@@ -5,6 +5,10 @@ env:
   DOCKER_BUILDKIT: 1
   COMPOSE_DOCKER_CLI_BUILD: 1
 
+defaults:
+ run:
+  working-directory: ./
+
 on:
   pull_request:
     branches: [ "master", "main" ]

@@ -1,0 +1,96 @@
+log:
+  level: INFO
+
+entryPoints:
+  web:
+    # http
+    address: ":80"
+    http:
+      # https://docs.traefik.io/routing/entrypoints/#entrypoint
+      redirections:
+        entryPoint:
+          to: web-secure
+
+  web-secure:
+    # https
+    address: ":443"
+
+  flower:
+    address: ":5555"
+
+certificatesResolvers:
+  letsencrypt:
+    # https://docs.traefik.io/master/https/acme/#lets-encrypt
+    acme:
+      email: "support@opensource.legal"
+      storage: /etc/traefik/acme/acme.json
+      # https://docs.traefik.io/master/https/acme/#httpchallenge
+      httpChallenge:
+        entryPoint: web
+
+http:
+  routers:
+
+    flower-secure-router:
+      rule: "Host(`opencontracts.opensource.legal`) || Host(`www.opencontracts.opensource.legal`) && PathPrefix(`/flower`)"
+      entryPoints:
+        - flower
+      service: flower
+      priority: 0
+      tls:
+        # https://docs.traefik.io/master/routing/routers/#certresolver
+        certResolver: letsencrypt
+
+    frontend-secure-router:
+      rule: "(Host(`opencontracts.opensource.legal`) || Host(`www.opencontracts.opensource.legal`)) && !PathPrefix(`/graphql`) && !PathPrefix(`/admin`) && !PathPrefix(`/flower`)"
+      entryPoints:
+        - "web-secure"
+      middlewares:
+        - "csrf"
+      service: frontend
+      priority: 1
+      tls:
+        # https://docs.traefik.io/master/routing/routers/#certresolver
+        certResolver: letsencrypt
+
+    web-secure-router:
+      rule: "(Host(`opencontracts.opensource.legal`) || Host(`www.opencontracts.opensource.legal`)) && (PathPrefix(`/graphql`) || PathPrefix(`/admin`))"
+      entryPoints:
+        - "web-secure"
+      middlewares:
+        - "csrf"
+      service: django
+      priority: 2
+      tls:
+        # https://docs.traefik.io/master/routing/routers/#certresolver
+        certResolver: letsencrypt
+
+  middlewares:
+    csrf:
+      # https://docs.traefik.io/master/middlewares/headers/#hostsproxyheaders
+      # https://docs.djangoproject.com/en/dev/ref/csrf/#ajax
+      headers:
+        hostsProxyHeaders: [ "X-CSRFToken" ]
+
+  services:
+
+    frontend:
+      loadBalancer:
+        servers:
+          - url: http://frontend:3000
+
+    django:
+      loadBalancer:
+        servers:
+          - url: http://django:5000
+
+    flower:
+      loadBalancer:
+        servers:
+          - url: http://flower:5555
+
+providers:
+  # https://docs.traefik.io/master/providers/file/
+  file:
+    filename: /etc/traefik/traefik.yml
+    watch: true

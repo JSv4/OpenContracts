@@ -1,0 +1,108 @@
+.hovered_search_button {
+  opacity: 1;
+  transition: opacity 0.5s;
+  border-radius: 2vw 0px 0px 2vw;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+  width: 3vw;
+  height: 3vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.not_hovered_search_button {
+  opacity: 0;
+  transition: opacity 0.5s;
+  border-radius: 2vw 0px 0px 2vw;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+  width: 3vw;
+  height: 3vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.not_hovered_expand_button {
+  opacity: 0;
+  transition: opacity 0.5s;
+  border-radius: 0px 1vw 1vw 0px;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+  width: 1.5vw;
+  height: 3vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.hovered_expand_button {
+  opacity: 1;
+  transition: opacity 0.5s;
+  border-radius: 0px 1vw 1vw 0px;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+  width: 1.5vw;
+  height: 3vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+const collapsed_labels {
+  max-height: 6vh;
+  min-height: 6vh;
+  transition: height 0.5s;
+  width: 15vw;
+  max-width: 15vw;
+  margin-top: 0.1vw;
+  margin-bottom: 0.1vw;
+  overflow: auto;
+}
+
+.expanded_labels {
+  max-height: 20vh;
+  min-height: 6vh;
+  transition: height 0.5s;
+  width: 15vw;
+  max-width: 15vw;
+  margin-top: 0.1vw;
+  margin-bottom: 0.1vw;
+  overflow: auto;
+}
+
+.main_segment_container {
+  width: 15vw;
+  transition: border-radius 0.5s;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  border-radius: 0px 0px 0.5vw 0.5vw !important;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+  padding: 0px;
+}
+
+.main_segment_container_hovered {
+  width: 15vw;
+  transition: border-radius 0.5s;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  border-radius: 0px 0px 0px 0px !important;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+  padding: 0px;
+}
+
+.main_body {
+  width: 15vw;
+  margin-bottom: 0px;
+  padding: 0.5vw;
+  padding-bottom: 0.25vw;
+  text-align: center;
+  border-radius: 0.5vw 0.5vw 0px 0px;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+}

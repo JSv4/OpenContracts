@@ -1,0 +1,7 @@
+# PostgreSQL
+# ------------------------------------------------------------------------------
+POSTGRES_HOST=db-postgresql-nyc3-61832-do-user-2141655-0.b.db.ondigitalocean.com
+POSTGRES_PORT=25060
+POSTGRES_DB=defaultdb
+POSTGRES_USER=doadmin
+POSTGRES_PASSWORD=x3r3O1OKCOfbxEma

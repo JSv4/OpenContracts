@@ -1,0 +1,374 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type AddAnnotation {
+  ok: Boolean
+  annotation: AnnotationType
+}
+
+type AddDocTypeAnnotation {
+  ok: Boolean
+  annotation: AnnotationType
+}
+
+type AddRelationship {
+  ok: Boolean
+  relationship: RelationshipType
+}
+
+type AnnotationLabelType implements Node {
+  id: ID!
+  type: LabelType!
+  color: String!
+  description: String!
+  icon: String!
+  text: String!
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  annotationSet(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationTypeConnection!
+  labelsetSet(offset: Int, before: String, after: String, first: Int, last: Int): LabelSetTypeConnection!
+}
+
+type AnnotationLabelTypeConnection {
+  pageInfo: PageInfo!
+  edges: [AnnotationLabelTypeEdge]!
+  totalCount: Int
+}
+
+type AnnotationLabelTypeEdge {
+  node: AnnotationLabelType
+  cursor: String!
+}
+
+type AnnotationType implements Node {
+  id: ID!
+  page: Int!
+  rawText: String
+  tokensJsons: GenericScalar
+  boundingBox: GenericScalar
+  label: AnnotationLabelType
+  document: DocumentType!
+  corpus: CorpusType
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  assignmentSet(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
+  sourceNodeInRelationships(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  targetNodeInRelationships(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+}
+
+type AnnotationTypeConnection {
+  pageInfo: PageInfo!
+  edges: [AnnotationTypeEdge]!
+  totalCount: Int
+}
+
+type AnnotationTypeEdge {
+  node: AnnotationType
+  cursor: String!
+}
+
+type AssignmentType implements Node {
+  id: ID!
+  name: String
+  document: DocumentType!
+  corpus: CorpusType
+  resultingAnnotations(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationTypeConnection!
+  resultingRelationships(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  comments: String!
+  assignor: UserType!
+  assignee: UserType
+  completedAt: DateTime
+  created: DateTime!
+  modified: DateTime!
+}
+
+type AssignmentTypeConnection {
+  pageInfo: PageInfo!
+  edges: [AssignmentTypeEdge]!
+  totalCount: Int
+}
+
+type AssignmentTypeEdge {
+  node: AssignmentType
+  cursor: String!
+}
+
+type CorpusType implements Node {
+  id: ID!
+  title: String!
+  description: String!
+  icon: String
+  documents(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
+  labelSet: LabelSetType
+  creator: UserType!
+  backendLock: Boolean!
+  userLock: UserType
+  error: Boolean!
+  created: DateTime!
+  modified: DateTime!
+  assignmentSet(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
+  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  annotationSet(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationTypeConnection!
+}
+
+type CorpusTypeConnection {
+  pageInfo: PageInfo!
+  edges: [CorpusTypeEdge]!
+  totalCount: Int
+}
+
+type CorpusTypeEdge {
+  node: CorpusType
+  cursor: String!
+}
+
+scalar DateTime
+
+type DocumentType implements Node {
+  id: ID!
+  title: String
+  description: String
+  customMeta: JSONString
+  icon: String!
+  pdfFile: String!
+  txtExtractFile: String
+  pawlsParseFile: String
+  backendLock: Boolean!
+  userLock: UserType
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  assignmentSet(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
+  corpusSet(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
+  annotationSet(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationTypeConnection!
+}
+
+type DocumentTypeConnection {
+  pageInfo: PageInfo!
+  edges: [DocumentTypeEdge]!
+  totalCount: Int
+}
+
+type DocumentTypeEdge {
+  node: DocumentType
+  cursor: String!
+}
+
+scalar GenericScalar
+
+scalar JSONString
+
+type LabelSetType implements Node {
+  id: ID!
+  title: String!
+  description: String!
+  icon: String!
+  labels(offset: Int, before: String, after: String, first: Int, last: Int, type: String): AnnotationLabelTypeConnection!
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  corpusSet(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
+}
+
+type LabelSetTypeConnection {
+  pageInfo: PageInfo!
+  edges: [LabelSetTypeEdge]!
+  totalCount: Int
+}
+
+type LabelSetTypeEdge {
+  node: LabelSetType
+  cursor: String!
+}
+
+enum LabelType {
+  RELATIONSHIP_LABEL
+  DOC_TYPE_LABEL
+  TOKEN_LABEL
+}
+
+type Mutation {
+  tokenAuth(username: String!, password: String!): ObtainJSONWebToken
+  verifyToken(token: String): Verify
+  refreshToken(refreshToken: String): Refresh
+  addAnnotation(boundingBox: GenericScalar!, corpusId: String!, documentId: String!, labelId: String!, page: Int!, rawText: String!, tokensJsons: GenericScalar!): AddAnnotation
+  removeAnnotation(annotationId: String!): RemoveAnnotation
+  addRelationship(corpusId: String!, labelId: String!, sourceIds: [String]!, targetIds: [String]!): AddRelationship
+  removeRelationship(relationshipId: String!): RemoveRelationship
+  removeRelationships(relationshipIds: [String]): RemoveRelationships
+  addDocTypeAnnotation(corpusId: String!, documentId: String!, labelId: String!): AddDocTypeAnnotation
+  removeDocTypeAnnotation(annotationId: String!): RemoveAnnotation
+  updateRelationships(relationships: [RelationInputType]): UpdateRelations
+}
+
+interface Node {
+  id: ID!
+}
+
+type ObtainJSONWebToken {
+  payload: GenericScalar!
+  refreshExpiresIn: Int!
+  token: String!
+  refreshToken: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type Query {
+  annotations(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationTypeConnection
+  annotation(id: ID!): AnnotationType
+  relationships(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection
+  relationship(id: ID!): RelationshipType
+  assignments(offset: Int, before: String, after: String, first: Int, last: Int, assignor_Email: String, assignee_Email: String, documentId: String): AssignmentTypeConnection
+  assignment(id: ID!): AssignmentType
+  labels(offset: Int, before: String, after: String, first: Int, last: Int, type: String): AnnotationLabelTypeConnection
+  label(id: ID!): AnnotationLabelType
+  labelsets(offset: Int, before: String, after: String, first: Int, last: Int): LabelSetTypeConnection
+  labelset(id: ID!): LabelSetType
+  corpuses(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection
+  corpus(id: ID!): CorpusType
+  documents(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection
+  document(id: ID!): DocumentType
+  userimports(offset: Int, before: String, after: String, first: Int, last: Int): UserImportTypeConnection
+  userimport(id: ID!): UserImportType
+  userexports(offset: Int, before: String, after: String, first: Int, last: Int): UserExportTypeConnection
+  userexport(id: ID!): UserExportType
+}
+
+type Refresh {
+  payload: GenericScalar!
+  refreshExpiresIn: Int!
+  token: String!
+  refreshToken: String!
+}
+
+input RelationInputType {
+  id: String
+  sourceIds: [String]
+  targetIds: [String]
+  labelId: String
+  corpusId: String
+  documentId: String
+}
+
+type RelationshipType implements Node {
+  id: ID!
+  label: AnnotationLabelType
+  corpus: CorpusType
+  sourceAnnotations(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationTypeConnection!
+  targetAnnotations(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationTypeConnection!
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  assignmentSet(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
+}
+
+type RelationshipTypeConnection {
+  pageInfo: PageInfo!
+  edges: [RelationshipTypeEdge]!
+  totalCount: Int
+}
+
+type RelationshipTypeEdge {
+  node: RelationshipType
+  cursor: String!
+}
+
+type RemoveAnnotation {
+  ok: Boolean
+}
+
+type RemoveRelationship {
+  ok: Boolean
+}
+
+type RemoveRelationships {
+  ok: Boolean
+}
+
+type UpdateRelations {
+  ok: Boolean
+}
+
+type UserExportType implements Node {
+  id: ID!
+  zip: String!
+  name: String
+  created: DateTime!
+  started: DateTime
+  finished: DateTime
+  errors: String!
+  creator: UserType!
+}
+
+type UserExportTypeConnection {
+  pageInfo: PageInfo!
+  edges: [UserExportTypeEdge]!
+  totalCount: Int
+}
+
+type UserExportTypeEdge {
+  node: UserExportType
+  cursor: String!
+}
+
+type UserImportType implements Node {
+  id: ID!
+  zip: String!
+  name: String
+  created: DateTime!
+  started: DateTime
+  finished: DateTime
+  errors: String!
+  creator: UserType!
+}
+
+type UserImportTypeConnection {
+  pageInfo: PageInfo!
+  edges: [UserImportTypeEdge]!
+  totalCount: Int
+}
+
+type UserImportTypeEdge {
+  node: UserImportType
+  cursor: String!
+}
+
+type UserType implements Node {
+  id: ID!
+  password: String!
+  lastLogin: DateTime
+  isSuperuser: Boolean!
+  username: String!
+  email: String!
+  isStaff: Boolean!
+  isActive: Boolean!
+  dateJoined: DateTime!
+  name: String!
+  createdAssignments(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
+  myAssignments(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
+  userexportSet(offset: Int, before: String, after: String, first: Int, last: Int): UserExportTypeConnection!
+  userimportSet(offset: Int, before: String, after: String, first: Int, last: Int): UserImportTypeConnection!
+  editingDocuments(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
+  documentSet(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
+  corpusSet(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
+  editingCorpuses(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
+  labelSet(offset: Int, before: String, after: String, first: Int, last: Int, type: String): AnnotationLabelTypeConnection!
+  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  annotationSet(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationTypeConnection!
+  labelsetSet(offset: Int, before: String, after: String, first: Int, last: Int): LabelSetTypeConnection!
+}
+
+type Verify {
+  payload: GenericScalar!
+}

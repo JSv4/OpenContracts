@@ -1,0 +1,54 @@
+# General
+# ------------------------------------------------------------------------------
+DJANGO_READ_DOT_ENV_FILE=True
+DJANGO_SETTINGS_MODULE=config.settings.production
+DJANGO_SECRET_KEY=I_WOULD_BE_A_SECURE_KEY_IF_YOU_TRIED_HARDER
+DJANGO_ADMIN_URL=admin/security_by_obfuscation/
+DJANGO_ALLOWED_HOSTS=thisis.mydomain.com
+
+# Security
+# ------------------------------------------------------------------------------
+DJANGO_SECURE_SSL_REDIRECT=False
+
+# Email
+# ------------------------------------------------------------------------------
+DJANGO_SERVER_EMAIL=
+
+MAILGUN_API_KEY=
+MAILGUN_DOMAIN=
+
+
+# AWS
+# ------------------------------------------------------------------------------
+USE_AWS=False
+#DJANGO_AWS_ACCESS_KEY_ID=
+#DJANGO_AWS_SECRET_ACCESS_KEY=
+#DJANGO_AWS_STORAGE_BUCKET_NAME=
+#DJANGO_AWS_S3_REGION_NAME=
+
+
+# Gunicorn
+# ------------------------------------------------------------------------------
+WEB_CONCURRENCY=4
+
+
+# Redis
+# ------------------------------------------------------------------------------
+REDIS_URL=redis://redis:6379/0
+
+# Celery
+# ------------------------------------------------------------------------------
+
+# Flower
+CELERY_FLOWER_USER=yVwNztrJwYvISMVUtUwUDZNwPbMCeNWt
+CELERY_FLOWER_PASSWORD=KyLVxlQx9m8HzzZanDRRomUYfzqFuRkHHMBYDEfMwRKhz02cOGfr8kn22h402HDu
+
+# AUTH0
+# -----------------------------------------------------------------------------
+USE_AUTH0=False
+# AUTH0_CLIENT_ID=
+# AUTH0_API_AUDIENCE=
+# AUTH0_DOMAIN=
+# AUTH0_M2M_MANAGEMENT_API_SECRET=
+# AUTH0_M2M_MANAGEMENT_API_ID=
+# AUTH0_M2M_MANAGEMENT_GRANT_TYPE=

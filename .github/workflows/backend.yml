@@ -1,0 +1,67 @@
+name: Backend CI
+
+# Enable Buildkit and let compose use it to speed up image building
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+defaults:
+ run:
+  working-directory: ./
+
+on:
+  pull_request:
+    branches: [ "master", "main" ]
+    paths-ignore: [ "docs/**" ]
+
+  push:
+    branches: [ "master", "main" ]
+    paths-ignore: [ "docs/**" ]
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  linter:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Code Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            requirements/base.txt
+            requirements/local.txt
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.0
+
+  # With no caching at all the entire ci process takes 4m 30s to complete!
+  pytest:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Code Repository
+        uses: actions/checkout@v3
+
+      - name: Build the Stack
+        run:  docker-compose -f local.yml build
+
+      - name: Run DB Migrations
+        run:  docker-compose -f local.yml run --rm django python manage.py migrate
+
+      - name: Collect Static Files
+        run: docker-compose -f local.yml run --rm django python manage.py collectstatic
+
+      - name: Run Django Tests
+        run:  docker-compose -f local.yml run django pytest
+
+      - name: Tear down the Stack
+        run:  docker-compose -f local.yml down

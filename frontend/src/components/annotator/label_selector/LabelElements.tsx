@@ -19,7 +19,7 @@ export const LabelElement = ({ label }: DocTypeLabelProps) => {
         margin: ".25vw",
         width: "12vw",
         userSelect: "none",
-        "-msUserSelect": "none",
+        MsUserSelect: "none",
         MozUserSelect: "none",
       }}
     >

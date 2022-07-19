@@ -242,7 +242,7 @@ export const SelectionTokens = ({
 
   return (
     <div ref={containerRef} id="SelectionTokenWrapper">
-      {tokens &&
+      {tokens ? (
         tokens.map((t, i) => {
           const b = pageInfo.getScaledTokenBounds(
             pageInfo.tokens[t.tokenIndex]
@@ -267,7 +267,10 @@ export const SelectionTokens = ({
               }}
             />
           );
-        })}
+        })
+      ) : (
+        <></>
+      )}
     </div>
   );
 };

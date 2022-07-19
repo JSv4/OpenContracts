@@ -56,23 +56,29 @@ export const DocTypeLabelDisplay = ({ read_only }: { read_only: boolean }) => {
   if (doc_annotations.length === 0) {
     annotation_elements = [<BlankDocTypeLabel key="Blank_LABEL" />];
   } else {
-    annotation_elements = doc_annotations.map((annotation) => (
-      <DocTypeLabel
-        key={annotation.id}
-        onRemove={
-          annotation.myPermissions.includes(PermissionTypes.CAN_REMOVE)
-            ? () => onDelete(annotation)
-            : null
-        }
-        label={annotation.label}
-      />
-    ));
+    for (var annotation of doc_annotations) {
+      try {
+        annotation_elements.push(
+          <DocTypeLabel
+            key={annotation.id}
+            onRemove={
+              annotation.myPermissions.includes(PermissionTypes.CAN_REMOVE)
+                ? () => onDelete(annotation)
+                : null
+            }
+            label={annotation.annotationLabel}
+          />
+        );
+      } catch {}
+    }
   }
 
   // Want to reduce the existing label ids to flat array of just ids...
-  let existing_labels = doc_annotations.map(
-    (annotation) => annotation.label.id
-  );
+  let existing_labels: string[] = [];
+
+  try {
+    doc_annotations.map((annotation) => annotation.annotationLabel.id);
+  } catch {}
 
   // Filter out already applied labels from the label options
   let filtered_doc_label_choices = doc_label_choices.filter(

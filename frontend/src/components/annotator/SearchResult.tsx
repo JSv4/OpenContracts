@@ -96,7 +96,9 @@ export const SearchResult = ({
             pageInfo={pageInfo}
             tokens={match.tokens[pageInfo.page.pageNumber - 1]}
           />
-        ) : null
+        ) : (
+          <></>
+        )
       }
     </>
   );

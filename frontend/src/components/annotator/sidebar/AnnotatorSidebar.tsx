@@ -135,7 +135,7 @@ export const AnnotatorSidebar = ({ read_only }: { read_only: boolean }) => {
     ).map((annotation, index) => {
       return (
         <HighlightItem
-          key={index}
+          key={`highlight_item_${index}`}
           className={annotation.id}
           annotation={annotation}
           read_only={false}
@@ -162,7 +162,7 @@ export const AnnotatorSidebar = ({ read_only }: { read_only: boolean }) => {
 
     return (
       <RelationItem
-        key={relation.id}
+        key={`relation_item_${relation.id}`}
         relation={relation}
         read_only={read_only}
         selected={selectedRelations.includes(relation)}
@@ -290,7 +290,9 @@ export const AnnotatorSidebar = ({ read_only }: { read_only: boolean }) => {
             flex: 1,
           }}
         >
-          <Card.Group key={2}>{relation_elements}</Card.Group>
+          <Card.Group key="relationship_card_group">
+            {relation_elements}
+          </Card.Group>
         </Tab.Pane>
       ),
     },
@@ -326,7 +328,7 @@ export const AnnotatorSidebar = ({ read_only }: { read_only: boolean }) => {
         alignItems: "flex-start",
         justifyContent: "center",
         userSelect: "none",
-        "-msUserSelect": "none",
+        MsUserSelect: "none",
         MozUserSelect: "none",
       }}
     >

@@ -138,6 +138,8 @@ export const Annotator = ({
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  // console.log("Annotation - openedDocument: ", openedDocument);
+
   let doc_permissions: PermissionTypes[] = [];
   let raw_permissions = openedDocument.myPermissions;
   if (openedDocument && raw_permissions !== undefined) {
@@ -168,7 +170,7 @@ export const Annotator = ({
   const textSearchElementRefs = useRef({});
 
   const handleKeyUpPress = useCallback((event) => {
-    const { key, keyCode } = event;
+    const { keyCode } = event;
     if (keyCode === 16) {
       //console.log("Shift released");
       setShiftDown(false);
@@ -176,7 +178,7 @@ export const Annotator = ({
   }, []);
 
   const handleKeyDownPress = useCallback((event) => {
-    const { key, keyCode } = event;
+    const { keyCode } = event;
     if (keyCode === 16) {
       //console.log("Shift depressed")
       setShiftDown(true);
@@ -192,8 +194,21 @@ export const Annotator = ({
     };
   }, [handleKeyUpPress, handleKeyDownPress]);
 
-  // Get the basic data PAWLS needs to render doc and start annotations:
-  const { loading, error, data, refetch } = useQuery<
+  useEffect(() => {
+    console.log("Annotator setup");
+  }, []);
+
+  // TODO - source of infinite loop is notifyOnNetworkStatusChange: true...
+  // somewhere it's triggering reloads... which is weird because we're not using loading
+  // flag...
+
+  // IT IS NOT TRIGGERING RELOAD... IT's JUST STOPPING SCREEN FROM REFRESH
+  const {
+    refetch: refetch_annotator,
+    loading: annotator_loading,
+    data: annotator_data,
+    error: annotator_error,
+  } = useQuery<
     RequestAnnotatorDataForDocumentOutputs,
     RequestAnnotatorDataForDocumentInputs
   >(REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT, {
@@ -205,6 +220,7 @@ export const Annotator = ({
   });
 
   useEffect(() => {
+    console.log("Anotator - openedDocument changed");
     if (openedDocument && openedDocument.pdfFile) {
       setViewState(ViewState.LOADING);
 
@@ -235,7 +251,6 @@ export const Annotator = ({
           // first, visible page. That said it makes the code simpler, so we're ok with it for
           // now.
           const loadPages: Promise<PDFPageInfo>[] = [];
-          let total_char_count = 0;
           for (let i = 1; i <= doc.numPages; i++) {
             // See line 50 for an explanation of the cast here.
             loadPages.push(
@@ -256,7 +271,7 @@ export const Annotator = ({
         .then((pages) => {
           setPages(pages);
 
-          let { doc_text, page_text_map, string_index_token_map } =
+          let { doc_text, string_index_token_map } =
             createTokenStringSearch(pages);
 
           setPageTextMaps({
@@ -283,13 +298,13 @@ export const Annotator = ({
   }, [openedDocument]);
 
   useEffect(() => {
-    if (data) {
+    if (annotator_data) {
       // Build proper span label objs from GraphQL results
       let span_label_lookup: LooseObject = {};
-      if (data?.corpus?.labelSet) {
+      if (annotator_data?.corpus?.labelSet) {
         span_label_lookup = {
           ...span_label_lookup,
-          ...data.corpus.labelSet.spanLabels.edges.reduce(function (
+          ...annotator_data.corpus.labelSet.spanLabels.edges.reduce(function (
             obj: Record<string, any>,
             edge
           ) {
@@ -311,24 +326,23 @@ export const Annotator = ({
 
       // Build proper relationship label objs from GraphQL results
       let relationship_label_lookup: LooseObject = {};
-      if (data?.corpus?.labelSet?.relationshipLabels?.edges) {
+      if (annotator_data?.corpus?.labelSet?.relationshipLabels?.edges) {
         relationship_label_lookup = {
           ...relationship_label_lookup,
-          ...data.corpus.labelSet.relationshipLabels.edges.reduce(function (
-            obj: Record<string, any>,
-            edge
-          ) {
-            obj[edge.node.id] = {
-              id: edge.node.id,
-              color: edge.node.color,
-              text: edge.node.text,
-              icon: edge.node.icon as SemanticICONS,
-              description: edge.node.description,
-              labelType: edge.node.labelType,
-            };
-            return obj;
-          },
-          {}),
+          ...annotator_data.corpus.labelSet.relationshipLabels.edges.reduce(
+            function (obj: Record<string, any>, edge) {
+              obj[edge.node.id] = {
+                id: edge.node.id,
+                color: edge.node.color,
+                text: edge.node.text,
+                icon: edge.node.icon as SemanticICONS,
+                description: edge.node.description,
+                labelType: edge.node.labelType,
+              };
+              return obj;
+            },
+            {}
+          ),
         };
       }
       setRelationLabels(Object.values(relationship_label_lookup));
@@ -336,30 +350,29 @@ export const Annotator = ({
       // Build proper doc type label objs from GraphQL results
       let document_label_lookup: LooseObject = {};
 
-      if (data?.corpus?.labelSet?.docTypeLabels?.edges) {
+      if (annotator_data?.corpus?.labelSet?.docTypeLabels?.edges) {
         document_label_lookup = {
           ...document_label_lookup,
-          ...data.corpus.labelSet.docTypeLabels.edges.reduce(function (
-            obj: Record<string, any>,
-            edge
-          ) {
-            obj[edge.node.id] = {
-              id: edge.node.id,
-              color: edge.node.color,
-              text: edge.node.text,
-              icon: edge.node.icon as SemanticICONS,
-              description: edge.node.description,
-              labelType: edge.node.labelType,
-            };
-            return obj;
-          },
-          {}),
+          ...annotator_data.corpus.labelSet.docTypeLabels.edges.reduce(
+            function (obj: Record<string, any>, edge) {
+              obj[edge.node.id] = {
+                id: edge.node.id,
+                color: edge.node.color,
+                text: edge.node.text,
+                icon: edge.node.icon as SemanticICONS,
+                description: edge.node.description,
+                labelType: edge.node.labelType,
+              };
+              return obj;
+            },
+            {}
+          ),
         };
       }
       setDocTypeLabels(Object.values(document_label_lookup));
 
       // Turn existing annotation data into PDFAnnotations obj and inject into state:
-      let annotation_objs = data.existingSpanAnnotations.edges.map(
+      let annotation_objs = annotator_data.existingSpanAnnotations.edges.map(
         (e) =>
           new ServerAnnotation(
             e.node.page,
@@ -371,8 +384,8 @@ export const Annotator = ({
           )
       );
 
-      let doc_type_label_objs = data.existingDocLabelAnnotations.edges.map(
-        (edge) => {
+      let doc_type_label_objs =
+        annotator_data.existingDocLabelAnnotations.edges.map((edge) => {
           let label_obj = edge.node.annotationLabel;
           try {
             label_obj = document_label_lookup[label_obj.id];
@@ -384,11 +397,10 @@ export const Annotator = ({
               : [],
             edge.node.id
           );
-        }
-      );
+        });
 
-      let relationship_label_objs = data.existingRelationships.edges.map(
-        (edge) => {
+      let relationship_label_objs =
+        annotator_data.existingRelationships.edges.map((edge) => {
           let label_obj = edge.node.relationshipLabel;
           if (label_obj) {
             try {
@@ -407,8 +419,7 @@ export const Annotator = ({
             label_obj,
             edge.node.id
           );
-        }
-      );
+        });
 
       // add our loaded annotations from the backend into local state
       setPdfAnnotations(
@@ -422,15 +433,15 @@ export const Annotator = ({
       // Set up contexts for annotations
       setViewState(ViewState.LOADED);
     }
-  }, [data]);
+  }, [annotator_data]);
 
   useEffect(() => {
-    if (error) {
+    if (annotator_error) {
       toast.error(
         "Sorry, something went wrong!\nUnable to fetch required data to open annotations for this document and corpus."
       );
     }
-  }, [error]);
+  }, [annotator_data]);
 
   function addMultipleAnnotations(a: ServerAnnotation[]): void {
     setPdfAnnotations(
@@ -1000,7 +1011,7 @@ export const Annotator = ({
         variables: {
           documentId: openedDocument.id,
           corpusId: openedCorpus.id,
-          annotationLabelId: doc_type.label.id,
+          annotationLabelId: doc_type.annotationLabel.id,
         },
       })
         .then((data) => {

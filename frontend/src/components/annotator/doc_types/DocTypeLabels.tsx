@@ -7,6 +7,12 @@ interface DocTypeLabelProps {
 }
 
 export const DocTypeLabel = ({ label, onRemove }: DocTypeLabelProps) => {
+  //console.log("DoctTypeLabel for label", label);
+
+  if (!label) {
+    return <></>;
+  }
+
   return (
     <Card
       className="doc_label"
@@ -19,7 +25,7 @@ export const DocTypeLabel = ({ label, onRemove }: DocTypeLabelProps) => {
         margin: ".25vw",
         width: "12vw",
         userSelect: "none",
-        "-msUserSelect": "none",
+        MsUserSelect: "none",
         MozUserSelect: "none",
       }}
     >

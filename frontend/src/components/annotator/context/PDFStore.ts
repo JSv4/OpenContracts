@@ -9,7 +9,19 @@ import { AnnotationLabelType } from "../../../graphql/types";
 import { TokenId, RenderedSpanAnnotation } from "./AnnotationStore";
 import { convertAnnotationTokensToText } from "../utils";
 
+import { type } from "os";
+
 export type Optional<T> = T | undefined;
+
+// Somehow (still trying to figure this one out), undefined tokens are getting
+// passed to getScaledTokenBounds and this is blowing up the entire app. For now,
+// test for undefined token and just return this dummy token json.
+const undefined_bounding_box = {
+  top: 0,
+  bottom: 0,
+  left: 0,
+  right: 0,
+};
 
 /**
  * Returns the provided bounds scaled by the provided factor.
@@ -261,17 +273,29 @@ export class PDFPageInfo {
   }
 
   getScaledTokenBounds(t: Token): BoundingBox {
+    //console.log("getScaledTokenBounds() for t: ", t );
+    if (typeof t === "undefined") {
+      return undefined_bounding_box;
+    }
     return this.getScaledBounds(this.getTokenBounds(t));
   }
 
   getTokenBounds(t: Token): BoundingBox {
-    const b = {
-      left: t.x,
-      top: t.y,
-      right: t.x + t.width,
-      bottom: t.y + t.height,
-    };
-    return b;
+    if (!t) {
+      return {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+      };
+    } else {
+      return {
+        left: t.x,
+        top: t.y,
+        right: t.x + t.width,
+        bottom: t.y + t.height,
+      };
+    }
   }
 
   getScaledBounds(b: BoundingBox): BoundingBox {

@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, ReactNode } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Tab } from "semantic-ui-react";
-import _ from "lodash";
+import _, { update } from "lodash";
 import { toast } from "react-toastify";
 import {
   useLazyQuery,
@@ -19,9 +19,7 @@ import {
 import { CRUDModal } from "../components/widgets/CRUD/CRUDModal";
 import { CardLayout } from "../components/layout/CardLayout";
 import { CorpusBreadcrumbs } from "../components/corpuses/CorpusBreadcrumbs";
-import { DocumentCards } from "../components/documents/DocumentCards";
 import { LabelSetSelector } from "../components/widgets/CRUD/LabelSetSelector";
-import { AnnotationCards } from "../components/annotations/AnnotationCards";
 import {
   newCorpusForm_Ui_Schema,
   newCorpusForm_Schema,
@@ -40,7 +38,6 @@ import {
   documentSearchTerm,
   authToken,
   annotationContentSearchTerm,
-  filterToLabelsetId,
   openedDocument,
   showSelectedAnnotationOnly,
   showAnnotationBoundingBoxes,
@@ -66,26 +63,20 @@ import {
   START_IMPORT_CORPUS,
 } from "../graphql/mutations";
 import {
-  GetAnnotationsInputs,
-  GetAnnotationsOutputs,
   GetCorpusesInputs,
   GetCorpusesOutputs,
-  GET_ANNOTATIONS,
   GET_CORPUSES,
   RequestDocumentsInputs,
   RequestDocumentsOutputs,
   REQUEST_DOCUMENTS,
 } from "../graphql/queries";
-import {
-  ServerAnnotationType,
-  CorpusType,
-  DocumentType,
-  LabelType,
-} from "../graphql/types";
+import { CorpusType, LabelType } from "../graphql/types";
 import { LooseObject } from "../components/types";
 import { Annotator } from "../components/annotator/Annotator";
 import { toBase64 } from "../utils/files";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
+import { CorpusAnnotationCards } from "../components/annotations/CorpusAnnotationCards";
+import { CorpusDocumentCards } from "../components/documents/CorpusDocumentCards";
 
 export const Corpuses = () => {
   const show_remove_docs_from_corpus_modal = useReactiveVar(
@@ -107,11 +98,10 @@ export const Corpuses = () => {
     showAnnotationBoundingBoxes
   );
   const show_annotation_labels = useReactiveVar(showAnnotationLabels);
+  const filter_to_label_id = useReactiveVar(filterToLabelId);
 
   const auth_token = useReactiveVar(authToken);
   const annotation_search_term = useReactiveVar(annotationContentSearchTerm);
-  const filter_to_labelset_id = useReactiveVar(filterToLabelsetId);
-  const filter_to_label_id = useReactiveVar(filterToLabelId);
 
   const location = useLocation();
 
@@ -173,42 +163,6 @@ export const Corpuses = () => {
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Setup document resolvers and mutations
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  const [
-    fetchDocuments,
-    {
-      refetch: refetchDocuments,
-      loading: documents_loading,
-      error: documents_error,
-      data: documents_response,
-      fetchMore: fetchMoreDocuments,
-    },
-  ] = useLazyQuery<RequestDocumentsOutputs, RequestDocumentsInputs>(
-    REQUEST_DOCUMENTS,
-    {
-      variables: {
-        ...(opened_corpus
-          ? { annotateDocLabels: true, inCorpusWithId: opened_corpus.id }
-          : { annotateDocLabels: false }),
-        ...(filter_to_label_id ? { hasLabelWithId: filter_to_label_id } : {}),
-        ...(document_search_term ? { textSearch: document_search_term } : {}),
-      },
-      notifyOnNetworkStatusChange: true, // necessary in order to trigger loading signal on fetchMore
-    }
-  );
-
-  useEffect(() => {
-    refetchDocuments();
-  }, [document_search_term]);
-
-  const [removeDocumentsFromCorpus, {}] = useMutation<
-    RemoveDocumentsFromCorpusOutputs,
-    RemoveDocumentsFromCorpusInputs
-  >(REMOVE_DOCUMENTS_FROM_CORPUS, {
-    onCompleted: () => {
-      refetchDocuments();
-    },
-  });
-
   const [startImportCorpus, {}] = useMutation<
     StartImportCorpusExport,
     StartImportCorpusInputs
@@ -230,49 +184,44 @@ export const Corpuses = () => {
     loading: loading_corpuses,
     error: corpus_load_error,
     data: corpus_response,
-    fetchMore: fetchMoreCorpuses,
+    fetchMore: fetchMoreCorpusesOrig,
   } = useQuery<GetCorpusesOutputs, GetCorpusesInputs>(GET_CORPUSES, {
     variables: corpus_variables,
     notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
   });
+
   if (corpus_load_error) {
     toast.error("ERROR\nUnable to fetch corpuses.");
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Query to get annotations
+  // Query to refetch documents if dropdown action is used to delink a doc from corpus
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  const [
-    fetchAnnotations,
-    {
-      refetch: refetchAnnotations,
-      loading: annotation_loading,
-      error: annotation_error,
-      data: annotation_response,
-      fetchMore: fetchMoreAnnotations,
+  const [fetchDocumentsLazily, { error: documents_error }] = useLazyQuery<
+    RequestDocumentsOutputs,
+    RequestDocumentsInputs
+  >(REQUEST_DOCUMENTS, {
+    variables: {
+      ...(opened_corpus_id
+        ? { annotateDocLabels: true, inCorpusWithId: opened_corpus_id }
+        : { annotateDocLabels: false }),
+      ...(filter_to_label_id ? { hasLabelWithId: filter_to_label_id } : {}),
+      ...(document_search_term ? { textSearch: document_search_term } : {}),
     },
-  ] = useLazyQuery<GetAnnotationsOutputs, GetAnnotationsInputs>(
-    GET_ANNOTATIONS,
-    {
-      notifyOnNetworkStatusChange: true, // necessary in order to trigger loading signal on fetchMore
-      variables: {
-        annotationLabel_Type: "TOKEN_LABEL",
-        ...(opened_corpus ? { corpusId: opened_corpus.id } : {}),
-        ...(filter_to_label_id
-          ? { annotationLabelId: filter_to_label_id }
-          : {}),
-        ...(filter_to_labelset_id
-          ? { usesLabelFromLabelsetId: filter_to_labelset_id }
-          : {}),
-        ...(annotation_search_term
-          ? { rawText_Contains: annotation_search_term }
-          : {}),
-      },
-    }
-  );
-  if (annotation_error) {
-    toast.error("ERROR\nCould not fetch annotations.");
+    notifyOnNetworkStatusChange: true, // necessary in order to trigger loading signal on fetchMore
+  });
+  if (documents_error) {
+    toast.error("ERROR\nCould not fetch documents for corpus.");
   }
+
+  useEffect(() => {
+    console.log("Corpuses.tsx - Loading Corpuses changed...");
+  }, [loading_corpuses]);
+
+  const fetchMoreCorpuses = (args: any) => {
+    console.log("Corpuses.txt - fetchMoreCorpuses()");
+    fetchMoreCorpusesOrig(args);
+  };
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Effects to reload data on certain changes
@@ -281,103 +230,36 @@ export const Corpuses = () => {
   useEffect(() => {
     if (auth_token) {
       refetchCorpuses();
-      if (opened_corpus) {
-        refetchDocuments();
-        refetchAnnotations();
-      }
     }
   }, [auth_token]);
 
-  // If the tab changes, refetch appropriate data for selected tab
   useEffect(() => {
-    switch (active_tab) {
-      case 0:
-        refetchDocuments();
-        break;
-      case 1:
-        refetchAnnotations();
-        break;
-      default:
-        break;
-    }
-  }, [active_tab]);
-
-  useEffect(() => {
+    console.log("corpus_search_term");
     refetchCorpuses();
   }, [corpus_search_term]);
 
-  useEffect(() => {
-    console.log("Apple");
-    if (filter_to_label_id) {
-      switch (active_tab) {
-        case 0:
-          refetchDocuments();
-          break;
-        case 1:
-          refetchAnnotations();
-          break;
-        default:
-          console.log(`Unexpected tab index: ${active_tab}`);
-      }
-    }
-  }, [filter_to_label_id]);
-
   // If we detech user navigated to this page, refetch
   useEffect(() => {
-    refetchCorpuses().then(() => {
-      if (opened_corpus) {
-        fetchDocuments();
-        refetchAnnotations();
-      }
-    });
+    if (location.pathname === "/corpuses") {
+      refetchCorpuses();
+    }
   }, [location]);
 
   useEffect(() => {
-    console.log("Opened corpus");
-    if (opened_corpus_id) {
-      console.log("Fetch docs and annotations");
-      refetchDocuments();
-      refetchAnnotations();
-    } else {
-      console.log("Fetch corpuses");
+    if (!opened_corpus_id) {
       refetchCorpuses();
     }
-  }, [opened_corpus_id, refetchCorpuses, fetchDocuments, fetchAnnotations]);
-
-  useEffect(() => {
-    refetchAnnotations();
-  }, [annotation_search_term]);
-
-  useEffect(() => {
-    fetchDocuments();
-    if (active_tab === 1) {
-      fetchAnnotations();
-    }
-  }, []);
+  }, [opened_corpus_id]);
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Query to shape item data
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  const annotation_data = annotation_response?.annotations?.edges
-    ? annotation_response.annotations.edges
-    : [];
-  const annotation_items = annotation_data
-    .map((edge) => (edge ? edge.node : undefined))
-    .filter((item): item is ServerAnnotationType => !!item);
-
   const corpus_data = corpus_response?.corpuses?.edges
     ? corpus_response.corpuses.edges
     : [];
   const corpus_items = corpus_data
     .map((edge) => (edge ? edge.node : undefined))
     .filter((item): item is CorpusType => !!item);
-
-  const document_data = documents_response?.documents?.edges
-    ? documents_response.documents.edges
-    : [];
-  const document_items = document_data
-    .map((edge) => (edge?.node ? edge.node : undefined))
-    .filter((item): item is DocumentType => !!item);
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Query to mutate corpus
@@ -401,6 +283,15 @@ export const Corpuses = () => {
   >(DELETE_CORPUS, {
     onCompleted: (data) => {
       refetchCorpuses();
+    },
+  });
+
+  const [removeDocumentsFromCorpus, {}] = useMutation<
+    RemoveDocumentsFromCorpusOutputs,
+    RemoveDocumentsFromCorpusInputs
+  >(REMOVE_DOCUMENTS_FROM_CORPUS, {
+    onCompleted: () => {
+      fetchDocumentsLazily();
     },
   });
 
@@ -441,7 +332,7 @@ export const Corpuses = () => {
     }
   };
 
-  // TODO - Implement; Improve typing.
+  // TODO - Improve typing.
   const handleUpdateCorpus = (corpus_obj: any) => {
     // console.log("handleUpdateCorpus", corpus_obj);
     let variables = {
@@ -451,7 +342,7 @@ export const Corpuses = () => {
     tryMutateCorpus(variables);
   };
 
-  // TODO - Implement; Improve typing.
+  // TODO - Improve typing.
   const handleDeleteCorpus = (corpus_id: string | undefined) => {
     if (corpus_id) {
       // console.log("handleDeleteCorpus", corpus_id)
@@ -465,7 +356,6 @@ export const Corpuses = () => {
     }
   };
 
-  // TODO - Implement.
   const handleRemoveContracts = (delete_ids: string[]) => {
     // console.log("handleRemoveContracts", delete_ids);
     removeDocumentsFromCorpus({
@@ -484,7 +374,7 @@ export const Corpuses = () => {
       });
   };
 
-  // TODO - Implement; Improve typing.
+  // TODO - Improve typing.
   const handleCreateNewCorpus = (corpus_json: Record<string, any>) => {
     tryCreateCorpus({ variables: corpus_json })
       .then((data) => {
@@ -524,7 +414,7 @@ export const Corpuses = () => {
   }
 
   let contract_actions: DropdownActionProps[] = [];
-  if (selected_document_ids.length > 0 && authToken) {
+  if (selected_document_ids.length > 0 && auth_token) {
     contract_actions.push({
       icon: "remove circle",
       title: "Remove Contract(s)",
@@ -539,15 +429,7 @@ export const Corpuses = () => {
       menuItem: "Contracts",
       render: () => (
         <Tab.Pane>
-          <DocumentCards
-            items={document_items}
-            loading={documents_loading}
-            loading_message="Documents Loading..."
-            pageInfo={documents_response?.documents.pageInfo}
-            style={{ minHeight: "70vh" }}
-            fetchMore={fetchMoreDocuments}
-            removeFromCorpus={opened_corpus ? handleRemoveContracts : undefined}
-          />
+          <CorpusDocumentCards opened_corpus_id={opened_corpus_id} />
         </Tab.Pane>
       ),
     },
@@ -555,18 +437,83 @@ export const Corpuses = () => {
       menuItem: "Annotations",
       render: () => (
         <Tab.Pane>
-          <AnnotationCards
-            items={annotation_items}
-            loading={annotation_loading}
-            loading_message="Annotations Loading..."
-            pageInfo={annotation_response?.annotations.pageInfo}
-            style={{ minHeight: "70vh" }}
-            fetchMore={fetchMoreAnnotations}
-          />
+          <CorpusAnnotationCards opened_corpus_id={opened_corpus_id} />
         </Tab.Pane>
       ),
     },
   ];
+
+  let content = <></>;
+
+  // These else if statements should really be broken into separate components.
+  //console.log(`Opened_corpus`, opened_corpus, 'opened_document', opened_document);
+
+  if (
+    (opened_corpus === null || opened_corpus === undefined) &&
+    (opened_document === null || opened_document === undefined)
+  ) {
+    console.log("Set content to CorpusCards");
+    content = (
+      <CorpusCards
+        items={corpus_items}
+        pageInfo={corpus_response?.corpuses?.pageInfo}
+        loading={
+          loading_corpuses ||
+          delete_corpus_loading ||
+          update_corpus_loading ||
+          create_corpus_loading
+        }
+        loading_message="Loading Corpuses..."
+        fetchMore={fetchMoreCorpuses}
+      />
+    );
+  } else if (
+    (opened_corpus !== null || opened_corpus !== undefined) &&
+    (opened_document === null || opened_document === undefined)
+  ) {
+    console.log("Set content to tab");
+    content = (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "center",
+          height: "100%",
+          marginLeft: "1rem",
+          marginRight: "1rem",
+        }}
+      >
+        <Tab
+          attached="bottom"
+          style={{ width: "100%" }}
+          activeIndex={active_tab}
+          onTabChange={(e, { activeIndex }) =>
+            setActiveTab(activeIndex ? Number(activeIndex) : 0)
+          }
+          panes={panes}
+        />
+      </div>
+    );
+  } else if (
+    opened_corpus !== null &&
+    opened_corpus !== undefined &&
+    opened_document !== null &&
+    opened_document !== undefined
+  ) {
+    console.log("Reset Annotator ref");
+    content = (
+      <Annotator
+        open={Boolean(opened_document)}
+        onClose={() => openedDocument(null)}
+        openedDocument={opened_document}
+        openedCorpus={opened_corpus}
+        scroll_to_annotation_on_open={opened_to_annotation}
+        show_selected_annotation_only={show_selected_annotation_only}
+        show_annotation_bounding_boxes={show_annotation_bounding_boxes}
+        show_annotation_labels={show_annotation_labels}
+      />
+    );
+  }
 
   return (
     <CardLayout
@@ -714,49 +661,7 @@ export const Corpuses = () => {
         type="file"
         onChange={onImportFileChange}
       />
-      {opened_corpus !== null ? (
-        opened_document === null ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "center",
-              height: "100%",
-              marginLeft: "1rem",
-              marginRight: "1rem",
-            }}
-          >
-            <Tab
-              attached="bottom"
-              style={{ width: "100%" }}
-              activeIndex={active_tab}
-              onTabChange={(e, { activeIndex }) =>
-                setActiveTab(activeIndex ? Number(activeIndex) : 0)
-              }
-              panes={panes}
-            />
-          </div>
-        ) : (
-          <Annotator
-            open={Boolean(opened_document)}
-            onClose={() => openedDocument(null)}
-            openedDocument={opened_document}
-            openedCorpus={opened_corpus}
-            scroll_to_annotation_on_open={opened_to_annotation}
-            show_selected_annotation_only={show_selected_annotation_only}
-            show_annotation_bounding_boxes={show_annotation_bounding_boxes}
-            show_annotation_labels={show_annotation_labels}
-          />
-        )
-      ) : (
-        <CorpusCards
-          items={corpus_items}
-          pageInfo={corpus_response?.corpuses?.pageInfo}
-          loading={loading_corpuses}
-          loading_message="Loading Corpuses..."
-          fetchMore={fetchMoreCorpuses}
-        />
-      )}
+      {content}
     </CardLayout>
   );
 };

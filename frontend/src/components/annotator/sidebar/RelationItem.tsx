@@ -61,7 +61,7 @@ export function RelationItem({
       style={{
         ...(selected ? { backgroundColor: "#e2ffdb" } : {}),
         userSelect: "none",
-        "-msUserSelect": "none",
+        MsUserSelect: "none",
         MozUserSelect: "none",
       }}
       fluid

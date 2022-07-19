@@ -122,10 +122,17 @@ export const AnnotationCards = ({
               content={item.rawText}
               trigger={<p>{item.rawText?.substring(0, 256)}</p>}
             />
-            <Popup
-              content={item.document.title}
-              trigger={<Label corner="right" icon="file text outline" />}
-            />
+            {item && item.document && item.corpus ? (
+              <Popup
+                content={item.document.title}
+                trigger={<Label corner="right" icon="file text outline" />}
+              />
+            ) : (
+              <Popup
+                content={"Missing document for item!"}
+                trigger={<Label corner="right" icon="file text outline" />}
+              />
+            )}
           </Card.Content>
         </Card>
       );

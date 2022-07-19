@@ -157,7 +157,7 @@ export class DocTypeAnnotation {
   public readonly id: string;
 
   constructor(
-    public readonly label: AnnotationLabelType,
+    public readonly annotationLabel: AnnotationLabelType,
     public readonly myPermissions: PermissionTypes[],
     id: string | undefined = undefined
   ) {
@@ -169,7 +169,11 @@ export class DocTypeAnnotation {
   }
 
   static fromObject(obj: DocTypeAnnotation) {
-    return new DocTypeAnnotation(obj.label, obj.myPermissions, obj.id);
+    return new DocTypeAnnotation(
+      obj.annotationLabel,
+      obj.myPermissions,
+      obj.id
+    );
   }
 }
 

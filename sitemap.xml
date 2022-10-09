@@ -61,6 +61,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://hatch.pypa.io/latest/development/documentation/</loc>
+         <lastmod>2022-10-09</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://hatch.pypa.io/latest/development/environment/</loc>
          <lastmod>2022-10-09</lastmod>
          <changefreq>daily</changefreq>

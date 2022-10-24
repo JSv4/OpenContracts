@@ -1,0 +1,38 @@
+# Django Username and Password for Initial Admin Login
+# CHANGE THESE BEFORE FIRST BOOT OF OPENCONTRACTS
+# ------------------------------------------------------------------------------
+DJANGO_SUPERUSER_PASSWORD=Openc0ntracts_def@ult
+DJANGO_SUPERUSER_EMAIL=support@opensource.legal
+DJANGO_SUPERUSER_USERNAME=admin
+
+# General
+# ------------------------------------------------------------------------------
+USE_DOCKER=yes
+IPYTHONDIR=/app/.ipython
+DJANGO_SECRET_KEY=
+DJANGO_ADMIN_URL=admin/ItChL90Tnz71PZARMPtmZifuQczgho6l/
+DJANGO_ALLOWED_HOSTS=django,127.0.0.1,localhost,0.0.0.0
+
+# Application Configuration
+# ------------------------------------------------------------------------------
+USE_ANALYZER=True
+CALLBACK_ROOT_URL_FOR_ANALYZER=http://localhost:8000
+
+# AWS
+# ------------------------------------------------------------------------------
+USE_AWS=false
+
+# Redis
+# ------------------------------------------------------------------------------
+REDIS_URL=redis://redis:6379/0
+
+# Celery
+# ------------------------------------------------------------------------------
+
+# Flower
+CELERY_FLOWER_USER=
+CELERY_FLOWER_PASSWORD=
+
+# AUTH0
+# ------------------------------------------------------------------------------
+USE_AUTH0=False

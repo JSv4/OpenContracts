@@ -1,0 +1,34 @@
+#components-layout-demo-side .logo {
+  height: 32px;
+  margin: 16px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.site-layout .site-layout-background {
+  background: #fff;
+}
+
+#AppContainer {
+  margin: 0px !important;
+}
+
+.glowable_icon {
+  transition: 1s ease-in-out;
+}
+
+.glowable_icon::before {
+  background: #ffee10;
+  transition: 0.5s;
+  transform: scale(0.9);
+}
+
+.glowable_icon:hover::before {
+  transform: scale(1.1);
+  box-shadow: 0 0 15px #ffee10;
+}
+
+.glowable_icon:hover {
+  color: #ffee10;
+  box-shadow: 0 0 5px #ffee10;
+  text-shadow: 0 0 5px #ffee10;
+}

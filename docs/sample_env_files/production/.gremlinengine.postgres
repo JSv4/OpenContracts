@@ -1,0 +1,7 @@
+# PostgreSQL
+# ------------------------------------------------------------------------------
+POSTGRES_HOST=gremlinpostgres
+POSTGRES_PORT=5433
+POSTGRES_DB=gremlin_engine_db
+POSTGRES_USER=
+POSTGRES_PASSWORD=

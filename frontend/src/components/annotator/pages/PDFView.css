@@ -1,0 +1,10 @@
+.PDFViewTopBarWrapper {
+  flex: 1;
+  overflow-x: scroll !important;
+}
+
+@media (min-width: 401px) {
+  .PDFViewTopBarWrapper {
+    overflow: hidden !important;
+  }
+}

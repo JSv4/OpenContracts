@@ -1,0 +1,167 @@
+.sidebar {
+  color: rgb(119, 119, 119);
+  background: linear-gradient(
+    rgb(249, 248, 247),
+    rgb(251, 250, 248) 46px,
+    rgb(251, 251, 249) 120px,
+    rgb(248, 247, 245) 35%,
+    rgb(249, 248, 246)
+  );
+}
+
+.sidebar_tab_menu_style {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  font-size: large;
+  width: 100%;
+}
+
+.sidebar_tab_style {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 50%;
+  width: 100%;
+  overflow: hidden;
+  flex: 1;
+}
+
+.sidebar__relation__annotation {
+  padding: 1rem 3rem 1rem 1rem !important;
+}
+
+.sidebar__annotations {
+  list-style: none;
+  color: black;
+  padding: 0;
+}
+
+.highlight__location {
+  margin-top: 0.5rem;
+  text-align: right;
+  font-size: 10px;
+}
+
+.highlight__image {
+  overflow: auto;
+  max-width: 300px;
+  border: 1px dashed;
+}
+
+.sidebar__annotation {
+  padding: 2rem;
+  cursor: pointer;
+  transition: background 140ms ease-in;
+  border-bottom: 1px solid rgb(119, 119, 119);
+  color: black;
+}
+
+.sidebar__annotation:hover {
+  background: rgba(58, 56, 52, 0.08);
+}
+
+.selected {
+  border: 1px solid rgb(86, 180, 239);
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.05) inset,
+    0px 0px 8px rgba(82, 168, 236, 0.6);
+}
+
+a {
+  color: #d35400;
+}
+
+blockquote {
+  padding: 0;
+  margin: 0;
+  quotes: "\201c""\201d";
+}
+blockquote:before {
+  content: open-quote;
+}
+blockquote:after {
+  content: close-quote;
+}
+
+@-moz-keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@-webkit-keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+/* IE */
+@-ms-keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+/* Opera and prob css3 final iteration */
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.blink-image {
+  -moz-animation: blink normal 2s infinite ease-in-out; /* Firefox */
+  -webkit-animation: blink normal 2s infinite ease-in-out; /* Webkit */
+  -ms-animation: blink normal 2s infinite ease-in-out; /* IE */
+  animation: blink normal 2s infinite ease-in-out; /* Opera and prob css3 final iteration */
+}
+
+.blink-background {
+  -moz-animation: blink normal 5s infinite ease-in-out; /* Firefox */
+  -webkit-animation: blink normal 5s infinite ease-in-out; /* Webkit */
+  -ms-animation: blink normal 5s infinite ease-in-out; /* IE */
+  animation: blink normal 5s infinite ease-in-out;
+}
+
+.blinking-text {
+  animation: blinkingText 1.2s infinite;
+}
+@keyframes blinkingText {
+  0% {
+    color: red;
+  }
+  49% {
+    color: red;
+  }
+  60% {
+    color: transparent;
+  }
+  99% {
+    color: transparent;
+  }
+  100% {
+    color: red;
+  }
+}

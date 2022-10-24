@@ -1,0 +1,17 @@
+.icon-picker :global(.dropdown .visible.menu) {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+}
+
+.icon-picker-item {
+  text-align: center !important;
+  border-top: 0px !important;
+}
+
+.icon-picker-item :global(span) {
+  display: block;
+}
+
+.icon-picker-item :global(i.icon) {
+  margin: 0px !important;
+}

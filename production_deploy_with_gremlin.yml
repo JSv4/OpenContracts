@@ -1,0 +1,135 @@
+version: '3'
+
+volumes:
+  production_postgres_data: {}
+  production_postgres_data_backups: {}
+  production_traefik: {}
+  production_gremlin_postgres_data: {}
+  production_gremlin_postgres_data_backups: {}
+
+services:
+  django: &django
+    build:
+      context: .
+      dockerfile: ./compose/production/django/Dockerfile
+    image: opencontractserver_production_django
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - ./.envs/.production/.django
+      - ./.envs/.production/.postgres
+    command: /start
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: opencontractserver_production_postgres
+    volumes:
+      - production_postgres_data:/var/lib/postgresql/data:Z
+      - production_postgres_data_backups:/backups:z
+    env_file:
+      - ./.envs/.production/.postgres
+
+  gremlinpostgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: opencontractserver_production_gremlin_postgres
+    container_name: gremlinpostgres
+    environment:
+      - POSTGRES_DB=gremlin_engine_db
+    expose:
+      - "5433"
+    volumes:
+      - production_gremlin_postgres_data:/var/lib/postgresql/data:Z
+      - production_gremlin_postgres_data_backups:/backups:z
+    command: -p 5433
+    env_file:
+      - ./.envs/.production/.gremlinengine.postgres
+
+  gremlinengine: &gremlinengine
+    image: opensourcelegal/gremlin-engine:latest
+    container_name: gremlinengine
+    environment:
+      - POSTGRES_DB=gremlin_engine_db
+      - POSTGRES_HOST=gremlinpostgres
+      - POSTGRES_PORT=5433
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - USE_AWS=false
+      - DJANGO_SECURE_SSL_REDIRECT=False
+      - HTTP_X_FORWARDED_PROTO=http
+    depends_on:
+      - gremlinredis
+      - gremlinpostgres
+    env_file:
+      - ./.envs/.production/.django
+      - ./.envs/.production/.gremlinengine.postgres
+      - ./.envs/.production/.gremlinengine
+    command: /start
+
+  gremlinworker:
+    <<: *gremlinengine
+    image: opensourcelegal/gremlin-worker:latest
+    container_name: gremlinworker
+    environment:
+      - POSTGRES_DB=gremlin_engine_db
+      - POSTGRES_HOST=gremlinpostgres
+      - POSTGRES_PORT=5433
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - USE_AWS=false
+      - DJANGO_SECURE_SSL_REDIRECT=False
+      - HTTP_X_FORWARDED_PROTO=http
+    depends_on:
+      - gremlinredis
+      - gremlinpostgres
+    ports: []
+    command: /start-celeryworker
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile
+    image: opencontractserver_production_frontend
+    container_name: frontend
+    depends_on:
+      - django
+    env_file:
+      - ./.envs/.production/.frontend
+
+  traefik:
+    build:
+      context: .
+      dockerfile: ./compose/production/traefik/Dockerfile
+    image: opencontractserver_production_traefik
+    depends_on:
+      - django
+    volumes:
+      - production_traefik:/etc/traefik/acme:z
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+      - "0.0.0.0:5555:5555"
+
+  gremlinredis:
+    image: redis:6
+    container_name: gremlinredis
+
+  redis:
+    image: redis:6
+
+  celeryworker:
+    <<: *django
+    image: opencontractserver_production_celeryworker
+    command: /start-celeryworker
+
+  celerybeat:
+    <<: *django
+    image: opencontractserver_production_celerybeat
+    command: /start-celerybeat
+
+  flower:
+    <<: *django
+    image: opencontractserver_production_flower
+    command: /start-flower

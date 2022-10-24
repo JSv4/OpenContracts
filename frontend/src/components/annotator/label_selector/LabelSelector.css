@@ -1,0 +1,83 @@
+.LabelSelector_CardWrapperDiv {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+}
+
+.LabelSelector_Ellipses {
+  position: absolute;
+  right: 0px;
+  cursor: pointer;
+}
+
+.LabelSelector_BodySegment {
+  width: 150px !important;
+  height: 3vh;
+  min-height: 50px;
+  transition: border-radius 0.5s;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  border-radius: 0px 0px 0.5vw 0.5vw !important;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+  padding: 8px;
+}
+
+.LabelSelector_HeaderSegment {
+  width: 150px !important;
+  margin-bottom: 0px;
+  padding: 0.5vw;
+  padding-bottom: 0.25vw;
+  text-align: center;
+  border-radius: 0.5vw 0.5vw 0px 0px;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+  padding: 8px 0px 6px 8px;
+}
+
+.LabelSelector_ContentFlexContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+@media (max-width: 400px) {
+  .LabelSelector_HeaderSegment {
+    font-size: 0.8rem !important;
+  }
+  .LabelSelector_HeaderSegment {
+  }
+  .LabelSelector_BodySegment {
+  }
+}
+
+@media (min-width: 401px) {
+  .LabelSelector_HeaderSegment {
+    font-size: 0.9rem !important;
+    word-wrap: break-word;
+  }
+  .LabelSelector_HeaderSegment {
+    width: 150px !important;
+  }
+  .LabelSelector_BodySegment {
+    width: 150px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .LabelSelector_HeaderSegment {
+    font-size: 1rem !important;
+  }
+  .LabelSelector_HeaderSegment {
+    width: 225px !important;
+  }
+  .LabelSelector_BodySegment {
+    width: 225px !important;
+  }
+}

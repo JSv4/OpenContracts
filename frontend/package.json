@@ -1,0 +1,85 @@
+{
+  "name": "gui3",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@apollo/client": "^3.5.6",
+    "@auth0/auth0-react": "^1.8.0",
+    "@rjsf/core": "^3.2.1",
+    "@rjsf/semantic-ui": "^3.2.1",
+    "@testing-library/jest-dom": "^5.16.1",
+    "@testing-library/react": "^12.1.2",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^27.0.3",
+    "@types/lodash": "^4.14.178",
+    "@types/node": "^16.11.15",
+    "@types/pdfjs-dist": "^2.10.378",
+    "@types/react": "^17.0.37",
+    "@types/react-color": "^3.0.6",
+    "@types/react-dom": "^17.0.11",
+    "@types/react-pdf": "^5.0.9",
+    "@types/react-textfit": "^1.1.0",
+    "@types/styled-components": "^5.1.19",
+    "axios": "^0.24.0",
+    "fuse.js": "^6.5.3",
+    "graphql": "^16.2.0",
+    "lodash": "^4.17.21",
+    "nanoid": "^3.1.32",
+    "pdfjs-dist": "^2.13.216",
+    "react": "^17.0.2",
+    "react-beautiful-dnd": "^13.1.0",
+    "react-color": "^2.19.3",
+    "react-cool-inview": "^3.0.1",
+    "react-dom": "^17.0.2",
+    "react-dropzone": "^11.4.2",
+    "react-infinite-scroll-component": "^6.1.0",
+    "react-intersection-observer": "^9.1.0",
+    "react-pdf": "^5.7.1",
+    "react-router-dom": "6",
+    "react-scripts": "5.0.0",
+    "react-textfit": "^1.1.1",
+    "react-toastify": "^8.1.0",
+    "semantic-ui-css": "^2.4.1",
+    "semantic-ui-react": "^2.0.4",
+    "styled-components": "^5.3.3",
+    "typescript": "^4.5.4",
+    "uuid": "^8.3.2",
+    "web-vitals": "^2.1.2",
+    "worker-loader": "^3.0.8"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "lint": "prettier . --check --ignore-unknown",
+    "fix-styles": "prettier . --check --write --ignore-unknown",
+    "prepare": "cd .. && husky install frontend/.husky"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
+  },
+  "devDependencies": {
+    "@types/uuid": "^8.3.4",
+    "husky": "^8.0.1",
+    "prettier": "^2.7.1"
+  }
+}

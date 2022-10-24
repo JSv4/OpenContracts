@@ -1,0 +1,34 @@
+name: Frontend CI
+
+defaults:
+ run:
+  working-directory: ./frontend
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.0.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3.4.1
+        with:
+          cache: "yarn"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Install Dependencies
+        run: yarn install
+
+      - name: Lint Prettier
+        run: yarn run lint

@@ -1,0 +1,176 @@
+.hovered_plus_button {
+  opacity: 1;
+  transition: opacity 0.5s;
+  border-radius: 2vw 0px 0px 2vw;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: #4c4f52
+    linear-gradient(rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 100%);
+  color: rgba(255, 255, 255, 0.8);
+  width: 3vw;
+  height: 3vw;
+  min-width: 50px;
+  min-height: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.not_hovered_plus_button {
+  opacity: 0;
+  transition: opacity 0.5s;
+  border-radius: 2vw 0px 0px 2vw;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: #4c4f52
+    linear-gradient(rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 100%);
+  color: rgba(255, 255, 255, 0.8);
+  width: 3vw;
+  height: 3vw;
+  min-width: 50px;
+  min-height: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.not_hovered_expand_button {
+  opacity: 0;
+  transition: opacity 0.5s;
+  border-radius: 0px 1vw 1vw 0px;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+  width: 1.5vw;
+  height: 3vw;
+  min-height: 50px;
+  min-width: 25px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-right: 0.5rem;
+}
+
+.hovered_expand_button {
+  opacity: 1;
+  transition: opacity 0.5s;
+  border-radius: 0px 1vw 1vw 0px;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+  width: 1.5vw;
+  height: 3vw;
+  min-height: 50px;
+  min-width: 25px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-right: 0.5rem;
+}
+
+.collapsed_labels {
+  transition: height 0.5s;
+  height: 3vw;
+  min-height: 50px;
+}
+
+.expanded_labels {
+  height: 20vh;
+  min-height: 200px;
+  transition: height 0.5s;
+}
+
+.DocTypeWidget_ButtonFlexContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.DocTypeWidget_BodySegment {
+  width: 150px !important;
+  min-height: 50px;
+  transition: border-radius 0.5s;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  border-radius: 0px 0px 0.5vw 0.5vw !important;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+  padding: 8px;
+}
+
+.DocTypeWidget_BodySegment_hovered {
+  width: 150px !important;
+  min-height: 50px;
+  transition: border-radius 0.5s;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  border-radius: 0px 0px 0px 0px !important;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+}
+
+.DocTypeWidget_HeaderSegment {
+  width: 150px !important;
+  margin-bottom: 0px;
+  padding: 0.5vw;
+  padding-bottom: 0.25vw;
+  text-align: center;
+  border-radius: 0.5vw 0.5vw 0px 0px;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+  background: rgb(208, 208, 208);
+}
+
+@media (max-width: 400px) {
+  .DocTypeWidget_HeaderSegment {
+    padding: 0.5rem !important;
+  }
+  .DocTypeWidget_BodySegment {
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+  .DocTypeWidget_BodySegment_hovered {
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+}
+
+@media (min-width: 401px) {
+  .DocTypeWidget_HeaderSegment {
+    width: 150px !important;
+  }
+  .DocTypeWidget_BodySegment {
+    width: 150px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  .DocTypeWidget_BodySegment_hovered {
+    width: 150px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  .collapsed_labels {
+    width: 150px !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .DocTypeWidget_HeaderSegment {
+    width: 200px !important;
+  }
+  .DocTypeWidget_BodySegment {
+    width: 200px !important;
+  }
+  .DocTypeWidget_BodySegment_hovered {
+    width: 200px !important;
+  }
+  .collapsed_labels {
+    width: 200px !important;
+  }
+}

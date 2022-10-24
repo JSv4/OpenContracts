@@ -1,0 +1,180 @@
+version: '3'
+
+volumes:
+  local_postgres_data: {}
+  local_postgres_data_backups: {}
+  local_gremlin_postgres_data: {}
+  local_gremlin_postgres_data_backups: {}
+
+services:
+  django: &django
+    build:
+      context: .
+      args:
+        - GITHUB_ACTIONS
+      dockerfile: ./compose/local/django/Dockerfile
+    image: opencontractserver_local_django
+    container_name: django
+    depends_on:
+      - postgres
+      - redis
+      - gremlinengine
+    volumes:
+      - .:/app:z
+    environment:
+      - CALLBACK_ROOT_URL_FOR_ANALYZER=http://django:8000
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.postgres
+    ports:
+      - "8000:8000"
+    command: /start
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: opencontractserver_production_postgres
+    container_name: postgres
+    volumes:
+      - local_postgres_data:/var/lib/postgresql/data:Z
+      - local_postgres_data_backups:/backups:z
+    env_file:
+      - ./.envs/.local/.postgres
+
+  gremlinpostgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: opencontractserver_production_gremlin_postgres
+    container_name: gremlinpostgres
+    environment:
+      - POSTGRES_DB=gremlin_engine_db
+    expose:
+      - "5433"
+    volumes:
+      - local_gremlin_postgres_data:/var/lib/postgresql/data:Z
+      - local_gremlin_postgres_data_backups:/backups:z
+    command: -p 5433
+    env_file:
+      - ./.envs/.local/.gremlinengine.postgres
+
+  redis:
+    image: redis:6
+    container_name: redis
+
+  gremlinengine: &gremlinengine
+    image: opensourcelegal/gremlin-engine:latest
+    container_name: gremlinengine
+    environment:
+      - POSTGRES_DB=gremlin_engine_db
+      - POSTGRES_HOST=gremlinpostgres
+      - POSTGRES_PORT=5433
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - USE_AWS=false
+      - DJANGO_SECURE_SSL_REDIRECT=False
+      - HTTP_X_FORWARDED_PROTO=http
+#      - DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=false
+#      - DJANGO_SECURE_HSTS_PRELOAD=false
+#      - SECURE_CONTENT_TYPE_NOSNIFF=false
+    depends_on:
+      - gremlinredis
+      - gremlinpostgres
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.gremlinengine.postgres
+      - ./.envs/.local/.gremlinengine
+    command: /start
+
+  gremlinredis:
+    image: redis:6
+    container_name: gremlinredis
+
+  gremlinworker:
+    <<: *gremlinengine
+    image: opensourcelegal/gremlin-worker:latest
+    container_name: gremlinworker
+    environment:
+      - POSTGRES_DB=gremlin_engine_db
+      - POSTGRES_HOST=gremlinpostgres
+      - POSTGRES_PORT=5433
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - USE_AWS=false
+      - DJANGO_SECURE_SSL_REDIRECT=False
+      - HTTP_X_FORWARDED_PROTO=http
+    depends_on:
+      - gremlinredis
+      - gremlinpostgres
+    ports: []
+    command: /start-celeryworker
+
+  gremlinscheduler:
+    <<: *gremlinengine
+    image: opensourcelegal/gremlin-scheduler:latest
+    container_name: gremlinscheduler
+    environment:
+      - POSTGRES_DB=gremlin_engine_db
+      - POSTGRES_HOST=gremlinpostgres
+      - POSTGRES_PORT=5433
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - USE_AWS=false
+      - DJANGO_SECURE_SSL_REDIRECT=False
+      - HTTP_X_FORWARDED_PROTO=http
+    depends_on:
+      - gremlinredis
+      - gremlinpostgres
+    ports: []
+    command: /start-celerybeat
+
+  gremlinmonitor:
+    <<: *gremlinengine
+    image: opensourcelegal/gremlin-monitor:latest
+    container_name: gremlinmonitor
+    ports:
+      - "5556:5555"
+    command: /start-flower
+
+  celeryworker:
+    <<: *django
+    image: opencontractserver_local_celeryworker
+    container_name: celeryworker
+    depends_on:
+      - redis
+      - postgres
+    ports: []
+    command: /start-celeryworker
+
+  celerybeat:
+    <<: *django
+    image: opencontractserver_local_celerybeat
+    container_name: celerybeat
+    depends_on:
+      - redis
+      - postgres
+    ports: []
+    command: /start-celerybeat
+
+  flower:
+    <<: *django
+    image: opencontractserver_local_flower
+    container_name: flower
+    ports:
+      - "5555:5555"
+    command: /start-flower
+
+  frontend:
+      build:
+        context: ./frontend
+        dockerfile: ./Dockerfile
+      image: opencontractserver_local_frontend
+      container_name: frontend
+      depends_on:
+        - django
+      env_file:
+        - ./frontend/.local.env
+      ports:
+        - "3000:3000"
+      profiles:
+        - "fullstack"

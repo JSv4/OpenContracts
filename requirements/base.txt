@@ -1,0 +1,68 @@
+pytz==2021.3  # https://github.com/stub42/pytz
+python-slugify==6.1.2  # https://github.com/un33k/python-slugify
+Pillow==9.2.0  # https://github.com/python-pillow/Pillow
+argon2-cffi==21.1.0  # https://github.com/hynek/argon2_cffi
+redis==3.5.3  # https://github.com/redis/redis-py
+hiredis==2.0.0  # https://github.com/redis/hiredis-py
+celery==5.2.1  # pyup: < 6.0  # https://github.com/celery/celery
+django-celery-beat==2.2.1  # https://github.com/celery/django-celery-beat
+flower==1.0.0  # https://github.com/mher/flower
+pyjwt==2.4.0  # https://github.com/jpadilla/pyjwt
+cryptography==38.0.1  # https://github.com/pyca/cryptography
+pydantic==1.9.1
+typing-extensions==4.3.0  # https://github.com/python/typing_extensions
+requests==2.28.1  # https://requests.readthedocs.io/en/latest/
+
+
+# Django
+# ------------------------------------------------------------------------------
+django==3.2.9  # pyup: < 4.0  # https://www.djangoproject.com/
+django-environ==0.8.1  # https://github.com/joke2k/django-environ
+django-model-utils==4.2.0  # https://github.com/jazzband/django-model-utils
+django-crispy-forms==1.14.0  # https://github.com/django-crispy-forms/django-crispy-forms
+crispy-bootstrap5==0.6  # https://github.com/django-crispy-forms/crispy-bootstrap5
+django-redis==5.2.0  # https://github.com/jazzband/django-redis
+django-filter==22.1  # https://github.com/carltongibson/django-filter
+django-storages[boto3]==1.12.3  # https://github.com/jschneier/django-storages
+django-extensions==3.2.0  # https://github.com/django-extensions/django-extensions
+whitenoise
+django-tree-queries
+
+# Django REST Framework
+# ------------------------------------------------------------------------------
+djangorestframework==3.14.0  # https://github.com/encode/django-rest-framework
+django-cors-headers==3.13.0  # https://github.com/adamchainz/django-cors-headers
+drf-extra-fields==3.2.1  # https://github.com/Hipo/drf-extra-fields
+
+# PAWLS-related (for creating features for PDF annotation frontend based on PAWLS)
+# ------------------------------------------------------------------------------
+# Pawls preprocessors are available as a command line utility in their repo for now
+# BUT we can install them from their github repo subdirectory using the syntax below:
+git+https://github.com/allenai/pawls.git#egg=pawls&subdirectory=cli
+scikit-learn==1.1.1
+pdfplumber
+pytesseract
+tabulate
+pycocotools
+click>=6.7
+tqdm
+pdfminer
+pycrypto
+pdf2image
+pillow
+poppler-utils
+
+# Doc Analysis (NLP dependencies, placeholder)
+# ------------------------------------------------------------------------------
+PyPDF2==1.26.0  # https://github.com/mstamy2/PyPDF2
+pandas
+# pdf2image==1.15.1 # https://github.com/Belval/pdf2image
+
+# Permissioning
+# ------------------------------------------------------------------------------
+django-guardian
+
+# GraphQL
+# ------------------------------------------------------------------------------
+graphene-django
+django-graphql-jwt

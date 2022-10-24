@@ -1,0 +1,89 @@
+.DocTypeLabelHeader {
+  font-size: 1rem;
+}
+
+.DocTypeLabelCard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  flex: 1;
+  max-width: 200px;
+  min-width: 100px;
+  min-height: 34px !important;
+  height: 3vh !important;
+  margin: 0.25vw;
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
+  user-select: none;
+  -ms-user-select: none;
+  -moz-user-select: none;
+}
+
+.DocTypeLabelContent {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@media (max-width: 400px) {
+  .DocTypeLabelHeader {
+    font-size: 0.65rem !important;
+    padding-left: 5px !important;
+  }
+  .DocTypeLabelContent {
+    padding: 0px !important;
+  }
+  .DocTypeLabelCard {
+    padding: 5px !important;
+    margin: 2px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 95% !important;
+  }
+  .DocTypeLabelIcon {
+    font-size: 1.1rem !important;
+  }
+}
+
+@media (min-width: 401px) {
+  .DocTypeLabelHeader {
+    font-size: 0.75rem !important;
+    padding-left: 5px !important;
+  }
+  .DocTypeLabelIcon {
+    font-size: 1.1rem !important;
+  }
+  .DocTypeLabelContent {
+    padding: 0px !important;
+  }
+  .DocTypeLabelCard {
+    min-height: 34px !important;
+    padding: 5px !important;
+    margin: 5px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 95% !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .DocTypeLabelHeader {
+    font-size: 0.9rem;
+    padding-left: 10px !important;
+  }
+  .DocTypeLabelIcon {
+    font-size: 1.4rem !important;
+  }
+  .DocTypeLabelContent {
+    padding: 3px !important;
+  }
+  .DocTypeLabelCard {
+    padding: 10px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 98% !important;
+  }
+}

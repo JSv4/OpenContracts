@@ -1,0 +1,9 @@
+# Documentation
+# ------------------------------------------------------------------------------
+mkdocs-material
+mkdocs-click
+mkdocs-glightbox
+mkdocs-minify-plugin
+mkdocs-git-revision-date-localized-plugin
+mike
+mkdocstrings[python]

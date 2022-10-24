@@ -1,0 +1,17 @@
+.ui.menu .dropdown.item .menu .uninvert_me {
+  background: black !important;
+}
+
+div.uninvert_me * {
+  background: black !important;
+}
+
+div.active.item.uninvert_me * {
+  background: rgba(0, 0, 0, 0.03) !important;
+  color: rgba(0, 0, 0, 0.95) !important;
+}
+
+div.uninvert_me:hover * {
+  background: rgba(0, 0, 0, 0.03) !important;
+  color: rgba(0, 0, 0, 0.95) !important;
+}

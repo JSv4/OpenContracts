@@ -1,0 +1,8 @@
+# PostgreSQL
+# ------------------------------------------------------------------------------
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=opencontractserver
+POSTGRES_GREMLIN_DB=
+POSTGRES_USER=
+POSTGRES_PASSWORD=

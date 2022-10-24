@@ -9,10 +9,24 @@ A "local" deployment is deployed on your personal computer and is not meant to b
 don't need to configure anything, just follow the quick start guide above to get up and running with a local deployment
 without needing any further configuration.
 
-#### Customize Settings
+#### Setup .env Files
+
+##### Backend
 
 After cloning this repo to a machine of your choice, create a folder for your environment
-files in the repo root. You'll need `./.envs/.local/.django` and `./.envs/.local/.postgres` Use the samples in `./documentation/sample_env_files/local` as guidance. NOTE, you'll need to replace the placeholder passwords and users where noted, but, otherwise, minimal config should be required.
+files in the repo root. You'll need `./.envs/.local/.django` and `./.envs/.local/.postgres`
+Use the samples in `./documentation/sample_env_files/local` as guidance.
+NOTE, you'll need to replace the placeholder passwords and users where noted, but, otherwise, minimal config should be
+required.
+
+##### Frontend
+
+In the `./frontend` folder, you also need to create a single .env file which holds your configurations for your login
+method as well as certain feature switches (e.g. turn off imports). We've included a sample using auth0 and
+another sample using django's auth backend. Local vs production deployments are essentially the same, but the root
+url of the backend will change from localhost to whereever you're hosting the application in production.
+
+#### Build the Stack
 
 Once your .env files are setup, build the stack using docker-compose:
 

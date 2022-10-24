@@ -28,7 +28,7 @@ jobs:
     steps:
 
       - name: Checkout Code Repository
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -49,7 +49,7 @@ jobs:
     steps:
 
       - name: Checkout Code Repository
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
 
       - name: Store Codecov Env Flags
         run: |

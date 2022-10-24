@@ -20,7 +20,7 @@ django==3.2.9  # pyup: < 4.0  # https://www.djangoproject.com/
 django-environ==0.8.1  # https://github.com/joke2k/django-environ
 django-model-utils==4.2.0  # https://github.com/jazzband/django-model-utils
 django-crispy-forms==1.14.0  # https://github.com/django-crispy-forms/django-crispy-forms
-crispy-bootstrap5==0.6  # https://github.com/django-crispy-forms/crispy-bootstrap5
+crispy-bootstrap5==0.7  # https://github.com/django-crispy-forms/crispy-bootstrap5
 django-redis==5.2.0  # https://github.com/jazzband/django-redis
 django-filter==22.1  # https://github.com/carltongibson/django-filter
 django-storages[boto3]==1.12.3  # https://github.com/jschneier/django-storages

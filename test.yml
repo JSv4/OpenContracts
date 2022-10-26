@@ -1,0 +1,52 @@
+version: '3'
+
+volumes:
+  local_postgres_data: {}
+  local_postgres_data_backups: {}
+
+services:
+  django: &django
+    build:
+      context: .
+      args:
+        - GITHUB_ACTIONS
+      dockerfile: ./compose/local/django/Dockerfile
+    image: opencontractserver_local_django
+    container_name: django
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - .:/app:z
+    env_file:
+      - ./.envs/.test/.django
+      - ./.envs/.test/.postgres
+    ports:
+      - "8000:8000"
+    command: /start
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: opencontractserver_production_postgres
+    container_name: postgres
+    volumes:
+      - local_postgres_data:/var/lib/postgresql/data:Z
+      - local_postgres_data_backups:/backups:z
+    env_file:
+      - ./.envs/.test/.postgres
+
+  redis:
+    image: redis:6
+    container_name: redis
+
+  celeryworker:
+    <<: *django
+    image: opencontractserver_local_celeryworker
+    container_name: celeryworker
+    depends_on:
+      - redis
+      - postgres
+    ports: []
+    command: /start-celeryworker

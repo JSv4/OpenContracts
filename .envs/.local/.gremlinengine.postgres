@@ -1,7 +1,0 @@
-# PostgreSQL
-# ------------------------------------------------------------------------------
-POSTGRES_HOST=gremlinpostgres
-POSTGRES_PORT=5433
-POSTGRES_DB=gremlin_engine_db
-POSTGRES_USER=layRHIreDzsPFYERJCLpSCkivldgXLIZ
-POSTGRES_PASSWORD=m9gtttr2FO2pMxmvIYS5j6ky9CkoS4k8mwFqSqja1QsWY9kMd0TdCEyvxRMdEcSG

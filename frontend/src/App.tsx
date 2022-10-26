@@ -17,6 +17,7 @@ import {
   showAnnotationLabels,
   showExportModal,
   userObj,
+  cookieAccepted
 } from "./graphql/cache";
 
 import { NavMenu } from "./components/layout/NavMenu";
@@ -39,10 +40,13 @@ import "react-toastify/dist/ReactToastify.css";
 import useWindowDimensions from "./components/hooks/WindowDimensionHook";
 import { MobileNavMenu } from "./components/layout/MobileNavMenu";
 import { LabelDisplayBehavior } from "./graphql/types";
+import { CookieConsentDialog } from "./components/cookies/CookieConsent";
 
 export const App = () => {
+
   const { REACT_APP_USE_AUTH0 } = process.env;
   const show_export_modal = useReactiveVar(showExportModal);
+  const cookie_accepted = useReactiveVar(cookieAccepted);
   const { getAccessTokenSilently, user } = useAuth0();
 
   // For now, our responsive layout is a bit hacky, but it's working well enough to
@@ -106,6 +110,7 @@ export const App = () => {
       ) : (
         <></>
       )}
+      <CookieConsentDialog accepted={cookie_accepted} setAccepted={() => cookieAccepted(true)}/>
       <ThemeProvider>
         <div
           style={{

@@ -17,7 +17,7 @@ import {
   showAnnotationLabels,
   showExportModal,
   userObj,
-  cookieAccepted
+  showCookieAcceptModal
 } from "./graphql/cache";
 
 import { NavMenu } from "./components/layout/NavMenu";
@@ -46,7 +46,7 @@ export const App = () => {
 
   const { REACT_APP_USE_AUTH0 } = process.env;
   const show_export_modal = useReactiveVar(showExportModal);
-  const cookie_accepted = useReactiveVar(cookieAccepted);
+  const show_cookie_modal = useReactiveVar(showCookieAcceptModal);
   const { getAccessTokenSilently, user } = useAuth0();
 
   // For now, our responsive layout is a bit hacky, but it's working well enough to
@@ -90,7 +90,7 @@ export const App = () => {
     }
   }, [getAccessTokenSilently, user?.sub]);
 
-  // console.log("React App Use Auth0", REACT_APP_USE_AUTH0);
+  console.log("Cookie Accepted: ", show_cookie_modal);
 
   return (
     <div
@@ -110,7 +110,11 @@ export const App = () => {
       ) : (
         <></>
       )}
-      <CookieConsentDialog accepted={cookie_accepted} setAccepted={() => cookieAccepted(true)}/>
+      {
+        show_cookie_modal ? 
+        <CookieConsentDialog/> :
+        <></>
+      }
       <ThemeProvider>
         <div
           style={{

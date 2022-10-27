@@ -164,7 +164,7 @@ export const cache = new InMemoryCache({
 /**
  * Global GUI State / Variables
  */
-export const cookieAccepted = makeVar<boolean>(true);
+export const showCookieAcceptModal = makeVar<boolean>(true);
 export const showAddDocsToCorpusModal = makeVar<boolean>(false);
 export const showRemoveDocsFromCorpusModal = makeVar<boolean>(false);
 export const showUploadNewDocumentsModal = makeVar<boolean>(false);

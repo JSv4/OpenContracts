@@ -3,34 +3,44 @@ import {
     Modal, 
     Header, 
     Icon, 
-    Button 
+    Button,
+    Image 
 } from "semantic-ui-react";
 
-export const CookieConsentDialog = ({accepted, setAccepted}:{accepted: boolean, setAccepted: () => any}) => {
+import inverted_cookie_icon from "../../assets/icons/noun-cookie-2123093-FFFFFF.png";
+import { showCookieAcceptModal } from "../../graphql/cache";
+
+
+export const CookieConsentDialog = () => {
 
     return (
         <Modal
             basic
-            open={accepted}
             size='small'
+            open
         >
             <Header icon>
-                <Icon name='archive' />
-                Archive Old Messages
+                <div style={{display:'flex', flexDirection: 'row', justifyContent:'center'}}>
+                    <div>
+                        <Image src={inverted_cookie_icon}/>
+                    </div>
+                </div>
+                <div style={{marginTop:'.5em'}}>
+                    This Site Uses Cookies
+                </div>
             </Header>
-            <Modal.Content>
+            <Modal.Content style={{marginTop:'0', paddingTop: '0'}}>
                 <p>
-                This website uses cookies to enhance the user experience and help us refine OpenContracts.
-                We do not monetize (sell) your information. Please accept the cookie to continue.
+                    This website uses cookies to enhance the user experience and help us refine OpenContracts.
+                    We do not sell or share user information. Please accept the cookie to continue.
                 </p>
-                <Header as='h2' icon textAlign='center'>
-                    <Icon name='info circle' circular />
-                    <Header.Content>What We Collect</Header.Content>
+                <Header inverted textAlign='center'>
+                    <Header.Content as='h4'><u>What We Collect</u></Header.Content>
                 </Header>
                 <List>
                     <List.Item>
                         <List.Icon name='users' />
-                        <List.Content>Login Information (email, name, ip)</List.Content>
+                        <List.Content>User Information (email, name, ip)</List.Content>
                     </List.Item>
                     <List.Item>
                         <List.Icon name='settings' />
@@ -43,7 +53,7 @@ export const CookieConsentDialog = ({accepted, setAccepted}:{accepted: boolean, 
                 </List>
             </Modal.Content>
             <Modal.Actions>
-                <Button color='green' inverted onClick={() => setAccepted()}>
+                <Button color='green' inverted onClick={() => showCookieAcceptModal(false)}>
                     <Icon name='checkmark' /> Accept
                 </Button>
             </Modal.Actions>

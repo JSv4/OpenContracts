@@ -17,7 +17,7 @@ import {
   showAnnotationLabels,
   showExportModal,
   userObj,
-  showCookieAcceptModal
+  showCookieAcceptModal,
 } from "./graphql/cache";
 
 import { NavMenu } from "./components/layout/NavMenu";
@@ -43,7 +43,6 @@ import { LabelDisplayBehavior } from "./graphql/types";
 import { CookieConsentDialog } from "./components/cookies/CookieConsent";
 
 export const App = () => {
-
   const { REACT_APP_USE_AUTH0 } = process.env;
   const show_export_modal = useReactiveVar(showExportModal);
   const show_cookie_modal = useReactiveVar(showCookieAcceptModal);
@@ -110,11 +109,7 @@ export const App = () => {
       ) : (
         <></>
       )}
-      {
-        show_cookie_modal ? 
-        <CookieConsentDialog/> :
-        <></>
-      }
+      {show_cookie_modal ? <CookieConsentDialog /> : <></>}
       <ThemeProvider>
         <div
           style={{

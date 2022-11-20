@@ -14,7 +14,7 @@ DJANGO_ALLOWED_HOSTS=django,127.0.0.1,localhost,0.0.0.0
 
 # Application Configuration
 # ------------------------------------------------------------------------------
-USE_ANALYZER=True
+USE_ANALYZER=true
 CALLBACK_ROOT_URL_FOR_ANALYZER=http://localhost:8000
 
 # AWS
@@ -34,10 +34,4 @@ CELERY_FLOWER_PASSWORD=U3Md7XEGNZ67HlNwHon8fbwiT0GemPeCrwDubZ6BRvX3dwxMEsLhuLoiU
 
 # AUTH0
 # ------------------------------------------------------------------------------
-USE_AUTH0=True
-AUTH0_CLIENT_ID=318GitavTaWR7d17h4DKuoCme9VgjYDG
-AUTH0_API_AUDIENCE=https://opensource.legal/contracts
-AUTH0_DOMAIN=dev-7ranai11.auth0.com
-AUTH0_M2M_MANAGEMENT_API_SECRET=o00J91OuQv7ir0zBlkPJAn3izVfVOETjqizs2bd7Q8BbbkOxpyQUkg1wJrjknPo0
-AUTH0_M2M_MANAGEMENT_API_ID=gYmXqB6peEDVXtbsHyxuALF0Lq9Yu4vp
-AUTH0_M2M_MANAGEMENT_GRANT_TYPE=client_credentials
+USE_AUTH0=false

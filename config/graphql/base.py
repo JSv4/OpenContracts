@@ -135,7 +135,7 @@ class DRFMutation(graphene.Mutation):
         try:
             logger.info("Test if context has user")
             if info.context.user:
-                logger.info("User id: ", info.context.user.id)
+                logger.info(f"User id: {info.context.user.id}")
                 # We're using the DRF Serializers to build data and edit / save objs
                 # We want to pass an ID into the creator field, not the user obj
                 kwargs["creator"] = info.context.user.id
@@ -205,13 +205,13 @@ class DRFMutation(graphene.Mutation):
                 obj_serializer = serializer(data=kwargs)
                 obj_serializer.is_valid(raise_exception=True)
                 obj = obj_serializer.save()
-                logger.info("Created obj", info.context.user)
+                # logger.info(f"Created obj for: {info.context.user}")
 
                 # If we created new obj... give user proper permissions
                 set_permissions_for_obj_to_user(
                     info.context.user, obj, [PermissionTypes.ALL]
                 )
-                logger.info("Permissioned obj")
+                # logger.info("Permissioned obj")
 
                 ok = True
                 message = "Success"

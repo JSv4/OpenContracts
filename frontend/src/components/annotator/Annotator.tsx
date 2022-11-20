@@ -457,28 +457,38 @@ export const Annotator = ({
       // );
     }
 
-    if (annotator_data) {
-      // Build proper span label objs from GraphQL results
-      let span_label_lookup: LooseObject = {};
-      let human_span_label_lookup: LooseObject = {};
+    // Build proper span label objs from GraphQL results
+    let span_label_lookup: LooseObject = {};
+    let human_span_label_lookup: LooseObject = {};
+    let relationship_label_lookup: LooseObject = {};
+    let document_label_lookup: LooseObject = {};
 
-      if (annotator_data?.corpus?.labelSet?.allAnnotationLabels) {
-        span_label_lookup = {
-          ...span_label_lookup,
-          ...annotator_data.corpus.labelSet.allAnnotationLabels
-            .filter((label) => label.labelType === LabelType.TokenLabel)
-            .reduce(function (obj: Record<string, any>, label) {
-              obj[label.id] = {
-                id: label.id,
-                color: label.color,
-                text: label.text,
-                icon: label.icon as SemanticICONS,
-                description: label.description,
-                labelType: label.labelType,
-              };
-              return obj;
-            }, {}),
-        };
+    let annotation_label_list: AnnotationLabelType[] = [];
+    let doc_type_annotations: DocTypeAnnotation[] = [];
+    let relationship_annotations: RelationGroup[] = [];
+    let annotation_objs: ServerAnnotation[] = [];
+
+    if (annotator_data) {
+
+      try {
+        if (annotator_data?.corpus?.labelSet?.allAnnotationLabels) {
+          span_label_lookup = {
+            ...span_label_lookup,
+            ...annotator_data.corpus.labelSet.allAnnotationLabels
+              .filter((label) => label.labelType === LabelType.TokenLabel)
+              .reduce(function (obj: Record<string, any>, label) {
+                obj[label.id] = {
+                  id: label.id,
+                  color: label.color,
+                  text: label.text,
+                  icon: label.icon as SemanticICONS,
+                  description: label.description,
+                  labelType: label.labelType,
+                };
+                return obj;
+              }, {}),
+          };
+        } 
 
         // console.log(
         //   "Span choices",
@@ -502,185 +512,179 @@ export const Annotator = ({
             }, {}),
         };
         // console.log("human_span_label_choices", human_span_label_lookup);
-      }
 
-      // If we're looking at an analysis, make sure we get required labels
-      if (selected_analysis_ids && selected_analysis_ids.length > 0) {
-        let annotation_label_list: AnnotationLabelType[] = [];
-        if (annotator_data?.selectedAnalyzersWithLabels?.edges) {
-          for (let analyzer of annotator_data.selectedAnalyzersWithLabels
-            .edges) {
-            if (Array.isArray(analyzer.node.fullLabelList)) {
-              annotation_label_list = annotation_label_list.concat(
-                analyzer.node.fullLabelList
-              );
+        // If we're looking at an analysis, make sure we get required labels
+        if (selected_analysis_ids && selected_analysis_ids.length > 0) {
+          if (annotator_data?.selectedAnalyzersWithLabels?.edges) {
+            for (let analyzer of annotator_data.selectedAnalyzersWithLabels
+              .edges) {
+              if (Array.isArray(analyzer.node.fullLabelList)) {
+                annotation_label_list = annotation_label_list.concat(
+                  analyzer.node.fullLabelList
+                );
+              }
             }
+            annotation_label_list = _.uniqBy(annotation_label_list, "id");
           }
-          annotation_label_list = _.uniqBy(annotation_label_list, "id");
+
+          span_label_lookup = {
+            ...span_label_lookup,
+            ...annotation_label_list.reduce(function (
+              obj: Record<string, any>,
+              annot_label
+            ) {
+              obj[annot_label.id] = {
+                id: annot_label.id,
+                color: annot_label.color,
+                text: annot_label.text,
+                icon: annot_label.icon as SemanticICONS,
+                description: annot_label.description,
+                labelType: annot_label.labelType,
+              };
+              return obj;
+            },
+            {}),
+          };
         }
 
-        span_label_lookup = {
-          ...span_label_lookup,
-          ...annotation_label_list.reduce(function (
-            obj: Record<string, any>,
-            annot_label
-          ) {
-            obj[annot_label.id] = {
-              id: annot_label.id,
-              color: annot_label.color,
-              text: annot_label.text,
-              icon: annot_label.icon as SemanticICONS,
-              description: annot_label.description,
-              labelType: annot_label.labelType,
-            };
-            return obj;
-          },
-          {}),
-        };
+        // Build proper relationship label objs from GraphQL results
+        if (annotator_data?.corpus?.labelSet?.allAnnotationLabels) {
+          relationship_label_lookup = {
+            ...relationship_label_lookup,
+            ...annotator_data.corpus.labelSet.allAnnotationLabels
+              .filter((label) => label.labelType === LabelType.RelationshipLabel)
+              .reduce(function (obj: Record<string, any>, label) {
+                obj[label.id] = {
+                  id: label.id,
+                  color: label.color,
+                  text: label.text,
+                  icon: label.icon as SemanticICONS,
+                  description: label.description,
+                  labelType: label.labelType,
+                };
+                return obj;
+              }, {}),
+          };
+        }
+
+        if (annotator_data?.corpus?.labelSet.allAnnotationLabels) {
+          document_label_lookup = {
+            ...document_label_lookup,
+            ...annotator_data.corpus.labelSet.allAnnotationLabels
+              .filter((label) => label.labelType === LabelType.DocTypeLabel)
+              .reduce(function (obj: Record<string, any>, label) {
+                obj[label.id] = {
+                  id: label.id,
+                  color: label.color,
+                  text: label.text,
+                  icon: label.icon as SemanticICONS,
+                  description: label.description,
+                  labelType: label.labelType,
+                };
+                return obj;
+              }, {}),
+          };
+        }
+
+        // Turn existing annotation data into PDFAnnotations obj and inject into state:
+        if (
+          annotator_data?.existingTextAnnotations &&
+          selected_analysis_ids?.length === 0
+        ) {
+          // console.log(
+          //   "Prepping human annotations",
+          //   annotator_data.paginatedSpanAnnotations.pageAnnotations
+          // );
+          annotation_objs = annotator_data.existingTextAnnotations
+            .filter((annotation) => annotation.analysis == null)
+            .map(
+              (e) =>
+                new ServerAnnotation(
+                  e.page,
+                  e.annotationLabel,
+                  e.rawText ? e.rawText : "",
+                  e.json ? e.json : {},
+                  e.myPermissions ? getPermissions(e.myPermissions) : [],
+                  e.id
+                )
+            );
+          // console.log("Got manual annotation objs: ", annotation_objs);
+        } else if (
+          selected_analysis_ids &&
+          selected_analysis_ids.length > 0 &&
+          annotator_data?.existingTextAnnotations
+        ) {
+          annotation_objs = annotator_data.existingTextAnnotations
+            .filter((annotation) => annotation.analysis !== null)
+            .map(
+              (annot) =>
+                new ServerAnnotation(
+                  annot.page,
+                  annot.annotationLabel,
+                  annot.rawText ? annot.rawText : "",
+                  annot.json ? annot.json : {},
+                  annot.myPermissions ? getPermissions(annot.myPermissions) : [],
+                  annot.id
+                )
+            );
+        }
+
+        if (annotator_data?.existingDocLabelAnnotations) {
+          // console.log("There are existingDocLabelAnnotations", annotator_data.existingDocLabelAnnotations);
+
+          doc_type_annotations = annotator_data.existingDocLabelAnnotations.map(
+            (annot) => {
+              let label_obj = annot.annotationLabel;
+              try {
+                label_obj = document_label_lookup[label_obj.id];
+              } catch {}
+              return new DocTypeAnnotation(
+                label_obj,
+                annot.myPermissions ? getPermissions(annot.myPermissions) : [],
+                annot.id
+              );
+            }
+          );
+        }
+
+        if (annotator_data?.existingRelationships) {
+          annotator_data.existingRelationships.map((relationship) => {
+            let label_obj = relationship.relationshipLabel;
+            if (label_obj) {
+              try {
+                label_obj = relationship_label_lookup[label_obj.id];
+              } catch {}
+            }
+            let source_ids = relationship.sourceAnnotations.edges
+              .filter(
+                (relationship) =>
+                  relationship && relationship.node && relationship.node.id
+              )
+              .map((relationship) => relationship?.node?.id);
+            let target_ids = relationship.targetAnnotations.edges
+              .filter(
+                (relationship) =>
+                  relationship && relationship.node && relationship.node.id
+              )
+              .map((relationship) => relationship?.node?.id);
+            return new RelationGroup(
+              source_ids as string[],
+              target_ids as string[],
+              label_obj,
+              relationship.id
+            );
+          });
+        }
+        
+      } 
+      catch(e) {
+        console.log("WARNING - could not transform document data from server due to error: ", e);
       }
 
       setHumanSpanLabels(Object.values(human_span_label_lookup));
       setSpanLabels(Object.values(span_label_lookup));
-
-      // Build proper relationship label objs from GraphQL results
-      let relationship_label_lookup: LooseObject = {};
-      if (annotator_data?.corpus?.labelSet?.allAnnotationLabels) {
-        relationship_label_lookup = {
-          ...relationship_label_lookup,
-          ...annotator_data.corpus.labelSet.allAnnotationLabels
-            .filter((label) => label.labelType === LabelType.RelationshipLabel)
-            .reduce(function (obj: Record<string, any>, label) {
-              obj[label.id] = {
-                id: label.id,
-                color: label.color,
-                text: label.text,
-                icon: label.icon as SemanticICONS,
-                description: label.description,
-                labelType: label.labelType,
-              };
-              return obj;
-            }, {}),
-        };
-      }
       setRelationLabels(Object.values(relationship_label_lookup));
-
-      // Build proper doc type label objs from GraphQL results
-      let document_label_lookup: LooseObject = {};
-
-      if (annotator_data?.corpus?.labelSet.allAnnotationLabels) {
-        document_label_lookup = {
-          ...document_label_lookup,
-          ...annotator_data.corpus.labelSet.allAnnotationLabels
-            .filter((label) => label.labelType === LabelType.DocTypeLabel)
-            .reduce(function (obj: Record<string, any>, label) {
-              obj[label.id] = {
-                id: label.id,
-                color: label.color,
-                text: label.text,
-                icon: label.icon as SemanticICONS,
-                description: label.description,
-                labelType: label.labelType,
-              };
-              return obj;
-            }, {}),
-        };
-      }
       setDocTypeLabels(Object.values(document_label_lookup));
-
-      // Turn existing annotation data into PDFAnnotations obj and inject into state:
-      let annotation_objs: ServerAnnotation[] = [];
-      if (
-        annotator_data?.existingTextAnnotations &&
-        selected_analysis_ids?.length === 0
-      ) {
-        // console.log(
-        //   "Prepping human annotations",
-        //   annotator_data.paginatedSpanAnnotations.pageAnnotations
-        // );
-        annotation_objs = annotator_data.existingTextAnnotations
-          .filter((annotation) => annotation.analysis == null)
-          .map(
-            (e) =>
-              new ServerAnnotation(
-                e.page,
-                e.annotationLabel,
-                e.rawText ? e.rawText : "",
-                e.json ? e.json : {},
-                e.myPermissions ? getPermissions(e.myPermissions) : [],
-                e.id
-              )
-          );
-        // console.log("Got manual annotation objs: ", annotation_objs);
-      } else if (
-        selected_analysis_ids &&
-        selected_analysis_ids.length > 0 &&
-        annotator_data?.existingTextAnnotations
-      ) {
-        annotation_objs = annotator_data.existingTextAnnotations
-          .filter((annotation) => annotation.analysis !== null)
-          .map(
-            (annot) =>
-              new ServerAnnotation(
-                annot.page,
-                annot.annotationLabel,
-                annot.rawText ? annot.rawText : "",
-                annot.json ? annot.json : {},
-                annot.myPermissions ? getPermissions(annot.myPermissions) : [],
-                annot.id
-              )
-          );
-      }
-
-      let doc_type_annotations: DocTypeAnnotation[] = [];
-
-      if (annotator_data?.existingDocLabelAnnotations) {
-        // console.log("There are existingDocLabelAnnotations", annotator_data.existingDocLabelAnnotations);
-
-        doc_type_annotations = annotator_data.existingDocLabelAnnotations.map(
-          (annot) => {
-            let label_obj = annot.annotationLabel;
-            try {
-              label_obj = document_label_lookup[label_obj.id];
-            } catch {}
-            return new DocTypeAnnotation(
-              label_obj,
-              annot.myPermissions ? getPermissions(annot.myPermissions) : [],
-              annot.id
-            );
-          }
-        );
-      }
-
-      let relationship_annotations: RelationGroup[] = [];
-
-      if (annotator_data?.existingRelationships) {
-        annotator_data.existingRelationships.map((relationship) => {
-          let label_obj = relationship.relationshipLabel;
-          if (label_obj) {
-            try {
-              label_obj = relationship_label_lookup[label_obj.id];
-            } catch {}
-          }
-          let source_ids = relationship.sourceAnnotations.edges
-            .filter(
-              (relationship) =>
-                relationship && relationship.node && relationship.node.id
-            )
-            .map((relationship) => relationship?.node?.id);
-          let target_ids = relationship.targetAnnotations.edges
-            .filter(
-              (relationship) =>
-                relationship && relationship.node && relationship.node.id
-            )
-            .map((relationship) => relationship?.node?.id);
-          return new RelationGroup(
-            source_ids as string[],
-            target_ids as string[],
-            label_obj,
-            relationship.id
-          );
-        });
-      }
 
       // add our loaded annotations from the backend into local state
       // console.log("Final anotation list", annotation_objs);
@@ -694,6 +698,7 @@ export const Annotator = ({
 
       // Set up contexts for annotations
       setViewState(ViewState.LOADED);
+
     }
   }, [annotator_data]);
 

@@ -79,6 +79,7 @@ public_group_permissions = {
         'delete_analyzer',
         'publish_analyzer',
         'permission_analyzer'
+
     ]
 }
 

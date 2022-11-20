@@ -39,9 +39,9 @@ def set_permissions_for_obj_to_user(
     permissions (assuming they're part of the read public objects group).
     """
 
-    logger.info(
-        f"grant_permissions_for_obj_to_user - user ({user_val}) / obj ({instance})"
-    )
+    # logger.info(
+    #     f"grant_permissions_for_obj_to_user - user ({user_val}) / obj ({instance})"
+    # )
 
     # Provides some flexibility to use ids where passing object is not practical
     if isinstance(user_val, str) or isinstance(user_val, int):
@@ -50,10 +50,10 @@ def set_permissions_for_obj_to_user(
         user = user_val
 
     model_name = instance._meta.model_name
-    logger.info(f"grant_permissions_for_obj_to_user - Model name: {model_name}")
+    # logger.info(f"grant_permissions_for_obj_to_user - Model name: {model_name}")
 
     app_name = instance._meta.app_label
-    logger.info(f"grant_permissions_for_obj_to_user - App name: {app_name}")
+    # logger.info(f"grant_permissions_for_obj_to_user - App name: {app_name}")
 
     # First, get rid of old permissions ################################################################################
     with transaction.atomic():
@@ -64,9 +64,9 @@ def set_permissions_for_obj_to_user(
 
     # Now, add specified permissions ###################################################################################
     requested_permission_set = set(permissions)
-    logger.info(
-        f"grant_permissions_for_obj_to_user - Requested permissions: {requested_permission_set}"
-    )
+    # logger.info(
+    #     f"grant_permissions_for_obj_to_user - Requested permissions: {requested_permission_set}"
+    # )
 
     with transaction.atomic():
         if (
@@ -91,7 +91,7 @@ def set_permissions_for_obj_to_user(
             )
             > 0
         ):
-            logger.info("requested_permission_set - assign read permission")
+            # logger.info("requested_permission_set - assign read permission")
             assign_perm(f"{app_name}.read_{model_name}", user, instance)
 
         if (
@@ -160,9 +160,9 @@ def get_permission_id_to_name_map_for_model(
 
     model_name = instance._meta.model_name
     app_label = instance._meta.app_label
-    logger.info(
-        f"get_permission_id_to_name_map_for_model - App name: {app_label} / model name: {model_name}"
-    )
+    # logger.info(
+    #     f"get_permission_id_to_name_map_for_model - App name: {app_label} / model name: {model_name}"
+    # )
 
     model_type = ContentType.objects.get(app_label=app_label, model=model_name)
     this_model_permission_objs = list(
@@ -171,9 +171,9 @@ def get_permission_id_to_name_map_for_model(
         )
     )
     this_model_permission_id_map = reduce(combine, this_model_permission_objs, {})
-    logger.info(
-        f"get_permission_id_to_name_map_for_model - resulting map: {this_model_permission_id_map}"
-    )
+    # logger.info(
+    #     f"get_permission_id_to_name_map_for_model - resulting map: {this_model_permission_id_map}"
+    # )
     return this_model_permission_id_map
 
 
@@ -184,15 +184,15 @@ def get_users_permissions_for_obj(
 ) -> set[PermissionTypes]:
 
     model_name = instance._meta.model_name
-    logger.info(
-        f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name}"
-    )
+    # logger.info(
+    #     f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name}"
+    # )
 
-    app_label = instance._meta.app_label
-    logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
+    # app_label = instance._meta.app_label
+    # logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
 
     this_user_perms = getattr(instance, f"{model_name}userobjectpermission_set")
-    logger.info(f"get_users_permissions_for_obj - this_user_perms: {this_user_perms}")
+    # logger.info(f"get_users_permissions_for_obj - this_user_perms: {this_user_perms}")
     permission_id_to_name_map = get_permission_id_to_name_map_for_model(
         instance=instance
     )
@@ -239,12 +239,12 @@ def user_has_permission_for_obj(
         user = user_val
 
     model_name = instance._meta.model_name
-    logger.info(
-        f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name}"
-    )
+    # logger.info(
+    #     f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name}"
+    # )
 
-    app_label = instance._meta.app_label
-    logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
+    # app_label = instance._meta.app_label
+    # logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
 
     model_permissions_for_user = get_users_permissions_for_obj(
         user=user,
@@ -252,9 +252,9 @@ def user_has_permission_for_obj(
         include_group_permissions=include_group_permissions,
     )
 
-    logger.info(
-        f"user_has_permission_for_obj - user {user} has model_permissions: {model_permissions_for_user}"
-    )
+    # logger.info(
+    #     f"user_has_permission_for_obj - user {user} has model_permissions: {model_permissions_for_user}"
+    # )
 
     if permission == PermissionTypes.READ:
         return len(model_permissions_for_user.intersection({f"read_{model_name}"})) > 0

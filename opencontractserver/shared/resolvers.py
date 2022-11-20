@@ -37,12 +37,12 @@ def resolve_oc_model_queryset(
         permission_model_type = apps.get_model(
             app_label, f"{model_name}userobjectpermission"
         )
-        logger.info(f"Got permission model type: {permission_model_type}")
+        # logger.info(f"Got permission model type: {permission_model_type}")
 
         must_have_permissions = permission_model_type.objects.filter(
             permission__codename=f"read_{model_name}", user_id=user.id
         )
-        logger.info(f"Must have permissions: {must_have_permissions}")
+        # logger.info(f"Must have permissions: {must_have_permissions}")
 
         queryset = django_obj_model_type.objects.filter(
             Q(creator=user)
@@ -72,7 +72,7 @@ def resolve_single_oc_model_from_id(
     django_pk = from_global_id(graphql_id)[1]
 
     if user.is_superuser:
-        print("User is a superuser... return value")
+        # print("User is a superuser... return value")
         obj = model_type.objects.get(id=django_pk)
     elif user.is_anonymous:
         obj = model_type.objects.get(id=django_pk, is_public=True)
@@ -81,7 +81,7 @@ def resolve_single_oc_model_from_id(
         permission_model_type = apps.get_model(
             app_label, f"{model_name}userobjectpermission"
         )
-        logger.info(f"Got permission model type: {permission_model_type}")
+        # logger.info(f"Got permission model type: {permission_model_type}")
 
         must_have_permissions = permission_model_type.objects.filter(
             permission__codename=f"read_{model_name}", user_id=user.id
@@ -96,11 +96,11 @@ def resolve_single_oc_model_from_id(
             & Q(id=django_pk)
         ).distinct()
 
-        logger.info(f"Obj count is {len(obj_queryset)}")
+        # logger.info(f"Obj count is {len(obj_queryset)}")
         if len(obj_queryset) == 1:
             obj = obj_queryset[0]
         else:
             obj = None
-        logger.info(f"After querying obj level permissions, returned obj is: {obj}")
+        # logger.info(f"After querying obj level permissions, returned obj is: {obj}")
 
     return obj

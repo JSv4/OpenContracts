@@ -141,6 +141,7 @@ AUTHENTICATION_BACKENDS = [
 
 # AUTH0
 USE_AUTH0 = env.bool("USE_AUTH0", False)
+USE_API_KEY_AUTH = env.bool("ALLOW_API_KEYS", True)
 
 if USE_AUTH0:
 
@@ -156,9 +157,15 @@ if USE_AUTH0:
     ]
 
 else:
-
     AUTHENTICATION_BACKENDS += [
         "graphql_jwt.backends.JSONWebTokenBackend",
+    ]
+
+if USE_API_KEY_AUTH:
+    API_TOKEN_HEADER_NAME = "AUTHORIZATION"
+    API_TOKEN_PREFIX = "KEY"
+    AUTHENTICATION_BACKENDS += [
+        "config.graphql_api_key_auth.backends.Auth0ApiKeyBackend"
     ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model
@@ -427,6 +434,7 @@ GRAPHENE = {
     "MIDDLEWARE": [
         "config.graphql.permission_annotator.middleware.PermissionAnnotatingMiddleware",
         "graphql_jwt.middleware.JSONWebTokenMiddleware",
+        "config.graphql_api_key_auth.middleware.ApiKeyTokenMiddleware",
     ],
 }
 

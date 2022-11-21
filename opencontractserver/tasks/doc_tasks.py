@@ -86,7 +86,7 @@ def parse_base64_pdf(*args, doc_id: str = "") -> tuple[str, str, list]:
 
     """
 
-    logging.info(f"parse_base64_pdf - received: {args}")
+    # logging.info(f"parse_base64_pdf - received: {args}")
     logging.info(f"parse_base64_pdf - doc_id: {doc_id}")
 
     try:

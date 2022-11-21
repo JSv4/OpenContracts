@@ -6,12 +6,15 @@ from graphene import relay
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType as ModelType
 from graphene_django.filter import DjangoFilterConnectionField
+from graphql_relay import from_global_id
 
 from config.graphql.base import CountableConnection
 from config.graphql.filters import AnnotationFilter, LabelFilter
 from config.graphql.permission_annotator.mixins import AnnotatePermissionsForReadMixin
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
+    METADATA_LABEL,
+    TOKEN_LABEL,
     Annotation,
     AnnotationLabel,
     LabelSet,
@@ -76,6 +79,11 @@ class AnnotationType(AnnotatePermissionsForReadMixin, ModelType):
         # In order for filter options to show up in nested resolvers, you need to specify them
         # in the Graphene type
         filterset_class = AnnotationFilter
+
+
+class AnnotationOccurrenceType(graphene.ObjectType):
+    annotation_label_text: graphene.String()
+    has_instance: graphene.Boolean()
 
 
 class PdfPageInfoType(graphene.ObjectType):
@@ -148,6 +156,19 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
             else info.context.build_absolute_uri(self.pawls_parse_file.url)
         )
 
+    annotation_occurrences = graphene.List(
+        graphene.String, corpus_id=graphene.String(required=True)
+    )
+
+    def resolve_annotation_occurrences(self, info, corpus_id):
+
+        corpus_pk = from_global_id(corpus_id)[1]
+
+        results = []
+        for annotation in self.doc_annotations.all().filter(corpus_id=corpus_pk):
+            results.append({annotation.annotation_label.text})
+        return list(set(results))
+
     class Meta:
         model = Document
         interfaces = [relay.Node]
@@ -155,6 +176,26 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
+
+    annotation_labels_value_map = graphene.Scalar()
+
+    def resolve_annotation_labels_value_map(self):
+        """
+        Skips doc labels and relationships. Relationships are poorly supported for now.
+        Doc labels will be queried separately and added to row in a single col rather than have
+        their own col with a boolean flag
+        """
+        label_map: dict[str, set] = {}
+        for annotation in self.annotations.all().filter(
+            annotation_label__type__in=[TOKEN_LABEL, METADATA_LABEL]
+        ):
+            if annotation.annotation_label.text in label_map:
+                label_map[annotation.annotation_label.text].add(annotation.raw_text)
+            else:
+                label_map[annotation.annotation_label.text] = {annotation.raw_text}
+
+        return_val = {key: list(value) for key, value in label_map.items()}
+        return return_val
 
     applied_analyzer_ids = graphene.List(graphene.String)
 

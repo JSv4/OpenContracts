@@ -457,18 +457,18 @@ export const Annotator = ({
       // );
     }
 
-    // Build proper span label objs from GraphQL results
-    let span_label_lookup: LooseObject = {};
-    let human_span_label_lookup: LooseObject = {};
-    let relationship_label_lookup: LooseObject = {};
-    let document_label_lookup: LooseObject = {};
-
-    let annotation_label_list: AnnotationLabelType[] = [];
-    let doc_type_annotations: DocTypeAnnotation[] = [];
-    let relationship_annotations: RelationGroup[] = [];
-    let annotation_objs: ServerAnnotation[] = [];
-
     if (annotator_data) {
+
+      // Build proper span label objs from GraphQL results
+      let span_label_lookup: LooseObject = {};
+      let human_span_label_lookup: LooseObject = {};
+      let relationship_label_lookup: LooseObject = {};
+      let document_label_lookup: LooseObject = {};
+
+      let annotation_label_list: AnnotationLabelType[] = [];
+      let doc_type_annotations: DocTypeAnnotation[] = [];
+      let relationship_annotations: RelationGroup[] = [];
+      let annotation_objs: ServerAnnotation[] = [];
 
       try {
         if (annotator_data?.corpus?.labelSet?.allAnnotationLabels) {
@@ -675,7 +675,7 @@ export const Annotator = ({
             );
           });
         }
-        
+
       } 
       catch(e) {
         console.log("WARNING - could not transform document data from server due to error: ", e);

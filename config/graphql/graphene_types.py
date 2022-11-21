@@ -165,7 +165,10 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
         corpus_pk = from_global_id(corpus_id)[1]
 
         results = []
-        for annotation in self.doc_annotations.all().filter(corpus_id=corpus_pk):
+        for annotation in self.doc_annotations.all().filter(
+            corpus_id=corpus_pk,
+            annotation_label__type__in=[METADATA_LABEL, TOKEN_LABEL],
+        ):
             results.append({annotation.annotation_label.text})
         return list(set(results))
 

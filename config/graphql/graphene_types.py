@@ -62,7 +62,7 @@ class AnnotationInputType(AnnotatePermissionsForReadMixin, graphene.InputObjectT
     id = graphene.String(required=True)
     page = graphene.Int()
     raw_text = graphene.String()
-    json = graphene.Scalar()
+    json = GenericScalar()
     annotation_label = graphene.String()
     is_public = graphene.Boolean()
 
@@ -178,27 +178,35 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
+class LabelTypeEnum(graphene.Enum):
+    RELATIONSHIP_LABEL = "RELATIONSHIP_LABEL"
+    DOC_TYPE_LABEL = "DOC_TYPE_LABEL"
+    TOKEN_LABEL = "TOKEN_LABEL"
+    METADATA_LABEL = "METADATA_LABEL"
+
+
 class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
 
-    annotation_labels_value_map = graphene.Scalar()
+    annotation_headers_and_filter_values = GenericScalar(analyzer_id=graphene.String())
 
-    def resolve_annotation_labels_value_map(self):
-        """
-        Skips doc labels and relationships. Relationships are poorly supported for now.
-        Doc labels will be queried separately and added to row in a single col rather than have
-        their own col with a boolean flag
-        """
-        label_map: dict[str, set] = {}
-        for annotation in self.annotations.all().filter(
-            annotation_label__type__in=[TOKEN_LABEL, METADATA_LABEL]
-        ):
-            if annotation.annotation_label.text in label_map:
-                label_map[annotation.annotation_label.text].add(annotation.raw_text)
+    def resolve_annotation_headers_and_filter_values(self, info, **kwargs):
+
+        analyzer_id = kwargs.get("analyzer_id", None)
+        return_values: dict[str, set] = {}
+
+        annotation_set = self.annotations.all()
+
+        print(f"analyzer_id to filter to is {analyzer_id}")
+
+        for annotation in annotation_set:
+            if annotation.annotation_label.text in return_values:
+                return_values[annotation.annotation_label.text].add(annotation.raw_text)
             else:
-                label_map[annotation.annotation_label.text] = {annotation.raw_text}
+                return_values[annotation.annotation_label.text] = {annotation.raw_text}
 
-        return_val = {key: list(value) for key, value in label_map.items()}
-        return return_val
+        print(f"Return values: {return_values}")
+
+        return {key: list(value) for key, value in return_values.items()}
 
     applied_analyzer_ids = graphene.List(graphene.String)
 

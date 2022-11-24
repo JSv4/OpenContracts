@@ -97,6 +97,20 @@ class PdfPageInfoType(graphene.ObjectType):
     label_type = graphene.String()
 
 
+class LabelTypeEnum(graphene.Enum):
+    RELATIONSHIP_LABEL = "RELATIONSHIP_LABEL"
+    DOC_TYPE_LABEL = "DOC_TYPE_LABEL"
+    TOKEN_LABEL = "TOKEN_LABEL"
+    METADATA_LABEL = "METADATA_LABEL"
+
+
+class AnnotationSummaryType(graphene.ObjectType):
+    id: graphene.String()
+    label = graphene.String()
+    type = LabelTypeEnum()
+    raw_text = graphene.String()
+
+
 class PageAwareAnnotationType(graphene.ObjectType):
     pdf_page_info = graphene.Field(PdfPageInfoType)
     page_annotations = graphene.List(AnnotationType)
@@ -178,35 +192,53 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class LabelTypeEnum(graphene.Enum):
-    RELATIONSHIP_LABEL = "RELATIONSHIP_LABEL"
-    DOC_TYPE_LABEL = "DOC_TYPE_LABEL"
-    TOKEN_LABEL = "TOKEN_LABEL"
-    METADATA_LABEL = "METADATA_LABEL"
-
-
 class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
 
-    annotation_headers_and_filter_values = GenericScalar(analyzer_id=graphene.String())
+    # Smarter way to get all annotations for what's visible in our data grid...
+    # only run query for documents that are visible...
+    all_annotations_for_doc_subset = graphene.List(
+        AnnotationType,
+        for_doc_ids=graphene.List(graphene.ID),
+        analysis_id=graphene.ID(),
+        label_type=LabelTypeEnum(),
+    )
 
-    def resolve_annotation_headers_and_filter_values(self, info, **kwargs):
+    def resolve_all_annotations_for_doc_subset(self, info, **kwargs):
 
-        analyzer_id = kwargs.get("analyzer_id", None)
-        return_values: dict[str, set] = {}
+        analysis_id = kwargs.get("analysis_id", None)
+        for_doc_ids = kwargs.get("for_doc_ids", None)
+        label_type = kwargs.get("label_type", None)
 
         annotation_set = self.annotations.all()
 
-        print(f"analyzer_id to filter to is {analyzer_id}")
+        if for_doc_ids and isinstance(for_doc_ids, list):
+            try:
+                doc_ids = [
+                    from_global_id(document_id)[1] for document_id in for_doc_ids
+                ]
+                annotation_set = annotation_set.filter(document_id__in=doc_ids)
+            except Exception as e:
+                logger.warning(
+                    f"Failed resolving doc pks for corpus {self.id} with input doc ids"
+                    f" {for_doc_ids}: {e}"
+                )
 
-        for annotation in annotation_set:
-            if annotation.annotation_label.text in return_values:
-                return_values[annotation.annotation_label.text].add(annotation.raw_text)
-            else:
-                return_values[annotation.annotation_label.text] = {annotation.raw_text}
+        if label_type:
+            annotation_set = annotation_set.filter(
+                annotation_label__label_type=label_type
+            )
 
-        print(f"Return values: {return_values}")
+        if analysis_id:
+            try:
+                analysis_pk = from_global_id(analysis_id)[1]
+                annotation_set = annotation_set.filter(analysis_id=analysis_pk)
+            except Exception as e:
+                logger.warning(
+                    f"Failed resolving analysis pk for corpus {self.id} with input graphene id"
+                    f" {analysis_id}: {e}"
+                )
 
-        return {key: list(value) for key, value in return_values.items()}
+        return annotation_set
 
     applied_analyzer_ids = graphene.List(graphene.String)
 

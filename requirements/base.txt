@@ -2,7 +2,7 @@ pytz==2022.5  # https://github.com/stub42/pytz
 python-slugify==6.1.2  # https://github.com/un33k/python-slugify
 Pillow==9.2.0  # https://github.com/python-pillow/Pillow
 argon2-cffi==21.1.0  # https://github.com/hynek/argon2_cffi
-redis==3.5.3  # https://github.com/redis/redis-py
+redis==4.3.5  # https://github.com/redis/redis-py
 hiredis==2.0.0  # https://github.com/redis/hiredis-py
 celery==5.2.7  # pyup: < 6.0  # https://github.com/celery/celery
 django-celery-beat==2.4.0  # https://github.com/celery/django-celery-beat

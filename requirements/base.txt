@@ -32,7 +32,7 @@ django-tree-queries
 # ------------------------------------------------------------------------------
 djangorestframework==3.14.0  # https://github.com/encode/django-rest-framework
 django-cors-headers==3.13.0  # https://github.com/adamchainz/django-cors-headers
-drf-extra-fields==3.2.1  # https://github.com/Hipo/drf-extra-fields
+drf-extra-fields==3.4.1  # https://github.com/Hipo/drf-extra-fields
 
 # PAWLS-related (for creating features for PDF annotation frontend based on PAWLS)
 # ------------------------------------------------------------------------------

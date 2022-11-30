@@ -9,7 +9,7 @@ from graphene_django.filter import DjangoFilterConnectionField
 from graphql_relay import from_global_id
 
 from config.graphql.base import CountableConnection
-from config.graphql.filters import AnnotationFilter, LabelFilter
+from config.graphql.filters import AnnotationFilter, LabelFilter, DocumentFilter
 from config.graphql.permission_annotator.mixins import AnnotatePermissionsForReadMixin
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -190,42 +190,30 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
         model = Document
         interfaces = [relay.Node]
         connection_class = CountableConnection
+        filterset_class = DocumentFilter
 
 
 class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
 
     # Smarter way to get all annotations for what's visible in our data grid...
     # only run query for documents that are visible...
-    all_annotations_for_doc_subset = graphene.List(
+    all_annotation_summaries = graphene.List(
         AnnotationType,
-        for_doc_ids=graphene.List(graphene.ID),
         analysis_id=graphene.ID(),
-        label_type=LabelTypeEnum(),
+        label_types=graphene.List(LabelTypeEnum),
     )
 
-    def resolve_all_annotations_for_doc_subset(self, info, **kwargs):
+    def resolve_all_annotation_summaries(self, info, **kwargs):
 
         analysis_id = kwargs.get("analysis_id", None)
-        for_doc_ids = kwargs.get("for_doc_ids", None)
-        label_type = kwargs.get("label_type", None)
+        label_types = kwargs.get("label_types", None)
 
         annotation_set = self.annotations.all()
 
-        if for_doc_ids and isinstance(for_doc_ids, list):
-            try:
-                doc_ids = [
-                    from_global_id(document_id)[1] for document_id in for_doc_ids
-                ]
-                annotation_set = annotation_set.filter(document_id__in=doc_ids)
-            except Exception as e:
-                logger.warning(
-                    f"Failed resolving doc pks for corpus {self.id} with input doc ids"
-                    f" {for_doc_ids}: {e}"
-                )
-
-        if label_type:
+        if label_types and isinstance(label_types, list):
+            logger.info(f"Filter to label_types: {label_types}")
             annotation_set = annotation_set.filter(
-                annotation_label__label_type=label_type
+                annotation_label__label_type__in=[label_type.value for label_type in label_types]
             )
 
         if analysis_id:

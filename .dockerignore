@@ -1,0 +1,13 @@
+venv/
+uploadfiles/
+staticfiles/
+site/
+.git/
+.github/
+.ipython/
+.pytest_cache/
+docs/
+.coverage
+frontend/node_modules
+opencontractserver/media
+

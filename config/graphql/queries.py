@@ -109,17 +109,14 @@ class Query(graphene.ObjectType):
 
     bulk_doc_annotations_in_corpus = graphene.Field(
         graphene.List(AnnotationType),
-        corpus_id=graphene.ID(required=True),
-        document_id=graphene.ID(required=True),
+        corpus_id=graphene.String(required=True),
+        document_id=graphene.ID(required=False),
         for_analysis_ids=graphene.String(required=False),
-        label_type=graphene.Argument(label_type_enum),
+        label_type=graphene.List(label_type_enum),
     )
 
-    def resolve_bulk_doc_annotations_in_corpus(
-        self, info, document_id, corpus_id, **kwargs
-    ):
+    def resolve_bulk_doc_annotations_in_corpus(self, info, corpus_id, **kwargs):
 
-        doc_django_pk = from_global_id(document_id)[1]
         corpus_django_pk = from_global_id(corpus_id)[1]
 
         # Get the base queryset first (only stuff given user CAN see)
@@ -133,8 +130,7 @@ class Query(graphene.ObjectType):
             )
 
         # Now build query to stuff they want to see
-        q_objects = Q(document_id=doc_django_pk)
-        q_objects.add(Q(corpus_id=corpus_django_pk), Q.AND)
+        q_objects = Q(corpus_id=corpus_django_pk)
 
         # If for_analysis_ids is passed in, only show annotations from those analyses, otherwise only show human
         # annotations.
@@ -157,6 +153,11 @@ class Query(graphene.ObjectType):
         label_type = kwargs.get("label_type", None)
         if label_type is not None:
             q_objects.add(Q(annotation_label__label_type=label_type), Q.AND)
+
+        document_id = kwargs.get("document_id", None)
+        if document_id is not None:
+            doc_pk = from_global_id(document_id)[1]
+            q_objects.add(Q(document_id=doc_pk), Q.AND)
 
         logger.info(f"Filter bulk annotations: {q_objects}")
 

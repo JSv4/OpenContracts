@@ -15,15 +15,17 @@ from opencontractserver.shared.fields import NullableJSONField
 from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.utils import calc_oc_file_path
 
-# TODO - can we use the Python enum in data_types.py to drive this?
+# TODO - can we use the Python enum in data_types.py to drive choices
 RELATIONSHIP_LABEL = "RELATIONSHIP_LABEL"
 DOC_TYPE_LABEL = "DOC_TYPE_LABEL"
 TOKEN_LABEL = "TOKEN_LABEL"
+METADATA_LABEL = "METADATA_LABEL"
 
 LABEL_TYPES = [
     (RELATIONSHIP_LABEL, _("Relationship label.")),
     (DOC_TYPE_LABEL, _("Document-level type label.")),
-    (TOKEN_LABEL, _("Token-level labels for Funsd and NER labeling")),
+    (TOKEN_LABEL, _("Token-level labels for spans and NER labeling")),
+    (METADATA_LABEL, _("Metadata label for manual entry field")),
 ]
 
 

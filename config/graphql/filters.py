@@ -333,10 +333,17 @@ class DocumentFilter(django_filters.FilterSet):
 
     company_search = filters.CharFilter(method="company_name_search")
     has_pdf = filters.BooleanFilter(method="has_pdf_search")
+    has_annotations_with_ids = filters.CharFilter(
+        method="handle_has_annotations_with_ids"
+    )
     in_corpus_with_id = filters.CharFilter(method="in_corpus")
     has_label_with_title = filters.CharFilter(method="has_label_title")
     has_label_with_id = filters.CharFilter(method="has_label_id")
     text_search = filters.CharFilter(method="naive_text_search")
+
+    def handle_has_annotations_with_ids(self, queryset, info, value):
+        annotation_pks = [from_global_id(val)[1] for val in value.split(",")]
+        return queryset.filter(doc_annotation__in=annotation_pks)
 
     def filter_queryset(self, queryset):
         return super().filter_queryset(queryset).distinct()

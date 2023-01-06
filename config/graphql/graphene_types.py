@@ -6,6 +6,7 @@ from graphene import relay
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType as ModelType
 from graphene_django.filter import DjangoFilterConnectionField
+from graphql_relay import from_global_id
 
 from config.graphql.base import CountableConnection
 from config.graphql.filters import AnnotationFilter, LabelFilter
@@ -59,7 +60,7 @@ class AnnotationInputType(AnnotatePermissionsForReadMixin, graphene.InputObjectT
     id = graphene.String(required=True)
     page = graphene.Int()
     raw_text = graphene.String()
-    json = graphene.Scalar()
+    json = GenericScalar()
     annotation_label = graphene.String()
     is_public = graphene.Boolean()
 
@@ -87,6 +88,20 @@ class PdfPageInfoType(graphene.ObjectType):
     document_id = graphene.ID()
     for_analysis_ids = graphene.String()
     label_type = graphene.String()
+
+
+class LabelTypeEnum(graphene.Enum):
+    RELATIONSHIP_LABEL = "RELATIONSHIP_LABEL"
+    DOC_TYPE_LABEL = "DOC_TYPE_LABEL"
+    TOKEN_LABEL = "TOKEN_LABEL"
+    METADATA_LABEL = "METADATA_LABEL"
+
+
+class AnnotationSummaryType(graphene.ObjectType):
+    id: graphene.String()
+    label = graphene.String()
+    type = LabelTypeEnum()
+    raw_text = graphene.String()
 
 
 class PageAwareAnnotationType(graphene.ObjectType):
@@ -155,6 +170,39 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
+
+    all_annotation_summaries = graphene.List(
+        AnnotationType,
+        analysis_id=graphene.ID(),
+        label_types=graphene.List(LabelTypeEnum),
+    )
+
+    def resolve_all_annotation_summaries(self, info, **kwargs):
+
+        analysis_id = kwargs.get("analysis_id", None)
+        label_types = kwargs.get("label_types", None)
+
+        annotation_set = self.annotations.all()
+
+        if label_types and isinstance(label_types, list):
+            logger.info(f"Filter to label_types: {label_types}")
+            annotation_set = annotation_set.filter(
+                annotation_label__label_type__in=[
+                    label_type.value for label_type in label_types
+                ]
+            )
+
+        if analysis_id:
+            try:
+                analysis_pk = from_global_id(analysis_id)[1]
+                annotation_set = annotation_set.filter(analysis_id=analysis_pk)
+            except Exception as e:
+                logger.warning(
+                    f"Failed resolving analysis pk for corpus {self.id} with input graphene id"
+                    f" {analysis_id}: {e}"
+                )
+
+        return annotation_set
 
     applied_analyzer_ids = graphene.List(graphene.String)
 

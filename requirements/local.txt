@@ -15,6 +15,11 @@ pytest-sugar==0.9.5  # https://github.com/Frozenball/pytest-sugar
 djangorestframework-stubs==1.4.0  # https://github.com/typeddjango/djangorestframework-stubs
 responses==0.22.0  # https://github.com/getsentry/responses
 
+# Profiling
+# ------------------------------------------------------------------------------
+django-cprofile-middleware
+django-silk
+
 # Documentation
 # ------------------------------------------------------------------------------
 sphinx==6.1.0  # https://github.com/sphinx-doc/sphinx

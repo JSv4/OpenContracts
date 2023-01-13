@@ -39,7 +39,7 @@ if env("USE_DOCKER") == "yes":
 # django-extensions
 # ------------------------------------------------------------------------------
 # https://django-extensions.readthedocs.io/en/latest/installation_instructions.html#configuration
-INSTALLED_APPS += ["django_extensions"]  # noqa F405
+INSTALLED_APPS += ["django_extensions", "silk"]  # noqa F405
 
 # Celery
 # ------------------------------------------------------------------------------
@@ -57,3 +57,8 @@ CSRF_COOKIE_HTTPONLY = False
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+MIDDLEWARE += [
+    "django_cprofile_middleware.middleware.ProfilerMiddleware",
+    "silk.middleware.SilkyMiddleware",
+]
+SILKY_PYTHON_PROFILER = True

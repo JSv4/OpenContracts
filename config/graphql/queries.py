@@ -9,6 +9,7 @@ from graphene_django.fields import DjangoConnectionField
 from graphene_django.filter import DjangoFilterConnectionField
 from graphql_jwt.decorators import login_required
 from graphql_relay import from_global_id
+from silk.profiling.profiler import silk_profile
 
 from config.graphql.base import OpenContractsNode
 from config.graphql.filters import (
@@ -397,6 +398,7 @@ class Query(graphene.ObjectType):
     # CORPUS RESOLVERS #####################################
     corpuses = DjangoFilterConnectionField(CorpusType, filterset_class=CorpusFilter)
 
+    @silk_profile(name="Resolve Corpuses")
     def resolve_corpuses(self, info, **kwargs):
         # if info.context.user.is_superuser:
         #     return Corpus.objects.all()

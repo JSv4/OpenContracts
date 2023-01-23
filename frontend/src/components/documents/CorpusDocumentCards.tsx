@@ -57,8 +57,8 @@ export const CorpusDocumentCards = ({
     {
       variables: {
         ...(opened_corpus_id
-          ? { annotateDocLabels: true, inCorpusWithId: opened_corpus_id }
-          : { annotateDocLabels: false }),
+          ? { annotateDocLabels: true, inCorpusWithId: opened_corpus_id, includeMetadata: true }
+          : { annotateDocLabels: false, includeMetadata: false }),
         ...(filter_to_label_id ? { hasLabelWithId: filter_to_label_id } : {}),
         ...(document_search_term ? { textSearch: document_search_term } : {}),
       },

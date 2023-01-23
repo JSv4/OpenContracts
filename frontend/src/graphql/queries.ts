@@ -38,6 +38,7 @@ export const REQUEST_DOCUMENTS = gql`
     $textSearch: String
     $hasLabelWithId: String
     $annotateDocLabels: Boolean!
+    $includeMetadata: Boolean!
   ) {
     documents(
       inCorpusWithId: $inCorpusWithId
@@ -76,6 +77,24 @@ export const REQUEST_DOCUMENTS = gql`
               }
             }
           }
+          metadata_annotations: docAnnotations(
+            annotationLabel_LabelType: METADATA_LABEL
+          ) @include(if: $includeMetadata) {
+            edges {
+              node {
+                id
+                annotationLabel {
+                  labelType
+                  text
+                }
+                rawText
+                corpus {
+                  title
+                  icon
+                }
+              }
+            }
+          }
         }
       }
       pageInfo {
@@ -83,6 +102,30 @@ export const REQUEST_DOCUMENTS = gql`
         hasPreviousPage
         startCursor
         endCursor
+      }
+    }
+  }
+`;
+
+
+export interface GetCorpusMetadataInputs {
+  metadataForCorpusId: string;
+} 
+
+export interface GetCorpusMetadataOutputs {
+  corpus: CorpusType;
+}
+
+export const GET_CORPUS_METADATA = gql`
+  query($metadataForCorpusId: ID!) {
+    corpus(id: $metadataForCorpusId) {
+      id
+      allAnnotationSummaries(labelTypes: [METADATA_LABEL]) {
+        rawText
+        json
+        annotationLabel {
+          text
+        }
       }
     }
   }

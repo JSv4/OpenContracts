@@ -71,7 +71,10 @@ import {
 import {
   GetCorpusesInputs,
   GetCorpusesOutputs,
+  GetCorpusMetadataInputs,
+  GetCorpusMetadataOutputs,
   GET_CORPUSES,
+  GET_CORPUS_METADATA,
   RequestDocumentsInputs,
   RequestDocumentsOutputs,
   REQUEST_DOCUMENTS,
@@ -226,6 +229,21 @@ export const Corpuses = () => {
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Query to get Metadata for Selected Corpus
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  const [
+    fetchMetadata, 
+    { 
+      called: metadata_called, 
+      loading: metadata_loading, 
+      data: metadata_data,
+      refetch: refetchMetadata
+    }
+  ] = useLazyQuery<GetCorpusMetadataOutputs, GetCorpusMetadataInputs>(
+    GET_CORPUS_METADATA
+  );
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Query to refetch documents if dropdown action is used to delink a doc from corpus
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   const [fetchDocumentsLazily, { error: documents_error }] = useLazyQuery<
@@ -261,6 +279,7 @@ export const Corpuses = () => {
   useEffect(() => {
     if (auth_token) {
       refetchCorpuses();
+      refetchMetadata();
     }
   }, [auth_token]);
 
@@ -279,6 +298,9 @@ export const Corpuses = () => {
   useEffect(() => {
     if (!opened_corpus_id) {
       refetchCorpuses();
+    }
+    else {
+      fetchMetadata({variables: {metadataForCorpusId: opened_corpus_id}});
     }
   }, [opened_corpus_id]);
 

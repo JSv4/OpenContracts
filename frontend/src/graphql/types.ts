@@ -304,6 +304,7 @@ export type DocumentType = Node & {
   isPublic?: Scalars["Boolean"];
   myPermissions?: Scalars["String"][];
   doc_label_annotations?: Maybe<AnnotationTypeConnection>;
+  metadata_annotations?: Maybe<AnnotationTypeConnection>;
 };
 
 export type DocumentTypeAssignmentSetArgs = {

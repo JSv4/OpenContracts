@@ -191,7 +191,9 @@ class RelationshipGroupObjectPermission(GroupObjectPermissionBase):
 class Annotation(BaseOCModel):
     page = django.db.models.IntegerField(default=1, blank=False)
     raw_text = django.db.models.TextField(null=True, blank=True)
-    tokens_jsons = NullableJSONField(default=jsonfield_empty_array, null=False)
+    tokens_jsons = NullableJSONField(
+        default=jsonfield_empty_array, null=True, blank=True
+    )
     bounding_box = NullableJSONField(default=empty_bounding_box, null=False)
     json = NullableJSONField(default=jsonfield_default_value, null=False)
 

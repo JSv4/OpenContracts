@@ -13,7 +13,6 @@ from opencontractserver.analyzer.views import AnalysisCallbackView
 logger = logging.getLogger(__name__)
 
 urlpatterns = [
-    path("silk/", include("silk.urls", namespace="silk")),
     path(settings.ADMIN_URL, admin.site.urls),
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     *(
@@ -27,6 +26,7 @@ urlpatterns = [
         []
         if not settings.DEBUG
         else [
+            path("silk/", include("silk.urls", namespace="silk")),
             path(
                 "400/",
                 default_views.bad_request,

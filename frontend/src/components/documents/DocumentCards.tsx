@@ -29,6 +29,7 @@ export const DocumentCards = ({
   removeFromCorpus,
   fetchMore,
 }: DocumentCardProps) => {
+  
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= 400;
   const card_cols = determineCardColCount(width);

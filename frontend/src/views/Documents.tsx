@@ -15,7 +15,7 @@ import {
 import {
   RequestDocumentsInputs,
   RequestDocumentsOutputs,
-  REQUEST_DOCUMENTS,
+  GET_DOCUMENTS,
 } from "../graphql/queries";
 import {
   authToken,
@@ -98,7 +98,7 @@ export const Documents = () => {
     data: documents_data,
     fetchMore: fetchMoreDocuments,
   } = useQuery<RequestDocumentsOutputs, RequestDocumentsInputs>(
-    REQUEST_DOCUMENTS,
+    GET_DOCUMENTS,
     {
       variables: document_variables,
       nextFetchPolicy: "network-only",

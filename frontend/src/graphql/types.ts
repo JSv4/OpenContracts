@@ -230,6 +230,7 @@ export type CorpusType = Node & {
   assignmentSet?: AssignmentTypeConnection;
   relationshipSet?: RelationshipTypeConnection;
   annotationSet?: AnnotationTypeConnection;
+  allAnnotationSummaries?: ServerAnnotationType[];
   analyses: AnalysisTypeConnection;
   isPublic?: Scalars["Boolean"];
   myPermissions?: Scalars["String"][];

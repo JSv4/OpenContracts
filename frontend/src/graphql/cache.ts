@@ -221,6 +221,7 @@ export const selectedAnnotation = makeVar<ServerAnnotationType | null>(null);
 export const displayAnnotationOnAnnotatorLoad =
   makeVar<ServerAnnotationType | null>(null);
 export const annotationContentSearchTerm = makeVar<string>("");
+export const selectedMetaAnnotationId = makeVar<string>("");
 
 /**
  * Analyzer-related global variables

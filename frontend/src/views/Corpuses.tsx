@@ -43,7 +43,7 @@ import {
   showSelectedAnnotationOnly,
   showAnnotationBoundingBoxes,
   showAnnotationLabels,
-  selectedAnnotation,
+  selectedMetaAnnotationId,
   filterToLabelId,
   showAnalyzerSelectionForCorpus,
   selectedAnalyses,
@@ -77,7 +77,7 @@ import {
   GET_CORPUS_METADATA,
   RequestDocumentsInputs,
   RequestDocumentsOutputs,
-  REQUEST_DOCUMENTS,
+  GET_DOCUMENTS,
 } from "../graphql/queries";
 import { CorpusType, LabelType } from "../graphql/types";
 import { LooseObject } from "../components/types";
@@ -90,6 +90,7 @@ import { SelectAnalyzerModal } from "../components/analyzers/SelectAnalyzerModal
 import { CorpusAnalysesCards } from "../components/analyses/CorpusAnalysesCards";
 import { FilterToAnalysesSelector } from "../components/widgets/model-filters/FilterToAnalysesSelector";
 import useWindowDimensions from "../components/hooks/WindowDimensionHook";
+import { FilterToMetadataSelector } from "../components/widgets/model-filters/FilterToMetadataSelector";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
@@ -99,6 +100,7 @@ export const Corpuses = () => {
   const show_remove_docs_from_corpus_modal = useReactiveVar(
     showRemoveDocsFromCorpusModal
   );
+  const selected_metadata_id_to_filter_on = useReactiveVar(selectedMetaAnnotationId)
   const selected_analyes = useReactiveVar(selectedAnalyses);
   const selected_document_ids = useReactiveVar(selectedDocumentIds);
   const document_search_term = useReactiveVar(documentSearchTerm);
@@ -246,15 +248,17 @@ export const Corpuses = () => {
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Query to refetch documents if dropdown action is used to delink a doc from corpus
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  const [fetchDocumentsLazily, { error: documents_error }] = useLazyQuery<
+  const [
+    fetchDocumentsLazily, { error: documents_error, refetch: refetch_documents }] = useLazyQuery<
     RequestDocumentsOutputs,
     RequestDocumentsInputs
-  >(REQUEST_DOCUMENTS, {
+  >(GET_DOCUMENTS, {
     variables: {
       ...(opened_corpus_id
-        ? { annotateDocLabels: true, inCorpusWithId: opened_corpus_id }
-        : { annotateDocLabels: false }),
+        ? { annotateDocLabels: true, includeMetadata: true, inCorpusWithId: opened_corpus_id }
+        : { annotateDocLabels: false, includeMetadata: false }),
       ...(filter_to_label_id ? { hasLabelWithId: filter_to_label_id } : {}),
+      ...(selected_metadata_id_to_filter_on? { hasAnnotationsWithIds: selected_metadata_id_to_filter_on } : {}),
       ...(document_search_term ? { textSearch: document_search_term } : {}),
     },
     notifyOnNetworkStatusChange: true, // necessary in order to trigger loading signal on fetchMore
@@ -303,6 +307,11 @@ export const Corpuses = () => {
       fetchMetadata({variables: {metadataForCorpusId: opened_corpus_id}});
     }
   }, [opened_corpus_id]);
+
+  useEffect(() => {
+    console.log("selected_metadata_id_to_filter_on changed", selected_metadata_id_to_filter_on);
+    refetch_documents();
+  }, [selected_metadata_id_to_filter_on]);
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Query to shape item data
@@ -732,12 +741,17 @@ export const Corpuses = () => {
             value={documentSearchCache}
             filters={
               opened_corpus ? (
-                <FilterToLabelSelector
-                  only_labels_for_labelset_id={
-                    opened_corpus.labelSet?.id ? opened_corpus.labelSet.id : ""
-                  }
-                  label_type={LabelType.DocTypeLabel}
-                />
+                <>
+                  <FilterToMetadataSelector
+                    selected_corpus_id={opened_corpus.id}
+                  />
+                  <FilterToLabelSelector
+                    only_labels_for_labelset_id={
+                      opened_corpus.labelSet?.id ? opened_corpus.labelSet.id : ""
+                    }
+                    label_type={LabelType.DocTypeLabel}
+                  />
+                </>
               ) : (
                 <></>
               )

@@ -30,7 +30,7 @@ export interface RequestDocumentsOutputs {
   };
 }
 
-export const REQUEST_DOCUMENTS = gql`
+export const GET_DOCUMENTS = gql`
   query (
     $inCorpusWithId: String
     $cursor: String
@@ -38,12 +38,14 @@ export const REQUEST_DOCUMENTS = gql`
     $textSearch: String
     $hasLabelWithId: String
     $annotateDocLabels: Boolean!
+    $hasAnnotationsWithIds: String
     $includeMetadata: Boolean!
   ) {
     documents(
       inCorpusWithId: $inCorpusWithId
       textSearch: $textSearch
       hasLabelWithId: $hasLabelWithId
+      hasAnnotationsWithIds: $hasAnnotationsWithIds
       first: $limit
       after: $cursor
     ) {
@@ -121,9 +123,11 @@ export const GET_CORPUS_METADATA = gql`
     corpus(id: $metadataForCorpusId) {
       id
       allAnnotationSummaries(labelTypes: [METADATA_LABEL]) {
+        id
         rawText
         json
         annotationLabel {
+          id
           text
         }
       }

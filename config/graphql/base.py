@@ -2,10 +2,12 @@ import inspect
 import logging
 from abc import ABC
 
+import django.db.models
 import graphene
 from graphene.relay import Node
+from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import login_required
-from graphql_relay import from_global_id
+from graphql_relay import from_global_id, to_global_id
 
 from opencontractserver.shared.resolvers import resolve_single_oc_model_from_id
 from opencontractserver.utils.data_types import PermissionTypes
@@ -115,9 +117,10 @@ class DRFDeletion(graphene.Mutation):
 
 class DRFMutation(graphene.Mutation):
     class IOSettings(ABC):
-        pk_fields = []
+        pk_fields: list[str | int] = []
         lookup_field = "id"
-        model = None
+        model: django.db.models.Model = None
+        graphene_model: DjangoObjectType = None
         serializer = None
 
     class Arguments(ABC):
@@ -125,6 +128,7 @@ class DRFMutation(graphene.Mutation):
 
     ok = graphene.Boolean()
     message = graphene.String()
+    obj_id = graphene.ID()
 
     @classmethod
     @login_required
@@ -196,6 +200,9 @@ class DRFMutation(graphene.Mutation):
                 obj_serializer.save()
                 ok = True
                 message = "Success"
+                obj_id = to_global_id(
+                    cls.IOSettings.graphene_model.__class__.__name__, obj.id
+                )
                 logger.info("Succeeded updating obj")
 
             else:
@@ -215,8 +222,11 @@ class DRFMutation(graphene.Mutation):
 
                 ok = True
                 message = "Success"
+                obj_id = to_global_id(
+                    cls.IOSettings.graphene_model.__class__.__name__, obj.id
+                )
 
         except Exception as e:
             message = f"Mutation failed due to error: {e}"
 
-        return cls(ok=ok, message=message)
+        return cls(ok=ok, message=message, obj_id=obj_id)

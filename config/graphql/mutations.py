@@ -132,6 +132,7 @@ class UpdateLabelset(DRFMutation):
         lookup_field = "id"
         serializer = LabelsetSerializer
         model = LabelSet
+        graphene_model = LabelSetType
 
     class Arguments:
         id = graphene.String(required=True)
@@ -303,6 +304,7 @@ class UpdateDocument(DRFMutation):
         lookup_field = "id"
         serializer = DocumentSerializer
         model = Document
+        graphene_model = DocumentType
 
     class Arguments:
         id = graphene.String(required=True)
@@ -883,6 +885,7 @@ class UpdateAnnotation(DRFMutation):
         lookup_field = "id"
         serializer = AnnotationSerializer
         model = Annotation
+        graphene_model = AnnotationType
 
     class Arguments:
         id = graphene.String(required=True)
@@ -979,6 +982,7 @@ class CreateCorpusMutation(DRFMutation):
         pk_fields = ["label_set"]
         serializer = CorpusSerializer
         model = Corpus
+        graphene_model = CorpusType
 
     class Arguments:
         title = graphene.String(required=False)
@@ -993,6 +997,7 @@ class UpdateCorpusMutation(DRFMutation):
         pk_fields = ["label_set"]
         serializer = CorpusSerializer
         model = Corpus
+        graphene_model = CorpusType
 
     class Arguments:
         id = graphene.String(required=True)
@@ -1016,6 +1021,7 @@ class CreateLabelMutation(DRFMutation):
         pk_fields = []
         serializer = AnnotationLabelSerializer
         model = AnnotationLabel
+        graphene_model = AnnotationLabelType
 
     class Arguments:
         text = graphene.String(required=False)
@@ -1031,6 +1037,7 @@ class UpdateLabelMutation(DRFMutation):
         serializer = AnnotationLabelSerializer
         lookup_field = "id"
         model = AnnotationLabel
+        graphene_model = AnnotationLabelType
 
     class Arguments:
         id = graphene.String(required=True)

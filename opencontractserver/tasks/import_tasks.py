@@ -11,15 +11,13 @@ from config.graphql.serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.corpuses.models import TemporaryFileHandle
 from opencontractserver.documents.models import Document
-from opencontractserver.utils.data_types import (
-    OpenContractsExportDataJsonPythonType,
-    PermissionTypes,
-)
-from opencontractserver.utils.packaging_tools import (
+from opencontractserver.types.dicts import OpenContractsExportDataJsonPythonType
+from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.packaging import (
     unpack_corpus_from_export,
     unpack_label_set_from_export,
 )
-from opencontractserver.utils.permissioning_utils import set_permissions_for_obj_to_user
+from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

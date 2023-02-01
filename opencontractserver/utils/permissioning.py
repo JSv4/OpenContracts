@@ -16,7 +16,7 @@ from opencontractserver.analyzer.models import Analysis
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.utils.data_types import PermissionTypes
+from opencontractserver.types.enums import PermissionTypes
 
 User = get_user_model()
 

@@ -6,7 +6,7 @@ import pathlib
 import random
 from typing import Optional
 
-from opencontractserver.utils.data_types import (
+from opencontractserver.types.dicts import (
     OpenContractsDocAnnotations,
     OpenContractsGeneratedCorpusPythonType,
 )

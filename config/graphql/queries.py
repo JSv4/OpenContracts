@@ -50,8 +50,8 @@ from opencontractserver.annotations.models import (
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
+from opencontractserver.types.enums import LabelType
 from opencontractserver.users.models import Assignment, UserExport, UserImport
-from opencontractserver.utils.data_types import LabelType
 
 logger = logging.getLogger(__name__)
 

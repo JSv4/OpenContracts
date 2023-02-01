@@ -10,7 +10,7 @@ from opencontractserver.shared.defaults import jsonfield_default_value
 from opencontractserver.shared.fields import NullableJSONField
 from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.utils import calc_oc_file_path
-from opencontractserver.utils.data_types import JobStatus
+from opencontractserver.types.enums import JobStatus
 
 
 def calculate_analyzer_icon_path(instance, filename):

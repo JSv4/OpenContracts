@@ -13,7 +13,7 @@ from typing_extensions import TypedDict
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.utils.data_types import (
+from opencontractserver.types.dicts import (
     LabelLookupPythonType,
     OpenContractDocAnnotationExport,
     OpenContractsSinglePageAnnotationType,
@@ -94,10 +94,7 @@ def build_document_export(
 
     from PyPDF2 import PdfFileReader, PdfFileWriter
 
-    from opencontractserver.utils.pdf_tools import (
-        addHighlightToNewPage,
-        createHighlight,
-    )
+    from opencontractserver.utils.pdf import addHighlightToNewPage, createHighlight
 
     try:
 

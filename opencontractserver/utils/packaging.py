@@ -9,12 +9,12 @@ from django.core.files.base import ContentFile
 
 from opencontractserver.annotations.models import LabelSet
 from opencontractserver.corpuses.models import Corpus
-from opencontractserver.utils.data_types import (
+from opencontractserver.types.dicts import (
     OpenContractCorpusType,
     OpenContractsLabelSetType,
-    PermissionTypes,
 )
-from opencontractserver.utils.permissioning_utils import set_permissions_for_obj_to_user
+from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)
 

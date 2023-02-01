@@ -11,8 +11,8 @@ from config import celery_app
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.utils.data_types import PermissionTypes
-from opencontractserver.utils.permissioning_utils import set_permissions_for_obj_to_user
+from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 # Excellent django logging guidance here: https://docs.python.org/3/howto/logging-cookbook.html
 logger = logging.getLogger(__name__)

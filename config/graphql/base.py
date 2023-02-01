@@ -10,8 +10,8 @@ from graphql_jwt.decorators import login_required
 from graphql_relay import from_global_id, to_global_id
 
 from opencontractserver.shared.resolvers import resolve_single_oc_model_from_id
-from opencontractserver.utils.data_types import PermissionTypes
-from opencontractserver.utils.permissioning_utils import (
+from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.permissioning import (
     set_permissions_for_obj_to_user,
     user_has_permission_for_obj,
 )
@@ -135,6 +135,7 @@ class DRFMutation(graphene.Mutation):
     def mutate(cls, root, info, *args, **kwargs):
 
         ok = False
+        obj_id = None
 
         try:
             logger.info("Test if context has user")

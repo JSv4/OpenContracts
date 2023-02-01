@@ -5,8 +5,8 @@ import logging
 import requests
 
 from opencontractserver.analyzer.models import GremlinEngine
-from opencontractserver.utils.data_types import AnalyzerManifest
-from opencontractserver.utils.etl_utils import is_dict_instance_of_typed_dict
+from opencontractserver.types.dicts import AnalyzerManifest
+from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
 
 logger = logging.getLogger(__name__)
 

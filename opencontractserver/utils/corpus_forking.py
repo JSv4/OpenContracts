@@ -3,8 +3,8 @@ from django.contrib.auth import get_user_model
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.tasks import fork_corpus
-from opencontractserver.utils.data_types import PermissionTypes
-from opencontractserver.utils.permissioning_utils import set_permissions_for_obj_to_user
+from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()
 

@@ -1,6 +1,6 @@
 from config import celery_app
-from opencontractserver.utils.data_types import LabelLookupPythonType
-from opencontractserver.utils.etl_utils import build_label_lookups
+from opencontractserver.types.dicts import LabelLookupPythonType
+from opencontractserver.utils.etl import build_label_lookups
 
 
 @celery_app.task()

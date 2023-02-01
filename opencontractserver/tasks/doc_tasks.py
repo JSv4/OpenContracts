@@ -13,12 +13,12 @@ from pydantic import validate_arguments
 
 from config import celery_app
 from opencontractserver.documents.models import Document
-from opencontractserver.utils.data_types import (
+from opencontractserver.types.dicts import (
     LabelLookupPythonType,
     OpenContractDocAnnotationExport,
 )
-from opencontractserver.utils.etl_utils import build_document_export
-from opencontractserver.utils.pdf_tools import base_64_encode_bytes
+from opencontractserver.utils.etl import build_document_export
+from opencontractserver.utils.pdf import base_64_encode_bytes
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

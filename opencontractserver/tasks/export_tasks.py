@@ -11,13 +11,13 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from opencontractserver.corpuses.models import Corpus
-from opencontractserver.users.models import UserExport
-from opencontractserver.utils.data_types import (
-    AnnotationLabelPythonType,
+from opencontractserver.types.dicts import (
     OpenContractDocAnnotationExport,
     OpenContractsExportDataJsonPythonType,
 )
-from opencontractserver.utils.packaging_tools import (
+from opencontractserver.types.enums import AnnotationLabelPythonType
+from opencontractserver.users.models import UserExport
+from opencontractserver.utils.packaging import (
     package_corpus_for_export,
     package_label_set_for_export,
 )

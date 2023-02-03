@@ -74,7 +74,9 @@ export const Documents = () => {
 
   const location = useLocation();
 
-  let document_variables: LooseObject = {};
+  let document_variables: LooseObject = {
+    includeMetadata: true
+  };
   if (document_search_term) {
     document_variables["textSearch"] = document_search_term;
   }

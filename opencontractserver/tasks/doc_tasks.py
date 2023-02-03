@@ -99,13 +99,17 @@ def parse_base64_pdf(*args, doc_id: str = "") -> tuple[str, str, list]:
         # https://stackabuse.com/encoding-and-decoding-base64-strings-in-python/
         base64_img_bytes = args[0][1].encode("utf-8")
         decoded_file_data = base64.decodebytes(base64_img_bytes)
+        print(f"decoded_file_data type {type(decoded_file_data)}")
 
         with tempfile.NamedTemporaryFile(suffix=".pdf", prefix=TEMP_DIR) as tf:
             print(tf.name)
+            print(type(tf))
             tf.write(decoded_file_data)
+            print("Wrote files")
+            print(f"tf.name type {type(tf.name)}")
             annotations: list = process_tesseract(tf.name)
 
-            print("Annotations", annotations)
+            print(f"Annotations {annotations}")
 
         return TaskStates.COMPLETE, "", annotations
 

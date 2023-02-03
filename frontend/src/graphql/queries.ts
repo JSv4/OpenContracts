@@ -811,7 +811,6 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
       isPublic
       myPermissions
     }
-
     existingDocLabelAnnotations: bulkDocAnnotationsInCorpus(
       documentId: $selectedDocumentId
       corpusId: $selectedCorpusId

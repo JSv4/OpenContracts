@@ -6,6 +6,7 @@ from opencontractserver.tasks import (
     parse_base64_pdf,
     write_pawls_file,
 )
+from opencontractserver.tasks.doc_tasks import extract_thumbnail
 
 
 def process_doc_on_create_atomic(sender, instance, created, **kwargs):
@@ -20,6 +21,7 @@ def process_doc_on_create_atomic(sender, instance, created, **kwargs):
                     base_64_encode_document.s(doc_id=instance.id),
                     parse_base64_pdf.s(doc_id=instance.id),
                     write_pawls_file.s(doc_id=instance.id),
+                    extract_thumbnail.s(doc_id=instance.id),
                 ]
             ).apply_async()
         )

@@ -22,8 +22,8 @@ from opencontractserver.tasks.permissioning_tasks import (
 from ..analyzer.models import Analysis, Analyzer, GremlinEngine
 from ..analyzer.signals import install_gremlin_on_creation
 from ..annotations.models import TOKEN_LABEL, Annotation, AnnotationLabel
-from ..utils.data_types import PermissionTypes
-from ..utils.permissioning_utils import (
+from ..types.enums import PermissionTypes
+from ..utils.permissioning import (
     get_users_permissions_for_obj,
     set_permissions_for_obj_to_user,
     user_has_permission_for_obj,

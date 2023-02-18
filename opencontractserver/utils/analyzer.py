@@ -11,17 +11,16 @@ from django.utils import timezone
 
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
-from opencontractserver.utils.data_types import (
+from opencontractserver.types.dicts import (
     AnalyzerManifest,
-    AnnotationLabelPythonType,
     OpenContractsGeneratedCorpusPythonType,
     OpenContractsLabelSetType,
-    PermissionTypes,
 )
-from opencontractserver.utils.packaging_tools import (
+from opencontractserver.types.enums import AnnotationLabelPythonType, PermissionTypes
+from opencontractserver.utils.packaging import (
     turn_base64_encoded_file_to_django_content_file,
 )
-from opencontractserver.utils.permissioning_utils import set_permissions_for_obj_to_user
+from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)
 

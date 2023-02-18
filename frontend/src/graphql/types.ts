@@ -230,6 +230,7 @@ export type CorpusType = Node & {
   assignmentSet?: AssignmentTypeConnection;
   relationshipSet?: RelationshipTypeConnection;
   annotationSet?: AnnotationTypeConnection;
+  allAnnotationSummaries?: ServerAnnotationType[];
   analyses: AnalysisTypeConnection;
   isPublic?: Scalars["Boolean"];
   myPermissions?: Scalars["String"][];
@@ -304,6 +305,7 @@ export type DocumentType = Node & {
   isPublic?: Scalars["Boolean"];
   myPermissions?: Scalars["String"][];
   doc_label_annotations?: Maybe<AnnotationTypeConnection>;
+  metadata_annotations?: Maybe<AnnotationTypeConnection>;
 };
 
 export type DocumentTypeAssignmentSetArgs = {
@@ -394,6 +396,7 @@ export enum LabelType {
   RelationshipLabel = "RELATIONSHIP_LABEL",
   DocTypeLabel = "DOC_TYPE_LABEL",
   TokenLabel = "TOKEN_LABEL",
+  MetadataLabel = "METADATA_LABEL",
 }
 
 export enum AnnotationTypeEnum {

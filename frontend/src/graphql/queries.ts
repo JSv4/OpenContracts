@@ -30,7 +30,7 @@ export interface RequestDocumentsOutputs {
   };
 }
 
-export const REQUEST_DOCUMENTS = gql`
+export const GET_DOCUMENTS = gql`
   query (
     $inCorpusWithId: String
     $cursor: String
@@ -38,11 +38,14 @@ export const REQUEST_DOCUMENTS = gql`
     $textSearch: String
     $hasLabelWithId: String
     $annotateDocLabels: Boolean!
+    $hasAnnotationsWithIds: String
+    $includeMetadata: Boolean!
   ) {
     documents(
       inCorpusWithId: $inCorpusWithId
       textSearch: $textSearch
       hasLabelWithId: $hasLabelWithId
+      hasAnnotationsWithIds: $hasAnnotationsWithIds
       first: $limit
       after: $cursor
     ) {
@@ -76,6 +79,24 @@ export const REQUEST_DOCUMENTS = gql`
               }
             }
           }
+          metadata_annotations: docAnnotations(
+            annotationLabel_LabelType: METADATA_LABEL
+          ) @include(if: $includeMetadata) {
+            edges {
+              node {
+                id
+                annotationLabel {
+                  labelType
+                  text
+                }
+                rawText
+                corpus {
+                  title
+                  icon
+                }
+              }
+            }
+          }
         }
       }
       pageInfo {
@@ -83,6 +104,31 @@ export const REQUEST_DOCUMENTS = gql`
         hasPreviousPage
         startCursor
         endCursor
+      }
+    }
+  }
+`;
+
+export interface GetCorpusMetadataInputs {
+  metadataForCorpusId: string;
+}
+
+export interface GetCorpusMetadataOutputs {
+  corpus: CorpusType;
+}
+
+export const GET_CORPUS_METADATA = gql`
+  query ($metadataForCorpusId: ID!) {
+    corpus(id: $metadataForCorpusId) {
+      id
+      allAnnotationSummaries(labelTypes: [METADATA_LABEL]) {
+        id
+        rawText
+        json
+        annotationLabel {
+          id
+          text
+        }
       }
     }
   }
@@ -764,7 +810,6 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
       isPublic
       myPermissions
     }
-
     existingDocLabelAnnotations: bulkDocAnnotationsInCorpus(
       documentId: $selectedDocumentId
       corpusId: $selectedCorpusId

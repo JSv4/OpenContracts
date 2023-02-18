@@ -9,9 +9,9 @@ from django.db import transaction
 from opencontractserver.corpuses.models import Corpus, TemporaryFileHandle
 from opencontractserver.tasks import import_corpus
 from opencontractserver.tasks.utils import package_zip_into_base64
-from opencontractserver.utils.data_types import PermissionTypes
-from opencontractserver.utils.fork_utils import build_fork_corpus_task
-from opencontractserver.utils.permissioning_utils import set_permissions_for_obj_to_user
+from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.corpus_forking import build_fork_corpus_task
+from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()
 

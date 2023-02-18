@@ -5,7 +5,7 @@ import logging
 from django.contrib.auth import get_user_model
 
 from config import celery_app
-from opencontractserver.utils.cleanup_utils import delete_analysis_and_annotations
+from opencontractserver.utils.cleanup import delete_analysis_and_annotations
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

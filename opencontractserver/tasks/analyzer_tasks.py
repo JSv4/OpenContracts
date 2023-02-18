@@ -6,16 +6,16 @@ from django.utils import timezone
 from config import celery_app
 from opencontractserver.analyzer.models import GremlinEngine
 from opencontractserver.analyzer.utils import get_gremlin_manifests
+from opencontractserver.types.dicts import (
+    AnalyzerManifest,
+    OpenContractsGeneratedCorpusPythonType,
+)
 
 # Excellent django logging guidance here: https://docs.python.org/3/howto/logging-cookbook.html
-from opencontractserver.utils.analyzer_utils import (
+from opencontractserver.utils.analyzer import (
     create_analysis_for_corpus_with_analyzer,
     import_annotations_from_analysis,
     install_analyzers,
-)
-from opencontractserver.utils.data_types import (
-    AnalyzerManifest,
-    OpenContractsGeneratedCorpusPythonType,
 )
 
 logger = logging.getLogger(__name__)

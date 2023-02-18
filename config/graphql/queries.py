@@ -50,8 +50,8 @@ from opencontractserver.annotations.models import (
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
+from opencontractserver.types.enums import LabelType
 from opencontractserver.users.models import Assignment, UserExport, UserImport
-from opencontractserver.utils.data_types import LabelType
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ class Query(graphene.ObjectType):
 
     bulk_doc_annotations_in_corpus = graphene.Field(
         graphene.List(AnnotationType),
-        corpus_id=graphene.String(required=True),
+        corpus_id=graphene.ID(required=True),
         document_id=graphene.ID(required=False),
         for_analysis_ids=graphene.String(required=False),
         label_type=graphene.List(label_type_enum),

@@ -10,11 +10,9 @@ from rest_framework.views import APIView
 
 from opencontractserver.analyzer.models import Analysis
 from opencontractserver.tasks.analyzer_tasks import import_analysis
-from opencontractserver.utils.data_types import (
-    JobStatus,
-    OpenContractsGeneratedCorpusPythonType,
-)
-from opencontractserver.utils.etl_utils import is_dict_instance_of_typed_dict
+from opencontractserver.types.dicts import OpenContractsGeneratedCorpusPythonType
+from opencontractserver.types.enums import JobStatus
+from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
 
 logger = logging.getLogger(__name__)
 

@@ -11,6 +11,7 @@ import {
   documentSearchTerm,
   authToken,
   filterToLabelId,
+  selectedMetaAnnotationId,
 } from "../../graphql/cache";
 import {
   REMOVE_DOCUMENTS_FROM_CORPUS,
@@ -20,7 +21,7 @@ import {
 import {
   RequestDocumentsInputs,
   RequestDocumentsOutputs,
-  REQUEST_DOCUMENTS,
+  GET_DOCUMENTS,
 } from "../../graphql/queries";
 import { DocumentType } from "../../graphql/types";
 
@@ -37,6 +38,9 @@ export const CorpusDocumentCards = ({
    */
 
   const document_search_term = useReactiveVar(documentSearchTerm);
+  const selected_metadata_id_to_filter_on = useReactiveVar(
+    selectedMetaAnnotationId
+  );
 
   const auth_token = useReactiveVar(authToken);
   const filter_to_label_id = useReactiveVar(filterToLabelId);
@@ -52,19 +56,23 @@ export const CorpusDocumentCards = ({
     error: documents_error,
     data: documents_response,
     fetchMore: fetchMoreDocuments,
-  } = useQuery<RequestDocumentsOutputs, RequestDocumentsInputs>(
-    REQUEST_DOCUMENTS,
-    {
-      variables: {
-        ...(opened_corpus_id
-          ? { annotateDocLabels: true, inCorpusWithId: opened_corpus_id }
-          : { annotateDocLabels: false }),
-        ...(filter_to_label_id ? { hasLabelWithId: filter_to_label_id } : {}),
-        ...(document_search_term ? { textSearch: document_search_term } : {}),
-      },
-      notifyOnNetworkStatusChange: true, // necessary in order to trigger loading signal on fetchMore
-    }
-  );
+  } = useQuery<RequestDocumentsOutputs, RequestDocumentsInputs>(GET_DOCUMENTS, {
+    variables: {
+      ...(opened_corpus_id
+        ? {
+            annotateDocLabels: true,
+            inCorpusWithId: opened_corpus_id,
+            includeMetadata: true,
+          }
+        : { annotateDocLabels: false, includeMetadata: false }),
+      ...(selected_metadata_id_to_filter_on
+        ? { hasAnnotationsWithIds: selected_metadata_id_to_filter_on }
+        : {}),
+      ...(filter_to_label_id ? { hasLabelWithId: filter_to_label_id } : {}),
+      ...(document_search_term ? { textSearch: document_search_term } : {}),
+    },
+    notifyOnNetworkStatusChange: true, // necessary in order to trigger loading signal on fetchMore
+  });
   if (documents_error) {
     toast.error("ERROR\nCould not fetch documents for corpus.");
   }
@@ -72,6 +80,10 @@ export const CorpusDocumentCards = ({
   useEffect(() => {
     refetchDocuments();
   }, [document_search_term]);
+
+  useEffect(() => {
+    refetchDocuments();
+  }, [selected_metadata_id_to_filter_on]);
 
   const [removeDocumentsFromCorpus, {}] = useMutation<
     RemoveDocumentsFromCorpusOutputs,

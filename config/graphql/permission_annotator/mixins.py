@@ -8,7 +8,7 @@ from graphene.types.generic import GenericScalar
 from config.graphql.permission_annotator.middleware import (
     get_permissions_for_user_on_model_in_app,
 )
-from opencontractserver.utils.data_types import PermissionTypes
+from opencontractserver.types.enums import PermissionTypes
 
 User = get_user_model()
 

@@ -15,6 +15,11 @@ pytest-sugar==0.9.5  # https://github.com/Frozenball/pytest-sugar
 djangorestframework-stubs==1.4.0  # https://github.com/typeddjango/djangorestframework-stubs
 responses==0.22.0  # https://github.com/getsentry/responses
 
+# Profiling
+# ------------------------------------------------------------------------------
+django-cprofile-middleware
+django-silk
+
 # Documentation
 # ------------------------------------------------------------------------------
 sphinx==6.1.0  # https://github.com/sphinx-doc/sphinx
@@ -22,8 +27,8 @@ sphinx-autobuild==2021.3.14 # https://github.com/GaretJax/sphinx-autobuild
 
 # Code quality
 # ------------------------------------------------------------------------------
-flake8==6.0.0  # https://github.com/PyCQA/flake8
-flake8-isort==5.0.0  # https://github.com/gforcada/flake8-isort
+flake8==6.0.0 # https://github.com/PyCQA/flake8
+flake8-isort==6.0.0  # https://github.com/gforcada/flake8-isort
 coverage==6.5.0  # https://github.com/nedbat/coveragepy
 black==22.10.0  # https://github.com/psf/black
 pylint-django==2.5.3  # https://github.com/PyCQA/pylint-django

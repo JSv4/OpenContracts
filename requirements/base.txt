@@ -54,9 +54,12 @@ poppler-utils
 
 # Doc Analysis (NLP dependencies, placeholder)
 # ------------------------------------------------------------------------------
-PyPDF2==1.26.0  # https://github.com/mstamy2/PyPDF2
+PyPDF2==3.0.1  # https://github.com/mstamy2/PyPDF2
 pandas
-# pdf2image==1.15.1 # https://github.com/Belval/pdf2image
+
+# Data Processing Tools
+# -------------------------------------------------------------------------------
+opencv-python==4.7.0.68 # https://github.com/opencv/opencv-python
 
 # Permissioning
 # ------------------------------------------------------------------------------

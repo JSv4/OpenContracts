@@ -15,7 +15,7 @@ import {
 import {
   RequestDocumentsInputs,
   RequestDocumentsOutputs,
-  REQUEST_DOCUMENTS,
+  GET_DOCUMENTS,
 } from "../graphql/queries";
 import {
   authToken,
@@ -74,7 +74,9 @@ export const Documents = () => {
 
   const location = useLocation();
 
-  let document_variables: LooseObject = {};
+  let document_variables: LooseObject = {
+    includeMetadata: true,
+  };
   if (document_search_term) {
     document_variables["textSearch"] = document_search_term;
   }
@@ -97,14 +99,11 @@ export const Documents = () => {
     error: documents_error,
     data: documents_data,
     fetchMore: fetchMoreDocuments,
-  } = useQuery<RequestDocumentsOutputs, RequestDocumentsInputs>(
-    REQUEST_DOCUMENTS,
-    {
-      variables: document_variables,
-      nextFetchPolicy: "network-only",
-      notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
-    }
-  );
+  } = useQuery<RequestDocumentsOutputs, RequestDocumentsInputs>(GET_DOCUMENTS, {
+    variables: document_variables,
+    nextFetchPolicy: "network-only",
+    notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
+  });
 
   const document_nodes = documents_data?.documents?.edges
     ? documents_data.documents.edges

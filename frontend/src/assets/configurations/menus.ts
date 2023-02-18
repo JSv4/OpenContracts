@@ -18,7 +18,7 @@ export const header_menu_items = [
     id: "label_set_menu_button",
   },
   {
-    title: "Provisions",
+    title: "Annotations",
     route: "/annotations/",
     protected: false,
     id: "annotation_menu_button",

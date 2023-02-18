@@ -188,6 +188,27 @@ export const LabelSetEditModal = ({
       });
   };
 
+  const handleCreateMetadataLabel = () => {
+    createAnnotationLabelForLabelset({
+      variables: {
+        color: "00000",
+        description: "New field to hold user-entered values",
+        icon: "braille",
+        text: "Custom Field Name",
+        labelType: LabelType.MetadataLabel,
+        labelsetId: opened_labelset?.id ? opened_labelset.id : "",
+      },
+    })
+      .then((data) => {
+        toast.success("Success! Label created.");
+        refetch();
+      })
+      .catch((err) => {
+        toast.error("Error! Failed to create label");
+        console.log("Error creating new metdata value label", err);
+      });
+  };
+
   const handleCreateTextLabel = () => {
     createAnnotationLabelForLabelset({
       variables: {
@@ -313,17 +334,22 @@ export const LabelSetEditModal = ({
     (label): label is AnnotationLabelType =>
       !!label && label.labelType === LabelType.RelationshipLabel
   );
-
+  let metadata_labels = labels.filter(
+    (label): label is AnnotationLabelType =>
+      !!label && label.labelType === LabelType.MetadataLabel
+  );
   // console.log("Filtered by type", text_labels, doc_type_labels, relationship_labels);
 
   //Filter the text & doc label sets:
   let text_label_fuse = new Fuse(text_labels, fuse_options);
   let doc_label_fuse = new Fuse(doc_type_labels, fuse_options);
   let relationship_label_fuse = new Fuse(relationship_labels, fuse_options);
+  let metadata_label_fuse = new Fuse(metadata_labels, fuse_options);
 
   let text_label_results: AnnotationLabelType[] = [];
   let doc_label_results: AnnotationLabelType[] = [];
   let relationship_label_results: AnnotationLabelType[] = [];
+  let metadata_label_results: AnnotationLabelType[] = [];
 
   if (searchTerm.length > 0) {
     text_label_results = text_label_fuse
@@ -335,10 +361,14 @@ export const LabelSetEditModal = ({
     relationship_label_results = relationship_label_fuse
       .search(searchTerm)
       .map((item) => item.item) as AnnotationLabelType[];
+    metadata_label_results = metadata_label_fuse
+      .search(searchTerm)
+      .map((item) => item.item) as AnnotationLabelType[];
   } else {
     text_label_results = text_labels;
     doc_label_results = doc_type_labels;
     relationship_label_results = relationship_labels;
+    metadata_label_results = metadata_labels;
   }
 
   //Build text label components
@@ -375,6 +405,7 @@ export const LabelSetEditModal = ({
     });
   }
 
+  // Build relationship label components
   let relationship_data_labels: JSX.Element[] = [];
   if (relationship_label_results && relationship_label_results.length > 0) {
     relationship_data_labels = relationship_label_results.map(
@@ -395,9 +426,30 @@ export const LabelSetEditModal = ({
     );
   }
 
+  // Build metadata label components
+  let metadata_data_labels: JSX.Element[] = [];
+  if (metadata_label_results && metadata_label_results.length > 0) {
+    metadata_data_labels = metadata_label_results.map((label, index) => {
+      return (
+        <AnnotationLabelCard
+          key={label.id}
+          label={label}
+          selected={selectedLabels.map((label) => label.id).includes(label.id)}
+          onDelete={() => handleDeleteLabel([label])}
+          onSelect={toggleLabelSelect}
+          onSave={updateLabel}
+        />
+      );
+    });
+  }
+
   const panes = [
     {
-      menuItem: "Name & Description",
+      menuItem: {
+        key: "description",
+        icon: "bars",
+        content: "Details",
+      },
       render: () => (
         <Tab.Pane
           key={0}
@@ -436,7 +488,31 @@ export const LabelSetEditModal = ({
       ),
     },
     {
-      menuItem: `Text Labels (${text_data_labels?.length})`,
+      menuItem: {
+        key: "metadata",
+        icon: "braille",
+        content: `Metadata (${metadata_data_labels?.length})`,
+      },
+      render: () => (
+        <Tab.Pane
+          key={1}
+          style={{
+            overflowY: "scroll",
+            padding: "1em",
+            width: "100%",
+            flex: 1,
+          }}
+        >
+          <Card.Group itemsPerRow={1}>{metadata_data_labels}</Card.Group>
+        </Tab.Pane>
+      ),
+    },
+    {
+      menuItem: {
+        key: "text",
+        icon: "language",
+        content: `Text (${text_data_labels?.length})`,
+      },
       render: () => (
         <Tab.Pane
           key={1}
@@ -452,7 +528,11 @@ export const LabelSetEditModal = ({
       ),
     },
     {
-      menuItem: `Doc Type Labels (${doc_data_labels?.length})`,
+      menuItem: {
+        key: "text",
+        icon: "file pdf outline",
+        content: `Doc Types (${doc_data_labels?.length})`,
+      },
       render: () => (
         <Tab.Pane
           key={2}
@@ -468,7 +548,11 @@ export const LabelSetEditModal = ({
       ),
     },
     {
-      menuItem: `Relationship Type Labels (${relationship_data_labels?.length})`,
+      menuItem: {
+        key: "relation",
+        icon: "handshake outline",
+        content: `Relations (${relationship_data_labels?.length})`,
+      },
       render: () => (
         <Tab.Pane
           key={2}
@@ -488,7 +572,7 @@ export const LabelSetEditModal = ({
   let button_actions: DropdownActionProps[] = [];
 
   if (
-    [1, 2, 3].includes(parseInt(`${activeIndex}`)) &&
+    [1, 2, 3, 4].includes(parseInt(`${activeIndex}`)) &&
     my_permissions.includes(PermissionTypes.CAN_UPDATE)
   ) {
     button_actions.push({
@@ -496,19 +580,23 @@ export const LabelSetEditModal = ({
       color: "gray",
       title:
         activeIndex === 1
-          ? "Create Text Label"
+          ? "Create Metadata Field"
           : activeIndex === 2
-          ? "Create Document Type Label"
+          ? "Create Text Label"
           : activeIndex === 3
+          ? "Create Document Type Label"
+          : activeIndex === 4
           ? "Create OCR Label"
           : "",
       icon: "plus",
       action_function:
         activeIndex === 1
-          ? () => handleCreateTextLabel()
+          ? () => handleCreateMetadataLabel()
           : activeIndex === 2
-          ? () => handleCreateDocumentLabel()
+          ? () => handleCreateTextLabel()
           : activeIndex === 3
+          ? () => handleCreateDocumentLabel()
+          : activeIndex === 4
           ? () => handleCreateRelationshipLabel()
           : () => {},
     });
@@ -543,9 +631,7 @@ export const LabelSetEditModal = ({
             <Icon name="tags" />
             <Header.Content>
               Edit Label Set:{" "}
-              {updatedObject !== {}
-                ? (updatedObject as LabelSetType).title
-                : ""}
+              {updatedObject ? (updatedObject as LabelSetType).title : ""}
             </Header.Content>
           </Header>
         </div>

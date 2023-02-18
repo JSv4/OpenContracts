@@ -12,7 +12,7 @@ from django.db.models import Q
 from django.utils import timezone
 from graphene.types.generic import GenericScalar
 from graphql_jwt.decorators import login_required, user_passes_test
-from graphql_relay import from_global_id
+from graphql_relay import from_global_id, to_global_id
 
 from config.graphql.base import DRFDeletion, DRFMutation
 from config.graphql.graphene_types import (
@@ -56,9 +56,9 @@ from opencontractserver.tasks.permissioning_tasks import (
     make_analysis_public_task,
     make_corpus_public_task,
 )
+from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.users.models import UserExport
-from opencontractserver.utils.data_types import PermissionTypes
-from opencontractserver.utils.permissioning_utils import (
+from opencontractserver.utils.permissioning import (
     set_permissions_for_obj_to_user,
     user_has_permission_for_obj,
 )
@@ -132,6 +132,7 @@ class UpdateLabelset(DRFMutation):
         lookup_field = "id"
         serializer = LabelsetSerializer
         model = LabelSet
+        graphene_model = LabelSetType
 
     class Arguments:
         id = graphene.String(required=True)
@@ -303,6 +304,7 @@ class UpdateDocument(DRFMutation):
         lookup_field = "id"
         serializer = DocumentSerializer
         model = Document
+        graphene_model = DocumentType
 
     class Arguments:
         id = graphene.String(required=True)
@@ -883,6 +885,7 @@ class UpdateAnnotation(DRFMutation):
         lookup_field = "id"
         serializer = AnnotationSerializer
         model = Annotation
+        graphene_model = AnnotationType
 
     class Arguments:
         id = graphene.String(required=True)
@@ -979,6 +982,7 @@ class CreateCorpusMutation(DRFMutation):
         pk_fields = ["label_set"]
         serializer = CorpusSerializer
         model = Corpus
+        graphene_model = CorpusType
 
     class Arguments:
         title = graphene.String(required=False)
@@ -993,6 +997,7 @@ class UpdateCorpusMutation(DRFMutation):
         pk_fields = ["label_set"]
         serializer = CorpusSerializer
         model = Corpus
+        graphene_model = CorpusType
 
     class Arguments:
         id = graphene.String(required=True)
@@ -1016,6 +1021,7 @@ class CreateLabelMutation(DRFMutation):
         pk_fields = []
         serializer = AnnotationLabelSerializer
         model = AnnotationLabel
+        graphene_model = AnnotationLabelType
 
     class Arguments:
         text = graphene.String(required=False)
@@ -1031,6 +1037,7 @@ class UpdateLabelMutation(DRFMutation):
         serializer = AnnotationLabelSerializer
         lookup_field = "id"
         model = AnnotationLabel
+        graphene_model = AnnotationLabelType
 
     class Arguments:
         id = graphene.String(required=True)
@@ -1094,12 +1101,14 @@ class CreateLabelForLabelsetMutation(graphene.Mutation):
     ok = graphene.Boolean()
     message = graphene.String()
     obj = graphene.Field(AnnotationLabelType)
+    obj_id = graphene.ID()
 
     @login_required
     def mutate(root, info, labelset_id, text, description, color, icon, label_type):
 
         ok = False
         obj = None
+        obj_id = None
 
         try:
             labelset = LabelSet.objects.get(
@@ -1114,6 +1123,7 @@ class CreateLabelForLabelsetMutation(graphene.Mutation):
                 label_type=label_type,
                 creator=info.context.user,
             )
+            obj_id = to_global_id("AnnotationLabelType", obj.id)
             logger.debug("CreateLabelForLabelsetMutation - mutate / Created label", obj)
 
             set_permissions_for_obj_to_user(
@@ -1131,7 +1141,9 @@ class CreateLabelForLabelsetMutation(graphene.Mutation):
         except Exception as e:
             message = f"Failed to create label for labelset due to error: {e}"
 
-        return CreateLabelForLabelsetMutation(obj=obj, message=message, ok=ok)
+        return CreateLabelForLabelsetMutation(
+            obj=obj, obj_id=obj_id, message=message, ok=ok
+        )
 
 
 class StartCorpusAnalysisMutation(graphene.Mutation):

@@ -64,6 +64,7 @@ import {
   TokenId,
   PermissionTypes,
   LooseObject,
+  Token,
 } from "../types";
 import { SemanticICONS } from "semantic-ui-react/dist/commonjs/generic";
 import { toast } from "react-toastify";
@@ -390,6 +391,8 @@ export const Annotator = ({
         .then(([doc, resp]: [PDFDocumentProxy, PageTokens[]]) => {
           setDocument(doc);
 
+          console.log("Response", resp);
+
           // Load all the pages too. In theory this makes things a little slower to startup,
           // as fetching and rendering them asynchronously would make it faster to render the
           // first, visible page. That said it makes the code simpler, so we're ok with it for
@@ -399,11 +402,19 @@ export const Annotator = ({
             // See line 50 for an explanation of the cast here.
             loadPages.push(
               doc.getPage(i).then((p) => {
-                // console.log("Loading up some data for page ", i, p);
-                const pageIndex = p.pageNumber - 1;
+                let pageTokens: Token[] = [];
+                if (resp.length === 0) {
+                  toast.error(
+                    "Token layer isn't available for this document... annotations can't be displayed."
+                  );
+                  // console.log("Loading up some data for page ", i, p);
+                } else {
+                  // console.log("Loading up some data for page ", i, p);
+                  const pageIndex = p.pageNumber - 1;
 
-                // console.log("pageIndex", pageIndex);
-                const pageTokens = resp[pageIndex].tokens;
+                  console.log("pageIndex", pageIndex);
+                  pageTokens = resp[pageIndex].tokens;
+                }
 
                 // console.log("Tokens", pageTokens);
                 return new PDFPageInfo(p, pageTokens);

@@ -100,7 +100,9 @@ export const Corpuses = () => {
   const show_remove_docs_from_corpus_modal = useReactiveVar(
     showRemoveDocsFromCorpusModal
   );
-  const selected_metadata_id_to_filter_on = useReactiveVar(selectedMetaAnnotationId)
+  const selected_metadata_id_to_filter_on = useReactiveVar(
+    selectedMetaAnnotationId
+  );
   const selected_analyes = useReactiveVar(selectedAnalyses);
   const selected_document_ids = useReactiveVar(selectedDocumentIds);
   const document_search_term = useReactiveVar(documentSearchTerm);
@@ -234,13 +236,13 @@ export const Corpuses = () => {
   // Query to get Metadata for Selected Corpus
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   const [
-    fetchMetadata, 
-    { 
-      called: metadata_called, 
-      loading: metadata_loading, 
+    fetchMetadata,
+    {
+      called: metadata_called,
+      loading: metadata_loading,
       data: metadata_data,
-      refetch: refetchMetadata
-    }
+      refetch: refetchMetadata,
+    },
   ] = useLazyQuery<GetCorpusMetadataOutputs, GetCorpusMetadataInputs>(
     GET_CORPUS_METADATA
   );
@@ -249,20 +251,28 @@ export const Corpuses = () => {
   // Query to refetch documents if dropdown action is used to delink a doc from corpus
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   const [
-    fetchDocumentsLazily, { error: documents_error, refetch: refetch_documents }] = useLazyQuery<
-    RequestDocumentsOutputs,
-    RequestDocumentsInputs
-  >(GET_DOCUMENTS, {
-    variables: {
-      ...(opened_corpus_id
-        ? { annotateDocLabels: true, includeMetadata: true, inCorpusWithId: opened_corpus_id }
-        : { annotateDocLabels: false, includeMetadata: false }),
-      ...(filter_to_label_id ? { hasLabelWithId: filter_to_label_id } : {}),
-      ...(selected_metadata_id_to_filter_on? { hasAnnotationsWithIds: selected_metadata_id_to_filter_on } : {}),
-      ...(document_search_term ? { textSearch: document_search_term } : {}),
-    },
-    notifyOnNetworkStatusChange: true, // necessary in order to trigger loading signal on fetchMore
-  });
+    fetchDocumentsLazily,
+    { error: documents_error, refetch: refetch_documents },
+  ] = useLazyQuery<RequestDocumentsOutputs, RequestDocumentsInputs>(
+    GET_DOCUMENTS,
+    {
+      variables: {
+        ...(opened_corpus_id
+          ? {
+              annotateDocLabels: true,
+              includeMetadata: true,
+              inCorpusWithId: opened_corpus_id,
+            }
+          : { annotateDocLabels: false, includeMetadata: false }),
+        ...(filter_to_label_id ? { hasLabelWithId: filter_to_label_id } : {}),
+        ...(selected_metadata_id_to_filter_on
+          ? { hasAnnotationsWithIds: selected_metadata_id_to_filter_on }
+          : {}),
+        ...(document_search_term ? { textSearch: document_search_term } : {}),
+      },
+      notifyOnNetworkStatusChange: true, // necessary in order to trigger loading signal on fetchMore
+    }
+  );
   if (documents_error) {
     toast.error("ERROR\nCould not fetch documents for corpus.");
   }
@@ -302,14 +312,16 @@ export const Corpuses = () => {
   useEffect(() => {
     if (!opened_corpus_id) {
       refetchCorpuses();
-    }
-    else {
-      fetchMetadata({variables: {metadataForCorpusId: opened_corpus_id}});
+    } else {
+      fetchMetadata({ variables: { metadataForCorpusId: opened_corpus_id } });
     }
   }, [opened_corpus_id]);
 
   useEffect(() => {
-    console.log("selected_metadata_id_to_filter_on changed", selected_metadata_id_to_filter_on);
+    console.log(
+      "selected_metadata_id_to_filter_on changed",
+      selected_metadata_id_to_filter_on
+    );
     refetch_documents();
   }, [selected_metadata_id_to_filter_on]);
 
@@ -747,7 +759,9 @@ export const Corpuses = () => {
                   />
                   <FilterToLabelSelector
                     only_labels_for_labelset_id={
-                      opened_corpus.labelSet?.id ? opened_corpus.labelSet.id : ""
+                      opened_corpus.labelSet?.id
+                        ? opened_corpus.labelSet.id
+                        : ""
                     }
                     label_type={LabelType.DocTypeLabel}
                   />

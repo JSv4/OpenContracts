@@ -109,17 +109,16 @@ export const GET_DOCUMENTS = gql`
   }
 `;
 
-
 export interface GetCorpusMetadataInputs {
   metadataForCorpusId: string;
-} 
+}
 
 export interface GetCorpusMetadataOutputs {
   corpus: CorpusType;
 }
 
 export const GET_CORPUS_METADATA = gql`
-  query($metadataForCorpusId: ID!) {
+  query ($metadataForCorpusId: ID!) {
     corpus(id: $metadataForCorpusId) {
       id
       allAnnotationSummaries(labelTypes: [METADATA_LABEL]) {

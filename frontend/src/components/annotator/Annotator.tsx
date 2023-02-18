@@ -402,20 +402,20 @@ export const Annotator = ({
             // See line 50 for an explanation of the cast here.
             loadPages.push(
               doc.getPage(i).then((p) => {
-                
                 let pageTokens: Token[] = [];
                 if (resp.length === 0) {
-                  toast.error("Token layer isn't available for this document... annotations can't be displayed.")
+                  toast.error(
+                    "Token layer isn't available for this document... annotations can't be displayed."
+                  );
                   // console.log("Loading up some data for page ", i, p);
-                }
-                else {
+                } else {
                   // console.log("Loading up some data for page ", i, p);
                   const pageIndex = p.pageNumber - 1;
 
                   console.log("pageIndex", pageIndex);
                   pageTokens = resp[pageIndex].tokens;
                 }
-               
+
                 // console.log("Tokens", pageTokens);
                 return new PDFPageInfo(p, pageTokens);
               }) as unknown as Promise<PDFPageInfo>

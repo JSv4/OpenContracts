@@ -12,7 +12,6 @@ services:
         - GITHUB_ACTIONS
       dockerfile: ./compose/local/django/Dockerfile
     image: opencontractserver_local_django
-    container_name: django
     depends_on:
       - postgres
       - redis
@@ -30,7 +29,6 @@ services:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
     image: opencontractserver_production_postgres
-    container_name: postgres
     volumes:
       - local_postgres_data:/var/lib/postgresql/data:Z
       - local_postgres_data_backups:/backups:z
@@ -44,7 +42,6 @@ services:
   celeryworker:
     <<: *django
     image: opencontractserver_local_celeryworker
-    container_name: celeryworker
     depends_on:
       - redis
       - postgres

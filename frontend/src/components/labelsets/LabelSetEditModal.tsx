@@ -207,7 +207,7 @@ export const LabelSetEditModal = ({
         toast.error("Error! Failed to create label");
         console.log("Error creating new metdata value label", err);
       });
-  }
+  };
 
   const handleCreateTextLabel = () => {
     createAnnotationLabelForLabelset({
@@ -337,7 +337,7 @@ export const LabelSetEditModal = ({
   let metadata_labels = labels.filter(
     (label): label is AnnotationLabelType =>
       !!label && label.labelType === LabelType.MetadataLabel
-  )
+  );
   // console.log("Filtered by type", text_labels, doc_type_labels, relationship_labels);
 
   //Filter the text & doc label sets:
@@ -429,22 +429,18 @@ export const LabelSetEditModal = ({
   // Build metadata label components
   let metadata_data_labels: JSX.Element[] = [];
   if (metadata_label_results && metadata_label_results.length > 0) {
-    metadata_data_labels = metadata_label_results.map(
-      (label, index) => {
-        return (
-          <AnnotationLabelCard
-            key={label.id}
-            label={label}
-            selected={selectedLabels
-              .map((label) => label.id)
-              .includes(label.id)}
-            onDelete={() => handleDeleteLabel([label])}
-            onSelect={toggleLabelSelect}
-            onSave={updateLabel}
-          />
-        );
-      }
-    );
+    metadata_data_labels = metadata_label_results.map((label, index) => {
+      return (
+        <AnnotationLabelCard
+          key={label.id}
+          label={label}
+          selected={selectedLabels.map((label) => label.id).includes(label.id)}
+          onDelete={() => handleDeleteLabel([label])}
+          onSelect={toggleLabelSelect}
+          onSave={updateLabel}
+        />
+      );
+    });
   }
 
   const panes = [
@@ -509,7 +505,7 @@ export const LabelSetEditModal = ({
         >
           <Card.Group itemsPerRow={1}>{metadata_data_labels}</Card.Group>
         </Tab.Pane>
-      )
+      ),
     },
     {
       menuItem: {
@@ -635,9 +631,7 @@ export const LabelSetEditModal = ({
             <Icon name="tags" />
             <Header.Content>
               Edit Label Set:{" "}
-              {updatedObject
-                ? (updatedObject as LabelSetType).title
-                : ""}
+              {updatedObject ? (updatedObject as LabelSetType).title : ""}
             </Header.Content>
           </Header>
         </div>

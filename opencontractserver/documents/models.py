@@ -1,6 +1,7 @@
 import functools
 
 import django
+from django.db import models
 from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 

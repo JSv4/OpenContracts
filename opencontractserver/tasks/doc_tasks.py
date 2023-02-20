@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import base64
 import enum
 import io
 import json
 import logging
 import os
+import uuid
 from typing import Any
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile, File
 from django.core.files.storage import default_storage
@@ -16,7 +19,7 @@ from config import celery_app
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
     LabelLookupPythonType,
-    OpenContractDocAnnotationExport,
+    OpenContractDocAnnotationExport, PawlsPagePythonType,
 )
 from opencontractserver.utils.etl import build_document_export
 from opencontractserver.utils.pdf import base_64_encode_bytes
@@ -63,11 +66,57 @@ def base_64_encode_document(doc_id: int) -> tuple[str | None, str | None]:
         logger.error(f"Error building annotated doc for {doc_id}: {e}")
         return None, None
 
+@celery_app.task()
+@validate_arguments
+def split_pdf_for_processing(
+    doc_base64_bytes_str: str,
+    user_id: int,
+    doc_id: int
+) -> tuple[str, PawlsPagePythonType]:
+
+    logger.info(f"split_pdf_for_processing() - doc_base64_bytes_str: {doc_base64_bytes_str}")
+
+    import boto3
+    from PyPDF2 import PdfFileReader, PdfFileWriter
+
+    s3 = boto3.resource('s3')
+
+    base64_img_bytes = doc_base64_bytes_str.encode("utf-8")
+    decoded_file_data = base64.decodebytes(base64_img_bytes)
+
+    pdf = PdfFileReader(io.BytesIO(decoded_file_data))
+
+    #TODO - for each page, store to disk as a temporary file OR
+    # store to cloud storage and pass the path to the storage
+    # location rather than the bytes themselves (to cut down on
+    # Redis usage)
+
+    page_bytes_stream = io.BytesIO()
+
+    pages_and_paths: list[tuple[int, str]] = []
+
+    for page in range(pdf.getNumPages()):
+        logger.info(f"split_pdf_for_processing() - process page {page}")
+        pdf_writer = PdfFileWriter()
+        pdf_writer.addPage(pdf.getPage(page))
+        pdf_writer.write(page_bytes_stream)
+        page_path = f"user_{user_id}/fragments/{uuid.uuid4()}.pdf"
+        s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME).put_object(
+            Key=page_path,
+            Body=page_bytes_stream
+        )
+        pages_and_paths.append((page, page_path))
+
+    logger.info(f"split_pdf_for_processing() - pages_and_paths: {pages_and_paths}")
+
+
 
 @celery_app.task()
 @validate_arguments
 def burn_doc_annotations(
-    label_lookups: LabelLookupPythonType, doc_id: int, corpus_id: int
+    label_lookups: LabelLookupPythonType,
+    doc_id: int,
+    corpus_id: int
 ) -> tuple[str, str, OpenContractDocAnnotationExport | None, Any, Any]:
     """
     Simple task wrapper for a fairly complex task to burn in the annotations for a given corpus on a given doc.
@@ -100,7 +149,7 @@ def parse_base64_pdf(*args, doc_id: str = "") -> tuple[str, str, list]:
         # https://stackabuse.com/encoding-and-decoding-base64-strings-in-python/
         base64_img_bytes = args[0][1].encode("utf-8")
         decoded_file_data = base64.decodebytes(base64_img_bytes)
-        print(f"decoded_file_data type {type(decoded_file_data)}")
+        #print(f"decoded_file_data type {type(decoded_file_data)}")
 
         with tempfile.NamedTemporaryFile(suffix=".pdf", prefix=TEMP_DIR) as tf:
             print(tf.name)

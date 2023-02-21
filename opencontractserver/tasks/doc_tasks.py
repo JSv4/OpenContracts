@@ -6,6 +6,7 @@ import io
 import json
 import logging
 import os
+import pathlib
 import uuid
 from typing import Any
 
@@ -29,7 +30,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 User = get_user_model()
-
 
 # CONSTANTS
 class TaskStates(str, enum.Enum):
@@ -70,12 +70,21 @@ def process_pdf_page(
                f"{len(annotations)}")
 
     logger.info("process_pdf_page() - write to temporary storage to avoid overloading Redis")
-    pawls_fragment_path = f"user_{user_id}/pawls_fragments/{uuid.uuid4()}.json"
-    s3.put_object(
-        Key=pawls_fragment_path,
-        Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-        Body=json.dumps(annotations[0])
-    )
+
+    if settings.USE_AWS:
+        pawls_fragment_path = f"user_{user_id}/pawls_fragments/{uuid.uuid4()}.json"
+        s3.put_object(
+            Key=pawls_fragment_path,
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Body=json.dumps(annotations[0])
+        )
+    else:
+        pawls_fragment_folder_path = pathlib.Path(f"/tmp/user_{user_id}/pawls_fragments")
+        pawls_fragment_folder_path.mkdir(parents=True, exist_ok=True)
+        pawls_fragment_path = pawls_fragment_folder_path / f"{uuid.uuid4()}.json"
+        with pawls_fragment_path.open('w') as f:
+            f.write(json.dumps(annotations[0]))
+        pawls_fragment_path = pawls_fragment_path.resolve().__str__()
 
     logger.info(f"process_pdf_page() - annotations written to {pawls_fragment_path}")
 
@@ -97,17 +106,22 @@ def reassemble_extracted_pdf_parts(
 
         page_num, pawls_page_path, pdf_page_path = doc_part
 
-        import boto3
+        if settings.USE_AWS:
+            import boto3
 
-        logger.info("process_pdf_page() - Load obj from s3")
-        s3 = boto3.client('s3')
+            logger.info("process_pdf_page() - Load obj from s3")
+            s3 = boto3.client('s3')
 
-        page_obj = s3.get_object(
-            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-            Key=pawls_page_path
-        )
+            page_obj = s3.get_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                Key=pawls_page_path
+            )
+            page_pawls_layer = json.loads(page_obj['Body'].read().decode("utf-8"))
 
-        page_pawls_layer = json.loads(page_obj['Body'].read().decode("utf-8"))
+        else:
+            with open(pawls_page_path, "r") as f:
+                page_pawls_layer = json.loads(f.read())
+
         pawls_layer.append(page_pawls_layer)
 
     pawls_string = json.dumps(pawls_layer)

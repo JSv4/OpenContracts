@@ -10,6 +10,8 @@ from PyPDF2.generic import (
     TextStringObject,
 )
 
+from opencontractserver.types.dicts import PawlsPagePythonType
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -69,7 +71,7 @@ def createHighlight(
     return new_highlight
 
 
-def addHighlightToNewPage(highlight: DictionaryObject, page, output):
+def add_highlight_to_new_page(highlight: DictionaryObject, page, output):
     # TODO - finish typing
     highlight_ref = output._addObject(highlight)
 
@@ -79,7 +81,7 @@ def addHighlightToNewPage(highlight: DictionaryObject, page, output):
         page[NameObject("/Annots")] = ArrayObject([highlight_ref])
 
 
-def addHighlightToPage(highlight: DictionaryObject, page):
+def add_highlight_to_page(highlight: DictionaryObject, page):
     # TODO - finish typing
     highlight_ref = page._addObject(highlight)
 
@@ -87,3 +89,22 @@ def addHighlightToPage(highlight: DictionaryObject, page):
         page[NameObject("/Annots")].append(highlight_ref)
     else:
         page[NameObject("/Annots")] = ArrayObject([highlight_ref])
+
+
+def extract_pawls_from_pdfs_bytes(
+    pdf_bytes: bytes,
+    TEMP_DIR: str = "./tmp"
+) -> list[PawlsPagePythonType]:
+
+
+    import tempfile
+
+    from pawls.commands.preprocess import process_tesseract
+
+    with tempfile.NamedTemporaryFile(suffix=".pdf", prefix=TEMP_DIR) as tf:
+        print(tf.name)
+        print(type(tf))
+        tf.write(pdf_bytes)
+        annotations: list = process_tesseract(tf.name)
+
+    return annotations

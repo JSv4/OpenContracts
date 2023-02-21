@@ -1,10 +1,7 @@
 from .cleanup_tasks import delete_analysis_and_annotations_task
 from .doc_tasks import (
     base_64_encode_bytes,
-    base_64_encode_document,
     burn_doc_annotations,
-    parse_base64_pdf,
-    write_pawls_file,
 )
 from .export_tasks import package_annotated_docs
 from .fork_tasks import fork_corpus
@@ -21,10 +18,7 @@ from .permissioning_tasks import make_analysis_public_task, make_corpus_public_t
 __all__ = [
     "package_annotated_docs",
     "burn_doc_annotations",
-    "base_64_encode_document",
     "base_64_encode_bytes",
-    "parse_base64_pdf",
-    "write_pawls_file",
     "fork_corpus",
     "build_label_lookups_task",
     "import_corpus",

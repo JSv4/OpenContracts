@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import base64
 import enum
 import io
 import json
 import logging
-import os
 import pathlib
 import uuid
 from typing import Any
@@ -21,15 +19,17 @@ from config import celery_app
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
     LabelLookupPythonType,
-    OpenContractDocAnnotationExport, PawlsPagePythonType,
+    OpenContractDocAnnotationExport,
+    PawlsPagePythonType,
 )
 from opencontractserver.utils.etl import build_document_export
-from opencontractserver.utils.pdf import base_64_encode_bytes, extract_pawls_from_pdfs_bytes
+from opencontractserver.utils.pdf import extract_pawls_from_pdfs_bytes
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 User = get_user_model()
+
 
 # CONSTANTS
 class TaskStates(str, enum.Enum):
@@ -43,51 +43,51 @@ TEMP_DIR = "./tmp"
 
 @celery_app.task()
 def process_pdf_page(
-    total_page_count: int,
-    page_num: int,
-    page_path: str,
-    user_id: int
+    total_page_count: int, page_num: int, page_path: str, user_id: int
 ) -> tuple[int, str, str]:
 
-    logger.info(f"process_pdf_page() - Process page {page_num} of {total_page_count} from path {page_path}")
+    logger.info(
+        f"process_pdf_page() - Process page {page_num} of {total_page_count} from path {page_path}"
+    )
 
     if settings.USE_AWS:
         import boto3
 
         logger.info("process_pdf_page() - Load obj from s3")
-        s3 = boto3.client('s3')
+        s3 = boto3.client("s3")
 
-        page_obj = s3.get_object(
-            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-            Key=page_path
-        )
-        page_data = page_obj['Body'].read()
+        page_obj = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=page_path)
+        page_data = page_obj["Body"].read()
     else:
-        with open(page_path, 'rb') as page_file:
+        with open(page_path, "rb") as page_file:
             page_data = page_file.read()
 
     logger.info(f"Page data: {page_data}")
-    annotations = extract_pawls_from_pdfs_bytes(
-        pdf_bytes=page_data
+    annotations = extract_pawls_from_pdfs_bytes(pdf_bytes=page_data)
+
+    logger.info(
+        f"process_pdf_page() - processing complete with annotations of type {type(annotations)} and len "
+        f"{len(annotations)}"
     )
 
-    logger.info(f"process_pdf_page() - processing complete with annotations of type {type(annotations)} and len "
-               f"{len(annotations)}")
-
-    logger.info("process_pdf_page() - write to temporary storage to avoid overloading Redis")
+    logger.info(
+        "process_pdf_page() - write to temporary storage to avoid overloading Redis"
+    )
 
     if settings.USE_AWS:
         pawls_fragment_path = f"user_{user_id}/pawls_fragments/{uuid.uuid4()}.json"
         s3.put_object(
             Key=pawls_fragment_path,
             Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-            Body=json.dumps(annotations[0])
+            Body=json.dumps(annotations[0]),
         )
     else:
-        pawls_fragment_folder_path = pathlib.Path(f"/tmp/user_{user_id}/pawls_fragments")
+        pawls_fragment_folder_path = pathlib.Path(
+            f"/tmp/user_{user_id}/pawls_fragments"
+        )
         pawls_fragment_folder_path.mkdir(parents=True, exist_ok=True)
         pawls_fragment_path = pawls_fragment_folder_path / f"{uuid.uuid4()}.json"
-        with pawls_fragment_path.open('w') as f:
+        with pawls_fragment_path.open("w") as f:
             f.write(json.dumps(annotations[0]))
         pawls_fragment_path = pawls_fragment_path.resolve().__str__()
 
@@ -115,16 +115,15 @@ def reassemble_extracted_pdf_parts(
             import boto3
 
             logger.info("process_pdf_page() - Load obj from s3")
-            s3 = boto3.client('s3')
+            s3 = boto3.client("s3")
 
             page_obj = s3.get_object(
-                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-                Key=pawls_page_path
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=pawls_page_path
             )
-            page_pawls_layer = json.loads(page_obj['Body'].read().decode("utf-8"))
+            page_pawls_layer = json.loads(page_obj["Body"].read().decode("utf-8"))
 
         else:
-            with open(pawls_page_path, "r") as f:
+            with open(pawls_page_path) as f:
                 page_pawls_layer = json.loads(f.read())
 
         pawls_layer.append(page_pawls_layer)
@@ -136,12 +135,9 @@ def reassemble_extracted_pdf_parts(
     document.page_count = len(sorted_doc_parts)
     document.save()
 
+
 @celery_app.task()
-def set_doc_lock_state(
-    *args,
-    locked: bool,
-    doc_id: int
-):
+def set_doc_lock_state(*args, locked: bool, doc_id: int):
     document = Document.objects.get(pk=doc_id)
     document.backend_lock = locked
     document.save()
@@ -149,11 +145,7 @@ def set_doc_lock_state(
 
 @celery_app.task()
 # @validate_arguments
-def split_pdf_for_processing(
-    user_id: int,
-    doc_id: int
-) -> list[tuple[int, str]]:
-
+def split_pdf_for_processing(user_id: int, doc_id: int) -> list[tuple[int, str]]:
 
     logger.info(f"split_pdf_for_processing() - split doc {doc_id} for user {user_id}")
 
@@ -165,11 +157,12 @@ def split_pdf_for_processing(
 
     if settings.USE_AWS:
         import boto3
-        s3 = boto3.client('s3')
+
+        s3 = boto3.client("s3")
 
     pdf = PdfReader(doc_file)
 
-    #TODO - for each page, store to disk as a temporary file OR
+    # TODO - for each page, store to disk as a temporary file OR
     # store to cloud storage and pass the path to the storage
     # location rather than the bytes themselves (to cut down on
     # Redis usage)
@@ -192,13 +185,15 @@ def split_pdf_for_processing(
             s3.put_object(
                 Key=page_path,
                 Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-                Body=page_bytes_stream.getvalue()
+                Body=page_bytes_stream.getvalue(),
             )
         else:
-            pdf_fragment_folder_path = pathlib.Path(f"/tmp/user_{user_id}/pdf_fragments")
+            pdf_fragment_folder_path = pathlib.Path(
+                f"/tmp/user_{user_id}/pdf_fragments"
+            )
             pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
             pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}.pdf"
-            with pdf_fragment_path.open('wb') as f:
+            with pdf_fragment_path.open("wb") as f:
                 f.write(page_bytes_stream.getvalue())
 
             page_path = pdf_fragment_path.resolve().__str__()
@@ -209,21 +204,19 @@ def split_pdf_for_processing(
                 total_page_count=total_page_count,
                 page_num=page,
                 page_path=page_path,
-                user_id=user_id
+                user_id=user_id,
             )
         )
 
-    logger.info(f"plit_pdf_for_processing() - launch processing workflow")
+    logger.info("plit_pdf_for_processing() - launch processing workflow")
     process_workflow = chord(
-        group(
-            processing_tasks
-        ),
-        reassemble_extracted_pdf_parts.s(
-            doc_id=doc_id
-        ),
+        group(processing_tasks),
+        reassemble_extracted_pdf_parts.s(doc_id=doc_id),
     )
     process_workflow.apply_async()
-    logger.info(f"plit_pdf_for_processing() - pdf for doc_id {doc_id} being processed async")
+    logger.info(
+        f"plit_pdf_for_processing() - pdf for doc_id {doc_id} being processed async"
+    )
 
     logger.info(f"split_pdf_for_processing() - pages_and_paths: {pages_and_paths}")
     return pages_and_paths  # Leaving this here for tests for now... not a thorough way of evaluating underlying task
@@ -233,9 +226,7 @@ def split_pdf_for_processing(
 @celery_app.task()
 @validate_arguments
 def burn_doc_annotations(
-    label_lookups: LabelLookupPythonType,
-    doc_id: int,
-    corpus_id: int
+    label_lookups: LabelLookupPythonType, doc_id: int, corpus_id: int
 ) -> tuple[str, str, OpenContractDocAnnotationExport | None, Any, Any]:
     """
     Simple task wrapper for a fairly complex task to burn in the annotations for a given corpus on a given doc.

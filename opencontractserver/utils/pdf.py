@@ -92,10 +92,8 @@ def add_highlight_to_page(highlight: DictionaryObject, page):
 
 
 def extract_pawls_from_pdfs_bytes(
-    pdf_bytes: bytes,
-    TEMP_DIR: str = "./tmp"
+    pdf_bytes: bytes, TEMP_DIR: str = "./tmp"
 ) -> list[PawlsPagePythonType]:
-
 
     import tempfile
 

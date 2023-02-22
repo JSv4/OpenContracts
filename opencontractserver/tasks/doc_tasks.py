@@ -226,7 +226,8 @@ def split_pdf_for_processing(
     logger.info(f"plit_pdf_for_processing() - pdf for doc_id {doc_id} being processed async")
 
     logger.info(f"split_pdf_for_processing() - pages_and_paths: {pages_and_paths}")
-    return pages_and_paths
+    return pages_and_paths  # Leaving this here for tests for now... not a thorough way of evaluating underlying task
+    # completion
 
 
 @celery_app.task()

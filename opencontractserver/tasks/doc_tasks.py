@@ -51,16 +51,21 @@ def process_pdf_page(
 
     logger.info(f"process_pdf_page() - Process page {page_num} of {total_page_count} from path {page_path}")
 
-    import boto3
+    if settings.USE_AWS:
+        import boto3
 
-    logger.info("process_pdf_page() - Load obj from s3")
-    s3 = boto3.client('s3')
+        logger.info("process_pdf_page() - Load obj from s3")
+        s3 = boto3.client('s3')
 
-    page_obj = s3.get_object(
-        Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-        Key=page_path
-    )
-    page_data = page_obj['Body'].read()
+        page_obj = s3.get_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Key=page_path
+        )
+        page_data = page_obj['Body'].read()
+    else:
+        with open(page_path, 'rb') as page_file:
+            page_data = page_file.read()
+
     logger.info(f"Page data: {page_data}")
     annotations = extract_pawls_from_pdfs_bytes(
         pdf_bytes=page_data
@@ -152,14 +157,16 @@ def split_pdf_for_processing(
 
     logger.info(f"split_pdf_for_processing() - split doc {doc_id} for user {user_id}")
 
-    import boto3
     from PyPDF2 import PdfReader, PdfWriter
 
     doc = Document.objects.get(pk=doc_id)
     doc_path = doc.pdf_file.name
     doc_file = default_storage.open(doc_path, mode="rb")
 
-    s3 = boto3.client('s3')
+    if settings.USE_AWS:
+        import boto3
+        s3 = boto3.client('s3')
+
     pdf = PdfReader(doc_file)
 
     #TODO - for each page, store to disk as a temporary file OR
@@ -179,12 +186,23 @@ def split_pdf_for_processing(
         pdf_writer = PdfWriter()
         pdf_writer.add_page(pdf.pages[page])
         pdf_writer.write(page_bytes_stream)
-        page_path = f"user_{user_id}/fragments/{uuid.uuid4()}.pdf"
-        s3.put_object(
-            Key=page_path,
-            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-            Body=page_bytes_stream.getvalue()
-        )
+
+        if settings.USE_AWS:
+            page_path = f"user_{user_id}/fragments/{uuid.uuid4()}.pdf"
+            s3.put_object(
+                Key=page_path,
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                Body=page_bytes_stream.getvalue()
+            )
+        else:
+            pdf_fragment_folder_path = pathlib.Path(f"/tmp/user_{user_id}/pdf_fragments")
+            pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
+            pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}.pdf"
+            with pdf_fragment_path.open('wb') as f:
+                f.write(page_bytes_stream.getvalue())
+
+            page_path = pdf_fragment_path.resolve().__str__()
+
         pages_and_paths.append((page, page_path))
         processing_tasks.append(
             process_pdf_page.si(

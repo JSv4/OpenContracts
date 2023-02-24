@@ -6,7 +6,7 @@ redis==4.5.1  # https://github.com/redis/redis-py
 hiredis==2.0.0  # https://github.com/redis/hiredis-py
 celery==5.2.7  # pyup: < 6.0  # https://github.com/celery/celery
 django-celery-beat==2.4.0  # https://github.com/celery/django-celery-beat
-flower==1.0.0  # https://github.com/mher/flower
+flower==1.2.0  # https://github.com/mher/flower
 pyjwt==2.4.0  # https://github.com/jpadilla/pyjwt
 cryptography==38.0.1  # https://github.com/pyca/cryptography
 pydantic==1.10.2

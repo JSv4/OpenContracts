@@ -1,5 +1,5 @@
 from .cleanup_tasks import delete_analysis_and_annotations_task
-from .doc_tasks import base_64_encode_bytes, burn_doc_annotations
+from .doc_tasks import burn_doc_annotations
 from .export_tasks import package_annotated_docs
 from .fork_tasks import fork_corpus
 from .import_tasks import import_corpus
@@ -15,7 +15,6 @@ from .permissioning_tasks import make_analysis_public_task, make_corpus_public_t
 __all__ = [
     "package_annotated_docs",
     "burn_doc_annotations",
-    "base_64_encode_bytes",
     "fork_corpus",
     "build_label_lookups_task",
     "import_corpus",

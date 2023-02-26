@@ -38,7 +38,7 @@ drf-extra-fields==3.4.1  # https://github.com/Hipo/drf-extra-fields
 # ------------------------------------------------------------------------------
 # Pawls preprocessors are available as a command line utility in their repo for now
 # BUT we can install them from their github repo subdirectory using the syntax below:
-git+https://github.com/allenai/pawls.git#egg=pawls&subdirectory=cli
+git+https://github.com/JSv4/pawls#egg=pawls&subdirectory=cli
 scikit-learn==1.1.3
 pdfplumber
 pytesseract

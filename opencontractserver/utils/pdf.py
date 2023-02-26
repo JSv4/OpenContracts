@@ -1,5 +1,7 @@
 import base64
 import logging
+import pathlib
+import uuid
 
 from PyPDF2.generic import (
     ArrayObject,
@@ -92,17 +94,20 @@ def add_highlight_to_page(highlight: DictionaryObject, page):
 
 
 def extract_pawls_from_pdfs_bytes(
-    pdf_bytes: bytes, TEMP_DIR: str = "./tmp"
+    pdf_bytes: bytes,
 ) -> list[PawlsPagePythonType]:
-
-    import tempfile
 
     from pawls.commands.preprocess import process_tesseract
 
-    with tempfile.NamedTemporaryFile(suffix=".pdf", prefix=TEMP_DIR) as tf:
-        print(tf.name)
-        print(type(tf))
-        tf.write(pdf_bytes)
-        annotations: list = process_tesseract(tf.name)
+    pdf_fragment_folder_path = pathlib.Path("/tmp/user_0/pdf_fragments")
+    pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
+    pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}.pdf"
+    with pdf_fragment_path.open("wb") as f:
+        f.write(pdf_bytes)
+
+    page_path = pdf_fragment_path.resolve().__str__()
+    annotations: list = process_tesseract(page_path)
+
+    pdf_fragment_path.unlink()
 
     return annotations

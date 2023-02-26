@@ -41,7 +41,9 @@ class TaskStates(str, enum.Enum):
 TEMP_DIR = "./tmp"
 
 
-@celery_app.task()
+@celery_app.task(
+    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+)
 def process_pdf_page(
     total_page_count: int, page_num: int, page_path: str, user_id: int
 ) -> tuple[int, str, str]:
@@ -62,7 +64,7 @@ def process_pdf_page(
         with open(page_path, "rb") as page_file:
             page_data = page_file.read()
 
-    logger.info(f"Page data: {page_data}")
+    # logger.info(f"Page data: {page_data}")
     annotations = extract_pawls_from_pdfs_bytes(pdf_bytes=page_data)
 
     logger.info(
@@ -96,7 +98,9 @@ def process_pdf_page(
     return page_num, pawls_fragment_path, page_path
 
 
-@celery_app.task()
+@celery_app.task(
+    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+)
 def reassemble_extracted_pdf_parts(
     doc_parts: list[list[int, str, str]],
     doc_id: int,
@@ -143,8 +147,9 @@ def set_doc_lock_state(*args, locked: bool, doc_id: int):
     document.save()
 
 
-@celery_app.task()
-# @validate_arguments
+@celery_app.task(
+    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+)
 def split_pdf_for_processing(user_id: int, doc_id: int) -> list[tuple[int, str]]:
 
     logger.info(f"split_pdf_for_processing() - split doc {doc_id} for user {user_id}")

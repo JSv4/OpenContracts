@@ -148,7 +148,7 @@ class DRFMutation(graphene.Mutation):
                 logger.info("No user")
                 raise ValueError("No user in this request...")
 
-            logger.info(f"DRFMutation - kwargs: {kwargs}")
+            # logger.info(f"DRFMutation - kwargs: {kwargs}")
             serializer = cls.IOSettings.serializer
 
             if hasattr(cls.IOSettings, "pk_fields"):
@@ -207,9 +207,9 @@ class DRFMutation(graphene.Mutation):
                 logger.info("Succeeded updating obj")
 
             else:
-                logger.info(
-                    f"No lookup field specified... create obj with kwargs: {kwargs}"
-                )
+                # logger.info(
+                #     f"No lookup field specified... create obj with kwargs: {kwargs}"
+                # )
                 obj_serializer = serializer(data=kwargs)
                 obj_serializer.is_valid(raise_exception=True)
                 obj = obj_serializer.save()

@@ -409,7 +409,9 @@ CELERY_RESULT_SERIALIZER = "json"
 # CELERY_TASK_SOFT_TIME_LIMIT = 3600
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#beat-scheduler
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
-CELERY_WORKER_MAX_MEMORY_PER_CHILD = 1024000
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = 14240000  # 14 GB (thousands of kilobytes)
+CELERY_MAX_TASKS_PER_CHILD = 4
+CELERY_PREFETCH_MULTIPLIER = 1
 # django-rest-framework
 # -------------------------------------------------------------------------------
 # django-rest-framework - https://www.django-rest-framework.org/api-guide/settings/

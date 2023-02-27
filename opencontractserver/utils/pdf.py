@@ -1,5 +1,7 @@
 import base64
 import logging
+import pathlib
+import uuid
 
 from PyPDF2.generic import (
     ArrayObject,
@@ -9,6 +11,8 @@ from PyPDF2.generic import (
     NumberObject,
     TextStringObject,
 )
+
+from opencontractserver.types.dicts import PawlsPagePythonType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -69,7 +73,7 @@ def createHighlight(
     return new_highlight
 
 
-def addHighlightToNewPage(highlight: DictionaryObject, page, output):
+def add_highlight_to_new_page(highlight: DictionaryObject, page, output):
     # TODO - finish typing
     highlight_ref = output._addObject(highlight)
 
@@ -79,7 +83,7 @@ def addHighlightToNewPage(highlight: DictionaryObject, page, output):
         page[NameObject("/Annots")] = ArrayObject([highlight_ref])
 
 
-def addHighlightToPage(highlight: DictionaryObject, page):
+def add_highlight_to_page(highlight: DictionaryObject, page):
     # TODO - finish typing
     highlight_ref = page._addObject(highlight)
 
@@ -87,3 +91,23 @@ def addHighlightToPage(highlight: DictionaryObject, page):
         page[NameObject("/Annots")].append(highlight_ref)
     else:
         page[NameObject("/Annots")] = ArrayObject([highlight_ref])
+
+
+def extract_pawls_from_pdfs_bytes(
+    pdf_bytes: bytes,
+) -> list[PawlsPagePythonType]:
+
+    from pawls.commands.preprocess import process_tesseract
+
+    pdf_fragment_folder_path = pathlib.Path("/tmp/user_0/pdf_fragments")
+    pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
+    pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}.pdf"
+    with pdf_fragment_path.open("wb") as f:
+        f.write(pdf_bytes)
+
+    page_path = pdf_fragment_path.resolve().__str__()
+    annotations: list = process_tesseract(page_path)
+
+    pdf_fragment_path.unlink()
+
+    return annotations

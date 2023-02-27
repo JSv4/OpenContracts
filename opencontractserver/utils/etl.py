@@ -94,7 +94,7 @@ def build_document_export(
 
     from PyPDF2 import PdfFileReader, PdfFileWriter
 
-    from opencontractserver.utils.pdf import addHighlightToNewPage, createHighlight
+    from opencontractserver.utils.pdf import add_highlight_to_new_page, createHighlight
 
     try:
 
@@ -281,7 +281,7 @@ def build_document_export(
                             ),
                         )
 
-                        addHighlightToNewPage(highlight, page, pdf_output)
+                        add_highlight_to_new_page(highlight, page, pdf_output)
 
                         logger.info("Highlight added")
 

@@ -4,9 +4,12 @@ import enum
 import io
 import json
 import logging
-import os
+import pathlib
+import uuid
 from typing import Any
 
+from celery import chord, group
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile, File
 from django.core.files.storage import default_storage
@@ -17,9 +20,10 @@ from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
     LabelLookupPythonType,
     OpenContractDocAnnotationExport,
+    PawlsPagePythonType,
 )
 from opencontractserver.utils.etl import build_document_export
-from opencontractserver.utils.pdf import base_64_encode_bytes
+from opencontractserver.utils.pdf import extract_pawls_from_pdfs_bytes
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -37,31 +41,191 @@ class TaskStates(str, enum.Enum):
 TEMP_DIR = "./tmp"
 
 
+@celery_app.task(
+    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+)
+def process_pdf_page(
+    total_page_count: int, page_num: int, page_path: str, user_id: int
+) -> tuple[int, str, str]:
+
+    logger.info(
+        f"process_pdf_page() - Process page {page_num} of {total_page_count} from path {page_path}"
+    )
+
+    if settings.USE_AWS:
+        import boto3
+
+        logger.info("process_pdf_page() - Load obj from s3")
+        s3 = boto3.client("s3")
+
+        page_obj = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=page_path)
+        page_data = page_obj["Body"].read()
+    else:
+        with open(page_path, "rb") as page_file:
+            page_data = page_file.read()
+
+    # logger.info(f"Page data: {page_data}")
+    annotations = extract_pawls_from_pdfs_bytes(pdf_bytes=page_data)
+
+    logger.info(
+        f"process_pdf_page() - processing complete with annotations of type {type(annotations)} and len "
+        f"{len(annotations)}"
+    )
+
+    logger.info(
+        "process_pdf_page() - write to temporary storage to avoid overloading Redis"
+    )
+
+    if settings.USE_AWS:
+        pawls_fragment_path = f"user_{user_id}/pawls_fragments/{uuid.uuid4()}.json"
+        s3.put_object(
+            Key=pawls_fragment_path,
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Body=json.dumps(annotations[0]),
+        )
+    else:
+        pawls_fragment_folder_path = pathlib.Path(
+            f"/tmp/user_{user_id}/pawls_fragments"
+        )
+        pawls_fragment_folder_path.mkdir(parents=True, exist_ok=True)
+        pawls_fragment_path = pawls_fragment_folder_path / f"{uuid.uuid4()}.json"
+        with pawls_fragment_path.open("w") as f:
+            f.write(json.dumps(annotations[0]))
+        pawls_fragment_path = pawls_fragment_path.resolve().__str__()
+
+    logger.info(f"process_pdf_page() - annotations written to {pawls_fragment_path}")
+
+    return page_num, pawls_fragment_path, page_path
+
+
+@celery_app.task(
+    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+)
+def reassemble_extracted_pdf_parts(
+    doc_parts: list[list[int, str, str]],
+    doc_id: int,
+):
+
+    logger.info(f"reassemble_extracted_pdf_parts() - received parts: {doc_parts}")
+
+    sorted_doc_parts = sorted(doc_parts)
+    pawls_layer: list[PawlsPagePythonType] = []
+
+    for doc_part in sorted_doc_parts:
+
+        page_num, pawls_page_path, pdf_page_path = doc_part
+
+        if settings.USE_AWS:
+            import boto3
+
+            logger.info("process_pdf_page() - Load obj from s3")
+            s3 = boto3.client("s3")
+
+            page_obj = s3.get_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=pawls_page_path
+            )
+            page_pawls_layer = json.loads(page_obj["Body"].read().decode("utf-8"))
+
+        else:
+            with open(pawls_page_path) as f:
+                page_pawls_layer = json.loads(f.read())
+
+        pawls_layer.append(page_pawls_layer)
+
+    pawls_string = json.dumps(pawls_layer)
+    pawls_file = ContentFile(pawls_string.encode("utf-8"))
+    document = Document.objects.get(pk=doc_id)
+    document.pawls_parse_file.save(f"doc_{doc_id}.pawls", pawls_file)
+    document.page_count = len(sorted_doc_parts)
+    document.save()
+
+
 @celery_app.task()
-def base_64_encode_document(doc_id: int) -> tuple[str | None, str | None]:
-    """
-    Given a doc_id, encode the underlying pdf file in linked to the database
-    to base64 string for use in celery pipelines. Built to output tuple, with
-    position 0 being the doc name and pos 1 being the base64 string.
+def set_doc_lock_state(*args, locked: bool, doc_id: int):
+    document = Document.objects.get(pk=doc_id)
+    document.backend_lock = locked
+    document.save()
 
-    """
 
-    logger.info(f"base_64_encode_document - starting for doc pk {doc_id}")
+@celery_app.task(
+    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+)
+def split_pdf_for_processing(user_id: int, doc_id: int) -> list[tuple[int, str]]:
 
-    try:
+    logger.info(f"split_pdf_for_processing() - split doc {doc_id} for user {user_id}")
 
-        doc = Document.objects.get(pk=doc_id)
-        doc_path = doc.pdf_file.name
-        doc_name = os.path.basename(doc_path)
-        doc_file = default_storage.open(doc_path, mode="rb")
-        doc_base_64_string = base_64_encode_bytes(doc_file.read())
+    from PyPDF2 import PdfReader, PdfWriter
 
-        return doc_name, doc_base_64_string
+    doc = Document.objects.get(pk=doc_id)
+    doc_path = doc.pdf_file.name
+    doc_file = default_storage.open(doc_path, mode="rb")
 
-    except Exception as e:
+    if settings.USE_AWS:
+        import boto3
 
-        logger.error(f"Error building annotated doc for {doc_id}: {e}")
-        return None, None
+        s3 = boto3.client("s3")
+
+    pdf = PdfReader(doc_file)
+
+    # TODO - for each page, store to disk as a temporary file OR
+    # store to cloud storage and pass the path to the storage
+    # location rather than the bytes themselves (to cut down on
+    # Redis usage)
+
+    pages_and_paths: list[tuple[int, str]] = []
+    processing_tasks = []
+    total_page_count = len(pdf.pages)
+
+    for page in range(total_page_count):
+
+        page_bytes_stream = io.BytesIO()
+
+        logger.info(f"split_pdf_for_processing() - process page {page}")
+        pdf_writer = PdfWriter()
+        pdf_writer.add_page(pdf.pages[page])
+        pdf_writer.write(page_bytes_stream)
+
+        if settings.USE_AWS:
+            page_path = f"user_{user_id}/fragments/{uuid.uuid4()}.pdf"
+            s3.put_object(
+                Key=page_path,
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                Body=page_bytes_stream.getvalue(),
+            )
+        else:
+            pdf_fragment_folder_path = pathlib.Path(
+                f"/tmp/user_{user_id}/pdf_fragments"
+            )
+            pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
+            pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}.pdf"
+            with pdf_fragment_path.open("wb") as f:
+                f.write(page_bytes_stream.getvalue())
+
+            page_path = pdf_fragment_path.resolve().__str__()
+
+        pages_and_paths.append((page, page_path))
+        processing_tasks.append(
+            process_pdf_page.si(
+                total_page_count=total_page_count,
+                page_num=page,
+                page_path=page_path,
+                user_id=user_id,
+            )
+        )
+
+    logger.info("plit_pdf_for_processing() - launch processing workflow")
+    process_workflow = chord(
+        group(processing_tasks),
+        reassemble_extracted_pdf_parts.s(doc_id=doc_id),
+    )
+    process_workflow.apply_async()
+    logger.info(
+        f"plit_pdf_for_processing() - pdf for doc_id {doc_id} being processed async"
+    )
+
+    logger.info(f"split_pdf_for_processing() - pages_and_paths: {pages_and_paths}")
+    return pages_and_paths  # Leaving this here for tests for now... not a thorough way of evaluating underlying task
+    # completion
 
 
 @celery_app.task()
@@ -76,50 +240,6 @@ def burn_doc_annotations(
     return build_document_export(
         label_lookups=label_lookups, doc_id=doc_id, corpus_id=corpus_id
     )
-
-
-@celery_app.task()
-def parse_base64_pdf(*args, doc_id: str = "") -> tuple[str, str, list]:
-    """
-    Expect args[0] from *IMMEDIATELY PRECEDING* base_64_encode_document to be tuple:
-
-        (doc_name, doc_base_64_string)
-
-    """
-
-    # logging.info(f"parse_base64_pdf - received: {args}")
-    logging.info(f"parse_base64_pdf - doc_id: {doc_id}")
-
-    try:
-        import base64
-        import tempfile
-
-        from pawls.commands.preprocess import process_tesseract
-
-        # Nice guide on how to use base64 encoding to send file via text and then reconstitute bytes object on return
-        # https://stackabuse.com/encoding-and-decoding-base64-strings-in-python/
-        base64_img_bytes = args[0][1].encode("utf-8")
-        decoded_file_data = base64.decodebytes(base64_img_bytes)
-        print(f"decoded_file_data type {type(decoded_file_data)}")
-
-        with tempfile.NamedTemporaryFile(suffix=".pdf", prefix=TEMP_DIR) as tf:
-            print(tf.name)
-            print(type(tf))
-            tf.write(decoded_file_data)
-            print("Wrote files")
-            print(f"tf.name type {type(tf.name)}")
-            annotations: list = process_tesseract(tf.name)
-
-            print(f"Annotations {annotations}")
-
-        return TaskStates.COMPLETE, "", annotations
-
-    except Exception as e:
-        return (
-            TaskStates.ERROR,
-            f"Failed on doc {doc_id} due to error: {e}",
-            [],
-        )  # except Exception as e:
 
 
 @celery_app.task()
@@ -229,17 +349,3 @@ def extract_thumbnail(*args, doc_id=-1, **kwargs):
         logger.error(
             f"Unable to create a screenshot for doc_id {doc_id} due to error: {e}"
         )
-
-
-@celery_app.task()
-def write_pawls_file(*args, doc_id: str = ""):
-    logging.info(f"write_pawls_file() - received {args}")
-    pawls_pages = args[0][2]
-    pawls_string = json.dumps(pawls_pages)
-    logging.info(f"Pawls string: {pawls_string}")
-    pawls_file = ContentFile(pawls_string.encode("utf-8"))
-    document = Document.objects.get(pk=doc_id)
-    document.pawls_parse_file.save(f"doc_{doc_id}.pawls", pawls_file)
-    document.backend_lock = False
-    document.page_count = len(pawls_pages)
-    document.save()

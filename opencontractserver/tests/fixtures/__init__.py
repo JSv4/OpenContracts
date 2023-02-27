@@ -26,6 +26,8 @@ SAMPLE_PDF_FILE_ONE_PATH = (
     "Agreement_ZrZJLLv.pdf"
 )
 
+SAMPLE_PDF_FILE_TWO_PATH = pathlib.Path(__file__).parent / "USC Title 1 - CHAPTER 1.pdf"
+
 PUBLIC_PDF_URL_LIST = pathlib.Path(__file__).parent / "test_pdf_file_urls.txt"
 
 

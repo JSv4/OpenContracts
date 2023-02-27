@@ -1,12 +1,11 @@
 from celery import chain
 from django.db import transaction
 
-from opencontractserver.tasks import (
-    base_64_encode_document,
-    parse_base64_pdf,
-    write_pawls_file,
+from opencontractserver.tasks.doc_tasks import (
+    extract_thumbnail,
+    set_doc_lock_state,
+    split_pdf_for_processing,
 )
-from opencontractserver.tasks.doc_tasks import extract_thumbnail
 
 
 def process_doc_on_create_atomic(sender, instance, created, **kwargs):
@@ -18,10 +17,11 @@ def process_doc_on_create_atomic(sender, instance, created, **kwargs):
         transaction.on_commit(
             lambda: chain(
                 *[
-                    base_64_encode_document.s(doc_id=instance.id),
-                    parse_base64_pdf.s(doc_id=instance.id),
-                    write_pawls_file.s(doc_id=instance.id),
                     extract_thumbnail.s(doc_id=instance.id),
+                    split_pdf_for_processing.si(
+                        user_id=instance.creator.id, doc_id=instance.id
+                    ),
+                    set_doc_lock_state.si(locked=False, doc_id=instance.id),
                 ]
             ).apply_async()
         )

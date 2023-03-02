@@ -39,43 +39,43 @@ and no configuration is required. If you want to change the
 
 __Option 1__ Use "Fullstack" Profile in Docker Compose
 
-If you're **not** planning to do any frontend development, the easiest way to get started with OpenContracts is to 
+If you're **not** planning to do any frontend development, the easiest way to get started with OpenContracts is to
 just type:
 
 ```commandline
     docker-compose -f local.yml --profile fullstack up
 ```
 
-This will start docker compose and add a container for the frontend to the stack. 
+This will start docker compose and add a container for the frontend to the stack.
 
 __Option 2__ Use Node to Deploy Frontend
 
-If you plan to actively develop the frontend in the 
-[/frontend](https://github.com/JSv4/OpenContracts/tree/main/frontend) folder, you can just point your favorite 
+If you plan to actively develop the frontend in the
+[/frontend](https://github.com/JSv4/OpenContracts/tree/main/frontend) folder, you can just point your favorite
 typescript ID to that directory and then run:
 
 ```commandline
 yarn install
-``` 
+```
 
-and 
+and
 
 ```commandline
 yarn start
-``` 
+```
 
-to bring up the frontend. Then you can edit the frontend code as desired and have it hot reload as you'd expect for a 
+to bring up the frontend. Then you can edit the frontend code as desired and have it hot reload as you'd expect for a
 React app.
 
-Congrats! You have OpenContracts running. 
+Congrats! You have OpenContracts running.
 
 ## **Step 4**: Login and Start Annotating
 
 If you go to `http://localhost:3000` in your browser, you'll see the login page. You can login with the default username
-and password. These are set in the environment variable file you can find in the `./.envs/.local/' directory. In that 
-directory, you'll see a file called `.django`. Backend specific configuration variables go in there. 
+and password. These are set in the environment variable file you can find in the `./.envs/.local/' directory. In that
+directory, you'll see a file called `.django`. Backend specific configuration variables go in there.
 
-**NOTE: The frontend is at port 3000, not 8000, so don't forget to use http://localhost:3000 for frontend access. We 
+**NOTE: The frontend is at port 3000, not 8000, so don't forget to use http://localhost:3000 for frontend access. We
 have an open issue to add a redirect from the backend root page - http://localhost:8000/ - to http://localhost:3000**.
 
 **Caveats**

@@ -47,7 +47,9 @@ nav:
     - Philosophy: philosophy.md
     - Quick-Start: quick-start.md
     - System Requirements: requirements.md
-    - How It Works: under-the-hood.md
+    - How It Works:
+        - Application Architecture: architecture/under-the-hood.md
+        - Asynchronous Processing: architecture/asynchronous-processing.md
     - Acknowledgements: acknowledgements.md
   - Walkthrough:
       - Key-Concepts: walkthrough/key-concepts.md

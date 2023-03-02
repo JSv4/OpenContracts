@@ -1,6 +1,6 @@
 import { SemanticICONS } from "semantic-ui-react";
 import { TokenId } from "../components/annotator/context";
-import { MultipageAnnotationJson } from "../components/types";
+import { ExportTypes, MultipageAnnotationJson } from "../components/types";
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -739,6 +739,7 @@ export type UserExportType = Node & {
   created: Scalars["DateTime"];
   started?: Maybe<Scalars["DateTime"]>;
   finished?: Maybe<Scalars["DateTime"]>;
+  format?: ExportTypes;
   errors: Scalars["String"];
   creator: UserType;
   isPublic?: Scalars["Boolean"];

@@ -103,7 +103,6 @@ LOCAL_APPS = [
     "opencontractserver.documents",
     "opencontractserver.corpuses",
     "opencontractserver.annotations",
-    "opencontractserver.analyzer",
 ]
 
 # If configuration specifies the Analyzer should be activated, add it to the LOCAL_APPS list

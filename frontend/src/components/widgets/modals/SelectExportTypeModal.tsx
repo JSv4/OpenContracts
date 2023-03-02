@@ -1,5 +1,6 @@
 import React from 'react'
-import { Button, Icon, Modal } from 'semantic-ui-react'
+import { Button, Dropdown, Modal } from 'semantic-ui-react'
+import { ExportTypes } from '../../types';
 
 
 export function SelectExportTypeModal({
@@ -9,14 +10,14 @@ export function SelectExportTypeModal({
 }: {
   visible: boolean;
   toggleModal: (args?: any) => void | any;
-  startExport: (id: string, type: ) => void | any;
+  startExport: (id: string, type: ExportTypes) => void | any;
 }) {
 
   return (
       <Modal
         size="small"
-        open={open}
-        onClose={() => dispatch({ type: 'close' })}
+        open={visible}
+        onClose={() => {}}
       >
         <Modal.Header>Delete Your Account</Modal.Header>
         <Modal.Content>
@@ -27,15 +28,14 @@ export function SelectExportTypeModal({
             "height": "100%"
           }}>
             <div>
-            <Dropdown
+            {/* <Dropdown
               placeholder="Select label"
               search
               selection
-              options={dropdownOptions}
-              onChange={handleDropdownChange}
-              onMouseDown={onMouseDown}
-              value={selectedLabel.id}
-            />
+              options={[]}
+              onChange={()=>{}}
+              value={}
+            /> */}
             </div>
           </div>
         </Modal.Content>
@@ -43,12 +43,10 @@ export function SelectExportTypeModal({
           <Button negative onClick={() => toggleModal()}>
             Cancel
           </Button>
-          <Button positive onClick={() => dispatch({ type: 'close' })}>
+          <Button positive onClick={() => {}}>
             Start
           </Button>
         </Modal.Actions>
       </Modal>
   )
 }
-
-export default ModalExampleSize

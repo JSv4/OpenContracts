@@ -23,10 +23,10 @@ const onRedirectCallback = (appState: any) => {
   );
 };
 
-const { REACT_APP_USE_AUTH0: USE_AUTH0, REACT_APP_API_ROOT_URL: api_root_url } =
+const { REACT_APP_USE_AUTH0, REACT_APP_API_ROOT_URL: api_root_url } =
   process.env;
 
-console.log("OpenContracts is using Auth0: ", USE_AUTH0);
+console.log("OpenContracts is using Auth0: ", REACT_APP_USE_AUTH0);
 console.log("OpenContracts frontend target api root", api_root_url);
 
 const authLink = new ApolloLink((operation, forward) => {
@@ -49,7 +49,10 @@ const client = new ApolloClient({
   cache,
 });
 
-if (USE_AUTH0) {
+if (REACT_APP_USE_AUTH0 === "true") {
+
+  console.log("Rendering with USE_AUTH0");
+
   const providerConfig = {
     domain: "dev-7ranai11.auth0.com",
     clientId: "318GitavTaWR7d17h4DKuoCme9VgjYDG",
@@ -70,6 +73,9 @@ if (USE_AUTH0) {
     document.getElementById("root")
   );
 } else {
+
+  console.log("Rendering with NO AUTH0");
+
   ReactDOM.render(
     <ApolloProvider client={client}>
       <BrowserRouter>

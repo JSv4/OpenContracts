@@ -17,7 +17,7 @@ export const MobileNavMenu = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
-  const user = REACT_APP_USE_AUTH0 ? auth0_user : cache_user;
+  const user = REACT_APP_USE_AUTH0 === "true" ? auth0_user : cache_user;
 
   const show_export_modal = useReactiveVar(showExportModal);
 
@@ -25,7 +25,7 @@ export const MobileNavMenu = () => {
   let private_header_items = header_menu_items.filter((item) => item.protected);
 
   const requestLogout = (args: any) => {
-    if (REACT_APP_USE_AUTH0) {
+    if (REACT_APP_USE_AUTH0 === "true") {
       logout(args);
     } else {
       authToken("");
@@ -58,7 +58,7 @@ export const MobileNavMenu = () => {
     </Dropdown.Item>
   ));
 
-  if (REACT_APP_USE_AUTH0) {
+  if (REACT_APP_USE_AUTH0 === "true") {
     return (
       <Menu fluid inverted attached style={{ marginBottom: "0px" }}>
         <Menu.Menu position="left">

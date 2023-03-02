@@ -69,7 +69,7 @@ React app.
 
 Congrats! You have OpenContracts running. 
 
-## Step 4: Login and Start Annotating
+## **Step 4**: Login and Start Annotating
 
 If you go to `http://localhost:3000` in your browser, you'll see the login page. You can login with the default username
 and password. These are set in the environment variable file you can find in the `./.envs/.local/' directory. In that 

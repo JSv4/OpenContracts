@@ -50,8 +50,9 @@ This will start docker compose and add a container for the frontend to the stack
 
 __Option 2__ Use Node to Deploy Frontend
 
-If you plan to actively develop the frontend in the [/frontend](/frontend) folder, you can just point your favorite 
-typescript ID to that directory and then run 
+If you plan to actively develop the frontend in the 
+[/frontend](https://github.com/JSv4/OpenContracts/tree/main/frontend) folder, you can just point your favorite 
+typescript ID to that directory and then run:
 
 ```commandline
 yarn install

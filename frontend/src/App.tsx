@@ -62,7 +62,7 @@ export const App = () => {
   // Only use this if we're using Auth0 Authentication... otherwise we don't
   // need to access the Auth0 SDK.
   useEffect(() => {
-    if (REACT_APP_USE_AUTH0) {
+    if (REACT_APP_USE_AUTH0 === "true") {
       if (user) {
         try {
           getAccessTokenSilently({
@@ -87,7 +87,7 @@ export const App = () => {
         }
       }
     }
-  }, [getAccessTokenSilently, user?.sub]);
+  }, [getAccessTokenSilently, REACT_APP_USE_AUTH0, user?.sub]);
 
   console.log("Cookie Accepted: ", show_cookie_modal);
 
@@ -140,7 +140,7 @@ export const App = () => {
             </Dimmer>
             <Routes>
               <Route path="/" element={<Corpuses />} />
-              {REACT_APP_USE_AUTH0 ? (
+              {REACT_APP_USE_AUTH0 !== "true" ? (
                 <Route path="/login" element={<Login />} />
               ) : (
                 <></>

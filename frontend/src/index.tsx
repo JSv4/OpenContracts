@@ -50,7 +50,6 @@ const client = new ApolloClient({
 });
 
 if (REACT_APP_USE_AUTH0 === "true") {
-
   console.log("Rendering with USE_AUTH0");
 
   const providerConfig = {
@@ -73,7 +72,6 @@ if (REACT_APP_USE_AUTH0 === "true") {
     document.getElementById("root")
   );
 } else {
-
   console.log("Rendering with NO AUTH0");
 
   ReactDOM.render(

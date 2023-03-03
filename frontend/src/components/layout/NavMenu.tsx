@@ -56,7 +56,6 @@ export const NavMenu = () => {
   ));
 
   if (REACT_APP_USE_AUTH0 === "true") {
-
     return (
       <Menu fluid inverted attached style={{ marginBottom: "0px" }}>
         <Menu.Item header>

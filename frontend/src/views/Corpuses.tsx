@@ -686,11 +686,11 @@ export const Corpuses = () => {
             accepted_file_types="image/*"
             property_widgets={{ labelSet: <LabelSetSelector /> }}
           />
-          { exporting_corpus ? 
-            <SelectExportTypeModal
-              visible={Boolean(exportingCorpus)}
-            /> : <></>
-          }
+          {exporting_corpus ? (
+            <SelectExportTypeModal visible={Boolean(exportingCorpus)} />
+          ) : (
+            <></>
+          )}
           {corpus_to_analyze !== null ? (
             <SelectAnalyzerModal
               corpus={corpus_to_analyze}

@@ -159,7 +159,7 @@ export interface StartExportCorpusOutputs {
 }
 
 export const START_EXPORT_CORPUS = gql`
-  mutation ($corpusId: String!, $exportFormat:ExportType!) {
+  mutation ($corpusId: String!, $exportFormat: ExportType!) {
     exportCorpus(corpusId: $corpusId, exportFormat: $exportFormat) {
       ok
       message

@@ -199,6 +199,7 @@ export const openedCorpus = makeVar<CorpusType | null>(null);
 export const viewingCorpus = makeVar<CorpusType | null>(null);
 export const deletingCorpus = makeVar<CorpusType | null>(null);
 export const editingCorpus = makeVar<CorpusType | null>(null);
+export const exportingCorpus = makeVar<CorpusType | null>(null);
 export const selectedCorpusIds = makeVar<string[]>([]);
 export const showAnalyzerSelectionForCorpus = makeVar<CorpusType | null>(null);
 

@@ -50,6 +50,7 @@ import {
   analysisSearchTerm,
   selectedAnalysesIds,
   displayAnnotationOnAnnotatorLoad,
+  exportingCorpus,
 } from "../graphql/cache";
 import {
   UPDATE_CORPUS,
@@ -91,6 +92,7 @@ import { CorpusAnalysesCards } from "../components/analyses/CorpusAnalysesCards"
 import { FilterToAnalysesSelector } from "../components/widgets/model-filters/FilterToAnalysesSelector";
 import useWindowDimensions from "../components/hooks/WindowDimensionHook";
 import { FilterToMetadataSelector } from "../components/widgets/model-filters/FilterToMetadataSelector";
+import { SelectExportTypeModal } from "../components/widgets/modals/SelectExportTypeModal";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
@@ -113,6 +115,7 @@ export const Corpuses = () => {
   const corpus_to_edit = useReactiveVar(editingCorpus);
   const corpus_to_view = useReactiveVar(viewingCorpus);
   const opened_corpus = useReactiveVar(openedCorpus);
+  const exporting_corpus = useReactiveVar(exportingCorpus);
   const opened_document = useReactiveVar(openedDocument);
   const opened_to_annotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
   const show_selected_annotation_only = useReactiveVar(
@@ -683,6 +686,11 @@ export const Corpuses = () => {
             accepted_file_types="image/*"
             property_widgets={{ labelSet: <LabelSetSelector /> }}
           />
+          {exporting_corpus ? (
+            <SelectExportTypeModal visible={Boolean(exportingCorpus)} />
+          ) : (
+            <></>
+          )}
           {corpus_to_analyze !== null ? (
             <SelectAnalyzerModal
               corpus={corpus_to_analyze}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CorpusItem } from "./CorpusItem";
 
-import { ApolloError, useMutation, useReactiveVar } from "@apollo/client";
+import { useMutation, useReactiveVar } from "@apollo/client";
 import {
   viewingCorpus,
   editingCorpus,
@@ -9,6 +9,7 @@ import {
   selectedCorpusIds,
   deletingCorpus,
   showAnalyzerSelectionForCorpus,
+  exportingCorpus,
 } from "../../graphql/cache";
 
 import { Card, Dimmer, Loader } from "semantic-ui-react";
@@ -16,9 +17,6 @@ import { Card, Dimmer, Loader } from "semantic-ui-react";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import { CorpusType, PageInfo } from "../../graphql/types";
 import {
-  StartExportCorpusInputs,
-  StartExportCorpusOutputs,
-  START_EXPORT_CORPUS,
   StartForkCorpusInput,
   StartForkCorpusOutput,
   START_FORK_CORPUS,
@@ -87,24 +85,6 @@ export const CorpusCards = ({
     startForkCorpus({ variables: { corpusId } });
   };
 
-  const [startExportCorpus, {}] = useMutation<
-    StartExportCorpusOutputs,
-    StartExportCorpusInputs
-  >(START_EXPORT_CORPUS, {
-    onCompleted: (data) => {
-      toast.success(
-        "SUCCESS! Export started. Check export status under the user menu dropdown in the top right."
-      );
-    },
-    onError: (err: ApolloError) => {
-      toast.error(`Could Not Start Export: ${err}`);
-    },
-  });
-
-  const triggerCorpusExport = (corpusId: string) => {
-    startExportCorpus({ variables: { corpusId } });
-  };
-
   const toggleCorpusSelect = (id: string) => {
     if (selectedCorpusIds().includes(id)) {
       const values = [...selectedCorpusIds()];
@@ -147,7 +127,7 @@ export const CorpusCards = ({
           onSelect={() => toggleCorpusSelect(item.id)}
           onDelete={() => deletingCorpus(item)}
           onFork={() => triggerCorpusFork(item.id)}
-          onExport={() => triggerCorpusExport(item.id)}
+          onExport={() => exportingCorpus(item)}
           onEdit={() => editingCorpus(item)}
           onView={() => viewingCorpus(item)}
           onAnalyze={() => chooseAnalyzerForCorpus(item)}

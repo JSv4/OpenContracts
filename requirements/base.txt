@@ -49,7 +49,6 @@ tqdm
 pdfminer
 pycrypto
 pdf2image
-pillow
 poppler-utils
 
 # Doc Analysis (NLP dependencies, placeholder)

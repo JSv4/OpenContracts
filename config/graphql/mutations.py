@@ -56,7 +56,7 @@ from opencontractserver.tasks.permissioning_tasks import (
     make_analysis_public_task,
     make_corpus_public_task,
 )
-from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.types.enums import ExportType, PermissionTypes
 from opencontractserver.users.models import UserExport
 from opencontractserver.utils.permissioning import (
     set_permissions_for_obj_to_user,
@@ -391,13 +391,14 @@ class StartCorpusExport(graphene.Mutation):
             required=True,
             description="Graphene id of the corpus you want to package for export",
         )
+        export_format = graphene.Argument(graphene.Enum.from_enum(ExportType))
 
     ok = graphene.Boolean()
     message = graphene.String()
     export = graphene.Field(UserExportType)
 
     @login_required
-    def mutate(root, info, corpus_id):
+    def mutate(root, info, corpus_id, export_format):
 
         if (
             info.context.user.is_usage_capped
@@ -416,6 +417,7 @@ class StartCorpusExport(graphene.Mutation):
                 creator=info.context.user,
                 name=f"Export Corpus PK {corpus_pk} on {date_str}",
                 started=started,
+                format=export_format,
                 backend_lock=True,
             )
             set_permissions_for_obj_to_user(
@@ -427,19 +429,28 @@ class StartCorpusExport(graphene.Mutation):
                 "id", flat=True
             )
 
-            # Build celery workflow for export and start async task
-            chain(
-                build_label_lookups_task.si(corpus_pk),
-                chord(
-                    group(
-                        burn_doc_annotations.s(doc_id, corpus_pk) for doc_id in doc_ids
+            if export_format == ExportType.OPEN_CONTRACTS.value:
+                # Build celery workflow for export and start async task
+                chain(
+                    build_label_lookups_task.si(corpus_pk),
+                    chord(
+                        group(
+                            burn_doc_annotations.s(doc_id, corpus_pk)
+                            for doc_id in doc_ids
+                        ),
+                        package_annotated_docs.s(export.id, corpus_pk),
                     ),
-                    package_annotated_docs.s(export.id, corpus_pk),
-                ),
-            ).apply_async()
+                ).apply_async()
 
-            ok = True
-            message = "SUCCESS"
+                ok = True
+                message = "SUCCESS"
+            elif export_format == ExportType.LANGCHAIN.value:
+                print("LANGCHAIN EXPORT")
+                ok = True
+                message = "SUCCESS"
+            else:
+                ok = False
+                message = "Unknown Format"
 
         except Exception as e:
             message = f"StartCorpusExport() - Unable to create export due to error: {e}"

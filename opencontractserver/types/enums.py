@@ -10,8 +10,8 @@ class OpenContractsEnum(str, enum.Enum):
 
 
 class ExportType(OpenContractsEnum):
-    LANGCHAIN = "LangChain Format"
-    OPEN_CONTRACTS = "Open Contracts Format"
+    LANGCHAIN = "LANGCHAIN"
+    OPEN_CONTRACTS = "OPEN_CONTRACTS"
 
 
 class LabelType(str, enum.Enum):

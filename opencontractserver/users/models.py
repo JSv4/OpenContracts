@@ -171,6 +171,7 @@ def calculate_export_filename(instance, filename):
 
 
 class UserExport(django.db.models.Model):
+
     zip = django.db.models.FileField(blank=True, upload_to=calculate_export_filename)
     name = django.db.models.CharField(max_length=1024, null=True, blank=True)
     created = django.db.models.DateTimeField(default=timezone.now)
@@ -217,6 +218,22 @@ class UserExport(django.db.models.Model):
             self.created = timezone.now()
 
         return super().save(*args, **kwargs)
+
+
+# Model for Django Guardian permissions.
+class UserExportUserObjectPermission(UserObjectPermissionBase):
+    content_object = django.db.models.ForeignKey(
+        "UserExport", on_delete=django.db.models.CASCADE
+    )
+    # enabled = False
+
+
+# Model for Django Guardian permissions.
+class UserExportGroupObjectPermission(GroupObjectPermissionBase):
+    content_object = django.db.models.ForeignKey(
+        "UserExport", on_delete=django.db.models.CASCADE
+    )
+    # enabled = False
 
 
 # Can't use lambda functions so need a wrapper

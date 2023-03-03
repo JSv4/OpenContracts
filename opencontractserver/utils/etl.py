@@ -92,7 +92,7 @@ def build_document_export(
 
     logger.info(f"burn_doc_annotations - label_lookups: {label_lookups}")
 
-    from PyPDF2 import PdfFileReader, PdfFileWriter
+    from PyPDF2 import PdfReader, PdfWriter
 
     from opencontractserver.utils.pdf import add_highlight_to_new_page, createHighlight
 
@@ -134,7 +134,7 @@ def build_document_export(
 
         # PDF Code:
         try:
-            pdf_input = PdfFileReader(doc.pdf_file.open(mode="rb"))
+            pdf_input = PdfReader(doc.pdf_file.open(mode="rb"))
             # logger.info("Loaded pdf")
         except Exception as e:
             logger.error(f"Could not load input pdf due to error: {e}")
@@ -142,7 +142,7 @@ def build_document_export(
 
         # logger.info("Original pdf loaded")
 
-        pdf_output = PdfFileWriter()
+        pdf_output = PdfWriter()
         # logger.info("New PDFFileWriter created")
 
         page_highlights = {}
@@ -229,10 +229,12 @@ def build_document_export(
         # Open each page, make any edits, and move to the output pdf (the best way I've found to do this in PyPDF so
         # far)
         # logger.info("Burn in annotations")
-        for i in range(0, pdf_input.getNumPages()):
+        total_page_count = len(pdf_input.pages)
+
+        for i in range(0, total_page_count):
 
             # logger.info(f"Burn for page {i}")
-            page = pdf_input.getPage(i)
+            page = pdf_input.pages[i]
             page_box = page.mediaBox
 
             page_height = page_box.upperLeft[1]
@@ -285,7 +287,7 @@ def build_document_export(
 
                         logger.info("Highlight added")
 
-            pdf_output.addPage(page)
+            pdf_output.add_page(page)
 
         # Serialize and write out the annotated pdf
         pdf_output.write(annotated_pdf_bytes)

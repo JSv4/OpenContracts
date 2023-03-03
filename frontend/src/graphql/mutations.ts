@@ -1,6 +1,6 @@
 import { gql } from "@apollo/client";
 import { SemanticICONS } from "semantic-ui-react/dist/commonjs/generic";
-import { MultipageAnnotationJson } from "../components/types";
+import { ExportTypes, MultipageAnnotationJson } from "../components/types";
 import {
   AnalysisType,
   AnnotationLabelType,
@@ -147,6 +147,7 @@ export const CREATE_CORPUS = gql`
 
 export interface StartExportCorpusInputs {
   corpusId: string;
+  exportFormat: ExportTypes;
 }
 
 export interface StartExportCorpusOutputs {
@@ -158,8 +159,8 @@ export interface StartExportCorpusOutputs {
 }
 
 export const START_EXPORT_CORPUS = gql`
-  mutation ($corpusId: String!) {
-    exportCorpus(corpusId: $corpusId) {
+  mutation ($corpusId: String!, $exportFormat: ExportType!) {
+    exportCorpus(corpusId: $corpusId, exportFormat: $exportFormat) {
       ok
       message
       export {

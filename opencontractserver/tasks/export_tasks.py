@@ -8,6 +8,7 @@ import zipfile
 
 from celery import shared_task
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.utils import timezone
 
 from opencontractserver.corpuses.models import Corpus
@@ -93,7 +94,35 @@ def package_annotated_docs(
     output_bytes.seek(io.SEEK_SET)
 
     export = UserExport.objects.get(pk=export_id)
-    export.zip.save(f"{corpus.title} EXPORT.zip", output_bytes)
+    export.file.save(f"{corpus.title} EXPORT.zip", output_bytes)
+    export.finished = timezone.now()
+    export.backend_lock = False
+    export.save()
+
+    logger.info(f"Export {export_id} is completed. Signal should now notify creator.")
+
+
+@shared_task
+def package_langchain_exports(
+    burned_docs: tuple[tuple[str, dict]],
+    export_id: str | int,
+    corpus_pk: str | int,
+):
+
+    logger.info(f"Package corpus for export {export_id}...")
+
+    langchain_export = []
+    corpus = Corpus.objects.get(id=corpus_pk)
+
+    for doc in burned_docs:
+
+        langchain_export.append({"page_content": doc[0], "metdata": doc[1]})
+
+    json_str = json.dumps(langchain_export)
+    json_file = ContentFile(json_str.encode("utf-8"))
+
+    export = UserExport.objects.get(pk=export_id)
+    export.file.save(f"{corpus.title} LangChain Export.json", json_file)
     export.finished = timezone.now()
     export.backend_lock = False
     export.save()

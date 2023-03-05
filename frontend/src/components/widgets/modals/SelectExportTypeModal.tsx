@@ -55,8 +55,7 @@ export function SelectExportTypeModal({ visible }: { visible: boolean }) {
       key: ExportTypes.LANGCHAIN,
       text: "LangChain",
       value: ExportTypes.LANGCHAIN,
-      image: { avatar: true, src: langchain_icon },
-      disabled: true,
+      image: { avatar: true, src: langchain_icon }
     },
     {
       key: ExportTypes.OPEN_CONTRACTS,

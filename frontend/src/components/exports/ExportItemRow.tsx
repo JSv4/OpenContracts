@@ -73,7 +73,7 @@ export function ExportItemRow({ onDelete, item, key }: ExportItemRowProps) {
               icon="download"
               color="blue"
               onClick={() => {
-                window.location.href = item.zip;
+                window.location.href = item.file;
               }}
             />
           ) : (

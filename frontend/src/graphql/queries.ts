@@ -912,7 +912,7 @@ export interface ExportObject {
   created: Scalars["DateTime"];
   errors: string;
   backendLock: boolean;
-  zip: string;
+  file: string;
 }
 
 export interface GetExportsOutputs {
@@ -956,7 +956,7 @@ export const GET_EXPORTS = gql`
           created
           errors
           backendLock
-          zip
+          file
         }
       }
     }

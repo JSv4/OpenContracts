@@ -232,7 +232,7 @@ class UserImportType(AnnotatePermissionsForReadMixin, ModelType):
 
 class UserExportType(AnnotatePermissionsForReadMixin, ModelType):
     def resolve_zip(self, info):
-        return "" if not self.file else info.context.build_absolute_uri(self.zip.url)
+        return "" if not self.file else info.context.build_absolute_uri(self.file.url)
 
     class Meta:
         model = UserExport

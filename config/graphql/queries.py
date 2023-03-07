@@ -112,7 +112,7 @@ class Query(graphene.ObjectType):
         corpus_id=graphene.ID(required=True),
         document_id=graphene.ID(required=False),
         for_analysis_ids=graphene.String(required=False),
-        label_type=graphene.List(label_type_enum),
+        label_type=graphene.Argument(label_type_enum),
     )
 
     def resolve_bulk_doc_annotations_in_corpus(self, info, corpus_id, **kwargs):
@@ -128,6 +128,8 @@ class Query(graphene.ObjectType):
             queryset = Annotation.objects.filter(
                 Q(creator=info.context.user) | Q(is_public=True)
             )
+
+        print(f"Base queryset: {queryset}")
 
         # Now build query to stuff they want to see
         q_objects = Q(corpus_id=corpus_django_pk)
@@ -147,8 +149,8 @@ class Query(graphene.ObjectType):
             ]
             logger.info(f"resolve_bulk_doc_annotations - Analysis pks: {analysis_pks}")
             q_objects.add(Q(analysis_id__in=analysis_pks), Q.AND)
-        else:
-            q_objects.add(Q(analysis__isnull=True), Q.AND)
+        # else:
+        #     q_objects.add(Q(analysis__isnull=True), Q.AND)
 
         label_type = kwargs.get("label_type", None)
         if label_type is not None:
@@ -159,7 +161,7 @@ class Query(graphene.ObjectType):
             doc_pk = from_global_id(document_id)[1]
             q_objects.add(Q(document_id=doc_pk), Q.AND)
 
-        logger.info(f"Filter bulk annotations: {q_objects}")
+        logger.info(f"Filter queryset {queryset} bulk annotations: {q_objects}")
 
         return queryset.filter(q_objects).order_by("created", "page")
 

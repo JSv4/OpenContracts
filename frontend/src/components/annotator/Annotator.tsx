@@ -604,10 +604,7 @@ export const Annotator = ({
         annotator_data?.existingTextAnnotations &&
         selected_analysis_ids?.length === 0
       ) {
-        // console.log(
-        //   "Prepping human annotations",
-        //   annotator_data.paginatedSpanAnnotations.pageAnnotations
-        // );
+        console.log("Prepping human annotations", annotator_data);
         annotation_objs = annotator_data.existingTextAnnotations
           .filter((annotation) => annotation.analysis == null)
           .map(

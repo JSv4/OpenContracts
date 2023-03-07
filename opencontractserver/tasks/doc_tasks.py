@@ -16,7 +16,7 @@ from django.core.files.storage import default_storage
 from pydantic import validate_arguments
 
 from config import celery_app
-from opencontractserver.annotations.models import METADATA_LABEL, Annotation
+from opencontractserver.annotations.models import METADATA_LABEL, Annotation, TOKEN_LABEL
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
     LabelLookupPythonType,
@@ -331,6 +331,28 @@ def convert_doc_to_langchain_task(doc_id: int, corpus_id: int) -> tuple[str, dic
         metadata_json[metadata.annotation_label.text] = metadata.raw_text
 
     return text, metadata_json
+
+
+@celery_app.task()
+def convert_doc_to_funsd(doc_id: int, corpus_id: int):
+
+    doc = Document.objects.get(id=doc_id)
+
+    annotation_map = {}
+
+    token_annotations = Annotation.objects.filter(
+        annotation_label__label_type=TOKEN_LABEL
+    ).order_by('page')
+
+    with doc.pawls_parse_file.open('r') as pawls_file:
+        pawls_tokens = json.loads(pawls_file.read().decode('utf-8'))
+
+    for annotation in token_annotations:
+        annot_json = annotation.json
+
+    # TODO - investigate multi-select of annotations on same page
+
+    # Need to break every annotation out by page (particularly multi-page annotations)
 
 
 @celery_app.task()

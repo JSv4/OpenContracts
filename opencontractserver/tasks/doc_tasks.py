@@ -338,7 +338,8 @@ def convert_doc_to_funsd(doc_id: int, corpus_id: int):
 
     doc = Document.objects.get(id=doc_id)
 
-    annotation_map = {}
+    annotation_map: dict[int, list[dict]] = {}
+    funsd_annotations = []
 
     token_annotations = Annotation.objects.filter(
         annotation_label__label_type=TOKEN_LABEL
@@ -347,10 +348,76 @@ def convert_doc_to_funsd(doc_id: int, corpus_id: int):
     with doc.pawls_parse_file.open('r') as pawls_file:
         pawls_tokens = json.loads(pawls_file.read().decode('utf-8'))
 
+    # TODO - investigate multi-select of annotations on same page. Code below (and, it seems, entire
+    # application) assume no more than one annotation per page per Annotation obj.
     for annotation in token_annotations:
-        annot_json = annotation.json
 
-    # TODO - investigate multi-select of annotations on same page
+        base_id = f"{annotation.id}"
+
+        # Target FunsD format
+        """
+         {
+            "box": [
+                446,
+                257,
+                461,
+                267
+            ],
+            "text": "cc:",
+            "label": "question",
+            "words": [
+                {
+                    "box": [
+                        446,
+                        257,
+                        461,
+                        267
+                    ],
+                    "text": "cc:"
+                }
+            ],
+            "linking": [
+                [
+                    1,
+                    20
+                ]
+            ],
+            "id": 1
+        },
+        """
+
+        annotation_funsd = {}
+        annot_json = annotation.json
+        label = annotation.annotation_label
+
+        for page in annot_json.keys():
+
+            page_tokens = pawls_tokens[page]
+            page_annot_json = annot_json[page]
+            page_token_refs = page_annot_json['tokensJsons']
+
+            expanded_tokens = []
+            for token_ref in page_token_refs:
+                page_index = token_ref['pageIndex']
+                token_index = token_ref['tokenIndex']
+                token = pawls_tokens[page_index]['tokens'][token_index]
+                expanded_tokens.append(token)
+
+            # TODO - build FUNSD annotation here
+            funsd_annotation = {
+                "id": f"{base_id}-{page}",
+                "linking": [],
+                "text": page_annot_json['rawText'],
+                "box": page_annot_json['bounds'],
+                "label": label.id,
+                "words": expanded_tokens
+            }
+
+            if page in annotation_map:
+                annotation_map[page].append(funsd_annotation)
+            else:
+                annotation_map[page] = [funsd_annotation]
+
 
     # Need to break every annotation out by page (particularly multi-page annotations)
 

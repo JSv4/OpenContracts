@@ -21,7 +21,7 @@ from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
     LabelLookupPythonType,
     OpenContractDocAnnotationExport,
-    PawlsPagePythonType,
+    PawlsPagePythonType, PawlsTokenPythonType, FunsdTokenType, BoundingBoxPythonType,
 )
 from opencontractserver.utils.etl import build_document_export
 from opencontractserver.utils.pdf import extract_pawls_from_pdfs_bytes
@@ -336,17 +336,35 @@ def convert_doc_to_langchain_task(doc_id: int, corpus_id: int) -> tuple[str, dic
 @celery_app.task()
 def convert_doc_to_funsd(doc_id: int, corpus_id: int):
 
+    def pawls_bbox_to_funsd_box(pawls_bbox: BoundingBoxPythonType) -> tuple[float, float, float, float]:
+        return pawls_bbox['left'], pawls_bbox['top'], pawls_bbox['right'], pawls_bbox['bottom']
+
+    def pawls_token_to_funsd_token(pawls_token: PawlsTokenPythonType) -> FunsdTokenType:
+        pawls_xleft = pawls_token['x']
+        pawls_ybottom = pawls_token['y']
+        pawls_ytop = pawls_xleft + pawls_token['width']
+        pawls_xright = pawls_ybottom + pawls_token['height']
+        funsd_token = {
+            "text": pawls_token['text'],
+            # In FUNSD, this must be serialzied to list but that's done by json.dumps and tuple has better typing
+            # control (fixed length, positional datatypes, etc.)
+            "box": (pawls_xleft, pawls_ytop, pawls_xright, pawls_ybottom)
+        }
+        return funsd_token
+
+
     doc = Document.objects.get(id=doc_id)
 
     annotation_map: dict[int, list[dict]] = {}
-    funsd_annotations = []
 
     token_annotations = Annotation.objects.filter(
         annotation_label__label_type=TOKEN_LABEL
     ).order_by('page')
 
-    with doc.pawls_parse_file.open('r') as pawls_file:
-        pawls_tokens = json.loads(pawls_file.read().decode('utf-8'))
+    file_object = default_storage.open(
+        doc.pawls_parse_file.name
+    )
+    pawls_tokens = json.loads(file_object.read().decode('utf-8'))
 
     # TODO - investigate multi-select of annotations on same page. Code below (and, it seems, entire
     # application) assume no more than one annotation per page per Annotation obj.
@@ -354,8 +372,25 @@ def convert_doc_to_funsd(doc_id: int, corpus_id: int):
 
         base_id = f"{annotation.id}"
 
-        # Target FunsD format
         """
+
+        FUNSD format description from paper:
+
+        Each form is encoded in a JSON file. We represent a form
+        as a list of semantic entities that are interlinked. A semantic
+        entity represents a group of words that belong together from
+        a semantic and spatial standpoint. Each semantic entity is de-
+        scribed by a unique identifier, a label (i.e., question, answer,
+        header or other), a bounding box, a list of links with other
+        entities, and a list of words. Each word is represented by its
+        textual content and its bounding box. All the bounding boxes
+        are represented by their coordinates following the schema
+        box = [xlef t, ytop, xright, ybottom]. The links are directed
+        and formatted as [idf rom, idto], where id represents the
+        semantic entity identifier. The dataset statistics are shown in
+        Table I. Even with a limited number of annotated documents,
+        we obtain a large number of word-level annotations (> 30k)
+
          {
             "box": [
                 446,
@@ -386,13 +421,11 @@ def convert_doc_to_funsd(doc_id: int, corpus_id: int):
         },
         """
 
-        annotation_funsd = {}
         annot_json = annotation.json
         label = annotation.annotation_label
 
         for page in annot_json.keys():
 
-            page_tokens = pawls_tokens[page]
             page_annot_json = annot_json[page]
             page_token_refs = page_annot_json['tokensJsons']
 
@@ -401,14 +434,17 @@ def convert_doc_to_funsd(doc_id: int, corpus_id: int):
                 page_index = token_ref['pageIndex']
                 token_index = token_ref['tokenIndex']
                 token = pawls_tokens[page_index]['tokens'][token_index]
-                expanded_tokens.append(token)
+
+                # Convert token from PAWLS to FUNSD format (simple but annoying transforming done via function
+                # defined above)
+                expanded_tokens.append(pawls_token_to_funsd_token(token))
 
             # TODO - build FUNSD annotation here
             funsd_annotation = {
                 "id": f"{base_id}-{page}",
-                "linking": [],
+                "linking": [],  # TODO - pull in any relationships for label. This could be pretty complex
                 "text": page_annot_json['rawText'],
-                "box": page_annot_json['bounds'],
+                "box": pawls_bbox_to_funsd_box(page_annot_json['bounds']),
                 "label": label.id,
                 "words": expanded_tokens
             }
@@ -418,7 +454,7 @@ def convert_doc_to_funsd(doc_id: int, corpus_id: int):
             else:
                 annotation_map[page] = [funsd_annotation]
 
-
+    return annotation_map
     # Need to break every annotation out by page (particularly multi-page annotations)
 
 

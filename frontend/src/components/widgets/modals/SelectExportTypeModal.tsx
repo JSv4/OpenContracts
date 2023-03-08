@@ -18,6 +18,7 @@ import {
 } from "../../../graphql/mutations";
 import { ExportTypes } from "../../types";
 
+import funsd_icon from "../../../assets/icons/FUNSD.png";
 import langchain_icon from "../../../assets/icons/langchain.png";
 import open_contracts_icon from "../../../assets/icons/oc_45_dark.png";
 
@@ -55,13 +56,19 @@ export function SelectExportTypeModal({ visible }: { visible: boolean }) {
       key: ExportTypes.LANGCHAIN,
       text: "LangChain",
       value: ExportTypes.LANGCHAIN,
-      image: { avatar: true, src: langchain_icon }
+      image: { avatar: true, src: langchain_icon },
     },
     {
       key: ExportTypes.OPEN_CONTRACTS,
       text: "Open Contracts",
       value: ExportTypes.OPEN_CONTRACTS,
       image: { avatar: true, src: open_contracts_icon },
+    },
+    {
+      key: ExportTypes.FUNSD,
+      text: "FUNSD",
+      value: ExportTypes.FUNSD,
+      image: { avatar: true, src: funsd_icon },
     },
   ];
 

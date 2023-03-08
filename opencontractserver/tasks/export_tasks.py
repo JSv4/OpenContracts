@@ -128,3 +128,12 @@ def package_langchain_exports(
     export.save()
 
     logger.info(f"Export {export_id} is completed. Signal should now notify creator.")
+
+@shared_task
+def package_funsd_exports(
+    funsd_data: tuple[tuple[dict[int, list[dict]]]],
+    export_id: str | int,
+    corpus_pk: str | int,
+):
+
+    logger.info(f"package_funsd_exports() - data:\n{json.dumps(funsd_data, indent=4)}")

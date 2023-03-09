@@ -1,3 +1,6 @@
+import re
+
+
 def __consolidate_common_equivalent_chars(string):
 
     # OCR sometimes uses characters similar to what we're looking for in place of actual char.
@@ -13,3 +16,6 @@ def __consolidate_common_equivalent_chars(string):
         string = string.replace(i, ".")
 
     return string
+
+def only_alphanumeric_chars(raw_str: str) -> str:
+    return re.sub(r'[^a-zA-Z0-9]', '', raw_str)

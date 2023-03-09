@@ -1,7 +1,9 @@
 import base64
 import logging
 import pathlib
+import typing
 import uuid
+from io import BytesIO
 
 from PyPDF2.generic import (
     ArrayObject,
@@ -11,6 +13,8 @@ from PyPDF2.generic import (
     NumberObject,
     TextStringObject,
 )
+
+from django.conf import settings
 
 from opencontractserver.types.dicts import PawlsPagePythonType
 
@@ -111,3 +115,63 @@ def extract_pawls_from_pdfs_bytes(
     pdf_fragment_path.unlink()
 
     return annotations
+
+def split_pdf_into_images(
+    pdf_bytes: bytes,
+    storage_path: str,
+    target_format: typing.Literal['PNG', 'JPEG'] = "PNG"
+) -> list[str]:
+    """
+    Given pytes of a pdf file, split into image of specified format, store them in appropriate temporary
+    file storage location and then return list filepaths to the images, in page order.
+
+    Storage path should be like this user_{user_id}/fragments for s3 or f"/tmp/user_{user_id}/pdf_fragments" for
+    local storage
+
+    """
+
+    from pdf2image import convert_from_bytes
+
+    page_paths = []
+
+    try:
+        # TODO - make sure target image resolution is compatible with PAWLS x,y coord system
+        images = convert_from_bytes(pdf_bytes, size=(754, 1000))
+
+        if settings.USE_AWS:
+            import boto3
+
+            s3 = boto3.client("s3")
+
+
+        for img in images:
+
+            # images is a list of a Pillow Image objs.
+            # See here for ways to save (attempting to save bytes to memory):
+            # https://github.com/python-pillow/Pillow/blob/cdf5fd439cbe381e6c796acc3ab3150242d8e861/src/PIL/Image.py#L497
+
+            img_bytes_stream = BytesIO()
+            img.save(img_bytes_stream, target_format)
+
+            if settings.USE_AWS:
+                page_path = f"{storage_path}/{uuid.uuid4()}.pdf"
+                s3.put_object(
+                    Key=page_path,
+                    Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                    Body=img_bytes_stream.getvalue(),
+                )
+            else:
+                pdf_fragment_folder_path = pathlib.Path(storage_path)
+                pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
+                pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}.pdf"
+                with pdf_fragment_path.open("wb") as f:
+                    f.write(img_bytes_stream.getvalue())
+
+                page_path = pdf_fragment_path.resolve().__str__()
+
+            page_paths.append(page_path)
+
+    except Exception as e:
+        logger.error(f"split_pdf_into_images() - failed due to unexpected error: {e}")
+
+    return page_paths

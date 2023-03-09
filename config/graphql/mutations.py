@@ -459,7 +459,11 @@ class StartCorpusExport(graphene.Mutation):
             elif export_format == ExportType.FUNSD:
                 chord(
                     group(
-                        convert_doc_to_funsd.s(doc_id, corpus_pk)
+                        convert_doc_to_funsd.s(
+                            info.context.user.id,
+                            doc_id,
+                            corpus_pk
+                        )
                         for doc_id in doc_ids
                     ),
                     package_funsd_exports.s(export.id, corpus_pk),

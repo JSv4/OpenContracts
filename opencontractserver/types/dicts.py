@@ -34,6 +34,14 @@ class FunsdTokenType(TypedDict):
     # control over length than list typing allows
     text: str
 
+class FunsdAnnotationType(TypedDict):
+    box: tuple[float, float, float, float]
+    text: str
+    label: str
+    words: list[FunsdTokenType]
+    linking: list[int]
+    id: str
+
 class PawlsTokenPythonType(TypedDict):
     """
     This is what an actual PAWLS token looks like.

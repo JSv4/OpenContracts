@@ -7,14 +7,16 @@ import logging
 import zipfile
 
 from celery import shared_task
+
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.utils import timezone
+from django.conf import settings
 
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.types.dicts import (
     OpenContractDocAnnotationExport,
-    OpenContractsExportDataJsonPythonType,
+    OpenContractsExportDataJsonPythonType, FunsdAnnotationType,
 )
 from opencontractserver.types.enums import AnnotationLabelPythonType
 from opencontractserver.users.models import UserExport
@@ -22,6 +24,7 @@ from opencontractserver.utils.packaging import (
     package_corpus_for_export,
     package_label_set_for_export,
 )
+from opencontractserver.utils.text import only_alphanumeric_chars
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -131,9 +134,64 @@ def package_langchain_exports(
 
 @shared_task
 def package_funsd_exports(
-    funsd_data: tuple[tuple[dict[int, list[dict]]]],
+    funsd_data: tuple[tuple[int, dict[int | str, list[dict[int | str, FunsdAnnotationType]]], list[tuple[int, str,
+    str]]]],
     export_id: str | int,
     corpus_pk: str | int,
 ):
 
     logger.info(f"package_funsd_exports() - data:\n{json.dumps(funsd_data, indent=4)}")
+
+    s3 = None
+
+    corpus = Corpus.objects.get(id=corpus_pk)
+
+    output_bytes = io.BytesIO()
+    zip_file = zipfile.ZipFile(output_bytes, mode="w", compression=zipfile.ZIP_DEFLATED)
+
+    if settings.USE_AWS:
+
+        import boto3
+
+        logger.info("process_pdf_page() - Load obj from s3")
+        s3 = boto3.client("s3")
+
+    for doc_data in funsd_data:
+
+        print(f"Doc data: {doc_data}")
+
+        doc_id, funsd_annotations, page_image_paths = doc_data
+
+        for index, page_data in enumerate(page_image_paths):
+
+            doc_id, page_path, file_type = page_data
+
+            # Load page image
+            if settings.USE_AWS:
+                page_obj = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=page_path)
+                page_data = page_obj["Body"].read()
+            else:
+                with open(page_path, "rb") as page_file:
+                    page_data = page_file.read()
+
+            # Write page image
+            zip_file.writestr(f"{doc_id}-{index}.{file_type}", page_data)
+
+            # Load page funds annots
+            if str(index) in funsd_annotations:
+                annots = funsd_annotations[str(index)]
+            else:
+                annots = []
+
+            # Write page funds annot
+            zip_file.writestr(f"{doc_id}-{index}.json", json.dumps(annots, indent=4))
+
+    zip_file.close()
+    output_bytes.seek(io.SEEK_SET)
+
+    export = UserExport.objects.get(pk=export_id)
+    export.file.save(f"{only_alphanumeric_chars(corpus.title)} FUNSD EXPORT.zip", output_bytes)
+    export.finished = timezone.now()
+    export.backend_lock = False
+    export.save()
+

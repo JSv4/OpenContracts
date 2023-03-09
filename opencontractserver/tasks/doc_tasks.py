@@ -21,10 +21,14 @@ from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
     LabelLookupPythonType,
     OpenContractDocAnnotationExport,
-    PawlsPagePythonType, PawlsTokenPythonType, FunsdTokenType, BoundingBoxPythonType,
+    PawlsPagePythonType,
+    PawlsTokenPythonType,
+    FunsdTokenType,
+    BoundingBoxPythonType,
+    FunsdAnnotationType,
 )
 from opencontractserver.utils.etl import build_document_export
-from opencontractserver.utils.pdf import extract_pawls_from_pdfs_bytes
+from opencontractserver.utils.pdf import extract_pawls_from_pdfs_bytes, split_pdf_into_images
 from opencontractserver.utils.text import __consolidate_common_equivalent_chars
 
 logger = logging.getLogger(__name__)
@@ -333,8 +337,10 @@ def convert_doc_to_langchain_task(doc_id: int, corpus_id: int) -> tuple[str, dic
     return text, metadata_json
 
 
+
 @celery_app.task()
-def convert_doc_to_funsd(doc_id: int, corpus_id: int):
+def convert_doc_to_funsd(user_id: int, doc_id: int, corpus_id: int) -> tuple[int, dict[int, list[FunsdAnnotationType]],
+list[tuple[int, str, str]]]:
 
     def pawls_bbox_to_funsd_box(pawls_bbox: BoundingBoxPythonType) -> tuple[float, float, float, float]:
         return pawls_bbox['left'], pawls_bbox['top'], pawls_bbox['right'], pawls_bbox['bottom']
@@ -358,13 +364,30 @@ def convert_doc_to_funsd(doc_id: int, corpus_id: int):
     annotation_map: dict[int, list[dict]] = {}
 
     token_annotations = Annotation.objects.filter(
-        annotation_label__label_type=TOKEN_LABEL
+        annotation_label__label_type=TOKEN_LABEL,
+        document_id=doc_id,
+        corpus_id=corpus_id
     ).order_by('page')
 
     file_object = default_storage.open(
         doc.pawls_parse_file.name
     )
     pawls_tokens = json.loads(file_object.read().decode('utf-8'))
+
+    pdf_object = default_storage.open(
+        doc.pdf_file.name
+    )
+    pdf_bytes = pdf_object.read()
+    pdf_images = split_pdf_into_images(
+        pdf_bytes,
+        storage_path=f"user_{user_id}/pdf_page_images"
+    )
+    pdf_images_and_data = list(zip(
+        [doc_id for _ in range(len(pdf_images))],
+        pdf_images,
+        ["PNG" for _ in range(len(pdf_images))]
+    ))
+    logger.info(f"convert_doc_to_funsd() - pdf_images: {pdf_images}")
 
     # TODO - investigate multi-select of annotations on same page. Code below (and, it seems, entire
     # application) assume no more than one annotation per page per Annotation obj.
@@ -440,9 +463,9 @@ def convert_doc_to_funsd(doc_id: int, corpus_id: int):
                 expanded_tokens.append(pawls_token_to_funsd_token(token))
 
             # TODO - build FUNSD annotation here
-            funsd_annotation = {
+            funsd_annotation: FunsdAnnotationType = {
                 "id": f"{base_id}-{page}",
-                "linking": [],  # TODO - pull in any relationships for label. This could be pretty complex
+                "linking": [],  # TODO - pull in any relationships for label. This could be pretty complex (actually no)
                 "text": page_annot_json['rawText'],
                 "box": pawls_bbox_to_funsd_box(page_annot_json['bounds']),
                 "label": label.id,
@@ -454,8 +477,7 @@ def convert_doc_to_funsd(doc_id: int, corpus_id: int):
             else:
                 annotation_map[page] = [funsd_annotation]
 
-    return annotation_map
-    # Need to break every annotation out by page (particularly multi-page annotations)
+    return doc_id, annotation_map, pdf_images_and_data
 
 
 @celery_app.task()

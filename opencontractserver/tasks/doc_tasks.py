@@ -16,19 +16,26 @@ from django.core.files.storage import default_storage
 from pydantic import validate_arguments
 
 from config import celery_app
-from opencontractserver.annotations.models import METADATA_LABEL, Annotation, TOKEN_LABEL
+from opencontractserver.annotations.models import (
+    METADATA_LABEL,
+    TOKEN_LABEL,
+    Annotation,
+)
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
+    BoundingBoxPythonType,
+    FunsdAnnotationType,
+    FunsdTokenType,
     LabelLookupPythonType,
     OpenContractDocAnnotationExport,
     PawlsPagePythonType,
     PawlsTokenPythonType,
-    FunsdTokenType,
-    BoundingBoxPythonType,
-    FunsdAnnotationType,
 )
 from opencontractserver.utils.etl import build_document_export
-from opencontractserver.utils.pdf import extract_pawls_from_pdfs_bytes, split_pdf_into_images
+from opencontractserver.utils.pdf import (
+    extract_pawls_from_pdfs_bytes,
+    split_pdf_into_images,
+)
 from opencontractserver.utils.text import __consolidate_common_equivalent_chars
 
 logger = logging.getLogger(__name__)
@@ -337,27 +344,32 @@ def convert_doc_to_langchain_task(doc_id: int, corpus_id: int) -> tuple[str, dic
     return text, metadata_json
 
 
-
 @celery_app.task()
-def convert_doc_to_funsd(user_id: int, doc_id: int, corpus_id: int) -> tuple[int, dict[int, list[FunsdAnnotationType]],
-list[tuple[int, str, str]]]:
-
-    def pawls_bbox_to_funsd_box(pawls_bbox: BoundingBoxPythonType) -> tuple[float, float, float, float]:
-        return pawls_bbox['left'], pawls_bbox['top'], pawls_bbox['right'], pawls_bbox['bottom']
+def convert_doc_to_funsd(
+    user_id: int, doc_id: int, corpus_id: int
+) -> tuple[int, dict[int, list[FunsdAnnotationType]], list[tuple[int, str, str]]]:
+    def pawls_bbox_to_funsd_box(
+        pawls_bbox: BoundingBoxPythonType,
+    ) -> tuple[float, float, float, float]:
+        return (
+            pawls_bbox["left"],
+            pawls_bbox["top"],
+            pawls_bbox["right"],
+            pawls_bbox["bottom"],
+        )
 
     def pawls_token_to_funsd_token(pawls_token: PawlsTokenPythonType) -> FunsdTokenType:
-        pawls_xleft = pawls_token['x']
-        pawls_ybottom = pawls_token['y']
-        pawls_ytop = pawls_xleft + pawls_token['width']
-        pawls_xright = pawls_ybottom + pawls_token['height']
+        pawls_xleft = pawls_token["x"]
+        pawls_ybottom = pawls_token["y"]
+        pawls_ytop = pawls_xleft + pawls_token["width"]
+        pawls_xright = pawls_ybottom + pawls_token["height"]
         funsd_token = {
-            "text": pawls_token['text'],
+            "text": pawls_token["text"],
             # In FUNSD, this must be serialzied to list but that's done by json.dumps and tuple has better typing
             # control (fixed length, positional datatypes, etc.)
-            "box": (pawls_xleft, pawls_ytop, pawls_xright, pawls_ybottom)
+            "box": (pawls_xleft, pawls_ytop, pawls_xright, pawls_ybottom),
         }
         return funsd_token
-
 
     doc = Document.objects.get(id=doc_id)
 
@@ -366,27 +378,24 @@ list[tuple[int, str, str]]]:
     token_annotations = Annotation.objects.filter(
         annotation_label__label_type=TOKEN_LABEL,
         document_id=doc_id,
-        corpus_id=corpus_id
-    ).order_by('page')
+        corpus_id=corpus_id,
+    ).order_by("page")
 
-    file_object = default_storage.open(
-        doc.pawls_parse_file.name
-    )
-    pawls_tokens = json.loads(file_object.read().decode('utf-8'))
+    file_object = default_storage.open(doc.pawls_parse_file.name)
+    pawls_tokens = json.loads(file_object.read().decode("utf-8"))
 
-    pdf_object = default_storage.open(
-        doc.pdf_file.name
-    )
+    pdf_object = default_storage.open(doc.pdf_file.name)
     pdf_bytes = pdf_object.read()
     pdf_images = split_pdf_into_images(
-        pdf_bytes,
-        storage_path=f"user_{user_id}/pdf_page_images"
+        pdf_bytes, storage_path=f"user_{user_id}/pdf_page_images"
     )
-    pdf_images_and_data = list(zip(
-        [doc_id for _ in range(len(pdf_images))],
-        pdf_images,
-        ["PNG" for _ in range(len(pdf_images))]
-    ))
+    pdf_images_and_data = list(
+        zip(
+            [doc_id for _ in range(len(pdf_images))],
+            pdf_images,
+            ["PNG" for _ in range(len(pdf_images))],
+        )
+    )
     logger.info(f"convert_doc_to_funsd() - pdf_images: {pdf_images}")
 
     # TODO - investigate multi-select of annotations on same page. Code below (and, it seems, entire
@@ -450,13 +459,13 @@ list[tuple[int, str, str]]]:
         for page in annot_json.keys():
 
             page_annot_json = annot_json[page]
-            page_token_refs = page_annot_json['tokensJsons']
+            page_token_refs = page_annot_json["tokensJsons"]
 
             expanded_tokens = []
             for token_ref in page_token_refs:
-                page_index = token_ref['pageIndex']
-                token_index = token_ref['tokenIndex']
-                token = pawls_tokens[page_index]['tokens'][token_index]
+                page_index = token_ref["pageIndex"]
+                token_index = token_ref["tokenIndex"]
+                token = pawls_tokens[page_index]["tokens"][token_index]
 
                 # Convert token from PAWLS to FUNSD format (simple but annoying transforming done via function
                 # defined above)
@@ -466,10 +475,10 @@ list[tuple[int, str, str]]]:
             funsd_annotation: FunsdAnnotationType = {
                 "id": f"{base_id}-{page}",
                 "linking": [],  # TODO - pull in any relationships for label. This could be pretty complex (actually no)
-                "text": page_annot_json['rawText'],
-                "box": pawls_bbox_to_funsd_box(page_annot_json['bounds']),
+                "text": page_annot_json["rawText"],
+                "box": pawls_bbox_to_funsd_box(page_annot_json["bounds"]),
                 "label": f"{label.id}",
-                "words": expanded_tokens
+                "words": expanded_tokens,
             }
 
             if page in annotation_map:

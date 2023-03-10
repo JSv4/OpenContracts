@@ -2,7 +2,6 @@ import logging
 
 import graphene
 from django.contrib.auth import get_user_model
-
 from graphene import relay
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType as ModelType

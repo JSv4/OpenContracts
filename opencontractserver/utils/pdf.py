@@ -5,6 +5,7 @@ import typing
 import uuid
 from io import BytesIO
 
+from django.conf import settings
 from PyPDF2.generic import (
     ArrayObject,
     DictionaryObject,
@@ -13,8 +14,6 @@ from PyPDF2.generic import (
     NumberObject,
     TextStringObject,
 )
-
-from django.conf import settings
 
 from opencontractserver.types.dicts import PawlsPagePythonType
 
@@ -116,10 +115,11 @@ def extract_pawls_from_pdfs_bytes(
 
     return annotations
 
+
 def split_pdf_into_images(
     pdf_bytes: bytes,
     storage_path: str,
-    target_format: typing.Literal['PNG', 'JPEG'] = "PNG"
+    target_format: typing.Literal["PNG", "JPEG"] = "PNG",
 ) -> list[str]:
     """
     Given pytes of a pdf file, split into image of specified format, store them in appropriate temporary
@@ -142,7 +142,6 @@ def split_pdf_into_images(
             import boto3
 
             s3 = boto3.client("s3")
-
 
         for img in images:
 

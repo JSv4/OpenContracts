@@ -17,5 +17,6 @@ def __consolidate_common_equivalent_chars(string):
 
     return string
 
+
 def only_alphanumeric_chars(raw_str: str) -> str:
-    return re.sub(r'[^a-zA-Z0-9]', '', raw_str)
+    return re.sub(r"[^a-zA-Z0-9]", "", raw_str)

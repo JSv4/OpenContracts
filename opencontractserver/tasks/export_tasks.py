@@ -7,16 +7,16 @@ import logging
 import zipfile
 
 from celery import shared_task
-
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.utils import timezone
-from django.conf import settings
 
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.types.dicts import (
+    FunsdAnnotationType,
     OpenContractDocAnnotationExport,
-    OpenContractsExportDataJsonPythonType, FunsdAnnotationType,
+    OpenContractsExportDataJsonPythonType,
 )
 from opencontractserver.types.enums import AnnotationLabelPythonType
 from opencontractserver.users.models import UserExport
@@ -132,10 +132,16 @@ def package_langchain_exports(
 
     logger.info(f"Export {export_id} is completed. Signal should now notify creator.")
 
+
 @shared_task
 def package_funsd_exports(
-    funsd_data: tuple[tuple[int, dict[int | str, list[dict[int | str, FunsdAnnotationType]]], list[tuple[int, str,
-    str]]]],
+    funsd_data: tuple[
+        tuple[
+            int,
+            dict[int | str, list[dict[int | str, FunsdAnnotationType]]],
+            list[tuple[int, str, str]],
+        ]
+    ],
     export_id: str | int,
     corpus_pk: str | int,
 ):
@@ -168,7 +174,9 @@ def package_funsd_exports(
 
             # Load page image
             if settings.USE_AWS:
-                page_obj = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=page_path)
+                page_obj = s3.get_object(
+                    Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=page_path
+                )
                 page_data = page_obj["Body"].read()
             else:
                 with open(page_path, "rb") as page_file:
@@ -183,19 +191,21 @@ def package_funsd_exports(
             else:
                 annots = []
 
-            page_annots = {
-                "form": annots
-            }
+            page_annots = {"form": annots}
 
             # Write page funds annot
-            zip_file.writestr(f"annotations/doc_{doc_id}-pg_{index}.json", json.dumps(page_annots, indent=4))
+            zip_file.writestr(
+                f"annotations/doc_{doc_id}-pg_{index}.json",
+                json.dumps(page_annots, indent=4),
+            )
 
     zip_file.close()
     output_bytes.seek(io.SEEK_SET)
 
     export = UserExport.objects.get(pk=export_id)
-    export.file.save(f"{only_alphanumeric_chars(corpus.title)} FUNSD EXPORT.zip", output_bytes)
+    export.file.save(
+        f"{only_alphanumeric_chars(corpus.title)} FUNSD EXPORT.zip", output_bytes
+    )
     export.finished = timezone.now()
     export.backend_lock = False
     export.save()
-

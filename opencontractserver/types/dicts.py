@@ -40,7 +40,10 @@ class FunsdAnnotationType(TypedDict):
     label: str
     words: list[FunsdTokenType]
     linking: list[int]
-    id: str
+    id: str | int
+
+class PageFundsAnnotationsExportType(TypedDict):
+    form: list[FunsdAnnotationType]
 
 class PawlsTokenPythonType(TypedDict):
     """

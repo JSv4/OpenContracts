@@ -183,8 +183,12 @@ def package_funsd_exports(
             else:
                 annots = []
 
+            page_annots = {
+                "form": annots
+            }
+
             # Write page funds annot
-            zip_file.writestr(f"annotations/doc_{doc_id}-pg_{index}.json", json.dumps(annots, indent=4))
+            zip_file.writestr(f"annotations/doc_{doc_id}-pg_{index}.json", json.dumps(page_annots, indent=4))
 
     zip_file.close()
     output_bytes.seek(io.SEEK_SET)

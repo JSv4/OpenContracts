@@ -442,11 +442,11 @@ class Query(graphene.ObjectType):
         if info.context.user.is_superuser:
             return Document.objects.all()
         elif info.context.user.is_anonymous:
-            return Document.objects.filter(Q(is_public=True))
+            return Document.objects.filter(Q(is_public=True)).order_by('modified')
         else:
             return Document.objects.filter(
                 Q(creator=info.context.user) | Q(is_public=True)
-            )
+            ).order_by('modified')
 
     document = graphene.Field(DocumentType, id=graphene.String())
 

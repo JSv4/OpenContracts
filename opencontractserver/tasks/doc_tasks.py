@@ -468,7 +468,7 @@ list[tuple[int, str, str]]]:
                 "linking": [],  # TODO - pull in any relationships for label. This could be pretty complex (actually no)
                 "text": page_annot_json['rawText'],
                 "box": pawls_bbox_to_funsd_box(page_annot_json['bounds']),
-                "label": label.id,
+                "label": f"{label.id}",
                 "words": expanded_tokens
             }
 

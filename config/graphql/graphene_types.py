@@ -2,6 +2,7 @@ import logging
 
 import graphene
 from django.contrib.auth import get_user_model
+
 from graphene import relay
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType as ModelType
@@ -231,7 +232,7 @@ class UserImportType(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class UserExportType(AnnotatePermissionsForReadMixin, ModelType):
-    def resolve_zip(self, info):
+    def resolve_file(self, info):
         return "" if not self.file else info.context.build_absolute_uri(self.file.url)
 
     class Meta:

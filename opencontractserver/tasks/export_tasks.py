@@ -175,7 +175,7 @@ def package_funsd_exports(
                     page_data = page_file.read()
 
             # Write page image
-            zip_file.writestr(f"{doc_id}-{index}.{file_type}", page_data)
+            zip_file.writestr(f"images/doc_{doc_id}-pg_{index}.{file_type}", page_data)
 
             # Load page funds annots
             if str(index) in funsd_annotations:
@@ -184,7 +184,7 @@ def package_funsd_exports(
                 annots = []
 
             # Write page funds annot
-            zip_file.writestr(f"{doc_id}-{index}.json", json.dumps(annots, indent=4))
+            zip_file.writestr(f"annotations/doc_{doc_id}-pg_{index}.json", json.dumps(annots, indent=4))
 
     zip_file.close()
     output_bytes.seek(io.SEEK_SET)

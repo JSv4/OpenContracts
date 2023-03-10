@@ -172,7 +172,7 @@ def calculate_export_filename(instance, filename):
 
 class UserExport(django.db.models.Model):
 
-    zip = django.db.models.FileField(blank=True, upload_to=calculate_export_filename)
+    file = django.db.models.FileField(blank=True, upload_to=calculate_export_filename)
     name = django.db.models.CharField(max_length=1024, null=True, blank=True)
     created = django.db.models.DateTimeField(default=timezone.now)
     started = django.db.models.DateTimeField(null=True)

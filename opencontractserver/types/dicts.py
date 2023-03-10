@@ -28,6 +28,28 @@ class PawlsPageBoundaryPythonType(TypedDict):
     index: int
 
 
+class FunsdTokenType(TypedDict):
+    # From Funsd paper: box = [xlef t, ytop, xright, ybottom]
+    box: tuple[
+        float, float, float, float
+    ]  # This will be serialized to list when exported as JSON, but we want more
+    # control over length than list typing allows
+    text: str
+
+
+class FunsdAnnotationType(TypedDict):
+    box: tuple[float, float, float, float]
+    text: str
+    label: str
+    words: list[FunsdTokenType]
+    linking: list[int]
+    id: str | int
+
+
+class PageFundsAnnotationsExportType(TypedDict):
+    form: list[FunsdAnnotationType]
+
+
 class PawlsTokenPythonType(TypedDict):
     """
     This is what an actual PAWLS token looks like.

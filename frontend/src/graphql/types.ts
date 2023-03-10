@@ -733,7 +733,7 @@ export type UpdateRelations = {
 export type UserExportType = Node & {
   __typename?: "UserExportType";
   id: Scalars["ID"];
-  zip: Scalars["String"];
+  file: Scalars["String"];
   backendLock?: Scalars["Boolean"];
   name?: Maybe<Scalars["String"]>;
   created: Scalars["DateTime"];

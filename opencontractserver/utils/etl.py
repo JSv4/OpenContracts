@@ -111,12 +111,10 @@ def build_document_export(
         corpus = Corpus.objects.get(pk=corpus_id)
         # logger.info(f"Loaded corpus: {corpus}")
 
-        extracted_document_content_json = {}
+        extracted_document_content_json = ""
         try:
             with default_storage.open(doc.txt_extract_file.name) as content_file:
-                extracted_document_content_json = json.loads(
-                    content_file.read().decode("utf-8")
-                )
+                extracted_document_content_json = content_file.read().decode("utf-8")
         except Exception as e:
             logger.warning(f"Could not export doc text for doc {doc_id}: {e}")
 
@@ -235,11 +233,11 @@ def build_document_export(
 
             # logger.info(f"Burn for page {i}")
             page = pdf_input.pages[i]
-            page_box = page.mediaBox
+            page_box = page.mediabox
 
-            page_height = page_box.upperLeft[1]
+            page_height = page_box.upper_left[1]
             # logger.info(f"PyPDF2 page_height: {page_height}")
-            page_width = page_box.lowerRight[0]
+            page_width = page_box.lower_right[0]
             # logger.info(f"PyPDF2 page_width: {page_width}")
 
             if f"{i + 1}" in page_highlights:

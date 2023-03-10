@@ -19,6 +19,7 @@ export function notEmpty<TValue>(
 export enum ExportTypes {
   LANGCHAIN = "LANGCHAIN",
   OPEN_CONTRACTS = "OPEN_CONTRACTS",
+  FUNSD = "FUNSD",
 }
 
 export enum PermissionTypes {

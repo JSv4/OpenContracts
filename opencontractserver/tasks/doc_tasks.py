@@ -16,14 +16,27 @@ from django.core.files.storage import default_storage
 from pydantic import validate_arguments
 
 from config import celery_app
+from opencontractserver.annotations.models import (
+    METADATA_LABEL,
+    TOKEN_LABEL,
+    Annotation,
+)
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
+    BoundingBoxPythonType,
+    FunsdAnnotationType,
+    FunsdTokenType,
     LabelLookupPythonType,
     OpenContractDocAnnotationExport,
     PawlsPagePythonType,
+    PawlsTokenPythonType,
 )
 from opencontractserver.utils.etl import build_document_export
-from opencontractserver.utils.pdf import extract_pawls_from_pdfs_bytes
+from opencontractserver.utils.pdf import (
+    extract_pawls_from_pdfs_bytes,
+    split_pdf_into_images,
+)
+from opencontractserver.utils.text import __consolidate_common_equivalent_chars
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -111,6 +124,10 @@ def reassemble_extracted_pdf_parts(
     sorted_doc_parts = sorted(doc_parts)
     pawls_layer: list[PawlsPagePythonType] = []
 
+    doc_text = ""
+    line_start_char = 0
+    last_token_height = -1
+
     for doc_part in sorted_doc_parts:
 
         page_num, pawls_page_path, pdf_page_path = doc_part
@@ -130,11 +147,68 @@ def reassemble_extracted_pdf_parts(
             with open(pawls_page_path) as f:
                 page_pawls_layer = json.loads(f.read())
 
+        # Process PAWLS tokens to create a text layer
+        # We DO want to reset y pos on every page, which will be set to y of first token.
+        last_y = -1
+        line_text = ""
+        lines: list[tuple[int, int, int, int]] = []
+
+        for page_token_index, token in enumerate(page_pawls_layer["tokens"]):
+
+            token_text = __consolidate_common_equivalent_chars(token["text"])
+
+            new_y = round(token["y"], 0)
+            new_token_height = round(token["height"], 0)
+
+            if last_y == -1:
+                last_y = round(token["y"], 0)
+
+            if last_token_height == -1:
+                # Not really sure how to handle situations where the token height is 0 at the beginning... just
+                # try 1 pixel, I guess?
+                last_token_height = new_token_height if new_token_height > 0 else 1
+
+            # Tesseract line positions seem a bit erratic, honestly. Figuring out when a token is on the same line is
+            # not as easy as checking if y positions are the same as they are often off by a couple pixels. This is
+            # dependent on document, font size, OCR quality, and more... Decent heuristic I came up with was to look
+            # at two consecutive tokens, take the max token height and then see if the y difference was more than some
+            # percentage of the larger of the two token heights (to account for things like periods or dashes or
+            # whatever next to a word). Seems to work pretty well, though I am *SURE* it will fail in some cases. Easy
+            # enough fix there... just don't give a cr@p about line height and newlines and always use a space. That's
+            # actually probably fine for ML purposes.
+            # logger.info(f"Token: {token['text']} (len {len(token['text'])})")
+            # logger.info(f"Line y difference: {abs(new_y - last_y)}")
+            # logger.info(f"Compared to averaged token height: {0.5 * max(new_token_height, last_token_height)}")
+
+            if abs(new_y - last_y) > (0.5 * max(new_token_height, last_token_height)):
+
+                lines.append(
+                    (
+                        page_num,
+                        len(lines),
+                        line_start_char,
+                        len(line_text) + line_start_char,
+                    )
+                )
+
+                line_start_char = len(doc_text) + 1  # Accounting for newline
+                line_text = token_text
+
+            else:
+                line_text += " " if len(line_text) > 0 else ""
+                line_text += token_text
+
+            doc_text += " " if len(doc_text) > 0 else ""
+            doc_text += token_text
+
         pawls_layer.append(page_pawls_layer)
 
     pawls_string = json.dumps(pawls_layer)
     pawls_file = ContentFile(pawls_string.encode("utf-8"))
+    txt_file = ContentFile(doc_text.encode("utf-8"))
+
     document = Document.objects.get(pk=doc_id)
+    document.txt_extract_file.save(f"doc_{doc_id}.txt", txt_file)
     document.pawls_parse_file.save(f"doc_{doc_id}.pawls", pawls_file)
     document.page_count = len(sorted_doc_parts)
     document.save()
@@ -240,6 +314,179 @@ def burn_doc_annotations(
     return build_document_export(
         label_lookups=label_lookups, doc_id=doc_id, corpus_id=corpus_id
     )
+
+
+@celery_app.task()
+@validate_arguments
+def convert_doc_to_langchain_task(doc_id: int, corpus_id: int) -> tuple[str, dict]:
+    """
+    Given a doc and corpus, export text and all metadata in a tuple that can then be combined and exported for langchain
+    """
+    doc = Document.objects.get(id=doc_id)
+
+    metadata_annotations = Annotation.objects.filter(
+        document_id=doc_id,
+        corpus_id=corpus_id,
+        annotation_label__label_type=METADATA_LABEL,
+    )
+
+    if doc.txt_extract_file.name:
+        with doc.txt_extract_file.open("r") as txt_file:
+            text = txt_file.read()
+    else:
+        text = ""
+
+    metadata_json = {"doc_id": doc_id, "corpus_id": corpus_id}
+
+    for metadata in metadata_annotations:
+        metadata_json[metadata.annotation_label.text] = metadata.raw_text
+
+    return text, metadata_json
+
+
+@celery_app.task()
+def convert_doc_to_funsd(
+    user_id: int, doc_id: int, corpus_id: int
+) -> tuple[int, dict[int, list[FunsdAnnotationType]], list[tuple[int, str, str]]]:
+    def pawls_bbox_to_funsd_box(
+        pawls_bbox: BoundingBoxPythonType,
+    ) -> tuple[float, float, float, float]:
+        return (
+            pawls_bbox["left"],
+            pawls_bbox["top"],
+            pawls_bbox["right"],
+            pawls_bbox["bottom"],
+        )
+
+    def pawls_token_to_funsd_token(pawls_token: PawlsTokenPythonType) -> FunsdTokenType:
+        pawls_xleft = pawls_token["x"]
+        pawls_ybottom = pawls_token["y"]
+        pawls_ytop = pawls_xleft + pawls_token["width"]
+        pawls_xright = pawls_ybottom + pawls_token["height"]
+        funsd_token = {
+            "text": pawls_token["text"],
+            # In FUNSD, this must be serialzied to list but that's done by json.dumps and tuple has better typing
+            # control (fixed length, positional datatypes, etc.)
+            "box": (pawls_xleft, pawls_ytop, pawls_xright, pawls_ybottom),
+        }
+        return funsd_token
+
+    doc = Document.objects.get(id=doc_id)
+
+    annotation_map: dict[int, list[dict]] = {}
+
+    token_annotations = Annotation.objects.filter(
+        annotation_label__label_type=TOKEN_LABEL,
+        document_id=doc_id,
+        corpus_id=corpus_id,
+    ).order_by("page")
+
+    file_object = default_storage.open(doc.pawls_parse_file.name)
+    pawls_tokens = json.loads(file_object.read().decode("utf-8"))
+
+    pdf_object = default_storage.open(doc.pdf_file.name)
+    pdf_bytes = pdf_object.read()
+    pdf_images = split_pdf_into_images(
+        pdf_bytes, storage_path=f"user_{user_id}/pdf_page_images"
+    )
+    pdf_images_and_data = list(
+        zip(
+            [doc_id for _ in range(len(pdf_images))],
+            pdf_images,
+            ["PNG" for _ in range(len(pdf_images))],
+        )
+    )
+    logger.info(f"convert_doc_to_funsd() - pdf_images: {pdf_images}")
+
+    # TODO - investigate multi-select of annotations on same page. Code below (and, it seems, entire
+    # application) assume no more than one annotation per page per Annotation obj.
+    for annotation in token_annotations:
+
+        base_id = f"{annotation.id}"
+
+        """
+
+        FUNSD format description from paper:
+
+        Each form is encoded in a JSON file. We represent a form
+        as a list of semantic entities that are interlinked. A semantic
+        entity represents a group of words that belong together from
+        a semantic and spatial standpoint. Each semantic entity is de-
+        scribed by a unique identifier, a label (i.e., question, answer,
+        header or other), a bounding box, a list of links with other
+        entities, and a list of words. Each word is represented by its
+        textual content and its bounding box. All the bounding boxes
+        are represented by their coordinates following the schema
+        box = [xlef t, ytop, xright, ybottom]. The links are directed
+        and formatted as [idf rom, idto], where id represents the
+        semantic entity identifier. The dataset statistics are shown in
+        Table I. Even with a limited number of annotated documents,
+        we obtain a large number of word-level annotations (> 30k)
+
+         {
+            "box": [
+                446,
+                257,
+                461,
+                267
+            ],
+            "text": "cc:",
+            "label": "question",
+            "words": [
+                {
+                    "box": [
+                        446,
+                        257,
+                        461,
+                        267
+                    ],
+                    "text": "cc:"
+                }
+            ],
+            "linking": [
+                [
+                    1,
+                    20
+                ]
+            ],
+            "id": 1
+        },
+        """
+
+        annot_json = annotation.json
+        label = annotation.annotation_label
+
+        for page in annot_json.keys():
+
+            page_annot_json = annot_json[page]
+            page_token_refs = page_annot_json["tokensJsons"]
+
+            expanded_tokens = []
+            for token_ref in page_token_refs:
+                page_index = token_ref["pageIndex"]
+                token_index = token_ref["tokenIndex"]
+                token = pawls_tokens[page_index]["tokens"][token_index]
+
+                # Convert token from PAWLS to FUNSD format (simple but annoying transforming done via function
+                # defined above)
+                expanded_tokens.append(pawls_token_to_funsd_token(token))
+
+            # TODO - build FUNSD annotation here
+            funsd_annotation: FunsdAnnotationType = {
+                "id": f"{base_id}-{page}",
+                "linking": [],  # TODO - pull in any relationships for label. This could be pretty complex (actually no)
+                "text": page_annot_json["rawText"],
+                "box": pawls_bbox_to_funsd_box(page_annot_json["bounds"]),
+                "label": f"{label.id}",
+                "words": expanded_tokens,
+            }
+
+            if page in annotation_map:
+                annotation_map[page].append(funsd_annotation)
+            else:
+                annotation_map[page] = [funsd_annotation]
+
+    return doc_id, annotation_map, pdf_images_and_data
 
 
 @celery_app.task()

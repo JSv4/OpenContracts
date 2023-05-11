@@ -15,7 +15,7 @@ from django.utils import timezone
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.types.dicts import (
     FunsdAnnotationType,
-    OpenContractDocAnnotationExport,
+    OpenContractDocExport,
     OpenContractsExportDataJsonPythonType,
 )
 from opencontractserver.types.enums import AnnotationLabelPythonType
@@ -39,7 +39,7 @@ def package_annotated_docs(
         tuple[
             str | None,
             str | None,
-            OpenContractDocAnnotationExport | None,
+            OpenContractDocExport | None,
             dict[str | int, AnnotationLabelPythonType],
             dict[str | int, AnnotationLabelPythonType],
         ]
@@ -163,8 +163,6 @@ def package_funsd_exports(
         s3 = boto3.client("s3")
 
     for doc_data in funsd_data:
-
-        print(f"Doc data: {doc_data}")
 
         doc_id, funsd_annotations, page_image_paths = doc_data
 

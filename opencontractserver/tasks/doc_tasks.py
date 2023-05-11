@@ -6,7 +6,7 @@ import json
 import logging
 import pathlib
 import uuid
-from typing import Any
+from typing import Any, List, Tuple, Dict
 
 from celery import chord, group
 from django.conf import settings
@@ -27,9 +27,9 @@ from opencontractserver.types.dicts import (
     FunsdAnnotationType,
     FunsdTokenType,
     LabelLookupPythonType,
-    OpenContractDocAnnotationExport,
+    OpenContractDocExport,
     PawlsPagePythonType,
-    PawlsTokenPythonType,
+    PawlsTokenPythonType, FunsdAnnotationLoaderMapType,
 )
 from opencontractserver.utils.etl import build_document_export
 from opencontractserver.utils.pdf import (
@@ -306,7 +306,7 @@ def split_pdf_for_processing(user_id: int, doc_id: int) -> list[tuple[int, str]]
 @validate_arguments
 def burn_doc_annotations(
     label_lookups: LabelLookupPythonType, doc_id: int, corpus_id: int
-) -> tuple[str, str, OpenContractDocAnnotationExport | None, Any, Any]:
+) -> tuple[str, str, OpenContractDocExport | None, Any, Any]:
     """
     Simple task wrapper for a fairly complex task to burn in the annotations for a given corpus on a given doc.
     This will alter the PDF and add highlight and labels.
@@ -477,7 +477,7 @@ def convert_doc_to_funsd(
                 "linking": [],  # TODO - pull in any relationships for label. This could be pretty complex (actually no)
                 "text": page_annot_json["rawText"],
                 "box": pawls_bbox_to_funsd_box(page_annot_json["bounds"]),
-                "label": f"{label.id}",
+                "label": f"{label.text}",
                 "words": expanded_tokens,
             }
 
@@ -488,6 +488,108 @@ def convert_doc_to_funsd(
 
     return doc_id, annotation_map, pdf_images_and_data
 
+
+@celery_app.task()
+def convert_doc_to_funsd_loader_input(
+    user_id: int, doc_id: int, corpus_id: int) -> Tuple[int, FunsdAnnotationLoaderMapType, List[Tuple[int, str, str]]]:
+    def pawls_bbox_to_funsd_box(
+        pawls_bbox: BoundingBoxPythonType,
+    ) -> tuple[float, float, float, float]:
+        return (
+            pawls_bbox["left"],
+            pawls_bbox["top"],
+            pawls_bbox["right"],
+            pawls_bbox["bottom"],
+        )
+
+    def pawls_token_to_funsd_token(pawls_token: PawlsTokenPythonType) -> FunsdTokenType:
+        pawls_xleft = pawls_token["x"]
+        pawls_ybottom = pawls_token["y"]
+        pawls_ytop = pawls_xleft + pawls_token["width"]
+        pawls_xright = pawls_ybottom + pawls_token["height"]
+        funsd_token = {
+            "text": pawls_token["text"],
+            "box": (pawls_xleft, pawls_ytop, pawls_xright, pawls_ybottom),
+        }
+        return funsd_token
+
+    def label_to_ner_tag(label: str) -> str:
+        mapping = {
+            "header": "HEADER",
+            "question": "QUESTION",
+            "answer": "ANSWER",
+        }
+        for key, value in mapping.items():
+            if key in label.lower():
+                return value
+        return "O"
+
+    doc = Document.objects.get(id=doc_id)
+
+    annotation_map: dict[int, list[dict]] = {}
+
+    token_annotations = Annotation.objects.filter(
+        annotation_label__label_type=TOKEN_LABEL,
+        document_id=doc_id,
+        corpus_id=corpus_id,
+    ).order_by("page")
+
+    file_object = default_storage.open(doc.pawls_parse_file.name)
+    pawls_tokens = json.loads(file_object.read().decode("utf-8"))
+
+    pdf_object = default_storage.open(doc.pdf_file.name)
+    pdf_bytes = pdf_object.read()
+    pdf_images = split_pdf_into_images(
+        pdf_bytes, storage_path=f"user_{user_id}/pdf_page_images"
+    )
+    pdf_images_and_data = list(
+        zip(
+            [doc_id for _ in range(len(pdf_images))],
+            pdf_images,
+            ["PNG" for _ in range(len(pdf_images))],
+        )
+    )
+    logger.info(f"convert_doc_to_funsd() - pdf_images: {pdf_images}")
+
+    for annotation in token_annotations:
+
+        base_id = f"{annotation.id}"
+        annot_json = annotation.json
+        label = annotation.annotation_label
+
+        for page in annot_json.keys():
+
+            page_annot_json = annot_json[page]
+            page_token_refs = page_annot_json["tokensJsons"]
+
+            expanded_tokens = []
+            expanded_bboxes = []
+            ner_tags = []
+
+            for token_ref in page_token_refs:
+                page_index = token_ref["pageIndex"]
+                token_index = token_ref["tokenIndex"]
+                token = pawls_tokens[page_index]["tokens"][token_index]
+
+                # Convert token from PAWLS to FUNSD format
+                expanded_tokens.append(token["text"])
+                expanded_bboxes.append(pawls_bbox_to_funsd_box(token))
+                ner_tags.append(f"B-{label_to_ner_tag(label.text)}")
+
+            funsd_annotation = {
+                "id": f"{base_id}-{page}",
+                "tokens": expanded_tokens,
+                "bboxes": expanded_bboxes,
+                "ner_tags": ner_tags,
+                "image": pdf_images_and_data[int(page) - 1],
+            }
+
+            if page in annotation_map:
+                annotation_map[page].append(funsd_annotation)
+            else:
+                annotation_map[page] = [funsd_annotation]
+
+    return doc_id, annotation_map, pdf_images_and_data
 
 @celery_app.task()
 def extract_thumbnail(*args, doc_id=-1, **kwargs):

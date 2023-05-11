@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, List, Tuple
 
 from typing_extensions import NotRequired, TypedDict
 
@@ -45,6 +45,16 @@ class FunsdAnnotationType(TypedDict):
     linking: list[int]
     id: str | int
 
+
+class FunsdAnnotationLoaderOutputType(TypedDict):
+    id: str
+    tokens: List[str]
+    bboxes: List[Tuple[float, float, float, float]]
+    ner_tags: List[str]
+    image: Tuple[int, str, str]  # (doc_id, image_data, image_format)
+
+class FunsdAnnotationLoaderMapType(TypedDict):
+    page: List[FunsdAnnotationLoaderOutputType]
 
 class PageFundsAnnotationsExportType(TypedDict):
     form: list[FunsdAnnotationType]
@@ -171,7 +181,7 @@ class OpenContractsDocAnnotations(TypedDict):
     labelled_text: list[OpenContractsAnnotationPythonType]
 
 
-class OpenContractDocAnnotationExport(OpenContractsDocAnnotations):
+class OpenContractDocExport(OpenContractsDocAnnotations):
     """
     Eech individual documents annotations are exported and imported into
     and out of jsons with this form. Inherits doc_labels and labelled_text
@@ -183,6 +193,9 @@ class OpenContractDocAnnotationExport(OpenContractsDocAnnotations):
 
     # Document text
     content: str
+
+    # Document description
+    description: Optional[str]
 
     # Documents PAWLS parse file contents (serialized)
     pawls_file_content: list[PawlsPagePythonType]
@@ -220,7 +233,7 @@ class OpenContractsExportDataJsonPythonType(TypedDict):
     """
 
     # Lookup of pdf filename to the corresponding Annotation data
-    annotated_docs: dict[str, OpenContractDocAnnotationExport]
+    annotated_docs: dict[str, OpenContractDocExport]
 
     # Requisite labels, mapped from label name to label data
     doc_labels: dict[str, AnnotationLabelPythonType]
@@ -233,6 +246,31 @@ class OpenContractsExportDataJsonPythonType(TypedDict):
 
     # Stores the label set (todo - make sure the icon gets stored as base64)
     label_set: OpenContractsLabelSetType
+
+
+class OpenContractsAnnotatedDocumentImportType(TypedDict):
+    """
+    This is the type of the data.json that goes into our import for a single
+    document with its annotations and labels.
+    """
+
+    # Document title
+    doc_data: OpenContractDocExport
+
+    # Document pdf as base64 string
+    pdf_base64: str
+
+    # Document name
+    pdf_name: str
+
+    # Lookup of pdf filename to the corresponding Annotation data
+    doc_labels: dict[str, AnnotationLabelPythonType]
+
+    # Requisite text labels, mapped from label name to label data
+    text_labels: dict[str, AnnotationLabelPythonType]
+
+    # Requisite metadata labels, mapped from label name to label data
+    metadata_labels: dict[str, AnnotationLabelPythonType]
 
 
 class OpenContractsAnalysisTaskResult(TypedDict):

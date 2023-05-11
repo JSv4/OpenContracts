@@ -11,9 +11,8 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-
-from graphql import GraphQLError
 from graphene.types.generic import GenericScalar
+from graphql import GraphQLError
 from graphql_jwt.decorators import login_required, user_passes_test
 from graphql_relay import from_global_id, to_global_id
 
@@ -52,8 +51,8 @@ from opencontractserver.tasks import (
     delete_analysis_and_annotations_task,
     fork_corpus,
     import_corpus,
+    import_document_to_corpus,
     package_annotated_docs,
-    import_document_to_corpus
 )
 from opencontractserver.tasks.analyzer_tasks import start_analysis
 from opencontractserver.tasks.doc_tasks import (
@@ -555,7 +554,7 @@ class UploadAnnotatedDocument(graphene.Mutation):
     def mutate(root, info, target_corpus_id, document_import_data):
 
         try:
-            ok=True
+            ok = True
             message = "SUCCESS"
 
             received_json = json.loads(document_import_data)
@@ -567,14 +566,12 @@ class UploadAnnotatedDocument(graphene.Mutation):
             import_document_to_corpus.s(
                 target_corpus_id=target_corpus_id,
                 user_id=info.context.user.id,
-                document_import_data=received_json
+                document_import_data=received_json,
             ).apply_async()
 
         except Exception as e:
             ok = False
-            message = (
-                f"UploadAnnotatedDocument() - could not start load job due to error: {e}"
-            )
+            message = f"UploadAnnotatedDocument() - could not start load job due to error: {e}"
             logger.error(message)
 
         return UploadAnnotatedDocument(message=message, ok=ok)

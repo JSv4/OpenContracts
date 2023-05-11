@@ -132,8 +132,13 @@ class GraphQLTestCase(TestCase):
                 "annotationLabel": "test_text_label",
                 "rawText": "Test Text",
                 "page": 1,
-                "annotation_json": {"1": {"bounds": {"top": 0, "bottom": 1, "left": 0, "right": 1},
-                                            "tokensJsons": [{"pageIndex": 1, "tokenIndex": 0}], "rawText": "Test Text"}}
+                "annotation_json": {
+                    "1": {
+                        "bounds": {"top": 0, "bottom": 1, "left": 0, "right": 1},
+                        "tokensJsons": [{"pageIndex": 1, "tokenIndex": 0}],
+                        "rawText": "Test Text",
+                    }
+                },
             }
         ]
 
@@ -159,10 +164,10 @@ class GraphQLTestCase(TestCase):
             "pdf_base64": pdf_base64,
             "text_labels": text_labels,
             "doc_labels": doc_labels,
-            "metadata_labels": {}
+            "metadata_labels": {},
         }
 
-        mutation =  """
+        mutation = """
             mutation ImportAnnotatedDocToCorpus($targetCorpusId: String!, $documentImportData: String!) {
                 importAnnotatedDocToCorpus(targetCorpusId: $targetCorpusId, documentImportData:
                 $documentImportData) {
@@ -177,10 +182,7 @@ class GraphQLTestCase(TestCase):
             "documentImportData": json.dumps(document_import_data),
         }
 
-        response = client.execute(
-            mutation,
-            variables=variables
-        )
+        response = client.execute(mutation, variables=variables)
 
         print(f"Test response: {response}")
 

@@ -31,7 +31,6 @@ User = get_user_model()
 
 
 class TestImportDocumentToCorpus(TestCase):
-
     def setUp(self):
         self.user = User.objects.create_user(
             username="testuser", password="testpassword"
@@ -83,8 +82,13 @@ class TestImportDocumentToCorpus(TestCase):
                 "annotationLabel": "test_text_label",
                 "rawText": "Test Text",
                 "page": 1,
-                "annotation_json": {"1": {"bounds": {"top": 0, "bottom": 1, "left": 0, "right": 1},
-                                            "tokensJsons": [{"pageIndex": 1, "tokenIndex": 0}], "rawText": "Test Text"}}
+                "annotation_json": {
+                    "1": {
+                        "bounds": {"top": 0, "bottom": 1, "left": 0, "right": 1},
+                        "tokensJsons": [{"pageIndex": 1, "tokenIndex": 0}],
+                        "rawText": "Test Text",
+                    }
+                },
             }
         ]
 
@@ -110,25 +114,35 @@ class TestImportDocumentToCorpus(TestCase):
             "pdf_base64": pdf_base64,
             "text_labels": text_labels,
             "doc_labels": doc_labels,
-            "metadata_labels": {}
+            "metadata_labels": {},
         }
 
         # Call the import_document_to_corpus task
-        document_id = import_document_to_corpus(self.corpus.id, self.user.id, document_import_data)
+        document_id = import_document_to_corpus(
+            self.corpus.id, self.user.id, document_import_data
+        )
 
         # Check that the document was created
         document = Document.objects.get(id=document_id)
         self.assertEqual(document.title, "Test Document")
 
         # Check that the labels were created
-        self.assertEqual(AnnotationLabel.objects.filter(text="test_text_label").count(), 1)
-        self.assertEqual(AnnotationLabel.objects.filter(text="test_doc_label").count(), 1)
+        self.assertEqual(
+            AnnotationLabel.objects.filter(text="test_text_label").count(), 1
+        )
+        self.assertEqual(
+            AnnotationLabel.objects.filter(text="test_doc_label").count(), 1
+        )
 
         # Check that the annotations were created
         annotations = document.doc_annotations.all()
         self.assertEqual(annotations.count(), 2)
-        self.assertEqual(annotations.filter(annotation_label__text="test_text_label").count(), 1)
-        self.assertEqual(annotations.filter(annotation_label__text="test_doc_label").count(), 1)
+        self.assertEqual(
+            annotations.filter(annotation_label__text="test_text_label").count(), 1
+        )
+        self.assertEqual(
+            annotations.filter(annotation_label__text="test_doc_label").count(), 1
+        )
 
         # Check that the PDF file was imported correctly
         with document.pdf_file.open("rb") as pdf_file:
@@ -141,4 +155,3 @@ class TestImportDocumentToCorpus(TestCase):
             self.assertEqual(len(pawls_data), 1)
             self.assertEqual(len(pawls_data[0]["tokens"]), 1)
             self.assertEqual(pawls_data[0]["tokens"][0]["text"], "Test")
-

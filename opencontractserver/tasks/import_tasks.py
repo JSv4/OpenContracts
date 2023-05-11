@@ -9,11 +9,18 @@ from django.core.files.base import ContentFile, File
 
 from config import celery_app
 from config.graphql.serializers import AnnotationLabelSerializer
-from opencontractserver.annotations.models import Annotation, TOKEN_LABEL, DOC_TYPE_LABEL, METADATA_LABEL
-from opencontractserver.corpuses.models import TemporaryFileHandle, Corpus
+from opencontractserver.annotations.models import (
+    DOC_TYPE_LABEL,
+    METADATA_LABEL,
+    TOKEN_LABEL,
+    Annotation,
+)
+from opencontractserver.corpuses.models import Corpus, TemporaryFileHandle
 from opencontractserver.documents.models import Document
-from opencontractserver.types.dicts import OpenContractsExportDataJsonPythonType, \
-    OpenContractsAnnotatedDocumentImportType
+from opencontractserver.types.dicts import (
+    OpenContractsAnnotatedDocumentImportType,
+    OpenContractsExportDataJsonPythonType,
+)
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.packaging import (
     unpack_corpus_from_export,
@@ -68,15 +75,14 @@ def import_corpus(
                         doc_labels = data_json["doc_labels"]
 
                         label_set_data = {**data_json["label_set"]}  # noqa
-                        label_set_data.pop("id")   # noqa
+                        label_set_data.pop("id")  # noqa
 
                         corpus_data = {**data_json["corpus"]}
                         corpus_data.pop("id")
 
                         # Create labelset by loading JSON and converting to Django with DRF serializer
                         labelset_obj = unpack_label_set_from_export(
-                            data=label_set_data,  # noqa
-                            user=user_obj
+                            data=label_set_data, user=user_obj  # noqa
                         )
                         logger.info(f"LabelSet created: {labelset_obj}")
 
@@ -277,6 +283,7 @@ def import_corpus(
         logger.error(f"import_corpus() - Exception encountered in corpus import: {e}")
         return None
 
+
 @celery_app.task()
 def import_document_to_corpus(
     target_corpus_id: int,
@@ -295,13 +302,20 @@ def import_document_to_corpus(
 
         # Load existing labels
         existing_text_labels = {
-            label.text: label for label in labelset_obj.annotation_labels.filter(label_type=TOKEN_LABEL)
+            label.text: label
+            for label in labelset_obj.annotation_labels.filter(label_type=TOKEN_LABEL)
         }
         existing_doc_labels = {
-            label.text: label for label in labelset_obj.annotation_labels.filter(label_type=DOC_TYPE_LABEL)
+            label.text: label
+            for label in labelset_obj.annotation_labels.filter(
+                label_type=DOC_TYPE_LABEL
+            )
         }
         existing_metadata_labels = {
-            label.text: label for label in labelset_obj.annotation_labels.filter(label_type=METADATA_LABEL)
+            label.text: label
+            for label in labelset_obj.annotation_labels.filter(
+                label_type=METADATA_LABEL
+            )
         }
 
         # Create new labels if needed
@@ -359,19 +373,21 @@ def import_document_to_corpus(
 
         pdf_file = ContentFile(pdf_data, name=f"{document_import_data['pdf_name']}.pdf")
         pawls_parse_file = ContentFile(
-            json.dumps(document_import_data['doc_data']['pawls_file_content']).encode("utf-8"),
+            json.dumps(document_import_data["doc_data"]["pawls_file_content"]).encode(
+                "utf-8"
+            ),
             name="pawls_tokens.json",
         )
 
         doc_obj = Document.objects.create(
             title=document_import_data["doc_data"]["title"],
-            description=document_import_data['doc_data']["description"] if document_import_data['doc_data'][
-            'description'] else "No Description",
+            description=document_import_data["doc_data"]["description"]
+            if document_import_data["doc_data"]["description"]
+            else "No Description",
             pdf_file=pdf_file,
             pawls_parse_file=pawls_parse_file,
             creator_id=user_id,
-            page_count=document_import_data['doc_data']['page_count'],
-
+            page_count=document_import_data["doc_data"]["page_count"],
         )
         set_permissions_for_obj_to_user(user_id, doc_obj, [PermissionTypes.ALL])
 

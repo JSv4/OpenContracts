@@ -1,4 +1,4 @@
-from typing import Optional, Union, List, Tuple
+from typing import Optional, Union
 
 from typing_extensions import NotRequired, TypedDict
 
@@ -48,13 +48,15 @@ class FunsdAnnotationType(TypedDict):
 
 class FunsdAnnotationLoaderOutputType(TypedDict):
     id: str
-    tokens: List[str]
-    bboxes: List[Tuple[float, float, float, float]]
-    ner_tags: List[str]
-    image: Tuple[int, str, str]  # (doc_id, image_data, image_format)
+    tokens: list[str]
+    bboxes: list[tuple[float, float, float, float]]
+    ner_tags: list[str]
+    image: tuple[int, str, str]  # (doc_id, image_data, image_format)
+
 
 class FunsdAnnotationLoaderMapType(TypedDict):
-    page: List[FunsdAnnotationLoaderOutputType]
+    page: list[FunsdAnnotationLoaderOutputType]
+
 
 class PageFundsAnnotationsExportType(TypedDict):
     form: list[FunsdAnnotationType]

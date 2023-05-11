@@ -6,7 +6,7 @@ import json
 import logging
 import pathlib
 import uuid
-from typing import Any, List, Tuple, Dict
+from typing import Any
 
 from celery import chord, group
 from django.conf import settings
@@ -24,12 +24,13 @@ from opencontractserver.annotations.models import (
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
     BoundingBoxPythonType,
+    FunsdAnnotationLoaderMapType,
     FunsdAnnotationType,
     FunsdTokenType,
     LabelLookupPythonType,
     OpenContractDocExport,
     PawlsPagePythonType,
-    PawlsTokenPythonType, FunsdAnnotationLoaderMapType,
+    PawlsTokenPythonType,
 )
 from opencontractserver.utils.etl import build_document_export
 from opencontractserver.utils.pdf import (
@@ -491,7 +492,8 @@ def convert_doc_to_funsd(
 
 @celery_app.task()
 def convert_doc_to_funsd_loader_input(
-    user_id: int, doc_id: int, corpus_id: int) -> Tuple[int, FunsdAnnotationLoaderMapType, List[Tuple[int, str, str]]]:
+    user_id: int, doc_id: int, corpus_id: int
+) -> tuple[int, FunsdAnnotationLoaderMapType, list[tuple[int, str, str]]]:
     def pawls_bbox_to_funsd_box(
         pawls_bbox: BoundingBoxPythonType,
     ) -> tuple[float, float, float, float]:
@@ -590,6 +592,7 @@ def convert_doc_to_funsd_loader_input(
                 annotation_map[page] = [funsd_annotation]
 
     return doc_id, annotation_map, pdf_images_and_data
+
 
 @celery_app.task()
 def extract_thumbnail(*args, doc_id=-1, **kwargs):

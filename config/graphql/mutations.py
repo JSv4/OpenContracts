@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 import uuid
 
@@ -10,6 +11,8 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+
+from graphql import GraphQLError
 from graphene.types.generic import GenericScalar
 from graphql_jwt.decorators import login_required, user_passes_test
 from graphql_relay import from_global_id, to_global_id
@@ -50,6 +53,7 @@ from opencontractserver.tasks import (
     fork_corpus,
     import_corpus,
     package_annotated_docs,
+    import_document_to_corpus
 )
 from opencontractserver.tasks.analyzer_tasks import start_analysis
 from opencontractserver.tasks.doc_tasks import (
@@ -64,8 +68,10 @@ from opencontractserver.tasks.permissioning_tasks import (
     make_analysis_public_task,
     make_corpus_public_task,
 )
+from opencontractserver.types.dicts import OpenContractsAnnotatedDocumentImportType
 from opencontractserver.types.enums import ExportType, PermissionTypes
 from opencontractserver.users.models import UserExport
+from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
 from opencontractserver.utils.permissioning import (
     set_permissions_for_obj_to_user,
     user_has_permission_for_obj,
@@ -535,6 +541,43 @@ class StartDocumentExport(graphene.Mutation):
             export = None
 
         return StartDocumentExport(ok=ok, message=message, export=export)
+
+
+class UploadAnnotatedDocument(graphene.Mutation):
+    class Arguments:
+        target_corpus_id = graphene.String(required=True)
+        document_import_data = graphene.String(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+
+    @login_required
+    def mutate(root, info, target_corpus_id, document_import_data):
+
+        try:
+            ok=True
+            message = "SUCCESS"
+
+            received_json = json.loads(document_import_data)
+            if not is_dict_instance_of_typed_dict(
+                received_json, OpenContractsAnnotatedDocumentImportType
+            ):
+                raise GraphQLError("document_import_data is invalid...")
+
+            import_document_to_corpus.s(
+                target_corpus_id=target_corpus_id,
+                user_id=info.context.user.id,
+                document_import_data=received_json
+            ).apply_async()
+
+        except Exception as e:
+            ok = False
+            message = (
+                f"UploadAnnotatedDocument() - could not start load job due to error: {e}"
+            )
+            logger.error(message)
+
+        return UploadAnnotatedDocument(message=message, ok=ok)
 
 
 class UploadCorpusImportZip(graphene.Mutation):
@@ -1337,6 +1380,7 @@ class Mutation(graphene.ObjectType):
 
     # IMPORT MUTATIONS #########################################################
     import_open_contracts_zip = UploadCorpusImportZip.Field()
+    import_annotated_doc_to_corpus = UploadAnnotatedDocument.Field()
 
     # EXPORT MUTATIONS #########################################################
     export_corpus = StartCorpusExport.Field()  # Limited by user.is_usage_capped

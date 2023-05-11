@@ -5,6 +5,7 @@ from .fork_tasks import fork_corpus
 from .import_tasks import import_corpus
 from .lookup_tasks import build_label_lookups_task
 from .permissioning_tasks import make_analysis_public_task, make_corpus_public_task
+from .import_tasks import import_document_to_corpus
 
 # Great, quick guidance on how to restructure tasks into multiple modules:
 # https://blog.sneawo.com/blog/2018/12/05/how-to-split-celery-tasks-file/
@@ -18,6 +19,7 @@ __all__ = [
     "fork_corpus",
     "build_label_lookups_task",
     "import_corpus",
+    "import_document_to_corpus",
     "make_corpus_public_task",
     "make_analysis_public_task",
     "delete_analysis_and_annotations_task",

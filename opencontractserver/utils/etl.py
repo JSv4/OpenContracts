@@ -14,8 +14,9 @@ from opencontractserver.annotations.models import Annotation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
+    BoundingBoxPythonType,
     LabelLookupPythonType,
-    OpenContractDocAnnotationExport,
+    OpenContractDocExport,
     OpenContractsSinglePageAnnotationType,
     PawlsPagePythonType,
 )
@@ -82,7 +83,7 @@ def build_label_lookups(corpus_id: str) -> LabelLookupPythonType:
 
 def build_document_export(
     label_lookups: LabelLookupPythonType, doc_id: int, corpus_id: int
-) -> tuple[str, str, OpenContractDocAnnotationExport | None, Any, Any]:
+) -> tuple[str, str, OpenContractDocExport | None, Any, Any]:
 
     """
     Fairly complex function to burn in the annotations for a given corpus on a given doc. This will alter the PDF
@@ -145,7 +146,7 @@ def build_document_export(
 
         page_highlights = {}
 
-        doc_annotation_json: OpenContractDocAnnotationExport = {
+        doc_annotation_json: OpenContractDocExport = {
             "doc_labels": [],
             "labelled_text": [],
             "title": doc.title,
@@ -319,3 +320,14 @@ def is_dict_instance_of_typed_dict(instance: dict, typed_dict: type[TypedDict]):
     except pydantic.ValidationError as exc:
         print(f"ERROR: Invalid schema: {exc}")
         return False
+
+
+def pawls_bbox_to_funsd_box(
+    pawls_bbox: BoundingBoxPythonType,
+) -> tuple[float, float, float, float]:
+    return (
+        pawls_bbox["left"],
+        pawls_bbox["top"],
+        pawls_bbox["right"],
+        pawls_bbox["bottom"],
+    )

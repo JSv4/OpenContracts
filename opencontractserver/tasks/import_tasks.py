@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import zipfile
@@ -8,10 +9,18 @@ from django.core.files.base import ContentFile, File
 
 from config import celery_app
 from config.graphql.serializers import AnnotationLabelSerializer
-from opencontractserver.annotations.models import Annotation
-from opencontractserver.corpuses.models import TemporaryFileHandle
+from opencontractserver.annotations.models import (
+    DOC_TYPE_LABEL,
+    METADATA_LABEL,
+    TOKEN_LABEL,
+    Annotation,
+)
+from opencontractserver.corpuses.models import Corpus, TemporaryFileHandle
 from opencontractserver.documents.models import Document
-from opencontractserver.types.dicts import OpenContractsExportDataJsonPythonType
+from opencontractserver.types.dicts import (
+    OpenContractsAnnotatedDocumentImportType,
+    OpenContractsExportDataJsonPythonType,
+)
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.packaging import (
     unpack_corpus_from_export,
@@ -65,15 +74,15 @@ def import_corpus(
                         text_labels = data_json["text_labels"]
                         doc_labels = data_json["doc_labels"]
 
-                        label_set_data = {**data_json["label_set"]}
-                        label_set_data.pop("id")
+                        label_set_data = {**data_json["label_set"]}  # noqa
+                        label_set_data.pop("id")  # noqa
 
                         corpus_data = {**data_json["corpus"]}
                         corpus_data.pop("id")
 
                         # Create labelset by loading JSON and converting to Django with DRF serializer
                         labelset_obj = unpack_label_set_from_export(
-                            data=label_set_data, user=user_obj
+                            data=label_set_data, user=user_obj  # noqa
                         )
                         logger.info(f"LabelSet created: {labelset_obj}")
 
@@ -81,14 +90,14 @@ def import_corpus(
                         # immediately), this gets mixed in and passed to the serializer
                         if seed_corpus_id:
                             corpus_obj = unpack_corpus_from_export(
-                                data=corpus_data,
+                                data=corpus_data,  # noqa
                                 user=user_obj,
                                 label_set_id=labelset_obj.id,
                                 corpus_id=seed_corpus_id,
                             )
                         else:
                             corpus_obj = unpack_corpus_from_export(
-                                data=corpus_data,
+                                data=corpus_data,  # noqa
                                 user=user_obj,
                                 label_set_id=labelset_obj.id,
                                 corpus_id=None,
@@ -272,4 +281,151 @@ def import_corpus(
 
     except Exception as e:
         logger.error(f"import_corpus() - Exception encountered in corpus import: {e}")
+        return None
+
+
+@celery_app.task()
+def import_document_to_corpus(
+    target_corpus_id: int,
+    user_id: int,
+    document_import_data: OpenContractsAnnotatedDocumentImportType,
+) -> Optional[str]:
+
+    try:
+        logger.info(f"import_document_to_corpus() - for user_id: {user_id}")
+
+        # Load target corpus
+        corpus_obj = Corpus.objects.get(id=target_corpus_id)
+
+        # Load labelsets
+        labelset_obj = corpus_obj.label_set
+
+        # Load existing labels
+        existing_text_labels = {
+            label.text: label
+            for label in labelset_obj.annotation_labels.filter(label_type=TOKEN_LABEL)
+        }
+        existing_doc_labels = {
+            label.text: label
+            for label in labelset_obj.annotation_labels.filter(
+                label_type=DOC_TYPE_LABEL
+            )
+        }
+        existing_metadata_labels = {
+            label.text: label
+            for label in labelset_obj.annotation_labels.filter(
+                label_type=METADATA_LABEL
+            )
+        }
+
+        # Create new labels if needed
+        for label_name, label_data in document_import_data["text_labels"].items():
+            if label_name not in existing_text_labels:
+                label_data = document_import_data["text_labels"][label_name]
+                label_data.pop("id")  # noqa
+                label_data["creator"] = user_id  # noqa
+
+                label_serializer = AnnotationLabelSerializer(data=label_data)
+                label_serializer.is_valid(raise_exception=True)
+                label_obj = label_serializer.save()
+                set_permissions_for_obj_to_user(
+                    user_id, label_obj, [PermissionTypes.ALL]
+                )
+                labelset_obj.annotation_labels.add(label_obj)
+                existing_text_labels[label_name] = label_obj
+
+        for label_name, label_data in document_import_data["doc_labels"].items():
+            if label_name not in existing_doc_labels:
+                label_data = document_import_data["doc_labels"][label_name]
+                label_data.pop("id")  # noqa
+                label_data["creator"] = user_id  # noqa
+
+                label_serializer = AnnotationLabelSerializer(data=label_data)
+                label_serializer.is_valid(raise_exception=True)
+                label_obj = label_serializer.save()
+                set_permissions_for_obj_to_user(
+                    user_id, label_obj, [PermissionTypes.ALL]
+                )
+
+                labelset_obj.annotation_labels.add(label_obj)
+                existing_doc_labels[label_name] = label_obj
+
+        for label_name, label_data in document_import_data["metadata_labels"].items():
+            if label_name not in existing_metadata_labels:
+                label_data = document_import_data["doc_labels"][label_name]
+                label_data.pop("id")  # noqa
+                label_data["creator"] = user_id  # noqa
+
+                label_serializer = AnnotationLabelSerializer(data=label_data)
+                label_serializer.is_valid(raise_exception=True)
+                label_obj = label_serializer.save()
+                set_permissions_for_obj_to_user(
+                    user_id, label_obj, [PermissionTypes.ALL]
+                )
+
+                labelset_obj.annotation_labels.add(label_obj)
+                existing_metadata_labels[label_name] = label_obj
+
+        # Import the document
+
+        pdf_base64 = document_import_data["pdf_base64"]
+        pdf_data = base64.b64decode(pdf_base64)
+
+        pdf_file = ContentFile(pdf_data, name=f"{document_import_data['pdf_name']}.pdf")
+        pawls_parse_file = ContentFile(
+            json.dumps(document_import_data["doc_data"]["pawls_file_content"]).encode(
+                "utf-8"
+            ),
+            name="pawls_tokens.json",
+        )
+
+        doc_obj = Document.objects.create(
+            title=document_import_data["doc_data"]["title"],
+            description=document_import_data["doc_data"]["description"]
+            if document_import_data["doc_data"]["description"]
+            else "No Description",
+            pdf_file=pdf_file,
+            pawls_parse_file=pawls_parse_file,
+            creator_id=user_id,
+            page_count=document_import_data["doc_data"]["page_count"],
+        )
+        set_permissions_for_obj_to_user(user_id, doc_obj, [PermissionTypes.ALL])
+
+        # Link to corpus
+        corpus_obj.documents.add(doc_obj)
+        corpus_obj.save()
+
+        # Import the annotations for the document
+        doc_annotations_data = document_import_data["doc_data"]["labelled_text"]
+        for annotation in doc_annotations_data:
+            label_obj = existing_text_labels[annotation["annotationLabel"]]
+            annot_obj = Annotation.objects.create(
+                raw_text=annotation["rawText"],
+                page=annotation["page"],
+                json=annotation["annotation_json"],
+                annotation_label=label_obj,
+                document=doc_obj,
+                corpus=corpus_obj,
+                creator_id=user_id,
+            )
+            annot_obj.save()
+            set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
+
+        for doc_label in document_import_data["doc_data"]["doc_labels"]:
+            label_obj = existing_doc_labels[doc_label]
+            annot_obj = Annotation(
+                annotation_label=label_obj,
+                document=doc_obj,
+                corpus=corpus_obj,
+                creator_id=user_id,
+            )
+            annot_obj.save()
+            set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
+
+        return doc_obj.id
+
+    except Exception as e:
+        logger.error(
+            f"import_document_to_corpus() - Exception encountered in document import: {e}"
+        )
         return None

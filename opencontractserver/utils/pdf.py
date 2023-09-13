@@ -100,7 +100,7 @@ def extract_pawls_from_pdfs_bytes(
     pdf_bytes: bytes,
 ) -> list[PawlsPagePythonType]:
 
-    from pawls.commands.preprocess import process_tesseract
+    from pdfpreprocessor.preprocessors.tesseract import process_tesseract
 
     pdf_fragment_folder_path = pathlib.Path("/tmp/user_0/pdf_fragments")
     pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)

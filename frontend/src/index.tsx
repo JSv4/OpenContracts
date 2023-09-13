@@ -28,8 +28,7 @@ const onRedirectCallback = (appState: any) => {
 
 const { REACT_APP_USE_AUTH0 } = process.env;
 
-
-const api_root_url='http://localhost:8000'
+const api_root_url = "http://localhost:8000";
 
 console.log("OpenContracts is using Auth0: ", REACT_APP_USE_AUTH0);
 console.log("OpenContracts frontend target api root", api_root_url);
@@ -45,7 +44,7 @@ const authLink = new ApolloLink((operation, forward) => {
   return forward(operation);
 });
 
-console.log("api_root_url", api_root_url)
+console.log("api_root_url", api_root_url);
 const httpLink = createHttpLink({
   uri: `${api_root_url}/graphql/`,
 });

@@ -16,9 +16,8 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.types.dicts import (
     FunsdAnnotationType,
     OpenContractDocExport,
-    OpenContractsExportDataJsonPythonType,
+    OpenContractsExportDataJsonPythonType, AnnotationLabelPythonType,
 )
-from opencontractserver.types.enums import AnnotationLabelPythonType
 from opencontractserver.users.models import UserExport
 from opencontractserver.utils.packaging import (
     package_corpus_for_export,

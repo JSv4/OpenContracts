@@ -60,7 +60,8 @@ class Query(graphene.ObjectType):
 
     # ANNOTATION RESOLVERS #####################################
     annotations = DjangoFilterConnectionField(
-        AnnotationType, filterset_class=AnnotationFilter
+        AnnotationType,
+        filterset_class=AnnotationFilter
     )
 
     def resolve_annotations(self, info, **kwargs):

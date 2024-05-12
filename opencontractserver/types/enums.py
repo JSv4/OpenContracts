@@ -44,12 +44,3 @@ class PermissionTypes(str, enum.Enum):
     PUBLISH = "PUBLISH"
     CRUD = "CRUD"
     ALL = "ALL"
-
-
-class AnnotationLabelPythonType(TypedDict):
-    id: str
-    color: str
-    description: str
-    icon: str
-    text: str
-    label_type: LabelType

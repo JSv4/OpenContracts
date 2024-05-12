@@ -66,5 +66,5 @@ django-guardian
 
 # GraphQL
 # ------------------------------------------------------------------------------
-graphene-django
+graphene-django==3.0.0
 django-graphql-jwt

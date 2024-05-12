@@ -2,7 +2,16 @@ from typing import Optional, Union
 
 from typing_extensions import NotRequired, TypedDict
 
-from opencontractserver.types.enums import AnnotationLabelPythonType
+from opencontractserver.types.enums import LabelType
+
+
+class AnnotationLabelPythonType(TypedDict):
+    id: str
+    color: str
+    description: str
+    icon: str
+    text: str
+    label_type: LabelType
 
 
 class LabelLookupPythonType(TypedDict):

@@ -14,9 +14,9 @@ from opencontractserver.annotations.models import Annotation, AnnotationLabel, L
 from opencontractserver.types.dicts import (
     AnalyzerManifest,
     OpenContractsGeneratedCorpusPythonType,
-    OpenContractsLabelSetType,
+    OpenContractsLabelSetType, AnnotationLabelPythonType,
 )
-from opencontractserver.types.enums import AnnotationLabelPythonType, PermissionTypes
+from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.packaging import (
     turn_base64_encoded_file_to_django_content_file,
 )

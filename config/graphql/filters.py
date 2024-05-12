@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django_filters import rest_framework as filters
 from graphql_relay import from_global_id
+from django_filters import FilterSet, OrderingFilter
 
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -135,7 +136,6 @@ class AnnotationFilter(django_filters.FilterSet):
     uses_label_from_labelset_id = django_filters.CharFilter(
         method="filter_by_label_from_labelset_id"
     )
-
     def filter_by_label_from_labelset_id(self, queryset, info, value):
         django_pk = from_global_id(value)[1]
         return queryset.filter(annotation_label__included_in_labelset=django_pk)
@@ -176,6 +176,12 @@ class AnnotationFilter(django_filters.FilterSet):
             return queryset.filter(analysis__analyzer_id__in=analyzer_ids)
         else:
             return queryset
+
+    order_by = OrderingFilter(
+        fields=(
+            ('modified', 'modified'),
+        )
+    )
 
     class Meta:
         model = Annotation

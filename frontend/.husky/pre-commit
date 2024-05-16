@@ -1,13 +1,24 @@
 #!/usr/bin/env sh
-export NVM_DIR="$HOME/.nvm/nvm.sh"
-. "$(dirname $NVM_DIR)/nvm.sh"
 
-export NVM_DIR="$HOME/.nvm"
-a=$(nvm ls | grep 'node')
+# Check if NVM_DIR is set, if not, set it based on the platform
+if [ -z "$NVM_DIR" ]; then
+  if [ "$(uname)" = "Darwin" ] || [ "$(expr substr $(uname -s) 1 5)" = "Linux" ]; then
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  elif [ "$(expr substr $(uname -s) 1 10)" = "MINGW32_NT" ] || [ "$(expr substr $(uname -s) 1 10)" = "MINGW64_NT" ]; then
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  fi
+fi
+
+# Getting the active node version and updating PATH
+a=$(nvm ls default | grep 'node')
 b=${a#*(-> }
 v=${b%%[)| ]*}
 
+# Cross-platform way to handle PATH
 export PATH="$NVM_DIR/versions/node/$v/bin:$PATH"
 
+# Moving into the frontend directory and running 'lint-staged'
 cd frontend
 npx lint-staged

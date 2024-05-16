@@ -492,6 +492,7 @@ export const GET_ANNOTATION_LABELS = gql`
           text
           description
           labelType
+          readOnly
           isPublic
           myPermissions
           analyzer {
@@ -525,6 +526,7 @@ export const GET_LABELSET_WITH_ALL_LABELS = gql`
         id
         icon
         labelType
+        readOnly
         text
         description
         color
@@ -767,6 +769,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
           color
           description
           text
+          readOnly
           labelType
           analyzer {
             id
@@ -790,6 +793,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
         description
         text
         labelType
+        readOnly
       }
       boundingBox
       page
@@ -886,6 +890,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
           description
           text
           labelType
+          readOnly
           analyzer {
             id
           }

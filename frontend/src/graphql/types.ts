@@ -60,6 +60,7 @@ export type AnnotationLabelType = Node & {
   created?: Scalars["DateTime"];
   modified?: Scalars["DateTime"];
   isPublic?: Scalars["Boolean"];
+  readonly?: Scalars["Boolean"];
   myPermissions?: Scalars["String"][];
   relationshipSet?: RelationshipTypeConnection;
   annotationSet?: AnnotationTypeConnection;

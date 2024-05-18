@@ -451,6 +451,12 @@ GRAPHQL_JWT = {
 # Constants for Permissioning
 DEFAULT_PERMISSIONS_GROUP = "Public Objects Access"
 
+# Nlm-ingestor settings
+# -----------------------------------------------------------------------------
+NLM_INGEST_USE_OCR = False
+NLM_INGEST_HOSTNAME = "http://nlm-ingestor:5001"
+NLM_INGEST_API_KEY = None
+
 # CORS
 # ------------------------------------------------------------------------------
 CORS_ORIGIN_WHITELIST = [

@@ -232,13 +232,18 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
     doc_path = doc.pdf_file.name
     doc_file = default_storage.open(doc_path, mode="rb")
 
-    os_key = os.envrion.get('API_KEY', 'abc123')
+    if settings.NLM_INGEST_API_KEY is not None:
+        headers = {'API_KEY': settings.NLM_INGEST_API_KEY}
+    else:
+        headers = {}
 
-    headers = {'API_KEY': api_key}
     files = {'file': doc_file}
-    params = {'calculate_opencontracts_data': 'yes'}  # Ensures calculate_opencontracts_data is set to True
+    params = {
+        'calculate_opencontracts_data': 'yes',
+        'applyOcr': "yes" if settings.NLM_INGEST_USE_OCR else 'no'
+    }  # Ensures calculate_opencontracts_data is set to True
 
-    response = requests.post(api_url, headers=headers, files=files, params=params)
+    response = requests.post(settings.NLM_INGEST_HOSTNAME, headers=headers, files=files, params=params)
 
     if not response.status_code == 200:
         response.raise_for_status()

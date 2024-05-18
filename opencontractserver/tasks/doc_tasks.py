@@ -6,7 +6,8 @@ import json
 import logging
 import pathlib
 import uuid
-from typing import Any
+import requests
+from typing import Any, Optional
 
 from celery import chord, group
 from django.conf import settings
@@ -16,10 +17,11 @@ from django.core.files.storage import default_storage
 from pydantic import validate_arguments
 
 from config import celery_app
+from config.graphql.serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import (
     METADATA_LABEL,
     TOKEN_LABEL,
-    Annotation,
+    Annotation, AnnotationLabel,
 )
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
@@ -30,11 +32,13 @@ from opencontractserver.types.dicts import (
     PawlsPagePythonType,
     PawlsTokenPythonType,
 )
+from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.pdf import (
     extract_pawls_from_pdfs_bytes,
     split_pdf_into_images,
 )
+from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 from opencontractserver.utils.text import __consolidate_common_equivalent_chars
 
 logger = logging.getLogger(__name__)
@@ -226,8 +230,6 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
 
     logger.info(f"nlm_ingest_pdf() - split doc {doc_id} for user {user_id}")
 
-    from PyPDF2 import PdfReader, PdfWriter
-
     doc = Document.objects.get(pk=doc_id)
     doc_path = doc.pdf_file.name
     doc_file = default_storage.open(doc_path, mode="rb")
@@ -304,7 +306,7 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
                 page=label_data["page"],
                 json=label_data["annotation_json"],
                 annotation_label=label_obj,
-                document=doc_obj,
+                document=doc,
                 creator_id=user_id,
             )
             annot_obj.save()

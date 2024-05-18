@@ -219,6 +219,94 @@ def set_doc_lock_state(*args, locked: bool, doc_id: int):
     document.backend_lock = locked
     document.save()
 
+@celery_app.task(
+    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+)
+def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
+
+    logger.info(f"nlm_ingest_pdf() - split doc {doc_id} for user {user_id}")
+
+    from PyPDF2 import PdfReader, PdfWriter
+
+    doc = Document.objects.get(pk=doc_id)
+    doc_path = doc.pdf_file.name
+    doc_file = default_storage.open(doc_path, mode="rb")
+
+    os_key = os.envrion.get('API_KEY', 'abc123')
+
+    headers = {'API_KEY': api_key}
+    files = {'file': doc_file}
+    params = {'calculate_opencontracts_data': 'yes'}  # Ensures calculate_opencontracts_data is set to True
+
+    response = requests.post(api_url, headers=headers, files=files, params=params)
+
+    if not response.status_code == 200:
+        response.raise_for_status()
+
+    response_data = response.json()
+    open_contracts_data: Optional[OpenContractDocExport] = response_data.get('return_dict', {}).get('opencontracts_data', None)
+
+    document = Document.objects.get(pk=doc_id)
+
+    # Create new labels if needed
+    if open_contracts_data is not None:
+
+        # Get PAWLS layer and text contents
+        pawls_string = json.dumps(open_contracts_data['pawls_file_content'])
+        pawls_file = ContentFile(pawls_string.encode("utf-8"))
+        txt_file = ContentFile(open_contracts_data['content'].encode("utf-8"))
+
+        document.txt_extract_file.save(f"doc_{doc_id}.txt", txt_file)
+        document.pawls_parse_file.save(f"doc_{doc_id}.pawls", pawls_file)
+        document.page_count = len(open_contracts_data['pawls_file_content'])
+
+        existing_text_labels: dict[str, AnnotationLabel] = {}
+
+        # Now, annotate the document with any annotations that bubbled up from parser.
+        for label_data in open_contracts_data['labelled_text']:
+
+            label_name = label_data['annotationLabel']
+
+            if label_name not in existing_text_labels:
+                label_obj = AnnotationLabel.objects.filter(
+                    label_name=label_name,
+                    creator_id=user_id,
+                    label_type=TOKEN_LABEL
+                )
+                if label_obj.count() > 0:
+                    label_obj = label_obj[0]
+                    existing_text_labels[label_name] = label_obj
+                else:
+                    label_serializer = AnnotationLabelSerializer(data={
+                        "label_type": "TOKEN_LABEL",
+                        "color":"grey",
+                        "description": "NLM Structural Label",
+                        "icon": "expand",
+                        "text": label_name,
+                        "creator_id": user_id
+                    })
+                    label_serializer.is_valid(raise_exception=True)
+                    label_obj = label_serializer.save()
+                    set_permissions_for_obj_to_user(
+                        user_id, label_obj, [PermissionTypes.ALL]
+                    )
+                    existing_text_labels[label_name] = label_obj
+            else:
+                label_obj = existing_text_labels[label_name]
+
+            annot_obj = Annotation.objects.create(
+                raw_text=label_data["rawText"],
+                page=label_data["page"],
+                json=label_data["annotation_json"],
+                annotation_label=label_obj,
+                document=doc_obj,
+                creator_id=user_id,
+            )
+            annot_obj.save()
+            set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
+
+    document.save()
+
 
 @celery_app.task(
     autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}

@@ -8,6 +8,7 @@ from opencontractserver.tasks.doc_tasks import (
     split_pdf_for_processing,
     nlm_ingest_pdf,
 )
+from opencontractserver.tasks.embeddings_task import calculate_embedding_for_doc_text
 
 
 def process_doc_on_create_atomic(sender, instance, created, **kwargs):
@@ -17,12 +18,18 @@ def process_doc_on_create_atomic(sender, instance, created, **kwargs):
     # such as when we do an import.
     if created and not instance.pawls_parse_file:
 
+
         # USE NLM Ingestor if NLM_INGESTOR_ACTIVE is set to True
         if settings.NLM_INGESTOR_ACTIVE:
             ingest_tasks = [
                 extract_thumbnail.s(doc_id=instance.id),
                 nlm_ingest_pdf.si(
                     user_id=instance.creator.id, doc_id=instance.id
+                ),
+                *(
+                    [calculate_embedding_for_doc_text.si(
+                        doc_id=instance.id
+                    )] if instance.embedding is None else []
                 ),
                 set_doc_lock_state.si(locked=False, doc_id=instance.id),
             ]
@@ -32,6 +39,11 @@ def process_doc_on_create_atomic(sender, instance, created, **kwargs):
                 extract_thumbnail.s(doc_id=instance.id),
                 split_pdf_for_processing.si(
                     user_id=instance.creator.id, doc_id=instance.id
+                ),
+                *(
+                    [calculate_embedding_for_doc_text.si(
+                        doc_id=instance.id
+                    )] if instance.embedding is None else []
                 ),
                 set_doc_lock_state.si(locked=False, doc_id=instance.id),
             ]

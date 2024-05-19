@@ -458,6 +458,10 @@ NLM_INGEST_USE_OCR = False  # IF True, always tell nlm-ingestor to use OCR (Tess
 NLM_INGEST_HOSTNAME = "http://nlm-ingestor:5001"  # Hostname to send nlm-ingestor REST requests to
 NLM_INGEST_API_KEY = None  # If the endpoint is secured with an API_KEY, specify it here, otherwise use None
 
+# Embeddings / Semantic Search
+EMBEDDINGS_MICROSERVICE_URL = "http://vector-embedder:5001"
+VECTOR_EMBEDDER_API_KEY = "abc123"
+
 # CORS
 # ------------------------------------------------------------------------------
 CORS_ORIGIN_WHITELIST = [

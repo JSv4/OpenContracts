@@ -278,7 +278,8 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
                 label_obj = AnnotationLabel.objects.filter(
                     text=label_name,
                     creator_id=user_id,
-                    label_type=TOKEN_LABEL
+                    label_type=TOKEN_LABEL,
+                    read_only=True
                 )
                 if label_obj.count() > 0:
                     label_obj = label_obj[0]

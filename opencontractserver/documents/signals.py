@@ -1,10 +1,12 @@
 from celery import chain
 from django.db import transaction
+from django.conf import settings
 
 from opencontractserver.tasks.doc_tasks import (
     extract_thumbnail,
     set_doc_lock_state,
     split_pdf_for_processing,
+    nlm_ingest_pdf,
 )
 
 
@@ -14,14 +16,27 @@ def process_doc_on_create_atomic(sender, instance, created, **kwargs):
     # run OCR and token extract. Sometimes a doc will be created with tokens preloaded,
     # such as when we do an import.
     if created and not instance.pawls_parse_file:
+
+        # USE NLM Ingestor if NLM_INGESTOR_ACTIVE is set to True
+        if settings.NLM_INGESTOR_ACTIVE:
+            ingest_tasks = [
+                extract_thumbnail.s(doc_id=instance.id),
+                nlm_ingest_pdf.si(
+                    user_id=instance.creator.id, doc_id=instance.id
+                ),
+                set_doc_lock_state.si(locked=False, doc_id=instance.id),
+            ]
+        # Otherwise fall back to PAWLs parser
+        else:
+            ingest_tasks = [
+                extract_thumbnail.s(doc_id=instance.id),
+                split_pdf_for_processing.si(
+                    user_id=instance.creator.id, doc_id=instance.id
+                ),
+                set_doc_lock_state.si(locked=False, doc_id=instance.id),
+            ]
+
+        # Send tasks to celery for async execution
         transaction.on_commit(
-            lambda: chain(
-                *[
-                    extract_thumbnail.s(doc_id=instance.id),
-                    split_pdf_for_processing.si(
-                        user_id=instance.creator.id, doc_id=instance.id
-                    ),
-                    set_doc_lock_state.si(locked=False, doc_id=instance.id),
-                ]
-            ).apply_async()
+            lambda: chain(*ingest_tasks).apply_async()
         )

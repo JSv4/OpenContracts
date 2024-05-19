@@ -51,7 +51,7 @@ class NlmIngestorTestCase(TestCase):
 
         nlm_parse_response = responses.Response(
             method="POST",
-            url=settings.NLM_INGEST_HOSTNAME + "/api/parseDocument",
+            url=settings.NLM_INGEST_HOSTNAME + "/api/parseDocument/?calculate_opencontracts_data=yes&applyOcr=no",
             json=json.loads(NLM_INGESTOR_EXPECTED_JSON.read_text())
         )
         responses.add(nlm_parse_response)
@@ -62,4 +62,4 @@ class NlmIngestorTestCase(TestCase):
 
         # Let's make sure we have right # of annotations + labels in database
         assert Annotation.objects.all().count() == 27
-        assert AnnotationLabel.objects.all().count() == 5
+        assert AnnotationLabel.objects.all().count() == 4

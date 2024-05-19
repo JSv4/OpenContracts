@@ -245,7 +245,7 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
         'applyOcr': "yes" if settings.NLM_INGEST_USE_OCR else 'no'
     }  # Ensures calculate_opencontracts_data is set to True
 
-    response = requests.post(settings.NLM_INGEST_HOSTNAME, headers=headers, files=files, params=params)
+    response = requests.post(settings.NLM_INGEST_HOSTNAME + "/api/parseDocument/", headers=headers, files=files, params=params)
 
     if not response.status_code == 200:
         response.raise_for_status()
@@ -276,7 +276,7 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
 
             if label_name not in existing_text_labels:
                 label_obj = AnnotationLabel.objects.filter(
-                    label_name=label_name,
+                    text=label_name,
                     creator_id=user_id,
                     label_type=TOKEN_LABEL
                 )

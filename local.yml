@@ -43,6 +43,10 @@ services:
     image: jscrudato/nlm-ingestor-opencontracts
     container_name: nlm-ingestor
 
+  vector-embedder:
+    image: jscrudato/vector-embedder-microservice
+    container_name: vector-embedder
+
   celeryworker:
     <<: *django
     image: opencontractserver_local_celeryworker

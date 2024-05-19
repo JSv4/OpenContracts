@@ -3,6 +3,7 @@ import uuid
 import django
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from pgvector.django import VectorField
 from django.utils.translation import gettext_lazy as _
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 
@@ -218,6 +219,9 @@ class Annotation(BaseOCModel):
         on_delete=django.db.models.SET_NULL,
         related_name="annotations",
     )
+
+    # Vector for vector search
+    embedding = VectorField(dimensions=384, null=True)
 
     # If this annotation was created as part of an analysis... track that.
     analysis = django.db.models.ForeignKey(

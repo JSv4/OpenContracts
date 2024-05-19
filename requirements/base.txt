@@ -27,6 +27,7 @@ django-storages[boto3]==1.13.1  # https://github.com/jschneier/django-storages
 django-extensions==3.2.0  # https://github.com/django-extensions/django-extensions
 whitenoise
 django-tree-queries
+pgvector  # For vector embeddings
 
 # Django REST Framework
 # ------------------------------------------------------------------------------

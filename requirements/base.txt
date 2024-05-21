@@ -47,7 +47,6 @@ pycocotools
 click>=6.7
 tqdm
 pdfminer
-pycrypto
 pdf2image
 poppler-utils
 

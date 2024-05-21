@@ -451,6 +451,13 @@ GRAPHQL_JWT = {
 # Constants for Permissioning
 DEFAULT_PERMISSIONS_GROUP = "Public Objects Access"
 
+# Nlm-ingestor settings
+# -----------------------------------------------------------------------------
+NLM_INGESTOR_ACTIVE = env.bool('NLM_INGESTOR_ACTIVE', False)  # Use nlm-ingestor where this is True... otherwise PAWLs
+NLM_INGEST_USE_OCR = False  # IF True, always tell nlm-ingestor to use OCR (Tesseract)
+NLM_INGEST_HOSTNAME = "http://nlm-ingestor:5001"  # Hostname to send nlm-ingestor REST requests to
+NLM_INGEST_API_KEY = None  # If the endpoint is secured with an API_KEY, specify it here, otherwise use None
+
 # CORS
 # ------------------------------------------------------------------------------
 CORS_ORIGIN_WHITELIST = [

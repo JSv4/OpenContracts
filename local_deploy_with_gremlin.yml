@@ -63,6 +63,12 @@ services:
     image: redis:6
     container_name: redis
 
+  nlm-ingestor:
+    image: jscrudato/nlm-ingestor-opencontracts
+    container_name: redis
+    environment:
+      - API_KEY=8j4t9kjdfgmdfpomd
+
   gremlinengine: &gremlinengine
     image: opensourcelegal/gremlin-engine:latest
     container_name: gremlinengine

@@ -27,11 +27,11 @@ EXPOSE 3000
 
 # COPY .env file and shell script to container
 WORKDIR /usr/share/nginx/html
-COPY ./env.sh .
+COPY ./env.sh env.sh
 COPY .env .
 
 # Make shell script executable
 RUN chmod +x env.sh
 
 # Start Nginx server
-CMD ["/bin/sh", "-c", "/usr/share/nginx/html/env.sh && nginx -g \"daemon off;\""]
+CMD ["/bin/sh", "-c", "nginx -g \"daemon off;\""]

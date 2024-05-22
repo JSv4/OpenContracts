@@ -72,6 +72,7 @@ class AnnotationType(AnnotatePermissionsForReadMixin, ModelType):
     class Meta:
         model = Annotation
         interfaces = [relay.Node]
+        exclude = ("embedding",)
         connection_class = CountableConnection
 
         # In order for filter options to show up in nested resolvers, you need to specify them
@@ -166,6 +167,7 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
     class Meta:
         model = Document
         interfaces = [relay.Node]
+        exclude = ("embedding",)
         connection_class = CountableConnection
 
 

@@ -7,7 +7,7 @@ import pgvector.django
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('annotations', '0004_annotationlabel_read_only'),
+        ('annotations', '0005_add_pgvector'),
     ]
 
     operations = [

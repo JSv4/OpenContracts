@@ -13,8 +13,9 @@ from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
 from opencontractserver.types.dicts import (
     AnalyzerManifest,
+    AnnotationLabelPythonType,
     OpenContractsGeneratedCorpusPythonType,
-    OpenContractsLabelSetType, AnnotationLabelPythonType,
+    OpenContractsLabelSetType,
 )
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.packaging import (

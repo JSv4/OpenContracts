@@ -27,6 +27,7 @@ services:
       - redis
       - vector-embedder
       - nlm-ingestor
+      - celeryworker
     volumes:
       - .:/app:z
     env_file:
@@ -41,10 +42,11 @@ services:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
     image: opencontractserver_production_postgres
-    container_name: postgres
     volumes:
       - local_postgres_data:/var/lib/postgresql/data:Z
       - local_postgres_data_backups:/backups:z
+      - ./compose/production/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+
     env_file:
       - ./.envs/.test/.postgres
 

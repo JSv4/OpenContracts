@@ -2,8 +2,8 @@ import functools
 
 import django
 from django.utils import timezone
-from pgvector.django import VectorField
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
+from pgvector.django import VectorField
 
 from opencontractserver.shared.defaults import jsonfield_default_value
 from opencontractserver.shared.fields import NullableJSONField

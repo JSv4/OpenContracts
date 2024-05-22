@@ -3,9 +3,9 @@ import uuid
 import django
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from pgvector.django import VectorField
 from django.utils.translation import gettext_lazy as _
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
+from pgvector.django import VectorField
 
 from opencontractserver.shared.defaults import (
     empty_bounding_box,

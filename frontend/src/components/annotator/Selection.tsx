@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import styled, { ThemeProps } from "styled-components";
 import _ from "lodash";
+import uniqueId from "lodash/uniqueId";
 
 import {
   Modal,
@@ -214,6 +215,7 @@ export const SelectionBoundary = ({
 };
 
 interface TokenSpanProps {
+  id?: string;
   hidden?: boolean;
   color?: string;
   isSelected?: boolean;
@@ -248,6 +250,7 @@ interface TokenSpanProps {
 
 const TokenSpan = styled.span.attrs(
   ({
+    id,
     theme,
     top,
     bottom,
@@ -259,6 +262,7 @@ const TokenSpan = styled.span.attrs(
     isSelected,
     highOpacity,
   }: TokenSpanProps) => ({
+    id,
     style: {
       background: isSelected
         ? color
@@ -279,6 +283,7 @@ const TokenSpan = styled.span.attrs(
 `;
 
 interface SelectionTokenProps {
+  id?: string;
   color?: string;
   className?: string;
   hidden?: boolean;
@@ -288,6 +293,7 @@ interface SelectionTokenProps {
   scrollTo?: boolean;
 }
 export const SelectionTokens = ({
+  id,
   color,
   className,
   hidden,
@@ -308,7 +314,7 @@ export const SelectionTokens = ({
   }, [scrollTo]);
 
   return (
-    <div ref={containerRef} id="SelectionTokenWrapper">
+    <div ref={containerRef} id={`SelectionTokenWrapper_${uniqueId()}`}>
       {tokens ? (
         tokens.map((t, i) => {
           const b = pageInfo.getScaledTokenBounds(
@@ -316,6 +322,7 @@ export const SelectionTokens = ({
           );
           return (
             <TokenSpan
+              id={`${uniqueId()}`}
               hidden={hidden}
               key={i}
               className={className}
@@ -696,6 +703,7 @@ export const Selection = ({
         // SelectionBoundary.
         annotation.json[pageInfo.page.pageNumber - 1].tokensJsons ? (
           <SelectionTokens
+            id={`SELECTION_TOKEN_${annotation.id}`}
             color={annotation.annotationLabel.color}
             highOpacity={!showBoundingBox}
             hidden={hidden}

@@ -598,8 +598,11 @@ export const Annotator = ({
       }
       setDocTypeLabels(Object.values(document_label_lookup));
 
+      // This is the annotations start loading
       // Turn existing annotation data into PDFAnnotations obj and inject into state:
       let annotation_objs: ServerAnnotation[] = [];
+
+      // Case 1 is where an "Analysis" is not selected
       if (
         annotator_data?.existingTextAnnotations &&
         selected_analysis_ids?.length === 0
@@ -619,7 +622,9 @@ export const Annotator = ({
               )
           );
         // console.log("Got manual annotation objs: ", annotation_objs);
-      } else if (
+      }
+      // If an analysis is selected... load THOSE annotations
+      else if (
         selected_analysis_ids &&
         selected_analysis_ids.length > 0 &&
         annotator_data?.existingTextAnnotations
@@ -639,6 +644,7 @@ export const Annotator = ({
           );
       }
 
+      // Load doc-level labels
       let doc_type_annotations: DocTypeAnnotation[] = [];
 
       if (annotator_data?.existingDocLabelAnnotations) {
@@ -659,6 +665,7 @@ export const Annotator = ({
         );
       }
 
+      // Load relationship level labels
       let relationship_annotations: RelationGroup[] = [];
 
       if (annotator_data?.existingRelationships) {

@@ -128,6 +128,7 @@ const Page = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const annotations = annotationStore.pdfAnnotations.annotations;
+  console.log(`${annotations.length} annotations in store`);
   const {
     scrollContainerRef,
     selectedTextSearchMatchIndex,
@@ -285,17 +286,27 @@ const Page = ({
     ? annotationStore.pageSelectionQueue[pageInfo.page.pageNumber - 1]
     : [];
 
-  // TODO... create renderedable RenderedSpanAnnotations
-  // Note on 9/1/22 - have no idea what this refers too, lol.
-
   let page_annotation_components: React.ReactNode[] = [];
 
   ////////////////
   if (scale && pageInfo.bounds && annotations) {
+    console.log("Total annotations", annotations);
     const defined_annotations = annotations.filter(
       (a) => a.json[pageInfo.page.pageNumber - 1] !== undefined
     );
 
+    console.log(
+      `# of Annotations on page ${pageInfo.page.pageNumber - 1}: ${
+        defined_annotations.length
+      }`
+    );
+    console.log(defined_annotations);
+
+    // OK... figured out kinda what's happening but not sure where... the tokens in the JSON are cumulative (as I suspected)
+    // so each annotation adds a layer of tokens which eventually gets opaque. Find source of this issue... Don't think it's
+    // parser... but look at backend annotation json data first to make sure.
+
+    // This is where existing annotations get their selection tokens applied
     for (const [index, annotation] of defined_annotations.entries()) {
       page_annotation_components.push(
         <Selection
@@ -321,6 +332,11 @@ const Page = ({
       );
     }
   }
+  console.log(
+    `Number of React components on page ${pageInfo.page.pageNumber - 1}: ${
+      page_annotation_components.length
+    }`
+  );
 
   return (
     <PageAnnotationsContainer
@@ -480,23 +496,6 @@ const Page = ({
             )
           )
         : null}
-      {/* {pageInfo.page.pageNumber <
-      Object.keys(annotationStore.pdfPageInfoObjs).length ? (
-        <FetchMoreOnVisible
-          style={{
-            position: "relative",
-            bottom: "0px",
-            left: "0px",
-            height: "0px",
-            width: "100%",
-          }}
-          fetchNextPage={() =>
-            handleFetchMoreAnnotatorSpans(pageInfo.page.pageNumber + 1)
-          }
-        />
-      ) : (
-        <></>
-      )} */}
     </PageAnnotationsContainer>
   );
 };

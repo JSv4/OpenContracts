@@ -24,6 +24,7 @@
     "fuse.js": "^6.5.3",
     "graphql": "^16.2.0",
     "lodash": "^4.17.21",
+    "lodash.uniqueid": "^4.0.1",
     "pdfjs-dist": "^2.13.216",
     "react": "16.14.0",
     "react-beautiful-dnd": "^13.1.0",
@@ -77,6 +78,7 @@
     "**/*": "prettier --write --ignore-unknown"
   },
   "devDependencies": {
+    "@types/lodash.uniqueid": "^4.0.9",
     "@types/uuid": "^8.3.4",
     "husky": "^8.0.1",
     "prettier": "^2.7.1"

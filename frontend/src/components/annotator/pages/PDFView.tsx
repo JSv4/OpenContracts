@@ -156,9 +156,13 @@ export const PDFView = ({
     Record<number, PDFPageInfo>
   >([]);
 
+  const [showStructuralLabels, setShowStructuralLabels] = useState(false);
   const [activeSpanLabel, setActiveSpanLabel] = useState<
     AnnotationLabelType | undefined
   >(humanSpanLabelChoices.length > 0 ? humanSpanLabelChoices[0] : undefined);
+  const [spanLabelsToView, setSpanLabelsToView] = useState<
+    AnnotationLabelType[]
+  >([]);
   const [activeRelationLabel, setActiveRelationLabel] =
     useState<AnnotationLabelType>(relationLabels[0]);
   const [useFreeFormAnnotations, toggleUseFreeFormAnnotations] =
@@ -166,6 +170,24 @@ export const PDFView = ({
   const [hideLabels, setHideLabels] = useState<boolean>(false);
   const [relationModalVisible, setRelationModalVisible] =
     useState<boolean>(false);
+
+  const addSpanLabelsToViewSelection = (ls: AnnotationLabelType[]) => {
+    setSpanLabelsToView([...spanLabelsToView, ...ls]);
+  };
+
+  const clearSpanLabelsToView = () => {
+    setSpanLabelsToView([]);
+  };
+
+  const removeSpanLabelsToViewSelection = (
+    labelsToRemove: AnnotationLabelType[]
+  ) => {
+    setSpanLabelsToView((prevData) =>
+      [...prevData].filter((viewingLabel) =>
+        labelsToRemove.map((l) => l.id).includes(viewingLabel.id)
+      )
+    );
+  };
 
   // Add selection references
   const insertSelectionElementRef = (
@@ -547,7 +569,16 @@ export const PDFView = ({
             insertPageRef,
             removePageRef,
             activeSpanLabel,
+            showOnlySpanLabels: spanLabelsToView,
+            clearViewLabels: clearSpanLabelsToView,
+            addLabelsToView: addSpanLabelsToViewSelection,
+            removeLabelsToView: removeSpanLabelsToViewSelection,
             setActiveLabel: setActiveSpanLabel,
+            showStructuralLabels: showStructuralLabels,
+            setViewLabels: (ls: AnnotationLabelType[]) =>
+              setSpanLabelsToView(ls),
+            toggleShowStructuralLabels: () =>
+              setShowStructuralLabels((oldVal) => !oldVal),
             relationLabels,
             activeRelationLabel,
             setActiveRelationLabel,

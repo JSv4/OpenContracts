@@ -1,11 +1,12 @@
 import { useEffect, useRef } from "react";
 import _ from "lodash";
+import uniqueId from "lodash/uniqueId";
 
 import { TokenId, PDFPageInfo } from "./context";
 import {} from "./";
 import { TokenSpan } from "./TokenSpan";
 
-interface SelectionTokenProps {
+interface SearchSelectionTokenProps {
   color?: string;
   className?: string;
   hidden?: boolean;
@@ -15,7 +16,7 @@ interface SelectionTokenProps {
   scrollTo?: boolean;
 }
 
-export const SelectionTokens = ({
+export const SearchSelectionTokens = ({
   color,
   className,
   hidden,
@@ -23,7 +24,7 @@ export const SelectionTokens = ({
   highOpacity,
   tokens,
   scrollTo,
-}: SelectionTokenProps) => {
+}: SearchSelectionTokenProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,7 +37,7 @@ export const SelectionTokens = ({
   }, [scrollTo]);
 
   return (
-    <div ref={containerRef} id="SelectionTokenWrapper">
+    <div ref={containerRef} id={`SearchSelectionTokenWrapper_${uniqueId()}`}>
       {tokens ? (
         tokens.map((t, i) => {
           const b = pageInfo.getScaledTokenBounds(

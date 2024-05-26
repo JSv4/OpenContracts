@@ -654,7 +654,7 @@ export const Selection = ({
                   )}
                   {annotation.myPermissions.includes(
                     PermissionTypes.CAN_REMOVE
-                  ) ? (
+                  ) && !annotation.annotationLabel.readonly ? (
                     <Icon
                       style={{
                         marginLeft: ".125rem",

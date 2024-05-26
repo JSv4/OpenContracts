@@ -285,3 +285,37 @@ class AnalysisType(AnnotatePermissionsForReadMixin, ModelType):
         model = Analysis
         interfaces = [relay.Node]
         connection_class = CountableConnection
+
+
+class LanguageModelType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    class Meta:
+        model = LanguageModel
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+class FieldsetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    class Meta:
+        model = Fieldset
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+
+class ColumnType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    class Meta:
+        model = Column
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+
+class ExtractType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    class Meta:
+        model = Extract
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+
+class RowType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    class Meta:
+        model = Row
+        interfaces = [relay.Node]
+        connection_class = CountableConnection

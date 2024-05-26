@@ -22,7 +22,7 @@ from config.graphql.filters import (
     GremlinEngineFilter,
     LabelFilter,
     LabelsetFilter,
-    RelationshipFilter,
+    RelationshipFilter, LanguageModelFilter, FieldsetFilter, ColumnFilter, ExtractFilter, RowFilter,
 )
 from config.graphql.graphene_types import (
     AnalysisType,
@@ -38,7 +38,7 @@ from config.graphql.graphene_types import (
     PdfPageInfoType,
     RelationshipType,
     UserExportType,
-    UserImportType,
+    UserImportType, LanguageModelType, FieldsetType, ColumnType, ExtractType, RowType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -49,6 +49,7 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.extracts.models import LanguageModel, Fieldset, Column, Extract, Row
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.types.enums import LabelType
 from opencontractserver.users.models import Assignment, UserExport, UserImport
@@ -619,3 +620,152 @@ class Query(graphene.ObjectType):
                 return Analysis.objects.filter(
                     Q(creator=info.context.user) | Q(is_public=True)
                 )
+
+    language_model = relay.Node.Field(LanguageModelType)
+
+    @login_required
+    def resolve_language_model(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return LanguageModel.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return LanguageModel.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return LanguageModel.objects.get(
+                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
+            )
+
+    language_models = DjangoFilterConnectionField(
+        LanguageModelType, filterset_class=LanguageModelFilter
+    )
+
+    @login_required
+    def resolve_language_models(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return LanguageModel.objects.all()
+        elif info.context.user.is_anonymous:
+            return LanguageModel.objects.filter(Q(is_public=True))
+        else:
+            return LanguageModel.objects.filter(
+                Q(creator=info.context.user) | Q(is_public=True)
+            )
+
+    fieldset = relay.Node.Field(FieldsetType)
+
+    @login_required
+    def resolve_fieldset(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return Fieldset.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return Fieldset.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return Fieldset.objects.get(
+                Q(id=django_pk) & (Q(owner=info.context.user) | Q(is_public=True))
+            )
+
+    fieldsets = DjangoFilterConnectionField(
+        FieldsetType,
+        filterset_class=FieldsetFilter
+    )
+
+    @login_required
+    def resolve_fieldsets(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return Fieldset.objects.all()
+        elif info.context.user.is_anonymous:
+            return Fieldset.objects.filter(Q(is_public=True))
+        else:
+            return Fieldset.objects.filter(
+                Q(owner=info.context.user) | Q(is_public=True)
+            )
+
+    column = relay.Node.Field(ColumnType)
+
+    @login_required
+    def resolve_column(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return Column.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return Column.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return Column.objects.get(
+                Q(id=django_pk) & (Q(fieldset__owner=info.context.user) | Q(is_public=True))
+            )
+
+    columns = DjangoFilterConnectionField(
+        ColumnType,
+        filterset_class=ColumnFilter
+    )
+
+    @login_required
+    def resolve_columns(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return Column.objects.all()
+        elif info.context.user.is_anonymous:
+            return Column.objects.filter(Q(is_public=True))
+        else:
+            return Column.objects.filter(
+                Q(fieldset__owner=info.context.user) | Q(is_public=True)
+            )
+
+    extract = relay.Node.Field(ExtractType)
+
+    @login_required
+    def resolve_extract(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return Extract.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return Extract.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return Extract.objects.get(
+                Q(id=django_pk) & (Q(owner=info.context.user) | Q(is_public=True))
+            )
+
+    extracts = DjangoFilterConnectionField(
+        ExtractType,
+        filterset_class=ExtractFilter
+    )
+
+    @login_required
+    def resolve_extracts(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return Extract.objects.all()
+        elif info.context.user.is_anonymous:
+            return Extract.objects.filter(Q(is_public=True))
+        else:
+            return Extract.objects.filter(
+                Q(owner=info.context.user) | Q(is_public=True)
+            )
+
+    row = relay.Node.Field(RowType)
+
+    @login_required
+    def resolve_row(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return Row.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return Row.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return Row.objects.get(
+                Q(id=django_pk) & (Q(extract__owner=info.context.user) | Q(is_public=True))
+            )
+
+    rows = DjangoFilterConnectionField(
+        RowType,
+        filterset_class=RowFilter
+    )
+
+    @login_required
+    def resolve_rows(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return Row.objects.all()
+        elif info.context.user.is_anonymous:
+            return Row.objects.filter(Q(is_public=True))
+        else:
+            return Row.objects.filter(
+                Q(extract__owner=info.context.user) | Q(is_public=True)
+            )

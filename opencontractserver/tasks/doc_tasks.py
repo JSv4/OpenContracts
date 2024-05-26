@@ -302,7 +302,7 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
                             "icon": "expand",
                             "text": label_name,
                             "creator_id": user_id,
-                            "read_only": True
+                            "read_only": True,
                         }
                     )
                     label_serializer.is_valid(raise_exception=True)

@@ -49,7 +49,7 @@ class NlmIngestorTestCase(TestCase):
         nlm_parse_response = responses.Response(
             method="POST",
             url=settings.NLM_INGEST_HOSTNAME
-            + "/api/parseDocument/?calculate_opencontracts_data=yes&applyOcr=no",
+            + "/api/parseDocument?calculate_opencontracts_data=yes&applyOcr=no",
             json=json.loads(NLM_INGESTOR_EXPECTED_JSON.read_text()),
         )
         responses.add(nlm_parse_response)

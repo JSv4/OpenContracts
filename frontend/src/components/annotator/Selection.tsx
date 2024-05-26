@@ -526,8 +526,6 @@ export const Selection = ({
 
   const annotationStore = useContext(AnnotationStore);
 
-  const raw_permissions = annotation.myPermissions;
-
   let color;
   if (!label || !label.color) {
     color = "#616a6b"; // grey as the default.
@@ -635,7 +633,7 @@ export const Selection = ({
                   </div>
                   {annotation.myPermissions.includes(
                     PermissionTypes.CAN_UPDATE
-                  ) ? (
+                  ) && !annotation.annotationLabel.readonly ? (
                     <Icon
                       style={{
                         marginLeft: ".25rem",

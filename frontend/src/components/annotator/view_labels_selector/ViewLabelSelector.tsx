@@ -3,16 +3,9 @@ import { Dropdown, DropdownProps } from "semantic-ui-react";
 
 import _ from "lodash";
 
-import "./LabelSelector.css";
 import { AnnotationStore } from "../context";
-import { AnnotationLabelType } from "../../../graphql/types";
-import useWindowDimensions from "../../hooks/WindowDimensionHook";
 
-interface LabelSelectorProps {
-  sidebarWidth: string;
-}
-
-export const LabelSelector = ({ sidebarWidth }: LabelSelectorProps) => {
+export const ViewLabelSelector = () => {
   const annotationStore = useContext(AnnotationStore);
 
   // Some labels are not meant to be manually annotated (namely those for
@@ -20,13 +13,9 @@ export const LabelSelector = ({ sidebarWidth }: LabelSelectorProps) => {
   // labels used by an analyzer (at least not for now), so we need to track that
   // list separately.
   const human_label_choices = annotationStore.humanSpanLabelChoices;
-  const {
-    showOnlySpanLabels,
-    setViewLabels,
-    addLabelsToView,
-    clearViewLabels,
-    removeLabelsToView,
-  } = annotationStore;
+  const label_choices = [...human_label_choices];
+
+  const { showOnlySpanLabels, setViewLabels } = annotationStore;
 
   const handleChange = (
     event: React.SyntheticEvent<HTMLElement, Event>,
@@ -34,10 +23,14 @@ export const LabelSelector = ({ sidebarWidth }: LabelSelectorProps) => {
   ) => {
     console.log("Got event", event);
     console.log("Event data", data);
+    const selected_labels = label_choices.filter((l) =>
+      data?.value && Array.isArray(data.value) ? data.value.includes(l.id) : []
+    );
+    setViewLabels(selected_labels);
   };
 
   // Filter out already applied labels from the label options
-  const labelOptions = _.map(human_label_choices, (label) => ({
+  const labelOptions = _.map(label_choices, (label) => ({
     key: label.id,
     text: label.text ? label.text : "?",
     value: label.id,
@@ -53,6 +46,7 @@ export const LabelSelector = ({ sidebarWidth }: LabelSelectorProps) => {
       search
       selection
       options={labelOptions}
+      style={{ minWidth: "10em" }}
     />
   );
 };

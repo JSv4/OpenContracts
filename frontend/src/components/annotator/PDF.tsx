@@ -307,7 +307,12 @@ const Page = ({
     // parser... but look at backend annotation json data first to make sure.
 
     // This is where existing annotations get their selection tokens applied
-    for (const [index, annotation] of defined_annotations.entries()) {
+    const annots_to_render = !annotationStore.showStructuralLabels
+      ? defined_annotations.filter((annot) => annot.annotationLabel.readonly)
+      : defined_annotations;
+    console.log("Annots to render", annots_to_render);
+
+    for (const [index, annotation] of annots_to_render.entries()) {
       page_annotation_components.push(
         <Selection
           hidden={

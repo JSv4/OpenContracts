@@ -8,7 +8,6 @@ from django_filters import OrderingFilter
 from django_filters import rest_framework as filters
 from graphql_relay import from_global_id
 
-from opencontractserver.extracts.models import LanguageModel, Fieldset, Column, Extract, Row
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
     Annotation,
@@ -18,6 +17,13 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.extracts.models import (
+    Column,
+    Extract,
+    Fieldset,
+    LanguageModel,
+    Row,
+)
 from opencontractserver.users.models import Assignment, UserExport
 
 User = get_user_model()
@@ -380,6 +386,7 @@ class DocumentFilter(django_filters.FilterSet):
             "description": ["exact", "contains"],
             "id": ["exact"],
         }
+
 
 class LanguageModelFilter(django_filters.FilterSet):
     class Meta:

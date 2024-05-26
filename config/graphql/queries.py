@@ -16,13 +16,18 @@ from config.graphql.filters import (
     AnalyzerFilter,
     AnnotationFilter,
     AssignmentFilter,
+    ColumnFilter,
     CorpusFilter,
     DocumentFilter,
     ExportFilter,
+    ExtractFilter,
+    FieldsetFilter,
     GremlinEngineFilter,
     LabelFilter,
     LabelsetFilter,
-    RelationshipFilter, LanguageModelFilter, FieldsetFilter, ColumnFilter, ExtractFilter, RowFilter,
+    LanguageModelFilter,
+    RelationshipFilter,
+    RowFilter,
 )
 from config.graphql.graphene_types import (
     AnalysisType,
@@ -30,15 +35,20 @@ from config.graphql.graphene_types import (
     AnnotationLabelType,
     AnnotationType,
     AssignmentType,
+    ColumnType,
     CorpusType,
     DocumentType,
+    ExtractType,
+    FieldsetType,
     GremlinEngineType_READ,
     LabelSetType,
+    LanguageModelType,
     PageAwareAnnotationType,
     PdfPageInfoType,
     RelationshipType,
+    RowType,
     UserExportType,
-    UserImportType, LanguageModelType, FieldsetType, ColumnType, ExtractType, RowType,
+    UserImportType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -49,7 +59,13 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import LanguageModel, Fieldset, Column, Extract, Row
+from opencontractserver.extracts.models import (
+    Column,
+    Extract,
+    Fieldset,
+    LanguageModel,
+    Row,
+)
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.types.enums import LabelType
 from opencontractserver.users.models import Assignment, UserExport, UserImport
@@ -665,8 +681,7 @@ class Query(graphene.ObjectType):
             )
 
     fieldsets = DjangoFilterConnectionField(
-        FieldsetType,
-        filterset_class=FieldsetFilter
+        FieldsetType, filterset_class=FieldsetFilter
     )
 
     @login_required
@@ -691,13 +706,11 @@ class Query(graphene.ObjectType):
             return Column.objects.get(Q(id=django_pk) & Q(is_public=True))
         else:
             return Column.objects.get(
-                Q(id=django_pk) & (Q(fieldset__owner=info.context.user) | Q(is_public=True))
+                Q(id=django_pk)
+                & (Q(fieldset__owner=info.context.user) | Q(is_public=True))
             )
 
-    columns = DjangoFilterConnectionField(
-        ColumnType,
-        filterset_class=ColumnFilter
-    )
+    columns = DjangoFilterConnectionField(ColumnType, filterset_class=ColumnFilter)
 
     @login_required
     def resolve_columns(self, info, **kwargs):
@@ -724,10 +737,7 @@ class Query(graphene.ObjectType):
                 Q(id=django_pk) & (Q(owner=info.context.user) | Q(is_public=True))
             )
 
-    extracts = DjangoFilterConnectionField(
-        ExtractType,
-        filterset_class=ExtractFilter
-    )
+    extracts = DjangoFilterConnectionField(ExtractType, filterset_class=ExtractFilter)
 
     @login_required
     def resolve_extracts(self, info, **kwargs):
@@ -751,13 +761,11 @@ class Query(graphene.ObjectType):
             return Row.objects.get(Q(id=django_pk) & Q(is_public=True))
         else:
             return Row.objects.get(
-                Q(id=django_pk) & (Q(extract__owner=info.context.user) | Q(is_public=True))
+                Q(id=django_pk)
+                & (Q(extract__owner=info.context.user) | Q(is_public=True))
             )
 
-    rows = DjangoFilterConnectionField(
-        RowType,
-        filterset_class=RowFilter
-    )
+    rows = DjangoFilterConnectionField(RowType, filterset_class=RowFilter)
 
     @login_required
     def resolve_rows(self, info, **kwargs):

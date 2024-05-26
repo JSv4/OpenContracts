@@ -1,4 +1,3 @@
-import json
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -7,10 +6,8 @@ from graphene.test import Client
 from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
-from opencontractserver.annotations.models import AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
-from opencontractserver.extracts.models import LanguageModel, Fieldset, Column, Extract, Row
-from opencontractserver.tasks.extract_tasks import run_extract
+from opencontractserver.extracts.models import Fieldset, LanguageModel
 
 User = get_user_model()
 
@@ -19,9 +16,12 @@ class TestContext:
     def __init__(self, user):
         self.user = user
 
+
 class ExtractsMutationTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.user = User.objects.create_user(
+            username="testuser", password="testpassword"
+        )
         self.client = Client(schema, context_value=TestContext(self.user))
 
         self.corpus = Corpus.objects.create(title="TestCorpus", creator=self.user)
@@ -42,7 +42,9 @@ class ExtractsMutationTestCase(TestCase):
         result = self.client.execute(mutation)
         self.assertIsNone(result.get("errors"))
         self.assertTrue(result["data"]["createLanguageModel"]["ok"])
-        self.assertIsNotNone(result["data"]["createLanguageModel"]["languageModel"]["id"])
+        self.assertIsNotNone(
+            result["data"]["createLanguageModel"]["languageModel"]["id"]
+        )
         self.assertEqual(
             result["data"]["createLanguageModel"]["languageModel"]["model"], "TestModel"
         )
@@ -80,24 +82,24 @@ class ExtractsMutationTestCase(TestCase):
         )
 
         mutation = """
-            mutation {
+            mutation {{
                 createColumn(
-                    fieldsetId: "%s",
+                    fieldsetId: "{}",
                     query: "TestQuery",
                     outputType: "str",
-                    languageModelId: "%s",
+                    languageModelId: "{}",
                     agentic: false
-                ) {
+                ) {{
                     ok
-                    column {
+                    column {{
                         id
                         query
                         outputType
                         agentic
-                    }
-                }
-            }
-        """ % (
+                    }}
+                }}
+            }}
+        """.format(
             to_global_id("FieldsetType", fieldset.id),
             to_global_id("LanguageModelType", language_model.id),
         )
@@ -116,25 +118,27 @@ class ExtractsMutationTestCase(TestCase):
         )
 
         mutation = """
-            mutation {
+            mutation {{
                 startExtract(
-                    corpusId: "%s",
+                    corpusId: "{}",
                     name: "TestExtract",
-                    fieldsetId: "%s"
-                ) {
+                    fieldsetId: "{}"
+                ) {{
                     ok
-                    extract {
+                    extract {{
                         id
                         name
-                    }
-                }
-            }
-        """ % (
+                    }}
+                }}
+            }}
+        """.format(
             to_global_id("CorpusType", self.corpus.id),
             to_global_id("FieldsetType", fieldset.id),
         )
 
-        with patch("opencontractserver.tasks.extract_tasks.run_extract.delay") as mock_task:
+        with patch(
+            "opencontractserver.tasks.extract_tasks.run_extract.delay"
+        ) as mock_task:
             result = self.client.execute(mutation)
             self.assertIsNone(result.get("errors"))
             self.assertTrue(result["data"]["startExtract"]["ok"])

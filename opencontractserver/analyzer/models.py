@@ -123,7 +123,6 @@ class Analysis(BaseOCModel):
     export as a csv.
     """
 
-
     class Meta:
         permissions = (
             ("create_analysis", "create Analysis"),
@@ -145,10 +144,7 @@ class Analysis(BaseOCModel):
 
     # Tracking information to tie this back to the OC Analyzer that was used to create it.
     analyzer = django.db.models.ForeignKey(
-        Analyzer,
-        null=False,
-        blank=False,
-        on_delete=django.db.models.CASCADE
+        Analyzer, null=False, blank=False, on_delete=django.db.models.CASCADE
     )
 
     # For (ok) security on results, the callback for a given analyzer will require a TOKEN header of uuid v4

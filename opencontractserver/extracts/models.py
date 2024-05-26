@@ -1,8 +1,6 @@
 import django
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
-from pgvector.django import VectorField
 
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.shared.fields import NullableJSONField

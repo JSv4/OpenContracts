@@ -104,7 +104,7 @@ LOCAL_APPS = [
     "opencontractserver.corpuses",
     "opencontractserver.annotations",
     "opencontractserver.analyzer",
-    "opencontractserver.extracts"
+    "opencontractserver.extracts",
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps

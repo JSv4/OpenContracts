@@ -4,6 +4,7 @@ import graphene
 from django.contrib.auth import get_user_model
 from graphene import relay
 from graphene.types.generic import GenericScalar
+from graphene_django import DjangoObjectType
 from graphene_django import DjangoObjectType as ModelType
 from graphene_django.filter import DjangoFilterConnectionField
 from graphql_relay import from_global_id
@@ -20,6 +21,13 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.extracts.models import (
+    Column,
+    Extract,
+    Fieldset,
+    LanguageModel,
+    Row,
+)
 from opencontractserver.users.models import Assignment, UserExport, UserImport
 
 User = get_user_model()
@@ -292,6 +300,7 @@ class LanguageModelType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         model = LanguageModel
         interfaces = [relay.Node]
         connection_class = CountableConnection
+
 
 class FieldsetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:

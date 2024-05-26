@@ -3,13 +3,15 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from graphene.test import Client
-from graphql_relay import to_global_id
 
-from config.graphql.schema import schema
-from opencontractserver.annotations.models import AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
-from opencontractserver.extracts.models import LanguageModel, Fieldset, Column, Extract, Row
+from opencontractserver.extracts.models import (
+    Column,
+    Extract,
+    Fieldset,
+    LanguageModel,
+    Row,
+)
 from opencontractserver.tasks.extract_tasks import run_extract
 
 User = get_user_model()
@@ -19,9 +21,12 @@ class TestContext:
     def __init__(self, user):
         self.user = user
 
+
 class ExtractsTaskTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.user = User.objects.create_user(
+            username="testuser", password="testpassword"
+        )
 
         self.language_model = LanguageModel.objects.create(model="TestModel")
         self.fieldset = Fieldset.objects.create(
@@ -44,7 +49,9 @@ class ExtractsTaskTestCase(TestCase):
 
     @patch("opencontractserver.tasks.extract_tasks.agent_fetch_my_definitions")
     @patch("opencontractserver.tasks.extract_tasks.extract_for_query")
-    def test_run_extract_task(self, mock_extract_for_query, mock_agent_fetch_my_definitions):
+    def test_run_extract_task(
+        self, mock_extract_for_query, mock_agent_fetch_my_definitions
+    ):
         mock_extract_for_query.return_value = "Mocked extracted data"
         mock_agent_fetch_my_definitions.return_value = []
 

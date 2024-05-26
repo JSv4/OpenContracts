@@ -1,16 +1,17 @@
-import json
-from unittest.mock import patch
-
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from graphene.test import Client
 from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
-from opencontractserver.annotations.models import AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
-from opencontractserver.extracts.models import LanguageModel, Fieldset, Column, Extract, Row
-from opencontractserver.tasks.extract_tasks import run_extract
+from opencontractserver.extracts.models import (
+    Column,
+    Extract,
+    Fieldset,
+    LanguageModel,
+    Row,
+)
 
 User = get_user_model()
 
@@ -22,7 +23,9 @@ class TestContext:
 
 class ExtractsQueryTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.user = User.objects.create_user(
+            username="testuser", password="testpassword"
+        )
         self.client = Client(schema, context_value=TestContext(self.user))
 
         self.language_model = LanguageModel.objects.create(model="TestModel")
@@ -130,7 +133,8 @@ class ExtractsQueryTestCase(TestCase):
         result = self.client.execute(query)
         self.assertIsNone(result.get("errors"))
         self.assertEqual(
-            result["data"]["extract"]["id"], to_global_id("ExtractType", self.extract.id)
+            result["data"]["extract"]["id"],
+            to_global_id("ExtractType", self.extract.id),
         )
         self.assertEqual(result["data"]["extract"]["name"], "TestExtract")
 
@@ -154,4 +158,3 @@ class ExtractsQueryTestCase(TestCase):
         )
         self.assertEqual(result["data"]["row"]["data"], {"data": "TestData"})
         self.assertEqual(result["data"]["row"]["dataDefinition"], "str")
-

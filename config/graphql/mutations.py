@@ -21,9 +21,13 @@ from config.graphql.graphene_types import (
     AnalysisType,
     AnnotationLabelType,
     AnnotationType,
+    ColumnType,
     CorpusType,
     DocumentType,
+    ExtractType,
+    FieldsetType,
     LabelSetType,
+    LanguageModelType,
     RelationInputType,
     RelationshipType,
     UserExportType,
@@ -45,6 +49,7 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus, TemporaryFileHandle
 from opencontractserver.documents.models import Document
+from opencontractserver.extracts.models import Column, Extract, Fieldset, LanguageModel
 from opencontractserver.tasks import (
     build_label_lookups_task,
     burn_doc_annotations,
@@ -63,6 +68,7 @@ from opencontractserver.tasks.export_tasks import (
     package_funsd_exports,
     package_langchain_exports,
 )
+from opencontractserver.tasks.extract_tasks import run_extract
 from opencontractserver.tasks.permissioning_tasks import (
     make_analysis_public_task,
     make_corpus_public_task,
@@ -1390,6 +1396,7 @@ class Mutation(graphene.ObjectType):
     delete_analysis = DeleteAnalysisMutation.Field()
     make_analysis_public = MakeAnalysisPublic.Field()
 
+
 class CreateLanguageModel(graphene.Mutation):
     class Arguments:
         model = graphene.String(required=True)
@@ -1456,7 +1463,9 @@ class CreateColumn(graphene.Mutation):
         instructions=None,
     ):
         fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
-        language_model = LanguageModel.objects.get(pk=from_global_id(language_model_id)[1])
+        language_model = LanguageModel.objects.get(
+            pk=from_global_id(language_model_id)[1]
+        )
         column = Column(
             fieldset=fieldset,
             query=query,
@@ -1465,7 +1474,7 @@ class CreateColumn(graphene.Mutation):
             limit_to_label=limit_to_label,
             instructions=instructions,
             language_model=language_model,
-            agentic=agentic
+            agentic=agentic,
         )
         column.save()
         set_permissions_for_obj_to_user(
@@ -1490,10 +1499,7 @@ class StartExtract(graphene.Mutation):
         fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
 
         extract = Extract(
-            corpus=corpus,
-            name=name,
-            fieldset=fieldset,
-            owner=info.context.user
+            corpus=corpus, name=name, fieldset=fieldset, owner=info.context.user
         )
         extract.save()
         set_permissions_for_obj_to_user(

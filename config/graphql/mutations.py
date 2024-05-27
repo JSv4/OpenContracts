@@ -1333,7 +1333,8 @@ class CreateLanguageModel(graphene.Mutation):
         model = graphene.String(required=True)
 
     ok = graphene.Boolean()
-    language_model = graphene.Field(LanguageModelType)
+    message = graphene.String()
+    obj = graphene.Field(LanguageModelType)
 
     @staticmethod
     @login_required
@@ -1343,8 +1344,7 @@ class CreateLanguageModel(graphene.Mutation):
         set_permissions_for_obj_to_user(
             info.context.user, language_model, [PermissionTypes.CRUD]
         )
-        return CreateLanguageModel(ok=True, language_model=language_model)
-
+        return CreateLanguageModel(ok=True, message="SUCCESS!", obj=language_model)
 
 class CreateFieldset(graphene.Mutation):
     class Arguments:
@@ -1352,7 +1352,8 @@ class CreateFieldset(graphene.Mutation):
         description = graphene.String(required=True)
 
     ok = graphene.Boolean()
-    fieldset = graphene.Field(FieldsetType)
+    message = graphene.String()
+    obj = graphene.Field(FieldsetType)
 
     @staticmethod
     @login_required
@@ -1367,7 +1368,7 @@ class CreateFieldset(graphene.Mutation):
         set_permissions_for_obj_to_user(
             info.context.user, fieldset, [PermissionTypes.CRUD]
         )
-        return CreateFieldset(ok=True, fieldset=fieldset)
+        return CreateFieldset(ok=True, message="SUCCESS!", obj=fieldset)
 
 
 class CreateColumn(graphene.Mutation):
@@ -1382,7 +1383,8 @@ class CreateColumn(graphene.Mutation):
         agentic = graphene.Boolean(required=True)
 
     ok = graphene.Boolean()
-    column = graphene.Field(ColumnType)
+    message = graphene.String()
+    obj = graphene.Field(ColumnType)
 
     @staticmethod
     @login_required
@@ -1417,7 +1419,7 @@ class CreateColumn(graphene.Mutation):
         set_permissions_for_obj_to_user(
             info.context.user, column, [PermissionTypes.CRUD]
         )
-        return CreateColumn(ok=True, column=column)
+        return CreateColumn(ok=True, message="SUCCESS!", obj=column)
 
 
 class StartExtract(graphene.Mutation):
@@ -1427,7 +1429,8 @@ class StartExtract(graphene.Mutation):
         fieldset_id = graphene.ID(required=True)
 
     ok = graphene.Boolean()
-    extract = graphene.Field(ExtractType)
+    message = graphene.String()
+    obj = graphene.Field(ExtractType)
 
     @staticmethod
     @login_required
@@ -1450,7 +1453,7 @@ class StartExtract(graphene.Mutation):
         # Start celery task to process extract
         run_extract.delay(extract.id, info.context.user.id)
 
-        return StartExtract(ok=True, extract=extract)
+        return StartExtract(ok=True, message="SUCCESS!", obj=extract)
 
 
 class Mutation(graphene.ObjectType):

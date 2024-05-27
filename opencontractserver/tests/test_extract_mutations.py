@@ -31,7 +31,7 @@ class ExtractsMutationTestCase(TestCase):
             mutation {
                 createLanguageModel(model: "TestModel") {
                     ok
-                    languageModel {
+                    obj {
                         id
                         model
                     }
@@ -43,10 +43,10 @@ class ExtractsMutationTestCase(TestCase):
         self.assertIsNone(result.get("errors"))
         self.assertTrue(result["data"]["createLanguageModel"]["ok"])
         self.assertIsNotNone(
-            result["data"]["createLanguageModel"]["languageModel"]["id"]
+            result["data"]["createLanguageModel"]["obj"]["id"]
         )
         self.assertEqual(
-            result["data"]["createLanguageModel"]["languageModel"]["model"], "TestModel"
+            result["data"]["createLanguageModel"]["obj"]["model"], "TestModel"
         )
 
     def test_create_fieldset_mutation(self):
@@ -54,7 +54,7 @@ class ExtractsMutationTestCase(TestCase):
             mutation {
                 createFieldset(name: "TestFieldset", description: "Test description") {
                     ok
-                    fieldset {
+                    obj {
                         id
                         name
                         description
@@ -66,12 +66,12 @@ class ExtractsMutationTestCase(TestCase):
         result = self.client.execute(mutation)
         self.assertIsNone(result.get("errors"))
         self.assertTrue(result["data"]["createFieldset"]["ok"])
-        self.assertIsNotNone(result["data"]["createFieldset"]["fieldset"]["id"])
+        self.assertIsNotNone(result["data"]["createFieldset"]["obj"]["id"])
         self.assertEqual(
-            result["data"]["createFieldset"]["fieldset"]["name"], "TestFieldset"
+            result["data"]["createFieldset"]["obj"]["name"], "TestFieldset"
         )
         self.assertEqual(
-            result["data"]["createFieldset"]["fieldset"]["description"],
+            result["data"]["createFieldset"]["obj"]["description"],
             "Test description",
         )
 
@@ -96,7 +96,7 @@ class ExtractsMutationTestCase(TestCase):
                     agentic: false
                 ) {{
                     ok
-                    column {{
+                    obj {{
                         id
                         query
                         outputType
@@ -112,10 +112,10 @@ class ExtractsMutationTestCase(TestCase):
         result = self.client.execute(mutation)
         self.assertIsNone(result.get("errors"))
         self.assertTrue(result["data"]["createColumn"]["ok"])
-        self.assertIsNotNone(result["data"]["createColumn"]["column"]["id"])
-        self.assertEqual(result["data"]["createColumn"]["column"]["query"], "TestQuery")
-        self.assertEqual(result["data"]["createColumn"]["column"]["outputType"], "str")
-        self.assertEqual(result["data"]["createColumn"]["column"]["agentic"], False)
+        self.assertIsNotNone(result["data"]["createColumn"]["obj"]["id"])
+        self.assertEqual(result["data"]["createColumn"]["obj"]["query"], "TestQuery")
+        self.assertEqual(result["data"]["createColumn"]["obj"]["outputType"], "str")
+        self.assertEqual(result["data"]["createColumn"]["obj"]["agentic"], False)
 
     def test_start_extract_mutation(self):
         fieldset = Fieldset.objects.create(
@@ -133,7 +133,7 @@ class ExtractsMutationTestCase(TestCase):
                     fieldsetId: "{}"
                 ) {{
                     ok
-                    extract {{
+                    obj {{
                         id
                         name
                     }}
@@ -150,8 +150,8 @@ class ExtractsMutationTestCase(TestCase):
             result = self.client.execute(mutation)
             self.assertIsNone(result.get("errors"))
             self.assertTrue(result["data"]["startExtract"]["ok"])
-            self.assertIsNotNone(result["data"]["startExtract"]["extract"]["id"])
+            self.assertIsNotNone(result["data"]["startExtract"]["obj"]["id"])
             self.assertEqual(
-                result["data"]["startExtract"]["extract"]["name"], "TestExtract"
+                result["data"]["startExtract"]["obj"]["name"], "TestExtract"
             )
             mock_task.assert_called_once()

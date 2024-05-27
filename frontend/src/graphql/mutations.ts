@@ -1070,3 +1070,20 @@ export const REQUEST_DELETE_ANALYSIS = gql`
     }
   }
 `;
+
+export interface RequestCreateLanguageModelInputType {
+  model: string;
+}
+
+export interface RequestCreateLanguageModelOutputType {}
+
+export const REQUEST_CREATE_LANGUAGEMODEL = gql`
+  mutation CreateLanguageModel($model: String!) {
+    createLanguageModel(model: $model) {
+      languageModel {
+        id
+        model
+      }
+    }
+  }
+`;

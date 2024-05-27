@@ -14,6 +14,9 @@ import {
   AnalysisType,
   AnnotationLabelType,
   LabelType,
+  LanguageModelType,
+  FieldsetType,
+  ExtractType,
 } from "./types";
 
 export interface RequestDocumentsInputs {
@@ -963,6 +966,150 @@ export const GET_EXPORTS = gql`
           backendLock
           file
         }
+      }
+    }
+  }
+`;
+
+export interface GetLanguageModelsOutputs {
+  languageModels: {
+    pageInfo: PageInfo;
+    edges: {
+      node: LanguageModelType;
+    }[];
+  };
+}
+
+export const GET_LANGUAGEMODELS = gql`
+  query GetLanguageModels {
+    languageModels {
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        endCursor
+        startCursor
+      }
+      edges {
+        node {
+          id
+          model
+        }
+      }
+    }
+  }
+`;
+
+export interface GetFieldsetsOutputs {
+  fieldsets: {
+    pageInfo: PageInfo;
+    edges: {
+      node: FieldsetType;
+    }[];
+  };
+}
+
+export const GET_FIELDSETS = gql`
+  query GetFieldsets {
+    fieldsets {
+      edges {
+        node {
+          id
+          owner {
+            id
+            username
+          }
+          name
+          description
+          columns {
+            id
+            query
+            matchText
+            outputType
+            limitToLabel
+            instructions
+            languageModel {
+              id
+              model
+            }
+            agentic
+          }
+        }
+      }
+    }
+  }
+`;
+
+export interface GetFieldsetOutputs {
+  fieldset: FieldsetType;
+}
+
+export const GET_FIELDSET = gql`
+  query GetFieldset($id: ID!) {
+    fieldset(id: $id) {
+      id
+      owner {
+        id
+        username
+      }
+      name
+      description
+      columns {
+        id
+        query
+        matchText
+        outputType
+        limitToLabel
+        instructions
+        languageModel {
+          id
+          model
+        }
+        agentic
+      }
+    }
+  }
+`;
+
+export interface GetExportsOutput {
+  extract: ExtractType;
+}
+
+export const GET_EXPORT = gql`
+  query GetExtract($id: ID!) {
+    extract(id: $id) {
+      id
+      corpus {
+        id
+        title
+      }
+      name
+      fieldset {
+        id
+        name
+        columns {
+          id
+          query
+        }
+      }
+      owner {
+        id
+        username
+      }
+      created
+      started
+      finished
+      stacktrace
+      rows {
+        id
+        column {
+          id
+        }
+        data
+        dataDefinition
+        started
+        completed
+        failed
+        stacktrace
       }
     }
   }

@@ -1170,3 +1170,48 @@ export type AnalyzerManifestType = {
   text_labels: AnnotationLabelPythonType[];
   label_set: OpenContractsLabelSetType;
 };
+
+export interface LanguageModelType extends Node {
+  model: string;
+}
+
+export interface FieldsetType extends Node {
+  owner: UserType;
+  name: string;
+  description: string;
+  columns: ColumnType[];
+}
+
+export interface ColumnType extends Node {
+  fieldset: FieldsetType;
+  query: string;
+  matchText?: Maybe<string>;
+  outputType: string;
+  limitToLabel?: Maybe<string>;
+  instructions?: Maybe<string>;
+  languageModel: LanguageModelType;
+  agentic: boolean;
+}
+
+export interface ExtractType extends Node {
+  corpus: CorpusType;
+  name: string;
+  fieldset: FieldsetType;
+  owner: UserType;
+  created: string;
+  started?: Maybe<string>;
+  finished?: Maybe<string>;
+  stacktrace?: Maybe<string>;
+  rows: RowType[];
+}
+
+export interface RowType extends Node {
+  extract: ExtractType;
+  column: ColumnType;
+  data: any;
+  dataDefinition: string;
+  started?: Maybe<string>;
+  completed?: Maybe<string>;
+  failed?: Maybe<string>;
+  stacktrace?: Maybe<string>;
+}

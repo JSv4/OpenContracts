@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 
 from opencontractserver.corpuses.models import Corpus
+from opencontractserver.shared.defaults import jsonfield_default_value
 from opencontractserver.shared.fields import NullableJSONField
 from opencontractserver.shared.Models import BaseOCModel
 
@@ -162,7 +163,7 @@ class Row(BaseOCModel):
     column = django.db.models.ForeignKey(
         "Column", related_name="rows", on_delete=django.db.models.CASCADE
     )
-    data = NullableJSONField()
+    data = NullableJSONField(default=jsonfield_default_value, null=True, blank=True)
     data_definition = django.db.models.TextField(null=False, blank=False)
     started = django.db.models.DateTimeField(null=True, blank=True)
     completed = django.db.models.DateTimeField(null=True, blank=True)

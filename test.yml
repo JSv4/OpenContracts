@@ -13,6 +13,8 @@ services:
   vector-embedder:
     image: jscrudato/vector-embedder-microservice
     container_name: vector-embedder
+    environment:
+      PORT: 8000
 
   django: &django
     build:

@@ -1203,12 +1203,14 @@ export interface ExtractType extends Node {
   started?: Maybe<string>;
   finished?: Maybe<string>;
   stacktrace?: Maybe<string>;
-  rows: RowType[];
+  datacells: DatacellType[];
+  documents?: DocumentType[];
 }
 
-export interface RowType extends Node {
+export interface DatacellType extends Node {
   extract: ExtractType;
   column: ColumnType;
+  document: DocumentType;
   data: any;
   dataDefinition: string;
   started?: Maybe<string>;

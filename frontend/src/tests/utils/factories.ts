@@ -14,10 +14,11 @@ import {
   AnalysisTypeConnection,
   ExtractType,
   ColumnType,
-  RowType,
+  DatacellType,
   CorpusType,
   FieldsetType,
   LanguageModelType,
+  DocumentType,
 } from "../../graphql/types";
 
 export function generateMockUser(): UserType {
@@ -214,18 +215,20 @@ export function generateMockExtract(
     started: null,
     finished: null,
     stacktrace: null,
-    rows: [],
+    datacells: [],
   };
 }
 
 export function generateMockRow(
   extract: ExtractType,
-  column: ColumnType
-): RowType {
+  column: ColumnType,
+  document: DocumentType
+): DatacellType {
   return {
     id: uuidv4(),
     extract,
     column,
+    document,
     data: {
       data: "Some Data",
     },

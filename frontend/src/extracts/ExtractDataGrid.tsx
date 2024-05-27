@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@apollo/client";
 import { toast } from "react-toastify";
 
 import { ColumnDetails } from "./ColumnDetails";
-import { ColumnType, ExtractType, RowType } from "../graphql/types";
+import { ColumnType, ExtractType, DatacellType } from "../graphql/types";
 import { REQUEST_GET_EXTRACT } from "../graphql/queries";
 import { REQUEST_START_EXTRACT } from "../graphql/mutations";
 
@@ -39,7 +39,8 @@ export const ExtractDataGrid: React.FC<ExtractDataGridProps> = ({
 
   const { extract } = data;
   const columns = extract.fieldset.columns;
-  const rows = extract.rows;
+  const datacells = extract.datacells;
+  const documents = extract.documents ? extract.documents : [];
 
   console.log("Extract:", extract);
 
@@ -56,7 +57,7 @@ export const ExtractDataGrid: React.FC<ExtractDataGridProps> = ({
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          {rows.map((row: RowType) => (
+          {datacells.map((row: DatacellType) => (
             <Table.Row key={row.id}>
               {columns.map((column: ColumnType) => (
                 <Table.Cell key={column.id}>{row.data[column.id]}</Table.Cell>

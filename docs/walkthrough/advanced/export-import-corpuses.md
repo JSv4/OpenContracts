@@ -22,7 +22,7 @@ If you've enabled corpus imports (see the **frontend** env file for the boolean 
 ## OpenContracts Export Format Specification
 
 The OpenContracts export is a zip archive containing:
-1. A `data.json` file with metadata about the export 
+1. A `data.json` file with metadata about the export
 2. The original PDF documents
 3. Exported annotations "burned in" to the PDF documents
 
@@ -38,19 +38,19 @@ The `data.json` file contains a JSON object with the following fields:
 
 * `corpus` (OpenContractCorpusType): Metadata about the exported corpus, with fields:
     - `id` (int): ID of the corpus
-    - `title` (string)  
+    - `title` (string)
     - `description` (string)
     - `icon_name` (string): Filename of the corpus icon image
     - `icon_data` (string): Base64 encoded icon image data
     - `creator` (string): Email of the corpus creator
     - `label_set` (string): ID of the labelset used by this corpus
-        
+
 * `label_set` (OpenContractsLabelSetType): Metadata about the label set, with fields:
     - `id` (int)
-    - `title` (string)  
+    - `title` (string)
     - `description` (string)
     - `icon_name` (string): Filename of the labelset icon
-    - `icon_data` (string): Base64 encoded labelset icon data 
+    - `icon_data` (string): Base64 encoded labelset icon data
     - `creator` (string): Email of the labelset creator
 
 
@@ -61,7 +61,7 @@ Each document in `annotated_docs` is represented by an OpenContractDocExport obj
 * `doc_labels` (list[string]): List of document label names applied to this doc
 * `labelled_text` (list[OpenContractsAnnotationPythonType]): List of text annotations
 * `title` (string): Document title
-* `content` (string): Full text content of the document  
+* `content` (string): Full text content of the document
 * `description` (string): Description of the document
 * `pawls_file_content` (list[PawlsPagePythonType]): PAWLS parse data for each page
 * `page_count` (int): Number of pages in the document
@@ -70,10 +70,10 @@ Each document in `annotated_docs` is represented by an OpenContractDocExport obj
 
 Represents an individual text annotation, with fields:
 
-* `id` (string): Optional ID 
+* `id` (string): Optional ID
 * `annotationLabel` (string): Name of the label for this annotation
 * `rawText` (string): Raw text content of the annotation
-* `page` (int): 0-based page number the annotation is on 
+* `page` (int): 0-based page number the annotation is on
 * `annotation_json` (dict): Maps page numbers to OpenContractsSinglePageAnnotationType
 
 ### OpenContractsSinglePageAnnotationType Format
@@ -89,11 +89,11 @@ Represents the annotation data for a single page:
 Represents a bounding box with fields:
 
 * `top` (int)
-* `bottom` (int)  
+* `bottom` (int)
 * `left` (int)
 * `right` (int)
 
-### TokenIdPythonType Format  
+### TokenIdPythonType Format
 
 References a PAWLS token by page and token index:
 
@@ -109,7 +109,7 @@ Represents PAWLS parse data for a single page:
 
 ### PawlsPageBoundaryPythonType Format
 
-Represents the page boundary with fields:  
+Represents the page boundary with fields:
 
 * `width` (float)
 * `height` (float)
@@ -119,10 +119,10 @@ Represents the page boundary with fields:
 
 Represents a single PAWLS token with fields:
 
-* `x` (float): X-coordinate of token box 
+* `x` (float): X-coordinate of token box
 * `y` (float): Y-coordinate of token box
 * `width` (float): Width of token box
-* `height` (float): Height of token box  
+* `height` (float): Height of token box
 * `text` (string): Text content of the token
 
 ### AnnotationLabelPythonType Format
@@ -130,13 +130,13 @@ Represents a single PAWLS token with fields:
 Defines an annotation label with fields:
 
 * `id` (string)
-* `color` (string): Hex color for the label 
-* `description` (string) 
+* `color` (string): Hex color for the label
+* `description` (string)
 * `icon` (string): Icon name
 * `text` (string): Label text
 * `label_type` (LabelType): One of DOC_TYPE_LABEL, TOKEN_LABEL, RELATIONSHIP_LABEL, METADATA_LABEL
 
-### Example data.json 
+### Example data.json
 ```json
 {
   "annotated_docs": {
@@ -212,7 +212,7 @@ Defines an annotation label with fields:
       "label_type": "DOC_TYPE_LABEL"
     },
     "NDA": {
-      "id": "2", 
+      "id": "2",
       "color": "#00FF00",
       "description": "Indicates a non-disclosure agreement",
       "icon": "nda",
@@ -241,7 +241,7 @@ Defines an annotation label with fields:
   },
   "label_set": {
     "id": "4",
-    "title": "Example Label Set",  
+    "title": "Example Label Set",
     "description": "A sample label set",
     "icon_name": "label_icon.png",
     "icon_data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==",

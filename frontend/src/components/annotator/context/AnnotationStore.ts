@@ -217,7 +217,9 @@ export class PdfAnnotations {
 interface _AnnotationStore {
   spanLabels: AnnotationLabelType[];
   humanSpanLabelChoices: AnnotationLabelType[];
+  showStructuralLabels?: boolean;
   activeSpanLabel?: AnnotationLabelType | undefined;
+  showOnlySpanLabels?: AnnotationLabelType[];
   setActiveLabel: (label: AnnotationLabelType) => void;
 
   scrollContainerRef: React.RefObject<HTMLDivElement> | undefined;
@@ -261,6 +263,7 @@ interface _AnnotationStore {
   textSearchMatches: TextSearchResult[];
   selectedTextSearchMatchIndex: number;
   searchText: string | undefined;
+  toggleShowStructuralLabels: () => void;
   searchForText: (searchText: string) => void;
   advanceTextSearchMatch: () => void;
   reverseTextSearchMatch: () => void;
@@ -282,6 +285,11 @@ interface _AnnotationStore {
   createAnnotation: (a: ServerAnnotation) => void;
   deleteAnnotation: (annotation_id: string) => void;
   updateAnnotation: (a: ServerAnnotation) => void;
+
+  clearViewLabels: () => void;
+  setViewLabels: (ls: AnnotationLabelType[]) => void;
+  addLabelsToView: (ls: AnnotationLabelType[]) => void;
+  removeLabelsToView: (ls: AnnotationLabelType[]) => void;
 
   createDocTypeAnnotation: (dt: DocTypeAnnotation) => void;
   deleteDocTypeAnnotation: (doc_annotation_id: string) => void;
@@ -312,11 +320,16 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   pageSelectionQueue: [],
   spanLabels: [],
   humanSpanLabelChoices: [],
+  showStructuralLabels: false,
   activeSpanLabel: undefined,
+  showOnlySpanLabels: [],
   docText: undefined,
   textSearchMatches: [],
   selectedTextSearchMatchIndex: 1,
   searchText: undefined,
+  toggleShowStructuralLabels: () => {
+    throw new Error("toggleShowStructuralLabels() - not implemented");
+  },
   searchForText: (searchText: string) => {
     throw new Error("searchForText() - not implemented");
   },
@@ -339,6 +352,18 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   },
   setActiveLabel: (_?: AnnotationLabelType) => {
     throw new Error("Unimplemented");
+  },
+  clearViewLabels: () => {
+    throw new Error("clearViewLabels is not implemented");
+  },
+  setViewLabels: () => {
+    throw new Error("setViewLabels() is not implemented");
+  },
+  addLabelsToView: (_?: AnnotationLabelType[]) => {
+    throw new Error("addLabelsToView is not implemented");
+  },
+  removeLabelsToView: (_?: AnnotationLabelType[]) => {
+    throw new Error("removeLabelsToViewis not implemented");
   },
   scrollContainerRef: undefined,
   setScrollContainerRef: (ref: React.RefObject<HTMLDivElement> | undefined) => {

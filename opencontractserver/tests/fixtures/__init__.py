@@ -28,7 +28,9 @@ SAMPLE_PDF_FILE_ONE_PATH = (
 
 # files for nlm ingestor pipeline test
 NLM_INGESTOR_SAMPLE_PDF = pathlib.Path(__file__).parent / "sample.pdf"
-NLM_INGESTOR_EXPECTED_JSON = pathlib.Path(__file__).parent / "nlm_ingestor_output_for_sample_pdf.json"
+NLM_INGESTOR_EXPECTED_JSON = (
+    pathlib.Path(__file__).parent / "nlm_ingestor_output_for_sample_pdf.json"
+)
 
 SAMPLE_PDF_FILE_TWO_PATH = pathlib.Path(__file__).parent / "USC Title 1 - CHAPTER 1.pdf"
 

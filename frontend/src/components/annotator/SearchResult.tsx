@@ -7,7 +7,7 @@ import { BoundingBox } from "../types";
 import { LabelDisplayBehavior } from "../../graphql/types";
 import { getBorderWidthFromBounds } from "./utils/transform";
 import { LabelTagContainer } from "./LabelTagContainer";
-import { SelectionTokens } from "./SelectionTokens";
+import { SearchSelectionTokens } from "./SelectionTokens";
 import { TextSearchResult } from "../types";
 
 import { ResultBoundary } from "./ResultBoundary";
@@ -89,7 +89,7 @@ export const SearchResult = ({
         // positioned element. This is why SelectionTokens are not inside
         // SelectionBoundary.
         match.tokens[pageInfo.page.pageNumber - 1] !== undefined ? (
-          <SelectionTokens
+          <SearchSelectionTokens
             color={color}
             highOpacity={!showBoundingBox}
             hidden={hidden}

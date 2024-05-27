@@ -1,22 +1,20 @@
 # Copyright (C) 2024 - John Scrudato
 import json
 import logging
-import responses
 
-from django.contrib.auth import get_user_model
-from django.test import TestCase
+import responses
 from django.conf import settings
-from django.db import transaction
+from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from django.db import transaction
+from django.test import TestCase
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.documents.models import Document
-from opencontractserver.tasks.doc_tasks import (
-    nlm_ingest_pdf
-)
+from opencontractserver.tasks.doc_tasks import nlm_ingest_pdf
 from opencontractserver.tests.fixtures import (
+    NLM_INGESTOR_EXPECTED_JSON,
     NLM_INGESTOR_SAMPLE_PDF,
-    NLM_INGESTOR_EXPECTED_JSON
 )
 
 User = get_user_model()
@@ -25,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 class NlmIngestorTestCase(TestCase):
-
     def setUp(self):
 
         # Setup a test user ######################################################################
@@ -51,8 +48,9 @@ class NlmIngestorTestCase(TestCase):
 
         nlm_parse_response = responses.Response(
             method="POST",
-            url=settings.NLM_INGEST_HOSTNAME + "/api/parseDocument/?calculate_opencontracts_data=yes&applyOcr=no",
-            json=json.loads(NLM_INGESTOR_EXPECTED_JSON.read_text())
+            url=settings.NLM_INGEST_HOSTNAME
+            + "/api/parseDocument?calculate_opencontracts_data=yes&applyOcr=no",
+            json=json.loads(NLM_INGESTOR_EXPECTED_JSON.read_text()),
         )
         responses.add(nlm_parse_response)
 

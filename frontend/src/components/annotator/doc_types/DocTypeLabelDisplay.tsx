@@ -249,7 +249,7 @@ const DocTypeWidgetContainer = styled.div<HideableHasWidth>(
   ({ width }) => `
     position: fixed;
     z-index: 1000;
-    bottom: ${width <= 400 ? "10px" : "2vh"};
+    bottom: ${Number(width) <= 400 ? "10px" : "2vh"};
     right: 0px;
     display: flex;
     flex-direction: row;

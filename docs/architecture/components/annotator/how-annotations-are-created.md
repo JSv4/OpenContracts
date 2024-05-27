@@ -44,5 +44,3 @@ graph TD
     Q -->|Error| S[Display error message]
     R --> T[Re-render components with updated annotations]
 ```
-
-

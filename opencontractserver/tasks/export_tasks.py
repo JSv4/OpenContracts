@@ -14,9 +14,10 @@ from django.utils import timezone
 
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.types.dicts import (
+    AnnotationLabelPythonType,
     FunsdAnnotationType,
     OpenContractDocExport,
-    OpenContractsExportDataJsonPythonType, AnnotationLabelPythonType,
+    OpenContractsExportDataJsonPythonType,
 )
 from opencontractserver.users.models import UserExport
 from opencontractserver.utils.packaging import (

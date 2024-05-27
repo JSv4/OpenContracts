@@ -35,3 +35,6 @@ CELERY_FLOWER_PASSWORD=U3Md7XEGNZ67HlNwHon8fbwiT0GemPeCrwDubZ6BRvX3dwxMEsLhuLoiU
 # AUTH0
 # ------------------------------------------------------------------------------
 USE_AUTH0=false
+
+# Turn on Embeddings Microservice
+# ------------------------------------------------------------------------------

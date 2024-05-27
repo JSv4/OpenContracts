@@ -32,6 +32,7 @@ import { LabelDisplayBehavior } from "../../../graphql/types";
 import { SearchSidebarWidget } from "../search_widget/SearchSidebarWidget";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import { ViewLabelSelector } from "../view_labels_selector/ViewLabelSelector";
 
 const label_display_options = [
   { key: 1, text: "Always Show", value: LabelDisplayBehavior.ALWAYS },
@@ -106,6 +107,7 @@ export const AnnotatorSidebar = ({
   const annotations = annotationStore.pdfAnnotations.annotations;
   const relations = annotationStore.pdfAnnotations.relations;
   const selectedRelations = annotationStore.selectedRelations;
+  const { showStructuralLabels, toggleShowStructuralLabels } = annotationStore;
 
   const onRemoveAnnotationFromRelation = (
     annotationId: string,
@@ -307,6 +309,14 @@ export const AnnotatorSidebar = ({
                       />
                     </Grid.Column>
                     <Grid.Column textAlign="center" verticalAlign="middle">
+                      <Header size="tiny">Show Layout Blocks</Header>
+                      <Checkbox
+                        toggle
+                        onChange={(e, data) => toggleShowStructuralLabels()}
+                        checked={showStructuralLabels}
+                      />
+                    </Grid.Column>
+                    <Grid.Column textAlign="center" verticalAlign="middle">
                       <Header size="tiny">Show Bounding Boxes</Header>
                       <Checkbox
                         toggle
@@ -327,7 +337,12 @@ export const AnnotatorSidebar = ({
                         options={label_display_options}
                         selection
                         value={label_display_behavior}
+                        style={{ minWidth: "12em" }}
                       />
+                    </Grid.Column>
+                    <Grid.Column textAlign="center" verticalAlign="middle">
+                      <Header size="tiny">These Labels Only</Header>
+                      <ViewLabelSelector />
                     </Grid.Column>
                   </Grid.Row>
                 </Grid>

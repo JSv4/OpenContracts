@@ -3,6 +3,7 @@ import functools
 import django
 from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
+from pgvector.django import VectorField
 
 from opencontractserver.shared.defaults import jsonfield_default_value
 from opencontractserver.shared.fields import NullableJSONField
@@ -55,6 +56,9 @@ class Document(BaseOCModel):
         upload_to=functools.partial(calc_oc_file_path, sub_folder="pawls_layers_files"),
         null=True,
     )
+
+    # Vector for vector search
+    embedding = VectorField(dimensions=384, null=True)
 
     class Meta:
         permissions = (

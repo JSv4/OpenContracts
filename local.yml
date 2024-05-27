@@ -15,6 +15,8 @@ services:
     depends_on:
       - postgres
       - redis
+      - vector-embedder
+      - nlm-ingestor
     volumes:
       - .:/app:z
     env_file:
@@ -28,6 +30,7 @@ services:
     build:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
+    container_name: postgres
     image: opencontractserver_production_postgres
     volumes:
       - local_postgres_data:/var/lib/postgresql/data:Z
@@ -42,6 +45,12 @@ services:
   nlm-ingestor:
     image: jscrudato/nlm-ingestor-opencontracts
     container_name: nlm-ingestor
+
+  vector-embedder:
+    image: jscrudato/vector-embedder-microservice
+    container_name: vector-embedder
+    environment:
+      PORT: 8000
 
   celeryworker:
     <<: *django

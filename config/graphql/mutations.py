@@ -1338,10 +1338,7 @@ class CreateLanguageModel(graphene.Mutation):
     @staticmethod
     @login_required
     def mutate(root, info, model):
-        language_model = LanguageModel(
-            model=model,
-            creator=info.context.user
-        )
+        language_model = LanguageModel(model=model, creator=info.context.user)
         language_model.save()
         set_permissions_for_obj_to_user(
             info.context.user, language_model, [PermissionTypes.CRUD]
@@ -1364,7 +1361,7 @@ class CreateFieldset(graphene.Mutation):
             owner=info.context.user,
             name=name,
             description=description,
-            creator=info.context.user
+            creator=info.context.user,
         )
         fieldset.save()
         set_permissions_for_obj_to_user(
@@ -1401,9 +1398,7 @@ class CreateColumn(graphene.Mutation):
         limit_to_label=None,
         instructions=None,
     ):
-        fieldset = Fieldset.objects.get(
-            pk=from_global_id(fieldset_id)[1]
-        )
+        fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
         language_model = LanguageModel.objects.get(
             pk=from_global_id(language_model_id)[1]
         )
@@ -1416,7 +1411,7 @@ class CreateColumn(graphene.Mutation):
             instructions=instructions,
             language_model=language_model,
             agentic=agentic,
-            creator=info.context.user
+            creator=info.context.user,
         )
         column.save()
         set_permissions_for_obj_to_user(
@@ -1445,7 +1440,7 @@ class StartExtract(graphene.Mutation):
             name=name,
             fieldset=fieldset,
             owner=info.context.user,
-            creator=info.context.user
+            creator=info.context.user,
         )
         extract.save()
         set_permissions_for_obj_to_user(

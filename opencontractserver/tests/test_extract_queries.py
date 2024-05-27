@@ -29,14 +29,13 @@ class ExtractsQueryTestCase(TestCase):
         self.client = Client(schema, context_value=TestContext(self.user))
 
         self.language_model = LanguageModel.objects.create(
-            model="TestModel",
-            creator=self.user
+            model="TestModel", creator=self.user
         )
         self.fieldset = Fieldset.objects.create(
             owner=self.user,
             name="TestFieldset",
             description="Test description",
-            creator=self.user
+            creator=self.user,
         )
         self.column = Column.objects.create(
             creator=self.user,
@@ -52,14 +51,14 @@ class ExtractsQueryTestCase(TestCase):
             name="TestExtract",
             fieldset=self.fieldset,
             owner=self.user,
-            creator=self.user
+            creator=self.user,
         )
         self.row = Row.objects.create(
             extract=self.extract,
             column=self.column,
             data={"data": "TestData"},
             data_definition="str",
-            creator=self.user
+            creator=self.user,
         )
 
     def test_language_model_query(self):

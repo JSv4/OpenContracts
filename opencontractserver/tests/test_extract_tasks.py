@@ -1,4 +1,3 @@
-import json
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -33,14 +32,13 @@ class ExtractsTaskTestCase(TestCase):
         )
 
         self.language_model = LanguageModel.objects.create(
-            model="TestModel",
-            creator=self.user
+            model="TestModel", creator=self.user
         )
         self.fieldset = Fieldset.objects.create(
             owner=self.user,
             name="TestFieldset",
             description="Test description",
-            creator=self.user
+            creator=self.user,
         )
         self.column = Column.objects.create(
             fieldset=self.fieldset,
@@ -48,7 +46,7 @@ class ExtractsTaskTestCase(TestCase):
             output_type="str",
             language_model=self.language_model,
             agentic=True,
-            creator=self.user
+            creator=self.user,
         )
         self.corpus = Corpus.objects.create(title="TestCorpus", creator=self.user)
         self.extract = Extract.objects.create(
@@ -56,7 +54,7 @@ class ExtractsTaskTestCase(TestCase):
             name="TestExtract",
             fieldset=self.fieldset,
             owner=self.user,
-            creator=self.user
+            creator=self.user,
         )
 
         pdf_file = ContentFile(
@@ -89,10 +87,7 @@ class ExtractsTaskTestCase(TestCase):
         self.extract.refresh_from_db()
         self.assertIsNotNone(self.extract.started)
 
-        row = Row.objects.filter(
-            extract=self.extract,
-            column=self.column
-        ).first()
+        row = Row.objects.filter(extract=self.extract, column=self.column).first()
         self.assertIsNotNone(row)
         self.assertEqual(row.data, {"data": "Mocked extracted data"})
         self.assertEqual(row.data_definition, "str")

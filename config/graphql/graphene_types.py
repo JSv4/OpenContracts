@@ -324,6 +324,9 @@ class ExtractType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
 
 class RowType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+
+    data = GenericScalar()
+
     class Meta:
         model = Row
         interfaces = [relay.Node]

@@ -1282,7 +1282,6 @@ class StartCorpusAnalysisMutation(graphene.Mutation):
 
 
 class DeleteAnalysisMutation(graphene.Mutation):
-
     ok = graphene.Boolean()
     message = graphene.String()
 
@@ -1327,6 +1326,136 @@ class ObtainJSONWebTokenWithUser(graphql_jwt.ObtainJSONWebToken):
     @classmethod
     def resolve(cls, root, info, **kwargs):
         return cls(user=info.context.user)
+
+
+class CreateLanguageModel(graphene.Mutation):
+    class Arguments:
+        model = graphene.String(required=True)
+
+    ok = graphene.Boolean()
+    language_model = graphene.Field(LanguageModelType)
+
+    @staticmethod
+    @login_required
+    def mutate(root, info, model):
+        language_model = LanguageModel(
+            model=model,
+            creator=info.context.user
+        )
+        language_model.save()
+        set_permissions_for_obj_to_user(
+            info.context.user, language_model, [PermissionTypes.CRUD]
+        )
+        return CreateLanguageModel(ok=True, language_model=language_model)
+
+
+class CreateFieldset(graphene.Mutation):
+    class Arguments:
+        name = graphene.String(required=True)
+        description = graphene.String(required=True)
+
+    ok = graphene.Boolean()
+    fieldset = graphene.Field(FieldsetType)
+
+    @staticmethod
+    @login_required
+    def mutate(root, info, name, description):
+        fieldset = Fieldset(
+            owner=info.context.user,
+            name=name,
+            description=description,
+            creator=info.context.user
+        )
+        fieldset.save()
+        set_permissions_for_obj_to_user(
+            info.context.user, fieldset, [PermissionTypes.CRUD]
+        )
+        return CreateFieldset(ok=True, fieldset=fieldset)
+
+
+class CreateColumn(graphene.Mutation):
+    class Arguments:
+        fieldset_id = graphene.ID(required=True)
+        query = graphene.String(required=True)
+        match_text = graphene.String()
+        output_type = graphene.String(required=True)
+        limit_to_label = graphene.String()
+        instructions = graphene.String()
+        language_model_id = graphene.ID(required=True)
+        agentic = graphene.Boolean(required=True)
+
+    ok = graphene.Boolean()
+    column = graphene.Field(ColumnType)
+
+    @staticmethod
+    @login_required
+    def mutate(
+        root,
+        info,
+        fieldset_id,
+        query,
+        output_type,
+        language_model_id,
+        agentic,
+        match_text=None,
+        limit_to_label=None,
+        instructions=None,
+    ):
+        fieldset = Fieldset.objects.get(
+            pk=from_global_id(fieldset_id)[1]
+        )
+        language_model = LanguageModel.objects.get(
+            pk=from_global_id(language_model_id)[1]
+        )
+        column = Column(
+            fieldset=fieldset,
+            query=query,
+            match_text=match_text,
+            output_type=output_type,
+            limit_to_label=limit_to_label,
+            instructions=instructions,
+            language_model=language_model,
+            agentic=agentic,
+            creator=info.context.user
+        )
+        column.save()
+        set_permissions_for_obj_to_user(
+            info.context.user, column, [PermissionTypes.CRUD]
+        )
+        return CreateColumn(ok=True, column=column)
+
+
+class StartExtract(graphene.Mutation):
+    class Arguments:
+        corpus_id = graphene.ID(required=True)
+        name = graphene.String(required=True)
+        fieldset_id = graphene.ID(required=True)
+
+    ok = graphene.Boolean()
+    extract = graphene.Field(ExtractType)
+
+    @staticmethod
+    @login_required
+    def mutate(root, info, corpus_id, name, fieldset_id):
+        corpus = Corpus.objects.get(pk=from_global_id(corpus_id)[1])
+        fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
+
+        extract = Extract(
+            corpus=corpus,
+            name=name,
+            fieldset=fieldset,
+            owner=info.context.user,
+            creator=info.context.user
+        )
+        extract.save()
+        set_permissions_for_obj_to_user(
+            info.context.user, extract, [PermissionTypes.CRUD]
+        )
+
+        # Start celery task to process extract
+        run_extract.delay(extract.id, info.context.user.id)
+
+        return StartExtract(ok=True, extract=extract)
 
 
 class Mutation(graphene.ObjectType):
@@ -1396,117 +1525,8 @@ class Mutation(graphene.ObjectType):
     delete_analysis = DeleteAnalysisMutation.Field()
     make_analysis_public = MakeAnalysisPublic.Field()
 
-
-class CreateLanguageModel(graphene.Mutation):
-    class Arguments:
-        model = graphene.String(required=True)
-
-    ok = graphene.Boolean()
-    language_model = graphene.Field(LanguageModelType)
-
-    @staticmethod
-    @login_required
-    def mutate(root, info, model):
-        language_model = LanguageModel(model=model)
-        language_model.save()
-        set_permissions_for_obj_to_user(
-            info.context.user, language_model, [PermissionTypes.CRUD]
-        )
-        return CreateLanguageModel(ok=True, language_model=language_model)
-
-
-class CreateFieldset(graphene.Mutation):
-    class Arguments:
-        name = graphene.String(required=True)
-        description = graphene.String(required=True)
-
-    ok = graphene.Boolean()
-    fieldset = graphene.Field(FieldsetType)
-
-    @staticmethod
-    @login_required
-    def mutate(root, info, name, description):
-        fieldset = Fieldset(owner=info.context.user, name=name, description=description)
-        fieldset.save()
-        set_permissions_for_obj_to_user(
-            info.context.user, fieldset, [PermissionTypes.CRUD]
-        )
-        return CreateFieldset(ok=True, fieldset=fieldset)
-
-
-class CreateColumn(graphene.Mutation):
-    class Arguments:
-        fieldset_id = graphene.ID(required=True)
-        query = graphene.String(required=True)
-        match_text = graphene.String()
-        output_type = graphene.String(required=True)
-        limit_to_label = graphene.String()
-        instructions = graphene.String()
-        language_model_id = graphene.ID(required=True)
-        agentic = graphene.Boolean(required=True)
-
-    ok = graphene.Boolean()
-    column = graphene.Field(ColumnType)
-
-    @staticmethod
-    @login_required
-    def mutate(
-        root,
-        info,
-        fieldset_id,
-        query,
-        output_type,
-        language_model_id,
-        agentic,
-        match_text=None,
-        limit_to_label=None,
-        instructions=None,
-    ):
-        fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
-        language_model = LanguageModel.objects.get(
-            pk=from_global_id(language_model_id)[1]
-        )
-        column = Column(
-            fieldset=fieldset,
-            query=query,
-            match_text=match_text,
-            output_type=output_type,
-            limit_to_label=limit_to_label,
-            instructions=instructions,
-            language_model=language_model,
-            agentic=agentic,
-        )
-        column.save()
-        set_permissions_for_obj_to_user(
-            info.context.user, column, [PermissionTypes.CRUD]
-        )
-        return CreateColumn(ok=True, column=column)
-
-
-class StartExtract(graphene.Mutation):
-    class Arguments:
-        corpus_id = graphene.ID(required=True)
-        name = graphene.String(required=True)
-        fieldset_id = graphene.ID(required=True)
-
-    ok = graphene.Boolean()
-    extract = graphene.Field(ExtractType)
-
-    @staticmethod
-    @login_required
-    def mutate(root, info, corpus_id, name, fieldset_id):
-        corpus = Corpus.objects.get(pk=from_global_id(corpus_id)[1])
-        fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
-
-        extract = Extract(
-            corpus=corpus, name=name, fieldset=fieldset, owner=info.context.user
-        )
-        extract.save()
-        set_permissions_for_obj_to_user(
-            info.context.user, extract, [PermissionTypes.CRUD]
-        )
-
-        # Start celery task to process extract
-        run_extract.delay(extract.id, info.context.user.id)
-
-        return StartExtract(ok=True, extract=extract)
+    # EXTRACT MUTATIONS ##########################################################
+    create_language_model = CreateLanguageModel.Field()
+    create_fieldset = CreateFieldset.Field()
+    create_column = CreateColumn.Field()
+    start_extract = StartExtract.Field()

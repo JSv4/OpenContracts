@@ -20,7 +20,8 @@ class TestContext:
 class ExtractsMutationTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser", password="testpassword"
+            username="testuser",
+            password="testpassword"
         )
         self.client = Client(schema, context_value=TestContext(self.user))
 
@@ -76,9 +77,12 @@ class ExtractsMutationTestCase(TestCase):
         )
 
     def test_create_column_mutation(self):
-        language_model = LanguageModel.objects.create(model="TestModel")
+        language_model = LanguageModel.objects.create(model="TestModel", creator=self.user)
         fieldset = Fieldset.objects.create(
-            owner=self.user, name="TestFieldset", description="Test description"
+            owner=self.user,
+            name="TestFieldset",
+            description="Test description",
+            creator=self.user
         )
 
         mutation = """
@@ -114,7 +118,10 @@ class ExtractsMutationTestCase(TestCase):
 
     def test_start_extract_mutation(self):
         fieldset = Fieldset.objects.create(
-            owner=self.user, name="TestFieldset", description="Test description"
+            owner=self.user,
+            name="TestFieldset",
+            description="Test description",
+            creator=self.user
         )
 
         mutation = """

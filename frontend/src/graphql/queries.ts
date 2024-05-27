@@ -1008,7 +1008,7 @@ export interface GetFieldsetsOutputs {
   };
 }
 
-export const GET_FIELDSETS = gql`
+export const REQUEST_GET_FIELDSETS = gql`
   query GetFieldsets {
     fieldsets {
       edges {
@@ -1074,7 +1074,7 @@ export interface GetExportsOutput {
   extract: ExtractType;
 }
 
-export const GET_EXPORT = gql`
+export const REQUEST_GET_EXTRACT = gql`
   query GetExtract($id: ID!) {
     extract(id: $id) {
       id

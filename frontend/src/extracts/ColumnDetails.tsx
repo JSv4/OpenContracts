@@ -2,6 +2,12 @@ import React, { useState } from "react";
 import { Button, Form, Input, Select } from "semantic-ui-react";
 import { useMutation, useQuery } from "@apollo/client";
 import { toast } from "react-toastify";
+import { ColumnType, LanguageModelType } from "../graphql/types";
+import { GET_LANGUAGEMODELS } from "../graphql/queries";
+import {
+  REQUEST_CREATE_COLUMN,
+  REQUEST_UPDATE_COLUMN,
+} from "../graphql/mutations";
 
 interface ColumnDetailsProps {
   column?: ColumnType;
@@ -26,10 +32,10 @@ export const ColumnDetails: React.FC<ColumnDetailsProps> = ({
 
   const { data: languageModelsData } = useQuery<{
     languageModels: LanguageModelType[];
-  }>(GET_LANGUAGE_MODELS);
+  }>(GET_LANGUAGEMODELS);
 
-  const [createColumn] = useMutation(CREATE_COLUMN);
-  const [updateColumn] = useMutation(UPDATE_COLUMN);
+  const [createColumn] = useMutation(REQUEST_CREATE_COLUMN);
+  const [updateColumn] = useMutation(REQUEST_UPDATE_COLUMN);
 
   const handleSave = async () => {
     try {
@@ -105,10 +111,14 @@ export const ColumnDetails: React.FC<ColumnDetailsProps> = ({
         <label>Language Model</label>
         <Select
           value={languageModelId}
-          options={languageModelsData?.languageModels.map((model) => ({
-            value: model.id,
-            text: model.model,
-          }))}
+          options={
+            languageModelsData?.languageModels
+              ? languageModelsData.languageModels.map((model) => ({
+                  value: model.id,
+                  text: model.model,
+                }))
+              : []
+          }
           onChange={(_, { value }) => setLanguageModelId(value as string)}
         />
       </Form.Field>

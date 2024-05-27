@@ -4,9 +4,13 @@ import { ExportTypes, MultipageAnnotationJson } from "../components/types";
 import {
   AnalysisType,
   AnnotationLabelType,
+  ColumnType,
   CorpusType,
+  ExtractType,
+  FieldsetType,
   LabelSetType,
   LabelType,
+  LanguageModelType,
   Maybe,
   UserExportType,
 } from "./types";
@@ -1075,14 +1079,224 @@ export interface RequestCreateLanguageModelInputType {
   model: string;
 }
 
-export interface RequestCreateLanguageModelOutputType {}
+export interface RequestCreateLanguageModelOutputType {
+  languageModel: {
+    ok: boolean;
+    message: string;
+    obj: LanguageModelType;
+  };
+}
 
 export const REQUEST_CREATE_LANGUAGEMODEL = gql`
   mutation CreateLanguageModel($model: String!) {
     createLanguageModel(model: $model) {
       languageModel {
         id
-        model
+        message
+        obj {
+          id
+        }
+      }
+    }
+  }
+`;
+
+export interface RequestCreateFieldsetInputType {
+  name: string;
+  description: string;
+}
+
+export interface RequestCreateFieldsetOutputType {
+  createFieldset: {
+    ok: boolean;
+    message: string;
+    obj: FieldsetType;
+  };
+}
+
+export const REQUEST_CREATE_FIELDSET = gql`
+  mutation CreateFieldset($name: String!, $description: String!) {
+    createFieldset(name: $name, description: $description) {
+      ok
+      msg
+      obj {
+        id
+        name
+        description
+      }
+    }
+  }
+`;
+
+export interface RequestUpdateFieldsetOutputType {
+  updateFieldset: {
+    ok: boolean;
+    message: string;
+    obj: FieldsetType;
+  };
+}
+
+export interface RequestUpdateFieldsetInputType {
+  id: string;
+  name?: string;
+  description?: string;
+}
+
+export const REQUEST_UPDATE_FIELDSET = gql`
+  mutation UpdateFieldset($id: ID!, $name: String, $description: String) {
+    updateFieldset(id: $id, name: $name, description: $description) {
+      msg
+      ok
+      obj {
+        id
+        name
+        description
+      }
+    }
+  }
+`;
+
+export interface RequestCreateColumnInputType {
+  fieldsetId: string;
+  query: string;
+  matchText?: string;
+  outputType: string;
+  limitToLabel?: string;
+  instructions?: string;
+  languageModelId: string;
+  agentic: boolean;
+}
+
+export interface RequestCreateColumnOutputType {
+  createColumn: {
+    ok: boolean;
+    msg: string;
+    obj: ColumnType;
+  };
+}
+
+export const REQUEST_CREATE_COLUMN = gql`
+  mutation CreateColumn(
+    $fieldsetId: ID!
+    $query: String!
+    $matchText: String
+    $outputType: String!
+    $limitToLabel: String
+    $instructions: String
+    $languageModelId: ID!
+    $agentic: Boolean!
+  ) {
+    createColumn(
+      fieldsetId: $fieldsetId
+      query: $query
+      matchText: $matchText
+      outputType: $outputType
+      limitToLabel: $limitToLabel
+      instructions: $instructions
+      languageModelId: $languageModelId
+      agentic: $agentic
+    ) {
+      msg
+      ok
+      obj {
+        id
+        query
+        matchText
+        outputType
+        limitToLabel
+        instructions
+        languageModel {
+          id
+          model
+        }
+        agentic
+      }
+    }
+  }
+`;
+
+export interface RequestUpdateColumnInputType {
+  id: string;
+  fieldsetId: string;
+  query: string;
+  matchText?: string;
+  outputType: string;
+  limitToLabel?: string;
+  instructions?: string;
+  languageModelId: string;
+  agentic: boolean;
+}
+
+export interface RequestUpdateColumnOutputType {
+  updateColumn: {
+    ok: boolean;
+    msg: string;
+    obj: ColumnType;
+  };
+}
+
+export const REQUEST_UPDATE_COLUMN = gql`
+  mutation UpdateColumn(
+    $id: ID!
+    $query: String
+    $matchText: String
+    $outputType: String
+    $limitToLabel: String
+    $instructions: String
+    $languageModelId: ID
+    $agentic: Boolean
+  ) {
+    updateColumn(
+      id: $id
+      query: $query
+      matchText: $matchText
+      outputType: $outputType
+      limitToLabel: $limitToLabel
+      instructions: $instructions
+      languageModelId: $languageModelId
+      agentic: $agentic
+    ) {
+      msg
+      ok
+      obj {
+        id
+        query
+        matchText
+        outputType
+        limitToLabel
+        instructions
+        languageModel {
+          id
+          model
+        }
+        agentic
+      }
+    }
+  }
+`;
+
+export interface RequestStartExtractOutputType {
+  startExtract: {
+    msg: string;
+    ok: boolean;
+    obj: ExtractType;
+  };
+}
+
+export interface RequestStartExtractInputType {
+  corpusId: string;
+  name: string;
+  fieldsetId: string;
+}
+
+export const REQUEST_START_EXTRACT = gql`
+  mutation StartExtract($corpusId: ID!, $name: String!, $fieldsetId: ID!) {
+    startExtract(corpusId: $corpusId, name: $name, fieldsetId: $fieldsetId) {
+      msg
+      ok
+      obj {
+        id
+        name
       }
     }
   }

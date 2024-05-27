@@ -22,7 +22,7 @@ from opencontractserver.extracts.models import (
     Extract,
     Fieldset,
     LanguageModel,
-    Row,
+    Datacell,
 )
 from opencontractserver.users.models import Assignment, UserExport
 
@@ -428,9 +428,9 @@ class ExtractFilter(django_filters.FilterSet):
         }
 
 
-class RowFilter(django_filters.FilterSet):
+class DatacellFilter(django_filters.FilterSet):
     class Meta:
-        model = Row
+        model = Datacell
         fields = {
             "data_definition": ["exact"],
             "started": ["lte", "gte"],

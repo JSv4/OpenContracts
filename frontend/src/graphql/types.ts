@@ -1172,6 +1172,7 @@ export type AnalyzerManifestType = {
 };
 
 export interface LanguageModelType extends Node {
+  id: string;
   model: string;
 }
 
@@ -1213,5 +1214,4 @@ export interface RowType extends Node {
   started?: Maybe<string>;
   completed?: Maybe<string>;
   failed?: Maybe<string>;
-  stacktrace?: Maybe<string>;
 }

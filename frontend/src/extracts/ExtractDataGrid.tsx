@@ -41,6 +41,8 @@ export const ExtractDataGrid: React.FC<ExtractDataGridProps> = ({
   const columns = extract.fieldset.columns;
   const rows = extract.rows;
 
+  console.log("Extract:", extract);
+
   return (
     <div>
       <Table celled>

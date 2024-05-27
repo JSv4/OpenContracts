@@ -20,6 +20,8 @@ export const ColumnDetails: React.FC<ColumnDetailsProps> = ({
   fieldsetId,
   onSave,
 }) => {
+  console.log("ColumnDetails - column: ", column);
+
   const [query, setQuery] = useState(column?.query || "");
   const [matchText, setMatchText] = useState(column?.matchText || "");
   const [outputType, setOutputType] = useState(column?.outputType || "");

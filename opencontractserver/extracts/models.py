@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 
 from opencontractserver.corpuses.models import Corpus
+from opencontractserver.documents.models import Document
 from opencontractserver.shared.defaults import jsonfield_default_value
 from opencontractserver.shared.fields import NullableJSONField
 from opencontractserver.shared.Models import BaseOCModel
@@ -132,7 +133,6 @@ class Extract(BaseOCModel):
     created = django.db.models.DateTimeField(auto_now_add=True)
     started = django.db.models.DateTimeField(null=True, blank=True)
     finished = django.db.models.DateTimeField(null=True, blank=True)
-    stacktrace = django.db.models.TextField(null=True, blank=True)
 
     class Meta:
         permissions = (
@@ -156,12 +156,15 @@ class ExtractGroupObjectPermission(GroupObjectPermissionBase):
     )
 
 
-class Row(BaseOCModel):
+class Datacell(BaseOCModel):
     extract = django.db.models.ForeignKey(
-        "Extract", related_name="rows", on_delete=django.db.models.CASCADE
+        "Extract", related_name="extracted_datacels", on_delete=django.db.models.CASCADE
     )
     column = django.db.models.ForeignKey(
-        "Column", related_name="rows", on_delete=django.db.models.CASCADE
+        "Column", related_name="extracted_datacels", on_delete=django.db.models.CASCADE
+    )
+    document = django.db.models.ForeignKey(
+        Document, related_name="extracted_datacels", on_delete=django.db.models.CASCADE
     )
     data = NullableJSONField(default=jsonfield_default_value, null=True, blank=True)
     data_definition = django.db.models.TextField(null=False, blank=False)
@@ -172,21 +175,21 @@ class Row(BaseOCModel):
 
     class Meta:
         permissions = (
-            ("permission_row", "permission row"),
-            ("create_row", "create row"),
-            ("read_row", "read row"),
-            ("update_row", "update row"),
-            ("remove_row", "delete row"),
+            ("permission_datacell", "permission datacell"),
+            ("create_datacell", "create datacell"),
+            ("read_datacell", "read datacell"),
+            ("update_datacell", "update datacell"),
+            ("remove_datacell", "delete datacell"),
         )
 
 
-class RowUserObjectPermission(UserObjectPermissionBase):
+class DatacellUserObjectPermission(UserObjectPermissionBase):
     content_object = django.db.models.ForeignKey(
-        "Row", on_delete=django.db.models.CASCADE
+        "Datacell", on_delete=django.db.models.CASCADE
     )
 
 
-class RowGroupObjectPermission(GroupObjectPermissionBase):
+class DatacellGroupObjectPermission(GroupObjectPermissionBase):
     content_object = django.db.models.ForeignKey(
-        "Row", on_delete=django.db.models.CASCADE
+        "Datacell", on_delete=django.db.models.CASCADE
     )

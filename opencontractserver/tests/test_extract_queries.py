@@ -10,7 +10,7 @@ from opencontractserver.extracts.models import (
     Extract,
     Fieldset,
     LanguageModel,
-    Row,
+    DataCell,
 )
 
 User = get_user_model()
@@ -53,7 +53,7 @@ class ExtractsQueryTestCase(TestCase):
             owner=self.user,
             creator=self.user,
         )
-        self.row = Row.objects.create(
+        self.row = DataCell.objects.create(
             extract=self.extract,
             column=self.column,
             data={"data": "TestData"},

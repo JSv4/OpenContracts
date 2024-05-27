@@ -26,7 +26,7 @@ from opencontractserver.extracts.models import (
     Extract,
     Fieldset,
     LanguageModel,
-    Row,
+    Datacell,
 )
 from opencontractserver.users.models import Assignment, UserExport, UserImport
 
@@ -323,11 +323,11 @@ class ExtractType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         connection_class = CountableConnection
 
 
-class RowType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+class DatacellType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
     data = GenericScalar()
 
     class Meta:
-        model = Row
+        model = Datacell
         interfaces = [relay.Node]
         connection_class = CountableConnection

@@ -6,7 +6,7 @@ from django.utils import timezone
 from pgvector.django import L2Distance
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.extracts.models import Extract, Row
+from opencontractserver.extracts.models import Extract, DataCell
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.embeddings import calculate_embedding_for_text
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
@@ -43,7 +43,7 @@ def run_extract(extract_id, user_id):
         for column in fieldset.columns.all():
 
             with transaction.atomic():
-                row = Row.objects.create(
+                row = DataCell.objects.create(
                     extract=extract,
                     column=column,
                     data_definition=column.output_type,

@@ -1098,7 +1098,6 @@ export const REQUEST_GET_EXTRACT = gql`
       created
       started
       finished
-      stacktrace
       rows {
         id
         column {

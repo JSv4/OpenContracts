@@ -27,7 +27,7 @@ from config.graphql.filters import (
     LabelsetFilter,
     LanguageModelFilter,
     RelationshipFilter,
-    RowFilter,
+    DatacellFilter,
 )
 from config.graphql.graphene_types import (
     AnalysisType,
@@ -46,7 +46,7 @@ from config.graphql.graphene_types import (
     PageAwareAnnotationType,
     PdfPageInfoType,
     RelationshipType,
-    RowType,
+    DatacellType,
     UserExportType,
     UserImportType,
 )
@@ -64,7 +64,7 @@ from opencontractserver.extracts.models import (
     Extract,
     Fieldset,
     LanguageModel,
-    Row,
+    Datacell,
 )
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.types.enums import LabelType
@@ -750,30 +750,30 @@ class Query(graphene.ObjectType):
                 Q(owner=info.context.user) | Q(is_public=True)
             )
 
-    row = relay.Node.Field(RowType)
+    datacell = relay.Node.Field(DatacellType)
 
     @login_required
-    def resolve_row(self, info, **kwargs):
+    def resolve_datacell(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         if info.context.user.is_superuser:
-            return Row.objects.get(id=django_pk)
+            return Datacell.objects.get(id=django_pk)
         elif info.context.user.is_anonymous:
-            return Row.objects.get(Q(id=django_pk) & Q(is_public=True))
+            return Datacell.objects.get(Q(id=django_pk) & Q(is_public=True))
         else:
-            return Row.objects.get(
+            return Datacell.objects.get(
                 Q(id=django_pk)
                 & (Q(extract__owner=info.context.user) | Q(is_public=True))
             )
 
-    rows = DjangoFilterConnectionField(RowType, filterset_class=RowFilter)
+    datacells = DjangoFilterConnectionField(DatacellType, filterset_class=DatacellFilter)
 
     @login_required
-    def resolve_rows(self, info, **kwargs):
+    def resolve_datacells(self, info, **kwargs):
         if info.context.user.is_superuser:
-            return Row.objects.all()
+            return Datacell.objects.all()
         elif info.context.user.is_anonymous:
-            return Row.objects.filter(Q(is_public=True))
+            return Datacell.objects.filter(Q(is_public=True))
         else:
-            return Row.objects.filter(
+            return Datacell.objects.filter(
                 Q(extract__owner=info.context.user) | Q(is_public=True)
             )

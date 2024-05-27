@@ -12,7 +12,7 @@ from opencontractserver.extracts.models import (
     Extract,
     Fieldset,
     LanguageModel,
-    Row,
+    DataCell,
 )
 from opencontractserver.tasks.extract_tasks import run_extract
 from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_TWO_PATH
@@ -87,7 +87,7 @@ class ExtractsTaskTestCase(TestCase):
         self.extract.refresh_from_db()
         self.assertIsNotNone(self.extract.started)
 
-        row = Row.objects.filter(extract=self.extract, column=self.column).first()
+        row = DataCell.objects.filter(extract=self.extract, column=self.column).first()
         self.assertIsNotNone(row)
         self.assertEqual(row.data, {"data": "Mocked extracted data"})
         self.assertEqual(row.data_definition, "str")

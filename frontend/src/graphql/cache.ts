@@ -14,6 +14,7 @@ import {
   LabelSetType,
   LabelDisplayBehavior,
   AnalysisType,
+  ExtractType,
 } from "./types";
 
 export const mergeArrayByIdFieldPolicy: FieldPolicy<Reference[]> = {
@@ -180,6 +181,8 @@ export const showAnnotationLabels = makeVar<LabelDisplayBehavior>(
   LabelDisplayBehavior.ON_HOVER
 );
 export const pagesVisible = makeVar<Record<number, string>>({});
+export const showEditExtractModal = makeVar<boolean>(false);
+export const showDeleteExtractModal = makeVar<boolean>(false);
 
 /**
  *  Document-related global variables.
@@ -191,10 +194,17 @@ export const viewingDocument = makeVar<DocumentType | null>(null);
 export const editingDocument = makeVar<DocumentType | null>(null);
 
 /**
+ * Extract-related global variables
+ */
+export const selectedExtractId = makeVar<string | null>(null);
+export const openedExtract = makeVar<ExtractType | null>(null);
+
+/**
  * Corpus-related global variables
  */
 export const corpusSearchTerm = makeVar<string>("");
 export const filterToCorpus = makeVar<CorpusType | null>(null);
+export const selectedCorpus = makeVar<CorpusType | null>(null);
 export const openedCorpus = makeVar<CorpusType | null>(null);
 export const viewingCorpus = makeVar<CorpusType | null>(null);
 export const deletingCorpus = makeVar<CorpusType | null>(null);

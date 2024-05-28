@@ -824,6 +824,24 @@ export const REQUEST_DELETE_ANNOTATION = gql`
   }
 `;
 
+export interface RequestDeleteExtractInputType {
+  id: string;
+}
+
+export interface RequestDeleteExtractOutputType {
+  deleteExtract: {
+    ok: boolean;
+  };
+}
+
+export const REQUEST_DELETE_EXTRACT = gql`
+  mutation ($id: String!) {
+    deleteExtract(id: $id) {
+      ok
+    }
+  }
+`;
+
 export interface NewRelationshipInputType {
   relationshipLabelId: string;
   documentId: string;

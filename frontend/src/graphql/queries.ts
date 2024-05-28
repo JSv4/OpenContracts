@@ -1070,7 +1070,11 @@ export const GET_FIELDSET = gql`
   }
 `;
 
-export interface GetExportsOutput {
+export interface RequestGetExtractInput {
+  id: string;
+}
+
+export interface GetExtractOutput {
   extract: ExtractType;
 }
 
@@ -1098,10 +1102,14 @@ export const REQUEST_GET_EXTRACT = gql`
       created
       started
       finished
-      rows {
+      datacells {
         id
         column {
           id
+        }
+        document {
+          id
+          name
         }
         data
         dataDefinition
@@ -1109,6 +1117,70 @@ export const REQUEST_GET_EXTRACT = gql`
         completed
         failed
         stacktrace
+      }
+    }
+  }
+`;
+
+export interface GetExtractsInput {
+  name?: string;
+  created?: string;
+  started?: string;
+  finished?: string;
+}
+
+export interface GetExtractsOutput {
+  extracts: {
+    pageInfo: PageInfo;
+    edges: {
+      node: ExtractType;
+    }[];
+  };
+}
+
+export const REQUEST_GET_EXTRACTS = gql`
+  query GetExtracts($id: ID!) {
+    extracts(id: $id) {
+      edges {
+        node {
+          id
+          corpus {
+            id
+            title
+          }
+          name
+          fieldset {
+            id
+            name
+            columns {
+              id
+              query
+            }
+          }
+          owner {
+            id
+            username
+          }
+          created
+          started
+          finished
+          datacells {
+            id
+            column {
+              id
+            }
+            document {
+              id
+              name
+            }
+            data
+            dataDefinition
+            started
+            completed
+            failed
+            stacktrace
+          }
+        }
       }
     }
   }

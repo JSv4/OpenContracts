@@ -737,7 +737,10 @@ class Query(graphene.ObjectType):
                 Q(id=django_pk) & (Q(owner=info.context.user) | Q(is_public=True))
             )
 
-    extracts = DjangoFilterConnectionField(ExtractType, filterset_class=ExtractFilter)
+    extracts = DjangoFilterConnectionField(
+        ExtractType,
+        filterset_class=ExtractFilter
+    )
 
     @login_required
     def resolve_extracts(self, info, **kwargs):

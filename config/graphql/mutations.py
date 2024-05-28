@@ -1456,6 +1456,16 @@ class StartExtract(graphene.Mutation):
         return StartExtract(ok=True, message="SUCCESS!", obj=extract)
 
 
+class DeleteExtract(DRFDeletion):
+    class IOSettings:
+        model = Extract
+        lookup_field = "id"
+
+    class Arguments:
+        id = graphene.String(required=True)
+
+
+
 class Mutation(graphene.ObjectType):
     # TOKEN MUTATIONS (IF WE'RE NOT OUTSOURCING JWT CREATION TO AUTH0) #######
     if not settings.USE_AUTH0:
@@ -1528,3 +1538,4 @@ class Mutation(graphene.ObjectType):
     create_fieldset = CreateFieldset.Field()
     create_column = CreateColumn.Field()
     start_extract = StartExtract.Field()
+    delete_extract = DeleteExtract.Field()  # TODO - test

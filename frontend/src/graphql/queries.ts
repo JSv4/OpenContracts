@@ -1139,8 +1139,8 @@ export interface GetExtractsOutput {
 }
 
 export const REQUEST_GET_EXTRACTS = gql`
-  query GetExtracts($id: ID!) {
-    extracts(id: $id) {
+  query GetExtracts {
+    extracts {
       edges {
         node {
           id
@@ -1153,8 +1153,12 @@ export const REQUEST_GET_EXTRACTS = gql`
             id
             name
             columns {
-              id
-              query
+              edges {
+                node {
+                  id
+                  query
+                }
+              }
             }
           }
           owner {
@@ -1164,21 +1168,25 @@ export const REQUEST_GET_EXTRACTS = gql`
           created
           started
           finished
-          datacells {
-            id
-            column {
-              id
+          extractedDatacells {
+            edges {
+              node {
+                id
+                column {
+                  id
+                }
+                document {
+                  id
+                  title
+                }
+                data
+                dataDefinition
+                started
+                completed
+                failed
+                stacktrace
+              }
             }
-            document {
-              id
-              name
-            }
-            data
-            dataDefinition
-            started
-            completed
-            failed
-            stacktrace
           }
         }
       }

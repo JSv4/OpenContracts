@@ -39,7 +39,7 @@ export const ExtractDataGrid: React.FC<ExtractDataGridProps> = ({
 
   const { extract } = data;
   const columns = extract.fieldset.columns;
-  const datacells = extract.datacells;
+  const datacells = extract.extractedDatacells;
   const documents = extract.documents ? extract.documents : [];
 
   console.log("Extract:", extract);
@@ -57,13 +57,19 @@ export const ExtractDataGrid: React.FC<ExtractDataGridProps> = ({
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          {datacells.map((row: DatacellType) => (
-            <Table.Row key={row.id}>
-              {columns.map((column: ColumnType) => (
-                <Table.Cell key={column.id}>{row.data[column.id]}</Table.Cell>
-              ))}
-            </Table.Row>
-          ))}
+          {datacells?.edges ? (
+            datacells.edges.map((row) => (
+              <Table.Row key={row?.node?.id}>
+                {columns.map((column: ColumnType) => (
+                  <Table.Cell key={column.id}>
+                    {row && row.node ? row.node.data[column.id] : ""}
+                  </Table.Cell>
+                ))}
+              </Table.Row>
+            ))
+          ) : (
+            <></>
+          )}
         </Table.Body>
       </Table>
       {!extract.started && (

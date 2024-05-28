@@ -184,6 +184,7 @@ export const showAnnotationLabels = makeVar<LabelDisplayBehavior>(
 export const pagesVisible = makeVar<Record<number, string>>({});
 export const showEditExtractModal = makeVar<boolean>(false);
 export const showDeleteExtractModal = makeVar<boolean>(false);
+export const showCreateExtractModal = makeVar<boolean>(false);
 
 /**
  *  Document-related global variables.

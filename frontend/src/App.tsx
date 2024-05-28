@@ -41,6 +41,7 @@ import useWindowDimensions from "./components/hooks/WindowDimensionHook";
 import { MobileNavMenu } from "./components/layout/MobileNavMenu";
 import { LabelDisplayBehavior } from "./graphql/types";
 import { CookieConsentDialog } from "./components/cookies/CookieConsent";
+import { Extracts } from "./views/Extracts";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = process.env;
@@ -150,6 +151,7 @@ export const App = () => {
               <Route path="/annotations" element={<Annotations />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms_of_service" element={<TermsOfService />} />
+              <Route path="/extracts" element={<Extracts />} />
             </Routes>
           </Container>
           <Footer />

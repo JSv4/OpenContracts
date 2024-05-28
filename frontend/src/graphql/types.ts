@@ -1194,6 +1194,19 @@ export interface ColumnType extends Node {
   agentic: boolean;
 }
 
+export type DatacellTypeConnection = {
+  __typename?: "DatacellTypeConnection";
+  pageInfo: PageInfo;
+  edges: Array<Maybe<DatacellTypeEdge>>;
+  totalCount?: Maybe<Scalars["Int"]>;
+};
+
+export type DatacellTypeEdge = {
+  __typename?: "DatacellTypeEdge";
+  node?: Maybe<DatacellType>;
+  cursor: Scalars["String"];
+};
+
 export interface ExtractType extends Node {
   corpus: CorpusType;
   name: string;
@@ -1203,8 +1216,8 @@ export interface ExtractType extends Node {
   started?: Maybe<string>;
   finished?: Maybe<string>;
   stacktrace?: Maybe<string>;
-  datacells: DatacellType[];
   documents?: DocumentType[];
+  extractedDatacells?: DatacellTypeConnection;
 }
 
 export interface DatacellType extends Node {

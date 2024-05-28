@@ -13,6 +13,7 @@ import {
   GET_DOCUMENTS,
   GetExtractsOutput,
   GetExtractsInput,
+  REQUEST_GET_EXTRACTS,
 } from "../graphql/queries";
 import {
   authToken,
@@ -20,6 +21,7 @@ import {
   selectedExtractId,
   showDeleteExtractModal,
   showEditExtractModal,
+  showCreateExtractModal,
 } from "../graphql/cache";
 
 import { ActionDropdownItem, LooseObject } from "../components/types";
@@ -27,11 +29,13 @@ import { CardLayout } from "../components/layout/CardLayout";
 import { ExtractType } from "../graphql/types";
 import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { ExtractList } from "../extracts/list/ExtractList";
+import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";
 
-export const Documents = () => {
+export const Extracts = () => {
   const auth_token = useReactiveVar(authToken);
   const opened_extract = useReactiveVar(openedExtract);
   const selected_extract_id = useReactiveVar(selectedExtractId);
+  const show_create_extract_modal = useReactiveVar(showCreateExtractModal);
   const show_edit_extract_modal = useReactiveVar(showEditExtractModal);
   const show_delete_extract_modal = useReactiveVar(showDeleteExtractModal);
 
@@ -47,18 +51,19 @@ export const Documents = () => {
     error: extracts_error,
     data: extracts_data,
     fetchMore: fetchMoreExtracts,
-  } = useQuery<GetExtractsOutput, GetExtractsInput>(GET_DOCUMENTS, {
+  } = useQuery<GetExtractsOutput, GetExtractsInput>(REQUEST_GET_EXTRACTS, {
     variables: extract_variables,
     nextFetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
   });
 
-  const extract_nodes = extracts_data?.extracts?.edges
-    ? extracts_data.extracts.edges
-    : [];
-  const extract_items = extract_nodes
-    .map((edge) => (edge?.node ? edge.node : undefined))
-    .filter((item): item is ExtractType => !!item);
+  // const extract_nodes = extracts_data?.extracts?.edges
+  //   ? extracts_data.extracts.edges
+  //   : [];
+  // const extract_items = extract_nodes
+  //   .map((edge) => (edge?.node ? edge.node : undefined))
+  //   .filter((item): item is ExtractType => !!item);
+  const extract_items: ExtractType[] = [];
 
   // If we just logged in, refetch extracts in case there are extracts that are not public and are only visible to current user
   useEffect(() => {
@@ -110,14 +115,13 @@ export const Documents = () => {
   let extract_actions: ActionDropdownItem[] = [];
 
   if (auth_token) {
-    // document_actions.push({
-    //   key: "documents_action_dropdown_0",
-    //   title: "Import",
-    //   icon: "cloud upload",
-    //   color: "blue",
-    //   action_function: () =>
-    //     showUploadNewDocumentsModal(!show_upload_new_documents_modal),
-    // });
+    extract_actions.push({
+      key: "extracts_action_dropdown_0",
+      title: "Create",
+      icon: "plus",
+      color: "blue",
+      action_function: () => showCreateExtractModal(!show_create_extract_modal),
+    });
   }
 
   return (
@@ -140,7 +144,7 @@ export const Documents = () => {
           />
         </>
       }
-      SearchBar={<span>Hold For Stuff</span>}
+      SearchBar={<CreateAndSearchBar actions={extract_actions} />}
     >
       <ExtractList
         items={extract_items}

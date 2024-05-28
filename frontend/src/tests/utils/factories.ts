@@ -215,7 +215,6 @@ export function generateMockExtract(
     started: null,
     finished: null,
     stacktrace: null,
-    datacells: [],
   };
 }
 

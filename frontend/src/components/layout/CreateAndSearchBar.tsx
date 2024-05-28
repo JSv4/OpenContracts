@@ -15,10 +15,10 @@ export interface DropdownActionProps {
 interface CreateAndSearchBarProps {
   actions: DropdownActionProps[];
   filters?: JSX.Element | JSX.Element[];
-  placeholder: string;
-  value: string;
+  placeholder?: string;
+  value?: string;
   style?: object | {};
-  onChange: (search_string: string) => any | void;
+  onChange?: (search_string: string) => any | void;
 }
 
 export const CreateAndSearchBar = ({
@@ -77,28 +77,33 @@ export const CreateAndSearchBar = ({
     return (
       <MobileSearchBarContainer>
         <SearchBarContainer style={style}>
-          <div
-            style={
-              use_mobile_layout
-                ? {
-                    width: "175px",
-                  }
-                : {
-                    width: "25vw",
-                    minWidth: "175px",
-                    maxWidth: "400px",
-                  }
-            }
-          >
-            <Form>
-              <Form.Input
-                icon="search"
-                placeholder={placeholder}
-                onChange={(data) => onChange(data.target.value)}
-                value={value}
-              />
-            </Form>
-          </div>
+          {onChange ? (
+            <div
+              style={
+                use_mobile_layout
+                  ? {
+                      width: "175px",
+                    }
+                  : {
+                      width: "25vw",
+                      minWidth: "175px",
+                      maxWidth: "400px",
+                    }
+              }
+            >
+              <Form>
+                <Form.Input
+                  icon="search"
+                  placeholder={placeholder}
+                  onChange={(data) => onChange(data.target.value)}
+                  value={value}
+                />
+              </Form>
+            </div>
+          ) : (
+            <></>
+          )}
+
           <div
             style={{
               display: "flex",
@@ -129,16 +134,20 @@ export const CreateAndSearchBar = ({
   } else {
     return (
       <SearchBarContainer style={style}>
-        <div style={{ width: "25vw" }}>
-          <Form>
-            <Form.Input
-              icon="search"
-              placeholder={placeholder}
-              onChange={(data) => onChange(data.target.value)}
-              value={value}
-            />
-          </Form>
-        </div>
+        {onChange ? (
+          <div style={{ width: "25vw" }}>
+            <Form>
+              <Form.Input
+                icon="search"
+                placeholder={placeholder}
+                onChange={(data) => onChange(data.target.value)}
+                value={value}
+              />
+            </Form>
+          </div>
+        ) : (
+          <></>
+        )}
         <FilterWrapper>{filters}</FilterWrapper>
         <div>{buttongroup}</div>
       </SearchBarContainer>

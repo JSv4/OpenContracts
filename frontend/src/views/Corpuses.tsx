@@ -313,7 +313,7 @@ export const Corpuses = () => {
   }, [location]);
 
   useEffect(() => {
-    if (!opened_corpus_id) {
+    if (!opened_corpus_id || opened_corpus_id === null) {
       refetchCorpuses();
     } else {
       fetchMetadata({ variables: { metadataForCorpusId: opened_corpus_id } });

@@ -153,7 +153,9 @@ export function generateMockFieldset(owner: UserType): FieldsetType {
     owner,
     name: "mockFieldset",
     description: "Mock fieldset description",
-    columns: [],
+    columns: {
+      edges: [],
+    },
   };
 }
 

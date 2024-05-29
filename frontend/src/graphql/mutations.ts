@@ -1293,29 +1293,49 @@ export const REQUEST_UPDATE_COLUMN = gql`
   }
 `;
 
-export interface RequestStartExtractOutputType {
-  startExtract: {
+export interface RequestCreateExtractOutputType {
+  createExtract: {
     msg: string;
     ok: boolean;
     obj: ExtractType;
   };
 }
 
-export interface RequestStartExtractInputType {
+export interface RequestCreateExtractInputType {
   corpusId: string;
   name: string;
   fieldsetId: string;
 }
 
-export const REQUEST_START_EXTRACT = gql`
-  mutation StartExtract($corpusId: ID!, $name: String!, $fieldsetId: ID!) {
-    startExtract(corpusId: $corpusId, name: $name, fieldsetId: $fieldsetId) {
+export const REQUEST_CREATE_EXTRACT = gql`
+  mutation CreateExtract($corpusId: ID!, $name: String!, $fieldsetId: ID!) {
+    createExtract(corpusId: $corpusId, name: $name, fieldsetId: $fieldsetId) {
       msg
       ok
       obj {
         id
         name
       }
+    }
+  }
+`;
+
+export interface RequestStartExtractOutputType {
+  startExtract: {
+    msg: string;
+    ok: boolean;
+  };
+}
+
+export interface RequestStartExtractInputType {
+  extractId: string;
+}
+
+export const REQUEST_START_EXTRACT = gql`
+  mutation StartExtract($extractId: ID!) {
+    startExtract(extractId: $extractId) {
+      msg
+      ok
     }
   }
 `;

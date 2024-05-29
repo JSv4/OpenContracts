@@ -4,9 +4,9 @@ import { useMutation, useQuery } from "@apollo/client";
 import { toast } from "react-toastify";
 
 import { ColumnDetails } from "./ColumnDetails";
-import { ColumnType, ExtractType, DatacellType } from "../graphql/types";
+import { ExtractType } from "../graphql/types";
 import { REQUEST_GET_EXTRACT } from "../graphql/queries";
-import { REQUEST_START_EXTRACT } from "../graphql/mutations";
+import { REQUEST_CREATE_EXTRACT } from "../graphql/mutations";
 
 interface ExtractDataGridProps {
   extractId: string;
@@ -21,7 +21,7 @@ export const ExtractDataGrid: React.FC<ExtractDataGridProps> = ({
       variables: { id: extractId },
     }
   );
-  const [startExtract] = useMutation(REQUEST_START_EXTRACT);
+  const [startExtract] = useMutation(REQUEST_CREATE_EXTRACT);
 
   const handleStartExtract = async () => {
     try {
@@ -49,9 +49,9 @@ export const ExtractDataGrid: React.FC<ExtractDataGridProps> = ({
       <Table celled>
         <Table.Header>
           <Table.Row>
-            {columns.map((column) => (
-              <Table.HeaderCell key={column.id}>
-                {column.query}
+            {columns.edges.map((columnEdge) => (
+              <Table.HeaderCell key={columnEdge.node.id}>
+                {columnEdge.node.query}
               </Table.HeaderCell>
             ))}
           </Table.Row>
@@ -60,9 +60,9 @@ export const ExtractDataGrid: React.FC<ExtractDataGridProps> = ({
           {datacells?.edges ? (
             datacells.edges.map((row) => (
               <Table.Row key={row?.node?.id}>
-                {columns.map((column: ColumnType) => (
-                  <Table.Cell key={column.id}>
-                    {row && row.node ? row.node.data[column.id] : ""}
+                {columns.edges.map((columnEdge) => (
+                  <Table.Cell key={columnEdge.node.id}>
+                    {row && row.node ? row.node.data[columnEdge.node.id] : ""}
                   </Table.Cell>
                 ))}
               </Table.Row>
@@ -75,10 +75,10 @@ export const ExtractDataGrid: React.FC<ExtractDataGridProps> = ({
       {!extract.started && (
         <>
           <h3>Edit Columns</h3>
-          {columns.map((column) => (
+          {columns.edges.map((columnEdge) => (
             <ColumnDetails
-              key={column.id}
-              column={column}
+              key={columnEdge.node.id}
+              column={columnEdge.node}
               fieldsetId={extract.fieldset.id}
               onSave={refetch}
             />

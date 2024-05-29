@@ -53,10 +53,10 @@ export const FieldsetDetails: React.FC<FieldsetDetailsProps> = ({
         </Form.Field>
       </Form>
       <h3>Columns</h3>
-      {fieldset.columns.map((column: ColumnType) => (
+      {fieldset.columns.edges.map((columnEdge) => (
         <ColumnDetails
-          key={column.id}
-          column={column}
+          key={columnEdge.node.id}
+          column={columnEdge.node}
           fieldsetId={fieldset.id}
           onSave={onSave}
         />

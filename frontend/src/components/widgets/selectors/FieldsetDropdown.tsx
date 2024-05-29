@@ -1,4 +1,4 @@
-import React, { SyntheticEvent, useEffect, useState } from "react";
+import React, { SyntheticEvent, useCallback, useEffect, useState } from "react";
 import { useQuery, useReactiveVar } from "@apollo/client";
 import { Dropdown, DropdownProps } from "semantic-ui-react";
 import {
@@ -20,7 +20,16 @@ export const FieldsetDropdown: React.FC = () => {
   const selected_fieldset = useReactiveVar(selectedFieldset);
 
   const { loading, error, data, refetch } = useQuery<GetFieldsetsOutputs>(
-    REQUEST_GET_FIELDSETS
+    REQUEST_GET_FIELDSETS,
+    {
+      variables: searchQuery
+        ? {
+            searchText: searchQuery,
+          }
+        : {},
+      fetchPolicy: "network-only",
+      notifyOnNetworkStatusChange: true,
+    }
   );
 
   // If the searchQuery changes... refetch fieldsets.
@@ -32,11 +41,18 @@ export const FieldsetDropdown: React.FC = () => {
     ? data.fieldsets.edges.map((edge) => edge.node)
     : [];
 
+  const debouncedSetSearchQuery = useCallback(
+    _.debounce((query: string) => {
+      setSearchQuery(query);
+    }, 500),
+    []
+  );
+
   const handleSearchChange = (
     event: React.SyntheticEvent<HTMLElement>,
     { searchQuery }: { searchQuery: string }
   ) => {
-    setSearchQuery(searchQuery);
+    debouncedSetSearchQuery(searchQuery);
   };
 
   const handleSelectionChange = (
@@ -83,6 +99,7 @@ export const FieldsetDropdown: React.FC = () => {
       onChange={handleSelectionChange}
       onSearchChange={handleSearchChange}
       loading={loading}
+      style={{ minWidth: "50vw important!" }}
     />
   );
 };

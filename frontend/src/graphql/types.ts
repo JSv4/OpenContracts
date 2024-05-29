@@ -1180,7 +1180,7 @@ export interface FieldsetType extends Node {
   owner: UserType;
   name: string;
   description: string;
-  columns: ColumnType[];
+  columns: ColumnTypeEdge;
 }
 
 export interface ColumnType extends Node {
@@ -1192,6 +1192,14 @@ export interface ColumnType extends Node {
   instructions?: Maybe<string>;
   languageModel: LanguageModelType;
   agentic: boolean;
+}
+
+export interface ColumnTypeEdge {
+  __typename?: "ColumnTypeEdge";
+  pageInfo?: PageInfo;
+  edges: {
+    node: ColumnType;
+  }[];
 }
 
 export type DatacellTypeConnection = {

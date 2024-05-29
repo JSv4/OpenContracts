@@ -30,6 +30,7 @@ import { ExtractType } from "../graphql/types";
 import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { ExtractList } from "../extracts/list/ExtractList";
 import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";
+import { CreateExtractModal } from "../components/widgets/modals/CreateExtractModal";
 
 export const Extracts = () => {
   const auth_token = useReactiveVar(authToken);
@@ -57,13 +58,12 @@ export const Extracts = () => {
     notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
   });
 
-  // const extract_nodes = extracts_data?.extracts?.edges
-  //   ? extracts_data.extracts.edges
-  //   : [];
-  // const extract_items = extract_nodes
-  //   .map((edge) => (edge?.node ? edge.node : undefined))
-  //   .filter((item): item is ExtractType => !!item);
-  const extract_items: ExtractType[] = [];
+  const extract_nodes = extracts_data?.extracts?.edges
+    ? extracts_data.extracts.edges
+    : [];
+  const extract_items = extract_nodes
+    .map((edge) => (edge?.node ? edge.node : undefined))
+    .filter((item): item is ExtractType => !!item);
 
   // If we just logged in, refetch extracts in case there are extracts that are not public and are only visible to current user
   useEffect(() => {
@@ -141,6 +141,10 @@ export const Extracts = () => {
             noAction={() => showDeleteExtractModal(false)}
             toggleModal={() => showDeleteExtractModal(false)}
             visible={show_delete_extract_modal}
+          />
+          <CreateExtractModal
+            open={show_create_extract_modal}
+            onClose={() => showCreateExtractModal(false)}
           />
         </>
       }

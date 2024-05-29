@@ -25,7 +25,9 @@ const mockColumn: ColumnType = {
     owner: generateMockUser(),
     name: "The set to be",
     description: "Everyone's favorite hang",
-    columns: [],
+    columns: {
+      edges: [],
+    },
   },
 };
 

@@ -999,6 +999,10 @@ export const GET_LANGUAGEMODELS = gql`
   }
 `;
 
+export interface GetFieldsetsInputs {
+  searchText?: string;
+}
+
 export interface GetFieldsetsOutputs {
   fieldsets: {
     pageInfo: PageInfo;
@@ -1009,8 +1013,8 @@ export interface GetFieldsetsOutputs {
 }
 
 export const REQUEST_GET_FIELDSETS = gql`
-  query GetFieldsets {
-    fieldsets {
+  query GetFieldsets($searchText: String) {
+    fieldsets(name_Contains: $searchText) {
       edges {
         node {
           id
@@ -1021,17 +1025,21 @@ export const REQUEST_GET_FIELDSETS = gql`
           name
           description
           columns {
-            id
-            query
-            matchText
-            outputType
-            limitToLabel
-            instructions
-            languageModel {
-              id
-              model
+            edges {
+              node {
+                id
+                query
+                matchText
+                outputType
+                limitToLabel
+                instructions
+                languageModel {
+                  id
+                  model
+                }
+                agentic
+              }
             }
-            agentic
           }
         }
       }
@@ -1123,10 +1131,7 @@ export const REQUEST_GET_EXTRACT = gql`
 `;
 
 export interface GetExtractsInput {
-  name?: string;
-  created?: string;
-  started?: string;
-  finished?: string;
+  name_Contains?: string;
 }
 
 export interface GetExtractsOutput {
@@ -1139,8 +1144,8 @@ export interface GetExtractsOutput {
 }
 
 export const REQUEST_GET_EXTRACTS = gql`
-  query GetExtracts {
-    extracts {
+  query GetExtracts($searchText: String) {
+    extracts(name_Contains: $searchText) {
       edges {
         node {
           id

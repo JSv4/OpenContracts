@@ -1,4 +1,4 @@
-import React, { SyntheticEvent, useEffect, useState } from "react";
+import React, { SyntheticEvent, useCallback, useEffect, useState } from "react";
 import { useQuery, useReactiveVar } from "@apollo/client";
 import { Dropdown, DropdownProps } from "semantic-ui-react";
 import {
@@ -24,9 +24,11 @@ export const CorpusDropdown: React.FC = () => {
     GetCorpusesOutputs,
     GetCorpusesInputs
   >(GET_CORPUSES, {
-    variables: {
-      textSearch: searchQuery,
-    },
+    variables: searchQuery
+      ? {
+          textSearch: searchQuery,
+        }
+      : {},
   });
 
   // If the searchQuery changes... refetch corpuses.
@@ -38,11 +40,18 @@ export const CorpusDropdown: React.FC = () => {
     ? data.corpuses.edges.map((edge) => edge.node)
     : [];
 
+  const debouncedSetSearchQuery = useCallback(
+    _.debounce((query: string) => {
+      setSearchQuery(query);
+    }, 500),
+    []
+  );
+
   const handleSearchChange = (
     event: React.SyntheticEvent<HTMLElement>,
     { searchQuery }: { searchQuery: string }
   ) => {
-    setSearchQuery(searchQuery);
+    debouncedSetSearchQuery(searchQuery);
   };
 
   const handleSelectionChange = (

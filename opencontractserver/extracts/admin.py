@@ -1,7 +1,13 @@
 from django.contrib import admin
 from guardian.admin import GuardedModelAdmin
 
-from opencontractserver.extracts.models import Extract, Column, Datacell, Fieldset, LanguageModel
+from opencontractserver.extracts.models import (
+    Column,
+    Datacell,
+    Extract,
+    Fieldset,
+    LanguageModel,
+)
 
 
 @admin.register(Fieldset)
@@ -22,3 +28,8 @@ class ExtractAdmin(GuardedModelAdmin):
 @admin.register(LanguageModel)
 class LanguageModelAdmin(GuardedModelAdmin):
     list_display = ["id", "model"]
+
+
+@admin.register(Datacell)
+class DatacellAdmin(GuardedModelAdmin):
+    list_display = ["id", "extract", "column"]

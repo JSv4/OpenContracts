@@ -158,7 +158,9 @@ class ExtractGroupObjectPermission(GroupObjectPermissionBase):
 
 class Datacell(BaseOCModel):
     extract = django.db.models.ForeignKey(
-        "Extract", related_name="extracted_datacells", on_delete=django.db.models.CASCADE
+        "Extract",
+        related_name="extracted_datacells",
+        on_delete=django.db.models.CASCADE,
     )
     column = django.db.models.ForeignKey(
         "Column", related_name="extracted_datacells", on_delete=django.db.models.CASCADE

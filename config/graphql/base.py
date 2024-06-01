@@ -1,10 +1,10 @@
 import inspect
 import logging
+import traceback
 from abc import ABC
 
 import django.db.models
 import graphene
-import traceback
 from graphene.relay import Node
 from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import login_required

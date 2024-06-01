@@ -22,12 +22,19 @@ class TestContext:
 
 class ColumnMutationTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.user = User.objects.create_user(
+            username="testuser", password="testpassword"
+        )
         self.client = Client(schema, context_value=TestContext(self.user))
 
-        self.language_model = LanguageModel.objects.create(model="TestModel", creator=self.user)
+        self.language_model = LanguageModel.objects.create(
+            model="TestModel", creator=self.user
+        )
         self.fieldset = Fieldset.objects.create(
-            owner=self.user, name="TestFieldset", description="Test description", creator=self.user
+            owner=self.user,
+            name="TestFieldset",
+            description="Test description",
+            creator=self.user,
         )
         self.column = Column.objects.create(
             fieldset=self.fieldset,
@@ -40,9 +47,7 @@ class ColumnMutationTestCase(TestCase):
             agentic=False,
             creator=self.user,
         )
-        set_permissions_for_obj_to_user(
-            self.user, self.column, [PermissionTypes.CRUD]
-        )
+        set_permissions_for_obj_to_user(self.user, self.column, [PermissionTypes.CRUD])
 
     def test_update_column_mutation(self):
         mutation = """
@@ -70,7 +75,7 @@ class ColumnMutationTestCase(TestCase):
 
         result = self.client.execute(mutation)
         self.assertIsNone(result.get("errors"))
-        print(result.get('data'))
+        print(result.get("data"))
         self.assertTrue(result["data"]["updateColumn"]["ok"])
 
         updated_column = Column.objects.get(id=self.column.id)

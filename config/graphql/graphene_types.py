@@ -23,10 +23,10 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import (
     Column,
+    Datacell,
     Extract,
     Fieldset,
     LanguageModel,
-    Datacell,
 )
 from opencontractserver.users.models import Assignment, UserExport, UserImport
 

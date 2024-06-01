@@ -5,7 +5,7 @@ from rest_framework import serializers
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import Extract, Column
+from opencontractserver.extracts.models import Column, Extract
 from opencontractserver.shared.fields import PDFBase64File
 
 User = get_user_model()
@@ -51,7 +51,7 @@ class ExtractSerializer(serializers.ModelSerializer):
             "creator_id",
             "created",
             "started",
-            "finished"
+            "finished",
         ]
         read_only_fields = ["id", "created"]
 
@@ -71,7 +71,7 @@ class ColumnSerializer(serializers.ModelSerializer):
             "limit_to_label",
             "instructions",
             "language_model_id",
-            "agentic"
+            "agentic",
         ]
         read_only_fields = ["id", "created"]
 

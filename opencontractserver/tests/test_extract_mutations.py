@@ -42,9 +42,7 @@ class ExtractsMutationTestCase(TestCase):
         result = self.client.execute(mutation)
         self.assertIsNone(result.get("errors"))
         self.assertTrue(result["data"]["createLanguageModel"]["ok"])
-        self.assertIsNotNone(
-            result["data"]["createLanguageModel"]["obj"]["id"]
-        )
+        self.assertIsNotNone(result["data"]["createLanguageModel"]["obj"]["id"])
         self.assertEqual(
             result["data"]["createLanguageModel"]["obj"]["model"], "TestModel"
         )

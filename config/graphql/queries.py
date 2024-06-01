@@ -18,6 +18,7 @@ from config.graphql.filters import (
     AssignmentFilter,
     ColumnFilter,
     CorpusFilter,
+    DatacellFilter,
     DocumentFilter,
     ExportFilter,
     ExtractFilter,
@@ -27,7 +28,6 @@ from config.graphql.filters import (
     LabelsetFilter,
     LanguageModelFilter,
     RelationshipFilter,
-    DatacellFilter,
 )
 from config.graphql.graphene_types import (
     AnalysisType,
@@ -37,6 +37,7 @@ from config.graphql.graphene_types import (
     AssignmentType,
     ColumnType,
     CorpusType,
+    DatacellType,
     DocumentType,
     ExtractType,
     FieldsetType,
@@ -46,7 +47,6 @@ from config.graphql.graphene_types import (
     PageAwareAnnotationType,
     PdfPageInfoType,
     RelationshipType,
-    DatacellType,
     UserExportType,
     UserImportType,
 )
@@ -61,10 +61,10 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import (
     Column,
+    Datacell,
     Extract,
     Fieldset,
     LanguageModel,
-    Datacell,
 )
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.types.enums import LabelType
@@ -737,10 +737,7 @@ class Query(graphene.ObjectType):
                 Q(id=django_pk) & (Q(owner=info.context.user) | Q(is_public=True))
             )
 
-    extracts = DjangoFilterConnectionField(
-        ExtractType,
-        filterset_class=ExtractFilter
-    )
+    extracts = DjangoFilterConnectionField(ExtractType, filterset_class=ExtractFilter)
 
     @login_required
     def resolve_extracts(self, info, **kwargs):
@@ -768,7 +765,9 @@ class Query(graphene.ObjectType):
                 & (Q(extract__owner=info.context.user) | Q(is_public=True))
             )
 
-    datacells = DjangoFilterConnectionField(DatacellType, filterset_class=DatacellFilter)
+    datacells = DjangoFilterConnectionField(
+        DatacellType, filterset_class=DatacellFilter
+    )
 
     @login_required
     def resolve_datacells(self, info, **kwargs):

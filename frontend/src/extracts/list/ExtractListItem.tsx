@@ -7,9 +7,15 @@ interface ExtractItemRowProps {
   item: ExtractType;
   key: string;
   onDelete: (args?: any) => void | any;
+  onSelect?: (item: ExtractType) => void;
 }
 
-export function ExtractItemRow({ onDelete, item, key }: ExtractItemRowProps) {
+export function ExtractItemRow({
+  onSelect,
+  onDelete,
+  item,
+  key,
+}: ExtractItemRowProps) {
   let createdTime = "";
   let createdDate = "N/A";
   if (item.created) {
@@ -56,6 +62,13 @@ export function ExtractItemRow({ onDelete, item, key }: ExtractItemRowProps) {
       </Table.Cell>
       <Table.Cell textAlign="center">
         <div>
+          <Button
+            circular
+            size="mini"
+            icon="eye"
+            color="grey"
+            {...(onSelect ? { onClick: () => onSelect(item) } : {})}
+          />
           <Button
             circular
             size="mini"

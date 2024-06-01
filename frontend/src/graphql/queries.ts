@@ -9,15 +9,14 @@ import {
   LabelSetType,
   PageInfo,
   RelationshipType,
-  Scalars,
   AnalyzerType,
   AnalysisType,
   AnnotationLabelType,
-  LabelType,
   LanguageModelType,
   FieldsetType,
   ExtractType,
 } from "./types";
+import { ExportObject } from "./types";
 
 export interface RequestDocumentsInputs {
   textSearch?: string;
@@ -661,20 +660,6 @@ export interface RequestAnnotatorDataForDocumentInputs {
   forAnalysisIds?: string; // value should be comma separated ID strings
 }
 
-export interface PageAwareAnnotationType {
-  pdfPageInfo: {
-    pageCount: number;
-    currentPage: number;
-    corpusId: string;
-    documentId: string;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-    labelType: LabelType;
-    forAnalysisIds: string;
-  };
-  pageAnnotations: ServerAnnotationType[];
-}
-
 export interface RequestAnnotatorDataForDocumentOutputs {
   existingTextAnnotations: ServerAnnotationType[];
   existingDocLabelAnnotations: ServerAnnotationType[];
@@ -912,17 +897,6 @@ export interface GetExportsInputs {
   orderByFinished?: string;
 }
 
-export interface ExportObject {
-  id: string;
-  name: string;
-  finished: Scalars["DateTime"];
-  started: Scalars["DateTime"];
-  created: Scalars["DateTime"];
-  errors: string;
-  backendLock: boolean;
-  file: string;
-}
-
 export interface GetExportsOutputs {
   userexports: {
     pageInfo: PageInfo;
@@ -965,6 +939,40 @@ export const GET_EXPORTS = gql`
           errors
           backendLock
           file
+        }
+      }
+    }
+  }
+`;
+
+export interface GetExportInputType {
+  id: string;
+}
+
+export interface GetExportOutputType {
+  extract: ExtractType;
+}
+
+export const GET_EXPORT = gql`
+  query getExtract($id: ID!) {
+    extract(id: $id) {
+      id
+      name
+      fullDatacellList {
+        id
+        isPublic
+      }
+      fieldset {
+        fullColumnList {
+          id
+          limitToLabel
+          languageModel {
+            id
+            model
+          }
+          agentic
+          matchText
+          query
         }
       }
     }
@@ -1082,7 +1090,7 @@ export interface RequestGetExtractInput {
   id: string;
 }
 
-export interface GetExtractOutput {
+export interface RequestGetExtractOutput {
   extract: ExtractType;
 }
 
@@ -1098,9 +1106,16 @@ export const REQUEST_GET_EXTRACT = gql`
       fieldset {
         id
         name
-        columns {
+        fullColumnList {
           id
           query
+          matchText
+          limitToLabel
+          agentic
+          languageModel {
+            id
+            model
+          }
         }
       }
       owner {
@@ -1110,14 +1125,14 @@ export const REQUEST_GET_EXTRACT = gql`
       created
       started
       finished
-      datacells {
+      fullDatacellList {
         id
         column {
           id
         }
         document {
           id
-          name
+          title
         }
         data
         dataDefinition

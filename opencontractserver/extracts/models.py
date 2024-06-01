@@ -158,13 +158,13 @@ class ExtractGroupObjectPermission(GroupObjectPermissionBase):
 
 class Datacell(BaseOCModel):
     extract = django.db.models.ForeignKey(
-        "Extract", related_name="extracted_datacels", on_delete=django.db.models.CASCADE
+        "Extract", related_name="extracted_datacells", on_delete=django.db.models.CASCADE
     )
     column = django.db.models.ForeignKey(
-        "Column", related_name="extracted_datacels", on_delete=django.db.models.CASCADE
+        "Column", related_name="extracted_datacells", on_delete=django.db.models.CASCADE
     )
     document = django.db.models.ForeignKey(
-        Document, related_name="extracted_datacels", on_delete=django.db.models.CASCADE
+        Document, related_name="extracted_datacells", on_delete=django.db.models.CASCADE
     )
     data = NullableJSONField(default=jsonfield_default_value, null=True, blank=True)
     data_definition = django.db.models.TextField(null=False, blank=False)

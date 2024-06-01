@@ -10,6 +10,7 @@ interface ExtractListProps {
   style?: Record<string, any>;
   fetchMore: (args?: any) => void | any;
   onDelete: (args?: any) => void | any;
+  onSelectRow?: (item: ExtractType) => void;
 }
 
 export function ExtractList({
@@ -19,6 +20,7 @@ export function ExtractList({
   style,
   fetchMore,
   onDelete,
+  onSelectRow,
 }: ExtractListProps) {
   const handleUpdate = () => {
     if (!loading && pageInfo?.hasNextPage) {
@@ -36,6 +38,7 @@ export function ExtractList({
         <ExtractItemRow
           key={item.id}
           onDelete={() => onDelete(item.id)}
+          {...(onSelectRow ? { onSelect: () => onSelectRow(item) } : {})}
           item={item}
         />
       ))

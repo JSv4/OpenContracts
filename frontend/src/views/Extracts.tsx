@@ -31,6 +31,7 @@ import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { ExtractList } from "../extracts/list/ExtractList";
 import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";
 import { CreateExtractModal } from "../components/widgets/modals/CreateExtractModal";
+import { EditExtractModal } from "../components/widgets/modals/EditExtractModal";
 
 export const Extracts = () => {
   const auth_token = useReactiveVar(authToken);
@@ -146,6 +147,11 @@ export const Extracts = () => {
             open={show_create_extract_modal}
             onClose={() => showCreateExtractModal(false)}
           />
+          <EditExtractModal
+            extract={opened_extract}
+            open={opened_extract !== null}
+            toggleModal={() => openedExtract(null)}
+          />
         </>
       }
       SearchBar={<CreateAndSearchBar actions={extract_actions} />}
@@ -156,6 +162,7 @@ export const Extracts = () => {
         loading={extracts_loading}
         fetchMore={fetchMoreExtracts}
         onDelete={handleDeleteExtract}
+        onSelectRow={(it: ExtractType) => openedExtract(it)}
       />
     </CardLayout>
   );

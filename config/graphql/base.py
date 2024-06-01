@@ -4,6 +4,7 @@ from abc import ABC
 
 import django.db.models
 import graphene
+import traceback
 from graphene.relay import Node
 from graphene_django import DjangoObjectType
 from graphql_jwt.decorators import login_required
@@ -161,6 +162,7 @@ class DRFMutation(graphene.Mutation):
                                     from_global_id(kwargs.get(global_id, None))[1]
                                 )
                         else:
+                            logger.info(f"pk field is: {kwargs.get(pk_field, None)}")
                             pk_value = from_global_id(kwargs.get(pk_field, None))[1]
                         kwargs[pk_field] = pk_value
 
@@ -169,6 +171,8 @@ class DRFMutation(graphene.Mutation):
                 obj = cls.IOSettings.model.objects.get(
                     pk=from_global_id(kwargs.get(cls.IOSettings.lookup_field, None))[1]
                 )
+
+                logger.info(f"Retrieved obj: {obj}")
 
                 # Check the object isn't locked by another user
                 if hasattr(obj, "user_lock") and obj.user_lock is not None:
@@ -228,6 +232,7 @@ class DRFMutation(graphene.Mutation):
                 )
 
         except Exception as e:
+            logger.error(traceback.format_exc())
             message = f"Mutation failed due to error: {e}"
 
         return cls(ok=ok, message=message, obj_id=obj_id)

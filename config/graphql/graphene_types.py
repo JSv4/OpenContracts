@@ -74,7 +74,6 @@ class AnnotationInputType(AnnotatePermissionsForReadMixin, graphene.InputObjectT
 
 
 class AnnotationType(AnnotatePermissionsForReadMixin, ModelType):
-
     json = GenericScalar()
 
     class Meta:
@@ -126,7 +125,6 @@ class AnnotationLabelType(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class LabelSetType(AnnotatePermissionsForReadMixin, ModelType):
-
     annotation_labels = DjangoFilterConnectionField(
         AnnotationLabelType, filterset_class=LabelFilter
     )
@@ -180,7 +178,6 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
-
     all_annotation_summaries = graphene.List(
         AnnotationType,
         analysis_id=graphene.ID(),
@@ -251,7 +248,6 @@ class UserExportType(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class AnalyzerType(AnnotatePermissionsForReadMixin, ModelType):
-
     analyzer_id = graphene.String()
 
     def resolve_analyzer_id(self, info):
@@ -302,13 +298,6 @@ class LanguageModelType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         connection_class = CountableConnection
 
 
-class FieldsetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-    class Meta:
-        model = Fieldset
-        interfaces = [relay.Node]
-        connection_class = CountableConnection
-
-
 class ColumnType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:
         model = Column
@@ -316,18 +305,34 @@ class ColumnType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         connection_class = CountableConnection
 
 
-class ExtractType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+class FieldsetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    full_column_list = graphene.List(ColumnType)
+
     class Meta:
-        model = Extract
+        model = Fieldset
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
+    def resolve_full_column_list(self, info):
+        return self.columns.all()
+
 
 class DatacellType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-
     data = GenericScalar()
 
     class Meta:
         model = Datacell
         interfaces = [relay.Node]
         connection_class = CountableConnection
+
+
+class ExtractType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    full_datacell_list = graphene.List(DatacellType)
+
+    class Meta:
+        model = Extract
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+    def resolve_full_datacell_list(self, info):
+        return self.extracted_datacells.all()

@@ -1181,6 +1181,7 @@ export interface FieldsetType extends Node {
   name: string;
   description: string;
   columns: ColumnTypeEdge;
+  fullColumnList?: ColumnType[];
 }
 
 export interface ColumnType extends Node {
@@ -1226,6 +1227,7 @@ export interface ExtractType extends Node {
   stacktrace?: Maybe<string>;
   documents?: DocumentType[];
   extractedDatacells?: DatacellTypeConnection;
+  fullDatacellList?: DatacellType[];
 }
 
 export interface DatacellType extends Node {
@@ -1237,4 +1239,27 @@ export interface DatacellType extends Node {
   started?: Maybe<string>;
   completed?: Maybe<string>;
   failed?: Maybe<string>;
+}
+export interface ExportObject {
+  id: string;
+  name: string;
+  finished: Scalars["DateTime"];
+  started: Scalars["DateTime"];
+  created: Scalars["DateTime"];
+  errors: string;
+  backendLock: boolean;
+  file: string;
+}
+export interface PageAwareAnnotationType {
+  pdfPageInfo: {
+    pageCount: number;
+    currentPage: number;
+    corpusId: string;
+    documentId: string;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    labelType: LabelType;
+    forAnalysisIds: string;
+  };
+  pageAnnotations: ServerAnnotationType[];
 }

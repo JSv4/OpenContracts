@@ -38,7 +38,7 @@ from config.graphql.serializers import (
     AnnotationSerializer,
     CorpusSerializer,
     DocumentSerializer,
-    LabelsetSerializer,
+    LabelsetSerializer, ExtractSerializer, ColumnSerializer,
 )
 from opencontractserver.analyzer.models import Analysis
 from opencontractserver.annotations.models import (
@@ -1371,6 +1371,28 @@ class CreateFieldset(graphene.Mutation):
         return CreateFieldset(ok=True, message="SUCCESS!", obj=fieldset)
 
 
+class UpdateColumnMutation(DRFMutation):
+
+    class IOSettings:
+        lookup_field = "id"
+        pk_fields = ["fieldset", "language_model"]
+        serializer = ColumnSerializer
+        model = Column
+        graphene_model = ColumnType
+
+    class Arguments:
+        id = graphene.ID(required=True)
+        fieldset_id = graphene.ID(required=False)
+        creator_id = graphene.ID(required=False)
+        query = graphene.String(required=False)
+        match_text = graphene.String(required=False)
+        output_type = graphene.String(required=False)
+        limit_to_label = graphene.String(required=False)
+        instructions = graphene.String(required=False)
+        language_model_id = graphene.ID(required=False)
+        agentic = graphene.Boolean(required=False)
+
+
 class CreateColumn(graphene.Mutation):
     class Arguments:
         fieldset_id = graphene.ID(required=True)
@@ -1421,15 +1443,42 @@ class CreateColumn(graphene.Mutation):
         )
         return CreateColumn(ok=True, message="SUCCESS!", obj=column)
 
+class DeleteColumn(DRFDeletion):
+    class IOSettings:
+        model = Column
+        lookup_field = "id"
+
+    class Arguments:
+        id = graphene.String(required=True)
+
 
 class StartExtract(graphene.Mutation):
+    class Arguments:
+        extract_global_id = graphene.ID(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+
+    @staticmethod
+    @login_required
+    def mutate(root, info, extract_global_id):
+
+        extract_id = from_global_id(extract_global_id)[1]
+
+        # Start celery task to process extract
+        run_extract.s(extract_id, info.context.user.id).apply_async()
+
+        return StartExtract(ok=True, message="STARTED!")
+
+
+class CreateExtract(graphene.Mutation):
     class Arguments:
         corpus_id = graphene.ID(required=True)
         name = graphene.String(required=True)
         fieldset_id = graphene.ID(required=True)
 
     ok = graphene.Boolean()
-    message = graphene.String()
+    msg = graphene.String()
     obj = graphene.Field(ExtractType)
 
     @staticmethod
@@ -1450,11 +1499,24 @@ class StartExtract(graphene.Mutation):
             info.context.user, extract, [PermissionTypes.CRUD]
         )
 
-        # Start celery task to process extract
-        run_extract.delay(extract.id, info.context.user.id)
+        return CreateExtract(ok=True, msg="SUCCESS!", obj=extract)
 
-        return StartExtract(ok=True, message="SUCCESS!", obj=extract)
 
+class UpdateExtractMutation(DRFMutation):
+
+    class IOSettings:
+        lookup_field = "id"
+        pk_fields = ["corpus", "fieldset", "owner"]
+        serializer = ExtractSerializer
+        model = Extract
+        graphene_model = ExtractType
+
+    class Arguments:
+        id = graphene.String(required=True)
+        title = graphene.String(required=False)
+        description = graphene.String(required=False)
+        icon = graphene.String(required=False)
+        label_set = graphene.String(required=False)
 
 class DeleteExtract(DRFDeletion):
     class IOSettings:
@@ -1536,6 +1598,12 @@ class Mutation(graphene.ObjectType):
     # EXTRACT MUTATIONS ##########################################################
     create_language_model = CreateLanguageModel.Field()
     create_fieldset = CreateFieldset.Field()
+
     create_column = CreateColumn.Field()
+    update_column = UpdateColumnMutation.Field()
+    delete_column = DeleteColumn.Field()
+
+    create_extract = CreateExtract.Field()
     start_extract = StartExtract.Field()
     delete_extract = DeleteExtract.Field()  # TODO - test
+    update_extract = UpdateExtractMutation.Field()

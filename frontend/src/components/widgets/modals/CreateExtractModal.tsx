@@ -13,7 +13,7 @@ import { selectedCorpus, selectedFieldset } from "../../../graphql/cache";
 import {
   REQUEST_GET_EXTRACT,
   RequestGetExtractInput,
-  GetExtractOutput,
+  RequestGetExtractOutput,
 } from "../../../graphql/queries";
 import { CorpusDropdown } from "../selectors/CorpusDropdown";
 import { FieldsetDropdown } from "../selectors/FieldsetDropdown";
@@ -43,7 +43,7 @@ export const CreateExtractModal: React.FC<ExtractModalProps> = ({
   const selected_fieldset = useReactiveVar(selectedFieldset);
 
   const { loading, error, data } = useQuery<
-    GetExtractOutput,
+    RequestGetExtractOutput,
     RequestGetExtractInput
   >(REQUEST_GET_EXTRACT, {
     variables: { id: extractId || "" },

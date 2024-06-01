@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from graphene.test import Client
 from graphql_relay import to_global_id
+from graphql_relay.node.node import from_global_id
 
 from config.graphql.schema import schema
 from opencontractserver.extracts.models import Column, Fieldset, LanguageModel
@@ -79,3 +80,65 @@ class ColumnMutationTestCase(TestCase):
         self.assertEqual(updated_column.limit_to_label, "UpdatedLimit")
         self.assertEqual(updated_column.instructions, "UpdatedInstructions")
         self.assertTrue(updated_column.agentic)
+
+    def test_delete_column_mutation(self):
+        mutation = """
+            mutation {{
+                deleteColumn(id: "{}") {{
+                    ok
+                }}
+            }}
+        """.format(
+            to_global_id("ColumnType", self.column.id)
+        )
+
+        result = self.client.execute(mutation)
+        self.assertIsNone(result.get("errors"))
+        self.assertTrue(result["data"]["deleteColumn"]["ok"])
+
+        with self.assertRaises(Column.DoesNotExist):
+            Column.objects.get(id=self.column.id)
+
+    def test_create_column_mutation(self):
+        mutation = """
+            mutation {{
+                createColumn(
+                    fieldsetId: "{}",
+                    query: "NewQuery",
+                    outputType: "int",
+                    languageModelId: "{}",
+                    agentic: true,
+                    matchText: "NewMatchText",
+                    limitToLabel: "NewLimit",
+                    instructions: "NewInstructions"
+                ) {{
+                    ok
+                    obj {{
+                        id
+                        query
+                        matchText
+                        outputType
+                        limitToLabel
+                        instructions
+                        agentic
+                    }}
+                }}
+            }}
+        """.format(
+            to_global_id("FieldsetType", self.fieldset.id),
+            to_global_id("LanguageModelType", self.language_model.id),
+        )
+
+        result = self.client.execute(mutation)
+        self.assertIsNone(result.get("errors"))
+        self.assertTrue(result["data"]["createColumn"]["ok"])
+
+        created_column_id = result["data"]["createColumn"]["obj"]["id"]
+        created_column = Column.objects.get(id=from_global_id(created_column_id)[1])
+
+        self.assertEqual(created_column.query, "NewQuery")
+        self.assertEqual(created_column.match_text, "NewMatchText")
+        self.assertEqual(created_column.output_type, "int")
+        self.assertEqual(created_column.limit_to_label, "NewLimit")
+        self.assertEqual(created_column.instructions, "NewInstructions")
+        self.assertTrue(created_column.agentic)

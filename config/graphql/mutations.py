@@ -1346,6 +1346,7 @@ class CreateLanguageModel(graphene.Mutation):
         )
         return CreateLanguageModel(ok=True, message="SUCCESS!", obj=language_model)
 
+
 class CreateFieldset(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
@@ -1372,7 +1373,6 @@ class CreateFieldset(graphene.Mutation):
 
 
 class UpdateColumnMutation(DRFMutation):
-
     class IOSettings:
         lookup_field = "id"
         pk_fields = ["fieldset", "language_model"]
@@ -1443,6 +1443,7 @@ class CreateColumn(graphene.Mutation):
         )
         return CreateColumn(ok=True, message="SUCCESS!", obj=column)
 
+
 class DeleteColumn(DRFDeletion):
     class IOSettings:
         model = Column
@@ -1462,7 +1463,6 @@ class StartExtract(graphene.Mutation):
     @staticmethod
     @login_required
     def mutate(root, info, extract_global_id):
-
         extract_id = from_global_id(extract_global_id)[1]
 
         # Start celery task to process extract
@@ -1503,7 +1503,6 @@ class CreateExtract(graphene.Mutation):
 
 
 class UpdateExtractMutation(DRFMutation):
-
     class IOSettings:
         lookup_field = "id"
         pk_fields = ["corpus", "fieldset", "owner"]
@@ -1518,6 +1517,7 @@ class UpdateExtractMutation(DRFMutation):
         icon = graphene.String(required=False)
         label_set = graphene.String(required=False)
 
+
 class DeleteExtract(DRFDeletion):
     class IOSettings:
         model = Extract
@@ -1525,7 +1525,6 @@ class DeleteExtract(DRFDeletion):
 
     class Arguments:
         id = graphene.String(required=True)
-
 
 
 class Mutation(graphene.ObjectType):

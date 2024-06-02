@@ -547,11 +547,7 @@ class StartDocumentExport(graphene.Mutation):
             ok = False
             export = None
 
-        return StartDocumentExport(
-            ok=ok,
-            message=message,
-            export=export
-        )
+        return StartDocumentExport(ok=ok, message=message, export=export)
 
 
 class UploadAnnotatedDocument(graphene.Mutation):
@@ -1483,6 +1479,7 @@ class CreateExtract(graphene.Mutation):
     Otherwise, a new fieldset is created. If no name is provided, fieldset name has
     form "[Extract name] Fieldset"
     """
+
     class Arguments:
         corpus_id = graphene.ID(required=True)
         name = graphene.String(required=True)
@@ -1496,7 +1493,15 @@ class CreateExtract(graphene.Mutation):
 
     @staticmethod
     @login_required
-    def mutate(root, info, corpus_id, name, fieldset_id=None, fieldset_name=None, fieldset_description=None):
+    def mutate(
+        root,
+        info,
+        corpus_id,
+        name,
+        fieldset_id=None,
+        fieldset_name=None,
+        fieldset_description=None,
+    ):
 
         corpus = Corpus.objects.get(pk=from_global_id(corpus_id)[1])
 
@@ -1545,14 +1550,15 @@ class UpdateExtractMutation(DRFMutation):
 
 
 class AddDocumentsToExtract(DRFMutation):
-
     class Arguments:
         document_ids = graphene.List(
             graphene.ID,
             required=True,
             description="List of ids of the documents to add to extract.",
         )
-        extract_id = graphene.ID(required=True, description="Id of corpus to add docs to.")
+        extract_id = graphene.ID(
+            required=True, description="Id of corpus to add docs to."
+        )
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -1571,7 +1577,9 @@ class AddDocumentsToExtract(DRFMutation):
             )
 
             if extract.finished is not None:
-                raise ValueError(f"Extract {extract_id} already finished... it cannot be edited.")
+                raise ValueError(
+                    f"Extract {extract_id} already finished... it cannot be edited."
+                )
 
             doc_pks = list(
                 map(lambda graphene_id: from_global_id(graphene_id)[1], document_ids)
@@ -1618,7 +1626,9 @@ class RemoveDocumentsFromExtract(graphene.Mutation):
             )
 
             if extract.finished is not None:
-                raise ValueError(f"Extract {extract_id} already finished... it cannot be edited.")
+                raise ValueError(
+                    f"Extract {extract_id} already finished... it cannot be edited."
+                )
 
             doc_pks = list(
                 map(

@@ -8,7 +8,7 @@ from graphql_relay import to_global_id
 from config.graphql.schema import schema
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import Fieldset, LanguageModel, Extract
+from opencontractserver.extracts.models import Extract, Fieldset, LanguageModel
 
 User = get_user_model()
 
@@ -137,12 +137,6 @@ class ExtractsMutationTestCase(TestCase):
         self.assertEqual(result["data"]["createColumn"]["obj"]["agentic"], False)
 
     def test_start_extract_mutation(self):
-        fieldset = Fieldset.objects.create(
-            name="TestFieldset",
-            description="Test description",
-            creator=self.user,
-        )
-
         mutation = """
             mutation {{
                 startExtract(
@@ -156,9 +150,7 @@ class ExtractsMutationTestCase(TestCase):
             to_global_id("CorpusType", self.corpus.id)
         )
 
-        with patch(
-            "opencontractserver.tasks.extract_tasks.run_extract.s"
-        ) as mock_task:
+        with patch("opencontractserver.tasks.extract_tasks.run_extract.s") as mock_task:
             result = self.client.execute(mutation)
             self.assertIsNone(result.get("errors"))
             self.assertTrue(result["data"]["startExtract"]["ok"])
@@ -179,7 +171,7 @@ class ExtractsMutationTestCase(TestCase):
         """.format(
             to_global_id("ExtractType", self.extract.id),
             to_global_id("DocumentType", self.document1.id),
-            to_global_id("DocumentType", self.document2.id)
+            to_global_id("DocumentType", self.document2.id),
         )
 
         result = self.client.execute(mutation)
@@ -206,7 +198,7 @@ class ExtractsMutationTestCase(TestCase):
         """.format(
             to_global_id("ExtractType", self.extract.id),
             to_global_id("DocumentType", self.document1.id),
-            to_global_id("DocumentType", self.document2.id)
+            to_global_id("DocumentType", self.document2.id),
         )
 
         result = self.client.execute(mutation)

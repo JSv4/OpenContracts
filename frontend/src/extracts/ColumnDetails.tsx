@@ -28,7 +28,7 @@ export const ColumnDetails: React.FC<ColumnDetailsProps> = ({
   const [limitToLabel, setLimitToLabel] = useState(column?.limitToLabel || "");
   const [instructions, setInstructions] = useState(column?.instructions || "");
   const [languageModelId, setLanguageModelId] = useState(
-    column?.languageModel.id || ""
+    column?.languageModel?.id || ""
   );
   const [agentic, setAgentic] = useState(column?.agentic || false);
 

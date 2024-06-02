@@ -1026,7 +1026,7 @@ export const REQUEST_GET_FIELDSETS = gql`
       edges {
         node {
           id
-          owner {
+          creator {
             id
             username
           }
@@ -1063,7 +1063,7 @@ export const GET_FIELDSET = gql`
   query GetFieldset($id: ID!) {
     fieldset(id: $id) {
       id
-      owner {
+      creator {
         id
         username
       }
@@ -1118,7 +1118,7 @@ export const REQUEST_GET_EXTRACT = gql`
           }
         }
       }
-      owner {
+      creator {
         id
         username
       }
@@ -1181,7 +1181,7 @@ export const REQUEST_GET_EXTRACTS = gql`
               }
             }
           }
-          owner {
+          creator {
             id
             username
           }

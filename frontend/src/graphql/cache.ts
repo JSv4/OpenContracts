@@ -16,6 +16,7 @@ import {
   AnalysisType,
   ExtractType,
   FieldsetType,
+  LanguageModelType,
 } from "./types";
 
 export const mergeArrayByIdFieldPolicy: FieldPolicy<Reference[]> = {
@@ -253,6 +254,7 @@ export const analysisSearchTerm = makeVar<string>("");
  */
 export const exportSearchTerm = makeVar<string>("");
 export const selectedFieldset = makeVar<FieldsetType | null>(null);
+export const selectedLanguageModel = makeVar<LanguageModelType | null>(null);
 
 /**
  * Auth-related global variables

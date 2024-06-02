@@ -1177,7 +1177,7 @@ export interface LanguageModelType extends Node {
 }
 
 export interface FieldsetType extends Node {
-  owner: UserType;
+  creator: UserType;
   name: string;
   description: string;
   columns: ColumnTypeEdge;
@@ -1185,13 +1185,14 @@ export interface FieldsetType extends Node {
 }
 
 export interface ColumnType extends Node {
+  name: Maybe<string>;
   fieldset: FieldsetType;
   query: string;
   matchText?: Maybe<string>;
   outputType: string;
   limitToLabel?: Maybe<string>;
   instructions?: Maybe<string>;
-  languageModel: LanguageModelType;
+  languageModel?: Maybe<LanguageModelType>;
   agentic: boolean;
 }
 
@@ -1220,7 +1221,7 @@ export interface ExtractType extends Node {
   corpus: CorpusType;
   name: string;
   fieldset: FieldsetType;
-  owner: UserType;
+  creator: UserType;
   created: string;
   started?: Maybe<string>;
   finished?: Maybe<string>;

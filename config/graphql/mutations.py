@@ -547,7 +547,11 @@ class StartDocumentExport(graphene.Mutation):
             ok = False
             export = None
 
-        return StartDocumentExport(ok=ok, message=message, export=export)
+        return StartDocumentExport(
+            ok=ok,
+            message=message,
+            export=export
+        )
 
 
 class UploadAnnotatedDocument(graphene.Mutation):
@@ -1362,7 +1366,6 @@ class CreateFieldset(graphene.Mutation):
     @login_required
     def mutate(root, info, name, description):
         fieldset = Fieldset(
-            owner=info.context.user,
             name=name,
             description=description,
             creator=info.context.user,
@@ -1405,6 +1408,7 @@ class CreateColumn(graphene.Mutation):
         instructions = graphene.String()
         language_model_id = graphene.ID(required=True)
         agentic = graphene.Boolean(required=True)
+        name = graphene.String(required=True)
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -1415,6 +1419,7 @@ class CreateColumn(graphene.Mutation):
     def mutate(
         root,
         info,
+        name,
         fieldset_id,
         query,
         output_type,
@@ -1452,32 +1457,38 @@ class DeleteColumn(DRFDeletion):
         lookup_field = "id"
 
     class Arguments:
-        id = graphene.String(required=True)
+        id = graphene.ID(required=True)
 
 
 class StartExtract(graphene.Mutation):
     class Arguments:
-        extract_global_id = graphene.ID(required=True)
+        extract_id = graphene.ID(required=True)
 
     ok = graphene.Boolean()
     message = graphene.String()
 
     @staticmethod
     @login_required
-    def mutate(root, info, extract_global_id):
-        extract_id = from_global_id(extract_global_id)[1]
+    def mutate(root, info, extract_id):
 
         # Start celery task to process extract
-        run_extract.s(extract_id, info.context.user.id).apply_async()
+        run_extract.s(from_global_id(extract_id)[1], info.context.user.id).apply_async()
 
         return StartExtract(ok=True, message="STARTED!")
 
 
 class CreateExtract(graphene.Mutation):
+    """
+    Create a new extract. If fieldset_id is provided, attach existing fieldset.
+    Otherwise, a new fieldset is created. If no name is provided, fieldset name has
+    form "[Extract name] Fieldset"
+    """
     class Arguments:
         corpus_id = graphene.ID(required=True)
         name = graphene.String(required=True)
-        fieldset_id = graphene.ID(required=True)
+        fieldset_id = graphene.ID(required=False)
+        fieldset_name = graphene.String(required=False)
+        fieldset_description = graphene.String(required=False)
 
     ok = graphene.Boolean()
     msg = graphene.String()
@@ -1485,15 +1496,28 @@ class CreateExtract(graphene.Mutation):
 
     @staticmethod
     @login_required
-    def mutate(root, info, corpus_id, name, fieldset_id):
+    def mutate(root, info, corpus_id, name, fieldset_id=None, fieldset_name=None, fieldset_description=None):
+
         corpus = Corpus.objects.get(pk=from_global_id(corpus_id)[1])
-        fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
+
+        if fieldset_id is not None:
+            fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
+        else:
+            if fieldset_name is None:
+                fieldset_name = f"{name} Fieldset"
+            fieldset = Fieldset.objects.create(
+                name=fieldset_name,
+                description=fieldset_description,
+                creator=info.context.user,
+            )
+            set_permissions_for_obj_to_user(
+                info.context.user, fieldset, [PermissionTypes.CRUD]
+            )
 
         extract = Extract(
             corpus=corpus,
             name=name,
             fieldset=fieldset,
-            owner=info.context.user,
             creator=info.context.user,
         )
         extract.save()
@@ -1507,7 +1531,7 @@ class CreateExtract(graphene.Mutation):
 class UpdateExtractMutation(DRFMutation):
     class IOSettings:
         lookup_field = "id"
-        pk_fields = ["corpus", "fieldset", "owner"]
+        pk_fields = ["corpus", "fieldset", "creator"]
         serializer = ExtractSerializer
         model = Extract
         graphene_model = ExtractType
@@ -1518,6 +1542,100 @@ class UpdateExtractMutation(DRFMutation):
         description = graphene.String(required=False)
         icon = graphene.String(required=False)
         label_set = graphene.String(required=False)
+
+
+class AddDocumentsToExtract(DRFMutation):
+
+    class Arguments:
+        document_ids = graphene.List(
+            graphene.ID,
+            required=True,
+            description="List of ids of the documents to add to extract.",
+        )
+        extract_id = graphene.ID(required=True, description="Id of corpus to add docs to.")
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+
+    @login_required
+    def mutate(root, info, extract_id, document_ids):
+
+        ok = False
+
+        try:
+            user = info.context.user
+
+            extract = Extract.objects.get(
+                Q(pk=from_global_id(extract_id)[1])
+                & (Q(creator=user) | Q(is_public=True))
+            )
+
+            if extract.finished is not None:
+                raise ValueError(f"Extract {extract_id} already finished... it cannot be edited.")
+
+            doc_pks = list(
+                map(lambda graphene_id: from_global_id(graphene_id)[1], document_ids)
+            )
+            doc_objs = Document.objects.filter(
+                Q(pk__in=doc_pks) & (Q(creator=user) | Q(is_public=True))
+            )
+
+            extract.documents.add(*doc_objs)
+
+            ok = True
+            message = "Success"
+
+        except Exception as e:
+            message = f"Error assigning docs to corpus: {e}"
+
+        return AddDocumentsToExtract(message=message, ok=ok)
+
+
+class RemoveDocumentsFromExtract(graphene.Mutation):
+    class Arguments:
+        extract_id = graphene.ID(
+            required=True, description="ID of extract to remove documents from."
+        )
+        document_ids_to_remove = graphene.List(
+            graphene.ID,
+            required=True,
+            description="List of ids of the docs to remove from extract.",
+        )
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+
+    @login_required
+    def mutate(root, info, extract_id, document_ids_to_remove):
+
+        ok = False
+
+        try:
+            user = info.context.user
+            extract = Extract.objects.get(
+                Q(pk=from_global_id(extract_id)[1])
+                & (Q(creator=user) | Q(is_public=True))
+            )
+
+            if extract.finished is not None:
+                raise ValueError(f"Extract {extract_id} already finished... it cannot be edited.")
+
+            doc_pks = list(
+                map(
+                    lambda graphene_id: from_global_id(graphene_id)[1],
+                    document_ids_to_remove,
+                )
+            )
+
+            extract_docs = extract.documents.filter(pk__in=doc_pks)
+            extract.documents.remove(*extract_docs)
+            ok = True
+            message = "Success"
+
+        except Exception as e:
+            message = f"Error on removing docs: {e}"
+
+        return RemoveDocumentsFromExtract(message=message, ok=ok)
 
 
 class DeleteExtract(DRFDeletion):
@@ -1608,3 +1726,5 @@ class Mutation(graphene.ObjectType):
     start_extract = StartExtract.Field()
     delete_extract = DeleteExtract.Field()  # TODO - test
     update_extract = UpdateExtractMutation.Field()
+    add_docs_to_extract = AddDocumentsToExtract.Field()
+    remove_docs_from_extract = RemoveDocumentsFromExtract.Field()

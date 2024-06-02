@@ -38,13 +38,6 @@ class LanguageModelGroupObjectPermission(GroupObjectPermissionBase):
 
 
 class Fieldset(BaseOCModel):
-    owner = django.db.models.ForeignKey(
-        User,
-        related_name="fieldsets",
-        null=False,
-        blank=False,
-        on_delete=django.db.models.CASCADE,
-    )
     name = django.db.models.CharField(max_length=256, null=False, blank=False)
     description = django.db.models.TextField(null=False, blank=False)
 
@@ -71,6 +64,9 @@ class FieldsetGroupObjectPermission(GroupObjectPermissionBase):
 
 
 class Column(BaseOCModel):
+    name = django.db.models.CharField(
+        max_length=256, null=False, blank=False, default=""
+    )
     fieldset = django.db.models.ForeignKey(
         "Fieldset", related_name="columns", on_delete=django.db.models.CASCADE
     )
@@ -113,9 +109,15 @@ class Extract(BaseOCModel):
     corpus = django.db.models.ForeignKey(
         Corpus,
         related_name="extracts",
-        on_delete=django.db.models.CASCADE,
-        null=False,
-        blank=False,
+        on_delete=django.db.models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    documents = django.db.models.ManyToManyField(
+        Document,
+        related_name="extracts",
+        related_query_name="extract",
+        blank=True,
     )
     name = django.db.models.CharField(max_length=512, null=False, blank=False)
     fieldset = django.db.models.ForeignKey(
@@ -124,15 +126,10 @@ class Extract(BaseOCModel):
         on_delete=django.db.models.PROTECT,
         null=False,
     )
-    owner = django.db.models.ForeignKey(
-        django.contrib.auth.get_user_model(),
-        related_name="owned_extracts",
-        on_delete=django.db.models.PROTECT,
-        null=False,
-    )
     created = django.db.models.DateTimeField(auto_now_add=True)
     started = django.db.models.DateTimeField(null=True, blank=True)
     finished = django.db.models.DateTimeField(null=True, blank=True)
+    error = django.db.models.TextField(null=True, blank=True)
 
     class Meta:
         permissions = (

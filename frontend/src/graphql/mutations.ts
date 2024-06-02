@@ -1188,7 +1188,7 @@ export interface RequestCreateColumnInputType {
 export interface RequestCreateColumnOutputType {
   createColumn: {
     ok: boolean;
-    msg: string;
+    message: string;
     obj: ColumnType;
   };
 }
@@ -1233,6 +1233,26 @@ export const REQUEST_CREATE_COLUMN = gql`
   }
 `;
 
+export interface RequestDeleteColumnOutputType {
+  deleteColumn: {
+    ok: boolean;
+    message: string;
+  };
+}
+
+export interface RequestDeleteColumnInputType {
+  id: string;
+}
+
+export const REQUEST_DELETE_COLUMN = gql`
+  mutation DeleteColumn($id: ID!) {
+    deleteColumn(id: $id) {
+      ok
+      message
+    }
+  }
+`;
+
 export interface RequestUpdateColumnInputType {
   id: string;
   fieldsetId: string;
@@ -1256,6 +1276,7 @@ export interface RequestUpdateColumnOutputType {
 export const REQUEST_UPDATE_COLUMN = gql`
   mutation UpdateColumn(
     $id: ID!
+    $name: String
     $query: String
     $matchText: String
     $outputType: String
@@ -1266,6 +1287,7 @@ export const REQUEST_UPDATE_COLUMN = gql`
   ) {
     updateColumn(
       id: $id
+      name: $name
       query: $query
       matchText: $matchText
       outputType: $outputType

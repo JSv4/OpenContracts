@@ -677,7 +677,7 @@ class Query(graphene.ObjectType):
             return Fieldset.objects.get(Q(id=django_pk) & Q(is_public=True))
         else:
             return Fieldset.objects.get(
-                Q(id=django_pk) & (Q(owner=info.context.user) | Q(is_public=True))
+                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
             )
 
     fieldsets = DjangoFilterConnectionField(
@@ -692,7 +692,7 @@ class Query(graphene.ObjectType):
             return Fieldset.objects.filter(Q(is_public=True))
         else:
             return Fieldset.objects.filter(
-                Q(owner=info.context.user) | Q(is_public=True)
+                Q(creator=info.context.user) | Q(is_public=True)
             )
 
     column = relay.Node.Field(ColumnType)
@@ -707,7 +707,7 @@ class Query(graphene.ObjectType):
         else:
             return Column.objects.get(
                 Q(id=django_pk)
-                & (Q(fieldset__owner=info.context.user) | Q(is_public=True))
+                & (Q(fieldset__creator=info.context.user) | Q(is_public=True))
             )
 
     columns = DjangoFilterConnectionField(ColumnType, filterset_class=ColumnFilter)
@@ -720,7 +720,7 @@ class Query(graphene.ObjectType):
             return Column.objects.filter(Q(is_public=True))
         else:
             return Column.objects.filter(
-                Q(fieldset__owner=info.context.user) | Q(is_public=True)
+                Q(fieldset__creator=info.context.user) | Q(is_public=True)
             )
 
     extract = relay.Node.Field(ExtractType)
@@ -734,7 +734,7 @@ class Query(graphene.ObjectType):
             return Extract.objects.get(Q(id=django_pk) & Q(is_public=True))
         else:
             return Extract.objects.get(
-                Q(id=django_pk) & (Q(owner=info.context.user) | Q(is_public=True))
+                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
             )
 
     extracts = DjangoFilterConnectionField(ExtractType, filterset_class=ExtractFilter)
@@ -747,7 +747,7 @@ class Query(graphene.ObjectType):
             return Extract.objects.filter(Q(is_public=True))
         else:
             return Extract.objects.filter(
-                Q(owner=info.context.user) | Q(is_public=True)
+                Q(creator=info.context.user) | Q(is_public=True)
             )
 
     datacell = relay.Node.Field(DatacellType)
@@ -762,7 +762,7 @@ class Query(graphene.ObjectType):
         else:
             return Datacell.objects.get(
                 Q(id=django_pk)
-                & (Q(extract__owner=info.context.user) | Q(is_public=True))
+                & (Q(extract__creator=info.context.user) | Q(is_public=True))
             )
 
     datacells = DjangoFilterConnectionField(
@@ -777,5 +777,5 @@ class Query(graphene.ObjectType):
             return Datacell.objects.filter(Q(is_public=True))
         else:
             return Datacell.objects.filter(
-                Q(extract__owner=info.context.user) | Q(is_public=True)
+                Q(extract__creator=info.context.user) | Q(is_public=True)
             )

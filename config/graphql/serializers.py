@@ -45,8 +45,6 @@ class ExtractSerializer(serializers.ModelSerializer):
             "corpus",
             "name",
             "fieldset",
-            "owner",
-            "owner_id",
             "creator",
             "creator_id",
             "created",
@@ -61,6 +59,7 @@ class ColumnSerializer(serializers.ModelSerializer):
         model = Column
         fields = [
             "id",
+            "name",
             "fieldset",
             "fieldset_id",
             "language_model",

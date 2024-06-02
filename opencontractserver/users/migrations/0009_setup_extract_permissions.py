@@ -15,11 +15,35 @@ public_group_permissions = {
         "update_column",
         "delete_column",
         "permission_column",
+
+        "create_languagemodel",
+        "read_languagemodel",
+        "update_languagemodel",
+        "delete_languagemodel",
+        "permission_languagemodel",
+
+        "create_fieldset",
+        "read_fieldset",
+        "update_fieldset",
+        "delete_fieldset",
+        "permission_fieldset",
+
+        "create_extract",
+        "read_extract",
+        "update_extract",
+        "delete_extract",
+        "permission_extract",
+
+        "create_datacell",
+        "read_datacell",
+        "update_datacell",
+        "delete_datacell",
+        "permission_datacell",
     ]
 }
 
-def add_group_permissions(apps, schema_editor):
 
+def add_group_permissions(apps, schema_editor):
     # See https://code.djangoproject.com/ticket/23422
     db_alias = schema_editor.connection.alias
 
@@ -40,7 +64,6 @@ def add_group_permissions(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('users', '0008_alter_userexport_format'),
     ]

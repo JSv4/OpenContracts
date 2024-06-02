@@ -163,6 +163,7 @@ export function generateMockColumn(fieldset: FieldsetType): ColumnType {
   return {
     id: uuidv4(),
     fieldset,
+    name: "mockName",
     query: "mockQuery",
     matchText: "mockMatchText",
     outputType: "mockOutputType",

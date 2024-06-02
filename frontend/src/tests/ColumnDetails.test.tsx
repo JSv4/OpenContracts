@@ -10,6 +10,7 @@ const mockOnSave = jest.fn();
 
 const mockColumn: ColumnType = {
   id: "1",
+  name: "mockName",
   query: "test query",
   matchText: "test match",
   outputType: "string",
@@ -57,7 +58,7 @@ describe("ColumnDetails", () => {
       mockColumn.instructions
     );
     expect(screen.getByLabelText("Language Model")).toHaveValue(
-      mockColumn.languageModel.id
+      mockColumn?.languageModel?.id
     );
     expect(screen.getByLabelText("Agentic")).not.toBeChecked();
   });

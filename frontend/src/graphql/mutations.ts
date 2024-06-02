@@ -1253,6 +1253,49 @@ export const REQUEST_DELETE_COLUMN = gql`
   }
 `;
 
+export interface RequestAddDocToExtractOutputType {
+  ok: boolean;
+  message: string;
+  objId: string;
+}
+
+export interface RequestAddDocToExtractInputType {
+  documentIds: string[];
+  extractId: string;
+}
+
+export const REQUEST_ADD_DOC_TO_EXTRACT = gql`
+  mutation AddDocToExtract($documentIds: [ID]!, $extractId: ID!) {
+    addDocsToExtract(documentIds: $documentIds, extractId: $extractId) {
+      ok
+      message
+      objId
+    }
+  }
+`;
+
+export interface RequestRemoveDocFromExtractOutputType {
+  ok: boolean;
+  message: string;
+}
+
+export interface RequestRemoveDocFromExtractInputType {
+  documentIdsToRemove: string[];
+  extractId: string;
+}
+
+export const REQUEST_REMOVE_DOC_FROM_EXTRACT = gql`
+  mutation RemoveDocsFromExtract($documentIdsToRemove: [ID]!, $extractId: ID!) {
+    removeDocsFromExtract(
+      documentIdsToRemove: $documentIdsToRemove
+      extractId: $extractId
+    ) {
+      ok
+      message
+    }
+  }
+`;
+
 export interface RequestUpdateColumnInputType {
   id: string;
   fieldsetId: string;

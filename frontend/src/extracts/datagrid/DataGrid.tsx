@@ -9,28 +9,42 @@ import {
   List,
   Dropdown,
 } from "semantic-ui-react";
-import { ColumnType, DatacellType, DocumentType } from "../../graphql/types";
+import {
+  ColumnType,
+  DatacellType,
+  DocumentType,
+  ExtractType,
+} from "../../graphql/types";
 import { useMutation } from "@apollo/client";
 import {
+  REQUEST_ADD_DOC_TO_EXTRACT,
   REQUEST_DELETE_COLUMN,
+  REQUEST_REMOVE_DOC_FROM_EXTRACT,
   REQUEST_UPDATE_COLUMN,
+  RemoveDocTypeAnnotationInputType,
+  RemoveDocTypeAnnotationOutputType,
+  RequestAddDocToExtractInputType,
+  RequestAddDocToExtractOutputType,
   RequestDeleteColumnInputType,
   RequestDeleteColumnOutputType,
+  RequestRemoveDocFromExtractInputType,
+  RequestRemoveDocFromExtractOutputType,
   RequestUpdateColumnInputType,
   RequestUpdateColumnOutputType,
 } from "../../graphql/mutations";
 import { toast } from "react-toastify";
 
 interface DataGridProps {
+  extract: ExtractType;
   columns: ColumnType[];
   rows: DocumentType[];
   cells: DatacellType[];
 }
 
-export const DataGrid = ({ columns, rows, cells }: DataGridProps) => {
+export const DataGrid = ({ columns, rows, cells, extract }: DataGridProps) => {
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [showAddRowButton, setShowAddRowButton] = useState(false);
-  const [];
+  const [openAddRowModal, setOpenAddRowModal] = useState(false);
 
   const [
     deleteColumn,
@@ -70,6 +84,35 @@ export const DataGrid = ({ columns, rows, cells }: DataGridProps) => {
     }
   );
 
+  // TODO - I think I need to do something in the cache here...
+  const [
+    removeDocsFromExtract,
+    { loading: remove_docs_loading, data: remove_docs_data },
+  ] = useMutation<
+    RequestRemoveDocFromExtractOutputType,
+    RequestRemoveDocFromExtractInputType
+  >(REQUEST_REMOVE_DOC_FROM_EXTRACT, {
+    onCompleted: (data) => {
+      toast.success("SUCCESS! Removed docs from extract.");
+    },
+    onError: (err) => {
+      toast.error("ERROR! Could not remove docs from extract.");
+    },
+  });
+
+  const [addDocsToExtract, { loading: add_docs_loading, data: add_docs_data }] =
+    useMutation<
+      RequestAddDocToExtractOutputType,
+      RequestAddDocToExtractInputType
+    >(REQUEST_ADD_DOC_TO_EXTRACT, {
+      onCompleted: (data) => {
+        toast.success("SUCCESS! Added docs to extract.");
+      },
+      onError: (err) => {
+        toast.error("ERROR! Could not add docs to extract.");
+      },
+    });
+
   return (
     <div
       style={{
@@ -104,7 +147,7 @@ export const DataGrid = ({ columns, rows, cells }: DataGridProps) => {
                   <Dropdown.Menu>
                     <Dropdown.Item
                       text="Edit"
-                      onClick={() => editColumn(column)}
+                      onClick={() => console.log("Edit", column)}
                     />
                     <Dropdown.Item
                       text="Delete"
@@ -137,10 +180,20 @@ export const DataGrid = ({ columns, rows, cells }: DataGridProps) => {
                     style={{ float: "right" }}
                   >
                     <Dropdown.Menu>
-                      <Dropdown.Item text="Edit" onClick={() => editRow(row)} />
+                      <Dropdown.Item
+                        text="Edit"
+                        onClick={() => console.log("Edit row ", row)}
+                      />
                       <Dropdown.Item
                         text="Delete"
-                        onClick={() => removeRow(row.id)}
+                        onClick={() =>
+                          removeDocsFromExtract({
+                            variables: {
+                              extractId: extract.id,
+                              documentIdsToRemove: [row.id],
+                            },
+                          })
+                        }
                       />
                     </Dropdown.Menu>
                   </Dropdown>
@@ -169,7 +222,7 @@ export const DataGrid = ({ columns, rows, cells }: DataGridProps) => {
             alignItems: "center",
             cursor: "pointer",
           }}
-          onClick={addColumn}
+          onClick={() => console.log("Add row")}
         >
           <Icon name="plus" size="large" />
         </div>
@@ -188,7 +241,11 @@ export const DataGrid = ({ columns, rows, cells }: DataGridProps) => {
             alignItems: "center",
           }}
         >
-          <Button icon="plus" circular onClick={openAddRowModal} />
+          <Button
+            icon="plus"
+            circular
+            onClick={() => setOpenAddRowModal(true)}
+          />
         </div>
       )}
     </div>

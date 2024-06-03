@@ -1,5 +1,5 @@
 import React, { SyntheticEvent, useCallback, useEffect, useState } from "react";
-import { useQuery, useReactiveVar } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import { Dropdown, DropdownProps } from "semantic-ui-react";
 import {
   GET_LANGUAGEMODELS,
@@ -15,13 +15,17 @@ interface FieldsetOption {
 }
 
 interface LanguageModelDropdownProps {
-  selectedLanguageModel: (lang: LanguageModelType | null) => void;
-  selected_languagemodel: LanguageModelType | undefined;
+  read_only?: boolean;
+  languageModel?: LanguageModelType;
+  style?: Record<string, any>;
+  onChange?: (values: any) => void;
 }
 
 export const LanguageModelDropdown = ({
-  selectedLanguageModel,
-  selected_languagemodel,
+  read_only,
+  style,
+  onChange,
+  languageModel,
 }: LanguageModelDropdownProps) => {
   const [searchQuery, setSearchQuery] = useState<string>();
 
@@ -66,10 +70,12 @@ export const LanguageModelDropdown = ({
     data: DropdownProps
   ) => {
     const selected = _.find(fieldsets, { id: data.value });
-    if (selected) {
-      selectedLanguageModel(selected as LanguageModelType);
-    } else {
-      selectedLanguageModel(null);
+    if (onChange) {
+      if (selected) {
+        onChange(selected as LanguageModelType);
+      } else {
+        onChange(null);
+      }
     }
   };
 
@@ -99,10 +105,11 @@ export const LanguageModelDropdown = ({
       fluid
       selection
       search
+      disabled={read_only}
       options={getDropdownOptions()}
-      value={selected_languagemodel ? selected_languagemodel.id : undefined}
+      value={languageModel ? languageModel.id : undefined}
       placeholder="Select Language Model"
-      onChange={handleSelectionChange}
+      onChange={read_only ? () => {} : handleSelectionChange}
       onSearchChange={handleSearchChange}
       loading={loading}
       style={{ minWidth: "50vw important!" }}

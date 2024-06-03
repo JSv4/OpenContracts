@@ -111,6 +111,48 @@ export const GET_DOCUMENTS = gql`
   }
 `;
 
+export const SEARCH_DOCUMENTS = gql`
+  query (
+    $inCorpusWithId: String
+    $cursor: String
+    $limit: Int
+    $textSearch: String
+    $hasLabelWithId: String
+    $annotateDocLabels: Boolean!
+    $hasAnnotationsWithIds: String
+    $includeMetadata: Boolean!
+  ) {
+    documents(
+      inCorpusWithId: $inCorpusWithId
+      textSearch: $textSearch
+      hasLabelWithId: $hasLabelWithId
+      hasAnnotationsWithIds: $hasAnnotationsWithIds
+      first: $limit
+      after: $cursor
+    ) {
+      edges {
+        node {
+          id
+          title
+          description
+          backendLock
+          pdfFile
+          pawlsParseFile
+          icon
+          isPublic
+          myPermissions
+        }
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+    }
+  }
+`;
+
 export interface GetCorpusMetadataInputs {
   metadataForCorpusId: string;
 }

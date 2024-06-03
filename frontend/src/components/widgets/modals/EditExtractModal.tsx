@@ -13,6 +13,7 @@ import {
   REQUEST_GET_EXTRACT,
   RequestGetExtractInput,
 } from "../../../graphql/queries";
+import { DataGrid } from "../../../extracts/datagrid/DataGrid";
 
 interface EditExtractModalProps {
   extract: ExtractType | null;
@@ -45,11 +46,17 @@ export const EditExtractModal = ({
       size="fullscreen"
       open={open}
       onClose={() => toggleModal()}
-      style={{ height: "90vh" }}
+      style={{
+        height: "90vh",
+        display: "flex !important",
+        flexDirection: "column",
+        alignContent: "flex-start",
+        justifyContent: "center",
+      }}
     >
       <ModalHeader>Editing Extract {extract.name}</ModalHeader>
-      <ModalContent>
-        <p>Some good stuff up in here.</p>
+      <ModalContent style={{ flex: 1 }}>
+        <DataGrid extract={extract} />
       </ModalContent>
       <ModalActions>
         <Button negative onClick={() => toggleModal()}>

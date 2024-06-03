@@ -147,10 +147,10 @@ export function generateMockLanguageModel(): LanguageModelType {
   };
 }
 
-export function generateMockFieldset(owner: UserType): FieldsetType {
+export function generateMockFieldset(creator: UserType): FieldsetType {
   return {
     id: uuidv4(),
-    owner,
+    creator,
     name: "mockFieldset",
     description: "Mock fieldset description",
     columns: {
@@ -174,7 +174,7 @@ export function generateMockColumn(fieldset: FieldsetType): ColumnType {
   };
 }
 
-export function generateMockCorpus(owner: UserType): CorpusType {
+export function generateMockCorpus(creator: UserType): CorpusType {
   return {
     __typename: "CorpusType",
     id: uuidv4(),
@@ -186,7 +186,7 @@ export function generateMockCorpus(owner: UserType): CorpusType {
     icon: "mockIcon",
     documents: generateMockDocumentConnection(),
     labelSet: null,
-    creator: owner,
+    creator,
     parent: undefined,
     backendLock: false,
     userLock: null,
@@ -205,7 +205,7 @@ export function generateMockCorpus(owner: UserType): CorpusType {
 
 export function generateMockExtract(
   corpus: CorpusType,
-  owner: UserType,
+  creator: UserType,
   fieldset: FieldsetType
 ): ExtractType {
   return {
@@ -213,7 +213,7 @@ export function generateMockExtract(
     corpus,
     name: "Mock Extract",
     fieldset,
-    owner,
+    creator,
     created: new Date().toISOString(),
     started: null,
     finished: null,

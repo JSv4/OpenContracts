@@ -119,13 +119,13 @@ const ColumnHeaderCard: React.FC<{
             }
           />
           <LanguageModelDropdown
-            selectedLanguageModel={(data) =>
+            onChange={(data) =>
               setEditedColumn({
                 ...editedColumn,
                 languageModel: data ? data : null,
               })
             }
-            selected_languagemodel={
+            languageModel={
               editedColumn?.languageModel
                 ? editedColumn.languageModel
                 : undefined

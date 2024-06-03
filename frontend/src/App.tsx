@@ -133,7 +133,7 @@ export const App = () => {
               width: "100% !important",
               margin: "0px !important",
               padding: "0px !important",
-              minWidth: "95vw",
+              minWidth: "100vw",
             }}
           >
             <Dimmer active={false}>

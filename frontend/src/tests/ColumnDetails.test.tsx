@@ -23,7 +23,7 @@ const mockColumn: ColumnType = {
   agentic: false,
   fieldset: {
     id: "213214",
-    owner: generateMockUser(),
+    creator: generateMockUser(),
     name: "The set to be",
     description: "Everyone's favorite hang",
     columns: {

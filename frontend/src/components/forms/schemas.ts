@@ -73,6 +73,63 @@ export const newCorpusForm_Ui_Schema = {
   },
 };
 
+//########################### EDIT COLUMN FORM ####################################
+
+export const editColumnForm_Schema = {
+  title: "Column Details",
+  type: "object",
+  properties: {
+    name: {
+      type: "string",
+      title: "Title:",
+    },
+    query: {
+      type: "string",
+      title: "What question shall we ask the LLM?",
+    },
+    matchText: {
+      type: "string",
+      title: "Provide a sample of the text you want to to find.",
+    },
+    outputType: {
+      type: "string",
+      title:
+        "Please define the output data schema as Python primitive or Pydantic model.",
+    },
+    limitToLabel: {
+      type: "string",
+      title:
+        "For now if you want to limit searching to annotations with certain label, provide label name.",
+    },
+    instructions: {
+      type: "string",
+      title:
+        "If you want to provide detailed instructions to data parser, provide them here.",
+    },
+    agentic: {
+      type: "boolean",
+      title:
+        "Use agentic retrieval of referenced sections and definitions in returned text.",
+    },
+  },
+  required: [],
+};
+
+export const editColumnForm_Ui_Schema = {
+  matchText: {
+    "ui:widget": "textarea",
+    "ui:placeholder": "Add a description...",
+  },
+  outputType: {
+    "ui:widget": "textarea",
+    "ui:placeholder": "Add a description...",
+  },
+  instructions: {
+    "ui:widget": "textarea",
+    "ui:placeholder": "Add a description...",
+  },
+};
+
 //########################### EDIT CORPUS FORM ####################################
 
 export const editCorpusForm_Schema = {

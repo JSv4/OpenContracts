@@ -56,9 +56,8 @@ export const Documents = () => {
   const document_to_view = useReactiveVar(viewingDocument);
   const document_to_open = useReactiveVar(openedDocument);
 
-  const filter_to_labelset_id = useReactiveVar(filterToLabelsetId);
-  const filtered_to_label_id = useReactiveVar(filterToLabelId);
   const filtered_to_labelset_id = useReactiveVar(filterToLabelsetId);
+  const filtered_to_label_id = useReactiveVar(filterToLabelId);
   const filtered_to_corpus = useReactiveVar(filterToCorpus);
   const selected_document_ids = useReactiveVar(selectedDocumentIds);
   const document_search_term = useReactiveVar(documentSearchTerm);
@@ -146,32 +145,13 @@ export const Documents = () => {
   useEffect(() => {
     console.log("filter_to_labelset_id change");
     refetchDocuments();
-  }, [filter_to_labelset_id]);
+  }, [filtered_to_labelset_id]);
 
   // If selected corpus changes, refetch docs
   useEffect(() => {
     console.log("filtered_to_corpus change");
     refetchDocuments();
   }, [filtered_to_corpus]);
-
-  console.log("Visible docs are processing", visible_docs_are_processing);
-  // Setup long polling timer to check for document lock changes if any document is changed
-  // TODO - change to GraphQL subscriptions
-  // useEffect(() => {
-  //   console.log("visible_docs_are_processing");
-  //   let interval: number | undefined = undefined;
-  //   if (visible_docs_are_processing) {
-  //     interval = window.setInterval(() => {
-  //       console.log("Fetch more docs");
-  //       refetchDocuments().then(() => {
-  //         visible_docs_are_processing = document_items.reduce<boolean>((accum, current) => accum || Boolean(current.backendLock), false);
-  //       })
-  //     }, 5000);
-  //   } else if (!visible_docs_are_processing) {
-  //     clearInterval(interval);
-  //   }
-  //   return () => clearInterval(interval);
-  // }, [visible_docs_are_processing]);
 
   /**
    * Set up the debounced search handling for the Document SearchBar
@@ -349,14 +329,14 @@ export const Documents = () => {
                 }
               />
               <FilterToCorpusSelector
-                uses_labelset_id={filter_to_labelset_id}
+                uses_labelset_id={filtered_to_labelset_id}
               />
-              {filter_to_labelset_id || filtered_to_corpus?.labelSet?.id ? (
+              {filtered_to_labelset_id || filtered_to_corpus?.labelSet?.id ? (
                 <FilterToLabelSelector
                   label_type={LabelType.TokenLabel}
                   only_labels_for_labelset_id={
-                    filter_to_labelset_id
-                      ? filter_to_labelset_id
+                    filtered_to_labelset_id
+                      ? filtered_to_labelset_id
                       : filtered_to_corpus?.labelSet?.id
                       ? filtered_to_corpus.labelSet.id
                       : undefined

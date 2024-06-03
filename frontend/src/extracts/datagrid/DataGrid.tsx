@@ -21,8 +21,6 @@ import {
   REQUEST_DELETE_COLUMN,
   REQUEST_REMOVE_DOC_FROM_EXTRACT,
   REQUEST_UPDATE_COLUMN,
-  RemoveDocTypeAnnotationInputType,
-  RemoveDocTypeAnnotationOutputType,
   RequestAddDocToExtractInputType,
   RequestAddDocToExtractOutputType,
   RequestDeleteColumnInputType,
@@ -33,18 +31,30 @@ import {
   RequestUpdateColumnOutputType,
 } from "../../graphql/mutations";
 import { toast } from "react-toastify";
+import { SelectDocumentsModal } from "../../components/widgets/modals/SelectDocumentsModal";
+import { CRUDModal } from "../../components/widgets/CRUD/CRUDModal";
+import {
+  editColumnForm_Schema,
+  editColumnForm_Ui_Schema,
+} from "../../components/forms/schemas";
+import { LanguageModelDropdown } from "../../components/widgets/selectors/LanguageModelDropdown";
 
 interface DataGridProps {
   extract: ExtractType;
-  columns: ColumnType[];
-  rows: DocumentType[];
-  cells: DatacellType[];
 }
 
-export const DataGrid = ({ columns, rows, cells, extract }: DataGridProps) => {
+export const DataGrid = ({ extract }: DataGridProps) => {
+  const [column_to_edit, setColumnToEdit] = useState<ColumnType | null>(null);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [showAddColumnModal, setShowAddColumnModal] = useState(false);
   const [showAddRowButton, setShowAddRowButton] = useState(false);
   const [openAddRowModal, setOpenAddRowModal] = useState(false);
+
+  const { fullDatacellList, documents, fieldset } = extract;
+
+  const cells = fullDatacellList ? fullDatacellList : [];
+  const rows = documents ? documents : [];
+  const columns = fieldset?.fullColumnList ? fieldset.fullColumnList : [];
 
   const [
     deleteColumn,
@@ -116,6 +126,8 @@ export const DataGrid = ({ columns, rows, cells, extract }: DataGridProps) => {
   return (
     <div
       style={{
+        display: "flex",
+        flexDirection: "column",
         overflow: "auto",
         height: "100%",
         width: "100%",
@@ -129,7 +141,50 @@ export const DataGrid = ({ columns, rows, cells, extract }: DataGridProps) => {
       onMouseEnter={() => setShowAddRowButton(true)}
       onMouseLeave={() => setShowAddRowButton(false)}
     >
-      <Table celled>
+      <SelectDocumentsModal
+        open={openAddRowModal}
+        onAddDocumentIds={(documentIds: string[]) =>
+          addDocsToExtract({
+            variables: { extractId: extract.id, documentIds },
+          })
+        }
+        toggleModal={() => setOpenAddRowModal(!openAddRowModal)}
+      />
+      <CRUDModal
+        open={column_to_edit !== null}
+        mode="EDIT"
+        old_instance={column_to_edit ? column_to_edit : {}}
+        model_name="column"
+        ui_schema={editColumnForm_Ui_Schema}
+        data_schema={editColumnForm_Schema}
+        has_file={false}
+        file_is_image={false}
+        accepted_file_types=""
+        file_field=""
+        file_label=""
+        onClose={() => setColumnToEdit(null)}
+        property_widgets={{
+          labelSet: <LanguageModelDropdown />,
+        }}
+      />
+      <CRUDModal
+        open={showAddColumnModal}
+        mode="CREATE"
+        old_instance={{}}
+        model_name="column"
+        ui_schema={editColumnForm_Ui_Schema}
+        data_schema={editColumnForm_Schema}
+        has_file={false}
+        file_is_image={false}
+        accepted_file_types=""
+        file_field=""
+        file_label=""
+        onClose={() => setColumnToEdit(null)}
+        property_widgets={{
+          labelSet: <LanguageModelDropdown />,
+        }}
+      />
+      <Table celled style={{ flex: 1 }}>
         <Table.Header fullWidth>
           <Table.Row>
             <Table.HeaderCell>
@@ -221,10 +276,14 @@ export const DataGrid = ({ columns, rows, cells, extract }: DataGridProps) => {
             justifyContent: "center",
             alignItems: "center",
             cursor: "pointer",
+            zIndex: 100000,
           }}
-          onClick={() => console.log("Add row")}
         >
-          <Icon name="plus" size="large" />
+          <Button
+            icon="plus"
+            circular
+            onClick={() => setShowAddColumnModal(true)}
+          />
         </div>
       )}
       {showAddRowButton && (

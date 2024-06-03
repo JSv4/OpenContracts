@@ -92,8 +92,8 @@ export function CRUDModal({
   }
 
   return (
-    <Modal closeIcon open={open} onClose={() => onClose()}>
-      <Modal.Content>
+    <Modal size="large" closeIcon open={open} onClose={() => onClose()}>
+      <Modal.Content scrolling>
         <CRUDWidget
           mode={mode}
           instance={instance_obj}

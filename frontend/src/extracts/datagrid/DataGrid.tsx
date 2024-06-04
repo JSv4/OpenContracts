@@ -119,11 +119,8 @@ export const DataGrid = ({
                   >
                     <Dropdown.Menu>
                       <Dropdown.Item
-                        text="Edit"
-                        onClick={() => console.log("Edit row ", row)}
-                      />
-                      <Dropdown.Item
                         text="Delete"
+                        icon="trash"
                         onClick={() => onRemoveDocIds(extract.id, [row.id])}
                       />
                     </Dropdown.Menu>

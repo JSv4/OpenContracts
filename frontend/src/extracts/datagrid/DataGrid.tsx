@@ -17,28 +17,12 @@ import {
 } from "../../graphql/types";
 import { useMutation } from "@apollo/client";
 import {
-  REQUEST_ADD_DOC_TO_EXTRACT,
-  REQUEST_CREATE_COLUMN,
-  REQUEST_DELETE_COLUMN,
-  REQUEST_REMOVE_DOC_FROM_EXTRACT,
   REQUEST_UPDATE_COLUMN,
-  RequestAddDocToExtractInputType,
-  RequestAddDocToExtractOutputType,
-  RequestDeleteColumnInputType,
-  RequestDeleteColumnOutputType,
-  RequestRemoveDocFromExtractInputType,
-  RequestRemoveDocFromExtractOutputType,
   RequestUpdateColumnInputType,
   RequestUpdateColumnOutputType,
 } from "../../graphql/mutations";
 import { toast } from "react-toastify";
 import { SelectDocumentsModal } from "../../components/widgets/modals/SelectDocumentsModal";
-import { CRUDModal } from "../../components/widgets/CRUD/CRUDModal";
-import {
-  editColumnForm_Schema,
-  editColumnForm_Ui_Schema,
-} from "../../components/forms/schemas";
-import { LanguageModelDropdown } from "../../components/widgets/selectors/LanguageModelDropdown";
 import { addingColumnToExtract } from "../../graphql/cache";
 
 interface DataGridProps {
@@ -47,6 +31,7 @@ interface DataGridProps {
   rows: DocumentType[];
   onAddDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveDocIds: (extractId: string, documentIds: string[]) => void;
+  onRemoveColumnId: (columnId: string) => void;
   columns: ColumnType[];
 }
 
@@ -57,8 +42,8 @@ export const DataGrid = ({
   columns,
   onAddDocIds,
   onRemoveDocIds,
+  onRemoveColumnId,
 }: DataGridProps) => {
-  const [column_to_edit, setColumnToEdit] = useState<ColumnType | null>(null);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [showAddRowButton, setShowAddRowButton] = useState(false);
   const [openAddRowModal, setOpenAddRowModal] = useState(false);
@@ -70,44 +55,6 @@ export const DataGrid = ({
   useEffect(() => {
     console.log("DataGrid columns", columns);
   }, [columns]);
-
-  const [
-    deleteColumn,
-    {
-      loading: delete_column_loading,
-      error: delete_column_error,
-      data: delete_column_data,
-    },
-  ] = useMutation<RequestDeleteColumnOutputType, RequestDeleteColumnInputType>(
-    REQUEST_DELETE_COLUMN,
-    {
-      onCompleted: (data) => {
-        toast.success("SUCCESS! Removed column from Extract.");
-      },
-      onError: (err) => {
-        toast.error("ERROR! Could not remove column.");
-      },
-    }
-  );
-
-  const [
-    updateColumn,
-    {
-      loading: update_column_loading,
-      error: update_column_error,
-      data: update_column_data,
-    },
-  ] = useMutation<RequestUpdateColumnOutputType, RequestUpdateColumnInputType>(
-    REQUEST_UPDATE_COLUMN,
-    {
-      onCompleted: (data) => {
-        toast.success("SUCCESS! Updated column.");
-      },
-      onError: (err) => {
-        toast.error("ERROR! Could not update column.");
-      },
-    }
-  );
 
   return (
     <div
@@ -135,23 +82,6 @@ export const DataGrid = ({
         filterDocIds={rows.map((row) => row.id)}
         toggleModal={() => setOpenAddRowModal(!openAddRowModal)}
       />
-      <CRUDModal
-        open={column_to_edit !== null}
-        mode="EDIT"
-        old_instance={column_to_edit ? column_to_edit : {}}
-        model_name="column"
-        ui_schema={editColumnForm_Ui_Schema}
-        data_schema={editColumnForm_Schema}
-        has_file={false}
-        file_is_image={false}
-        accepted_file_types=""
-        file_field=""
-        file_label=""
-        onClose={() => setColumnToEdit(null)}
-        property_widgets={{
-          labelSet: <LanguageModelDropdown />,
-        }}
-      />
       <Table celled style={{ flex: 1 }}>
         <Table.Header fullWidth>
           <Table.Row>
@@ -174,9 +104,7 @@ export const DataGrid = ({
                     />
                     <Dropdown.Item
                       text="Delete"
-                      onClick={() =>
-                        deleteColumn({ variables: { id: column.id } })
-                      }
+                      onClick={() => onRemoveColumnId(column.id)}
                     />
                   </Dropdown.Menu>
                 </Dropdown>

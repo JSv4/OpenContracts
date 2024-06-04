@@ -13,7 +13,6 @@ import {
   RequestCreateColumnOutputType,
 } from "../graphql/mutations";
 import {
-  GET_DOCUMENTS,
   GetExtractsOutput,
   GetExtractsInput,
   REQUEST_GET_EXTRACTS,
@@ -36,13 +35,6 @@ import { ExtractList } from "../extracts/list/ExtractList";
 import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";
 import { CreateExtractModal } from "../components/widgets/modals/CreateExtractModal";
 import { EditExtractModal } from "../components/widgets/modals/EditExtractModal";
-import { CRUDModal } from "../components/widgets/CRUD/CRUDModal";
-import {
-  editColumnForm_Schema,
-  editColumnForm_Ui_Schema,
-} from "../components/forms/schemas";
-import { LanguageModelDropdown } from "../components/widgets/selectors/LanguageModelDropdown";
-import { CreateColumnModal } from "../components/widgets/modals/CreateColumnModal";
 
 export const Extracts = () => {
   const auth_token = useReactiveVar(authToken);
@@ -95,25 +87,6 @@ export const Extracts = () => {
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Implementing various resolvers / mutations to create action methods
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  const [
-    createColumn,
-    {
-      loading: create_column_loading,
-      error: create_column_error,
-      data: create_column_data,
-    },
-  ] = useMutation<RequestCreateColumnOutputType, RequestCreateColumnInputType>(
-    REQUEST_CREATE_COLUMN,
-    {
-      onCompleted: (data) => {
-        toast.success("SUCCESS! Created column.");
-      },
-      onError: (err) => {
-        toast.error("ERROR! Could not create column.");
-      },
-    }
-  );
-
   const [tryDeleteExtract] = useMutation<
     RequestDeleteExtractOutputType,
     RequestDeleteExtractInputType
@@ -183,23 +156,6 @@ export const Extracts = () => {
             open={opened_extract !== null}
             toggleModal={() => openedExtract(null)}
           />
-          {adding_column_to_extract ? (
-            <CreateColumnModal
-              open={adding_column_to_extract !== null}
-              onSubmit={(data) => {
-                console.log("Create col with data", data);
-                createColumn({
-                  variables: {
-                    fieldsetId: adding_column_to_extract.fieldset.id,
-                    ...data,
-                  },
-                });
-              }}
-              onClose={() => addingColumnToExtract(null)}
-            />
-          ) : (
-            <></>
-          )}
         </>
       }
       SearchBar={<CreateAndSearchBar actions={extract_actions} />}

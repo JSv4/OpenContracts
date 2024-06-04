@@ -1222,6 +1222,7 @@ export const REQUEST_CREATE_COLUMN = gql`
       ok
       obj {
         id
+        name
         query
         matchText
         outputType
@@ -1241,6 +1242,7 @@ export interface RequestDeleteColumnOutputType {
   deleteColumn: {
     ok: boolean;
     message: string;
+    deletedId: string;
   };
 }
 
@@ -1253,6 +1255,7 @@ export const REQUEST_DELETE_COLUMN = gql`
     deleteColumn(id: $id) {
       ok
       message
+      deletedId
     }
   }
 `;

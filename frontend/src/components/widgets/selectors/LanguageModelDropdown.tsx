@@ -16,7 +16,7 @@ interface FieldsetOption {
 
 interface LanguageModelDropdownProps {
   read_only?: boolean;
-  languageModel?: LanguageModelType;
+  languageModelId?: string | undefined;
   style?: Record<string, any>;
   onChange?: (values: any) => void;
 }
@@ -25,7 +25,7 @@ export const LanguageModelDropdown = ({
   read_only,
   style,
   onChange,
-  languageModel,
+  languageModelId,
 }: LanguageModelDropdownProps) => {
   const [searchQuery, setSearchQuery] = useState<string>();
 
@@ -72,7 +72,7 @@ export const LanguageModelDropdown = ({
     const selected = _.find(fieldsets, { id: data.value });
     if (onChange) {
       if (selected) {
-        onChange(selected as LanguageModelType);
+        onChange(data.value);
       } else {
         onChange(null);
       }
@@ -107,7 +107,7 @@ export const LanguageModelDropdown = ({
       search
       disabled={read_only}
       options={getDropdownOptions()}
-      value={languageModel ? languageModel.id : undefined}
+      value={languageModelId ? languageModelId : undefined}
       placeholder="Select Language Model"
       onChange={read_only ? () => {} : handleSelectionChange}
       onSearchChange={handleSearchChange}

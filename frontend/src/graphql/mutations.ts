@@ -6,6 +6,7 @@ import {
   AnnotationLabelType,
   ColumnType,
   CorpusType,
+  DocumentType,
   ExtractType,
   FieldsetType,
   LabelSetType,
@@ -1175,7 +1176,7 @@ export const REQUEST_UPDATE_FIELDSET = gql`
 `;
 
 export interface RequestCreateColumnInputType {
-  fieldsetId: string;
+  fieldsetId?: string;
   query: string;
   matchText?: string;
   outputType: string;
@@ -1183,6 +1184,7 @@ export interface RequestCreateColumnInputType {
   instructions?: string;
   languageModelId: string;
   agentic: boolean;
+  name: string;
 }
 
 export interface RequestCreateColumnOutputType {
@@ -1195,14 +1197,15 @@ export interface RequestCreateColumnOutputType {
 
 export const REQUEST_CREATE_COLUMN = gql`
   mutation CreateColumn(
+    $name: String!
     $fieldsetId: ID!
-    $query: String!
+    $query: String
     $matchText: String
     $outputType: String!
     $limitToLabel: String
     $instructions: String
     $languageModelId: ID!
-    $agentic: Boolean!
+    $agentic: Boolean
   ) {
     createColumn(
       fieldsetId: $fieldsetId
@@ -1213,8 +1216,9 @@ export const REQUEST_CREATE_COLUMN = gql`
       instructions: $instructions
       languageModelId: $languageModelId
       agentic: $agentic
+      name: $name
     ) {
-      msg
+      message
       ok
       obj {
         id
@@ -1254,9 +1258,11 @@ export const REQUEST_DELETE_COLUMN = gql`
 `;
 
 export interface RequestAddDocToExtractOutputType {
-  ok: boolean;
-  message: string;
-  objId: string;
+  addDocsToExtract: {
+    ok: boolean;
+    message: string;
+    objs: DocumentType[];
+  };
 }
 
 export interface RequestAddDocToExtractInputType {
@@ -1269,14 +1275,23 @@ export const REQUEST_ADD_DOC_TO_EXTRACT = gql`
     addDocsToExtract(documentIds: $documentIds, extractId: $extractId) {
       ok
       message
-      objId
+      objs {
+        __typename
+        id
+        title
+        description
+        pageCount
+      }
     }
   }
 `;
 
 export interface RequestRemoveDocFromExtractOutputType {
-  ok: boolean;
-  message: string;
+  removeDocsFromExtract: {
+    ok: boolean;
+    message: string;
+    idsRemoved: string[];
+  };
 }
 
 export interface RequestRemoveDocFromExtractInputType {
@@ -1292,6 +1307,7 @@ export const REQUEST_REMOVE_DOC_FROM_EXTRACT = gql`
     ) {
       ok
       message
+      idsRemoved
     }
   }
 `;

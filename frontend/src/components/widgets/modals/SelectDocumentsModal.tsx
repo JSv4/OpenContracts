@@ -27,12 +27,14 @@ import { selectedDocumentIds } from "../../../graphql/cache";
 
 interface SelectDocumentsModalProps {
   open: boolean;
+  filterDocIds: string[];
   toggleModal: () => void;
   onAddDocumentIds: (documents: string[]) => void;
 }
 
 export const SelectDocumentsModal = ({
   open,
+  filterDocIds,
   toggleModal,
   onAddDocumentIds,
 }: SelectDocumentsModalProps) => {
@@ -87,7 +89,8 @@ export const SelectDocumentsModal = ({
     : [];
   const document_items = document_nodes
     .map((edge) => (edge?.node ? edge.node : undefined))
-    .filter((item): item is DocumentType => !!item);
+    .filter((item): item is DocumentType => !!item)
+    .filter((item) => !filterDocIds.includes(item.id));
 
   // If doc search term changes, refetch documents
   useEffect(() => {

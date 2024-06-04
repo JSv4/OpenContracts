@@ -5,15 +5,29 @@ import {
   Button,
   Modal,
 } from "semantic-ui-react";
-import { ExtractType } from "../../../graphql/types";
-import { useQuery } from "@apollo/client";
+import {
+  ColumnType,
+  DatacellType,
+  DocumentType,
+  ExtractType,
+} from "../../../graphql/types";
+import { useMutation, useQuery } from "@apollo/client";
 import {
   RequestGetExtractOutput,
-  GetExtractsInput,
   REQUEST_GET_EXTRACT,
   RequestGetExtractInput,
 } from "../../../graphql/queries";
 import { DataGrid } from "../../../extracts/datagrid/DataGrid";
+import { useEffect, useState } from "react";
+import {
+  REQUEST_ADD_DOC_TO_EXTRACT,
+  REQUEST_REMOVE_DOC_FROM_EXTRACT,
+  RequestAddDocToExtractInputType,
+  RequestAddDocToExtractOutputType,
+  RequestRemoveDocFromExtractInputType,
+  RequestRemoveDocFromExtractOutputType,
+} from "../../../graphql/mutations";
+import { toast } from "react-toastify";
 
 interface EditExtractModalProps {
   extract: ExtractType | null;
@@ -26,20 +40,106 @@ export const EditExtractModal = ({
   extract,
   toggleModal,
 }: EditExtractModalProps) => {
-  const { loading, error, data, refetch } = useQuery<
-    RequestGetExtractOutput,
-    RequestGetExtractInput
-  >(REQUEST_GET_EXTRACT, {
-    variables: {
-      id: extract ? extract.id : "",
+  const [cells, setCells] = useState<DatacellType[]>([]);
+  const [rows, setRows] = useState<DocumentType[]>([]);
+  const [columns, setColumns] = useState<ColumnType[]>([]);
+
+  const [addDocsToExtract, { loading: add_docs_loading, data: add_docs_data }] =
+    useMutation<
+      RequestAddDocToExtractOutputType,
+      RequestAddDocToExtractInputType
+    >(REQUEST_ADD_DOC_TO_EXTRACT, {
+      onCompleted: (data) => {
+        console.log("Add data to ", data);
+        setRows((old_rows) => [
+          ...old_rows,
+          ...(data.addDocsToExtract.objs as DocumentType[]),
+        ]);
+        toast.success("SUCCESS! Added docs to extract.");
+      },
+      onError: (err) => {
+        toast.error("ERROR! Could not add docs to extract.");
+      },
+    });
+
+  const handleAddDocIdsToExtract = (
+    extractId: string,
+    documentIds: string[]
+  ) => {
+    addDocsToExtract({
+      variables: {
+        extractId,
+        documentIds,
+      },
+    });
+  };
+
+  const [
+    removeDocsFromExtract,
+    { loading: remove_docs_loading, data: remove_docs_data },
+  ] = useMutation<
+    RequestRemoveDocFromExtractOutputType,
+    RequestRemoveDocFromExtractInputType
+  >(REQUEST_REMOVE_DOC_FROM_EXTRACT, {
+    onCompleted: (data) => {
+      toast.success("SUCCESS! Removed docs from extract.");
+      console.log("Removed docs and return data", data);
+      setRows((old_rows) =>
+        old_rows.filter(
+          (item) => !data.removeDocsFromExtract.idsRemoved.includes(item.id)
+        )
+      );
+    },
+    onError: (err) => {
+      toast.error("ERROR! Could not remove docs from extract.");
     },
   });
+
+  const handleRemoveDocIdsFromExtract = (
+    extractId: string,
+    documentIds: string[]
+  ) => {
+    removeDocsFromExtract({
+      variables: {
+        extractId,
+        documentIdsToRemove: documentIds,
+      },
+    });
+  };
+
+  const {
+    loading,
+    error,
+    data: extract_data,
+    refetch,
+  } = useQuery<RequestGetExtractOutput, RequestGetExtractInput>(
+    REQUEST_GET_EXTRACT,
+    {
+      variables: {
+        id: extract ? extract.id : "",
+      },
+    }
+  );
+
+  useEffect(() => {
+    if (extract) {
+      refetch();
+    }
+  }, [extract]);
+
+  useEffect(() => {
+    if (extract_data) {
+      const { fullDatacellList, fullDocumentList, fieldset } =
+        extract_data.extract;
+      setCells(fullDatacellList ? fullDatacellList : []);
+      setRows(fullDocumentList ? fullDocumentList : []);
+      setColumns(fieldset?.fullColumnList ? fieldset.fullColumnList : []);
+    }
+  }, [extract_data]);
 
   if (!extract || !extract.id) {
     return <></>;
   }
-
-  console.log("Extract", data);
 
   return (
     <Modal
@@ -56,7 +156,14 @@ export const EditExtractModal = ({
     >
       <ModalHeader>Editing Extract {extract.name}</ModalHeader>
       <ModalContent style={{ flex: 1 }}>
-        <DataGrid extract={extract} />
+        <DataGrid
+          onAddDocIds={handleAddDocIdsToExtract}
+          onRemoveDocIds={handleRemoveDocIdsFromExtract}
+          extract={extract}
+          cells={cells}
+          rows={rows}
+          columns={columns}
+        />
       </ModalContent>
       <ModalActions>
         <Button negative onClick={() => toggleModal()}>

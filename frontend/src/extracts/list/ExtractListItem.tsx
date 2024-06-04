@@ -5,7 +5,6 @@ import { DateTimeWidget } from "../../components/widgets/data-display/DateTimeWi
 interface ExtractItemRowProps {
   style?: Record<string, any>;
   item: ExtractType;
-  key: string;
   onDelete: (args?: any) => void | any;
   onSelect?: (item: ExtractType) => void;
 }
@@ -14,7 +13,6 @@ export function ExtractItemRow({
   onSelect,
   onDelete,
   item,
-  key,
 }: ExtractItemRowProps) {
   let createdTime = "";
   let createdDate = "N/A";
@@ -41,7 +39,7 @@ export function ExtractItemRow({
   }
 
   return (
-    <Table.Row key={key}>
+    <Table.Row key={item.id}>
       <Table.Cell>{item.name}</Table.Cell>
       <Table.Cell>
         <DateTimeWidget timeString={createdTime} dateString={createdDate} />

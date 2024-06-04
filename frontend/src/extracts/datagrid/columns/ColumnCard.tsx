@@ -125,9 +125,9 @@ const ColumnHeaderCard: React.FC<{
                 languageModel: data ? data : null,
               })
             }
-            languageModel={
+            languageModelId={
               editedColumn?.languageModel
-                ? editedColumn.languageModel
+                ? editedColumn.languageModel.id
                 : undefined
             }
           />

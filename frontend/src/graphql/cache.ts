@@ -67,27 +67,6 @@ export const cache = new InMemoryCache({
     PageAwareAnnotationType: {
       fields: {
         pageAnnotations: {
-          // merge: (existing: Reference[] = [], incoming: Reference[] = [], { readField }) => {
-
-          //   console.log("Attempt merge");
-
-          //   const merged: any[] = existing ? existing.slice(0) : [];
-          //   const existing_ids = existing.map((item) => readField<string>('id', item))
-
-          //   incoming.forEach((incoming_annotation) => {
-          //     const incoming_item_id = readField<string>('id', incoming_annotation);
-          //     if (!existing_ids.includes(incoming_item_id)) {
-          //       console.log("New id detected...", incoming_item_id);
-          //       merged.push(incoming_annotation);
-
-          //     }
-          //   })
-
-          //   console.log("Cache - incoming", incoming, "existing", existing, "merged", merged);
-
-          //   return merged;
-
-          // },
           keyArgs: ["documentId", "corpusId", "forAnalysisIds", "labelType"],
         },
       },
@@ -159,6 +138,9 @@ export const cache = new InMemoryCache({
         labelsets: relayStylePagination(),
         annotationLabels: relayStylePagination(),
         relationshipLabels: relayStylePagination(),
+        extracts: relayStylePagination(),
+        columns: relayStylePagination(),
+        languageModels: relayStylePagination(),
       },
     },
   },
@@ -255,6 +237,9 @@ export const analysisSearchTerm = makeVar<string>("");
 export const exportSearchTerm = makeVar<string>("");
 export const selectedFieldset = makeVar<FieldsetType | null>(null);
 export const selectedLanguageModel = makeVar<LanguageModelType | null>(null);
+export const editingExtract = makeVar<ExtractType | null>(null);
+export const addingColumnToExtract = makeVar<ExtractType | null>(null);
+export const editingColumnForExtract = makeVar<ExtractType | null>(null);
 
 /**
  * Auth-related global variables

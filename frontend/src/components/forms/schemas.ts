@@ -112,7 +112,7 @@ export const editColumnForm_Schema = {
         "Use agentic retrieval of referenced sections and definitions in returned text.",
     },
   },
-  required: [],
+  required: ["name", "outputType"],
 };
 
 export const editColumnForm_Ui_Schema = {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Table,
   Input,
@@ -18,6 +18,7 @@ import {
 import { useMutation } from "@apollo/client";
 import {
   REQUEST_ADD_DOC_TO_EXTRACT,
+  REQUEST_CREATE_COLUMN,
   REQUEST_DELETE_COLUMN,
   REQUEST_REMOVE_DOC_FROM_EXTRACT,
   REQUEST_UPDATE_COLUMN,
@@ -38,23 +39,37 @@ import {
   editColumnForm_Ui_Schema,
 } from "../../components/forms/schemas";
 import { LanguageModelDropdown } from "../../components/widgets/selectors/LanguageModelDropdown";
+import { addingColumnToExtract } from "../../graphql/cache";
 
 interface DataGridProps {
   extract: ExtractType;
+  cells: DatacellType[];
+  rows: DocumentType[];
+  onAddDocIds: (extractId: string, documentIds: string[]) => void;
+  onRemoveDocIds: (extractId: string, documentIds: string[]) => void;
+  columns: ColumnType[];
 }
 
-export const DataGrid = ({ extract }: DataGridProps) => {
+export const DataGrid = ({
+  extract,
+  cells,
+  rows,
+  columns,
+  onAddDocIds,
+  onRemoveDocIds,
+}: DataGridProps) => {
   const [column_to_edit, setColumnToEdit] = useState<ColumnType | null>(null);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
-  const [showAddColumnModal, setShowAddColumnModal] = useState(false);
   const [showAddRowButton, setShowAddRowButton] = useState(false);
   const [openAddRowModal, setOpenAddRowModal] = useState(false);
 
-  const { fullDatacellList, documents, fieldset } = extract;
+  useEffect(() => {
+    console.log("DataGrid rows ", rows);
+  }, [rows]);
 
-  const cells = fullDatacellList ? fullDatacellList : [];
-  const rows = documents ? documents : [];
-  const columns = fieldset?.fullColumnList ? fieldset.fullColumnList : [];
+  useEffect(() => {
+    console.log("DataGrid columns", columns);
+  }, [columns]);
 
   const [
     deleteColumn,
@@ -94,35 +109,6 @@ export const DataGrid = ({ extract }: DataGridProps) => {
     }
   );
 
-  // TODO - I think I need to do something in the cache here...
-  const [
-    removeDocsFromExtract,
-    { loading: remove_docs_loading, data: remove_docs_data },
-  ] = useMutation<
-    RequestRemoveDocFromExtractOutputType,
-    RequestRemoveDocFromExtractInputType
-  >(REQUEST_REMOVE_DOC_FROM_EXTRACT, {
-    onCompleted: (data) => {
-      toast.success("SUCCESS! Removed docs from extract.");
-    },
-    onError: (err) => {
-      toast.error("ERROR! Could not remove docs from extract.");
-    },
-  });
-
-  const [addDocsToExtract, { loading: add_docs_loading, data: add_docs_data }] =
-    useMutation<
-      RequestAddDocToExtractOutputType,
-      RequestAddDocToExtractInputType
-    >(REQUEST_ADD_DOC_TO_EXTRACT, {
-      onCompleted: (data) => {
-        toast.success("SUCCESS! Added docs to extract.");
-      },
-      onError: (err) => {
-        toast.error("ERROR! Could not add docs to extract.");
-      },
-    });
-
   return (
     <div
       style={{
@@ -144,33 +130,15 @@ export const DataGrid = ({ extract }: DataGridProps) => {
       <SelectDocumentsModal
         open={openAddRowModal}
         onAddDocumentIds={(documentIds: string[]) =>
-          addDocsToExtract({
-            variables: { extractId: extract.id, documentIds },
-          })
+          onAddDocIds(extract.id, documentIds)
         }
+        filterDocIds={rows.map((row) => row.id)}
         toggleModal={() => setOpenAddRowModal(!openAddRowModal)}
       />
       <CRUDModal
         open={column_to_edit !== null}
         mode="EDIT"
         old_instance={column_to_edit ? column_to_edit : {}}
-        model_name="column"
-        ui_schema={editColumnForm_Ui_Schema}
-        data_schema={editColumnForm_Schema}
-        has_file={false}
-        file_is_image={false}
-        accepted_file_types=""
-        file_field=""
-        file_label=""
-        onClose={() => setColumnToEdit(null)}
-        property_widgets={{
-          labelSet: <LanguageModelDropdown />,
-        }}
-      />
-      <CRUDModal
-        open={showAddColumnModal}
-        mode="CREATE"
-        old_instance={{}}
         model_name="column"
         ui_schema={editColumnForm_Ui_Schema}
         data_schema={editColumnForm_Schema}
@@ -241,14 +209,7 @@ export const DataGrid = ({ extract }: DataGridProps) => {
                       />
                       <Dropdown.Item
                         text="Delete"
-                        onClick={() =>
-                          removeDocsFromExtract({
-                            variables: {
-                              extractId: extract.id,
-                              documentIdsToRemove: [row.id],
-                            },
-                          })
-                        }
+                        onClick={() => onRemoveDocIds(extract.id, [row.id])}
                       />
                     </Dropdown.Menu>
                   </Dropdown>
@@ -282,7 +243,7 @@ export const DataGrid = ({ extract }: DataGridProps) => {
           <Button
             icon="plus"
             circular
-            onClick={() => setShowAddColumnModal(true)}
+            onClick={() => addingColumnToExtract(extract)}
           />
         </div>
       )}

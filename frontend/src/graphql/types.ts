@@ -1186,14 +1186,14 @@ export interface FieldsetType extends Node {
 
 export interface ColumnType extends Node {
   name: Maybe<string>;
-  fieldset: FieldsetType;
-  query: string;
+  fieldset?: FieldsetType;
+  query?: string;
   matchText?: Maybe<string>;
   outputType: string;
   limitToLabel?: Maybe<string>;
   instructions?: Maybe<string>;
   languageModel?: Maybe<LanguageModelType>;
-  agentic: boolean;
+  agentic?: boolean;
 }
 
 export interface ColumnTypeEdge {
@@ -1229,6 +1229,7 @@ export interface ExtractType extends Node {
   documents?: DocumentType[];
   extractedDatacells?: DatacellTypeConnection;
   fullDatacellList?: DatacellType[];
+  fullDocumentList?: DocumentType[];
 }
 
 export interface DatacellType extends Node {

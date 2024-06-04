@@ -118,9 +118,7 @@ export const SEARCH_DOCUMENTS = gql`
     $limit: Int
     $textSearch: String
     $hasLabelWithId: String
-    $annotateDocLabels: Boolean!
     $hasAnnotationsWithIds: String
-    $includeMetadata: Boolean!
   ) {
     documents(
       inCorpusWithId: $inCorpusWithId
@@ -141,6 +139,7 @@ export const SEARCH_DOCUMENTS = gql`
           icon
           isPublic
           myPermissions
+          is_selected @client
         }
       }
       pageInfo {
@@ -1150,6 +1149,7 @@ export const REQUEST_GET_EXTRACT = gql`
         name
         fullColumnList {
           id
+          name
           query
           matchText
           limitToLabel
@@ -1167,6 +1167,12 @@ export const REQUEST_GET_EXTRACT = gql`
       created
       started
       finished
+      fullDocumentList {
+        id
+        title
+        description
+        pageCount
+      }
       fullDatacellList {
         id
         column {

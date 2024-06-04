@@ -1317,20 +1317,20 @@ export const REQUEST_REMOVE_DOC_FROM_EXTRACT = gql`
 
 export interface RequestUpdateColumnInputType {
   id: string;
-  fieldsetId: string;
-  query: string;
+  fieldsetId?: string;
+  query?: string;
   matchText?: string;
-  outputType: string;
+  outputType?: string;
   limitToLabel?: string;
   instructions?: string;
-  languageModelId: string;
-  agentic: boolean;
+  languageModelId?: string;
+  agentic?: boolean;
 }
 
 export interface RequestUpdateColumnOutputType {
   updateColumn: {
     ok: boolean;
-    msg: string;
+    message: string;
     obj: ColumnType;
   };
 }
@@ -1358,10 +1358,11 @@ export const REQUEST_UPDATE_COLUMN = gql`
       languageModelId: $languageModelId
       agentic: $agentic
     ) {
-      msg
+      message
       ok
       obj {
         id
+        name
         query
         matchText
         outputType

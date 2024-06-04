@@ -1,29 +1,16 @@
 import React, { useEffect, useState } from "react";
-import {
-  Table,
-  Input,
-  Button,
-  Icon,
-  Popup,
-  Modal,
-  List,
-  Dropdown,
-} from "semantic-ui-react";
+import { Table, Button, Icon, Dropdown } from "semantic-ui-react";
 import {
   ColumnType,
   DatacellType,
   DocumentType,
   ExtractType,
 } from "../../graphql/types";
-import { useMutation } from "@apollo/client";
-import {
-  REQUEST_UPDATE_COLUMN,
-  RequestUpdateColumnInputType,
-  RequestUpdateColumnOutputType,
-} from "../../graphql/mutations";
-import { toast } from "react-toastify";
 import { SelectDocumentsModal } from "../../components/widgets/modals/SelectDocumentsModal";
-import { addingColumnToExtract } from "../../graphql/cache";
+import {
+  addingColumnToExtract,
+  editingColumnForExtract,
+} from "../../graphql/cache";
 
 interface DataGridProps {
   extract: ExtractType;
@@ -100,7 +87,7 @@ export const DataGrid = ({
                   <Dropdown.Menu>
                     <Dropdown.Item
                       text="Edit"
-                      onClick={() => console.log("Edit", column)}
+                      onClick={() => editingColumnForExtract(column)}
                     />
                     <Dropdown.Item
                       text="Delete"

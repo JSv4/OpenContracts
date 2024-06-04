@@ -17,6 +17,7 @@ import {
   ExtractType,
   FieldsetType,
   LanguageModelType,
+  ColumnType,
 } from "./types";
 
 export const mergeArrayByIdFieldPolicy: FieldPolicy<Reference[]> = {
@@ -239,7 +240,7 @@ export const selectedFieldset = makeVar<FieldsetType | null>(null);
 export const selectedLanguageModel = makeVar<LanguageModelType | null>(null);
 export const editingExtract = makeVar<ExtractType | null>(null);
 export const addingColumnToExtract = makeVar<ExtractType | null>(null);
-export const editingColumnForExtract = makeVar<ExtractType | null>(null);
+export const editingColumnForExtract = makeVar<ColumnType | null>(null);
 
 /**
  * Auth-related global variables

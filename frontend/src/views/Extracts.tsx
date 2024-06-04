@@ -8,9 +8,6 @@ import {
   RequestDeleteExtractOutputType,
   RequestDeleteExtractInputType,
   REQUEST_DELETE_EXTRACT,
-  RequestCreateColumnInputType,
-  REQUEST_CREATE_COLUMN,
-  RequestCreateColumnOutputType,
 } from "../graphql/mutations";
 import {
   GetExtractsOutput,
@@ -22,9 +19,7 @@ import {
   openedExtract,
   selectedExtractId,
   showDeleteExtractModal,
-  showEditExtractModal,
   showCreateExtractModal,
-  addingColumnToExtract,
 } from "../graphql/cache";
 
 import { ActionDropdownItem, LooseObject } from "../components/types";
@@ -41,9 +36,7 @@ export const Extracts = () => {
   const opened_extract = useReactiveVar(openedExtract);
   const selected_extract_id = useReactiveVar(selectedExtractId);
   const show_create_extract_modal = useReactiveVar(showCreateExtractModal);
-  const show_edit_extract_modal = useReactiveVar(showEditExtractModal);
   const show_delete_extract_modal = useReactiveVar(showDeleteExtractModal);
-  const adding_column_to_extract = useReactiveVar(addingColumnToExtract);
 
   const location = useLocation();
 

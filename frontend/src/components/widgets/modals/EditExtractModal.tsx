@@ -40,8 +40,10 @@ import { toast } from "react-toastify";
 import { CreateColumnModal } from "./CreateColumnModal";
 import {
   addingColumnToExtract,
+  editingColumnForExtract,
   showEditExtractModal,
 } from "../../../graphql/cache";
+import { EditColumnModal } from "./EditColumnModal";
 
 interface EditExtractModalProps {
   extract: ExtractType | null;
@@ -58,6 +60,8 @@ export const EditExtractModal = ({
   const [rows, setRows] = useState<DocumentType[]>([]);
   const [columns, setColumns] = useState<ColumnType[]>([]);
   const adding_column_to_extract = useReactiveVar(addingColumnToExtract);
+  const editing_column_for_extract = useReactiveVar(editingColumnForExtract);
+
   useEffect(() => {
     console.log("adding_column_to_extract", adding_column_to_extract);
   }, [adding_column_to_extract]);
@@ -186,24 +190,38 @@ export const EditExtractModal = ({
     }
   );
 
-  const [
-    updateColumn,
-    {
-      loading: update_column_loading,
-      error: update_column_error,
-      data: update_column_data,
+  const [updateColumn] = useMutation<
+    RequestUpdateColumnOutputType,
+    RequestUpdateColumnInputType
+  >(REQUEST_UPDATE_COLUMN, {
+    onCompleted: (data) => {
+      toast.success("SUCCESS! Updated column.");
+      setColumns((oldCols) => {
+        // Find the index of the object to be updated
+        const index = oldCols.findIndex(
+          (item) => item.id === data.updateColumn.obj.id
+        );
+
+        // If the object exists, replace it with the new object
+        if (index !== -1) {
+          // Create a new array with the updated object
+          return [
+            ...oldCols.slice(0, index),
+            data.updateColumn.obj,
+            ...oldCols.slice(index + 1),
+          ];
+        } else {
+          // If the object doesn't exist, just add it to the end of the list
+          return [...oldCols, data.updateColumn.obj];
+        }
+      });
+      editingColumnForExtract(null);
     },
-  ] = useMutation<RequestUpdateColumnOutputType, RequestUpdateColumnInputType>(
-    REQUEST_UPDATE_COLUMN,
-    {
-      onCompleted: (data) => {
-        toast.success("SUCCESS! Updated column.");
-      },
-      onError: (err) => {
-        toast.error("ERROR! Could not update column.");
-      },
-    }
-  );
+    onError: (err) => {
+      toast.error("ERROR! Could not update column.");
+      editingColumnForExtract(null);
+    },
+  });
 
   useEffect(() => {
     if (extract) {
@@ -237,6 +255,16 @@ export const EditExtractModal = ({
         }
         onClose={() => addingColumnToExtract(null)}
       />
+      {editing_column_for_extract === null ? (
+        <></>
+      ) : (
+        <EditColumnModal
+          open={editing_column_for_extract !== null}
+          existing_column={editing_column_for_extract}
+          onClose={() => editingColumnForExtract(null)}
+          onSubmit={(data: ColumnType) => updateColumn({ variables: data })}
+        />
+      )}
       <Modal
         size="fullscreen"
         open={open}

@@ -1185,15 +1185,17 @@ export interface FieldsetType extends Node {
 }
 
 export interface ColumnType extends Node {
-  name: Maybe<string>;
+  name: string;
   fieldset?: FieldsetType;
   query?: string;
-  matchText?: Maybe<string>;
+  matchText?: string;
   outputType: string;
-  limitToLabel?: Maybe<string>;
-  instructions?: Maybe<string>;
-  languageModel?: Maybe<LanguageModelType>;
+  limitToLabel?: string;
+  instructions?: string;
+  languageModel?: LanguageModelType;
   agentic?: boolean;
+  fieldsetId?: string;
+  languageModelId?: string;
 }
 
 export interface ColumnTypeEdge {

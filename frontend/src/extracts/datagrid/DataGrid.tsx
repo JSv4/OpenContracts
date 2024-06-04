@@ -22,6 +22,14 @@ interface DataGridProps {
   columns: ColumnType[];
 }
 
+const missingCellStyle = {
+  backgroundColor: "#f0f0f0",
+  backgroundImage:
+    "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)",
+  backgroundSize: "10px 10px",
+  backgroundPosition: "0 0, 5px 5px",
+};
+
 export const DataGrid = ({
   extract,
   cells,
@@ -126,11 +134,21 @@ export const DataGrid = ({
                     </Dropdown.Menu>
                   </Dropdown>
                 </Table.Cell>
-                {cells
-                  .filter((cell) => cell.document.id == row.id)
-                  .map((cell) => (
-                    <Table.Cell key={cell.id}>{cell.data}</Table.Cell>
-                  ))}
+                {columns.map((column) => {
+                  const cell = cells.find(
+                    (cell) =>
+                      cell.document.id === row.id &&
+                      cell.column.id === column.id
+                  );
+                  return (
+                    <Table.Cell
+                      key={column.id}
+                      style={cell ? {} : missingCellStyle}
+                    >
+                      {cell ? cell.data : "-"}
+                    </Table.Cell>
+                  );
+                })}
               </Table.Row>
             ))
           )}

@@ -145,7 +145,7 @@ export const Extracts = () => {
             onClose={() => showCreateExtractModal(false)}
           />
           <EditExtractModal
-            extract={opened_extract}
+            ext={opened_extract}
             open={opened_extract !== null}
             toggleModal={() => openedExtract(null)}
           />

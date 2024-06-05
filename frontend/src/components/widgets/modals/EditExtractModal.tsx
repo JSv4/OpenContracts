@@ -4,6 +4,7 @@ import {
   ModalActions,
   Button,
   Modal,
+  Icon,
 } from "semantic-ui-react";
 import {
   ColumnType,
@@ -24,6 +25,7 @@ import {
   REQUEST_CREATE_COLUMN,
   REQUEST_DELETE_COLUMN,
   REQUEST_REMOVE_DOC_FROM_EXTRACT,
+  REQUEST_START_EXTRACT,
   REQUEST_UPDATE_COLUMN,
   RequestAddDocToExtractInputType,
   RequestAddDocToExtractOutputType,
@@ -33,6 +35,8 @@ import {
   RequestDeleteColumnOutputType,
   RequestRemoveDocFromExtractInputType,
   RequestRemoveDocFromExtractOutputType,
+  RequestStartExtractInputType,
+  RequestStartExtractOutputType,
   RequestUpdateColumnInputType,
   RequestUpdateColumnOutputType,
 } from "../../../graphql/mutations";
@@ -46,16 +50,17 @@ import {
 import { EditColumnModal } from "./EditColumnModal";
 
 interface EditExtractModalProps {
-  extract: ExtractType | null;
+  ext: ExtractType | null;
   open: boolean;
   toggleModal: () => void;
 }
 
 export const EditExtractModal = ({
   open,
-  extract,
+  ext,
   toggleModal,
 }: EditExtractModalProps) => {
+  const [extract, setExtract] = useState<ExtractType | null>(ext);
   const [cells, setCells] = useState<DatacellType[]>([]);
   const [rows, setRows] = useState<DocumentType[]>([]);
   const [columns, setColumns] = useState<ColumnType[]>([]);
@@ -65,6 +70,12 @@ export const EditExtractModal = ({
   useEffect(() => {
     console.log("adding_column_to_extract", adding_column_to_extract);
   }, [adding_column_to_extract]);
+
+  useEffect(() => {
+    if (ext) {
+      setExtract(ext);
+    }
+  }, [ext]);
 
   const [addDocsToExtract, { loading: add_docs_loading, data: add_docs_data }] =
     useMutation<
@@ -223,6 +234,21 @@ export const EditExtractModal = ({
     },
   });
 
+  const [startExtract] = useMutation<
+    RequestStartExtractOutputType,
+    RequestStartExtractInputType
+  >(REQUEST_START_EXTRACT, {
+    onCompleted: (data) => {
+      toast.success("SUCCESS! Started extract.");
+      setExtract((e) => {
+        return { ...e, ...data.startExtract.obj };
+      });
+    },
+    onError: (err) => {
+      toast.error("ERROR! Could not start extract.");
+    },
+  });
+
   useEffect(() => {
     if (extract) {
       refetch();
@@ -266,6 +292,7 @@ export const EditExtractModal = ({
         />
       )}
       <Modal
+        closeIcon
         size="fullscreen"
         open={open}
         onClose={() => toggleModal()}
@@ -279,6 +306,42 @@ export const EditExtractModal = ({
       >
         <ModalHeader>Editing Extract {extract.name}</ModalHeader>
         <ModalContent style={{ flex: 1 }}>
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "flex-end",
+              padding: "1rem",
+            }}
+          >
+            <div>
+              {extract.started ? (
+                <Button
+                  positive
+                  icon
+                  {...(!extract.finished
+                    ? { disabled: true, loading: true }
+                    : {})}
+                  labelPosition="right"
+                >
+                  Download
+                  <Icon name="download" />
+                </Button>
+              ) : (
+                <Button
+                  icon
+                  labelPosition="left"
+                  onClick={() =>
+                    startExtract({ variables: { extractId: extract.id } })
+                  }
+                >
+                  <Icon name="play" />
+                  Run
+                </Button>
+              )}
+            </div>
+          </div>
           <DataGrid
             onAddDocIds={handleAddDocIdsToExtract}
             onRemoveDocIds={handleRemoveDocIdsFromExtract}
@@ -290,12 +353,7 @@ export const EditExtractModal = ({
           />
         </ModalContent>
         <ModalActions>
-          <Button negative onClick={() => toggleModal()}>
-            No
-          </Button>
-          <Button positive onClick={() => toggleModal()}>
-            Yes
-          </Button>
+          <Button onClick={() => toggleModal()}>Close</Button>
         </ModalActions>
       </Modal>
     </>

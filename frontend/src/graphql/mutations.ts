@@ -1407,8 +1407,9 @@ export const REQUEST_CREATE_EXTRACT = gql`
 
 export interface RequestStartExtractOutputType {
   startExtract: {
-    msg: string;
+    message: string;
     ok: boolean;
+    obj: ExtractType;
   };
 }
 
@@ -1419,8 +1420,13 @@ export interface RequestStartExtractInputType {
 export const REQUEST_START_EXTRACT = gql`
   mutation StartExtract($extractId: ID!) {
     startExtract(extractId: $extractId) {
-      msg
+      message
       ok
+      obj {
+        id
+        started
+        finished
+      }
     }
   }
 `;

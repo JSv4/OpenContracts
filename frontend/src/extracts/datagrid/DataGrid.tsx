@@ -89,7 +89,7 @@ export const DataGrid = ({
                 <Dropdown
                   icon={null}
                   trigger={<Icon name="cog" style={{ float: "right" }} />}
-                  pointing="top right"
+                  pointing="right"
                   style={{ float: "right" }}
                 >
                   <Dropdown.Menu>
@@ -122,7 +122,7 @@ export const DataGrid = ({
                   <Dropdown
                     icon={null}
                     trigger={<Icon name="cog" style={{ float: "right" }} />}
-                    pointing="top right"
+                    pointing="bottom right"
                     style={{ float: "right" }}
                   >
                     <Dropdown.Menu>

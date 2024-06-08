@@ -243,6 +243,12 @@ export const addingColumnToExtract = makeVar<ExtractType | null>(null);
 export const editingColumnForExtract = makeVar<ColumnType | null>(null);
 
 /**
+ * Query-realted global variables
+ */
+export const selectedQueryIds = makeVar<string[]>([]);
+export const openedQueryId = makeVar<string | null>(null);
+
+/**
  * Auth-related global variables
  */
 export const userObj = makeVar<User | null>(null);

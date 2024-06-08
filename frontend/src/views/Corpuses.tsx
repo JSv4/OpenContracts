@@ -93,6 +93,8 @@ import { FilterToAnalysesSelector } from "../components/widgets/model-filters/Fi
 import useWindowDimensions from "../components/hooks/WindowDimensionHook";
 import { FilterToMetadataSelector } from "../components/widgets/model-filters/FilterToMetadataSelector";
 import { SelectExportTypeModal } from "../components/widgets/modals/SelectExportTypeModal";
+import { CorpusQueryList } from "../components/queries/CorpusQueryList";
+import { NewQuerySearch } from "../components/queries/NewQuerySearch";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
@@ -556,6 +558,23 @@ export const Corpuses = () => {
       ),
     },
   ];
+  if (opened_corpus_id) {
+    panes = [
+      {
+        menuItem: {
+          key: "query",
+          icon: "search",
+          content: use_mobile_layout ? "" : "Query",
+        },
+        render: () => (
+          <Tab.Pane>
+            <NewQuerySearch corpus_id={opened_corpus_id} />
+            {/* <CorpusQueryList opened_corpus_id={opened_corpus_id}/> */}
+          </Tab.Pane>
+        ),
+      },
+    ].concat(panes);
+  }
 
   let content = <></>;
 

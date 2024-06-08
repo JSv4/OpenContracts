@@ -6,6 +6,7 @@ import {
   AnnotationLabelType,
   ColumnType,
   CorpusType,
+  DatacellType,
   DocumentType,
   ExtractType,
   FieldsetType,
@@ -1426,6 +1427,118 @@ export const REQUEST_START_EXTRACT = gql`
         id
         started
         finished
+      }
+    }
+  }
+`;
+
+export interface RequestApproveDatacellInputType {
+  datacellId: string;
+}
+
+export interface RequestApproveDatacellOutputType {
+  approveDatacell: {
+    ok: boolean;
+    message: string;
+    obj: DatacellType;
+  };
+}
+
+export const REQUEST_APPROVE_DATACELL = gql`
+  mutation ApproveDatacell($datacellId: String!) {
+    approveDatacell(datacellId: $datacellId) {
+      ok
+      message
+      obj {
+        id
+        data
+        started
+        completed
+        stacktrace
+        correctedData
+        approvedBy {
+          id
+          username
+        }
+        rejectedBy {
+          id
+          username
+        }
+      }
+    }
+  }
+`;
+
+export interface RequestRejectDatacellInputType {
+  datacellId: string;
+}
+
+export interface RequestRejectDatacellOutputType {
+  rejectDatacell: {
+    ok: boolean;
+    message: string;
+    obj: DatacellType;
+  };
+}
+
+export const REQUEST_REJECT_DATACELL = gql`
+  mutation RejectDatacell($datacellId: String!) {
+    rejectDatacell(datacellId: $datacellId) {
+      ok
+      message
+      obj {
+        id
+        data
+        started
+        completed
+        stacktrace
+        correctedData
+        approvedBy {
+          id
+          username
+        }
+        rejectedBy {
+          id
+          username
+        }
+      }
+    }
+  }
+`;
+
+export interface RequestEditDatacellInputType {
+  datacellId: string;
+  editedData: Record<any, any>;
+}
+
+export interface RequestEditDatacellOutputType {
+  editDatacell: {
+    ok: boolean;
+    message: string;
+    obj: DatacellType;
+  };
+}
+
+export const REQUEST_EDIT_DATACELL = gql`
+  mutation EditDatacell($datacellId: String!, $editedData: GenericScalar!) {
+    editDatacell(datacellId: $datacellId, editedData: $editedData) {
+      ok
+      message
+      obj {
+        id
+        data
+        started
+        completed
+        stacktrace
+        correctedData
+        approvedBy {
+          id
+          username
+        }
+        rejectedBy {
+          id
+          username
+        }
       }
     }
   }

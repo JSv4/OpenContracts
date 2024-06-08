@@ -238,6 +238,9 @@ export function generateMockRow(
     started: null,
     completed: null,
     failed: null,
+    rejectedBy: null,
+    approvedBy: null,
+    correctedData: null,
   };
 }
 

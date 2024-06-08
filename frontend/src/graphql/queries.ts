@@ -15,6 +15,8 @@ import {
   LanguageModelType,
   FieldsetType,
   ExtractType,
+  CorpusQueryType,
+  CorpusQueryTypeConnection,
 } from "./types";
 import { ExportObject } from "./types";
 
@@ -172,6 +174,112 @@ export const GET_CORPUS_METADATA = gql`
           id
           text
         }
+      }
+    }
+  }
+`;
+
+export interface GetCorpusQueryDetailsInputType {
+  corpusId: string;
+}
+
+export interface GetCorpusQueryDetailsOutputType {
+  corpusQuery: CorpusQueryType;
+}
+
+export const GET_CORPUS_QUERY_DETAILS = gql`
+  query CorpusQuery($corpusId: ID!) {
+    corpusQuery(id: $corpusId) {
+      id
+      response
+      query
+      started
+      failed
+      completed
+      stacktrace
+      fullSourceList {
+        id
+        annotationLabel {
+          id
+          text
+        }
+        rawText
+        json
+        tokensJsons
+      }
+    }
+  }
+`;
+
+export interface GetCorpusQueriesInput {
+  corpusId: string;
+}
+
+export interface GetCorpusQueriesOutput {
+  corpusQueries: CorpusQueryTypeConnection;
+}
+
+export const GET_CORPUS_QUERIES = gql`
+  query CorpusQueries($corpusId: ID!) {
+    corpusQueries(corpusId: $corpusId) {
+      edges {
+        node {
+          id
+          query
+          response
+          started
+          completed
+          failed
+        }
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        endCursor
+        startCursor
+      }
+    }
+  }
+`;
+
+export interface GetCorpusQueryInputType {
+  corpusId: string;
+}
+
+export interface GetCorpusQueryOutputType {
+  corpusQuery: CorpusQueryType;
+}
+
+export const GET_CORPUS_QUERY = gql`
+  query FullCorpusQuery($corpusId: ID!) {
+    corpusQuery(id: $corpusId) {
+      id
+      query
+      response
+      fullSourceList {
+        id
+        isPublic
+        myPermissions
+        annotationLabel {
+          id
+          icon
+          color
+          description
+          text
+          labelType
+          readOnly
+        }
+        boundingBox
+        page
+        rawText
+        tokensJsons
+        json
+        creator {
+          id
+          email
+        }
+        isPublic
+        myPermissions
       }
     }
   }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Table, Button, Icon, Dropdown } from "semantic-ui-react";
 import {
   ColumnType,
@@ -11,6 +11,20 @@ import {
   addingColumnToExtract,
   editingColumnForExtract,
 } from "../../graphql/cache";
+import { EmptyDatacell } from "./EmptyDataCell";
+import { ExtractDatacell } from "./DataCell";
+import { useMutation } from "@apollo/client";
+import {
+  REQUEST_APPROVE_DATACELL,
+  REQUEST_EDIT_DATACELL,
+  REQUEST_REJECT_DATACELL,
+  RequestApproveDatacellInputType,
+  RequestApproveDatacellOutputType,
+  RequestEditDatacellInputType,
+  RequestEditDatacellOutputType,
+  RequestRejectDatacellInputType,
+  RequestRejectDatacellOutputType,
+} from "../../graphql/mutations";
 
 interface DataGridProps {
   extract: ExtractType;
@@ -21,14 +35,6 @@ interface DataGridProps {
   onRemoveColumnId: (columnId: string) => void;
   columns: ColumnType[];
 }
-
-const missingCellStyle = {
-  backgroundColor: "#f0f0f0",
-  backgroundImage:
-    "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)",
-  backgroundSize: "10px 10px",
-  backgroundPosition: "0 0, 5px 5px",
-};
 
 export const DataGrid = ({
   extract,
@@ -43,13 +49,18 @@ export const DataGrid = ({
   const [showAddRowButton, setShowAddRowButton] = useState(false);
   const [openAddRowModal, setOpenAddRowModal] = useState(false);
 
-  useEffect(() => {
-    console.log("DataGrid rows ", rows);
-  }, [rows]);
-
-  useEffect(() => {
-    console.log("DataGrid columns", columns);
-  }, [columns]);
+  const [requestApprove] = useMutation<
+    RequestApproveDatacellOutputType,
+    RequestApproveDatacellInputType
+  >(REQUEST_APPROVE_DATACELL);
+  const [requestReject] = useMutation<
+    RequestRejectDatacellOutputType,
+    RequestRejectDatacellInputType
+  >(REQUEST_REJECT_DATACELL);
+  const [requestEdit] = useMutation<
+    RequestEditDatacellOutputType,
+    RequestEditDatacellInputType
+  >(REQUEST_EDIT_DATACELL);
 
   return (
     <div
@@ -140,14 +151,25 @@ export const DataGrid = ({
                       cell.document.id === row.id &&
                       cell.column.id === column.id
                   );
-                  return (
-                    <Table.Cell
-                      key={column.id}
-                      style={cell ? {} : missingCellStyle}
-                    >
-                      {cell ? cell.data : "-"}
-                    </Table.Cell>
-                  );
+                  if (cell) {
+                    return (
+                      <ExtractDatacell
+                        cellData={cell.data}
+                        onApprove={() =>
+                          requestApprove({ variables: { datacellId: cell.id } })
+                        }
+                        onReject={() =>
+                          requestReject({ variables: { datacellId: cell.id } })
+                        }
+                        onEdit={(id: string, editedData: Record<string, any>) =>
+                          requestEdit({
+                            variables: { datacellId: cell.id, editedData },
+                          })
+                        }
+                      />
+                    );
+                  }
+                  return <EmptyDatacell id={`CELL_${row.id}.${column.id}`} />;
                 })}
               </Table.Row>
             ))

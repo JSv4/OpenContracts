@@ -27,7 +27,7 @@ from config.graphql.filters import (
     LabelFilter,
     LabelsetFilter,
     LanguageModelFilter,
-    RelationshipFilter,
+    RelationshipFilter, CorpusQueryFilter,
 )
 from config.graphql.graphene_types import (
     AnalysisType,
@@ -48,7 +48,7 @@ from config.graphql.graphene_types import (
     PdfPageInfoType,
     RelationshipType,
     UserExportType,
-    UserImportType,
+    UserImportType, CorpusQueryType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -57,7 +57,7 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus
+from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import (
     Column,
@@ -74,7 +74,6 @@ logger = logging.getLogger(__name__)
 
 
 class Query(graphene.ObjectType):
-
     # ANNOTATION RESOLVERS #####################################
     annotations = DjangoFilterConnectionField(
         AnnotationType, filterset_class=AnnotationFilter
@@ -747,6 +746,33 @@ class Query(graphene.ObjectType):
             return Extract.objects.filter(Q(is_public=True))
         else:
             return Extract.objects.filter(
+                Q(creator=info.context.user) | Q(is_public=True)
+            )
+
+    corpus_query = relay.Node.Field(CorpusQueryType)
+
+    @login_required
+    def resolve_corpus_query(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return CorpusQuery.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return CorpusQuery.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return CorpusQuery.objects.get(
+                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
+            )
+
+    corpus_queries = DjangoFilterConnectionField(CorpusQueryType, filterset_class=CorpusQueryFilter)
+
+    @login_required
+    def resolve_corpus_queries(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return CorpusQuery.objects.all()
+        elif info.context.user.is_anonymous:
+            return CorpusQuery.objects.filter(Q(is_public=True))
+        else:
+            return CorpusQuery.objects.filter(
                 Q(creator=info.context.user) | Q(is_public=True)
             )
 

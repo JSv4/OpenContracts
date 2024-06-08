@@ -7,6 +7,8 @@ from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from tree_queries.models import TreeNode
 from tree_queries.query import TreeQuerySet
 
+from opencontractserver.annotations.models import Annotation
+from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.utils import calc_oc_file_path
 
 
@@ -127,5 +129,57 @@ class CorpusUserObjectPermission(UserObjectPermissionBase):
 class CorpusGroupObjectPermission(GroupObjectPermissionBase):
     content_object = django.db.models.ForeignKey(
         "Corpus", on_delete=django.db.models.CASCADE
+    )
+    # enabled = False
+
+
+class CorpusQuery(BaseOCModel):
+    """
+    Store the response to the query as a structured annotation which can then be
+    displayed and sources rendered via the frontend.
+
+    NOTE - not permissioned separately from the corpus
+    """
+    query = django.db.models.TextField(blank=False, null=False)
+    corpus = django.db.models.ForeignKey(
+        "Corpus", on_delete=django.db.models.CASCADE, related_name="queries"
+    )
+    sources = django.db.models.ManyToManyField(
+        Annotation,
+        blank=True,
+        null=True,
+        related_name="queries",
+        related_query_name="created_by_query",
+    )
+    response = django.db.models.TextField(blank=True, null=True)
+    started = django.db.models.DateTimeField(null=True, blank=True)
+    completed = django.db.models.DateTimeField(null=True, blank=True)
+    failed = django.db.models.DateTimeField(null=True, blank=True)
+    stacktrace = django.db.models.TextField(null=True, blank=True)
+
+    class Meta:
+        permissions = (
+            ("permission_corpusquery", "permission corpusquery"),
+            ("publish_corpusquery", "publish corpusquery"),
+            ("create_corpusquery", "create corpusquery"),
+            ("read_corpusquery", "read corpusquery"),
+            ("update_corpusquery", "update corpusquery"),
+            ("remove_corpusquery", "delete corpusquery"),
+        )
+        ordering = ("created",)
+        base_manager_name = "objects"
+
+# Model for Django Guardian permissions... trying to improve performance...
+class CorpusQueryUserObjectPermission(UserObjectPermissionBase):
+    content_object = django.db.models.ForeignKey(
+        "CorpusQuery", on_delete=django.db.models.CASCADE
+    )
+    # enabled = False
+
+
+# Model for Django Guardian permissions... trying to improve performance...
+class CorpusQueryGroupObjectPermission(GroupObjectPermissionBase):
+    content_object = django.db.models.ForeignKey(
+        "CorpusQuery", on_delete=django.db.models.CASCADE
     )
     # enabled = False

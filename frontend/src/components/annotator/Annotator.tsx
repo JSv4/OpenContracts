@@ -445,13 +445,15 @@ export const Annotator = ({
     }
   }, [openedDocument]);
 
-  // If override annotations change, load them into state store
+  // If oquery we want to show changes, load it and its annotations into state store
   useEffect(() => {
-    if (
-      opened_query !== null &&
-      show_query &&
-      show_query.fullSourceList.length > 0
-    ) {
+    if (show_query && show_query.fullSourceList.length > 0) {
+      if (!read_only) {
+        throw new TypeError(
+          "read_only must be true when show_query is not null"
+        );
+      }
+
       // First let's get all of the labels used in our answer by looking at the returned source annotation and getting unique list of labels by ids
       const unique_annot_labels: AnnotationLabelType[] = _.uniqBy(
         show_query.fullSourceList.map((source) => source.annotationLabel),
@@ -476,7 +478,7 @@ export const Annotator = ({
 
       // We want to make sure we jump to the FIRST source
       // We only want to load annotation page for selected annotation on load ONCE
-      const first_annotation = opened_query.fullSourceList[0]; // TODO - make sure these are filtered by page on server
+      const first_annotation = show_query.fullSourceList[0]; // TODO - make sure these are filtered by page on server
       if (
         loaded_page_for_annotation === null &&
         jumped_to_annotation_on_load !== first_annotation.id
@@ -486,7 +488,7 @@ export const Annotator = ({
 
       // This is the annotations start loading
       // Turn existing annotation data into PDFAnnotations obj and inject into state:
-      let annotation_objs: ServerAnnotation[] = opened_query.fullSourceList
+      let annotation_objs: ServerAnnotation[] = show_query.fullSourceList
         .filter((annotation) => annotation.analysis !== null)
         .map(
           (annot) =>
@@ -507,7 +509,7 @@ export const Annotator = ({
       // Set up contexts for annotations
       setViewState(ViewState.LOADED);
     }
-  }, [opened_query]);
+  }, [show_query]);
 
   useEffect(() => {
     // console.log("New Annotator data", annotator_data);
@@ -525,8 +527,8 @@ export const Annotator = ({
       // );
     }
 
-    // if annotator_data changes due to loading from
-    if (annotator_data) {
+    // if annotator_data changes due to loading from graphql (and we didn't somehow also have show_query set)
+    if (annotator_data && !show_query) {
       // Build proper span label objs from GraphQL results
       let span_label_lookup: LooseObject = {};
       let human_span_label_lookup: LooseObject = {};

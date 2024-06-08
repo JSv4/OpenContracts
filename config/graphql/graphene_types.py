@@ -19,7 +19,7 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus
+from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import (
     Column,
@@ -328,6 +328,7 @@ class DatacellType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
 class ExtractType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     full_datacell_list = graphene.List(DatacellType)
+    full_document_list = graphene.List(DocumentType)
 
     class Meta:
         model = Extract
@@ -336,3 +337,19 @@ class ExtractType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
     def resolve_full_datacell_list(self, info):
         return self.extracted_datacells.all()
+
+    def resolve_full_document_list(self, info):
+        return self.documents.all()
+
+
+class CorpusQueryType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+
+    full_source_list = graphene.List(AnnotationType)
+
+    def resolve_full_source_list(self, info):
+        return self.sources.all()
+
+    class Meta:
+        model = CorpusQuery
+        interfaces = [relay.Node]
+        connection_class = CountableConnection

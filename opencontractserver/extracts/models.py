@@ -172,6 +172,24 @@ class Datacell(BaseOCModel):
     failed = django.db.models.DateTimeField(null=True, blank=True)
     stacktrace = django.db.models.TextField(null=True, blank=True)
 
+    approved_by = django.db.models.ForeignKey(
+        get_user_model(),
+        on_delete=django.db.models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="approved_cells",
+    )
+    rejected_by = django.db.models.ForeignKey(
+        get_user_model(),
+        on_delete=django.db.models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="rejected_cells"
+    )
+    corrected_data = NullableJSONField(default=jsonfield_default_value, null=True, blank=True)
+
+
+
     class Meta:
         permissions = (
             ("permission_datacell", "permission datacell"),

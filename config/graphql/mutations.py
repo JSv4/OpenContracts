@@ -1996,7 +1996,7 @@ class Mutation(graphene.ObjectType):
     make_analysis_public = MakeAnalysisPublic.Field()
 
     # QUERY MUTATIONS #########################################################
-    ask_query = StartQueryForCorpus.Field()  # TODO - test
+    ask_query = StartQueryForCorpus.Field()
 
     # EXTRACT MUTATIONS ##########################################################
     create_language_model = CreateLanguageModel.Field()

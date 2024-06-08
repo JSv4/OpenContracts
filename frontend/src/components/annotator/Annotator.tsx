@@ -76,7 +76,6 @@ import _ from "lodash";
 import {
   displayAnnotationOnAnnotatorLoad,
   openedQueryId,
-  pagesVisible,
   selectedAnalysesIds,
 } from "../../graphql/cache";
 import useWindowDimensions from "../hooks/WindowDimensionHook";

@@ -1369,56 +1369,6 @@ class CreateLabelForLabelsetMutation(graphene.Mutation):
         )
 
 
-class QueryCorpus(graphene.Mutation):
-    """
-    Lets you ask a question of a corpus. Until the underlying stack gets an upgrade to Async and more recent
-    Django, this has to be synchronous.
-    """
-
-    ok = graphene.Boolean()
-    response = graphene.String()
-    obj = graphene.Field(CorpusQueryType)
-
-    class Arguments:
-        query = graphene.String(required=True, description="What do you want to ask of corpus?")
-        corpus_id = graphene.String(required=True)
-
-    @staticmethod
-    @login_required
-    def mutate(root, info, query, corpus_id):
-
-        obj = None
-        ok = False
-        message = ""
-
-        try:
-            corpus = Corpus.objects.get(pk=from_global_id(corpus_id)[1])
-
-            if not user_has_permission_for_obj(
-                user_val=info.context.user,
-                instance=corpus,
-                permission=PermissionTypes.DELETE,
-                include_group_permissions=True,
-            ):
-                PermissionError("You don't have permission to access this corpus.")
-
-            obj = CorpusQuery.objects.create(
-                corpus=corpus,
-                creator=info.context.user,
-                query=query
-            )
-
-            ok = True
-            message = "Query started (we don't have streaming responses... YET)."
-
-            # TODO - kick off the processing via signal from model.
-
-        except Exception as e:
-            message = f"Unable to run query due to error: {e}"
-
-        return QueryCorpus(ok=pk, message=message, obj=obj)
-
-
 class StartCorpusAnalysisMutation(graphene.Mutation):
     class Arguments:
         corpus_id = graphene.ID(
@@ -1971,7 +1921,6 @@ class Mutation(graphene.ObjectType):
     delete_multiple_documents = DeleteMultipleDocuments.Field()
 
     # CORPUS MUTATIONS #########################################################
-    query_corpus = QueryCorpus.Field()
     fork_corpus = StartCorpusFork.Field()
     make_corpus_public = MakeCorpusPublic.Field()
     create_corpus = CreateCorpusMutation.Field()

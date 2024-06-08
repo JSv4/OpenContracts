@@ -5,6 +5,7 @@ import {
   AnalysisType,
   AnnotationLabelType,
   ColumnType,
+  CorpusQueryType,
   CorpusType,
   DatacellType,
   DocumentType,
@@ -1539,6 +1540,37 @@ export const REQUEST_EDIT_DATACELL = gql`
           id
           username
         }
+      }
+    }
+  }
+`;
+
+export interface AskQueryOfCorpusInputType {
+  corpusId: string;
+  query: string;
+}
+
+export interface AskQueryOfCorpusOutputType {
+  askQuery: {
+    ok: boolean;
+    message: string;
+    obj: CorpusQueryType;
+  };
+}
+
+export const ASK_QUERY_OF_CORPUS = gql`
+  mutation AskQuery($corpusId: String!, $query: String!) {
+    askQuery(corpusId: $corpusId, query: $query) {
+      ok
+      message
+      obj {
+        id
+        query
+        response
+        started
+        completed
+        failed
+        stacktrace
       }
     }
   }

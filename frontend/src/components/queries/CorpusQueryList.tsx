@@ -131,7 +131,7 @@ export const CorpusQueryList = ({
       style={{ minHeight: "40vh" }}
       fetchMore={fetchMoreDocuments}
       onDelete={(item: CorpusQueryType) => handleRemoveQuery(item.id)}
-      onSelectRow={(item: CorpusQueryType) => openedQueryId(item.id)}
+      onSelectRow={(item: CorpusQueryType) => openedQueryId(item)}
     />
   );
 };

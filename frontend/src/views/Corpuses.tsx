@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Tab } from "semantic-ui-react";
+import { Button, Tab } from "semantic-ui-react";
 import _, { update } from "lodash";
 import { toast } from "react-toastify";
 import {
@@ -568,6 +568,9 @@ export const Corpuses = () => {
         },
         render: () => (
           <Tab.Pane>
+            <div>
+              <Button>Go back</Button>
+            </div>
             <NewQuerySearch corpus_id={opened_corpus_id} />
             {/* <CorpusQueryList opened_corpus_id={opened_corpus_id}/> */}
           </Tab.Pane>

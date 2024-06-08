@@ -18,6 +18,7 @@ import {
   FieldsetType,
   LanguageModelType,
   ColumnType,
+  CorpusQueryType,
 } from "./types";
 
 export const mergeArrayByIdFieldPolicy: FieldPolicy<Reference[]> = {
@@ -246,7 +247,7 @@ export const editingColumnForExtract = makeVar<ColumnType | null>(null);
  * Query-realted global variables
  */
 export const selectedQueryIds = makeVar<string[]>([]);
-export const openedQueryId = makeVar<string | null>(null);
+export const openedQueryId = makeVar<CorpusQueryType | null>(null);
 
 /**
  * Auth-related global variables

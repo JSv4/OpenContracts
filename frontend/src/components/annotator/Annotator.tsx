@@ -52,6 +52,7 @@ import { SidebarContainer } from "../common";
 import { getPawlsLayer } from "./api/rest";
 import {
   AnnotationLabelType,
+  CorpusQueryType,
   CorpusType,
   DocumentType,
   LabelDisplayBehavior,
@@ -74,6 +75,7 @@ import { getPermissions } from "../../utils/transform";
 import _ from "lodash";
 import {
   displayAnnotationOnAnnotatorLoad,
+  openedQueryId,
   pagesVisible,
   selectedAnalysesIds,
 } from "../../graphql/cache";
@@ -114,6 +116,7 @@ interface AnnotatorProps {
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
   show_annotation_labels: LabelDisplayBehavior;
+  show_query?: CorpusQueryType | null;
   onClose: (args?: any) => void | any;
 }
 
@@ -126,11 +129,13 @@ export const Annotator = ({
   show_selected_annotation_only,
   show_annotation_bounding_boxes,
   show_annotation_labels,
+  show_query,
   onClose,
 }: AnnotatorProps) => {
   const { width } = useWindowDimensions();
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";
 
+  const opened_query = useReactiveVar(openedQueryId);
   const selected_analysis_ids = useReactiveVar(selectedAnalysesIds);
   // console.log("selected_analysis_ids", selected_analysis_ids);
 
@@ -184,18 +189,6 @@ export const Annotator = ({
           forAnalysisIds: scroll_to_annotation_on_open.analysis.id,
         }
       : {}),
-  };
-
-  const setPageVisible = (
-    page_number: number,
-    state: "VISIBLE" | "NOT VISIBLE"
-  ) => {
-    setPagesVisible((old_pages_visible) => {
-      return {
-        ...old_pages_visible,
-        [page_number]: state,
-      };
-    });
   };
 
   // Hold our query variables (using a state var lets us bundle updates to the
@@ -452,6 +445,70 @@ export const Annotator = ({
     }
   }, [openedDocument]);
 
+  // If override annotations change, load them into state store
+  useEffect(() => {
+    if (
+      opened_query !== null &&
+      show_query &&
+      show_query.fullSourceList.length > 0
+    ) {
+      // First let's get all of the labels used in our answer by looking at the returned source annotation and getting unique list of labels by ids
+      const unique_annot_labels: AnnotationLabelType[] = _.uniqBy(
+        show_query.fullSourceList.map((source) => source.annotationLabel),
+        (label) => label.id
+      );
+      const span_label_lookup = unique_annot_labels
+        .filter((label) => label.labelType === LabelType.TokenLabel)
+        .reduce(function (obj: Record<string, any>, label) {
+          obj[label.id] = {
+            id: label.id,
+            color: label.color,
+            text: label.text,
+            icon: label.icon as SemanticICONS,
+            description: label.description,
+            labelType: label.labelType,
+          };
+          return obj;
+        }, {});
+
+      // TODO - store labels in state store
+      setSpanLabels(Object.values(span_label_lookup));
+
+      // We want to make sure we jump to the FIRST source
+      // We only want to load annotation page for selected annotation on load ONCE
+      const first_annotation = opened_query.fullSourceList[0]; // TODO - make sure these are filtered by page on server
+      if (
+        loaded_page_for_annotation === null &&
+        jumped_to_annotation_on_load !== first_annotation.id
+      ) {
+        setLoadedPageForAnnotation(scroll_to_annotation_on_open);
+      }
+
+      // This is the annotations start loading
+      // Turn existing annotation data into PDFAnnotations obj and inject into state:
+      let annotation_objs: ServerAnnotation[] = opened_query.fullSourceList
+        .filter((annotation) => annotation.analysis !== null)
+        .map(
+          (annot) =>
+            new ServerAnnotation(
+              annot.page,
+              annot.annotationLabel,
+              annot.rawText ? annot.rawText : "",
+              annot.json ? annot.json : {},
+              annot.myPermissions ? getPermissions(annot.myPermissions) : [],
+              annot.id
+            )
+        );
+
+      // TODO - let queries label docs and create relationships
+      // For now, we're assuming relationships and doc type labels cannot come out of the query... there is no reasons for this to remain true. Just a lot of work :-)
+      setPdfAnnotations(new PdfAnnotations(annotation_objs, [], []));
+
+      // Set up contexts for annotations
+      setViewState(ViewState.LOADED);
+    }
+  }, [opened_query]);
+
   useEffect(() => {
     // console.log("New Annotator data", annotator_data);
 
@@ -468,6 +525,7 @@ export const Annotator = ({
       // );
     }
 
+    // if annotator_data changes due to loading from
     if (annotator_data) {
       // Build proper span label objs from GraphQL results
       let span_label_lookup: LooseObject = {};
@@ -490,6 +548,7 @@ export const Annotator = ({
               return obj;
             }, {}),
         };
+        setSpanLabels(Object.values(span_label_lookup));
 
         // console.log(
         //   "Span choices",

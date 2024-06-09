@@ -180,7 +180,7 @@ export const GET_CORPUS_METADATA = gql`
 `;
 
 export interface GetCorpusQueryDetailsInputType {
-  corpusId: string;
+  id: string;
 }
 
 export interface GetCorpusQueryDetailsOutputType {
@@ -206,6 +206,9 @@ export const GET_CORPUS_QUERY_DETAILS = gql`
         rawText
         json
         tokensJsons
+        document {
+          id
+        }
       }
     }
   }

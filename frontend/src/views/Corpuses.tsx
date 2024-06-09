@@ -51,6 +51,8 @@ import {
   selectedAnalysesIds,
   displayAnnotationOnAnnotatorLoad,
   exportingCorpus,
+  showQueryViewState,
+  openedQueryObj,
 } from "../graphql/cache";
 import {
   UPDATE_CORPUS,
@@ -95,6 +97,7 @@ import { FilterToMetadataSelector } from "../components/widgets/model-filters/Fi
 import { SelectExportTypeModal } from "../components/widgets/modals/SelectExportTypeModal";
 import { CorpusQueryList } from "../components/queries/CorpusQueryList";
 import { NewQuerySearch } from "../components/queries/NewQuerySearch";
+import { ViewQueryResultsModal } from "../components/widgets/modals/ViewQueryResultsModal";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
@@ -131,6 +134,8 @@ export const Corpuses = () => {
 
   const auth_token = useReactiveVar(authToken);
   const annotation_search_term = useReactiveVar(annotationContentSearchTerm);
+  const show_query_view_state = useReactiveVar(showQueryViewState);
+  const opened_query_obj = useReactiveVar(openedQueryObj);
 
   const location = useLocation();
 
@@ -558,7 +563,42 @@ export const Corpuses = () => {
       ),
     },
   ];
+
+  // Load our query view components. Show either ASK or VIEW component in the tab depending on global state setting.
   if (opened_corpus_id) {
+    let query_view = <></>;
+    if (show_query_view_state === "ASK") {
+      query_view = (
+        <>
+          <div style={{ position: "absolute", top: "1rem", right: "1rem" }}>
+            <Button
+              primary
+              content="Previous Queries"
+              icon="left arrow"
+              labelPosition="left"
+              onClick={() => showQueryViewState("VIEW")}
+            />
+          </div>
+          <NewQuerySearch corpus_id={opened_corpus_id} />;
+        </>
+      );
+    } else {
+      query_view = (
+        <>
+          <div style={{ position: "absolute", top: "1rem", right: "1rem" }}>
+            <Button
+              primary
+              content="New Question"
+              icon="query"
+              labelPosition="left"
+              onClick={() => showQueryViewState("ASK")}
+            />
+          </div>
+          <CorpusQueryList opened_corpus_id={opened_corpus_id} />
+        </>
+      );
+    }
+
     panes = [
       {
         menuItem: {
@@ -566,15 +606,7 @@ export const Corpuses = () => {
           icon: "search",
           content: use_mobile_layout ? "" : "Query",
         },
-        render: () => (
-          <Tab.Pane>
-            <div>
-              <Button>Go back</Button>
-            </div>
-            <NewQuerySearch corpus_id={opened_corpus_id} />
-            {/* <CorpusQueryList opened_corpus_id={opened_corpus_id}/> */}
-          </Tab.Pane>
-        ),
+        render: () => <Tab.Pane>{query_view}</Tab.Pane>,
       },
     ].concat(panes);
   }
@@ -722,7 +754,15 @@ export const Corpuses = () => {
           ) : (
             <></>
           )}
-
+          {opened_query_obj ? (
+            <ViewQueryResultsModal
+              query_id={opened_query_obj.id}
+              open={true}
+              onClose={() => openedQueryObj(null)}
+            />
+          ) : (
+            <></>
+          )}
           {corpus_to_view !== null ? (
             <CRUDModal
               open={corpus_to_view !== null}

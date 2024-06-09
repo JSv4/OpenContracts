@@ -170,6 +170,7 @@ export const pagesVisible = makeVar<Record<number, string>>({});
 export const showEditExtractModal = makeVar<boolean>(false);
 export const showDeleteExtractModal = makeVar<boolean>(false);
 export const showCreateExtractModal = makeVar<boolean>(false);
+export const showQueryViewState = makeVar<"ASK" | "VIEW" | "DETAILS">("ASK");
 
 /**
  *  Document-related global variables.
@@ -247,7 +248,7 @@ export const editingColumnForExtract = makeVar<ColumnType | null>(null);
  * Query-realted global variables
  */
 export const selectedQueryIds = makeVar<string[]>([]);
-export const openedQueryId = makeVar<CorpusQueryType | null>(null);
+export const openedQueryObj = makeVar<CorpusQueryType | null>(null);
 
 /**
  * Auth-related global variables

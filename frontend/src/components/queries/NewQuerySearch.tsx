@@ -1,5 +1,13 @@
+import { useMutation } from "@apollo/client";
 import React from "react";
 import { Button, Container, Header, Image, Input } from "semantic-ui-react";
+import {
+  ASK_QUERY_OF_CORPUS,
+  AskQueryOfCorpusInputType,
+  AskQueryOfCorpusOutputType,
+} from "../../graphql/mutations";
+import { toast } from "react-toastify";
+import { openedQueryObj } from "../../graphql/cache";
 
 interface NewQuerySearchProps {
   corpus_id: string;
@@ -10,8 +18,26 @@ export const NewQuerySearch: React.FC<NewQuerySearchProps> = ({
 }) => {
   const [query, setQuery] = React.useState("");
 
+  const [sendQuery] = useMutation<
+    AskQueryOfCorpusOutputType,
+    AskQueryOfCorpusInputType
+  >(ASK_QUERY_OF_CORPUS, {
+    onCompleted: (data) => {
+      toast.success("SUCCESS! Question Submitted.");
+      openedQueryObj(data.askQuery.obj);
+    },
+    onError: (err) => {
+      toast.error("ERROR! Failed submitting question.");
+    },
+  });
+
   const handleSubmit = () => {
-    console.log("Create query for corpus", corpus_id);
+    sendQuery({
+      variables: {
+        corpusId: corpus_id,
+        query,
+      },
+    });
   };
 
   return (

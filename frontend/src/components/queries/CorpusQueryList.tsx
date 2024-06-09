@@ -5,9 +5,10 @@ import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
 import { useLocation } from "react-router-dom";
 
 import {
-  openedQueryId,
+  openedQueryObj,
   selectedQueryIds,
   authToken,
+  showQueryViewState,
 } from "../../graphql/cache";
 import {
   GetCorpusQueryDetailsInputType,
@@ -36,6 +37,7 @@ export const CorpusQueryList = ({
 
   const auth_token = useReactiveVar(authToken);
   const selected_query_ids = useReactiveVar(selectedQueryIds);
+  const show_query_view_state = useReactiveVar(showQueryViewState);
 
   const location = useLocation();
 
@@ -80,6 +82,13 @@ export const CorpusQueryList = ({
       refetchQueries();
     }
   }, [auth_token]);
+
+  // If the query view state changes (from TO our list VIEW, reload)
+  useEffect(() => {
+    if (show_query_view_state === "VIEW") {
+      refetchQueries();
+    }
+  }, [show_query_view_state]);
 
   // If we detech user navigated to this page, refetch
   useEffect(() => {
@@ -131,7 +140,7 @@ export const CorpusQueryList = ({
       style={{ minHeight: "40vh" }}
       fetchMore={fetchMoreDocuments}
       onDelete={(item: CorpusQueryType) => handleRemoveQuery(item.id)}
-      onSelectRow={(item: CorpusQueryType) => openedQueryId(item)}
+      onSelectRow={(item: CorpusQueryType) => openedQueryObj(item)}
     />
   );
 };

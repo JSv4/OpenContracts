@@ -75,7 +75,7 @@ import { getPermissions } from "../../utils/transform";
 import _ from "lodash";
 import {
   displayAnnotationOnAnnotatorLoad,
-  openedQueryId,
+  openedQueryObj,
   selectedAnalysesIds,
 } from "../../graphql/cache";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
@@ -134,7 +134,7 @@ export const Annotator = ({
   const { width } = useWindowDimensions();
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";
 
-  const opened_query = useReactiveVar(openedQueryId);
+  const opened_query = useReactiveVar(openedQueryObj);
   const selected_analysis_ids = useReactiveVar(selectedAnalysesIds);
   // console.log("selected_analysis_ids", selected_analysis_ids);
 

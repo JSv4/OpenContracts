@@ -27,7 +27,7 @@ export const ViewQueryResultsModal = ({
     GetCorpusQueryDetailsInputType
   >(GET_CORPUS_QUERY_DETAILS, {
     variables: {
-      id: query_id,
+      corpusId: query_id,
     },
   });
 
@@ -52,7 +52,10 @@ export const ViewQueryResultsModal = ({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Modal.Header>"Create a New Column"</Modal.Header>
+      <Modal.Header>
+        <b>Query: </b>
+        {loadedQueryDetails?.query.substring(0, 64)}
+      </Modal.Header>
       <Modal.Content>
         <Grid centered divided>
           <Grid.Column>

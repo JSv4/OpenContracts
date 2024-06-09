@@ -1,6 +1,7 @@
 import { Table, Icon, Button } from "semantic-ui-react";
 import { CorpusQueryType, ExportObject } from "../../graphql/types";
 import { DateTimeWidget } from "../widgets/data-display/DateTimeWidget";
+import { openedQueryObj } from "../../graphql/cache";
 
 interface CorpusQueryListItemProps {
   style?: Record<string, any>;
@@ -34,7 +35,7 @@ export function CorpusQueryListItem({
   }
 
   return (
-    <Table.Row key={key}>
+    <Table.Row key={key} style={{ maxHeight: "10vh" }}>
       <Table.Cell>{item.query}</Table.Cell>
       <Table.Cell>{item.response}</Table.Cell>
       <Table.Cell textAlign="center">
@@ -62,6 +63,13 @@ export function CorpusQueryListItem({
             icon="trash"
             color="red"
             onClick={onDelete}
+          />
+          <Button
+            circular
+            size="mini"
+            icon="eye"
+            color="blue"
+            onClick={() => openedQueryObj(item)}
           />
           {item.completed ? (
             <Button

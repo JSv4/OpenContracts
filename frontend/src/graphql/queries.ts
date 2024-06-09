@@ -180,7 +180,7 @@ export const GET_CORPUS_METADATA = gql`
 `;
 
 export interface GetCorpusQueryDetailsInputType {
-  id: string;
+  corpusId: string;
 }
 
 export interface GetCorpusQueryDetailsOutputType {

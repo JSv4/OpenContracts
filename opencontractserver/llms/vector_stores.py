@@ -1,0 +1,213 @@
+import logging
+from typing import Any, List, Optional
+
+from django.db import models
+from django.db.models import QuerySet, Q
+from pgvector.django import VectorField, CosineDistance
+
+from pydantic import PrivateAttr
+
+from llama_index.core.schema import BaseNode, TextNode
+from llama_index.core.vector_stores.types import (
+    BasePydanticVectorStore,
+    MetadataFilters,
+    VectorStoreQuery,
+    VectorStoreQueryMode,
+    VectorStoreQueryResult,
+)
+from opencontractserver.annotations.models import Annotation, AnnotationLabel
+
+_logger = logging.getLogger(__name__)
+
+
+class DjangoAnnotationVectorStore(BasePydanticVectorStore):
+    """Django Annotation Vector Store.
+
+    This vector store uses Django's ORM to store and retrieve embeddings and text data
+    from the Annotation model. It allows filtering by AnnotationLabel text.
+
+    Args:
+        connection_string (str): The Django database connection string.
+
+    Example:
+        >>> from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
+        >>> vector_store = DjangoAnnotationVectorStore()
+    """
+
+    stores_text = True
+    flat_metadata = False
+    corpus_id: str | int
+
+    _annotation_model: models.Model = PrivateAttr()
+    _annotation_label_model: models.Model = PrivateAttr()
+
+    def __init__(
+        self,
+        corpus_id: str | int,
+        hybrid_search: bool = False,
+        text_search_config: str = "english",
+        embed_dim: int = 1536,
+        cache_ok: bool = False,
+        perform_setup: bool = True,
+        debug: bool = False,
+        use_jsonb: bool = False,
+    ):
+        """Initialize the Django Annotation Vector Store."""
+        self._annotation_model = Annotation
+        self._annotation_label_model = AnnotationLabel
+
+        super().__init__(
+            corpus_id=corpus_id,
+            hybrid_search=hybrid_search,
+            text_search_config=text_search_config,
+            embed_dim=embed_dim,
+            cache_ok=cache_ok,
+            perform_setup=perform_setup,
+            debug=debug,
+            use_jsonb=use_jsonb,
+        )
+
+    async def close(self) -> None:
+        return
+
+    @classmethod
+    def class_name(cls) -> str:
+        return "DjangoAnnotationVectorStore"
+
+    @classmethod
+    def from_params(
+        cls,
+        corpus_id: str | int,
+        hybrid_search: bool = False,
+        text_search_config: str = "english",
+        embed_dim: int = 1536,
+        cache_ok: bool = False,
+        perform_setup: bool = True,
+        debug: bool = False,
+        use_jsonb: bool = False,
+    ) -> "DjangoAnnotationVectorStore":
+        return cls(
+            corpus_id=corpus_id,
+            hybrid_search=hybrid_search,
+            text_search_config=text_search_config,
+            embed_dim=embed_dim,
+            cache_ok=cache_ok,
+            perform_setup=perform_setup,
+            debug=debug,
+            use_jsonb=use_jsonb,
+        )
+
+    def _get_annotation_queryset(self) -> QuerySet:
+        """Get the base Annotation queryset."""
+        # Need to do this this way because some annotations don't travel with the corpus but the document itself - e.g.
+        # layout and structural annotations from the nlm parser.
+
+        return Annotation.objects.filter(
+            Q(corpus_id=self.corpus_id) |
+            Q(document__corpus=self.corpus_id)
+        ).distinct()
+
+    def _build_filter_query(self, filters: Optional[MetadataFilters]) -> QuerySet:
+        """Build the filter query based on the provided metadata filters."""
+        queryset = self._get_annotation_queryset()
+
+        print(F"_build_filter_query: {queryset.count()}")
+
+        if filters is None:
+            return queryset
+
+        for filter_ in filters.filters:
+            print(f"_build_filter_query - filter: {filter_}")
+            if filter_.key == "label":
+                queryset = queryset.filter(
+                    annotation_label__text__iexact=filter_.value
+                )
+            else:
+                raise ValueError(f"Unsupported filter key: {filter_.key}")
+
+        return queryset
+
+    def _db_rows_to_query_result(
+        self, rows: List[Annotation]
+    ) -> VectorStoreQueryResult:
+        """Convert database rows to a VectorStoreQueryResult."""
+        nodes = []
+        similarities = []
+        ids = []
+
+        for row in rows:
+            print(f"Embedding type: {type(row.embedding)} {row.embedding}")
+            node = TextNode(
+                doc_id=str(row.id),
+                text=row.raw_text,
+                embedding=row.embedding.tolist(),
+                extra_info={
+                    "page": row.page,
+                    "bounding_box": row.bounding_box,
+                    "label": row.annotation_label.text if row.annotation_label else None,
+                    "label_id": row.annotation_label.id if row.annotation_label else None
+                },
+            )
+            print(f"Created node: {node}")
+            nodes.append(node)
+            similarities.append(row.similarity)
+            ids.append(str(row.id))
+
+        return VectorStoreQueryResult(nodes=nodes, similarities=similarities, ids=ids)
+
+    @property
+    def client(self) -> None:
+        """Return None since the Django ORM is used instead of a separate client."""
+        return None
+
+    def add(self, nodes: List[BaseNode], **add_kwargs: Any) -> List[str]:
+        """Don't actually want to add entries via LlamaIndex"""
+        return []
+
+    async def async_add(self, nodes: List[BaseNode], **kwargs: Any) -> List[str]:
+        """Add nodes asynchronously to the vector store."""
+        return self.add(nodes, **kwargs)
+
+    def delete(self, doc_id: str, **delete_kwargs: Any):
+        """Don't want this to occur through LlamaIndex."""
+        pass
+
+    def query(self, query: VectorStoreQuery, **kwargs: Any) -> VectorStoreQueryResult:
+        """Query the vector store."""
+        queryset = self._build_filter_query(query.filters)
+
+        if query.mode == VectorStoreQueryMode.HYBRID:
+            if query.query_str is None:
+                raise ValueError("query_str must be provided for hybrid search.")
+
+            if query.alpha is None:
+                alpha = 0.5  # Default alpha value for hybrid search
+            else:
+                alpha = query.alpha
+
+            queryset = queryset.annotate(
+                similarity=alpha * CosineDistance('embeddings', query.query_embedding)
+                           + (1 - alpha) * models.functions.TrigramSimilarity("raw_text", query.query_str)
+            ).order_by("-similarity")[:query.hybrid_top_k]
+
+        elif query.mode in [VectorStoreQueryMode.SPARSE, VectorStoreQueryMode.TEXT_SEARCH]:
+            if query.query_str is None:
+                raise ValueError("query_str must be provided for text search.")
+
+            queryset = queryset.filter(raw_text__search=query.query_str).annotate(
+                similarity=models.functions.TrigramSimilarity("raw_text", query.query_str)
+            ).order_by("-similarity")[:query.sparse_top_k]
+
+        else:  # Default to vector search
+            queryset = (queryset.order_by(CosineDistance('embedding', query.query_embedding)).
+                        annotate(similarity=CosineDistance('embedding', query.query_embedding)))[:query.similarity_top_k]
+
+        rows = list(queryset)
+        print(f"Returned rows: {rows}")
+
+        return self._db_rows_to_query_result(rows)
+
+    async def aquery(self, query: VectorStoreQuery, **kwargs: Any) -> VectorStoreQueryResult:
+        """Query the vector store asynchronously."""
+        return self.query(query, **kwargs)
+

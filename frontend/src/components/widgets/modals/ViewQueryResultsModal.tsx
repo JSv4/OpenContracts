@@ -51,12 +51,24 @@ export const ViewQueryResultsModal = ({
   }, [query_id]);
 
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal
+      closeIcon
+      size="fullscreen"
+      style={{
+        height: "80vh",
+        display: "flex !important",
+        flexDirection: "column",
+        justifyContent: "flex-start",
+        overflowY: "scroll",
+      }}
+      open={open}
+      onClose={onClose}
+    >
       <Modal.Header>
         <b>Query: </b>
         {loadedQueryDetails?.query.substring(0, 64)}
       </Modal.Header>
-      <Modal.Content>
+      <Modal.Content style={{ flex: 1 }}>
         <Grid centered divided>
           <Grid.Column>
             <Grid.Row>

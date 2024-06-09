@@ -536,6 +536,7 @@ class StartQueryForCorpus(graphene.Mutation):
                 creator=info.context.user,
                 corpus_id=from_global_id(corpus_id)[1],
             )
+            print(f"Obj created: {obj}")
             set_permissions_for_obj_to_user(
                 info.context.user, obj, [PermissionTypes.CRUD]
             )

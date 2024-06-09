@@ -528,6 +528,8 @@ export const Annotator = ({
 
     // if annotator_data changes due to loading from graphql (and we didn't somehow also have show_query set)
     if (annotator_data && !show_query) {
+      console.log("Processing annotator data", annotator_data);
+
       // Build proper span label objs from GraphQL results
       let span_label_lookup: LooseObject = {};
       let human_span_label_lookup: LooseObject = {};
@@ -638,7 +640,7 @@ export const Annotator = ({
       // Build proper doc type label objs from GraphQL results
       let document_label_lookup: LooseObject = {};
 
-      if (annotator_data?.corpus?.labelSet.allAnnotationLabels) {
+      if (annotator_data?.corpus?.labelSet?.allAnnotationLabels) {
         document_label_lookup = {
           ...document_label_lookup,
           ...annotator_data.corpus.labelSet.allAnnotationLabels

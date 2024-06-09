@@ -17,7 +17,9 @@ class TestContext:
 
 class CorpusQueryMutationTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.user = User.objects.create_user(
+            username="testuser", password="testpassword"
+        )
         self.client = Client(schema, context_value=TestContext(self.user))
 
         self.corpus = Corpus.objects.create(title="TestCorpus", creator=self.user)
@@ -32,7 +34,7 @@ class CorpusQueryMutationTestCase(TestCase):
         corpus_query = CorpusQuery.objects.create(
             query="What is the capital of France?",
             corpus=self.corpus,
-            creator=self.user
+            creator=self.user,
         )
 
         query = """
@@ -49,19 +51,24 @@ class CorpusQueryMutationTestCase(TestCase):
 
         result = self.client.execute(query)
         self.assertIsNone(result.get("errors"))
-        self.assertEqual(result["data"]["corpusQuery"]["query"], "What is the capital of France?")
-        self.assertEqual(result["data"]["corpusQuery"]["id"], to_global_id("CorpusQueryType", corpus_query.id))
+        self.assertEqual(
+            result["data"]["corpusQuery"]["query"], "What is the capital of France?"
+        )
+        self.assertEqual(
+            result["data"]["corpusQuery"]["id"],
+            to_global_id("CorpusQueryType", corpus_query.id),
+        )
 
     def test_corpus_queries(self):
         CorpusQuery.objects.create(
             query="What is the capital of France?",
             corpus=self.corpus,
-            creator=self.user
+            creator=self.user,
         )
         CorpusQuery.objects.create(
             query="What is the population of Germany?",
             corpus=self.corpus,
-            creator=self.user
+            creator=self.user,
         )
 
         query = """
@@ -82,5 +89,9 @@ class CorpusQueryMutationTestCase(TestCase):
         self.assertIsNone(result.get("errors"))
         queries = result["data"]["corpusQueries"]["edges"]
         self.assertEqual(len(queries), 2)
-        self.assertIn("What is the capital of France?", [q["node"]["query"] for q in queries])
-        self.assertIn("What is the population of Germany?", [q["node"]["query"] for q in queries])
+        self.assertIn(
+            "What is the capital of France?", [q["node"]["query"] for q in queries]
+        )
+        self.assertIn(
+            "What is the population of Germany?", [q["node"]["query"] for q in queries]
+        )

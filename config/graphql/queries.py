@@ -18,6 +18,7 @@ from config.graphql.filters import (
     AssignmentFilter,
     ColumnFilter,
     CorpusFilter,
+    CorpusQueryFilter,
     DatacellFilter,
     DocumentFilter,
     ExportFilter,
@@ -27,7 +28,7 @@ from config.graphql.filters import (
     LabelFilter,
     LabelsetFilter,
     LanguageModelFilter,
-    RelationshipFilter, CorpusQueryFilter,
+    RelationshipFilter,
 )
 from config.graphql.graphene_types import (
     AnalysisType,
@@ -36,6 +37,7 @@ from config.graphql.graphene_types import (
     AnnotationType,
     AssignmentType,
     ColumnType,
+    CorpusQueryType,
     CorpusType,
     DatacellType,
     DocumentType,
@@ -48,7 +50,7 @@ from config.graphql.graphene_types import (
     PdfPageInfoType,
     RelationshipType,
     UserExportType,
-    UserImportType, CorpusQueryType,
+    UserImportType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -763,7 +765,9 @@ class Query(graphene.ObjectType):
                 Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
             )
 
-    corpus_queries = DjangoFilterConnectionField(CorpusQueryType, filterset_class=CorpusQueryFilter)
+    corpus_queries = DjangoFilterConnectionField(
+        CorpusQueryType, filterset_class=CorpusQueryFilter
+    )
 
     @login_required
     def resolve_corpus_queries(self, info, **kwargs):

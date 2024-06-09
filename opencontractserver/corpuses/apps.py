@@ -15,9 +15,7 @@ class CorpusesConfig(AppConfig):
         try:
             import opencontractserver.corpuses.signals  # noqa F401
             from opencontractserver.corpuses.models import CorpusQuery
-            from opencontractserver.corpuses.signals import (
-                run_query_on_create,
-            )
+            from opencontractserver.corpuses.signals import run_query_on_create
 
             # DOCUMENT SIGNALS #########################################################################################
             # When a new query is created, queue task to run query.

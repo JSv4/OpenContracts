@@ -184,11 +184,11 @@ class Datacell(BaseOCModel):
         on_delete=django.db.models.CASCADE,
         null=True,
         blank=True,
-        related_name="rejected_cells"
+        related_name="rejected_cells",
     )
-    corrected_data = NullableJSONField(default=jsonfield_default_value, null=True, blank=True)
-
-
+    corrected_data = NullableJSONField(
+        default=jsonfield_default_value, null=True, blank=True
+    )
 
     class Meta:
         permissions = (

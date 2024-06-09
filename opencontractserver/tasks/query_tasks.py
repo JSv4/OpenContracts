@@ -4,13 +4,11 @@ from typing import NoReturn
 from django.conf import settings
 from django.utils import timezone
 from llama_index.core import Settings, VectorStoreIndex
+from llama_index.core.query_engine import CitationQueryEngine
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.openai import OpenAI
 
 from config import celery_app
-
-from llama_index.core.query_engine import CitationQueryEngine
-from llama_index.llms.openai import OpenAI
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-
 from opencontractserver.corpuses.models import CorpusQuery
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
 
@@ -26,16 +24,17 @@ def run_query(
     query.save()
 
     try:
-        embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1")
+        embed_model = HuggingFaceEmbedding(
+            model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        )
         Settings.embed_model = embed_model
 
-        llm = OpenAI(
-            model=settings.OPENAI_MODEL,
-            api_key=settings.OPENAI_API_KEY
-        )
+        llm = OpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY)
         Settings.llm = llm
 
-        vector_store = DjangoAnnotationVectorStore.from_params(corpus_id=query.corpus.id)
+        vector_store = DjangoAnnotationVectorStore.from_params(
+            corpus_id=query.corpus.id
+        )
         index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
 
         query_engine = CitationQueryEngine.from_args(
@@ -50,7 +49,7 @@ def run_query(
         query.completed = timezone.now()
         query.save()
 
-    except Exception as e:
+    except Exception:
         query.failed = timezone.now()
         query.stacktrace = traceback.format_exc()
         query.save()

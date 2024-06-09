@@ -22,7 +22,9 @@ from config.graphql.graphene_types import (
     AnnotationLabelType,
     AnnotationType,
     ColumnType,
+    CorpusQueryType,
     CorpusType,
+    DatacellType,
     DocumentType,
     ExtractType,
     FieldsetType,
@@ -32,8 +34,6 @@ from config.graphql.graphene_types import (
     RelationshipType,
     UserExportType,
     UserType,
-    DatacellType,
-    CorpusQueryType,
 )
 from config.graphql.serializers import (
     AnnotationLabelSerializer,
@@ -50,9 +50,15 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus, TemporaryFileHandle, CorpusQuery
+from opencontractserver.corpuses.models import Corpus, CorpusQuery, TemporaryFileHandle
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import Column, Extract, Fieldset, LanguageModel, Datacell
+from opencontractserver.extracts.models import (
+    Column,
+    Datacell,
+    Extract,
+    Fieldset,
+    LanguageModel,
+)
 from opencontractserver.tasks import (
     build_label_lookups_task,
     burn_doc_annotations,
@@ -502,13 +508,15 @@ class StartCorpusFork(graphene.Mutation):
 
 
 class StartQueryForCorpus(graphene.Mutation):
-
     class Arguments:
         corpus_id = graphene.String(
             required=True,
             description="Graphene id of the corpus you want to package for export",
         )
-        query = graphene.String(required=True, description="What is the question the user wants an answer to?")
+        query = graphene.String(
+            required=True,
+            description="What is the question the user wants an answer to?",
+        )
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -523,8 +531,8 @@ class StartQueryForCorpus(graphene.Mutation):
         # Enforce sane limits on free / rando users. Can be overriden.
         try:
             if (
-                info.context.user.is_usage_capped and
-                CorpusQuery.objects.filter(creator=info.context.user).count() > 10
+                info.context.user.is_usage_capped
+                and CorpusQuery.objects.filter(creator=info.context.user).count() > 10
             ):
                 raise PermissionError(
                     "By default, new users are limited to 10 queries. Please contact the admin to "
@@ -1590,11 +1598,7 @@ class UpdateColumnMutation(DRFMutation):
         except Exception as e:
             message = f"Failed to update: {e}"
 
-        return UpdateColumnMutation(
-            ok=ok,
-            message=message,
-            obj=obj
-        )
+        return UpdateColumnMutation(ok=ok, message=message, obj=obj)
 
 
 class CreateColumn(graphene.Mutation):
@@ -1629,7 +1633,7 @@ class CreateColumn(graphene.Mutation):
         instructions=None,
     ):
         if {query, match_text} == {None}:
-            raise ValueError(f"One of `query` or `match_text` must be provided.")
+            raise ValueError("One of `query` or `match_text` must be provided.")
 
         fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
         language_model = LanguageModel.objects.get(
@@ -1837,7 +1841,6 @@ class RemoveDocumentsFromExtract(graphene.Mutation):
     def mutate(root, info, extract_id, document_ids_to_remove):
 
         ok = False
-        ids_removed = []
 
         try:
             user = info.context.user
@@ -1866,7 +1869,9 @@ class RemoveDocumentsFromExtract(graphene.Mutation):
         except Exception as e:
             message = f"Error on removing docs: {e}"
 
-        return RemoveDocumentsFromExtract(message=message, ok=ok, ids_removed=document_ids_to_remove)
+        return RemoveDocumentsFromExtract(
+            message=message, ok=ok, ids_removed=document_ids_to_remove
+        )
 
 
 class DeleteExtract(DRFDeletion):

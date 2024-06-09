@@ -421,9 +421,7 @@ class ExtractFilter(django_filters.FilterSet):
 class CorpusQueryFilter(django_filters.FilterSet):
     class Meta:
         model = CorpusQuery
-        fields = {
-            "corpus_id": ["exact"]
-        }
+        fields = {"corpus_id": ["exact"]}
 
 
 class DatacellFilter(django_filters.FilterSet):

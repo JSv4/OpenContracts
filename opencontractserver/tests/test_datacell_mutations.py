@@ -4,9 +4,15 @@ from graphene.test import Client
 from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
-from opencontractserver.extracts.models import Extract, Column, Datacell, Fieldset, LanguageModel
-from opencontractserver.documents.models import Document
 from opencontractserver.corpuses.models import Corpus
+from opencontractserver.documents.models import Document
+from opencontractserver.extracts.models import (
+    Column,
+    Datacell,
+    Extract,
+    Fieldset,
+    LanguageModel,
+)
 
 User = get_user_model()
 
@@ -18,7 +24,9 @@ class TestContext:
 
 class DatacellMutationTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.user = User.objects.create_user(
+            username="testuser", password="testpassword"
+        )
         self.client = Client(schema, context_value=TestContext(self.user))
 
         self.corpus = Corpus.objects.create(title="TestCorpus", creator=self.user)

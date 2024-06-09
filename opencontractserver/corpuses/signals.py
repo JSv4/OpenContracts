@@ -1,8 +1,6 @@
 from django.db import transaction
 
-from opencontractserver.tasks.query_tasks import (
-    run_query
-)
+from opencontractserver.tasks.query_tasks import run_query
 
 
 def run_query_on_create(sender, instance, created, **kwargs):

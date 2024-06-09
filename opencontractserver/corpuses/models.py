@@ -140,6 +140,7 @@ class CorpusQuery(BaseOCModel):
 
     NOTE - not permissioned separately from the corpus
     """
+
     query = django.db.models.TextField(blank=False, null=False)
     corpus = django.db.models.ForeignKey(
         "Corpus", on_delete=django.db.models.CASCADE, related_name="queries"
@@ -168,6 +169,7 @@ class CorpusQuery(BaseOCModel):
         )
         ordering = ("created",)
         base_manager_name = "objects"
+
 
 # Model for Django Guardian permissions... trying to improve performance...
 class CorpusQueryUserObjectPermission(UserObjectPermissionBase):

@@ -29,4 +29,3 @@ class AnnotationLabelAdmin(GuardedModelAdmin):
 @admin.register(LabelSet)
 class LabelSetAdmin(GuardedModelAdmin):
     list_display = ["id", "title", "description"]
-

@@ -1,12 +1,8 @@
 import logging
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from django.db import models
-from django.db.models import QuerySet, Q
-from pgvector.django import VectorField, CosineDistance
-
-from pydantic import PrivateAttr
-
+from django.db.models import Q, QuerySet
 from llama_index.core.schema import BaseNode, TextNode
 from llama_index.core.vector_stores.types import (
     BasePydanticVectorStore,
@@ -15,6 +11,9 @@ from llama_index.core.vector_stores.types import (
     VectorStoreQueryMode,
     VectorStoreQueryResult,
 )
+from pgvector.django import CosineDistance
+from pydantic import PrivateAttr
+
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 
 _logger = logging.getLogger(__name__)
@@ -103,15 +102,14 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         # layout and structural annotations from the nlm parser.
 
         return Annotation.objects.filter(
-            Q(corpus_id=self.corpus_id) |
-            Q(document__corpus=self.corpus_id)
+            Q(corpus_id=self.corpus_id) | Q(document__corpus=self.corpus_id)
         ).distinct()
 
     def _build_filter_query(self, filters: Optional[MetadataFilters]) -> QuerySet:
         """Build the filter query based on the provided metadata filters."""
         queryset = self._get_annotation_queryset()
 
-        print(F"_build_filter_query: {queryset.count()}")
+        print(f"_build_filter_query: {queryset.count()}")
 
         if filters is None:
             return queryset
@@ -119,16 +117,14 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         for filter_ in filters.filters:
             print(f"_build_filter_query - filter: {filter_}")
             if filter_.key == "label":
-                queryset = queryset.filter(
-                    annotation_label__text__iexact=filter_.value
-                )
+                queryset = queryset.filter(annotation_label__text__iexact=filter_.value)
             else:
                 raise ValueError(f"Unsupported filter key: {filter_.key}")
 
         return queryset
 
     def _db_rows_to_query_result(
-        self, rows: List[Annotation]
+        self, rows: list[Annotation]
     ) -> VectorStoreQueryResult:
         """Convert database rows to a VectorStoreQueryResult."""
         nodes = []
@@ -144,8 +140,12 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
                 extra_info={
                     "page": row.page,
                     "bounding_box": row.bounding_box,
-                    "label": row.annotation_label.text if row.annotation_label else None,
-                    "label_id": row.annotation_label.id if row.annotation_label else None
+                    "label": row.annotation_label.text
+                    if row.annotation_label
+                    else None,
+                    "label_id": row.annotation_label.id
+                    if row.annotation_label
+                    else None,
                 },
             )
             print(f"Created node: {node}")
@@ -160,11 +160,11 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         """Return None since the Django ORM is used instead of a separate client."""
         return None
 
-    def add(self, nodes: List[BaseNode], **add_kwargs: Any) -> List[str]:
+    def add(self, nodes: list[BaseNode], **add_kwargs: Any) -> list[str]:
         """Don't actually want to add entries via LlamaIndex"""
         return []
 
-    async def async_add(self, nodes: List[BaseNode], **kwargs: Any) -> List[str]:
+    async def async_add(self, nodes: list[BaseNode], **kwargs: Any) -> list[str]:
         """Add nodes asynchronously to the vector store."""
         return self.add(nodes, **kwargs)
 
@@ -186,28 +186,44 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
                 alpha = query.alpha
 
             queryset = queryset.annotate(
-                similarity=alpha * CosineDistance('embeddings', query.query_embedding)
-                           + (1 - alpha) * models.functions.TrigramSimilarity("raw_text", query.query_str)
-            ).order_by("-similarity")[:query.hybrid_top_k]
+                similarity=alpha * CosineDistance("embeddings", query.query_embedding)
+                + (1 - alpha)
+                * models.functions.TrigramSimilarity("raw_text", query.query_str)
+            ).order_by("-similarity")[: query.hybrid_top_k]
 
-        elif query.mode in [VectorStoreQueryMode.SPARSE, VectorStoreQueryMode.TEXT_SEARCH]:
+        elif query.mode in [
+            VectorStoreQueryMode.SPARSE,
+            VectorStoreQueryMode.TEXT_SEARCH,
+        ]:
             if query.query_str is None:
                 raise ValueError("query_str must be provided for text search.")
 
-            queryset = queryset.filter(raw_text__search=query.query_str).annotate(
-                similarity=models.functions.TrigramSimilarity("raw_text", query.query_str)
-            ).order_by("-similarity")[:query.sparse_top_k]
+            queryset = (
+                queryset.filter(raw_text__search=query.query_str)
+                .annotate(
+                    similarity=models.functions.TrigramSimilarity(
+                        "raw_text", query.query_str
+                    )
+                )
+                .order_by("-similarity")[: query.sparse_top_k]
+            )
 
         else:  # Default to vector search
-            queryset = (queryset.order_by(CosineDistance('embedding', query.query_embedding)).
-                        annotate(similarity=CosineDistance('embedding', query.query_embedding)))[:query.similarity_top_k]
+            queryset = (
+                queryset.order_by(
+                    CosineDistance("embedding", query.query_embedding)
+                ).annotate(
+                    similarity=CosineDistance("embedding", query.query_embedding)
+                )
+            )[: query.similarity_top_k]
 
         rows = list(queryset)
         print(f"Returned rows: {rows}")
 
         return self._db_rows_to_query_result(rows)
 
-    async def aquery(self, query: VectorStoreQuery, **kwargs: Any) -> VectorStoreQueryResult:
+    async def aquery(
+        self, query: VectorStoreQuery, **kwargs: Any
+    ) -> VectorStoreQueryResult:
         """Query the vector store asynchronously."""
         return self.query(query, **kwargs)
-

@@ -1,6 +1,6 @@
 import logging
 
-from celery import shared_task, group
+from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
 from pgvector.django import L2Distance
@@ -55,17 +55,16 @@ def run_extract(extract_id, user_id):
                 datacell_ids.append(cell.pk)
 
                 # Kick off processing job for cell in queue as soon as it's created.
-                llama_index_doc_query.si(cell_id).apply_async()
+                llama_index_doc_query.si(cell.pk).apply_async()
+
 
 @shared_task
 def llama_index_doc_query(cell_id):
     """
-        Use LlamaIndex to run queries specified for a particular cell
+    Use LlamaIndex to run queries specified for a particular cell
     """
 
-    datacell = Datacell.objects.get(
-        id=cell_id
-    )
+    datacell = Datacell.objects.get(id=cell_id)
 
     try:
         logger.debug(
@@ -100,9 +99,7 @@ def llama_index_doc_query(cell_id):
 
         if datacell.column.agentic:
             # TODO - use different query code
-            annotations = annotations.union(
-                agent_fetch_my_definitions(annotations)
-            )
+            annotations = annotations.union(agent_fetch_my_definitions(annotations))
 
         val = extract_for_query(annotations, datacell.column.query, output_type)
 

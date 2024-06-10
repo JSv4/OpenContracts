@@ -147,7 +147,7 @@ class ExtractsMutationTestCase(TestCase):
                 }}
             }}
         """.format(
-            to_global_id("CorpusType", self.corpus.id)
+            to_global_id("ExtractType", self.extract.id)
         )
 
         with patch("opencontractserver.tasks.extract_tasks.run_extract.s") as mock_task:

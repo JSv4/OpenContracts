@@ -107,6 +107,7 @@ class ColumnMutationTestCase(TestCase):
         mutation = """
             mutation {{
                 createColumn(
+                    name: "Test Col",
                     fieldsetId: "{}",
                     query: "NewQuery",
                     outputType: "int",

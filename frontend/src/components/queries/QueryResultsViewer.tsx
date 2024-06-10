@@ -183,7 +183,24 @@ const QueryResultsViewer: React.FC<QueryResultsViewerProps> = ({
         </Card>
         <Segment>
           <Header as="h3">Response</Header>
-          <ReactMarkdown>{query_obj.response || ""}</ReactMarkdown>
+          <ReactMarkdown
+            components={{
+              a: ({ href, children }) => (
+                <a
+                  href={href}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    console.log(event, href);
+                  }}
+                >
+                  {children}
+                </a>
+              ),
+            }}
+          >
+            {query_obj.response || ""}
+          </ReactMarkdown>
         </Segment>
       </Grid.Column>
     </Grid>

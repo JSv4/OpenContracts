@@ -31,7 +31,6 @@ class ColumnMutationTestCase(TestCase):
             model="TestModel", creator=self.user
         )
         self.fieldset = Fieldset.objects.create(
-            owner=self.user,
             name="TestFieldset",
             description="Test description",
             creator=self.user,

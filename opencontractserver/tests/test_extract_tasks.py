@@ -35,7 +35,6 @@ class ExtractsTaskTestCase(TestCase):
             model="TestModel", creator=self.user
         )
         self.fieldset = Fieldset.objects.create(
-            owner=self.user,
             name="TestFieldset",
             description="Test description",
             creator=self.user,
@@ -53,7 +52,6 @@ class ExtractsTaskTestCase(TestCase):
             corpus=self.corpus,
             name="TestExtract",
             fieldset=self.fieldset,
-            owner=self.user,
             creator=self.user,
         )
 

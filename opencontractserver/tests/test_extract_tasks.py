@@ -73,12 +73,10 @@ class ExtractsTaskTestCase(TestCase):
 
     @patch("opencontractserver.tasks.extract_tasks.agent_fetch_my_definitions")
     @patch("opencontractserver.tasks.extract_tasks.extract_for_query")
-    @patch("opencontractserver.tasks.extract_tasks.llama_index_doc_query")
     def test_run_extract_task(
         self,
         mock_extract_for_query,
         mock_agent_fetch_my_definitions,
-        mock_llama_index_doc_query,
     ):
         mock_extract_for_query.return_value = "Mocked extracted data"
         mock_agent_fetch_my_definitions.return_value = Annotation.objects.all()
@@ -92,6 +90,5 @@ class ExtractsTaskTestCase(TestCase):
         row = Datacell.objects.filter(extract=self.extract, column=self.column).first()
         self.assertIsNotNone(row)
 
-        mock_llama_index_doc_query.assert_called_once()
         mock_extract_for_query.assert_called_once()
         mock_agent_fetch_my_definitions.assert_called_once()

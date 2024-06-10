@@ -1,3 +1,4 @@
+import re
 import traceback
 from typing import NoReturn
 
@@ -45,7 +46,14 @@ def run_query(
         )
         response = query_engine.query(str(query.query))
         print(f"{len(response.source_nodes)} Sources: {response.source_nodes[0].node}")
-        query.response = str(response)
+
+        # Parse the citations to actual links
+        markdown_text = str(response)
+        for index, obj in enumerate(response.source_nodes, start=1):
+            pattern = re.compile(fr"\[{index}\]")
+            markdown_text = pattern.sub(f"[[{index}]({obj['url']})]", markdown_text)
+
+        query.response = markdown_text
         query.completed = timezone.now()
         query.save()
 

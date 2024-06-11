@@ -102,7 +102,8 @@ def llama_index_doc_query(cell_id, similarity_top_k=4):
         Settings.llm = llm
 
         vector_store = DjangoAnnotationVectorStore.from_params(
-            document_id=document.id
+            document_id=document.id,
+            must_have_text=datacell.column.must_contain_text
         )
         index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
 
@@ -175,14 +176,22 @@ def llama_index_doc_query(cell_id, similarity_top_k=4):
             )
             definitions = str(response)
 
-        retrieved_text = f"Relevant Text:\n```\n{retrieved_text}\n```\n\n" + definitions
+        retrieved_text = f"Related Document:\n```\n{retrieved_text}\n```\n\n" + definitions
 
         print(f"Resulting data for marvin: {retrieved_text}")
 
-        if parse_instructions:
-            result = marvin.cast(retrieved_text, target=output_type, instructions=parse_instructions)
+        if datacell.column.extract_is_list:
+            print(f"Extract as list!")
+            if parse_instructions:
+                result = marvin.extract(retrieved_text, target=output_type, instructions=parse_instructions)
+            else:
+                result = marvin.extract(retrieved_text, target=output_type)
         else:
-            result = marvin.cast(retrieved_text, target=output_type)
+            print(f"Extract single instance")
+            if parse_instructions:
+                result = marvin.cast(retrieved_text, target=output_type, instructions=parse_instructions)
+            else:
+                result = marvin.cast(retrieved_text, target=output_type)
 
         print(f"Result processed from marvin: {result}")
         logger.debug(
@@ -192,7 +201,7 @@ def llama_index_doc_query(cell_id, similarity_top_k=4):
         if issubclass(output_type, BaseModel) or isinstance(output_type, BaseModel):
             datacell.data = {"data": result.model_dump()}
         elif output_type in [str, int, bool, float]:
-            datacell.data = {"data": output_type(result)}
+            datacell.data = {"data": result}
         else:
             raise ValueError(f"Unsupported output type: {output_type}")
         datacell.completed = timezone.now()

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   Form,
@@ -14,19 +14,32 @@ import {
 import { LanguageModelDropdown } from "../selectors/LanguageModelDropdown";
 import { LooseObject } from "../../types";
 import { fontWeight } from "../../../theme/fonts";
+import { ColumnType } from "../../../graphql/types";
 
 interface CreateColumnModalProps {
   open: boolean;
+  existing_column?: ColumnType;
   onClose: () => void;
   onSubmit: (data: any) => void;
 }
 
 export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
   open,
+  existing_column,
   onClose,
   onSubmit,
 }) => {
-  const [objData, setObjData] = useState<LooseObject>({});
+  const [objData, setObjData] = useState<LooseObject>(
+    existing_column ? existing_column : {}
+  );
+
+  useEffect(() => {
+    if (existing_column) {
+      setObjData(existing_column);
+    } else {
+      setObjData({});
+    }
+  }, [existing_column]);
 
   const {
     name,
@@ -38,6 +51,7 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
     agentic,
     extractIsList,
     languageModelId,
+    mustContainText,
   } = objData;
 
   const handleChange = (
@@ -54,9 +68,9 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
   };
 
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal style={{ height: "70vh" }} open={open} closeIcon onClose={onClose}>
       <Modal.Header>Create a New Data Extract Column</Modal.Header>
-      <Modal.Content>
+      <Modal.Content style={{ overflowY: "scroll" }}>
         <Form>
           <Grid stackable>
             <Grid.Row>
@@ -118,6 +132,22 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
                     placeholder="What query shall we use to guide the LLM extraction?"
                     value={query}
                     onChange={(e, data) => handleChange(e, data, "query")}
+                  />
+                </Form.Field>
+              </Grid.Column>
+            </Grid.Row>
+            <Grid.Row>
+              <Grid.Column width={16}>
+                <Header as="h4">Must Contain Text</Header>
+                <Form.Field>
+                  <TextArea
+                    rows={3}
+                    name="mustContainText"
+                    placeholder="Only look in annotations that contain this string (case insensitive)?"
+                    value={mustContainText}
+                    onChange={(e, data) =>
+                      handleChange(e, data, "mustContainText")
+                    }
                   />
                 </Form.Field>
               </Grid.Column>
@@ -236,7 +266,7 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
         </Form>
       </Modal.Content>
       <Modal.Actions>
-        <Button color="black" onClick={onClose}>
+        <Button color="black" onClick={() => onClose()}>
           Cancel
         </Button>
         <Button

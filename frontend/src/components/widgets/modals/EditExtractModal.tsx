@@ -287,11 +287,11 @@ export const EditExtractModal = ({
       {editing_column_for_extract === null ? (
         <></>
       ) : (
-        <EditColumnModal
+        <CreateColumnModal
           open={editing_column_for_extract !== null}
           existing_column={editing_column_for_extract}
-          onClose={() => editingColumnForExtract(null)}
           onSubmit={(data: ColumnType) => updateColumn({ variables: data })}
+          onClose={() => editingColumnForExtract(null)}
         />
       )}
       <Modal

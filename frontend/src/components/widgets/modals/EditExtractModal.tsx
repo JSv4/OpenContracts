@@ -198,6 +198,7 @@ export const EditExtractModal = ({
       variables: {
         id: extract ? extract.id : "",
       },
+      nextFetchPolicy: "network-only",
     }
   );
 
@@ -268,6 +269,8 @@ export const EditExtractModal = ({
   if (!extract || !extract.id) {
     return <></>;
   }
+
+  console.log("Extract details", extract);
 
   return (
     <>

@@ -1,18 +1,31 @@
 import logging
 
-from celery import shared_task
+import marvin
+
+from celery import shared_task, chord, group
+
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from pgvector.django import L2Distance
 
-from opencontractserver.annotations.models import Annotation
+from llama_index.core import Settings, VectorStoreIndex
+from llama_index.core.agent import ReActAgent, FunctionCallingAgentWorker, StructuredPlannerAgent
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.openai import OpenAI
+
+from pydantic import BaseModel
+
 from opencontractserver.extracts.models import Datacell, Extract
+from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
 from opencontractserver.types.enums import PermissionTypes
-from opencontractserver.utils.embeddings import calculate_embedding_for_text
+from opencontractserver.utils.etl import parse_model_or_primitive
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)
 
+# Pass OpenAI API key to marvin for parsing / extract
+marvin.settings.openai.api_key = settings.OPENAI_API_KEY
 
 # Mock these functions for now
 def agent_fetch_my_definitions(annot):
@@ -21,6 +34,13 @@ def agent_fetch_my_definitions(annot):
 
 def extract_for_query(annots, query, output_type):
     return None
+
+
+@shared_task
+def mark_extract_complete(extract_id):
+    extract = Extract.objects.get(pk=extract_id)
+    extract.finished = timezone.now()
+    extract.save()
 
 
 @shared_task
@@ -38,7 +58,7 @@ def run_extract(extract_id, user_id):
     fieldset = extract.fieldset
 
     document_ids = corpus.documents.all().values_list("id", flat=True)
-    datacell_ids = []
+    tasks = []
 
     for document_id in document_ids:
         for column in fieldset.columns.all():
@@ -52,58 +72,129 @@ def run_extract(extract_id, user_id):
                     document_id=document_id,
                 )
                 set_permissions_for_obj_to_user(user_id, cell, [PermissionTypes.CRUD])
-                datacell_ids.append(cell.pk)
 
                 # Kick off processing job for cell in queue as soon as it's created.
-                llama_index_doc_query.si(cell.pk).apply_async()
+                tasks.append(llama_index_doc_query.si(cell.pk))
 
+    chord(group(*tasks))(mark_extract_complete.si(extract_id))
 
 @shared_task
-def llama_index_doc_query(cell_id):
+def llama_index_doc_query(cell_id, similarity_top_k=4):
     """
     Use LlamaIndex to run queries specified for a particular cell
     """
 
     datacell = Datacell.objects.get(id=cell_id)
+    print(f"Process datacell {datacell}")
 
     try:
-        logger.debug(
-            f"run_extract() - processing column datacell {datacell.id} for {datacell.document.id}"
-        )
+
         datacell.started = timezone.now()
         datacell.save()
 
-        output_type = eval(datacell.column.output_type)
-
-        # TODO - integrate LlamaIndex code
-
-        annotations = Annotation.objects.filter(
-            document_id=datacell.document.id, embedding__isnull=False
+        document = datacell.document
+        embed_model = HuggingFaceEmbedding(
+            model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
         )
+        Settings.embed_model = embed_model
 
-        if datacell.column.limit_to_label:
-            annotations = annotations.filter(
-                annotation_label__text=datacell.column.limit_to_label
+        llm = OpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY)
+        Settings.llm = llm
+
+        vector_store = DjangoAnnotationVectorStore.from_params(
+            document_id=document.id
+        )
+        index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
+
+        # search_text
+        search_text = datacell.column.match_text
+        query = datacell.column.query
+        output_type = parse_model_or_primitive(datacell.column.output_type)
+        print(f"Output type: {output_type}")
+        parse_instructions = datacell.column.instructions
+
+        retriever = index.as_retriever(similarity_top_k=similarity_top_k)
+
+        results = retriever.retrieve(search_text if search_text else query)
+        retrieved_text = "\n".join([f"```Relevant Section:\n\n{n.text}\n```" for n in results])
+        print(f"Retrieved text: {retrieved_text}")
+
+        # TODO - eventually this can just be pulled from a sepearate Django vector index where we filter to definitions!
+        definitions = ""
+        if datacell.column.agentic:
+
+            import nest_asyncio
+            nest_asyncio.apply()
+
+            engine = index.as_query_engine(similarity_top_k=similarity_top_k)
+
+            query_engine_tools = [
+                QueryEngineTool.from_defaults(
+                    query_engine=engine,
+                    name='document_parts',
+                    description="Let's you use hybrid or vector search over this document to search for specific text semantically or using text search.",
+                )
+            ]
+
+            # create the function calling worker for reasoning
+            worker = FunctionCallingAgentWorker.from_tools(
+                query_engine_tools, verbose=True
             )
 
-        match_text = datacell.column.match_text or datacell.column.query
+            # wrap the worker in the top-level planner
+            agent = StructuredPlannerAgent(
+                worker, tools=query_engine_tools, verbose=True
+            )
 
-        if match_text:
-            # need to generate embeddings here
-            natural_lang_embeddings = calculate_embedding_for_text(match_text)
+            # TODO - eventually capture section hierarchy as nlm-sherpa does so we can query up a retrieved chunk to
+            #  its parent section
 
-            # Find closest 5 annotations
-            annotations = annotations.order_by(
-                L2Distance("embedding", natural_lang_embeddings)
-            )[:5]
+            response = agent.query(
+                f"""Please identify all of the defined terms - capitalized terms that are not well-known proper nouns,
+                terms that in quotation marks or terms that are clearly definitions in the context of a given sentence,
+                 such as blah blah, as used herein - the bros - and find their definitions. Likewise, if you see a
+                 section reference, try to retrieve the original section text. You produce an output that looks like
+                 this:
+                ```
 
-        if datacell.column.agentic:
-            # TODO - use different query code
-            annotations = annotations.union(agent_fetch_my_definitions(annotations))
+                ### Related sections and definitions ##########
 
-        val = extract_for_query(annotations, datacell.column.query, output_type)
+                [defined term name]: definition
+                ...
 
-        datacell.data = {"data": val}
+                [section name]: text
+                ...
+
+                ```
+
+                Now, given the text to analyze below, please perform the analysis for this original text:
+                ```
+                {retrieved_text}
+                ```
+                """
+            )
+            definitions = str(response)
+
+        retrieved_text = f"Relevant Text:\n```\n{retrieved_text}\n```\n\n" + definitions
+
+        print(f"Resulting data for marvin: {retrieved_text}")
+
+        if parse_instructions:
+            result = marvin.cast(retrieved_text, target=output_type, instructions=parse_instructions)
+        else:
+            result = marvin.cast(retrieved_text, target=output_type)
+
+        print(f"Result processed from marvin: {result}")
+        logger.debug(
+            f"run_extract() - processing column datacell {datacell.id} for {datacell.document.id}"
+        )
+
+        if issubclass(output_type, BaseModel) or isinstance(output_type, BaseModel):
+            datacell.data = {"data": result.model_dump()}
+        elif output_type in [str, int, bool, float]:
+            datacell.data = {"data": output_type(result)}
+        else:
+            raise ValueError(f"Unsupported output type: {output_type}")
         datacell.completed = timezone.now()
         datacell.save()
 

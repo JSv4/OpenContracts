@@ -19,7 +19,6 @@ def run_query(
     query_id: str | int,
 ) -> NoReturn:
 
-    # TODO - better structured outputs that can be rendered on the frontend.
     query = CorpusQuery.objects.get(id=query_id)
     query.started = timezone.now()
     query.save()
@@ -49,10 +48,14 @@ def run_query(
 
         # Parse the citations to actual links
         markdown_text = str(response)
+        annotation_ids = []
         for index, obj in enumerate(response.source_nodes, start=1):
+            pk = obj.node.extra_info['annotation_id']
             pattern = re.compile(fr"\[{index}\]")
-            markdown_text = pattern.sub(f"[[{index}]({obj['url']})]", markdown_text)
+            markdown_text = pattern.sub(f"[[{index}]({pk})]", markdown_text)
+            annotation_ids.append(pk)
 
+        query.sources.add(*annotation_ids)
         query.response = markdown_text
         query.completed = timezone.now()
         query.save()

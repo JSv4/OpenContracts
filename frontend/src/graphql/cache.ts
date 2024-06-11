@@ -221,6 +221,7 @@ export const displayAnnotationOnAnnotatorLoad =
   makeVar<ServerAnnotationType | null>(null);
 export const annotationContentSearchTerm = makeVar<string>("");
 export const selectedMetaAnnotationId = makeVar<string>("");
+export const includeStructuralAnnotations = makeVar<boolean>(false); // These are weird as they don't have a labelset and user probably doesn't want to see them.
 
 /**
  * Analyzer-related global variables

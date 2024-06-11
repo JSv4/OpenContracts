@@ -1189,11 +1189,13 @@ export interface ColumnType extends Node {
   fieldset?: FieldsetType;
   query?: string;
   matchText?: string;
+  mustContainText?: string;
   outputType: string;
   limitToLabel?: string;
   instructions?: string;
   languageModel?: LanguageModelType;
   agentic?: boolean;
+  extractIsList?: boolean;
   fieldsetId?: string;
   languageModelId?: string;
 }

@@ -320,7 +320,7 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   pageSelectionQueue: [],
   spanLabels: [],
   humanSpanLabelChoices: [],
-  showStructuralLabels: false,
+  showStructuralLabels: true,
   activeSpanLabel: undefined,
   showOnlySpanLabels: [],
   docText: undefined,

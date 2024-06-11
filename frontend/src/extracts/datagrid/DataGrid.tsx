@@ -45,6 +45,8 @@ export const DataGrid = ({
   onRemoveDocIds,
   onRemoveColumnId,
 }: DataGridProps) => {
+  console.log("Datagrid cells: ", cells);
+
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [showAddRowButton, setShowAddRowButton] = useState(false);
   const [openAddRowModal, setOpenAddRowModal] = useState(false);
@@ -97,23 +99,27 @@ export const DataGrid = ({
             {columns.map((column) => (
               <Table.HeaderCell key={column.id}>
                 {column.name}
-                <Dropdown
-                  icon={null}
-                  trigger={<Icon name="cog" style={{ float: "right" }} />}
-                  pointing="right"
-                  style={{ float: "right" }}
-                >
-                  <Dropdown.Menu>
-                    <Dropdown.Item
-                      text="Edit"
-                      onClick={() => editingColumnForExtract(column)}
-                    />
-                    <Dropdown.Item
-                      text="Delete"
-                      onClick={() => onRemoveColumnId(column.id)}
-                    />
-                  </Dropdown.Menu>
-                </Dropdown>
+                {!extract.started ? (
+                  <Dropdown
+                    icon={null}
+                    trigger={<Icon name="cog" style={{ float: "right" }} />}
+                    pointing="right"
+                    style={{ float: "right" }}
+                  >
+                    <Dropdown.Menu>
+                      <Dropdown.Item
+                        text="Edit"
+                        onClick={() => editingColumnForExtract(column)}
+                      />
+                      <Dropdown.Item
+                        text="Delete"
+                        onClick={() => onRemoveColumnId(column.id)}
+                      />
+                    </Dropdown.Menu>
+                  </Dropdown>
+                ) : (
+                  <></>
+                )}
               </Table.HeaderCell>
             ))}
           </Table.Row>
@@ -130,20 +136,24 @@ export const DataGrid = ({
               <Table.Row key={row.id}>
                 <Table.Cell>
                   {row.title}
-                  <Dropdown
-                    icon={null}
-                    trigger={<Icon name="cog" style={{ float: "right" }} />}
-                    pointing="bottom right"
-                    style={{ float: "right" }}
-                  >
-                    <Dropdown.Menu>
-                      <Dropdown.Item
-                        text="Delete"
-                        icon="trash"
-                        onClick={() => onRemoveDocIds(extract.id, [row.id])}
-                      />
-                    </Dropdown.Menu>
-                  </Dropdown>
+                  {!extract.started ? (
+                    <Dropdown
+                      icon={null}
+                      trigger={<Icon name="cog" style={{ float: "right" }} />}
+                      pointing="bottom right"
+                      style={{ float: "right" }}
+                    >
+                      <Dropdown.Menu>
+                        <Dropdown.Item
+                          text="Delete"
+                          icon="trash"
+                          onClick={() => onRemoveDocIds(extract.id, [row.id])}
+                        />
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  ) : (
+                    <></>
+                  )}
                 </Table.Cell>
                 {columns.map((column) => {
                   const cell = cells.find(
@@ -176,7 +186,7 @@ export const DataGrid = ({
           )}
         </Table.Body>
       </Table>
-      {isAddingColumn && (
+      {!extract.started && isAddingColumn && (
         <div
           style={{
             position: "absolute",
@@ -199,7 +209,7 @@ export const DataGrid = ({
           />
         </div>
       )}
-      {showAddRowButton && (
+      {!extract.started && showAddRowButton && (
         <div
           style={{
             position: "absolute",

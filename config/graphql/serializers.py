@@ -71,6 +71,8 @@ class ColumnSerializer(serializers.ModelSerializer):
             "instructions",
             "language_model_id",
             "agentic",
+            "extract_is_list",
+            "must_contain_text"
         ]
         read_only_fields = ["id", "created"]
 
@@ -96,6 +98,7 @@ class AnnotationLabelSerializer(serializers.ModelSerializer):
             "icon",
             "text",
             "creator_id",
+            "read_only"
         ]
         read_only_fields = ["id"]
 

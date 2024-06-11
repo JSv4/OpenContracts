@@ -142,7 +142,10 @@ export const Extracts = () => {
           />
           <CreateExtractModal
             open={show_create_extract_modal}
-            onClose={() => showCreateExtractModal(false)}
+            onClose={() => {
+              showCreateExtractModal(false);
+              refetchExtracts();
+            }}
           />
           <EditExtractModal
             ext={opened_extract}

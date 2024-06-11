@@ -1,12 +1,6 @@
 import { useQuery, useReactiveVar } from "@apollo/client";
 
-import {
-  Dropdown,
-  Menu,
-  Label,
-  DropdownItemProps,
-  LabelDetailProps,
-} from "semantic-ui-react";
+import { Dropdown, Menu, Label, DropdownItemProps } from "semantic-ui-react";
 
 import _ from "lodash";
 

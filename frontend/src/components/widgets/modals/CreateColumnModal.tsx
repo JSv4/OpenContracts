@@ -2,19 +2,18 @@ import React, { useState } from "react";
 import {
   Modal,
   Form,
-  FormInput,
+  Input,
   TextArea,
-  FormGroup,
-  FormButton,
-  FormField,
-  TextAreaProps,
-  InputOnChangeData,
-  Checkbox,
   Grid,
   Button,
+  Header,
+  Checkbox,
+  Popup,
+  Icon,
 } from "semantic-ui-react";
 import { LanguageModelDropdown } from "../selectors/LanguageModelDropdown";
 import { LooseObject } from "../../types";
+import { fontWeight } from "../../../theme/fonts";
 
 interface CreateColumnModalProps {
   open: boolean;
@@ -37,12 +36,13 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
     limitToLabel,
     instructions,
     agentic,
+    extractIsList,
     languageModelId,
   } = objData;
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    data: TextAreaProps | InputOnChangeData,
+    data: any,
     name: string
   ) => {
     setObjData({ ...objData, [name]: data.value });
@@ -55,127 +55,198 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Modal.Header>"Create a New Column"</Modal.Header>
+      <Modal.Header>Create a New Data Extract Column</Modal.Header>
       <Modal.Content>
-        <Grid centered divided>
-          <Grid.Column>
+        <Form>
+          <Grid stackable>
             <Grid.Row>
-              <Form>
-                <FormGroup>
-                  <FormInput
-                    placeholder="Name"
+              <Grid.Column width={8}>
+                <Form.Field>
+                  <label>Name</label>
+                  <Input
+                    placeholder="Enter column name"
                     name="name"
                     value={name}
                     onChange={(e, { value }) =>
                       setObjData({ ...objData, name: value })
                     }
-                    style={{ minWidth: "50vw important!" }}
+                    fluid
                   />
-                  <TextArea
-                    rows={6}
+                </Form.Field>
+              </Grid.Column>
+              <Grid.Column width={8}>
+                <Form.Field>
+                  <label>
+                    Output Type
+                    <Popup
+                      trigger={<Icon name="question circle outline" />}
+                      content="Specify the output type for the column. Currently we support Python primitives (e.g. int, str, boolean, float) or simple (non-nested) Pydantic models. Parser is still a WIP, so please keep it simple."
+                    />
+                  </label>
+                  <Input
+                    placeholder="e.g., str"
                     name="outputType"
-                    label="Output Type:"
-                    placeholder="str"
                     value={outputType}
-                    onChange={(
-                      event: React.ChangeEvent<HTMLTextAreaElement>,
-                      data: TextAreaProps
-                    ) => setObjData({ ...objData, outputType: data.value })}
+                    onChange={(e, { value }) =>
+                      setObjData({ ...objData, outputType: value })
+                    }
+                    fluid
                   />
-                  <FormField>
-                    <label>Language Model</label>
-                    <LanguageModelDropdown
-                      onChange={(id: string) =>
-                        setObjData({ ...objData, languageModelId: id })
-                      }
-                      languageModelId={languageModelId}
-                    />
-                  </FormField>
-                </FormGroup>
-              </Form>
+                </Form.Field>
+              </Grid.Column>
             </Grid.Row>
             <Grid.Row>
-              <Form>
-                <TextArea
-                  rows={3}
-                  name="query"
-                  label="Query:"
-                  placeholder="What is the title of the document?"
-                  value={query}
-                  onChange={(
-                    event: React.ChangeEvent<HTMLTextAreaElement>,
-                    data: TextAreaProps
-                  ) => handleChange(event, data, "query")}
-                />
-              </Form>
-              <Form>
-                <TextArea
-                  rows={3}
-                  name="matchText"
-                  placeh
-                  label="Representative Example:"
-                  placeholder="Place example of text containing relevant data here."
-                  value={matchText}
-                  onChange={(
-                    event: React.ChangeEvent<HTMLTextAreaElement>,
-                    data: TextAreaProps
-                  ) => handleChange(event, data, "matchText")}
-                />
-              </Form>
-              <Form>
-                <TextArea
-                  rows={3}
-                  name="instructions"
-                  placeh
-                  label="Parser Instructions:"
-                  placeholder="Provide detailed instructions for extracting object properties here..."
-                  value={instructions}
-                  onChange={(
-                    event: React.ChangeEvent<HTMLTextAreaElement>,
-                    data: TextAreaProps
-                  ) => handleChange(event, data, "matchText")}
-                />
-              </Form>
+              <Grid.Column width={16}>
+                <Form.Field>
+                  <label>Language Model</label>
+                  <LanguageModelDropdown
+                    onChange={(id: string) =>
+                      setObjData({ ...objData, languageModelId: id })
+                    }
+                    languageModelId={languageModelId}
+                  />
+                </Form.Field>
+              </Grid.Column>
             </Grid.Row>
             <Grid.Row>
-              <Grid columns={2}>
-                <Grid.Column>
-                  <Grid.Row>
-                    <Checkbox
-                      label="Agentic"
-                      checked={agentic}
-                      onChange={(_, data) =>
-                        setObjData({
-                          ...objData,
-                          agentic: data.checked || false,
-                        })
-                      }
-                    />
-                  </Grid.Row>
-                </Grid.Column>
-                <Grid.Column>
-                  <Grid.Row>
-                    <FormInput
-                      placeholder="Label Name To Limit Search To"
-                      name="limitToLabel"
-                      value={limitToLabel}
-                      onChange={(e, { value }) =>
-                        setObjData({ ...objData, limitToLabel: value })
-                      }
-                      style={{ minWidth: "50vw important!" }}
-                    />
-                  </Grid.Row>
-                </Grid.Column>
-              </Grid>
+              <Grid.Column width={16}>
+                <Header as="h4">Query</Header>
+                <Form.Field>
+                  <TextArea
+                    rows={3}
+                    name="query"
+                    placeholder="What query shall we use to guide the LLM extraction?"
+                    value={query}
+                    onChange={(e, data) => handleChange(e, data, "query")}
+                  />
+                </Form.Field>
+              </Grid.Column>
             </Grid.Row>
-          </Grid.Column>
-        </Grid>
+            <Grid.Row>
+              <Grid.Column width={16}>
+                <Header as="h4">
+                  Representative Example
+                  <Popup
+                    trigger={
+                      <Icon
+                        name="question circle outline"
+                        size="tiny"
+                        style={{ fontSize: "1rem" }}
+                      />
+                    }
+                    content="Find text that is semantically similar to this example FIRST if provided. If not provided, query is used for RAG retrieval ('naive RAG' - not recommended)."
+                  />
+                </Header>
+                <Form.Field>
+                  <TextArea
+                    rows={3}
+                    name="matchText"
+                    placeholder="Place example of text containing relevant data here."
+                    value={matchText}
+                    onChange={(e, data) => handleChange(e, data, "matchText")}
+                  />
+                </Form.Field>
+              </Grid.Column>
+            </Grid.Row>
+            <Grid.Row>
+              <Grid.Column width={16}>
+                <Header as="h4">Parser Instructions</Header>
+                <Form.Field>
+                  <TextArea
+                    rows={3}
+                    name="instructions"
+                    placeholder="Provide detailed instructions for extracting object properties here..."
+                    value={instructions}
+                    onChange={(e, data) =>
+                      handleChange(e, data, "instructions")
+                    }
+                  />
+                </Form.Field>
+              </Grid.Column>
+            </Grid.Row>
+            <Grid.Row>
+              <Grid.Column width={8}>
+                <Form.Field>
+                  <Checkbox
+                    label={
+                      <label>
+                        Agentic (Extra API Calls)
+                        <Popup
+                          trigger={<Icon name="question circle outline" />}
+                          content="Uses a LlamaIndex agent to attempt to find additional, referenced context from the retrieved text."
+                        />
+                      </label>
+                    }
+                    checked={agentic}
+                    onChange={(_, data) =>
+                      setObjData({
+                        ...objData,
+                        agentic: data.checked || false,
+                      })
+                    }
+                  />
+                </Form.Field>
+              </Grid.Column>
+              <Grid.Column width={8}>
+                <Form.Field>
+                  <Checkbox
+                    label={
+                      <label>
+                        List of Values
+                        <Popup
+                          trigger={<Icon name="question circle outline" />}
+                          content="Check if the column should extract a list of values of type output type"
+                        />
+                      </label>
+                    }
+                    checked={extractIsList}
+                    onChange={(_, data) =>
+                      setObjData({
+                        ...objData,
+                        extractIsList: data.checked || false,
+                      })
+                    }
+                  />
+                </Form.Field>
+              </Grid.Column>
+            </Grid.Row>
+            <Grid.Row>
+              <Grid.Column width={16}>
+                <Form.Field>
+                  <label>
+                    Limit Search to Label
+                    <Popup
+                      trigger={<Icon name="question circle outline" />}
+                      content="Specify a label name to limit the search scope"
+                    />
+                  </label>
+                  <Input
+                    placeholder="Enter label name"
+                    name="limitToLabel"
+                    value={limitToLabel}
+                    onChange={(e, { value }) =>
+                      setObjData({ ...objData, limitToLabel: value })
+                    }
+                    fluid
+                  />
+                </Form.Field>
+              </Grid.Column>
+            </Grid.Row>
+          </Grid>
+        </Form>
+      </Modal.Content>
+      <Modal.Actions>
+        <Button color="black" onClick={onClose}>
+          Cancel
+        </Button>
         <Button
           content="Submit"
-          style={{ marginTop: "1vh" }}
+          labelPosition="right"
+          icon="checkmark"
           onClick={handleSubmit}
+          positive
         />
-      </Modal.Content>
+      </Modal.Actions>
     </Modal>
   );
 };

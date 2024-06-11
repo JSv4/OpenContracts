@@ -1389,13 +1389,13 @@ export interface RequestCreateExtractOutputType {
 }
 
 export interface RequestCreateExtractInputType {
-  corpusId: string;
+  corpusId?: string;
   name: string;
-  fieldsetId: string;
+  fieldsetId?: string;
 }
 
 export const REQUEST_CREATE_EXTRACT = gql`
-  mutation CreateExtract($corpusId: ID!, $name: String!, $fieldsetId: ID!) {
+  mutation CreateExtract($corpusId: ID, $name: String!, $fieldsetId: ID) {
     createExtract(corpusId: $corpusId, name: $name, fieldsetId: $fieldsetId) {
       msg
       ok

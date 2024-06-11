@@ -123,7 +123,7 @@ export const ExtractDatacell = ({
           <></>
         )}
         <div style={{ position: "relative" }}>
-          {renderJsonPreview(cellData.data?.data ?? {})}
+          {renderJsonPreview(cellData?.data ?? {})}
           {!readOnly && (
             <div style={{ position: "absolute", top: "5px", right: "5px" }}>
               <Popup

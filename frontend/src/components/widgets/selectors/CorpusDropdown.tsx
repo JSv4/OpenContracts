@@ -92,6 +92,7 @@ export const CorpusDropdown: React.FC = () => {
       fluid
       selection
       search
+      clearable
       options={getDropdownOptions()}
       value={selected_corpus ? selected_corpus.id : undefined}
       placeholder="Select Corpus"

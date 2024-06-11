@@ -148,7 +148,6 @@ class CorpusQuery(BaseOCModel):
     sources = django.db.models.ManyToManyField(
         Annotation,
         blank=True,
-        null=True,
         related_name="queries",
         related_query_name="created_by_query",
     )

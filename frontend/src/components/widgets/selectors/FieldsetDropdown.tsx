@@ -93,6 +93,7 @@ export const FieldsetDropdown: React.FC = () => {
       fluid
       selection
       search
+      clearable
       options={getDropdownOptions()}
       value={selected_fieldset ? selected_fieldset.id : undefined}
       placeholder="Select Fieldset"

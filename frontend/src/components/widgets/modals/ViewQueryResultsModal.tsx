@@ -22,6 +22,7 @@ export const ViewQueryResultsModal = ({
 }: ViewQueryResultsModalProps) => {
   const [loadedQueryDetails, setLoadedQueryDetails] =
     useState<CorpusQueryType | null>(null);
+
   const { data, error, loading, startPolling, stopPolling, refetch } = useQuery<
     GetCorpusQueryDetailsOutputType,
     GetCorpusQueryDetailsInputType
@@ -29,6 +30,7 @@ export const ViewQueryResultsModal = ({
     variables: {
       corpusId: query_id,
     },
+    nextFetchPolicy: "network-only",
   });
 
   // If job isn't actually done...
@@ -51,24 +53,12 @@ export const ViewQueryResultsModal = ({
   }, [query_id]);
 
   return (
-    <Modal
-      closeIcon
-      size="fullscreen"
-      style={{
-        height: "80vh",
-        display: "flex !important",
-        flexDirection: "column",
-        justifyContent: "flex-start",
-        overflowY: "scroll",
-      }}
-      open={open}
-      onClose={onClose}
-    >
+    <Modal closeIcon size="fullscreen" open={open} onClose={onClose}>
       <Modal.Header>
         <b>Query: </b>
         {loadedQueryDetails?.query.substring(0, 64)}
       </Modal.Header>
-      <Modal.Content style={{ flex: 1 }}>
+      <Modal.Content style={{ flex: 1, overflowY: "scroll" }}>
         <Grid centered divided>
           <Grid.Column>
             <Grid.Row>

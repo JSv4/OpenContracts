@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Optional
 
+from asgiref.sync import sync_to_async
 from django.db import models
 from django.db.models import Q, QuerySet
 from llama_index.core.schema import BaseNode, TextNode
@@ -35,14 +36,16 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
 
     stores_text = True
     flat_metadata = False
-    corpus_id: str | int
 
-    _annotation_model: models.Model = PrivateAttr()
-    _annotation_label_model: models.Model = PrivateAttr()
+    corpus_id: str | int | None
+    document_id: str | int | None
+    must_have_text: str | None
 
     def __init__(
         self,
-        corpus_id: str | int,
+        corpus_id: str | int | None = None,
+        document_id: str | int | None = None,
+        must_have_text: str | None = None,
         hybrid_search: bool = False,
         text_search_config: str = "english",
         embed_dim: int = 1536,
@@ -51,12 +54,10 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         debug: bool = False,
         use_jsonb: bool = False,
     ):
-        """Initialize the Django Annotation Vector Store."""
-        self._annotation_model = Annotation
-        self._annotation_label_model = AnnotationLabel
 
         super().__init__(
             corpus_id=corpus_id,
+            document_id=document_id,
             hybrid_search=hybrid_search,
             text_search_config=text_search_config,
             embed_dim=embed_dim,
@@ -76,7 +77,9 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     @classmethod
     def from_params(
         cls,
-        corpus_id: str | int,
+        corpus_id: str | int | None = None,
+        document_id: str | int | None = None,
+        must_have_text: str | None = None,
         hybrid_search: bool = False,
         text_search_config: str = "english",
         embed_dim: int = 1536,
@@ -87,6 +90,8 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     ) -> "DjangoAnnotationVectorStore":
         return cls(
             corpus_id=corpus_id,
+            document_id=document_id,
+            must_have_text=must_have_text,
             hybrid_search=hybrid_search,
             text_search_config=text_search_config,
             embed_dim=embed_dim,
@@ -101,9 +106,14 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         # Need to do this this way because some annotations don't travel with the corpus but the document itself - e.g.
         # layout and structural annotations from the nlm parser.
 
-        return Annotation.objects.filter(
-            Q(corpus_id=self.corpus_id) | Q(document__corpus=self.corpus_id)
-        ).distinct()
+        queryset = Annotation.objects.all()
+        if self.corpus_id is not None:
+            queryset = queryset.filter(Q(corpus_id=self.corpus_id) | Q(document__corpus=self.corpus_id))
+        if self.document_id is not None:
+            queryset = queryset.filter(document=self.document_id)
+        if self.must_have_text is not None:
+            queryset = queryset.filter(raw_text__icontains=self.must_have_text)
+        return queryset.distinct()
 
     def _build_filter_query(self, filters: Optional[MetadataFilters]) -> QuerySet:
         """Build the filter query based on the provided metadata filters."""
@@ -133,6 +143,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
 
         for row in rows:
             print(f"Embedding type: {type(row.embedding)} {row.embedding}")
+            print(f"Row id: {row.id}")
             node = TextNode(
                 doc_id=str(row.id),
                 text=row.raw_text,
@@ -140,6 +151,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
                 extra_info={
                     "page": row.page,
                     "bounding_box": row.bounding_box,
+                    "annotation_id": row.id,
                     "label": row.annotation_label.text
                     if row.annotation_label
                     else None,
@@ -149,6 +161,8 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
                 },
             )
             print(f"Created node: {node}")
+            print(f"Node ref doc: {node.ref_doc_id}")
+            print(f"Node dir: {dir(node)}")
             nodes.append(node)
             similarities.append(row.similarity)
             ids.append(str(row.id))
@@ -225,5 +239,6 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     async def aquery(
         self, query: VectorStoreQuery, **kwargs: Any
     ) -> VectorStoreQueryResult:
+        print(f"Calling Django vector query async")
         """Query the vector store asynchronously."""
-        return self.query(query, **kwargs)
+        return await sync_to_async(self.query)(query, **kwargs)

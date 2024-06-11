@@ -9,7 +9,7 @@ django-celery-beat==2.4.0  # https://github.com/celery/django-celery-beat
 flower==1.0.0  # https://github.com/mher/flower
 pyjwt==2.4.0  # https://github.com/jpadilla/pyjwt
 cryptography==38.0.1  # https://github.com/pyca/cryptography
-pydantic==1.10.2
+pydantic==2.*
 typing-extensions==4.*  # https://github.com/python/typing_extensions
 requests==2.*  # https://requests.readthedocs.io/en/latest/
 
@@ -59,6 +59,7 @@ llama-index==0.10.43
 llama-index-agent-openai==0.2.7
 llama-index-embeddings-huggingface==0.2.1
 llama-index-llms-openai==0.1.22
+marvin==2.3.4
 
 # Data Processing Tools
 # -------------------------------------------------------------------------------

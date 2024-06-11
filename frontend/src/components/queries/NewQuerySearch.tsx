@@ -1,6 +1,13 @@
 import { useMutation } from "@apollo/client";
 import React from "react";
-import { Button, Container, Header, Image, Input } from "semantic-ui-react";
+import {
+  Button,
+  Container,
+  Header,
+  Icon,
+  Image,
+  Input,
+} from "semantic-ui-react";
 import {
   ASK_QUERY_OF_CORPUS,
   AskQueryOfCorpusInputType,
@@ -62,9 +69,9 @@ export const NewQuerySearch: React.FC<NewQuerySearchProps> = ({
             marginBottom: "1rem",
           }}
         >
-          <Image src="path/to/your/logo.png" size="small" />
+          <Icon name="search" size="huge" />
           <Header as="h2" style={{ marginLeft: "1rem" }}>
-            Agentic Query
+            Corpus Query
             <Header.Subheader>Query your document collection</Header.Subheader>
           </Header>
         </div>

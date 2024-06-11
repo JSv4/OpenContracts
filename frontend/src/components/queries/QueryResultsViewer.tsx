@@ -25,6 +25,8 @@ interface QueryResultsViewerProps {
 const QueryResultsViewer: React.FC<QueryResultsViewerProps> = ({
   query_obj,
 }) => {
+  console.log("View query results", query_obj);
+
   const [viewSourceAnnotation, setViewSourceAnnotation] =
     useState<ServerAnnotationType | null>(null);
 

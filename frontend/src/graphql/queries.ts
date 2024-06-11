@@ -201,13 +201,26 @@ export const GET_CORPUS_QUERY_DETAILS = gql`
         id
         annotationLabel {
           id
+          icon
+          color
+          description
           text
+          labelType
+          readOnly
         }
         rawText
         json
         tokensJsons
         document {
           id
+          title
+          is_selected @client
+          is_open @client
+          description
+          backendLock
+          pdfFile
+          pawlsParseFile
+          icon
         }
       }
     }

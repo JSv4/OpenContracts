@@ -22,6 +22,7 @@ import {
   RequestCreateExtractInputType,
   RequestCreateExtractOutputType,
 } from "../../../graphql/mutations";
+import { toast } from "react-toastify";
 
 interface ExtractModalProps {
   open: boolean;
@@ -69,15 +70,19 @@ export const CreateExtractModal: React.FC<ExtractModalProps> = ({
       try {
         const { data } = await createExtract({
           variables: {
-            corpusId: selected_corpus?.id || corpusId || "",
+            ...(selected_corpus?.id ? { corpusId: selected_corpus?.id } : {}),
+            ...(selected_fieldset?.id
+              ? { fieldsetId: selected_fieldset?.id }
+              : {}),
             name,
-            fieldsetId: selected_fieldset?.id || fieldsetId || "",
           },
         });
         if (data?.createExtract.ok) {
+          selectedCorpus(null);
+          selectedFieldset(null);
           onClose();
         } else {
-          console.error("Failed to create extract:", data?.createExtract.msg);
+          toast.error(`Failed to create extract: ${data?.createExtract.msg}`);
         }
       } catch (error) {
         console.error("Error creating extract:", error);

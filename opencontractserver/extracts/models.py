@@ -74,6 +74,7 @@ class Column(BaseOCModel):
     # TODO - Should set up validations so EITHER of these can be null but not both.
     query = django.db.models.TextField(null=True, blank=True)
     match_text = django.db.models.TextField(null=True, blank=True)
+    must_contain_text = django.db.models.TextField(null=True, blank=True)
 
     output_type = django.db.models.TextField(null=False, blank=False)
     limit_to_label = django.db.models.CharField(max_length=512, null=True, blank=True)
@@ -82,6 +83,7 @@ class Column(BaseOCModel):
         "LanguageModel", on_delete=django.db.models.PROTECT, null=False, blank=False
     )
     agentic = django.db.models.BooleanField(default=False)
+    extract_is_list = django.db.models.BooleanField(default=False)
 
     class Meta:
         permissions = (

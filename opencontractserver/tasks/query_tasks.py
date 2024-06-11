@@ -50,8 +50,8 @@ def run_query(
         markdown_text = str(response)
         annotation_ids = []
         for index, obj in enumerate(response.source_nodes, start=1):
-            pk = obj.node.extra_info['annotation_id']
-            pattern = re.compile(fr"\[{index}\]")
+            pk = obj.node.extra_info["annotation_id"]
+            pattern = re.compile(rf"\[{index}\]")
             markdown_text = pattern.sub(f"[[{index}]({pk})]", markdown_text)
             annotation_ids.append(pk)
 

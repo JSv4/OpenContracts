@@ -4,14 +4,13 @@ import json
 import logging
 import os
 import uuid
-from typing import Any, cast, Type
+from typing import Any, cast
 
 import pydantic
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
+from pydantic import create_model
 from typing_extensions import TypedDict
-
-from pydantic import ValidationError, create_model
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.corpuses.models import Corpus
@@ -278,7 +277,7 @@ def build_document_export(
                             round(float(page_height) - y_scale * rect["bottom"]),
                             {"author": "Label:", "contents": label["text"]},
                             color=tuple(
-                                int(label["color"].lstrip("#")[i: i + 2], 16) / 256
+                                int(label["color"].lstrip("#")[i : i + 2], 16) / 256
                                 for i in (0, 2, 4)
                             ),
                         )
@@ -333,7 +332,7 @@ def pawls_bbox_to_funsd_box(
     )
 
 
-def parse_model_or_primitive(value: str) -> Type:
+def parse_model_or_primitive(value: str) -> type:
     """
     Parse a string value as either a Pydantic model or a primitive type.
 
@@ -388,7 +387,7 @@ def parse_model_or_primitive(value: str) -> Type:
             for index, line in enumerate(lines):
 
                 line = line.strip()
-                if line == '':
+                if line == "":
                     continue
 
                 if "=" in line:
@@ -400,10 +399,7 @@ def parse_model_or_primitive(value: str) -> Type:
                     raise ValueError(f"There is an error in line {index+1} your model")
                 props[parts[0].strip()] = (parts[1].strip(), ...)
 
-            model = create_model(
-                uuid.uuid4().__str__(),
-                **props
-            )
+            model = create_model(uuid.uuid4().__str__(), **props)
             return model
         except Exception as e:
             raise ValueError(f"Failed to parse model from value due to error: {e}")

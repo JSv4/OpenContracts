@@ -1,19 +1,15 @@
 import logging
 
 import marvin
-
-from celery import shared_task, chord, group
-
+from celery import chord, group, shared_task
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-
 from llama_index.core import Settings, VectorStoreIndex
-from llama_index.core.agent import ReActAgent, FunctionCallingAgentWorker, StructuredPlannerAgent
-from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from llama_index.core.agent import FunctionCallingAgentWorker, StructuredPlannerAgent
+from llama_index.core.tools import QueryEngineTool
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
-
 from pydantic import BaseModel
 
 from opencontractserver.extracts.models import Datacell, Extract
@@ -26,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Pass OpenAI API key to marvin for parsing / extract
 marvin.settings.openai.api_key = settings.OPENAI_API_KEY
+
 
 # Mock these functions for now
 def agent_fetch_my_definitions(annot):
@@ -45,7 +42,6 @@ def mark_extract_complete(extract_id):
 
 @shared_task
 def run_extract(extract_id, user_id):
-
     logger.info(f"Run extract for extract {extract_id}")
 
     extract = Extract.objects.get(pk=extract_id)
@@ -62,7 +58,6 @@ def run_extract(extract_id, user_id):
 
     for document_id in document_ids:
         for column in fieldset.columns.all():
-
             with transaction.atomic():
                 cell = Datacell.objects.create(
                     extract=extract,
@@ -77,6 +72,7 @@ def run_extract(extract_id, user_id):
                 tasks.append(llama_index_doc_query.si(cell.pk))
 
     chord(group(*tasks))(mark_extract_complete.si(extract_id))
+
 
 @shared_task
 def llama_index_doc_query(cell_id, similarity_top_k=4):
@@ -102,8 +98,7 @@ def llama_index_doc_query(cell_id, similarity_top_k=4):
         Settings.llm = llm
 
         vector_store = DjangoAnnotationVectorStore.from_params(
-            document_id=document.id,
-            must_have_text=datacell.column.must_contain_text
+            document_id=document.id, must_have_text=datacell.column.must_contain_text
         )
         index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
 
@@ -117,14 +112,16 @@ def llama_index_doc_query(cell_id, similarity_top_k=4):
         retriever = index.as_retriever(similarity_top_k=similarity_top_k)
 
         results = retriever.retrieve(search_text if search_text else query)
-        retrieved_text = "\n".join([f"```Relevant Section:\n\n{n.text}\n```" for n in results])
+        retrieved_text = "\n".join(
+            [f"```Relevant Section:\n\n{n.text}\n```" for n in results]
+        )
         print(f"Retrieved text: {retrieved_text}")
 
         # TODO - eventually this can just be pulled from a sepearate Django vector index where we filter to definitions!
         definitions = ""
         if datacell.column.agentic:
-
             import nest_asyncio
+
             nest_asyncio.apply()
 
             engine = index.as_query_engine(similarity_top_k=similarity_top_k)
@@ -132,8 +129,9 @@ def llama_index_doc_query(cell_id, similarity_top_k=4):
             query_engine_tools = [
                 QueryEngineTool.from_defaults(
                     query_engine=engine,
-                    name='document_parts',
-                    description="Let's you use hybrid or vector search over this document to search for specific text semantically or using text search.",
+                    name="document_parts",
+                    description="Let's you use hybrid or vector search over this document to search for specific text "
+                    "semantically or using text search.",
                 )
             ]
 
@@ -176,20 +174,26 @@ def llama_index_doc_query(cell_id, similarity_top_k=4):
             )
             definitions = str(response)
 
-        retrieved_text = f"Related Document:\n```\n{retrieved_text}\n```\n\n" + definitions
+        retrieved_text = (
+            f"Related Document:\n```\n{retrieved_text}\n```\n\n" + definitions
+        )
 
         print(f"Resulting data for marvin: {retrieved_text}")
 
         if datacell.column.extract_is_list:
-            print(f"Extract as list!")
+            print("Extract as list!")
             if parse_instructions:
-                result = marvin.extract(retrieved_text, target=output_type, instructions=parse_instructions)
+                result = marvin.extract(
+                    retrieved_text, target=output_type, instructions=parse_instructions
+                )
             else:
                 result = marvin.extract(retrieved_text, target=output_type)
         else:
-            print(f"Extract single instance")
+            print("Extract single instance")
             if parse_instructions:
-                result = marvin.cast(retrieved_text, target=output_type, instructions=parse_instructions)
+                result = marvin.cast(
+                    retrieved_text, target=output_type, instructions=parse_instructions
+                )
             else:
                 result = marvin.cast(retrieved_text, target=output_type)
 

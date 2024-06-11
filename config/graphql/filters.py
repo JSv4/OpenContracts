@@ -228,9 +228,7 @@ class LabelFilter(django_filters.FilterSet):
         print(f"Raw corpus id: {value}")
         django_pk = from_global_id(value)[1]
         print("Lookup labels for pk", django_pk)
-        queryset = queryset.filter(
-            Q(included_in_labelset__used_by_corpus=django_pk)
-        )
+        queryset = queryset.filter(Q(included_in_labelset__used_by_corpus=django_pk))
         print(
             "Filtered to values",
             queryset,

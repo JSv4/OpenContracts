@@ -13,9 +13,8 @@ from llama_index.core.vector_stores.types import (
     VectorStoreQueryResult,
 )
 from pgvector.django import CosineDistance
-from pydantic import PrivateAttr
 
-from opencontractserver.annotations.models import Annotation, AnnotationLabel
+from opencontractserver.annotations.models import Annotation
 
 _logger = logging.getLogger(__name__)
 
@@ -108,7 +107,9 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
 
         queryset = Annotation.objects.all()
         if self.corpus_id is not None:
-            queryset = queryset.filter(Q(corpus_id=self.corpus_id) | Q(document__corpus=self.corpus_id))
+            queryset = queryset.filter(
+                Q(corpus_id=self.corpus_id) | Q(document__corpus=self.corpus_id)
+            )
         if self.document_id is not None:
             queryset = queryset.filter(document=self.document_id)
         if self.must_have_text is not None:
@@ -239,6 +240,5 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     async def aquery(
         self, query: VectorStoreQuery, **kwargs: Any
     ) -> VectorStoreQueryResult:
-        print(f"Calling Django vector query async")
         """Query the vector store asynchronously."""
         return await sync_to_async(self.query)(query, **kwargs)

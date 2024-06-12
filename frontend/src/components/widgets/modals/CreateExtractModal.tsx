@@ -6,6 +6,8 @@ import {
   FormGroup,
   FormButton,
   FormField,
+  Dimmer,
+  Loader,
 } from "semantic-ui-react";
 
 import { useReactiveVar, useQuery, useMutation } from "@apollo/client";
@@ -40,6 +42,7 @@ export const CreateExtractModal: React.FC<ExtractModalProps> = ({
   corpusId,
 }) => {
   const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const selected_corpus = useReactiveVar(selectedCorpus);
   const selected_fieldset = useReactiveVar(selectedFieldset);
 
@@ -68,6 +71,7 @@ export const CreateExtractModal: React.FC<ExtractModalProps> = ({
   const handleSubmit = async () => {
     if (!extractId) {
       try {
+        setIsSubmitting(true);
         const { data } = await createExtract({
           variables: {
             ...(selected_corpus?.id ? { corpusId: selected_corpus?.id } : {}),
@@ -86,6 +90,8 @@ export const CreateExtractModal: React.FC<ExtractModalProps> = ({
         }
       } catch (error) {
         console.error("Error creating extract:", error);
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
@@ -106,39 +112,55 @@ export const CreateExtractModal: React.FC<ExtractModalProps> = ({
       <Modal.Content>
         <Form onSubmit={handleSubmit}>
           <FormGroup>
-            <FormInput
-              placeholder="Name"
-              name="name"
-              value={name}
-              onChange={(e, { value }) => setName(value)}
-              style={{ minWidth: "50vw important!" }}
-            />
+            <FormField required>
+              <label>Name</label>
+              <FormInput
+                placeholder="Enter the extract name"
+                name="name"
+                value={name}
+                onChange={(e, { value }) => setName(value)}
+              />
+            </FormField>
           </FormGroup>
           {!corpusId && (
             <FormGroup>
               <FormField>
                 <label>Corpus</label>
                 <CorpusDropdown />
+                <small>
+                  <b>(Optional)</b> If provided, load documents from this corpus
+                  for the extract
+                </small>
               </FormField>
             </FormGroup>
           )}
-
           {!fieldsetId && (
             <FormGroup>
               <FormField>
                 <label>Fieldset</label>
                 <FieldsetDropdown />
+                <small>
+                  <b>(Optional)</b> Re-use an existing fieldset (search by
+                  name). If not provided, a new fieldset is created for the
+                  extract.
+                </small>
               </FormField>
             </FormGroup>
           )}
           <FormButton
+            primary
             content="Submit"
             style={{ marginTop: "1vh" }}
-            disabled={loading}
-            loading={loading}
+            disabled={isSubmitting || createExtractLoading}
+            loading={isSubmitting || createExtractLoading}
           />
         </Form>
       </Modal.Content>
+      {(isSubmitting || createExtractLoading) && (
+        <Dimmer active inverted>
+          <Loader inverted>Submitting...</Loader>
+        </Dimmer>
+      )}
     </Modal>
   );
 };

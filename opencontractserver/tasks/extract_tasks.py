@@ -75,7 +75,7 @@ def run_extract(extract_id, user_id):
 
 
 @shared_task
-def llama_index_doc_query(cell_id, similarity_top_k=4):
+def llama_index_doc_query(cell_id, similarity_top_k=3):
     """
     Use LlamaIndex to run queries specified for a particular cell
     """
@@ -112,12 +112,15 @@ def llama_index_doc_query(cell_id, similarity_top_k=4):
         retriever = index.as_retriever(similarity_top_k=similarity_top_k)
 
         results = retriever.retrieve(search_text if search_text else query)
+        retrieved_annotation_ids = [n.node.extra_info['id'] for n in results]
+        datacell.sources.add(*retrieved_annotation_ids)
+
         retrieved_text = "\n".join(
             [f"```Relevant Section:\n\n{n.text}\n```" for n in results]
         )
         print(f"Retrieved text: {retrieved_text}")
 
-        # TODO - eventually this can just be pulled from a sepearate Django vector index where we filter to definitions!
+        # TODO - eventually this can just be pulled from a separate Django vector index where we filter to definitions!
         definitions = ""
         if datacell.column.agentic:
             import nest_asyncio

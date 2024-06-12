@@ -133,14 +133,23 @@ export const CorpusQueryList = ({
   };
 
   return (
-    <QueryList
-      items={query_items}
-      loading={queries_loading}
-      pageInfo={queries_response?.corpusQueries.pageInfo}
-      style={{ minHeight: "40vh" }}
-      fetchMore={fetchMoreDocuments}
-      onDelete={(item: CorpusQueryType) => handleRemoveQuery(item.id)}
-      onSelectRow={(item: CorpusQueryType) => openedQueryObj(item)}
-    />
+    <div
+      className="DocumentCards"
+      style={{
+        flex: 1,
+        width: "100%",
+        overflow: "hidden",
+      }}
+    >
+      <QueryList
+        items={query_items}
+        loading={queries_loading}
+        pageInfo={queries_response?.corpusQueries.pageInfo}
+        style={{ minHeight: "40vh" }}
+        fetchMore={fetchMoreDocuments}
+        onDelete={(item: CorpusQueryType) => handleRemoveQuery(item.id)}
+        onSelectRow={(item: CorpusQueryType) => openedQueryObj(item)}
+      />
+    </div>
   );
 };

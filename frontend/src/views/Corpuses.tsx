@@ -606,7 +606,11 @@ export const Corpuses = () => {
           icon: "search",
           content: use_mobile_layout ? "" : "Query",
         },
-        render: () => <Tab.Pane>{query_view}</Tab.Pane>,
+        render: () => (
+          <Tab.Pane style={{ height: "100%", overflowY: "scroll" }}>
+            {query_view}
+          </Tab.Pane>
+        ),
       },
     ].concat(panes);
   }
@@ -642,11 +646,13 @@ export const Corpuses = () => {
     // console.log("Set content to tab");
     content = (
       <div
+        className="CorpusesTabDiv"
         style={{
           display: "flex",
           flexDirection: "row",
           justifyContent: "center",
           height: "100%",
+          overflowY: "hidden",
           ...(use_mobile_layout
             ? {
                 marginLeft: "5px",

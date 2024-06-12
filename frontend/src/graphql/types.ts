@@ -1273,6 +1273,7 @@ export interface DatacellType extends Node {
   rejectedBy: Maybe<UserType>;
   approvedBy: Maybe<UserType>;
   correctedData: any;
+  sources?: AnnotationTypeConnection;
 }
 export interface ExportObject {
   id: string;

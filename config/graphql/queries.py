@@ -772,13 +772,13 @@ class Query(graphene.ObjectType):
     @login_required
     def resolve_corpus_queries(self, info, **kwargs):
         if info.context.user.is_superuser:
-            return CorpusQuery.objects.all()
+            return CorpusQuery.objects.all().order_by("-created")
         elif info.context.user.is_anonymous:
-            return CorpusQuery.objects.filter(Q(is_public=True))
+            return CorpusQuery.objects.filter(Q(is_public=True)).order_by("-created")
         else:
             return CorpusQuery.objects.filter(
                 Q(creator=info.context.user) | Q(is_public=True)
-            )
+            ).order_by("-created")
 
     datacell = relay.Node.Field(DatacellType)
 

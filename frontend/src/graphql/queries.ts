@@ -822,6 +822,7 @@ export const GET_ANALYSES = gql`
 export interface RequestAnnotatorDataForDocumentInputs {
   selectedDocumentId: string;
   selectedCorpusId: string;
+  preloadAnnotations: boolean;
   forAnalysisIds?: string; // value should be comma separated ID strings
 }
 
@@ -845,6 +846,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
     $selectedDocumentId: ID!
     $selectedCorpusId: ID!
     $forAnalysisIds: String
+    $preloadAnnotations: Boolean!
   ) {
     selectedAnalyzersSpanAnnotations: pageAnnotations(
       documentId: $selectedDocumentId
@@ -913,7 +915,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
     annotationLabels(
       usedInAnalysisIds: $forAnalysisIds
       labelType: TOKEN_LABEL
-    ) {
+    ) @skip(if: $preloadAnnotations) {
       totalCount
       edges {
         node {
@@ -935,7 +937,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
       corpusId: $selectedCorpusId
       forAnalysisIds: $forAnalysisIds
       labelType: TOKEN_LABEL
-    ) {
+    ) @skip(if: $preloadAnnotations) {
       id
       isPublic
       myPermissions
@@ -971,7 +973,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
       documentId: $selectedDocumentId
       corpusId: $selectedCorpusId
       labelType: DOC_TYPE_LABEL
-    ) {
+    ) @skip(if: $preloadAnnotations) {
       id
       isPublic
       myPermissions
@@ -1000,7 +1002,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
     existingRelationships: bulkDocRelationshipsInCorpus(
       documentId: $selectedDocumentId
       corpusId: $selectedCorpusId
-    ) {
+    ) @skip(if: $preloadAnnotations) {
       id
       modified
       sourceAnnotations {
@@ -1305,6 +1307,14 @@ export const REQUEST_GET_EXTRACT = gql`
         document {
           id
           title
+        }
+        fullSourceList {
+          id
+          annotationLabel {
+            id
+            text
+          }
+          rawText
         }
         data
         dataDefinition

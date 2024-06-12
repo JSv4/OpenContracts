@@ -58,7 +58,9 @@ export const ViewQueryResultsModal = ({
         <b>Query: </b>
         {loadedQueryDetails?.query.substring(0, 64)}
       </Modal.Header>
-      <Modal.Content style={{ flex: 1, overflowY: "scroll" }}>
+      <Modal.Content
+        style={{ flex: 1, overflowY: "scroll", minHeight: "30vh" }}
+      >
         <Grid centered divided>
           <Grid.Column>
             <Grid.Row>

@@ -92,7 +92,9 @@ export const NewQuerySearch: React.FC<NewQuerySearchProps> = ({
             }}
             style={{ width: "400px" }}
           />
-          <Button icon="search">Search</Button>
+          <Button icon="search" onClick={() => handleSubmit()}>
+            Search
+          </Button>
         </div>
       </Container>
     </div>

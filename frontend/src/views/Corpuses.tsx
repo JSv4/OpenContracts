@@ -317,6 +317,7 @@ export const Corpuses = () => {
     if (location.pathname === "/corpuses") {
       refetchCorpuses();
     }
+    showQueryViewState("ASK");
   }, [location]);
 
   useEffect(() => {
@@ -572,6 +573,7 @@ export const Corpuses = () => {
         <>
           <div style={{ position: "absolute", top: "1rem", right: "1rem" }}>
             <Button
+              size="mini"
               primary
               content="Previous Queries"
               icon="left arrow"
@@ -584,18 +586,29 @@ export const Corpuses = () => {
       );
     } else {
       query_view = (
-        <>
-          <div style={{ position: "absolute", top: "1rem", right: "1rem" }}>
-            <Button
-              primary
-              content="New Question"
-              icon="query"
-              labelPosition="left"
-              onClick={() => showQueryViewState("ASK")}
-            />
+        <div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "flex-end",
+              width: "100%",
+            }}
+          >
+            <div>
+              <Button
+                size="mini"
+                primary
+                content="New Question"
+                icon="question"
+                labelPosition="left"
+                onClick={() => showQueryViewState("ASK")}
+                style={{ margin: "1rem" }}
+              />
+            </div>
           </div>
           <CorpusQueryList opened_corpus_id={opened_corpus_id} />
-        </>
+        </div>
       );
     }
 

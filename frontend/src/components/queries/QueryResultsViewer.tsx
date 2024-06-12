@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   Grid,
   Card,
-  List,
+  Image,
   Header,
   Segment,
   Placeholder,
@@ -20,6 +20,7 @@ import {
   openedDocument,
   selectedAnnotation,
 } from "../../graphql/cache";
+import wait_icon from "../../assets/icons/waiting for robo.webp";
 
 interface QueryResultsViewerProps {
   query_obj: CorpusQueryType;
@@ -65,6 +66,7 @@ const QueryResultsViewer: React.FC<QueryResultsViewerProps> = ({
           <Grid.Column width={12}>
             <Segment>
               <Header as="h3">Waiting for next available agent...</Header>
+              <Image avatar src={wait_icon} />
             </Segment>
           </Grid.Column>
         </Grid>

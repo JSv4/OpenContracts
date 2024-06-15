@@ -9,8 +9,15 @@ import {
   Loader,
 } from "semantic-ui-react";
 
-import { DatacellType } from "../../graphql/types";
+import { DatacellType, ServerAnnotationType } from "../../graphql/types";
 import { JSONTree } from "react-json-tree";
+import {
+  displayAnnotationOnAnnotatorLoad,
+  onlyDisplayTheseAnnotations,
+  openedDocument,
+  selectedAnnotation,
+} from "../../graphql/cache";
+import { Server } from "http";
 
 interface ExtractDatacellProps {
   cellData: DatacellType;
@@ -55,8 +62,28 @@ export const ExtractDatacell = ({
   onReject,
   onEdit,
 }: ExtractDatacellProps): JSX.Element => {
+  console.log("Celldata", cellData);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState<Record<string, any> | null>(null);
+  const [viewSourceAnnotations, setViewSourceAnnotations] = useState<
+    ServerAnnotationType[] | null
+  >(null);
+
+  useEffect(() => {
+    console.log("viewSourceAnnotations changed", viewSourceAnnotations);
+    if (viewSourceAnnotations !== null) {
+      let open_doc = viewSourceAnnotations[0].document;
+      console.log("Open doc", open_doc);
+      let source_annotations = viewSourceAnnotations;
+      console.log("Source annotations", source_annotations);
+      displayAnnotationOnAnnotatorLoad(viewSourceAnnotations[0]);
+      selectedAnnotation(viewSourceAnnotations[0]); // Not sure which one to zoom in on... picking first
+      openedDocument(viewSourceAnnotations[0].document); // All sources for doc should share same document
+      onlyDisplayTheseAnnotations(viewSourceAnnotations);
+      setViewSourceAnnotations(null);
+    }
+  }, [viewSourceAnnotations]);
 
   const viewOnly =
     readOnly || (cellData.started && !(cellData.failed || cellData.completed));
@@ -130,6 +157,19 @@ export const ExtractDatacell = ({
                 trigger={<Icon name="ellipsis vertical" />}
                 content={
                   <Button.Group vertical>
+                    <Button
+                      icon="eye"
+                      primary
+                      onClick={
+                        cellData?.fullSourceList &&
+                        cellData.fullSourceList !== undefined
+                          ? () =>
+                              setViewSourceAnnotations(
+                                cellData.fullSourceList as ServerAnnotationType[]
+                              )
+                          : () => {}
+                      }
+                    />
                     <Button
                       icon="thumbs down"
                       color="red"

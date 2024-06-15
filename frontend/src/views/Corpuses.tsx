@@ -53,6 +53,7 @@ import {
   exportingCorpus,
   showQueryViewState,
   openedQueryObj,
+  onlyDisplayTheseAnnotations,
 } from "../graphql/cache";
 import {
   UPDATE_CORPUS,
@@ -84,7 +85,7 @@ import {
 } from "../graphql/queries";
 import { CorpusType, LabelType } from "../graphql/types";
 import { LooseObject } from "../components/types";
-import { Annotator } from "../components/annotator/Annotator";
+import { CorpusDocumentAnnotator } from "../components/annotator/CorpusDocumentAnnotator";
 import { toBase64 } from "../utils/files";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
 import { CorpusAnnotationCards } from "../components/annotations/CorpusAnnotationCards";
@@ -110,6 +111,7 @@ export const Corpuses = () => {
   const selected_metadata_id_to_filter_on = useReactiveVar(
     selectedMetaAnnotationId
   );
+
   const selected_analyes = useReactiveVar(selectedAnalyses);
   const selected_document_ids = useReactiveVar(selectedDocumentIds);
   const document_search_term = useReactiveVar(documentSearchTerm);
@@ -122,6 +124,7 @@ export const Corpuses = () => {
   const opened_corpus = useReactiveVar(openedCorpus);
   const exporting_corpus = useReactiveVar(exportingCorpus);
   const opened_document = useReactiveVar(openedDocument);
+  const filter_to_label_id = useReactiveVar(filterToLabelId);
   const opened_to_annotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
   const show_selected_annotation_only = useReactiveVar(
     showSelectedAnnotationOnly
@@ -130,7 +133,6 @@ export const Corpuses = () => {
     showAnnotationBoundingBoxes
   );
   const show_annotation_labels = useReactiveVar(showAnnotationLabels);
-  const filter_to_label_id = useReactiveVar(filterToLabelId);
 
   const auth_token = useReactiveVar(authToken);
   const annotation_search_term = useReactiveVar(annotationContentSearchTerm);
@@ -629,7 +631,7 @@ export const Corpuses = () => {
   }
 
   let content = <></>;
-
+  // TODO - move <Annotator/> to root of <App>
   // These else if statements should really be broken into separate components.
   //console.log(`Opened_corpus`, opened_corpus, 'opened_document', opened_document);
 
@@ -694,9 +696,9 @@ export const Corpuses = () => {
     opened_document !== null &&
     opened_document !== undefined
   ) {
-    // console.log("Reset Annotator ref");
+    console.log("Show annotator");
     content = (
-      <Annotator
+      <CorpusDocumentAnnotator
         open={Boolean(opened_document)}
         onClose={() => {
           openedDocument(null);

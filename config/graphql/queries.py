@@ -189,16 +189,15 @@ class Query(graphene.ObjectType):
         current_page=graphene.Int(required=False),
         page_number_list=graphene.String(required=False),
         page_containing_annotation_with_id=graphene.ID(required=False),
-        corpus_id=graphene.ID(required=True),
+        corpus_id=graphene.ID(required=False),
         document_id=graphene.ID(required=True),
         for_analysis_ids=graphene.String(required=False),
         label_type=graphene.Argument(label_type_enum),
     )
 
-    def resolve_page_annotations(self, info, document_id, corpus_id, **kwargs):
+    def resolve_page_annotations(self, info, document_id, corpus_id=None, **kwargs):
 
         doc_django_pk = from_global_id(document_id)[1]
-        corpus_django_pk = from_global_id(corpus_id)[1]
 
         document = Document.objects.get(id=doc_django_pk)
 
@@ -214,7 +213,8 @@ class Query(graphene.ObjectType):
 
         # Now build query to stuff they want to see
         q_objects = Q(document_id=doc_django_pk)
-        q_objects.add(Q(corpus_id=corpus_django_pk), Q.AND)
+        if corpus_id is not None:
+            q_objects.add(Q(corpus_id=from_global_id(corpus_id)[1]), Q.AND)
 
         # If for_analysis_ids is passed in, only show annotations from those analyses, otherwise only show human
         # annotations.
@@ -743,13 +743,13 @@ class Query(graphene.ObjectType):
     @login_required
     def resolve_extracts(self, info, **kwargs):
         if info.context.user.is_superuser:
-            return Extract.objects.all()
+            return Extract.objects.all().order_by("-created")
         elif info.context.user.is_anonymous:
-            return Extract.objects.filter(Q(is_public=True))
+            return Extract.objects.filter(Q(is_public=True)).order_by("-created")
         else:
             return Extract.objects.filter(
                 Q(creator=info.context.user) | Q(is_public=True)
-            )
+            ).order_by("-created")
 
     corpus_query = relay.Node.Field(CorpusQueryType)
 

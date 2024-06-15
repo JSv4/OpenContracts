@@ -18,6 +18,14 @@ import {
   showExportModal,
   userObj,
   showCookieAcceptModal,
+  openedDocument,
+  selectedAnalysesIds,
+  selectedAnalyses,
+  onlyDisplayTheseAnnotations,
+  openedCorpus,
+  displayAnnotationOnAnnotatorLoad,
+  showSelectedAnnotationOnly,
+  showAnnotationBoundingBoxes,
 } from "./graphql/cache";
 
 import { NavMenu } from "./components/layout/NavMenu";
@@ -42,17 +50,34 @@ import { MobileNavMenu } from "./components/layout/MobileNavMenu";
 import { LabelDisplayBehavior } from "./graphql/types";
 import { CookieConsentDialog } from "./components/cookies/CookieConsent";
 import { Extracts } from "./views/Extracts";
+import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = process.env;
   const show_export_modal = useReactiveVar(showExportModal);
   const show_cookie_modal = useReactiveVar(showCookieAcceptModal);
+  const only_display_these_annotations = useReactiveVar(
+    onlyDisplayTheseAnnotations
+  );
+  const selected_analyes = useReactiveVar(selectedAnalyses);
+  const opened_corpus = useReactiveVar(openedCorpus);
+  const opened_document = useReactiveVar(openedDocument);
+  const opened_to_annotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
+  const show_selected_annotation_only = useReactiveVar(
+    showSelectedAnnotationOnly
+  );
+  const show_annotation_bounding_boxes = useReactiveVar(
+    showAnnotationBoundingBoxes
+  );
+  const show_annotation_labels = useReactiveVar(showAnnotationLabels);
+
   const { getAccessTokenSilently, user } = useAuth0();
 
   // For now, our responsive layout is a bit hacky, but it's working well enough to
   // provide a passable UI on mobile. Your results not guaranteed X-)
   const { width } = useWindowDimensions();
   const show_mobile_menu = width <= 1000;
+  const banish_sidebar = width <= 1000;
 
   useEffect(() => {
     if (width <= 800) {
@@ -139,6 +164,27 @@ export const App = () => {
             <Dimmer active={false}>
               <Loader content="Logging in..." />
             </Dimmer>
+            {opened_document && only_display_these_annotations !== undefined ? (
+              <DocumentAnnotator
+                open={Boolean(opened_document)}
+                onClose={() => {
+                  openedDocument(null);
+                  selectedAnalysesIds([]);
+                  selectedAnalyses([]);
+                  onlyDisplayTheseAnnotations(undefined);
+                }}
+                display_annotations={only_display_these_annotations}
+                opened_document={opened_document}
+                read_only={selected_analyes.length > 0 || banish_sidebar}
+                scroll_to_annotation_on_open={opened_to_annotation}
+                show_selected_annotation_only={show_selected_annotation_only}
+                show_annotation_bounding_boxes={show_annotation_bounding_boxes}
+                show_annotation_labels={show_annotation_labels}
+              />
+            ) : (
+              <></>
+            )}
+
             <Routes>
               <Route path="/" element={<Corpuses />} />
               {REACT_APP_USE_AUTH0 !== "true" ? (

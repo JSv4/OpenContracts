@@ -318,7 +318,12 @@ class FieldsetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
 
 class DatacellType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+
     data = GenericScalar()
+    full_source_list = graphene.List(AnnotationType)
+
+    def resolve_full_source_list(self, info):
+        return self.sources.all()
 
     class Meta:
         model = Datacell

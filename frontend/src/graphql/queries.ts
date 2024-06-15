@@ -819,14 +819,14 @@ export const GET_ANALYSES = gql`
   }
 `;
 
-export interface RequestAnnotatorDataForDocumentInputs {
+export interface RequestAnnotatorDataForDocumentInCorpusInputs {
   selectedDocumentId: string;
   selectedCorpusId: string;
   preloadAnnotations: boolean;
   forAnalysisIds?: string; // value should be comma separated ID strings
 }
 
-export interface RequestAnnotatorDataForDocumentOutputs {
+export interface RequestAnnotatorDataForDocumentInCorpusOutputs {
   existingTextAnnotations: ServerAnnotationType[];
   existingDocLabelAnnotations: ServerAnnotationType[];
   existingRelationships: RelationshipType[];
@@ -841,10 +841,10 @@ export interface RequestAnnotatorDataForDocumentOutputs {
   };
 }
 
-export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
+export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT_IN_CORPUS = gql`
   query (
     $selectedDocumentId: ID!
-    $selectedCorpusId: ID!
+    $selectedCorpusId: ID
     $forAnalysisIds: String
     $preloadAnnotations: Boolean!
   ) {
@@ -1049,6 +1049,81 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
           analyzer {
             id
           }
+        }
+        isPublic
+        myPermissions
+      }
+    }
+  }
+`;
+
+export interface RequestPageAnnotationDataInputs {
+  selectedDocumentId: string;
+}
+
+export interface RequestPageAnnotationDataOutputs {
+  existingTextAnnotations: ServerAnnotationType[];
+  existingDocLabelAnnotations: ServerAnnotationType[];
+  existingRelationships: RelationshipType[];
+  selectedAnalyzersWithLabels: {
+    edges: {
+      node: AnalyzerType;
+    }[];
+  };
+  corpus: {
+    id: string;
+    labelSet: LabelSet;
+  };
+}
+
+export const REQUEST_PAGE_ANNOTATION_DATA = gql`
+  query ($selectedDocumentId: ID!) {
+    selectedAnalyzersSpanAnnotations: pageAnnotations(
+      documentId: $selectedDocumentId
+      labelType: TOKEN_LABEL
+    ) {
+      pdfPageInfo {
+        pageCount
+        currentPage
+        hasNextPage
+        corpusId
+        documentId
+        labelType
+        forAnalysisIds
+      }
+      pageAnnotations {
+        id
+        isPublic
+        myPermissions
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+        }
+        boundingBox
+        page
+        rawText
+        tokensJsons
+        json
+        sourceNodeInRelationships {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+        targetNodeInRelationships {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+        creator {
+          id
+          email
         }
         isPublic
         myPermissions
@@ -1310,11 +1385,45 @@ export const REQUEST_GET_EXTRACT = gql`
         }
         fullSourceList {
           id
+          isPublic
+          myPermissions
           annotationLabel {
             id
             text
+            color
+            icon
+            description
           }
+          document {
+            id
+            pdfFile
+            pawlsParseFile
+          }
+          boundingBox
+          page
           rawText
+          tokensJsons
+          json
+          sourceNodeInRelationships {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+          targetNodeInRelationships {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+          creator {
+            id
+            email
+          }
+          isPublic
+          myPermissions
         }
         data
         dataDefinition

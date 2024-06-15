@@ -170,7 +170,7 @@ export const DataGrid = ({
                     if (cell) {
                       return (
                         <ExtractDatacell
-                          cellData={cell.data}
+                          cellData={cell}
                           onApprove={() =>
                             requestApprove({
                               variables: { datacellId: cell.id },

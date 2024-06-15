@@ -17,6 +17,7 @@ import { vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { CorpusQueryType, ServerAnnotationType } from "../../graphql/types";
 import {
   displayAnnotationOnAnnotatorLoad,
+  onlyDisplayTheseAnnotations,
   openedDocument,
   selectedAnnotation,
 } from "../../graphql/cache";
@@ -40,6 +41,7 @@ const QueryResultsViewer: React.FC<QueryResultsViewerProps> = ({
       selectedAnnotation(viewSourceAnnotation);
       openedDocument(viewSourceAnnotation.document);
       setViewSourceAnnotation(null);
+      onlyDisplayTheseAnnotations([viewSourceAnnotation]);
     }
   }, [viewSourceAnnotation]);
 

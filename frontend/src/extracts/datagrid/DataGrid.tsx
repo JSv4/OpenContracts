@@ -1,5 +1,13 @@
-import React, { useState } from "react";
-import { Table, Button, Icon, Dropdown, Segment } from "semantic-ui-react";
+import React, { useEffect, useState } from "react";
+import {
+  Table,
+  Button,
+  Icon,
+  Dropdown,
+  Segment,
+  Dimmer,
+  Loader,
+} from "semantic-ui-react";
 import {
   ColumnType,
   DatacellType,
@@ -25,6 +33,7 @@ import {
   RequestRejectDatacellInputType,
   RequestRejectDatacellOutputType,
 } from "../../graphql/mutations";
+import { toast } from "react-toastify";
 
 interface DataGridProps {
   extract: ExtractType;
@@ -33,6 +42,7 @@ interface DataGridProps {
   onAddDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveColumnId: (columnId: string) => void;
+  refetch: () => any;
   columns: ColumnType[];
 }
 
@@ -41,28 +51,50 @@ export const DataGrid = ({
   cells,
   rows,
   columns,
+  refetch,
   onAddDocIds,
   onRemoveDocIds,
   onRemoveColumnId,
 }: DataGridProps) => {
-  console.log("Datagrid cells: ", cells);
-
+  const [lastCells, setLastCells] = useState(cells);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [showAddRowButton, setShowAddRowButton] = useState(false);
   const [openAddRowModal, setOpenAddRowModal] = useState(false);
 
-  const [requestApprove] = useMutation<
+  useEffect(() => {
+    setLastCells(cells);
+  }, [cells]);
+
+  const [requestApprove, { loading: trying_approve }] = useMutation<
     RequestApproveDatacellOutputType,
     RequestApproveDatacellInputType
-  >(REQUEST_APPROVE_DATACELL);
-  const [requestReject] = useMutation<
+  >(REQUEST_APPROVE_DATACELL, {
+    onCompleted: () => {
+      toast.success("Approved!");
+      refetch();
+    },
+    onError: () => toast.error("Could not register feedback!"),
+  });
+  const [requestReject, { loading: trying_reject }] = useMutation<
     RequestRejectDatacellOutputType,
     RequestRejectDatacellInputType
-  >(REQUEST_REJECT_DATACELL);
-  const [requestEdit] = useMutation<
+  >(REQUEST_REJECT_DATACELL, {
+    onCompleted: () => {
+      toast.success("Rejected!");
+      refetch();
+    },
+    onError: () => toast.error("Could not register feedback!"),
+  });
+  const [requestEdit, { loading: trying_edit }] = useMutation<
     RequestEditDatacellOutputType,
     RequestEditDatacellInputType
-  >(REQUEST_EDIT_DATACELL);
+  >(REQUEST_EDIT_DATACELL, {
+    onCompleted: () => {
+      toast.success("Edit Saved!");
+      refetch();
+    },
+    onError: () => toast.error("Could not register feedback!"),
+  });
 
   return (
     <Segment
@@ -87,6 +119,28 @@ export const DataGrid = ({
       onMouseEnter={() => setShowAddRowButton(true)}
       onMouseLeave={() => setShowAddRowButton(false)}
     >
+      {trying_approve ? (
+        <Dimmer>
+          <Loader>Approving...</Loader>
+        </Dimmer>
+      ) : (
+        <></>
+      )}
+      {trying_edit ? (
+        <Dimmer>
+          <Loader>Editing...</Loader>
+        </Dimmer>
+      ) : (
+        <></>
+      )}
+      {trying_reject ? (
+        <Dimmer>
+          <Loader>Rejecting...</Loader>
+        </Dimmer>
+      ) : (
+        <></>
+      )}
+
       <SelectDocumentsModal
         open={openAddRowModal}
         onAddDocumentIds={(documentIds: string[]) =>
@@ -139,7 +193,7 @@ export const DataGrid = ({
               </Table.Row>
             ) : (
               rows.map((row) => (
-                <Table.Row key={row.id}>
+                <Table.Row key={`Row_${row.id}`}>
                   <Table.Cell>
                     {row.title}
                     {!extract.started ? (
@@ -162,7 +216,7 @@ export const DataGrid = ({
                     )}
                   </Table.Cell>
                   {columns.map((column) => {
-                    const cell = cells.find(
+                    const cell = lastCells.find(
                       (cell) =>
                         cell.document.id === row.id &&
                         cell.column.id === column.id
@@ -170,6 +224,7 @@ export const DataGrid = ({
                     if (cell) {
                       return (
                         <ExtractDatacell
+                          key={`Cell_${cell.id}`}
                           cellData={cell}
                           onApprove={() =>
                             requestApprove({

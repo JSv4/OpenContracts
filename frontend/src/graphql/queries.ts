@@ -844,7 +844,7 @@ export interface RequestAnnotatorDataForDocumentInCorpusOutputs {
 export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT_IN_CORPUS = gql`
   query (
     $selectedDocumentId: ID!
-    $selectedCorpusId: ID
+    $selectedCorpusId: ID!
     $forAnalysisIds: String
     $preloadAnnotations: Boolean!
   ) {
@@ -1207,6 +1207,8 @@ export const GET_EXPORT = gql`
       fieldset {
         fullColumnList {
           id
+          instructions
+          extractIsList
           limitToLabel
           languageModel {
             id
@@ -1283,6 +1285,7 @@ export const REQUEST_GET_FIELDSETS = gql`
                 outputType
                 limitToLabel
                 instructions
+                extractIsList
                 languageModel {
                   id
                   model
@@ -1318,6 +1321,7 @@ export const GET_FIELDSET = gql`
         outputType
         limitToLabel
         instructions
+        extractIsList
         languageModel {
           id
           model
@@ -1352,6 +1356,7 @@ export const REQUEST_GET_EXTRACT = gql`
           id
           name
           query
+          instructions
           matchText
           limitToLabel
           agentic
@@ -1430,7 +1435,14 @@ export const REQUEST_GET_EXTRACT = gql`
         started
         completed
         failed
+        correctedData
         stacktrace
+        rejectedBy {
+          email
+        }
+        approvedBy {
+          email
+        }
       }
     }
   }

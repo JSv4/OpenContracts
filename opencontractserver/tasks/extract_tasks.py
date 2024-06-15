@@ -50,10 +50,10 @@ def run_extract(extract_id, user_id):
         extract.started = timezone.now()
         extract.save()
 
-    corpus = extract.corpus
     fieldset = extract.fieldset
 
-    document_ids = corpus.documents.all().values_list("id", flat=True)
+    document_ids = extract.documents.all().values_list("id", flat=True)
+    print(f"Run extract {extract_id} over document ids {document_ids}")
     tasks = []
 
     for document_id in document_ids:
@@ -113,8 +113,8 @@ def llama_index_doc_query(cell_id, similarity_top_k=3):
 
         results = retriever.retrieve(search_text if search_text else query)
         for r in results:
-            print(f"Result {r.node.extra_info['label_id']}:\n{r}")
-        retrieved_annotation_ids = [n.node.extra_info['label_id'] for n in results]
+            print(f"Result: {r.node.extra_info}:\n{r}")
+        retrieved_annotation_ids = [n.node.extra_info['annotation_id'] for n in results]
         print(f"retrieved_annotation_ids: {retrieved_annotation_ids}")
         datacell.sources.add(*retrieved_annotation_ids)
 

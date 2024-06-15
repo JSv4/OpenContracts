@@ -74,7 +74,6 @@ export function ExtractItemRow({
             color="red"
             onClick={onDelete}
           />
-          <Button circular size="mini" icon="pencil" color="blue" />
         </div>
       </Table.Cell>
     </Table.Row>

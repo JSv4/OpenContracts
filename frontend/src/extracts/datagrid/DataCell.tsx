@@ -18,6 +18,7 @@ import {
   selectedAnnotation,
 } from "../../graphql/cache";
 import { Server } from "http";
+import _ from "lodash";
 
 interface ExtractDatacellProps {
   cellData: DatacellType;
@@ -62,8 +63,7 @@ export const ExtractDatacell = ({
   onReject,
   onEdit,
 }: ExtractDatacellProps): JSX.Element => {
-  console.log("Celldata", cellData);
-
+  const [color, setColor] = useState<string>("gray");
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState<Record<string, any> | null>(null);
   const [viewSourceAnnotations, setViewSourceAnnotations] = useState<
@@ -85,43 +85,36 @@ export const ExtractDatacell = ({
     }
   }, [viewSourceAnnotations]);
 
-  const viewOnly =
-    readOnly || (cellData.started && !(cellData.failed || cellData.completed));
-
   useEffect(() => {
     setEditData(cellData.correctedData ?? cellData.data ?? {});
   }, [cellData]);
-
-  const handleEditClick = () => {
-    setModalOpen(true);
-  };
-
-  const handleSave = () => {
-    if (editData && onEdit) {
-      onEdit(cellData.id, editData);
-    }
-    setModalOpen(false);
-  };
 
   const handleCancel = () => {
     setEditData(null);
     setModalOpen(false);
   };
 
-  let color = "light gray";
-  if (cellData.failed) {
-    color = "red";
-  } else if (cellData.started && cellData.completed) {
-    if (cellData.correctedData) {
-      color = "yellow";
-    } else if (cellData.rejectedBy) {
-      color = "light red";
-    } else if (cellData.approvedBy) {
-      color = "green";
-    } else {
-      color = "light green";
+  useEffect(() => {
+    console.log("Calculate color on new cellData!");
+    let calculated_color = "light gray";
+    if (cellData.failed) {
+      calculated_color = "red";
+    } else if (cellData.started && cellData.completed) {
+      console.log("Try to determine ");
+      if (
+        cellData.correctedData !== "{}" &&
+        !_.isEmpty(cellData.correctedData)
+      ) {
+        calculated_color = "yellow";
+      } else if (cellData.rejectedBy) {
+        calculated_color = "red";
+      } else if (cellData.approvedBy) {
+        calculated_color = "green";
+      }
     }
-  }
+    console.log("Calculated color", cellData, calculated_color);
+    setColor(calculated_color);
+  }, [cellData]);
 
   const renderJsonPreview = (data: Record<string, any>) => {
     const jsonString = JSON.stringify(data, null, 2);
@@ -135,13 +128,9 @@ export const ExtractDatacell = ({
     );
   };
 
-  const handleJsonChange = (newData: Record<string, any>) => {
-    setEditData(newData);
-  };
-
   return (
     <>
-      <Table.Cell key={cellData.id} style={{ color }}>
+      <Table.Cell key={cellData.id} style={{ backgroundColor: color }}>
         {cellData.started && !cellData.completed ? (
           <Dimmer active>
             <Loader />

@@ -195,6 +195,7 @@ class ApproveDatacell(graphene.Mutation):
             pk = from_global_id(datacell_id)[1]
             obj = Datacell.objects.get(pk=pk)
             obj.approved_by = info.context.user
+            obj.rejected_by = None
             obj.save()
             message = "SUCCESS!"
 
@@ -226,6 +227,7 @@ class RejectDatacell(graphene.Mutation):
             pk = from_global_id(datacell_id)[1]
             obj = Datacell.objects.get(pk=pk)
             obj.rejected_by = info.context.user
+            obj.approved_by = None
             obj.save()
             message = "SUCCESS!"
 

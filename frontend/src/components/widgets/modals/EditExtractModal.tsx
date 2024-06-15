@@ -5,6 +5,8 @@ import {
   Button,
   Modal,
   Icon,
+  Dimmer,
+  Loader,
 } from "semantic-ui-react";
 import {
   ColumnType,
@@ -45,9 +47,7 @@ import { CreateColumnModal } from "./CreateColumnModal";
 import {
   addingColumnToExtract,
   editingColumnForExtract,
-  showEditExtractModal,
 } from "../../../graphql/cache";
-import { EditColumnModal } from "./EditColumnModal";
 
 interface EditExtractModalProps {
   ext: ExtractType | null;
@@ -163,7 +163,7 @@ export const EditExtractModal = ({
     });
   };
 
-  const [createColumn] = useMutation<
+  const [createColumn, { loading: create_column_loading }] = useMutation<
     RequestCreateColumnOutputType,
     RequestCreateColumnInputType
   >(REQUEST_CREATE_COLUMN, {
@@ -192,6 +192,8 @@ export const EditExtractModal = ({
     error,
     data: extract_data,
     refetch,
+    startPolling,
+    stopPolling,
   } = useQuery<RequestGetExtractOutput, RequestGetExtractInput>(
     REQUEST_GET_EXTRACT,
     {
@@ -202,7 +204,7 @@ export const EditExtractModal = ({
     }
   );
 
-  const [updateColumn] = useMutation<
+  const [updateColumn, { loading: update_column_loading }] = useMutation<
     RequestUpdateColumnOutputType,
     RequestUpdateColumnInputType
   >(REQUEST_UPDATE_COLUMN, {
@@ -235,20 +237,54 @@ export const EditExtractModal = ({
     },
   });
 
-  const [startExtract] = useMutation<
+  const [startExtract, { loading: start_extract_loading }] = useMutation<
     RequestStartExtractOutputType,
     RequestStartExtractInputType
   >(REQUEST_START_EXTRACT, {
     onCompleted: (data) => {
       toast.success("SUCCESS! Started extract.");
-      setExtract((e) => {
-        return { ...e, ...data.startExtract.obj };
+      setExtract((old_extract) => {
+        return { ...old_extract, ...data.startExtract.obj };
       });
+      startPolling(30000);
     },
     onError: (err) => {
       toast.error("ERROR! Could not start extract.");
+      stopPolling();
     },
   });
+
+  // Setup long-polling (or stop it) for incomplete jobs that are running
+  useEffect(() => {
+    if (extract_data && extract_data.extract.started) {
+      // Start polling every 30 seconds
+      startPolling(30000);
+
+      // Set up a timeout to stop polling after 10 minutes
+      const timeoutId = setTimeout(() => {
+        stopPolling();
+        toast.info(
+          "Job is taking too long... polling paused after 10 minutes."
+        );
+      }, 600000);
+
+      // Clean up the timeout when the component unmounts or the extract changes
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [extract_data, startPolling, stopPolling]);
+
+  useEffect(() => {
+    if (
+      extract_data &&
+      (extract_data.extract.stacktrace !== null ||
+        extract_data.extract.finished !== null)
+    ) {
+      // Stop polling when the extract has failed or finished
+      stopPolling();
+    }
+  }, [extract_data, stopPolling]);
 
   useEffect(() => {
     if (extract) {
@@ -307,6 +343,23 @@ export const EditExtractModal = ({
           justifyContent: "center",
         }}
       >
+        {start_extract_loading ? (
+          <Dimmer>
+            <Loader>Running...</Loader>
+          </Dimmer>
+        ) : (
+          <></>
+        )}
+        {loading ||
+        update_column_loading ||
+        add_docs_loading ||
+        remove_docs_loading ? (
+          <Dimmer>
+            <Loader>Loading...</Loader>
+          </Dimmer>
+        ) : (
+          <></>
+        )}
         <ModalHeader>Editing Extract {extract.name}</ModalHeader>
         <ModalContent style={{ flex: 1 }}>
           <div
@@ -349,6 +402,7 @@ export const EditExtractModal = ({
             onAddDocIds={handleAddDocIdsToExtract}
             onRemoveDocIds={handleRemoveDocIdsFromExtract}
             onRemoveColumnId={handleDeleteColumnIdFromExtract}
+            refetch={() => refetch({ id: extract.id })}
             extract={extract}
             cells={cells}
             rows={rows}

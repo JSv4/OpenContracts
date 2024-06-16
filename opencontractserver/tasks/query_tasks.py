@@ -25,17 +25,20 @@ def run_query(
 
     try:
         embed_model = HuggingFaceEmbedding(
-            model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-        )
+            model_name="/models/multi-qa-MiniLM-L6-cos-v1"
+        )  # Using our pre-load cache path where the model was stored on container build
         Settings.embed_model = embed_model
 
         llm = OpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY)
         Settings.llm = llm
 
+        print("Setting up vector store...")
         vector_store = DjangoAnnotationVectorStore.from_params(
             corpus_id=query.corpus.id
         )
+        print(f"Vector store: {vector_store}")
         index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
+        print(f"Index: {index}")
 
         query_engine = CitationQueryEngine.from_args(
             index,
@@ -43,6 +46,8 @@ def run_query(
             # here we can control how granular citation sources are, the default is 512
             citation_chunk_size=512,
         )
+        print(f"Query engine: {query_engine}")
+
         response = query_engine.query(str(query.query))
         print(f"{len(response.source_nodes)} Sources: {response.source_nodes[0].node}")
 
@@ -60,7 +65,8 @@ def run_query(
         query.completed = timezone.now()
         query.save()
 
-    except Exception:
+    except Exception as e:
+        print(f"Query failed: {e}")
         query.failed = timezone.now()
         query.stacktrace = traceback.format_exc()
         query.save()

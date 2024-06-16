@@ -57,6 +57,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         super().__init__(
             corpus_id=corpus_id,
             document_id=document_id,
+            must_have_text=must_have_text,
             hybrid_search=hybrid_search,
             text_search_config=text_search_config,
             embed_dim=embed_dim,
@@ -148,7 +149,9 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             node = TextNode(
                 doc_id=str(row.id),
                 text=row.raw_text,
-                embedding=row.embedding.tolist(),
+                embedding=row.embedding.tolist()
+                if getattr(row, "embedding", None) is not None
+                else [],
                 extra_info={
                     "page": row.page,
                     "bounding_box": row.bounding_box,

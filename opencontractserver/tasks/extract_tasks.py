@@ -81,8 +81,8 @@ def llama_index_doc_query(cell_id, similarity_top_k=3):
 
         document = datacell.document
         embed_model = HuggingFaceEmbedding(
-            model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-        )
+            model_name="/models/multi-qa-MiniLM-L6-cos-v1"
+        )  # Using our pre-load cache path where the model was stored on container build
         Settings.embed_model = embed_model
 
         llm = OpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY)

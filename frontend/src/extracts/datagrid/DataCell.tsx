@@ -17,7 +17,6 @@ import {
   openedDocument,
   selectedAnnotation,
 } from "../../graphql/cache";
-import { Server } from "http";
 import _ from "lodash";
 
 interface ExtractDatacellProps {

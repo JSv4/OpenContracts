@@ -4,12 +4,12 @@ import json
 import logging
 import os
 import uuid
-from typing import Any, cast
+from typing import Any
 
-import pydantic
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
 from pydantic import create_model
+from pydantic import TypeAdapter, ValidationError
 from typing_extensions import TypedDict
 
 from opencontractserver.annotations.models import Annotation
@@ -310,13 +310,11 @@ def build_document_export(
 def is_dict_instance_of_typed_dict(instance: dict, typed_dict: type[TypedDict]):
     # validate with pydantic
     try:
-        cast(
-            typed_dict,
-            pydantic.create_model_from_typeddict(typed_dict)(**instance).dict(),
-        )
+
+        TypeAdapter(typed_dict).validate_python(instance)
         return True
 
-    except pydantic.ValidationError as exc:
+    except ValidationError as exc:
         print(f"ERROR: Invalid schema: {exc}")
         return False
 

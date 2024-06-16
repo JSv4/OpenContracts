@@ -1,3 +1,2 @@
 frontend/public/** linguist-vendored
 frontend/src/assets/** linguist-vendored
-*.yaml filter=lfs diff=lfs merge=lfs -text

@@ -1,11 +1,8 @@
-from unittest.mock import patch
-
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.test import TestCase
+from django.test.utils import override_settings
 
-from opencontractserver.annotations.models import Annotation
-from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import (
     Column,
@@ -47,9 +44,7 @@ class ExtractsTaskTestCase(TestCase):
             agentic=True,
             creator=self.user,
         )
-        self.corpus = Corpus.objects.create(title="TestCorpus", creator=self.user)
         self.extract = Extract.objects.create(
-            corpus=self.corpus,
             name="TestExtract",
             fieldset=self.fieldset,
             creator=self.user,
@@ -68,27 +63,19 @@ class ExtractsTaskTestCase(TestCase):
             backend_lock=True,
         )
 
-        self.corpus.documents.add(self.doc)
-        self.corpus.save()
+        self.extract.documents.add(self.doc)
+        self.extract.save()
 
-    @patch("opencontractserver.tasks.extract_tasks.agent_fetch_my_definitions")
-    @patch("opencontractserver.tasks.extract_tasks.extract_for_query")
-    def test_run_extract_task(
-        self,
-        mock_extract_for_query,
-        mock_agent_fetch_my_definitions,
-    ):
-        mock_extract_for_query.return_value = "Mocked extracted data"
-        mock_agent_fetch_my_definitions.return_value = Annotation.objects.all()
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    def test_run_extract_task(self):
+        print(f"{self.extract.documents.all()}")
 
         # Run this SYNCHRONOUSLY for TESTIN' purposes
-        run_extract.s(self.extract.id, self.user.id).apply().get()
+        run_extract.delay(self.extract.id, self.user.id)
+        print(Datacell.objects.all().count())
 
         self.extract.refresh_from_db()
         self.assertIsNotNone(self.extract.started)
 
         row = Datacell.objects.filter(extract=self.extract, column=self.column).first()
         self.assertIsNotNone(row)
-
-        mock_extract_for_query.assert_called_once()
-        mock_agent_fetch_my_definitions.assert_called_once()

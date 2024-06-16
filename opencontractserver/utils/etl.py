@@ -8,8 +8,7 @@ from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
-from pydantic import create_model
-from pydantic import TypeAdapter, ValidationError
+from pydantic import TypeAdapter, ValidationError, create_model
 from typing_extensions import TypedDict
 
 from opencontractserver.annotations.models import Annotation

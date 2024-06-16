@@ -24,15 +24,6 @@ logger = logging.getLogger(__name__)
 marvin.settings.openai.api_key = settings.OPENAI_API_KEY
 
 
-# Mock these functions for now
-def agent_fetch_my_definitions(annot):
-    return []
-
-
-def extract_for_query(annots, query, output_type):
-    return None
-
-
 @shared_task
 def mark_extract_complete(extract_id):
     extract = Extract.objects.get(pk=extract_id)
@@ -114,7 +105,7 @@ def llama_index_doc_query(cell_id, similarity_top_k=3):
         results = retriever.retrieve(search_text if search_text else query)
         for r in results:
             print(f"Result: {r.node.extra_info}:\n{r}")
-        retrieved_annotation_ids = [n.node.extra_info['annotation_id'] for n in results]
+        retrieved_annotation_ids = [n.node.extra_info["annotation_id"] for n in results]
         print(f"retrieved_annotation_ids: {retrieved_annotation_ids}")
         datacell.sources.add(*retrieved_annotation_ids)
 

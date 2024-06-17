@@ -97,6 +97,22 @@ jobs:
       - name: Collect Static Files
         run: docker-compose -f test.yml run --rm django python manage.py collectstatic
 
+      - name: Verify Docker Containers
+        run: |
+          docker-compose -f test.yml ps
+
+      - name: Inspect Docker Network
+        run: |
+          docker network inspect opencontracts
+
+      - name: Ping NLM Ingestor from Django Container
+        run: |
+          docker-compose -f test.yml exec django ping -c 4 nlm-ingestor
+
+      - name: Check NLM Ingestor Logs
+        run: |
+          docker-compose -f test.yml logs nlm-ingestor
+
       - name: Build Pytest Coverage File
         run: |
           docker-compose -f test.yml run django coverage run -m pytest --cov-report=xml --cov

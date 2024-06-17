@@ -56,7 +56,7 @@ jobs:
             requirements/local.txt
 
       - name: Run pre-commit
-        uses: pre-commit/action@v3.0.0
+        uses: pre-commit/action@v3.0.1
 
   # With no caching at all the entire ci process takes 4m 30s to complete!
   pytest:

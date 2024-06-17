@@ -97,15 +97,6 @@ jobs:
       - name: Collect Static Files
         run: docker-compose -f test.yml run --rm django python manage.py collectstatic
 
-      # Add the following steps for network inspection and nslookup
-      - name: Inspect Docker Network
-        run: |
-          docker network inspect $(docker-compose -f test.yml ps -q | xargs docker inspect --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' | uniq)
-
-      - name: Run nslookup in Django Container
-        run: |
-          docker-compose -f test.yml exec django nslookup nlm-ingestor
-
       - name: Build Pytest Coverage File
         run: |
           docker-compose -f test.yml run django coverage run -m pytest --cov-report=xml --cov

@@ -10,6 +10,7 @@ from opencontractserver.annotations.signals import process_annot_on_create_atomi
 from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.corpuses.signals import run_query_on_create
 from opencontractserver.documents.models import Document
+from opencontractserver.documents.signals import process_doc_on_create_atomic
 from opencontractserver.tasks.doc_tasks import nlm_ingest_pdf
 from opencontractserver.tasks.embeddings_task import (
     calculate_embedding_for_annotation_text,
@@ -26,6 +27,7 @@ class QueryTasksTestCase(TestCase):
 
         post_save.disconnect(run_query_on_create, sender=CorpusQuery)
         post_save.disconnect(process_annot_on_create_atomic, sender=Annotation)
+        post_save.disconnect(process_doc_on_create_atomic, sender=Document)
 
         self.user = User.objects.create_user(
             username="testuser", password="testpassword"

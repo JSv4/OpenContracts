@@ -9,6 +9,8 @@ services:
   nlm-ingestor:
     image: jscrudato/nlm-ingestor-opencontracts
     container_name: nlm-ingestor
+    environment:
+      PORT: 5001
 
   vector-embedder:
     image: jscrudato/vector-embedder-microservice
@@ -63,5 +65,6 @@ services:
     depends_on:
       - redis
       - postgres
+      - nlm-ingestor
     ports: []
     command: /start-celeryworker

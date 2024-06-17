@@ -62,7 +62,7 @@ The `DjangoAnnotationVectorStore` provides various customization and filtering o
 ```python
 def _build_filter_query(self, filters: Optional[MetadataFilters]) -> QuerySet:
     queryset = self._get_annotation_queryset()
-    
+
     if filters is None:
         return queryset
 

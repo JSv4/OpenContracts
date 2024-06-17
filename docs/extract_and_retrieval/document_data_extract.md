@@ -1,13 +1,13 @@
 # Extracting Structured Data from Documents using LlamaIndex, AI Agents, and Marvin
 
-We've added a powerful feature called "extract" that enables the generation of structured data grids from a list of 
-documents using a combination of vector search, AI agents, and the Marvin library. This functionality is implemented in 
+We've added a powerful feature called "extract" that enables the generation of structured data grids from a list of
+documents using a combination of vector search, AI agents, and the Marvin library. This functionality is implemented in
 a Django application and leverages Celery for asynchronous task processing.
 
-All credit for the inspiration of this features goes to the fine folks at Nlmatics. They were some of the first pioneers 
+All credit for the inspiration of this features goes to the fine folks at Nlmatics. They were some of the first pioneers
 working on datagrids from document using a set of questions and custom transformer models. This implementation of their
-concept ultimately leverages newer techniques and better models, but hats off to them for coming up with a design like 
-this 6 years ago! 
+concept ultimately leverages newer techniques and better models, but hats off to them for coming up with a design like
+this 6 years ago!
 
 ## Overview
 
@@ -75,9 +75,9 @@ However, there are a few considerations to keep in mind:
 
 ## Next Steps
 
-This is more of a proof-of-concept of the power of the existing universe of open source tooling. There are a number of more 
-advanced techniques we can use to get better retrieval, more intelligent agentic behavior and more. Also, we haven't optomized 
-for performance AT ALL, so any improvements in any of these areas would be welcome. Further, we expect the real power for 
-an open source tool like OpenContracts to come from custom implementations of this functionality, so we'll also be working 
-on more easily customizable and modular agents and retrieval pipelines so you can quickly select the right pipeline for the 
+This is more of a proof-of-concept of the power of the existing universe of open source tooling. There are a number of more
+advanced techniques we can use to get better retrieval, more intelligent agentic behavior and more. Also, we haven't optomized
+for performance AT ALL, so any improvements in any of these areas would be welcome. Further, we expect the real power for
+an open source tool like OpenContracts to come from custom implementations of this functionality, so we'll also be working
+on more easily customizable and modular agents and retrieval pipelines so you can quickly select the right pipeline for the
 right task.

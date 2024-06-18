@@ -4,26 +4,18 @@ volumes:
   local_postgres_data: {}
   local_postgres_data_backups: {}
 
-networks:
-  opencontracts:
-
 services:
-
   nlm-ingestor:
     image: jscrudato/nlm-ingestor-opencontracts
     container_name: nlm-ingestor
     environment:
       PORT: 5001
-    networks:
-      - opencontracts
 
   vector-embedder:
     image: jscrudato/vector-embedder-microservice
     container_name: vector-embedder
     environment:
       PORT: 8000
-    networks:
-      - opencontracts
 
   django: &django
     build:
@@ -47,8 +39,6 @@ services:
     ports:
       - "8000:8000"
     command: /start
-    networks:
-      - opencontracts
 
   postgres:
     build:
@@ -61,14 +51,10 @@ services:
       - ./compose/production/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     env_file:
       - ./.envs/.test/.postgres
-    networks:
-      - opencontracts
 
   redis:
     image: redis:6
     container_name: redis
-    networks:
-      - opencontracts
 
   celeryworker:
     <<: *django
@@ -80,5 +66,3 @@ services:
       - nlm-ingestor
     ports: []
     command: /start-celeryworker
-    networks:
-      - opencontracts

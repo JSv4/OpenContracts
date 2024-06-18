@@ -105,10 +105,6 @@ jobs:
         run: |
           docker network inspect $(docker-compose -f test.yml ps -q | xargs docker inspect --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' | uniq)
 
-      - name: Ping NLM Ingestor from Django Container
-        run: |
-          docker-compose -f test.yml exec django ping -c 4 nlm-ingestor
-
       - name: Capture Docker Compose Logs
         if: failure()
         run: |

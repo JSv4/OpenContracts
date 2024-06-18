@@ -109,10 +109,17 @@ jobs:
         run: |
           docker-compose -f test.yml exec django ping -c 4 nlm-ingestor
 
-      - name: Check NLM Ingestor Logs
+      - name: Capture Docker Compose Logs
         if: failure()
         run: |
-          docker-compose -f test.yml logs nlm-ingestor > nlm-ingestor-logs.txt
+          docker-compose -f test.yml logs --no-color > docker-compose-logs.txt
+
+      - name: Upload Docker Compose Logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-compose-logs
+          path: docker-compose-logs.txt
 
       - name: Build Pytest Coverage File
         run: |

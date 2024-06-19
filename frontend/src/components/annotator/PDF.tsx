@@ -174,30 +174,6 @@ const Page = ({
 
   useEffect(() => {
     try {
-      // Saving this for now... is a great piece of code to determine if page is visible for page-by-page
-      // loading or rendering.
-      // const determinePageVisiblity = () => {
-
-      //   if (canvasRef.current !== null && scrollContainerRef && scrollContainerRef.current !== null) {
-
-      //     const scroll_window_bounding_rect = scrollContainerRef.current?.getBoundingClientRect()
-      //     const page_bounding_rect = canvasRef.current.getBoundingClientRect();
-
-      //     let pageVisibility = (
-      //       (page_bounding_rect.top >= scroll_window_bounding_rect.top && page_bounding_rect.top <= scroll_window_bounding_rect.bottom) ||
-      //       (page_bounding_rect.bottom >= scroll_window_bounding_rect.top && page_bounding_rect.bottom <= scroll_window_bounding_rect.bottom) ||
-      //       (page_bounding_rect.top < scroll_window_bounding_rect.top && page_bounding_rect.bottom >= scroll_window_bounding_rect.bottom)
-      //     );
-
-      //     // if (pageVisibility) {
-      //     //   console.log(`Page ${pageInfo.page.pageNumber} is VISIBLE!`);
-      //     //   setPageVisible(pageInfo.page.pageNumber, "VISIBLE");
-      //     // } else {
-      //     //   setPageVisible(pageInfo.page.pageNumber, "NOT VISIBLE");
-      //     // }
-      //   }
-      // };
-
       if (canvasRef.current === null) {
         onError(new Error("No canvas element"));
         return;

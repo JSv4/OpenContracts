@@ -64,7 +64,6 @@ COPY ./requirements .
 RUN pip wheel --wheel-dir /usr/src/app/wheels  \
   -r ${BUILD_ENVIRONMENT}.txt
 
-
 # Python 'run' stage
 FROM python as python-run-stage
 
@@ -99,6 +98,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # copy python dependency wheels from python-build-stage
 COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
 
+# Install CPU-less requirements
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN pip install sentence-transformers
+
 # use wheels to install python dependencies
 RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
 	&& rm -rf /wheels/
@@ -108,6 +111,10 @@ RUN echo "RUN STAGE GITHUB_ACTIONS: $GITHUB_ACTIONS"
 COPY ./setup_codecov.sh .
 RUN if [ "$GITHUB_ACTIONS" ] ; then echo "GITHUB ACTION MODE" && chmod u+x setup_codecov.sh && ./setup_codecov.sh ; else echo "NOT GITHUB ACTION. DO NOT INSTALL CODECOV" ; fi
 
+# Download sentence transformer binaries
+COPY download_embeddings_model.py .
+RUN mkdir -p /models
+RUN python download_embeddings_model.py
 
 COPY ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint

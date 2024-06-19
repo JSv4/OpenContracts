@@ -104,6 +104,7 @@ LOCAL_APPS = [
     "opencontractserver.corpuses",
     "opencontractserver.annotations",
     "opencontractserver.analyzer",
+    "opencontractserver.extracts",
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -465,6 +466,11 @@ NLM_INGEST_API_KEY = None  # If the endpoint is secured with an API_KEY, specify
 # Embeddings / Semantic Search
 EMBEDDINGS_MICROSERVICE_URL = "http://vector-embedder:8000"
 VECTOR_EMBEDDER_API_KEY = "abc123"
+
+# LLM SETTING
+OPENAI_API_KEY = env.str("OPENAI_API_KEY", default="")
+OPENAI_MODEL = env.str("OPENAI_MODEL", default="gpt-4o")
+EMBEDDINGS_MODEL = env.str("EMBEDDINGS_MODEL", default="gpt-4o")
 
 # CORS
 # ------------------------------------------------------------------------------

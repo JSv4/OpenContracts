@@ -21,7 +21,11 @@ export const CardLayout = ({
   const use_responsive = width <= 1000 && width > 400;
 
   return (
-    <CardContainer width={width} className="CardLayoutContainer">
+    <CardContainer
+      width={width}
+      className="CardLayoutContainer"
+      style={{ maxHeight: "90vh" }}
+    >
       {Modals ? Modals : <></>}
       <Segment attached="top" secondary className="SearchBar">
         {SearchBar}
@@ -40,6 +44,7 @@ export const CardLayout = ({
           flexDirection: "column",
           justifyContent: "flex-start",
           height: "100%",
+          overflowY: "hidden",
           padding: use_mobile ? "5px" : use_responsive ? "10px" : "1rem",
           ...(use_mobile
             ? {

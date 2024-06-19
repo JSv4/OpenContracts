@@ -21,9 +21,15 @@ from config.graphql.graphene_types import (
     AnalysisType,
     AnnotationLabelType,
     AnnotationType,
+    ColumnType,
+    CorpusQueryType,
     CorpusType,
+    DatacellType,
     DocumentType,
+    ExtractType,
+    FieldsetType,
     LabelSetType,
+    LanguageModelType,
     RelationInputType,
     RelationshipType,
     UserExportType,
@@ -34,6 +40,7 @@ from config.graphql.serializers import (
     AnnotationSerializer,
     CorpusSerializer,
     DocumentSerializer,
+    ExtractSerializer,
     LabelsetSerializer,
 )
 from opencontractserver.analyzer.models import Analysis
@@ -43,8 +50,15 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus, TemporaryFileHandle
+from opencontractserver.corpuses.models import Corpus, CorpusQuery, TemporaryFileHandle
 from opencontractserver.documents.models import Document
+from opencontractserver.extracts.models import (
+    Column,
+    Datacell,
+    Extract,
+    Fieldset,
+    LanguageModel,
+)
 from opencontractserver.tasks import (
     build_label_lookups_task,
     burn_doc_annotations,
@@ -63,6 +77,7 @@ from opencontractserver.tasks.export_tasks import (
     package_funsd_exports,
     package_langchain_exports,
 )
+from opencontractserver.tasks.extract_tasks import run_extract
 from opencontractserver.tasks.permissioning_tasks import (
     make_analysis_public_task,
     make_corpus_public_task,
@@ -157,6 +172,102 @@ class UpdateLabelset(DRFMutation):
         description = graphene.String(
             required=False, description="Description of the Labelset."
         )
+
+
+class ApproveDatacell(graphene.Mutation):
+    # TODO - I think permissioning cells makes sense but adds a lot of overhead and probably requires
+    #  some changes like granting permission based on parent corpus / extract.
+
+    class Arguments:
+        datacell_id = graphene.String(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(DatacellType)
+
+    @login_required
+    def mutate(root, info, datacell_id):
+
+        ok = True
+        obj = None
+
+        try:
+            pk = from_global_id(datacell_id)[1]
+            obj = Datacell.objects.get(pk=pk)
+            obj.approved_by = info.context.user
+            obj.rejected_by = None
+            obj.save()
+            message = "SUCCESS!"
+
+        except Exception as e:
+            ok = False
+            message = f"Failed to approve datacell due to error: {e}"
+
+        return ApproveDatacell(ok=ok, obj=obj, message=message)
+
+
+class RejectDatacell(graphene.Mutation):
+    # TODO - I think permissioning cells makes sense but adds a lot of overhead and probably requires
+    #  some changes like granting permission based on parent corpus / extract.
+
+    class Arguments:
+        datacell_id = graphene.String(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(DatacellType)
+
+    @login_required
+    def mutate(root, info, datacell_id):
+
+        ok = True
+        obj = None
+
+        try:
+            pk = from_global_id(datacell_id)[1]
+            obj = Datacell.objects.get(pk=pk)
+            obj.rejected_by = info.context.user
+            obj.approved_by = None
+            obj.save()
+            message = "SUCCESS!"
+
+        except Exception as e:
+            ok = False
+            message = f"Failed to approve datacell due to error: {e}"
+
+        return RejectDatacell(ok=ok, obj=obj, message=message)
+
+
+class EditDatacell(graphene.Mutation):
+    # TODO - I think permissioning cells makes sense but adds a lot of overhead and probably requires
+    #  some changes like granting permission based on parent corpus / extract.
+
+    class Arguments:
+        datacell_id = graphene.String(required=True)
+        edited_data = GenericScalar(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(DatacellType)
+
+    @login_required
+    def mutate(root, info, datacell_id, edited_data):
+
+        ok = True
+        obj = None
+
+        try:
+            pk = from_global_id(datacell_id)[1]
+            obj = Datacell.objects.get(pk=pk)
+            obj.corrected_data = edited_data
+            obj.save()
+            message = "SUCCESS!"
+
+        except Exception as e:
+            ok = False
+            message = f"Failed to approve datacell due to error: {e}"
+
+        return EditDatacell(ok=ok, obj=obj, message=message)
 
 
 class CreateLabelset(graphene.Mutation):
@@ -396,6 +507,54 @@ class StartCorpusFork(graphene.Mutation):
             logger.error(message)
 
         return StartCorpusFork(ok=ok, message=message, new_corpus=new_corpus)
+
+
+class StartQueryForCorpus(graphene.Mutation):
+    class Arguments:
+        corpus_id = graphene.String(
+            required=True,
+            description="Graphene id of the corpus you want to package for export",
+        )
+        query = graphene.String(
+            required=True,
+            description="What is the question the user wants an answer to?",
+        )
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(CorpusQueryType)
+
+    @login_required
+    def mutate(root, info, corpus_id, query):
+
+        obj = None
+        ok = False
+        message = "SUCCESS!"
+        # Enforce sane limits on free / rando users. Can be overriden.
+        try:
+            if (
+                info.context.user.is_usage_capped
+                and CorpusQuery.objects.filter(creator=info.context.user).count() > 10
+            ):
+                raise PermissionError(
+                    "By default, new users are limited to 10 queries. Please contact the admin to "
+                    "upgrade your account."
+                )
+
+            obj = CorpusQuery.objects.create(
+                query=query,
+                creator=info.context.user,
+                corpus_id=from_global_id(corpus_id)[1],
+            )
+            print(f"Obj created: {obj}")
+            set_permissions_for_obj_to_user(
+                info.context.user, obj, [PermissionTypes.CRUD]
+            )
+            ok = True
+        except Exception as e:
+            message = f"Error asking query: {e}"
+
+        return StartQueryForCorpus(ok=ok, obj=obj, message=message)
 
 
 class StartCorpusExport(graphene.Mutation):
@@ -1276,7 +1435,6 @@ class StartCorpusAnalysisMutation(graphene.Mutation):
 
 
 class DeleteAnalysisMutation(graphene.Mutation):
-
     ok = graphene.Boolean()
     message = graphene.String()
 
@@ -1321,6 +1479,441 @@ class ObtainJSONWebTokenWithUser(graphql_jwt.ObtainJSONWebToken):
     @classmethod
     def resolve(cls, root, info, **kwargs):
         return cls(user=info.context.user)
+
+
+class CreateLanguageModel(graphene.Mutation):
+    class Arguments:
+        model = graphene.String(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(LanguageModelType)
+
+    @staticmethod
+    @login_required
+    def mutate(root, info, model):
+        language_model = LanguageModel(model=model, creator=info.context.user)
+        language_model.save()
+        set_permissions_for_obj_to_user(
+            info.context.user, language_model, [PermissionTypes.CRUD]
+        )
+        return CreateLanguageModel(ok=True, message="SUCCESS!", obj=language_model)
+
+
+class CreateFieldset(graphene.Mutation):
+    class Arguments:
+        name = graphene.String(required=True)
+        description = graphene.String(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(FieldsetType)
+
+    @staticmethod
+    @login_required
+    def mutate(root, info, name, description):
+        fieldset = Fieldset(
+            name=name,
+            description=description,
+            creator=info.context.user,
+        )
+        fieldset.save()
+        set_permissions_for_obj_to_user(
+            info.context.user, fieldset, [PermissionTypes.CRUD]
+        )
+        return CreateFieldset(ok=True, message="SUCCESS!", obj=fieldset)
+
+
+class UpdateColumnMutation(DRFMutation):
+    class Arguments:
+        name = graphene.String(required=False)
+        id = graphene.ID(required=True)
+        fieldset_id = graphene.ID(required=False)
+        query = graphene.String(required=False)
+        match_text = graphene.String(required=False)
+        output_type = graphene.String(required=False)
+        limit_to_label = graphene.String(required=False)
+        instructions = graphene.String(required=False)
+        language_model_id = graphene.ID(required=False)
+        agentic = graphene.Boolean(required=False)
+        extract_is_list = graphene.Boolean(required=False)
+        must_contain_text = graphene.String(required=False)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(ColumnType)
+
+    @staticmethod
+    @login_required
+    def mutate(
+        root,
+        info,
+        id,
+        name=None,
+        query=None,
+        match_text=None,
+        output_type=None,
+        limit_to_label=None,
+        instructions=None,
+        agentic=None,
+        extract_is_list=None,
+        language_model_id=None,
+        fieldset_id=None,
+        must_contain_text=None,
+    ):
+
+        ok = False
+        message = ""
+        obj = None
+
+        try:
+            pk = from_global_id(id)[1]
+            obj = Column.objects.get(pk=pk, creator=info.context.user)
+
+            if fieldset_id is not None:
+                obj.fieldset_id = from_global_id(fieldset_id)[1]
+
+            if language_model_id is not None:
+                obj.language_model_id = from_global_id(language_model_id)[1]
+
+            if name is not None:
+                obj.name = name
+
+            if query is not None:
+                obj.query = query
+
+            if match_text is not None:
+                obj.match_text = match_text
+
+            if output_type is not None:
+                obj.output_type = output_type
+
+            if limit_to_label is not None:
+                obj.limit_to_label = limit_to_label
+
+            if instructions is not None:
+                obj.instructions = instructions
+
+            if agentic is not None:
+                obj.agentic = agentic
+
+            if extract_is_list is not None:
+                obj.extract_is_list = extract_is_list
+
+            if must_contain_text is not None:
+                obj.must_contain_text = must_contain_text
+
+            obj.save()
+            message = "SUCCESS!"
+            ok = True
+
+        except Exception as e:
+            message = f"Failed to update: {e}"
+
+        return UpdateColumnMutation(ok=ok, message=message, obj=obj)
+
+
+class CreateColumn(graphene.Mutation):
+    class Arguments:
+        fieldset_id = graphene.ID(required=True)
+        query = graphene.String(required=False)
+        match_text = graphene.String(required=False)
+        output_type = graphene.String(required=True)
+        limit_to_label = graphene.String(required=False)
+        instructions = graphene.String(required=False)
+        language_model_id = graphene.ID(required=True)
+        agentic = graphene.Boolean(required=False)
+        extract_is_list = graphene.Boolean(required=False)
+        must_contain_text = graphene.String(required=False)
+        name = graphene.String(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(ColumnType)
+
+    @staticmethod
+    @login_required
+    def mutate(
+        root,
+        info,
+        name,
+        fieldset_id,
+        output_type,
+        language_model_id,
+        agentic=None,
+        extract_is_list=None,
+        must_contain_text=None,
+        query=None,
+        match_text=None,
+        limit_to_label=None,
+        instructions=None,
+    ):
+        if {query, match_text} == {None}:
+            raise ValueError("One of `query` or `match_text` must be provided.")
+
+        fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
+        language_model = LanguageModel.objects.get(
+            pk=from_global_id(language_model_id)[1]
+        )
+        column = Column(
+            name=name,
+            fieldset=fieldset,
+            query=query,
+            match_text=match_text,
+            output_type=output_type,
+            limit_to_label=limit_to_label,
+            instructions=instructions,
+            language_model=language_model,
+            must_contain_text=must_contain_text,
+            agentic=agentic if agentic is not None else False,
+            extract_is_list=extract_is_list if extract_is_list is not None else False,
+            creator=info.context.user,
+        )
+        column.save()
+        set_permissions_for_obj_to_user(
+            info.context.user, column, [PermissionTypes.CRUD]
+        )
+        return CreateColumn(ok=True, message="SUCCESS!", obj=column)
+
+
+class DeleteColumn(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    deleted_id = graphene.String()
+
+    @staticmethod
+    @login_required
+    def mutate(root, info, id):
+        Column.objects.get(pk=from_global_id(id)[1], creator=info.context.user).delete()
+        return DeleteColumn(ok=True, message="STARTED!", deleted_id=id)
+
+
+class StartExtract(graphene.Mutation):
+    class Arguments:
+        extract_id = graphene.ID(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(ExtractType)
+
+    @staticmethod
+    @login_required
+    def mutate(root, info, extract_id):
+        # Start celery task to process extract
+        pk = from_global_id(extract_id)[1]
+        extract = Extract.objects.get(pk=pk)
+        extract.started = timezone.now()
+        extract.save()
+        run_extract.s(pk, info.context.user.id).apply_async()
+
+        return StartExtract(ok=True, message="STARTED!", obj=extract)
+
+
+class CreateExtract(graphene.Mutation):
+    """
+    Create a new extract. If fieldset_id is provided, attach existing fieldset.
+    Otherwise, a new fieldset is created. If no name is provided, fieldset name has
+    form "[Extract name] Fieldset"
+    """
+
+    class Arguments:
+        corpus_id = graphene.ID(required=False)
+        name = graphene.String(required=True)
+        fieldset_id = graphene.ID(required=False)
+        fieldset_name = graphene.String(required=False)
+        fieldset_description = graphene.String(required=False)
+
+    ok = graphene.Boolean()
+    msg = graphene.String()
+    obj = graphene.Field(ExtractType)
+
+    @staticmethod
+    @login_required
+    def mutate(
+        root,
+        info,
+        name,
+        corpus_id=None,
+        fieldset_id=None,
+        fieldset_name=None,
+        fieldset_description=None,
+    ):
+
+        corpus = None
+        if corpus_id is not None:
+            corpus = Corpus.objects.get(pk=from_global_id(corpus_id)[1])
+            print(f"Corpus is: {corpus}")
+
+        if fieldset_id is not None:
+            print(f"Fieldset id is not None: {fieldset_id}")
+            fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
+        else:
+            if fieldset_name is None:
+                fieldset_name = f"{name} Fieldset"
+            print(f"Creating new fieldset... name will be: {fieldset_name}")
+
+            fieldset = Fieldset.objects.create(
+                name=fieldset_name,
+                description=fieldset_description
+                if fieldset_description is not None
+                else f"Autogenerated {fieldset_name}",
+                creator=info.context.user,
+            )
+            set_permissions_for_obj_to_user(
+                info.context.user, fieldset, [PermissionTypes.CRUD]
+            )
+
+        extract = Extract(
+            corpus=corpus,
+            name=name,
+            fieldset=fieldset,
+            creator=info.context.user,
+        )
+        extract.save()
+
+        if corpus is not None:
+            print(f"Try to add corpus docs: {corpus.documents.all()}")
+            extract.documents.add(*corpus.documents.all())
+        else:
+            print("Corpus IS still None... no docs to add.")
+
+        set_permissions_for_obj_to_user(
+            info.context.user, extract, [PermissionTypes.CRUD]
+        )
+
+        return CreateExtract(ok=True, msg="SUCCESS!", obj=extract)
+
+
+class UpdateExtractMutation(DRFMutation):
+    class IOSettings:
+        lookup_field = "id"
+        pk_fields = ["corpus", "fieldset", "creator"]
+        serializer = ExtractSerializer
+        model = Extract
+        graphene_model = ExtractType
+
+    class Arguments:
+        id = graphene.String(required=True)
+        title = graphene.String(required=False)
+        description = graphene.String(required=False)
+        icon = graphene.String(required=False)
+        label_set = graphene.String(required=False)
+
+
+class AddDocumentsToExtract(DRFMutation):
+    class Arguments:
+        document_ids = graphene.List(
+            graphene.ID,
+            required=True,
+            description="List of ids of the documents to add to extract.",
+        )
+        extract_id = graphene.ID(
+            required=True, description="Id of corpus to add docs to."
+        )
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    objs = graphene.List(DocumentType)
+
+    @login_required
+    def mutate(root, info, extract_id, document_ids):
+
+        ok = False
+        doc_objs = []
+
+        try:
+            user = info.context.user
+
+            extract = Extract.objects.get(
+                Q(pk=from_global_id(extract_id)[1])
+                & (Q(creator=user) | Q(is_public=True))
+            )
+
+            if extract.finished is not None:
+                raise ValueError(
+                    f"Extract {extract_id} already finished... it cannot be edited."
+                )
+
+            doc_pks = list(
+                map(lambda graphene_id: from_global_id(graphene_id)[1], document_ids)
+            )
+            doc_objs = Document.objects.filter(
+                Q(pk__in=doc_pks) & (Q(creator=user) | Q(is_public=True))
+            )
+            print(f"Add documents to extract {extract}: {doc_objs}")
+            extract.documents.add(*doc_objs)
+
+            ok = True
+            message = "Success"
+
+        except Exception as e:
+            message = f"Error assigning docs to corpus: {e}"
+
+        return AddDocumentsToExtract(message=message, ok=ok, objs=doc_objs)
+
+
+class RemoveDocumentsFromExtract(graphene.Mutation):
+    class Arguments:
+        extract_id = graphene.ID(
+            required=True, description="ID of extract to remove documents from."
+        )
+        document_ids_to_remove = graphene.List(
+            graphene.ID,
+            required=True,
+            description="List of ids of the docs to remove from extract.",
+        )
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    ids_removed = graphene.List(graphene.String)
+
+    @login_required
+    def mutate(root, info, extract_id, document_ids_to_remove):
+
+        ok = False
+
+        try:
+            user = info.context.user
+            extract = Extract.objects.get(
+                Q(pk=from_global_id(extract_id)[1])
+                & (Q(creator=user) | Q(is_public=True))
+            )
+
+            if extract.finished is not None:
+                raise ValueError(
+                    f"Extract {extract_id} already finished... it cannot be edited."
+                )
+
+            doc_pks = list(
+                map(
+                    lambda graphene_id: from_global_id(graphene_id)[1],
+                    document_ids_to_remove,
+                )
+            )
+
+            extract_docs = extract.documents.filter(pk__in=doc_pks)
+            extract.documents.remove(*extract_docs)
+            ok = True
+            message = "Success"
+
+        except Exception as e:
+            message = f"Error on removing docs: {e}"
+
+        return RemoveDocumentsFromExtract(
+            message=message, ok=ok, ids_removed=document_ids_to_remove
+        )
+
+
+class DeleteExtract(DRFDeletion):
+    class IOSettings:
+        model = Extract
+        lookup_field = "id"
+
+    class Arguments:
+        id = graphene.String(required=True)
 
 
 class Mutation(graphene.ObjectType):
@@ -1389,3 +1982,24 @@ class Mutation(graphene.ObjectType):
     )  # Limited by user.is_usage_capped
     delete_analysis = DeleteAnalysisMutation.Field()
     make_analysis_public = MakeAnalysisPublic.Field()
+
+    # QUERY MUTATIONS #########################################################
+    ask_query = StartQueryForCorpus.Field()
+
+    # EXTRACT MUTATIONS ##########################################################
+    create_language_model = CreateLanguageModel.Field()
+    create_fieldset = CreateFieldset.Field()
+
+    create_column = CreateColumn.Field()
+    update_column = UpdateColumnMutation.Field()
+    delete_column = DeleteColumn.Field()
+
+    create_extract = CreateExtract.Field()
+    start_extract = StartExtract.Field()
+    delete_extract = DeleteExtract.Field()  # TODO - test
+    update_extract = UpdateExtractMutation.Field()
+    add_docs_to_extract = AddDocumentsToExtract.Field()
+    remove_docs_from_extract = RemoveDocumentsFromExtract.Field()
+    approve_datacell = ApproveDatacell.Field()  # TODO - add tests
+    reject_datacell = RejectDatacell.Field()  # TODO - add tests
+    edit_datacell = EditDatacell.Field()  # TODO - add tests

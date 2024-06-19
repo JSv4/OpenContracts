@@ -4,9 +4,16 @@ import { ExportTypes, MultipageAnnotationJson } from "../components/types";
 import {
   AnalysisType,
   AnnotationLabelType,
+  ColumnType,
+  CorpusQueryType,
   CorpusType,
+  DatacellType,
+  DocumentType,
+  ExtractType,
+  FieldsetType,
   LabelSetType,
   LabelType,
+  LanguageModelType,
   Maybe,
   UserExportType,
 } from "./types";
@@ -820,6 +827,24 @@ export const REQUEST_DELETE_ANNOTATION = gql`
   }
 `;
 
+export interface RequestDeleteExtractInputType {
+  id: string;
+}
+
+export interface RequestDeleteExtractOutputType {
+  deleteExtract: {
+    ok: boolean;
+  };
+}
+
+export const REQUEST_DELETE_EXTRACT = gql`
+  mutation ($id: String!) {
+    deleteExtract(id: $id) {
+      ok
+    }
+  }
+`;
+
 export interface NewRelationshipInputType {
   relationshipLabelId: string;
   documentId: string;
@@ -1067,6 +1092,486 @@ export const REQUEST_DELETE_ANALYSIS = gql`
     deleteAnalysis(id: $id) {
       ok
       message
+    }
+  }
+`;
+
+export interface RequestCreateLanguageModelInputType {
+  model: string;
+}
+
+export interface RequestCreateLanguageModelOutputType {
+  languageModel: {
+    ok: boolean;
+    message: string;
+    obj: LanguageModelType;
+  };
+}
+
+export const REQUEST_CREATE_LANGUAGEMODEL = gql`
+  mutation CreateLanguageModel($model: String!) {
+    createLanguageModel(model: $model) {
+      languageModel {
+        id
+        message
+        obj {
+          id
+        }
+      }
+    }
+  }
+`;
+
+export interface RequestCreateFieldsetInputType {
+  name: string;
+  description: string;
+}
+
+export interface RequestCreateFieldsetOutputType {
+  createFieldset: {
+    ok: boolean;
+    message: string;
+    obj: FieldsetType;
+  };
+}
+
+export const REQUEST_CREATE_FIELDSET = gql`
+  mutation CreateFieldset($name: String!, $description: String!) {
+    createFieldset(name: $name, description: $description) {
+      ok
+      msg
+      obj {
+        id
+        name
+        description
+      }
+    }
+  }
+`;
+
+export interface RequestUpdateFieldsetOutputType {
+  updateFieldset: {
+    ok: boolean;
+    message: string;
+    obj: FieldsetType;
+  };
+}
+
+export interface RequestUpdateFieldsetInputType {
+  id: string;
+  name?: string;
+  description?: string;
+}
+
+export const REQUEST_UPDATE_FIELDSET = gql`
+  mutation UpdateFieldset($id: ID!, $name: String, $description: String) {
+    updateFieldset(id: $id, name: $name, description: $description) {
+      msg
+      ok
+      obj {
+        id
+        name
+        description
+      }
+    }
+  }
+`;
+
+export interface RequestCreateColumnInputType {
+  fieldsetId?: string;
+  query: string;
+  matchText?: string;
+  outputType: string;
+  limitToLabel?: string;
+  instructions?: string;
+  languageModelId: string;
+  agentic: boolean;
+  name: string;
+}
+
+export interface RequestCreateColumnOutputType {
+  createColumn: {
+    ok: boolean;
+    message: string;
+    obj: ColumnType;
+  };
+}
+
+export const REQUEST_CREATE_COLUMN = gql`
+  mutation CreateColumn(
+    $name: String!
+    $fieldsetId: ID!
+    $query: String
+    $matchText: String
+    $outputType: String!
+    $limitToLabel: String
+    $instructions: String
+    $languageModelId: ID!
+    $agentic: Boolean
+  ) {
+    createColumn(
+      fieldsetId: $fieldsetId
+      query: $query
+      matchText: $matchText
+      outputType: $outputType
+      limitToLabel: $limitToLabel
+      instructions: $instructions
+      languageModelId: $languageModelId
+      agentic: $agentic
+      name: $name
+    ) {
+      message
+      ok
+      obj {
+        id
+        name
+        query
+        matchText
+        outputType
+        limitToLabel
+        instructions
+        languageModel {
+          id
+          model
+        }
+        agentic
+      }
+    }
+  }
+`;
+
+export interface RequestDeleteColumnOutputType {
+  deleteColumn: {
+    ok: boolean;
+    message: string;
+    deletedId: string;
+  };
+}
+
+export interface RequestDeleteColumnInputType {
+  id: string;
+}
+
+export const REQUEST_DELETE_COLUMN = gql`
+  mutation DeleteColumn($id: ID!) {
+    deleteColumn(id: $id) {
+      ok
+      message
+      deletedId
+    }
+  }
+`;
+
+export interface RequestAddDocToExtractOutputType {
+  addDocsToExtract: {
+    ok: boolean;
+    message: string;
+    objs: DocumentType[];
+  };
+}
+
+export interface RequestAddDocToExtractInputType {
+  documentIds: string[];
+  extractId: string;
+}
+
+export const REQUEST_ADD_DOC_TO_EXTRACT = gql`
+  mutation AddDocToExtract($documentIds: [ID]!, $extractId: ID!) {
+    addDocsToExtract(documentIds: $documentIds, extractId: $extractId) {
+      ok
+      message
+      objs {
+        __typename
+        id
+        title
+        description
+        pageCount
+      }
+    }
+  }
+`;
+
+export interface RequestRemoveDocFromExtractOutputType {
+  removeDocsFromExtract: {
+    ok: boolean;
+    message: string;
+    idsRemoved: string[];
+  };
+}
+
+export interface RequestRemoveDocFromExtractInputType {
+  documentIdsToRemove: string[];
+  extractId: string;
+}
+
+export const REQUEST_REMOVE_DOC_FROM_EXTRACT = gql`
+  mutation RemoveDocsFromExtract($documentIdsToRemove: [ID]!, $extractId: ID!) {
+    removeDocsFromExtract(
+      documentIdsToRemove: $documentIdsToRemove
+      extractId: $extractId
+    ) {
+      ok
+      message
+      idsRemoved
+    }
+  }
+`;
+
+export interface RequestUpdateColumnInputType {
+  id: string;
+  fieldsetId?: string;
+  query?: string;
+  matchText?: string;
+  outputType?: string;
+  limitToLabel?: string;
+  instructions?: string;
+  languageModelId?: string;
+  agentic?: boolean;
+}
+
+export interface RequestUpdateColumnOutputType {
+  updateColumn: {
+    ok: boolean;
+    message: string;
+    obj: ColumnType;
+  };
+}
+
+export const REQUEST_UPDATE_COLUMN = gql`
+  mutation UpdateColumn(
+    $id: ID!
+    $name: String
+    $query: String
+    $matchText: String
+    $outputType: String
+    $limitToLabel: String
+    $instructions: String
+    $languageModelId: ID
+    $agentic: Boolean
+  ) {
+    updateColumn(
+      id: $id
+      name: $name
+      query: $query
+      matchText: $matchText
+      outputType: $outputType
+      limitToLabel: $limitToLabel
+      instructions: $instructions
+      languageModelId: $languageModelId
+      agentic: $agentic
+    ) {
+      message
+      ok
+      obj {
+        id
+        name
+        query
+        matchText
+        outputType
+        limitToLabel
+        instructions
+        languageModel {
+          id
+          model
+        }
+        agentic
+      }
+    }
+  }
+`;
+
+export interface RequestCreateExtractOutputType {
+  createExtract: {
+    msg: string;
+    ok: boolean;
+    obj: ExtractType;
+  };
+}
+
+export interface RequestCreateExtractInputType {
+  corpusId?: string;
+  name: string;
+  fieldsetId?: string;
+}
+
+export const REQUEST_CREATE_EXTRACT = gql`
+  mutation CreateExtract($corpusId: ID, $name: String!, $fieldsetId: ID) {
+    createExtract(corpusId: $corpusId, name: $name, fieldsetId: $fieldsetId) {
+      msg
+      ok
+      obj {
+        id
+        name
+      }
+    }
+  }
+`;
+
+export interface RequestStartExtractOutputType {
+  startExtract: {
+    message: string;
+    ok: boolean;
+    obj: ExtractType;
+  };
+}
+
+export interface RequestStartExtractInputType {
+  extractId: string;
+}
+
+export const REQUEST_START_EXTRACT = gql`
+  mutation StartExtract($extractId: ID!) {
+    startExtract(extractId: $extractId) {
+      message
+      ok
+      obj {
+        id
+        started
+        finished
+      }
+    }
+  }
+`;
+
+export interface RequestApproveDatacellInputType {
+  datacellId: string;
+}
+
+export interface RequestApproveDatacellOutputType {
+  approveDatacell: {
+    ok: boolean;
+    message: string;
+    obj: DatacellType;
+  };
+}
+
+export const REQUEST_APPROVE_DATACELL = gql`
+  mutation ApproveDatacell($datacellId: String!) {
+    approveDatacell(datacellId: $datacellId) {
+      ok
+      message
+      obj {
+        id
+        data
+        started
+        completed
+        stacktrace
+        correctedData
+        approvedBy {
+          id
+          username
+        }
+        rejectedBy {
+          id
+          username
+        }
+      }
+    }
+  }
+`;
+
+export interface RequestRejectDatacellInputType {
+  datacellId: string;
+}
+
+export interface RequestRejectDatacellOutputType {
+  rejectDatacell: {
+    ok: boolean;
+    message: string;
+    obj: DatacellType;
+  };
+}
+
+export const REQUEST_REJECT_DATACELL = gql`
+  mutation RejectDatacell($datacellId: String!) {
+    rejectDatacell(datacellId: $datacellId) {
+      ok
+      message
+      obj {
+        id
+        data
+        started
+        completed
+        stacktrace
+        correctedData
+        approvedBy {
+          id
+          username
+        }
+        rejectedBy {
+          id
+          username
+        }
+      }
+    }
+  }
+`;
+
+export interface RequestEditDatacellInputType {
+  datacellId: string;
+  editedData: Record<any, any>;
+}
+
+export interface RequestEditDatacellOutputType {
+  editDatacell: {
+    ok: boolean;
+    message: string;
+    obj: DatacellType;
+  };
+}
+
+export const REQUEST_EDIT_DATACELL = gql`
+  mutation EditDatacell($datacellId: String!, $editedData: GenericScalar!) {
+    editDatacell(datacellId: $datacellId, editedData: $editedData) {
+      ok
+      message
+      obj {
+        id
+        data
+        started
+        completed
+        stacktrace
+        correctedData
+        approvedBy {
+          id
+          username
+        }
+        rejectedBy {
+          id
+          username
+        }
+      }
+    }
+  }
+`;
+
+export interface AskQueryOfCorpusInputType {
+  corpusId: string;
+  query: string;
+}
+
+export interface AskQueryOfCorpusOutputType {
+  askQuery: {
+    ok: boolean;
+    message: string;
+    obj: CorpusQueryType;
+  };
+}
+
+export const ASK_QUERY_OF_CORPUS = gql`
+  mutation AskQuery($corpusId: String!, $query: String!) {
+    askQuery(corpusId: $corpusId, query: $query) {
+      ok
+      message
+      obj {
+        id
+        query
+        response
+        started
+        completed
+        failed
+        stacktrace
+      }
     }
   }
 `;

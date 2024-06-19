@@ -48,8 +48,17 @@ nav:
     - Quick-Start: quick-start.md
     - System Requirements: requirements.md
     - How It Works:
-        - Application Architecture: architecture/under-the-hood.md
-        - Asynchronous Processing: architecture/asynchronous-processing.md
+        - Backend:
+            - Application Architecture: architecture/under-the-hood.md
+            - Asynchronous Processing: architecture/asynchronous-processing.md
+            - LlamaIndex Integration: extract_and_retrieval/document_data_extract.md
+            - Question Answering: extract_and_retrieval/querying_corpus.md
+            - Datagrid Extract: extract_and_retrieval/document_data_extract.md
+        - Frontend:
+            - Annotation Creation: architecture/components/annotator/how-annotations-are-created.md
+            - Annotator Component: architecture/components/annotator/overview.md
+        - Data Format:
+            - Page XY Data: walkthrough/advanced/pawls-token-format.md
     - Acknowledgements: acknowledgements.md
   - Walkthrough:
       - Key-Concepts: walkthrough/key-concepts.md

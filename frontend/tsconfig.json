@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "es5",
+    "types": ["@testing-library/jest-dom"],
     "lib": ["dom", "dom.iterable", "esnext", "es2020.string"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -17,5 +18,5 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src"]
+  "include": ["src", "./jest-setup.ts"]
 }

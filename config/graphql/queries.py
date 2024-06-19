@@ -16,12 +16,18 @@ from config.graphql.filters import (
     AnalyzerFilter,
     AnnotationFilter,
     AssignmentFilter,
+    ColumnFilter,
     CorpusFilter,
+    CorpusQueryFilter,
+    DatacellFilter,
     DocumentFilter,
     ExportFilter,
+    ExtractFilter,
+    FieldsetFilter,
     GremlinEngineFilter,
     LabelFilter,
     LabelsetFilter,
+    LanguageModelFilter,
     RelationshipFilter,
 )
 from config.graphql.graphene_types import (
@@ -30,10 +36,16 @@ from config.graphql.graphene_types import (
     AnnotationLabelType,
     AnnotationType,
     AssignmentType,
+    ColumnType,
+    CorpusQueryType,
     CorpusType,
+    DatacellType,
     DocumentType,
+    ExtractType,
+    FieldsetType,
     GremlinEngineType_READ,
     LabelSetType,
+    LanguageModelType,
     PageAwareAnnotationType,
     PdfPageInfoType,
     RelationshipType,
@@ -47,8 +59,15 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus
+from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document
+from opencontractserver.extracts.models import (
+    Column,
+    Datacell,
+    Extract,
+    Fieldset,
+    LanguageModel,
+)
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.types.enums import LabelType
 from opencontractserver.users.models import Assignment, UserExport, UserImport
@@ -57,7 +76,6 @@ logger = logging.getLogger(__name__)
 
 
 class Query(graphene.ObjectType):
-
     # ANNOTATION RESOLVERS #####################################
     annotations = DjangoFilterConnectionField(
         AnnotationType, filterset_class=AnnotationFilter
@@ -171,16 +189,15 @@ class Query(graphene.ObjectType):
         current_page=graphene.Int(required=False),
         page_number_list=graphene.String(required=False),
         page_containing_annotation_with_id=graphene.ID(required=False),
-        corpus_id=graphene.ID(required=True),
+        corpus_id=graphene.ID(required=False),
         document_id=graphene.ID(required=True),
         for_analysis_ids=graphene.String(required=False),
         label_type=graphene.Argument(label_type_enum),
     )
 
-    def resolve_page_annotations(self, info, document_id, corpus_id, **kwargs):
+    def resolve_page_annotations(self, info, document_id, corpus_id=None, **kwargs):
 
         doc_django_pk = from_global_id(document_id)[1]
-        corpus_django_pk = from_global_id(corpus_id)[1]
 
         document = Document.objects.get(id=doc_django_pk)
 
@@ -196,7 +213,8 @@ class Query(graphene.ObjectType):
 
         # Now build query to stuff they want to see
         q_objects = Q(document_id=doc_django_pk)
-        q_objects.add(Q(corpus_id=corpus_django_pk), Q.AND)
+        if corpus_id is not None:
+            q_objects.add(Q(corpus_id=from_global_id(corpus_id)[1]), Q.AND)
 
         # If for_analysis_ids is passed in, only show annotations from those analyses, otherwise only show human
         # annotations.
@@ -619,3 +637,175 @@ class Query(graphene.ObjectType):
                 return Analysis.objects.filter(
                     Q(creator=info.context.user) | Q(is_public=True)
                 )
+
+    language_model = relay.Node.Field(LanguageModelType)
+
+    @login_required
+    def resolve_language_model(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return LanguageModel.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return LanguageModel.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return LanguageModel.objects.get(
+                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
+            )
+
+    language_models = DjangoFilterConnectionField(
+        LanguageModelType, filterset_class=LanguageModelFilter
+    )
+
+    @login_required
+    def resolve_language_models(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return LanguageModel.objects.all()
+        elif info.context.user.is_anonymous:
+            return LanguageModel.objects.filter(Q(is_public=True))
+        else:
+            return LanguageModel.objects.filter(
+                Q(creator=info.context.user) | Q(is_public=True)
+            )
+
+    fieldset = relay.Node.Field(FieldsetType)
+
+    @login_required
+    def resolve_fieldset(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return Fieldset.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return Fieldset.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return Fieldset.objects.get(
+                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
+            )
+
+    fieldsets = DjangoFilterConnectionField(
+        FieldsetType, filterset_class=FieldsetFilter
+    )
+
+    @login_required
+    def resolve_fieldsets(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return Fieldset.objects.all()
+        elif info.context.user.is_anonymous:
+            return Fieldset.objects.filter(Q(is_public=True))
+        else:
+            return Fieldset.objects.filter(
+                Q(creator=info.context.user) | Q(is_public=True)
+            )
+
+    column = relay.Node.Field(ColumnType)
+
+    @login_required
+    def resolve_column(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return Column.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return Column.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return Column.objects.get(
+                Q(id=django_pk)
+                & (Q(fieldset__creator=info.context.user) | Q(is_public=True))
+            )
+
+    columns = DjangoFilterConnectionField(ColumnType, filterset_class=ColumnFilter)
+
+    @login_required
+    def resolve_columns(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return Column.objects.all()
+        elif info.context.user.is_anonymous:
+            return Column.objects.filter(Q(is_public=True))
+        else:
+            return Column.objects.filter(
+                Q(fieldset__creator=info.context.user) | Q(is_public=True)
+            )
+
+    extract = relay.Node.Field(ExtractType)
+
+    @login_required
+    def resolve_extract(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return Extract.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return Extract.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return Extract.objects.get(
+                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
+            )
+
+    extracts = DjangoFilterConnectionField(ExtractType, filterset_class=ExtractFilter)
+
+    @login_required
+    def resolve_extracts(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return Extract.objects.all().order_by("-created")
+        elif info.context.user.is_anonymous:
+            return Extract.objects.filter(Q(is_public=True)).order_by("-created")
+        else:
+            return Extract.objects.filter(
+                Q(creator=info.context.user) | Q(is_public=True)
+            ).order_by("-created")
+
+    corpus_query = relay.Node.Field(CorpusQueryType)
+
+    @login_required
+    def resolve_corpus_query(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return CorpusQuery.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return CorpusQuery.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return CorpusQuery.objects.get(
+                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
+            )
+
+    corpus_queries = DjangoFilterConnectionField(
+        CorpusQueryType, filterset_class=CorpusQueryFilter
+    )
+
+    @login_required
+    def resolve_corpus_queries(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return CorpusQuery.objects.all().order_by("-created")
+        elif info.context.user.is_anonymous:
+            return CorpusQuery.objects.filter(Q(is_public=True)).order_by("-created")
+        else:
+            return CorpusQuery.objects.filter(
+                Q(creator=info.context.user) | Q(is_public=True)
+            ).order_by("-created")
+
+    datacell = relay.Node.Field(DatacellType)
+
+    @login_required
+    def resolve_datacell(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return Datacell.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return Datacell.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return Datacell.objects.get(
+                Q(id=django_pk)
+                & (Q(extract__creator=info.context.user) | Q(is_public=True))
+            )
+
+    datacells = DjangoFilterConnectionField(
+        DatacellType, filterset_class=DatacellFilter
+    )
+
+    @login_required
+    def resolve_datacells(self, info, **kwargs):
+        if info.context.user.is_superuser:
+            return Datacell.objects.all()
+        elif info.context.user.is_anonymous:
+            return Datacell.objects.filter(Q(is_public=True))
+        else:
+            return Datacell.objects.filter(
+                Q(extract__creator=info.context.user) | Q(is_public=True)
+            )

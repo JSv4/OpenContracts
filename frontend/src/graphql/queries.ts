@@ -9,12 +9,16 @@ import {
   LabelSetType,
   PageInfo,
   RelationshipType,
-  Scalars,
   AnalyzerType,
   AnalysisType,
   AnnotationLabelType,
-  LabelType,
+  LanguageModelType,
+  FieldsetType,
+  ExtractType,
+  CorpusQueryType,
+  CorpusQueryTypeConnection,
 } from "./types";
+import { ExportObject } from "./types";
 
 export interface RequestDocumentsInputs {
   textSearch?: string;
@@ -109,6 +113,47 @@ export const GET_DOCUMENTS = gql`
   }
 `;
 
+export const SEARCH_DOCUMENTS = gql`
+  query (
+    $inCorpusWithId: String
+    $cursor: String
+    $limit: Int
+    $textSearch: String
+    $hasLabelWithId: String
+    $hasAnnotationsWithIds: String
+  ) {
+    documents(
+      inCorpusWithId: $inCorpusWithId
+      textSearch: $textSearch
+      hasLabelWithId: $hasLabelWithId
+      hasAnnotationsWithIds: $hasAnnotationsWithIds
+      first: $limit
+      after: $cursor
+    ) {
+      edges {
+        node {
+          id
+          title
+          description
+          backendLock
+          pdfFile
+          pawlsParseFile
+          icon
+          isPublic
+          myPermissions
+          is_selected @client
+        }
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+    }
+  }
+`;
+
 export interface GetCorpusMetadataInputs {
   metadataForCorpusId: string;
 }
@@ -129,6 +174,128 @@ export const GET_CORPUS_METADATA = gql`
           id
           text
         }
+      }
+    }
+  }
+`;
+
+export interface GetCorpusQueryDetailsInputType {
+  corpusId: string;
+}
+
+export interface GetCorpusQueryDetailsOutputType {
+  corpusQuery: CorpusQueryType;
+}
+
+export const GET_CORPUS_QUERY_DETAILS = gql`
+  query CorpusQuery($corpusId: ID!) {
+    corpusQuery(id: $corpusId) {
+      id
+      response
+      query
+      started
+      failed
+      completed
+      stacktrace
+      fullSourceList {
+        id
+        annotationLabel {
+          id
+          icon
+          color
+          description
+          text
+          labelType
+          readOnly
+        }
+        rawText
+        json
+        tokensJsons
+        document {
+          id
+          title
+          is_selected @client
+          is_open @client
+          description
+          backendLock
+          pdfFile
+          pawlsParseFile
+          icon
+        }
+      }
+    }
+  }
+`;
+
+export interface GetCorpusQueriesInput {
+  corpusId: string;
+}
+
+export interface GetCorpusQueriesOutput {
+  corpusQueries: CorpusQueryTypeConnection;
+}
+
+export const GET_CORPUS_QUERIES = gql`
+  query CorpusQueries($corpusId: ID!) {
+    corpusQueries(corpusId: $corpusId) {
+      edges {
+        node {
+          id
+          query
+          response
+          started
+          completed
+          failed
+        }
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        endCursor
+        startCursor
+      }
+    }
+  }
+`;
+
+export interface GetCorpusQueryInputType {
+  corpusId: string;
+}
+
+export interface GetCorpusQueryOutputType {
+  corpusQuery: CorpusQueryType;
+}
+
+export const GET_CORPUS_QUERY = gql`
+  query FullCorpusQuery($corpusId: ID!) {
+    corpusQuery(id: $corpusId) {
+      id
+      query
+      response
+      fullSourceList {
+        id
+        isPublic
+        myPermissions
+        annotationLabel {
+          id
+          icon
+          color
+          description
+          text
+          labelType
+          readOnly
+        }
+        boundingBox
+        page
+        rawText
+        tokensJsons
+        json
+        creator {
+          id
+          email
+        }
+        isPublic
+        myPermissions
       }
     }
   }
@@ -652,27 +819,14 @@ export const GET_ANALYSES = gql`
   }
 `;
 
-export interface RequestAnnotatorDataForDocumentInputs {
+export interface RequestAnnotatorDataForDocumentInCorpusInputs {
   selectedDocumentId: string;
   selectedCorpusId: string;
+  preloadAnnotations: boolean;
   forAnalysisIds?: string; // value should be comma separated ID strings
 }
 
-export interface PageAwareAnnotationType {
-  pdfPageInfo: {
-    pageCount: number;
-    currentPage: number;
-    corpusId: string;
-    documentId: string;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-    labelType: LabelType;
-    forAnalysisIds: string;
-  };
-  pageAnnotations: ServerAnnotationType[];
-}
-
-export interface RequestAnnotatorDataForDocumentOutputs {
+export interface RequestAnnotatorDataForDocumentInCorpusOutputs {
   existingTextAnnotations: ServerAnnotationType[];
   existingDocLabelAnnotations: ServerAnnotationType[];
   existingRelationships: RelationshipType[];
@@ -687,11 +841,12 @@ export interface RequestAnnotatorDataForDocumentOutputs {
   };
 }
 
-export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
+export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT_IN_CORPUS = gql`
   query (
     $selectedDocumentId: ID!
     $selectedCorpusId: ID!
     $forAnalysisIds: String
+    $preloadAnnotations: Boolean!
   ) {
     selectedAnalyzersSpanAnnotations: pageAnnotations(
       documentId: $selectedDocumentId
@@ -760,7 +915,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
     annotationLabels(
       usedInAnalysisIds: $forAnalysisIds
       labelType: TOKEN_LABEL
-    ) {
+    ) @skip(if: $preloadAnnotations) {
       totalCount
       edges {
         node {
@@ -782,7 +937,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
       corpusId: $selectedCorpusId
       forAnalysisIds: $forAnalysisIds
       labelType: TOKEN_LABEL
-    ) {
+    ) @skip(if: $preloadAnnotations) {
       id
       isPublic
       myPermissions
@@ -818,7 +973,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
       documentId: $selectedDocumentId
       corpusId: $selectedCorpusId
       labelType: DOC_TYPE_LABEL
-    ) {
+    ) @skip(if: $preloadAnnotations) {
       id
       isPublic
       myPermissions
@@ -847,7 +1002,7 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
     existingRelationships: bulkDocRelationshipsInCorpus(
       documentId: $selectedDocumentId
       corpusId: $selectedCorpusId
-    ) {
+    ) @skip(if: $preloadAnnotations) {
       id
       modified
       sourceAnnotations {
@@ -902,22 +1057,86 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT = gql`
   }
 `;
 
+export interface RequestPageAnnotationDataInputs {
+  selectedDocumentId: string;
+}
+
+export interface RequestPageAnnotationDataOutputs {
+  existingTextAnnotations: ServerAnnotationType[];
+  existingDocLabelAnnotations: ServerAnnotationType[];
+  existingRelationships: RelationshipType[];
+  selectedAnalyzersWithLabels: {
+    edges: {
+      node: AnalyzerType;
+    }[];
+  };
+  corpus: {
+    id: string;
+    labelSet: LabelSet;
+  };
+}
+
+export const REQUEST_PAGE_ANNOTATION_DATA = gql`
+  query ($selectedDocumentId: ID!) {
+    selectedAnalyzersSpanAnnotations: pageAnnotations(
+      documentId: $selectedDocumentId
+      labelType: TOKEN_LABEL
+    ) {
+      pdfPageInfo {
+        pageCount
+        currentPage
+        hasNextPage
+        corpusId
+        documentId
+        labelType
+        forAnalysisIds
+      }
+      pageAnnotations {
+        id
+        isPublic
+        myPermissions
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+        }
+        boundingBox
+        page
+        rawText
+        tokensJsons
+        json
+        sourceNodeInRelationships {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+        targetNodeInRelationships {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+        creator {
+          id
+          email
+        }
+        isPublic
+        myPermissions
+      }
+    }
+  }
+`;
+
 export interface GetExportsInputs {
   name_Contains?: string;
   orderByCreated?: string;
   orderByStarted?: string;
   orderByFinished?: string;
-}
-
-export interface ExportObject {
-  id: string;
-  name: string;
-  finished: Scalars["DateTime"];
-  started: Scalars["DateTime"];
-  created: Scalars["DateTime"];
-  errors: string;
-  backendLock: boolean;
-  file: string;
 }
 
 export interface GetExportsOutputs {
@@ -962,6 +1181,336 @@ export const GET_EXPORTS = gql`
           errors
           backendLock
           file
+        }
+      }
+    }
+  }
+`;
+
+export interface GetExportInputType {
+  id: string;
+}
+
+export interface GetExportOutputType {
+  extract: ExtractType;
+}
+
+export const GET_EXPORT = gql`
+  query getExtract($id: ID!) {
+    extract(id: $id) {
+      id
+      name
+      fullDatacellList {
+        id
+        isPublic
+      }
+      fieldset {
+        fullColumnList {
+          id
+          instructions
+          extractIsList
+          limitToLabel
+          languageModel {
+            id
+            model
+          }
+          agentic
+          matchText
+          query
+        }
+      }
+    }
+  }
+`;
+
+export interface GetLanguageModelsOutputs {
+  languageModels: {
+    pageInfo: PageInfo;
+    edges: {
+      node: LanguageModelType;
+    }[];
+  };
+}
+
+export const GET_LANGUAGEMODELS = gql`
+  query GetLanguageModels {
+    languageModels {
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        endCursor
+        startCursor
+      }
+      edges {
+        node {
+          id
+          model
+        }
+      }
+    }
+  }
+`;
+
+export interface GetFieldsetsInputs {
+  searchText?: string;
+}
+
+export interface GetFieldsetsOutputs {
+  fieldsets: {
+    pageInfo: PageInfo;
+    edges: {
+      node: FieldsetType;
+    }[];
+  };
+}
+
+export const REQUEST_GET_FIELDSETS = gql`
+  query GetFieldsets($searchText: String) {
+    fieldsets(name_Contains: $searchText) {
+      edges {
+        node {
+          id
+          creator {
+            id
+            username
+          }
+          name
+          description
+          columns {
+            edges {
+              node {
+                id
+                query
+                matchText
+                outputType
+                limitToLabel
+                instructions
+                extractIsList
+                languageModel {
+                  id
+                  model
+                }
+                agentic
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export interface GetFieldsetOutputs {
+  fieldset: FieldsetType;
+}
+
+export const GET_FIELDSET = gql`
+  query GetFieldset($id: ID!) {
+    fieldset(id: $id) {
+      id
+      creator {
+        id
+        username
+      }
+      name
+      description
+      columns {
+        id
+        query
+        matchText
+        outputType
+        limitToLabel
+        instructions
+        extractIsList
+        languageModel {
+          id
+          model
+        }
+        agentic
+      }
+    }
+  }
+`;
+
+export interface RequestGetExtractInput {
+  id: string;
+}
+
+export interface RequestGetExtractOutput {
+  extract: ExtractType;
+}
+
+export const REQUEST_GET_EXTRACT = gql`
+  query GetExtract($id: ID!) {
+    extract(id: $id) {
+      id
+      corpus {
+        id
+        title
+      }
+      name
+      fieldset {
+        id
+        name
+        fullColumnList {
+          id
+          name
+          query
+          instructions
+          matchText
+          limitToLabel
+          agentic
+          languageModel {
+            id
+            model
+          }
+        }
+      }
+      creator {
+        id
+        username
+      }
+      created
+      started
+      finished
+      fullDocumentList {
+        id
+        title
+        description
+        pageCount
+      }
+      fullDatacellList {
+        id
+        column {
+          id
+        }
+        document {
+          id
+          title
+        }
+        fullSourceList {
+          id
+          isPublic
+          myPermissions
+          annotationLabel {
+            id
+            text
+            color
+            icon
+            description
+          }
+          document {
+            id
+            pdfFile
+            pawlsParseFile
+          }
+          boundingBox
+          page
+          rawText
+          tokensJsons
+          json
+          sourceNodeInRelationships {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+          targetNodeInRelationships {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+          creator {
+            id
+            email
+          }
+          isPublic
+          myPermissions
+        }
+        data
+        dataDefinition
+        started
+        completed
+        failed
+        correctedData
+        stacktrace
+        rejectedBy {
+          email
+        }
+        approvedBy {
+          email
+        }
+      }
+    }
+  }
+`;
+
+export interface GetExtractsInput {
+  name_Contains?: string;
+}
+
+export interface GetExtractsOutput {
+  extracts: {
+    pageInfo: PageInfo;
+    edges: {
+      node: ExtractType;
+    }[];
+  };
+}
+
+export const REQUEST_GET_EXTRACTS = gql`
+  query GetExtracts($searchText: String) {
+    extracts(name_Contains: $searchText) {
+      edges {
+        node {
+          id
+          corpus {
+            id
+            title
+          }
+          name
+          fieldset {
+            id
+            name
+            columns {
+              edges {
+                node {
+                  id
+                  query
+                }
+              }
+            }
+          }
+          creator {
+            id
+            username
+          }
+          created
+          started
+          finished
+          extractedDatacells {
+            edges {
+              node {
+                id
+                column {
+                  id
+                }
+                document {
+                  id
+                  title
+                }
+                data
+                dataDefinition
+                started
+                completed
+                failed
+                stacktrace
+              }
+            }
+          }
         }
       }
     }

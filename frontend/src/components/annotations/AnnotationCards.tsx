@@ -68,6 +68,7 @@ export const AnnotationCards = ({
 
   const handleUpdate = () => {
     if (!loading && pageInfo?.hasNextPage) {
+      console.log("Fetching more annotation cards...");
       fetchMore({
         variables: {
           limit: 20,

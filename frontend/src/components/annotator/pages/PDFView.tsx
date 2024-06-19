@@ -156,7 +156,7 @@ export const PDFView = ({
     Record<number, PDFPageInfo>
   >([]);
 
-  const [showStructuralLabels, setShowStructuralLabels] = useState(false);
+  const [showStructuralLabels, setShowStructuralLabels] = useState(true);
   const [activeSpanLabel, setActiveSpanLabel] = useState<
     AnnotationLabelType | undefined
   >(humanSpanLabelChoices.length > 0 ? humanSpanLabelChoices[0] : undefined);

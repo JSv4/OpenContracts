@@ -1,6 +1,6 @@
 import React, { ReactNode, useEffect, useState } from "react";
 import { Button, Modal, Icon } from "semantic-ui-react";
-import _ from "lodash";
+import _, { update } from "lodash";
 import { CRUDWidget } from "./CRUDWidget";
 import { CRUDProps, LooseObject } from "../../types";
 
@@ -47,17 +47,23 @@ export function CRUDModal({
 
   const can_write = mode !== "VIEW" && (mode === "CREATE" || mode === "EDIT");
 
-  // console.log("----------------------------")
+  // console.log("---- CRUD MODAL ----");
   // console.log("old_instance", old_instance);
   // console.log("instance_obj", instance_obj);
 
   useEffect(() => {
+    console.log("CRUD updated fields obj", updated_fields_obj);
+  }, [updated_fields_obj]);
+
+  useEffect(() => {
     setInstanceObj(old_instance ? old_instance : {});
-    setUpdatedFields({ id: old_instance?.id ? old_instance.id : -1 });
+    if (old_instance.length >= 0 && old_instance.hasOwnProperty("id")) {
+      setUpdatedFields({ id: old_instance.id });
+    }
   }, [old_instance]);
 
   const handleModelChange = (updated_fields: LooseObject) => {
-    // console.log("HandleModelChange: ", updated_fields);
+    console.log("HandleModelChange: ", updated_fields);
     setInstanceObj((instance_obj) => ({ ...instance_obj, ...updated_fields }));
     setUpdatedFields((updated_fields_obj) => ({
       ...updated_fields_obj,
@@ -92,8 +98,14 @@ export function CRUDModal({
   }
 
   return (
-    <Modal closeIcon open={open} onClose={() => onClose()}>
-      <Modal.Content>
+    <Modal
+      centered
+      size="large"
+      closeIcon
+      open={open}
+      onClose={() => onClose()}
+    >
+      <Modal.Content scrolling>
         <CRUDWidget
           mode={mode}
           instance={instance_obj}
@@ -118,9 +130,13 @@ export function CRUDModal({
           <Button
             color="green"
             inverted
-            onClick={() =>
-              onSubmit(mode === "EDIT" ? updated_fields_obj : instance_obj)
-            }
+            onClick={() => {
+              console.log(
+                "Submitting",
+                mode === "EDIT" ? updated_fields_obj : instance_obj
+              );
+              onSubmit(mode === "EDIT" ? updated_fields_obj : instance_obj);
+            }}
           >
             <Icon name="checkmark" /> {mode === "EDIT" ? "Update" : "Create"}
           </Button>

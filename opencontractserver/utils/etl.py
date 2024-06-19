@@ -3,11 +3,12 @@ import io
 import json
 import logging
 import os
-from typing import Any, cast
+import uuid
+from typing import Any
 
-import pydantic
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
+from pydantic import TypeAdapter, ValidationError, create_model
 from typing_extensions import TypedDict
 
 from opencontractserver.annotations.models import Annotation
@@ -28,7 +29,6 @@ User = get_user_model()
 
 
 def build_label_lookups(corpus_id: str) -> LabelLookupPythonType:
-
     logger.info(f"build_label_lookups for corpus id #{corpus_id}")
 
     doc_labels = {}
@@ -84,7 +84,6 @@ def build_label_lookups(corpus_id: str) -> LabelLookupPythonType:
 def build_document_export(
     label_lookups: LabelLookupPythonType, doc_id: int, corpus_id: int
 ) -> tuple[str, str, OpenContractDocExport | None, Any, Any]:
-
     """
     Fairly complex function to burn in the annotations for a given corpus on a given doc. This will alter the PDF
     and add highlight and labels. It's still a bit ugly, but it works.
@@ -308,16 +307,13 @@ def build_document_export(
 
 
 def is_dict_instance_of_typed_dict(instance: dict, typed_dict: type[TypedDict]):
-
     # validate with pydantic
     try:
-        cast(
-            typed_dict,
-            pydantic.create_model_from_typeddict(typed_dict)(**instance).dict(),
-        )
+
+        TypeAdapter(typed_dict).validate_python(instance)
         return True
 
-    except pydantic.ValidationError as exc:
+    except ValidationError as exc:
         print(f"ERROR: Invalid schema: {exc}")
         return False
 
@@ -331,3 +327,79 @@ def pawls_bbox_to_funsd_box(
         pawls_bbox["right"],
         pawls_bbox["bottom"],
     )
+
+
+def parse_model_or_primitive(value: str) -> type:
+    """
+    Parse a string value as either a Pydantic model or a primitive type.
+
+    This function attempts to parse the given string value as a Pydantic model using the
+    `parse_raw_as` function from the `pydantic` module. If the parsing succeeds, it means
+    the value represents a valid Pydantic model, and the function returns the parsed model.
+
+    If parsing as a Pydantic model fails with a `ValidationError`, the function then checks
+    if the value is one of the supported primitive type names ("int", "float", "str", "bool").
+    If it is, the function uses `eval` to evaluate the primitive type name and returns the
+    corresponding type object.
+
+    If the value is neither a valid model nor a supported primitive type name, the function
+    raises a `ValueError` indicating an invalid model or primitive type.
+
+    Args:
+        value (str): The string value to parse as either a Pydantic model or a primitive type.
+
+    Returns:
+        The parsed Pydantic model if the value represents a valid model, or the corresponding
+        primitive type object if the value is a supported primitive type name.
+
+    Raises:
+        ValueError: If the value is neither a valid Pydantic model nor a supported primitive
+                    type name.
+
+    Example:        model_string = '''
+        class User(BaseModel):
+            name: str
+            age: int
+            email: str
+        '''
+        model = parse_model_or_primitive(model_string)
+        print(type(model))  # Output: <class 'pydantic.main.BaseModel'>
+
+        primitive_type_string = "int"
+        primitive_type = parse_model_or_primitive(primitive_type_string)
+        print(primitive_type)  # Output: <class 'int'>
+    """
+    if value == "int":
+        return int
+    elif value == "float":
+        return float
+    elif value == "str":
+        return str
+    elif value == "bool":
+        return bool
+    elif ":" in value:
+        try:
+            props = {}
+            lines = value.split("\n")
+            for index, line in enumerate(lines):
+
+                line = line.strip()
+                if line == "":
+                    continue
+
+                if "=" in line:
+                    raise ValueError("We don't support default values, sorry.")
+                elif ":" not in line:
+                    raise ValueError("Every property needs to be typed!")
+                parts = line.split(":")
+                if len(parts) != 2:
+                    raise ValueError(f"There is an error in line {index+1} your model")
+                props[parts[0].strip()] = (parts[1].strip(), ...)
+
+            model = create_model(uuid.uuid4().__str__(), **props)
+            return model
+        except Exception as e:
+            raise ValueError(f"Failed to parse model from value due to error: {e}")
+
+    else:
+        raise ValueError(f"Invalid model or primitive type: {value}")

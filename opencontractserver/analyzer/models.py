@@ -113,6 +113,16 @@ class AnalyzerGroupObjectPermission(GroupObjectPermissionBase):
 
 # Create your models here.
 class Analysis(BaseOCModel):
+    """
+    Okay, this is duplicative of new Extracts objects... I can probably make this pull double duty
+    BUT I think the more expeditious approach here is to just start fresh and leave this for now but
+    Eventually replace it or merge the two concepts.
+
+    For now, the distinction is extracts are not annotating the documents directly but rather tracking where
+    information is coming from - so we can still jump into the document - but storing extracted information for
+    export as a csv.
+    """
+
     class Meta:
         permissions = (
             ("create_analysis", "create Analysis"),

@@ -15,7 +15,10 @@ import {
   ServerAnnotation,
 } from "./context";
 import { Token } from "../types";
-import { PageTokenMapBuilderProps, PageTokenMapProps } from "./Annotator";
+import {
+  PageTokenMapBuilderProps,
+  PageTokenMapProps,
+} from "./CorpusDocumentAnnotator";
 
 /**
  * Query string values can be strings or an array of strings. This utility

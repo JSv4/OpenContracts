@@ -5,13 +5,13 @@ from rest_framework import serializers
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.extracts.models import Column, Extract
 from opencontractserver.shared.fields import PDFBase64File
 
 User = get_user_model()
 
 
 class DocumentSerializer(serializers.ModelSerializer):
-
     pdf_file = PDFBase64File(required=False)
 
     class Meta:
@@ -21,7 +21,6 @@ class DocumentSerializer(serializers.ModelSerializer):
 
 
 class CorpusSerializer(serializers.ModelSerializer):
-
     icon = Base64ImageField(required=False)
 
     class Meta:
@@ -38,8 +37,47 @@ class CorpusSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
-class LabelsetSerializer(serializers.ModelSerializer):
+class ExtractSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Extract
+        fields = [
+            "id",
+            "corpus",
+            "name",
+            "fieldset",
+            "creator",
+            "creator_id",
+            "created",
+            "started",
+            "finished",
+        ]
+        read_only_fields = ["id", "created"]
 
+
+class ColumnSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Column
+        fields = [
+            "id",
+            "name",
+            "fieldset",
+            "fieldset_id",
+            "language_model",
+            "language_model_id",
+            "query",
+            "match_text",
+            "output_type",
+            "limit_to_label",
+            "instructions",
+            "language_model_id",
+            "agentic",
+            "extract_is_list",
+            "must_contain_text",
+        ]
+        read_only_fields = ["id", "created"]
+
+
+class LabelsetSerializer(serializers.ModelSerializer):
     icon = Base64ImageField(required=False)
 
     class Meta:
@@ -60,12 +98,12 @@ class AnnotationLabelSerializer(serializers.ModelSerializer):
             "icon",
             "text",
             "creator_id",
+            "read_only",
         ]
         read_only_fields = ["id"]
 
 
 class AnnotationSerializer(serializers.ModelSerializer):
-
     """
     Due to pydantic being a pain about having a 'json' field, this should ONLY
     be used to deserialize data into a django obj (where we can have a json field).

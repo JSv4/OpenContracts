@@ -23,4 +23,10 @@ export const header_menu_items = [
     protected: false,
     id: "annotation_menu_button",
   },
+  {
+    title: "Extracts",
+    route: "/extracts",
+    protected: false,
+    id: "extract_menu_button",
+  },
 ];

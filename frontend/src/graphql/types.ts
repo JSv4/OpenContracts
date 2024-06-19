@@ -1170,3 +1170,132 @@ export type AnalyzerManifestType = {
   text_labels: AnnotationLabelPythonType[];
   label_set: OpenContractsLabelSetType;
 };
+
+export interface LanguageModelType extends Node {
+  id: string;
+  model: string;
+}
+
+export interface FieldsetType extends Node {
+  creator: UserType;
+  name: string;
+  description: string;
+  columns: ColumnTypeEdge;
+  fullColumnList?: ColumnType[];
+}
+
+export interface ColumnType extends Node {
+  name: string;
+  fieldset?: FieldsetType;
+  query?: string;
+  matchText?: string;
+  mustContainText?: string;
+  outputType: string;
+  limitToLabel?: string;
+  instructions?: string;
+  languageModel?: LanguageModelType;
+  agentic?: boolean;
+  extractIsList?: boolean;
+  fieldsetId?: string;
+  languageModelId?: string;
+}
+
+export interface ColumnTypeEdge {
+  __typename?: "ColumnTypeEdge";
+  pageInfo?: PageInfo;
+  edges: {
+    node: ColumnType;
+  }[];
+}
+
+export type DatacellTypeConnection = {
+  __typename?: "DatacellTypeConnection";
+  pageInfo: PageInfo;
+  edges: Array<Maybe<DatacellTypeEdge>>;
+  totalCount?: Maybe<Scalars["Int"]>;
+};
+
+export type DatacellTypeEdge = {
+  __typename?: "DatacellTypeEdge";
+  node?: Maybe<DatacellType>;
+  cursor: Scalars["String"];
+};
+
+export interface ExtractType extends Node {
+  corpus: CorpusType;
+  name: string;
+  fieldset: FieldsetType;
+  creator: UserType;
+  created: string;
+  started?: Maybe<string>;
+  finished?: Maybe<string>;
+  stacktrace?: Maybe<string>;
+  documents?: DocumentType[];
+  extractedDatacells?: DatacellTypeConnection;
+  fullDatacellList?: DatacellType[];
+  fullDocumentList?: DocumentType[];
+}
+
+export type CorpusQueryTypeConnection = {
+  __typename?: "CorpusQueryTypeConnection";
+  pageInfo: PageInfo;
+  edges: Array<Maybe<CorpusQueryTypeEdge>>;
+  totalCount?: Maybe<Scalars["Int"]>;
+};
+
+export type CorpusQueryTypeEdge = {
+  __typename?: "CorpusQueryTypeEdge";
+  node?: Maybe<CorpusQueryType>;
+  cursor: Scalars["String"];
+};
+
+export interface CorpusQueryType extends Node {
+  query: string;
+  corpus: CorpusType;
+  fullSourceList: ServerAnnotationType[];
+  sources: AnnotationTypeConnection;
+  response: Maybe<string>;
+  started: Maybe<string>;
+  completed: Maybe<string>;
+  failed: Maybe<string>;
+  stacktrace: Maybe<string>;
+}
+
+export interface DatacellType extends Node {
+  extract: ExtractType;
+  column: ColumnType;
+  document: DocumentType;
+  data: any;
+  dataDefinition: string;
+  started?: Maybe<string>;
+  completed?: Maybe<string>;
+  failed?: Maybe<string>;
+  rejectedBy: Maybe<UserType>;
+  approvedBy: Maybe<UserType>;
+  correctedData: any;
+  fullSourceList?: ServerAnnotationType[];
+  sources?: AnnotationTypeConnection;
+}
+export interface ExportObject {
+  id: string;
+  name: string;
+  finished: Scalars["DateTime"];
+  started: Scalars["DateTime"];
+  created: Scalars["DateTime"];
+  errors: string;
+  backendLock: boolean;
+  file: string;
+}
+export interface PageAwareAnnotationType {
+  pdfPageInfo: {
+    pageCount: number;
+    currentPage: number;
+    corpusId: string;
+    documentId: string;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    labelType: LabelType;
+    forAnalysisIds: string;
+  };
+  pageAnnotations: ServerAnnotationType[];
+}

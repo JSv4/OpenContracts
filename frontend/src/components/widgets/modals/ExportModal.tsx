@@ -6,11 +6,11 @@ import { ExportList } from "../../exports/ExportList";
 import { LooseObject } from "../../types";
 import { useLazyQuery, useReactiveVar } from "@apollo/client";
 import {
-  ExportObject,
   GetExportsInputs,
   GetExportsOutputs,
   GET_EXPORTS,
 } from "../../../graphql/queries";
+import { ExportObject } from "../../../graphql/types";
 import { exportSearchTerm, showExportModal } from "../../../graphql/cache";
 import { toast } from "react-toastify";
 

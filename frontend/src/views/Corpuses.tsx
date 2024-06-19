@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Tab } from "semantic-ui-react";
+import { Button, Tab } from "semantic-ui-react";
 import _, { update } from "lodash";
 import { toast } from "react-toastify";
 import {
@@ -51,6 +51,9 @@ import {
   selectedAnalysesIds,
   displayAnnotationOnAnnotatorLoad,
   exportingCorpus,
+  showQueryViewState,
+  openedQueryObj,
+  onlyDisplayTheseAnnotations,
 } from "../graphql/cache";
 import {
   UPDATE_CORPUS,
@@ -82,7 +85,7 @@ import {
 } from "../graphql/queries";
 import { CorpusType, LabelType } from "../graphql/types";
 import { LooseObject } from "../components/types";
-import { Annotator } from "../components/annotator/Annotator";
+import { CorpusDocumentAnnotator } from "../components/annotator/CorpusDocumentAnnotator";
 import { toBase64 } from "../utils/files";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
 import { CorpusAnnotationCards } from "../components/annotations/CorpusAnnotationCards";
@@ -93,6 +96,9 @@ import { FilterToAnalysesSelector } from "../components/widgets/model-filters/Fi
 import useWindowDimensions from "../components/hooks/WindowDimensionHook";
 import { FilterToMetadataSelector } from "../components/widgets/model-filters/FilterToMetadataSelector";
 import { SelectExportTypeModal } from "../components/widgets/modals/SelectExportTypeModal";
+import { CorpusQueryList } from "../components/queries/CorpusQueryList";
+import { NewQuerySearch } from "../components/queries/NewQuerySearch";
+import { ViewQueryResultsModal } from "../components/widgets/modals/ViewQueryResultsModal";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
@@ -105,6 +111,7 @@ export const Corpuses = () => {
   const selected_metadata_id_to_filter_on = useReactiveVar(
     selectedMetaAnnotationId
   );
+
   const selected_analyes = useReactiveVar(selectedAnalyses);
   const selected_document_ids = useReactiveVar(selectedDocumentIds);
   const document_search_term = useReactiveVar(documentSearchTerm);
@@ -117,6 +124,7 @@ export const Corpuses = () => {
   const opened_corpus = useReactiveVar(openedCorpus);
   const exporting_corpus = useReactiveVar(exportingCorpus);
   const opened_document = useReactiveVar(openedDocument);
+  const filter_to_label_id = useReactiveVar(filterToLabelId);
   const opened_to_annotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
   const show_selected_annotation_only = useReactiveVar(
     showSelectedAnnotationOnly
@@ -125,10 +133,11 @@ export const Corpuses = () => {
     showAnnotationBoundingBoxes
   );
   const show_annotation_labels = useReactiveVar(showAnnotationLabels);
-  const filter_to_label_id = useReactiveVar(filterToLabelId);
 
   const auth_token = useReactiveVar(authToken);
   const annotation_search_term = useReactiveVar(annotationContentSearchTerm);
+  const show_query_view_state = useReactiveVar(showQueryViewState);
+  const opened_query_obj = useReactiveVar(openedQueryObj);
 
   const location = useLocation();
 
@@ -310,10 +319,11 @@ export const Corpuses = () => {
     if (location.pathname === "/corpuses") {
       refetchCorpuses();
     }
+    showQueryViewState("ASK");
   }, [location]);
 
   useEffect(() => {
-    if (!opened_corpus_id) {
+    if (!opened_corpus_id || opened_corpus_id === null) {
       refetchCorpuses();
     } else {
       fetchMetadata({ variables: { metadataForCorpusId: opened_corpus_id } });
@@ -557,8 +567,71 @@ export const Corpuses = () => {
     },
   ];
 
-  let content = <></>;
+  // Load our query view components. Show either ASK or VIEW component in the tab depending on global state setting.
+  if (opened_corpus_id) {
+    let query_view = <></>;
+    if (show_query_view_state === "ASK") {
+      query_view = (
+        <>
+          <div style={{ position: "absolute", top: "1rem", right: "1rem" }}>
+            <Button
+              size="mini"
+              primary
+              content="Previous Queries"
+              icon="left arrow"
+              labelPosition="left"
+              onClick={() => showQueryViewState("VIEW")}
+            />
+          </div>
+          <NewQuerySearch corpus_id={opened_corpus_id} />;
+        </>
+      );
+    } else {
+      query_view = (
+        <div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "flex-end",
+              width: "100%",
+            }}
+          >
+            <div>
+              <Button
+                size="mini"
+                primary
+                content="New Question"
+                icon="question"
+                labelPosition="left"
+                onClick={() => showQueryViewState("ASK")}
+                style={{ margin: "1rem" }}
+              />
+            </div>
+          </div>
+          <CorpusQueryList opened_corpus_id={opened_corpus_id} />
+        </div>
+      );
+    }
 
+    panes = [
+      {
+        menuItem: {
+          key: "query",
+          icon: "search",
+          content: use_mobile_layout ? "" : "Query",
+        },
+        render: () => (
+          <Tab.Pane style={{ height: "100%", overflowY: "scroll" }}>
+            {query_view}
+          </Tab.Pane>
+        ),
+      },
+    ].concat(panes);
+  }
+
+  let content = <></>;
+  // TODO - move <Annotator/> to root of <App>
   // These else if statements should really be broken into separate components.
   //console.log(`Opened_corpus`, opened_corpus, 'opened_document', opened_document);
 
@@ -588,11 +661,13 @@ export const Corpuses = () => {
     // console.log("Set content to tab");
     content = (
       <div
+        className="CorpusesTabDiv"
         style={{
           display: "flex",
           flexDirection: "row",
           justifyContent: "center",
           height: "100%",
+          overflowY: "hidden",
           ...(use_mobile_layout
             ? {
                 marginLeft: "5px",
@@ -621,9 +696,9 @@ export const Corpuses = () => {
     opened_document !== null &&
     opened_document !== undefined
   ) {
-    // console.log("Reset Annotator ref");
+    console.log("Show annotator");
     content = (
-      <Annotator
+      <CorpusDocumentAnnotator
         open={Boolean(opened_document)}
         onClose={() => {
           openedDocument(null);
@@ -700,7 +775,15 @@ export const Corpuses = () => {
           ) : (
             <></>
           )}
-
+          {opened_query_obj ? (
+            <ViewQueryResultsModal
+              query_id={opened_query_obj.id}
+              open={true}
+              onClose={() => openedQueryObj(null)}
+            />
+          ) : (
+            <></>
+          )}
           {corpus_to_view !== null ? (
             <CRUDModal
               open={corpus_to_view !== null}

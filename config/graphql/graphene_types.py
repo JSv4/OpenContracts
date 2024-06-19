@@ -4,6 +4,7 @@ import graphene
 from django.contrib.auth import get_user_model
 from graphene import relay
 from graphene.types.generic import GenericScalar
+from graphene_django import DjangoObjectType
 from graphene_django import DjangoObjectType as ModelType
 from graphene_django.filter import DjangoFilterConnectionField
 from graphql_relay import from_global_id
@@ -18,8 +19,15 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus
+from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document
+from opencontractserver.extracts.models import (
+    Column,
+    Datacell,
+    Extract,
+    Fieldset,
+    LanguageModel,
+)
 from opencontractserver.users.models import Assignment, UserExport, UserImport
 
 User = get_user_model()
@@ -66,7 +74,6 @@ class AnnotationInputType(AnnotatePermissionsForReadMixin, graphene.InputObjectT
 
 
 class AnnotationType(AnnotatePermissionsForReadMixin, ModelType):
-
     json = GenericScalar()
 
     class Meta:
@@ -118,7 +125,6 @@ class AnnotationLabelType(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class LabelSetType(AnnotatePermissionsForReadMixin, ModelType):
-
     annotation_labels = DjangoFilterConnectionField(
         AnnotationLabelType, filterset_class=LabelFilter
     )
@@ -172,7 +178,6 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
-
     all_annotation_summaries = graphene.List(
         AnnotationType,
         analysis_id=graphene.ID(),
@@ -243,7 +248,6 @@ class UserExportType(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class AnalyzerType(AnnotatePermissionsForReadMixin, ModelType):
-
     analyzer_id = graphene.String()
 
     def resolve_analyzer_id(self, info):
@@ -283,5 +287,74 @@ class GremlinEngineType_WRITE(AnnotatePermissionsForReadMixin, ModelType):
 class AnalysisType(AnnotatePermissionsForReadMixin, ModelType):
     class Meta:
         model = Analysis
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+
+class LanguageModelType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    class Meta:
+        model = LanguageModel
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+
+class ColumnType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    class Meta:
+        model = Column
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+
+class FieldsetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    full_column_list = graphene.List(ColumnType)
+
+    class Meta:
+        model = Fieldset
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+    def resolve_full_column_list(self, info):
+        return self.columns.all()
+
+
+class DatacellType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+
+    data = GenericScalar()
+    full_source_list = graphene.List(AnnotationType)
+
+    def resolve_full_source_list(self, info):
+        return self.sources.all()
+
+    class Meta:
+        model = Datacell
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+
+class ExtractType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    full_datacell_list = graphene.List(DatacellType)
+    full_document_list = graphene.List(DocumentType)
+
+    class Meta:
+        model = Extract
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+    def resolve_full_datacell_list(self, info):
+        return self.extracted_datacells.all()
+
+    def resolve_full_document_list(self, info):
+        return self.documents.all()
+
+
+class CorpusQueryType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+
+    full_source_list = graphene.List(AnnotationType)
+
+    def resolve_full_source_list(self, info):
+        return self.sources.all()
+
+    class Meta:
+        model = CorpusQuery
         interfaces = [relay.Node]
         connection_class = CountableConnection

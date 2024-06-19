@@ -130,7 +130,7 @@ export const Login = () => {
                   <Header.Subheader
                     style={{ marginTop: ".25em", fontSize: ".65em" }}
                   >
-                    The Open Contract Labeling Platform
+                    The Open Contract Analytics Platform
                   </Header.Subheader>
                 </Header>
               </div>

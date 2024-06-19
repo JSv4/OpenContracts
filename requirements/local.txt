@@ -14,6 +14,7 @@ pytest-cov==4.0.0  # https://github.com/pytest-dev/pytest-cov
 pytest-sugar==0.9.5  # https://github.com/Frozenball/pytest-sugar
 djangorestframework-stubs==1.8.0  # https://github.com/typeddjango/djangorestframework-stubs
 responses==0.22.0  # https://github.com/getsentry/responses
+vcrpy==6.0.1  # https://vcrpy.readthedocs.io/en/latest/
 
 # Profiling
 # ------------------------------------------------------------------------------
@@ -33,7 +34,7 @@ coverage==6.5.0  # https://github.com/nedbat/coveragepy
 black==22.10.0  # https://github.com/psf/black
 pylint-django==2.5.3  # https://github.com/PyCQA/pylint-django
 pylint-celery==0.3  # https://github.com/PyCQA/pylint-celery
-pre-commit==2.20.0  # https://github.com/pre-commit/pre-commit
+pre-commit==3.7.1  # https://github.com/pre-commit/pre-commit
 
 # Django
 # ------------------------------------------------------------------------------

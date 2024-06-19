@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.test import TestCase
+from django.test.utils import override_settings
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.documents.models import Document
@@ -43,6 +44,7 @@ class NlmIngestorTestCase(TestCase):
                 backend_lock=True,
             )
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @responses.activate
     def test_load_nlm_ingested_doc(self):
 
@@ -56,7 +58,7 @@ class NlmIngestorTestCase(TestCase):
 
         # Run ingest pipeline SYNCHRONOUS and, with @responses.activate decorator, no API call ought to go out to
         # nlm-ingestor host
-        nlm_ingest_pdf.s(user_id=self.user.id, doc_id=self.doc.id).apply().get()
+        nlm_ingest_pdf.delay(user_id=self.user.id, doc_id=self.doc.id)
 
         # Let's make sure we have right # of annotations + labels in database
         assert Annotation.objects.all().count() == 27

@@ -14,6 +14,11 @@ import {
   LabelSetType,
   LabelDisplayBehavior,
   AnalysisType,
+  ExtractType,
+  FieldsetType,
+  LanguageModelType,
+  ColumnType,
+  CorpusQueryType,
 } from "./types";
 
 export const mergeArrayByIdFieldPolicy: FieldPolicy<Reference[]> = {
@@ -64,27 +69,6 @@ export const cache = new InMemoryCache({
     PageAwareAnnotationType: {
       fields: {
         pageAnnotations: {
-          // merge: (existing: Reference[] = [], incoming: Reference[] = [], { readField }) => {
-
-          //   console.log("Attempt merge");
-
-          //   const merged: any[] = existing ? existing.slice(0) : [];
-          //   const existing_ids = existing.map((item) => readField<string>('id', item))
-
-          //   incoming.forEach((incoming_annotation) => {
-          //     const incoming_item_id = readField<string>('id', incoming_annotation);
-          //     if (!existing_ids.includes(incoming_item_id)) {
-          //       console.log("New id detected...", incoming_item_id);
-          //       merged.push(incoming_annotation);
-
-          //     }
-          //   })
-
-          //   console.log("Cache - incoming", incoming, "existing", existing, "merged", merged);
-
-          //   return merged;
-
-          // },
           keyArgs: ["documentId", "corpusId", "forAnalysisIds", "labelType"],
         },
       },
@@ -156,6 +140,9 @@ export const cache = new InMemoryCache({
         labelsets: relayStylePagination(),
         annotationLabels: relayStylePagination(),
         relationshipLabels: relayStylePagination(),
+        extracts: relayStylePagination(),
+        columns: relayStylePagination(),
+        languageModels: relayStylePagination(),
       },
     },
   },
@@ -180,6 +167,10 @@ export const showAnnotationLabels = makeVar<LabelDisplayBehavior>(
   LabelDisplayBehavior.ON_HOVER
 );
 export const pagesVisible = makeVar<Record<number, string>>({});
+export const showEditExtractModal = makeVar<boolean>(false);
+export const showDeleteExtractModal = makeVar<boolean>(false);
+export const showCreateExtractModal = makeVar<boolean>(false);
+export const showQueryViewState = makeVar<"ASK" | "VIEW" | "DETAILS">("ASK");
 
 /**
  *  Document-related global variables.
@@ -191,10 +182,17 @@ export const viewingDocument = makeVar<DocumentType | null>(null);
 export const editingDocument = makeVar<DocumentType | null>(null);
 
 /**
+ * Extract-related global variables
+ */
+export const selectedExtractId = makeVar<string | null>(null);
+export const openedExtract = makeVar<ExtractType | null>(null);
+
+/**
  * Corpus-related global variables
  */
 export const corpusSearchTerm = makeVar<string>("");
 export const filterToCorpus = makeVar<CorpusType | null>(null);
+export const selectedCorpus = makeVar<CorpusType | null>(null);
 export const openedCorpus = makeVar<CorpusType | null>(null);
 export const viewingCorpus = makeVar<CorpusType | null>(null);
 export const deletingCorpus = makeVar<CorpusType | null>(null);
@@ -221,8 +219,12 @@ export const filterToAnnotationLabelId = makeVar<string>(""); // Not used elsewh
 export const selectedAnnotation = makeVar<ServerAnnotationType | null>(null);
 export const displayAnnotationOnAnnotatorLoad =
   makeVar<ServerAnnotationType | null>(null);
+export const onlyDisplayTheseAnnotations = makeVar<
+  ServerAnnotationType[] | undefined
+>(undefined);
 export const annotationContentSearchTerm = makeVar<string>("");
 export const selectedMetaAnnotationId = makeVar<string>("");
+export const includeStructuralAnnotations = makeVar<boolean>(false); // These are weird as they don't have a labelset and user probably doesn't want to see them.
 
 /**
  * Analyzer-related global variables
@@ -240,6 +242,17 @@ export const analysisSearchTerm = makeVar<string>("");
  * Export-related global variables
  */
 export const exportSearchTerm = makeVar<string>("");
+export const selectedFieldset = makeVar<FieldsetType | null>(null);
+export const selectedLanguageModel = makeVar<LanguageModelType | null>(null);
+export const editingExtract = makeVar<ExtractType | null>(null);
+export const addingColumnToExtract = makeVar<ExtractType | null>(null);
+export const editingColumnForExtract = makeVar<ColumnType | null>(null);
+
+/**
+ * Query-realted global variables
+ */
+export const selectedQueryIds = makeVar<string[]>([]);
+export const openedQueryObj = makeVar<CorpusQueryType | null>(null);
 
 /**
  * Auth-related global variables

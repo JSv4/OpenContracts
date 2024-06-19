@@ -15,8 +15,15 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus
+from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document
+from opencontractserver.extracts.models import (
+    Column,
+    Datacell,
+    Extract,
+    Fieldset,
+    LanguageModel,
+)
 from opencontractserver.users.models import Assignment, UserExport
 
 User = get_user_model()
@@ -29,7 +36,6 @@ class GremlinEngineFilter(django_filters.FilterSet):
 
 
 class AnalyzerFilter(django_filters.FilterSet):
-
     analyzer_id = filters.CharFilter(method="filter_by_analyzer_id")
 
     def filter_by_analyzer_id(self, queryset, info, value):
@@ -62,7 +68,6 @@ class AnalyzerFilter(django_filters.FilterSet):
 
 
 class AnalysisFilter(django_filters.FilterSet):
-
     #####################################################################
     # Filter by analyses that have received callbacks
     received_callback_results = filters.BooleanFilter(
@@ -108,7 +113,6 @@ class AnalysisFilter(django_filters.FilterSet):
 
 
 class CorpusFilter(django_filters.FilterSet):
-
     text_search = filters.CharFilter(method="text_search_method")
 
     def text_search_method(self, queryset, name, value):
@@ -132,7 +136,6 @@ class CorpusFilter(django_filters.FilterSet):
 
 
 class AnnotationFilter(django_filters.FilterSet):
-
     uses_label_from_labelset_id = django_filters.CharFilter(
         method="filter_by_label_from_labelset_id"
     )
@@ -195,7 +198,6 @@ class AnnotationFilter(django_filters.FilterSet):
 
 
 class LabelFilter(django_filters.FilterSet):
-
     used_in_labelset_id = django_filters.CharFilter(method="filter_by_labelset_id")
     used_in_labelset_for_corpus_id = django_filters.CharFilter(
         method="filter_by_used_in_labelset_for_corpus_id"
@@ -222,13 +224,16 @@ class LabelFilter(django_filters.FilterSet):
         return queryset.filter(included_in_labelset__pk=django_pk)
 
     def filter_by_used_in_labelset_for_corpus_id(self, queryset, name, value):
+
+        print(f"Raw corpus id: {value}")
         django_pk = from_global_id(value)[1]
         print("Lookup labels for pk", django_pk)
+        queryset = queryset.filter(Q(included_in_labelset__used_by_corpus=django_pk))
         print(
             "Filtered to values",
-            queryset.filter(included_in_labelset__used_by_corpus_id=django_pk),
+            queryset,
         )
-        return queryset.filter(included_in_labelset__used_by_corpus_id=django_pk)
+        return queryset.filter(included_in_labelset__used_by_corpus=django_pk)
 
     class Meta:
         model = AnnotationLabel
@@ -240,7 +245,6 @@ class LabelFilter(django_filters.FilterSet):
 
 
 class LabelsetFilter(django_filters.FilterSet):
-
     text_search = filters.CharFilter(method="text_search_method")
 
     def text_search_method(self, queryset, name, value):
@@ -264,7 +268,6 @@ class LabelsetFilter(django_filters.FilterSet):
 
 
 class RelationshipFilter(django_filters.FilterSet):
-
     # Old-style filter when relationships let you cross documents. Think this creates too taxing a query on the
     # Database. If we need document-level relationships, we can create a new model for that.
     # document_id = django_filters.CharFilter(method='filter_document_id')
@@ -284,7 +287,6 @@ class RelationshipFilter(django_filters.FilterSet):
 
 
 class AssignmentFilter(django_filters.FilterSet):
-
     document_id = django_filters.CharFilter(method="filter_document_id")
 
     def filter_document_id(self, queryset, name, value):
@@ -297,7 +299,6 @@ class AssignmentFilter(django_filters.FilterSet):
 
 
 class ExportFilter(django_filters.FilterSet):
-
     # This uses the django-filters ordering capabilities. Following filters available:
     #   1) created (earliest to latest)
     #   2) -created (latest to earliest)
@@ -333,7 +334,6 @@ class ExportFilter(django_filters.FilterSet):
 
 
 class DocumentFilter(django_filters.FilterSet):
-
     company_search = filters.CharFilter(method="company_name_search")
     has_pdf = filters.BooleanFilter(method="has_pdf_search")
     has_annotations_with_ids = filters.CharFilter(
@@ -378,4 +378,61 @@ class DocumentFilter(django_filters.FilterSet):
         fields = {
             "description": ["exact", "contains"],
             "id": ["exact"],
+        }
+
+
+class LanguageModelFilter(django_filters.FilterSet):
+    class Meta:
+        model = LanguageModel
+        fields = {
+            "model": ["exact", "contains"],
+        }
+
+
+class FieldsetFilter(django_filters.FilterSet):
+    class Meta:
+        model = Fieldset
+        fields = {
+            "name": ["exact", "contains"],
+            "description": ["contains"],
+        }
+
+
+class ColumnFilter(django_filters.FilterSet):
+    class Meta:
+        model = Column
+        fields = {
+            "query": ["contains"],
+            "match_text": ["contains"],
+            "output_type": ["exact"],
+            "limit_to_label": ["exact"],
+            "agentic": ["exact"],
+        }
+
+
+class ExtractFilter(django_filters.FilterSet):
+    class Meta:
+        model = Extract
+        fields = {
+            "name": ["exact", "contains"],
+            "created": ["lte", "gte"],
+            "started": ["lte", "gte"],
+            "finished": ["lte", "gte"],
+        }
+
+
+class CorpusQueryFilter(django_filters.FilterSet):
+    class Meta:
+        model = CorpusQuery
+        fields = {"corpus_id": ["exact"]}
+
+
+class DatacellFilter(django_filters.FilterSet):
+    class Meta:
+        model = Datacell
+        fields = {
+            "data_definition": ["exact"],
+            "started": ["lte", "gte"],
+            "completed": ["lte", "gte"],
+            "failed": ["lte", "gte"],
         }

@@ -27,6 +27,21 @@ jobs:
   linter:
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
+          # all of these default to true, but feel free to set to
+          # "false" if necessary for your workflow
+          android: false
+          dotnet: false
+          haskell: false
+          large-packages: true
+          docker-images: true
+          swap-storage: true
 
       - name: Checkout Code Repository
         uses: actions/checkout@v3.3.0
@@ -41,13 +56,28 @@ jobs:
             requirements/local.txt
 
       - name: Run pre-commit
-        uses: pre-commit/action@v3.0.0
+        uses: pre-commit/action@v3.0.1
 
   # With no caching at all the entire ci process takes 4m 30s to complete!
   pytest:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
+          # all of these default to true, but feel free to set to
+          # "false" if necessary for your workflow
+          android: false
+          dotnet: false
+          haskell: false
+          large-packages: true
+          docker-images: true
+          swap-storage: true
 
       - name: Checkout Code Repository
         uses: actions/checkout@v3.3.0
@@ -66,6 +96,26 @@ jobs:
 
       - name: Collect Static Files
         run: docker-compose -f test.yml run --rm django python manage.py collectstatic
+
+      - name: Verify Docker Containers
+        run: |
+          docker-compose -f test.yml ps
+
+      - name: Inspect Docker Network
+        run: |
+          docker network inspect $(docker-compose -f test.yml ps -q | xargs docker inspect --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' | uniq)
+
+      - name: Capture Docker Compose Logs
+        if: failure()
+        run: |
+          docker-compose -f test.yml logs --no-color > docker-compose-logs.txt
+
+      - name: Upload Docker Compose Logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-compose-logs
+          path: docker-compose-logs.txt
 
       - name: Build Pytest Coverage File
         run: |

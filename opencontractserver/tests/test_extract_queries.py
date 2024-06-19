@@ -26,6 +26,7 @@ class TestContext:
 
 class ExtractsQueryTestCase(TestCase):
     def setUp(self):
+
         self.user = User.objects.create_user(
             username="testuser", password="testpassword"
         )
@@ -54,18 +55,21 @@ class ExtractsQueryTestCase(TestCase):
             fieldset=self.fieldset,
             creator=self.user,
         )
+
         pdf_file = ContentFile(
             SAMPLE_PDF_FILE_TWO_PATH.open("rb").read(), name="test.pdf"
         )
 
+        # We're going to manually process three docs
         self.doc = Document.objects.create(
             creator=self.user,
-            title="Test Doc",
-            description="USC Title 1 - Chapter 1",
+            title="Rando Doc",
+            description="RANDO DOC!",
             custom_meta={},
             pdf_file=pdf_file,
             backend_lock=True,
         )
+
         self.row = Datacell.objects.create(
             extract=self.extract,
             column=self.column,

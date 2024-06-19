@@ -1,13 +1,16 @@
 # Extracting Structured Data from Documents using LlamaIndex, AI Agents, and Marvin
 
 We've added a powerful feature called "extract" that enables the generation of structured data grids from a list of
-documents using a combination of vector search, AI agents, and the Marvin library. This functionality is implemented in
-a Django application and leverages Celery for asynchronous task processing.
+documents using a combination of vector search, AI agents, and the Marvin library. 
 
-All credit for the inspiration of this features goes to the fine folks at Nlmatics. They were some of the first pioneers
-working on datagrids from document using a set of questions and custom transformer models. This implementation of their
-concept ultimately leverages newer techniques and better models, but hats off to them for coming up with a design like
-this 6 years ago!
+This `run_extract` task orchestrates the extraction process, spinning up a number of `llama_index_doc_query` tasks. 
+Each of these query tasks uses LlamaIndex Django & pgvector for vector search and retrieval, and Marvin 
+for data parsing and extraction. It processes each document and column in parallel using celery's task system.
+
+All credit for the inspiration of this feature goes to the fine folks at [Nlmatics](https://www.nlmatics.com/). They 
+were some of the first pioneers working on datagrids from document using a set of questions and custom transformer 
+models. This implementation of their concept ultimately leverages newer techniques and better models, but hats off 
+to them for coming up with a design like this in 2017/2018!
 
 ## Overview
 
@@ -39,7 +42,30 @@ The `run_extract` function is the entry point for initiating the extract process
 
 ### 2. Processing Individual Datacells
 
-The `llama_index_doc_query` function is responsible for processing each individual `Datacell`. It performs the following steps:
+The `llama_index_doc_query` function is responsible for processing each individual `Datacell`. 
+
+Here's the rough execution logic:
+
+```mermaid
+graph TD
+    I[llama_index_doc_query] --> J[Retrieve Datacell]
+    J --> M[Create LlamaIndex DjangoAnnotationVectorStore for Doc ID]
+    M --> N[Create VectorStoreIndex]
+    N --> O{Column is agentic?}
+    O -- Yes --> P[Create QueryEngineTool]
+    P --> Q[Create FunctionCallingAgentWorker]
+    Q --> R[Create StructuredPlannerAgent]
+    R --> S[Query agent for definitions]
+    O -- No --> T{Extract is list?}
+    S --> T
+    T -- Yes --> U[Extract with Marvin]
+    T -- No --> V[Cast with Marvin]
+    U --> W[Save result to Datacell]
+    V --> W
+    W --> X[Mark Datacell complete]
+```
+
+It performs the following steps:
 
 1. Retrieves the `Datacell` object from the database based on the provided `cell_id`.
 2. Sets the `started` timestamp of the datacell to the current time.

@@ -116,7 +116,7 @@ export const ExtractDatacell = ({
   }, [cellData]);
 
   const renderJsonPreview = (data: Record<string, any>) => {
-    const jsonString = JSON.stringify(data, null, 2);
+    const jsonString = JSON.stringify(data?.data ? data.data : {}, null, 2);
     const preview = jsonString.split("\n").slice(0, 3).join("\n") + "\n...";
     return (
       <Popup
@@ -130,10 +130,8 @@ export const ExtractDatacell = ({
   return (
     <>
       <Table.Cell key={cellData.id} style={{ backgroundColor: color }}>
-        {cellData.started && !cellData.completed ? (
-          <Dimmer active>
-            <Loader />
-          </Dimmer>
+        {cellData.started && !cellData.completed && !cellData.failed ? (
+          <Loader />
         ) : (
           <></>
         )}

@@ -1229,7 +1229,7 @@ export interface ExtractType extends Node {
   created: string;
   started?: Maybe<string>;
   finished?: Maybe<string>;
-  stacktrace?: Maybe<string>;
+  error?: Maybe<string>;
   documents?: DocumentType[];
   extractedDatacells?: DatacellTypeConnection;
   fullDatacellList?: DatacellType[];

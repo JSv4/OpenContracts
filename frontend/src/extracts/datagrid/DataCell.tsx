@@ -70,12 +70,9 @@ export const ExtractDatacell = ({
   >(null);
 
   useEffect(() => {
-    console.log("viewSourceAnnotations changed", viewSourceAnnotations);
     if (viewSourceAnnotations !== null) {
       let open_doc = viewSourceAnnotations[0].document;
-      console.log("Open doc", open_doc);
       let source_annotations = viewSourceAnnotations;
-      console.log("Source annotations", source_annotations);
       displayAnnotationOnAnnotatorLoad(viewSourceAnnotations[0]);
       selectedAnnotation(viewSourceAnnotations[0]); // Not sure which one to zoom in on... picking first
       openedDocument(viewSourceAnnotations[0].document); // All sources for doc should share same document
@@ -94,12 +91,10 @@ export const ExtractDatacell = ({
   };
 
   useEffect(() => {
-    console.log("Calculate color on new cellData!");
     let calculated_color = "light gray";
     if (cellData.failed) {
       calculated_color = "red";
     } else if (cellData.started && cellData.completed) {
-      console.log("Try to determine ");
       if (
         cellData.correctedData !== "{}" &&
         !_.isEmpty(cellData.correctedData)
@@ -111,7 +106,6 @@ export const ExtractDatacell = ({
         calculated_color = "green";
       }
     }
-    console.log("Calculated color", cellData, calculated_color);
     setColor(calculated_color);
   }, [cellData]);
 

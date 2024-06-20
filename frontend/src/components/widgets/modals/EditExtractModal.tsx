@@ -7,6 +7,9 @@ import {
   Icon,
   Dimmer,
   Loader,
+  Statistic,
+  Segment,
+  Message,
 } from "semantic-ui-react";
 import {
   ColumnType,
@@ -235,12 +238,7 @@ export const EditExtractModal = ({
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
 
-    if (
-      extract &&
-      extract.started &&
-      !extract.finished &&
-      !extract.stacktrace
-    ) {
+    if (extract && extract.started && !extract.finished && !extract.error) {
       // Start polling every 5 seconds
       pollInterval = setInterval(() => {
         refetch({ id: extract.id });
@@ -342,6 +340,60 @@ export const EditExtractModal = ({
         )}
         <ModalHeader>Editing Extract {extract.name}</ModalHeader>
         <ModalContent style={{ flex: 1 }}>
+          <Segment.Group horizontal>
+            <Segment textAlign="center">
+              <Statistic size="mini">
+                <Statistic.Label>Status</Statistic.Label>
+                <Statistic.Value>
+                  {extract.started && !extract.finished && !extract.error ? (
+                    <Icon name="spinner" loading />
+                  ) : extract.finished ? (
+                    <Icon name="check circle" color="green" />
+                  ) : extract.error ? (
+                    <Icon name="exclamation circle" color="red" />
+                  ) : (
+                    <Icon name="pause circle" color="grey" />
+                  )}
+                </Statistic.Value>
+              </Statistic>
+            </Segment>
+            {extract.started && (
+              <Segment textAlign="center">
+                <Statistic size="mini">
+                  <Statistic.Label>Started</Statistic.Label>
+                  <Statistic.Value>
+                    {new Date(extract.started).toLocaleString()}
+                  </Statistic.Value>
+                </Statistic>
+              </Segment>
+            )}
+            {extract.finished && (
+              <Segment textAlign="center">
+                <Statistic size="mini">
+                  <Statistic.Label>Completed</Statistic.Label>
+                  <Statistic.Value>
+                    {new Date(extract.finished).toLocaleString()}
+                  </Statistic.Value>
+                </Statistic>
+              </Segment>
+            )}
+            {extract.error && extract.finished && (
+              <Segment textAlign="center" color="red">
+                <Statistic size="mini">
+                  <Statistic.Label>Failed</Statistic.Label>
+                  <Statistic.Value>
+                    {new Date(extract.finished).toLocaleString()}
+                  </Statistic.Value>
+                </Statistic>
+              </Segment>
+            )}
+          </Segment.Group>
+          {extract.error && (
+            <Message negative>
+              <Message.Header>Error</Message.Header>
+              <pre>{extract.error}</pre>
+            </Message>
+          )}
           <div
             style={{
               width: "100%",

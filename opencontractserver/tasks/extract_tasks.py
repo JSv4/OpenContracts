@@ -1,20 +1,28 @@
 import logging
 
 import marvin
+import numpy as np
 from celery import chord, group, shared_task
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from llama_index.core import Settings, VectorStoreIndex
+from llama_index.core import Settings, VectorStoreIndex, QueryBundle
 from llama_index.core.agent import FunctionCallingAgentWorker, StructuredPlannerAgent
+from llama_index.core.postprocessor import LLMRerank
+from llama_index.core.schema import NodeWithScore, Node
 from llama_index.core.tools import QueryEngineTool
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.core.postprocessor import SentenceTransformerRerank
 from llama_index.llms.openai import OpenAI
+from llama_index_client import TextNode
+from pgvector.django import CosineDistance
 from pydantic import BaseModel
 
+from opencontractserver.annotations.models import Annotation
 from opencontractserver.extracts.models import Datacell, Extract
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.embeddings import calculate_embedding_for_text
 from opencontractserver.utils.etl import parse_model_or_primitive
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
@@ -66,7 +74,7 @@ def run_extract(extract_id, user_id):
 
 
 @shared_task
-def llama_index_doc_query(cell_id, similarity_top_k=3):
+def llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int = 512):
     """
     Use LlamaIndex to run queries specified for a particular cell
     """
@@ -95,24 +103,116 @@ def llama_index_doc_query(cell_id, similarity_top_k=3):
 
         # search_text
         search_text = datacell.column.match_text
+
+        # query
         query = datacell.column.query
+
+        # Special character
+        if "|||" in search_text:
+
+            logger.info(f"Detected special break character in examples `|||` - splitting and averaging embeddings.")
+
+            examples = search_text.split('|||')
+            embeddings: list[list[float | int]] = []
+            for example in examples:
+                vector = calculate_embedding_for_text(example)
+                if vector is not None:
+                    embeddings.append(calculate_embedding_for_text(example))
+
+            # print(f"Calculate mean for embeddings {embeddings}")
+
+            avg_embedding: np.ndarray = np.mean(embeddings, axis=0)
+            print(f"Calculated avg embeddings: {type(avg_embedding)}")
+
+            # print(f"Averaged embeddings: {avg_embedding}")
+
+            queryset = (Annotation.objects.
+            filter(document_id=document.id).
+            order_by(
+                CosineDistance("embedding", avg_embedding.tolist())
+            )
+            .annotate(
+                similarity=CosineDistance("embedding", avg_embedding.tolist())
+            ))[:similarity_top_k]
+            print(f"Annotated queryset: {queryset}")
+
+            nodes = [
+                NodeWithScore(
+                    node=Node(
+                        doc_id=str(row.id),
+                        text=row.raw_text,
+                        embedding=row.embedding.tolist()
+                        if getattr(row, "embedding", None) is not None
+                        else [],
+                        extra_info={
+                            "page": row.page,
+                            "bounding_box": row.bounding_box,
+                            "annotation_id": row.id,
+                            "label": row.annotation_label.text
+                            if row.annotation_label
+                            else None,
+                            "label_id": row.annotation_label.id
+                            if row.annotation_label
+                            else None,
+                        },
+                    ),
+                    score=row.similarity
+                ) for row in queryset
+            ]
+            print(f"{len(nodes)} Nodes for reranker: {nodes}")
+
+            # reranker = LLMRerank(
+            #     choice_batch_size=5,
+            #     top_n=3,
+            # )
+            sbert_rerank = SentenceTransformerRerank(
+                model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=5
+            )
+            retrieved_nodes = sbert_rerank.postprocess_nodes(
+                nodes, QueryBundle(query)
+            )
+            print(f"{len(retrieved_nodes)} Reranked nodes")
+
+            annotation_ids = [n.node.extra_info['annotation_id'] for n in retrieved_nodes]
+            print(f"Annotation ids for reranked nodes: {annotation_ids}")
+
+            datacell.sources.add(*annotation_ids)
+
+            print(f"Resolved queryset: {queryset}")
+
+            retrieved_text = "\n".join(
+                [f"```Relevant Section:\n\n{node.text}\n```" for node in retrieved_nodes]
+            )
+
+        else:
+            retriever = index.as_retriever(similarity_top_k=similarity_top_k)
+
+            results = retriever.retrieve(search_text if search_text else query)
+
+            sbert_rerank = SentenceTransformerRerank(
+                model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=5
+            )
+            retrieved_nodes = sbert_rerank.postprocess_nodes(
+                results, QueryBundle(query)
+            )
+
+            for r in retrieved_nodes:
+                print(f"Result: {r.node.extra_info}:\n{r}")
+
+            retrieved_annotation_ids = [n.node.extra_info["annotation_id"] for n in retrieved_nodes]
+            print(f"retrieved_annotation_ids: {retrieved_annotation_ids}")
+            datacell.sources.add(*retrieved_annotation_ids)
+
+            retrieved_text = "\n".join(
+                [f"```Relevant Section:\n\n{n.text}\n```" for n in results]
+            )
+
+        logger.info(f"Retrieved text: {retrieved_text}")
+
         output_type = parse_model_or_primitive(datacell.column.output_type)
-        print(f"Output type: {output_type}")
+        logger.info(f"Output type: {output_type}")
+
         parse_instructions = datacell.column.instructions
-
-        retriever = index.as_retriever(similarity_top_k=similarity_top_k)
-
-        results = retriever.retrieve(search_text if search_text else query)
-        for r in results:
-            print(f"Result: {r.node.extra_info}:\n{r}")
-        retrieved_annotation_ids = [n.node.extra_info["annotation_id"] for n in results]
-        print(f"retrieved_annotation_ids: {retrieved_annotation_ids}")
-        datacell.sources.add(*retrieved_annotation_ids)
-
-        retrieved_text = "\n".join(
-            [f"```Relevant Section:\n\n{n.text}\n```" for n in results]
-        )
-        print(f"Retrieved text: {retrieved_text}")
 
         # TODO - eventually this can just be pulled from a separate Django vector index where we filter to definitions!
         definitions = ""
@@ -128,7 +228,7 @@ def llama_index_doc_query(cell_id, similarity_top_k=3):
                     query_engine=engine,
                     name="document_parts",
                     description="Let's you use hybrid or vector search over this document to search for specific text "
-                    "semantically or using text search.",
+                                "semantically or using text search.",
                 )
             ]
 
@@ -179,20 +279,14 @@ def llama_index_doc_query(cell_id, similarity_top_k=3):
 
         if datacell.column.extract_is_list:
             print("Extract as list!")
-            if parse_instructions:
-                result = marvin.extract(
-                    retrieved_text, target=output_type, instructions=parse_instructions
-                )
-            else:
-                result = marvin.extract(retrieved_text, target=output_type)
+            result = marvin.extract(
+                retrieved_text, target=output_type, instructions=parse_instructions if parse_instructions else query
+            )
         else:
             print("Extract single instance")
-            if parse_instructions:
-                result = marvin.cast(
-                    retrieved_text, target=output_type, instructions=parse_instructions
-                )
-            else:
-                result = marvin.cast(retrieved_text, target=output_type)
+            result = marvin.cast(
+                retrieved_text, target=output_type, instructions=parse_instructions if parse_instructions else query
+            )
 
         print(f"Result processed from marvin: {result}")
         logger.debug(

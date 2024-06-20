@@ -47,8 +47,7 @@ export const Extracts = () => {
   const shouldPoll = (extracts: GetExtractsOutput) => {
     return extracts?.extracts?.edges.reduce(
       (accum, edge) =>
-        (edge.node.started && !edge.node.finished && !edge.node.stacktrace) ||
-        accum,
+        (edge.node.started && !edge.node.finished && !edge.node.error) || accum,
       false
     );
   };
@@ -62,7 +61,6 @@ export const Extracts = () => {
   } = useQuery<GetExtractsOutput, GetExtractsInput>(REQUEST_GET_EXTRACTS, {
     variables: extract_variables,
     nextFetchPolicy: "network-only",
-    notifyOnNetworkStatusChange: true,
   });
 
   useEffect(() => {

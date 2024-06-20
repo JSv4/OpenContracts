@@ -16,9 +16,9 @@ share label document corpuses with complex layouts such as contracts, scientific
 etc. It has evolved into a platform for mass contract analytics that still maintains its core functionality as an open 
 platform that makes it effortless to view, edit and share annotations:
 
-| ![Grid Review And Sources.gif](assets/images/gifs/Grid_Review_And_Sources.gif)
-  | ![](assets/images/screenshots/Jumped_To_Annotation.png) |
-|---|---|
+![Grid Review And Sources.gif](assets/images/gifs/Grid_Review_And_Sources.gif)
+
+![Manual Annotations](assets/images/screenshots/Jumped_To_Annotation.png)
 
 Now, in the version 2 release (currently in beta) - we've incorporated LLMs and vector databases to 
 provide a seamless and efficient workflow for processing large volumes of documents in parallel. At the core of the

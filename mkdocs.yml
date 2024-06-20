@@ -1,11 +1,11 @@
 site_name: OpenContracts
-site_description: Open, Extensible Natural Language Annotation and Analysis Platform
+site_description: Open, Extensible Document Analytics Platform
 site_author: John Scrudato IV
 site_url: https://hatch.pypa.io/latest/
 repo_name: JSv4/OpenContracts
 repo_url: https://github.com/JSv4/OpenContracts
 edit_uri: blob/master/docs
-copyright: 'Copyright &copy; John Scrudato & OpenSource.Legal 2022-present'
+copyright: 'Copyright &copy; John Scrudato 2022-present'
 
 docs_dir: docs
 site_dir: site
@@ -14,8 +14,8 @@ theme:
   name: material
   custom_dir: docs/.overrides
   language: en
-  favicon: assets/images/logos/favicon.icon
-  logo: assets/images/logos/os_legal_128_inverted.png
+  favicon: assets/images/logos/OpenContracts_Logo_Inverted.ico
+  logo: assets/images/logos/OpenContracts_Logo_Inverted.png
   font:
     text: Roboto
     code: Roboto Mono

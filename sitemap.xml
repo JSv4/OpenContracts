@@ -2,177 +2,187 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://hatch.pypa.io/latest/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/acknowledgements/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/philosophy/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/quick-start/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/requirements/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/architecture/asynchronous-processing/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/architecture/under-the-hood/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/architecture/components/annotator/how-annotations-are-created/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/architecture/components/annotator/overview/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/configuration/add-users/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/configuration/choose-an-authentication-backend/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/configuration/choose-and-configure-docker-stack/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/configuration/choose-storage-backend/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/configuration/configure-admin-users/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/configuration/configure-gremlin/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/development/documentation/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/development/environment/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/development/frontend-notes/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/development/test-suite/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/extract_and_retrieval/document_data_extract/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/extract_and_retrieval/intro_to_django_annotation_vector_store/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/extract_and_retrieval/querying_corpus/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/key-concepts/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/step-1-add-documents/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/step-2-create-labelset/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/step-3-create-a-corpus/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/step-4-create-text-annotations/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/step-5-create-doc-type-annotations/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/step-6-search-and-filter-by-annotations/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://hatch.pypa.io/latest/walkthrough/step-7-query-corpus/</loc>
+         <lastmod>2024-06-20</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://hatch.pypa.io/latest/walkthrough/step-8-data-extract/</loc>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/advanced/configure-annotation-view/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/advanced/export-import-corpuses/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/advanced/fork-a-corpus/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/advanced/generate-graphql-schema-files/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/advanced/pawls-token-format/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://hatch.pypa.io/latest/walkthrough/advanced/run-gremlin-analyzer/</loc>
-         <lastmod>2024-06-16</lastmod>
+         <lastmod>2024-06-20</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>

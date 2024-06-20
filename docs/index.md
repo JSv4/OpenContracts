@@ -1,26 +1,43 @@
-# OpenContracts
+![OpenContracts](assets/images/logos/OpenContracts.webp)
 
-### The Free and Open Source Document Analysis Platform
+## The Free and Open Source Document Analytics Platform
+
 ---
 
-![OSLegal logo](assets/images/logos/os_legal_128_name_left_dark.png){ align="left" width="300" role="img" }
-
-| |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| --- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| CI/CD | [![Codecov (Backend)](https://codecov.io/gh/JSv4/OpenContracts/branch/main/graph/badge.svg?token=73BJLAO4WY)](https://codecov.io/gh/JSv4/OpenContracts){ loading=lazy }                                                                                                                                                                                                                                                                                                                                       |
-| Meta | [![code style - black](https://img.shields.io/badge/code%20style-black-000000.svg){ loading=lazy }](https://github.com/psf/black) [![types - Mypy](https://img.shields.io/badge/types-Mypy-blue.svg){ loading=lazy }](https://github.com/python/mypy) [![imports - isort](https://img.shields.io/badge/imports-isort-ef8336.svg){ loading=lazy }](https://github.com/pycqa/isort) [![License - Apache2](https://img.shields.io/badge/license-Apache%202-blue.svg){ loading=lazy }](https://spdx.org/licenses/) |
+| |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| CI/CD | [![codecov](https://codecov.io/gh/JSv4/OpenContracts/branch/main/graph/badge.svg?token=RdVsiuaTVz)](https://codecov.io/gh/JSv4/OpenContracts)                                                                                                                                                                                                                                                                                                                  |
+| Meta | [![code style - black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) [![types - Mypy](https://img.shields.io/badge/types-Mypy-blue.svg)](https://github.com/python/mypy) [![imports - isort](https://img.shields.io/badge/imports-isort-ef8336.svg)](https://github.com/pycqa/isort) [![License - Apache2](https://img.shields.io/badge/license-Apache%202-blue.svg)](https://spdx.org/licenses/) |
 
 ## What Does it Do?
 
-OpenContracts is an **Apache-2 Licensed** software application to label, share and search annotate documents.
-It's  designed specifically to label documents with complex layouts such as contracts, scientific papers, newspapers,
-etc.
+OpenContracts is an **Apache-2 Licensed** enterprise document analytics tool. It was originally designed to label and 
+share label document corpuses with complex layouts such as contracts, scientific papers, newspapers,
+etc. It has evolved into a platform for mass contract analytics that still maintains its core functionality as an open 
+platform that makes it effortless to view, edit and share annotations:
 
-![](assets/images/screenshots/Jumped_To_Annotation.png)
+| ![Grid Review And Sources.gif](assets/images/gifs/Grid_Review_And_Sources.gif)
+  | ![](assets/images/screenshots/Jumped_To_Annotation.png) |
+|---|---|
 
-When combine with a NLP processing engine like Gremlin Engine (another of our open source projects),
-OpenContracts not only lets humans collaborate on and share document annotations, it also can analyze and export data
-from contracts using state-of-the-art NLP technology.
+Now, in the version 2 release (currently in beta) - we've incorporated LLMs and vector databases to 
+provide a seamless and efficient workflow for processing large volumes of documents in parallel. At the core of the
+system is pgvector for vector search, LlamaIndex for precise vector search and retrieval, and Marvin framework for data 
+parsing and extraction.
+
+Users can still create and edit annotations directly within the platform, enabling them to enrich documents with their 
+own insights and domain expertise. Through a custom LlamaIndex DjangoVectorStore, we can expose this structured data - 
+human annotated text with embeddings - to LLMs and the LlamaIndex ecosystem. 
+
+Finally, the tool's intuitive interface allows for easy navigation through documents, providing clear visual cues to identify 
+the exact source of information extracted by the language model. This transparency ensures that users can verify the 
+accuracy and context of the extracted data.
+
+
+## Documentation
+
+We use MkDocs for our documentation. Please visit [https://JSv4.github.io/OpenContracts/](https://JSv4.github.io/OpenContracts/)
+for our detailed documentation - including a quick start guide, a walk through, architectural overview and more.
 
 ## Why Does it Exist?
 
@@ -43,14 +60,4 @@ use to generate a text and x-y coordinate layer from scratch. Formats like .docx
 to provide an easy, consistent format. Likewise, the output quality of many converters and tools is sub-par and these
 tools can produce very different document structures for the same inputs.
 
-## About OpenSource.Legal
-
-OpenSource.Legal believes that the effective, digital transformation of the legal services industry and the execution of
-"the law", broadly speaking, requires shared solutions and tools to solve some of the problems that are common to almost
-every legal workflow. The current splintering of service delivery into dozens of incompatible platforms with limited
-configurations threatens to put software developers and software vendors in the driver seat of the industry. We firmly
-believe that lawyers and legal engineers, armed with easily configurable and *extensible* tools can much more effectively
-design the workflows and user experiences that they need to deliver and scale their expertise.
-
-Visit us at https://opensource.legal for a directory of open source legal projects and an overview of our
-projects.
+**Adding OCR and ingestion for other enterprise documents is a priority**.

@@ -50,7 +50,8 @@ nav:
     - How It Works:
         - Backend - Architecture: architecture/under-the-hood.md
         - Backend - Asynchronous Processing: architecture/asynchronous-processing.md
-        - Backend- LlamaIndex Integration: extract_and_retrieval/document_data_extract.md
+        - Backend - LlamaIndex & Django Integration: extract_and_retrieval/intro_to_django_annotation_vector_store.md
+        - Backend- Datagrid Extract: extract_and_retrieval/document_data_extract.md
         - Backend- Question Answering: extract_and_retrieval/querying_corpus.md
         - Backend - Datagrid Extract: extract_and_retrieval/document_data_extract.md
         - Frontend - Annotation Creation: architecture/components/annotator/how-annotations-are-created.md
@@ -66,7 +67,7 @@ nav:
       - Step 5 - Create Some Document Annotations: walkthrough/step-5-create-doc-type-annotations.md
       - Step 6 - Search and Filter By Annotations: walkthrough/step-6-search-and-filter-by-annotations.md
       - Step 7 - Query a Corpus: walkthrough/step-7-query-corpus.md
-      - Step 8 - Data Extract: walkthrough/step-8-data-extract.mds
+      - Step 8 - Data Extract: walkthrough/step-8-data-extract.md
       - Advanced:
           - Configure How Annotations Are Displayed: walkthrough/advanced/configure-annotation-view.md
           - Run a Gremlin Analyzer: walkthrough/advanced/run-gremlin-analyzer.md

@@ -1,18 +1,18 @@
 # Extracting Structured Data from Documents using LlamaIndex, AI Agents, and Marvin
 
 We've added a powerful feature called "extract" that enables the generation of structured data grids from a list of
-documents using a combination of vector search, AI agents, and the Marvin library. 
+documents using a combination of vector search, AI agents, and the Marvin library.
 
-This `run_extract` task orchestrates the extraction process, spinning up a number of `llama_index_doc_query` tasks. 
-Each of these query tasks uses LlamaIndex Django & pgvector for vector search and retrieval, and Marvin 
+This `run_extract` task orchestrates the extraction process, spinning up a number of `llama_index_doc_query` tasks.
+Each of these query tasks uses LlamaIndex Django & pgvector for vector search and retrieval, and Marvin
 for data parsing and extraction. It processes each document and column in parallel using celery's task system.
 
-All credit for the inspiration of this feature goes to the fine folks at [Nlmatics](https://www.nlmatics.com/). They 
-were some of the first pioneers working on datagrids from document using a set of questions and custom transformer 
-models. This implementation of their concept ultimately leverages newer techniques and better models, but hats off 
+All credit for the inspiration of this feature goes to the fine folks at [Nlmatics](https://www.nlmatics.com/). They
+were some of the first pioneers working on datagrids from document using a set of questions and custom transformer
+models. This implementation of their concept ultimately leverages newer techniques and better models, but hats off
 to them for coming up with a design like this in 2017/2018!
 
-The current implementation relies heavily on [LlamaIndex](https://docs.llamaindex.ai/en/stable/), specifically 
+The current implementation relies heavily on [LlamaIndex](https://docs.llamaindex.ai/en/stable/), specifically
 their vector store tooling, their reranker and their agent framework.
 
 Structured data extraction is powered by the amazing [Marvin library](https://github.com/prefecthq/marvin).
@@ -47,12 +47,12 @@ The `run_extract` function is the entry point for initiating the extract process
 
 ### 2. Processing Individual Datacells
 
-The `llama_index_doc_query` function is responsible for processing each individual `Datacell`. 
+The `llama_index_doc_query` function is responsible for processing each individual `Datacell`.
 
 #### Execution Flow Visualized:
 
 ```mermaid
-graph TD    
+graph TD
     I[llama_index_doc_query] --> J[Retrieve Datacell]
     J --> K[Create HuggingFaceEmbedding]
     K --> L[Create OpenAI LLM]
@@ -121,7 +121,7 @@ graph TD
 
 9. The result is saved to the datacell's `data` field based on the `output_type`. The datacell is marked as completed.
 
-10. If an exception occurs during processing, the error is logged, saved to the datacell's `stacktrace`, and the 
+10. If an exception occurs during processing, the error is logged, saved to the datacell's `stacktrace`, and the
     datacell is marked as failed.
 
 ## Next Steps

@@ -739,9 +739,7 @@ class Query(graphene.ObjectType):
             )
 
     extracts = DjangoFilterConnectionField(
-        ExtractType,
-        filterset_class=ExtractFilter,
-        max_limit=15
+        ExtractType, filterset_class=ExtractFilter, max_limit=15
     )
 
     @login_required

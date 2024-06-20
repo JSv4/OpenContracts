@@ -360,6 +360,7 @@ export const EditExtractModal = ({
                     ? { disabled: true, loading: true }
                     : {})}
                   labelPosition="right"
+                  onClick={() => window.alert("Not implemented yet")}
                 >
                   Download
                   <Icon name="download" />
@@ -382,7 +383,6 @@ export const EditExtractModal = ({
             onAddDocIds={handleAddDocIdsToExtract}
             onRemoveDocIds={handleRemoveDocIdsFromExtract}
             onRemoveColumnId={handleDeleteColumnIdFromExtract}
-            refetch={ext ? () => refetch({ id: ext.id }) : () => {}}
             extract={extract}
             cells={cells}
             rows={rows}

@@ -38,5 +38,5 @@ USE_AUTH0=false
 
 # LLM SETTINGS
 # ------------------------------------------------------------------------------
-OPENAI_API_KEY=sk-opencontracts-testing-UHD5Qk7d8lwnYsAjbsgLT3BlbkFJWvrzpMWnxi7ZoO6m4knz
+OPENAI_API_KEY=fake
 OPENAI_MODEL=gpt-4o

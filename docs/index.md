@@ -11,26 +11,26 @@
 
 ## What Does it Do?
 
-OpenContracts is an **Apache-2 Licensed** enterprise document analytics tool. It was originally designed to label and 
+OpenContracts is an **Apache-2 Licensed** enterprise document analytics tool. It was originally designed to label and
 share label document corpuses with complex layouts such as contracts, scientific papers, newspapers,
-etc. It has evolved into a platform for mass contract analytics that still maintains its core functionality as an open 
+etc. It has evolved into a platform for mass contract analytics that still maintains its core functionality as an open
 platform that makes it effortless to view, edit and share annotations:
 
 ![Grid Review And Sources.gif](assets/images/gifs/Grid_Review_And_Sources.gif)
 
 ![Manual Annotations](assets/images/screenshots/Jumped_To_Annotation.png)
 
-Now, in the version 2 release (currently in beta) - we've incorporated LLMs and vector databases to 
+Now, in the version 2 release (currently in beta) - we've incorporated LLMs and vector databases to
 provide a seamless and efficient workflow for processing large volumes of documents in parallel. At the core of the
-system is pgvector for vector search, LlamaIndex for precise vector search and retrieval, and Marvin framework for data 
+system is pgvector for vector search, LlamaIndex for precise vector search and retrieval, and Marvin framework for data
 parsing and extraction.
 
-Users can still create and edit annotations directly within the platform, enabling them to enrich documents with their 
-own insights and domain expertise. Through a custom LlamaIndex DjangoVectorStore, we can expose this structured data - 
-human annotated text with embeddings - to LLMs and the LlamaIndex ecosystem. 
+Users can still create and edit annotations directly within the platform, enabling them to enrich documents with their
+own insights and domain expertise. Through a custom LlamaIndex DjangoVectorStore, we can expose this structured data -
+human annotated text with embeddings - to LLMs and the LlamaIndex ecosystem.
 
-Finally, the tool's intuitive interface allows for easy navigation through documents, providing clear visual cues to identify 
-the exact source of information extracted by the language model. This transparency ensures that users can verify the 
+Finally, the tool's intuitive interface allows for easy navigation through documents, providing clear visual cues to identify
+the exact source of information extracted by the language model. This transparency ensures that users can verify the
 accuracy and context of the extracted data.
 
 

@@ -789,28 +789,28 @@ export type UserImportTypeEdge = {
 
 export type UserType = Node & {
   __typename?: "UserType";
-  id: Scalars["ID"];
-  password: Scalars["String"];
+  id?: Scalars["ID"];
+  password?: Scalars["String"];
   lastLogin?: Maybe<Scalars["DateTime"]>;
-  isSuperuser: Scalars["Boolean"];
-  username: Scalars["String"];
+  isSuperuser?: Scalars["Boolean"];
+  username?: Scalars["String"];
   email: Scalars["String"];
-  isStaff: Scalars["Boolean"];
-  isActive: Scalars["Boolean"];
-  dateJoined: Scalars["DateTime"];
-  name: Scalars["String"];
-  createdAssignments: AssignmentTypeConnection;
-  myAssignments: AssignmentTypeConnection;
-  userexportSet: UserExportTypeConnection;
-  userimportSet: UserImportTypeConnection;
-  editingDocuments: DocumentTypeConnection;
-  documentSet: DocumentTypeConnection;
-  corpusSet: CorpusTypeConnection;
-  editingCorpuses: CorpusTypeConnection;
-  labelSet: AnnotationLabelTypeConnection;
-  relationshipSet: RelationshipTypeConnection;
-  annotationSet: AnnotationTypeConnection;
-  labelsetSet: LabelSetTypeConnection;
+  isStaff?: Scalars["Boolean"];
+  isActive?: Scalars["Boolean"];
+  dateJoined?: Scalars["DateTime"];
+  name?: Scalars["String"];
+  createdAssignments?: AssignmentTypeConnection;
+  myAssignments?: AssignmentTypeConnection;
+  userexportSet?: UserExportTypeConnection;
+  userimportSet?: UserImportTypeConnection;
+  editingDocuments?: DocumentTypeConnection;
+  documentSet?: DocumentTypeConnection;
+  corpusSet?: CorpusTypeConnection;
+  editingCorpuses?: CorpusTypeConnection;
+  labelSet?: AnnotationLabelTypeConnection;
+  relationshipSet?: RelationshipTypeConnection;
+  annotationSet?: AnnotationTypeConnection;
+  labelsetSet?: LabelSetTypeConnection;
 };
 
 export type UserTypeCreatedAssignmentsArgs = {
@@ -1229,7 +1229,7 @@ export interface ExtractType extends Node {
   created: string;
   started?: Maybe<string>;
   finished?: Maybe<string>;
-  stacktrace?: Maybe<string>;
+  error?: Maybe<string>;
   documents?: DocumentType[];
   extractedDatacells?: DatacellTypeConnection;
   fullDatacellList?: DatacellType[];

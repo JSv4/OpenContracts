@@ -1373,6 +1373,7 @@ export const REQUEST_GET_EXTRACT = gql`
       created
       started
       finished
+      error
       fullDocumentList {
         id
         title
@@ -1491,27 +1492,14 @@ export const REQUEST_GET_EXTRACTS = gql`
           created
           started
           finished
-          extractedDatacells {
-            edges {
-              node {
-                id
-                column {
-                  id
-                }
-                document {
-                  id
-                  title
-                }
-                data
-                dataDefinition
-                started
-                completed
-                failed
-                stacktrace
-              }
-            }
-          }
+          error
         }
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
     }
   }

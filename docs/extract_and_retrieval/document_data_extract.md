@@ -1,13 +1,21 @@
 # Extracting Structured Data from Documents using LlamaIndex, AI Agents, and Marvin
 
 We've added a powerful feature called "extract" that enables the generation of structured data grids from a list of
-documents using a combination of vector search, AI agents, and the Marvin library. This functionality is implemented in
-a Django application and leverages Celery for asynchronous task processing.
+documents using a combination of vector search, AI agents, and the Marvin library.
 
-All credit for the inspiration of this features goes to the fine folks at Nlmatics. They were some of the first pioneers
-working on datagrids from document using a set of questions and custom transformer models. This implementation of their
-concept ultimately leverages newer techniques and better models, but hats off to them for coming up with a design like
-this 6 years ago!
+This `run_extract` task orchestrates the extraction process, spinning up a number of `llama_index_doc_query` tasks.
+Each of these query tasks uses LlamaIndex Django & pgvector for vector search and retrieval, and Marvin
+for data parsing and extraction. It processes each document and column in parallel using celery's task system.
+
+All credit for the inspiration of this feature goes to the fine folks at [Nlmatics](https://www.nlmatics.com/). They
+were some of the first pioneers working on datagrids from document using a set of questions and custom transformer
+models. This implementation of their concept ultimately leverages newer techniques and better models, but hats off
+to them for coming up with a design like this in 2017/2018!
+
+The current implementation relies heavily on [LlamaIndex](https://docs.llamaindex.ai/en/stable/), specifically
+their vector store tooling, their reranker and their agent framework.
+
+Structured data extraction is powered by the amazing [Marvin library](https://github.com/prefecthq/marvin).
 
 ## Overview
 
@@ -17,13 +25,13 @@ The extract process involves the following key components:
 2. **Fieldset**: A set of columns defining the structure of the data to be extracted.
 3. **LlamaIndex**: A library used for efficient vector search and retrieval of relevant document sections.
 4. **AI Agents**: Intelligent agents that analyze the retrieved document sections and extract structured data.
-5. **Marvin**: A library that facilitates the parsing and extraction of structured data from text.
+5. **[Marvin](https://github.com/prefecthq/marvin)**: A library that facilitates the parsing and extraction of structured data from text.
 
 The extract process is initiated by creating an `Extract` object that specifies the document corpus and the fieldset defining the desired data structure. The process is then broken down into individual tasks for each document and column combination, allowing for parallel processing and scalability.
 
 ## Detailed Walkthrough
 
-Let's dive into the code and understand how the extract process works step by step.
+Here's how the extract process works step by step.
 
 ### 1. Initiating the Extract Process
 
@@ -39,39 +47,82 @@ The `run_extract` function is the entry point for initiating the extract process
 
 ### 2. Processing Individual Datacells
 
-The `llama_index_doc_query` function is responsible for processing each individual `Datacell`. It performs the following steps:
+The `llama_index_doc_query` function is responsible for processing each individual `Datacell`.
 
-1. Retrieves the `Datacell` object from the database based on the provided `cell_id`.
-2. Sets the `started` timestamp of the datacell to the current time.
-3. Retrieves the associated `document` and initializes the necessary components for vector search and retrieval using LlamaIndex, including the embedding model, language model, and vector store.
-4. Performs a vector search to retrieve the most relevant document sections based on the search text or query specified in the datacell's column.
-5. Extracts the retrieved annotation IDs and associates them with the datacell as sources.
-6. If the datacell's column is marked as "agentic," it uses an AI agent to further analyze the retrieved document sections and extract additional information such as defined terms and section references.
-7. Prepares the retrieved text and additional information for parsing using the Marvin library.
-8. Depending on the specified output type of the datacell's column, it uses Marvin to extract the structured data as either a list or a single instance.
-9. Parses the extracted data and stores it in the datacell's `data` field based on the output type (e.g., BaseModel, str, int, bool, float).
-10. Sets the `completed` timestamp of the datacell to the current time.
-11. If an exception occurs during processing, it sets the `failed` timestamp and stores the error stacktrace in the datacell.
+#### Execution Flow Visualized:
 
-### 3. Marking the Extract as Complete
+```mermaid
+graph TD
+    I[llama_index_doc_query] --> J[Retrieve Datacell]
+    J --> K[Create HuggingFaceEmbedding]
+    K --> L[Create OpenAI LLM]
+    L --> M[Create DjangoAnnotationVectorStore]
+    M --> N[Create VectorStoreIndex]
+    N --> O{Special character '|||' in search_text?}
+    O -- Yes --> P[Split examples and average embeddings]
+    P --> Q[Query annotations using averaged embeddings]
+    Q --> R[Rerank nodes using SentenceTransformerRerank]
+    O -- No --> S[Retrieve results using index retriever]
+    S --> T[Rerank nodes using SentenceTransformerRerank]
+    R --> U{Column is agentic?}
+    T --> U
+    U -- Yes --> V[Create QueryEngineTool]
+    V --> W[Create FunctionCallingAgentWorker]
+    W --> X[Create StructuredPlannerAgent]
+    X --> Y[Query agent for definitions]
+    U -- No --> Z{Extract is list?}
+    Y --> Z
+    Z -- Yes --> AA[Extract with Marvin]
+    Z -- No --> AB[Cast with Marvin]
+    AA --> AC[Save result to Datacell]
+    AB --> AC
+    AC --> AD[Mark Datacell complete]
+```
+#### Step-by-step Walkthrough
 
-Once all the datacells have been processed, the `mark_extract_complete` function is triggered by the Celery chord. It retrieves the `Extract` object based on the provided `extract_id` and sets the `finished` timestamp to the current time, indicating that the extract process is complete.
+1. The `run_extract` task is called with an `extract_id` and `user_id`. It retrieves the corresponding `Extract` object and marks it as started.
 
-## Benefits and Considerations
+2. It then iterates over the document IDs associated with the extract. For each document and each column in the extract's fieldset, it:
+   - Creates a new `Datacell` object with the extract, column, output type, creator, and document.
+   - Sets CRUD permissions for the datacell to the user.
+   - Appends a `llama_index_doc_query` task to a list of tasks, passing the datacell ID.
 
-The extract functionality offers several benefits:
+3. After all datacells are created and their tasks added to the list, a Celery `chord` is used to group the tasks. Once all tasks are complete, it calls the `mark_extract_complete` task to mark the extract as finished.
 
-1. **Structured Data Extraction**: It enables the extraction of structured data from unstructured or semi-structured documents, making the information more accessible and actionable.
-2. **Scalability**: By breaking down the process into individual tasks for each document and column combination, it allows for parallel processing and scalability, enabling the handling of large document corpora.
-3. **Flexibility**: The use of fieldsets allows for the definition of custom data structures tailored to specific requirements.
-4. **AI-Powered Analysis**: The integration of AI agents and the Marvin library enables intelligent analysis and extraction of relevant information from the retrieved document sections.
-5. **Asynchronous Processing**: The use of Celery for asynchronous task processing ensures that the extract process doesn't block the main application and can be performed in the background.
+4. The `llama_index_doc_query` task processes each individual datacell. It:
+   - Retrieves the datacell and marks it as started.
+   - Creates a `HuggingFaceEmbedding` model and sets it as the `Settings.embed_model`.
+   - Creates an `OpenAI` LLM and sets it as the `Settings.llm`.
+   - Creates a `DjangoAnnotationVectorStore` from the document ID and column settings.
+   - Creates a `VectorStoreIndex` from the vector store.
 
-However, there are a few considerations to keep in mind:
+5. If the `search_text` contains the special character '|||':
+   - It splits the examples and calculates the embeddings for each example.
+   - It calculates the average embedding from the individual embeddings.
+   - It queries the `Annotation` objects using the averaged embeddings and orders them by cosine distance.
+   - It reranks the nodes using `SentenceTransformerRerank` and retrieves the top-n nodes.
+   - It adds the annotation IDs of the reranked nodes to the datacell's sources.
+   - It retrieves the text from the reranked nodes.
 
-1**Processing Time**: Depending on the size of the document corpus and the complexity of the fieldset, the extract process may take a considerable amount of time to complete.
-2**Error Handling**: Proper error handling and monitoring should be implemented to handle any exceptions or failures during the processing of individual datacells.
-3**Data Validation**: The extracted structured data may require additional validation and cleansing steps to ensure its quality and consistency.
+6. If the `search_text` does not contain the special character '|||':
+   - It retrieves the relevant annotations using the index retriever based on the `search_text` or `query`.
+   - It reranks the nodes using `SentenceTransformerRerank` and retrieves the top-n nodes.
+   - It adds the annotation IDs of the reranked nodes to the datacell's sources.
+   - It retrieves the text from the retrieved nodes.
+
+7. If the column is marked as `agentic`:
+   - It creates a `QueryEngineTool`, `FunctionCallingAgentWorker`, and `StructuredPlannerAgent`.
+   - It queries the agent to find defined terms and section references in the retrieved text.
+   - The definitions and section text are added to the retrieved text.
+
+8. Depending on whether the column's `extract_is_list` is true, it either:
+   - Extracts a list of the `output_type` from the retrieved text using Marvin, with optional `instructions` or `query`.
+   - Casts the retrieved text to the `output_type` using Marvin, with optional `instructions` or `query`.
+
+9. The result is saved to the datacell's `data` field based on the `output_type`. The datacell is marked as completed.
+
+10. If an exception occurs during processing, the error is logged, saved to the datacell's `stacktrace`, and the
+    datacell is marked as failed.
 
 ## Next Steps
 

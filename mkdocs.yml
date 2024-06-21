@@ -1,11 +1,11 @@
 site_name: OpenContracts
-site_description: Open, Extensible Natural Language Annotation and Analysis Platform
+site_description: Open, Extensible Document Analytics Platform
 site_author: John Scrudato IV
 site_url: https://hatch.pypa.io/latest/
 repo_name: JSv4/OpenContracts
 repo_url: https://github.com/JSv4/OpenContracts
 edit_uri: blob/master/docs
-copyright: 'Copyright &copy; John Scrudato & OpenSource.Legal 2022-present'
+copyright: 'Copyright &copy; John Scrudato 2022-present'
 
 docs_dir: docs
 site_dir: site
@@ -14,8 +14,8 @@ theme:
   name: material
   custom_dir: docs/.overrides
   language: en
-  favicon: assets/images/logos/favicon.icon
-  logo: assets/images/logos/os_legal_128_inverted.png
+  favicon: assets/images/logos/OpenContracts_Logo_Inverted.ico
+  logo: assets/images/logos/OpenContracts_Logo_Inverted.png
   font:
     text: Roboto
     code: Roboto Mono
@@ -48,17 +48,15 @@ nav:
     - Quick-Start: quick-start.md
     - System Requirements: requirements.md
     - How It Works:
-        - Backend:
-            - Application Architecture: architecture/under-the-hood.md
-            - Asynchronous Processing: architecture/asynchronous-processing.md
-            - LlamaIndex Integration: extract_and_retrieval/document_data_extract.md
-            - Question Answering: extract_and_retrieval/querying_corpus.md
-            - Datagrid Extract: extract_and_retrieval/document_data_extract.md
-        - Frontend:
-            - Annotation Creation: architecture/components/annotator/how-annotations-are-created.md
-            - Annotator Component: architecture/components/annotator/overview.md
-        - Data Format:
-            - Page XY Data: walkthrough/advanced/pawls-token-format.md
+        - Backend - Architecture: architecture/under-the-hood.md
+        - Backend - Asynchronous Processing: architecture/asynchronous-processing.md
+        - Backend - LlamaIndex & Django Integration: extract_and_retrieval/intro_to_django_annotation_vector_store.md
+        - Backend- Datagrid Extract: extract_and_retrieval/document_data_extract.md
+        - Backend- Question Answering: extract_and_retrieval/querying_corpus.md
+        - Backend - Datagrid Extract: extract_and_retrieval/document_data_extract.md
+        - Frontend - Annotation Creation: architecture/components/annotator/how-annotations-are-created.md
+        - Frontend - Annotator Component: architecture/components/annotator/overview.md
+        - PDF Data Format: walkthrough/advanced/pawls-token-format.md
     - Acknowledgements: acknowledgements.md
   - Walkthrough:
       - Key-Concepts: walkthrough/key-concepts.md
@@ -68,6 +66,8 @@ nav:
       - Step 4 - Create Some Annotations: walkthrough/step-4-create-text-annotations.md
       - Step 5 - Create Some Document Annotations: walkthrough/step-5-create-doc-type-annotations.md
       - Step 6 - Search and Filter By Annotations: walkthrough/step-6-search-and-filter-by-annotations.md
+      - Step 7 - Query a Corpus: walkthrough/step-7-query-corpus.md
+      - Step 8 - Data Extract: walkthrough/step-8-data-extract.md
       - Advanced:
           - Configure How Annotations Are Displayed: walkthrough/advanced/configure-annotation-view.md
           - Run a Gremlin Analyzer: walkthrough/advanced/run-gremlin-analyzer.md

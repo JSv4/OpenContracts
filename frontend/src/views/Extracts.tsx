@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
 import { useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -44,6 +44,14 @@ export const Extracts = () => {
     includeMetadata: true,
   };
 
+  const shouldPoll = (extracts: GetExtractsOutput) => {
+    return extracts?.extracts?.edges.reduce(
+      (accum, edge) =>
+        (edge.node.started && !edge.node.finished && !edge.node.error) || accum,
+      false
+    );
+  };
+
   const {
     refetch: refetchExtracts,
     loading: extracts_loading,
@@ -53,8 +61,19 @@ export const Extracts = () => {
   } = useQuery<GetExtractsOutput, GetExtractsInput>(REQUEST_GET_EXTRACTS, {
     variables: extract_variables,
     nextFetchPolicy: "network-only",
-    notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
   });
+
+  useEffect(() => {
+    if (extracts_data && shouldPoll(extracts_data)) {
+      const pollInterval = setInterval(() => {
+        refetchExtracts();
+      }, 30000);
+
+      return () => {
+        clearInterval(pollInterval);
+      };
+    }
+  }, [extracts_data, refetchExtracts]);
 
   const extract_nodes = extracts_data?.extracts?.edges
     ? extracts_data.extracts.edges

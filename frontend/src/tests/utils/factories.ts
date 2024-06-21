@@ -217,7 +217,7 @@ export function generateMockExtract(
     created: new Date().toISOString(),
     started: null,
     finished: null,
-    stacktrace: null,
+    error: null,
   };
 }
 

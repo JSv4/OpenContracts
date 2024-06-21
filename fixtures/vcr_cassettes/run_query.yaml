@@ -9,7 +9,7 @@ interactions:
       Connection:
       - keep-alive
       X-Amzn-Trace-Id:
-      - 6937a81d-4aa7-49dd-af9f-3488a9407281
+      - c42050e0-2aba-4e6c-b3ff-d846ac65f466
       user-agent:
       - sentence-transformers/None; hf_hub/0.23.4; python/3.10.12; torch/2.3.1
     method: HEAD
@@ -35,7 +35,7 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Mon, 17 Jun 2024 00:55:18 GMT
+      - Thu, 20 Jun 2024 06:32:15 GMT
       ETag:
       - '"952a9b81c0bfd99800fabf352f69c7ccd46c5e43"'
       Referrer-Policy:
@@ -43,11 +43,11 @@ interactions:
       Vary:
       - Origin
       Via:
-      - 1.1 aa3674a12327640af71c59263be8ffc6.cloudfront.net (CloudFront)
+      - 1.1 01fc452cc2ba7a24791ff6a3ac1b51e0.cloudfront.net (CloudFront)
       X-Amz-Cf-Id:
-      - WvmTFxlOjMTxflOeJVVL9lTHiUaGVy82T3obwPK3O5Tf0Bbia_AcbA==
+      - DmJCIsy5nVsq5g6RUsf2fAJgt8Ss3ioNdkT8uXvk9XseSWHgLb-yuw==
       X-Amz-Cf-Pop:
-      - DFW57-P1
+      - DFW56-P3
       X-Cache:
       - Miss from cloudfront
       X-Powered-By:
@@ -55,7 +55,7 @@ interactions:
       X-Repo-Commit:
       - 2430568290bb832d22ad5064f44dd86cf0240142
       X-Request-Id:
-      - Root=1-666f8976-57b32e764f1fae40133649e8;6937a81d-4aa7-49dd-af9f-3488a9407281
+      - Root=1-6673ccef-021d6b0735f82c096e30ae2d;c42050e0-2aba-4e6c-b3ff-d846ac65f466
       cross-origin-opener-policy:
       - same-origin
     status:
@@ -71,7 +71,7 @@ interactions:
       Connection:
       - keep-alive
       X-Amzn-Trace-Id:
-      - 24fbb4f6-730e-4fe6-a48f-fe730128135a
+      - 2dd18b00-eb2f-4e67-868c-69fb8a39986f
       user-agent:
       - sentence-transformers/None; hf_hub/0.23.4; python/3.10.12; torch/2.3.1
     method: HEAD
@@ -97,7 +97,7 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Mon, 17 Jun 2024 00:55:18 GMT
+      - Thu, 20 Jun 2024 06:32:15 GMT
       ETag:
       - '"fd1b291129c607e5d49799f87cb219b27f98acdf"'
       Referrer-Policy:
@@ -105,11 +105,11 @@ interactions:
       Vary:
       - Origin
       Via:
-      - 1.1 4bbf91f2f9edc22eb68408b6405ae452.cloudfront.net (CloudFront)
+      - 1.1 8b40d2318598b57f3a4cb29b2f0fb820.cloudfront.net (CloudFront)
       X-Amz-Cf-Id:
-      - P7E0wkXqjU_Uej5TwejnKX1Kwy9fGtFYqYQAjue1lXxWK4luugKhtA==
+      - W30PYweGPDJrpZ5Hv4wHXuw8CfK5PJ7X5qnZAk3-hMErDYCBpIFs_g==
       X-Amz-Cf-Pop:
-      - DFW57-P1
+      - DFW56-P3
       X-Cache:
       - Miss from cloudfront
       X-Powered-By:
@@ -117,7 +117,7 @@ interactions:
       X-Repo-Commit:
       - 2430568290bb832d22ad5064f44dd86cf0240142
       X-Request-Id:
-      - Root=1-666f8976-12dbb9ac4b52852029f73fe5;24fbb4f6-730e-4fe6-a48f-fe730128135a
+      - Root=1-6673ccef-5c719fd83e8099237741396a;2dd18b00-eb2f-4e67-868c-69fb8a39986f
       cross-origin-opener-policy:
       - same-origin
     status:
@@ -133,7 +133,7 @@ interactions:
       Connection:
       - keep-alive
       X-Amzn-Trace-Id:
-      - ea7459e2-bcc3-43ed-a30c-56e474f0743c
+      - 52e0b5c0-0e19-42ea-8219-87d15b82bccd
       user-agent:
       - sentence-transformers/None; hf_hub/0.23.4; python/3.10.12; torch/2.3.1
     method: HEAD
@@ -159,7 +159,7 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Mon, 17 Jun 2024 00:55:18 GMT
+      - Thu, 20 Jun 2024 06:32:15 GMT
       ETag:
       - '"49291b15aecddcea5f99be93dde87cbfdfb3127b"'
       Referrer-Policy:
@@ -167,11 +167,11 @@ interactions:
       Vary:
       - Origin
       Via:
-      - 1.1 9fe7d47ea2a815113a41181f1d63f69e.cloudfront.net (CloudFront)
+      - 1.1 e6a210d32373f8c8e5c59660a5ef51d8.cloudfront.net (CloudFront)
       X-Amz-Cf-Id:
-      - YQxa0BqRwoL1-1KRUIruxMKmWYylWhcFZRrHhPXdnyR0PoHw-LmLsw==
+      - 4A54PMCjuvTChEV4QV7BR8i86QpiXg2rLVyO5umJP6RoHEbdqtU0Sg==
       X-Amz-Cf-Pop:
-      - DFW57-P1
+      - DFW56-P3
       X-Cache:
       - Miss from cloudfront
       X-Powered-By:
@@ -179,7 +179,7 @@ interactions:
       X-Repo-Commit:
       - 2430568290bb832d22ad5064f44dd86cf0240142
       X-Request-Id:
-      - Root=1-666f8976-619a0f0802ed002b12047e02;ea7459e2-bcc3-43ed-a30c-56e474f0743c
+      - Root=1-6673ccef-7dce73f77a57082a1dc25d40;52e0b5c0-0e19-42ea-8219-87d15b82bccd
       cross-origin-opener-policy:
       - same-origin
     status:
@@ -195,7 +195,7 @@ interactions:
       Connection:
       - keep-alive
       X-Amzn-Trace-Id:
-      - 0ad68716-f11b-4a87-9335-1695746c8e65
+      - f09d0367-174c-4157-ad13-311fad36f201
       user-agent:
       - sentence-transformers/None; hf_hub/0.23.4; python/3.10.12; torch/2.3.1
     method: HEAD
@@ -221,7 +221,7 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Mon, 17 Jun 2024 00:55:18 GMT
+      - Thu, 20 Jun 2024 06:32:16 GMT
       ETag:
       - '"952a9b81c0bfd99800fabf352f69c7ccd46c5e43"'
       Referrer-Policy:
@@ -229,11 +229,11 @@ interactions:
       Vary:
       - Origin
       Via:
-      - 1.1 b3ac893abff0a2c3dda216fe4cd9157a.cloudfront.net (CloudFront)
+      - 1.1 5c2c969e1efb957f3541c48cdf2f9d6a.cloudfront.net (CloudFront)
       X-Amz-Cf-Id:
-      - Ljb-Exg_FOd94QfTjt3Woa8egvhp_dtXiQ-Ofwetu16Jh_TyERSSXg==
+      - pGnu0_VjrnY51Ut3bx16lIhQk7SXTEDO7JCp_buRP1dZqCYDK7fjyg==
       X-Amz-Cf-Pop:
-      - DFW57-P1
+      - DFW56-P3
       X-Cache:
       - Miss from cloudfront
       X-Powered-By:
@@ -241,7 +241,7 @@ interactions:
       X-Repo-Commit:
       - 2430568290bb832d22ad5064f44dd86cf0240142
       X-Request-Id:
-      - Root=1-666f8976-77ce0d8643792f1e3435ac6e;0ad68716-f11b-4a87-9335-1695746c8e65
+      - Root=1-6673ccef-28691392080780163a8d2956;f09d0367-174c-4157-ad13-311fad36f201
       cross-origin-opener-policy:
       - same-origin
     status:
@@ -257,7 +257,7 @@ interactions:
       Connection:
       - keep-alive
       X-Amzn-Trace-Id:
-      - f5402b91-f5eb-45b4-a075-d049990efe8b
+      - b3a5682a-b1ed-45fa-9e8c-0db7f6b2474d
       user-agent:
       - sentence-transformers/None; hf_hub/0.23.4; python/3.10.12; torch/2.3.1
     method: HEAD
@@ -283,7 +283,7 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Mon, 17 Jun 2024 00:55:19 GMT
+      - Thu, 20 Jun 2024 06:32:16 GMT
       ETag:
       - '"f789d99277496b282d19020415c5ba9ca79ac875"'
       Referrer-Policy:
@@ -291,11 +291,11 @@ interactions:
       Vary:
       - Origin
       Via:
-      - 1.1 22067fb5d7eb764108747a104222f50a.cloudfront.net (CloudFront)
+      - 1.1 93e20f04c6918da9c97f5798c5d3e818.cloudfront.net (CloudFront)
       X-Amz-Cf-Id:
-      - -EBdBJBR4dDde4nqBMzXGIdeeJvSPRVW4cDLQjb79G1gxvpbuPoGZQ==
+      - geCj4tpUK05iNFMDMvcBr77JbF9RbkpQfSmWszq6coRkPRElRrS9UQ==
       X-Amz-Cf-Pop:
-      - DFW57-P1
+      - DFW56-P3
       X-Cache:
       - Miss from cloudfront
       X-Powered-By:
@@ -303,7 +303,7 @@ interactions:
       X-Repo-Commit:
       - 2430568290bb832d22ad5064f44dd86cf0240142
       X-Request-Id:
-      - Root=1-666f8977-755975443859079a54c6564b;f5402b91-f5eb-45b4-a075-d049990efe8b
+      - Root=1-6673ccf0-3c2ea1da6740be7c33a130f2;b3a5682a-b1ed-45fa-9e8c-0db7f6b2474d
       cross-origin-opener-policy:
       - same-origin
     status:
@@ -319,10 +319,10 @@ interactions:
       Connection:
       - keep-alive
       X-Amzn-Trace-Id:
-      - 02879368-28c1-475b-87cf-27dbe8c18f99
+      - 70f0b99f-6a86-4335-90cf-7e93958cfbf6
       user-agent:
       - unknown/None; hf_hub/0.23.4; python/3.10.12; torch/2.3.1; transformers/4.41.2;
-        session_id/c9c9ba8fda1242b8a494bd97dddc1efb; file_type/config; from_auto_class/True
+        session_id/c5e102d9de1b472dbff4798a7adece4e; file_type/config; from_auto_class/True
     method: HEAD
     uri: https://huggingface.co/sentence-transformers/multi-qa-MiniLM-L6-cos-v1/resolve/main/config.json
   response:
@@ -346,7 +346,7 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Mon, 17 Jun 2024 00:55:19 GMT
+      - Thu, 20 Jun 2024 06:32:16 GMT
       ETag:
       - '"72b987fd805cfa2b58c4c8c952b274a11bfd5a00"'
       Referrer-Policy:
@@ -354,11 +354,11 @@ interactions:
       Vary:
       - Origin
       Via:
-      - 1.1 22067fb5d7eb764108747a104222f50a.cloudfront.net (CloudFront)
+      - 1.1 77bbaa12f1db74ae58b5588b8dc2ac98.cloudfront.net (CloudFront)
       X-Amz-Cf-Id:
-      - vcMejovYO63W-ZVZzRtjsKKnmi79_pmQL_6PYMzMpFnR2pmtRRtvwQ==
+      - sOWW-mOSAdGNN7a7cnNL5nGGAUpfaGbpeGTubMc2miil3TvWKcnTpQ==
       X-Amz-Cf-Pop:
-      - DFW57-P1
+      - DFW56-P3
       X-Cache:
       - Miss from cloudfront
       X-Powered-By:
@@ -366,7 +366,7 @@ interactions:
       X-Repo-Commit:
       - 2430568290bb832d22ad5064f44dd86cf0240142
       X-Request-Id:
-      - Root=1-666f8977-398703a07c3d166b3cac45e3;02879368-28c1-475b-87cf-27dbe8c18f99
+      - Root=1-6673ccf0-5e3b8e8a5628d74b4206988a;70f0b99f-6a86-4335-90cf-7e93958cfbf6
       cross-origin-opener-policy:
       - same-origin
     status:
@@ -382,10 +382,10 @@ interactions:
       Connection:
       - keep-alive
       X-Amzn-Trace-Id:
-      - be1e0a15-3f16-4695-ac5f-a5b5972f24f0
+      - 2be312a3-cd7a-4910-999e-da6a826f0371
       user-agent:
       - unknown/None; hf_hub/0.23.4; python/3.10.12; torch/2.3.1; transformers/4.41.2;
-        session_id/c9c9ba8fda1242b8a494bd97dddc1efb
+        session_id/c5e102d9de1b472dbff4798a7adece4e
     method: HEAD
     uri: https://huggingface.co/sentence-transformers/multi-qa-MiniLM-L6-cos-v1/resolve/main/tokenizer_config.json
   response:
@@ -409,7 +409,7 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Mon, 17 Jun 2024 00:55:20 GMT
+      - Thu, 20 Jun 2024 06:32:17 GMT
       ETag:
       - '"d50701956f8e35e7507e6b74547a71e62ca39cad"'
       Referrer-Policy:
@@ -417,11 +417,11 @@ interactions:
       Vary:
       - Origin
       Via:
-      - 1.1 e9bcf307d6ed54e3e501e39bc538dcfc.cloudfront.net (CloudFront)
+      - 1.1 8cfa3ac64c5335f6622a388421fb1f1a.cloudfront.net (CloudFront)
       X-Amz-Cf-Id:
-      - iUS-6xkcamOBSjJd-KMVOTdt-28vhCIM9wAZP3rZByFrJ6nA6q9VoQ==
+      - tWdw4Xr_cV5CTKXC3qiorxAyQaBr-bnIUH9w4sI-49JQbco_XHB8qQ==
       X-Amz-Cf-Pop:
-      - DFW57-P1
+      - DFW56-P3
       X-Cache:
       - Miss from cloudfront
       X-Powered-By:
@@ -429,7 +429,7 @@ interactions:
       X-Repo-Commit:
       - 2430568290bb832d22ad5064f44dd86cf0240142
       X-Request-Id:
-      - Root=1-666f8978-5b4b884110c4301b55ae4a58;be1e0a15-3f16-4695-ac5f-a5b5972f24f0
+      - Root=1-6673ccf1-6deb521614d70597234511d0;2be312a3-cd7a-4910-999e-da6a826f0371
       cross-origin-opener-policy:
       - same-origin
     status:
@@ -445,14 +445,14 @@ interactions:
       Connection:
       - keep-alive
       X-Amzn-Trace-Id:
-      - bdbd44a7-adcb-4e76-8139-71e24d9d2061
+      - 82c7248c-99ec-4ac9-9e46-d1253d5392ac
       user-agent:
       - sentence-transformers/None; hf_hub/0.23.4; python/3.10.12; torch/2.3.1
     method: GET
     uri: https://huggingface.co/api/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1/revision/main
   response:
     body:
-      string: '{"_id":"621ffdc136468d709f1802cf","id":"sentence-transformers/multi-qa-MiniLM-L6-cos-v1","modelId":"sentence-transformers/multi-qa-MiniLM-L6-cos-v1","author":"sentence-transformers","sha":"2430568290bb832d22ad5064f44dd86cf0240142","lastModified":"2024-03-27T11:37:43.000Z","private":false,"disabled":false,"gated":false,"pipeline_tag":"sentence-similarity","tags":["sentence-transformers","pytorch","tf","safetensors","bert","feature-extraction","sentence-similarity","transformers","en","dataset:flax-sentence-embeddings/stackexchange_xml","dataset:ms_marco","dataset:gooaq","dataset:yahoo_answers_topics","dataset:search_qa","dataset:eli5","dataset:natural_questions","dataset:trivia_qa","dataset:embedding-data/QQP","dataset:embedding-data/PAQ_pairs","dataset:embedding-data/Amazon-QA","dataset:embedding-data/WikiAnswers","autotrain_compatible","endpoints_compatible","region:us"],"downloads":1956573,"library_name":"sentence-transformers","mask_token":"[MASK]","widgetData":[{"source_sentence":"That
+      string: '{"_id":"621ffdc136468d709f1802cf","id":"sentence-transformers/multi-qa-MiniLM-L6-cos-v1","modelId":"sentence-transformers/multi-qa-MiniLM-L6-cos-v1","author":"sentence-transformers","sha":"2430568290bb832d22ad5064f44dd86cf0240142","lastModified":"2024-03-27T11:37:43.000Z","private":false,"disabled":false,"gated":false,"pipeline_tag":"sentence-similarity","tags":["sentence-transformers","pytorch","tf","safetensors","bert","feature-extraction","sentence-similarity","transformers","en","dataset:flax-sentence-embeddings/stackexchange_xml","dataset:ms_marco","dataset:gooaq","dataset:yahoo_answers_topics","dataset:search_qa","dataset:eli5","dataset:natural_questions","dataset:trivia_qa","dataset:embedding-data/QQP","dataset:embedding-data/PAQ_pairs","dataset:embedding-data/Amazon-QA","dataset:embedding-data/WikiAnswers","autotrain_compatible","endpoints_compatible","text-embeddings-inference","region:us"],"downloads":1969565,"library_name":"sentence-transformers","mask_token":"[MASK]","widgetData":[{"source_sentence":"That
         is a happy person","sentences":["That is a happy dog","That is a very happy
         person","Today is a sunny day"]}],"likes":104,"model-index":null,"config":{"architectures":["BertModel"],"model_type":"bert","tokenizer_config":{"unk_token":"[UNK]","sep_token":"[SEP]","pad_token":"[PAD]","cls_token":"[CLS]","mask_token":"[MASK]"}},"cardData":{"language":["en"],"library_name":"sentence-transformers","tags":["sentence-transformers","feature-extraction","sentence-similarity","transformers"],"datasets":["flax-sentence-embeddings/stackexchange_xml","ms_marco","gooaq","yahoo_answers_topics","search_qa","eli5","natural_questions","trivia_qa","embedding-data/QQP","embedding-data/PAQ_pairs","embedding-data/Amazon-QA","embedding-data/WikiAnswers"],"pipeline_tag":"sentence-similarity"},"transformersInfo":{"auto_model":"AutoModel","pipeline_tag":"feature-extraction","processor":"AutoTokenizer"},"siblings":[{"rfilename":".gitattributes"},{"rfilename":"1_Pooling/config.json"},{"rfilename":"README.md"},{"rfilename":"config.json"},{"rfilename":"config_sentence_transformers.json"},{"rfilename":"data_config.json"},{"rfilename":"model.safetensors"},{"rfilename":"modules.json"},{"rfilename":"pytorch_model.bin"},{"rfilename":"sentence_bert_config.json"},{"rfilename":"special_tokens_map.json"},{"rfilename":"tf_model.h5"},{"rfilename":"tokenizer.json"},{"rfilename":"tokenizer_config.json"},{"rfilename":"train_script.py"},{"rfilename":"vocab.txt"}],"spaces":["jorge-henao/ask2democracycol","Abhilashvj/haystack_QA","Sukhyun/course_recommender","namoopsoo/text-audio-video","somosnlp-hackathon-2023/ask2democracy","Waflon/FAQ_SSI_CHILE","mnemlaghi/canap","PBusienei/Summit_app_demo","myshirk/semantic-search-datasets","namoopsoo/text-audio-video-policies","namoopsoo/text-audio-video-policies-t4","gfhayworth/chat_qa_demo","simplexico/legal-ai-actions","Warlord-K/IITI-Similarity","Warlord-K/LatestFashion","brka-ot/sentence-transformers-multi-qa-MiniLM-L6-cos-v1-feature-extraction","Slycat/Southampton-Similarity","eaglelandsonce/RAG-with-Phi-2-and-LangChain","rishabincloud/RAG-Phi2-LangChain","QaillcNextGen/RAG-with-Phi-2-and-LangChain","yalaa/simplewiki-retrieve-rerank","ravi259/baserag_hf","Lakshita336/bot"],"createdAt":"2022-03-02T23:29:05.000Z","safetensors":{"parameters":{"I64":512,"F32":22713216},"total":22713728}}'
     headers:
@@ -463,29 +463,29 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '3325'
+      - '3353'
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Mon, 17 Jun 2024 00:55:21 GMT
+      - Thu, 20 Jun 2024 06:32:18 GMT
       ETag:
-      - W/"cfd-NInsy1AAU5gLq7OHE8s2f1zGJcU"
+      - W/"d19-bcnRJ0pa6T1Bg56DtVbeCHFnT6E"
       Referrer-Policy:
       - strict-origin-when-cross-origin
       Vary:
       - Origin
       Via:
-      - 1.1 73e04d645babcbb9ee8f20cc865b009c.cloudfront.net (CloudFront)
+      - 1.1 9f39a08ea59fcf3ed020e2cd341ac082.cloudfront.net (CloudFront)
       X-Amz-Cf-Id:
-      - _UMKR3DCSfQUzyFq1KiAeWAHsCz5uSOWIoNfupkK7V9BmkXOXo5TLg==
+      - xxEjVrgpgyctn-ed00_RU92YLG00VGPgEDn64h1VAQ7QYjZjYzUoig==
       X-Amz-Cf-Pop:
-      - DFW57-P1
+      - DFW56-P3
       X-Cache:
       - Miss from cloudfront
       X-Powered-By:
       - huggingface-moon
       X-Request-Id:
-      - Root=1-666f8979-4ecc8ea31d08a10257f4f4b9;bdbd44a7-adcb-4e76-8139-71e24d9d2061
+      - Root=1-6673ccf2-5f19bfee1cbd02f2566a0c1b;82c7248c-99ec-4ac9-9e46-d1253d5392ac
       cross-origin-opener-policy:
       - same-origin
     status:
@@ -544,18 +544,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1SQS0/DMBCE7/kVK5+bqnm0TXMDJCQkQEJIXBCq3GSTGhyvsTeUCvW/Iyd9wMWH
-        nf3GM/sTAQhVixJEtZVcdVbHK9nvXuSVfV69q8/7O5kX+4ebp6KeX98uWjEJBG3eseITNa2osxpZ
-        kRnlyqFkDK7JMinmxXyZZoPQUY06YK3lOKc4naV5PJvHSXYEt6Qq9KKE1wgA4Gd4Q0RT47coYTY5
-        TTr0XrYoyvMSgHCkw0RI75VnaVhMLmJFhtEMqa+M36Er4ZEMAjXAWwTr6EvVWIOn3lXoIexLZUCZ
-        hlwnQz1wqPFLGgamAfrs0e2n4vjJ4ZxOU2sdbUIT02t9njfKKL9dO5SeTEjimeyIHyKAt+EK/b9i
-        wjrqLK+ZPtAEwyxNRz9xuftFTfKjyMRS/6GyRXRMKPzeM3brRpkWnXVqPEpj11my2mC+XBQookP0
-        CwAA//8DAChpqmkdAgAA
+        H4sIAAAAAAAAA1SQQU/DMAyF7/0VVs4rWtsV1t2QOCEBtwmB0JSlbhdI7ZB4A4T231G6scElBz9/
+        L+/5OwNQtlULUGajxQze5Y2p25u+Xjay/Bzmpriip1t+WN6tr5v5o5okgtevaOSXujA8eIdimQ6y
+        CagFk2txVcznl3VRNaMwcIsuYb2XfMZ5OS1n+bTOi+oIbtgajGoBzxkAwPf4pojU4qdawHTyOxkw
+        Rt2jWpyWAFRglyZKx2ijaBI1OYuGSZDG1PdMCNyBbBB84J1tsYXI22AwQtrTlsBSx2HQqRYEdLjT
+        JCAMmuIHBkv9iL9vMXxdqOM3+1M+x70PvE5daOvcad5ZsnGzCqgjU8oShf0B32cAL+Mdtv+qKR94
+        8LISfkNKhlVZHvzU+fJntaiOorBo94eq6uyYUMWvKDisOks9Bh/s4SydX3UzvCybdqprle2zHwAA
+        AP//AwDgrnwrHwIAAA==
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 894f12e05ca96b6a-DFW
+      - 8969b8922904eb1f-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -563,14 +563,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 17 Jun 2024 00:55:23 GMT
+      - Thu, 20 Jun 2024 06:32:19 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=eDLcP2XrJvP63zAA2i2UAJ.3Buc81FLoOGkuPgjH7mo-1718585723-1.0.1.1-Ka8kgEOmWi2ytMMe66ZP_EGq0kHx2G3KTnG9QfABf1fjbhIa5EXdgwqCr437e7obvYr2w2sc6IqLuEXXcYjTxw;
-        path=/; expires=Mon, 17-Jun-24 01:25:23 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=2DnYPG47fdcZ4pM0n50WPP4bMItIrfRKW3OD6B687cc-1718865139-1.0.1.1-.mwvto43wAJymXKhrq_Lqlp_ba8VTSGnK.gJIybKhx58G2v1OAzxK8vnaPL3TYpi3ZxPqixDdvlcdKwsM3Wb3g;
+        path=/; expires=Thu, 20-Jun-24 07:02:19 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=4EGRFe7EcNvaVXQnRIMzxNGUMnzV4wIlaHb67CcJ3b4-1718585723488-0.0.1.1-604800000;
+      - _cfuvid=Udvyk9jWojWeH8XS41I1sDtjlX5USgzGucGhUFXBoZY-1718865139975-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -579,11 +579,11 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '353'
+      - '238'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15724800; includeSubDomains
+      - max-age=31536000; includeSubDomains
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -597,7 +597,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 38ms
       x-request-id:
-      - req_4d4bcd45943be075321c1adff16d183f
+      - 92c7b6115df3895e7df67f76d1b624d1
     status:
       code: 200
       message: OK

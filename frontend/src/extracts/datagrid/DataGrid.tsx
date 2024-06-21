@@ -42,7 +42,6 @@ interface DataGridProps {
   onAddDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveColumnId: (columnId: string) => void;
-  refetch: () => any;
   columns: ColumnType[];
 }
 
@@ -51,7 +50,6 @@ export const DataGrid = ({
   cells,
   rows,
   columns,
-  refetch,
   onAddDocIds,
   onRemoveDocIds,
   onRemoveColumnId,
@@ -69,31 +67,55 @@ export const DataGrid = ({
     RequestApproveDatacellOutputType,
     RequestApproveDatacellInputType
   >(REQUEST_APPROVE_DATACELL, {
-    onCompleted: () => {
+    onCompleted: (data) => {
       toast.success("Approved!");
-      refetch();
+      setLastCells((prevCells) =>
+        prevCells.map((cell) =>
+          cell.id === data.approveDatacell.obj.id
+            ? { ...cell, ...data.approveDatacell.obj }
+            : cell
+        )
+      );
     },
     onError: () => toast.error("Could not register feedback!"),
   });
+
   const [requestReject, { loading: trying_reject }] = useMutation<
     RequestRejectDatacellOutputType,
     RequestRejectDatacellInputType
   >(REQUEST_REJECT_DATACELL, {
-    onCompleted: () => {
+    onCompleted: (data) => {
       toast.success("Rejected!");
-      refetch();
+      setLastCells((prevCells) =>
+        prevCells.map((cell) =>
+          cell.id === data.rejectDatacell.obj.id
+            ? { ...data.rejectDatacell.obj, ...cell }
+            : cell
+        )
+      );
     },
     onError: () => toast.error("Could not register feedback!"),
   });
+
   const [requestEdit, { loading: trying_edit }] = useMutation<
     RequestEditDatacellOutputType,
     RequestEditDatacellInputType
   >(REQUEST_EDIT_DATACELL, {
-    onCompleted: () => {
+    onCompleted: (data) => {
       toast.success("Edit Saved!");
-      refetch();
+      setLastCells((prevCells) =>
+        prevCells.map((cell) =>
+          cell.id === data.editDatacell.obj.id
+            ? { ...data.editDatacell.obj, ...cell }
+            : cell
+        )
+      );
     },
-    onError: () => toast.error("Could not register feedback!"),
+    onError: (error) => {
+      toast.error("Could not register feedback!");
+      // Roll back the state if the mutation fails
+      setLastCells((prevCells) => [...prevCells]);
+    },
   });
 
   return (
@@ -224,7 +246,7 @@ export const DataGrid = ({
                     if (cell) {
                       return (
                         <ExtractDatacell
-                          key={`Cell_${cell.id}`}
+                          key={`Cell_ ${cell.id}`}
                           cellData={cell}
                           onApprove={() =>
                             requestApprove({

@@ -20,7 +20,8 @@ from opencontractserver.tasks.doc_tasks import nlm_ingest_pdf
 from opencontractserver.tasks.embeddings_task import (
     calculate_embedding_for_annotation_text,
 )
-from opencontractserver.tasks.extract_tasks import llama_index_doc_query, run_extract
+from opencontractserver.tasks.extract_orchestrator_tasks import run_extract
+from opencontractserver.tasks import oc_llama_index_doc_query
 from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_TWO_PATH
 
 User = get_user_model()
@@ -169,5 +170,5 @@ class ExtractsTaskTestCase(TestCase):
             print(f"Cell started: {cell.started}")
             print(f"Cell completed: {cell.completed}")
             print(f"Cell failed: {cell.failed}")
-            llama_index_doc_query.delay(cell.id)
+            oc_llama_index_doc_query.delay(cell.id)
             self.assertIsNotNone(cell.data)

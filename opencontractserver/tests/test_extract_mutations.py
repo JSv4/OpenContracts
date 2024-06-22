@@ -150,7 +150,7 @@ class ExtractsMutationTestCase(TestCase):
             to_global_id("ExtractType", self.extract.id)
         )
 
-        with patch("opencontractserver.tasks.extract_tasks.run_extract.s") as mock_task:
+        with patch("opencontractserver.tasks.extract_orchestrator_tasks.run_extract.s") as mock_task:
             result = self.client.execute(mutation)
             self.assertIsNone(result.get("errors"))
             self.assertTrue(result["data"]["startExtract"]["ok"])

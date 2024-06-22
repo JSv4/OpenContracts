@@ -1,5 +1,5 @@
-![OpenContracts](/docs/assets/images/logos/OpenContracts.webp)
-
+![OpenContracts](/docs/assets/images/logos/OS_Legal_Logo.png)
+# OpenContracts
 ## The Free and Open Source Document Analytics Platform
 
 ---

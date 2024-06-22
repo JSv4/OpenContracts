@@ -2,14 +2,13 @@ import logging
 
 import marvin
 import numpy as np
-from celery import chord, group, shared_task
+from celery import shared_task
 from django.conf import settings
-from django.db import transaction
 from django.utils import timezone
-from llama_index.core import QueryBundle, Settings, VectorStoreIndex
+from llama_index.core import Settings, VectorStoreIndex, QueryBundle
 from llama_index.core.agent import FunctionCallingAgentWorker, StructuredPlannerAgent
 from llama_index.core.postprocessor import SentenceTransformerRerank
-from llama_index.core.schema import Node, NodeWithScore
+from llama_index.core.schema import NodeWithScore, Node
 from llama_index.core.tools import QueryEngineTool
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
@@ -17,64 +16,18 @@ from pgvector.django import CosineDistance
 from pydantic import BaseModel
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.extracts.models import Datacell, Extract
+from opencontractserver.extracts.models import Datacell
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
-from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.embeddings import calculate_embedding_for_text
 from opencontractserver.utils.etl import parse_model_or_primitive
-from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)
 
-# Pass OpenAI API key to marvin for parsing / extract
-marvin.settings.openai.api_key = settings.OPENAI_API_KEY
-
-
 @shared_task
-def mark_extract_complete(extract_id):
-    extract = Extract.objects.get(pk=extract_id)
-    extract.finished = timezone.now()
-    extract.save()
-
-
-@shared_task
-def run_extract(extract_id, user_id):
-    logger.info(f"Run extract for extract {extract_id}")
-
-    extract = Extract.objects.get(pk=extract_id)
-
-    with transaction.atomic():
-        extract.started = timezone.now()
-        extract.save()
-
-    fieldset = extract.fieldset
-
-    document_ids = extract.documents.all().values_list("id", flat=True)
-    print(f"Run extract {extract_id} over document ids {document_ids}")
-    tasks = []
-
-    for document_id in document_ids:
-        for column in fieldset.columns.all():
-            with transaction.atomic():
-                cell = Datacell.objects.create(
-                    extract=extract,
-                    column=column,
-                    data_definition=column.output_type,
-                    creator_id=user_id,
-                    document_id=document_id,
-                )
-                set_permissions_for_obj_to_user(user_id, cell, [PermissionTypes.CRUD])
-
-                # Kick off processing job for cell in queue as soon as it's created.
-                tasks.append(llama_index_doc_query.si(cell.pk))
-
-    chord(group(*tasks))(mark_extract_complete.si(extract_id))
-
-
-@shared_task
-def llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int = 512):
+def oc_llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int = 512):
     """
-    Use LlamaIndex to run queries specified for a particular cell
+    OpenContracts' default LlamaIndex and Marvin-based data extract pipeline to run queries specified for a
+    particular cell. We use sentence transformer embeddings + sentence transformer re-ranking.
     """
 
     datacell = Datacell.objects.get(id=cell_id)

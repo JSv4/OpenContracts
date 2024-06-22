@@ -6,6 +6,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from config import celery_app
 from opencontractserver.extracts.models import Datacell, Extract
 from opencontractserver.tasks.data_extract_tasks import oc_llama_index_doc_query
 from opencontractserver.types.enums import PermissionTypes
@@ -15,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 # Pass OpenAI API key to marvin for parsing / extract
 marvin.settings.openai.api_key = settings.OPENAI_API_KEY
+
+
+def get_task_by_name(task_name):
+    return celery_app.tasks.get(task_name)
 
 
 @shared_task
@@ -52,9 +57,13 @@ def run_extract(extract_id, user_id):
                 )
                 set_permissions_for_obj_to_user(user_id, cell, [PermissionTypes.CRUD])
 
-                # Kick off processing job for cell in queue as soon as it's created.
-                tasks.append(oc_llama_index_doc_query.si(cell.pk))
+                # Get the task function dynamically based on the column's task_name
+                task_func = get_task_by_name(column.task_name)
+                if task_func is None:
+                    logger.error(f"Task {column.task_name} not found for column {column.id}")
+                    continue
+
+                # Add the task to the group
+                tasks.append(task_func.si(cell.pk))
 
     chord(group(*tasks))(mark_extract_complete.si(extract_id))
-
-

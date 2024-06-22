@@ -29,7 +29,6 @@ from config.graphql.graphene_types import (
     ExtractType,
     FieldsetType,
     LabelSetType,
-    LanguageModelType,
     RelationInputType,
     RelationshipType,
     UserExportType,
@@ -52,13 +51,7 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus, CorpusQuery, TemporaryFileHandle
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import (
-    Column,
-    Datacell,
-    Extract,
-    Fieldset,
-    LanguageModel,
-)
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.tasks import (
     build_label_lookups_task,
     burn_doc_annotations,
@@ -1481,25 +1474,6 @@ class ObtainJSONWebTokenWithUser(graphql_jwt.ObtainJSONWebToken):
         return cls(user=info.context.user)
 
 
-class CreateLanguageModel(graphene.Mutation):
-    class Arguments:
-        model = graphene.String(required=True)
-
-    ok = graphene.Boolean()
-    message = graphene.String()
-    obj = graphene.Field(LanguageModelType)
-
-    @staticmethod
-    @login_required
-    def mutate(root, info, model):
-        language_model = LanguageModel(model=model, creator=info.context.user)
-        language_model.save()
-        set_permissions_for_obj_to_user(
-            info.context.user, language_model, [PermissionTypes.CRUD]
-        )
-        return CreateLanguageModel(ok=True, message="SUCCESS!", obj=language_model)
-
-
 class CreateFieldset(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
@@ -1652,9 +1626,6 @@ class CreateColumn(graphene.Mutation):
             raise ValueError("One of `query` or `match_text` must be provided.")
 
         fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
-        language_model = LanguageModel.objects.get(
-            pk=from_global_id(language_model_id)[1]
-        )
         column = Column(
             name=name,
             fieldset=fieldset,
@@ -1987,7 +1958,6 @@ class Mutation(graphene.ObjectType):
     ask_query = StartQueryForCorpus.Field()
 
     # EXTRACT MUTATIONS ##########################################################
-    create_language_model = CreateLanguageModel.Field()
     create_fieldset = CreateFieldset.Field()
 
     create_column = CreateColumn.Field()

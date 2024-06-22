@@ -6,13 +6,7 @@ from graphql_relay import to_global_id
 from config.graphql.schema import schema
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import (
-    Column,
-    Datacell,
-    Extract,
-    Fieldset,
-    LanguageModel,
-)
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 
 User = get_user_model()
 
@@ -47,14 +41,10 @@ class DatacellMutationTestCase(TestCase):
             creator=self.user,
             fieldset=self.fieldset,
         )
-        self.language_model = LanguageModel.objects.create(
-            model="TestModel", creator=self.user
-        )
         self.column = Column.objects.create(
             fieldset=self.extract.fieldset,
             query="TestQuery",
             output_type="str",
-            language_model=self.language_model,
             creator=self.user,
         )
         self.datacell = Datacell.objects.create(

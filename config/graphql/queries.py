@@ -3,7 +3,6 @@ import logging
 import re
 
 import graphene
-from celery.exceptions import CeleryError
 from django.conf import settings
 from django.db.models import Q
 from graphene import relay
@@ -62,12 +61,7 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import (
-    Column,
-    Datacell,
-    Extract,
-    Fieldset,
-)
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.types.enums import LabelType
 from opencontractserver.users.models import Assignment, UserExport, UserImport
@@ -783,9 +777,7 @@ class Query(graphene.ObjectType):
                 Q(extract__creator=info.context.user) | Q(is_public=True)
             )
 
-    registered_extract_tasks = graphene.Field(
-        GenericScalar
-    )
+    registered_extract_tasks = graphene.Field(GenericScalar)
 
     @login_required
     def resolve_registered_extract_tasks(self, info, **kwargs):
@@ -797,7 +789,7 @@ class Query(graphene.ObjectType):
         # Get tasks from the app instance
         try:
             for task_name, task in celery_app.tasks.items():
-                if not task_name.startswith('celery.'):
+                if not task_name.startswith("celery."):
                     docstring = inspect.getdoc(task.run) or "No docstring available"
                     tasks[task_name] = docstring
 
@@ -821,4 +813,8 @@ class Query(graphene.ObjectType):
         #     logger.warning(f"Unexpected error while inspecting workers: {str(e)}")
 
         # Filter out Celery's internal tasks
-        return {task: description for task, description in tasks.items() if task.startswith('opencontractserver.tasks.data_extract_tasks')}
+        return {
+            task: description
+            for task, description in tasks.items()
+            if task.startswith("opencontractserver.tasks.data_extract_tasks")
+        }

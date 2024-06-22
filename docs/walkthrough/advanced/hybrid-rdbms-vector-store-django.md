@@ -35,11 +35,11 @@ can efficiently store, query, and analyze data with both relational and vector-b
 
 This is a basic walkthrough for how to use Django as an RDBMS and vector store. This is all baked into OpenContracts
 and **does not need to be setup**. This tutorial is purely for reference (particularly if you want to create your own
-hybrid RDBMS / vector store). 
+hybrid RDBMS / vector store).
 
-We like using [cookiecutter-django](https://github.com/cookiecutter/cookiecutter-django) to scaffold Django projects. 
-First setup your preferred local Python environment (venv is recommended but whatever floats your boat) and cd into the 
-directory you want to hold your app. 
+We like using [cookiecutter-django](https://github.com/cookiecutter/cookiecutter-django) to scaffold Django projects.
+First setup your preferred local Python environment (venv is recommended but whatever floats your boat) and cd into the
+directory you want to hold your app.
 
 Then, install cookiecutter:
 
@@ -59,7 +59,7 @@ Here are some suggested settings (note we're not using docker in our toy app her
 
 ### Install Dependencies
 
-First, ensure you have `pgvector` installed in your project. The python-pgvector instructions are 
+First, ensure you have `pgvector` installed in your project. The python-pgvector instructions are
 [here](https://github.com/pgvector/pgvector-python?tab=readme-ov-file#django). We'll do a quick walkthrough for you.
 
 First, install dependencies. If you're using our starting point, pgvector is in requirements.txt:
@@ -82,9 +82,9 @@ Add a new app to the django project for our vectors. Let's call it vector:
 python manage.py startapp vector
 ```
 
-### If you were starting from scratch, you'd need to create a new, _empty_ migration in one of your Django apps. 
+### If you were starting from scratch, you'd need to create a new, _empty_ migration in one of your Django apps.
 
-Assuming you're working off a fresh Django project, you want to create a migration which will turn on the pgvector 
+Assuming you're working off a fresh Django project, you want to create a migration which will turn on the pgvector
 extension in your configure postgres database:
 
 ```commandline
@@ -113,7 +113,7 @@ class Document(models.Model):
 
     def __str__(self):
         return self.title
-    
+
     def save(self, *args, **kwargs):
         # Generate embedding for the document content
         self.embedding = model.encode(self.content).tolist()
@@ -123,9 +123,9 @@ class Document(models.Model):
 
 ### Configure Your Postgres Database
 
-There are lots of tutorials on setting up Postgres, and the exact steps depend on your environment. Assuming you've 
-created a Postgres database and have the proper connection credentials, configure it in your Django settings module. 
-Follow the official Django instructions 
+There are lots of tutorials on setting up Postgres, and the exact steps depend on your environment. Assuming you've
+created a Postgres database and have the proper connection credentials, configure it in your Django settings module.
+Follow the official Django instructions
 [here](https://docs.djangoproject.com/en/5.0/ref/databases/#postgresql-connection-settings).
 
 ### Create migrations for model
@@ -134,7 +134,7 @@ Follow the official Django instructions
 python manage.py makemigrations
 ```
 
-### Now apply migrations 
+### Now apply migrations
 
 Usual Django migrate command:
 

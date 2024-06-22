@@ -5,10 +5,10 @@ import numpy as np
 from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
-from llama_index.core import Settings, VectorStoreIndex, QueryBundle
+from llama_index.core import QueryBundle, Settings, VectorStoreIndex
 from llama_index.core.agent import FunctionCallingAgentWorker, StructuredPlannerAgent
 from llama_index.core.postprocessor import SentenceTransformerRerank
-from llama_index.core.schema import NodeWithScore, Node
+from llama_index.core.schema import Node, NodeWithScore
 from llama_index.core.tools import QueryEngineTool
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
@@ -22,6 +22,7 @@ from opencontractserver.utils.embeddings import calculate_embedding_for_text
 from opencontractserver.utils.etl import parse_model_or_primitive
 
 logger = logging.getLogger(__name__)
+
 
 @shared_task
 def oc_llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int = 512):

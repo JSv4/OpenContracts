@@ -9,19 +9,13 @@ from opencontractserver.annotations.models import Annotation
 from opencontractserver.annotations.signals import process_annot_on_create_atomic
 from opencontractserver.documents.models import Document
 from opencontractserver.documents.signals import process_doc_on_create_atomic
-from opencontractserver.extracts.models import (
-    Column,
-    Datacell,
-    Extract,
-    Fieldset,
-    LanguageModel,
-)
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
+from opencontractserver.tasks import oc_llama_index_doc_query
 from opencontractserver.tasks.doc_tasks import nlm_ingest_pdf
 from opencontractserver.tasks.embeddings_task import (
     calculate_embedding_for_annotation_text,
 )
 from opencontractserver.tasks.extract_orchestrator_tasks import run_extract
-from opencontractserver.tasks import oc_llama_index_doc_query
 from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_TWO_PATH
 
 User = get_user_model()
@@ -42,10 +36,6 @@ class ExtractsTaskTestCase(TestCase):
         self.user = User.objects.create_user(
             username="testuser", password="testpassword"
         )
-
-        self.language_model = LanguageModel.objects.create(
-            model="TestModel", creator=self.user
-        )
         self.fieldset = Fieldset.objects.create(
             name="TestFieldset",
             description="Test description",
@@ -55,7 +45,6 @@ class ExtractsTaskTestCase(TestCase):
             fieldset=self.fieldset,
             query="What is the name of this document",
             output_type="str",
-            language_model=self.language_model,
             agentic=True,
             creator=self.user,
         )

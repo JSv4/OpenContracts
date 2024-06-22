@@ -56,7 +56,12 @@ class Column(BaseOCModel):
     instructions = django.db.models.TextField(null=True, blank=True)
     agentic = django.db.models.BooleanField(default=False)
     extract_is_list = django.db.models.BooleanField(default=False)
-    task_name = django.db.models.CharField(max_length=1024, null=False, blank=False, default="opencontractserver.tasks.data_extract_tasks.oc_llama_index_doc_query")
+    task_name = django.db.models.CharField(
+        max_length=1024,
+        null=False,
+        blank=False,
+        default="opencontractserver.tasks.data_extract_tasks.oc_llama_index_doc_query",
+    )
 
     class Meta:
         permissions = (

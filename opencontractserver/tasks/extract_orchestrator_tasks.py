@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 import marvin
 from celery import chord, group, shared_task
@@ -19,9 +19,7 @@ marvin.settings.openai.api_key = settings.OPENAI_API_KEY
 
 
 def get_task_by_name(task_name) -> Optional[Callable]:
-    """
-
-    """
+    """ """
     try:
         return celery_app.tasks.get(task_name)
     except Exception:
@@ -66,7 +64,9 @@ def run_extract(extract_id, user_id):
                 # Get the task function dynamically based on the column's task_name
                 task_func = get_task_by_name(column.task_name)
                 if task_func is None:
-                    logger.error(f"Task {column.task_name} not found for column {column.id}")
+                    logger.error(
+                        f"Task {column.task_name} not found for column {column.id}"
+                    )
                     continue
 
                 # Add the task to the group

@@ -1,12 +1,7 @@
 from django.contrib import admin
 from guardian.admin import GuardedModelAdmin
 
-from opencontractserver.extracts.models import (
-    Column,
-    Datacell,
-    Extract,
-    Fieldset,
-)
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 
 
 @admin.register(Fieldset)

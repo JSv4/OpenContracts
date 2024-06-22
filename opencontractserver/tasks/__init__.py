@@ -1,8 +1,8 @@
 from .cleanup_tasks import delete_analysis_and_annotations_task
+from .data_extract_tasks import *  # noqa: F403, F401
 from .doc_tasks import burn_doc_annotations
 from .export_tasks import package_annotated_docs
 from .extract_orchestrator_tasks import run_extract
-from .data_extract_tasks import *
 from .fork_tasks import fork_corpus
 from .import_tasks import import_corpus, import_document_to_corpus
 from .lookup_tasks import build_label_lookups_task

@@ -27,11 +27,11 @@ OpenContracts - including the ability to display the annotations that were used 
 
 ### `run_extract` Task
 
-The run_extract task orchestrates the extraction process. We don't recommend you modify the orchestrator, though you 
-can. You'll want to have a good understanding of 
+The run_extract task orchestrates the extraction process. We don't recommend you modify the orchestrator, though you
+can. You'll want to have a good understanding of
 [celery](https://docs.celeryq.dev/en/stable/getting-started/introduction.html) if you modify this.
 
-The core thing to understand is the extracts are run asynchronously by celery workers (again, read the celery docs if 
+The core thing to understand is the extracts are run asynchronously by celery workers (again, read the celery docs if
 you are not familiar and want to know more). For each data extract column - basically a set of questions and text we're going to search for - for _each_
 document in the extract, we create a data extraction task `llama_index_doc_query` that will use LlamaIndex to retrieve
 the most relevant text:
@@ -75,9 +75,9 @@ whatever available celery workers we have (you don't need to worry about the orh
 
 ### `llama_index_doc_query` Task
 
-Each datacell - or extracted datapoint, remember one per document per column - is extracted by the 
-`llama_index_doc_query` task. **Modify this task** if you want to tweak your retrieval behavior. We have plans to make 
-it easier to simply register a new LlamaIndex pipeline and select that from the frontend. 
+Each datacell - or extracted datapoint, remember one per document per column - is extracted by the
+`llama_index_doc_query` task. **Modify this task** if you want to tweak your retrieval behavior. We have plans to make
+it easier to simply register a new LlamaIndex pipeline and select that from the frontend.
 
 #### Task Definition and Initial Setup
 
@@ -124,7 +124,7 @@ so we're using a lightweight sentence tranformer embeddings model:
         model_name="multi-qa-MiniLM-L6-cos-v1", cache_folder="/models"
     )
     Settings.embed_model = embed_model
-    
+
     llm = OpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY)
     Settings.llm = llm
 ```
@@ -140,12 +140,12 @@ so we're using a lightweight sentence tranformer embeddings model:
 
 #### Initialize Custom Vector Store
 
-Now, here's the cool part with LlamaIndex. Assuming we have Django models with embeddings produced by the same 
-embeddings model, we don't need to do any real-time encoding of our source documents, and our Django object store in 
+Now, here's the cool part with LlamaIndex. Assuming we have Django models with embeddings produced by the same
+embeddings model, we don't need to do any real-time encoding of our source documents, and our Django object store in
 Postgres can be loaded as a LlamaIndex vector store. Even better, we can pass in some arguments that let us scope the
-store down to what we want. For example, we can limit retrieving text from to document, to annotations containing 
-certain text, and to annotations with certain labels - e.g. `termination`. This lets us leverage all of the work that's 
-been done by humans (and machines) in an OpenContracts corpus to label and tag documents. We're getting the best of 
+store down to what we want. For example, we can limit retrieving text from to document, to annotations containing
+certain text, and to annotations with certain labels - e.g. `termination`. This lets us leverage all of the work that's
+been done by humans (and machines) in an OpenContracts corpus to label and tag documents. We're getting the best of
 both worlds - both human and machine intelligence!
 
 ```python
@@ -155,20 +155,20 @@ both worlds - both human and machine intelligence!
     index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
 ```
 
-- **Vector Store Initialization**: Here we create an instance of `DjangoAnnotationVectorStore` using parameters 
+- **Vector Store Initialization**: Here we create an instance of `DjangoAnnotationVectorStore` using parameters
   specific to the document and column.
 - **LlamaIndex Integration**: We create a `VectorStoreIndex` from the custom vector store. This integrates the vector
   store with LlamaIndex, enabling advanced querying capabilities.
 
 #### Perform Retrieval
 
-Now we use the properties of a configured column to find the proper text. For example, if match_text has been provided, 
+Now we use the properties of a configured column to find the proper text. For example, if match_text has been provided,
 we search for nearest K annotations to the match_text (rather than searching based on the query itself):
 
 ```python
     search_text = datacell.column.match_text
     query = datacell.column.query
-    
+
     retriever = index.as_retriever(similarity_top_k=similarity_top_k)
     results = retriever.retrieve(search_text if search_text else query)
 ```
@@ -181,7 +181,7 @@ we search for nearest K annotations to the match_text (rather than searching bas
 
 #### Rerank Results
 
-We use a LlamaIndex reranker (in this case a SentenceTransformer reranker) to rerank the retrieved annotations based 
+We use a LlamaIndex reranker (in this case a SentenceTransformer reranker) to rerank the retrieved annotations based
 on the query (this is an example of where you could easily customize your own pipeline - you might want to rerank based
 on match text, use an LLM-based reranker, or use a totally different reranker like cohere):
 
@@ -232,26 +232,26 @@ Next, we aggregate the retrieved annotations into a single string we can pass to
 
 #### Parse and Save Result
 
-Finally, we dynamically specify the output schema / format of the data. We use 
-[marvin](https://github.com/prefecthq/marvin) to do the structuring, but you could tweak the pipeline to use 
-[LlamaIndex's Structured Data Extract](https://docs.llamaindex.ai/en/stable/use_cases/extraction/) or you could roll 
-your own custom parsers. 
+Finally, we dynamically specify the output schema / format of the data. We use
+[marvin](https://github.com/prefecthq/marvin) to do the structuring, but you could tweak the pipeline to use
+[LlamaIndex's Structured Data Extract](https://docs.llamaindex.ai/en/stable/use_cases/extraction/) or you could roll
+your own custom parsers.
 
 ```python
         output_type = parse_model_or_primitive(datacell.column.output_type)
         logger.info(f"Output type: {output_type}")
-        
-        # If provided, we use the column parse instructions property to instruct Marvin how to parse, otherwise, 
-        # we give it the query and target output schema. Usually the latter approach is OK, but the former is more 
+
+        # If provided, we use the column parse instructions property to instruct Marvin how to parse, otherwise,
+        # we give it the query and target output schema. Usually the latter approach is OK, but the former is more
         # intentional and gives better performance.
         parse_instructions = datacell.column.instructions
-        
+
         result = marvin.cast(
             retrieved_text,
             target=output_type,
             instructions=parse_instructions if parse_instructions else query,
         )
-        
+
         if isinstance(result, BaseModel):
             datacell.data = {"data": result.model_dump()}
         else:
@@ -295,7 +295,7 @@ efficient and accurate retrieval of relevant annotations, leveraging advanced NL
 
 ### Next Steps - Customize The Extract & Retrieval
 
-As we've highlighted in a number of places, you can modify `llama_index_doc_query` as desired to give you 
-the capabilities you want. One of our upcoming features will make it easier to define different retrieval and parsing 
+As we've highlighted in a number of places, you can modify `llama_index_doc_query` as desired to give you
+the capabilities you want. One of our upcoming features will make it easier to define different retrieval and parsing
 pipelines that you can specify at the Column level. So, you could write custom pipelines that you could then select at
 the column level.

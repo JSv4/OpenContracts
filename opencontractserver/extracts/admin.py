@@ -6,7 +6,6 @@ from opencontractserver.extracts.models import (
     Datacell,
     Extract,
     Fieldset,
-    LanguageModel,
 )
 
 
@@ -23,11 +22,6 @@ class ColumnAdmin(GuardedModelAdmin):
 @admin.register(Extract)
 class ExtractAdmin(GuardedModelAdmin):
     list_display = ["id", "name"]
-
-
-@admin.register(LanguageModel)
-class LanguageModelAdmin(GuardedModelAdmin):
-    list_display = ["id", "model"]
 
 
 @admin.register(Datacell)

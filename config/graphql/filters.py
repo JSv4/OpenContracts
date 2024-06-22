@@ -22,7 +22,6 @@ from opencontractserver.extracts.models import (
     Datacell,
     Extract,
     Fieldset,
-    LanguageModel,
 )
 from opencontractserver.users.models import Assignment, UserExport
 
@@ -378,14 +377,6 @@ class DocumentFilter(django_filters.FilterSet):
         fields = {
             "description": ["exact", "contains"],
             "id": ["exact"],
-        }
-
-
-class LanguageModelFilter(django_filters.FilterSet):
-    class Meta:
-        model = LanguageModel
-        fields = {
-            "model": ["exact", "contains"],
         }
 
 

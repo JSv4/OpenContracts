@@ -1534,10 +1534,10 @@ class UpdateColumnMutation(DRFMutation):
         output_type = graphene.String(required=False)
         limit_to_label = graphene.String(required=False)
         instructions = graphene.String(required=False)
-        language_model_id = graphene.ID(required=False)
         agentic = graphene.Boolean(required=False)
         extract_is_list = graphene.Boolean(required=False)
         must_contain_text = graphene.String(required=False)
+        task_name = graphene.String(required=False)
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -1556,9 +1556,9 @@ class UpdateColumnMutation(DRFMutation):
         limit_to_label=None,
         instructions=None,
         agentic=None,
+        task_name=None,
         extract_is_list=None,
         language_model_id=None,
-        fieldset_id=None,
         must_contain_text=None,
     ):
 
@@ -1570,8 +1570,8 @@ class UpdateColumnMutation(DRFMutation):
             pk = from_global_id(id)[1]
             obj = Column.objects.get(pk=pk, creator=info.context.user)
 
-            if fieldset_id is not None:
-                obj.fieldset_id = from_global_id(fieldset_id)[1]
+            if task_name is not None:
+                obj.task_name = task_name
 
             if language_model_id is not None:
                 obj.language_model_id = from_global_id(language_model_id)[1]
@@ -1621,11 +1621,11 @@ class CreateColumn(graphene.Mutation):
         output_type = graphene.String(required=True)
         limit_to_label = graphene.String(required=False)
         instructions = graphene.String(required=False)
-        language_model_id = graphene.ID(required=True)
         agentic = graphene.Boolean(required=False)
         extract_is_list = graphene.Boolean(required=False)
         must_contain_text = graphene.String(required=False)
         name = graphene.String(required=True)
+        task_name = graphene.String(required=True)
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -1639,7 +1639,7 @@ class CreateColumn(graphene.Mutation):
         name,
         fieldset_id,
         output_type,
-        language_model_id,
+        task_name,
         agentic=None,
         extract_is_list=None,
         must_contain_text=None,
@@ -1663,8 +1663,8 @@ class CreateColumn(graphene.Mutation):
             output_type=output_type,
             limit_to_label=limit_to_label,
             instructions=instructions,
-            language_model=language_model,
             must_contain_text=must_contain_text,
+            task_name=task_name,
             agentic=agentic if agentic is not None else False,
             extract_is_list=extract_is_list if extract_is_list is not None else False,
             creator=info.context.user,

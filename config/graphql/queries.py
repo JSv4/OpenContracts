@@ -30,7 +30,6 @@ from config.graphql.filters import (
     GremlinEngineFilter,
     LabelFilter,
     LabelsetFilter,
-    LanguageModelFilter,
     RelationshipFilter,
 )
 from config.graphql.graphene_types import (
@@ -48,7 +47,6 @@ from config.graphql.graphene_types import (
     FieldsetType,
     GremlinEngineType_READ,
     LabelSetType,
-    LanguageModelType,
     PageAwareAnnotationType,
     PdfPageInfoType,
     RelationshipType,
@@ -69,7 +67,6 @@ from opencontractserver.extracts.models import (
     Datacell,
     Extract,
     Fieldset,
-    LanguageModel,
 )
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.types.enums import LabelType
@@ -640,35 +637,6 @@ class Query(graphene.ObjectType):
                 return Analysis.objects.filter(
                     Q(creator=info.context.user) | Q(is_public=True)
                 )
-
-    language_model = relay.Node.Field(LanguageModelType)
-
-    @login_required
-    def resolve_language_model(self, info, **kwargs):
-        django_pk = from_global_id(kwargs.get("id", None))[1]
-        if info.context.user.is_superuser:
-            return LanguageModel.objects.get(id=django_pk)
-        elif info.context.user.is_anonymous:
-            return LanguageModel.objects.get(Q(id=django_pk) & Q(is_public=True))
-        else:
-            return LanguageModel.objects.get(
-                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
-            )
-
-    language_models = DjangoFilterConnectionField(
-        LanguageModelType, filterset_class=LanguageModelFilter
-    )
-
-    @login_required
-    def resolve_language_models(self, info, **kwargs):
-        if info.context.user.is_superuser:
-            return LanguageModel.objects.all()
-        elif info.context.user.is_anonymous:
-            return LanguageModel.objects.filter(Q(is_public=True))
-        else:
-            return LanguageModel.objects.filter(
-                Q(creator=info.context.user) | Q(is_public=True)
-            )
 
     fieldset = relay.Node.Field(FieldsetType)
 

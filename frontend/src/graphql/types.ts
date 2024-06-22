@@ -1171,11 +1171,6 @@ export type AnalyzerManifestType = {
   label_set: OpenContractsLabelSetType;
 };
 
-export interface LanguageModelType extends Node {
-  id: string;
-  model: string;
-}
-
 export interface FieldsetType extends Node {
   creator: UserType;
   name: string;
@@ -1193,11 +1188,10 @@ export interface ColumnType extends Node {
   outputType: string;
   limitToLabel?: string;
   instructions?: string;
-  languageModel?: LanguageModelType;
   agentic?: boolean;
   extractIsList?: boolean;
   fieldsetId?: string;
-  languageModelId?: string;
+  taskName: string;
 }
 
 export interface ColumnTypeEdge {

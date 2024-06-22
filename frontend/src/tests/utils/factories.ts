@@ -17,7 +17,6 @@ import {
   DatacellType,
   CorpusType,
   FieldsetType,
-  LanguageModelType,
   DocumentType,
 } from "../../graphql/types";
 
@@ -140,13 +139,6 @@ export function generateMockPageInfo(): PageInfo {
   };
 }
 
-export function generateMockLanguageModel(): LanguageModelType {
-  return {
-    id: uuidv4(),
-    model: "mockLanguageModel",
-  };
-}
-
 export function generateMockFieldset(creator: UserType): FieldsetType {
   return {
     id: uuidv4(),
@@ -169,7 +161,7 @@ export function generateMockColumn(fieldset: FieldsetType): ColumnType {
     outputType: "mockOutputType",
     limitToLabel: "mockLimitToLabel",
     instructions: "mockInstructions",
-    languageModel: generateMockLanguageModel(),
+    taskName: "mockTaskName",
     agentic: false,
   };
 }

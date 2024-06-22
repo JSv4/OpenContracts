@@ -16,7 +16,6 @@ import {
   AnalysisType,
   ExtractType,
   FieldsetType,
-  LanguageModelType,
   ColumnType,
   CorpusQueryType,
 } from "./types";
@@ -142,7 +141,6 @@ export const cache = new InMemoryCache({
         relationshipLabels: relayStylePagination(),
         extracts: relayStylePagination(),
         columns: relayStylePagination(),
-        languageModels: relayStylePagination(),
       },
     },
   },
@@ -243,7 +241,6 @@ export const analysisSearchTerm = makeVar<string>("");
  */
 export const exportSearchTerm = makeVar<string>("");
 export const selectedFieldset = makeVar<FieldsetType | null>(null);
-export const selectedLanguageModel = makeVar<LanguageModelType | null>(null);
 export const editingExtract = makeVar<ExtractType | null>(null);
 export const addingColumnToExtract = makeVar<ExtractType | null>(null);
 export const editingColumnForExtract = makeVar<ColumnType | null>(null);

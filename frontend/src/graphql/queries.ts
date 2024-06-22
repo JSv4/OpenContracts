@@ -12,7 +12,6 @@ import {
   AnalyzerType,
   AnalysisType,
   AnnotationLabelType,
-  LanguageModelType,
   FieldsetType,
   ExtractType,
   CorpusQueryType,
@@ -1210,41 +1209,10 @@ export const GET_EXPORT = gql`
           instructions
           extractIsList
           limitToLabel
-          languageModel {
-            id
-            model
-          }
+          taskName
           agentic
           matchText
           query
-        }
-      }
-    }
-  }
-`;
-
-export interface GetLanguageModelsOutputs {
-  languageModels: {
-    pageInfo: PageInfo;
-    edges: {
-      node: LanguageModelType;
-    }[];
-  };
-}
-
-export const GET_LANGUAGEMODELS = gql`
-  query GetLanguageModels {
-    languageModels {
-      pageInfo {
-        hasNextPage
-        hasPreviousPage
-        endCursor
-        startCursor
-      }
-      edges {
-        node {
-          id
-          model
         }
       }
     }
@@ -1286,10 +1254,7 @@ export const REQUEST_GET_FIELDSETS = gql`
                 limitToLabel
                 instructions
                 extractIsList
-                languageModel {
-                  id
-                  model
-                }
+                taskName
                 agentic
               }
             }
@@ -1322,10 +1287,7 @@ export const GET_FIELDSET = gql`
         limitToLabel
         instructions
         extractIsList
-        languageModel {
-          id
-          model
-        }
+        taskName
         agentic
       }
     }
@@ -1360,10 +1322,7 @@ export const REQUEST_GET_EXTRACT = gql`
           matchText
           limitToLabel
           agentic
-          languageModel {
-            id
-            model
-          }
+          taskName
         }
       }
       creator {
@@ -1502,5 +1461,15 @@ export const REQUEST_GET_EXTRACTS = gql`
         endCursor
       }
     }
+  }
+`;
+
+export interface GetRegisteredExtractTasksOutput {
+  registeredExtractTasks: Record<string, string>;
+}
+
+export const GET_REGISTERED_EXTRACT_TASKS = gql`
+  query {
+    registeredExtractTasks
   }
 `;

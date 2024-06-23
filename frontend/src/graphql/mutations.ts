@@ -1179,7 +1179,7 @@ export const REQUEST_CREATE_COLUMN = gql`
     $outputType: String!
     $limitToLabel: String
     $instructions: String
-    $taskName: String!
+    $taskName: String
     $agentic: Boolean
   ) {
     createColumn(
@@ -1316,7 +1316,7 @@ export const REQUEST_UPDATE_COLUMN = gql`
     $outputType: String
     $limitToLabel: String
     $instructions: String
-    $taskName: ID
+    $taskName: String
     $agentic: Boolean
   ) {
     updateColumn(

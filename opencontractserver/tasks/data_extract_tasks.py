@@ -6,10 +6,14 @@ from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
 from llama_index.core import QueryBundle, Settings, VectorStoreIndex
-from llama_index.core.agent import FunctionCallingAgentWorker, StructuredPlannerAgent
+from llama_index.core.agent import (
+    FunctionCallingAgentWorker,
+    ReActAgent,
+    StructuredPlannerAgent,
+)
 from llama_index.core.postprocessor import SentenceTransformerRerank
 from llama_index.core.schema import Node, NodeWithScore
-from llama_index.core.tools import QueryEngineTool
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
 from pgvector.django import CosineDistance
@@ -247,6 +251,66 @@ def oc_llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int
             datacell.data = {"data": result}
         else:
             raise ValueError(f"Unsupported output type: {output_type}")
+        datacell.completed = timezone.now()
+        datacell.save()
+
+    except Exception as e:
+        logger.error(f"run_extract() - Ran into error: {e}")
+        datacell.stacktrace = f"Error processing: {e}"
+        datacell.failed = timezone.now()
+        datacell.save()
+
+
+@shared_task
+def llama_index_react_agent_query(cell_id):
+    """
+    Use our DjangoAnnotationVectorStore + LlamaIndex REACT Agent to retrieve text. This is from our tutorial and does
+    NOT structure data. It simply returns the response to your query as text.
+    """
+
+    datacell = Datacell.objects.get(id=cell_id)
+
+    try:
+
+        datacell.started = timezone.now()
+        datacell.save()
+
+        document = datacell.document
+        embed_model = HuggingFaceEmbedding(
+            model_name="multi-qa-MiniLM-L6-cos-v1", cache_folder="/models"
+        )  # Using our pre-load cache path where the model was stored on container build
+        Settings.embed_model = embed_model
+
+        llm = OpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY)
+        Settings.llm = llm
+
+        vector_store = DjangoAnnotationVectorStore.from_params(
+            document_id=document.id, must_have_text=datacell.column.must_contain_text
+        )
+        index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
+
+        doc_engine = index.as_query_engine(similarity_top_k=10)
+
+        query_engine_tools = [
+            QueryEngineTool(
+                query_engine=doc_engine,
+                metadata=ToolMetadata(
+                    name="doc_engine",
+                    description=(
+                        f"Provides detailed annotations and text from within the {document.title}"
+                    ),
+                ),
+            )
+        ]
+
+        agent = ReActAgent.from_tools(
+            query_engine_tools,
+            llm=llm,
+            verbose=True,
+        )
+
+        response = agent.chat(datacell.column.query)
+        datacell.data = {"data": str(response)}
         datacell.completed = timezone.now()
         datacell.save()
 

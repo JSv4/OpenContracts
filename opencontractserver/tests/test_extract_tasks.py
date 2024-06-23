@@ -53,7 +53,6 @@ class ExtractsTaskTestCase(TestCase):
             query="Provide a list of the defined terms ",
             match_text="A defined term is defined as a term that is defined...\n|||\nPerson shall mean a person.",
             output_type="str",
-            language_model=self.language_model,
             agentic=True,
             creator=self.user,
         )

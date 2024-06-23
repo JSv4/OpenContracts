@@ -47,6 +47,8 @@ class ExtractsTaskTestCase(TestCase):
             output_type="str",
             agentic=True,
             creator=self.user,
+            # Let's test setting extract engine dynamically
+            task_name="opencontractserver.tasks.data_extract_tasks.llama_index_react_agent_query",
         )
         self.column = Column.objects.create(
             fieldset=self.fieldset,

@@ -5,14 +5,14 @@
 When you create a new Extract on the frontend, you can build a grid of data field columns and document rows that
 the application will traverse, cell-by-cell, to answer the question posed in each column for every document:
 
-![datagrid](../../../docs/assets/images/screenshots/Datagrid.png)
+![datagrid](../../assets/images/screenshots/Datagrid.png)
 
 You can define the target data shape for each column - e.g. require all outputs match a certain dictionary schema or be
 floats. We leverage LLMs to ensure that the retrieved data matches the desired schema.
 
 You'll notice when you add or edit a column, you can configure a number of different things:
 
-![datagrid](../../../docs/assets/images/screenshots/Edit_Column.png)
+![datagrid](../../assets/images/screenshots/Edit_Column.png)
 
 Specifically, you can adjust
 - **name**: The name of the column.
@@ -30,7 +30,7 @@ Specifically, you can adjust
 
 You'll notice that in the GUI, there is a dropdown to pick the extract task:
 
-![Extract_Task_Dropdown.png](../../../docs/assets/images/screenshots/Extract_Task_Dropdown.png)
+![Extract_Task_Dropdown.png](../../assets/images/screenshots/Extract_Task_Dropdown.png)
 
 This is actually retrieved dynamically from the backend from the tasks in `opencontractsserver.tasks.data_extract_tasks.py`. Every **celery task** in this python module will show up in the GUI,
 and the description in the dropdown is actually pulled out of the docstring provided in the code itself:
@@ -152,9 +152,13 @@ useful description.
 Once the task kicks off, step one is to log in the DB that the task has started:
 
 ```python
+    ...
+
     try:
-    datacell.started = timezone.now()
-    datacell.save()
+        datacell.started = timezone.now()
+        datacell.save()
+
+        ...
 ```
 
 - **Exception Handling**: We use a `try` block to handle any exceptions that might occur during the processing.
@@ -477,12 +481,12 @@ datacell.save()
 The next time you rebuild the containers (in prod, in local env they rebuild automatically), you will see a new entry
 in the column configuration modals:
 
-![Custom_Extract_Task.png](../../../docs/assets/images/screenshots/Custom_Extract_Task.png)
+![Custom_Extract_Task.png](../../assets/images/screenshots/Custom_Extract_Task.png)
 
 It's that easy! Now, any user in your instance can run your extract and generate outputs - here we've used it for
 the Company Name column:
 
-![Agent_Extract_Demo_Run.png](../../../docs/assets/images/screenshots/Agent_Extract_Demo_Run.png)
+![Agent_Extract_Demo_Run.png](../../assets/images/screenshots/Agent_Extract_Demo_Run.png)
 
 We plan to create decorators and other developer aids to reduce boilerplate here and let you focus
 entirely on your retrieval pipeline.

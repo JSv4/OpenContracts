@@ -69,7 +69,8 @@ nav:
       - Step 7 - Query a Corpus: walkthrough/step-7-query-corpus.md
       - Step 8 - Data Extract: walkthrough/step-8-data-extract.md
       - Advanced:
-          - Custom Llama Index Extract: walkthrough/advanced/custom-llama.md
+          - Data Extract Models: walkthrough/advanced/data-extract-models.md
+          - Write Your Own Llama Index Extractor: walkthrough/advanced/write-your-own-extractors.md
           - Configure How Annotations Are Displayed: walkthrough/advanced/configure-annotation-view.md
           - Run a Gremlin Analyzer: walkthrough/advanced/run-gremlin-analyzer.md
           - Fork a Corpus: walkthrough/advanced/fork-a-corpus.md

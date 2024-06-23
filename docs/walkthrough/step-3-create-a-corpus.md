@@ -13,7 +13,9 @@ to create a Corpus, you first need to create a Corpus and then add documents to 
    ![](../assets/images/screenshots/Create_Corpus_Modal.png)
 4. Assuming you created the labelset you want to use, when you click on the dropdown in the "Label Set" section, you
    should see your new labelset. Click on it to select it:
-   ![](/documentation/assets/images/screenshots/Select_Label_Set_For_Corpus.png)
+
+   ![](../assets/images/screenshots/Select_Label_Set_For_Corpus.png)
+
 5. You will now be able to open the corpus again, open documents in the corpus and start labelling.
 
 ## Add Documents to Corpus

@@ -44,7 +44,7 @@ jobs:
           swap-storage: true
 
       - name: Checkout Code Repository
-        uses: actions/checkout@v3.3.0
+        uses: actions/checkout@v4.1.7
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -80,7 +80,7 @@ jobs:
           swap-storage: true
 
       - name: Checkout Code Repository
-        uses: actions/checkout@v3.3.0
+        uses: actions/checkout@v4.1.7
 
       - name: Store Codecov Env Flags
         run: |

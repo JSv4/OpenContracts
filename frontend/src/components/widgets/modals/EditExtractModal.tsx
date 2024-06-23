@@ -261,6 +261,12 @@ export const EditExtractModal = ({
   }, [extract, refetch]);
 
   useEffect(() => {
+    if (open && extract) {
+      refetch();
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (extract_data) {
       const { fullDatacellList, fullDocumentList, fieldset } =
         extract_data.extract;
@@ -289,8 +295,6 @@ export const EditExtractModal = ({
   if (!extract || !extract.id) {
     return <></>;
   }
-
-  console.log("Extract details", extract);
 
   return (
     <>

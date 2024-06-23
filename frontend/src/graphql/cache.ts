@@ -184,6 +184,7 @@ export const editingDocument = makeVar<DocumentType | null>(null);
  */
 export const selectedExtractId = makeVar<string | null>(null);
 export const openedExtract = makeVar<ExtractType | null>(null);
+export const extractSearchTerm = makeVar<string>("");
 
 /**
  * Corpus-related global variables

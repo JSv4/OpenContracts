@@ -53,6 +53,8 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
     taskName,
   } = objData;
 
+  console.log("existing_column", existing_column);
+
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     data: any,

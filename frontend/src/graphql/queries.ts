@@ -1213,6 +1213,7 @@ export const GET_EXPORT = gql`
           agentic
           matchText
           query
+          outputType
         }
       }
     }
@@ -1323,6 +1324,7 @@ export const REQUEST_GET_EXTRACT = gql`
           limitToLabel
           agentic
           taskName
+          outputType
         }
       }
       creator {
@@ -1409,7 +1411,7 @@ export const REQUEST_GET_EXTRACT = gql`
 `;
 
 export interface GetExtractsInput {
-  name_Contains?: string;
+  searchText?: string;
 }
 
 export interface GetExtractsOutput {

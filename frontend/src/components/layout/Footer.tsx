@@ -46,7 +46,7 @@ export function Footer() {
           <Divider inverted section />
           <Grid divided inverted stackable>
             <Grid.Column width={4}>
-              <Header inverted as="h4" content="Our Other Projects:" />
+              <Header inverted as="h4" content="My Other Projects:" />
               <List link inverted>
                 <List.Item as="a" href="https://github.com/JSv4/GremlinServer">
                   GREMLIN Low-Code
@@ -60,13 +60,10 @@ export function Footer() {
               </List>
             </Grid.Column>
             <Grid.Column width={4}>
-              <Header inverted as="h4" content="Open Source Legal" />
+              <Header inverted as="h4" content="Open Source Legaltech" />
               <List link inverted>
                 <List.Item as="a" href="https://github.com/JSv4">
                   Github
-                </List.Item>
-                <List.Item as="a" href="https://opensource.legal">
-                  OpenSource.Legal
                 </List.Item>
               </List>
             </Grid.Column>
@@ -92,7 +89,7 @@ export function Footer() {
         <Container textAlign="center">
           <Grid divided inverted stackable>
             <Grid.Column width={4}>
-              <Header inverted as="h4" content="Our Other Projects:" />
+              <Header inverted as="h4" content="My Other Projects:" />
               <List link inverted>
                 <List.Item as="a" href="https://github.com/JSv4/GremlinServer">
                   GREMLIN Low-Code
@@ -106,7 +103,7 @@ export function Footer() {
               </List>
             </Grid.Column>
             <Grid.Column width={4}>
-              <Header inverted as="h4" content="Open Source Legal" />
+              <Header inverted as="h4" content="Open Source Legaltech" />
               <List link inverted>
                 <List.Item as="a" href="https://github.com/JSv4">
                   Github

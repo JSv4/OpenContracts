@@ -48,14 +48,14 @@ nav:
     - Quick-Start: quick-start.md
     - System Requirements: requirements.md
     - How It Works:
-        - Backend - Architecture: architecture/under-the-hood.md
-        - Backend - Asynchronous Processing: architecture/asynchronous-processing.md
-        - Backend - LlamaIndex & Django Integration: extract_and_retrieval/intro_to_django_annotation_vector_store.md
-        - Backend- Datagrid Extract: extract_and_retrieval/document_data_extract.md
+        - Architecture: architecture/components/Data-flow-diagram.md
+        - Asynchronous Processing: architecture/asynchronous-processing.md
+        - LlamaIndex & Django Integration: extract_and_retrieval/intro_to_django_annotation_vector_store.md
+        - Datagrid Extract: extract_and_retrieval/document_data_extract.md
         - Backend- Question Answering: extract_and_retrieval/querying_corpus.md
         - Backend - Datagrid Extract: extract_and_retrieval/document_data_extract.md
-        - Frontend - Annotation Creation: architecture/components/annotator/how-annotations-are-created.md
-        - Frontend - Annotator Component: architecture/components/annotator/overview.md
+        - Annotator Component: architecture/components/annotator/overview.md
+        - Annotator Logic: architecture/components/annotator/how-annotations-are-created.md
         - PDF Data Format: walkthrough/advanced/pawls-token-format.md
     - Acknowledgements: acknowledgements.md
   - Walkthrough:

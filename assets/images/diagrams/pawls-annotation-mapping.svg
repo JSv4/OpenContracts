@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <defs>
+    <style>
+      .pdf-page { fill: #f0f0f0; stroke: #333; stroke-width: 2; }
+      .token { fill: #e1f5fe; stroke: #01579b; stroke-width: 1; }
+      .annotation { fill: none; stroke: #f57f17; stroke-width: 2; stroke-dasharray: 5,5; }
+      .line { stroke: #333; stroke-width: 1; }
+      .label { font-family: Arial, sans-serif; font-size: 12px; }
+      .code { font-family: 'Courier New', monospace; font-size: 10px; }
+    </style>
+  </defs>
+
+  <!-- PDF Page -->
+  <rect x="50" y="50" width="300" height="400" class="pdf-page" />
+  <text x="200" y="470" text-anchor="middle" class="label">PDF Page</text>
+
+  <!-- Tokens -->
+  <rect x="70" y="70" width="80" height="20" class="token" />
+  <text x="110" y="84" text-anchor="middle" class="label">Lorem</text>
+
+  <rect x="160" y="70" width="70" height="20" class="token" />
+  <text x="195" y="84" text-anchor="middle" class="label">ipsum</text>
+
+  <rect x="240" y="70" width="60" height="20" class="token" />
+  <text x="270" y="84" text-anchor="middle" class="label">dolor</text>
+
+  <rect x="70" y="100" width="40" height="20" class="token" />
+  <text x="90" y="114" text-anchor="middle" class="label">sit</text>
+
+  <rect x="120" y="100" width="60" height="20" class="token" />
+  <text x="150" y="114" text-anchor="middle" class="label">amet,</text>
+
+  <!-- Annotation -->
+  <rect x="65" y="65" width="240" height="60" class="annotation" />
+
+  <!-- JSON Representation -->
+  <rect x="400" y="50" width="350" height="400" fill="#f9f9f9" stroke="#666" />
+  <text x="575" y="470" text-anchor="middle" class="label">PAWLs JSON</text>
+
+  <text x="420" y="80" class="code">{</text>
+  <text x="440" y="100" class="code">"page": {</text>
+  <text x="460" y="120" class="code">"width": 300,</text>
+  <text x="460" y="140" class="code">"height": 400,</text>
+  <text x="460" y="160" class="code">"index": 0</text>
+  <text x="440" y="180" class="code">},</text>
+  <text x="440" y="200" class="code">"tokens": [</text>
+  <text x="460" y="220" class="code">{ "x": 70, "y": 70, "width": 80, "height": 20, "text": "Lorem" },</text>
+  <text x="460" y="240" class="code">{ "x": 160, "y": 70, "width": 70, "height": 20, "text": "ipsum" },</text>
+  <text x="460" y="260" class="code">{ "x": 240, "y": 70, "width": 60, "height": 20, "text": "dolor" },</text>
+  <text x="460" y="280" class="code">{ "x": 70, "y": 100, "width": 40, "height": 20, "text": "sit" },</text>
+  <text x="460" y="300" class="code">{ "x": 120, "y": 100, "width": 60, "height": 20, "text": "amet," }</text>
+  <text x="440" y="320" class="code">]</text>
+  <text x="420" y="340" class="code">}</text>
+
+  <!-- Annotation JSON -->
+  <text x="420" y="380" class="code">"annotation": {</text>
+  <text x="440" y="400" class="code">"bounds": { "x": 65, "y": 65, "width": 240, "height": 60 },</text>
+  <text x="440" y="420" class="code">"tokensJsons": [0, 1, 2, 3, 4],</text>
+  <text x="440" y="440" class="code">"rawText": "Lorem ipsum dolor sit amet,"</text>
+  <text x="420" y="460" class="code">}</text>
+
+  <!-- Connecting Lines -->
+  <line x1="350" y1="80" x2="400" y2="80" class="line" />
+  <line x1="350" y1="100" x2="440" y2="100" class="line" />
+  <line x1="350" y1="220" x2="460" y2="220" class="line" />
+  <line x1="305" y1="95" x2="420" y2="380" class="line" />
+</svg>

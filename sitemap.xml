@@ -26,12 +26,17 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://hatch.pypa.io/latest/architecture/PDF-data-layer/</loc>
+         <lastmod>2024-06-23</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://hatch.pypa.io/latest/architecture/asynchronous-processing/</loc>
          <lastmod>2024-06-23</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://hatch.pypa.io/latest/architecture/under-the-hood/</loc>
+         <loc>https://hatch.pypa.io/latest/architecture/components/Data-flow-diagram/</loc>
          <lastmod>2024-06-23</lastmod>
          <changefreq>daily</changefreq>
     </url>

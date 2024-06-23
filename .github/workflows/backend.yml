@@ -112,7 +112,7 @@ jobs:
 
       - name: Upload Docker Compose Logs
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: docker-compose-logs
           path: docker-compose-logs.txt

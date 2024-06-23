@@ -4,10 +4,15 @@
 
 ---
 
-| |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| --- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| CI/CD | [![codecov](https://codecov.io/gh/JSv4/OpenContracts/branch/main/graph/badge.svg?token=RdVsiuaTVz)](https://codecov.io/gh/JSv4/OpenContracts)                                                                                                                                                                                                                                                                                                                  |
-| Meta | [![code style - black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) [![types - Mypy](https://img.shields.io/badge/types-Mypy-blue.svg)](https://github.com/python/mypy) [![imports - isort](https://img.shields.io/badge/imports-isort-ef8336.svg)](https://github.com/pycqa/isort) [![License - Apache2](https://img.shields.io/badge/license-Apache%202-blue.svg)](https://spdx.org/licenses/) |
+|               |                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|---------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Backend CI/CD | [![codecov](https://codecov.io/gh/JSv4/OpenContracts/branch/main/graph/badge.svg?token=RdVsiuaTVz)](https://codecov.io/gh/JSv4/OpenContracts)                                                                                                                                                                                                                                                                                          |
+| Meta          | [![code style - black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) [![types - Mypy](https://img.shields.io/badge/types-Mypy-blue.svg)](https://github.com/python/mypy) [![imports - isort](https://img.shields.io/badge/imports-isort-ef8336.svg)](https://github.com/pycqa/isort) [![License - Apache2](https://img.shields.io/badge/license-Apache%202-blue.svg)](https://spdx.org/licenses/) |
+
+## Documentation
+
+We use MkDocs for our documentation. Please visit [https://JSv4.github.io/OpenContracts/](https://JSv4.github.io/OpenContracts/)
+for our detailed documentation on Mkdocs - including a quick start guide, a walk through, architectural overview and more.
 
 ## What Does it Do?
 
@@ -32,12 +37,6 @@ human annotated text with embeddings - to LLMs and the LlamaIndex ecosystem.
 Finally, the tool's intuitive interface allows for easy navigation through documents, providing clear visual cues to identify 
 the exact source of information extracted by the language model. This transparency ensures that users can verify the 
 accuracy and context of the extracted data.
-
-
-## Documentation
-
-We use MkDocs for our documentation. Please visit [https://JSv4.github.io/OpenContracts/](https://JSv4.github.io/OpenContracts/)
-for our detailed documentation - including a quick start guide, a walk through, architectural overview and more.
 
 ## Why Does it Exist?
 

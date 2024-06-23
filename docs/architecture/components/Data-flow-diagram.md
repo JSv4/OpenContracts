@@ -1,9 +1,9 @@
-# Container Data Flow
+# Container Architecture & Data Flow
 
 You'll notice that we have a number of containers in our docker compose file (**Note** the local.yml is up-to-date. The
-production file needs some work to be production grade, and we may switch to [Tilt](https://tilt.dev/).). 
+production file needs some work to be production grade, and we may switch to [Tilt](https://tilt.dev/).).
 
-Here, you can see how these containers relate to some of the core data elements powering the application - such as 
+Here, you can see how these containers relate to some of the core data elements powering the application - such as
 parsing structural and layout annotations from PDFs (which powers the vector store) and generating vector embeddings.
 
 ## PNG Diagram
@@ -62,7 +62,7 @@ graph TB
 
     classDef container fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
     classDef model fill:#fff59d,stroke:#f57f17,stroke-width:2px;
-    
+
     class django,postgres,redis,celeryworker,celerybeat,flower,frontend,nlm_ingestor,vector_embedder container;
     class document,annotation,relationship,labelset,extract,datacell model;
 ```

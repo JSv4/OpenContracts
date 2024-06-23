@@ -17,13 +17,7 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import (
-    Column,
-    Datacell,
-    Extract,
-    Fieldset,
-    LanguageModel,
-)
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport
 
 User = get_user_model()
@@ -378,14 +372,6 @@ class DocumentFilter(django_filters.FilterSet):
         fields = {
             "description": ["exact", "contains"],
             "id": ["exact"],
-        }
-
-
-class LanguageModelFilter(django_filters.FilterSet):
-    class Meta:
-        model = LanguageModel
-        fields = {
-            "model": ["exact", "contains"],
         }
 
 

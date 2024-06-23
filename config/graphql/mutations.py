@@ -29,7 +29,6 @@ from config.graphql.graphene_types import (
     ExtractType,
     FieldsetType,
     LabelSetType,
-    LanguageModelType,
     RelationInputType,
     RelationshipType,
     UserExportType,
@@ -52,13 +51,7 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus, CorpusQuery, TemporaryFileHandle
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import (
-    Column,
-    Datacell,
-    Extract,
-    Fieldset,
-    LanguageModel,
-)
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.tasks import (
     build_label_lookups_task,
     burn_doc_annotations,
@@ -77,7 +70,7 @@ from opencontractserver.tasks.export_tasks import (
     package_funsd_exports,
     package_langchain_exports,
 )
-from opencontractserver.tasks.extract_tasks import run_extract
+from opencontractserver.tasks.extract_orchestrator_tasks import run_extract
 from opencontractserver.tasks.permissioning_tasks import (
     make_analysis_public_task,
     make_corpus_public_task,
@@ -1481,25 +1474,6 @@ class ObtainJSONWebTokenWithUser(graphql_jwt.ObtainJSONWebToken):
         return cls(user=info.context.user)
 
 
-class CreateLanguageModel(graphene.Mutation):
-    class Arguments:
-        model = graphene.String(required=True)
-
-    ok = graphene.Boolean()
-    message = graphene.String()
-    obj = graphene.Field(LanguageModelType)
-
-    @staticmethod
-    @login_required
-    def mutate(root, info, model):
-        language_model = LanguageModel(model=model, creator=info.context.user)
-        language_model.save()
-        set_permissions_for_obj_to_user(
-            info.context.user, language_model, [PermissionTypes.CRUD]
-        )
-        return CreateLanguageModel(ok=True, message="SUCCESS!", obj=language_model)
-
-
 class CreateFieldset(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
@@ -1534,10 +1508,10 @@ class UpdateColumnMutation(DRFMutation):
         output_type = graphene.String(required=False)
         limit_to_label = graphene.String(required=False)
         instructions = graphene.String(required=False)
-        language_model_id = graphene.ID(required=False)
         agentic = graphene.Boolean(required=False)
         extract_is_list = graphene.Boolean(required=False)
         must_contain_text = graphene.String(required=False)
+        task_name = graphene.String(required=False)
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -1556,9 +1530,9 @@ class UpdateColumnMutation(DRFMutation):
         limit_to_label=None,
         instructions=None,
         agentic=None,
+        task_name=None,
         extract_is_list=None,
         language_model_id=None,
-        fieldset_id=None,
         must_contain_text=None,
     ):
 
@@ -1570,8 +1544,8 @@ class UpdateColumnMutation(DRFMutation):
             pk = from_global_id(id)[1]
             obj = Column.objects.get(pk=pk, creator=info.context.user)
 
-            if fieldset_id is not None:
-                obj.fieldset_id = from_global_id(fieldset_id)[1]
+            if task_name is not None:
+                obj.task_name = task_name
 
             if language_model_id is not None:
                 obj.language_model_id = from_global_id(language_model_id)[1]
@@ -1621,11 +1595,11 @@ class CreateColumn(graphene.Mutation):
         output_type = graphene.String(required=True)
         limit_to_label = graphene.String(required=False)
         instructions = graphene.String(required=False)
-        language_model_id = graphene.ID(required=True)
         agentic = graphene.Boolean(required=False)
         extract_is_list = graphene.Boolean(required=False)
         must_contain_text = graphene.String(required=False)
         name = graphene.String(required=True)
+        task_name = graphene.String(required=False)
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -1639,7 +1613,7 @@ class CreateColumn(graphene.Mutation):
         name,
         fieldset_id,
         output_type,
-        language_model_id,
+        task_name=None,
         agentic=None,
         extract_is_list=None,
         must_contain_text=None,
@@ -1652,9 +1626,6 @@ class CreateColumn(graphene.Mutation):
             raise ValueError("One of `query` or `match_text` must be provided.")
 
         fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
-        language_model = LanguageModel.objects.get(
-            pk=from_global_id(language_model_id)[1]
-        )
         column = Column(
             name=name,
             fieldset=fieldset,
@@ -1663,8 +1634,8 @@ class CreateColumn(graphene.Mutation):
             output_type=output_type,
             limit_to_label=limit_to_label,
             instructions=instructions,
-            language_model=language_model,
             must_contain_text=must_contain_text,
+            **({"task_name": task_name} if task_name is not None else {}),
             agentic=agentic if agentic is not None else False,
             extract_is_list=extract_is_list if extract_is_list is not None else False,
             creator=info.context.user,
@@ -1987,7 +1958,6 @@ class Mutation(graphene.ObjectType):
     ask_query = StartQueryForCorpus.Field()
 
     # EXTRACT MUTATIONS ##########################################################
-    create_language_model = CreateLanguageModel.Field()
     create_fieldset = CreateFieldset.Field()
 
     create_column = CreateColumn.Field()

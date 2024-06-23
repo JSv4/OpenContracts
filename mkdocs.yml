@@ -14,8 +14,8 @@ theme:
   name: material
   custom_dir: docs/.overrides
   language: en
-  favicon: assets/images/logos/OpenContracts_Logo_Inverted.ico
-  logo: assets/images/logos/OpenContracts_Logo_Inverted.png
+  favicon: assets/images/logos/favicon.ico
+  logo: assets/images/logos/os_legal_128_inverted.png
   font:
     text: Roboto
     code: Roboto Mono
@@ -69,6 +69,8 @@ nav:
       - Step 7 - Query a Corpus: walkthrough/step-7-query-corpus.md
       - Step 8 - Data Extract: walkthrough/step-8-data-extract.md
       - Advanced:
+          - Data Extract Models: walkthrough/advanced/data-extract-models.md
+          - Write Your Own Llama Index Extractor: walkthrough/advanced/write-your-own-extractors.md
           - Configure How Annotations Are Displayed: walkthrough/advanced/configure-annotation-view.md
           - Run a Gremlin Analyzer: walkthrough/advanced/run-gremlin-analyzer.md
           - Fork a Corpus: walkthrough/advanced/fork-a-corpus.md

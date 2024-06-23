@@ -1,3 +1,4 @@
+import inspect
 import logging
 import re
 
@@ -5,6 +6,7 @@ import graphene
 from django.conf import settings
 from django.db.models import Q
 from graphene import relay
+from graphene.types.generic import GenericScalar
 from graphene_django.fields import DjangoConnectionField
 from graphene_django.filter import DjangoFilterConnectionField
 from graphql_jwt.decorators import login_required
@@ -27,7 +29,6 @@ from config.graphql.filters import (
     GremlinEngineFilter,
     LabelFilter,
     LabelsetFilter,
-    LanguageModelFilter,
     RelationshipFilter,
 )
 from config.graphql.graphene_types import (
@@ -45,7 +46,6 @@ from config.graphql.graphene_types import (
     FieldsetType,
     GremlinEngineType_READ,
     LabelSetType,
-    LanguageModelType,
     PageAwareAnnotationType,
     PdfPageInfoType,
     RelationshipType,
@@ -61,13 +61,7 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import (
-    Column,
-    Datacell,
-    Extract,
-    Fieldset,
-    LanguageModel,
-)
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.types.enums import LabelType
 from opencontractserver.users.models import Assignment, UserExport, UserImport
@@ -638,35 +632,6 @@ class Query(graphene.ObjectType):
                     Q(creator=info.context.user) | Q(is_public=True)
                 )
 
-    language_model = relay.Node.Field(LanguageModelType)
-
-    @login_required
-    def resolve_language_model(self, info, **kwargs):
-        django_pk = from_global_id(kwargs.get("id", None))[1]
-        if info.context.user.is_superuser:
-            return LanguageModel.objects.get(id=django_pk)
-        elif info.context.user.is_anonymous:
-            return LanguageModel.objects.get(Q(id=django_pk) & Q(is_public=True))
-        else:
-            return LanguageModel.objects.get(
-                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
-            )
-
-    language_models = DjangoFilterConnectionField(
-        LanguageModelType, filterset_class=LanguageModelFilter
-    )
-
-    @login_required
-    def resolve_language_models(self, info, **kwargs):
-        if info.context.user.is_superuser:
-            return LanguageModel.objects.all()
-        elif info.context.user.is_anonymous:
-            return LanguageModel.objects.filter(Q(is_public=True))
-        else:
-            return LanguageModel.objects.filter(
-                Q(creator=info.context.user) | Q(is_public=True)
-            )
-
     fieldset = relay.Node.Field(FieldsetType)
 
     @login_required
@@ -811,3 +776,45 @@ class Query(graphene.ObjectType):
             return Datacell.objects.filter(
                 Q(extract__creator=info.context.user) | Q(is_public=True)
             )
+
+    registered_extract_tasks = graphene.Field(GenericScalar)
+
+    @login_required
+    def resolve_registered_extract_tasks(self, info, **kwargs):
+        from config import celery_app
+
+        tasks = {}
+
+        # Try to get tasks from the app instance
+        # Get tasks from the app instance
+        try:
+            for task_name, task in celery_app.tasks.items():
+                if not task_name.startswith("celery."):
+                    docstring = inspect.getdoc(task.run) or "No docstring available"
+                    tasks[task_name] = docstring
+
+        except AttributeError as e:
+            logger.warning(f"Couldn't get tasks from app instance: {str(e)}")
+
+        # Saving for reference... but I don't think it's necessary ATM and it's much higher latency.
+        # Try to get tasks from workers
+        # try:
+        #     i = celery_app.control.inspect(timeout=5.0, connect_timeout=5.0)
+        #     registered_tasks = i.registered()
+        #     if registered_tasks:
+        #         for worker_tasks in registered_tasks.values():
+        #             for task_name in worker_tasks:
+        #                 if not task_name.startswith('celery.') and task_name not in tasks:
+        #                     # For tasks only found on workers, we can't easily get the docstring
+        #                     tasks[task_name] = "Docstring not available for worker-only task"
+        # except CeleryError as e:
+        #     logger.warning(f"Celery error while inspecting workers: {str(e)}")
+        # except Exception as e:
+        #     logger.warning(f"Unexpected error while inspecting workers: {str(e)}")
+
+        # Filter out Celery's internal tasks
+        return {
+            task: description
+            for task, description in tasks.items()
+            if task.startswith("opencontractserver.tasks.data_extract_tasks")
+        }

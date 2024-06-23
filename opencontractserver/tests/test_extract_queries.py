@@ -7,13 +7,7 @@ from graphql_relay import to_global_id
 from config.graphql.schema import schema
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import (
-    Column,
-    Datacell,
-    Extract,
-    Fieldset,
-    LanguageModel,
-)
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_TWO_PATH
 
 User = get_user_model()
@@ -31,10 +25,6 @@ class ExtractsQueryTestCase(TestCase):
             username="testuser", password="testpassword"
         )
         self.client = Client(schema, context_value=TestContext(self.user))
-
-        self.language_model = LanguageModel.objects.create(
-            model="TestModel", creator=self.user
-        )
         self.fieldset = Fieldset.objects.create(
             name="TestFieldset",
             description="Test description",
@@ -45,7 +35,6 @@ class ExtractsQueryTestCase(TestCase):
             fieldset=self.fieldset,
             query="TestQuery",
             output_type="str",
-            language_model=self.language_model,
             agentic=False,
         )
         self.corpus = Corpus.objects.create(title="TestCorpus", creator=self.user)
@@ -78,26 +67,6 @@ class ExtractsQueryTestCase(TestCase):
             creator=self.user,
             document=self.doc,
         )
-
-    def test_language_model_query(self):
-        query = """
-            query {
-                languageModel(id: "%s") {
-                    id
-                    model
-                }
-            }
-        """ % to_global_id(
-            "LanguageModelType", self.language_model.id
-        )
-
-        result = self.client.execute(query)
-        self.assertIsNone(result.get("errors"))
-        self.assertEqual(
-            result["data"]["languageModel"]["id"],
-            to_global_id("LanguageModelType", self.language_model.id),
-        )
-        self.assertEqual(result["data"]["languageModel"]["model"], "TestModel")
 
     def test_fieldset_query(self):
         query = """

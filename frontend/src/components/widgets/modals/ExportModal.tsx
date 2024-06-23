@@ -162,6 +162,7 @@ export function ExportModal({
             justifyContent: "center",
             flexDirection: "row",
             width: "100%",
+            marginBottom: "1rem",
           }}
         >
           <CreateAndSearchBar

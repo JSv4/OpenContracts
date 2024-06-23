@@ -13,7 +13,6 @@ import {
   FieldsetType,
   LabelSetType,
   LabelType,
-  LanguageModelType,
   Maybe,
   UserExportType,
 } from "./types";
@@ -1096,32 +1095,6 @@ export const REQUEST_DELETE_ANALYSIS = gql`
   }
 `;
 
-export interface RequestCreateLanguageModelInputType {
-  model: string;
-}
-
-export interface RequestCreateLanguageModelOutputType {
-  languageModel: {
-    ok: boolean;
-    message: string;
-    obj: LanguageModelType;
-  };
-}
-
-export const REQUEST_CREATE_LANGUAGEMODEL = gql`
-  mutation CreateLanguageModel($model: String!) {
-    createLanguageModel(model: $model) {
-      languageModel {
-        id
-        message
-        obj {
-          id
-        }
-      }
-    }
-  }
-`;
-
 export interface RequestCreateFieldsetInputType {
   name: string;
   description: string;
@@ -1184,7 +1157,7 @@ export interface RequestCreateColumnInputType {
   outputType: string;
   limitToLabel?: string;
   instructions?: string;
-  languageModelId: string;
+  taskName: string;
   agentic: boolean;
   name: string;
 }
@@ -1206,7 +1179,7 @@ export const REQUEST_CREATE_COLUMN = gql`
     $outputType: String!
     $limitToLabel: String
     $instructions: String
-    $languageModelId: ID!
+    $taskName: String
     $agentic: Boolean
   ) {
     createColumn(
@@ -1216,7 +1189,7 @@ export const REQUEST_CREATE_COLUMN = gql`
       outputType: $outputType
       limitToLabel: $limitToLabel
       instructions: $instructions
-      languageModelId: $languageModelId
+      taskName: $taskName
       agentic: $agentic
       name: $name
     ) {
@@ -1230,10 +1203,7 @@ export const REQUEST_CREATE_COLUMN = gql`
         outputType
         limitToLabel
         instructions
-        languageModel {
-          id
-          model
-        }
+        taskName
         agentic
       }
     }
@@ -1325,7 +1295,7 @@ export interface RequestUpdateColumnInputType {
   outputType?: string;
   limitToLabel?: string;
   instructions?: string;
-  languageModelId?: string;
+  taskName?: string;
   agentic?: boolean;
 }
 
@@ -1346,7 +1316,7 @@ export const REQUEST_UPDATE_COLUMN = gql`
     $outputType: String
     $limitToLabel: String
     $instructions: String
-    $languageModelId: ID
+    $taskName: String
     $agentic: Boolean
   ) {
     updateColumn(
@@ -1357,7 +1327,7 @@ export const REQUEST_UPDATE_COLUMN = gql`
       outputType: $outputType
       limitToLabel: $limitToLabel
       instructions: $instructions
-      languageModelId: $languageModelId
+      taskName: $taskName
       agentic: $agentic
     ) {
       message
@@ -1370,10 +1340,7 @@ export const REQUEST_UPDATE_COLUMN = gql`
         outputType
         limitToLabel
         instructions
-        languageModel {
-          id
-          model
-        }
+        taskName
         agentic
       }
     }

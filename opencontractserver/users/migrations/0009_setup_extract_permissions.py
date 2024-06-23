@@ -16,12 +16,6 @@ public_group_permissions = {
         "delete_column",
         "permission_column",
 
-        "create_languagemodel",
-        "read_languagemodel",
-        "update_languagemodel",
-        "delete_languagemodel",
-        "permission_languagemodel",
-
         "create_fieldset",
         "read_fieldset",
         "update_fieldset",
@@ -56,8 +50,8 @@ def add_group_permissions(apps, schema_editor):
         role, created = Group.objects.get_or_create(name=group)
         logger.info(f'{group} Group created')
         for perm in public_group_permissions[group]:
-            role.permissions.add(Permission.objects.get(codename=perm))
             logger.info(f'Permitting {group} to {perm}')
+            role.permissions.add(Permission.objects.get(codename=perm))
         role.save()
 
     logger.info("Installation of default public access group COMPLETE!")

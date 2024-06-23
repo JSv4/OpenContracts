@@ -1599,7 +1599,7 @@ class CreateColumn(graphene.Mutation):
         extract_is_list = graphene.Boolean(required=False)
         must_contain_text = graphene.String(required=False)
         name = graphene.String(required=True)
-        task_name = graphene.String(required=True)
+        task_name = graphene.String(required=False)
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -1613,7 +1613,7 @@ class CreateColumn(graphene.Mutation):
         name,
         fieldset_id,
         output_type,
-        task_name,
+        task_name=None,
         agentic=None,
         extract_is_list=None,
         must_contain_text=None,
@@ -1635,7 +1635,7 @@ class CreateColumn(graphene.Mutation):
             limit_to_label=limit_to_label,
             instructions=instructions,
             must_contain_text=must_contain_text,
-            task_name=task_name,
+            **({"task_name": task_name} if task_name is not None else {}),
             agentic=agentic if agentic is not None else False,
             extract_is_list=extract_is_list if extract_is_list is not None else False,
             creator=info.context.user,

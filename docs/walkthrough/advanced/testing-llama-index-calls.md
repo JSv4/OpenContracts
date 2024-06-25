@@ -3,9 +3,9 @@
 ![](../../assets/images/logos/LLM_Cassette.png)
 
 I've built a number of full-stack, LLM-powered applications at this point.
-A persistent challenge is testing the underlying LLM query pipelines in a deterministic and isolated way. 
+A persistent challenge is testing the underlying LLM query pipelines in a deterministic and isolated way.
 
-A colleague and I eventually hit on a way to make testing complex LLM behavior deterministic 
+A colleague and I eventually hit on a way to make testing complex LLM behavior deterministic
 and decoupled from upstream LLM API providers. This tutorial walks you through the problem and solution to this testing
 issue.
 
@@ -87,7 +87,7 @@ former colleague of mine pointed out a library for Ruby called [VCR](https://git
 goal:
 
 ```
-Record your test suite's HTTP interactions and replay them during future test runs for fast, deterministic, accurate 
+Record your test suite's HTTP interactions and replay them during future test runs for fast, deterministic, accurate
 tests.
 ```
 

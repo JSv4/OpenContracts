@@ -76,6 +76,7 @@ nav:
           - Fork a Corpus: walkthrough/advanced/fork-a-corpus.md
           - Import and Export Corpuses: walkthrough/advanced/export-import-corpuses.md
           - Generate GraphQL Schema Files: walkthrough/advanced/generate-graphql-schema-files.md
+          - Testing LLM Calls: walkthrough/advanced/testing-llama-index-calls.md
   - Configuration:
       - Choose and Configure Docker Compose Stack: configuration/choose-and-configure-docker-stack.md
       - Configure Admin Users: configuration/configure-admin-users.md

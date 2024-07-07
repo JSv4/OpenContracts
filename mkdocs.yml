@@ -81,6 +81,7 @@ nav:
       - Choose and Configure Docker Compose Stack: configuration/choose-and-configure-docker-stack.md
       - Configure Admin Users: configuration/configure-admin-users.md
       - Configure Authentication Backend: configuration/choose-an-authentication-backend.md
+      - Configure Frontend: configuration/frontend-configuration.md
       - Add Users: configuration/add-users.md
       - Configure Storage Backend: configuration/choose-storage-backend.md
       - Configure Gremlin Analyzer: configuration/configure-gremlin.md

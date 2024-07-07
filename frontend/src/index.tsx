@@ -26,9 +26,11 @@ const onRedirectCallback = (appState: any) => {
 // const { REACT_APP_USE_AUTH0, REACT_APP_API_ROOT_URL: api_root_url } =
 //   process.env;
 
-const { REACT_APP_USE_AUTH0 } = process.env;
+const { REACT_APP_USE_AUTH0, REACT_APP_ROOT_URL } = process.env;
 
-const api_root_url = "http://localhost:8000";
+const api_root_url = REACT_APP_ROOT_URL
+  ? REACT_APP_ROOT_URL
+  : "http://localhost:8000";
 
 console.log("OpenContracts is using Auth0: ", REACT_APP_USE_AUTH0);
 console.log("OpenContracts frontend target api root", api_root_url);

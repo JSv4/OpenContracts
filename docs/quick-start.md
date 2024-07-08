@@ -23,7 +23,7 @@ called source in your user's home directory:
 
 Again, we're assuming a local deployment here with basic options. To just get up
 and running, you'll want to copy our sample .env file from the `./docs/sample_env_files` directory to the
-appropriate folders in the repo root (for the backend) and /frontend (for the frontend).
+appropriate `.local` subfolder in the `.envs` directory in the repo root.
 
 ### Backend .Env File
 
@@ -34,10 +34,10 @@ password in `.django` and your own postgres credentials in `.postgres`.
 
 ### Frontend .Env File
 
-You also need to copy the appropriate .env file into the `./frontend` folder. We're assuming you're
+You also need to copy the appropriate .frontend env file as `./envs/.local/.frontend`. We're assuming you're
 not using something like auth0 and are going to rely on Django auth to provision and authenticate users. Grab
 [./sample_env_files/frontend/local/django.auth.env](./sample_env_files/frontend/local/django.auth.env) and copy it to
-`./frontend/.env`.
+`./envs/.local/.frontend`.
 
 ## **Step 3**: Build the Stack
 

@@ -49,6 +49,7 @@ if [ -f ./.env ]; then
         print $1 ": \"" (ENVIRON[$1] ? ENVIRON[$1] : $2) "\","
     }' ./.env >> ./env-config.js
 else
+    echo "Debug: No .env file found, checking environment variables"
     # =======================================
     # Process environment variables directly
     # =======================================
@@ -69,6 +70,11 @@ fi
 
 # Close the JavaScript object in env-config.js
 echo "}" >> ./env-config.js
+
+echo "Debug: Final contents of env-config.js:"
+cat ./env-config.js
+
+echo "Debug: env.sh script completed"
 
 # =====================================
 # Script Completion

@@ -5,10 +5,19 @@ using the environment configuration script we've developed. We'll use the follow
 reference:
 
 ```
-REACT_APP_USE_AUTH0=false
-REACT_APP_USE_ANALYZERS=true
-REACT_APP_ALLOW_IMPORTS=true
-REACT_APP_ROOT_URL=http://localhost:3000
+REACT_APP_APPLICATION_DOMAIN=
+REACT_APP_APPLICATION_CLIENT_ID=
+REACT_APP_AUDIENCE=http://localhost:3000
+REACT_APP_API_ROOT_URL=https://opencontracts.opensource.legal
+
+# Uncomment to use Auth0 (you must then set the DOMAIN and CLIENT_ID envs above
+# REACT_APP_USE_AUTH0=true
+
+# Uncomment to enable access to analyzers via the frontend
+# REACT_APP_USE_ANALYZERS=true
+
+# Uncomment to enable access to import functionality via the frontend
+# REACT_APP_ALLOW_IMPORTS=true
 ```
 
 ## Understanding the Configuration Variables
@@ -18,7 +27,7 @@ Before we dive into the methods of providing these variables, let's briefly disc
 1. `REACT_APP_USE_AUTH0`: Use Auth0 for authentication if True (in which case you need Auth0 config vars)
 2. `REACT_APP_USE_ANALYZERS`: Turn off frontend controls for analyzers.
 3. `REACT_APP_ALLOW_IMPORTS`: Allow import of corpus exports.
-4. `REACT_APP_ROOT_URL`: Specifies the base URL for the application, useful for API calls or routing.
+4. `REACT_APP_API_ROOT_URL`: Specifies the base URL for the application, useful for API calls or routing.
 
 ## Methods of Providing Configuration Variables
 
@@ -86,7 +95,7 @@ This method combines the ease of a file-based approach with the flexibility of e
          - REACT_APP_USE_AUTH0=false
          - REACT_APP_USE_ANALYZERS=true
          - REACT_APP_ALLOW_IMPORTS=true
-         - REACT_APP_ROOT_URL=http://localhost:3000
+         - REACT_APP_API_ROOT_URL=http://localhost:3000
    ```
 
 3. Run your container using `docker-compose up`.

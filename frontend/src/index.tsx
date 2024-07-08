@@ -23,12 +23,21 @@ const onRedirectCallback = (appState: any) => {
   );
 };
 
-// const { REACT_APP_USE_AUTH0, REACT_APP_API_ROOT_URL: api_root_url } =
-//   process.env;
+// Can't use useEnv hook here...
+console.log("Window env", window._env_);
+const REACT_APP_APPLICATION_DOMAIN =
+  window._env_.REACT_APP_APPLICATION_DOMAIN || "";
+const REACT_APP_APPLICATION_CLIENT_ID =
+  window._env_.REACT_APP_APPLICATION_CLIENT_ID || "";
+const REACT_APP_AUDIENCE =
+  window._env_.REACT_APP_AUDIENCE || "http://localhost:3000";
+const REACT_APP_API_ROOT_URL =
+  window._env_.REACT_APP_API_ROOT_URL || "http://localhost:8000";
+const REACT_APP_USE_AUTH0 = window._env_.REACT_APP_USE_AUTH0 === "true";
 
-const { REACT_APP_USE_AUTH0 } = process.env;
-
-const api_root_url = "http://localhost:8000";
+const api_root_url = REACT_APP_API_ROOT_URL
+  ? REACT_APP_API_ROOT_URL
+  : "http://localhost:8000";
 
 console.log("OpenContracts is using Auth0: ", REACT_APP_USE_AUTH0);
 console.log("OpenContracts frontend target api root", api_root_url);
@@ -54,13 +63,13 @@ const client = new ApolloClient({
   cache,
 });
 
-if (REACT_APP_USE_AUTH0 === "true") {
+if (REACT_APP_USE_AUTH0) {
   console.log("Rendering with USE_AUTH0");
 
   const providerConfig = {
-    domain: "dev-7ranai11.auth0.com",
-    clientId: "318GitavTaWR7d17h4DKuoCme9VgjYDG",
-    audience: "https://opensource.legal/contracts",
+    domain: REACT_APP_APPLICATION_DOMAIN,
+    clientId: REACT_APP_APPLICATION_CLIENT_ID,
+    audience: REACT_APP_AUDIENCE,
     redirectUri: window.location.origin,
     scope: "application:login",
     onRedirectCallback,

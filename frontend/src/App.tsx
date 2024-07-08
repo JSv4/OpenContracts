@@ -51,9 +51,10 @@ import { LabelDisplayBehavior } from "./graphql/types";
 import { CookieConsentDialog } from "./components/cookies/CookieConsent";
 import { Extracts } from "./views/Extracts";
 import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
+import { useEnv } from "./components/hooks/UseEnv";
 
 export const App = () => {
-  const { REACT_APP_USE_AUTH0 } = process.env;
+  const { REACT_APP_USE_AUTH0 } = useEnv();
   const show_export_modal = useReactiveVar(showExportModal);
   const show_cookie_modal = useReactiveVar(showCookieAcceptModal);
   const only_display_these_annotations = useReactiveVar(
@@ -88,7 +89,7 @@ export const App = () => {
   // Only use this if we're using Auth0 Authentication... otherwise we don't
   // need to access the Auth0 SDK.
   useEffect(() => {
-    if (REACT_APP_USE_AUTH0 === "true") {
+    if (REACT_APP_USE_AUTH0) {
       if (user) {
         try {
           getAccessTokenSilently({
@@ -187,7 +188,7 @@ export const App = () => {
 
             <Routes>
               <Route path="/" element={<Corpuses />} />
-              {REACT_APP_USE_AUTH0 !== "true" ? (
+              {!REACT_APP_USE_AUTH0 ? (
                 <Route path="/login" element={<Login />} />
               ) : (
                 <></>

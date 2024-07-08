@@ -27,11 +27,19 @@ EXPOSE 3000
 
 # COPY .env file and shell script to container
 WORKDIR /usr/share/nginx/html
-COPY ./env.sh env.sh
-COPY .env .
+COPY ./env.sh .
 
-# Make shell script executable
-RUN chmod +x env.sh
+# Convert line endings and make script executable
+RUN sed -i 's/\r$//' env.sh && chmod +x env.sh
 
-# Start Nginx server
-CMD ["/bin/sh", "-c", "nginx -g \"daemon off;\""]
+# Create entrypoint script
+RUN echo "#!/bin/sh" > entrypoint.sh
+RUN echo "echo 'Entrypoint: Starting container'" >> entrypoint.sh
+RUN echo "echo 'Entrypoint: Running env.sh'" >> entrypoint.sh
+RUN echo "./env.sh" >> entrypoint.sh
+RUN echo "echo 'Entrypoint: Starting Nginx'" >> entrypoint.sh
+RUN echo "exec nginx -g 'daemon off;'" >> entrypoint.sh
+RUN chmod +x entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/bin/sh", "/usr/share/nginx/html/entrypoint.sh"]

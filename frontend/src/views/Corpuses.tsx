@@ -53,7 +53,6 @@ import {
   exportingCorpus,
   showQueryViewState,
   openedQueryObj,
-  onlyDisplayTheseAnnotations,
 } from "../graphql/cache";
 import {
   UPDATE_CORPUS,

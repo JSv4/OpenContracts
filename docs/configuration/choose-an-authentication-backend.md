@@ -51,7 +51,7 @@ Here's the order of operations in the *original* Graphene backend provided by gr
        1. username is retrieved from payload via `auth0_settings.JWT_PAYLOAD_GET_USERNAME_HANDLER`
        2. user object is retrieved via `auth0_settings.JWT_GET_USER_BY_NATURAL_KEY_HANDLER`
 
-*We modified a couple things:*
+*We modified a couple of things:*
 
 1. The decode method called in 3(a) needs to be modified to decode with Auth0 secrets and settings.
 2. get_user_by_payload needs to be modified in several ways:

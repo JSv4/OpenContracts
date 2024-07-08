@@ -1,8 +1,14 @@
-# Tutorial: Configuring Your Frontend Container
+# Frontend Configuration
 
-This tutorial will guide you through the different ways to provide configuration variables to your frontend container
-using the environment configuration script we've developed. We'll use the following example `.env` file as our
-reference:
+## Why?
+
+The frontend configuration variables should not be secrets as there is no way to keep them secure on the frontend. That 
+said, being able to specify certain configurations via environment variables makes configuration and deployment much
+easier. 
+
+## What Can be Configured?
+
+Our frontend config file should look like this:
 
 ```
 REACT_APP_APPLICATION_DOMAIN=
@@ -20,97 +26,133 @@ REACT_APP_API_ROOT_URL=https://opencontracts.opensource.legal
 # REACT_APP_ALLOW_IMPORTS=true
 ```
 
-## Understanding the Configuration Variables
+ATM, there are three key configurations:
+1. **REACT_APP_USE_AUTH0** - uncomment this / set it to true to switch the frontend login components and auth flow from
+   django password auth to Auth0 oauth2. IF this is true, you also need to provide valid configurations for 
+   `REACT_APP_APPLICATION_DOMAIN`, `REACT_APP_APPLICATION_CLIENT_ID`, and `REACT_APP_AUDIENCE`. These are configured 
+   on the Auth0 platform. We don't have a walkthrough for that ATM.
+2. **REACT_APP_USE_ANALYZERS** - allow users to see and use analyzers. False on the demo deployment. 
+3. **REACT_APP_ALLOW_IMPORTS** - do not let people upload zip files and attempt to import them. Not recommended on truly
+   public installations as security will be challenging. Internal to an org should be OK, but still use caution. 
 
-Before we dive into the methods of providing these variables, let's briefly discuss variables and their purpose:
+## How to Configure
 
-1. `REACT_APP_USE_AUTH0`: Use Auth0 for authentication if True (in which case you need Auth0 config vars)
-2. `REACT_APP_USE_ANALYZERS`: Turn off frontend controls for analyzers.
-3. `REACT_APP_ALLOW_IMPORTS`: Allow import of corpus exports.
-4. `REACT_APP_API_ROOT_URL`: Specifies the base URL for the application, useful for API calls or routing.
+### Method 1: Using an `.env` File
 
-## Methods of Providing Configuration Variables
+This method involves using a `.env` file that Docker Compose automatically picks up.
 
-### 1. Using a .env File
+#### Steps:
+1. Create a file named `.env` in the same directory as your `docker-compose.yml` file.
+2. Copy the contents of your environment variable file into this `.env` file.
+3. In your `docker-compose.yml`, you don't need to explicitly specify the env file.
 
-This is the most straightforward method and is great for local development.
+#### Example `docker-compose.yml`:
+```yaml
+version: '3'
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    # No need to specify env_file here
+```
 
-**Steps:**
+#### Pros:
+- Simple setup
+- Docker Compose automatically uses the `.env` file
+- Easy to version control (if desired)
 
-1. Create a `.env` file in the same directory as your Dockerfile.
-2. Add your configuration variables to this file.
-3. Make sure your Dockerfile copies this `.env` file into the container.
-4. The script will read this file and generate the `env-config.js`.
+#### Cons:
+- All services defined in the Docker Compose file will have access to these variables
+- May not be suitable if you need different env files for different services
 
-**Pros:**
+### Method 2: Using `env_file` in Docker Compose
 
-- Easy to manage and version control
-- Great for development environments
+This method allows you to specify a custom named env file for each service.
 
-**Cons:**
+#### Steps:
+1. Keep your existing `.env` file (or rename it if desired).
+2. In your `docker-compose.yml`, specify the env file using the `env_file` key.
 
-- Less secure for production (as sensitive data might be in version control)
-- Requires rebuilding the container to change values
+#### Example `docker-compose.yml`:
+```yaml
+version: '3'
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./.env  # or your custom named file
+```
 
-### 2. Using Environment Variables
+#### Pros:
+- Allows using different env files for different services
+- More explicit than relying on the default `.env` file
 
-This method is more flexible and secure, especially for production deployments.
+#### Cons:
+- Requires specifying the env file in the Docker Compose file
 
-**Steps:**
+### Method 3: Defining Environment Variables Directly in Docker Compose
 
-1. Remove or rename the `.env` file.
-2. Set environment variables when running your container:
+This method involves defining the environment variables directly in the `docker-compose.yml` file.
 
-   ```bash
-   docker run -e REACT_APP_USE_AUTH0=false -e REACT_APP_USE_ANALYZERS=true ...
-   ```
+#### Steps:
+1. In your `docker-compose.yml`, use the `environment` key to define variables.
 
-3. The script will use these environment variables to generate `env-config.js`.
+#### Example `docker-compose.yml`:
+```yaml
+version: '3'
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_APPLICATION_DOMAIN=yourdomain.com
+      - REACT_APP_APPLICATION_CLIENT_ID=your_client_id
+      - REACT_APP_AUDIENCE=http://localhost:3000
+      - REACT_APP_API_ROOT_URL=https://opencontracts.opensource.legal
+      - REACT_APP_USE_AUTH0=true
+      - REACT_APP_USE_ANALYZERS=true
+      - REACT_APP_ALLOW_IMPORTS=true
+```
 
-**Pros:**
+#### Pros:
+- All configuration is in one file
+- Easy to see all environment variables at a glance
 
-- More secure for production
-- Can change values without rebuilding the container
-- Follows the "12-factor app" methodology
+#### Cons:
+- Can make the `docker-compose.yml` file long and harder to manage
+- Sensitive information in the Docker Compose file may be a security risk
 
-**Cons:**
+### Method 4: Combining `env_file` and `environment`
 
-- Can be cumbersome to set many variables on the command line
+This method allows you to use an env file for most variables and override or add specific ones in the Docker Compose file.
 
-### 3. Using Docker Compose
+#### Steps:
+1. Keep your `.env` file with most variables.
+2. In `docker-compose.yml`, use both `env_file` and `environment`.
 
-This method combines the ease of a file-based approach with the flexibility of environment variables.
+#### Example `docker-compose.yml`:
+```yaml
+version: '3'
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./.env
+    environment:
+      - REACT_APP_USE_AUTH0=true
+      - REACT_APP_USE_ANALYZERS=true
+      - REACT_APP_ALLOW_IMPORTS=true
+```
 
-**Steps:**
+#### Pros:
+- Flexibility to use env files and override when needed
+- Can keep sensitive info in env file and non-sensitive in Docker Compose
 
-1. Create a `docker-compose.yml` file.
-2. Define your environment variables in the file:
-
-   ```yaml
-   version: '3'
-   services:
-     frontend:
-       build: .
-       environment:
-         - REACT_APP_USE_AUTH0=false
-         - REACT_APP_USE_ANALYZERS=true
-         - REACT_APP_ALLOW_IMPORTS=true
-         - REACT_APP_API_ROOT_URL=http://localhost:3000
-   ```
-
-3. Run your container using `docker-compose up`.
-
-**Pros:**
-
-- Easy to manage multiple environment variables
-- Can have different configurations for different environments
-- Variables not stored in the image
-
-**Cons:**
-
-- Requires Docker Compose
-
-## Conclusion
-
-Each method has its own advantages and use cases. For local development, a `.env` file is often the simplest. For
-production deployments, using environment variables, or Docker Compose provides more flexibility and security.
+#### Cons:
+- Need to be careful about precedence (Docker Compose values override env file)

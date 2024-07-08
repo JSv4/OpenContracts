@@ -13,12 +13,11 @@ REACT_APP_ROOT_URL=http://localhost:3000
 
 ## Understanding the Configuration Variables
 
-Before we dive into the methods of providing these variables, let's briefly discuss what each variable might be used
-for:
+Before we dive into the methods of providing these variables, let's briefly discuss variables and their purpose:
 
-1. `REACT_APP_USE_AUTH0`: Likely controls whether the application uses Auth0 for authentication.
-2. `REACT_APP_USE_ANALYZERS`: Probably enables or disables some form of data or code analysis feature.
-3. `REACT_APP_ALLOW_IMPORTS`: Might control whether users can import external data or modules.
+1. `REACT_APP_USE_AUTH0`: Use Auth0 for authentication if True (in which case you need Auth0 config vars)
+2. `REACT_APP_USE_ANALYZERS`: Turn off frontend controls for analyzers.
+3. `REACT_APP_ALLOW_IMPORTS`: Allow import of corpus exports.
 4. `REACT_APP_ROOT_URL`: Specifies the base URL for the application, useful for API calls or routing.
 
 ## Methods of Providing Configuration Variables

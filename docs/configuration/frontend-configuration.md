@@ -2,9 +2,9 @@
 
 ## Why?
 
-The frontend configuration variables should not be secrets as there is no way to keep them secure on the frontend. That 
+The frontend configuration variables should not be secrets as there is no way to keep them secure on the frontend. That
 said, being able to specify certain configurations via environment variables makes configuration and deployment much
-easier. 
+easier.
 
 ## What Can be Configured?
 
@@ -28,12 +28,12 @@ REACT_APP_API_ROOT_URL=https://opencontracts.opensource.legal
 
 ATM, there are three key configurations:
 1. **REACT_APP_USE_AUTH0** - uncomment this / set it to true to switch the frontend login components and auth flow from
-   django password auth to Auth0 oauth2. IF this is true, you also need to provide valid configurations for 
-   `REACT_APP_APPLICATION_DOMAIN`, `REACT_APP_APPLICATION_CLIENT_ID`, and `REACT_APP_AUDIENCE`. These are configured 
+   django password auth to Auth0 oauth2. IF this is true, you also need to provide valid configurations for
+   `REACT_APP_APPLICATION_DOMAIN`, `REACT_APP_APPLICATION_CLIENT_ID`, and `REACT_APP_AUDIENCE`. These are configured
    on the Auth0 platform. We don't have a walkthrough for that ATM.
-2. **REACT_APP_USE_ANALYZERS** - allow users to see and use analyzers. False on the demo deployment. 
+2. **REACT_APP_USE_ANALYZERS** - allow users to see and use analyzers. False on the demo deployment.
 3. **REACT_APP_ALLOW_IMPORTS** - do not let people upload zip files and attempt to import them. Not recommended on truly
-   public installations as security will be challenging. Internal to an org should be OK, but still use caution. 
+   public installations as security will be challenging. Internal to an org should be OK, but still use caution.
 
 ## How to Configure
 

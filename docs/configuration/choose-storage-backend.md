@@ -17,11 +17,11 @@ fields in the .production samples, but you could use them in the .local env file
 **Here the variables you need to set to enable AWS S3 storage:**
 
 1. `USE_AWS` - set to `true` since you're using AWS, otherwise the backend will use a docker volume for storage.
-2. `DJANGO_AWS_ACCESS_KEY_ID` - the access key ID created by AWS when you set up your IAM user (see tutorials above).
-3. `DJANGO_AWS_SECRET_ACCESS_KEY` - the secret access key created by AWS when you set up your IAM user
+2. `AWS_ACCESS_KEY_ID` - the access key ID created by AWS when you set up your IAM user (see tutorials above).
+3. `AWS_SECRET_ACCESS_KEY` - the secret access key created by AWS when you set up your IAM user
    (see tutorials above)
-4. `DJANGO_AWS_STORAGE_BUCKET_NAME` - the name of the AWS bucket you created to hold the files.
-5. `DJANGO_AWS_S3_REGION_NAME` - the region of the AWS bucket you configured.
+4. `AWS_STORAGE_BUCKET_NAME` - the name of the AWS bucket you created to hold the files.
+5. `AWS_S3_REGION_NAME` - the region of the AWS bucket you configured.
 
 ## Django Storage Backend
 

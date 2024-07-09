@@ -186,7 +186,7 @@ class ApproveDatacell(graphene.Mutation):
 
         try:
             pk = from_global_id(datacell_id)[1]
-            obj = Datacell.objects.get(pk=pk)
+            obj = Datacell.objects.get(pk=pk, creator=info.context.user)
             obj.approved_by = info.context.user
             obj.rejected_by = None
             obj.save()
@@ -218,7 +218,7 @@ class RejectDatacell(graphene.Mutation):
 
         try:
             pk = from_global_id(datacell_id)[1]
-            obj = Datacell.objects.get(pk=pk)
+            obj = Datacell.objects.get(pk=pk, creator=info.context.user)
             obj.rejected_by = info.context.user
             obj.approved_by = None
             obj.save()
@@ -251,7 +251,7 @@ class EditDatacell(graphene.Mutation):
 
         try:
             pk = from_global_id(datacell_id)[1]
-            obj = Datacell.objects.get(pk=pk)
+            obj = Datacell.objects.get(pk=pk, creator=info.context.user)
             obj.corrected_data = edited_data
             obj.save()
             message = "SUCCESS!"
@@ -1675,7 +1675,7 @@ class StartExtract(graphene.Mutation):
     def mutate(root, info, extract_id):
         # Start celery task to process extract
         pk = from_global_id(extract_id)[1]
-        extract = Extract.objects.get(pk=pk)
+        extract = Extract.objects.get(pk=pk, creator=info.context.user)
         extract.started = timezone.now()
         extract.save()
         run_extract.s(pk, info.context.user.id).apply_async()

@@ -44,6 +44,14 @@ export const CookieConsentDialog = () => {
             <List.Icon name="computer" />
             <List.Content>System Information</List.Content>
           </List.Item>
+          <List.Item>
+            <List.Icon name="computer" />
+            <List.Content>Extractor Configurations</List.Content>
+            <List.Description>
+              We don't collect or share the data you extract, but we demo
+              accounts share extractor configurations by default.
+            </List.Description>
+          </List.Item>
         </List>
       </Modal.Content>
       <Modal.Actions>

@@ -8,32 +8,36 @@ easier.
 
 ## What Can be Configured?
 
-Our frontend config file should look like this:
+Our frontend config file should look like this (The `OPEN_CONTRACTS_` prefixes are necessary to get the env variables
+injected into the frontend container. The env variable that shows up on `window._env_` in the React frontend will omit
+the prefix, however - e.g. `OPEN_CONTRACTS_REACT_APP_APPLICATION_DOMAIN` will show up as `REACT_APP_APPLICATION_DOMAIN`):
 
 ```
-REACT_APP_APPLICATION_DOMAIN=
-REACT_APP_APPLICATION_CLIENT_ID=
-REACT_APP_AUDIENCE=http://localhost:3000
-REACT_APP_API_ROOT_URL=https://opencontracts.opensource.legal
+OPEN_CONTRACTS_REACT_APP_APPLICATION_DOMAIN=
+OPEN_CONTRACTS_REACT_APP_APPLICATION_CLIENT_ID=
+OPEN_CONTRACTS_REACT_APP_AUDIENCE=http://localhost:3000
+OPEN_CONTRACTS_REACT_APP_API_ROOT_URL=https://opencontracts.opensource.legal
 
 # Uncomment to use Auth0 (you must then set the DOMAIN and CLIENT_ID envs above
-# REACT_APP_USE_AUTH0=true
+# OPEN_CONTRACTS_REACT_APP_USE_AUTH0=true
 
 # Uncomment to enable access to analyzers via the frontend
-# REACT_APP_USE_ANALYZERS=true
+# OPEN_CONTRACTS_REACT_APP_USE_ANALYZERS=true
 
 # Uncomment to enable access to import functionality via the frontend
-# REACT_APP_ALLOW_IMPORTS=true
+# OPEN_CONTRACTS_REACT_APP_ALLOW_IMPORTS=true
 ```
 
 ATM, there are three key configurations:
-1. **REACT_APP_USE_AUTH0** - uncomment this / set it to true to switch the frontend login components and auth flow from
-   django password auth to Auth0 oauth2. IF this is true, you also need to provide valid configurations for
-   `REACT_APP_APPLICATION_DOMAIN`, `REACT_APP_APPLICATION_CLIENT_ID`, and `REACT_APP_AUDIENCE`. These are configured
+1. **OPEN_CONTRACTS_REACT_APP_USE_AUTH0** - uncomment this / set it to true to switch the frontend login components and 
+   auth flow from django password auth to Auth0 oauth2. IF this is true, you also need to provide valid configurations 
+   for `OPEN_CONTRACTS_REACT_APP_APPLICATION_DOMAIN`, `OPEN_CONTRACTS_REACT_APP_APPLICATION_CLIENT_ID`, and 
+   `OPEN_CONTRACTS_REACT_APP_AUDIENCE`. These are configured
    on the Auth0 platform. We don't have a walkthrough for that ATM.
-2. **REACT_APP_USE_ANALYZERS** - allow users to see and use analyzers. False on the demo deployment.
-3. **REACT_APP_ALLOW_IMPORTS** - do not let people upload zip files and attempt to import them. Not recommended on truly
-   public installations as security will be challenging. Internal to an org should be OK, but still use caution.
+2. **OPEN_CONTRACTS_REACT_APP_USE_ANALYZERS** - allow users to see and use analyzers. False on the demo deployment.
+3. **OPEN_CONTRACTS_REACT_APP_ALLOW_IMPORTS** - do not let people upload zip files and attempt to import them. Not 
+   recommended on truly public installations as security will be challenging. Internal to an org should be OK, but 
+   still use caution.
 
 ## How to Configure
 
@@ -109,13 +113,13 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - REACT_APP_APPLICATION_DOMAIN=yourdomain.com
-      - REACT_APP_APPLICATION_CLIENT_ID=your_client_id
-      - REACT_APP_AUDIENCE=http://localhost:3000
-      - REACT_APP_API_ROOT_URL=https://opencontracts.opensource.legal
-      - REACT_APP_USE_AUTH0=true
-      - REACT_APP_USE_ANALYZERS=true
-      - REACT_APP_ALLOW_IMPORTS=true
+      - OPEN_CONTRACTS_REACT_APP_APPLICATION_DOMAIN=yourdomain.com
+      - OPEN_CONTRACTS_REACT_APP_APPLICATION_CLIENT_ID=your_client_id
+      - OPEN_CONTRACTS_REACT_APP_AUDIENCE=http://localhost:3000
+      - OPEN_CONTRACTS_REACT_APP_API_ROOT_URL=https://opencontracts.opensource.legal
+      - OPEN_CONTRACTS_REACT_APP_USE_AUTH0=true
+      - OPEN_CONTRACTS_REACT_APP_USE_ANALYZERS=true
+      - OPEN_CONTRACTS_REACT_APP_ALLOW_IMPORTS=true
 ```
 
 #### Pros:

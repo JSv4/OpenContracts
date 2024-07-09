@@ -112,7 +112,7 @@ export function DocumentUploadList(props: DocumentUploadListProps) {
           </Segment>
         )}
         <input
-          accept=".pdf"
+          accept="application/pdf"
           {...getInputProps()}
           ref={fileInputRef}
           type="file"

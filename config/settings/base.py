@@ -116,6 +116,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIGRATION_MODULES = {"sites": "opencontractserver.contrib.sites.migrations"}
 
 # USER LIMITS (FOR USERS WITH IS_USAGE_CAPPED=True)
+# ------------------------------------------------------------------------------
 USAGE_CAPPED_USER_DOC_CAP_COUNT = env.int(
     "USAGE_CAPPED_USER_CORPUS_CAP_COUNT", default=10
 )
@@ -128,6 +129,10 @@ USAGE_CAPPED_USER_CAN_IMPORT_CORPUS = env.bool(
 USAGE_CAPPED_USER_CAN_EXPORT_CORPUS = env.bool(
     "USAGE_CAPPED_USER_CAN_EXPORT_CORPUS", default=True
 )
+
+# UPLOAD CONTROLS
+# ------------------------------------------------------------------------------
+ALLOWED_DOCUMENT_MIMETYPES = ["application/pdf"]
 
 # AUTHENTICATION
 # ------------------------------------------------------------------------------

@@ -11,6 +11,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from filetype import filetype
 from graphene.types.generic import GenericScalar
 from graphql import GraphQLError
 from graphql_jwt.decorators import login_required, user_passes_test
@@ -844,9 +845,23 @@ class UploadDocument(graphene.Mutation):
             )
 
         try:
+            file_bytes = base64.b64decode(base64_file_string)
+
+            # Check file type
+            kind = filetype.guess(file_bytes)
+            if kind is None:
+                return UploadDocument(
+                    message="Unable to determine file type", ok=False, document=None
+                )
+
+            if kind.mime not in settings.ALLOWED_DOCUMENT_MIMETYPES:
+                return UploadDocument(
+                    message=f"Unallowed filetype: {kind.mime}", ok=False, document=None
+                )
+
             user = info.context.user
-            pdf_file = ContentFile(base64.b64decode(base64_file_string), name=filename)
-            document = Document.objects.create(
+            pdf_file = ContentFile("Yo", name=filename)
+            document = Document(
                 creator=user,
                 title=title,
                 description=description,
@@ -854,6 +869,7 @@ class UploadDocument(graphene.Mutation):
                 pdf_file=pdf_file,
                 backend_lock=True,
             )
+            document.save()
             set_permissions_for_obj_to_user(user, document, [PermissionTypes.CRUD])
             ok = True
             message = "Success"

@@ -860,7 +860,7 @@ class UploadDocument(graphene.Mutation):
                 )
 
             user = info.context.user
-            pdf_file = ContentFile("Yo", name=filename)
+            pdf_file = ContentFile(file_bytes, name=filename)
             document = Document(
                 creator=user,
                 title=title,

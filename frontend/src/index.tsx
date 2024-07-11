@@ -25,15 +25,21 @@ const onRedirectCallback = (appState: any) => {
 
 // Can't use useEnv hook here...
 console.log("Window env", window._env_);
-const REACT_APP_APPLICATION_DOMAIN =
-  window._env_.REACT_APP_APPLICATION_DOMAIN || "";
-const REACT_APP_APPLICATION_CLIENT_ID =
-  window._env_.REACT_APP_APPLICATION_CLIENT_ID || "";
-const REACT_APP_AUDIENCE =
-  window._env_.REACT_APP_AUDIENCE || "http://localhost:3000";
-const REACT_APP_API_ROOT_URL =
-  window._env_.REACT_APP_API_ROOT_URL || "http://localhost:8000";
-const REACT_APP_USE_AUTH0 = window._env_.REACT_APP_USE_AUTH0 === "true";
+const REACT_APP_APPLICATION_DOMAIN = window._env_
+  ? window._env_.REACT_APP_APPLICATION_DOMAIN || ""
+  : "";
+const REACT_APP_APPLICATION_CLIENT_ID = window._env_
+  ? window._env_.REACT_APP_APPLICATION_CLIENT_ID || ""
+  : "";
+const REACT_APP_AUDIENCE = window._env_
+  ? window._env_.REACT_APP_AUDIENCE || "http://localhost:3000"
+  : "";
+const REACT_APP_API_ROOT_URL = window._env_
+  ? window._env_.REACT_APP_API_ROOT_URL || "http://localhost:8000"
+  : "";
+const REACT_APP_USE_AUTH0 = window._env_
+  ? window._env_.REACT_APP_USE_AUTH0 === "true"
+  : false;
 
 const api_root_url = REACT_APP_API_ROOT_URL
   ? REACT_APP_API_ROOT_URL

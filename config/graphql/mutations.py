@@ -271,7 +271,7 @@ class CreateLabelset(graphene.Mutation):
             description="Base64-encoded file string for the Labelset icon (optional).",
         )
         filename = graphene.String(
-            required=True, description="Filename of the document."
+            required=False, description="Filename of the document."
         )
         title = graphene.String(required=True, description="Title of the Labelset.")
         description = graphene.String(
@@ -283,7 +283,10 @@ class CreateLabelset(graphene.Mutation):
     obj = graphene.Field(LabelSetType)
 
     @login_required
-    def mutate(root, info, base64_icon_string, title, description, filename):
+    def mutate(root, info, title, description, filename=None, base64_icon_string=None):
+
+        if base64_icon_string is None:
+            base64_icon_string = settings.DEFAULT_IMAGE
 
         ok = False
         obj = None
@@ -296,7 +299,7 @@ class CreateLabelset(graphene.Mutation):
                     if "," in base64_icon_string[:32]
                     else base64_icon_string
                 ),
-                name=filename,
+                name=filename if filename is not None else "icon.png",
             )
             obj = LabelSet(
                 creator=user, title=title, description=description, icon=icon

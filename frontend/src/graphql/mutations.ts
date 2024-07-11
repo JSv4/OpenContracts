@@ -271,7 +271,7 @@ export const CREATE_LABELSET = gql`
     $title: String!
     $description: String
     $icon: String
-    $filename: String!
+    $filename: String
   ) {
     createLabelset(
       title: $title

@@ -41,7 +41,14 @@ export const NavMenu = () => {
       active={pathname === item.route}
       key={`${item.title}`}
     >
-      <Link to={item.route}>{item.title}</Link>
+      <Link to={item.route}>
+        {item.title}
+        {item.icon ? (
+          <Icon name={item.icon} style={{ paddingLeft: ".25rem" }} />
+        ) : (
+          <></>
+        )}
+      </Link>
     </Menu.Item>
   ));
 

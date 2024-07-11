@@ -52,6 +52,7 @@ import { CookieConsentDialog } from "./components/cookies/CookieConsent";
 import { Extracts } from "./views/Extracts";
 import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 import { useEnv } from "./components/hooks/UseEnv";
+import { Dashboard } from "./views/Dashboard";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
@@ -187,7 +188,7 @@ export const App = () => {
             )}
 
             <Routes>
-              <Route path="/" element={<Corpuses />} />
+              <Route path="/corpuses" element={<Corpuses />} />
               {!REACT_APP_USE_AUTH0 ? (
                 <Route path="/login" element={<Login />} />
               ) : (
@@ -199,6 +200,7 @@ export const App = () => {
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms_of_service" element={<TermsOfService />} />
               <Route path="/extracts" element={<Extracts />} />
+              <Route path="/" element={<Dashboard />} />
             </Routes>
           </Container>
           <Footer />

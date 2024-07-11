@@ -1475,3 +1475,14 @@ export const GET_REGISTERED_EXTRACT_TASKS = gql`
     registeredExtractTasks
   }
 `;
+
+export const GET_DASHBOARD_STATISTICS = gql`
+  query GetStatistics {
+    statistics {
+      corpuses
+      documents
+      extractors
+      annotations
+    }
+  }
+`;

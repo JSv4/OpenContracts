@@ -1,7 +1,8 @@
 ![OpenContracts](docs/assets/images/logos/OS_Legal_Logo.png)
 
-# Open Contracts
+# Open Contracts ([Demo](https://opencontracts.opensource.legal))
 ## The Free and Open Source Document Analytics Platform [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/JSv4)
+
 
 ---
 

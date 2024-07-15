@@ -135,9 +135,23 @@ export const SelectDocumentsModal = ({
     selectedDocumentIds([]);
     toggleModal();
   };
+
   const handleCancel = () => {
     selectedDocumentIds([]);
     toggleModal();
+  };
+
+  const onSelect = (document: DocumentType) => {
+    // console.log("On selected document", document);
+    if (selected_document_ids.includes(document.id)) {
+      // console.log("Already selected... deselect")
+      const values = selected_document_ids.filter((id) => id !== document.id);
+      // console.log("Filtered values", values);
+      selectedDocumentIds(values);
+    } else {
+      selectedDocumentIds([...selected_document_ids, document.id]);
+    }
+    // console.log("selected doc ids", selected_document_ids);
   };
 
   return (
@@ -197,6 +211,7 @@ export const SelectDocumentsModal = ({
           }
         >
           <DocumentCards
+            onClick={onSelect}
             items={document_items}
             pageInfo={documents_data?.documents?.pageInfo}
             loading={documents_loading}

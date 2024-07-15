@@ -12,6 +12,7 @@ import {
   authToken,
   filterToLabelId,
   selectedMetaAnnotationId,
+  openedDocument,
 } from "../../graphql/cache";
 import {
   REMOVE_DOCUMENTS_FROM_CORPUS,
@@ -37,6 +38,7 @@ export const CorpusDocumentCards = ({
    * that corpus and let you browse them.
    */
 
+  const selected_document_ids = useReactiveVar(selectedDocumentIds);
   const document_search_term = useReactiveVar(documentSearchTerm);
   const selected_metadata_id_to_filter_on = useReactiveVar(
     selectedMetaAnnotationId
@@ -152,6 +154,23 @@ export const CorpusDocumentCards = ({
       });
   };
 
+  const onSelect = (document: DocumentType) => {
+    // console.log("On selected document", document);
+    if (selected_document_ids.includes(document.id)) {
+      // console.log("Already selected... deselect")
+      const values = selected_document_ids.filter((id) => id !== document.id);
+      // console.log("Filtered values", values);
+      selectedDocumentIds(values);
+    } else {
+      selectedDocumentIds([...selected_document_ids, document.id]);
+    }
+    // console.log("selected doc ids", selected_document_ids);
+  };
+
+  const onOpen = (document: DocumentType) => {
+    openedDocument(document);
+  };
+
   return (
     <DocumentCards
       items={document_items}
@@ -160,6 +179,8 @@ export const CorpusDocumentCards = ({
       pageInfo={documents_response?.documents.pageInfo}
       style={{ minHeight: "70vh" }}
       fetchMore={fetchMoreDocuments}
+      onShiftClick={onSelect}
+      onClick={onOpen}
       removeFromCorpus={opened_corpus_id ? handleRemoveContracts : undefined}
     />
   );

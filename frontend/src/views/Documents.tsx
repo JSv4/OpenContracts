@@ -115,6 +115,23 @@ export const Documents = () => {
     false
   );
 
+  const onSelect = (document: DocumentType) => {
+    // console.log("On selected document", document);
+    if (selected_document_ids.includes(document.id)) {
+      // console.log("Already selected... deselect")
+      const values = selected_document_ids.filter((id) => id !== document.id);
+      // console.log("Filtered values", values);
+      selectedDocumentIds(values);
+    } else {
+      selectedDocumentIds([...selected_document_ids, document.id]);
+    }
+    // console.log("selected doc ids", selected_document_ids);
+  };
+
+  const onOpen = (document: DocumentType) => {
+    openedDocument(document);
+  };
+
   // If we just logged in, refetch docs in case there are documents that are not public and are only visible to current user
   useEffect(() => {
     if (auth_token) {
@@ -354,6 +371,8 @@ export const Documents = () => {
       }
     >
       <DocumentCards
+        onClick={onOpen}
+        onShiftClick={onSelect}
         items={document_items}
         pageInfo={documents_data?.documents?.pageInfo}
         loading={documents_loading}

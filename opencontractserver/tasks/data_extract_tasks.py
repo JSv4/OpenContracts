@@ -64,7 +64,7 @@ def oc_llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int
         query = datacell.column.query
 
         # Special character
-        if "|||" in search_text:
+        if isinstance(search_text, str) and "|||" in search_text:
 
             logger.info(
                 "Detected special break character in examples `|||` - splitting and averaging embeddings."

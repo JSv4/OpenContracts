@@ -153,7 +153,7 @@ export const CorpusCards = ({
         style={{
           flex: 1,
           width: "100%",
-          overflow: "hidden",
+          overflowY: "scroll",
         }}
       >
         <Card.Group stackable itemsPerRow={card_cols} style={comp_style}>

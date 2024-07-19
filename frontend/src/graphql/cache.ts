@@ -157,7 +157,7 @@ export const showDeleteDocumentsModal = makeVar<boolean>(false);
 export const showNewLabelsetModal = makeVar<boolean>(false);
 export const showExportModal = makeVar<boolean>(false);
 // if this is true, only render the currently selected annotation.
-export const showSelectedAnnotationOnly = makeVar<boolean>(false);
+export const showSelectedAnnotationOnly = makeVar<boolean>(true);
 // if this is false, don't render <SelectionBoundary> elements so you only see tokens. Cleaner for complex annotations.
 export const showAnnotationBoundingBoxes = makeVar<boolean>(false);
 // Show Labels toggle (if false, don't show labels)

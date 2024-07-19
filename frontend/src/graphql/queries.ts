@@ -209,6 +209,13 @@ export const GET_CORPUS_QUERY_DETAILS = gql`
         }
         rawText
         json
+        sourceNodeInRelationships {
+          edges {
+            node {
+              id
+            }
+          }
+        }
         tokensJsons
         document {
           id

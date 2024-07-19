@@ -216,6 +216,13 @@ export const GET_CORPUS_QUERY_DETAILS = gql`
             }
           }
         }
+        targetNodeInRelationships {
+          edges {
+            node {
+              id
+            }
+          }
+        }
         tokensJsons
         document {
           id
@@ -886,6 +893,13 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT_IN_CORPUS = gql`
         tokensJsons
         json
         sourceNodeInRelationships {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+        targetNodeInRelationships {
           edges {
             node {
               id

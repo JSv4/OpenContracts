@@ -40,8 +40,8 @@ const QueryResultsViewer: React.FC<QueryResultsViewerProps> = ({
       displayAnnotationOnAnnotatorLoad(viewSourceAnnotation);
       selectedAnnotation(viewSourceAnnotation);
       openedDocument(viewSourceAnnotation.document);
-      setViewSourceAnnotation(null);
       onlyDisplayTheseAnnotations([viewSourceAnnotation]);
+      setViewSourceAnnotation(null);
     }
   }, [viewSourceAnnotation]);
 

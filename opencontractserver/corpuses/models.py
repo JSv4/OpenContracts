@@ -103,6 +103,14 @@ class Corpus(TreeNode):
             ("update_corpus", "update corpus"),
             ("remove_corpus", "delete corpus"),
         )
+        indexes = [
+            django.db.models.Index(fields=['title']),
+            django.db.models.Index(fields=['label_set']),
+            django.db.models.Index(fields=['creator']),
+            django.db.models.Index(fields=['user_lock']),
+            django.db.models.Index(fields=['created']),
+            django.db.models.Index(fields=['modified']),
+        ]
         ordering = ("created",)
         base_manager_name = "objects"
 

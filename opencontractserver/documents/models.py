@@ -69,6 +69,13 @@ class Document(BaseOCModel):
             ("update_document", "update document"),
             ("remove_document", "delete document"),
         )
+        indexes = [
+            django.db.models.Index(fields=['title']),
+            django.db.models.Index(fields=['page_count']),
+            django.db.models.Index(fields=['creator']),
+            django.db.models.Index(fields=['created']),
+            django.db.models.Index(fields=['modified']),
+        ]
 
     # Override save to update modified on save
     def save(self, *args, **kwargs):

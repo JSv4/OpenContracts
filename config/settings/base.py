@@ -462,7 +462,9 @@ DEFAULT_PERMISSIONS_GROUP = "Public Objects Access"
 NLM_INGESTOR_ACTIVE = env.bool(
     "NLM_INGESTOR_ACTIVE", False
 )  # Use nlm-ingestor where this is True... otherwise PAWLs
-NLM_INGEST_USE_OCR = False  # IF True, always tell nlm-ingestor to use OCR (Tesseract)
+NLM_INGEST_USE_OCR = (
+    True  # IF True, allow ingestor to use OCR when no text found in pdf.
+)
 NLM_INGEST_HOSTNAME = (
     "http://nlm-ingestor:5001"  # Hostname to send nlm-ingestor REST requests to
 )

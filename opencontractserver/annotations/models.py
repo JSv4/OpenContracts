@@ -257,6 +257,17 @@ class Annotation(BaseOCModel):
             ("publish_annotation", "publish relationship"),
         )
 
+        indexes = [
+            django.db.models.Index(fields=['page']),
+            django.db.models.Index(fields=['annotation_label']),
+            django.db.models.Index(fields=['document']),
+            django.db.models.Index(fields=['corpus']),
+            django.db.models.Index(fields=['analysis']),
+            django.db.models.Index(fields=['creator']),
+            django.db.models.Index(fields=['created']),
+            django.db.models.Index(fields=['modified']),
+        ]
+
     # Override save to update modified on save
     def save(self, *args, **kwargs):
         """On save, update timestamps"""

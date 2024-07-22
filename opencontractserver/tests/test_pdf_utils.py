@@ -3,18 +3,19 @@ import os
 import tempfile
 
 from django.test import TestCase
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
-from unittest.mock import patch, MagicMock
 
-from opencontractserver.tests.fixtures import NLM_INGESTOR_SAMPLE_PDF, NLM_INGESTOR_SAMPLE_PDF_NEEDS_OCR
+from opencontractserver.tests.fixtures import (
+    NLM_INGESTOR_SAMPLE_PDF,
+    NLM_INGESTOR_SAMPLE_PDF_NEEDS_OCR,
+)
 from opencontractserver.utils.pdf import (
-    check_if_pdf_needs_ocr,
     base_64_encode_bytes,
+    check_if_pdf_needs_ocr,
     convert_hex_to_rgb_tuple,
     createHighlight,
     split_pdf_into_images,
 )
+
 
 class PDFUtilsTestCase(TestCase):
     def setUp(self):
@@ -43,9 +44,12 @@ class PDFUtilsTestCase(TestCase):
 
     def test_create_highlight(self):
         highlight = createHighlight(
-            x1=10, y1=20, x2=30, y2=40,
+            x1=10,
+            y1=20,
+            x2=30,
+            y2=40,
             meta={"author": "Test Author", "contents": "Test Contents"},
-            color=(1.0, 0.5, 0.0)
+            color=(1.0, 0.5, 0.0),
         )
         self.assertEqual(highlight["/Type"], "/Annot")
         self.assertEqual(highlight["/Subtype"], "/Highlight")

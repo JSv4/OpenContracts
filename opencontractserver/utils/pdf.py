@@ -5,8 +5,8 @@ import typing
 import uuid
 from io import BytesIO
 
-from PyPDF2 import PdfReader
 from django.conf import settings
+from PyPDF2 import PdfReader
 from PyPDF2.generic import (
     ArrayObject,
     DictionaryObject,
@@ -166,18 +166,21 @@ def split_pdf_into_images(
 
             if settings.USE_AWS:
                 import boto3
+
                 s3 = boto3.client("s3")
                 page_path = f"{storage_path}/{uuid.uuid4()}{file_extension}"
                 s3.put_object(
                     Key=page_path,
                     Bucket=settings.AWS_STORAGE_BUCKET_NAME,
                     Body=img_bytes_stream.getvalue(),
-                    ContentType=content_type
+                    ContentType=content_type,
                 )
             else:
                 pdf_fragment_folder_path = pathlib.Path(storage_path)
                 pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
-                pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}{file_extension}"
+                pdf_fragment_path = (
+                    pdf_fragment_folder_path / f"{uuid.uuid4()}{file_extension}"
+                )
                 with pdf_fragment_path.open("wb") as f:
                     f.write(img_bytes_stream.getvalue())
                 page_path = str(pdf_fragment_path.resolve())

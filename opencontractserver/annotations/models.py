@@ -176,6 +176,16 @@ class Relationship(BaseOCModel):
             ("publish_relationship", "publish relationship"),
         )
 
+        indexes = [
+            django.db.models.Index(fields=['relationship_label']),
+            django.db.models.Index(fields=['corpus']),
+            django.db.models.Index(fields=['document']),
+            django.db.models.Index(fields=['analyzer']),
+            django.db.models.Index(fields=['creator']),
+            django.db.models.Index(fields=['created']),
+            django.db.models.Index(fields=['modified']),
+        ]
+
     # Override save to update modified on save
     def save(self, *args, **kwargs):
         """On save, update timestamps"""
@@ -347,6 +357,15 @@ class LabelSet(BaseOCModel):
             ("update_labelset", "Can update labelset"),
             ("remove_labelset", "Can delete labelset"),
         )
+
+        indexes = [
+            django.db.models.Index(fields=['title']),
+            django.db.models.Index(fields=['analyzer']),
+            django.db.models.Index(fields=['creator']),
+            django.db.models.Index(fields=['created']),
+            django.db.models.Index(fields=['modified']),
+        ]
+
         constraints = [
             django.db.models.UniqueConstraint(
                 fields=["analyzer", "title"],

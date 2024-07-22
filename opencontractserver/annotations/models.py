@@ -80,6 +80,15 @@ class AnnotationLabel(BaseOCModel):
             ("remove_annotationlabel", "delete Annotationlabel"),
         )
 
+        indexes = [
+            django.db.models.Index(fields=['label_type']),
+            django.db.models.Index(fields=['analyzer']),
+            django.db.models.Index(fields=['text']),
+            django.db.models.Index(fields=['creator']),
+            django.db.models.Index(fields=['created']),
+            django.db.models.Index(fields=['modified']),
+        ]
+
         constraints = [
             django.db.models.UniqueConstraint(
                 fields=["analyzer", "text"],

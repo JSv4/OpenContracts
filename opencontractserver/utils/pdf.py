@@ -5,6 +5,7 @@ import typing
 import uuid
 from io import BytesIO
 
+from PyPDF2 import PdfReader
 from django.conf import settings
 from PyPDF2.generic import (
     ArrayObject,
@@ -135,8 +136,19 @@ def split_pdf_into_images(
     page_paths = []
 
     try:
+
+        # Ensure target_format is uppercase
+        target_format = target_format.upper()
+        if target_format not in ["PNG", "JPEG"]:
+            raise ValueError(f"Unsupported target format: {target_format}")
+
         # TODO - make sure target image resolution is compatible with PAWLS x,y coord system
         images = convert_from_bytes(pdf_bytes, size=(754, 1000))
+        print(f"PDF images: {len(images)}")
+
+        # Determine file extension and content type
+        file_extension = ".png" if target_format == "PNG" else ".jpg"
+        content_type = f"image/{target_format.lower()}"
 
         if settings.USE_AWS:
             import boto3
@@ -153,20 +165,22 @@ def split_pdf_into_images(
             img.save(img_bytes_stream, target_format)
 
             if settings.USE_AWS:
-                page_path = f"{storage_path}/{uuid.uuid4()}.pdf"
+                import boto3
+                s3 = boto3.client("s3")
+                page_path = f"{storage_path}/{uuid.uuid4()}{file_extension}"
                 s3.put_object(
                     Key=page_path,
                     Bucket=settings.AWS_STORAGE_BUCKET_NAME,
                     Body=img_bytes_stream.getvalue(),
+                    ContentType=content_type
                 )
             else:
                 pdf_fragment_folder_path = pathlib.Path(storage_path)
                 pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
-                pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}.pdf"
+                pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}{file_extension}"
                 with pdf_fragment_path.open("wb") as f:
                     f.write(img_bytes_stream.getvalue())
-
-                page_path = pdf_fragment_path.resolve().__str__()
+                page_path = str(pdf_fragment_path.resolve())
 
             page_paths.append(page_path)
 
@@ -174,3 +188,17 @@ def split_pdf_into_images(
         logger.error(f"split_pdf_into_images() - failed due to unexpected error: {e}")
 
     return page_paths
+
+
+def check_if_pdf_needs_ocr(file_object, threshold=10):
+    pdf_reader = PdfReader(file_object)
+    total_text = ""
+
+    for page in pdf_reader.pages:
+        total_text += page.extract_text()
+
+    # Reset file pointer to the beginning for subsequent use
+    file_object.seek(0)
+
+    # If the total extracted text is less than the threshold, it likely needs OCR
+    return len(total_text.strip()) < threshold

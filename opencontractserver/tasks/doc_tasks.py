@@ -37,7 +37,7 @@ from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.pdf import (
     extract_pawls_from_pdfs_bytes,
-    split_pdf_into_images,
+    split_pdf_into_images, check_if_pdf_needs_ocr,
 )
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 from opencontractserver.utils.text import __consolidate_common_equivalent_chars
@@ -236,6 +236,10 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
     doc_path = doc.pdf_file.name
     doc_file = default_storage.open(doc_path, mode="rb")
 
+    # Check if OCR is needed
+    needs_ocr = check_if_pdf_needs_ocr(doc_file)
+    logger.debug(f"Document {doc_id} needs OCR: {needs_ocr}")
+
     if settings.NLM_INGEST_API_KEY is not None:
         headers = {"API_KEY": settings.NLM_INGEST_API_KEY}
     else:
@@ -244,7 +248,7 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
     files = {"file": doc_file}
     params = {
         "calculate_opencontracts_data": "yes",
-        "applyOcr": "yes" if settings.NLM_INGEST_USE_OCR else "no",
+        "applyOcr": "yes" if needs_ocr and settings.NLM_INGEST_USE_OCR else "no",
     }  # Ensures calculate_opencontracts_data is set to True
 
     response = requests.post(

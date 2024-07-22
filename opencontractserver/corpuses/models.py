@@ -104,12 +104,12 @@ class Corpus(TreeNode):
             ("remove_corpus", "delete corpus"),
         )
         indexes = [
-            django.db.models.Index(fields=['title']),
-            django.db.models.Index(fields=['label_set']),
-            django.db.models.Index(fields=['creator']),
-            django.db.models.Index(fields=['user_lock']),
-            django.db.models.Index(fields=['created']),
-            django.db.models.Index(fields=['modified']),
+            django.db.models.Index(fields=["title"]),
+            django.db.models.Index(fields=["label_set"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["user_lock"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
         ]
         ordering = ("created",)
         base_manager_name = "objects"
@@ -175,12 +175,12 @@ class CorpusQuery(BaseOCModel):
             ("remove_corpusquery", "delete corpusquery"),
         )
         indexes = [
-            django.db.models.Index(fields=['corpus']),
-            django.db.models.Index(fields=['started']),
-            django.db.models.Index(fields=['completed']),
-            django.db.models.Index(fields=['failed']),
-            django.db.models.Index(fields=['creator']),
-            django.db.models.Index(fields=['created']),
+            django.db.models.Index(fields=["corpus"]),
+            django.db.models.Index(fields=["started"]),
+            django.db.models.Index(fields=["completed"]),
+            django.db.models.Index(fields=["failed"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["created"]),
         ]
         ordering = ("created",)
         base_manager_name = "objects"

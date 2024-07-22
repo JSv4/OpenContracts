@@ -81,12 +81,12 @@ class AnnotationLabel(BaseOCModel):
         )
 
         indexes = [
-            django.db.models.Index(fields=['label_type']),
-            django.db.models.Index(fields=['analyzer']),
-            django.db.models.Index(fields=['text']),
-            django.db.models.Index(fields=['creator']),
-            django.db.models.Index(fields=['created']),
-            django.db.models.Index(fields=['modified']),
+            django.db.models.Index(fields=["label_type"]),
+            django.db.models.Index(fields=["analyzer"]),
+            django.db.models.Index(fields=["text"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
         ]
 
         constraints = [
@@ -177,13 +177,13 @@ class Relationship(BaseOCModel):
         )
 
         indexes = [
-            django.db.models.Index(fields=['relationship_label']),
-            django.db.models.Index(fields=['corpus']),
-            django.db.models.Index(fields=['document']),
-            django.db.models.Index(fields=['analyzer']),
-            django.db.models.Index(fields=['creator']),
-            django.db.models.Index(fields=['created']),
-            django.db.models.Index(fields=['modified']),
+            django.db.models.Index(fields=["relationship_label"]),
+            django.db.models.Index(fields=["corpus"]),
+            django.db.models.Index(fields=["document"]),
+            django.db.models.Index(fields=["analyzer"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
         ]
 
     # Override save to update modified on save
@@ -277,18 +277,18 @@ class Annotation(BaseOCModel):
         )
 
         indexes = [
-            django.db.models.Index(fields=['page']),
-            django.db.models.Index(fields=['annotation_label']),
-            django.db.models.Index(fields=['document']),
-            django.db.models.Index(fields=['document', 'creator']),
-            django.db.models.Index(fields=['corpus']),
-            django.db.models.Index(fields=['corpus', 'creator']),
-            django.db.models.Index(fields=['document', 'corpus']),
-            django.db.models.Index(fields=['document', 'corpus', 'creator']),
-            django.db.models.Index(fields=['analysis']),
-            django.db.models.Index(fields=['creator']),
-            django.db.models.Index(fields=['created']),
-            django.db.models.Index(fields=['modified']),
+            django.db.models.Index(fields=["page"]),
+            django.db.models.Index(fields=["annotation_label"]),
+            django.db.models.Index(fields=["document"]),
+            django.db.models.Index(fields=["document", "creator"]),
+            django.db.models.Index(fields=["corpus"]),
+            django.db.models.Index(fields=["corpus", "creator"]),
+            django.db.models.Index(fields=["document", "corpus"]),
+            django.db.models.Index(fields=["document", "corpus", "creator"]),
+            django.db.models.Index(fields=["analysis"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
         ]
 
     # Override save to update modified on save
@@ -363,11 +363,11 @@ class LabelSet(BaseOCModel):
         )
 
         indexes = [
-            django.db.models.Index(fields=['title']),
-            django.db.models.Index(fields=['analyzer']),
-            django.db.models.Index(fields=['creator']),
-            django.db.models.Index(fields=['created']),
-            django.db.models.Index(fields=['modified']),
+            django.db.models.Index(fields=["title"]),
+            django.db.models.Index(fields=["analyzer"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
         ]
 
         constraints = [

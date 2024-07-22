@@ -174,6 +174,14 @@ class CorpusQuery(BaseOCModel):
             ("update_corpusquery", "update corpusquery"),
             ("remove_corpusquery", "delete corpusquery"),
         )
+        indexes = [
+            django.db.models.Index(fields=['corpus']),
+            django.db.models.Index(fields=['started']),
+            django.db.models.Index(fields=['completed']),
+            django.db.models.Index(fields=['failed']),
+            django.db.models.Index(fields=['creator']),
+            django.db.models.Index(fields=['created']),
+        ]
         ordering = ("created",)
         base_manager_name = "objects"
 

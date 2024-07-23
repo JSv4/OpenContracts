@@ -80,6 +80,15 @@ class AnnotationLabel(BaseOCModel):
             ("remove_annotationlabel", "delete Annotationlabel"),
         )
 
+        indexes = [
+            django.db.models.Index(fields=["label_type"]),
+            django.db.models.Index(fields=["analyzer"]),
+            django.db.models.Index(fields=["text"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
+        ]
+
         constraints = [
             django.db.models.UniqueConstraint(
                 fields=["analyzer", "text"],
@@ -166,6 +175,16 @@ class Relationship(BaseOCModel):
             ("remove_relationship", "delete relationship"),
             ("publish_relationship", "publish relationship"),
         )
+
+        indexes = [
+            django.db.models.Index(fields=["relationship_label"]),
+            django.db.models.Index(fields=["corpus"]),
+            django.db.models.Index(fields=["document"]),
+            django.db.models.Index(fields=["analyzer"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
+        ]
 
     # Override save to update modified on save
     def save(self, *args, **kwargs):
@@ -257,6 +276,21 @@ class Annotation(BaseOCModel):
             ("publish_annotation", "publish relationship"),
         )
 
+        indexes = [
+            django.db.models.Index(fields=["page"]),
+            django.db.models.Index(fields=["annotation_label"]),
+            django.db.models.Index(fields=["document"]),
+            django.db.models.Index(fields=["document", "creator"]),
+            django.db.models.Index(fields=["corpus"]),
+            django.db.models.Index(fields=["corpus", "creator"]),
+            django.db.models.Index(fields=["document", "corpus"]),
+            django.db.models.Index(fields=["document", "corpus", "creator"]),
+            django.db.models.Index(fields=["analysis"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
+        ]
+
     # Override save to update modified on save
     def save(self, *args, **kwargs):
         """On save, update timestamps"""
@@ -327,6 +361,15 @@ class LabelSet(BaseOCModel):
             ("update_labelset", "Can update labelset"),
             ("remove_labelset", "Can delete labelset"),
         )
+
+        indexes = [
+            django.db.models.Index(fields=["title"]),
+            django.db.models.Index(fields=["analyzer"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
+        ]
+
         constraints = [
             django.db.models.UniqueConstraint(
                 fields=["analyzer", "title"],

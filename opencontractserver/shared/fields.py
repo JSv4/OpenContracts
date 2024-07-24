@@ -3,9 +3,8 @@ import json
 import logging
 
 import PyPDF2
-from django.contrib.postgres.forms import JSONField
 from django.db.models import JSONField as DbJSONField
-from django.forms.fields import InvalidJSONInput
+from django.forms.fields import InvalidJSONInput, JSONField
 from drf_extra_fields.fields import Base64FileField
 
 # Logging setup

@@ -1,11 +1,10 @@
-import io
 import json
 import logging
 
-import PyPDF2
 from django.db.models import JSONField as DbJSONField
 from django.forms.fields import InvalidJSONInput, JSONField
 from drf_extra_fields.fields import Base64FileField
+from filetype import filetype
 
 # Logging setup
 logger = logging.getLogger(__name__)
@@ -14,13 +13,19 @@ logger.setLevel(logging.INFO)
 
 # Field to accept base64-encoded file strings for PDF only as a field on our serializers
 class PDFBase64File(Base64FileField):
-    ALLOWED_TYPES = ["pdf"]
+
+    ALLOWED_TYPES = ("pdf",)
 
     def get_file_extension(self, filename, decoded_file):
-        try:
-            PyPDF2.PdfFileReader(io.BytesIO(decoded_file))
-        except PyPDF2.utils.PdfReadError as e:
-            logger.warning(e)
+
+        # Check file type
+        kind = filetype.guess(decoded_file)
+        if kind is None:
+            logger.warning("Could not determine valid filetype")
+            return None
+        elif kind.mime != "application/pdf":
+            logger.warning(f"Not a PDF: {kind.mime}")
+            return None
         else:
             return "pdf"
 

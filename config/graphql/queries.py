@@ -141,8 +141,6 @@ class Query(graphene.ObjectType):
                 Q(creator=info.context.user) | Q(is_public=True)
             )
 
-        print(f"Base queryset: {queryset}")
-
         # Now build query to stuff they want to see (filter to annotations in this corpus or with NO corpus FK, which
         # travel with document.
         q_objects = Q(corpus_id=corpus_django_pk) | Q(corpus_id__isnull=True)

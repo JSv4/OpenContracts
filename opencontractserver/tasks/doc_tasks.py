@@ -19,7 +19,6 @@ from pydantic import validate_arguments
 from config import celery_app
 from config.graphql.serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import (
-    METADATA_LABEL,
     TOKEN_LABEL,
     Annotation,
     AnnotationLabel,
@@ -426,34 +425,6 @@ def burn_doc_annotations(
     return build_document_export(
         label_lookups=label_lookups, doc_id=doc_id, corpus_id=corpus_id
     )
-
-
-@celery_app.task()
-@validate_arguments
-def convert_doc_to_langchain_task(doc_id: int, corpus_id: int) -> tuple[str, dict]:
-    """
-    Given a doc and corpus, export text and all metadata in a tuple that can then be combined and exported for langchain
-    """
-    doc = Document.objects.get(id=doc_id)
-
-    metadata_annotations = Annotation.objects.filter(
-        document_id=doc_id,
-        corpus_id=corpus_id,
-        annotation_label__label_type=METADATA_LABEL,
-    )
-
-    if doc.txt_extract_file.name:
-        with doc.txt_extract_file.open("r") as txt_file:
-            text = txt_file.read()
-    else:
-        text = ""
-
-    metadata_json = {"doc_id": doc_id, "corpus_id": corpus_id}
-
-    for metadata in metadata_annotations:
-        metadata_json[metadata.annotation_label.text] = metadata.raw_text
-
-    return text, metadata_json
 
 
 @celery_app.task()

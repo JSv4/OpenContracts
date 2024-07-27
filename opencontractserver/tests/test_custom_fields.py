@@ -1,7 +1,11 @@
-import base64
-from django.test import TestCase
-from opencontractserver.shared.fields import PDFBase64File, UTF8JSONFormField, NullableJSONField
 from django.forms import Form
+from django.test import TestCase
+
+from opencontractserver.shared.fields import (
+    NullableJSONField,
+    PDFBase64File,
+    UTF8JSONFormField,
+)
 
 
 class PDFBase64FileTests(TestCase):
@@ -10,18 +14,17 @@ class PDFBase64FileTests(TestCase):
 
     def test_valid_pdf_file(self):
         pdf_content = b"%PDF-1.5\n%\xe2\xe3\xcf\xd3\n"
-        encoded_content = base64.b64encode(pdf_content).decode('utf-8')
-        result = self.field.get_file_extension('test.pdf', pdf_content)
+        result = self.field.get_file_extension("test.pdf", pdf_content)
         self.assertEqual(result, "pdf")
 
     def test_invalid_file_type(self):
         txt_content = b"This is not a PDF file"
-        result = self.field.get_file_extension('test.txt', txt_content)
+        result = self.field.get_file_extension("test.txt", txt_content)
         self.assertIsNone(result)
 
     def test_non_pdf_file(self):
         jpg_content = b"\xFF\xD8\xFF\xE0\x00\x10JFIF"
-        result = self.field.get_file_extension('test.jpg', jpg_content)
+        result = self.field.get_file_extension("test.jpg", jpg_content)
         self.assertIsNone(result)
 
 
@@ -62,15 +65,15 @@ class CustomJSONFieldFormTests(TestCase):
         json_field = NullableJSONField()
 
     def test_form_with_valid_json(self):
-        form = self.TestForm({'json_field': '{"key": "value"}'})
+        form = self.TestForm({"json_field": '{"key": "value"}'})
         self.assertTrue(form.is_valid())
 
     def test_form_with_empty_json(self):
-        form = self.TestForm({'json_field': '{}'})
+        form = self.TestForm({"json_field": "{}"})
         self.assertTrue(form.is_valid())
 
     def test_form_with_null_json(self):
-        form = self.TestForm({'json_field': ''})
+        form = self.TestForm({"json_field": ""})
         self.assertTrue(form.is_valid())
 
     # TODO - this test is not quite working as expected. Minimal risk ATM.

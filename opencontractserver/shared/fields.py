@@ -1,7 +1,6 @@
 import json
 import logging
 
-from django.core.exceptions import ValidationError
 from django.db.models import JSONField as DbJSONField
 from django.forms.fields import InvalidJSONInput, JSONField
 from drf_extra_fields.fields import Base64FileField

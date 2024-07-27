@@ -144,7 +144,7 @@ class AnnotationFilter(django_filters.FilterSet):
 
     def filter_by_created_by_analysis_ids(self, queryset, info, value):
 
-        print(f"filter_by_created_by_analysis_ids - value: {value}")
+        # print(f"filter_by_created_by_analysis_ids - value: {value}")
 
         analysis_ids = value.split(",")
         if "~~MANUAL~~" in analysis_ids:
@@ -219,14 +219,14 @@ class LabelFilter(django_filters.FilterSet):
 
     def filter_by_used_in_labelset_for_corpus_id(self, queryset, name, value):
 
-        print(f"Raw corpus id: {value}")
+        # print(f"Raw corpus id: {value}")
         django_pk = from_global_id(value)[1]
-        print("Lookup labels for pk", django_pk)
+        # print("Lookup labels for pk", django_pk)
         queryset = queryset.filter(Q(included_in_labelset__used_by_corpus=django_pk))
-        print(
-            "Filtered to values",
-            queryset,
-        )
+        # print(
+        #     "Filtered to values",
+        #     queryset,
+        # )
         return queryset.filter(included_in_labelset__used_by_corpus=django_pk)
 
     class Meta:

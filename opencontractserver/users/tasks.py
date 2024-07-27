@@ -65,33 +65,32 @@ if settings.USE_AUTH0:
     @celery_app.task()
     def apply_data_to_user(data, userPk):
 
-        print(f"apply_data_to_user() - userPk is: {userPk}\nData: {data}")
+        # print(f"apply_data_to_user() - userPk is: {userPk}\nData: {data}")
 
         user = User.objects.get(username=userPk)
         if user is not None and not user.synced:
 
-            print("User entry exists and has not synced:")
             try:
                 user.email = data["email"]
-                print(data["email"])
+                # print(data["email"])
                 user.email_verified = data["email_verified"]
-                print(data["email_verified"])
+                # print(data["email_verified"])
                 if data["email_verified"]:
                     user.is_active = True
                 else:
                     user.is_active = False  # disable accounts with unverified emails
                 user.name = data["name"]
-                print(data["name"])
+                # print(data["name"])
                 user.given_name = data["given_name"]
-                print(data["given_name"])
+                # print(data["given_name"])
                 user.family_name = data["family_name"]
-                print(data["family_name"])
+                # print(data["family_name"])
                 user.synced = True
                 user.is_social_user = True
                 user.last_synced = pytz.utc.localize(datetime.datetime.now())
                 user.last_ip = data["last_ip"]
-                print(user.last_ip)
-                print(user)
+                # print(user.last_ip)
+                # print(user)
                 user.save()
 
             except Exception as inst:
@@ -117,7 +116,7 @@ if settings.USE_AUTH0:
             refresh = True
         else:
             if tokens[0].expiration_Date < pytz.utc.localize(datetime.datetime.now()):
-                print("Token has expired. Refetching from Auth0")
+                # print("Token has expired. Refetching from Auth0")
                 tokens[0].delete()
                 refresh = True
 
@@ -141,7 +140,7 @@ if settings.USE_AUTH0:
         tokens = Auth0APIToken.objects.all()
 
         if len(tokens) == 0:
-            print("No Auth0 Tokens... Request one.")
+            # print("No Auth0 Tokens... Request one.")
             return get_new_auth0_token.delay().get()
         elif len(tokens) > 1:
             print(

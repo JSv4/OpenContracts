@@ -63,14 +63,8 @@ from opencontractserver.tasks import (
     package_annotated_docs,
 )
 from opencontractserver.tasks.analyzer_tasks import start_analysis
-from opencontractserver.tasks.doc_tasks import (
-    convert_doc_to_funsd,
-    convert_doc_to_langchain_task,
-)
-from opencontractserver.tasks.export_tasks import (
-    package_funsd_exports,
-    package_langchain_exports,
-)
+from opencontractserver.tasks.doc_tasks import convert_doc_to_funsd
+from opencontractserver.tasks.export_tasks import package_funsd_exports
 from opencontractserver.tasks.extract_orchestrator_tasks import run_extract
 from opencontractserver.tasks.permissioning_tasks import (
     make_analysis_public_task,
@@ -543,7 +537,7 @@ class StartQueryForCorpus(graphene.Mutation):
                 creator=info.context.user,
                 corpus_id=from_global_id(corpus_id)[1],
             )
-            print(f"Obj created: {obj}")
+            # print(f"Obj created: {obj}")
             set_permissions_for_obj_to_user(
                 info.context.user, obj, [PermissionTypes.CRUD]
             )
@@ -611,16 +605,6 @@ class StartCorpusExport(graphene.Mutation):
                     ),
                 ).apply_async()
 
-                ok = True
-                message = "SUCCESS"
-            elif export_format == ExportType.LANGCHAIN.value:
-                chord(
-                    group(
-                        convert_doc_to_langchain_task.s(doc_id, corpus_pk)
-                        for doc_id in doc_ids
-                    ),
-                    package_langchain_exports.s(export.id, corpus_pk),
-                ).apply_async()
                 ok = True
                 message = "SUCCESS"
             elif export_format == ExportType.FUNSD:
@@ -1735,15 +1719,15 @@ class CreateExtract(graphene.Mutation):
         corpus = None
         if corpus_id is not None:
             corpus = Corpus.objects.get(pk=from_global_id(corpus_id)[1])
-            print(f"Corpus is: {corpus}")
+            # print(f"Corpus is: {corpus}")
 
         if fieldset_id is not None:
-            print(f"Fieldset id is not None: {fieldset_id}")
+            # print(f"Fieldset id is not None: {fieldset_id}")
             fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
         else:
             if fieldset_name is None:
                 fieldset_name = f"{name} Fieldset"
-            print(f"Creating new fieldset... name will be: {fieldset_name}")
+            # print(f"Creating new fieldset... name will be: {fieldset_name}")
 
             fieldset = Fieldset.objects.create(
                 name=fieldset_name,
@@ -1765,7 +1749,7 @@ class CreateExtract(graphene.Mutation):
         extract.save()
 
         if corpus is not None:
-            print(f"Try to add corpus docs: {corpus.documents.all()}")
+            # print(f"Try to add corpus docs: {corpus.documents.all()}")
             extract.documents.add(*corpus.documents.all())
         else:
             print("Corpus IS still None... no docs to add.")
@@ -1833,7 +1817,7 @@ class AddDocumentsToExtract(DRFMutation):
             doc_objs = Document.objects.filter(
                 Q(pk__in=doc_pks) & (Q(creator=user) | Q(is_public=True))
             )
-            print(f"Add documents to extract {extract}: {doc_objs}")
+            # print(f"Add documents to extract {extract}: {doc_objs}")
             extract.documents.add(*doc_objs)
 
             ok = True

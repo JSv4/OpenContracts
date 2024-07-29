@@ -36,6 +36,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # Requirements are installed here to ensure they will be cached.
 COPY ./requirements .
 
+RUN pip install --upgrade pip
+
 # Create Python Dependency and Sub-Dependency Wheels.
 RUN pip wheel --wheel-dir /usr/src/app/wheels  \
   -r ${BUILD_ENVIRONMENT}.txt
@@ -73,6 +75,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # All absolute dir copies ignore workdir instruction. All relative dir copies are wrt to the workdir instruction
 # copy python dependency wheels from python-build-stage
 COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
+
+RUN pip install --upgrade pip
 
 # Install CPU-less requirements
 RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu

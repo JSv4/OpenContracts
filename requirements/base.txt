@@ -63,7 +63,7 @@ marvin==2.3.4
 
 # Data Processing Tools
 # -------------------------------------------------------------------------------
-opencv-python==4.7.0.68 # https://github.com/opencv/opencv-python
+opencv-python==4.10.0.84 # https://github.com/opencv/opencv-python
 filetype==1.2.0  # https://github.com/h2non/filetype.py
 
 # Permissioning

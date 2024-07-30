@@ -8,13 +8,13 @@ watchgod==0.8.2  # https://github.com/samuelcolvin/watchgod
 # Testing
 # ------------------------------------------------------------------------------
 mypy==0.991  # https://github.com/python/mypy
-django-stubs==1.13.0  # https://github.com/typeddjango/django-stubs
+django-stubs==4.2.7  # https://github.com/typeddjango/django-stubs
 pytest==8.2.2  # https://github.com/pytest-dev/pytest
 pytest-cov==4.0.0  # https://github.com/pytest-dev/pytest-cov
 pytest-sugar==0.9.5  # https://github.com/Frozenball/pytest-sugar
 djangorestframework-stubs==1.8.0  # https://github.com/typeddjango/djangorestframework-stubs
 responses==0.22.0  # https://github.com/getsentry/responses
-vcrpy==6.0.1  # https://vcrpy.readthedocs.io/en/latest/
+git+https://github.com/kevin1024/vcrpy.git@35650b141b5689eed84eac05c23b48412c76dd52 # VCR.py 6.0.* has deprecated setuptools which broke recently.
 
 # Profiling
 # ------------------------------------------------------------------------------

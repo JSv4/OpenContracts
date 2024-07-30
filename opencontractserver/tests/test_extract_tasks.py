@@ -140,7 +140,10 @@ class ExtractsTaskTestCase(TestCase):
         self.extract.save()
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-    @vcr.use_cassette("fixtures/vcr_cassettes/test_run_extract_task.yaml", filter_headers=['authorization'])
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/test_run_extract_task.yaml",
+        filter_headers=["authorization"],
+    )
     def test_run_extract_task(self):
         print(f"{self.extract.documents.all()}")
 

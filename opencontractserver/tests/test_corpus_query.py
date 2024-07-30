@@ -66,7 +66,9 @@ class QueryTasksTestCase(TestCase):
         )
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-    @vcr.use_cassette("fixtures/vcr_cassettes/run_query.yaml", filter_headers=['authorization'])
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/run_query.yaml", filter_headers=["authorization"]
+    )
     def test_run_query(self):
 
         print(self.query)

@@ -39,9 +39,9 @@ def set_permissions_for_obj_to_user(
     permissions (assuming they're part of the read public objects group).
     """
 
-    # logger.info(
-    #     f"grant_permissions_for_obj_to_user - user ({user_val}) / obj ({instance})"
-    # )
+    logger.info(
+        f"grant_permissions_for_obj_to_user - user ({user_val}) / obj ({instance})"
+    )
 
     # Provides some flexibility to use ids where passing object is not practical
     if isinstance(user_val, str) or isinstance(user_val, int):
@@ -50,10 +50,10 @@ def set_permissions_for_obj_to_user(
         user = user_val
 
     model_name = instance._meta.model_name
-    # logger.info(f"grant_permissions_for_obj_to_user - Model name: {model_name}")
+    logger.info(f"grant_permissions_for_obj_to_user - Model name: {model_name}")
 
     app_name = instance._meta.app_label
-    # logger.info(f"grant_permissions_for_obj_to_user - App name: {app_name}")
+    logger.info(f"grant_permissions_for_obj_to_user - App name: {app_name}")
 
     # First, get rid of old permissions ################################################################################
     with transaction.atomic():
@@ -64,9 +64,9 @@ def set_permissions_for_obj_to_user(
 
     # Now, add specified permissions ###################################################################################
     requested_permission_set = set(permissions)
-    # logger.info(
-    #     f"grant_permissions_for_obj_to_user - Requested permissions: {requested_permission_set}"
-    # )
+    logger.info(
+        f"grant_permissions_for_obj_to_user - Requested permissions: {requested_permission_set}"
+    )
 
     with transaction.atomic():
         if (
@@ -79,6 +79,7 @@ def set_permissions_for_obj_to_user(
             )
             > 0
         ):
+            logger.info("requested_permission_set - assign create permission")
             assign_perm(f"{app_name}.create_{model_name}", user, instance)
 
         if (
@@ -91,7 +92,7 @@ def set_permissions_for_obj_to_user(
             )
             > 0
         ):
-            # logger.info("requested_permission_set - assign read permission")
+            logger.info("requested_permission_set - assign read permission")
             assign_perm(f"{app_name}.read_{model_name}", user, instance)
 
         if (
@@ -104,6 +105,7 @@ def set_permissions_for_obj_to_user(
             )
             > 0
         ):
+            logger.info("requested_permission_set - assign update permission")
             assign_perm(f"{app_name}.update_{model_name}", user, instance)
 
         if (
@@ -116,6 +118,7 @@ def set_permissions_for_obj_to_user(
             )
             > 0
         ):
+            logger.info("requested_permission_set - assign remove permission")
             assign_perm(f"{app_name}.remove_{model_name}", user, instance)
 
         if (
@@ -126,6 +129,7 @@ def set_permissions_for_obj_to_user(
             )
             > 0
         ):
+            logger.info("requested_permission_set - assign permissioning permission")
             assign_perm(f"{app_name}.permission_{model_name}", user, instance)
 
         if (
@@ -136,6 +140,7 @@ def set_permissions_for_obj_to_user(
             )
             > 0
         ):
+            logger.info("requested_permission_set - assign publish permission")
             assign_perm(f"{app_name}.publish_{model_name}", user, instance)
 
 
@@ -181,21 +186,22 @@ def get_users_permissions_for_obj(
     user: User,
     instance: type[django.db.models.Model],
     include_group_permissions: bool = False,
-) -> set[PermissionTypes]:
+) -> set[str]:
 
     model_name = instance._meta.model_name
-    # logger.info(
-    #     f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name}"
-    # )
+    logger.info(
+        f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name}"
+    )
 
-    # app_label = instance._meta.app_label
-    # logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
+    app_label = instance._meta.app_label
+    logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
 
     this_user_perms = getattr(instance, f"{model_name}userobjectpermission_set")
-    # logger.info(f"get_users_permissions_for_obj - this_user_perms: {this_user_perms}")
+    logger.info(f"get_users_permissions_for_obj - this_user_perms: {this_user_perms}")
     permission_id_to_name_map = get_permission_id_to_name_map_for_model(
         instance=instance
     )
+    logger.info(f"get_users_permissions_for_obj - permission_id_to_name_map: {permission_id_to_name_map}")
 
     # Build list of permission names from the permission type ids
     model_permissions_for_user = {
@@ -212,10 +218,13 @@ def get_users_permissions_for_obj(
         this_users_group_perms = getattr(
             instance, f"{model_name}groupobjectpermission_set"
         ).filter(group_id__in=get_users_group_ids(user_instance=user))
+        logger.info(f"get_users_permissions_for_obj - this_users_group_perms: {this_users_group_perms}")
         for perm in this_users_group_perms:
             model_permissions_for_user.add(
                 permission_id_to_name_map[perm.permission_id]
             )
+
+    logger.info(f"Final permissions: {model_permissions_for_user}")
 
     return model_permissions_for_user
 
@@ -239,12 +248,12 @@ def user_has_permission_for_obj(
         user = user_val
 
     model_name = instance._meta.model_name
-    # logger.info(
-    #     f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name}"
-    # )
+    logger.info(
+        f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name} for permission {permission}"
+    )
 
-    # app_label = instance._meta.app_label
-    # logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
+    app_label = instance._meta.app_label
+    logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
 
     model_permissions_for_user = get_users_permissions_for_obj(
         user=user,
@@ -252,12 +261,14 @@ def user_has_permission_for_obj(
         include_group_permissions=include_group_permissions,
     )
 
-    # logger.info(
-    #     f"user_has_permission_for_obj - user {user} has model_permissions: {model_permissions_for_user}"
-    # )
+    logger.info(
+        f"user_has_permission_for_obj - user {user} has model_permissions: {model_permissions_for_user}"
+    )
 
     if permission == PermissionTypes.READ:
         return len(model_permissions_for_user.intersection({f"read_{model_name}"})) > 0
+    elif permission == PermissionTypes.CREATE:
+        return len(model_permissions_for_user.intersection({f"create_{model_name}"})) > 0
     elif permission == PermissionTypes.UPDATE:
         return (
             len(model_permissions_for_user.intersection({f"update_{model_name}"})) > 0
@@ -305,6 +316,8 @@ def user_has_permission_for_obj(
             )
             == 6
         )
+    else:
+        return False
 
 
 class MakePublicReturnType(TypedDict):

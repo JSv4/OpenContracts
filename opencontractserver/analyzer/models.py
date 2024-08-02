@@ -86,13 +86,24 @@ class Analyzer(BaseOCModel):
     # Tracking information to tie this back to the OC Analyzer that was used to create it.
     manifest = NullableJSONField(default=jsonfield_default_value, null=True, blank=True)
     description = django.db.models.TextField(null=False, blank=True, default="")
-    host_gremlin = django.db.models.ForeignKey(
-        GremlinEngine, blank=False, null=False, on_delete=django.db.models.CASCADE
-    )
     disabled = django.db.models.BooleanField(default=False)
     is_public = django.db.models.BooleanField(default=True)
     icon = django.db.models.FileField(
         blank=True, upload_to=calculate_analyzer_icon_path
+    )
+
+    host_gremlin = django.db.models.ForeignKey(
+        GremlinEngine,
+        on_delete=django.db.models.CASCADE,
+        null=True,
+        blank=True,
+    )
+
+    task_name = django.db.models.CharField(
+        max_length=1024,
+        null=True,
+        blank=True,
+        default="opencontractserver.tasks.data_extract_tasks.oc_llama_index_doc_query",
     )
 
 

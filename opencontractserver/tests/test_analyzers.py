@@ -6,6 +6,8 @@ import requests
 import responses
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models.signals import post_save
@@ -14,7 +16,10 @@ from django.test.testcases import TransactionTestCase
 from rest_framework.test import APIClient
 
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
+from opencontractserver.analyzer.signals import install_gremlin_on_creation
+from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
 from opencontractserver.corpuses.models import Corpus
+from opencontractserver.documents.models import Document
 from opencontractserver.tasks.analyzer_tasks import (
     import_analysis,
     install_analyzer_task,
@@ -26,12 +31,8 @@ from opencontractserver.tests.fixtures import (
     SAMPLE_GREMLIN_OUTPUT_FOR_PUBLIC_DOCS,
     create_mock_submission_response,
     generate_random_analyzer_return_values,
+    get_valid_pdf_urls,
 )
-
-from ..analyzer.signals import install_gremlin_on_creation
-from ..annotations.models import Annotation, AnnotationLabel, LabelSet
-from ..documents.models import Document
-from .fixtures import get_valid_pdf_urls
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,8 @@ class TestOpenContractsAnalyzers(TransactionTestCase):
         )
 
     def setUp(self):
+
+        Group.objects.get_or_create(name=settings.DEFAULT_PERMISSIONS_GROUP)
 
         # We're turning off signals so we can more easily test the async gremlin
         # install logic without having to patch into the signal handlers.
@@ -91,6 +94,41 @@ class TestOpenContractsAnalyzers(TransactionTestCase):
                 page_count=1,
             )
         logger.info(f"{len(get_valid_pdf_urls())} pdfs loaded for analysis")
+
+    def test_analyzer_constraints(self):
+        # Test that we can't create an Analyzer with both host_gremlin and task_name
+        with self.assertRaises(ValidationError):
+            invalid_analyzer = Analyzer(
+                description="Invalid Analyzer",
+                host_gremlin=self.gremlin,
+                task_name="some.task.name",
+                creator=self.user,
+                manifest={},
+            )
+            invalid_analyzer.full_clean()
+
+        # Test that we can't create an Analyzer with neither host_gremlin nor task_name
+        with self.assertRaises(ValidationError):
+            invalid_analyzer = Analyzer(
+                description="Invalid Analyzer", creator=self.user, manifest={}
+            )
+            invalid_analyzer.full_clean()
+
+        # Test that we can create an Analyzer with only host_gremlin
+        Analyzer(
+            description="Valid Analyzer with Gremlin",
+            host_gremlin=self.gremlin,
+            creator=self.user,
+            manifest={},
+        )
+
+        # Test that we can create an Analyzer with only task_name
+        Analyzer(
+            description="Valid Analyzer with Task",
+            task_name="opencontractserver.tasks.data_extract_tasks.oc_llama_index_doc_query",
+            creator=self.user,
+            manifest={},
+        )
 
     @responses.activate
     def __test_install_gremlin(self):

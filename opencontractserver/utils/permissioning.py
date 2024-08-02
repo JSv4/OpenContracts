@@ -193,7 +193,7 @@ def get_users_permissions_for_obj(
     #     f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name}"
     # )
 
-    app_label = instance._meta.app_label
+    # app_label = instance._meta.app_label
     # logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
 
     this_user_perms = getattr(instance, f"{model_name}userobjectpermission_set")
@@ -249,10 +249,11 @@ def user_has_permission_for_obj(
 
     model_name = instance._meta.model_name
     # logger.info(
-    #     f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name} for permission {permission}"
+    #     f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name} for
+    #     permission {permission}"
     # )
 
-    app_label = instance._meta.app_label
+    # app_label = instance._meta.app_label
     # logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
 
     model_permissions_for_user = get_users_permissions_for_obj(
@@ -267,7 +268,9 @@ def user_has_permission_for_obj(
     if permission == PermissionTypes.READ:
         return len(model_permissions_for_user.intersection({f"read_{model_name}"})) > 0
     elif permission == PermissionTypes.CREATE:
-        return len(model_permissions_for_user.intersection({f"create_{model_name}"})) > 0
+        return (
+            len(model_permissions_for_user.intersection({f"create_{model_name}"})) > 0
+        )
     elif permission == PermissionTypes.UPDATE:
         return (
             len(model_permissions_for_user.intersection({f"update_{model_name}"})) > 0

@@ -123,12 +123,25 @@ class DocumentAnalysisRow(BaseOCModel):
         blank=False,
     )
     annotations = django.db.models.ManyToManyField(
-        "annotations.Annotation",
-        related_name="rows"
+        "annotations.Annotation", related_name="rows"
     )
     data = django.db.models.ManyToManyField(
         "extracts.Datacell",
         related_name="rows",
+    )
+    analysis = django.db.models.ForeignKey(
+        "analyzer.Analysis",
+        related_name="rows",
+        on_delete=django.db.models.CASCADE,
+        null=True,
+        blank=True,
+    )
+    extract = django.db.models.ForeignKey(
+        "extracts.Extract",
+        related_name="rows",
+        on_delete=django.db.models.CASCADE,
+        null=True,
+        blank=True,
     )
 
     class Meta:
@@ -140,6 +153,32 @@ class DocumentAnalysisRow(BaseOCModel):
             ("publish_documentanalysisrow", "publish DocumentAnalysisRow"),
             ("permission_documentanalysisrow", "permission DocumentAnalysisRow"),
         )
+        constraints = [
+            django.db.models.UniqueConstraint(
+                fields=["document", "analysis"],
+                condition=django.db.models.Q(analysis__isnull=False),
+                name="unique_document_analysis",
+            ),
+            django.db.models.UniqueConstraint(
+                fields=["document", "extract"],
+                condition=django.db.models.Q(extract__isnull=False),
+                name="unique_document_extract",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if (self.analysis is None and self.extract is None) or (
+            self.analysis is not None and self.extract is not None
+        ):
+            raise ValidationError(
+                "Either 'analysis' or 'extract' must be set, but not both."
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 
 class DocumentAnalysisRowUserObjectPermission(UserObjectPermissionBase):
     content_object = django.db.models.ForeignKey(

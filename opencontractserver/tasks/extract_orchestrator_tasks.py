@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from config import celery_app
+from opencontractserver.documents.models import DocumentAnalysisRow
 from opencontractserver.extracts.models import Datacell, Extract
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
@@ -52,6 +53,14 @@ def run_extract(extract_id, user_id):
     tasks = []
 
     for document_id in document_ids:
+
+        row_results = DocumentAnalysisRow(
+            document_id=document_id,
+            extract_id=extract_id,
+            creator=extract.creator
+        )
+        row_results.save()
+
         for column in fieldset.columns.all():
             with transaction.atomic():
                 cell = Datacell.objects.create(
@@ -62,6 +71,9 @@ def run_extract(extract_id, user_id):
                     document_id=document_id,
                 )
                 set_permissions_for_obj_to_user(user_id, cell, [PermissionTypes.CRUD])
+
+                # Add data cell to tracking
+                row_results.data.add(cell)
 
                 # Get the task function dynamically based on the column's task_name
                 task_func = get_task_by_name(column.task_name)

@@ -206,6 +206,7 @@ def create_analysis_for_corpus_with_analyzer(
     docs = corpus.documents.all()
     analysis.analyzed_documents.add(*[doc.id for doc in docs])
 
+
     logger.info(f"Analyze corpus {corpus.id} with docs {docs}")
 
     document_exchange_data = []

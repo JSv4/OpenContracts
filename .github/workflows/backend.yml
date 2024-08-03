@@ -89,26 +89,26 @@ jobs:
           echo "$ci_env"
 
       - name: Build the Stack
-        run:  docker-compose -f test.yml build
+        run:  docker compose -f test.yml build
 
       - name: Run DB Migrations
-        run:  docker-compose -f test.yml run --rm django python manage.py migrate
+        run:  docker compose -f test.yml run --rm django python manage.py migrate
 
       - name: Collect Static Files
-        run: docker-compose -f test.yml run --rm django python manage.py collectstatic
+        run: docker compose -f test.yml run --rm django python manage.py collectstatic
 
       - name: Verify Docker Containers
         run: |
-          docker-compose -f test.yml ps
+          docker compose -f test.yml ps
 
       - name: Inspect Docker Network
         run: |
-          docker network inspect $(docker-compose -f test.yml ps -q | xargs docker inspect --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' | uniq)
+          docker network inspect $(docker compose -f test.yml ps -q | xargs docker inspect --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' | uniq)
 
       - name: Capture Docker Compose Logs
         if: failure()
         run: |
-          docker-compose -f test.yml logs --no-color > docker-compose-logs.txt
+          docker compose -f test.yml logs --no-color > docker-compose-logs.txt
 
       - name: Upload Docker Compose Logs
         if: failure()
@@ -119,7 +119,7 @@ jobs:
 
       - name: Build Pytest Coverage File
         run: |
-          docker-compose -f test.yml run django coverage run -m pytest --cov-report=xml --cov
+          docker compose -f test.yml run django coverage run -m pytest --cov-report=xml --cov
 
       - name: Upload Coverage Reports to Codecov
         env:
@@ -128,7 +128,7 @@ jobs:
         run:  |
               # use bash variable expression to get the substring
               ci_env=`bash <(curl -s https://codecov.io/env)`
-              docker-compose -f test.yml run $ci_env django /bin/codecov -v -t ${CODECOV_TOKEN} -R . -f coverage.xml -C ${COMMIT_SHA}
+              docker compose -f test.yml run $ci_env django /bin/codecov -v -t ${CODECOV_TOKEN} -R . -f coverage.xml -C ${COMMIT_SHA}
 
       - name: Tear down the Stack
-        run:  docker-compose -f test.yml down
+        run:  docker compose -f test.yml down

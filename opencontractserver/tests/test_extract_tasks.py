@@ -7,7 +7,7 @@ from django.test.utils import override_settings
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.annotations.signals import process_annot_on_create_atomic
-from opencontractserver.documents.models import Document
+from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.documents.signals import process_doc_on_create_atomic
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.tasks import oc_llama_index_doc_query
@@ -155,8 +155,11 @@ class ExtractsTaskTestCase(TestCase):
         self.assertIsNotNone(self.extract.started)
 
         self.assertEqual(6, Datacell.objects.all().count())
-        row = Datacell.objects.filter(extract=self.extract, column=self.column).first()
-        self.assertIsNotNone(row)
+        cells = Datacell.objects.filter(extract=self.extract, column=self.column).first()
+        self.assertIsNotNone(cells)
+
+        rows = DocumentAnalysisRow.objects.filter(extract=self.extract)
+        self.assertEqual(3, rows.count())
 
         for cell in Datacell.objects.all():
             print(f"Cell data: {cell.data}")

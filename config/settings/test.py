@@ -41,9 +41,9 @@ EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 # ------------------------------------------------------------------------------
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
-CELERY_BROKER_URL = 'memory://'
-CELERY_RESULT_BACKEND = 'cache'
-CELERY_CACHE_BACKEND = 'memory'
+CELERY_BROKER_URL = "memory://"
+CELERY_RESULT_BACKEND = "cache"
+CELERY_CACHE_BACKEND = "memory"
 
 # Ensure these settings are applied
 print("Test settings loaded. CELERY_TASK_ALWAYS_EAGER:", CELERY_TASK_ALWAYS_EAGER)

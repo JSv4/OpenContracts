@@ -83,21 +83,25 @@ class Analyzer(BaseOCModel):
         constraints = [
             django.db.models.CheckConstraint(
                 check=(
-                    django.db.models.Q(host_gremlin__isnull=True, task_name__isnull=False) |
-                    django.db.models.Q(host_gremlin__isnull=False, task_name__isnull=True)
+                    django.db.models.Q(
+                        host_gremlin__isnull=True, task_name__isnull=False
+                    )
+                    | django.db.models.Q(
+                        host_gremlin__isnull=False, task_name__isnull=True
+                    )
                 ),
-                name='one_field_null_constraint'
+                name="one_field_null_constraint",
             ),
             django.db.models.UniqueConstraint(
-                fields=['host_gremlin'],
+                fields=["host_gremlin"],
                 condition=django.db.models.Q(host_gremlin__isnull=False),
-                name='unique_host_gremlin_if_not_null'
+                name="unique_host_gremlin_if_not_null",
             ),
             django.db.models.UniqueConstraint(
-                fields=['task_name'],
+                fields=["task_name"],
                 condition=django.db.models.Q(task_name__isnull=False),
-                name='unique_task_name_if_not_null'
-            )
+                name="unique_task_name_if_not_null",
+            ),
         ]
 
     id = django.db.models.CharField(max_length=1024, primary_key=True)

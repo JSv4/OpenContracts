@@ -155,7 +155,9 @@ class ExtractsTaskTestCase(TestCase):
         self.assertIsNotNone(self.extract.started)
 
         self.assertEqual(6, Datacell.objects.all().count())
-        cells = Datacell.objects.filter(extract=self.extract, column=self.column).first()
+        cells = Datacell.objects.filter(
+            extract=self.extract, column=self.column
+        ).first()
         self.assertIsNotNone(cells)
 
         rows = DocumentAnalysisRow.objects.filter(extract=self.extract)

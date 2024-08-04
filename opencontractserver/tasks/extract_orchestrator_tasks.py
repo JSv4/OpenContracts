@@ -55,9 +55,7 @@ def run_extract(extract_id, user_id):
     for document_id in document_ids:
 
         row_results = DocumentAnalysisRow(
-            document_id=document_id,
-            extract_id=extract_id,
-            creator=extract.creator
+            document_id=document_id, extract_id=extract_id, creator=extract.creator
         )
         row_results.save()
 

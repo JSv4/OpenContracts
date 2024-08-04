@@ -37,5 +37,15 @@ TEMPLATES[-1]["OPTIONS"]["loaders"] = [  # type: ignore[index] # noqa F405
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
-# Your stuff...
+# Celery
 # ------------------------------------------------------------------------------
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_BROKER_URL = 'memory://'
+CELERY_RESULT_BACKEND = 'cache'
+CELERY_CACHE_BACKEND = 'memory'
+
+# Ensure these settings are applied
+print("Test settings loaded. CELERY_TASK_ALWAYS_EAGER:", CELERY_TASK_ALWAYS_EAGER)
+print("CELERY_BROKER_URL:", CELERY_BROKER_URL)
+print("CELERY_RESULT_BACKEND:", CELERY_RESULT_BACKEND)

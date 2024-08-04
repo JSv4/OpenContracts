@@ -395,7 +395,7 @@ if USE_TZ:
     # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-timezone
     CELERY_TIMEZONE = TIME_ZONE
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-broker_url
-CELERY_BROKER_URL = env("CELERY_BROKER_URL")
+CELERY_BROKER_URL = env("REDIS_URL")
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-result_backend
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-accept_content
@@ -415,6 +415,7 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_WORKER_MAX_MEMORY_PER_CHILD = 14240000  # 14 GB (thousands of kilobytes)
 CELERY_MAX_TASKS_PER_CHILD = 4
 CELERY_PREFETCH_MULTIPLIER = 1
+CELERY_RESULT_BACKEND_MAX_RETRIES=10
 # django-rest-framework
 # -------------------------------------------------------------------------------
 # django-rest-framework - https://www.django-rest-framework.org/api-guide/settings/

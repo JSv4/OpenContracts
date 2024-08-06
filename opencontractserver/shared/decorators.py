@@ -87,7 +87,7 @@ def doc_analyzer_task(max_retries=None):
 
                 return result  # Return the result from the wrapped function
 
-            except ValueError as e:
+            except ValueError:
                 # Re-raise ValueError instead of catching it as we're throwing these intentionally when return values
                 # are off...
                 raise

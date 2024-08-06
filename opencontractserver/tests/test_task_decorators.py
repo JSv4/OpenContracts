@@ -1,4 +1,4 @@
-from celery.exceptions import MaxRetriesExceededError, Retry
+from celery.exceptions import Retry
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -96,7 +96,9 @@ class DocAnalyzerTaskTestCase(TestCase):
         with self.assertRaisesRegex(
             ValueError, f"Corpus with id {non_existent_corpus_id} does not exist"
         ):
-            sample_task.si(doc_id=self.document.id, corpus_id=non_existent_corpus_id).apply().get()
+            sample_task.si(
+                doc_id=self.document.id, corpus_id=non_existent_corpus_id
+            ).apply().get()
 
     def test_doc_analyzer_task_invalid_return_value(self):
         self.document.backend_lock = False

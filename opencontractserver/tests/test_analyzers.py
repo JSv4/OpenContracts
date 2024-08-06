@@ -11,7 +11,6 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models.signals import post_save
-from django.dispatch import Signal
 from django.test.testcases import TransactionTestCase
 from rest_framework.test import APIClient
 

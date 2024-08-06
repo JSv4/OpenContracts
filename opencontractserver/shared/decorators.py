@@ -55,6 +55,7 @@ def doc_analyzer_task(max_retries=None):
 
             try:
                 result = func(*args, **kwargs)
+                print(f"Function results: {result}")
 
                 if not isinstance(result, tuple) or len(result) != 3:
                     raise ValueError(
@@ -85,6 +86,11 @@ def doc_analyzer_task(max_retries=None):
                     )
 
                 return result  # Return the result from the wrapped function
+
+            except ValueError as e:
+                # Re-raise ValueError instead of catching it as we're throwing these intentionally when return values
+                # are off...
+                raise
 
             except Exception as e:
                 logger.info(f"Error in doc_analyzer_task for doc_id {doc_id}: {str(e)}")

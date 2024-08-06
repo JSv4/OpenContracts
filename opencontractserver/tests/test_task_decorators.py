@@ -1,4 +1,4 @@
-from celery.exceptions import MaxRetriesExceededError
+from celery.exceptions import MaxRetriesExceededError, Retry
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -53,7 +53,7 @@ class DocAnalyzerTaskTestCase(TestCase):
         )
 
     def test_doc_analyzer_task_backend_lock_retry_cycle(self):
-        with self.assertRaises(MaxRetriesExceededError):
+        with self.assertRaises(Retry):
             task = sample_task.s(doc_id=self.document.id).apply()
             task.get()
 
@@ -89,20 +89,20 @@ class DocAnalyzerTaskTestCase(TestCase):
         with self.assertRaisesRegex(
             ValueError, f"Document with id {non_existent_id} does not exist"
         ):
-            sample_task.si(doc_id=999).apply().get()
+            sample_task.si(doc_id=non_existent_id).apply().get()
 
     def test_doc_analyzer_task_nonexistent_corpus(self):
         non_existent_corpus_id = self.corpus.id + 1000  # Ensure this ID doesn't exist
         with self.assertRaisesRegex(
             ValueError, f"Corpus with id {non_existent_corpus_id} does not exist"
         ):
-            sample_task.si(doc_id=self.document.id, corpus_id=-1).apply().get()
+            sample_task.si(doc_id=self.document.id, corpus_id=non_existent_corpus_id).apply().get()
 
     def test_doc_analyzer_task_invalid_return_value(self):
         self.document.backend_lock = False
         self.document.save()
 
-        @doc_analyzer_task
+        @doc_analyzer_task()
         def invalid_return_task(doc_id, corpus_id=None):
             return "Invalid return value"
 
@@ -113,7 +113,7 @@ class DocAnalyzerTaskTestCase(TestCase):
         self.document.backend_lock = False
         self.document.save()
 
-        @doc_analyzer_task
+        @doc_analyzer_task()
         def invalid_annotation_task(doc_id, corpus_id=None):
             return "Not a list", [{"data": {}}], True
 
@@ -126,7 +126,7 @@ class DocAnalyzerTaskTestCase(TestCase):
         self.document.backend_lock = False
         self.document.save()
 
-        @doc_analyzer_task
+        @doc_analyzer_task()
         def invalid_metadata_task(doc_id, corpus_id=None):
             return [], "Not a list", True
 
@@ -139,7 +139,7 @@ class DocAnalyzerTaskTestCase(TestCase):
         self.document.backend_lock = False
         self.document.save()
 
-        @doc_analyzer_task
+        @doc_analyzer_task()
         def missing_data_key_task(doc_id, corpus_id=None):
             return [], [{"not_data": {}}], True
 

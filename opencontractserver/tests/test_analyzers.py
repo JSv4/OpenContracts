@@ -55,12 +55,10 @@ class TestOpenContractsAnalyzers(TransactionTestCase):
 
         # We're turning off signals so we can more easily test the async gremlin
         # install logic without having to patch into the signal handlers.
-        Signal.disconnect(
-            post_save,
-            receiver=install_gremlin_on_creation,
-            sender=GremlinEngine,
-            dispatch_uid="Signal.disconnect",
-        )
+        # Disconnect all signals for GremlinEngine
+        all_signals = post_save._live_receivers(GremlinEngine)
+        for receiver in all_signals:
+            post_save.disconnect(receiver, sender=GremlinEngine)
 
         # We need a user to tie everything back to.
         with transaction.atomic():
@@ -96,6 +94,7 @@ class TestOpenContractsAnalyzers(TransactionTestCase):
         logger.info(f"{len(get_valid_pdf_urls())} pdfs loaded for analysis")
 
     def test_analyzer_constraints(self):
+
         # Test that we can't create an Analyzer with both host_gremlin and task_name
         with self.assertRaises(ValidationError):
             invalid_analyzer = Analyzer(

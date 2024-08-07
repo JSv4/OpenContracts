@@ -43,7 +43,6 @@ class TestContext:
 
 
 class GraphQLTestCase(TestCase):
-
     def setUp(self):
         logger.info("Starting setUp method")
 
@@ -353,9 +352,13 @@ class GraphQLTestCase(TestCase):
             }
         """
 
-        logger.info(f"Start analysis...")
+        logger.info("Start analysis...")
         new_analysis_response = self.graphene_client.execute(
-            START_ANALYSIS_REQUEST, variables={"corpusId": self.global_corpus_id, "analyzerId": self.analyzer_global_id}
+            START_ANALYSIS_REQUEST,
+            variables={
+                "corpusId": self.global_corpus_id,
+                "analyzerId": self.analyzer_global_id,
+            },
         )
         logger.info(f"New analysis response: {new_analysis_response}")
 

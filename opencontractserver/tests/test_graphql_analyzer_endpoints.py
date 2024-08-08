@@ -3,11 +3,13 @@
 import json
 import logging
 
+import factory
 import requests
 import responses
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models.signals import post_save
 from django.test import TestCase
 from django.test.client import Client as DjangoClient
 from graphene.test import Client
@@ -42,7 +44,8 @@ class TestContext:
         self.user = user
 
 
-class GraphQLTestCase(TestCase):
+class GraphQLAnalyzerTestCase(TestCase):
+    @factory.django.mute_signals(post_save)
     def setUp(self):
         logger.info("Starting setUp method")
 
@@ -156,19 +159,18 @@ class GraphQLTestCase(TestCase):
             )
 
             with transaction.atomic():
-                analysis = Analysis.objects.create(
+                self.analysis = Analysis.objects.create(
                     analyzer_id=self.analyzer.id,
                     analyzed_corpus_id=self.corpus.id,
                     creator=self.user,
                 )
-            logger.info(f"Created Analysis object: {analysis}")
+            logger.info(f"Created Analysis object: {self.analysis}")
 
-            self.analysis_id = (
-                start_analysis.si(analysis_id=analysis.id, user_id=self.user.id)
-                .apply()
-                .get()
-            )
-        logger.info(f"Started analysis with ID: {self.analysis_id}")
+            start_analysis.si(
+                analysis_id=self.analysis.id, user_id=self.user.id
+            ).apply().get()
+
+        logger.info(f"Started analysis with ID: {self.analysis.id}")
 
         # Mock callback results to actually create data
         mock_gremlin_response_data = generate_random_analyzer_return_values(
@@ -179,7 +181,7 @@ class GraphQLTestCase(TestCase):
         analysis_result = (
             import_analysis.si(
                 creator_id=self.user.id,
-                analysis_id=self.analysis_id,
+                analysis_id=self.analysis.id,
                 analysis_results=mock_gremlin_response_data,
             )
             .apply()
@@ -229,8 +231,6 @@ class GraphQLTestCase(TestCase):
             """
 
         analyzer_list_response = self.graphene_client.execute(ANALYZER_LIST_REQUEST)
-
-        logger.info(f"analyzer_list_response: {analyzer_list_response['data']}")
 
         self.assertTrue(len(analyzer_list_response["data"]["analyzers"]["edges"]), 1)
         self.assertIsNotNone(

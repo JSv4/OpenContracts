@@ -31,6 +31,9 @@ def import_analysis(
     analysis_results: OpenContractsGeneratedCorpusPythonType,
 ) -> bool:
 
+    logger.info(f"import_analysis - creator_id: {creator_id}")
+    logger.info(f"import_analysis - analysis_id: {analysis_id}")
+
     return import_annotations_from_analysis(
         analysis_id=analysis_id,
         creator_id=creator_id,

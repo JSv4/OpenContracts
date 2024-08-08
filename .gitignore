@@ -171,4 +171,4 @@ GitHub.sublime-settings
 # File directories
 /staticfiles/
 /uploadfiles/
-user_*/
+/user_*/

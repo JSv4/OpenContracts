@@ -281,8 +281,11 @@ def import_annotations_from_analysis(
     """
     Import the actual annotations and link them to proper analyzers, analysis, labels, etc.
     """
-
+    logger.info(
+        f"import_annotations_from_analysis - start(analysis_id: {analysis_id}, creator_id: {creator_id})..."
+    )
     analysis = Analysis.objects.get(id=analysis_id)
+    logger.info(f"import_annotations_from_analysis - analysis: {analysis}")
 
     try:
         label_id_map = install_labels_for_analyzer(

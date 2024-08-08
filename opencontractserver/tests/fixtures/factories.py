@@ -27,7 +27,6 @@ def generate_random_analyzer_return_values(
         .read()
     )
     sample_annotated_doc_data = list(static_output["annotated_docs"].values())
-    logger.info(f"sample_annotated_doc_data: {sample_annotated_doc_data}")
     annotated_docs = {}
 
     def random_doc_data() -> OpenContractsDocAnnotations:

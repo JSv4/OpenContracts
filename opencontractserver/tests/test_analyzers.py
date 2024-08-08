@@ -2,6 +2,7 @@
 import json
 import logging
 
+import factory.django
 import requests
 import responses
 from django.conf import settings
@@ -15,7 +16,6 @@ from django.test.testcases import TransactionTestCase
 from rest_framework.test import APIClient
 
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
-from opencontractserver.analyzer.signals import install_gremlin_on_creation
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
@@ -39,15 +39,16 @@ User = get_user_model()
 
 
 class TestOpenContractsAnalyzers(TransactionTestCase):
-    def tearDown(self):
+    # def tearDown(self):
+    #
+    #     # Reconnect the django signals for gremlinengine create
+    #     post_save.connect(
+    #         install_gremlin_on_creation,
+    #         sender=GremlinEngine,
+    #         dispatch_uid="install_gremlin_on_creation",
+    #     )
 
-        # Reconnect the django signals for gremlinengine create
-        post_save.connect(
-            install_gremlin_on_creation,
-            sender=GremlinEngine,
-            dispatch_uid="install_gremlin_on_creation",
-        )
-
+    @factory.django.mute_signals(post_save)
     def setUp(self):
 
         Group.objects.get_or_create(name=settings.DEFAULT_PERMISSIONS_GROUP)
@@ -55,9 +56,6 @@ class TestOpenContractsAnalyzers(TransactionTestCase):
         # We're turning off signals so we can more easily test the async gremlin
         # install logic without having to patch into the signal handlers.
         # Disconnect all signals for GremlinEngine
-        all_signals = post_save._live_receivers(GremlinEngine)
-        for receiver in all_signals:
-            post_save.disconnect(receiver, sender=GremlinEngine)
 
         # We need a user to tie everything back to.
         with transaction.atomic():
@@ -92,6 +90,7 @@ class TestOpenContractsAnalyzers(TransactionTestCase):
             )
         logger.info(f"{len(get_valid_pdf_urls())} pdfs loaded for analysis")
 
+    @factory.django.mute_signals(post_save)
     def test_analyzer_constraints(self):
 
         # Test that we can't create an Analyzer with both host_gremlin and task_name
@@ -128,6 +127,7 @@ class TestOpenContractsAnalyzers(TransactionTestCase):
             manifest={},
         )
 
+    @factory.django.mute_signals(post_save)
     @responses.activate
     def __test_install_gremlin(self):
 

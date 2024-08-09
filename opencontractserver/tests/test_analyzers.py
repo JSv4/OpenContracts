@@ -39,14 +39,6 @@ User = get_user_model()
 
 
 class TestOpenContractsAnalyzers(TransactionTestCase):
-    # def tearDown(self):
-    #
-    #     # Reconnect the django signals for gremlinengine create
-    #     post_save.connect(
-    #         install_gremlin_on_creation,
-    #         sender=GremlinEngine,
-    #         dispatch_uid="install_gremlin_on_creation",
-    #     )
 
     @factory.django.mute_signals(post_save)
     def setUp(self):

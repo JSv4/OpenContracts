@@ -1408,12 +1408,15 @@ class StartCorpusAnalysisMutation(graphene.Mutation):
         try:
 
             corpus_pk = from_global_id(corpus_id)[1]
+            analyzer_pk = from_global_id(analyzer_id)[1]
 
             obj = Analysis.objects.create(
-                analyzer_id=analyzer_id,
+                analyzer_id=analyzer_pk,
                 analyzed_corpus_id=corpus_pk,
                 creator=info.context.user,
             )
+
+            logger.info(f"StartCorpusAnalysisMutation - retrieved analysis: {obj}")
 
             transaction.on_commit(
                 lambda: start_analysis.s(

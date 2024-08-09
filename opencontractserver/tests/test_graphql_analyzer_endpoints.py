@@ -3,11 +3,13 @@
 import json
 import logging
 
+import factory
 import requests
 import responses
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models.signals import post_save
 from django.test import TestCase
 from django.test.client import Client as DjangoClient
 from graphene.test import Client
@@ -42,15 +44,20 @@ class TestContext:
         self.user = user
 
 
-class GraphQLTestCase(TestCase):
+class GraphQLAnalyzerTestCase(TestCase):
+    @factory.django.mute_signals(post_save)
     def setUp(self):
-        # Setup a test user ######################################################################
+        logger.info("Starting setUp method")
+
+        # Setup a test user
         with transaction.atomic():
             self.user = User.objects.create_user(username="bob", password="12345678")
+        logger.info(f"Created test user: {self.user}")
 
         self.graphene_client = Client(schema, context_value=TestContext(self.user))
+        logger.info("Created graphene client")
 
-        # Setup a test JWT token for user ######################################################################
+        # Setup a test JWT token for user
         executed_login_data = self.graphene_client.execute(
             """
             mutation ($username: String!, $password: String!) {
@@ -75,13 +82,15 @@ class GraphQLTestCase(TestCase):
         self.authenticated_client.credentials(
             HTTP_AUTHORIZATION=f"Bearer {self.jwt_token}"
         )
+        logger.info("Created test clients")
 
         # Create a test corpus
         with transaction.atomic():
-            corpus = Corpus.objects.create(
+            self.corpus = Corpus.objects.create(
                 title="Test Analysis Corpus", creator=self.user, backend_lock=False
             )
-        self.global_corpus_id = to_global_id("CorpusType", corpus.id)
+        self.global_corpus_id = to_global_id("CorpusType", self.corpus.id)
+        logger.info(f"Created test corpus: {self.corpus}")
 
         self.doc_ids = []
         for index, url in enumerate(get_valid_pdf_urls()):
@@ -103,13 +112,15 @@ class GraphQLTestCase(TestCase):
         logger.info(f"{len(get_valid_pdf_urls())} pdfs loaded for analysis")
 
         # Link docs to corpus
-        corpus.documents.add(*self.doc_ids)
+        self.corpus.documents.add(*self.doc_ids)
+        logger.info("Linked documents to corpus")
 
-        # Setup a test gremlin + analyzers ######################################################################
+        # Setup a test gremlin + analyzers
         with transaction.atomic():
             self.gremlin = GremlinEngine.objects.create(
                 url="http://localhost:8000", creator=self.user
             )
+        logger.info(f"Created GremlinEngine: {self.gremlin}")
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -122,6 +133,7 @@ class GraphQLTestCase(TestCase):
                 request_gremlin_manifest.si(gremlin_id=self.gremlin.id).apply().get()
             )
             self.assertIsNotNone(analyzer_manifests)
+        logger.info(f"Retrieved analyzer manifests: {analyzer_manifests}")
 
         with transaction.atomic():
             install_analyzer_task.si(
@@ -130,9 +142,12 @@ class GraphQLTestCase(TestCase):
             ).apply().get()
 
         self.assertEqual(Analyzer.objects.all().count(), len(analyzer_manifests))
+        logger.info(f"Installed {Analyzer.objects.all().count()} analyzers")
 
         # Import a faux analysis
         self.analyzer = Analyzer.objects.all()[0]
+        self.analyzer_global_id = to_global_id("AnalyzerType", self.analyzer.id)
+        logger.info(f"Selected analyzer for faux analysis: {self.analyzer}")
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -144,47 +159,52 @@ class GraphQLTestCase(TestCase):
             )
 
             with transaction.atomic():
-                analysis = Analysis.objects.create(
+                self.analysis = Analysis.objects.create(
                     analyzer_id=self.analyzer.id,
-                    analyzed_corpus_id=corpus.id,
+                    analyzed_corpus_id=self.corpus.id,
                     creator=self.user,
                 )
+            logger.info(f"Created Analysis object: {self.analysis}")
 
-            self.analysis_id = (
-                start_analysis.si(analysis_id=analysis.id, user_id=self.user.id)
-                .apply()
-                .get()
-            )
+            start_analysis.si(
+                analysis_id=self.analysis.id, user_id=self.user.id
+            ).apply().get()
+
+        logger.info(f"Started analysis with ID: {self.analysis.id}")
 
         # Mock callback results to actually create data
-
-        # Here's where we deviate from the callback test... we actually just manually
-        # call the import_analysis task *synchronously*
         mock_gremlin_response_data = generate_random_analyzer_return_values(
             doc_ids=self.doc_ids
         )
+        logger.info("Generated mock gremlin response data")
 
         analysis_result = (
             import_analysis.si(
                 creator_id=self.user.id,
-                analysis_id=self.analysis_id,
+                analysis_id=self.analysis.id,
                 analysis_results=mock_gremlin_response_data,
             )
             .apply()
             .get()
         )
+        logger.info(f"Imported analysis result: {analysis_result}")
 
         self.assertTrue(analysis_result)
 
         # Rough and ready test of imports - count database objs
         annotation_count = Annotation.objects.all().count()
-        self.assertTrue(annotation_count > 0)
-
         label_set_count = LabelSet.objects.all().count()
-        self.assertTrue(label_set_count > 0)
-
         label_count = AnnotationLabel.objects.all().count()
+
+        logger.info(f"Created {annotation_count} annotations")
+        logger.info(f"Created {label_set_count} label sets")
+        logger.info(f"Created {label_count} labels")
+
+        self.assertTrue(annotation_count > 0)
+        self.assertTrue(label_set_count > 0)
         self.assertTrue(label_count > 0)
+
+        logger.info("setUp method completed successfully")
 
     def __test_get_analyzer_list(self):
 
@@ -211,8 +231,6 @@ class GraphQLTestCase(TestCase):
             """
 
         analyzer_list_response = self.graphene_client.execute(ANALYZER_LIST_REQUEST)
-
-        logger.info(f"analyzer_list_response: {analyzer_list_response['data']}")
 
         self.assertTrue(len(analyzer_list_response["data"]["analyzers"]["edges"]), 1)
         self.assertIsNotNone(
@@ -302,7 +320,7 @@ class GraphQLTestCase(TestCase):
 
         # Get list of analyses from the response
         analysis_list = analysis_list_request["data"]["analyses"]["edges"]
-        logger.info(f"Analysis list: {analysis_list}")
+        logger.info(f"Analysis list (count {len(analysis_list)}): {analysis_list}")
 
         # There should only be one
         self.assertTrue(len(analysis_list) == 1)
@@ -333,10 +351,15 @@ class GraphQLTestCase(TestCase):
               }
             }
         """
-        new_analysis_response = self.graphene_client.execute(
-            START_ANALYSIS_REQUEST, variables={"corpusId": "", "analyzerId": ""}
-        )
 
+        logger.info("Start analysis...")
+        new_analysis_response = self.graphene_client.execute(
+            START_ANALYSIS_REQUEST,
+            variables={
+                "corpusId": self.global_corpus_id,
+                "analyzerId": self.analyzer_global_id,
+            },
+        )
         logger.info(f"New analysis response: {new_analysis_response}")
 
     def test_endpoints(self):

@@ -43,9 +43,12 @@ INSTALLED_APPS += ["django_extensions", "silk"]  # noqa F405
 
 # Celery
 # ------------------------------------------------------------------------------
-
-# http://docs.celeryproject.org/en/latest/userguide/configuration.html#task-eager-propagates
-CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TASK_EAGER_PROPAGATES = (
+    True  # If this is True, eagerly executed tasks will propagate exceptions
+)
+CELERY_BROKER_URL = "memory://"
+CELERY_RESULT_BACKEND = "cache"
+CELERY_CACHE_BACKEND = "memory"
 
 # SECURITY
 # ------------------------------------------------------------------------------

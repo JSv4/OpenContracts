@@ -209,10 +209,11 @@ class CorpusActionTrigger(django.db.models.TextChoices):
 
 
 class CorpusAction(BaseOCModel):
+    name = django.db.models.CharField(max_length=256, blank=False, null=False, default="Corpus Action")
     corpus = django.db.models.ForeignKey('Corpus', on_delete=django.db.models.CASCADE, related_name='actions')
     fieldset = django.db.models.ForeignKey('extracts.Fieldset', on_delete=django.db.models.SET_NULL, null=True, blank=True)
     analyzer = django.db.models.ForeignKey('analyzer.Analyzer', on_delete=django.db.models.SET_NULL, null=True, blank=True)
-    trigger = django.db.models.CharField(max_length=20, choices=CorpusActionTrigger.choices)
+    trigger = django.db.models.CharField(max_length=256, choices=CorpusActionTrigger.choices)
 
     class Meta:
         constraints = [

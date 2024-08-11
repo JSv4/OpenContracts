@@ -5,19 +5,17 @@ from opencontractserver.tasks.query_tasks import run_query
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from .models import Corpus
-from opencontractserver.tasks.corpus_tasks import process_corpus_actions
-from opencontractserver.corpuses.models import CorpusActionTrigger
+from opencontractserver.tasks.corpus_tasks import process_corpus_action
 
 
 @receiver(m2m_changed, sender=Corpus.documents.through)
 def handle_document_added_to_corpus(sender, instance, action, pk_set, **kwargs):
     if action == "post_add":
-        for document_id in pk_set:
-            process_corpus_actions.s(
-                corpus_id=instance.id,
-                document_id=document_id,
-                trigger=CorpusActionTrigger.ADD_DOCUMENT
-            ).apply_async()
+        process_corpus_action.si(
+            corpus_id=instance.id,
+            document_ids=list(pk_set),
+            user_id=instance.creator.id,
+        ).apply_async()
 
 
 def run_query_on_create(sender, instance, created, **kwargs):

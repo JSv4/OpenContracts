@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -13,7 +14,7 @@ from opencontractserver.types.dicts import (
 
 # Excellent django logging guidance here: https://docs.python.org/3/howto/logging-cookbook.html
 from opencontractserver.utils.analyzer import (
-    create_analysis_for_corpus_with_analyzer,
+    run_analysis,
     import_annotations_from_analysis,
     install_analyzers,
 )
@@ -44,12 +45,12 @@ def import_analysis(
 @celery_app.task()
 def start_analysis(
     analysis_id: str,
-    user_id: int | str,
+    doc_ids: Optional[list[int | str]] = None,
 ) -> bool:
 
-    create_analysis_for_corpus_with_analyzer(
+    run_analysis(
         analysis_id=analysis_id,
-        user_id=user_id,
+        doc_ids=doc_ids
     )
 
     return True

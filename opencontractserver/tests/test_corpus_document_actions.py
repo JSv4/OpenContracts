@@ -108,16 +108,16 @@ class TestCorpusDocumentActions(TestCase):
         )
 
         process_corpus_action.si(self.corpus.id, [self.document.id], self.user.id).apply()
-        #
-        # analyses = Analysis.objects.all()
-        # self.assertEqual(1, analyses.count())
-        # self.assertEqual(analyses[0].analyzed_corpus.id, self.corpus.id)
-        # self.assertEqual(analyses[0].analyzer.id, self.analyzer.id)
-        #
-        # extracts = Extract.objects.all()
-        # self.assertEqual(1, extracts.count())
-        # self.assertEqual(extracts[0].corpus.id, self.corpus.id)
-        # self.assertEqual(extracts[0].fieldset.id, self.fieldset.id)
+
+        analyses = Analysis.objects.all()
+        self.assertEqual(1, analyses.count())
+        self.assertEqual(analyses[0].analyzed_corpus.id, self.corpus.id)
+        self.assertEqual(analyses[0].analyzer.id, self.analyzer.id)
+
+        extracts = Extract.objects.all()
+        self.assertEqual(1, extracts.count())
+        self.assertEqual(extracts[0].corpus.id, self.corpus.id)
+        self.assertEqual(extracts[0].fieldset.id, self.fieldset.id)
 
     def test_no_corpus_actions(self):
         with patch('opencontractserver.tasks.corpus_tasks.process_corpus_action') as mock_process_action:

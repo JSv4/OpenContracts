@@ -1,8 +1,8 @@
 import uuid
 
 import django
-from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from tree_queries.models import TreeNode
@@ -204,25 +204,35 @@ class CorpusQueryGroupObjectPermission(GroupObjectPermissionBase):
 
 
 class CorpusActionTrigger(django.db.models.TextChoices):
-    ADD_DOCUMENT = 'add_document', 'Add Document'
-    EDIT_DOCUMENT = 'edit_document', 'Edit Document'
+    ADD_DOCUMENT = "add_document", "Add Document"
+    EDIT_DOCUMENT = "edit_document", "Edit Document"
 
 
 class CorpusAction(BaseOCModel):
-    name = django.db.models.CharField(max_length=256, blank=False, null=False, default="Corpus Action")
-    corpus = django.db.models.ForeignKey('Corpus', on_delete=django.db.models.CASCADE, related_name='actions')
-    fieldset = django.db.models.ForeignKey('extracts.Fieldset', on_delete=django.db.models.SET_NULL, null=True, blank=True)
-    analyzer = django.db.models.ForeignKey('analyzer.Analyzer', on_delete=django.db.models.SET_NULL, null=True, blank=True)
-    trigger = django.db.models.CharField(max_length=256, choices=CorpusActionTrigger.choices)
+    name = django.db.models.CharField(
+        max_length=256, blank=False, null=False, default="Corpus Action"
+    )
+    corpus = django.db.models.ForeignKey(
+        "Corpus", on_delete=django.db.models.CASCADE, related_name="actions"
+    )
+    fieldset = django.db.models.ForeignKey(
+        "extracts.Fieldset", on_delete=django.db.models.SET_NULL, null=True, blank=True
+    )
+    analyzer = django.db.models.ForeignKey(
+        "analyzer.Analyzer", on_delete=django.db.models.SET_NULL, null=True, blank=True
+    )
+    trigger = django.db.models.CharField(
+        max_length=256, choices=CorpusActionTrigger.choices
+    )
 
     class Meta:
         constraints = [
             django.db.models.CheckConstraint(
                 check=(
-                    django.db.models.Q(fieldset__isnull=False, analyzer__isnull=True) |
-                    django.db.models.Q(fieldset__isnull=True, analyzer__isnull=False)
+                    django.db.models.Q(fieldset__isnull=False, analyzer__isnull=True)
+                    | django.db.models.Q(fieldset__isnull=True, analyzer__isnull=False)
                 ),
-                name='exactly_one_of_fieldset_or_analyzer'
+                name="exactly_one_of_fieldset_or_analyzer",
             )
         ]
 
@@ -239,6 +249,7 @@ class CorpusAction(BaseOCModel):
     def __str__(self):
         action_type = "Fieldset" if self.fieldset else "Analyzer"
         return f"CorpusAction for {self.corpus} - {action_type} - {self.get_trigger_display()}"
+
 
 class CorpusActionUserObjectPermission(UserObjectPermissionBase):
     content_object = django.db.models.ForeignKey(

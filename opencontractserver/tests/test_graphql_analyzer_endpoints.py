@@ -166,9 +166,7 @@ class GraphQLAnalyzerTestCase(TestCase):
                 )
             logger.info(f"Created Analysis object: {self.analysis}")
 
-            start_analysis.si(
-                analysis_id=self.analysis.id
-            ).apply().get()
+            start_analysis.si(analysis_id=self.analysis.id).apply().get()
 
         logger.info(f"Started analysis with ID: {self.analysis.id}")
 

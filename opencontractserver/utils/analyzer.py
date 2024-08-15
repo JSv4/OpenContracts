@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import django.db.models
 import requests
@@ -189,7 +188,7 @@ def install_analyzers(
 
 def run_analysis(
     analysis_id: str,
-    doc_ids: Optional[list[int | str]] = None,
+    doc_ids: list[int | str] | None = None,
 ) -> int:
     """
     Given an analysis id, package up the data required to transfer
@@ -219,8 +218,10 @@ def run_analysis(
 
     # OR we have to throw an error
     else:
-        raise ValueError(f"create_analysis_with_analyzer() - called and analysis {analysis_id} has no corpus property "
-                         f"AND no doc_id list provided as alternate doc source")
+        raise ValueError(
+            f"create_analysis_with_analyzer() - called and analysis {analysis_id} has no corpus property "
+            f"AND no doc_id list provided as alternate doc source"
+        )
 
     analysis.analyzed_documents.add(*[doc.id for doc in docs])
     document_exchange_data = []

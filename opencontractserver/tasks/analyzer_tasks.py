@@ -14,9 +14,9 @@ from opencontractserver.types.dicts import (
 
 # Excellent django logging guidance here: https://docs.python.org/3/howto/logging-cookbook.html
 from opencontractserver.utils.analyzer import (
-    run_analysis,
     import_annotations_from_analysis,
     install_analyzers,
+    run_analysis,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,10 +48,7 @@ def start_analysis(
     doc_ids: Optional[list[int | str]] = None,
 ) -> bool:
 
-    run_analysis(
-        analysis_id=analysis_id,
-        doc_ids=doc_ids
-    )
+    run_analysis(analysis_id=analysis_id, doc_ids=doc_ids)
 
     return True
 

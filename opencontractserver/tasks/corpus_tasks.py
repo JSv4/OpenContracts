@@ -1,28 +1,31 @@
 import logging
 import uuid
 
-from celery import shared_task, chord, group
-
+from celery import chord, group, shared_task
 from django.db import transaction
 from django.utils import timezone
 
-from opencontractserver.documents.models import DocumentAnalysisRow
-from opencontractserver.corpuses.models import CorpusAction
-from opencontractserver.extracts.models import Datacell, Extract
 from opencontractserver.analyzer.models import Analysis
-from opencontractserver.tasks.extract_orchestrator_tasks import get_task_by_name, mark_extract_complete
+from opencontractserver.corpuses.models import CorpusAction
+from opencontractserver.documents.models import DocumentAnalysisRow
+from opencontractserver.extracts.models import Datacell, Extract
 from opencontractserver.tasks.analyzer_tasks import start_analysis
-from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
+from opencontractserver.tasks.extract_orchestrator_tasks import (
+    get_task_by_name,
+    mark_extract_complete,
+)
 from opencontractserver.types.enums import PermissionTypes
-
+from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)
 
 
 @shared_task
-def process_corpus_action(corpus_id: str | int, document_ids: list[str | int], user_id: str | int):
+def process_corpus_action(
+    corpus_id: str | int, document_ids: list[str | int], user_id: str | int
+):
 
-    logger.info(f"process_corpus_action()...")
+    logger.info("process_corpus_action()...")
 
     actions = CorpusAction.objects.filter(corpus_id=corpus_id)
     action_tasks = []
@@ -38,7 +41,7 @@ def process_corpus_action(corpus_id: str | int, document_ids: list[str | int], u
                 name=f"Corpus Action {action.name} Extract {uuid.uuid4()}",
                 fieldset=action.fieldset,
                 started=timezone.now(),
-                creator_id=user_id
+                creator_id=user_id,
             )
             extract.save()
 
@@ -49,7 +52,7 @@ def process_corpus_action(corpus_id: str | int, document_ids: list[str | int], u
                 row_results = DocumentAnalysisRow(
                     document_id=document_id,
                     extract_id=extract.id,
-                    creator=extract.creator
+                    creator=extract.creator,
                 )
                 row_results.save()
 
@@ -62,7 +65,9 @@ def process_corpus_action(corpus_id: str | int, document_ids: list[str | int], u
                             creator_id=user_id,
                             document_id=document_id,
                         )
-                        set_permissions_for_obj_to_user(user_id, cell, [PermissionTypes.CRUD])
+                        set_permissions_for_obj_to_user(
+                            user_id, cell, [PermissionTypes.CRUD]
+                        )
 
                         # Add data cell to tracking
                         row_results.data.add(cell)
@@ -107,15 +112,14 @@ def process_corpus_action(corpus_id: str | int, document_ids: list[str | int], u
 
                 logger.info(f" - retrieved analysis: {obj}")
 
-                action_tasks.append(start_analysis.s(
-                    analysis_id=obj.id,
-                    doc_ids=document_ids
-                ))
+                action_tasks.append(
+                    start_analysis.s(analysis_id=obj.id, doc_ids=document_ids)
+                )
 
                 # Once we've run through all the actions, start tasks for processing.
                 group(action_tasks).apply_async()
 
         else:
-            raise ValueError("Unexpected action configuration... no analyzer or fieldset.")
-
-
+            raise ValueError(
+                "Unexpected action configuration... no analyzer or fieldset."
+            )

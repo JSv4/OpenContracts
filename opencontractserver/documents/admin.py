@@ -8,6 +8,7 @@ from opencontractserver.documents.models import Document, DocumentAnalysisRow
 class DocumentAdmin(GuardedModelAdmin):
     list_display = ["id", "title", "description", "backend_lock", "user_lock"]
 
+
 @admin.register(DocumentAnalysisRow)
 class DocumentAnalysisRowAdmin(GuardedModelAdmin):
     list_display = ["id", "document", "analysis", "extract", "creator"]

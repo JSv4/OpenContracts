@@ -78,7 +78,7 @@ def process_corpus_action(corpus_id: str | int, document_ids: list[str | int], u
                         # Add the task to the group
                         tasks.append(task_func.si(cell.pk))
 
-            action_tasks.append(chord(group(*tasks))(mark_extract_complete.si(extract.id)))
+            chord(group(*tasks))(mark_extract_complete.si(extract.id))
 
         elif action.analyzer:
 
@@ -107,13 +107,10 @@ def process_corpus_action(corpus_id: str | int, document_ids: list[str | int], u
 
                 logger.info(f" - retrieved analysis: {obj}")
 
-                action_tasks.append(start_analysis.s(
+                start_analysis.s(
                     analysis_id=obj.id,
                     doc_ids=document_ids
-                ))
+                ).apply_async()
 
         else:
             raise ValueError("Unexpected action configuration... no analyzer or fieldset.")
-
-        # Once we've run through all the actions, start tasks for processing.
-        group(action_tasks).apply()

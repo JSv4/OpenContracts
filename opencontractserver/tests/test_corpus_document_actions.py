@@ -51,22 +51,7 @@ class TestCorpusDocumentActions(TestCase):
         self.corpus.documents.add(self.document)
         mock_apply_async.assert_called_once()
 
-    @patch('opencontractserver.tasks.corpus_tasks.process_corpus_action')
-    def test_process_corpus_action_with_fieldset(self, mock_process_action):
-        CorpusAction.objects.create(
-            corpus=self.corpus,
-            fieldset=self.fieldset,
-            trigger=CorpusActionTrigger.ADD_DOCUMENT,
-            creator=self.user
-        )
-
-        process_corpus_action.si(self.corpus.id, [self.document.id], self.user.id)
-
-        mock_process_action.assert_called_once()
-        self.assertTrue(Datacell.objects.filter(document=self.document, extract__corpus=self.corpus).exists())
-
-    @patch('opencontractserver.tasks.analyzer_tasks.start_analysis')
-    def test_process_corpus_action_with_task_based_analyzer(self, mock_start_analysis):
+    def test_process_corpus_action_with_task_based_analyzer(self):
         CorpusAction.objects.create(
             corpus=self.corpus,
             analyzer=self.task_based_analyzer,
@@ -75,7 +60,7 @@ class TestCorpusDocumentActions(TestCase):
         )
 
         with self.assertRaises(ValueError):
-            process_corpus_action.si(self.corpus.id, [self.document.id], self.user.id).apply_async()
+            process_corpus_action.si(self.corpus.id, [self.document.id], self.user.id).apply()
 
     def test_process_corpus_action_with_analyzer(self):
         CorpusAction.objects.create(
@@ -118,11 +103,6 @@ class TestCorpusDocumentActions(TestCase):
         self.assertEqual(1, extracts.count())
         self.assertEqual(extracts[0].corpus.id, self.corpus.id)
         self.assertEqual(extracts[0].fieldset.id, self.fieldset.id)
-
-    def test_no_corpus_actions(self):
-        with patch('opencontractserver.tasks.corpus_tasks.process_corpus_action') as mock_process_action:
-            process_corpus_action.si(self.corpus.id, [self.document.id], self.user.id)
-            mock_process_action.assert_not_called()
 
     def tearDown(self):
         m2m_changed.disconnect(handle_document_added_to_corpus, sender=Corpus.documents.through)

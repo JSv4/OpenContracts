@@ -107,10 +107,15 @@ def process_corpus_action(corpus_id: str | int, document_ids: list[str | int], u
 
                 logger.info(f" - retrieved analysis: {obj}")
 
-                start_analysis.s(
+                action_tasks.append(start_analysis.s(
                     analysis_id=obj.id,
                     doc_ids=document_ids
-                ).apply_async()
+                ))
+
+                # Once we've run through all the actions, start tasks for processing.
+                group(action_tasks).apply_async()
 
         else:
             raise ValueError("Unexpected action configuration... no analyzer or fieldset.")
+
+

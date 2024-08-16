@@ -45,22 +45,18 @@ class TestCorpusDocumentActions(TestCase):
             creator=self.user,
         )
 
-    def test_signal_triggered_on_document_add(self):
-        with patch(
-            "opencontractserver.corpuses.signals.process_corpus_action"
-        ) as mock_task:
-            self.corpus.documents.add(self.document)
-            mock_task.si.assert_called_once_with(
-                corpus_id=self.corpus.id,
-                document_ids=[self.document.id],
-                user_id=self.corpus.creator.id,
-            )
-            mock_task.si.return_value.apply_async.assert_called_once()
+    @patch("opencontractserver.tasks.corpus_tasks.process_corpus_action.si")
+    def test_add_doc_signal(self, mock_task):
 
-    @patch("opencontractserver.tasks.corpus_tasks.process_corpus_action.apply_async")
-    def test_process_corpus_action_task_called(self, mock_apply_async):
         self.corpus.documents.add(self.document)
-        mock_apply_async.assert_called_once()
+
+        # Assert that the task was called with the correct arguments
+        mock_task.assert_called_once_with(
+            corpus_id=self.corpus.id,
+            document_ids=[self.document.id],
+            user_id=self.corpus.creator.id,
+        )
+        mock_task.return_value.apply_async.assert_called_once()
 
     def test_process_corpus_action_with_task_based_analyzer(self):
         CorpusAction.objects.create(

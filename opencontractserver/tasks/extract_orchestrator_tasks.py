@@ -37,10 +37,7 @@ def mark_extract_complete(extract_id):
 
 
 @shared_task
-def run_extract(
-    extract_id: Optional[str | int],
-    user_id: str | int
-):
+def run_extract(extract_id: Optional[str | int], user_id: str | int):
     logger.info(f"Run extract for extract {extract_id}")
 
     extract = Extract.objects.get(pk=extract_id)

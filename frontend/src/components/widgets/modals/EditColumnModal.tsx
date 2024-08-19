@@ -12,8 +12,8 @@ import {
   Grid,
   Button,
 } from "semantic-ui-react";
-import { LanguageModelDropdown } from "../selectors/LanguageModelDropdown";
 import { ColumnType } from "../../../graphql/types";
+import { ExtractTaskDropdown } from "../selectors/ExtractTaskDropdown";
 
 interface EditColumnModalProps {
   existing_column: ColumnType;
@@ -51,7 +51,7 @@ export const EditColumnModal: React.FC<EditColumnModalProps> = ({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Modal.Header>"Create a New Column"</Modal.Header>
+      <Modal.Header>Edit Column</Modal.Header>
       <Modal.Content>
         <Grid centered divided>
           <Grid.Column>
@@ -82,13 +82,15 @@ export const EditColumnModal: React.FC<EditColumnModalProps> = ({
                   />
                   <FormField>
                     <label>Language Model</label>
-                    <LanguageModelDropdown
-                      onChange={(id: string) =>
-                        setObjData((oldObj) => {
-                          return { ...oldObj, languageModelId: id };
-                        })
-                      }
-                      languageModelId={objData.languageModel?.id}
+                    <ExtractTaskDropdown
+                      onChange={(taskName: string | null) => {
+                        if (taskName) {
+                          setObjData((oldObj) => {
+                            return { ...oldObj, taskName };
+                          });
+                        }
+                      }}
+                      taskName={objData.taskName}
                     />
                   </FormField>
                 </FormGroup>

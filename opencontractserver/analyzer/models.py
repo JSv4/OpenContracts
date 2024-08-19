@@ -80,19 +80,53 @@ class Analyzer(BaseOCModel):
             ("update_analyzer", "update analyzer"),
             ("remove_analyzer", "delete analyzer"),
         )
+        constraints = [
+            django.db.models.CheckConstraint(
+                check=(
+                    django.db.models.Q(
+                        host_gremlin__isnull=True, task_name__isnull=False
+                    )
+                    | django.db.models.Q(
+                        host_gremlin__isnull=False, task_name__isnull=True
+                    )
+                ),
+                name="one_field_null_constraint",
+            ),
+            django.db.models.UniqueConstraint(
+                fields=["host_gremlin"],
+                condition=django.db.models.Q(host_gremlin__isnull=False),
+                name="unique_host_gremlin_if_not_null",
+            ),
+            django.db.models.UniqueConstraint(
+                fields=["task_name"],
+                condition=django.db.models.Q(task_name__isnull=False),
+                name="unique_task_name_if_not_null",
+            ),
+        ]
 
     id = django.db.models.CharField(max_length=1024, primary_key=True)
 
     # Tracking information to tie this back to the OC Analyzer that was used to create it.
     manifest = NullableJSONField(default=jsonfield_default_value, null=True, blank=True)
     description = django.db.models.TextField(null=False, blank=True, default="")
-    host_gremlin = django.db.models.ForeignKey(
-        GremlinEngine, blank=False, null=False, on_delete=django.db.models.CASCADE
-    )
     disabled = django.db.models.BooleanField(default=False)
     is_public = django.db.models.BooleanField(default=True)
     icon = django.db.models.FileField(
         blank=True, upload_to=calculate_analyzer_icon_path
+    )
+
+    host_gremlin = django.db.models.ForeignKey(
+        GremlinEngine,
+        on_delete=django.db.models.CASCADE,
+        null=True,
+        blank=True,
+    )
+
+    task_name = django.db.models.CharField(
+        max_length=1024,
+        null=True,
+        blank=True,
+        default=None,
     )
 
 

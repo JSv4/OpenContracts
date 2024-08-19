@@ -1,6 +1,7 @@
 import functools
 
 import django
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from pgvector.django import VectorField
@@ -13,7 +14,6 @@ from opencontractserver.shared.utils import calc_oc_file_path
 
 # Create your models here.
 class Document(BaseOCModel):
-
     """
     Document
     """
@@ -69,10 +69,16 @@ class Document(BaseOCModel):
             ("update_document", "update document"),
             ("remove_document", "delete document"),
         )
+        indexes = [
+            django.db.models.Index(fields=["title"]),
+            django.db.models.Index(fields=["page_count"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
+        ]
 
     # Override save to update modified on save
     def save(self, *args, **kwargs):
-
         """On save, update timestamps"""
         if not self.pk:
             self.created = timezone.now()
@@ -102,5 +108,88 @@ class DocumentUserObjectPermission(UserObjectPermissionBase):
 class DocumentGroupObjectPermission(GroupObjectPermissionBase):
     content_object = django.db.models.ForeignKey(
         "Document", on_delete=django.db.models.CASCADE
+    )
+    # enabled = False
+
+
+# Basically going to hold row-level data for extracts, and, for analyses, the analyses
+# results per analysis per document
+class DocumentAnalysisRow(BaseOCModel):
+    document = django.db.models.ForeignKey(
+        "documents.Document",
+        related_name="rows",
+        on_delete=django.db.models.CASCADE,
+        null=False,
+        blank=False,
+    )
+    annotations = django.db.models.ManyToManyField(
+        "annotations.Annotation", related_name="rows"
+    )
+    data = django.db.models.ManyToManyField(
+        "extracts.Datacell",
+        related_name="rows",
+    )
+    analysis = django.db.models.ForeignKey(
+        "analyzer.Analysis",
+        related_name="rows",
+        on_delete=django.db.models.CASCADE,
+        null=True,
+        blank=True,
+    )
+    extract = django.db.models.ForeignKey(
+        "extracts.Extract",
+        related_name="rows",
+        on_delete=django.db.models.CASCADE,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        permissions = (
+            ("create_documentanalysisrow", "create DocumentAnalysisRow"),
+            ("read_documentanalysisrow", "read DocumentAnalysisRow"),
+            ("update_documentanalysisrow", "update DocumentAnalysisRow"),
+            ("remove_documentanalysisrow", "delete DocumentAnalysisRow"),
+            ("publish_documentanalysisrow", "publish DocumentAnalysisRow"),
+            ("permission_documentanalysisrow", "permission DocumentAnalysisRow"),
+        )
+        constraints = [
+            django.db.models.UniqueConstraint(
+                fields=["document", "analysis"],
+                condition=django.db.models.Q(analysis__isnull=False),
+                name="unique_document_analysis",
+            ),
+            django.db.models.UniqueConstraint(
+                fields=["document", "extract"],
+                condition=django.db.models.Q(extract__isnull=False),
+                name="unique_document_extract",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if (self.analysis is None and self.extract is None) or (
+            self.analysis is not None and self.extract is not None
+        ):
+            raise ValidationError(
+                "Either 'analysis' or 'extract' must be set, but not both."
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+class DocumentAnalysisRowUserObjectPermission(UserObjectPermissionBase):
+    content_object = django.db.models.ForeignKey(
+        "DocumentAnalysisRow", on_delete=django.db.models.CASCADE
+    )
+    # enabled = False
+
+
+# Model for Django Guardian permissions... trying to improve performance...
+class DocumentAnalysisRowGroupObjectPermission(GroupObjectPermissionBase):
+    content_object = django.db.models.ForeignKey(
+        "DocumentAnalysisRow", on_delete=django.db.models.CASCADE
     )
     # enabled = False

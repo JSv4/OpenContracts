@@ -1,13 +1,13 @@
-REACT_APP_APPLICATION_DOMAIN=
-REACT_APP_APPLICATION_CLIENT_ID=
-REACT_APP_AUDIENCE=http://localhost:3000
-REACT_APP_API_ROOT_URL=https://opencontracts.opensource.legal
+OPEN_CONTRACTS_REACT_APP_APPLICATION_DOMAIN=
+OPEN_CONTRACTS_REACT_APP_APPLICATION_CLIENT_ID=
+OPEN_CONTRACTS_REACT_APP_AUDIENCE=http://localhost:3000
+OPEN_CONTRACTS_REACT_APP_API_ROOT_URL=http://localhost:8000
 
 # Uncomment to use Auth0 (you must then set the DOMAIN and CLIENT_ID envs above
-# REACT_APP_USE_AUTH0=true
+# OPEN_CONTRACTS_REACT_APP_USE_AUTH0=true
 
 # Uncomment to enable access to analyzers via the frontend
-# REACT_APP_USE_ANALYZERS=true
+# OPEN_CONTRACTS_REACT_APP_USE_ANALYZERS=true
 
 # Uncomment to enable access to import functionality via the frontend
-# REACT_APP_ALLOW_IMPORTS=true
+# OPEN_CONTRACTS_REACT_APP_ALLOW_IMPORTS=true

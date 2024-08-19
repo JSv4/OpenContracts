@@ -16,7 +16,6 @@ import {
   AnalysisType,
   ExtractType,
   FieldsetType,
-  LanguageModelType,
   ColumnType,
   CorpusQueryType,
 } from "./types";
@@ -142,7 +141,6 @@ export const cache = new InMemoryCache({
         relationshipLabels: relayStylePagination(),
         extracts: relayStylePagination(),
         columns: relayStylePagination(),
-        languageModels: relayStylePagination(),
       },
     },
   },
@@ -159,7 +157,7 @@ export const showDeleteDocumentsModal = makeVar<boolean>(false);
 export const showNewLabelsetModal = makeVar<boolean>(false);
 export const showExportModal = makeVar<boolean>(false);
 // if this is true, only render the currently selected annotation.
-export const showSelectedAnnotationOnly = makeVar<boolean>(false);
+export const showSelectedAnnotationOnly = makeVar<boolean>(true);
 // if this is false, don't render <SelectionBoundary> elements so you only see tokens. Cleaner for complex annotations.
 export const showAnnotationBoundingBoxes = makeVar<boolean>(false);
 // Show Labels toggle (if false, don't show labels)
@@ -186,6 +184,7 @@ export const editingDocument = makeVar<DocumentType | null>(null);
  */
 export const selectedExtractId = makeVar<string | null>(null);
 export const openedExtract = makeVar<ExtractType | null>(null);
+export const extractSearchTerm = makeVar<string>("");
 
 /**
  * Corpus-related global variables
@@ -243,7 +242,6 @@ export const analysisSearchTerm = makeVar<string>("");
  */
 export const exportSearchTerm = makeVar<string>("");
 export const selectedFieldset = makeVar<FieldsetType | null>(null);
-export const selectedLanguageModel = makeVar<LanguageModelType | null>(null);
 export const editingExtract = makeVar<ExtractType | null>(null);
 export const addingColumnToExtract = makeVar<ExtractType | null>(null);
 export const editingColumnForExtract = makeVar<ColumnType | null>(null);

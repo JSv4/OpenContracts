@@ -7,7 +7,7 @@ from graphql_relay import to_global_id
 from graphql_relay.node.node import from_global_id
 
 from config.graphql.schema import schema
-from opencontractserver.extracts.models import Column, Fieldset, LanguageModel
+from opencontractserver.extracts.models import Column, Fieldset
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
@@ -27,9 +27,6 @@ class ColumnMutationTestCase(TestCase):
         )
         self.client = Client(schema, context_value=TestContext(self.user))
 
-        self.language_model = LanguageModel.objects.create(
-            model="TestModel", creator=self.user
-        )
         self.fieldset = Fieldset.objects.create(
             name="TestFieldset",
             description="Test description",
@@ -42,7 +39,6 @@ class ColumnMutationTestCase(TestCase):
             output_type="str",
             limit_to_label="OriginalLimit",
             instructions="OriginalInstructions",
-            language_model=self.language_model,
             agentic=False,
             creator=self.user,
         )
@@ -58,7 +54,6 @@ class ColumnMutationTestCase(TestCase):
                     outputType: "int",
                     limitToLabel: "UpdatedLimit",
                     instructions: "UpdatedInstructions",
-                    languageModelId: "{}",
                     agentic: true
                 ) {{
                     ok
@@ -68,7 +63,6 @@ class ColumnMutationTestCase(TestCase):
             }}
         """.format(
             to_global_id("ColumnType", self.column.id),
-            to_global_id("LanguageModelType", self.language_model.id),
         )
         logger.info(f"Test mutation: {mutation}")
 
@@ -111,7 +105,6 @@ class ColumnMutationTestCase(TestCase):
                     fieldsetId: "{}",
                     query: "NewQuery",
                     outputType: "int",
-                    languageModelId: "{}",
                     agentic: true,
                     matchText: "NewMatchText",
                     limitToLabel: "NewLimit",
@@ -131,7 +124,6 @@ class ColumnMutationTestCase(TestCase):
             }}
         """.format(
             to_global_id("FieldsetType", self.fieldset.id),
-            to_global_id("LanguageModelType", self.language_model.id),
         )
 
         result = self.client.execute(mutation)

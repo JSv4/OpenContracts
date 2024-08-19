@@ -46,7 +46,7 @@ export function Footer() {
           <Divider inverted section />
           <Grid divided inverted stackable>
             <Grid.Column width={4}>
-              <Header inverted as="h4" content="Our Other Projects:" />
+              <Header inverted as="h4" content="My Other Projects:" />
               <List link inverted>
                 <List.Item as="a" href="https://github.com/JSv4/GremlinServer">
                   GREMLIN Low-Code
@@ -60,13 +60,10 @@ export function Footer() {
               </List>
             </Grid.Column>
             <Grid.Column width={4}>
-              <Header inverted as="h4" content="Open Source Legal" />
+              <Header inverted as="h4" content="Open Source Legaltech" />
               <List link inverted>
                 <List.Item as="a" href="https://github.com/JSv4">
                   Github
-                </List.Item>
-                <List.Item as="a" href="https://opensource.legal">
-                  OpenSource.Legal
                 </List.Item>
               </List>
             </Grid.Column>
@@ -77,9 +74,9 @@ export function Footer() {
                 content="Gordium Knot, Inc. d/b/a OpenSource.Legal ©2021"
               />
               <p>
-                Open Contracts was developed by Gordium Knot, Inc. d/b/a
-                OpenSource.Legal. Use of this tool is governed by our terms of
-                service.
+                Open Contracts was developed by{" "}
+                <a href="https://github.com/JSv4">JSv4</a>. Use of this tool is
+                governed by the terms of service.
               </p>
             </Grid.Column>
           </Grid>
@@ -92,7 +89,7 @@ export function Footer() {
         <Container textAlign="center">
           <Grid divided inverted stackable>
             <Grid.Column width={4}>
-              <Header inverted as="h4" content="Our Other Projects:" />
+              <Header inverted as="h4" content="My Other Projects:" />
               <List link inverted>
                 <List.Item as="a" href="https://github.com/JSv4/GremlinServer">
                   GREMLIN Low-Code
@@ -106,26 +103,19 @@ export function Footer() {
               </List>
             </Grid.Column>
             <Grid.Column width={4}>
-              <Header inverted as="h4" content="Open Source Legal" />
+              <Header inverted as="h4" content="Open Source Legaltech" />
               <List link inverted>
                 <List.Item as="a" href="https://github.com/JSv4">
                   Github
                 </List.Item>
-                <List.Item as="a" href="https://opensource.legal">
-                  OpenSource.Legal
-                </List.Item>
               </List>
             </Grid.Column>
             <Grid.Column width={8}>
-              <Header
-                inverted
-                as="h4"
-                content="Gordium Knot, Inc. d/b/a OpenSource.Legal ©2021"
-              />
+              <Header inverted as="h4" content="©2021-2024 JSv4" />
               <p>
-                Open Contracts was developed by Gordium Knot, Inc. d/b/a
-                OpenSource.Legal. Use of this tool is governed by our terms of
-                service.
+                Open Contracts was developed by{" "}
+                <a href="https://github.com/JSv4">JSv4</a>. Use of this tool is
+                governed by the terms of service.
               </p>
             </Grid.Column>
           </Grid>

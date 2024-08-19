@@ -19,7 +19,6 @@ from pydantic import validate_arguments
 from config import celery_app
 from config.graphql.serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import (
-    METADATA_LABEL,
     TOKEN_LABEL,
     Annotation,
     AnnotationLabel,
@@ -36,6 +35,7 @@ from opencontractserver.types.dicts import (
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.pdf import (
+    check_if_pdf_needs_ocr,
     extract_pawls_from_pdfs_bytes,
     split_pdf_into_images,
 )
@@ -236,6 +236,10 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
     doc_path = doc.pdf_file.name
     doc_file = default_storage.open(doc_path, mode="rb")
 
+    # Check if OCR is needed
+    needs_ocr = check_if_pdf_needs_ocr(doc_file)
+    logger.debug(f"Document {doc_id} needs OCR: {needs_ocr}")
+
     if settings.NLM_INGEST_API_KEY is not None:
         headers = {"API_KEY": settings.NLM_INGEST_API_KEY}
     else:
@@ -244,7 +248,7 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
     files = {"file": doc_file}
     params = {
         "calculate_opencontracts_data": "yes",
-        "applyOcr": "yes" if settings.NLM_INGEST_USE_OCR else "no",
+        "applyOcr": "yes" if needs_ocr and settings.NLM_INGEST_USE_OCR else "no",
     }  # Ensures calculate_opencontracts_data is set to True
 
     response = requests.post(
@@ -421,34 +425,6 @@ def burn_doc_annotations(
     return build_document_export(
         label_lookups=label_lookups, doc_id=doc_id, corpus_id=corpus_id
     )
-
-
-@celery_app.task()
-@validate_arguments
-def convert_doc_to_langchain_task(doc_id: int, corpus_id: int) -> tuple[str, dict]:
-    """
-    Given a doc and corpus, export text and all metadata in a tuple that can then be combined and exported for langchain
-    """
-    doc = Document.objects.get(id=doc_id)
-
-    metadata_annotations = Annotation.objects.filter(
-        document_id=doc_id,
-        corpus_id=corpus_id,
-        annotation_label__label_type=METADATA_LABEL,
-    )
-
-    if doc.txt_extract_file.name:
-        with doc.txt_extract_file.open("r") as txt_file:
-            text = txt_file.read()
-    else:
-        text = ""
-
-    metadata_json = {"doc_id": doc_id, "corpus_id": corpus_id}
-
-    for metadata in metadata_annotations:
-        metadata_json[metadata.annotation_label.text] = metadata.raw_text
-
-    return text, metadata_json
 
 
 @celery_app.task()

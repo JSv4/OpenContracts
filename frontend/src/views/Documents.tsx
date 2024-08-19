@@ -110,48 +110,89 @@ export const Documents = () => {
   const document_items = document_nodes
     .map((edge) => (edge?.node ? edge.node : undefined))
     .filter((item): item is DocumentType => !!item);
-  let visible_docs_are_processing = document_items.reduce<boolean>(
-    (accum, current) => accum || Boolean(current.backendLock),
-    false
-  );
+
+  const onSelect = (document: DocumentType) => {
+    // console.log("On selected document", document);
+    if (selected_document_ids.includes(document.id)) {
+      // console.log("Already selected... deselect")
+      const values = selected_document_ids.filter((id) => id !== document.id);
+      // console.log("Filtered values", values);
+      selectedDocumentIds(values);
+    } else {
+      selectedDocumentIds([...selected_document_ids, document.id]);
+    }
+    // console.log("selected doc ids", selected_document_ids);
+  };
+
+  const onOpen = (document: DocumentType) => {
+    openedDocument(document);
+  };
 
   // If we just logged in, refetch docs in case there are documents that are not public and are only visible to current user
   useEffect(() => {
     if (auth_token) {
-      console.log("DocumentItem - refetchDocuments due to auth_token");
+      // console.log("DocumentItem - refetchDocuments due to auth_token");
       refetchDocuments();
     }
   }, [auth_token]);
 
   // If we navigated here, refetch documents to ensure we have fresh docs
   useEffect(() => {
-    console.log("DocumentItem - refetchDocuments due to location change");
+    // console.log("DocumentItem - refetchDocuments due to location change");
     refetchDocuments();
   }, [location]);
 
   // If doc search term changes, refetch documents
   useEffect(() => {
-    console.log("document_search_term change");
+    // console.log("document_search_term change");
     refetchDocuments();
   }, [document_search_term]);
 
   // If selected label changes, refetch docs
   useEffect(() => {
-    console.log("filtered_to_label_id change");
+    // console.log("filtered_to_label_id change");
     refetchDocuments();
   }, [filtered_to_label_id]);
 
   // If selected labelSET changes, refetch docs
   useEffect(() => {
-    console.log("filter_to_labelset_id change");
+    // console.log("filter_to_labelset_id change");
     refetchDocuments();
   }, [filtered_to_labelset_id]);
 
   // If selected corpus changes, refetch docs
   useEffect(() => {
-    console.log("filtered_to_corpus change");
+    // console.log("filtered_to_corpus change");
     refetchDocuments();
   }, [filtered_to_corpus]);
+
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+    const areDocumentsProcessing = document_items.some(
+      (doc) => doc.backendLock
+    );
+
+    if (areDocumentsProcessing) {
+      // Start polling every 5 seconds
+      pollInterval = setInterval(() => {
+        refetchDocuments();
+      }, 15000);
+
+      // Set up a timeout to stop polling after 10 minutes
+      const timeoutId = setTimeout(() => {
+        clearInterval(pollInterval);
+        toast.info(
+          "Document processing is taking too long... polling paused after 10 minutes."
+        );
+      }, 600000);
+
+      // Clean up the interval and timeout when the component unmounts or the condition changes
+      return () => {
+        clearInterval(pollInterval);
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [document_items, refetchDocuments]);
 
   /**
    * Set up the debounced search handling for the Document SearchBar
@@ -205,11 +246,11 @@ export const Documents = () => {
     UpdateDocumentInputs
   >(UPDATE_DOCUMENT);
   const handleUpdateDocument = (document_obj: any) => {
-    console.log("handleUpdateDocument", document_obj);
+    // console.log("handleUpdateDocument", document_obj);
     let variables = {
       variables: document_obj,
     };
-    console.log("handleUpdateDocument variables", variables);
+    // console.log("handleUpdateDocument variables", variables);
     tryUpdateDocument(variables);
   };
 
@@ -244,6 +285,10 @@ export const Documents = () => {
       });
     }
   }
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // LONG POLL CODE                                                             //
+  ////////////////////////////////////////////////////////////////////////////////
 
   return (
     <CardLayout
@@ -354,6 +399,8 @@ export const Documents = () => {
       }
     >
       <DocumentCards
+        onClick={onOpen}
+        onShiftClick={onSelect}
         items={document_items}
         pageInfo={documents_data?.documents?.pageInfo}
         loading={documents_loading}

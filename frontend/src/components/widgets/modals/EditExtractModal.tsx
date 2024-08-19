@@ -7,6 +7,9 @@ import {
   Icon,
   Dimmer,
   Loader,
+  Statistic,
+  Segment,
+  Message,
 } from "semantic-ui-react";
 import {
   ColumnType,
@@ -77,23 +80,22 @@ export const EditExtractModal = ({
     }
   }, [ext]);
 
-  const [addDocsToExtract, { loading: add_docs_loading, data: add_docs_data }] =
-    useMutation<
-      RequestAddDocToExtractOutputType,
-      RequestAddDocToExtractInputType
-    >(REQUEST_ADD_DOC_TO_EXTRACT, {
-      onCompleted: (data) => {
-        console.log("Add data to ", data);
-        setRows((old_rows) => [
-          ...old_rows,
-          ...(data.addDocsToExtract.objs as DocumentType[]),
-        ]);
-        toast.success("SUCCESS! Added docs to extract.");
-      },
-      onError: (err) => {
-        toast.error("ERROR! Could not add docs to extract.");
-      },
-    });
+  const [addDocsToExtract, { loading: add_docs_loading }] = useMutation<
+    RequestAddDocToExtractOutputType,
+    RequestAddDocToExtractInputType
+  >(REQUEST_ADD_DOC_TO_EXTRACT, {
+    onCompleted: (data) => {
+      console.log("Add data to ", data);
+      setRows((old_rows) => [
+        ...old_rows,
+        ...(data.addDocsToExtract.objs as DocumentType[]),
+      ]);
+      toast.success("SUCCESS! Added docs to extract.");
+    },
+    onError: (err) => {
+      toast.error("ERROR! Could not add docs to extract.");
+    },
+  });
 
   const handleAddDocIdsToExtract = (
     extractId: string,
@@ -107,10 +109,7 @@ export const EditExtractModal = ({
     });
   };
 
-  const [
-    removeDocsFromExtract,
-    { loading: remove_docs_loading, data: remove_docs_data },
-  ] = useMutation<
+  const [removeDocsFromExtract, { loading: remove_docs_loading }] = useMutation<
     RequestRemoveDocFromExtractOutputType,
     RequestRemoveDocFromExtractInputType
   >(REQUEST_REMOVE_DOC_FROM_EXTRACT, {
@@ -192,8 +191,6 @@ export const EditExtractModal = ({
     error,
     data: extract_data,
     refetch,
-    startPolling,
-    stopPolling,
   } = useQuery<RequestGetExtractOutput, RequestGetExtractInput>(
     REQUEST_GET_EXTRACT,
     {
@@ -201,6 +198,7 @@ export const EditExtractModal = ({
         id: extract ? extract.id : "",
       },
       nextFetchPolicy: "network-only",
+      notifyOnNetworkStatusChange: true,
     }
   );
 
@@ -237,6 +235,48 @@ export const EditExtractModal = ({
     },
   });
 
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+
+    if (extract && extract.started && !extract.finished && !extract.error) {
+      // Start polling every 5 seconds
+      pollInterval = setInterval(() => {
+        refetch({ id: extract.id });
+      }, 5000);
+
+      // Set up a timeout to stop polling after 10 minutes
+      const timeoutId = setTimeout(() => {
+        clearInterval(pollInterval);
+        toast.info(
+          "Job is taking too long... polling paused after 10 minutes."
+        );
+      }, 600000);
+
+      // Clean up the interval and timeout when the component unmounts or the extract changes
+      return () => {
+        clearInterval(pollInterval);
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [extract, refetch]);
+
+  useEffect(() => {
+    if (open && extract) {
+      refetch();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (extract_data) {
+      const { fullDatacellList, fullDocumentList, fieldset } =
+        extract_data.extract;
+      setCells(fullDatacellList ? fullDatacellList : []);
+      setRows(fullDocumentList ? fullDocumentList : []);
+      setColumns(fieldset?.fullColumnList ? fieldset.fullColumnList : []);
+      setExtract(extract_data.extract);
+    }
+  }, [extract_data]);
+
   const [startExtract, { loading: start_extract_loading }] = useMutation<
     RequestStartExtractOutputType,
     RequestStartExtractInputType
@@ -246,67 +286,15 @@ export const EditExtractModal = ({
       setExtract((old_extract) => {
         return { ...old_extract, ...data.startExtract.obj };
       });
-      startPolling(30000);
     },
     onError: (err) => {
       toast.error("ERROR! Could not start extract.");
-      stopPolling();
     },
   });
-
-  // Setup long-polling (or stop it) for incomplete jobs that are running
-  useEffect(() => {
-    if (extract_data && extract_data.extract.started) {
-      // Start polling every 30 seconds
-      startPolling(30000);
-
-      // Set up a timeout to stop polling after 10 minutes
-      const timeoutId = setTimeout(() => {
-        stopPolling();
-        toast.info(
-          "Job is taking too long... polling paused after 10 minutes."
-        );
-      }, 600000);
-
-      // Clean up the timeout when the component unmounts or the extract changes
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [extract_data, startPolling, stopPolling]);
-
-  useEffect(() => {
-    if (
-      extract_data &&
-      (extract_data.extract.stacktrace !== null ||
-        extract_data.extract.finished !== null)
-    ) {
-      // Stop polling when the extract has failed or finished
-      stopPolling();
-    }
-  }, [extract_data, stopPolling]);
-
-  useEffect(() => {
-    if (extract) {
-      refetch();
-    }
-  }, [extract]);
-
-  useEffect(() => {
-    if (extract_data) {
-      const { fullDatacellList, fullDocumentList, fieldset } =
-        extract_data.extract;
-      setCells(fullDatacellList ? fullDatacellList : []);
-      setRows(fullDocumentList ? fullDocumentList : []);
-      setColumns(fieldset?.fullColumnList ? fieldset.fullColumnList : []);
-    }
-  }, [extract_data]);
 
   if (!extract || !extract.id) {
     return <></>;
   }
-
-  console.log("Extract details", extract);
 
   return (
     <>
@@ -343,14 +331,8 @@ export const EditExtractModal = ({
           justifyContent: "center",
         }}
       >
-        {start_extract_loading ? (
-          <Dimmer>
-            <Loader>Running...</Loader>
-          </Dimmer>
-        ) : (
-          <></>
-        )}
         {loading ||
+        adding_column_to_extract ||
         update_column_loading ||
         add_docs_loading ||
         remove_docs_loading ? (
@@ -362,6 +344,60 @@ export const EditExtractModal = ({
         )}
         <ModalHeader>Editing Extract {extract.name}</ModalHeader>
         <ModalContent style={{ flex: 1 }}>
+          <Segment.Group horizontal>
+            <Segment textAlign="center">
+              <Statistic size="mini">
+                <Statistic.Label>Status</Statistic.Label>
+                <Statistic.Value>
+                  {extract.started && !extract.finished && !extract.error ? (
+                    <Icon name="spinner" loading />
+                  ) : extract.finished ? (
+                    <Icon name="check circle" color="green" />
+                  ) : extract.error ? (
+                    <Icon name="exclamation circle" color="red" />
+                  ) : (
+                    <Icon name="pause circle" color="grey" />
+                  )}
+                </Statistic.Value>
+              </Statistic>
+            </Segment>
+            {extract.started && (
+              <Segment textAlign="center">
+                <Statistic size="mini">
+                  <Statistic.Label>Started</Statistic.Label>
+                  <Statistic.Value>
+                    {new Date(extract.started).toLocaleString()}
+                  </Statistic.Value>
+                </Statistic>
+              </Segment>
+            )}
+            {extract.finished && (
+              <Segment textAlign="center">
+                <Statistic size="mini">
+                  <Statistic.Label>Completed</Statistic.Label>
+                  <Statistic.Value>
+                    {new Date(extract.finished).toLocaleString()}
+                  </Statistic.Value>
+                </Statistic>
+              </Segment>
+            )}
+            {extract.error && extract.finished && (
+              <Segment textAlign="center" color="red">
+                <Statistic size="mini">
+                  <Statistic.Label>Failed</Statistic.Label>
+                  <Statistic.Value>
+                    {new Date(extract.finished).toLocaleString()}
+                  </Statistic.Value>
+                </Statistic>
+              </Segment>
+            )}
+          </Segment.Group>
+          {extract.error && (
+            <Message negative>
+              <Message.Header>Error</Message.Header>
+              <pre>{extract.error}</pre>
+            </Message>
+          )}
           <div
             style={{
               width: "100%",
@@ -380,6 +416,7 @@ export const EditExtractModal = ({
                     ? { disabled: true, loading: true }
                     : {})}
                   labelPosition="right"
+                  onClick={() => window.alert("Not implemented yet")}
                 >
                   Download
                   <Icon name="download" />
@@ -402,7 +439,6 @@ export const EditExtractModal = ({
             onAddDocIds={handleAddDocIdsToExtract}
             onRemoveDocIds={handleRemoveDocIdsFromExtract}
             onRemoveColumnId={handleDeleteColumnIdFromExtract}
-            refetch={() => refetch({ id: extract.id })}
             extract={extract}
             cells={cells}
             rows={rows}

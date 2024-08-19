@@ -5,10 +5,10 @@ argon2-cffi==21.3.0  # https://github.com/hynek/argon2_cffi
 redis==4.5.1  # https://github.com/redis/redis-py
 hiredis==2.0.0  # https://github.com/redis/hiredis-py
 celery==5.2.7  # pyup: < 6.0  # https://github.com/celery/celery
-django-celery-beat==2.4.0  # https://github.com/celery/django-celery-beat
 flower==2.0.1  # https://github.com/mher/flower
+django-celery-beat==2.6.0  # https://github.com/celery/django-celery-beat
 pyjwt==2.4.0  # https://github.com/jpadilla/pyjwt
-cryptography==38.0.1  # https://github.com/pyca/cryptography
+cryptography==43.0.0  # https://github.com/pyca/cryptography
 pydantic==2.*
 typing-extensions==4.*  # https://github.com/python/typing_extensions
 requests==2.*  # https://requests.readthedocs.io/en/latest/
@@ -16,15 +16,15 @@ requests==2.*  # https://requests.readthedocs.io/en/latest/
 
 # Django
 # ------------------------------------------------------------------------------
-django==3.2.9  # pyup: < 4.0  # https://www.djangoproject.com/
+django==4.2.15  # pyup: < 4.0  # https://www.djangoproject.com/
 django-environ==0.9.0  # https://github.com/joke2k/django-environ
 django-model-utils==4.3.1  # https://github.com/jazzband/django-model-utils
-django-crispy-forms==1.14.0  # https://github.com/django-crispy-forms/django-crispy-forms
+django-crispy-forms==2.3  # https://github.com/django-crispy-forms/django-crispy-forms
 crispy-bootstrap5==0.7  # https://github.com/django-crispy-forms/crispy-bootstrap5
 django-redis==5.2.0  # https://github.com/jazzband/django-redis
 django-filter==22.1  # https://github.com/carltongibson/django-filter
 django-storages[boto3]==1.13.1  # https://github.com/jschneier/django-storages
-django-extensions==3.2.0  # https://github.com/django-extensions/django-extensions
+django-extensions==3.2.3  # https://github.com/django-extensions/django-extensions
 whitenoise
 django-tree-queries
 pgvector  # For vector embeddings
@@ -39,7 +39,7 @@ drf-extra-fields==3.4.1  # https://github.com/Hipo/drf-extra-fields
 # ------------------------------------------------------------------------------
 # Pawls preprocessors are available as a command line utility in their repo for now
 # BUT we can install them from their github repo subdirectory using the syntax below:
-git+https://github.com/JSv4/PDF-Preprocessors@v1.0.5
+git+https://github.com/JSv4/PDF-Preprocessors@v1.0.5  # TODO - DEPRECATED. REMOVE.
 scikit-learn
 pdfplumber
 pytesseract
@@ -63,7 +63,8 @@ marvin==2.3.4
 
 # Data Processing Tools
 # -------------------------------------------------------------------------------
-opencv-python==4.7.0.68 # https://github.com/opencv/opencv-python
+opencv-python==4.10.0.84 # https://github.com/opencv/opencv-python
+filetype==1.2.0  # https://github.com/h2non/filetype.py
 
 # Permissioning
 # ------------------------------------------------------------------------------

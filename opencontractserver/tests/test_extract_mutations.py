@@ -8,7 +8,7 @@ from graphql_relay import to_global_id
 from config.graphql.schema import schema
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import Extract, Fieldset, LanguageModel
+from opencontractserver.extracts.models import Extract, Fieldset
 
 User = get_user_model()
 
@@ -47,27 +47,6 @@ class ExtractsMutationTestCase(TestCase):
             creator=self.user,
         )
 
-    def test_create_language_model_mutation(self):
-        mutation = """
-            mutation {
-                createLanguageModel(model: "TestModel") {
-                    ok
-                    obj {
-                        id
-                        model
-                    }
-                }
-            }
-        """
-
-        result = self.client.execute(mutation)
-        self.assertIsNone(result.get("errors"))
-        self.assertTrue(result["data"]["createLanguageModel"]["ok"])
-        self.assertIsNotNone(result["data"]["createLanguageModel"]["obj"]["id"])
-        self.assertEqual(
-            result["data"]["createLanguageModel"]["obj"]["model"], "TestModel"
-        )
-
     def test_create_fieldset_mutation(self):
         mutation = """
             mutation {
@@ -95,9 +74,6 @@ class ExtractsMutationTestCase(TestCase):
         )
 
     def test_create_column_mutation(self):
-        language_model = LanguageModel.objects.create(
-            model="TestModel", creator=self.user
-        )
         fieldset = Fieldset.objects.create(
             name="TestFieldset",
             description="Test description",
@@ -111,7 +87,6 @@ class ExtractsMutationTestCase(TestCase):
                     fieldsetId: "{}",
                     query: "TestQuery",
                     outputType: "str",
-                    languageModelId: "{}",
                     agentic: false
                 ) {{
                     ok
@@ -125,7 +100,6 @@ class ExtractsMutationTestCase(TestCase):
             }}
         """.format(
             to_global_id("FieldsetType", fieldset.id),
-            to_global_id("LanguageModelType", language_model.id),
         )
 
         result = self.client.execute(mutation)
@@ -150,7 +124,9 @@ class ExtractsMutationTestCase(TestCase):
             to_global_id("ExtractType", self.extract.id)
         )
 
-        with patch("opencontractserver.tasks.extract_tasks.run_extract.s") as mock_task:
+        with patch(
+            "opencontractserver.tasks.extract_orchestrator_tasks.run_extract.s"
+        ) as mock_task:
             result = self.client.execute(mutation)
             self.assertIsNone(result.get("errors"))
             self.assertTrue(result["data"]["startExtract"]["ok"])

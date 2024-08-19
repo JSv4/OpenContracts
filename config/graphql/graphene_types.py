@@ -21,13 +21,7 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import (
-    Column,
-    Datacell,
-    Extract,
-    Fieldset,
-    LanguageModel,
-)
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport, UserImport
 
 User = get_user_model()
@@ -287,13 +281,6 @@ class GremlinEngineType_WRITE(AnnotatePermissionsForReadMixin, ModelType):
 class AnalysisType(AnnotatePermissionsForReadMixin, ModelType):
     class Meta:
         model = Analysis
-        interfaces = [relay.Node]
-        connection_class = CountableConnection
-
-
-class LanguageModelType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-    class Meta:
-        model = LanguageModel
         interfaces = [relay.Node]
         connection_class = CountableConnection
 

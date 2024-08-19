@@ -8,15 +8,16 @@ import user_logo from "../../assets/icons/noun-person-113116-FFFFFF.png";
 import { header_menu_items } from "../../assets/configurations/menus";
 import { authToken, showExportModal, userObj } from "../../graphql/cache";
 import { useReactiveVar } from "@apollo/client";
+import { useEnv } from "../hooks/UseEnv";
 
 export const NavMenu = () => {
-  const { REACT_APP_USE_AUTH0 } = process.env;
+  const { REACT_APP_USE_AUTH0 } = useEnv();
   const { loginWithRedirect, logout, user: auth0_user, isLoading } = useAuth0();
   const cache_user = useReactiveVar(userObj);
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
-  const user = REACT_APP_USE_AUTH0 === "true" ? auth0_user : cache_user;
+  const user = REACT_APP_USE_AUTH0 ? auth0_user : cache_user;
 
   const show_export_modal = useReactiveVar(showExportModal);
 
@@ -24,7 +25,7 @@ export const NavMenu = () => {
   let private_header_items = header_menu_items.filter((item) => item.protected);
 
   const requestLogout = (args: any) => {
-    if (REACT_APP_USE_AUTH0 === "true") {
+    if (REACT_APP_USE_AUTH0) {
       logout(args);
     } else {
       authToken("");
@@ -55,7 +56,7 @@ export const NavMenu = () => {
     </Menu.Item>
   ));
 
-  if (REACT_APP_USE_AUTH0 === "true") {
+  if (REACT_APP_USE_AUTH0) {
     return (
       <Menu fluid inverted attached style={{ marginBottom: "0px" }}>
         <Menu.Item header>

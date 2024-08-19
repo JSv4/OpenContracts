@@ -7,20 +7,15 @@ from django.test.utils import override_settings
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.annotations.signals import process_annot_on_create_atomic
-from opencontractserver.documents.models import Document
+from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.documents.signals import process_doc_on_create_atomic
-from opencontractserver.extracts.models import (
-    Column,
-    Datacell,
-    Extract,
-    Fieldset,
-    LanguageModel,
-)
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
+from opencontractserver.tasks import oc_llama_index_doc_query
 from opencontractserver.tasks.doc_tasks import nlm_ingest_pdf
 from opencontractserver.tasks.embeddings_task import (
     calculate_embedding_for_annotation_text,
 )
-from opencontractserver.tasks.extract_tasks import llama_index_doc_query, run_extract
+from opencontractserver.tasks.extract_orchestrator_tasks import run_extract
 from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_TWO_PATH
 
 User = get_user_model()
@@ -41,10 +36,6 @@ class ExtractsTaskTestCase(TestCase):
         self.user = User.objects.create_user(
             username="testuser", password="testpassword"
         )
-
-        self.language_model = LanguageModel.objects.create(
-            model="TestModel", creator=self.user
-        )
         self.fieldset = Fieldset.objects.create(
             name="TestFieldset",
             description="Test description",
@@ -54,15 +45,16 @@ class ExtractsTaskTestCase(TestCase):
             fieldset=self.fieldset,
             query="What is the name of this document",
             output_type="str",
-            language_model=self.language_model,
             agentic=True,
             creator=self.user,
+            # Let's test setting extract engine dynamically
+            task_name="opencontractserver.tasks.data_extract_tasks.llama_index_react_agent_query",
         )
         self.column = Column.objects.create(
             fieldset=self.fieldset,
             query="Provide a list of the defined terms ",
+            match_text="A defined term is defined as a term that is defined...\n|||\nPerson shall mean a person.",
             output_type="str",
-            language_model=self.language_model,
             agentic=True,
             creator=self.user,
         )
@@ -148,7 +140,10 @@ class ExtractsTaskTestCase(TestCase):
         self.extract.save()
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-    @vcr.use_cassette("fixtures/vcr_cassettes/test_run_extract_task.yaml")
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/test_run_extract_task.yaml",
+        filter_headers=["authorization"],
+    )
     def test_run_extract_task(self):
         print(f"{self.extract.documents.all()}")
 
@@ -160,13 +155,18 @@ class ExtractsTaskTestCase(TestCase):
         self.assertIsNotNone(self.extract.started)
 
         self.assertEqual(6, Datacell.objects.all().count())
-        row = Datacell.objects.filter(extract=self.extract, column=self.column).first()
-        self.assertIsNotNone(row)
+        cells = Datacell.objects.filter(
+            extract=self.extract, column=self.column
+        ).first()
+        self.assertIsNotNone(cells)
+
+        rows = DocumentAnalysisRow.objects.filter(extract=self.extract)
+        self.assertEqual(3, rows.count())
 
         for cell in Datacell.objects.all():
             print(f"Cell data: {cell.data}")
             print(f"Cell started: {cell.started}")
             print(f"Cell completed: {cell.completed}")
             print(f"Cell failed: {cell.failed}")
-            llama_index_doc_query.delay(cell.id)
+            oc_llama_index_doc_query.delay(cell.id)
             self.assertIsNotNone(cell.data)

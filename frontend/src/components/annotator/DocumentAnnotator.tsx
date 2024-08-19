@@ -460,14 +460,6 @@ export const DocumentAnnotator = ({
             })
         );
         console.log("display_annotations", display_annotations);
-        console.log(
-          "Edges",
-          display_annotations[0].sourceNodeInRelationships.edges
-        );
-        console.log(
-          "Edges",
-          display_annotations[0].targetNodeInRelationships.edges
-        );
 
         // Build relationship_annotations
         const uniqueRelationships = [

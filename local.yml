@@ -88,7 +88,7 @@ services:
       depends_on:
         - django
       env_file:
-        - ./frontend/.local.env
+      - ./.envs/.local/.frontend
       ports:
         - "3000:3000"
       profiles:

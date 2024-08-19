@@ -33,32 +33,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # psycopg2 dependencies
   libpq-dev
 
-# RUN wget https://poppler.freedesktop.org/poppler-data-0.4.10.tar.gz \
-#     && tar -xf poppler-data-0.4.10.tar.gz \
-#     && cd poppler-data-0.4.10 \
-#     && make install \
-#     && cd .. \
-#     && wget https://poppler.freedesktop.org/poppler-21.03.0.tar.xz \
-#     && tar -xf poppler-21.03.0.tar.xz \
-#     && cd poppler-21.03.0 \
-#     && mkdir build \
-#     && cd build \
-#     && cmake .. \
-#     && make \
-#     && make install \
-#     && cd ../.. \
-#     && ldconfig \
-#     && rm poppler-data-0.4.10.tar.gz \
-#     && rm -rf poppler-data-0.4.10 \
-#     && rm poppler-21.03.0.tar.xz \
-#     && rm -rf poppler-21.03.0
-# CMD tail -f /dev/null
-
-# Get tesseract tessdata file
-# RUN wget https://github.com/tesseract-ocr/tessdata_best/raw/main/eng.traineddata -P /usr/share/tessdata
-
 # Requirements are installed here to ensure they will be cached.
 COPY ./requirements .
+
+RUN pip install --upgrade pip
 
 # Create Python Dependency and Sub-Dependency Wheels.
 RUN pip wheel --wheel-dir /usr/src/app/wheels  \
@@ -97,6 +75,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # All absolute dir copies ignore workdir instruction. All relative dir copies are wrt to the workdir instruction
 # copy python dependency wheels from python-build-stage
 COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
+
+RUN pip install --upgrade pip
 
 # Install CPU-less requirements
 RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu

@@ -13,7 +13,7 @@ import {
 } from "../graphql/mutations";
 import { toast } from "react-toastify";
 
-import logo_text from "../assets/images/os_legal_128_name_left_dark.png";
+import logo_text from "../assets/images/os_legal_128_regular.png";
 import useWindowDimensions from "../components/hooks/WindowDimensionHook";
 
 const divStyle = {
@@ -204,16 +204,6 @@ export const Login = () => {
             </Form>
           </div>
         </Segment>
-      </div>
-      <div
-        style={{
-          zIndex: 100,
-          position: "absolute",
-          bottom: "2vh",
-          left: "2vw",
-        }}
-      >
-        <Image style={{ height: "8vh" }} src={logo_text} />
       </div>
     </div>
   );

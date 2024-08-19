@@ -12,32 +12,6 @@ from opencontractserver.shared.Models import BaseOCModel
 User = get_user_model()
 
 
-class LanguageModel(BaseOCModel):
-
-    model = django.db.models.CharField(max_length=256, null=False, blank=False)
-
-    class Meta:
-        permissions = (
-            ("permission_languagemodel", "permission language model"),
-            ("create_languagemodel", "create language model"),
-            ("read_languagemodel", "read language model"),
-            ("update_languagemodel", "update language model"),
-            ("remove_languagemodel", "delete language model"),
-        )
-
-
-class LanguageModelUserObjectPermission(UserObjectPermissionBase):
-    content_object = django.db.models.ForeignKey(
-        "LanguageModel", on_delete=django.db.models.CASCADE
-    )
-
-
-class LanguageModelGroupObjectPermission(GroupObjectPermissionBase):
-    content_object = django.db.models.ForeignKey(
-        "LanguageModel", on_delete=django.db.models.CASCADE
-    )
-
-
 class Fieldset(BaseOCModel):
     name = django.db.models.CharField(max_length=256, null=False, blank=False)
     description = django.db.models.TextField(null=False, blank=False)
@@ -80,11 +54,14 @@ class Column(BaseOCModel):
     output_type = django.db.models.TextField(null=False, blank=False)
     limit_to_label = django.db.models.CharField(max_length=512, null=True, blank=True)
     instructions = django.db.models.TextField(null=True, blank=True)
-    language_model = django.db.models.ForeignKey(
-        "LanguageModel", on_delete=django.db.models.PROTECT, null=False, blank=False
-    )
     agentic = django.db.models.BooleanField(default=False)
     extract_is_list = django.db.models.BooleanField(default=False)
+    task_name = django.db.models.CharField(
+        max_length=1024,
+        null=False,
+        blank=False,
+        default="opencontractserver.tasks.data_extract_tasks.oc_llama_index_doc_query",
+    )
 
     class Meta:
         permissions = (

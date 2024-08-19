@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
 import { useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -20,6 +20,7 @@ import {
   selectedExtractId,
   showDeleteExtractModal,
   showCreateExtractModal,
+  extractSearchTerm,
 } from "../graphql/cache";
 
 import { ActionDropdownItem, LooseObject } from "../components/types";
@@ -34,14 +35,37 @@ import { EditExtractModal } from "../components/widgets/modals/EditExtractModal"
 export const Extracts = () => {
   const auth_token = useReactiveVar(authToken);
   const opened_extract = useReactiveVar(openedExtract);
+  const extract_search_term = useReactiveVar(extractSearchTerm);
   const selected_extract_id = useReactiveVar(selectedExtractId);
   const show_create_extract_modal = useReactiveVar(showCreateExtractModal);
   const show_delete_extract_modal = useReactiveVar(showDeleteExtractModal);
+
+  const [extractSearchCache, setExtractSearchCache] =
+    useState<string>(extract_search_term);
 
   const location = useLocation();
 
   let extract_variables: LooseObject = {
     includeMetadata: true,
+  };
+
+  const debouncedExportSearch = useRef(
+    _.debounce((searchTerm) => {
+      extractSearchTerm(searchTerm);
+    }, 1000)
+  );
+
+  const handleExtractSearchChange = (value: string) => {
+    setExtractSearchCache(value);
+    debouncedExportSearch.current(value);
+  };
+
+  const shouldPoll = (extracts: GetExtractsOutput) => {
+    return extracts?.extracts?.edges.reduce(
+      (accum, edge) =>
+        (edge.node.started && !edge.node.finished && !edge.node.error) || accum,
+      false
+    );
   };
 
   const {
@@ -51,10 +75,28 @@ export const Extracts = () => {
     data: extracts_data,
     fetchMore: fetchMoreExtracts,
   } = useQuery<GetExtractsOutput, GetExtractsInput>(REQUEST_GET_EXTRACTS, {
-    variables: extract_variables,
+    variables: {
+      searchText: extract_search_term,
+    },
     nextFetchPolicy: "network-only",
-    notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
+    notifyOnNetworkStatusChange: true,
   });
+
+  useEffect(() => {
+    refetchExtracts({ searchText: extract_search_term });
+  }, [extract_search_term]);
+
+  useEffect(() => {
+    if (extracts_data && shouldPoll(extracts_data)) {
+      const pollInterval = setInterval(() => {
+        refetchExtracts();
+      }, 30000);
+
+      return () => {
+        clearInterval(pollInterval);
+      };
+    }
+  }, [extracts_data, refetchExtracts]);
 
   const extract_nodes = extracts_data?.extracts?.edges
     ? extracts_data.extracts.edges
@@ -154,7 +196,16 @@ export const Extracts = () => {
           />
         </>
       }
-      SearchBar={<CreateAndSearchBar actions={extract_actions} />}
+      SearchBar={
+        <CreateAndSearchBar
+          value={extractSearchCache}
+          onChange={(search_string: string) =>
+            handleExtractSearchChange(search_string)
+          }
+          actions={extract_actions}
+          placeholder="Search for extract by name..."
+        />
+      }
     >
       <ExtractList
         items={extract_items}

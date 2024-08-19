@@ -121,13 +121,13 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         """Build the filter query based on the provided metadata filters."""
         queryset = self._get_annotation_queryset()
 
-        print(f"_build_filter_query: {queryset.count()}")
+        # print(f"_build_filter_query: {queryset.count()}")
 
         if filters is None:
             return queryset
 
         for filter_ in filters.filters:
-            print(f"_build_filter_query - filter: {filter_}")
+            # print(f"_build_filter_query - filter: {filter_}")
             if filter_.key == "label":
                 queryset = queryset.filter(annotation_label__text__iexact=filter_.value)
             else:
@@ -144,8 +144,8 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         ids = []
 
         for row in rows:
-            print(f"Embedding type: {type(row.embedding)} {row.embedding}")
-            print(f"Row id: {row.id}")
+            # print(f"Embedding type: {type(row.embedding)} {row.embedding}")
+            # print(f"Row id: {row.id}")
             node = TextNode(
                 doc_id=str(row.id),
                 text=row.raw_text,
@@ -164,9 +164,9 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
                     else None,
                 },
             )
-            print(f"Created node: {node}")
-            print(f"Node ref doc: {node.ref_doc_id}")
-            print(f"Node dir: {dir(node)}")
+            # print(f"Created node: {node}")
+            # print(f"Node ref doc: {node.ref_doc_id}")
+            # print(f"Node dir: {dir(node)}")
             nodes.append(node)
             similarities.append(row.similarity)
             ids.append(str(row.id))
@@ -236,7 +236,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             )[: query.similarity_top_k]
 
         rows = list(queryset)
-        print(f"Returned rows: {rows}")
+        # print(f"Returned rows: {rows}")
 
         return self._db_rows_to_query_result(rows)
 

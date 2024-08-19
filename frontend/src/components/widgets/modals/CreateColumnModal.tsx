@@ -11,10 +11,9 @@ import {
   Popup,
   Icon,
 } from "semantic-ui-react";
-import { LanguageModelDropdown } from "../selectors/LanguageModelDropdown";
 import { LooseObject } from "../../types";
-import { fontWeight } from "../../../theme/fonts";
 import { ColumnType } from "../../../graphql/types";
+import { ExtractTaskDropdown } from "../selectors/ExtractTaskDropdown";
 
 interface CreateColumnModalProps {
   open: boolean;
@@ -50,9 +49,11 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
     instructions,
     agentic,
     extractIsList,
-    languageModelId,
     mustContainText,
+    taskName,
   } = objData;
+
+  console.log("existing_column", existing_column);
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -112,12 +113,14 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
             <Grid.Row>
               <Grid.Column width={16}>
                 <Form.Field>
-                  <label>Language Model</label>
-                  <LanguageModelDropdown
-                    onChange={(id: string) =>
-                      setObjData({ ...objData, languageModelId: id })
-                    }
-                    languageModelId={languageModelId}
+                  <label>Extract Task</label>
+                  <ExtractTaskDropdown
+                    onChange={(taskName: string | null) => {
+                      if (taskName) {
+                        setObjData({ ...objData, taskName });
+                      }
+                    }}
+                    taskName={taskName}
                   />
                 </Form.Field>
               </Grid.Column>

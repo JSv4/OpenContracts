@@ -38,5 +38,5 @@ USE_AUTH0=false
 
 # LLM SETTINGS
 # ------------------------------------------------------------------------------
-OPENAI_API_KEY=FAKE_API_KEY
+OPENAI_API_KEY=fake
 OPENAI_MODEL=gpt-4o

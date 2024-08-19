@@ -12,7 +12,6 @@ import {
   AnalyzerType,
   AnalysisType,
   AnnotationLabelType,
-  LanguageModelType,
   FieldsetType,
   ExtractType,
   CorpusQueryType,
@@ -210,6 +209,20 @@ export const GET_CORPUS_QUERY_DETAILS = gql`
         }
         rawText
         json
+        sourceNodeInRelationships {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+        targetNodeInRelationships {
+          edges {
+            node {
+              id
+            }
+          }
+        }
         tokensJsons
         document {
           id
@@ -886,6 +899,13 @@ export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT_IN_CORPUS = gql`
             }
           }
         }
+        targetNodeInRelationships {
+          edges {
+            node {
+              id
+            }
+          }
+        }
         creator {
           id
           email
@@ -1210,41 +1230,11 @@ export const GET_EXPORT = gql`
           instructions
           extractIsList
           limitToLabel
-          languageModel {
-            id
-            model
-          }
+          taskName
           agentic
           matchText
           query
-        }
-      }
-    }
-  }
-`;
-
-export interface GetLanguageModelsOutputs {
-  languageModels: {
-    pageInfo: PageInfo;
-    edges: {
-      node: LanguageModelType;
-    }[];
-  };
-}
-
-export const GET_LANGUAGEMODELS = gql`
-  query GetLanguageModels {
-    languageModels {
-      pageInfo {
-        hasNextPage
-        hasPreviousPage
-        endCursor
-        startCursor
-      }
-      edges {
-        node {
-          id
-          model
+          outputType
         }
       }
     }
@@ -1286,10 +1276,7 @@ export const REQUEST_GET_FIELDSETS = gql`
                 limitToLabel
                 instructions
                 extractIsList
-                languageModel {
-                  id
-                  model
-                }
+                taskName
                 agentic
               }
             }
@@ -1322,10 +1309,7 @@ export const GET_FIELDSET = gql`
         limitToLabel
         instructions
         extractIsList
-        languageModel {
-          id
-          model
-        }
+        taskName
         agentic
       }
     }
@@ -1360,10 +1344,8 @@ export const REQUEST_GET_EXTRACT = gql`
           matchText
           limitToLabel
           agentic
-          languageModel {
-            id
-            model
-          }
+          taskName
+          outputType
         }
       }
       creator {
@@ -1373,6 +1355,7 @@ export const REQUEST_GET_EXTRACT = gql`
       created
       started
       finished
+      error
       fullDocumentList {
         id
         title
@@ -1449,7 +1432,7 @@ export const REQUEST_GET_EXTRACT = gql`
 `;
 
 export interface GetExtractsInput {
-  name_Contains?: string;
+  searchText?: string;
 }
 
 export interface GetExtractsOutput {
@@ -1491,28 +1474,25 @@ export const REQUEST_GET_EXTRACTS = gql`
           created
           started
           finished
-          extractedDatacells {
-            edges {
-              node {
-                id
-                column {
-                  id
-                }
-                document {
-                  id
-                  title
-                }
-                data
-                dataDefinition
-                started
-                completed
-                failed
-                stacktrace
-              }
-            }
-          }
+          error
         }
       }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
     }
+  }
+`;
+
+export interface GetRegisteredExtractTasksOutput {
+  registeredExtractTasks: Record<string, string>;
+}
+
+export const GET_REGISTERED_EXTRACT_TASKS = gql`
+  query {
+    registeredExtractTasks
   }
 `;

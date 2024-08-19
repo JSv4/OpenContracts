@@ -58,8 +58,6 @@ export const Labelsets = () => {
   const opened_labelset = useReactiveVar(openedLabelset);
   const auth_token = useReactiveVar(authToken);
 
-  const location = useLocation();
-
   const [searchCache, setSearchCache] = useState<string>(labelset_search_term);
 
   const { refetch, loading, error, data, fetchMore } = useQuery<

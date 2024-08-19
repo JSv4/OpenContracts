@@ -16,6 +16,8 @@ interface DocumentCardProps {
   pageInfo: PageInfo | undefined;
   loading: boolean;
   loading_message: string;
+  onShiftClick?: (document: DocumentType) => void;
+  onClick?: (document: DocumentType) => void;
   removeFromCorpus?: (doc_ids: string[]) => void | any;
   fetchMore: (args?: any) => void | any;
 }
@@ -26,6 +28,8 @@ export const DocumentCards = ({
   pageInfo,
   loading,
   loading_message,
+  onShiftClick,
+  onClick,
   removeFromCorpus,
   fetchMore,
 }: DocumentCardProps) => {
@@ -75,6 +79,8 @@ export const DocumentCards = ({
         <DocumentItem
           key={node?.id ? node.id : `doc_item_${index}`}
           item={node}
+          onClick={onClick}
+          onShiftClick={onShiftClick}
           contextMenuOpen={contextMenuOpen}
           setContextMenuOpen={setContextMenuOpen}
           removeFromCorpus={removeFromCorpus}
@@ -106,7 +112,7 @@ export const DocumentCards = ({
         style={{
           flex: 1,
           width: "100%",
-          overflow: "hidden",
+          overflowY: "scroll",
           ...style,
         }}
       >

@@ -14,25 +14,17 @@ import _ from "lodash";
 
 import {
   editingDocument,
-  openedCorpus,
-  openedDocument,
   selectedDocumentIds,
   showAddDocsToCorpusModal,
   showDeleteDocumentsModal,
   viewingDocument,
 } from "../../graphql/cache";
-import {
-  AnnotationLabelType,
-  CorpusType,
-  DocumentType,
-} from "../../graphql/types";
-import { useMutation, useReactiveVar } from "@apollo/client";
+import { AnnotationLabelType, DocumentType } from "../../graphql/types";
 import { downloadFile } from "../../utils/files";
 import fallback_doc_icon from "../../assets/images/defaults/default_doc_icon.jpg";
 import { getPermissions } from "../../utils/transform";
 import { PermissionTypes } from "../types";
 import { MyPermissionsIndicator } from "../widgets/permissions/MyPermissionsIndicator";
-import { REMOVE_DOCUMENTS_FROM_CORPUS } from "../../graphql/mutations";
 
 interface DocumentItemProps {
   item: DocumentType;
@@ -41,6 +33,8 @@ interface DocumentItemProps {
   edit_caption?: string;
   add_caption?: string;
   contextMenuOpen: string | null;
+  onShiftClick?: (document: DocumentType) => void;
+  onClick?: (document: DocumentType) => void;
   removeFromCorpus?: (doc_ids: string[]) => void | any;
   setContextMenuOpen: (args: any) => any | void;
 }
@@ -52,11 +46,11 @@ export const DocumentItem = ({
   delete_caption = "Delete Document",
   download_caption = "Download PDF",
   contextMenuOpen,
+  onShiftClick,
+  onClick,
   removeFromCorpus,
   setContextMenuOpen,
 }: DocumentItemProps) => {
-  const selected_document_ids = useReactiveVar(selectedDocumentIds);
-
   const contextRef = React.useRef<HTMLElement | null>(null);
 
   const createContextFromEvent = (
@@ -83,23 +77,6 @@ export const DocumentItem = ({
         width: 0,
       }),
     } as HTMLElement;
-  };
-
-  const onSelect = (document: DocumentType) => {
-    // console.log("On selected document", document);
-    if (selected_document_ids.includes(document.id)) {
-      // console.log("Already selected... deselect")
-      const values = selected_document_ids.filter((id) => id !== document.id);
-      // console.log("Filtered values", values);
-      selectedDocumentIds(values);
-    } else {
-      selectedDocumentIds([...selected_document_ids, document.id]);
-    }
-    // console.log("selected doc ids", selected_document_ids);
-  };
-
-  const onOpen = (document: DocumentType) => {
-    openedDocument(document);
   };
 
   const onDownload = (file_url: string | void | null) => {
@@ -130,13 +107,13 @@ export const DocumentItem = ({
     event.stopPropagation();
     if (event.shiftKey) {
       // console.log("Shift Click - Check onSelect");
-      if (onSelect && _.isFunction(onSelect)) {
+      if (onShiftClick && _.isFunction(onShiftClick)) {
         // console.log("onSelect");
-        onSelect(item);
+        onShiftClick(item);
       }
     } else {
-      if (onOpen && _.isFunction(onOpen)) {
-        onOpen(item);
+      if (onClick && _.isFunction(onClick)) {
+        onClick(item);
       }
     }
   };

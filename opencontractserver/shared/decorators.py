@@ -119,13 +119,11 @@ def doc_analyzer_task(max_retries=None):
                 # Process annotations if task passed
                 if task_pass and analysis:
 
-                    logger.info("Task passed... continue to check types.")
-
                     # Check returned types if passed.
-                    if not isinstance(doc_annotations, list) or (len(doc_annotations) > 0 and not all(
-                        isinstance(a, str) for a in doc_annotations)
+                    if not isinstance(doc_annotations, list) or (
+                        len(doc_annotations) > 0
+                        and not all(isinstance(a, str) for a in doc_annotations)
                     ):
-                        logger.error(f"Raise Error for doc_annotations!")
                         raise ValueError(
                             "First element of the tuple must be a list of doc labels"
                         )
@@ -135,18 +133,17 @@ def doc_analyzer_task(max_retries=None):
                             "Second element of the tuple must be a list of OpenContractsAnnotationPythonTypes"
                         )
 
-                    logger.info(f"Test metadata: {metadata}")
-                    if not isinstance(metadata, list) or (len(metadata) > 0 and not all(
-                        isinstance(m, dict) and "data" in m for m in metadata)
+                    if not isinstance(metadata, list) or (
+                        len(metadata) > 0
+                        and not all(
+                            isinstance(m, dict) and "data" in m for m in metadata
+                        )
                     ):
-                        logger.error("Going to raise an error - malformed metadata!")
                         raise ValueError(
                             "Third element of the tuple must be a list of dictionaries with 'data' key"
                         )
 
                     for annotation_data in text_annotations:
-
-                        logger.info(f"Check type of annotation_data {annotation_data}")
 
                         if not is_dict_instance_of_typed_dict(
                             annotation_data, OpenContractsAnnotationPythonType

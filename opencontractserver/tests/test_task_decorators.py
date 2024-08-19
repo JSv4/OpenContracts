@@ -185,7 +185,8 @@ class DocAnalyzerTaskTestCase(TestCase):
             return [], "Not a list", [{"data": {}}], True
 
         with self.assertRaisesRegex(
-            ValueError, "Second element of the tuple must be a list of OpenContractsAnnotationPythonTypes"
+            ValueError,
+            "Second element of the tuple must be a list of OpenContractsAnnotationPythonTypes",
         ):
             invalid_text_annotations_task.si(
                 doc_id=self.document.id, analysis_id=self.analysis.id
@@ -200,7 +201,8 @@ class DocAnalyzerTaskTestCase(TestCase):
             return [], [], "Not a list", True
 
         with self.assertRaisesRegex(
-            ValueError, "Third element of the tuple must be a list of dictionaries with 'data' key"
+            ValueError,
+            "Third element of the tuple must be a list of dictionaries with 'data' key",
         ):
             invalid_metadata_task.si(
                 doc_id=self.document.id, analysis_id=self.analysis.id
@@ -215,7 +217,8 @@ class DocAnalyzerTaskTestCase(TestCase):
             return [], [{"random_key": "I am lazy", "wishlist?": "RTFD"}], [], True
 
         with self.assertRaisesRegex(
-            ValueError, "Each annotation must be of type OpenContractsAnnotationPythonType"
+            ValueError,
+            "Each annotation must be of type OpenContractsAnnotationPythonType",
         ):
             invalid_text_annotation_schema_task.si(
                 doc_id=self.document.id, analysis_id=self.analysis.id

@@ -1,17 +1,21 @@
 from celery.exceptions import Retry
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.test import TestCase
 
+from opencontractserver.analyzer.models import Analysis, Analyzer
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.shared.decorators import doc_analyzer_task
+from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_ONE_PATH
 
 User = get_user_model()
 
 
 @doc_analyzer_task(max_retries=10)
-def sample_task(doc_id, corpus_id=None):
+def sample_task(*args, **kwargs):
     return (
+        ["IMPORTANT_DOCUMENT"],
         [
             {
                 "id": 1,
@@ -33,18 +37,25 @@ class DocAnalyzerTaskTestCase(TestCase):
             username="testuser", password="testpassword"
         )
 
+        # Mock file content
+        pdf_file = ContentFile(
+            SAMPLE_PDF_FILE_ONE_PATH.open("rb").read(), name="test.pdf"
+        )
+
         # Create a real Document instance
         self.document = Document.objects.create(
             title="Test Document",
             description="A test document",
             backend_lock=True,
             creator=self.user,
+            pdf_file=pdf_file,
         )
         self.unlocked_document = Document.objects.create(
             title="Test Document 2",
             description="A test document",
             backend_lock=False,
             creator=self.user,
+            pdf_file=pdf_file,
         )
 
         # Create a real Corpus instance
@@ -52,17 +63,37 @@ class DocAnalyzerTaskTestCase(TestCase):
             title="Test Corpus", description="A test corpus", creator=self.user
         )
 
+        self.task_name_analyzer = Analyzer(
+            description="Valid Analyzer with Task",
+            task_name="opencontractserver.tasks.data_extract_tasks.oc_llama_index_doc_query",
+            creator=self.user,
+            manifest={},
+        )
+        self.task_name_analyzer.save()
+
+        self.analysis = Analysis(
+            analyzer_id=self.task_name_analyzer.id,
+            analyzed_corpus_id=self.corpus.id,
+            creator=self.user,
+        )
+        self.analysis.save()
+
     def test_doc_analyzer_task_backend_lock_retry_cycle(self):
         with self.assertRaises(Retry):
-            task = sample_task.s(doc_id=self.document.id).apply()
+            task = sample_task.s(
+                doc_id=self.document.id, analysis_id=self.analysis.id
+            ).apply()
             task.get()
 
     def test_doc_analyzer_task_no_backend_lock(self):
-        task = sample_task.si(doc_id=self.unlocked_document.id).apply()
+        task = sample_task.si(
+            doc_id=self.unlocked_document.id, analysis_id=self.analysis.id
+        ).apply()
         results = task.get()
         print(results)
         self.assertEqual(
             (
+                ["IMPORTANT_DOCUMENT"],
                 [
                     {
                         "id": 1,
@@ -89,7 +120,9 @@ class DocAnalyzerTaskTestCase(TestCase):
         with self.assertRaisesRegex(
             ValueError, f"Document with id {non_existent_id} does not exist"
         ):
-            sample_task.si(doc_id=non_existent_id).apply().get()
+            sample_task.si(
+                doc_id=non_existent_id, analysis_id=self.analysis.id
+            ).apply().get()
 
     def test_doc_analyzer_task_nonexistent_corpus(self):
         non_existent_corpus_id = self.corpus.id + 1000  # Ensure this ID doesn't exist
@@ -97,7 +130,9 @@ class DocAnalyzerTaskTestCase(TestCase):
             ValueError, f"Corpus with id {non_existent_corpus_id} does not exist"
         ):
             sample_task.si(
-                doc_id=self.document.id, corpus_id=non_existent_corpus_id
+                doc_id=self.document.id,
+                analysis_id=self.analysis.id,
+                corpus_id=non_existent_corpus_id,
             ).apply().get()
 
     def test_doc_analyzer_task_invalid_return_value(self):
@@ -105,49 +140,57 @@ class DocAnalyzerTaskTestCase(TestCase):
         self.document.save()
 
         @doc_analyzer_task()
-        def invalid_return_task(doc_id, corpus_id=None):
+        def invalid_return_task(*args, **kwargs):
             return "Invalid return value"
 
         with self.assertRaisesRegex(ValueError, "Function must return a tuple"):
-            invalid_return_task.s(doc_id=self.document.id).apply().get()
+            invalid_return_task.s(
+                doc_id=self.document.id, analysis_id=self.analysis.id
+            ).apply().get()
 
     def test_doc_analyzer_task_invalid_annotation(self):
         self.document.backend_lock = False
         self.document.save()
 
         @doc_analyzer_task()
-        def invalid_annotation_task(doc_id, corpus_id=None):
-            return "Not a list", [{"data": {}}], True
+        def invalid_annotation_task(*args, **kwargs):
+            return "Not a list", [], [{"data": {}}], True
 
         with self.assertRaisesRegex(
             ValueError, "First element of the tuple must be a list"
         ):
-            invalid_annotation_task.si(doc_id=self.document.id).apply().get()
+            invalid_annotation_task.si(
+                doc_id=self.document.id, analysis_id=self.analysis.id
+            ).apply().get()
 
     def test_doc_analyzer_task_invalid_metadata(self):
         self.document.backend_lock = False
         self.document.save()
 
         @doc_analyzer_task()
-        def invalid_metadata_task(doc_id, corpus_id=None):
-            return [], "Not a list", True
+        def invalid_metadata_task(*args, **kwargs):
+            return [], [], "Not a list", True
 
         with self.assertRaisesRegex(
             ValueError, "Second element of the tuple must be a list"
         ):
-            invalid_metadata_task.si(doc_id=self.document.id).apply().get()
+            invalid_metadata_task.si(
+                doc_id=self.document.id, analysis_id=self.analysis.id
+            ).apply().get()
 
     def test_doc_analyzer_task_missing_data_key(self):
         self.document.backend_lock = False
         self.document.save()
 
         @doc_analyzer_task()
-        def missing_data_key_task(doc_id, corpus_id=None):
-            return [], [{"not_data": {}}], True
+        def missing_data_key_task(*args, **kwargs):
+            return [], [], [{"not_data": {}}], True
 
         with self.assertRaisesRegex(
             ValueError,
-            "Second element of the tuple must be a list of dictionaries with "
+            "Third element of the tuple must be a list of dictionaries with "
             "'data' key",
         ):
-            missing_data_key_task.si(doc_id=self.document.id).apply().get()
+            missing_data_key_task.si(
+                doc_id=self.document.id, analysis_id=self.analysis.id
+            ).apply().get()

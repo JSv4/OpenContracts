@@ -309,12 +309,10 @@ def build_document_export(
 def is_dict_instance_of_typed_dict(instance: dict, typed_dict: type[TypedDict]):
     # validate with pydantic
     try:
-
         TypeAdapter(typed_dict).validate_python(instance)
         return True
 
-    except ValidationError as exc:
-        print(f"ERROR: Invalid schema: {exc}")
+    except ValidationError:
         return False
 
 

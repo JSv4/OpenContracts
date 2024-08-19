@@ -148,6 +148,19 @@ class DocAnalyzerTaskTestCase(TestCase):
                 doc_id=self.document.id, analysis_id=self.analysis.id
             ).apply().get()
 
+    def test_doc_analyzer_task_invalid_return_tuple_length(self):
+        self.document.backend_lock = False
+        self.document.save()
+
+        @doc_analyzer_task()
+        def invalid_return_task(*args, **kwargs):
+            return [], []
+
+        with self.assertRaisesRegex(ValueError, "Function must return a tuple"):
+            invalid_return_task.s(
+                doc_id=self.document.id, analysis_id=self.analysis.id
+            ).apply().get()
+
     def test_doc_analyzer_task_invalid_annotation(self):
         self.document.backend_lock = False
         self.document.save()
@@ -157,9 +170,24 @@ class DocAnalyzerTaskTestCase(TestCase):
             return "Not a list", [], [{"data": {}}], True
 
         with self.assertRaisesRegex(
-            ValueError, "First element of the tuple must be a list"
+            ValueError, "First element of the tuple must be a list of doc labels"
         ):
             invalid_annotation_task.si(
+                doc_id=self.document.id, analysis_id=self.analysis.id
+            ).apply().get()
+
+    def test_doc_analyzer_task_invalid_text_annotations(self):
+        self.document.backend_lock = False
+        self.document.save()
+
+        @doc_analyzer_task(max_retries=10)
+        def invalid_text_annotations_task(*args, **kwargs):
+            return [], "Not a list", [{"data": {}}], True
+
+        with self.assertRaisesRegex(
+            ValueError, "Second element of the tuple must be a list of OpenContractsAnnotationPythonTypes"
+        ):
+            invalid_text_annotations_task.si(
                 doc_id=self.document.id, analysis_id=self.analysis.id
             ).apply().get()
 
@@ -175,6 +203,21 @@ class DocAnalyzerTaskTestCase(TestCase):
             ValueError, "Third element of the tuple must be a list of dictionaries with 'data' key"
         ):
             invalid_metadata_task.si(
+                doc_id=self.document.id, analysis_id=self.analysis.id
+            ).apply().get()
+
+    def test_doc_analyzer_task_invalid_text_annotation_schema(self):
+        self.document.backend_lock = False
+        self.document.save()
+
+        @doc_analyzer_task()
+        def invalid_text_annotation_schema_task(*args, **kwargs):
+            return [], [{"random_key": "I am lazy", "wishlist?": "RTFD"}], [], True
+
+        with self.assertRaisesRegex(
+            ValueError, "Each annotation must be of type OpenContractsAnnotationPythonType"
+        ):
+            invalid_text_annotation_schema_task.si(
                 doc_id=self.document.id, analysis_id=self.analysis.id
             ).apply().get()
 

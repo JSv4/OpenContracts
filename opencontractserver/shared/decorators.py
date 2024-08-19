@@ -122,16 +122,24 @@ def doc_analyzer_task(max_retries=None):
                     logger.info("Task passed... continue to check types.")
 
                     # Check returned types if passed.
-                    if not isinstance(doc_annotations, list) or not all(
-                        isinstance(a, str) for a in doc_annotations
+                    if not isinstance(doc_annotations, list) or (len(doc_annotations) > 0 and not all(
+                        isinstance(a, str) for a in doc_annotations)
                     ):
+                        logger.error(f"Raise Error for doc_annotations!")
                         raise ValueError(
-                            "First element of the tuple must be a list of annotation dictionaries"
+                            "First element of the tuple must be a list of doc labels"
                         )
 
-                    if not isinstance(metadata, list) or not all(
-                        isinstance(m, dict) and "data" in m for m in metadata
+                    if not isinstance(text_annotations, list):
+                        raise ValueError(
+                            "Second element of the tuple must be a list of OpenContractsAnnotationPythonTypes"
+                        )
+
+                    logger.info(f"Test metadata: {metadata}")
+                    if not isinstance(metadata, list) or (len(metadata) > 0 and not all(
+                        isinstance(m, dict) and "data" in m for m in metadata)
                     ):
+                        logger.error("Going to raise an error - malformed metadata!")
                         raise ValueError(
                             "Third element of the tuple must be a list of dictionaries with 'data' key"
                         )

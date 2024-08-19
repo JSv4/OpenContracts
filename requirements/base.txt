@@ -5,8 +5,8 @@ argon2-cffi==21.3.0  # https://github.com/hynek/argon2_cffi
 redis==4.5.1  # https://github.com/redis/redis-py
 hiredis==2.0.0  # https://github.com/redis/hiredis-py
 celery==5.2.7  # pyup: < 6.0  # https://github.com/celery/celery
+flower==2.0.1  # https://github.com/mher/flower
 django-celery-beat==2.6.0  # https://github.com/celery/django-celery-beat
-flower==1.0.0  # https://github.com/mher/flower
 pyjwt==2.4.0  # https://github.com/jpadilla/pyjwt
 cryptography==43.0.0  # https://github.com/pyca/cryptography
 pydantic==2.*

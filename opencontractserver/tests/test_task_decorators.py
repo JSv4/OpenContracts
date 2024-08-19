@@ -172,7 +172,7 @@ class DocAnalyzerTaskTestCase(TestCase):
             return [], [], "Not a list", True
 
         with self.assertRaisesRegex(
-            ValueError, "Second element of the tuple must be a list"
+            ValueError, "Third element of the tuple must be a list of dictionaries with 'data' key"
         ):
             invalid_metadata_task.si(
                 doc_id=self.document.id, analysis_id=self.analysis.id

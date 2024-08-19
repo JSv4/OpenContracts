@@ -1421,7 +1421,6 @@ class StartCorpusAnalysisMutation(graphene.Mutation):
             transaction.on_commit(
                 lambda: start_analysis.s(
                     analysis_id=obj.id,
-                    user_id=info.context.user.id,
                 ).apply_async()
             )
 

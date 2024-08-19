@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.handlers.wsgi import WSGIRequest
 from django.db import transaction
 from django.utils import timezone
+from llama_index.legacy.readers.bagel import Documents
 
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
@@ -185,16 +186,15 @@ def install_analyzers(
     return resulting_ids
 
 
-def create_analysis_for_corpus_with_analyzer(
+def run_analysis(
     analysis_id: str,
-    user_id: int | str,
+    doc_ids: list[int | str] | None = None,
 ) -> int:
     """
-    Given an analyzer id and a corpus, package up the data required to transfer
+    Given an analysis id, package up the data required to transfer
     the task to a Gremlin Engine and then submit it to the target analyzer on the target
     Gremlin engine. Doc_ids is optional, if you only want to analyzer certain documents
-    in a given corpus. You MUST provide a corpus_id, however, and docs MUST be part of the
-    corpus, or they're ignored.
+    in a given corpus, it overrides the corpus data.
     """
 
     # Not the most efficient set of calls, I know. Holdover from a slight change in how
@@ -202,12 +202,28 @@ def create_analysis_for_corpus_with_analyzer(
     analysis = Analysis.objects.get(id=analysis_id)
     analyzer = analysis.analyzer
     gremlin = analyzer.host_gremlin
-    corpus = analysis.analyzed_corpus
-    docs = corpus.documents.all()
+
+    # If we're analyzing an entire corpus
+    if analysis.analyzed_corpus:
+        corpus = analysis.analyzed_corpus
+        docs = corpus.documents.all()
+        logger.info(f"Analyze corpus {corpus.id} with {docs.count()} docs")
+
+    # Otherwise we need a list of valid doc_ids to apply to analysis
+    elif isinstance(doc_ids, list) and len(doc_ids) > 0:
+        docs = Documents.filter(id__in=doc_ids)
+        if docs.count() != len(doc_ids):
+            raise ValueError(f"Failed retrieving all documents in doc list {doc_ids}")
+        logger.info(f"Analyze document list with d {doc_ids}")
+
+    # OR we have to throw an error
+    else:
+        raise ValueError(
+            f"create_analysis_with_analyzer() - called and analysis {analysis_id} has no corpus property "
+            f"AND no doc_id list provided as alternate doc source"
+        )
+
     analysis.analyzed_documents.add(*[doc.id for doc in docs])
-
-    logger.info(f"Analyze corpus {corpus.id} with docs {docs}")
-
     document_exchange_data = []
     for doc in docs:
 

@@ -2,6 +2,7 @@ import uuid
 
 import django
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from tree_queries.models import TreeNode
@@ -198,5 +199,68 @@ class CorpusQueryUserObjectPermission(UserObjectPermissionBase):
 class CorpusQueryGroupObjectPermission(GroupObjectPermissionBase):
     content_object = django.db.models.ForeignKey(
         "CorpusQuery", on_delete=django.db.models.CASCADE
+    )
+    # enabled = False
+
+
+class CorpusActionTrigger(django.db.models.TextChoices):
+    ADD_DOCUMENT = "add_document", "Add Document"
+    EDIT_DOCUMENT = "edit_document", "Edit Document"
+
+
+class CorpusAction(BaseOCModel):
+    name = django.db.models.CharField(
+        max_length=256, blank=False, null=False, default="Corpus Action"
+    )
+    corpus = django.db.models.ForeignKey(
+        "Corpus", on_delete=django.db.models.CASCADE, related_name="actions"
+    )
+    fieldset = django.db.models.ForeignKey(
+        "extracts.Fieldset", on_delete=django.db.models.SET_NULL, null=True, blank=True
+    )
+    analyzer = django.db.models.ForeignKey(
+        "analyzer.Analyzer", on_delete=django.db.models.SET_NULL, null=True, blank=True
+    )
+    trigger = django.db.models.CharField(
+        max_length=256, choices=CorpusActionTrigger.choices
+    )
+
+    class Meta:
+        constraints = [
+            django.db.models.CheckConstraint(
+                check=(
+                    django.db.models.Q(fieldset__isnull=False, analyzer__isnull=True)
+                    | django.db.models.Q(fieldset__isnull=True, analyzer__isnull=False)
+                ),
+                name="exactly_one_of_fieldset_or_analyzer",
+            )
+        ]
+
+    def clean(self):
+        if self.fieldset and self.analyzer:
+            raise ValidationError("Only one of fieldset or analyzer can be set.")
+        if not self.fieldset and not self.analyzer:
+            raise ValidationError("Either fieldset or analyzer must be set.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        action_type = "Fieldset" if self.fieldset else "Analyzer"
+        return f"CorpusAction for {self.corpus} - {action_type} - {self.get_trigger_display()}"
+
+
+class CorpusActionUserObjectPermission(UserObjectPermissionBase):
+    content_object = django.db.models.ForeignKey(
+        "CorpusAction", on_delete=django.db.models.CASCADE
+    )
+    # enabled = False
+
+
+# Model for Django Guardian permissions... trying to improve performance...
+class CorpusActionGroupObjectPermission(GroupObjectPermissionBase):
+    content_object = django.db.models.ForeignKey(
+        "CorpusAction", on_delete=django.db.models.CASCADE
     )
     # enabled = False

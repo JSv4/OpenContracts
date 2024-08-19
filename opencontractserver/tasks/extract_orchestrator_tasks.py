@@ -37,7 +37,7 @@ def mark_extract_complete(extract_id):
 
 
 @shared_task
-def run_extract(extract_id, user_id):
+def run_extract(extract_id: Optional[str | int], user_id: str | int):
     logger.info(f"Run extract for extract {extract_id}")
 
     extract = Extract.objects.get(pk=extract_id)
@@ -72,7 +72,6 @@ def run_extract(extract_id, user_id):
 
                 # Add data cell to tracking
                 row_results.data.add(cell)
-
                 # Get the task function dynamically based on the column's task_name
                 task_func = get_task_by_name(column.task_name)
                 if task_func is None:

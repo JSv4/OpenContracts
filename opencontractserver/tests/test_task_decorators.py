@@ -141,7 +141,7 @@ class DocAnalyzerTaskTestCase(TestCase):
 
         self.assertEqual(1, annotations.count())
         self.assertEqual(1, annotation_labels.count())
-        self.assertEqual(annotations[0].annotation_label.id, annotations[0].id)
+        self.assertEqual(annotations[0].annotation_label.id, annotation_labels[0].id)
         self.assertEqual(annotations[0].raw_text, "This is a sample PDF document")
         self.assertEqual(annotation_labels[0].text, "IMPORTANT!")
 

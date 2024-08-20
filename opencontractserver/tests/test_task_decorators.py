@@ -34,11 +34,6 @@ class DocAnalyzerTaskTestCase(TestCase):
             username="testuser", password="testpassword"
         )
 
-        # Mock file content
-        pdf_file = ContentFile(
-            SAMPLE_PDF_FILE_ONE_PATH.open("rb").read(), name="test.pdf"
-        )
-
         # Create a real Document instance
         self.document = Document.objects.create(
             title="Test Document",

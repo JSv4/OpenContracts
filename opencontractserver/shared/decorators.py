@@ -73,31 +73,22 @@ def doc_analyzer_task(max_retries=None):
 
             try:
                 # Retrieve necessary file contents
-                pdf_file_bytes = doc.pdf_file.read()
-                txt_extract = (
-                    doc.txt_extract_file.read().decode("utf-8")
-                    if doc.txt_extract_file
-                    else None
-                )
-                pawls_parse = (
-                    json.loads(doc.pawls_parse_file.read().decode("utf-8"))
-                    if doc.pawls_parse_file
-                    else None
-                )
-
-                logger.info(
-                    "Retrieved pdf_file_bytes {type(pdf_file_bytes)}, txt_extract {type(txt_extract)}, pawls_parse "
-                    "({type(pawls_parse)})"
-                )
+                # NOTE - I disabled this because there is some pretty significant likelihood that text extracted from
+                # PDF won't fully match our extracted text layer. This is due to differences in white space handling,
+                # OCR, etc., etc. I can see reasons to provide the bytes to the decorated function, but it's going to be
+                # something that introduces ALL kinds of drift. Rather than deal with that absent a really compelling
+                # reasons, going to avoid it for now.
+                # pdf_file_bytes = doc.pdf_file.read() if doc.pdf_file else None
+                pdf_text_extract = doc.txt_extract_file.read().decode('utf-8') if doc.txt_extract_file else None
+                pdf_pawls_extract = json.loads(doc.pawls_parse_file.read()) if doc.pawls_parse_file else None
 
                 # Create PdfDataLayer
-                pdf_data_layer = makePdfTranslationLayerFromPawlsTokens(pawls_parse)
+                pdf_data_layer = makePdfTranslationLayerFromPawlsTokens(pdf_pawls_extract)
 
                 # Call the wrapped function with the retrieved data
                 result = func(
-                    pdf_file_bytes=pdf_file_bytes,
-                    txt_extract=txt_extract,
-                    pawls_parse=pawls_parse,
+                    pdf_text_extract=pdf_text_extract,
+                    pdf_pawls_extract=pdf_pawls_extract,
                     *args,
                     **kwargs,
                 )
@@ -173,7 +164,7 @@ def doc_analyzer_task(max_retries=None):
                             label, _ = AnnotationLabel.objects.get_or_create(
                                 text=annotation_data["annotationLabel"],
                                 label_type=LabelType.TOKEN_LABEL,
-                                creator=analysis.creator
+                                creator=analysis.creator,
                             )
                             Annotation.objects.create(
                                 document=doc,

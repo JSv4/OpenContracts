@@ -1,14 +1,17 @@
+from io import BytesIO
+
+from PyPDF2 import PdfFileReader, PdfReader
 from celery.exceptions import Retry
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.test import TestCase
 
 from opencontractserver.analyzer.models import Analysis, Analyzer
-from opencontractserver.annotations.models import AnnotationLabel, Annotation
+from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.shared.decorators import doc_analyzer_task
-from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_ONE_PATH
+from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_ONE_PATH, SAMPLE_TXT_FILE_ONE_PATH
 from opencontractserver.types.dicts import TextSpan
 
 User = get_user_model()
@@ -35,14 +38,18 @@ class DocAnalyzerTaskTestCase(TestCase):
             username="testuser", password="testpassword"
         )
 
+        with open(SAMPLE_PDF_FILE_ONE_PATH, 'rb') as pdf_file:
+            self.pdf_content = ContentFile(pdf_file.read(), name=pdf_file.name)
+
+        with open(SAMPLE_TXT_FILE_ONE_PATH, 'r') as txt_file:
+            self.txt_content = ContentFile(txt_file.read(), name=txt_file.name)
+
         # Create a real Document instance
         self.document = Document.objects.create(
             title="Test Document",
             description="A test document",
-            pdf_file=ContentFile(b"dummy pdf content", name="test.pdf"),
-            txt_extract_file=ContentFile(
-                b"This is a sample PDF document.", name="test.txt"
-            ),
+            pdf_file=self.pdf_content,
+            txt_extract_file=self.txt_content,
             pawls_parse_file=ContentFile(
                 b'[{"page": {"width": 612, "height": 792, "index": 0}, "tokens": [{"x": 72, "y": 72, "width": 50, '
                 b'"height": 12, "text": "This"}, {"x": 130, "y": 72, "width": 20, "height": 12, "text": "is"}, '
@@ -58,10 +65,8 @@ class DocAnalyzerTaskTestCase(TestCase):
         self.unlocked_document = Document.objects.create(
             title="Test Document 2",
             description="A test document",
-            pdf_file=ContentFile(b"dummy pdf content", name="test.pdf"),
-            txt_extract_file=ContentFile(
-                b"This is a sample PDF document.", name="test.txt"
-            ),
+            pdf_file=self.pdf_content,
+            txt_extract_file=self.txt_content,
             pawls_parse_file=ContentFile(
                 b'[{"page": {"width": 612, "height": 792, "index": 0}, "tokens": [{"x": 72, "y": 72, "width": 50, '
                 b'"height": 12, "text": "This"}, {"x": 130, "y": 72, "width": 20, "height": 12, "text": "is"}, '
@@ -135,6 +140,18 @@ class DocAnalyzerTaskTestCase(TestCase):
         self.assertEqual(annotations[0].annotation_label.id, annotations[0].id)
         self.assertEqual(annotations[0].raw_text, "This is a sample PDF document")
         self.assertEqual(annotation_labels[0].text, "IMPORTANT!")
+
+    def test_function_has_access_to_pdf_text(self):
+        @doc_analyzer_task()
+        def test_pdf_text_received(*args, pdf_text_extract, **kwargs):
+            return [], [], [{"data": pdf_text_extract}], True
+
+        expected_text = SAMPLE_TXT_FILE_ONE_PATH.read_text()
+        processed_text = test_pdf_text_received.si(
+                doc_id=self.unlocked_document.id, analysis_id=self.analysis.id
+            ).apply().get()[2][0]['data']
+
+        self.assertEqual(processed_text, expected_text)
 
     def test_doc_analyzer_task_missing_doc_id(self):
         with self.assertRaisesRegex(
@@ -211,10 +228,7 @@ class DocAnalyzerTaskTestCase(TestCase):
         def invalid_text_annotations_task(*args, **kwargs):
             return [], "Not a list", [{"data": {}}], True
 
-        with self.assertRaisesRegex(
-            ValueError,
-            "Second element of the tuple must be"
-        ):
+        with self.assertRaisesRegex(ValueError, "Second element of the tuple must be"):
             invalid_text_annotations_task.si(
                 doc_id=self.document.id, analysis_id=self.analysis.id
             ).apply().get()

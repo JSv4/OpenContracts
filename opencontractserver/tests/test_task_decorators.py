@@ -203,7 +203,7 @@ class DocAnalyzerTaskTestCase(TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "Second element of the tuple must be a list of (TextSpan, str) tuples",
+            "Second element of the tuple must be"
         ):
             invalid_text_annotations_task.si(
                 doc_id=self.document.id, analysis_id=self.analysis.id

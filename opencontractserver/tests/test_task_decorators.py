@@ -1,6 +1,3 @@
-from io import BytesIO
-
-from PyPDF2 import PdfFileReader, PdfReader
 from celery.exceptions import Retry
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -11,7 +8,10 @@ from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.shared.decorators import doc_analyzer_task
-from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_ONE_PATH, SAMPLE_TXT_FILE_ONE_PATH
+from opencontractserver.tests.fixtures import (
+    SAMPLE_PDF_FILE_ONE_PATH,
+    SAMPLE_TXT_FILE_ONE_PATH,
+)
 from opencontractserver.types.dicts import TextSpan
 
 User = get_user_model()
@@ -38,10 +38,10 @@ class DocAnalyzerTaskTestCase(TestCase):
             username="testuser", password="testpassword"
         )
 
-        with open(SAMPLE_PDF_FILE_ONE_PATH, 'rb') as pdf_file:
+        with open(SAMPLE_PDF_FILE_ONE_PATH, "rb") as pdf_file:
             self.pdf_content = ContentFile(pdf_file.read(), name=pdf_file.name)
 
-        with open(SAMPLE_TXT_FILE_ONE_PATH, 'r') as txt_file:
+        with open(SAMPLE_TXT_FILE_ONE_PATH) as txt_file:
             self.txt_content = ContentFile(txt_file.read(), name=txt_file.name)
 
         # Create a real Document instance
@@ -147,9 +147,13 @@ class DocAnalyzerTaskTestCase(TestCase):
             return [], [], [{"data": pdf_text_extract}], True
 
         expected_text = SAMPLE_TXT_FILE_ONE_PATH.read_text()
-        processed_text = test_pdf_text_received.si(
+        processed_text = (
+            test_pdf_text_received.si(
                 doc_id=self.unlocked_document.id, analysis_id=self.analysis.id
-            ).apply().get()[2][0]['data']
+            )
+            .apply()
+            .get()[2][0]["data"]
+        )
 
         self.assertEqual(processed_text, expected_text)
 

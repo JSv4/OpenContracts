@@ -79,11 +79,21 @@ def doc_analyzer_task(max_retries=None):
                 # something that introduces ALL kinds of drift. Rather than deal with that absent a really compelling
                 # reasons, going to avoid it for now.
                 # pdf_file_bytes = doc.pdf_file.read() if doc.pdf_file else None
-                pdf_text_extract = doc.txt_extract_file.read().decode('utf-8') if doc.txt_extract_file else None
-                pdf_pawls_extract = json.loads(doc.pawls_parse_file.read()) if doc.pawls_parse_file else None
+                pdf_text_extract = (
+                    doc.txt_extract_file.read().decode("utf-8")
+                    if doc.txt_extract_file
+                    else None
+                )
+                pdf_pawls_extract = (
+                    json.loads(doc.pawls_parse_file.read())
+                    if doc.pawls_parse_file
+                    else None
+                )
 
                 # Create PdfDataLayer
-                pdf_data_layer = makePdfTranslationLayerFromPawlsTokens(pdf_pawls_extract)
+                pdf_data_layer = makePdfTranslationLayerFromPawlsTokens(
+                    pdf_pawls_extract
+                )
 
                 # Call the wrapped function with the retrieved data
                 result = func(

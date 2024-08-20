@@ -4,12 +4,13 @@ from functools import wraps
 
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
+from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
 
 from opencontractserver.analyzer.models import Analysis
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.types.dicts import OpenContractsAnnotationPythonType
+from opencontractserver.types.dicts import TextSpan
 from opencontractserver.types.enums import LabelType
 from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
 
@@ -89,6 +90,9 @@ def doc_analyzer_task(max_retries=None):
                     "({type(pawls_parse)})"
                 )
 
+                # Create PdfDataLayer
+                pdf_data_layer = makePdfTranslationLayerFromPawlsTokens(pawls_parse)
+
                 # Call the wrapped function with the retrieved data
                 result = func(
                     pdf_file_bytes=pdf_file_bytes,
@@ -100,15 +104,13 @@ def doc_analyzer_task(max_retries=None):
 
                 logger.info(f"Function result: {result}")
 
-                # TODO - use PlasmaPDF to accept raw spans and convert them to proper OpenContractsAnnotationPythonType
-
                 if not isinstance(result, tuple) or len(result) != 4:
                     raise ValueError(
                         "Function must return a tuple of (List[str], List[OpenContractsAnnotationPythonType], "
                         "List[Dict[str, Any]], bool)"
                     )
 
-                doc_annotations, text_annotations, metadata, task_pass = result
+                doc_annotations, span_label_pairs, metadata, task_pass = result
 
                 if not isinstance(task_pass, bool):
                     raise ValueError(
@@ -119,6 +121,8 @@ def doc_analyzer_task(max_retries=None):
                 # Process annotations if task passed
                 if task_pass and analysis:
 
+                    logger.info("Doc analyzer task passed... handle outputs.")
+
                     # Check returned types if passed.
                     if not isinstance(doc_annotations, list) or (
                         len(doc_annotations) > 0
@@ -128,9 +132,9 @@ def doc_analyzer_task(max_retries=None):
                             "First element of the tuple must be a list of doc labels"
                         )
 
-                    if not isinstance(text_annotations, list):
+                    if not isinstance(span_label_pairs, list):
                         raise ValueError(
-                            "Second element of the tuple must be a list of OpenContractsAnnotationPythonTypes"
+                            "Second element of the tuple must be a list of (TextSpan, str) tuples"
                         )
 
                     if not isinstance(metadata, list) or (
@@ -143,28 +147,47 @@ def doc_analyzer_task(max_retries=None):
                             "Third element of the tuple must be a list of dictionaries with 'data' key"
                         )
 
-                    for annotation_data in text_annotations:
+                    for span_label_pair in span_label_pairs:
 
-                        if not is_dict_instance_of_typed_dict(
-                            annotation_data, OpenContractsAnnotationPythonType
+                        logger.info(f"Look at span_label_pair: {span_label_pair}")
+
+                        if not (
+                            isinstance(span_label_pair, tuple)
+                            and len(span_label_pair) == 2
+                            and is_dict_instance_of_typed_dict(
+                                span_label_pair[0], TextSpan
+                            )
+                            and isinstance(span_label_pair[1], str)
                         ):
                             raise ValueError(
-                                "Each annotation must be of type OpenContractsAnnotationPythonType"
+                                "Second element of the tuple must be a list of (TextSpan, str) tuples"
                             )
 
-                        label, _ = AnnotationLabel.objects.get_or_create(
-                            text=annotation_data["annotationLabel"],
-                            label_type=LabelType.TOKEN_LABEL
-                            if annotation_data["page"] != 1
-                            else LabelType.DOC_TYPE_LABEL,
-                        )
-                        Annotation.objects.create(
-                            document=doc,
-                            analysis=analysis,
-                            annotation_label=label,
-                            page=annotation_data["page"],
-                            raw_text=annotation_data["rawText"],
-                        )
+                        # Convert (TextSpan, str) pairs to OpenContractsAnnotationPythonType
+                        annotations = []
+                        for span, label in span_label_pairs:
+                            oc_annotation = (
+                                pdf_data_layer.create_opencontract_annotation_from_span(
+                                    {"span": span, "annotation_label": label}
+                                )
+                            )
+                            annotations.append(oc_annotation)
+
+                        for annotation_data in annotations:
+                            label, _ = AnnotationLabel.objects.get_or_create(
+                                text=annotation_data["annotationLabel"],
+                                label_type=LabelType.TOKEN_LABEL
+                                if annotation_data["page"] != 1
+                                else LabelType.DOC_TYPE_LABEL,
+                            )
+                            Annotation.objects.create(
+                                document=doc,
+                                analysis=analysis,
+                                annotation_label=label,
+                                page=annotation_data["page"],
+                                raw_text=annotation_data["rawText"],
+                                json=annotation_data["annotation_json"],
+                            )
 
                 return result  # Return the result from the wrapped function
 

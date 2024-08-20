@@ -8,6 +8,7 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.shared.decorators import doc_analyzer_task
 from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_ONE_PATH
+from opencontractserver.types.dicts import TextSpan
 
 User = get_user_model()
 
@@ -17,13 +18,10 @@ def sample_task(*args, **kwargs):
     return (
         ["IMPORTANT_DOCUMENT"],
         [
-            {
-                "id": 1,
-                "annotationLabel": "test",
-                "rawText": "text",
-                "page": 1,
-                "annotation_json": {},
-            }
+            (
+                TextSpan(id="1", start=0, end=29, text="This is a sample PDF document"),
+                "IMPORTANT!",
+            )
         ],
         [{"data": {"processed": True}}],
         True,
@@ -32,7 +30,6 @@ def sample_task(*args, **kwargs):
 
 class DocAnalyzerTaskTestCase(TestCase):
     def setUp(self):
-
         self.user = User.objects.create_user(
             username="testuser", password="testpassword"
         )
@@ -46,16 +43,39 @@ class DocAnalyzerTaskTestCase(TestCase):
         self.document = Document.objects.create(
             title="Test Document",
             description="A test document",
+            pdf_file=ContentFile(b"dummy pdf content", name="test.pdf"),
+            txt_extract_file=ContentFile(
+                b"This is a sample PDF document.", name="test.txt"
+            ),
+            pawls_parse_file=ContentFile(
+                b'[{"page": {"width": 612, "height": 792, "index": 0}, "tokens": [{"x": 72, "y": 72, "width": 50, '
+                b'"height": 12, "text": "This"}, {"x": 130, "y": 72, "width": 20, "height": 12, "text": "is"}, '
+                b'{"x": 158, "y": 72, "width": 40, "height": 12, "text": "a"}, {"x": 206, "y": 72, "width": 60, '
+                b'"height": 12, "text": "sample"}, {"x": 274, "y": 72, "width": 50, "height": 12, "text": "PDF"}, '
+                b'{"x": 332, "y": 72, "width": 80, "height": 12, "text": "document."}]}]',
+                name="test_pawls.json",
+            ),
             backend_lock=True,
             creator=self.user,
-            pdf_file=pdf_file,
         )
+
         self.unlocked_document = Document.objects.create(
             title="Test Document 2",
             description="A test document",
+            pdf_file=ContentFile(b"dummy pdf content", name="test.pdf"),
+            txt_extract_file=ContentFile(
+                b"This is a sample PDF document.", name="test.txt"
+            ),
+            pawls_parse_file=ContentFile(
+                b'[{"page": {"width": 612, "height": 792, "index": 0}, "tokens": [{"x": 72, "y": 72, "width": 50, '
+                b'"height": 12, "text": "This"}, {"x": 130, "y": 72, "width": 20, "height": 12, "text": "is"}, '
+                b'{"x": 158, "y": 72, "width": 40, "height": 12, "text": "a"}, {"x": 206, "y": 72, "width": 60, '
+                b'"height": 12, "text": "sample"}, {"x": 274, "y": 72, "width": 50, "height": 12, "text": "PDF"}, '
+                b'{"x": 332, "y": 72, "width": 80, "height": 12, "text": "document."}]}]',
+                name="test_pawls.json",
+            ),
             backend_lock=False,
             creator=self.user,
-            pdf_file=pdf_file,
         )
 
         # Create a real Corpus instance
@@ -95,13 +115,15 @@ class DocAnalyzerTaskTestCase(TestCase):
             (
                 ["IMPORTANT_DOCUMENT"],
                 [
-                    {
-                        "id": 1,
-                        "annotationLabel": "test",
-                        "rawText": "text",
-                        "page": 1,
-                        "annotation_json": {},
-                    }
+                    (
+                        TextSpan(
+                            id="1",
+                            start=0,
+                            end=29,
+                            text="This is a sample PDF document",
+                        ),
+                        "IMPORTANT!",
+                    )
                 ],
                 [{"data": {"processed": True}}],
                 True,
@@ -186,7 +208,7 @@ class DocAnalyzerTaskTestCase(TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "Second element of the tuple must be a list of OpenContractsAnnotationPythonTypes",
+            "Second element of the tuple must be a list of (TextSpan, str) tuples",
         ):
             invalid_text_annotations_task.si(
                 doc_id=self.document.id, analysis_id=self.analysis.id
@@ -216,10 +238,7 @@ class DocAnalyzerTaskTestCase(TestCase):
         def invalid_text_annotation_schema_task(*args, **kwargs):
             return [], [{"random_key": "I am lazy", "wishlist?": "RTFD"}], [], True
 
-        with self.assertRaisesRegex(
-            ValueError,
-            "Each annotation must be of type OpenContractsAnnotationPythonType",
-        ):
+        with self.assertRaisesRegex(ValueError, "Second element of the tuple must be"):
             invalid_text_annotation_schema_task.si(
                 doc_id=self.document.id, analysis_id=self.analysis.id
             ).apply().get()

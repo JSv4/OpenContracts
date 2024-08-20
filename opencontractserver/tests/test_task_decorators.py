@@ -1,3 +1,5 @@
+import json
+
 from celery.exceptions import Retry
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -32,6 +34,16 @@ def sample_task(*args, **kwargs):
     )
 
 
+dummy_pawls_bytes = (
+    b'[{"page": {"width": 612, "height": 792, "index": 0}, "tokens": [{"x": 72, "y": 72, "width": 50, '
+    b'"height": 12, "text": "This"}, {"x": 130, "y": 72, "width": 20, "height": 12, "text": "is"}, '
+    b'{"x": 158, "y": 72, "width": 40, "height": 12, "text": "a"}, {"x": 206, "y": 72, "width": 60, '
+    b'"height": 12, "text": "sample"}, {"x": 274, "y": 72, "width": 50, "height": 12, "text": "PDF"}, '
+    b'{"x": 332, "y": 72, "width": 80, "height": 12, "text": "document."}]}]'
+)
+dummy_pawls_data = json.loads(dummy_pawls_bytes)
+
+
 class DocAnalyzerTaskTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -51,11 +63,7 @@ class DocAnalyzerTaskTestCase(TestCase):
             pdf_file=self.pdf_content,
             txt_extract_file=self.txt_content,
             pawls_parse_file=ContentFile(
-                b'[{"page": {"width": 612, "height": 792, "index": 0}, "tokens": [{"x": 72, "y": 72, "width": 50, '
-                b'"height": 12, "text": "This"}, {"x": 130, "y": 72, "width": 20, "height": 12, "text": "is"}, '
-                b'{"x": 158, "y": 72, "width": 40, "height": 12, "text": "a"}, {"x": 206, "y": 72, "width": 60, '
-                b'"height": 12, "text": "sample"}, {"x": 274, "y": 72, "width": 50, "height": 12, "text": "PDF"}, '
-                b'{"x": 332, "y": 72, "width": 80, "height": 12, "text": "document."}]}]',
+                dummy_pawls_bytes,
                 name="test_pawls.json",
             ),
             backend_lock=True,
@@ -68,11 +76,7 @@ class DocAnalyzerTaskTestCase(TestCase):
             pdf_file=self.pdf_content,
             txt_extract_file=self.txt_content,
             pawls_parse_file=ContentFile(
-                b'[{"page": {"width": 612, "height": 792, "index": 0}, "tokens": [{"x": 72, "y": 72, "width": 50, '
-                b'"height": 12, "text": "This"}, {"x": 130, "y": 72, "width": 20, "height": 12, "text": "is"}, '
-                b'{"x": 158, "y": 72, "width": 40, "height": 12, "text": "a"}, {"x": 206, "y": 72, "width": 60, '
-                b'"height": 12, "text": "sample"}, {"x": 274, "y": 72, "width": 50, "height": 12, "text": "PDF"}, '
-                b'{"x": 332, "y": 72, "width": 80, "height": 12, "text": "document."}]}]',
+                dummy_pawls_bytes,
                 name="test_pawls.json",
             ),
             backend_lock=False,
@@ -156,6 +160,21 @@ class DocAnalyzerTaskTestCase(TestCase):
         )
 
         self.assertEqual(processed_text, expected_text)
+
+    def test_function_has_access_to_pawls_tokens(self):
+        @doc_analyzer_task()
+        def test_pdf_tokens_received(*args, pdf_pawls_extract, **kwargs):
+            return [], [], [{"data": pdf_pawls_extract}], True
+
+        received_tokens = (
+            test_pdf_tokens_received.si(
+                doc_id=self.unlocked_document.id, analysis_id=self.analysis.id
+            )
+            .apply()
+            .get()[2][0]["data"]
+        )
+
+        self.assertEqual(received_tokens, dummy_pawls_data)
 
     def test_doc_analyzer_task_missing_doc_id(self):
         with self.assertRaisesRegex(

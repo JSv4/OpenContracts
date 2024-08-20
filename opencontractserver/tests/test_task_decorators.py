@@ -4,6 +4,7 @@ from django.core.files.base import ContentFile
 from django.test import TestCase
 
 from opencontractserver.analyzer.models import Analysis, Analyzer
+from opencontractserver.annotations.models import AnnotationLabel, Annotation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.shared.decorators import doc_analyzer_task
@@ -125,6 +126,15 @@ class DocAnalyzerTaskTestCase(TestCase):
             ),
             results,
         )
+
+        annotation_labels = AnnotationLabel.objects.all()
+        annotations = Annotation.objects.all()
+
+        self.assertEqual(1, annotations.count())
+        self.assertEqual(1, annotation_labels.count())
+        self.assertEqual(annotations[0].annotation_label.id, annotations[0].id)
+        self.assertEqual(annotations[0].raw_text, "This is a sample PDF document")
+        self.assertEqual(annotation_labels[0].text, "IMPORTANT!")
 
     def test_doc_analyzer_task_missing_doc_id(self):
         with self.assertRaisesRegex(

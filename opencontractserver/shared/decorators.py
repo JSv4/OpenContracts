@@ -164,21 +164,16 @@ def doc_analyzer_task(max_retries=None):
                             )
 
                         # Convert (TextSpan, str) pairs to OpenContractsAnnotationPythonType
-                        annotations = []
                         for span, label in span_label_pairs:
-                            oc_annotation = (
+                            annotation_data = (
                                 pdf_data_layer.create_opencontract_annotation_from_span(
                                     {"span": span, "annotation_label": label}
                                 )
                             )
-                            annotations.append(oc_annotation)
-
-                        for annotation_data in annotations:
                             label, _ = AnnotationLabel.objects.get_or_create(
                                 text=annotation_data["annotationLabel"],
-                                label_type=LabelType.TOKEN_LABEL
-                                if annotation_data["page"] != 1
-                                else LabelType.DOC_TYPE_LABEL,
+                                label_type=LabelType.TOKEN_LABEL,
+                                creator=analysis.creator
                             )
                             Annotation.objects.create(
                                 document=doc,
@@ -188,6 +183,8 @@ def doc_analyzer_task(max_retries=None):
                                 raw_text=annotation_data["rawText"],
                                 json=annotation_data["annotation_json"],
                             )
+
+                    # TODO - do doc labels
 
                 return result  # Return the result from the wrapped function
 

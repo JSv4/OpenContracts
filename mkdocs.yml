@@ -51,7 +51,8 @@ nav:
         - Architecture: architecture/components/Data-flow-diagram.md
         - Asynchronous Processing: architecture/asynchronous-processing.md
         - LlamaIndex & Django Integration: extract_and_retrieval/intro_to_django_annotation_vector_store.md
-        - Datagrid Extract: extract_and_retrieval/document_data_extract.md
+        - Datagrid Extract: extract_and_retrieval/document_data_extract.
+        - Automated Tests: architecture/opencontract-corpus-actions.md
         - Backend- Question Answering: extract_and_retrieval/querying_corpus.md
         - Backend - Datagrid Extract: extract_and_retrieval/document_data_extract.md
         - Annotator Component: architecture/components/annotator/overview.md
@@ -70,6 +71,7 @@ nav:
       - Step 8 - Data Extract: walkthrough/step-8-data-extract.md
       - Advanced:
           - Data Extract Models: walkthrough/advanced/data-extract-models.md
+          - Write Automated Corpus Actions: walkthrough/advanced/register-doc-analyzer.md
           - Write Your Own Llama Index Extractor: walkthrough/advanced/write-your-own-extractors.md
           - Configure How Annotations Are Displayed: walkthrough/advanced/configure-annotation-view.md
           - Run a Gremlin Analyzer: walkthrough/advanced/run-gremlin-analyzer.md

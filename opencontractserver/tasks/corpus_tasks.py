@@ -97,9 +97,10 @@ def process_corpus_action(
 
                 task_name = action.analyzer.task_name
                 task_func = get_task_by_name(task_name)
+
                 if task_func is None:
                     logger.error(
-                        f"Queue {task_name} for doc {document_id} added to corpus {corpus_id}"
+                        f"Queue {task_name} for corpus {corpus_id} failed as task could not be found..."
                     )
                     continue
 

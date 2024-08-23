@@ -87,28 +87,31 @@ def process_corpus_action(
 
         elif action.analyzer:
 
+            obj = Analysis.objects.create(
+                analyzer=action.analyzer,
+                analyzed_corpus_id=corpus_id,
+                creator_id=user_id,
+            )
+
             if action.analyzer.task_name:
 
-                raise ValueError("Not handling task-based analyzers yet...")
+                task_name = action.analyzer.task_name
+                task_func = get_task_by_name(task_name)
 
-                # # Get the task function dynamically based on the column's task_name
-                # task_name = action.analyzer.task_name
-                # task_func = get_task_by_name(task_name)
-                # if task_func is None:
-                #     logger.error(
-                #         f"Queue {task_name} for doc {document_id} added to corpus {corpus_id}"
-                #     )
-                #     continue
-                #
-                # # Add the task to the group
-                # action_tasks.append(task_func.si(doc_id=document_id, corpus_id=corpus_id))
-                # # TODO - add collector
-            else:
-                obj = Analysis.objects.create(
-                    analyzer=action.analyzer,
-                    analyzed_corpus_id=corpus_id,
-                    creator_id=user_id,
+                if task_func is None:
+                    logger.error(
+                        f"Queue {task_name} for corpus {corpus_id} failed as task could not be found..."
+                    )
+                    continue
+
+                # Add the task to the group
+                action_tasks.extend(
+                    [
+                        task_func.si(doc_id=doc_id, analysis_id=obj.id)
+                        for doc_id in document_ids
+                    ]
                 )
+            else:
 
                 logger.info(f" - retrieved analysis: {obj}")
 

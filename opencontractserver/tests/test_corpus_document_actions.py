@@ -66,10 +66,11 @@ class TestCorpusDocumentActions(TestCase):
             creator=self.user,
         )
 
-        with self.assertRaises(ValueError):
-            process_corpus_action.si(
-                self.corpus.id, [self.document.id], self.user.id
-            ).apply()
+        process_corpus_action.si(
+            self.corpus.id, [self.document.id], self.user.id
+        ).apply().get()
+
+        self.assertEqual(Analysis.objects.all().count(), 1)
 
     def test_process_corpus_action_with_analyzer(self):
         CorpusAction.objects.create(

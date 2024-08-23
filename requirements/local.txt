@@ -1,13 +1,13 @@
 -r base.txt
 
-Werkzeug==2.2.2 # https://github.com/pallets/werkzeug
-ipdb==0.13.9  # https://github.com/gotcha/ipdb
+Werkzeug==3.0.3 # https://github.com/pallets/werkzeug
+ipdb==0.13.13  # https://github.com/gotcha/ipdb
 psycopg2==2.9.5  # https://github.com/psycopg/psycopg2
 watchgod==0.8.2  # https://github.com/samuelcolvin/watchgod
 
 # Testing
 # ------------------------------------------------------------------------------
-mypy==0.991  # https://github.com/python/mypy
+mypy==1.11.1  # https://github.com/python/mypy
 django-stubs==4.2.7  # https://github.com/typeddjango/django-stubs
 pytest==8.2.2  # https://github.com/pytest-dev/pytest
 pytest-cov==5.0.0  # https://github.com/pytest-dev/pytest-cov
@@ -41,7 +41,7 @@ pre-commit==3.7.1  # https://github.com/pre-commit/pre-commit
 factory-boy==3.2.1  # https://github.com/FactoryBoy/factory_boy
 
 django-debug-toolbar==3.7.0  # https://github.com/jazzband/django-debug-toolbar
-django-coverage-plugin==2.0.3  # https://github.com/nedbat/django_coverage_plugin
+django-coverage-plugin==3.1.0  # https://github.com/nedbat/django_coverage_plugin
 pytest-django==4.5.2  # https://github.com/pytest-dev/pytest-django
 
 # PDFs

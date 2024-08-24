@@ -96,9 +96,10 @@ export const DocumentCards = ({
     paddingLeft: use_mobile_layout ? "5px" : "1rem",
     ...(use_mobile_layout ? { margin: "0px !important" } : {}),
   };
-  if (style) {
-    comp_style = { ...comp_style, ...style };
-  }
+  // This is causing oddness may need separate things
+  // if (style) {
+  //   comp_style = { ...comp_style, ...style };
+  // }
   /**
    * Return DocumentItems
    */

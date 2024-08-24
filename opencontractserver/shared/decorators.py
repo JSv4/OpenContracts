@@ -176,6 +176,8 @@ def doc_analyzer_task(max_retries=None):
                                 label_type=LabelType.TOKEN_LABEL,
                                 creator=analysis.creator,
                             )
+
+                            # Harder to filter these to ensure no duplicates...
                             Annotation.objects.create(
                                 document=doc,
                                 analysis=analysis,
@@ -193,17 +195,27 @@ def doc_analyzer_task(max_retries=None):
                             label_type=LabelType.DOC_TYPE_LABEL,
                             creator=analysis.creator,
                         )
-                        Annotation.objects.create(
+
+                        # We don't want to create lots of duplicate doc-level annotations
+                        annotation = Annotation.objects.filter(
                             document=doc,
                             analysis=analysis,
                             annotation_label=label,
-                            page=1,
-                            raw_text="",
-                            json={},
-                            creator=analysis.creator,
                             **({"corpus_id": corpus_id} if corpus_id else {}),
                         )
-                    # TODO - do doc labels
+
+                        # Only create if existing copy doesn't exist.
+                        if annotation.count() == 0:
+                            Annotation.objects.create(
+                                document=doc,
+                                analysis=analysis,
+                                annotation_label=label,
+                                page=1,
+                                raw_text="",
+                                json={},
+                                creator=analysis.creator,
+                                **({"corpus_id": corpus_id} if corpus_id else {}),
+                            )
 
                 return result  # Return the result from the wrapped function
 

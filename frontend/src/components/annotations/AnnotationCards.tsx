@@ -188,9 +188,9 @@ export const AnnotationCards = ({
         }
       : {}),
   };
-  if (style) {
-    comp_style = { ...comp_style, ...style };
-  }
+  // if (style) {
+  //   comp_style = { ...comp_style, ...style };
+  // }
 
   return (
     <>

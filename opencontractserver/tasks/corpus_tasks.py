@@ -9,11 +9,12 @@ from opencontractserver.analyzer.models import Analysis
 from opencontractserver.corpuses.models import CorpusAction
 from opencontractserver.documents.models import DocumentAnalysisRow
 from opencontractserver.extracts.models import Datacell, Extract
-from opencontractserver.tasks.analyzer_tasks import start_analysis
+from opencontractserver.tasks.doc_analysis_tasks import test
+from opencontractserver.tasks.analyzer_tasks import start_analysis, mark_analysis_complete
 from opencontractserver.tasks.extract_orchestrator_tasks import (
-    get_task_by_name,
     mark_extract_complete,
 )
+from opencontractserver.utils.celery_tasks import get_task_by_name
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
@@ -28,33 +29,36 @@ def process_corpus_action(
     logger.info("process_corpus_action()...")
 
     actions = CorpusAction.objects.filter(corpus_id=corpus_id)
-    action_tasks = []
 
     for action in actions:
+
+        action_tasks = []
 
         if action.fieldset:
 
             tasks = []
 
-            extract = Extract(
-                corpus=action.corpus,
-                name=f"Corpus Action {action.name} Extract {uuid.uuid4()}",
-                fieldset=action.fieldset,
-                started=timezone.now(),
-                creator_id=user_id,
-            )
-            extract.save()
+            with transaction.atomic():
+                extract = Extract(
+                    corpus=action.corpus,
+                    name=f"Corpus Action {action.name} Extract {uuid.uuid4()}",
+                    fieldset=action.fieldset,
+                    started=timezone.now(),
+                    creator_id=user_id,
+                )
+                extract.save()
 
             fieldset = action.fieldset
 
             for document_id in document_ids:
 
-                row_results = DocumentAnalysisRow(
-                    document_id=document_id,
-                    extract_id=extract.id,
-                    creator=extract.creator,
-                )
-                row_results.save()
+                with transaction.atomic():
+                    row_results = DocumentAnalysisRow(
+                        document_id=document_id,
+                        extract_id=extract.id,
+                        creator=extract.creator,
+                    )
+                    row_results.save()
 
                 for column in fieldset.columns.all():
                     with transaction.atomic():
@@ -83,15 +87,19 @@ def process_corpus_action(
                         # Add the task to the group
                         tasks.append(task_func.si(cell.pk))
 
-            chord(group(*tasks))(mark_extract_complete.si(extract.id))
+            transaction.on_commit(lambda: chord(group(*tasks))(mark_extract_complete.si(extract.id)))
 
         elif action.analyzer:
 
-            obj = Analysis.objects.create(
-                analyzer=action.analyzer,
-                analyzed_corpus_id=corpus_id,
-                creator_id=user_id,
-            )
+            with transaction.atomic():
+                obj = Analysis.objects.create(
+                    analyzer=action.analyzer,
+                    analyzed_corpus_id=corpus_id,
+                    creator_id=user_id,
+                    analysis_started=timezone.now()
+                )
+
+            logger.info(f"Action uses analyzer: {obj}")
 
             if action.analyzer.task_name:
 
@@ -104,13 +112,21 @@ def process_corpus_action(
                     )
                     continue
 
+                logger.info(f"Added task {task_name} to queue: {task_func}")
+
+                # for document_id in document_ids:
+                #     task_func.si(doc_id=document_id, analysis_id=obj.id).apply_async()
+
                 # Add the task to the group
                 action_tasks.extend(
                     [
-                        task_func.si(doc_id=doc_id, analysis_id=obj.id)
+                        task_func.s(doc_id=doc_id, analysis_id=obj.id)
                         for doc_id in document_ids
                     ]
                 )
+
+                transaction.on_commit(lambda: chord(group(*action_tasks))(mark_analysis_complete.si(obj.id)))
+
             else:
 
                 logger.info(f" - retrieved analysis: {obj}")
@@ -119,10 +135,16 @@ def process_corpus_action(
                     start_analysis.s(analysis_id=obj.id, doc_ids=document_ids)
                 )
 
-                # Once we've run through all the actions, start tasks for processing.
-                group(action_tasks).apply_async()
+                transaction.on_commit(lambda: group(*action_tasks).apply_async())
+
+
 
         else:
             raise ValueError(
                 "Unexpected action configuration... no analyzer or fieldset."
             )
+
+    # Once we've run through all the actions, start tasks for processing.
+    #
+
+    return True

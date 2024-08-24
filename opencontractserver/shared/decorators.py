@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 def doc_analyzer_task(max_retries=None):
     def decorator(func):
-        @shared_task(bind=True, queue="low_priority", max_retries=max_retries)
+        @shared_task(bind=True, max_retries=max_retries)
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             doc_id = kwargs.get("doc_id")
@@ -183,8 +183,26 @@ def doc_analyzer_task(max_retries=None):
                                 page=annotation_data["page"],
                                 raw_text=annotation_data["rawText"],
                                 json=annotation_data["annotation_json"],
+                                creator=analysis.creator,
+                                **({"corpus_id": corpus_id} if corpus_id else {}),
                             )
 
+                    for doc_label in doc_annotations:
+                        label, _ = AnnotationLabel.objects.get_or_create(
+                            text=doc_label,
+                            label_type=LabelType.DOC_TYPE_LABEL,
+                            creator=analysis.creator,
+                        )
+                        Annotation.objects.create(
+                            document=doc,
+                            analysis=analysis,
+                            annotation_label=label,
+                            page=1,
+                            raw_text="",
+                            json={},
+                            creator=analysis.creator,
+                            **({"corpus_id": corpus_id} if corpus_id else {}),
+                        )
                     # TODO - do doc labels
 
                 return result  # Return the result from the wrapped function

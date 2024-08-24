@@ -143,11 +143,15 @@ export const AnalysisItem = ({
           ) : (
             <></>
           )}
-          <Image
-            src={`data:image/png;base64,${analysis.analyzer.manifest?.label_set.icon_data}`}
-            floated="right"
-            size="mini"
-          />
+          {analysis.analyzer.manifest?.label_set?.icon_data ? (
+            <Image
+              src={`data:image/png;base64,${analysis.analyzer.manifest?.label_set.icon_data}`}
+              floated="right"
+              size="mini"
+            />
+          ) : (
+            <></>
+          )}
           <Card.Header style={{ wordBreak: "break-all" }}>
             {analysis.analyzer.analyzerId}
           </Card.Header>
@@ -228,15 +232,23 @@ export const AnalysisItem = ({
         ) : (
           <></>
         )}
-        <Image
-          src={`data:image/png;base64,${analysis.analyzer.manifest?.label_set.icon_data}`}
-          floated="right"
-          size="mini"
-        />
+        {analysis.analyzer.manifest?.label_set?.icon_data ? (
+          <Image
+            src={`data:image/png;base64,${analysis.analyzer.manifest?.label_set.icon_data}`}
+            floated="right"
+            size="mini"
+          />
+        ) : (
+          <></>
+        )}
+
         <Card.Header>{analysis.analyzer.analyzerId}</Card.Header>
         <Card.Meta>
           <span className="date">
-            <u>Author</u>: {analysis.analyzer.manifest?.metadata.author_name}
+            <u>Author</u>:{" "}
+            {analysis.analyzer.manifest?.metadata?.author_name
+              ? analysis.analyzer.manifest.metadata.author_name
+              : ""}
           </span>
         </Card.Meta>
         <Card.Description>{analysis.analyzer.description}</Card.Description>

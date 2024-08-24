@@ -7,7 +7,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from config import celery_app
+from opencontractserver.utils.celery_tasks import get_task_by_name
 from opencontractserver.documents.models import DocumentAnalysisRow
 from opencontractserver.extracts.models import Datacell, Extract
 from opencontractserver.types.enums import PermissionTypes
@@ -17,16 +17,6 @@ logger = logging.getLogger(__name__)
 
 # Pass OpenAI API key to marvin for parsing / extract
 marvin.settings.openai.api_key = settings.OPENAI_API_KEY
-
-
-def get_task_by_name(task_name) -> Optional[Callable]:
-    """
-    Try to get celery task function Callable by name
-    """
-    try:
-        return celery_app.tasks.get(task_name)
-    except Exception:
-        return None
 
 
 @shared_task

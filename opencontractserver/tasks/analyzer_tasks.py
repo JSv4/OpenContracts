@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from config import celery_app
-from opencontractserver.analyzer.models import GremlinEngine
+from opencontractserver.analyzer.models import GremlinEngine, Analyzer, Analysis
 from opencontractserver.analyzer.utils import get_gremlin_manifests
 from opencontractserver.types.dicts import (
     AnalyzerManifest,
@@ -31,7 +31,6 @@ def import_analysis(
     analysis_id: int | str,
     analysis_results: OpenContractsGeneratedCorpusPythonType,
 ) -> bool:
-
     logger.info(f"import_analysis - creator_id: {creator_id}")
     logger.info(f"import_analysis - analysis_id: {analysis_id}")
 
@@ -47,7 +46,6 @@ def start_analysis(
     analysis_id: str,
     doc_ids: Optional[list[int | str]] = None,
 ) -> bool:
-
     run_analysis(analysis_id=analysis_id, doc_ids=doc_ids)
 
     return True
@@ -55,7 +53,6 @@ def start_analysis(
 
 @celery_app.task()
 def request_gremlin_manifest(gremlin_id: str | int) -> list[AnalyzerManifest]:
-
     logger.info("request_gremlin_manifest() - Start...")
 
     gremlin = GremlinEngine.objects.get(id=gremlin_id)
@@ -77,7 +74,6 @@ def install_analyzer_task(
     analyzer_manifests: list[AnalyzerManifest],
     gremlin_id: int,
 ) -> list[int]:
-
     # logger.info(f"install_analyzer_task() - analyzer_manifests: {analyzer_manifests}")
 
     gremlin = GremlinEngine.objects.get(id=gremlin_id)
@@ -91,3 +87,10 @@ def install_analyzer_task(
     gremlin.save()
 
     return install_response
+
+
+@celery_app.task()
+def mark_analysis_complete(analysis_id):
+    analysis = Analysis.objects.get(pk=analysis_id)
+    analysis.analysis_completed = timezone.now()
+    analysis.save()

@@ -118,7 +118,8 @@ export const AnalysesCards = ({
         style={{
           flex: 1,
           width: "100%",
-          overflow: "hidden",
+          height: "100%",
+          overflowY: "scroll",
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-start",

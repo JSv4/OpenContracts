@@ -93,7 +93,6 @@ export const AnalysesCards = ({
 
   let comp_style = {
     width: "100%",
-    flex: 1,
     padding: "1rem",
     ...(use_mobile_layout
       ? {
@@ -102,9 +101,9 @@ export const AnalysesCards = ({
         }
       : {}),
   };
-  if (style) {
-    comp_style = { ...comp_style, ...style };
-  }
+  // if (style) {
+  //   comp_style = { ...comp_style, ...style };
+  // }
   /**
    * Return AnalysisItems
    */
@@ -116,7 +115,6 @@ export const AnalysesCards = ({
       <div
         className="AnalysisCards"
         style={{
-          flex: 1,
           width: "100%",
           height: "100%",
           overflowY: "scroll",

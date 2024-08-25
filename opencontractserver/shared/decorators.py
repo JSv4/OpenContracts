@@ -196,26 +196,16 @@ def doc_analyzer_task(max_retries=None):
                             creator=analysis.creator,
                         )
 
-                        # We don't want to create lots of duplicate doc-level annotations
-                        annotation = Annotation.objects.filter(
+                        Annotation.objects.create(
                             document=doc,
                             analysis=analysis,
                             annotation_label=label,
+                            page=1,
+                            raw_text="",
+                            json={},
+                            creator=analysis.creator,
                             **({"corpus_id": corpus_id} if corpus_id else {}),
                         )
-
-                        # Only create if existing copy doesn't exist.
-                        if annotation.count() == 0:
-                            Annotation.objects.create(
-                                document=doc,
-                                analysis=analysis,
-                                annotation_label=label,
-                                page=1,
-                                raw_text="",
-                                json={},
-                                creator=analysis.creator,
-                                **({"corpus_id": corpus_id} if corpus_id else {}),
-                            )
 
                 return result  # Return the result from the wrapped function
 

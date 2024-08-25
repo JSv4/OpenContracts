@@ -1,7 +1,5 @@
 import marvin
-
 from django.conf import settings
-from celery import shared_task
 
 from opencontractserver.shared.decorators import doc_analyzer_task
 
@@ -18,14 +16,8 @@ def contract_not_contract(*args, pdf_text_extract, **kawrgs):
     category = marvin.classify(
         f"INTRODUCTION:\n`{pdf_text_extract[:1000]}`\nCONCLUSION:\n\n`{pdf_text_extract[-1000:]}`",
         instructions="You determine what type of document we're likely looking at based on the introduction and "
-                     "conclusion - a contract template, a contract, presentation, other",
-        labels=["CONTRACT", "CONTRACT TEMPLATE", "PRESENTATION", "OTHER"]
+        "conclusion - a contract template, a contract, presentation, other",
+        labels=["CONTRACT", "CONTRACT TEMPLATE", "PRESENTATION", "OTHER"],
     )
 
     return [category], [], [], True
-
-
-@shared_task
-def test():
-    print("Hello, fella, I'm a real bot.")
-    return "REAL!"

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from guardian.admin import GuardedModelAdmin
 
-from opencontractserver.corpuses.models import Corpus, CorpusQuery, CorpusAction
+from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 
 
 @admin.register(Corpus)

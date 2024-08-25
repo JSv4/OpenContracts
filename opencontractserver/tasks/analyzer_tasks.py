@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from config import celery_app
-from opencontractserver.analyzer.models import GremlinEngine, Analyzer, Analysis
+from opencontractserver.analyzer.models import Analysis, GremlinEngine
 from opencontractserver.analyzer.utils import get_gremlin_manifests
 from opencontractserver.types.dicts import (
     AnalyzerManifest,

@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Optional
+from typing import Optional
 
 import marvin
 from celery import chord, group, shared_task
@@ -7,10 +7,10 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from opencontractserver.utils.celery_tasks import get_task_by_name
 from opencontractserver.documents.models import DocumentAnalysisRow
 from opencontractserver.extracts.models import Datacell, Extract
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.celery_tasks import get_task_by_name
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)

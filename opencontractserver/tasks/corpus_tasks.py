@@ -9,13 +9,13 @@ from opencontractserver.analyzer.models import Analysis
 from opencontractserver.corpuses.models import CorpusAction
 from opencontractserver.documents.models import DocumentAnalysisRow
 from opencontractserver.extracts.models import Datacell, Extract
-from opencontractserver.tasks.doc_analysis_tasks import test
-from opencontractserver.tasks.analyzer_tasks import start_analysis, mark_analysis_complete
-from opencontractserver.tasks.extract_orchestrator_tasks import (
-    mark_extract_complete,
+from opencontractserver.tasks.analyzer_tasks import (
+    mark_analysis_complete,
+    start_analysis,
 )
-from opencontractserver.utils.celery_tasks import get_task_by_name
+from opencontractserver.tasks.extract_orchestrator_tasks import mark_extract_complete
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.celery_tasks import get_task_by_name
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,9 @@ def process_corpus_action(
                         # Add the task to the group
                         tasks.append(task_func.si(cell.pk))
 
-            transaction.on_commit(lambda: chord(group(*tasks))(mark_extract_complete.si(extract.id)))
+            transaction.on_commit(
+                lambda: chord(group(*tasks))(mark_extract_complete.si(extract.id))
+            )
 
         elif action.analyzer:
 
@@ -96,7 +98,7 @@ def process_corpus_action(
                     analyzer=action.analyzer,
                     analyzed_corpus_id=corpus_id,
                     creator_id=user_id,
-                    analysis_started=timezone.now()
+                    analysis_started=timezone.now(),
                 )
 
             logger.info(f"Action uses analyzer: {obj}")
@@ -125,7 +127,11 @@ def process_corpus_action(
                     ]
                 )
 
-                transaction.on_commit(lambda: chord(group(*action_tasks))(mark_analysis_complete.si(obj.id)))
+                transaction.on_commit(
+                    lambda: chord(group(*action_tasks))(
+                        mark_analysis_complete.si(obj.id)
+                    )
+                )
 
             else:
 
@@ -136,8 +142,6 @@ def process_corpus_action(
                 )
 
                 transaction.on_commit(lambda: group(*action_tasks).apply_async())
-
-
 
         else:
             raise ValueError(

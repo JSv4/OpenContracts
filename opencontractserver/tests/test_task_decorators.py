@@ -120,7 +120,6 @@ class DocAnalyzerTaskTestCase(TestCase):
             doc_id=self.unlocked_document.id, analysis_id=self.analysis.id
         ).apply()
         results = task.get()
-        print(results)
         self.assertEqual(
             (
                 ["IMPORTANT_DOCUMENT"],

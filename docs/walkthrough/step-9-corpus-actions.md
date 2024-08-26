@@ -12,9 +12,9 @@ corpus.
 
 ### Supported Actions
 
-[!NOTE]
-Currently, you have to configure all of this via the Django admin dashboard (`http://localhost:8000/admin`
+**NOTE:** Currently, you have to configure all of this via the Django admin dashboard (`http://localhost:8000/admin`
 if you're using our local deployment), We'd like to expose this functionality using our React frontend, but the required
+GUI elements and GraphQL mutations need to be built out. A good starter PR for someone ;-). 
 
 Currently, a CorpusAction can be configured to run one of three types of analyzers automatically:
 

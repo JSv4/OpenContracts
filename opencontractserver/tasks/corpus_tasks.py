@@ -16,7 +16,10 @@ from opencontractserver.tasks.analyzer_tasks import (
 )
 from opencontractserver.tasks.extract_orchestrator_tasks import mark_extract_complete
 from opencontractserver.types.enums import PermissionTypes
-from opencontractserver.utils.celery_tasks import get_task_by_name, get_doc_analyzer_task_by_name
+from opencontractserver.utils.celery_tasks import (
+    get_doc_analyzer_task_by_name,
+    get_task_by_name,
+)
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)
@@ -39,7 +42,6 @@ def process_corpus_action(
         action_tasks = []
 
         if action.fieldset:
-
 
             tasks = []
 

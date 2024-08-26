@@ -19,7 +19,7 @@ def get_doc_analyzer_task_by_name(task_name) -> Optional[Callable]:
     """
     try:
         task = celery_app.tasks.get(task_name)
-        if task and getattr(task, 'is_doc_analyzer_task', False):
+        if task and getattr(task, "is_doc_analyzer_task", False):
             return task
         return None
     except Exception:

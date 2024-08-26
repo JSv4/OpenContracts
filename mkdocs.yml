@@ -51,7 +51,7 @@ nav:
         - Architecture: architecture/components/Data-flow-diagram.md
         - Asynchronous Processing: architecture/asynchronous-processing.md
         - LlamaIndex & Django Integration: extract_and_retrieval/intro_to_django_annotation_vector_store.md
-        - Datagrid Extract: extract_and_retrieval/document_data_extract.
+        - Datagrid Extract: extract_and_retrieval/document_data_extract.md
         - Automated Tests: architecture/opencontract-corpus-actions.md
         - Backend- Question Answering: extract_and_retrieval/querying_corpus.md
         - Backend - Datagrid Extract: extract_and_retrieval/document_data_extract.md
@@ -69,6 +69,7 @@ nav:
       - Step 6 - Search and Filter By Annotations: walkthrough/step-6-search-and-filter-by-annotations.md
       - Step 7 - Query a Corpus: walkthrough/step-7-query-corpus.md
       - Step 8 - Data Extract: walkthrough/step-8-data-extract.md
+      - Step 9 - Automatic Corpus Actions: walkthrough/step-9-corpus-actions.md
       - Advanced:
           - Data Extract Models: walkthrough/advanced/data-extract-models.md
           - Write Automated Corpus Actions: walkthrough/advanced/register-doc-analyzer.md

@@ -221,6 +221,8 @@ def doc_analyzer_task(max_retries=None):
                 logger.info(f"Error in doc_analyzer_task for doc_id {doc_id}: {str(e)}")
                 return [], [], [{"data": {"error": str(e)}}], False
 
+        # Add a custom attribute to identify doc_analyzer_tasks
+        wrapper.is_doc_analyzer_task = True
         return wrapper
 
     return decorator

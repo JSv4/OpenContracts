@@ -3,6 +3,7 @@ import uuid
 
 from celery import chord, group, shared_task
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from opencontractserver.analyzer.models import Analysis
@@ -28,7 +29,10 @@ def process_corpus_action(
 
     logger.info("process_corpus_action()...")
 
-    actions = CorpusAction.objects.filter(corpus_id=corpus_id)
+    actions = CorpusAction.objects.filter(
+        Q(corpus_id=corpus_id, disabled=False)
+        | Q(run_on_all_corpuses=True, disabled=False)
+    )
 
     for action in actions:
 

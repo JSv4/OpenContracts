@@ -190,10 +190,13 @@ def doc_analyzer_task(max_retries=None):
                             )
 
                     for doc_label in doc_annotations:
-                        label, _ = AnnotationLabel.objects.get_or_create(
-                            text=doc_label,
-                            label_type=LabelType.DOC_TYPE_LABEL,
-                            creator=analysis.creator,
+                        label, _ = (
+                            AnnotationLabel.objects.get_or_create(
+                                text=doc_label,
+                                label_type=LabelType.DOC_TYPE_LABEL,
+                                creator=analysis.creator,
+                            )
+                            - 0
                         )
 
                         Annotation.objects.create(

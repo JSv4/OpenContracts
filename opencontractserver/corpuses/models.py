@@ -224,6 +224,10 @@ class CorpusAction(BaseOCModel):
     trigger = django.db.models.CharField(
         max_length=256, choices=CorpusActionTrigger.choices
     )
+    disabled = django.db.models.BooleanField(null=False, default=False, blank=True)
+    run_on_all_corpuses = django.db.models.BooleanField(
+        null=False, default=False, blank=True
+    )
 
     class Meta:
         constraints = [

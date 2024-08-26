@@ -58,6 +58,7 @@ nav:
         - Annotator Component: architecture/components/annotator/overview.md
         - Annotator Logic: architecture/components/annotator/how-annotations-are-created.md
         - PDF Data Format: walkthrough/advanced/pawls-token-format.md
+        - Automatic Corpus Actions: architecture/opencontract-corpus-actions.md
     - Acknowledgements: acknowledgements.md
   - Walkthrough:
       - Key-Concepts: walkthrough/key-concepts.md

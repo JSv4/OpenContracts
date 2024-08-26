@@ -1,12 +1,17 @@
 from django.contrib import admin
 from guardian.admin import GuardedModelAdmin
 
-from opencontractserver.corpuses.models import Corpus, CorpusQuery
+from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 
 
 @admin.register(Corpus)
 class CorpusAdmin(GuardedModelAdmin):
     list_display = ["id", "title", "description", "backend_lock", "user_lock"]
+
+
+@admin.register(CorpusAction)
+class CorpusActionAdmin(GuardedModelAdmin):
+    list_display = ["id", "name", "corpus"]
 
 
 @admin.register(CorpusQuery)

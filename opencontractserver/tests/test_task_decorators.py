@@ -6,7 +6,12 @@ from django.core.files.base import ContentFile
 from django.test import TestCase
 
 from opencontractserver.analyzer.models import Analysis, Analyzer
-from opencontractserver.annotations.models import Annotation, AnnotationLabel
+from opencontractserver.annotations.models import (
+    DOC_TYPE_LABEL,
+    TOKEN_LABEL,
+    Annotation,
+    AnnotationLabel,
+)
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.shared.decorators import doc_analyzer_task
@@ -115,7 +120,6 @@ class DocAnalyzerTaskTestCase(TestCase):
             doc_id=self.unlocked_document.id, analysis_id=self.analysis.id
         ).apply()
         results = task.get()
-        print(results)
         self.assertEqual(
             (
                 ["IMPORTANT_DOCUMENT"],
@@ -139,11 +143,22 @@ class DocAnalyzerTaskTestCase(TestCase):
         annotation_labels = AnnotationLabel.objects.all()
         annotations = Annotation.objects.all()
 
-        self.assertEqual(1, annotations.count())
-        self.assertEqual(1, annotation_labels.count())
-        self.assertEqual(annotations[0].annotation_label.id, annotation_labels[0].id)
-        self.assertEqual(annotations[0].raw_text, "This is a sample PDF document")
-        self.assertEqual(annotation_labels[0].text, "IMPORTANT!")
+        self.assertEqual(2, annotations.count())
+        self.assertEqual(2, annotation_labels.count())
+
+        doc_type_annotation = Annotation.objects.filter(
+            annotation_label__label_type=DOC_TYPE_LABEL
+        )
+        self.assertEqual(1, doc_type_annotation.count())
+
+        span_type_annotation = Annotation.objects.filter(
+            annotation_label__label_type=TOKEN_LABEL
+        )
+        self.assertEqual(1, span_type_annotation.count())
+        self.assertEqual(
+            span_type_annotation[0].raw_text, "This is a sample PDF document"
+        )
+        self.assertEqual(span_type_annotation[0].annotation_label.text, "IMPORTANT!")
 
     def test_function_has_access_to_pdf_text(self):
         @doc_analyzer_task()

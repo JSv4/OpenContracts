@@ -123,7 +123,7 @@ export const FilterToAnalysesSelector = ({
     (edge) => edge.node.analyzer.analyzerId as string
   );
 
-  // console.log("analyzer_choices", analyzer_choices);
+  console.log("analyzer_choices", analyzer_choices);
   if (analyses_response?.analyses?.edges) {
     analysis_options = [
       ...analysis_options,

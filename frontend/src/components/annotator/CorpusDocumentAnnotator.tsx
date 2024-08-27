@@ -329,7 +329,7 @@ export const CorpusDocumentAnnotator = ({
         .then(([doc, resp]: [PDFDocumentProxy, PageTokens[]]) => {
           setDocument(doc);
 
-          console.log("Response", resp);
+          // console.log("Response", resp);
 
           // Load all the pages too. In theory this makes things a little slower to startup,
           // as fetching and rendering them asynchronously would make it faster to render the
@@ -350,7 +350,7 @@ export const CorpusDocumentAnnotator = ({
                   // console.log("Loading up some data for page ", i, p);
                   const pageIndex = p.pageNumber - 1;
 
-                  console.log("pageIndex", pageIndex);
+                  // console.log("pageIndex", pageIndex);
                   pageTokens = resp[pageIndex].tokens;
                 }
 
@@ -684,7 +684,7 @@ export const CorpusDocumentAnnotator = ({
           annotator_data?.existingTextAnnotations &&
           selected_analysis_ids?.length === 0
         ) {
-          console.log("Prepping human annotations", annotator_data);
+          // console.log("Prepping human annotations", annotator_data);
           setAnnotationObjs(
             annotator_data.existingTextAnnotations
               .filter((annotation) => annotation.analysis == null)

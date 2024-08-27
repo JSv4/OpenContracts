@@ -18,6 +18,8 @@ import useWindowDimensions from "../hooks/WindowDimensionHook";
 
 class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
+  private isRendering: boolean = false;
+
   constructor(
     readonly page: PDFPageProxy,
     readonly canvas: HTMLCanvasElement,
@@ -25,27 +27,33 @@ class PDFPageRenderer {
   ) {}
 
   cancelCurrentRender() {
-    if (this.currentRenderTask === undefined) {
-      return;
-    }
-    this.currentRenderTask.promise.then(
-      () => {},
-      (err: any) => {
-        if (
-          err instanceof Error &&
-          err.message.indexOf("Rendering cancelled") !== -1
-        ) {
-          // Swallow the error that's thrown when the render is canceled.
-          return;
+    if (this.currentRenderTask) {
+      this.currentRenderTask.promise.then(
+        () => {
+          this.isRendering = false;
+        },
+        (err: any) => {
+          this.isRendering = false;
+          if (
+            err instanceof Error &&
+            err.message.indexOf("Rendering cancelled") !== -1
+          ) {
+            return;
+          }
+          const e = err instanceof Error ? err : new Error(err);
+          this.onError(e);
         }
-        const e = err instanceof Error ? err : new Error(err);
-        this.onError(e);
-      }
-    );
-    this.currentRenderTask.cancel();
+      );
+      this.currentRenderTask.cancel();
+    }
   }
 
-  render(scale: number) {
+  async render(scale: number) {
+    if (this.isRendering) {
+      await this.cancelCurrentRender();
+    }
+
+    this.isRendering = true;
     const viewport = this.page.getViewport({ scale });
 
     this.canvas.height = viewport.height;
@@ -55,12 +63,17 @@ class PDFPageRenderer {
     if (canvasContext === null) {
       throw new Error("No canvas context");
     }
-    this.currentRenderTask = this.page.render({ canvasContext, viewport });
-    return this.currentRenderTask;
+
+    try {
+      this.currentRenderTask = this.page.render({ canvasContext, viewport });
+      await this.currentRenderTask.promise;
+    } finally {
+      this.isRendering = false;
+    }
   }
 
-  rescaleAndRender(scale: number) {
-    this.cancelCurrentRender();
+  async rescaleAndRender(scale: number) {
+    await this.cancelCurrentRender();
     return this.render(scale);
   }
 }
@@ -128,7 +141,7 @@ const Page = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const annotations = annotationStore.pdfAnnotations.annotations;
-  console.log(`${annotations.length} annotations in store`);
+  // console.log(`${annotations.length} annotations in store`);
   const {
     scrollContainerRef,
     selectedTextSearchMatchIndex,
@@ -191,11 +204,11 @@ const Page = ({
         onError
       );
 
-      renderer.render(pageInfo.scale);
+      renderer.render(pageInfo.scale).catch(onError);
 
       // determinePageVisiblity();
 
-      const handleResize = () => {
+      const handleResize = async () => {
         console.log("Handle Resize");
 
         if (canvasRef.current === null) {
@@ -204,8 +217,12 @@ const Page = ({
         }
         pageInfo.bounds = getPageBoundsFromCanvas(canvasRef.current);
 
-        renderer.rescaleAndRender(pageInfo.scale);
-        setScale(pageInfo.scale);
+        try {
+          await renderer.rescaleAndRender(pageInfo.scale);
+          setScale(pageInfo.scale);
+        } catch (error) {
+          onError(error instanceof Error ? error : new Error(String(error)));
+        }
         // determinePageVisiblity();
       };
 
@@ -266,17 +283,17 @@ const Page = ({
 
   ////////////////
   if (scale && pageInfo.bounds && annotations) {
-    console.log("Total annotations", annotations);
+    // console.log("Total annotations", annotations);
     const defined_annotations = annotations.filter(
       (a) => a.json[pageInfo.page.pageNumber - 1] !== undefined
     );
 
-    console.log(
-      `# of Annotations on page ${pageInfo.page.pageNumber - 1}: ${
-        defined_annotations.length
-      }`
-    );
-    console.log(defined_annotations);
+    // console.log(
+    //   `# of Annotations on page ${pageInfo.page.pageNumber - 1}: ${
+    //     defined_annotations.length
+    //   }`
+    // );
+    // console.log(defined_annotations);
 
     // OK... figured out kinda what's happening but not sure where... the tokens in the JSON are cumulative (as I suspected)
     // so each annotation adds a layer of tokens which eventually gets opaque. Find source of this issue... Don't think it's
@@ -286,7 +303,7 @@ const Page = ({
     const annots_to_render = !annotationStore.showStructuralLabels
       ? defined_annotations.filter((annot) => annot.annotationLabel.readonly)
       : defined_annotations;
-    console.log("Annots to render", annots_to_render);
+    // console.log("Annots to render", annots_to_render);
 
     for (const [index, annotation] of annots_to_render.entries()) {
       page_annotation_components.push(
@@ -313,11 +330,11 @@ const Page = ({
       );
     }
   }
-  console.log(
-    `Number of React components on page ${pageInfo.page.pageNumber - 1}: ${
-      page_annotation_components.length
-    }`
-  );
+  // console.log(
+  //   `Number of React components on page ${pageInfo.page.pageNumber - 1}: ${
+  //     page_annotation_components.length
+  //   }`
+  // );
 
   return (
     <PageAnnotationsContainer

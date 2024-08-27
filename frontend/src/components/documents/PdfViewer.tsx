@@ -1,6 +1,6 @@
 import { Modal, Button, Icon, Statistic } from "semantic-ui-react";
 import { useState } from "react";
-import { pdfjs, Document, Page } from "react-pdf";
+import { pdfjs, Document, Page, Outline } from "react-pdf";
 import {
   HorizontallyCenteredDiv,
   VerticallyCenteredDiv,
@@ -35,6 +35,10 @@ export function PdfViewer({
 
   function nextPage() {
     changePage(1);
+  }
+
+  function onItemClick({ pageNumber }: { pageNumber: string }) {
+    setPageNumber(parseInt(pageNumber));
   }
 
   return (

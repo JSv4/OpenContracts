@@ -434,10 +434,10 @@ export const AnnotatorSidebar = ({
         <div
           style={{ marginTop: "3vh", marginLeft: "1vw", marginRight: "1vw" }}
         >
-          <Header as="h3" icon>
+          <Header as="h4" icon style={{ margin: "0.5rem 0" }}>
             <Icon name={analysis_view_mode ? "magic" : "pencil"} />
             {header_text}
-            <Header.Subheader style={{ padding: ".5rem" }}>
+            <Header.Subheader style={{ padding: "0.25rem" }}>
               {subheader_text}
             </Header.Subheader>
           </Header>

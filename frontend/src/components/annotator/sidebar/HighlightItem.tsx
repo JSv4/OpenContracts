@@ -22,6 +22,7 @@ export const HighlightContainer = styled.div<HasColor>(
     -ms-user-select: none;
     -moz-user-select: none;
     -webkit-user-select: none;
+    padding: 1.00rem;
 `
 );
 
@@ -85,15 +86,13 @@ export const HighlightItem = ({
         <div>
           <Label
             style={{
-              color: annotation.annotationLabel.color
-                ? annotation.annotationLabel.color
-                : "grey",
+              display: "inline-block",
+              margin: "0.25rem 0.25rem 0.25rem 0",
+              color: annotation.annotationLabel.color || "grey",
             }}
           >
-            {annotation.annotationLabel.icon ? (
+            {annotation.annotationLabel.icon && (
               <Icon name={annotation.annotationLabel.icon} />
-            ) : (
-              <></>
             )}
             <strong>{annotation.annotationLabel.text}</strong>
           </Label>

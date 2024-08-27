@@ -200,6 +200,15 @@ class Analysis(BaseOCModel):
         null=False,
     )
 
+    # If applicable, what CorpusAction ran?
+    corpus_action = django.db.models.ForeignKey(
+        "corpuses.CorpusAction",
+        related_name="analyses",
+        blank=True,
+        null=True,
+        on_delete=django.db.models.SET_NULL,
+    )
+
     import_log = django.db.models.TextField(blank=True, null=True)
 
     # More for future use - if we are not analyzing an entire corpus but a subset

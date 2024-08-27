@@ -19,7 +19,7 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus, CorpusQuery
+from opencontractserver.corpuses.models import Corpus, CorpusQuery, CorpusAction
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport, UserImport
@@ -69,6 +69,19 @@ class AnnotationInputType(AnnotatePermissionsForReadMixin, graphene.InputObjectT
 
 class AnnotationType(AnnotatePermissionsForReadMixin, ModelType):
     json = GenericScalar()
+
+    all_source_node_in_relationship = graphene.List(lambda: RelationshipType)
+
+    def resolve_all_source_node_in_relationship(self, info):
+        return self.source_node_in_relationships.all()
+
+    all_target_node_in_relationship = graphene.List(lambda: RelationshipType)
+
+    def resolve_all_target_node_in_relationship(self, info):
+        return self.target_node_in_relationships.all()
+
+    def resolve_full_annotation_list(self, info):
+        return self.annotations.all()
 
     class Meta:
         model = Annotation
@@ -221,6 +234,23 @@ class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
+class CorpusActionType(AnnotatePermissionsForReadMixin, ModelType):
+
+    class Meta:
+        model = CorpusAction
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+        filter_fields = {
+            "id": ["exact"],
+            "name": ["exact", "icontains", "istartswith"],
+            "corpus__id": ["exact"],
+            "fieldset__id": ["exact"],
+            "analyzer__id": ["exact"],
+            "trigger": ["exact"],
+            "creator__id": ["exact"],
+        }
+
+
 class UserImportType(AnnotatePermissionsForReadMixin, ModelType):
     def resolve_zip(self, info):
         return "" if not self.file else info.context.build_absolute_uri(self.zip.url)
@@ -279,6 +309,12 @@ class GremlinEngineType_WRITE(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class AnalysisType(AnnotatePermissionsForReadMixin, ModelType):
+
+    full_annotation_list = graphene.List(AnnotationType)
+
+    def resolve_full_annotation_list(self, info):
+        return self.annotations.all()
+
     class Meta:
         model = Analysis
         interfaces = [relay.Node]
@@ -345,3 +381,9 @@ class CorpusQueryType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         model = CorpusQuery
         interfaces = [relay.Node]
         connection_class = CountableConnection
+
+
+class DocumentCorpusActionsType(graphene.ObjectType):
+    corpus_actions = graphene.List(CorpusActionType)
+    extracts = graphene.List(ExtractType)
+    analyses = graphene.List(AnalysisType)

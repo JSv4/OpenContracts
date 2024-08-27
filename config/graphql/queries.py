@@ -50,7 +50,7 @@ from config.graphql.graphene_types import (
     PdfPageInfoType,
     RelationshipType,
     UserExportType,
-    UserImportType,
+    UserImportType, DocumentCorpusActionsType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -59,8 +59,8 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus, CorpusQuery
-from opencontractserver.documents.models import Document
+from opencontractserver.corpuses.models import Corpus, CorpusQuery, CorpusAction
+from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.types.enums import LabelType
@@ -424,24 +424,6 @@ class Query(graphene.ObjectType):
         )
 
     corpus = OpenContractsNode.Field(CorpusType)  # relay.Node.Field(CorpusType)
-
-    # def resolve_corpus(self, info, **kwargs):
-    #     print("Wo lo bo bo")
-    #     # return resolve_single_oc_model_from_id(
-    #     #     model_type=Corpus,
-    #     #     user=info.context.user,
-    #     #     graphql_id=kwargs.get("id", None)
-    #     # )
-    #     return None
-    # django_pk = from_global_id(kwargs.get("id", None))[1]
-    # if info.context.user.is_superuser:
-    #     return Corpus.objects.get(id=django_pk)
-    # elif info.context.user.is_anonymous:
-    #     return Corpus.objects.get(Q(id=django_pk) & Q(is_public=True))
-    # else:
-    #     return Corpus.objects.get(
-    #         Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
-    #     )
 
     # DOCUMENT RESOLVERS #####################################
 
@@ -816,3 +798,34 @@ class Query(graphene.ObjectType):
             for task, description in tasks.items()
             if task.startswith("opencontractserver.tasks.data_extract_tasks")
         }
+
+    document_corpus_actions = graphene.Field(
+        DocumentCorpusActionsType,
+        document_id=graphene.ID(required=True),
+        corpus_id=graphene.ID(required=True)
+    )
+
+    def resolve_document_corpus_actions(self, info, document_id, corpus_id):
+        user = info.context.user
+        if not user.is_authenticated:
+            return None
+
+        doc_id = from_global_id(document_id)[1]
+        corpus_id = from_global_id(corpus_id)[1]
+
+        document = Document.objects.get(id=doc_id)
+        corpus = Corpus.objects.get(id=corpus_id)
+
+        corpus_actions = CorpusAction.objects.filter(corpus=corpus)
+
+        extracts = Extract.objects.filter(corpus=corpus, documents=document)
+
+        analysis_rows = DocumentAnalysisRow.objects.filter(document=document)
+        analyses = Analysis.objects.filter(id__in=analysis_rows.values_list('analysis_id', flat=True),
+                                           analyzed_corpus=corpus)
+
+        return DocumentCorpusActionsType(
+            corpus_actions=corpus_actions,
+            extracts=extracts,
+            analyses=analyses
+        )

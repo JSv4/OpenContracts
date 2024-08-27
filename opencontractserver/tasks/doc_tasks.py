@@ -325,6 +325,7 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
                 annotation_label=label_obj,
                 document=doc,
                 creator_id=user_id,
+                structural=True  # Mark these explicitly as structural annotations.
             )
             annot_obj.save()
             set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])

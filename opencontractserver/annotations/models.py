@@ -43,7 +43,11 @@ class AnnotationLabel(BaseOCModel):
     # If an analyzer requires a specific label, we want to track this so we can ensure we don't install copies of it
     # over and over again.
     analyzer = django.db.models.ForeignKey(
-        "analyzer.Analyzer", on_delete=django.db.models.SET_NULL, null=True, blank=True
+        "analyzer.Analyzer",
+        null=True,
+        blank=True,
+        related_name='annotations',
+        on_delete=django.db.models.SET_NULL
     )
 
     # If this is meant to be a 'built-in' label and be used across corpuses without being explicitly added to a
@@ -250,6 +254,9 @@ class Annotation(BaseOCModel):
         on_delete=django.db.models.SET_NULL,
         related_name="annotations",
     )
+
+    # Mark structural / layout annotations explicitly.
+    structural = django.db.models.BooleanField(default=False)
 
     # Sharing
     is_public = django.db.models.BooleanField(default=False)

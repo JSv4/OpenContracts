@@ -946,6 +946,7 @@ export type AnalysisType = Node & {
   myPermissions?: Maybe<Scalars["GenericScalar"]>;
   isPublished?: Maybe<Scalars["Boolean"]>;
   objectSharedWith?: Maybe<Scalars["GenericScalar"]>;
+  fullAnnotationList?: Maybe<Array<ServerAnnotationType>>;
 };
 
 export type AnalysisTypeAnalyzedDocumentsArgs = {
@@ -1293,3 +1294,36 @@ export interface PageAwareAnnotationType {
   };
   pageAnnotations: ServerAnnotationType[];
 }
+
+export type CorpusActionType = Node & {
+  __typename?: "CorpusActionType";
+  id: Scalars["ID"];
+  name: Scalars["String"];
+  corpus: CorpusType;
+  fieldset?: Maybe<FieldsetType>;
+  analyzer?: Maybe<AnalyzerType>;
+  trigger: Scalars["String"];
+  creator: UserType;
+  created: Scalars["DateTime"];
+  modified: Scalars["DateTime"];
+};
+
+export type CorpusActionTypeConnection = {
+  __typename?: "CorpusActionTypeConnection";
+  pageInfo: PageInfo;
+  edges: Array<Maybe<CorpusActionTypeEdge>>;
+  totalCount?: Maybe<Scalars["Int"]>;
+};
+
+export type CorpusActionTypeEdge = {
+  __typename?: "CorpusActionTypeEdge";
+  node?: Maybe<CorpusActionType>;
+  cursor: Scalars["String"];
+};
+
+export type DocumentCorpusActionsType = {
+  __typename?: "DocumentCorpusActionsType";
+  corpus_actions: Array<Maybe<CorpusActionType>>;
+  extracts: Array<Maybe<ExtractType>>;
+  analyses: Array<Maybe<AnalysisType>>;
+};

@@ -188,6 +188,7 @@ class AnnotationFilter(django_filters.FilterSet):
             "analysis": ["isnull"],
             "document_id": ["exact"],
             "corpus_id": ["exact"],
+            "structural": ["exact"]
         }
 
 
@@ -414,6 +415,16 @@ class CorpusQueryFilter(django_filters.FilterSet):
 
 
 class DatacellFilter(django_filters.FilterSet):
+
+    in_corpus_with_id = filters.CharFilter(method="in_corpus")
+    for_document_with_id = filters.CharFilter(method="for_document")
+
+    def in_corpus(self, queryset, name, value):
+        return queryset.filter(corpus=from_global_id(value)[1]).distinct()
+
+    def for_document(self, queryset, name, value):
+        return queryset.filter(documents_id=from_global_id(value)[1]).distinct()
+
     class Meta:
         model = Datacell
         fields = {

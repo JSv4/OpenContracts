@@ -9,13 +9,13 @@ To generate a GraphQL schema file, run your choice of the following commands.
 For an SDL file:
 
 ```
-$ docker-compose -f local.yml run django python manage.py graphql_schema --schema config.graphql.schema.schema --out schema.graphql
+$ docker compose -f local.yml run django python manage.py graphql_schema --schema config.graphql.schema.schema --out schema.graphql
 ```
 
 For a JSON file:
 
 ```
-$ docker-compose -f local.yml run django python manage.py graphql_schema --schema config.graphql.schema.schema --out schema.json
+$ docker compose -f local.yml run django python manage.py graphql_schema --schema config.graphql.schema.schema --out schema.json
 ```
 
 You can convert these to TypeScript for use in a frontend (though you'll find this has already been done for the React-

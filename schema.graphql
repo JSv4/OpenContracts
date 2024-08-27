@@ -1,147 +1,185 @@
-schema {
-  query: Query
-  mutation: Mutation
+type Query {
+  annotations(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection
+  bulkDocRelationshipsInCorpus(corpusId: ID!, documentId: ID!): [RelationshipType]
+  bulkDocAnnotationsInCorpus(corpusId: ID!, documentId: ID, forAnalysisIds: String, labelType: LabelType): [AnnotationType]
+  pageAnnotations(currentPage: Int, pageNumberList: String, pageContainingAnnotationWithId: ID, corpusId: ID, documentId: ID!, forAnalysisIds: String, labelType: LabelType): PageAwareAnnotationType
+  annotation(
+    """The ID of the object"""
+    id: ID!
+  ): AnnotationType
+  relationships(offset: Int, before: String, after: String, first: Int, last: Int, relationshipLabel: ID, corpusId: ID, documentId: ID): RelationshipTypeConnection
+  relationship(
+    """The ID of the object"""
+    id: ID!
+  ): RelationshipType
+  annotationLabels(offset: Int, before: String, after: String, first: Int, last: Int, description_Contains: String, text: String, text_Contains: String, labelType: AnnotationsAnnotationLabelLabelTypeChoices, usedInLabelsetId: String, usedInLabelsetForCorpusId: String, usedInAnalysisIds: String): AnnotationLabelTypeConnection
+  annotationLabel(
+    """The ID of the object"""
+    id: ID!
+  ): AnnotationLabelType
+  labelsets(offset: Int, before: String, after: String, first: Int, last: Int, id: ID, description_Contains: String, title: String, title_Contains: String, textSearch: String, labelsetId: String): LabelSetTypeConnection
+  labelset(
+    """The ID of the object"""
+    id: ID!
+  ): LabelSetType
+  corpuses(offset: Int, before: String, after: String, first: Int, last: Int, description: String, description_Contains: String, id: ID, title_Contains: String, textSearch: String, usesLabelsetId: String): CorpusTypeConnection
+  corpus(
+    """The ID of the object"""
+    id: ID!
+  ): CorpusType
+  documents(offset: Int, before: String, after: String, first: Int, last: Int, description: String, description_Contains: String, id: ID, companySearch: String, hasPdf: Boolean, hasAnnotationsWithIds: String, inCorpusWithId: String, hasLabelWithTitle: String, hasLabelWithId: String, textSearch: String): DocumentTypeConnection
+  document(id: String): DocumentType
+  userimports(offset: Int, before: String, after: String, first: Int, last: Int): UserImportTypeConnection
+  userimport(
+    """The ID of the object"""
+    id: ID!
+  ): UserImportType
+  userexports(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    name_Contains: String
+    id: ID
+    created_Lte: DateTime
+    started_Lte: DateTime
+    finished_Lte: DateTime
+
+    """Ordering"""
+    orderByCreated: String
+
+    """Ordering"""
+    orderByStarted: String
+
+    """Ordering"""
+    orderByFinished: String
+  ): UserExportTypeConnection
+  userexport(
+    """The ID of the object"""
+    id: ID!
+  ): UserExportType
+  assignments(offset: Int, before: String, after: String, first: Int, last: Int, assignor_Email: String, assignee_Email: String, documentId: String): AssignmentTypeConnection
+  assignment(
+    """The ID of the object"""
+    id: ID!
+  ): AssignmentType
+  gremlinEngine(
+    """The ID of the object"""
+    id: ID!
+  ): GremlinEngineType_READ
+  gremlinEngines(offset: Int, before: String, after: String, first: Int, last: Int, url: String): GremlinEngineType_READConnection
+  analyzer(
+    """The ID of the object"""
+    id: ID!
+  ): AnalyzerType
+  analyzers(offset: Int, before: String, after: String, first: Int, last: Int, id_Contains: ID, id: ID, description_Contains: String, disabled: Boolean, analyzerId: String, hostedByGremlinEngineId: String, usedInAnalysisIds: String): AnalyzerTypeConnection
+  analysis(
+    """The ID of the object"""
+    id: ID!
+  ): AnalysisType
+  analyses(offset: Int, before: String, after: String, first: Int, last: Int, analysisStarted_Gte: DateTime, analysisStarted_Lte: DateTime, analysisCompleted_Gte: DateTime, analysisCompleted_Lte: DateTime, status: AnalyzerAnalysisStatusChoices, receivedCallbackResults: Boolean, analyzedCorpusId: String, analyzedDocumentId: String, searchText: String): AnalysisTypeConnection
+  fieldset(
+    """The ID of the object"""
+    id: ID!
+  ): FieldsetType
+  fieldsets(offset: Int, before: String, after: String, first: Int, last: Int, name: String, name_Contains: String, description_Contains: String): FieldsetTypeConnection
+  column(
+    """The ID of the object"""
+    id: ID!
+  ): ColumnType
+  columns(offset: Int, before: String, after: String, first: Int, last: Int, query_Contains: String, matchText_Contains: String, outputType: String, limitToLabel: String, agentic: Boolean): ColumnTypeConnection
+  extract(
+    """The ID of the object"""
+    id: ID!
+  ): ExtractType
+  extracts(offset: Int, before: String, after: String, first: Int, last: Int, name: String, name_Contains: String, created_Lte: DateTime, created_Gte: DateTime, started_Lte: DateTime, started_Gte: DateTime, finished_Lte: DateTime, finished_Gte: DateTime): ExtractTypeConnection
+  corpusQuery(
+    """The ID of the object"""
+    id: ID!
+  ): CorpusQueryType
+  corpusQueries(offset: Int, before: String, after: String, first: Int, last: Int, corpusId: ID): CorpusQueryTypeConnection
+  datacell(
+    """The ID of the object"""
+    id: ID!
+  ): DatacellType
+  datacells(offset: Int, before: String, after: String, first: Int, last: Int, dataDefinition: String, started_Lte: DateTime, started_Gte: DateTime, completed_Lte: DateTime, completed_Gte: DateTime, failed_Lte: DateTime, failed_Gte: DateTime, inCorpusWithId: String, forDocumentWithId: String): DatacellTypeConnection
+  registeredExtractTasks: GenericScalar
+  documentCorpusActions(documentId: ID!, corpusId: ID!): DocumentCorpusActionsType
 }
 
-type AddAnnotation {
-  ok: Boolean
-  annotation: AnnotationType
-}
-
-type AddDocTypeAnnotation {
-  ok: Boolean
-  annotation: AnnotationType
-}
-
-type AddDocumentsToCorpus {
-  ok: Boolean
-  message: String
-}
-
-type AddRelationship {
-  ok: Boolean
-  relationship: RelationshipType
-}
-
-enum AnalysisStatus {
-  CREATED
-  QUEUED
-  RUNNING
-  COMPLETED
-  FAILED
-}
-
-type AnalysisType implements Node {
-  id: ID!
-  created: DateTime!
-  modified: DateTime!
-  isPublic: Boolean!
-  creator: UserType!
-  analyzer: AnalyzerType!
-  callbackToken: UUID!
-  receivedCallbackFile: String
-  analyzedCorpus: CorpusType!
-  importLog: String
-  analyzedDocuments(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
-  analysisStarted: DateTime
-  analysisCompleted: DateTime
-  status: AnalysisStatus!
-  annotations(offset: Int, before: String, after: String, first: Int, last: Int, rawText_Contains: String, annotationLabelId: ID, annotationLabel_Text: String, annotationLabel_Text_Contains: String, annotationLabel_Description_Contains: String, annotationLabel_LabelType: String, documentId: ID, corpusId: ID, usesLabelFromLabelsetId: String): AnnotationTypeConnection!
-  myPermissions: GenericScalar
-  isPublished: Boolean
-  objectSharedWith: GenericScalar
-}
-
-type AnalysisTypeConnection {
+type AnnotationTypeConnection {
+  """Pagination data for this connection."""
   pageInfo: PageInfo!
-  edges: [AnalysisTypeEdge]!
+
+  """Contains the nodes in this connection."""
+  edges: [AnnotationTypeEdge]!
   totalCount: Int
 }
 
-type AnalysisTypeEdge {
-  node: AnalysisType
-  cursor: String!
+"""
+The Relay compliant `PageInfo` type, containing data necessary to paginate this connection.
+"""
+type PageInfo {
+  """When paginating forwards, are there more items?"""
+  hasNextPage: Boolean!
+
+  """When paginating backwards, are there more items?"""
+  hasPreviousPage: Boolean!
+
+  """When paginating backwards, the cursor to continue."""
+  startCursor: String
+
+  """When paginating forwards, the cursor to continue."""
+  endCursor: String
 }
 
-type AnalyzerType implements Node {
-  creator: UserType!
-  created: DateTime!
-  modified: DateTime!
-  id: ID!
-  manifest: GenericScalar
-  description: String!
-  hostGremlin: GremlinEngineType_WRITE!
-  disabled: Boolean!
-  isPublic: Boolean!
-  annotationlabelSet(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationLabelTypeConnection!
-  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
-  labelsetSet(offset: Int, before: String, after: String, first: Int, last: Int): LabelSetTypeConnection!
-  analysisSet(offset: Int, before: String, after: String, first: Int, last: Int): AnalysisTypeConnection!
-  myPermissions: GenericScalar
-  isPublished: Boolean
-  objectSharedWith: GenericScalar
-  analyzerId: String
-}
+"""A Relay edge containing a `AnnotationType` and its cursor."""
+type AnnotationTypeEdge {
+  """The item at the end of the edge"""
+  node: AnnotationType
 
-type AnalyzerTypeConnection {
-  pageInfo: PageInfo!
-  edges: [AnalyzerTypeEdge]!
-  totalCount: Int
-}
-
-type AnalyzerTypeEdge {
-  node: AnalyzerType
-  cursor: String!
-}
-
-enum AnnotationLabelLabelType {
-  RELATIONSHIP_LABEL
-  DOC_TYPE_LABEL
-  TOKEN_LABEL
-}
-
-type AnnotationLabelType implements Node {
-  id: ID!
-  created: DateTime!
-  modified: DateTime!
-  labelType: AnnotationLabelLabelType!
-  analyzer: AnalyzerType
-  color: String!
-  description: String!
-  icon: String!
-  text: String!
-  isPublic: Boolean!
-  creator: UserType!
-  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
-  annotationSet(offset: Int, before: String, after: String, first: Int, last: Int, rawText_Contains: String, annotationLabelId: ID, annotationLabel_Text: String, annotationLabel_Text_Contains: String, annotationLabel_Description_Contains: String, annotationLabel_LabelType: String, documentId: ID, corpusId: ID, usesLabelFromLabelsetId: String): AnnotationTypeConnection!
-  includedInLabelsets(offset: Int, before: String, after: String, first: Int, last: Int): LabelSetTypeConnection!
-  myPermissions: GenericScalar
-  isPublished: Boolean
-  objectSharedWith: GenericScalar
-}
-
-type AnnotationLabelTypeConnection {
-  pageInfo: PageInfo!
-  edges: [AnnotationLabelTypeEdge]!
-  totalCount: Int
-}
-
-type AnnotationLabelTypeEdge {
-  node: AnnotationLabelType
+  """A cursor for use in pagination"""
   cursor: String!
 }
 
 type AnnotationType implements Node {
+  """The ID of the object"""
   id: ID!
+  userLock: UserType
+  backendLock: Boolean!
   page: Int!
   rawText: String
-  tokensJsons: JSONString!
+  tokensJsons: JSONString
   boundingBox: JSONString!
   json: GenericScalar
   annotationLabel: AnnotationLabelType
   document: DocumentType!
   corpus: CorpusType
   analysis: AnalysisType
+  structural: Boolean!
   isPublic: Boolean!
   creator: UserType!
   created: DateTime!
@@ -149,28 +187,193 @@ type AnnotationType implements Node {
   assignmentSet(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
   sourceNodeInRelationships(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
   targetNodeInRelationships(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  queries(offset: Int, before: String, after: String, first: Int, last: Int): CorpusQueryTypeConnection!
+  referencingCells(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+  allSourceNodeInRelationship: [AnnotationType]
+  allTargetNodeInRelationship: [AnnotationType]
+}
+
+"""An object with an ID"""
+interface Node {
+  """The ID of the object"""
+  id: ID!
+}
+
+type UserType implements Node {
+  """The ID of the object"""
+  id: ID!
+  password: String!
+  lastLogin: DateTime
+
+  """
+  Designates that this user has all permissions without explicitly assigning them.
+  """
+  isSuperuser: Boolean!
+
+  """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
+  username: String!
+
+  """Designates whether the user can log into this admin site."""
+  isStaff: Boolean!
+  dateJoined: DateTime!
+  name: String!
+  firstName: String!
+  lastName: String!
+  givenName: String!
+  familyName: String!
+  auth0Id: String!
+  phone: String!
+  email: String!
+  synced: Boolean!
+  isActive: Boolean!
+  emailVerified: Boolean!
+  isSocialUser: Boolean!
+  isUsageCapped: Boolean!
+  lastSynced: DateTime
+  firstSignedIn: DateTime!
+  lastIp: String!
+  createdAssignments(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
+  myAssignments(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
+  userexportSet(offset: Int, before: String, after: String, first: Int, last: Int): UserExportTypeConnection!
+  userimportSet(offset: Int, before: String, after: String, first: Int, last: Int): UserImportTypeConnection!
+  lockedDocumentObjects(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
+  documentSet(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
+  annotationlabelSet(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationLabelTypeConnection!
+  lockedAnnotationlabelObjects(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationLabelTypeConnection!
+  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  lockedRelationshipObjects(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  annotationSet(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection!
+  lockedAnnotationObjects(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection!
+  lockedLabelsetObjects(offset: Int, before: String, after: String, first: Int, last: Int): LabelSetTypeConnection!
+  labelsetSet(offset: Int, before: String, after: String, first: Int, last: Int): LabelSetTypeConnection!
+  corpusSet(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
+  editingCorpuses(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
+  lockedCorpusqueryObjects(offset: Int, before: String, after: String, first: Int, last: Int): CorpusQueryTypeConnection!
+  corpusquerySet(offset: Int, before: String, after: String, first: Int, last: Int): CorpusQueryTypeConnection!
+  lockedCorpusactionObjects(offset: Int, before: String, after: String, first: Int, last: Int, id: ID, name: String, name_Icontains: String, name_Istartswith: String, corpus_Id: ID, fieldset_Id: ID, analyzer_Id: ID, trigger: CorpusesCorpusActionTriggerChoices, creator_Id: ID): CorpusActionTypeConnection!
+  corpusactionSet(offset: Int, before: String, after: String, first: Int, last: Int, id: ID, name: String, name_Icontains: String, name_Istartswith: String, corpus_Id: ID, fieldset_Id: ID, analyzer_Id: ID, trigger: CorpusesCorpusActionTriggerChoices, creator_Id: ID): CorpusActionTypeConnection!
+  lockedGremlinengineObjects(offset: Int, before: String, after: String, first: Int, last: Int): GremlinEngineType_WRITEConnection!
+  gremlinengineSet(offset: Int, before: String, after: String, first: Int, last: Int): GremlinEngineType_WRITEConnection!
+  lockedAnalyzerObjects(offset: Int, before: String, after: String, first: Int, last: Int): AnalyzerTypeConnection!
+  analyzerSet(offset: Int, before: String, after: String, first: Int, last: Int): AnalyzerTypeConnection!
+  analysisSet(offset: Int, before: String, after: String, first: Int, last: Int): AnalysisTypeConnection!
+  lockedAnalysisObjects(offset: Int, before: String, after: String, first: Int, last: Int): AnalysisTypeConnection!
+  lockedFieldsetObjects(offset: Int, before: String, after: String, first: Int, last: Int): FieldsetTypeConnection!
+  fieldsetSet(offset: Int, before: String, after: String, first: Int, last: Int): FieldsetTypeConnection!
+  lockedColumnObjects(offset: Int, before: String, after: String, first: Int, last: Int): ColumnTypeConnection!
+  columnSet(offset: Int, before: String, after: String, first: Int, last: Int): ColumnTypeConnection!
+  lockedExtractObjects(offset: Int, before: String, after: String, first: Int, last: Int): ExtractTypeConnection!
+  extractSet(offset: Int, before: String, after: String, first: Int, last: Int): ExtractTypeConnection!
+  approvedCells(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
+  rejectedCells(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
+  lockedDatacellObjects(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
+  datacellSet(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
   myPermissions: GenericScalar
   isPublished: Boolean
   objectSharedWith: GenericScalar
 }
 
-type AnnotationTypeConnection {
+"""
+The `DateTime` scalar type represents a DateTime
+value as specified by
+[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
+"""
+scalar DateTime
+
+type AssignmentTypeConnection {
+  """Pagination data for this connection."""
   pageInfo: PageInfo!
-  edges: [AnnotationTypeEdge]!
+
+  """Contains the nodes in this connection."""
+  edges: [AssignmentTypeEdge]!
   totalCount: Int
 }
 
-type AnnotationTypeEdge {
-  node: AnnotationType
+"""A Relay edge containing a `AssignmentType` and its cursor."""
+type AssignmentTypeEdge {
+  """The item at the end of the edge"""
+  node: AssignmentType
+
+  """A cursor for use in pagination"""
   cursor: String!
 }
 
 type AssignmentType implements Node {
+  """The ID of the object"""
   id: ID!
   name: String
   document: DocumentType!
   corpus: CorpusType
-  resultingAnnotations(offset: Int, before: String, after: String, first: Int, last: Int, rawText_Contains: String, annotationLabelId: ID, annotationLabel_Text: String, annotationLabel_Text_Contains: String, annotationLabel_Description_Contains: String, annotationLabel_LabelType: String, documentId: ID, corpusId: ID, usesLabelFromLabelsetId: String): AnnotationTypeConnection!
+  resultingAnnotations(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection!
   resultingRelationships(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
   comments: String!
   assignor: UserType!
@@ -183,179 +386,249 @@ type AssignmentType implements Node {
   objectSharedWith: GenericScalar
 }
 
-type AssignmentTypeConnection {
-  pageInfo: PageInfo!
-  edges: [AssignmentTypeEdge]!
-  totalCount: Int
-}
-
-type AssignmentTypeEdge {
-  node: AssignmentType
-  cursor: String!
-}
-
-type CorpusType implements Node {
+type DocumentType implements Node {
+  """The ID of the object"""
   id: ID!
-  parent: CorpusType
-  title: String!
-  description: String!
-  icon: String
-  documents(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
-  labelSet: LabelSetType
+  userLock: UserType
+  backendLock: Boolean!
   isPublic: Boolean!
   creator: UserType!
-  backendLock: Boolean!
-  userLock: UserType
-  error: Boolean!
   created: DateTime!
   modified: DateTime!
-  assignmentSet(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
-  children(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
-  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
-  annotations(offset: Int, before: String, after: String, first: Int, last: Int, rawText_Contains: String, annotationLabelId: ID, annotationLabel_Text: String, annotationLabel_Text_Contains: String, annotationLabel_Description_Contains: String, annotationLabel_LabelType: String, documentId: ID, corpusId: ID, usesLabelFromLabelsetId: String): AnnotationTypeConnection!
-  analyses(offset: Int, before: String, after: String, first: Int, last: Int): AnalysisTypeConnection!
-  myPermissions: GenericScalar
-  isPublished: Boolean
-  objectSharedWith: GenericScalar
-}
-
-type CorpusTypeConnection {
-  pageInfo: PageInfo!
-  edges: [CorpusTypeEdge]!
-  totalCount: Int
-}
-
-type CorpusTypeEdge {
-  node: CorpusType
-  cursor: String!
-}
-
-type CreateCorpusMutation {
-  ok: Boolean
-  message: String
-}
-
-type CreateLabelForLabelsetMutation {
-  ok: Boolean
-  message: String
-  obj: AnnotationLabelType
-}
-
-type CreateLabelMutation {
-  ok: Boolean
-  message: String
-}
-
-type CreateLabelset {
-  ok: Boolean
-  message: String
-  obj: LabelSetType
-}
-
-scalar DateTime
-
-type DeleteCorpusMutation {
-  ok: Boolean
-  message: String
-}
-
-type DeleteDocument {
-  ok: Boolean
-  message: String
-}
-
-type DeleteExport {
-  ok: Boolean
-  message: String
-}
-
-type DeleteLabelMutation {
-  ok: Boolean
-  message: String
-}
-
-type DeleteLabelset {
-  ok: Boolean
-  message: String
-}
-
-type DeleteMultipleDocuments {
-  ok: Boolean
-  message: String
-}
-
-type DeleteMultipleLabelMutation {
-  ok: Boolean
-  message: String
-}
-
-type DocumentType implements Node {
-  id: ID!
   title: String
   description: String
   customMeta: JSONString
   icon: String!
   pdfFile: String!
   txtExtractFile: String
+  pageCount: Int!
   pawlsParseFile: String
-  backendLock: Boolean!
+  assignmentSet(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
+  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  docAnnotations(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection!
+  corpusSet(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
+  includedInAnalyses(offset: Int, before: String, after: String, first: Int, last: Int): AnalysisTypeConnection!
+  extracts(offset: Int, before: String, after: String, first: Int, last: Int): ExtractTypeConnection!
+  extractedDatacells(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+}
+
+"""
+Allows use of a JSON String for input / output from the GraphQL schema.
+
+Use of this type is *not recommended* as you lose the benefits of having a defined, static
+schema (one of the key benefits of GraphQL).
+"""
+scalar JSONString
+
+type RelationshipTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [RelationshipTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `RelationshipType` and its cursor."""
+type RelationshipTypeEdge {
+  """The item at the end of the edge"""
+  node: RelationshipType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type RelationshipType implements Node {
+  """The ID of the object"""
+  id: ID!
   userLock: UserType
+  backendLock: Boolean!
+  relationshipLabel: AnnotationLabelType
+  corpus: CorpusType
+  document: DocumentType!
+  sourceAnnotations(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection!
+  targetAnnotations(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection!
+  analyzer: AnalyzerType
   isPublic: Boolean!
   creator: UserType!
   created: DateTime!
   modified: DateTime!
   assignmentSet(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
-  corpusSet(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
-  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
-  docAnnotations(offset: Int, before: String, after: String, first: Int, last: Int, rawText_Contains: String, annotationLabelId: ID, annotationLabel_Text: String, annotationLabel_Text_Contains: String, annotationLabel_Description_Contains: String, annotationLabel_LabelType: String, documentId: ID, corpusId: ID, usesLabelFromLabelsetId: String): AnnotationTypeConnection!
-  includedInAnalyses(offset: Int, before: String, after: String, first: Int, last: Int): AnalysisTypeConnection!
   myPermissions: GenericScalar
   isPublished: Boolean
   objectSharedWith: GenericScalar
 }
 
-type DocumentTypeConnection {
-  pageInfo: PageInfo!
-  edges: [DocumentTypeEdge]!
-  totalCount: Int
-}
-
-type DocumentTypeEdge {
-  node: DocumentType
-  cursor: String!
-}
-
-scalar GenericScalar
-
-type GremlinEngineType_READ implements Node {
+type AnnotationLabelType implements Node {
+  """The ID of the object"""
   id: ID!
+  userLock: UserType
+  backendLock: Boolean!
+  created: DateTime!
+  modified: DateTime!
+  labelType: AnnotationsAnnotationLabelLabelTypeChoices!
+  analyzer: AnalyzerType
+  readOnly: Boolean!
+  color: String!
+  description: String!
+  icon: String!
+  text: String!
+  isPublic: Boolean!
+  creator: UserType!
+  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  annotationSet(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection!
+  includedInLabelsets(offset: Int, before: String, after: String, first: Int, last: Int): LabelSetTypeConnection!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+}
+
+"""An enumeration."""
+enum AnnotationsAnnotationLabelLabelTypeChoices {
+  """Relationship label."""
+  RELATIONSHIP_LABEL
+
+  """Document-level type label."""
+  DOC_TYPE_LABEL
+
+  """Token-level labels for spans and NER labeling"""
+  TOKEN_LABEL
+
+  """Metadata label for manual entry field"""
+  METADATA_LABEL
+}
+
+type AnalyzerType implements Node {
+  userLock: UserType
+  backendLock: Boolean!
   creator: UserType!
   created: DateTime!
   modified: DateTime!
-  url: String!
-  lastSynced: DateTime
-  installStarted: DateTime
-  installCompleted: DateTime
+
+  """The ID of the object"""
+  id: ID!
+  manifest: GenericScalar
+  description: String!
+  disabled: Boolean!
   isPublic: Boolean!
-  analyzerSet(offset: Int, before: String, after: String, first: Int, last: Int): AnalyzerTypeConnection!
+  icon: String!
+  hostGremlin: GremlinEngineType_WRITE
+  taskName: String
+  annotations(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationLabelTypeConnection!
+  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  labelsetSet(offset: Int, before: String, after: String, first: Int, last: Int): LabelSetTypeConnection!
+  corpusactionSet(offset: Int, before: String, after: String, first: Int, last: Int, id: ID, name: String, name_Icontains: String, name_Istartswith: String, corpus_Id: ID, fieldset_Id: ID, analyzer_Id: ID, trigger: CorpusesCorpusActionTriggerChoices, creator_Id: ID): CorpusActionTypeConnection!
+  analysisSet(offset: Int, before: String, after: String, first: Int, last: Int): AnalysisTypeConnection!
   myPermissions: GenericScalar
   isPublished: Boolean
   objectSharedWith: GenericScalar
+  analyzerId: String
+  fullLabelList: [AnnotationLabelType]
 }
 
-type GremlinEngineType_READConnection {
-  pageInfo: PageInfo!
-  edges: [GremlinEngineType_READEdge]!
-  totalCount: Int
-}
-
-type GremlinEngineType_READEdge {
-  node: GremlinEngineType_READ
-  cursor: String!
-}
+"""
+The `GenericScalar` scalar type represents a generic
+GraphQL scalar value that could be:
+String, Boolean, Int, Float, List or Object.
+"""
+scalar GenericScalar
 
 type GremlinEngineType_WRITE implements Node {
+  """The ID of the object"""
   id: ID!
+  userLock: UserType
+  backendLock: Boolean!
   creator: UserType!
   created: DateTime!
   modified: DateTime!
@@ -371,21 +644,65 @@ type GremlinEngineType_WRITE implements Node {
   objectSharedWith: GenericScalar
 }
 
-type GremlinEngineType_WRITEConnection {
+type AnalyzerTypeConnection {
+  """Pagination data for this connection."""
   pageInfo: PageInfo!
-  edges: [GremlinEngineType_WRITEEdge]!
+
+  """Contains the nodes in this connection."""
+  edges: [AnalyzerTypeEdge]!
   totalCount: Int
 }
 
-type GremlinEngineType_WRITEEdge {
-  node: GremlinEngineType_WRITE
+"""A Relay edge containing a `AnalyzerType` and its cursor."""
+type AnalyzerTypeEdge {
+  """The item at the end of the edge"""
+  node: AnalyzerType
+
+  """A cursor for use in pagination"""
   cursor: String!
 }
 
-scalar JSONString
+type AnnotationLabelTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [AnnotationLabelTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `AnnotationLabelType` and its cursor."""
+type AnnotationLabelTypeEdge {
+  """The item at the end of the edge"""
+  node: AnnotationLabelType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type LabelSetTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [LabelSetTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `LabelSetType` and its cursor."""
+type LabelSetTypeEdge {
+  """The item at the end of the edge"""
+  node: LabelSetType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
 
 type LabelSetType implements Node {
+  """The ID of the object"""
   id: ID!
+  userLock: UserType
+  backendLock: Boolean!
   isPublic: Boolean!
   creator: UserType!
   created: DateTime!
@@ -393,73 +710,900 @@ type LabelSetType implements Node {
   title: String!
   description: String!
   icon: String!
-  annotationLabels(offset: Int, before: String, after: String, first: Int, last: Int, description_Contains: String, text: String, text_Contains: String, labelType: String, usedInLabelsetId: String, usedInLabelsetForCorpusId: String): AnnotationLabelTypeConnection
+  annotationLabels(offset: Int, before: String, after: String, first: Int, last: Int, description_Contains: String, text: String, text_Contains: String, labelType: AnnotationsAnnotationLabelLabelTypeChoices, usedInLabelsetId: String, usedInLabelsetForCorpusId: String, usedInAnalysisIds: String): AnnotationLabelTypeConnection
   analyzer: AnalyzerType
   usedByCorpuses(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
   myPermissions: GenericScalar
   isPublished: Boolean
   objectSharedWith: GenericScalar
+  allAnnotationLabels: [AnnotationLabelType]
 }
 
-type LabelSetTypeConnection {
+type CorpusTypeConnection {
+  """Pagination data for this connection."""
   pageInfo: PageInfo!
-  edges: [LabelSetTypeEdge]!
+
+  """Contains the nodes in this connection."""
+  edges: [CorpusTypeEdge]!
   totalCount: Int
 }
 
-type LabelSetTypeEdge {
-  node: LabelSetType
+"""A Relay edge containing a `CorpusType` and its cursor."""
+type CorpusTypeEdge {
+  """The item at the end of the edge"""
+  node: CorpusType
+
+  """A cursor for use in pagination"""
   cursor: String!
 }
 
-type MakeCorpusPublic {
-  ok: Boolean
-  message: String
-  obj: CorpusType
+type CorpusType implements Node {
+  """The ID of the object"""
+  id: ID!
+  parent: CorpusType
+  title: String!
+  description: String!
+  icon: String
+  documents(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
+  labelSet: LabelSetType
+  isPublic: Boolean!
+  creator: UserType!
+  backendLock: Boolean!
+  userLock: UserType
+  error: Boolean!
+  created: DateTime!
+  modified: DateTime!
+  assignmentSet(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
+  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
+  annotations(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection!
+  children(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
+  queries(offset: Int, before: String, after: String, first: Int, last: Int): CorpusQueryTypeConnection!
+  actions(offset: Int, before: String, after: String, first: Int, last: Int, id: ID, name: String, name_Icontains: String, name_Istartswith: String, corpus_Id: ID, fieldset_Id: ID, analyzer_Id: ID, trigger: CorpusesCorpusActionTriggerChoices, creator_Id: ID): CorpusActionTypeConnection!
+  analyses(offset: Int, before: String, after: String, first: Int, last: Int): AnalysisTypeConnection!
+  extracts(offset: Int, before: String, after: String, first: Int, last: Int): ExtractTypeConnection!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+  allAnnotationSummaries(analysisId: ID, labelTypes: [LabelTypeEnum]): [AnnotationType]
+  appliedAnalyzerIds: [String]
+}
+
+type DocumentTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [DocumentTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `DocumentType` and its cursor."""
+type DocumentTypeEdge {
+  """The item at the end of the edge"""
+  node: DocumentType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type CorpusQueryTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [CorpusQueryTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `CorpusQueryType` and its cursor."""
+type CorpusQueryTypeEdge {
+  """The item at the end of the edge"""
+  node: CorpusQueryType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type CorpusQueryType implements Node {
+  """The ID of the object"""
+  id: ID!
+  userLock: UserType
+  backendLock: Boolean!
+  isPublic: Boolean!
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  query: String!
+  corpus: CorpusType!
+  sources(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection!
+  response: String
+  started: DateTime
+  completed: DateTime
+  failed: DateTime
+  stacktrace: String
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+  fullSourceList: [AnnotationType]
+}
+
+type CorpusActionTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [CorpusActionTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `CorpusActionType` and its cursor."""
+type CorpusActionTypeEdge {
+  """The item at the end of the edge"""
+  node: CorpusActionType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type CorpusActionType implements Node {
+  """The ID of the object"""
+  id: ID!
+  userLock: UserType
+  backendLock: Boolean!
+  isPublic: Boolean!
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  name: String!
+  corpus: CorpusType!
+  fieldset: FieldsetType
+  analyzer: AnalyzerType
+  trigger: CorpusesCorpusActionTriggerChoices!
+  disabled: Boolean!
+  runOnAllCorpuses: Boolean!
+  analyses(offset: Int, before: String, after: String, first: Int, last: Int): AnalysisTypeConnection!
+  extracts(offset: Int, before: String, after: String, first: Int, last: Int): ExtractTypeConnection!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+}
+
+type FieldsetType implements Node {
+  """The ID of the object"""
+  id: ID!
+  userLock: UserType
+  backendLock: Boolean!
+  isPublic: Boolean!
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  name: String!
+  description: String!
+  corpusactionSet(offset: Int, before: String, after: String, first: Int, last: Int, id: ID, name: String, name_Icontains: String, name_Istartswith: String, corpus_Id: ID, fieldset_Id: ID, analyzer_Id: ID, trigger: CorpusesCorpusActionTriggerChoices, creator_Id: ID): CorpusActionTypeConnection!
+  columns(offset: Int, before: String, after: String, first: Int, last: Int): ColumnTypeConnection!
+  extracts(offset: Int, before: String, after: String, first: Int, last: Int): ExtractTypeConnection!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+  fullColumnList: [ColumnType]
+}
+
+"""An enumeration."""
+enum CorpusesCorpusActionTriggerChoices {
+  """Add Document"""
+  ADD_DOCUMENT
+
+  """Edit Document"""
+  EDIT_DOCUMENT
+}
+
+type ColumnTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [ColumnTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `ColumnType` and its cursor."""
+type ColumnTypeEdge {
+  """The item at the end of the edge"""
+  node: ColumnType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type ColumnType implements Node {
+  """The ID of the object"""
+  id: ID!
+  userLock: UserType
+  backendLock: Boolean!
+  isPublic: Boolean!
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  name: String!
+  fieldset: FieldsetType!
+  query: String
+  matchText: String
+  mustContainText: String
+  outputType: String!
+  limitToLabel: String
+  instructions: String
+  agentic: Boolean!
+  extractIsList: Boolean!
+  taskName: String!
+  extractedDatacells(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+}
+
+type DatacellTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [DatacellTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `DatacellType` and its cursor."""
+type DatacellTypeEdge {
+  """The item at the end of the edge"""
+  node: DatacellType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type DatacellType implements Node {
+  """The ID of the object"""
+  id: ID!
+  userLock: UserType
+  backendLock: Boolean!
+  isPublic: Boolean!
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  extract: ExtractType!
+  column: ColumnType!
+  document: DocumentType!
+  sources(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection!
+  data: GenericScalar
+  dataDefinition: String!
+  started: DateTime
+  completed: DateTime
+  failed: DateTime
+  stacktrace: String
+  approvedBy: UserType
+  rejectedBy: UserType
+  correctedData: JSONString
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+  fullSourceList: [AnnotationType]
+}
+
+type ExtractType implements Node {
+  """The ID of the object"""
+  id: ID!
+  userLock: UserType
+  backendLock: Boolean!
+  isPublic: Boolean!
+  creator: UserType!
+  modified: DateTime!
+  corpus: CorpusType
+  documents(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
+  name: String!
+  fieldset: FieldsetType!
+  created: DateTime!
+  started: DateTime
+  finished: DateTime
+  error: String
+  corpusAction: CorpusActionType
+  extractedDatacells(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+  fullDatacellList: [DatacellType]
+  fullDocumentList: [DocumentType]
+}
+
+type ExtractTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [ExtractTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `ExtractType` and its cursor."""
+type ExtractTypeEdge {
+  """The item at the end of the edge"""
+  node: ExtractType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type AnalysisTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [AnalysisTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `AnalysisType` and its cursor."""
+type AnalysisTypeEdge {
+  """The item at the end of the edge"""
+  node: AnalysisType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type AnalysisType implements Node {
+  """The ID of the object"""
+  id: ID!
+  userLock: UserType
+  backendLock: Boolean!
+  created: DateTime!
+  modified: DateTime!
+  isPublic: Boolean!
+  creator: UserType!
+  analyzer: AnalyzerType!
+  callbackToken: UUID!
+  receivedCallbackFile: String
+  analyzedCorpus: CorpusType!
+  corpusAction: CorpusActionType
+  importLog: String
+  analyzedDocuments(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
+  analysisStarted: DateTime
+  analysisCompleted: DateTime
+  status: AnalyzerAnalysisStatusChoices!
+  annotations(
+    offset: Int
+    before: String
+    after: String
+    first: Int
+    last: Int
+    rawText_Contains: String
+    annotationLabelId: ID
+    annotationLabel_Text: String
+    annotationLabel_Text_Contains: String
+    annotationLabel_Description_Contains: String
+    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
+    analysis_Isnull: Boolean
+    documentId: ID
+    corpusId: ID
+    structural: Boolean
+    usesLabelFromLabelsetId: String
+    createdByAnalysisIds: String
+    createdWithAnalyzerId: String
+
+    """Ordering"""
+    orderBy: String
+  ): AnnotationTypeConnection!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+  fullAnnotationList: [AnnotationType]
+}
+
+"""
+Leverages the internal Python implementation of UUID (uuid.UUID) to provide native UUID objects
+in fields, resolvers and input.
+"""
+scalar UUID
+
+"""An enumeration."""
+enum AnalyzerAnalysisStatusChoices {
+  """JobStatus.CREATED"""
+  CREATED
+
+  """JobStatus.QUEUED"""
+  QUEUED
+
+  """JobStatus.RUNNING"""
+  RUNNING
+
+  """JobStatus.COMPLETED"""
+  COMPLETED
+
+  """JobStatus.FAILED"""
+  FAILED
+}
+
+enum LabelTypeEnum {
+  RELATIONSHIP_LABEL
+  DOC_TYPE_LABEL
+  TOKEN_LABEL
+  METADATA_LABEL
+}
+
+type UserExportTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [UserExportTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `UserExportType` and its cursor."""
+type UserExportTypeEdge {
+  """The item at the end of the edge"""
+  node: UserExportType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type UserExportType implements Node {
+  """The ID of the object"""
+  id: ID!
+  file: String!
+  name: String
+  created: DateTime!
+  started: DateTime
+  finished: DateTime
+  errors: String!
+  format: UsersUserExportFormatChoices!
+  backendLock: Boolean!
+  isPublic: Boolean!
+  creator: UserType!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+}
+
+"""An enumeration."""
+enum UsersUserExportFormatChoices {
+  """LANGCHAIN"""
+  LANGCHAIN
+
+  """OPEN_CONTRACTS"""
+  OPEN_CONTRACTS
+
+  """FUNSD"""
+  FUNSD
+}
+
+type UserImportTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [UserImportTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `UserImportType` and its cursor."""
+type UserImportTypeEdge {
+  """The item at the end of the edge"""
+  node: UserImportType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type UserImportType implements Node {
+  """The ID of the object"""
+  id: ID!
+  zip: String!
+  name: String
+  created: DateTime!
+  started: DateTime
+  finished: DateTime
+  errors: String!
+  isPublic: Boolean!
+  creator: UserType!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+}
+
+type GremlinEngineType_WRITEConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [GremlinEngineType_WRITEEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `GremlinEngineType_WRITE` and its cursor."""
+type GremlinEngineType_WRITEEdge {
+  """The item at the end of the edge"""
+  node: GremlinEngineType_WRITE
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type FieldsetTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [FieldsetTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `FieldsetType` and its cursor."""
+type FieldsetTypeEdge {
+  """The item at the end of the edge"""
+  node: FieldsetType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+"""An enumeration."""
+enum LabelType {
+  DOC_TYPE_LABEL
+  TOKEN_LABEL
+  RELATIONSHIP_LABEL
+  METADATA_LABEL
+}
+
+type PageAwareAnnotationType {
+  pdfPageInfo: PdfPageInfoType
+  pageAnnotations: [AnnotationType]
+}
+
+type PdfPageInfoType {
+  pageCount: Int
+  currentPage: Int
+  hasNextPage: Boolean
+  hasPreviousPage: Boolean
+  corpusId: ID
+  documentId: ID
+  forAnalysisIds: String
+  labelType: String
+}
+
+type GremlinEngineType_READ implements Node {
+  """The ID of the object"""
+  id: ID!
+  userLock: UserType
+  backendLock: Boolean!
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  url: String!
+  lastSynced: DateTime
+  installStarted: DateTime
+  installCompleted: DateTime
+  isPublic: Boolean!
+  analyzerSet(offset: Int, before: String, after: String, first: Int, last: Int): AnalyzerTypeConnection!
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+}
+
+type GremlinEngineType_READConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [GremlinEngineType_READEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `GremlinEngineType_READ` and its cursor."""
+type GremlinEngineType_READEdge {
+  """The item at the end of the edge"""
+  node: GremlinEngineType_READ
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type DocumentCorpusActionsType {
+  corpusActions: [CorpusActionType]
+  extracts: [ExtractType]
+  analyses: [AnalysisType]
 }
 
 type Mutation {
   tokenAuth(username: String!, password: String!): ObtainJSONWebTokenWithUser
   verifyToken(token: String): Verify
   refreshToken(refreshToken: String): Refresh
-  addAnnotation(annotationLabelId: String!, corpusId: String!, documentId: String!, json: GenericScalar!, page: Int!, rawText: String!): AddAnnotation
-  removeAnnotation(annotationId: String!): RemoveAnnotation
+  addAnnotation(
+    """Id of the label that is applied via this annotation."""
+    annotationLabelId: String!
+
+    """ID of the corpus this annotation is for."""
+    corpusId: String!
+
+    """Id of the document this annotation is on."""
+    documentId: String!
+
+    """New-style JSON for multipage annotations"""
+    json: GenericScalar!
+
+    """What page is this annotation on (0-indexed)"""
+    page: Int!
+
+    """What is the raw text of the annotation?"""
+    rawText: String!
+  ): AddAnnotation
+  removeAnnotation(
+    """Id of the annotation that is to be deleted."""
+    annotationId: String!
+  ): RemoveAnnotation
   updateAnnotation(annotationLabel: String, id: String!, json: GenericScalar, page: Int, rawText: String): UpdateAnnotation
-  addDocTypeAnnotation(annotationLabelId: String!, corpusId: String!, documentId: String!): AddDocTypeAnnotation
-  removeDocTypeAnnotation(annotationId: String!): RemoveAnnotation
-  addRelationship(corpusId: String!, documentId: String!, relationshipLabelId: String!, sourceIds: [String]!, targetIds: [String]!): AddRelationship
-  removeRelationship(relationshipId: String!): RemoveRelationship
+  addDocTypeAnnotation(
+    """Id of the label that is applied via this annotation."""
+    annotationLabelId: String!
+
+    """ID of the corpus this annotation is for."""
+    corpusId: String!
+
+    """Id of the document this annotation is on."""
+    documentId: String!
+  ): AddDocTypeAnnotation
+  removeDocTypeAnnotation(
+    """Id of the annotation that is to be deleted."""
+    annotationId: String!
+  ): RemoveAnnotation
+  addRelationship(
+    """ID of the corpus for this relationship."""
+    corpusId: String!
+
+    """ID of the document for this relationship."""
+    documentId: String!
+
+    """ID of the label for this relationship."""
+    relationshipLabelId: String!
+
+    """List of ids of the tokens in the source annotation"""
+    sourceIds: [String]!
+
+    """List of ids of the target tokens in the label"""
+    targetIds: [String]!
+  ): AddRelationship
+  removeRelationship(
+    """Id of the relationship that is to be deleted."""
+    relationshipId: String!
+  ): RemoveRelationship
   removeRelationships(relationshipIds: [String]): RemoveRelationships
   updateRelationships(relationships: [RelationInputType]): UpdateRelations
-  createLabelset(base64IconString: String, description: String, filename: String!, title: String!): CreateLabelset
-  updateLabelset(description: String, icon: String, id: String!, title: String!): UpdateLabelset
+  createLabelset(
+    """Base64-encoded file string for the Labelset icon (optional)."""
+    base64IconString: String
+
+    """Description of the Labelset."""
+    description: String
+
+    """Filename of the document."""
+    filename: String
+
+    """Title of the Labelset."""
+    title: String!
+  ): CreateLabelset
+  updateLabelset(
+    """Description of the Labelset."""
+    description: String
+
+    """Base64-encoded file string for the Labelset icon (optional)."""
+    icon: String
+    id: String!
+
+    """Title of the Labelset."""
+    title: String!
+  ): UpdateLabelset
   deleteLabelset(id: String!): DeleteLabelset
   createAnnotationLabel(color: String, description: String, icon: String, text: String, type: String): CreateLabelMutation
   updateAnnotationLabel(color: String, description: String, icon: String, id: String!, labelType: String, text: String): UpdateLabelMutation
   deleteAnnotationLabel(id: String!): DeleteLabelMutation
-  deleteMultipleAnnotationLabels(annotationLabelIdsToDelete: [String]!): DeleteMultipleLabelMutation
-  createAnnotationLabelForLabelset(color: String, description: String, icon: String, labelType: String, labelsetId: String!, text: String): CreateLabelForLabelsetMutation
-  removeAnnotationLabelsFromLabelset(labelIds: [String]!, labelsetId: String! = "Id of the labelset to delete the labels from"): RemoveLabelsFromLabelsetMutation
-  uploadDocument(base64FileString: String!, customMeta: GenericScalar, description: String!, filename: String!, title: String!): UploadDocument
+  deleteMultipleAnnotationLabels(
+    """List of ids of the labels to delete"""
+    annotationLabelIdsToDelete: [String]!
+  ): DeleteMultipleLabelMutation
+  createAnnotationLabelForLabelset(
+    color: String
+    description: String
+    icon: String
+    labelType: String
+
+    """Id of the label that is to be updated."""
+    labelsetId: String!
+    text: String
+  ): CreateLabelForLabelsetMutation
+  removeAnnotationLabelsFromLabelset(
+    """List of Ids of the labels to be deleted."""
+    labelIds: [String]!
+    labelsetId: String! = "Id of the labelset to delete the labels from"
+  ): RemoveLabelsFromLabelsetMutation
+  uploadDocument(
+    """Base64-encoded file string for the file."""
+    base64FileString: String!
+
+    """"""
+    customMeta: GenericScalar
+
+    """Description of the document."""
+    description: String!
+
+    """Filename of the document."""
+    filename: String!
+
+    """Title of the document."""
+    title: String!
+  ): UploadDocument
   updateDocument(customMeta: GenericScalar, description: String, id: String!, pdfFile: String, title: String): UpdateDocument
   deleteDocument(id: String!): DeleteDocument
-  exportDocument(corpusId: String!, documentId: String!): StartDocumentExport
-  deleteMultipleDocuments(documentIdsToDelete: [String]!): DeleteMultipleDocuments
-  forkCorpus(corpusId: String!): StartCorpusFork
-  makeCorpusPublic(corpusId: String!): MakeCorpusPublic
+  exportDocument(
+    """Id of the document to package?"""
+    corpusId: String!
+
+    """Id of the document to package?"""
+    documentId: String!
+  ): StartDocumentExport
+  deleteMultipleDocuments(
+    """List of ids of the documents to delete"""
+    documentIdsToDelete: [String]!
+  ): DeleteMultipleDocuments
+  forkCorpus(
+    """Graphene id of the corpus you want to package for export"""
+    corpusId: String!
+  ): StartCorpusFork
+  makeCorpusPublic(
+    """Corpus id to make public (superuser only)"""
+    corpusId: String!
+  ): MakeCorpusPublic
   createCorpus(description: String, icon: String, labelSet: String, title: String): CreateCorpusMutation
   updateCorpus(description: String, icon: String, id: String!, labelSet: String, title: String): UpdateCorpusMutation
   deleteCorpus(id: String!): DeleteCorpusMutation
-  linkDocumentsToCorpus(corpusId: String!, documentIds: [String]!): AddDocumentsToCorpus
-  removeDocumentsFromCorpus(corpusId: String!, documentIdsToRemove: [String]!): RemoveDocumentsFromCorpus
-  importOpenContractsZip(base64FileString: String!): UploadCorpusImportZip
-  exportCorpus(corpusId: String!): StartCorpusExport
-  deleteExport(id: String!): DeleteExport
-  startAnalysisOnCorpus(analyzerId: ID!, corpusId: ID!): StartCorpusAnalysisMutation
-}
+  linkDocumentsToCorpus(
+    """ID of corpus to add documents to."""
+    corpusId: String!
 
-interface Node {
-  id: ID!
+    """List of ids of the docs to add to corpus."""
+    documentIds: [String]!
+  ): AddDocumentsToCorpus
+  removeDocumentsFromCorpus(
+    """ID of corpus to remove documents from."""
+    corpusId: String!
+
+    """List of ids of the docs to remove from corpus."""
+    documentIdsToRemove: [String]!
+  ): RemoveDocumentsFromCorpus
+  importOpenContractsZip(
+    """Base-64 encoded string for zip of corpus file you want to import"""
+    base64FileString: String!
+  ): UploadCorpusImportZip
+  importAnnotatedDocToCorpus(documentImportData: String!, targetCorpusId: String!): UploadAnnotatedDocument
+  exportCorpus(
+    """Graphene id of the corpus you want to package for export"""
+    corpusId: String!
+    exportFormat: ExportType
+  ): StartCorpusExport
+  deleteExport(id: String!): DeleteExport
+  startAnalysisOnCorpus(
+    """Id of the analyzer to use."""
+    analyzerId: ID!
+
+    """Id of the corpus that is to be analyzed."""
+    corpusId: ID!
+  ): StartCorpusAnalysisMutation
+  deleteAnalysis(id: String!): DeleteAnalysisMutation
+  makeAnalysisPublic(
+    """Analysis id to make public (superuser only)"""
+    analysisId: String!
+  ): MakeAnalysisPublic
+  askQuery(
+    """Graphene id of the corpus you want to package for export"""
+    corpusId: String!
+
+    """What is the question the user wants an answer to?"""
+    query: String!
+  ): StartQueryForCorpus
+  createFieldset(description: String!, name: String!): CreateFieldset
+  createColumn(agentic: Boolean, extractIsList: Boolean, fieldsetId: ID!, instructions: String, limitToLabel: String, matchText: String, mustContainText: String, name: String!, outputType: String!, query: String, taskName: String): CreateColumn
+  updateColumn(agentic: Boolean, extractIsList: Boolean, fieldsetId: ID, id: ID!, instructions: String, limitToLabel: String, matchText: String, mustContainText: String, name: String, outputType: String, query: String, taskName: String): UpdateColumnMutation
+  deleteColumn(id: ID!): DeleteColumn
+
+  """
+  Create a new extract. If fieldset_id is provided, attach existing fieldset.
+  Otherwise, a new fieldset is created. If no name is provided, fieldset name has
+  form "[Extract name] Fieldset"
+  """
+  createExtract(corpusId: ID, fieldsetDescription: String, fieldsetId: ID, fieldsetName: String, name: String!): CreateExtract
+  startExtract(extractId: ID!): StartExtract
+  deleteExtract(id: String!): DeleteExtract
+  updateExtract(description: String, icon: String, id: String!, labelSet: String, title: String): UpdateExtractMutation
+  addDocsToExtract(
+    """List of ids of the documents to add to extract."""
+    documentIds: [ID]!
+
+    """Id of corpus to add docs to."""
+    extractId: ID!
+  ): AddDocumentsToExtract
+  removeDocsFromExtract(
+    """List of ids of the docs to remove from extract."""
+    documentIdsToRemove: [ID]!
+
+    """ID of extract to remove documents from."""
+    extractId: ID!
+  ): RemoveDocumentsFromExtract
+  approveDatacell(datacellId: String!): ApproveDatacell
+  rejectDatacell(datacellId: String!): RejectDatacell
+  editDatacell(datacellId: String!, editedData: GenericScalar!): EditDatacell
 }
 
 type ObtainJSONWebTokenWithUser {
@@ -470,38 +1614,8 @@ type ObtainJSONWebTokenWithUser {
   refreshToken: String!
 }
 
-type PageInfo {
-  hasNextPage: Boolean!
-  hasPreviousPage: Boolean!
-  startCursor: String
-  endCursor: String
-}
-
-type Query {
-  annotations(offset: Int, before: String, after: String, first: Int, last: Int, rawText_Contains: String, annotationLabelId: ID, annotationLabel_Text: String, annotationLabel_Text_Contains: String, annotationLabel_Description_Contains: String, annotationLabel_LabelType: String, documentId: ID, corpusId: ID, usesLabelFromLabelsetId: String): AnnotationTypeConnection
-  annotation(id: ID!): AnnotationType
-  relationships(offset: Int, before: String, after: String, first: Int, last: Int, relationshipLabel: ID, corpusId: ID, documentId: ID): RelationshipTypeConnection
-  relationship(id: ID!): RelationshipType
-  annotationLabels(offset: Int, before: String, after: String, first: Int, last: Int, description_Contains: String, text: String, text_Contains: String, labelType: String, usedInLabelsetId: String, usedInLabelsetForCorpusId: String): AnnotationLabelTypeConnection
-  annotationLabel(id: ID!): AnnotationLabelType
-  labelsets(offset: Int, before: String, after: String, first: Int, last: Int, id: Float, description_Contains: String, title: String, title_Contains: String, textSearch: String, labelsetId: String): LabelSetTypeConnection
-  labelset(id: ID!): LabelSetType
-  corpuses(offset: Int, before: String, after: String, first: Int, last: Int, description: String, description_Contains: String, id: Float, title_Contains: String, textSearch: String, usesLabelsetId: String): CorpusTypeConnection
-  corpus(id: ID!): CorpusType
-  documents(offset: Int, before: String, after: String, first: Int, last: Int, description: String, description_Contains: String, id: Float, companySearch: String, hasPdf: Boolean, inCorpusWithId: String, hasLabelWithTitle: String, hasLabelWithId: String, textSearch: String): DocumentTypeConnection
-  document(id: String): DocumentType
-  userimports(offset: Int, before: String, after: String, first: Int, last: Int): UserImportTypeConnection
-  userimport(id: ID!): UserImportType
-  userexports(offset: Int, before: String, after: String, first: Int, last: Int, name_Contains: String, id: Float, created_Lte: DateTime, started_Lte: DateTime, finished_Lte: DateTime, orderByCreated: String, orderByStarted: String, orderByFinished: String): UserExportTypeConnection
-  userexport(id: ID!): UserExportType
-  assignments(offset: Int, before: String, after: String, first: Int, last: Int, assignor_Email: String, assignee_Email: String, documentId: String): AssignmentTypeConnection
-  assignment(id: ID!): AssignmentType
-  gremlinEngine(id: ID!): GremlinEngineType_READ
-  gremlinEngines(offset: Int, before: String, after: String, first: Int, last: Int, url: String): GremlinEngineType_READConnection
-  analyzer(id: ID!): AnalyzerType
-  analyzers(offset: Int, before: String, after: String, first: Int, last: Int, description_Contains: String, disabled: Boolean, analyzerId: String, hostedByGremlinEngineId: String): AnalyzerTypeConnection
-  analysis(id: ID!): AnalysisType
-  analyses(offset: Int, before: String, after: String, first: Int, last: Int, analysisStarted_Gte: DateTime, analysisStarted_Lte: DateTime, analysisCompleted_Gte: DateTime, analysisCompleted_Lte: DateTime, status: String, receivedCallbackResults: Boolean): AnalysisTypeConnection
+type Verify {
+  payload: GenericScalar!
 }
 
 type Refresh {
@@ -509,6 +1623,43 @@ type Refresh {
   refreshExpiresIn: Int!
   token: String!
   refreshToken: String!
+}
+
+type AddAnnotation {
+  ok: Boolean
+  annotation: AnnotationType
+}
+
+type RemoveAnnotation {
+  ok: Boolean
+}
+
+type UpdateAnnotation {
+  ok: Boolean
+  message: String
+  objId: ID
+}
+
+type AddDocTypeAnnotation {
+  ok: Boolean
+  annotation: AnnotationType
+}
+
+type AddRelationship {
+  ok: Boolean
+  relationship: RelationshipType
+}
+
+type RemoveRelationship {
+  ok: Boolean
+}
+
+type RemoveRelationships {
+  ok: Boolean
+}
+
+type UpdateRelations {
+  ok: Boolean
 }
 
 input RelationInputType {
@@ -523,116 +1674,55 @@ input RelationInputType {
   documentId: String
 }
 
-type RelationshipType implements Node {
-  id: ID!
-  relationshipLabel: AnnotationLabelType
-  corpus: CorpusType
-  document: DocumentType!
-  sourceAnnotations(offset: Int, before: String, after: String, first: Int, last: Int, rawText_Contains: String, annotationLabelId: ID, annotationLabel_Text: String, annotationLabel_Text_Contains: String, annotationLabel_Description_Contains: String, annotationLabel_LabelType: String, documentId: ID, corpusId: ID, usesLabelFromLabelsetId: String): AnnotationTypeConnection!
-  targetAnnotations(offset: Int, before: String, after: String, first: Int, last: Int, rawText_Contains: String, annotationLabelId: ID, annotationLabel_Text: String, annotationLabel_Text_Contains: String, annotationLabel_Description_Contains: String, annotationLabel_LabelType: String, documentId: ID, corpusId: ID, usesLabelFromLabelsetId: String): AnnotationTypeConnection!
-  analyzer: AnalyzerType
-  isPublic: Boolean!
-  creator: UserType!
-  created: DateTime!
-  modified: DateTime!
-  assignmentSet(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
-  myPermissions: GenericScalar
-  isPublished: Boolean
-  objectSharedWith: GenericScalar
-}
-
-type RelationshipTypeConnection {
-  pageInfo: PageInfo!
-  edges: [RelationshipTypeEdge]!
-  totalCount: Int
-}
-
-type RelationshipTypeEdge {
-  node: RelationshipType
-  cursor: String!
-}
-
-type RemoveAnnotation {
-  ok: Boolean
-}
-
-type RemoveDocumentsFromCorpus {
+type CreateLabelset {
   ok: Boolean
   message: String
-}
-
-type RemoveLabelsFromLabelsetMutation {
-  ok: Boolean
-  message: String
-}
-
-type RemoveRelationship {
-  ok: Boolean
-}
-
-type RemoveRelationships {
-  ok: Boolean
-}
-
-type StartCorpusAnalysisMutation {
-  ok: Boolean
-  message: String
-  obj: AnalysisType
-}
-
-type StartCorpusExport {
-  ok: Boolean
-  message: String
-  export: UserExportType
-}
-
-type StartCorpusFork {
-  ok: Boolean
-  message: String
-  newCorpus: CorpusType
-}
-
-type StartDocumentExport {
-  ok: Boolean
-  message: String
-  export: UserExportType
-}
-
-scalar UUID
-
-type UpdateAnnotation {
-  ok: Boolean
-  message: String
-}
-
-type UpdateCorpusMutation {
-  ok: Boolean
-  message: String
-}
-
-type UpdateDocument {
-  ok: Boolean
-  message: String
-}
-
-type UpdateLabelMutation {
-  ok: Boolean
-  message: String
+  obj: LabelSetType
 }
 
 type UpdateLabelset {
   ok: Boolean
   message: String
+  objId: ID
 }
 
-type UpdateRelations {
-  ok: Boolean
-}
-
-type UploadCorpusImportZip {
+type DeleteLabelset {
   ok: Boolean
   message: String
-  corpus: CorpusType
+}
+
+type CreateLabelMutation {
+  ok: Boolean
+  message: String
+  objId: ID
+}
+
+type UpdateLabelMutation {
+  ok: Boolean
+  message: String
+  objId: ID
+}
+
+type DeleteLabelMutation {
+  ok: Boolean
+  message: String
+}
+
+type DeleteMultipleLabelMutation {
+  ok: Boolean
+  message: String
+}
+
+type CreateLabelForLabelsetMutation {
+  ok: Boolean
+  message: String
+  obj: AnnotationLabelType
+  objId: ID
+}
+
+type RemoveLabelsFromLabelsetMutation {
+  ok: Boolean
+  message: String
 }
 
 type UploadDocument {
@@ -641,102 +1731,198 @@ type UploadDocument {
   document: DocumentType
 }
 
-type UserExportType implements Node {
-  id: ID!
-  zip: String!
-  name: String
-  created: DateTime!
-  started: DateTime
-  finished: DateTime
-  errors: String!
-  backendLock: Boolean!
-  isPublic: Boolean!
-  creator: UserType!
-  myPermissions: GenericScalar
-  isPublished: Boolean
-  objectSharedWith: GenericScalar
+type UpdateDocument {
+  ok: Boolean
+  message: String
+  objId: ID
 }
 
-type UserExportTypeConnection {
-  pageInfo: PageInfo!
-  edges: [UserExportTypeEdge]!
-  totalCount: Int
+type DeleteDocument {
+  ok: Boolean
+  message: String
 }
 
-type UserExportTypeEdge {
-  node: UserExportType
-  cursor: String!
+type StartDocumentExport {
+  ok: Boolean
+  message: String
+  export: UserExportType
 }
 
-type UserImportType implements Node {
-  id: ID!
-  zip: String!
-  name: String
-  created: DateTime!
-  started: DateTime
-  finished: DateTime
-  errors: String!
-  isPublic: Boolean!
-  creator: UserType!
-  myPermissions: GenericScalar
-  isPublished: Boolean
-  objectSharedWith: GenericScalar
+type DeleteMultipleDocuments {
+  ok: Boolean
+  message: String
 }
 
-type UserImportTypeConnection {
-  pageInfo: PageInfo!
-  edges: [UserImportTypeEdge]!
-  totalCount: Int
+type StartCorpusFork {
+  ok: Boolean
+  message: String
+  newCorpus: CorpusType
 }
 
-type UserImportTypeEdge {
-  node: UserImportType
-  cursor: String!
+type MakeCorpusPublic {
+  ok: Boolean
+  message: String
 }
 
-type UserType implements Node {
-  id: ID!
-  password: String!
-  lastLogin: DateTime
-  isSuperuser: Boolean!
-  username: String!
-  isStaff: Boolean!
-  dateJoined: DateTime!
-  name: String!
-  firstName: String!
-  lastName: String!
-  givenName: String!
-  familyName: String!
-  auth0Id: String!
-  phone: String!
-  email: String!
-  synced: Boolean!
-  isActive: Boolean!
-  emailVerified: Boolean!
-  isSocialUser: Boolean!
-  lastSynced: DateTime
-  firstSignedIn: DateTime!
-  lastIp: String!
-  createdAssignments(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
-  myAssignments(offset: Int, before: String, after: String, first: Int, last: Int): AssignmentTypeConnection!
-  userexportSet(offset: Int, before: String, after: String, first: Int, last: Int): UserExportTypeConnection!
-  userimportSet(offset: Int, before: String, after: String, first: Int, last: Int): UserImportTypeConnection!
-  editingDocuments(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
-  documentSet(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
-  corpusSet(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
-  editingCorpuses(offset: Int, before: String, after: String, first: Int, last: Int): CorpusTypeConnection!
-  annotationlabelSet(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationLabelTypeConnection!
-  relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
-  annotationSet(offset: Int, before: String, after: String, first: Int, last: Int, rawText_Contains: String, annotationLabelId: ID, annotationLabel_Text: String, annotationLabel_Text_Contains: String, annotationLabel_Description_Contains: String, annotationLabel_LabelType: String, documentId: ID, corpusId: ID, usesLabelFromLabelsetId: String): AnnotationTypeConnection!
-  labelsetSet(offset: Int, before: String, after: String, first: Int, last: Int): LabelSetTypeConnection!
-  gremlinengineSet(offset: Int, before: String, after: String, first: Int, last: Int): GremlinEngineType_WRITEConnection!
-  analyzerSet(offset: Int, before: String, after: String, first: Int, last: Int): AnalyzerTypeConnection!
-  analysisSet(offset: Int, before: String, after: String, first: Int, last: Int): AnalysisTypeConnection!
-  myPermissions: GenericScalar
-  isPublished: Boolean
-  objectSharedWith: GenericScalar
+type CreateCorpusMutation {
+  ok: Boolean
+  message: String
+  objId: ID
 }
 
-type Verify {
-  payload: GenericScalar!
+type UpdateCorpusMutation {
+  ok: Boolean
+  message: String
+  objId: ID
+}
+
+type DeleteCorpusMutation {
+  ok: Boolean
+  message: String
+}
+
+type AddDocumentsToCorpus {
+  ok: Boolean
+  message: String
+}
+
+type RemoveDocumentsFromCorpus {
+  ok: Boolean
+  message: String
+}
+
+type UploadCorpusImportZip {
+  ok: Boolean
+  message: String
+  corpus: CorpusType
+}
+
+type UploadAnnotatedDocument {
+  ok: Boolean
+  message: String
+}
+
+type StartCorpusExport {
+  ok: Boolean
+  message: String
+  export: UserExportType
+}
+
+"""An enumeration."""
+enum ExportType {
+  LANGCHAIN
+  OPEN_CONTRACTS
+  FUNSD
+}
+
+type DeleteExport {
+  ok: Boolean
+  message: String
+}
+
+type StartCorpusAnalysisMutation {
+  ok: Boolean
+  message: String
+  obj: AnalysisType
+}
+
+type DeleteAnalysisMutation {
+  ok: Boolean
+  message: String
+}
+
+type MakeAnalysisPublic {
+  ok: Boolean
+  message: String
+  obj: AnalysisType
+}
+
+type StartQueryForCorpus {
+  ok: Boolean
+  message: String
+  obj: CorpusQueryType
+}
+
+type CreateFieldset {
+  ok: Boolean
+  message: String
+  obj: FieldsetType
+}
+
+type CreateColumn {
+  ok: Boolean
+  message: String
+  obj: ColumnType
+}
+
+type UpdateColumnMutation {
+  ok: Boolean
+  message: String
+  objId: ID
+  obj: ColumnType
+}
+
+type DeleteColumn {
+  ok: Boolean
+  message: String
+  deletedId: String
+}
+
+"""
+Create a new extract. If fieldset_id is provided, attach existing fieldset.
+Otherwise, a new fieldset is created. If no name is provided, fieldset name has
+form "[Extract name] Fieldset"
+"""
+type CreateExtract {
+  ok: Boolean
+  msg: String
+  obj: ExtractType
+}
+
+type StartExtract {
+  ok: Boolean
+  message: String
+  obj: ExtractType
+}
+
+type DeleteExtract {
+  ok: Boolean
+  message: String
+}
+
+type UpdateExtractMutation {
+  ok: Boolean
+  message: String
+  objId: ID
+}
+
+type AddDocumentsToExtract {
+  ok: Boolean
+  message: String
+  objId: ID
+  objs: [DocumentType]
+}
+
+type RemoveDocumentsFromExtract {
+  ok: Boolean
+  message: String
+  idsRemoved: [String]
+}
+
+type ApproveDatacell {
+  ok: Boolean
+  message: String
+  obj: DatacellType
+}
+
+type RejectDatacell {
+  ok: Boolean
+  message: String
+  obj: DatacellType
+}
+
+type EditDatacell {
+  ok: Boolean
+  message: String
+  obj: DatacellType
 }

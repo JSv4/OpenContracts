@@ -44,7 +44,6 @@ import {
   onlyDisplayTheseAnnotations,
   selectedAnalysesIds,
 } from "../../graphql/cache";
-import { AnnotatorRenderer } from "./AnnotatorRenderer";
 import { Header, Icon, Modal, Progress } from "semantic-ui-react";
 import AnnotatorSidebar from "./sidebar/AnnotatorSidebar";
 import { WithSidebar } from "./common";
@@ -52,6 +51,7 @@ import { Result } from "../widgets/data-display/Result";
 import { SidebarContainer } from "../common";
 import { CenterOnPage } from "./CenterOnPage";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
+import { AnnotatorRenderer } from "./AnnotatorRenderer";
 
 // Loading pdf js libraries without cdn is a right PITA... cobbled together a working
 // approach via these guides:
@@ -106,7 +106,6 @@ export const DocumentAnnotator = ({
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";
 
   const selected_analysis_ids = useReactiveVar(selectedAnalysesIds);
-  // console.log("selected_analysis_ids", selected_analysis_ids);
 
   const [viewState, setViewState] = useState<ViewState>(ViewState.LOADING);
   const [doc, setDocument] = useState<PDFDocumentProxy>();

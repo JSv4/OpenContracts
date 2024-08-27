@@ -16,6 +16,7 @@ import {
   ExtractType,
   CorpusQueryType,
   CorpusQueryTypeConnection,
+  CorpusActionType,
 } from "./types";
 import { ExportObject } from "./types";
 
@@ -832,6 +833,7 @@ export const GET_ANALYSES = gql`
   }
 `;
 
+// Possibly will deprecate these...
 export interface RequestAnnotatorDataForDocumentInCorpusInputs {
   selectedDocumentId: string;
   selectedCorpusId: string;
@@ -1494,5 +1496,251 @@ export interface GetRegisteredExtractTasksOutput {
 export const GET_REGISTERED_EXTRACT_TASKS = gql`
   query {
     registeredExtractTasks
+  }
+`;
+
+export interface GetDocumentAnalysesAndExtractsInput {
+  documentId: string;
+  corpusId: string;
+}
+
+export interface GetDocumentAnalysesAndExtractsOutput {
+  documentCorpusActions: {
+    corpusActions: Array<
+      CorpusActionType & {
+        extracts: {
+          pageInfo: PageInfo;
+          edges: Array<{
+            node: ExtractType;
+          }>;
+        };
+        analyses: {
+          pageInfo: PageInfo;
+          edges: Array<{
+            node: AnalysisType;
+          }>;
+        };
+      }
+    >;
+    extracts: Array<ExtractType>;
+    analyses: Array<AnalysisType>;
+  };
+}
+
+export const GET_DOCUMENT_ANALYSES_AND_EXTRACTS = gql`
+  query DocumentData($documentId: ID!, $corpusId: ID!) {
+    documentCorpusActions(documentId: $documentId, corpusId: $corpusId) {
+      corpusActions {
+        id
+        name
+        trigger
+        extracts {
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+          edges {
+            node {
+              id
+              name
+              created
+              started
+              finished
+            }
+          }
+        }
+        analyses {
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+          edges {
+            node {
+              id
+              analyzer {
+                id
+                description
+              }
+              analysisStarted
+              analysisCompleted
+              status
+            }
+          }
+        }
+      }
+      extracts {
+        id
+        name
+        created
+        started
+        finished
+      }
+      analyses {
+        id
+        analyzer {
+          id
+          description
+        }
+        analysisStarted
+        analysisCompleted
+        status
+      }
+    }
+  }
+`;
+
+// Input type for the query
+export interface GetDatacellsForExtractInput {
+  extractId: string;
+}
+
+// Output types for the query
+export interface GetDatacellsForExtractOutput {
+  extract: ExtractType;
+}
+
+export const GET_DATACELLS_FOR_EXTRACT = gql`
+  query GetDatacellsForExtract($extractId: ID!) {
+    extract(id: $extractId) {
+      id
+      name
+      fieldset {
+        id
+        name
+        fullColumnList {
+          id
+          name
+          query
+          outputType
+          limitToLabel
+          instructions
+          extractIsList
+          taskName
+          agentic
+        }
+      }
+      fullDatacellList {
+        id
+        column {
+          id
+          name
+        }
+        document {
+          id
+          title
+        }
+        data
+        dataDefinition
+        started
+        completed
+        failed
+        correctedData
+        stacktrace
+        approvedBy {
+          email
+        }
+        rejectedBy {
+          email
+        }
+        fullSourceList {
+          id
+          annotationLabel {
+            id
+            text
+            color
+            icon
+            description
+          }
+          boundingBox
+          page
+          rawText
+          tokensJsons
+          json
+        }
+      }
+    }
+  }
+`;
+
+export interface GetAnnotationsForAnalysisInput {
+  analysisId: string;
+}
+
+export interface GetAnnotationsForAnalysisOutput {
+  analysis: AnalysisType;
+}
+
+export const GET_ANNOTATIONS_FOR_ANALYSIS = gql`
+  query GetAnnotationsForAnalysis($analysisId: ID!) {
+    analysis(id: $analysisId) {
+      id
+      analyzer {
+        id
+        analyzerId
+        description
+        fullLabelList {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+      }
+      fullAnnotationList {
+        id
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+        boundingBox
+        page
+        rawText
+        tokensJsons
+        json
+        allSourceNodeInRelationship {
+          id
+          relationshipLabel {
+            id
+            text
+            color
+            icon
+            description
+          }
+          targetAnnotations {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+        allTargetNodeInRelationship {
+          id
+          relationshipLabel {
+            id
+            text
+            color
+            icon
+            description
+          }
+          sourceAnnotations {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+      }
+    }
   }
 `;

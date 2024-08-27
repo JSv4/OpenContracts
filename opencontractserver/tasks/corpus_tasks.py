@@ -52,6 +52,7 @@ def process_corpus_action(
                     fieldset=action.fieldset,
                     started=timezone.now(),
                     creator_id=user_id,
+                    corpus_action=action
                 )
                 extract.save()
 
@@ -106,6 +107,7 @@ def process_corpus_action(
                     analyzed_corpus_id=corpus_id,
                     creator_id=user_id,
                     analysis_started=timezone.now(),
+                    corpus_action=action
                 )
 
             logger.info(f"Action uses analyzer: {obj}")

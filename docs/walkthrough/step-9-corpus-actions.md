@@ -12,9 +12,9 @@ corpus.
 
 ### Supported Actions
 
-[!NOTE]
-Currently, you have to configure all of this via the Django admin dashboard (`http://localhost:8000/admin`
+**NOTE:** Currently, you have to configure all of this via the Django admin dashboard (`http://localhost:8000/admin`
 if you're using our local deployment), We'd like to expose this functionality using our React frontend, but the required
+GUI elements and GraphQL mutations need to be built out. A good starter PR for someone ;-).
 
 Currently, a CorpusAction can be configured to run one of three types of analyzers automatically:
 
@@ -36,7 +36,9 @@ Once you've opened the create action form, you'll see a number of different opti
 
 ![img.png](../assets/images/screenshots/New_Corpus_Action.png)
 
-See next section for more details on these configuration options.
+See next section for more details on these configuration options. Once you type in the appropriate configurations and
+hit "Save", the specified Analyzer or Fieldset will be run automatically on the specified Corpus! If you want to learn
+more about the underlying architecture, check out our [deep dive on `CorpusActions`](../architecture/opencontract-corpus-actions.md).
 
 ### Configuration Options for Corpus Action
 

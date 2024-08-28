@@ -12,7 +12,7 @@ import {
 import {
   GetExtractsOutput,
   GetExtractsInput,
-  REQUEST_GET_EXTRACTS,
+  GET_EXTRACTS,
 } from "../graphql/queries";
 import {
   authToken,
@@ -74,7 +74,7 @@ export const Extracts = () => {
     error: extracts_error,
     data: extracts_data,
     fetchMore: fetchMoreExtracts,
-  } = useQuery<GetExtractsOutput, GetExtractsInput>(REQUEST_GET_EXTRACTS, {
+  } = useQuery<GetExtractsOutput, GetExtractsInput>(GET_EXTRACTS, {
     variables: {
       searchText: extract_search_term,
     },

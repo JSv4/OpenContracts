@@ -405,6 +405,7 @@ class ExtractFilter(django_filters.FilterSet):
             "created": ["lte", "gte"],
             "started": ["lte", "gte"],
             "finished": ["lte", "gte"],
+            "corpus": ['exact']
         }
 
 

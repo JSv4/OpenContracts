@@ -1,10 +1,4 @@
-import {
-  SyntheticEvent,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useState,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import styled from "styled-components";
 
@@ -17,7 +11,11 @@ import {
   ViewState,
 } from "../../types";
 import {
+  AnalysisType,
   AnnotationLabelType,
+  CorpusType,
+  DocumentType,
+  ExtractType,
   LabelDisplayBehavior,
   ServerAnnotationType,
 } from "../../../graphql/types";
@@ -49,6 +47,14 @@ export const PDFView = ({
   doc_permissions,
   corpus_permissions,
   read_only,
+  selected_corpus,
+  selected_document,
+  analyses,
+  extracts,
+  selected_analysis,
+  selected_extract,
+  onSelectAnalysis,
+  onSelectExtract,
   createAnnotation,
   updateAnnotation,
   createRelation,
@@ -81,6 +87,14 @@ export const PDFView = ({
   doc_permissions: PermissionTypes[];
   corpus_permissions: PermissionTypes[];
   read_only: boolean;
+  selected_corpus?: CorpusType | null;
+  selected_document: DocumentType;
+  analyses: AnalysisType[];
+  extracts: ExtractType[];
+  selected_analysis: AnalysisType | null | undefined;
+  selected_extract: ExtractType | null | undefined;
+  onSelectAnalysis: (analysis: AnalysisType | null) => undefined | null | void;
+  onSelectExtract: (extract: ExtractType | null) => undefined | null | void;
   createAnnotation: (added_annotation_obj: ServerAnnotation) => void;
   updateAnnotation: (updated_annotation: ServerAnnotation) => void;
   createDocTypeAnnotation: (doc_type_annotation_obj: DocTypeAnnotation) => void;
@@ -132,7 +146,6 @@ export const PDFView = ({
   >({});
   const [scrollContainerRef, setScrollContainerRef] =
     useState<React.RefObject<HTMLDivElement>>();
-  const [scroll_offset, setScrollOffset] = useState<number>(0);
   const [textSearchMatches, setTextSearchMatches] =
     useState<TextSearchResult[]>();
   const [searchText, setSearchText] = useState<string>();
@@ -641,7 +654,16 @@ export const PDFView = ({
               <AnnotatorSidebar read_only={read_only} />
             </SidebarContainer>
             <div className="PDFViewTopBarWrapper">
-              <AnnotatorTopbar>
+              <AnnotatorTopbar
+                opened_corpus={selected_corpus}
+                opened_document={selected_document}
+                extracts={extracts}
+                analyses={analyses}
+                selected_analysis={selected_analysis}
+                selected_extract={selected_extract}
+                onSelectAnalysis={onSelectAnalysis}
+                onSelectExtract={onSelectExtract}
+              >
                 <PDFContainer
                   className="PDFContainer"
                   ref={containerRefCallback}

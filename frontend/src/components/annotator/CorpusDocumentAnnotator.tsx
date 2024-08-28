@@ -1,4 +1,4 @@
-import { useQuery, useReactiveVar } from "@apollo/client";
+import { useLazyQuery, useQuery } from "@apollo/client";
 import { useEffect, useState } from "react";
 
 import {
@@ -8,17 +8,17 @@ import {
   ServerAnnotation,
 } from "./context";
 import {
-  RequestAnnotatorDataForDocumentInCorpusInputs,
-  RequestAnnotatorDataForDocumentInCorpusOutputs,
-  REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT_IN_CORPUS,
   GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
   GetDocumentAnalysesAndExtractsOutput,
   GetDocumentAnalysesAndExtractsInput,
+  GET_DATACELLS_FOR_EXTRACT,
+  GET_ANNOTATIONS_FOR_ANALYSIS,
+  GetAnnotationsForAnalysisOutput,
+  GetAnnotationsForAnalysisInput,
+  GetDatacellsForExtractOutput,
+  GetDatacellsForExtractInput,
 } from "../../graphql/queries";
-import {
-  PDFDocumentLoadingTask,
-  PDFDocumentProxy,
-} from "pdfjs-dist/types/src/display/api";
+import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 
 import { getPawlsLayer } from "./api/rest";
 import {
@@ -30,27 +30,20 @@ import {
   DocumentType,
   ExtractType,
   LabelDisplayBehavior,
-  LabelType,
-  RelationshipTypeEdge,
   ServerAnnotationType,
 } from "../../graphql/types";
 import {
   ViewState,
-  PageTokens,
   TokenId,
   PermissionTypes,
-  LooseObject,
+  PageTokens,
   Token,
 } from "../types";
-import { SemanticICONS } from "semantic-ui-react/dist/commonjs/generic";
-import { toast } from "react-toastify";
-import { createTokenStringSearch } from "./utils";
 import { getPermissions } from "../../utils/transform";
 import _ from "lodash";
 import {
   displayAnnotationOnAnnotatorLoad,
   onlyDisplayTheseAnnotations,
-  selectedAnalysesIds,
 } from "../../graphql/cache";
 import { Header, Icon, Modal, Progress } from "semantic-ui-react";
 import AnnotatorSidebar from "./sidebar/AnnotatorSidebar";
@@ -60,6 +53,9 @@ import { SidebarContainer } from "../common";
 import { CenterOnPage } from "./CenterOnPage";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { AnnotatorRenderer } from "./AnnotatorRenderer";
+import { PDFDocumentLoadingTask } from "pdfjs-dist";
+import { toast } from "react-toastify";
+import { createTokenStringSearch } from "./utils";
 
 // Loading pdf js libraries without cdn is a right PITA... cobbled together a working
 // approach via these guides:
@@ -115,35 +111,29 @@ export const CorpusDocumentAnnotator = ({
   const { width } = useWindowDimensions();
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";
 
-  const selected_analysis_ids = useReactiveVar(selectedAnalysesIds);
-  // console.log("selected_analysis_ids", selected_analysis_ids);
-
-  const [pages_visible, setPagesVisible] = useState<
-    Record<number, "VISIBLE" | "NOT VISIBLE">
-  >(
-    scroll_to_annotation_on_open
-      ? { [scroll_to_annotation_on_open.page]: "VISIBLE" }
-      : { 1: "VISIBLE" }
-  );
   const [viewState, setViewState] = useState<ViewState>(ViewState.LOADING);
   const [doc, setDocument] = useState<PDFDocumentProxy>();
   const [pages, setPages] = useState<PDFPageInfo[]>([]);
+  const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
 
   // New states for analyses and extracts
   const [analyses, setAnalyses] = useState<AnalysisType[]>([]);
   const [extracts, setExtracts] = useState<ExtractType[]>([]);
-  const [selectedAnalysis, setSelectedAnalysis] = useState<string | null>(null);
-  const [selectedExtract, setSelectedExtract] = useState<string | null>(null);
+  const [selected_analysis, setSelectedAnalysis] =
+    useState<AnalysisType | null>(null);
+  const [selected_extract, setSelectedExtract] = useState<ExtractType | null>(
+    null
+  );
 
   // States for annotations and related data
-  const [annotationObjs, setAnnotationObjs] = useState<ServerAnnotation[]>([]);
-  const [docTypeAnnotations, setDocTypeAnnotations] = useState<
+  const [annotation_objs, setAnnotationObjs] = useState<ServerAnnotation[]>([]);
+  const [doc_type_annotations, setDocTypeAnnotations] = useState<
     DocTypeAnnotation[]
   >([]);
-  const [relationshipAnnotations, setRelationshipAnnotations] = useState<
+  const [relationship_annotations, setRelationshipAnnotations] = useState<
     RelationGroup[]
   >([]);
-  const [dataCells, setDataCells] = useState<DatacellType[]>([]);
+  const [data_cells, setDataCells] = useState<DatacellType[]>([]);
   const [columns, setColumns] = useState<ColumnType[]>([]);
 
   // Hold our query variables (using a state var lets us bundle updates to the
@@ -157,7 +147,6 @@ export const CorpusDocumentAnnotator = ({
 
   const [progress, setProgress] = useState(0);
 
-  const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
   const [loaded_page_for_annotation, setLoadedPageForAnnotation] =
     useState<ServerAnnotationType | null>(null);
   const [jumped_to_annotation_on_load, setJumpedToAnnotationOnLoad] = useState<
@@ -172,13 +161,29 @@ export const CorpusDocumentAnnotator = ({
     AnnotationLabelType[]
   >([]);
 
-  const { loading: analysesLoading, data: analysesData } = useQuery<
+  const {
+    loading: analysesLoading,
+    data: analysesData,
+    refetch,
+  } = useQuery<
     GetDocumentAnalysesAndExtractsOutput,
     GetDocumentAnalysesAndExtractsInput
   >(GET_DOCUMENT_ANALYSES_AND_EXTRACTS, {
     variables: { documentId: opened_document.id, corpusId: opened_corpus?.id },
-    skip: !open,
   });
+  const [
+    fetchAnnotationsForAnalysis,
+    { loading: annotationsLoading, data: annotationsData },
+  ] = useLazyQuery<
+    GetAnnotationsForAnalysisOutput,
+    GetAnnotationsForAnalysisInput
+  >(GET_ANNOTATIONS_FOR_ANALYSIS);
+  const [
+    fetchDataCellsForExtract,
+    { loading: dataCellsLoading, data: dataCellsData },
+  ] = useLazyQuery<GetDatacellsForExtractOutput, GetDatacellsForExtractInput>(
+    GET_DATACELLS_FOR_EXTRACT
+  );
 
   let doc_permissions: PermissionTypes[] = [];
   let raw_permissions = opened_document.myPermissions;
@@ -201,7 +206,6 @@ export const CorpusDocumentAnnotator = ({
     };
   }, []);
 
-  // Update query vars as appropriate.
   // Batching in useEffect to cut down on unecessary re-renders
   useEffect(() => {
     // If user wanted to nav right to an annotation, problem we have is we don't load
@@ -247,16 +251,59 @@ export const CorpusDocumentAnnotator = ({
   useEffect(() => {
     if (open && opened_document && opened_document.pdfFile) {
       setViewState(ViewState.LOADING);
+      refetch();
+      const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
+        opened_document.pdfFile
+      );
+      loadingTask.onProgress = (p: { loaded: number; total: number }) => {
+        setProgress(Math.round((p.loaded / p.total) * 100));
+      };
 
       // Load PDF and pawls layer
       Promise.all([
-        pdfjsLib.getDocument(opened_document.pdfFile).promise,
+        loadingTask.promise,
         getPawlsLayer(opened_document.pawlsParseFile || ""),
       ])
-        .then(([pdfDoc, pawlsData]) => {
+        .then(([pdfDoc, pawlsData]: [PDFDocumentProxy, PageTokens[]]) => {
           setDocument(pdfDoc);
-          // Process pawls data and set pages
-          // ... (implementation details here)
+
+          const loadPages: Promise<PDFPageInfo>[] = [];
+          for (let i = 1; i <= pdfDoc.numPages; i++) {
+            // See line 50 for an explanation of the cast here.
+            loadPages.push(
+              pdfDoc.getPage(i).then((p) => {
+                let pageTokens: Token[] = [];
+                if (pawlsData.length === 0) {
+                  toast.error(
+                    "Token layer isn't available for this document... annotations can't be displayed."
+                  );
+                  // console.log("Loading up some data for page ", i, p);
+                } else {
+                  // console.log("Loading up some data for page ", i, p);
+                  const pageIndex = p.pageNumber - 1;
+
+                  console.log("pageIndex", pageIndex);
+                  pageTokens = pawlsData[pageIndex].tokens;
+                }
+
+                // console.log("Tokens", pageTokens);
+                return new PDFPageInfo(p, pageTokens);
+              }) as unknown as Promise<PDFPageInfo>
+            );
+          }
+          return Promise.all(loadPages);
+        })
+        .then((pages) => {
+          setPages(pages);
+
+          let { doc_text, string_index_token_map } =
+            createTokenStringSearch(pages);
+
+          setPageTextMaps({
+            ...string_index_token_map,
+            ...pageTextMaps,
+          });
+
           setViewState(ViewState.LOADED);
         })
         .catch((err) => {
@@ -273,6 +320,10 @@ export const CorpusDocumentAnnotator = ({
     }
   }, [open]);
 
+  useEffect(() => {
+    refetch();
+  }, []);
+
   // Effect to process analyses and extracts data
   useEffect(() => {
     if (analysesData) {
@@ -282,25 +333,47 @@ export const CorpusDocumentAnnotator = ({
     }
   }, [analysesData]);
 
-  // Effect to fetch annotations when an analysis or extract is selected
+  // Effect to fetch annotations when an analysis is selected
   useEffect(() => {
-    if (selectedAnalysis || selectedExtract) {
-      fetchPageAnnotations({
+    if (selected_analysis) {
+      setSelectedExtract(null); // Ensure extract is deselected
+      fetchAnnotationsForAnalysis({
         variables: {
-          selectedDocumentId: opened_document.id,
-          analysisId: selectedAnalysis,
-          extractId: selectedExtract,
-        },
-      });
-    } else if (viewState === ViewState.LOADED) {
-      // Fetch annotations not linked to an Analysis when neither is selected
-      fetchPageAnnotations({
-        variables: {
-          selectedDocumentId: opened_document.id,
+          analysisId: selected_analysis.id,
         },
       });
     }
-  }, [selectedAnalysis, selectedExtract, viewState, opened_document.id]);
+  }, [selected_analysis, opened_document.id, opened_corpus?.id]);
+
+  // Effect to fetch data cells when an extract is selected
+  useEffect(() => {
+    if (selected_extract) {
+      setSelectedAnalysis(null); // Ensure analysis is deselected
+      fetchDataCellsForExtract({
+        variables: {
+          extractId: selected_extract.id,
+        },
+      });
+    }
+  }, [selected_extract, opened_document.id, opened_corpus?.id]);
+
+  // Effect to process data cells and columns
+  useEffect(() => {
+    if (dataCellsData) {
+      setDataCells(dataCellsData.extract.fullDatacellList ?? []);
+      setColumns(dataCellsData.extract.fieldset.fullColumnList ?? []);
+    }
+  }, [dataCellsData]);
+
+  const onSelectAnalysis = (analysis: AnalysisType | null) => {
+    setSelectedAnalysis(analysis);
+    setSelectedExtract(null);
+  };
+
+  const onSelectExtract = (extract: ExtractType | null) => {
+    setSelectedExtract(extract);
+    setSelectedAnalysis(null);
+  };
 
   let rendered_component = <></>;
   switch (viewState) {
@@ -319,7 +392,7 @@ export const CorpusDocumentAnnotator = ({
                 <Icon size="mini" name="file alternate outline" />
                 Loading Document Data
                 <Header.Subheader>
-                  Hang tight while we fetch the document and annotations.
+                  Hang tight while we fetch the required data.
                 </Header.Subheader>
               </Header>
             </div>
@@ -366,6 +439,12 @@ export const CorpusDocumentAnnotator = ({
             annotation_objs={annotation_objs}
             doc_type_annotations={doc_type_annotations}
             relationship_annotations={relationship_annotations}
+            data_cells={data_cells}
+            columns={columns}
+            analyses={analyses}
+            extracts={extracts}
+            onSelectAnalysis={onSelectAnalysis}
+            onSelectExtract={onSelectExtract}
             onError={setViewState}
           />
         );

@@ -1229,6 +1229,7 @@ export interface ExtractType extends Node {
   extractedDatacells?: DatacellTypeConnection;
   fullDatacellList?: DatacellType[];
   fullDocumentList?: DocumentType[];
+  myPermissions?: Scalars["String"][];
 }
 
 export type CorpusQueryTypeConnection = {

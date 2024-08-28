@@ -2,18 +2,41 @@ import { useReactiveVar } from "@apollo/client";
 import { ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { Image, Icon, Header, Segment, Sidebar, Card } from "semantic-ui-react";
 import { openedCorpus, selectedAnalyses } from "../../../graphql/cache";
-import { HorizontalAnalysisSelectorForCorpus } from "../../analyses/AnalysisSelectorForCorpus";
 
 import manual_annotation_icon from "../../../assets/icons/noun-quill-31093.png";
 import analyzer_lens_icon from "../../../assets/icons/noun-goggles-4650061.png";
-import { Textfit } from "react-textfit";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import {
+  AnalysisType,
+  CorpusType,
+  DocumentType,
+  ExtractType,
+} from "../../../graphql/types";
+import { ExtractAndAnalysisHorizontalSelector } from "../../analyses/AnalysisSelectorForCorpus";
 
 interface AnnotatorTopbarProps {
+  opened_corpus: CorpusType | null | undefined;
+  opened_document: DocumentType | null | undefined;
+  analyses: AnalysisType[];
+  extracts: ExtractType[];
+  selected_analysis: AnalysisType | null | undefined;
+  selected_extract: ExtractType | null | undefined;
+  onSelectAnalysis: (analysis: AnalysisType | null) => undefined | null | void;
+  onSelectExtract: (extract: ExtractType | null) => undefined | null | void;
   children?: ReactNode;
 }
 
-export const AnnotatorTopbar = ({ children }: AnnotatorTopbarProps) => {
+export const AnnotatorTopbar = ({
+  opened_corpus,
+  opened_document,
+  analyses,
+  extracts,
+  selected_analysis,
+  selected_extract,
+  onSelectAnalysis,
+  onSelectExtract,
+  children,
+}: AnnotatorTopbarProps) => {
   const { width } = useWindowDimensions();
   const banish_sidebar = width <= 1000;
 
@@ -41,9 +64,6 @@ export const AnnotatorTopbar = ({ children }: AnnotatorTopbarProps) => {
 
   // console.log("Expanded toolbar width", expanded_toolbar_width);
   // console.log("Icon toolbar width", icon_toolbar_width);
-
-  const selected_analyses = useReactiveVar(selectedAnalyses);
-  const opened_corpus = useReactiveVar(openedCorpus);
 
   const [topbarVisible, setTopbarVisible] = useState<boolean>(false);
 
@@ -184,7 +204,7 @@ export const AnnotatorTopbar = ({ children }: AnnotatorTopbarProps) => {
                             }
                       }
                     >
-                      {selected_analyses.length > 0
+                      {selected_analysis || selected_extract
                         ? "Analyzer View Mode"
                         : "Human Annotation Mode"}
                     </Header>
@@ -194,7 +214,7 @@ export const AnnotatorTopbar = ({ children }: AnnotatorTopbarProps) => {
                   <Image
                     size="mini"
                     src={
-                      selected_analyses.length > 0
+                      selected_analysis || selected_extract
                         ? analyzer_lens_icon
                         : manual_annotation_icon
                     }
@@ -229,9 +249,15 @@ export const AnnotatorTopbar = ({ children }: AnnotatorTopbarProps) => {
           style={{ width: "100%", height: "100%" }}
         >
           {opened_corpus ? (
-            <HorizontalAnalysisSelectorForCorpus
+            <ExtractAndAnalysisHorizontalSelector
               read_only={false}
               corpus={opened_corpus}
+              analyses={analyses}
+              extracts={extracts}
+              selected_analysis={selected_analysis}
+              selected_extract={selected_extract}
+              onSelectAnalysis={onSelectAnalysis}
+              onSelectExtract={onSelectExtract}
             />
           ) : (
             <></>

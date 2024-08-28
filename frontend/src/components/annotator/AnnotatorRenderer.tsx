@@ -38,9 +38,13 @@ import {
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 
 import {
+  AnalysisType,
   AnnotationLabelType,
+  ColumnType,
   CorpusType,
+  DatacellType,
   DocumentType,
+  ExtractType,
   LabelDisplayBehavior,
   ServerAnnotationType,
 } from "../../graphql/types";
@@ -75,6 +79,12 @@ interface AnnotatorRendererProps {
   pages: PDFPageInfo[];
   opened_document: DocumentType;
   opened_corpus?: CorpusType;
+  analyses?: AnalysisType[];
+  extracts?: ExtractType[];
+  selected_analysis?: AnalysisType | null;
+  selected_extract?: ExtractType | null;
+  onSelectAnalysis?: (analysis: AnalysisType | null) => undefined | null | void;
+  onSelectExtract?: (extract: ExtractType | null) => undefined | null | void;
   read_only: boolean;
   load_progress: number;
   scroll_to_annotation_on_open: ServerAnnotationType | null;
@@ -89,6 +99,8 @@ interface AnnotatorRendererProps {
   annotation_objs: ServerAnnotation[];
   doc_type_annotations: DocTypeAnnotation[];
   relationship_annotations: RelationGroup[];
+  data_cells?: DatacellType[];
+  columns?: ColumnType[];
   onError: (state: ViewState) => void | any;
 }
 
@@ -98,6 +110,12 @@ export const AnnotatorRenderer = ({
   pages,
   opened_document: openedDocument,
   opened_corpus: openedCorpus,
+  analyses,
+  extracts,
+  selected_analysis,
+  selected_extract,
+  onSelectAnalysis,
+  onSelectExtract,
   read_only,
   scroll_to_annotation_on_open,
   show_selected_annotation_only,
@@ -905,6 +923,18 @@ export const AnnotatorRenderer = ({
       docTypeLabels={document_label_lookup}
       setViewState={onError}
       shiftDown={shiftDown}
+      selected_corpus={openedCorpus}
+      selected_document={openedDocument}
+      analyses={analyses ? analyses : []}
+      extracts={extracts ? extracts : []}
+      selected_analysis={selected_analysis}
+      selected_extract={selected_extract}
+      onSelectAnalysis={
+        onSelectAnalysis ? onSelectAnalysis : (a: AnalysisType | null) => null
+      }
+      onSelectExtract={
+        onSelectExtract ? onSelectExtract : (e: ExtractType | null) => null
+      }
     />
   );
 };

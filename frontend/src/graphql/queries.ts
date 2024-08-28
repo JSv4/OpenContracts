@@ -820,8 +820,9 @@ export const GET_ANALYSES = gql`
             analyzerId
             description
             manifest
-            annotationlabelSet {
-              totalCount
+            fullLabelList {
+              id
+              text
             }
             hostGremlin {
               id
@@ -1435,6 +1436,7 @@ export const REQUEST_GET_EXTRACT = gql`
 
 export interface GetExtractsInput {
   searchText?: string;
+  corpusId?: string;
 }
 
 export interface GetExtractsOutput {
@@ -1446,9 +1448,9 @@ export interface GetExtractsOutput {
   };
 }
 
-export const REQUEST_GET_EXTRACTS = gql`
-  query GetExtracts($searchText: String) {
-    extracts(name_Contains: $searchText) {
+export const GET_EXTRACTS = gql`
+  query GetExtracts($searchText: String, $corpusId: ID) {
+    extracts(name_Contains: $searchText, corpus: $corpusId) {
       edges {
         node {
           id

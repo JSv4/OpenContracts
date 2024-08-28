@@ -1,167 +1,132 @@
-import { useQuery, useReactiveVar } from "@apollo/client";
-import { useRef, useState } from "react";
-import {
-  Dimmer,
-  Loader,
-  Segment,
-  Form,
-  Button,
-  Dropdown,
-  Popup,
-} from "semantic-ui-react";
-import {
-  analysisSearchTerm,
-  openedCorpus,
-  selectedAnalyses,
-  selectedAnalysesIds,
-  showAnalyzerSelectionForCorpus,
-} from "../../graphql/cache";
-import {
-  GetAnalysesInputs,
-  GetAnalysesOutputs,
-  GET_ANALYSES,
-} from "../../graphql/queries";
-import { AnalysisType, CorpusType } from "../../graphql/types";
-import { PlaceholderItem } from "../placeholders/PlaceholderItem";
-import { LooseObject } from "../types";
+import React, { useState, useMemo } from "react";
+import { Segment, Form, Button, Popup } from "semantic-ui-react";
+import Fuse from "fuse.js";
+import { AnalysisType, CorpusType, ExtractType } from "../../graphql/types";
 import { AnalysisItem } from "./AnalysisItem";
-
-import _ from "lodash";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
+import { ExtractItem } from "../extracts/ExtractItem";
 
-interface AnalysisSelectorForCorpusProps {
+interface HorizontalSelectorForCorpusProps {
   corpus: CorpusType;
   read_only: boolean;
+  analyses: AnalysisType[];
+  extracts: ExtractType[];
+  selected_analysis: AnalysisType | null | undefined;
+  selected_extract: ExtractType | null | undefined;
+  onSelectAnalysis: (analysis: AnalysisType | null) => void | null | undefined;
+  onSelectExtract: (extract: ExtractType | null) => void | null | undefined;
 }
 
-export const HorizontalAnalysisSelectorForCorpus = ({
+export const ExtractAndAnalysisHorizontalSelector: React.FC<
+  HorizontalSelectorForCorpusProps
+> = ({
   corpus,
   read_only,
-}: AnalysisSelectorForCorpusProps) => {
-  //////////////////////////////////////////////////////////////////////
-  // Responsive Layout
+  analyses,
+  extracts,
+  selected_analysis,
+  selected_extract,
+  onSelectAnalysis,
+  onSelectExtract,
+}) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= 400;
 
-  //////////////////////////////////////////////////////////////////////
-  // Local State Vars
-  const [searchBuffer, setSearchBuffer] = useState<string>(
-    "Search for Analysis..."
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"analyses" | "extracts">(
+    "analyses"
   );
 
-  //////////////////////////////////////////////////////////////////////
-  // Global State Vars in Apollo Cache
-  const opened_corpus = useReactiveVar(openedCorpus);
-  const analysis_search_term = useReactiveVar(analysisSearchTerm);
-  const analyses_to_display = useReactiveVar(selectedAnalyses);
-  const analysis_ids_to_display = analyses_to_display.map(
-    (analysis) => analysis.id
-  );
-
-  //////////////////////////////////////////////////////////////////////
-  // Craft the query variables obj based on current application state
-  const analyses_variables: LooseObject = {
-    corpusId: corpus.id,
+  const fuseOptions = {
+    keys: ["name", "description"], // Adjust these based on your data structure
+    threshold: 0.4,
   };
-  if (analysis_search_term) {
-    analyses_variables["searchText"] = analysis_search_term;
-  }
-  //////////////////////////////////////////////////////////////////////
 
-  //////////////////////////////////////////////////////////////////////
-  // Debounce the search function
-  const debouncedAnalyzerSearch = useRef(
-    _.debounce((searchTerm) => {
-      analysisSearchTerm(searchTerm);
-    }, 1000)
+  const analysesFuse = useMemo(
+    () => new Fuse(analyses, fuseOptions),
+    [analyses]
+  );
+  const extractsFuse = useMemo(
+    () => new Fuse(extracts, fuseOptions),
+    [extracts]
   );
 
-  const handleAnalysisSearchChange = (value: string) => {
-    setSearchBuffer(value);
-    debouncedAnalyzerSearch.current(value);
-  };
-  //////////////////////////////////////////////////////////////////////
+  const filteredItems = useMemo(() => {
+    if (!searchTerm) return activeTab === "analyses" ? analyses : extracts;
 
-  const toggleAnalysis = (selected_analysis: AnalysisType) => {
-    if (analysis_ids_to_display.includes(selected_analysis.id)) {
-      let cleaned_analyses = analyses_to_display.filter(
-        (analysis) => analysis.id !== selected_analysis.id
+    const fuse = activeTab === "analyses" ? analysesFuse : extractsFuse;
+    return fuse.search(searchTerm).map((result) => result.item);
+  }, [activeTab, searchTerm, analyses, extracts, analysesFuse, extractsFuse]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+  };
+
+  const renderItems = () => {
+    if (filteredItems.length === 0) {
+      return (
+        <PlaceholderCard
+          style={{
+            padding: ".5em",
+            margin: ".75em",
+            minWidth: use_mobile_layout ? "250px" : "300px",
+          }}
+          key={`no_${activeTab}_available_placeholder`}
+          title={`No ${
+            activeTab.charAt(0).toUpperCase() + activeTab.slice(1)
+          } Available...`}
+          description={`If you have sufficient privileges, try creating a new ${
+            activeTab === "analyses" ? "analysis" : "extract"
+          } from the corpus page.`}
+        />
       );
-      selectedAnalyses(cleaned_analyses);
-      selectedAnalysesIds(cleaned_analyses.map((analysis) => analysis.id));
-    } else {
-      selectedAnalysesIds(
-        [...analyses_to_display, selected_analysis].map(
-          (analysis) => analysis.id
-        )
-      );
-      selectedAnalyses([...analyses_to_display, selected_analysis]);
     }
-  };
 
-  const {
-    refetch: refetchAnalyses,
-    loading: loading_analyses,
-    error: analyses_load_error,
-    data: analyses_response,
-    fetchMore: fetchMoreAnalyses,
-  } = useQuery<GetAnalysesOutputs, GetAnalysesInputs>(GET_ANALYSES, {
-    variables: analyses_variables,
-    fetchPolicy: "network-only",
-    notifyOnNetworkStatusChange: true,
-  });
-
-  const analyses = analyses_response?.analyses?.edges
-    ? analyses_response.analyses.edges.map((edge) => edge.node)
-    : [];
-  const analysis_items =
-    analyses.length > 0 ? (
-      analyses.map((analysis) => (
+    return filteredItems.map((item) =>
+      activeTab === "analyses" ? (
         <AnalysisItem
           compact={use_mobile_layout}
-          key={analysis.id}
-          analysis={analysis}
+          key={item.id}
+          analysis={item as AnalysisType}
           corpus={corpus}
-          selected={analysis_ids_to_display.includes(analysis.id)}
+          selected={Boolean(
+            selected_analysis && item.id === selected_analysis.id
+          )}
           read_only={read_only}
-          onSelect={() => toggleAnalysis(analysis)}
+          onSelect={() =>
+            onSelectAnalysis(
+              selected_analysis && item.id === selected_analysis.id
+                ? null
+                : (item as AnalysisType)
+            )
+          }
         />
-      ))
-    ) : (
-      <PlaceholderCard
-        style={{
-          padding: ".5em",
-          margin: ".75em",
-          minWidth: use_mobile_layout ? "250px" : "300px",
-        }}
-        key="no_analyses_available_placeholder"
-        title="No Analyses Available..."
-        description="If you have sufficient privileges, try running a new analysis from the corpus page (right click on the corpus)."
-      />
+      ) : (
+        <ExtractItem
+          compact={use_mobile_layout}
+          key={item.id}
+          extract={item as ExtractType}
+          corpus={corpus}
+          selected={Boolean(
+            selected_extract && item.id === selected_extract.id
+          )}
+          read_only={read_only}
+          onSelect={() =>
+            onSelectExtract(
+              selected_extract && item.id === selected_extract.id
+                ? null
+                : (item as ExtractType)
+            )
+          }
+        />
+      )
     );
-
-  const action_buttons = [
-    {
-      key: "start_new",
-      color: "green",
-      title: "Start New",
-      icon: "plus",
-      action_function: () => window.alert("Yo yo"),
-    },
-  ].map((action_json) => (
-    <Dropdown.Item
-      icon={action_json.icon}
-      text={action_json.title}
-      onClick={action_json.action_function}
-      key={action_json.title}
-      color={action_json.color}
-    />
-  ));
+  };
 
   return (
     <Segment.Group
-      id="HorizontalAnalysisSelectorForCorpus"
+      id="HorizontalSelectorForCorpus"
       style={{
         height: "300px",
         display: "flex",
@@ -170,7 +135,7 @@ export const HorizontalAnalysisSelectorForCorpus = ({
       }}
     >
       <Segment
-        id="HorizontalAnalysisSelectorForCorpus_Menu"
+        id="HorizontalSelectorForCorpus_Menu"
         attached="top"
         style={{
           display: "flex",
@@ -180,6 +145,22 @@ export const HorizontalAnalysisSelectorForCorpus = ({
           height: "60px",
         }}
       >
+        <div style={{ marginRight: "10px" }}>
+          <Button.Group>
+            <Button
+              active={activeTab === "analyses"}
+              onClick={() => setActiveTab("analyses")}
+            >
+              Analyses
+            </Button>
+            <Button
+              active={activeTab === "extracts"}
+              onClick={() => setActiveTab("extracts")}
+            >
+              Extracts
+            </Button>
+          </Button.Group>
+        </div>
         <div
           style={{
             width: use_mobile_layout ? "200px" : "50%",
@@ -192,34 +173,11 @@ export const HorizontalAnalysisSelectorForCorpus = ({
           <Form>
             <Form.Input
               icon="search"
-              placeholder={"Search for analysis..."}
-              onChange={(data) => handleAnalysisSearchChange(data.target.value)}
-              value={searchBuffer}
+              placeholder={`Search for ${activeTab}...`}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              value={searchTerm}
             />
           </Form>
-        </div>
-        <div
-          style={{
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            marginLeft: ".5vw",
-          }}
-        >
-          <div>
-            <Popup
-              content="Start New Analysis For This **CORPUS**"
-              trigger={
-                <Button
-                  color="green"
-                  circular
-                  icon="add circle"
-                  onClick={() => showAnalyzerSelectionForCorpus(opened_corpus)}
-                />
-              }
-            />
-          </div>
         </div>
         <div
           style={{
@@ -230,26 +188,27 @@ export const HorizontalAnalysisSelectorForCorpus = ({
             marginLeft: ".1vw",
           }}
         >
-          <div>
-            <Popup
-              content="Clear **ALL** Selected Analyses"
-              trigger={
-                <Button
-                  color="blue"
-                  circular
-                  icon="cancel"
-                  onClick={() => {
-                    selectedAnalyses([]);
-                    selectedAnalysesIds([]);
-                  }}
-                />
-              }
-            />
-          </div>
+          <Popup
+            content={`Clear Selected ${
+              activeTab === "analyses" ? "Analysis" : "Extract"
+            }`}
+            trigger={
+              <Button
+                color="blue"
+                circular
+                icon="cancel"
+                onClick={() =>
+                  activeTab === "analyses"
+                    ? onSelectAnalysis(null)
+                    : onSelectExtract(null)
+                }
+              />
+            }
+          />
         </div>
       </Segment>
       <Segment
-        id="HorizontalAnalysisSelectorForCorpus_CardSegment"
+        id="HorizontalSelectorForCorpus_CardSegment"
         attached="bottom"
         style={{
           maxHeight: "240px",
@@ -261,15 +220,8 @@ export const HorizontalAnalysisSelectorForCorpus = ({
           borderRadius: "0px",
         }}
       >
-        {loading_analyses ? (
-          <Dimmer active={true}>
-            <Loader content="Loading Analyses..." />
-          </Dimmer>
-        ) : (
-          <></>
-        )}
         <div
-          id="HorizontalAnalysisSelectorForCorpus_CardTrack"
+          id="HorizontalSelectorForCorpus_CardTrack"
           style={{
             width: "100%",
             height: "100%",
@@ -280,7 +232,7 @@ export const HorizontalAnalysisSelectorForCorpus = ({
             flex: 1,
           }}
         >
-          {analysis_items}
+          {renderItems()}
         </div>
       </Segment>
     </Segment.Group>

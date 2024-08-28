@@ -46,7 +46,7 @@ class AnnotationLabel(BaseOCModel):
         "analyzer.Analyzer",
         null=True,
         blank=True,
-        related_name='annotations',
+        related_name='annotation_labels',
         on_delete=django.db.models.SET_NULL
     )
 

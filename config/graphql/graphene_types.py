@@ -80,9 +80,6 @@ class AnnotationType(AnnotatePermissionsForReadMixin, ModelType):
     def resolve_all_target_node_in_relationship(self, info):
         return self.target_node_in_relationships.all()
 
-    def resolve_full_annotation_list(self, info):
-        return self.annotations.all()
-
     class Meta:
         model = Annotation
         interfaces = [relay.Node]
@@ -282,7 +279,7 @@ class AnalyzerType(AnnotatePermissionsForReadMixin, ModelType):
     full_label_list = graphene.List(AnnotationLabelType)
 
     def resolve_full_label_list(self, info):
-        return self.annotationlabel_set.all()
+        return self.annotation_labels.all()
 
     def resolve_icon(self, info):
         return "" if not self.icon else info.context.build_absolute_uri(self.icon.url)

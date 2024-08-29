@@ -1764,7 +1764,7 @@ export interface GetDocumentAnnotationsAndRelationshipsOutput {
  */
 export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
   query GetDocumentAnnotationsAndRelationships(
-    $documentId: ID!
+    $documentId: String!
     $corpusId: ID!
     $analysisId: ID
   ) {

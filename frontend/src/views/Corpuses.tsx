@@ -420,7 +420,7 @@ export const Corpuses = () => {
 
   // TODO - Improve typing.
   const handleUpdateCorpus = (corpus_obj: any) => {
-    // console.log("handleUpdateCorpus", corpus_obj);
+    console.log("handleUpdateCorpus", corpus_obj);
     let variables = {
       variables: corpus_obj,
     };

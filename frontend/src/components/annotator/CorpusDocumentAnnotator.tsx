@@ -360,6 +360,20 @@ export const CorpusDocumentAnnotator = ({
         setProgress(Math.round((p.loaded / p.total) * 100));
       };
 
+      // If we're in annotate mode and corpus has a labelset AND we don't have initial annotations to display
+      if (
+        editMode === "ANNOTATE" &&
+        opened_corpus?.labelSet &&
+        (!display_annotations || display_annotations.length == 0)
+      ) {
+        getDocumentAnnotationsAndRelationships({
+          variables: {
+            documentId: opened_document.id,
+            corpusId: opened_corpus.id,
+          },
+        });
+      }
+
       // Load PDF and pawls layer
       Promise.all([
         loadingTask.promise,

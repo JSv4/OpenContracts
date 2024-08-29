@@ -56,6 +56,7 @@ export function CRUDModal({
   }, [updated_fields_obj]);
 
   useEffect(() => {
+    console.log("old_instance changed", old_instance);
     setInstanceObj(old_instance ? old_instance : {});
     if (old_instance.length >= 0 && old_instance.hasOwnProperty("id")) {
       setUpdatedFields({ id: old_instance.id });

@@ -101,6 +101,13 @@ interface AnnotatorRendererProps {
   relationship_annotations: RelationGroup[];
   data_cells?: DatacellType[];
   columns?: ColumnType[];
+  structural_annotations?: ServerAnnotation[];
+  editMode: "ANNOTATE" | "ANALYZE";
+  allowInput: boolean;
+  setEditMode: (m: "ANNOTATE" | "ANALYZE") => void | undefined | null;
+  setAllowInput: (v: boolean) => void | undefined | null;
+  setIsHumanAnnotationMode?: (val: boolean) => undefined | void | null;
+  setIsEditingEnabled?: (val: boolean) => undefined | void | null;
   onError: (state: ViewState) => void | any;
 }
 
@@ -114,6 +121,10 @@ export const AnnotatorRenderer = ({
   extracts,
   selected_analysis,
   selected_extract,
+  editMode,
+  allowInput,
+  setAllowInput,
+  setEditMode,
   onSelectAnalysis,
   onSelectExtract,
   read_only,
@@ -126,6 +137,7 @@ export const AnnotatorRenderer = ({
   relationship_labels: relationship_label_lookup,
   document_labels: document_label_lookup,
   annotation_objs,
+  structural_annotations,
   doc_type_annotations,
   relationship_annotations,
   onError,
@@ -202,7 +214,10 @@ export const AnnotatorRenderer = ({
   useEffect(() => {
     setPdfAnnotations(
       new PdfAnnotations(
-        annotation_objs,
+        [
+          ...annotation_objs,
+          ...(structural_annotations ? structural_annotations : []),
+        ],
         relationship_annotations,
         doc_type_annotations
       )
@@ -927,6 +942,10 @@ export const AnnotatorRenderer = ({
       selected_document={openedDocument}
       analyses={analyses ? analyses : []}
       extracts={extracts ? extracts : []}
+      editMode={editMode}
+      setEditMode={setEditMode}
+      allowInput={allowInput}
+      setAllowInput={setAllowInput}
       selected_analysis={selected_analysis}
       selected_extract={selected_extract}
       onSelectAnalysis={

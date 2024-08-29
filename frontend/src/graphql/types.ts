@@ -1,6 +1,10 @@
 import { SemanticICONS } from "semantic-ui-react";
 import { TokenId } from "../components/annotator/context";
-import { ExportTypes, MultipageAnnotationJson } from "../components/types";
+import {
+  ExportTypes,
+  MultipageAnnotationJson,
+  PermissionTypes,
+} from "../components/types";
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -61,7 +65,7 @@ export type AnnotationLabelType = Node & {
   modified?: Scalars["DateTime"];
   isPublic?: Scalars["Boolean"];
   readonly?: Scalars["Boolean"];
-  myPermissions?: Scalars["String"][];
+  myPermissions?: PermissionTypes[];
   relationshipSet?: RelationshipTypeConnection;
   annotationSet?: AnnotationTypeConnection;
   labelsetSet?: LabelSetTypeConnection;
@@ -114,12 +118,13 @@ export type ServerAnnotationType = Node & {
   json?: MultipageAnnotationJson;
   annotationLabel: AnnotationLabelType;
   document: DocumentType;
+  structural?: boolean;
   corpus?: Maybe<CorpusType>;
   creator: UserType;
   created: Scalars["DateTime"];
   modified: Scalars["DateTime"];
   isPublic?: Scalars["Boolean"];
-  myPermissions?: Scalars["String"][];
+  myPermissions?: PermissionTypes[];
   analysis?: Maybe<AnalysisType>;
   assignmentSet: AssignmentTypeConnection;
   sourceNodeInRelationships: RelationshipTypeConnection;
@@ -178,7 +183,7 @@ export type AssignmentType = Node & {
   created: Scalars["DateTime"];
   modified: Scalars["DateTime"];
   isPublic?: Scalars["Boolean"];
-  myPermissions?: Scalars["String"][];
+  myPermissions?: PermissionTypes[];
 };
 
 export type AssignmentTypeResultingAnnotationsArgs = {
@@ -234,7 +239,7 @@ export type CorpusType = Node & {
   allAnnotationSummaries?: ServerAnnotationType[];
   analyses: AnalysisTypeConnection;
   isPublic?: Scalars["Boolean"];
-  myPermissions?: Scalars["String"][];
+  myPermissions?: PermissionTypes[];
 };
 
 export type CorpusTypeDocumentsArgs = {
@@ -304,9 +309,12 @@ export type DocumentType = Node & {
   corpusSet?: CorpusTypeConnection;
   annotationSet?: AnnotationTypeConnection;
   isPublic?: Scalars["Boolean"];
-  myPermissions?: Scalars["String"][];
-  doc_label_annotations?: Maybe<AnnotationTypeConnection>;
-  metadata_annotations?: Maybe<AnnotationTypeConnection>;
+  myPermissions?: PermissionTypes[];
+  allAnnotations?: ServerAnnotationType[];
+  allRelationships?: RelationshipType[];
+  allStructuralAnnotations?: ServerAnnotationType[];
+  docLabelAnnotations?: Maybe<AnnotationTypeConnection>;
+  metadataAnnotations?: Maybe<AnnotationTypeConnection>;
 };
 
 export type DocumentTypeAssignmentSetArgs = {
@@ -360,7 +368,7 @@ export type LabelSetType = Node & {
   modified?: Scalars["DateTime"];
   corpusSet?: CorpusTypeConnection;
   isPublic?: Scalars["Boolean"];
-  myPermissions?: Scalars["String"][];
+  myPermissions?: PermissionTypes[];
 };
 
 export type LabelSetTypeLabelsArgs = {
@@ -671,7 +679,7 @@ export type RelationshipType = Node & {
   modified: Scalars["DateTime"];
   assignmentSet: AssignmentTypeConnection;
   isPublic?: Scalars["Boolean"];
-  myPermissions?: Scalars["String"][];
+  myPermissions?: PermissionTypes[];
 };
 
 export type RelationshipTypeSourceAnnotationsArgs = {
@@ -744,7 +752,7 @@ export type UserExportType = Node & {
   errors: Scalars["String"];
   creator: UserType;
   isPublic?: Scalars["Boolean"];
-  myPermissions?: Scalars["String"][];
+  myPermissions?: PermissionTypes[];
 };
 
 export type UserExportTypeConnection = {
@@ -771,7 +779,7 @@ export type UserImportType = Node & {
   errors: Scalars["String"];
   creator: UserType;
   isPublic?: Scalars["Boolean"];
-  myPermissions?: Scalars["String"][];
+  myPermissions?: PermissionTypes[];
 };
 
 export type UserImportTypeConnection = {
@@ -943,7 +951,7 @@ export type AnalysisType = Node & {
   analysisCompleted?: Maybe<Scalars["DateTime"]>;
   status: AnalysisStatus;
   annotations: AnnotationTypeConnection;
-  myPermissions?: Maybe<Scalars["GenericScalar"]>;
+  myPermissions?: Maybe<PermissionTypes[]>;
   isPublished?: Maybe<Scalars["Boolean"]>;
   objectSharedWith?: Maybe<Scalars["GenericScalar"]>;
   fullAnnotationList?: Maybe<Array<ServerAnnotationType>>;
@@ -1003,7 +1011,7 @@ export type AnalyzerType = Node & {
   relationshipSet: RelationshipTypeConnection;
   labelsetSet: LabelSetTypeConnection;
   analysisSet: AnalysisTypeConnection;
-  myPermissions?: Maybe<Scalars["GenericScalar"]>;
+  myPermissions?: Maybe<PermissionTypes[]>;
   isPublished?: Maybe<Scalars["Boolean"]>;
   objectSharedWith?: Maybe<Scalars["GenericScalar"]>;
   analyzerId?: Maybe<Scalars["String"]>;
@@ -1069,7 +1077,7 @@ export type GremlinEngineType_Read = Node & {
   installCompleted?: Maybe<Scalars["DateTime"]>;
   isPublic: Scalars["Boolean"];
   analyzerSet: AnalyzerTypeConnection;
-  myPermissions?: Maybe<Scalars["GenericScalar"]>;
+  myPermissions?: Maybe<PermissionTypes[]>;
   isPublished?: Maybe<Scalars["Boolean"]>;
   objectSharedWith?: Maybe<Scalars["GenericScalar"]>;
 };
@@ -1108,7 +1116,7 @@ export type GremlinEngineType_Write = Node & {
   isPublic: Scalars["Boolean"];
   analyzerSet: AnalyzerTypeConnection;
   apiKey?: Maybe<Scalars["String"]>;
-  myPermissions?: Maybe<Scalars["GenericScalar"]>;
+  myPermissions?: Maybe<PermissionTypes[]>;
   isPublished?: Maybe<Scalars["Boolean"]>;
   objectSharedWith?: Maybe<Scalars["GenericScalar"]>;
 };
@@ -1229,7 +1237,7 @@ export interface ExtractType extends Node {
   extractedDatacells?: DatacellTypeConnection;
   fullDatacellList?: DatacellType[];
   fullDocumentList?: DocumentType[];
-  myPermissions?: Scalars["String"][];
+  myPermissions?: PermissionTypes[];
 }
 
 export type CorpusQueryTypeConnection = {

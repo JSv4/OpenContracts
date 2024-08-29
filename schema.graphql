@@ -115,7 +115,7 @@ type Query {
     """The ID of the object"""
     id: ID!
   ): ExtractType
-  extracts(offset: Int, before: String, after: String, first: Int, last: Int, name: String, name_Contains: String, created_Lte: DateTime, created_Gte: DateTime, started_Lte: DateTime, started_Gte: DateTime, finished_Lte: DateTime, finished_Gte: DateTime): ExtractTypeConnection
+  extracts(offset: Int, before: String, after: String, first: Int, last: Int, name: String, name_Contains: String, created_Lte: DateTime, created_Gte: DateTime, started_Lte: DateTime, started_Gte: DateTime, finished_Lte: DateTime, finished_Gte: DateTime, corpus: ID): ExtractTypeConnection
   corpusQuery(
     """The ID of the object"""
     id: ID!
@@ -192,8 +192,8 @@ type AnnotationType implements Node {
   myPermissions: GenericScalar
   isPublished: Boolean
   objectSharedWith: GenericScalar
-  allSourceNodeInRelationship: [AnnotationType]
-  allTargetNodeInRelationship: [AnnotationType]
+  allSourceNodeInRelationship: [RelationshipType]
+  allTargetNodeInRelationship: [RelationshipType]
 }
 
 """An object with an ID"""
@@ -435,6 +435,9 @@ type DocumentType implements Node {
   myPermissions: GenericScalar
   isPublished: Boolean
   objectSharedWith: GenericScalar
+  allStructuralAnnotations: [AnnotationType]
+  allAnnotations(corpusId: ID!, analysisId: ID, isStructural: Boolean): [AnnotationType]
+  allRelationships(corpusId: ID!, analysisId: ID): [RelationshipType]
 }
 
 """
@@ -605,7 +608,7 @@ type AnalyzerType implements Node {
   icon: String!
   hostGremlin: GremlinEngineType_WRITE
   taskName: String
-  annotations(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationLabelTypeConnection!
+  annotationLabels(offset: Int, before: String, after: String, first: Int, last: Int): AnnotationLabelTypeConnection!
   relationshipSet(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
   labelsetSet(offset: Int, before: String, after: String, first: Int, last: Int): LabelSetTypeConnection!
   corpusactionSet(offset: Int, before: String, after: String, first: Int, last: Int, id: ID, name: String, name_Icontains: String, name_Istartswith: String, corpus_Id: ID, fieldset_Id: ID, analyzer_Id: ID, trigger: CorpusesCorpusActionTriggerChoices, creator_Id: ID): CorpusActionTypeConnection!

@@ -17,6 +17,7 @@ import {
   CorpusQueryType,
   CorpusQueryTypeConnection,
   CorpusActionType,
+  DocumentType,
 } from "./types";
 import { ExportObject } from "./types";
 
@@ -1741,6 +1742,84 @@ export const GET_ANNOTATIONS_FOR_ANALYSIS = gql`
               }
             }
           }
+        }
+      }
+    }
+  }
+`;
+
+export interface GetDocumentAnnotationsAndRelationshipsInput {
+  documentId: string;
+  corpusId: string;
+  analysisId?: string;
+}
+
+export interface GetDocumentAnnotationsAndRelationshipsOutput {
+  document: DocumentType;
+  corpus: CorpusType;
+}
+
+/**
+ * If analysisId is set to __none__ you will get annotations and relationships with NO linked analysis
+ */
+export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
+  query GetDocumentAnnotationsAndRelationships(
+    $documentId: ID!
+    $corpusId: ID!
+    $analysisId: ID
+  ) {
+    document(id: $documentId) {
+      id
+      allAnnotations(corpusId: $corpusId, analysisId: $analysisId) {
+        id
+        page
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+        }
+        rawText
+        json
+        myPermissions
+      }
+      allRelationships(corpusId: $corpusId, analysisId: $analysisId) {
+        id
+        relationshipLabel {
+          id
+          text
+          color
+          icon
+          description
+        }
+        sourceAnnotations {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+        targetAnnotations {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    }
+    corpus(id: $corpusId) {
+      id
+      labelSet {
+        id
+        allAnnotationLabels {
+          id
+          text
+          color
+          icon
+          description
+          labelType
         }
       }
     }

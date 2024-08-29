@@ -17,6 +17,9 @@ import {
   GetAnnotationsForAnalysisInput,
   GetDatacellsForExtractOutput,
   GetDatacellsForExtractInput,
+  GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS,
+  GetDocumentAnnotationsAndRelationshipsOutput,
+  GetDocumentAnnotationsAndRelationshipsInput,
 } from "../../graphql/queries";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 
@@ -116,6 +119,10 @@ export const CorpusDocumentAnnotator = ({
   const [pages, setPages] = useState<PDFPageInfo[]>([]);
   const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
 
+  // Component states for user interaction
+  const [editMode, setEditMode] = useState<"ANNOTATE" | "ANALYZE">("ANNOTATE");
+  const [allowInput, setAllowInput] = useState<boolean>(false);
+
   // New states for analyses and extracts
   const [analyses, setAnalyses] = useState<AnalysisType[]>([]);
   const [extracts, setExtracts] = useState<ExtractType[]>([]);
@@ -126,6 +133,9 @@ export const CorpusDocumentAnnotator = ({
   );
 
   // States for annotations and related data
+  const [structuralAnnotations, setStructuralAnnotations] = useState<
+    ServerAnnotation[]
+  >([]);
   const [annotation_objs, setAnnotationObjs] = useState<ServerAnnotation[]>([]);
   const [doc_type_annotations, setDocTypeAnnotations] = useState<
     DocTypeAnnotation[]
@@ -161,6 +171,11 @@ export const CorpusDocumentAnnotator = ({
     AnnotationLabelType[]
   >([]);
 
+  // Reset allow inputs when the mode switches
+  useEffect(() => {
+    setAllowInput(false);
+  }, [editMode]);
+
   const {
     loading: analysesLoading,
     data: analysesData,
@@ -171,6 +186,7 @@ export const CorpusDocumentAnnotator = ({
   >(GET_DOCUMENT_ANALYSES_AND_EXTRACTS, {
     variables: { documentId: opened_document.id, corpusId: opened_corpus?.id },
   });
+
   const [
     fetchAnnotationsForAnalysis,
     { loading: annotationsLoading, data: annotationsData },
@@ -178,12 +194,21 @@ export const CorpusDocumentAnnotator = ({
     GetAnnotationsForAnalysisOutput,
     GetAnnotationsForAnalysisInput
   >(GET_ANNOTATIONS_FOR_ANALYSIS);
+
   const [
     fetchDataCellsForExtract,
     { loading: dataCellsLoading, data: dataCellsData },
   ] = useLazyQuery<GetDatacellsForExtractOutput, GetDatacellsForExtractInput>(
     GET_DATACELLS_FOR_EXTRACT
   );
+
+  const [
+    getDocumentAnnotationsAndRelationships,
+    { data: humanAnnotationsAndRelationshipsData },
+  ] = useLazyQuery<
+    GetDocumentAnnotationsAndRelationshipsOutput,
+    GetDocumentAnnotationsAndRelationshipsInput
+  >(GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS);
 
   let doc_permissions: PermissionTypes[] = [];
   let raw_permissions = opened_document.myPermissions;
@@ -198,6 +223,82 @@ export const CorpusDocumentAnnotator = ({
   if (opened_corpus && raw_corp_permissions !== undefined) {
     corpus_permissions = getPermissions(raw_corp_permissions);
   }
+
+  useEffect(() => {
+    if (editMode === "ANNOTATE" && opened_corpus?.labelSet && opened_document) {
+      getDocumentAnnotationsAndRelationships({
+        variables: {
+          documentId: opened_document.id,
+          corpusId: opened_corpus.id,
+        },
+      });
+    }
+  }, [editMode, opened_corpus, opened_document]);
+
+  // When corpus annotation data (not analysis or extract data is loaded... react to it)
+  useEffect(() => {
+    if (humanAnnotationsAndRelationshipsData) {
+      const processedAnnotations =
+        humanAnnotationsAndRelationshipsData.document?.allAnnotations?.map(
+          (annotation) =>
+            new ServerAnnotation(
+              annotation.page,
+              annotation.annotationLabel,
+              annotation?.rawText ? annotation.rawText : "",
+              annotation?.json ? annotation.json : {},
+              annotation?.myPermissions
+                ? annotation.myPermissions
+                : ([] as PermissionTypes[]),
+              annotation.id
+            )
+        ) ?? [];
+
+      const processedRelationships =
+        humanAnnotationsAndRelationshipsData.document?.allRelationships?.map(
+          (relationship) =>
+            new RelationGroup(
+              relationship.sourceAnnotations?.edges
+                ?.map((edge) => edge?.node?.id)
+                .filter((id): id is string => id != null) ?? [],
+              relationship.targetAnnotations?.edges
+                ?.map((edge) => edge?.node?.id)
+                .filter((id): id is string => id != null) ?? [],
+              relationship.relationshipLabel,
+              relationship.id
+            )
+        ) ?? [];
+
+      setAnnotationObjs((prevAnnotations) => [
+        ...prevAnnotations,
+        ...processedAnnotations,
+      ]);
+      setRelationshipAnnotations(processedRelationships);
+
+      // Use labelSet.allAnnotationLabels to set the labels
+      const allLabels =
+        humanAnnotationsAndRelationshipsData?.corpus?.labelSet
+          ?.allAnnotationLabels ?? [];
+
+      // Filter and set span labels
+      const spanLabels = allLabels.filter(
+        (label) => label.labelType === "TOKEN_LABEL"
+      );
+      setSpanLabels(spanLabels);
+      setHumanSpanLabels(spanLabels);
+
+      // Filter and set relation labels
+      const relationLabels = allLabels.filter(
+        (label) => label.labelType === "RELATIONSHIP_LABEL"
+      );
+      setRelationLabels(relationLabels);
+
+      // Filter and set document labels (if needed)
+      const docLabels = allLabels.filter(
+        (label) => label.labelType === "DOC_TYPE_LABEL"
+      );
+      setDocTypeLabels(docLabels);
+    }
+  }, [humanAnnotationsAndRelationshipsData]);
 
   // When unmounting... ensure we turn off limiting to provided set of annotations
   useEffect(() => {
@@ -263,36 +364,58 @@ export const CorpusDocumentAnnotator = ({
       Promise.all([
         loadingTask.promise,
         getPawlsLayer(opened_document.pawlsParseFile || ""),
+        opened_document.allStructuralAnnotations || Promise.resolve([]),
       ])
-        .then(([pdfDoc, pawlsData]: [PDFDocumentProxy, PageTokens[]]) => {
-          setDocument(pdfDoc);
-
-          const loadPages: Promise<PDFPageInfo>[] = [];
-          for (let i = 1; i <= pdfDoc.numPages; i++) {
-            // See line 50 for an explanation of the cast here.
-            loadPages.push(
-              pdfDoc.getPage(i).then((p) => {
-                let pageTokens: Token[] = [];
-                if (pawlsData.length === 0) {
-                  toast.error(
-                    "Token layer isn't available for this document... annotations can't be displayed."
-                  );
-                  // console.log("Loading up some data for page ", i, p);
-                } else {
-                  // console.log("Loading up some data for page ", i, p);
-                  const pageIndex = p.pageNumber - 1;
-
-                  console.log("pageIndex", pageIndex);
-                  pageTokens = pawlsData[pageIndex].tokens;
-                }
-
-                // console.log("Tokens", pageTokens);
-                return new PDFPageInfo(p, pageTokens);
-              }) as unknown as Promise<PDFPageInfo>
+        .then(
+          ([pdfDoc, pawlsData, structuralAnns]: [
+            PDFDocumentProxy,
+            PageTokens[],
+            ServerAnnotationType[]
+          ]) => {
+            setDocument(pdfDoc);
+            setStructuralAnnotations(
+              structuralAnns.map(
+                (annotation) =>
+                  new ServerAnnotation(
+                    annotation.page,
+                    annotation.annotationLabel,
+                    annotation.rawText ? annotation.rawText : "",
+                    annotation.json ? annotation.json : {},
+                    annotation.myPermissions
+                      ? getPermissions(annotation.myPermissions)
+                      : [],
+                    annotation.id
+                  )
+              )
             );
+
+            const loadPages: Promise<PDFPageInfo>[] = [];
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+              // See line 50 for an explanation of the cast here.
+              loadPages.push(
+                pdfDoc.getPage(i).then((p) => {
+                  let pageTokens: Token[] = [];
+                  if (pawlsData.length === 0) {
+                    toast.error(
+                      "Token layer isn't available for this document... annotations can't be displayed."
+                    );
+                    // console.log("Loading up some data for page ", i, p);
+                  } else {
+                    // console.log("Loading up some data for page ", i, p);
+                    const pageIndex = p.pageNumber - 1;
+
+                    console.log("pageIndex", pageIndex);
+                    pageTokens = pawlsData[pageIndex].tokens;
+                  }
+
+                  // console.log("Tokens", pageTokens);
+                  return new PDFPageInfo(p, pageTokens);
+                }) as unknown as Promise<PDFPageInfo>
+              );
+            }
+            return Promise.all(loadPages);
           }
-          return Promise.all(loadPages);
-        })
+        )
         .then((pages) => {
           setPages(pages);
 
@@ -341,6 +464,34 @@ export const CorpusDocumentAnnotator = ({
         variables: {
           analysisId: selected_analysis.id,
         },
+      }).then(({ data }) => {
+        // TODO - properly parse resulting annotation data
+        if (data && data.analysis && data.analysis.fullAnnotationList) {
+          const processedAnnotations = data.analysis.fullAnnotationList.map(
+            (annotation) =>
+              new ServerAnnotation(
+                annotation.page,
+                annotation.annotationLabel,
+                annotation?.rawText ? annotation.rawText : "",
+                annotation?.json ? annotation.json : {},
+                annotation?.myPermissions
+                  ? annotation.myPermissions
+                  : ([] as PermissionTypes[]),
+                annotation.id
+              )
+          );
+          setAnnotationObjs(processedAnnotations);
+
+          // Process relationships
+          // TODO - add equivalent of fullAnnotationList for relationships...
+
+          // Update span labels
+          const uniqueLabels = _.uniqBy(
+            processedAnnotations.map((a) => a.annotationLabel),
+            "id"
+          );
+          setSpanLabels(uniqueLabels);
+        }
       });
     }
   }, [selected_analysis, opened_document.id, opened_corpus?.id]);
@@ -353,6 +504,36 @@ export const CorpusDocumentAnnotator = ({
         variables: {
           extractId: selected_extract.id,
         },
+      }).then(({ data }) => {
+        if (data && data.extract) {
+          setDataCells(data.extract.fullDatacellList || []);
+          setColumns(data.extract.fieldset.fullColumnList || []);
+
+          // Process annotations from datacells
+          const processedAnnotations = (data.extract.fullDatacellList || [])
+            .flatMap((datacell) => datacell.fullSourceList || [])
+            .map(
+              (annotation) =>
+                new ServerAnnotation(
+                  annotation.page,
+                  annotation.annotationLabel,
+                  annotation?.rawText ? annotation.rawText : "",
+                  annotation?.json ? annotation.json : {},
+                  annotation?.myPermissions
+                    ? annotation.myPermissions
+                    : ([] as PermissionTypes[]),
+                  annotation.id
+                )
+            );
+          setAnnotationObjs(processedAnnotations);
+
+          // Update span labels
+          const uniqueLabels = _.uniqBy(
+            processedAnnotations.map((a) => a.annotationLabel),
+            "id"
+          );
+          setSpanLabels(uniqueLabels);
+        }
       });
     }
   }, [selected_extract, opened_document.id, opened_corpus?.id]);
@@ -366,11 +547,13 @@ export const CorpusDocumentAnnotator = ({
   }, [dataCellsData]);
 
   const onSelectAnalysis = (analysis: AnalysisType | null) => {
+    console.log("onSelectAnalysis", analysis);
     setSelectedAnalysis(analysis);
     setSelectedExtract(null);
   };
 
   const onSelectExtract = (extract: ExtractType | null) => {
+    console.log("Select extract", extract);
     setSelectedExtract(extract);
     setSelectedAnalysis(null);
   };
@@ -384,7 +567,16 @@ export const CorpusDocumentAnnotator = ({
             width={responsive_sidebar_width}
             {...(responsive_sidebar_width ? { display: "none" } : {})}
           >
-            <AnnotatorSidebar read_only={true} />
+            <AnnotatorSidebar
+              read_only={true}
+              selected_analysis={selected_analysis}
+              selected_extract={selected_extract}
+              opened_document={opened_document}
+              allowInput={false}
+              editMode="ANNOTATE"
+              setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
+              setAllowInput={(v: boolean) => {}}
+            />
           </SidebarContainer>
           <CenterOnPage>
             <div>
@@ -408,7 +600,16 @@ export const CorpusDocumentAnnotator = ({
             width={responsive_sidebar_width}
             {...(responsive_sidebar_width ? { display: "none" } : {})}
           >
-            <AnnotatorSidebar read_only={true} />
+            <AnnotatorSidebar
+              read_only={true}
+              selected_analysis={selected_analysis}
+              selected_extract={selected_extract}
+              opened_document={opened_document}
+              allowInput={false}
+              editMode="ANNOTATE"
+              setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
+              setAllowInput={(v: boolean) => {}}
+            />
           </SidebarContainer>
           <CenterOnPage>
             <Result status="unknown" title="PDF Not Found" />
@@ -428,6 +629,7 @@ export const CorpusDocumentAnnotator = ({
             opened_corpus={opened_corpus}
             display_annotations={display_annotations}
             read_only={read_only}
+            structural_annotations={structuralAnnotations}
             scroll_to_annotation_on_open={scroll_to_annotation_on_open}
             show_selected_annotation_only={show_selected_annotation_only}
             show_annotation_bounding_boxes={show_annotation_bounding_boxes}
@@ -441,8 +643,14 @@ export const CorpusDocumentAnnotator = ({
             relationship_annotations={relationship_annotations}
             data_cells={data_cells}
             columns={columns}
+            editMode={editMode}
+            setEditMode={setEditMode}
+            allowInput={allowInput}
+            setAllowInput={setAllowInput}
             analyses={analyses}
             extracts={extracts}
+            selected_analysis={selected_analysis}
+            selected_extract={selected_extract}
             onSelectAnalysis={onSelectAnalysis}
             onSelectExtract={onSelectExtract}
             onError={setViewState}
@@ -458,7 +666,16 @@ export const CorpusDocumentAnnotator = ({
             width={responsive_sidebar_width}
             {...(responsive_sidebar_width ? { display: "none" } : {})}
           >
-            <AnnotatorSidebar read_only={true} />
+            <AnnotatorSidebar
+              read_only={true}
+              selected_analysis={selected_analysis}
+              selected_extract={selected_extract}
+              opened_document={opened_document}
+              allowInput={false}
+              editMode="ANNOTATE"
+              setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
+              setAllowInput={(v: boolean) => {}}
+            />
           </SidebarContainer>
           <CenterOnPage>
             <Result status="warning" title="Unable to Render Document" />

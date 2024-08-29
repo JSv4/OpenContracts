@@ -53,6 +53,10 @@ export const PDFView = ({
   extracts,
   selected_analysis,
   selected_extract,
+  editMode,
+  allowInput,
+  setAllowInput,
+  setEditMode,
   onSelectAnalysis,
   onSelectExtract,
   createAnnotation,
@@ -89,6 +93,10 @@ export const PDFView = ({
   read_only: boolean;
   selected_corpus?: CorpusType | null;
   selected_document: DocumentType;
+  editMode: "ANNOTATE" | "ANALYZE";
+  allowInput: boolean;
+  setEditMode: (m: "ANNOTATE" | "ANALYZE") => void | undefined | null;
+  setAllowInput: (v: boolean) => void | undefined | null;
   analyses: AnalysisType[];
   extracts: ExtractType[];
   selected_analysis: AnalysisType | null | undefined;
@@ -651,19 +659,62 @@ export const PDFView = ({
               width={responsive_sidebar_width}
               {...(banish_sidebar ? { display: "none" } : {})}
             >
-              <AnnotatorSidebar read_only={read_only} />
-            </SidebarContainer>
-            <div className="PDFViewTopBarWrapper">
-              <AnnotatorTopbar
-                opened_corpus={selected_corpus}
+              <AnnotatorSidebar
+                read_only={read_only}
                 opened_document={selected_document}
-                extracts={extracts}
-                analyses={analyses}
                 selected_analysis={selected_analysis}
                 selected_extract={selected_extract}
-                onSelectAnalysis={onSelectAnalysis}
-                onSelectExtract={onSelectExtract}
-              >
+                editMode={editMode}
+                setEditMode={setEditMode}
+                allowInput={allowInput}
+                setAllowInput={setAllowInput}
+              />
+            </SidebarContainer>
+            <div className="PDFViewTopBarWrapper">
+              {editMode == "ANALYZE" ? (
+                <AnnotatorTopbar
+                  opened_corpus={selected_corpus}
+                  opened_document={selected_document}
+                  extracts={extracts}
+                  analyses={analyses}
+                  selected_analysis={selected_analysis}
+                  selected_extract={selected_extract}
+                  onSelectAnalysis={onSelectAnalysis}
+                  onSelectExtract={onSelectExtract}
+                >
+                  <PDFContainer
+                    className="PDFContainer"
+                    ref={containerRefCallback}
+                    width={banish_sidebar ? 1200 : undefined}
+                  >
+                    {activeRelationLabel &&
+                    !read_only &&
+                    corpus_permissions.includes(PermissionTypes.CAN_UPDATE) ? (
+                      <RelationModal
+                        visible={relationModalVisible}
+                        onClick={onRelationModalOk}
+                        onCancel={onRelationModalCancel}
+                        source={selectedAnnotations}
+                        label={activeRelationLabel}
+                      />
+                    ) : null}
+                    <PDF
+                      read_only={read_only}
+                      corpus_permissions={corpus_permissions}
+                      doc_permissions={doc_permissions}
+                      shiftDown={shiftDown}
+                      show_selected_annotation_only={
+                        show_selected_annotation_only
+                      }
+                      show_annotation_bounding_boxes={
+                        show_annotation_bounding_boxes
+                      }
+                      show_annotation_labels={show_annotation_labels}
+                      setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
+                    />
+                  </PDFContainer>
+                </AnnotatorTopbar>
+              ) : (
                 <PDFContainer
                   className="PDFContainer"
                   ref={containerRefCallback}
@@ -695,7 +746,7 @@ export const PDFView = ({
                     setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
                   />
                 </PDFContainer>
-              </AnnotatorTopbar>
+              )}
             </div>
           </div>
         </AnnotationStore.Provider>

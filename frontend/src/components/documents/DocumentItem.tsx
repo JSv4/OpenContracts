@@ -96,7 +96,6 @@ export const DocumentItem = ({
     pdfFile,
     backendLock,
     isPublic,
-    doc_label_annotations,
     myPermissions,
   } = item;
 
@@ -194,8 +193,8 @@ export const DocumentItem = ({
   }
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  let doc_label_objs = item?.doc_label_annotations
-    ? item.doc_label_annotations.edges
+  let doc_label_objs = item?.docLabelAnnotations
+    ? item.docLabelAnnotations.edges
         .map((edge) =>
           edge?.node?.annotationLabel ? edge.node.annotationLabel : undefined
         )

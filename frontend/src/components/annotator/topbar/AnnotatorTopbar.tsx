@@ -204,9 +204,7 @@ export const AnnotatorTopbar = ({
                             }
                       }
                     >
-                      {selected_analysis || selected_extract
-                        ? "Analyzer View Mode"
-                        : "Human Annotation Mode"}
+                      {"Analyses & Extracts"}
                     </Header>
                   </div>
                 </div>

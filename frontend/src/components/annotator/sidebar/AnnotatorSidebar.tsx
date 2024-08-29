@@ -11,9 +11,9 @@ import {
   Header,
   Dropdown,
   Icon,
+  Placeholder,
+  Message,
 } from "semantic-ui-react";
-
-import { Textfit } from "react-textfit";
 
 import _ from "lodash";
 import { AnnotationStore, RelationGroup } from "../context";
@@ -28,11 +28,19 @@ import {
   showAnnotationLabels,
   selectedAnalyses,
 } from "../../../graphql/cache";
-import { LabelDisplayBehavior } from "../../../graphql/types";
+import {
+  AnalysisType,
+  CorpusType,
+  DocumentType,
+  ExtractType,
+  LabelDisplayBehavior,
+} from "../../../graphql/types";
 import { SearchSidebarWidget } from "../search_widget/SearchSidebarWidget";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { ViewLabelSelector } from "../view_labels_selector/ViewLabelSelector";
+import { SingleDocumentExtractResults } from "../../../extracts/SingleDocumentExtractResults";
+import { AnnotatorModeToggle } from "../../widgets/buttons/AnnotatorModeToggle";
 
 const label_display_options = [
   { key: 1, text: "Always Show", value: LabelDisplayBehavior.ALWAYS },
@@ -40,17 +48,87 @@ const label_display_options = [
   { key: 3, text: "Show on Hover", value: LabelDisplayBehavior.ON_HOVER },
 ];
 
+const getHeaderInfo = (
+  edit_mode: "ANNOTATE" | "ANALYZE",
+  allow_input: boolean,
+  read_only: boolean
+) => {
+  let header_text = "";
+  let subheader_text = "";
+  let tooltip_text = "";
+
+  if (edit_mode === "ANALYZE") {
+    header_text = "Analyses";
+    subheader_text = "Machine-created annotations.";
+
+    if (allow_input && !read_only) {
+      header_text += " (Feedback Mode)";
+      subheader_text += " You can provide feedback on these annotations.";
+      tooltip_text =
+        "In feedback mode, you can approve, reject, or suggest changes to machine-generated annotations.";
+    } else {
+      header_text += " (View Mode)";
+      tooltip_text =
+        "Check out Gremlin for more information on how to create or install NLP microservices that generate Open Contracts compatible annotations.";
+    }
+  } else {
+    header_text = "Annotations";
+
+    if (edit_mode == "ANNOTATE") {
+      if (allow_input && !read_only) {
+        header_text += " (Edit Mode)";
+        subheader_text = "You can create, edit, and delete annotations.";
+        tooltip_text =
+          "To create a highlight, drag to select the desired text. The label selected in the 'Selected Label:' box below will be applied. SHIFT + click to select multiple, separate regions.";
+      } else {
+        header_text += " (View Mode)";
+        subheader_text =
+          "You are viewing human-created annotations. Editing is currently disabled.";
+        tooltip_text = "Switch to Edit Mode to make changes to annotations.";
+      }
+    } else {
+      header_text += " (View Mode)";
+      subheader_text = "You are viewing human-created annotations.";
+      tooltip_text =
+        "Switch to Human Annotation Mode and then to Edit Mode to make changes to annotations.";
+    }
+  }
+
+  if (read_only) {
+    subheader_text += " You do not have edit permissions for this corpus.";
+    tooltip_text =
+      "The annotator is in read-only mode. You can view annotations but can't edit or create new ones. If this is unexpected, check your permissions or whether you've selected machine-created analyses.";
+  }
+
+  return { header_text, subheader_text, tooltip_text };
+};
+
 export const AnnotatorSidebar = ({
   read_only,
+  selected_corpus,
+  selected_analysis,
+  selected_extract,
+  opened_document,
+  allowInput,
+  editMode,
+  setEditMode,
+  setAllowInput,
   fetchMore,
 }: {
   read_only: boolean;
+  selected_corpus?: CorpusType | null | undefined;
+  selected_analysis?: AnalysisType | null | undefined;
+  selected_extract?: ExtractType | null | undefined;
+  opened_document: DocumentType;
+  editMode: "ANNOTATE" | "ANALYZE";
+  allowInput: boolean;
+  setEditMode: (m: "ANNOTATE" | "ANALYZE") => void | undefined | null;
+  setAllowInput: (v: boolean) => void | undefined | null;
   fetchMore?: () => void;
 }) => {
   const annotationStore = useContext(AnnotationStore);
   const label_display_behavior = useReactiveVar(showAnnotationLabels);
   const selected_analyses = useReactiveVar(selectedAnalyses);
-  const analysis_view_mode = selected_analyses.length > 0;
 
   // Slightly kludgy way to handle responsive layout and drop sidebar once it becomes a pain
   // If there's enough interest to warrant a refactor, we can put some more thought into how
@@ -58,44 +136,11 @@ export const AnnotatorSidebar = ({
   const { width } = useWindowDimensions();
   const show_minimal_layout = width <= 1000;
 
-  let subheader_text = "";
-  let header_text = "";
-  let tooltip_text = "";
-  if (analysis_view_mode) {
-    if (read_only) {
-      subheader_text = `You are viewing machine-created annotations. These were generated 
-      by Gremlin Engine NLP microservice.`;
-      header_text = "View Analyzer Annotations";
-      tooltip_text = `Check out Gremlin for more information on how to
-      create or install your NLP microservices which generate Open Contracts compatible annotations
-      that can be viewed just like this!`;
-    } else {
-      subheader_text = `You are viewing machine-created annotations. You have permissions 
-      to delete the entire annotation or specific annotations if you'd like.`;
-      header_text = "Edit Analyzer Annotations";
-      tooltip_text = `Check out Gremlin for more information on how to
-      create or install your NLP microservices which generate Open Contracts compatible annotations
-      that can be viewed just like this!`;
-    }
-  } else {
-    if (read_only) {
-      subheader_text = `You are viewing human-created annotations for this document. You do 
-      not have edit permission so you cannot edit or create annotations in this corpus.`;
-      header_text = "View Human Annotations";
-      tooltip_text = `The annotator is in read only mode. You can view annotations but
-      you can't edit or delete existing annotations or create new
-      ones. If this is unexpected, some things to check: 1) do you
-      have write permissions or 2) have you selected one or more
-      machine-created analyses? Editing and creating annotations is
-      disabled when an analysis is selected for display`;
-    } else {
-      subheader_text = `You are viewing human-created annotations. You have edit/create permissions`;
-      header_text = "Edit Human Annotations";
-      tooltip_text = `To create a highlight, drag to select the desired text. 
-      The label selected in the "Selected Label:" box below will be applied. 
-      SHIFT + click to select multiple, separate regions.`;
-    }
-  }
+  const { header_text, subheader_text, tooltip_text } = getHeaderInfo(
+    editMode,
+    allowInput,
+    read_only
+  );
 
   const show_selected_annotation_only = useReactiveVar(
     showSelectedAnnotationOnly
@@ -247,134 +292,7 @@ export const AnnotatorSidebar = ({
     );
   });
 
-  const panes = [
-    {
-      menuItem: "Labelled Text",
-      render: () => (
-        <Tab.Pane
-          key="AnnotatorSidebar_Spantab"
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            justifyItems: "flex-start",
-            padding: "1em",
-            width: "100%",
-            flexBasis: "100px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyItems: "flex-start",
-              flex: 1,
-              minHeight: 0,
-              flexBasis: "100px",
-            }}
-          >
-            <Segment
-              attached="top"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                justifyItems: "flex-start",
-                flex: 1,
-                flexBasis: "100px",
-                overflow: "hidden",
-                paddingBottom: ".5rem",
-              }}
-            >
-              <Popup
-                on="click"
-                trigger={
-                  <Label as="a" corner="left" icon="eye" color="violet" />
-                }
-                style={{ padding: "0px" }}
-              >
-                <Grid
-                  celled="internally"
-                  columns="equal"
-                  style={{ width: `400px` }}
-                >
-                  <Grid.Row>
-                    <Grid.Column textAlign="center" verticalAlign="middle">
-                      <Header size="tiny">Show Only Selected</Header>
-                      <Checkbox
-                        toggle
-                        onChange={(e, data) =>
-                          showSelectedAnnotationOnly(data.checked)
-                        }
-                        checked={show_selected_annotation_only}
-                      />
-                    </Grid.Column>
-                    <Grid.Column textAlign="center" verticalAlign="middle">
-                      <Header size="tiny">Show Layout Blocks</Header>
-                      <Checkbox
-                        toggle
-                        onChange={(e, data) => toggleShowStructuralLabels()}
-                        checked={showStructuralLabels}
-                      />
-                    </Grid.Column>
-                    <Grid.Column textAlign="center" verticalAlign="middle">
-                      <Header size="tiny">Show Bounding Boxes</Header>
-                      <Checkbox
-                        toggle
-                        onChange={(e, data) =>
-                          showAnnotationBoundingBoxes(data.checked)
-                        }
-                        checked={show_annotation_bounding_boxes}
-                      />
-                    </Grid.Column>
-                  </Grid.Row>
-                  <Grid.Row>
-                    <Grid.Column textAlign="center" verticalAlign="middle">
-                      <Header size="tiny">Label Display Behavior</Header>
-                      <Dropdown
-                        onChange={(e, { value }) =>
-                          showAnnotationLabels(value as LabelDisplayBehavior)
-                        }
-                        options={label_display_options}
-                        selection
-                        value={label_display_behavior}
-                        style={{ minWidth: "12em" }}
-                      />
-                    </Grid.Column>
-                    <Grid.Column textAlign="center" verticalAlign="middle">
-                      <Header size="tiny">These Labels Only</Header>
-                      <ViewLabelSelector />
-                    </Grid.Column>
-                  </Grid.Row>
-                </Grid>
-              </Popup>
-              <div style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}>
-                <ul className="sidebar__annotations">
-                  {text_highlight_elements}
-                </ul>
-              </div>
-            </Segment>
-          </div>
-        </Tab.Pane>
-      ),
-    },
-    {
-      menuItem: "Relationships",
-      render: () => (
-        <Tab.Pane
-          key="AnnotatorSidebar_Relationshiptab"
-          style={{
-            overflowY: "scroll",
-            margin: "0px",
-            width: "100%",
-            flex: 1,
-          }}
-        >
-          <Card.Group key="relationship_card_group">
-            {relation_elements}
-          </Card.Group>
-        </Tab.Pane>
-      ),
-    },
+  let panes = [
     {
       menuItem: "Search",
       render: () => (
@@ -393,6 +311,396 @@ export const AnnotatorSidebar = ({
       ),
     },
   ];
+
+  if (editMode == "ANALYZE") {
+    if (selected_analysis) {
+      panes = [
+        ...panes,
+        {
+          menuItem: "Annotated Text",
+          render: () => (
+            <Tab.Pane
+              key="AnnotatorSidebar_Spantab"
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyItems: "flex-start",
+                padding: "1em",
+                width: "100%",
+                flexBasis: "100px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyItems: "flex-start",
+                  flex: 1,
+                  minHeight: 0,
+                  flexBasis: "100px",
+                }}
+              >
+                <Segment
+                  attached="top"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyItems: "flex-start",
+                    flex: 1,
+                    flexBasis: "100px",
+                    overflow: "hidden",
+                    paddingBottom: ".5rem",
+                  }}
+                >
+                  <Popup
+                    on="click"
+                    trigger={
+                      <Label as="a" corner="left" icon="eye" color="violet" />
+                    }
+                    style={{ padding: "0px" }}
+                  >
+                    <Grid
+                      celled="internally"
+                      columns="equal"
+                      style={{ width: `400px` }}
+                    >
+                      <Grid.Row>
+                        <Grid.Column textAlign="center" verticalAlign="middle">
+                          <Header size="tiny">Show Only Selected</Header>
+                          <Checkbox
+                            toggle
+                            onChange={(e, data) =>
+                              showSelectedAnnotationOnly(data.checked)
+                            }
+                            checked={show_selected_annotation_only}
+                          />
+                        </Grid.Column>
+                        <Grid.Column textAlign="center" verticalAlign="middle">
+                          <Header size="tiny">Show Layout Blocks</Header>
+                          <Checkbox
+                            toggle
+                            onChange={(e, data) => toggleShowStructuralLabels()}
+                            checked={showStructuralLabels}
+                          />
+                        </Grid.Column>
+                        <Grid.Column textAlign="center" verticalAlign="middle">
+                          <Header size="tiny">Show Bounding Boxes</Header>
+                          <Checkbox
+                            toggle
+                            onChange={(e, data) =>
+                              showAnnotationBoundingBoxes(data.checked)
+                            }
+                            checked={show_annotation_bounding_boxes}
+                          />
+                        </Grid.Column>
+                      </Grid.Row>
+                      <Grid.Row>
+                        <Grid.Column textAlign="center" verticalAlign="middle">
+                          <Header size="tiny">Label Display Behavior</Header>
+                          <Dropdown
+                            onChange={(e, { value }) =>
+                              showAnnotationLabels(
+                                value as LabelDisplayBehavior
+                              )
+                            }
+                            options={label_display_options}
+                            selection
+                            value={label_display_behavior}
+                            style={{ minWidth: "12em" }}
+                          />
+                        </Grid.Column>
+                        <Grid.Column textAlign="center" verticalAlign="middle">
+                          <Header size="tiny">These Labels Only</Header>
+                          <ViewLabelSelector />
+                        </Grid.Column>
+                      </Grid.Row>
+                    </Grid>
+                  </Popup>
+                  <div
+                    style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}
+                  >
+                    <ul className="sidebar__annotations">
+                      {text_highlight_elements}
+                    </ul>
+                  </div>
+                </Segment>
+              </div>
+            </Tab.Pane>
+          ),
+        },
+        {
+          menuItem: "Relationships",
+          render: () => (
+            <Tab.Pane
+              key="AnnotatorSidebar_Relationshiptab"
+              style={{
+                overflowY: "scroll",
+                margin: "0px",
+                width: "100%",
+                flex: 1,
+              }}
+            >
+              <Card.Group key="relationship_card_group">
+                {relation_elements}
+              </Card.Group>
+            </Tab.Pane>
+          ),
+        },
+      ];
+    } else if (selected_extract) {
+      panes = [
+        ...panes,
+        {
+          menuItem: "Data",
+          render: () => (
+            <Tab.Pane style={{ flex: 1 }}>
+              {selected_extract ? (
+                // Render extract data here
+                <SingleDocumentExtractResults
+                  extract={selected_extract}
+                  document={opened_document}
+                />
+              ) : (
+                <Placeholder fluid />
+              )}
+            </Tab.Pane>
+          ),
+        },
+      ];
+    } else {
+      panes = [
+        ...panes,
+        {
+          menuItem: "Pick an Analysis",
+          render: () => (
+            <Tab.Pane
+              key="AnnotatorSidebar_Spantab"
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyItems: "flex-start",
+                padding: "1em",
+                width: "100%",
+                flexBasis: "100px",
+              }}
+            >
+              <div>
+                <Message warning>
+                  <Message.Header>
+                    No Selected Extract or Analysis
+                  </Message.Header>
+                  <p>
+                    To view or provide feedback on annotations, you need to
+                    select an analysis or extract from the topbar. If none is
+                    available, try running one first!.
+                  </p>
+                </Message>
+              </div>
+            </Tab.Pane>
+          ),
+        },
+      ];
+    }
+  } else if (editMode == "ANNOTATE") {
+    // if a labelset is not selected... we have nothing to display and nothing to edit
+    if (!selected_corpus?.labelSet) {
+      panes = [
+        ...panes,
+        {
+          menuItem: "Annotated Text",
+          render: () => (
+            <Tab.Pane
+              key="AnnotatorSidebar_Spantab"
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyItems: "flex-start",
+                padding: "1em",
+                width: "100%",
+                flexBasis: "100px",
+              }}
+            >
+              <div>
+                <Message warning>
+                  <Message.Header>
+                    No Selected Corpus or Labelset
+                  </Message.Header>
+                  <p>
+                    To view or edit human annotations, you need to ensure you're
+                    working with a corpus that has a linked Labelset.
+                  </p>
+                </Message>
+              </div>
+            </Tab.Pane>
+          ),
+        },
+        {
+          menuItem: "Relationships",
+          render: () => (
+            <Tab.Pane
+              key="AnnotatorSidebar_Relationshiptab"
+              style={{
+                overflowY: "scroll",
+                margin: "0px",
+                width: "100%",
+                flex: 1,
+              }}
+            >
+              <div>
+                <Message warning>
+                  <Message.Header>
+                    No Selected Corpus or Labelset
+                  </Message.Header>
+                  <p>
+                    To view or edit human annotations, you need to ensure you're
+                    working with a corpus that has a linked Labelset.
+                  </p>
+                </Message>
+              </div>
+            </Tab.Pane>
+          ),
+        },
+      ];
+    } else {
+      panes = [
+        ...panes,
+        {
+          menuItem: "Annotated Text",
+          render: () => (
+            <Tab.Pane
+              key="AnnotatorSidebar_Spantab"
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyItems: "flex-start",
+                padding: "1em",
+                width: "100%",
+                flexBasis: "100px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyItems: "flex-start",
+                  flex: 1,
+                  minHeight: 0,
+                  flexBasis: "100px",
+                }}
+              >
+                <Segment
+                  attached="top"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyItems: "flex-start",
+                    flex: 1,
+                    flexBasis: "100px",
+                    overflow: "hidden",
+                    paddingBottom: ".5rem",
+                  }}
+                >
+                  <Popup
+                    on="click"
+                    trigger={
+                      <Label as="a" corner="left" icon="eye" color="violet" />
+                    }
+                    style={{ padding: "0px" }}
+                  >
+                    <Grid
+                      celled="internally"
+                      columns="equal"
+                      style={{ width: `400px` }}
+                    >
+                      <Grid.Row>
+                        <Grid.Column textAlign="center" verticalAlign="middle">
+                          <Header size="tiny">Show Only Selected</Header>
+                          <Checkbox
+                            toggle
+                            onChange={(e, data) =>
+                              showSelectedAnnotationOnly(data.checked)
+                            }
+                            checked={show_selected_annotation_only}
+                          />
+                        </Grid.Column>
+                        <Grid.Column textAlign="center" verticalAlign="middle">
+                          <Header size="tiny">Show Layout Blocks</Header>
+                          <Checkbox
+                            toggle
+                            onChange={(e, data) => toggleShowStructuralLabels()}
+                            checked={showStructuralLabels}
+                          />
+                        </Grid.Column>
+                        <Grid.Column textAlign="center" verticalAlign="middle">
+                          <Header size="tiny">Show Bounding Boxes</Header>
+                          <Checkbox
+                            toggle
+                            onChange={(e, data) =>
+                              showAnnotationBoundingBoxes(data.checked)
+                            }
+                            checked={show_annotation_bounding_boxes}
+                          />
+                        </Grid.Column>
+                      </Grid.Row>
+                      <Grid.Row>
+                        <Grid.Column textAlign="center" verticalAlign="middle">
+                          <Header size="tiny">Label Display Behavior</Header>
+                          <Dropdown
+                            onChange={(e, { value }) =>
+                              showAnnotationLabels(
+                                value as LabelDisplayBehavior
+                              )
+                            }
+                            options={label_display_options}
+                            selection
+                            value={label_display_behavior}
+                            style={{ minWidth: "12em" }}
+                          />
+                        </Grid.Column>
+                        <Grid.Column textAlign="center" verticalAlign="middle">
+                          <Header size="tiny">These Labels Only</Header>
+                          <ViewLabelSelector />
+                        </Grid.Column>
+                      </Grid.Row>
+                    </Grid>
+                  </Popup>
+                  <div
+                    style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}
+                  >
+                    <ul className="sidebar__annotations">
+                      {text_highlight_elements}
+                    </ul>
+                  </div>
+                </Segment>
+              </div>
+            </Tab.Pane>
+          ),
+        },
+        {
+          menuItem: "Relationships",
+          render: () => (
+            <Tab.Pane
+              key="AnnotatorSidebar_Relationshiptab"
+              style={{
+                overflowY: "scroll",
+                margin: "0px",
+                width: "100%",
+                flex: 1,
+              }}
+            >
+              <Card.Group key="relationship_card_group">
+                {relation_elements}
+              </Card.Group>
+            </Tab.Pane>
+          ),
+        },
+      ];
+    }
+  }
 
   return (
     <Segment
@@ -432,15 +740,46 @@ export const AnnotatorSidebar = ({
       )}
       <div style={{ width: "100%", textAlign: "center" }}>
         <div
-          style={{ marginTop: "3vh", marginLeft: "1vw", marginRight: "1vw" }}
+          style={{
+            marginTop: "3vh",
+            marginLeft: "1vw",
+            marginRight: "1vw",
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-around",
+          }}
         >
-          <Header as="h4" icon style={{ margin: "0.5rem 0" }}>
-            <Icon name={analysis_view_mode ? "magic" : "pencil"} />
-            {header_text}
-            <Header.Subheader style={{ padding: "0.25rem" }}>
-              {subheader_text}
-            </Header.Subheader>
-          </Header>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
+            <AnnotatorModeToggle
+              read_only={read_only}
+              allow_input={allowInput}
+              mode={editMode}
+              setAllowInput={setAllowInput}
+              setMode={setEditMode}
+            />
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
+            <div style={{ paddingLeft: ".5vw" }}>
+              <Header as="h3">
+                {header_text}
+                <Header.Subheader style={{ padding: ".5rem" }}>
+                  {subheader_text}
+                </Header.Subheader>
+              </Header>
+            </div>
+          </div>
         </div>
       </div>
       <Tab

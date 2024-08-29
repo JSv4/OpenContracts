@@ -174,11 +174,70 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
             else info.context.build_absolute_uri(self.pawls_parse_file.url)
         )
 
+    all_structural_annotations = graphene.List(AnnotationType)
+
+    def resolve_all_structural_annotations(self, info):
+        return self.doc_annotations.filter(structural=True).distinct()
+
+    # Updated field and resolver for all annotations with enhanced filtering
+    all_annotations = graphene.List(
+        AnnotationType,
+        corpus_id=graphene.ID(required=True),
+        analysis_id=graphene.ID(),
+        is_structural=graphene.Boolean()
+    )
+
+    def resolve_all_annotations(self, info, corpus_id, analysis_id=None, is_structural=None):
+        try:
+            corpus_pk = from_global_id(corpus_id)[1]
+            annotations = self.doc_annotations.filter(corpus_id=corpus_pk)
+
+            if analysis_id is not None:
+                if analysis_id == "__none__":
+                    annotations = annotations.filter(analysis__isnull=True)
+                else:
+                    analysis_pk = from_global_id(analysis_id)[1]
+                    annotations = annotations.filter(analysis_id=analysis_pk)
+
+            if is_structural is not None:
+                annotations = annotations.filter(structural=is_structural)
+
+            return annotations.distinct()
+        except Exception as e:
+            logger.warning(
+                f"Failed resolving query for document {self.id} with input: corpus_id={corpus_id}, analysis_id={analysis_id}, is_structural={is_structural}. Error: {e}")
+            return []
+
+    # New field and resolver for all relationships
+    all_relationships = graphene.List(
+        RelationshipType,
+        corpus_id=graphene.ID(required=True),
+        analysis_id=graphene.ID()
+    )
+
+    def resolve_all_relationships(self, info, corpus_id, analysis_id=None):
+        try:
+            corpus_pk = from_global_id(corpus_id)[1]
+            relationships = self.relationships.filter(corpus_id=corpus_pk)
+
+            if analysis_id == '__none__':
+                relationships = relationships.filter(analysis__isnull=True)
+            elif analysis_id is not None:
+                analysis_pk = from_global_id(analysis_id)[1]
+                relationships = relationships.filter(analysis_id=analysis_pk)
+
+            return relationships.distinct()
+        except Exception as e:
+            logger.warning(
+                f"Failed resolving relationships query for document {self.id} with input: corpus_id={corpus_id}, analysis_id={analysis_id}. Error: {e}")
+            return []
+
     class Meta:
         model = Document
         interfaces = [relay.Node]
         exclude = ("embedding",)
         connection_class = CountableConnection
+
 
 
 class CorpusType(AnnotatePermissionsForReadMixin, ModelType):

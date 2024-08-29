@@ -748,7 +748,14 @@ export const DocumentAnnotator = ({
             width={responsive_sidebar_width}
             {...(responsive_sidebar_width ? { display: "none" } : {})}
           >
-            <AnnotatorSidebar read_only={true} />
+            <AnnotatorSidebar
+              read_only={true}
+              opened_document={opened_document}
+              allowInput={false}
+              editMode="ANNOTATE"
+              setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
+              setAllowInput={(v: boolean) => {}}
+            />
           </SidebarContainer>
           <CenterOnPage>
             <div>
@@ -772,7 +779,14 @@ export const DocumentAnnotator = ({
             width={responsive_sidebar_width}
             {...(responsive_sidebar_width ? { display: "none" } : {})}
           >
-            <AnnotatorSidebar read_only={true} />
+            <AnnotatorSidebar
+              read_only={true}
+              opened_document={opened_document}
+              allowInput={false}
+              editMode="ANNOTATE"
+              setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
+              setAllowInput={(v: boolean) => {}}
+            />
           </SidebarContainer>
           <CenterOnPage>
             <Result status="unknown" title="PDF Not Found" />
@@ -802,6 +816,10 @@ export const DocumentAnnotator = ({
             relationship_labels={relation_labels}
             document_labels={doc_type_labels}
             annotation_objs={annotation_objs}
+            editMode="ANALYZE"
+            allowInput={false}
+            setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
+            setAllowInput={(v: boolean) => {}}
             doc_type_annotations={doc_type_annotations}
             relationship_annotations={relationship_annotations}
             onError={setViewState}
@@ -817,7 +835,14 @@ export const DocumentAnnotator = ({
             width={responsive_sidebar_width}
             {...(responsive_sidebar_width ? { display: "none" } : {})}
           >
-            <AnnotatorSidebar read_only={true} />
+            <AnnotatorSidebar
+              read_only={true}
+              opened_document={opened_document}
+              allowInput={false}
+              editMode="ANNOTATE"
+              setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
+              setAllowInput={(v: boolean) => {}}
+            />
           </SidebarContainer>
           <CenterOnPage>
             <Result status="warning" title="Unable to Render Document" />

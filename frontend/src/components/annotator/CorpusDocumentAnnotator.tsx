@@ -252,6 +252,7 @@ export const CorpusDocumentAnnotator = ({
               annotation.id
             )
         ) ?? [];
+      console.log("Processed annotations", processedAnnotations);
 
       const processedRelationships =
         humanAnnotationsAndRelationshipsData.document?.allRelationships?.map(
@@ -588,6 +589,8 @@ export const CorpusDocumentAnnotator = ({
               opened_document={opened_document}
               allowInput={false}
               editMode="ANNOTATE"
+              datacells={data_cells}
+              columns={columns}
               setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
               setAllowInput={(v: boolean) => {}}
             />
@@ -620,6 +623,8 @@ export const CorpusDocumentAnnotator = ({
               selected_extract={selected_extract}
               opened_document={opened_document}
               allowInput={false}
+              datacells={data_cells}
+              columns={columns}
               editMode="ANNOTATE"
               setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
               setAllowInput={(v: boolean) => {}}
@@ -687,6 +692,8 @@ export const CorpusDocumentAnnotator = ({
               opened_document={opened_document}
               allowInput={false}
               editMode="ANNOTATE"
+              datacells={data_cells}
+              columns={columns}
               setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
               setAllowInput={(v: boolean) => {}}
             />

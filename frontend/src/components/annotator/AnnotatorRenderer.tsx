@@ -119,6 +119,8 @@ export const AnnotatorRenderer = ({
   opened_corpus: openedCorpus,
   analyses,
   extracts,
+  data_cells,
+  columns,
   selected_analysis,
   selected_extract,
   editMode,
@@ -142,7 +144,7 @@ export const AnnotatorRenderer = ({
   relationship_annotations,
   onError,
 }: AnnotatorRendererProps) => {
-  console.log("AnnotatorRenderer");
+  console.log("AnnotatorRenderer - annotation objs", annotation_objs);
 
   const [pdfAnnotations, setPdfAnnotations] = useState<PdfAnnotations>(
     new PdfAnnotations([], [], [])
@@ -942,6 +944,8 @@ export const AnnotatorRenderer = ({
       selected_document={openedDocument}
       analyses={analyses ? analyses : []}
       extracts={extracts ? extracts : []}
+      datacells={data_cells ? data_cells : []}
+      columns={columns ? columns : []}
       editMode={editMode}
       setEditMode={setEditMode}
       allowInput={allowInput}

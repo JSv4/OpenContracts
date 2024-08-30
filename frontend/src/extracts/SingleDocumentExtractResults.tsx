@@ -1,28 +1,27 @@
 import React from "react";
 import { Table, Segment, Icon, Popup } from "semantic-ui-react";
 import { JSONTree } from "react-json-tree";
-import { ColumnType, DocumentType, ExtractType } from "../graphql/types";
+import {
+  ColumnType,
+  DatacellType,
+  DocumentType,
+  ExtractType,
+} from "../graphql/types";
 
 interface SingleDocumentExtractResultsProps {
-  extract: ExtractType;
-  document: DocumentType;
+  datacells: DatacellType[];
+  columns: ColumnType[];
 }
 
 export const SingleDocumentExtractResults: React.FC<
   SingleDocumentExtractResultsProps
 > = ({
-  extract,
-  document,
+  datacells,
+  columns,
 }: {
-  extract: ExtractType;
-  document: DocumentType;
+  datacells: DatacellType[];
+  columns: ColumnType[];
 }) => {
-  const columns = extract.fieldset.fullColumnList || [];
-  const cells =
-    extract.fullDatacellList?.filter(
-      (cell) => cell.document.id === document.id
-    ) || [];
-
   const renderJsonPreview = (data: Record<string, any>) => {
     const jsonString = JSON.stringify(data, null, 2);
     const preview = jsonString.split("\n").slice(0, 3).join("\n") + "\n...";
@@ -47,7 +46,7 @@ export const SingleDocumentExtractResults: React.FC<
         </Table.Header>
         <Table.Body>
           {columns.map((column: ColumnType) => {
-            const cell = cells.find((c) => c.column.id === column.id);
+            const cell = datacells.find((c) => c.column.id === column.id);
             return (
               <Table.Row key={column.id}>
                 <Table.Cell>{column.name}</Table.Cell>

@@ -13,7 +13,9 @@ import {
 import {
   AnalysisType,
   AnnotationLabelType,
+  ColumnType,
   CorpusType,
+  DatacellType,
   DocumentType,
   ExtractType,
   LabelDisplayBehavior,
@@ -51,6 +53,8 @@ export const PDFView = ({
   selected_document,
   analyses,
   extracts,
+  datacells,
+  columns,
   selected_analysis,
   selected_extract,
   editMode,
@@ -99,6 +103,8 @@ export const PDFView = ({
   setAllowInput: (v: boolean) => void | undefined | null;
   analyses: AnalysisType[];
   extracts: ExtractType[];
+  datacells: DatacellType[];
+  columns: ColumnType[];
   selected_analysis: AnalysisType | null | undefined;
   selected_extract: ExtractType | null | undefined;
   onSelectAnalysis: (analysis: AnalysisType | null) => undefined | null | void;
@@ -664,6 +670,9 @@ export const PDFView = ({
                 opened_document={selected_document}
                 selected_analysis={selected_analysis}
                 selected_extract={selected_extract}
+                selected_corpus={selected_corpus}
+                columns={columns}
+                datacells={datacells}
                 editMode={editMode}
                 setEditMode={setEditMode}
                 allowInput={allowInput}

@@ -753,6 +753,8 @@ export const DocumentAnnotator = ({
               opened_document={opened_document}
               allowInput={false}
               editMode="ANNOTATE"
+              datacells={[]}
+              columns={[]}
               setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
               setAllowInput={(v: boolean) => {}}
             />
@@ -784,6 +786,8 @@ export const DocumentAnnotator = ({
               opened_document={opened_document}
               allowInput={false}
               editMode="ANNOTATE"
+              datacells={[]}
+              columns={[]}
               setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
               setAllowInput={(v: boolean) => {}}
             />
@@ -840,6 +844,8 @@ export const DocumentAnnotator = ({
               opened_document={opened_document}
               allowInput={false}
               editMode="ANNOTATE"
+              datacells={[]}
+              columns={[]}
               setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
               setAllowInput={(v: boolean) => {}}
             />

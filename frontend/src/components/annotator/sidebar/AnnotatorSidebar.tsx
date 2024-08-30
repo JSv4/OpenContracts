@@ -30,7 +30,9 @@ import {
 } from "../../../graphql/cache";
 import {
   AnalysisType,
+  ColumnType,
   CorpusType,
+  DatacellType,
   DocumentType,
   ExtractType,
   LabelDisplayBehavior,
@@ -111,6 +113,8 @@ export const AnnotatorSidebar = ({
   opened_document,
   allowInput,
   editMode,
+  datacells,
+  columns,
   setEditMode,
   setAllowInput,
   fetchMore,
@@ -122,13 +126,16 @@ export const AnnotatorSidebar = ({
   opened_document: DocumentType;
   editMode: "ANNOTATE" | "ANALYZE";
   allowInput: boolean;
+  datacells: DatacellType[];
+  columns: ColumnType[];
   setEditMode: (m: "ANNOTATE" | "ANALYZE") => void | undefined | null;
   setAllowInput: (v: boolean) => void | undefined | null;
   fetchMore?: () => void;
 }) => {
   const annotationStore = useContext(AnnotationStore);
   const label_display_behavior = useReactiveVar(showAnnotationLabels);
-  const selected_analyses = useReactiveVar(selectedAnalyses);
+
+  console.log("Annotator sidebar - selected_corpus", selected_corpus);
 
   // Slightly kludgy way to handle responsive layout and drop sidebar once it becomes a pain
   // If there's enough interest to warrant a refactor, we can put some more thought into how
@@ -458,8 +465,8 @@ export const AnnotatorSidebar = ({
               {selected_extract ? (
                 // Render extract data here
                 <SingleDocumentExtractResults
-                  extract={selected_extract}
-                  document={opened_document}
+                  datacells={datacells}
+                  columns={columns}
                 />
               ) : (
                 <Placeholder fluid />

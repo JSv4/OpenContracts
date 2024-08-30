@@ -43,6 +43,8 @@ export const AnalysisItem = ({
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= 400;
 
+  console.log("AnalysisItem - analysis: ", analysis);
+
   //////////////////////////////////////////////////////////////////////
   // There is probably a way to move this to the parent component and pass
   // it in, but the update() function requires a local var that I was having
@@ -111,6 +113,11 @@ export const AnalysisItem = ({
             : {}),
         }}
       >
+        {analysis.corpusAction && (
+          <Label attached="top" color="green" size="tiny">
+            <Icon name="cog" /> Action - {analysis.corpusAction.name}
+          </Label>
+        )}
         <Card.Content>
           {!read_only && can_delete ? (
             <div
@@ -155,6 +162,7 @@ export const AnalysisItem = ({
           <Card.Header style={{ wordBreak: "break-all" }}>
             {analysis.analyzer.analyzerId}
           </Card.Header>
+
           <Card.Meta>
             <span className="date">
               <u>Author</u>: {analysis.analyzer.manifest?.metadata.author_name}
@@ -200,6 +208,11 @@ export const AnalysisItem = ({
           : {}),
       }}
     >
+      {analysis.corpusAction && (
+        <Label attached="top" color="green" size="tiny">
+          <Icon name="cog" /> Action - {analysis.corpusAction.name}
+        </Label>
+      )}
       <Card.Content>
         {!read_only && can_delete ? (
           <div
@@ -241,7 +254,6 @@ export const AnalysisItem = ({
         ) : (
           <></>
         )}
-
         <Card.Header>{analysis.analyzer.analyzerId}</Card.Header>
         <Card.Meta>
           <span className="date">

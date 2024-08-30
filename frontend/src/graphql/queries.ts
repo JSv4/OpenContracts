@@ -18,6 +18,7 @@ import {
   CorpusQueryTypeConnection,
   CorpusActionType,
   DocumentType,
+  AnalysisRowType,
 } from "./types";
 import { ExportObject } from "./types";
 
@@ -1526,7 +1527,7 @@ export interface GetDocumentAnalysesAndExtractsOutput {
       }
     >;
     extracts: Array<ExtractType>;
-    analyses: Array<AnalysisType>;
+    analysisRows: Array<AnalysisRowType>;
   };
 }
 
@@ -1578,19 +1579,43 @@ export const GET_DOCUMENT_ANALYSES_AND_EXTRACTS = gql`
       extracts {
         id
         name
+        corpusAction {
+          id
+          name
+          trigger
+        }
         created
         started
         finished
       }
-      analyses {
+      analysisRows {
         id
-        analyzer {
+        analysis {
           id
-          description
+          analyzer {
+            id
+            description
+          }
+          annotations {
+            totalCount
+          }
+          corpusAction {
+            id
+            name
+            trigger
+          }
+          analysisStarted
+          analysisCompleted
+          status
         }
-        analysisStarted
-        analysisCompleted
-        status
+        data {
+          edges {
+            node {
+              id
+              data
+            }
+          }
+        }
       }
     }
   }

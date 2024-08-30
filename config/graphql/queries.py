@@ -50,7 +50,8 @@ from config.graphql.graphene_types import (
     PdfPageInfoType,
     RelationshipType,
     UserExportType,
-    UserImportType, DocumentCorpusActionsType,
+    UserImportType,
+    DocumentCorpusActionsType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -806,6 +807,7 @@ class Query(graphene.ObjectType):
     )
 
     def resolve_document_corpus_actions(self, info, document_id, corpus_id):
+
         user = info.context.user
         if not user.is_authenticated:
             return None
@@ -820,12 +822,10 @@ class Query(graphene.ObjectType):
 
         extracts = Extract.objects.filter(corpus=corpus, documents=document)
 
-        analysis_rows = DocumentAnalysisRow.objects.filter(document=document)
-        analyses = Analysis.objects.filter(id__in=analysis_rows.values_list('analysis_id', flat=True),
-                                           analyzed_corpus=corpus)
+        analysis_rows = DocumentAnalysisRow.objects.filter(document=document, analysis__analyzed_corpus=corpus)
 
         return DocumentCorpusActionsType(
             corpus_actions=corpus_actions,
             extracts=extracts,
-            analyses=analyses
+            analysis_rows=analysis_rows
         )

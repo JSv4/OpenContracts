@@ -25,6 +25,7 @@ import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 
 import { getPawlsLayer } from "./api/rest";
 import {
+  AnalysisRowType,
   AnalysisType,
   AnnotationLabelType,
   ColumnType,
@@ -143,6 +144,7 @@ export const CorpusDocumentAnnotator = ({
   const [relationship_annotations, setRelationshipAnnotations] = useState<
     RelationGroup[]
   >([]);
+  const [analysisRows, setAnalysisRows] = useState<AnalysisRowType[]>([]);
   const [data_cells, setDataCells] = useState<DatacellType[]>([]);
   const [columns, setColumns] = useState<ColumnType[]>([]);
 
@@ -465,9 +467,14 @@ export const CorpusDocumentAnnotator = ({
   // Effect to process analyses and extracts data
   useEffect(() => {
     if (analysesData) {
-      const { analyses, extracts } = analysesData.documentCorpusActions;
-      setAnalyses(analyses);
+      const { analysisRows, extracts } = analysesData.documentCorpusActions;
       setExtracts(extracts);
+      setAnalysisRows(analysisRows);
+      setAnalyses(
+        analysisRows
+          .map((row) => row.analysis)
+          .filter((a): a is AnalysisType => a !== null && a !== undefined)
+      );
     }
   }, [analysesData]);
 

@@ -138,7 +138,7 @@ def process_corpus_action(
 
                 transaction.on_commit(
                     lambda: chord(group(*action_tasks))(
-                        mark_analysis_complete.si(obj.id)
+                        mark_analysis_complete.si(analysis_id=obj.id, doc_ids=document_ids)
                     )
                 )
 

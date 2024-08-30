@@ -138,6 +138,11 @@ export const ExtractItem = ({
         ...(selected ? { backgroundColor: "#e2ffdb" } : {}),
       }}
     >
+      {extract.corpusAction && (
+        <Label attached="top" color="green" size="tiny">
+          <Icon name="cog" /> Action - {extract.corpusAction.name}
+        </Label>
+      )}
       {cardContent}
     </Card>
   );

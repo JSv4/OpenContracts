@@ -945,6 +945,7 @@ export type AnalysisType = Node & {
   callbackToken: Scalars["UUID"];
   receivedCallbackFile?: Maybe<Scalars["String"]>;
   analyzedCorpus: CorpusType;
+  corpusAction?: CorpusActionType;
   importLog?: Maybe<Scalars["String"]>;
   analyzedDocuments: DocumentTypeConnection;
   analysisStarted?: Maybe<Scalars["DateTime"]>;
@@ -1234,6 +1235,7 @@ export interface ExtractType extends Node {
   finished?: Maybe<string>;
   error?: Maybe<string>;
   documents?: DocumentType[];
+  corpusAction?: CorpusActionType;
   extractedDatacells?: DatacellTypeConnection;
   fullDatacellList?: DatacellType[];
   fullDocumentList?: DocumentType[];
@@ -1336,3 +1338,21 @@ export type DocumentCorpusActionsType = {
   extracts: Array<Maybe<ExtractType>>;
   analyses: Array<Maybe<AnalysisType>>;
 };
+
+export interface AnalysisRowType extends Node {
+  id: Scalars["ID"];
+  userLock: Maybe<UserType>;
+  backendLock: Scalars["Boolean"];
+  isPublic: Scalars["Boolean"];
+  creator: UserType;
+  created: Scalars["DateTime"];
+  modified: Scalars["DateTime"];
+  document: DocumentType;
+  annotations: AnnotationTypeConnection;
+  data: DatacellTypeConnection;
+  analysis: Maybe<AnalysisType>;
+  extract: Maybe<ExtractType>;
+  myPermissions: Maybe<Array<PermissionTypes>>;
+  isPublished: Maybe<Scalars["Boolean"]>;
+  objectSharedWith: Maybe<Scalars["GenericScalar"]>;
+}

@@ -4,16 +4,18 @@ from functools import wraps
 
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
 
 from opencontractserver.analyzer.models import Analysis
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
-from opencontractserver.documents.models import Document
+from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.types.dicts import TextSpan
 from opencontractserver.types.enums import LabelType
 from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
 
+# Timing constants for retry and backoff durations
 MAX_DELAY = 1800  # 30 minutes
 INITIAL_DELAY = 30  # 30 seconds
 DELAY_INCREMENT = 300  # 5 minutes
@@ -124,6 +126,14 @@ def doc_analyzer_task(max_retries=None):
 
                     logger.info("Doc analyzer task passed... handle outputs.")
 
+                    # Create doc analysis row
+                    data_row = DocumentAnalysisRow(
+                        document=doc,
+                        analysis=analysis,
+                        creator=analysis.creator
+                    )
+                    data_row.save()
+
                     # Check returned types if passed.
                     if not isinstance(doc_annotations, list) or (
                         len(doc_annotations) > 0
@@ -148,64 +158,74 @@ def doc_analyzer_task(max_retries=None):
                             "Third element of the tuple must be a list of dictionaries with 'data' key"
                         )
 
-                    for span_label_pair in span_label_pairs:
+                    resulting_annotations = []
 
-                        logger.info(f"Look at span_label_pair: {span_label_pair}")
+                    with transaction.atomic():
+                        for span_label_pair in span_label_pairs:
 
-                        if not (
-                            isinstance(span_label_pair, tuple)
-                            and len(span_label_pair) == 2
-                            and is_dict_instance_of_typed_dict(
-                                span_label_pair[0], TextSpan
-                            )
-                            and isinstance(span_label_pair[1], str)
-                        ):
-                            raise ValueError(
-                                "Second element of the tuple must be a list of (TextSpan, str) tuples"
-                            )
+                            logger.info(f"Look at span_label_pair: {span_label_pair}")
 
-                        # Convert (TextSpan, str) pairs to OpenContractsAnnotationPythonType
-                        for span, label in span_label_pairs:
-                            annotation_data = (
-                                pdf_data_layer.create_opencontract_annotation_from_span(
-                                    {"span": span, "annotation_label": label}
+                            if not (
+                                isinstance(span_label_pair, tuple)
+                                and len(span_label_pair) == 2
+                                and is_dict_instance_of_typed_dict(
+                                    span_label_pair[0], TextSpan
                                 )
-                            )
+                                and isinstance(span_label_pair[1], str)
+                            ):
+                                raise ValueError(
+                                    "Second element of the tuple must be a list of (TextSpan, str) tuples"
+                                )
+
+                            # Convert (TextSpan, str) pairs to OpenContractsAnnotationPythonType
+                            for span, label in span_label_pairs:
+                                annotation_data = (
+                                    pdf_data_layer.create_opencontract_annotation_from_span(
+                                        {"span": span, "annotation_label": label}
+                                    )
+                                )
+                                label, _ = AnnotationLabel.objects.get_or_create(
+                                    text=annotation_data["annotationLabel"],
+                                    label_type=LabelType.TOKEN_LABEL,
+                                    creator=analysis.creator,
+                                )
+
+                                # Harder to filter these to ensure no duplicates...
+                                annot = Annotation(
+                                    document=doc,
+                                    analysis=analysis,
+                                    annotation_label=label,
+                                    page=annotation_data["page"],
+                                    raw_text=annotation_data["rawText"],
+                                    json=annotation_data["annotation_json"],
+                                    creator=analysis.creator,
+                                    **({"corpus_id": corpus_id} if corpus_id else {}),
+                                )
+                                annot.save()
+                                resulting_annotations.append(annot)
+
+                        for doc_label in doc_annotations:
                             label, _ = AnnotationLabel.objects.get_or_create(
-                                text=annotation_data["annotationLabel"],
-                                label_type=LabelType.TOKEN_LABEL,
+                                text=doc_label,
+                                label_type=LabelType.DOC_TYPE_LABEL,
                                 creator=analysis.creator,
                             )
 
-                            # Harder to filter these to ensure no duplicates...
-                            Annotation.objects.create(
+                            annot = Annotation(
                                 document=doc,
                                 analysis=analysis,
                                 annotation_label=label,
-                                page=annotation_data["page"],
-                                raw_text=annotation_data["rawText"],
-                                json=annotation_data["annotation_json"],
+                                page=1,
+                                raw_text="",
+                                json={},
                                 creator=analysis.creator,
                                 **({"corpus_id": corpus_id} if corpus_id else {}),
                             )
+                            annot.save()
+                            resulting_annotations.append(annot)
 
-                    for doc_label in doc_annotations:
-                        label, _ = AnnotationLabel.objects.get_or_create(
-                            text=doc_label,
-                            label_type=LabelType.DOC_TYPE_LABEL,
-                            creator=analysis.creator,
-                        )
-
-                        Annotation.objects.create(
-                            document=doc,
-                            analysis=analysis,
-                            annotation_label=label,
-                            page=1,
-                            raw_text="",
-                            json={},
-                            creator=analysis.creator,
-                            **({"corpus_id": corpus_id} if corpus_id else {}),
-                        )
+                    # Link resulting annotations
+                    transaction.on_commit(lambda: data_row.annotations.add(*resulting_annotations))
 
                 return result  # Return the result from the wrapped function
 

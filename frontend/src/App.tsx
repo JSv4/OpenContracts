@@ -27,6 +27,7 @@ import {
   showSelectedAnnotationOnly,
   showAnnotationBoundingBoxes,
   openedExtract,
+  showSelectCorpusAnalyzerOrFieldsetModal,
 } from "./graphql/cache";
 
 import { NavMenu } from "./components/layout/NavMenu";
@@ -54,6 +55,7 @@ import { Extracts } from "./views/Extracts";
 import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 import { useEnv } from "./components/hooks/UseEnv";
 import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
+import { SelectCorpusAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
@@ -72,6 +74,9 @@ export const App = () => {
   );
   const show_annotation_bounding_boxes = useReactiveVar(
     showAnnotationBoundingBoxes
+  );
+  const show_corpus_analyzer_fieldset_modal = useReactiveVar(
+    showSelectCorpusAnalyzerOrFieldsetModal
   );
   const show_annotation_labels = useReactiveVar(showAnnotationLabels);
 
@@ -168,6 +173,13 @@ export const App = () => {
             <Dimmer active={false}>
               <Loader content="Logging in..." />
             </Dimmer>
+            {opened_corpus && (
+              <SelectCorpusAnalyzerOrFieldsetModal
+                open={show_corpus_analyzer_fieldset_modal}
+                corpus={opened_corpus}
+                onClose={() => showSelectCorpusAnalyzerOrFieldsetModal(false)}
+              />
+            )}
             {opened_extract && (
               <EditExtractModal
                 ext={opened_extract}

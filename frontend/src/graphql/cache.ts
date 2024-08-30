@@ -169,6 +169,7 @@ export const showEditExtractModal = makeVar<boolean>(false);
 export const showDeleteExtractModal = makeVar<boolean>(false);
 export const showCreateExtractModal = makeVar<boolean>(false);
 export const showQueryViewState = makeVar<"ASK" | "VIEW" | "DETAILS">("ASK");
+export const showSelectCorpusAnalyzerOrFieldsetModal = makeVar<boolean>(false);
 
 /**
  *  Document-related global variables.

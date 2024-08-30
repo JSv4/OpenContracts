@@ -30,11 +30,9 @@ import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { ExtractList } from "../components/extracts/list/ExtractList";
 import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";
 import { CreateExtractModal } from "../components/widgets/modals/CreateExtractModal";
-import { EditExtractModal } from "../components/widgets/modals/EditExtractModal";
 
 export const Extracts = () => {
   const auth_token = useReactiveVar(authToken);
-  const opened_extract = useReactiveVar(openedExtract);
   const extract_search_term = useReactiveVar(extractSearchTerm);
   const selected_extract_ids = useReactiveVar(selectedExtractIds);
   const show_create_extract_modal = useReactiveVar(showCreateExtractModal);
@@ -44,10 +42,6 @@ export const Extracts = () => {
     useState<string>(extract_search_term);
 
   const location = useLocation();
-
-  let extract_variables: LooseObject = {
-    includeMetadata: true,
-  };
 
   const debouncedExportSearch = useRef(
     _.debounce((searchTerm) => {

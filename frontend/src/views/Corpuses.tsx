@@ -53,6 +53,7 @@ import {
   exportingCorpus,
   showQueryViewState,
   openedQueryObj,
+  showSelectCorpusAnalyzerOrFieldsetModal,
 } from "../graphql/cache";
 import {
   UPDATE_CORPUS,
@@ -89,7 +90,6 @@ import { toBase64 } from "../utils/files";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
 import { CorpusAnnotationCards } from "../components/annotations/CorpusAnnotationCards";
 import { CorpusDocumentCards } from "../components/documents/CorpusDocumentCards";
-import { SelectAnalyzerModal } from "../components/analyzers/SelectAnalyzerModal";
 import { CorpusAnalysesCards } from "../components/analyses/CorpusAnalysesCards";
 import { FilterToAnalysesSelector } from "../components/widgets/model-filters/FilterToAnalysesSelector";
 import useWindowDimensions from "../components/hooks/WindowDimensionHook";
@@ -525,7 +525,7 @@ export const Corpuses = () => {
       title: "Start New Analysis",
       key: `Analysis_action_${analyses_actions.length}`,
       color: "blue",
-      action_function: () => showAnalyzerSelectionForCorpus(opened_corpus),
+      action_function: () => showSelectCorpusAnalyzerOrFieldsetModal(true),
     });
   }
 
@@ -777,15 +777,6 @@ export const Corpuses = () => {
           />
           {exporting_corpus ? (
             <SelectExportTypeModal visible={Boolean(exportingCorpus)} />
-          ) : (
-            <></>
-          )}
-          {corpus_to_analyze !== null ? (
-            <SelectAnalyzerModal
-              corpus={corpus_to_analyze}
-              toggleModal={() => showAnalyzerSelectionForCorpus(null)}
-              open={corpus_to_analyze !== null}
-            />
           ) : (
             <></>
           )}

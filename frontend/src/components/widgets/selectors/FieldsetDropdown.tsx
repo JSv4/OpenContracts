@@ -1,10 +1,7 @@
 import React, { SyntheticEvent, useCallback, useEffect, useState } from "react";
 import { useQuery, useReactiveVar } from "@apollo/client";
 import { Dropdown, DropdownProps } from "semantic-ui-react";
-import {
-  REQUEST_GET_FIELDSETS,
-  GetFieldsetsOutputs,
-} from "../../../graphql/queries";
+import { GET_FIELDSETS, GetFieldsetsOutputs } from "../../../graphql/queries";
 import { selectedFieldset } from "../../../graphql/cache";
 import _ from "lodash";
 import { FieldsetType } from "../../../graphql/types";
@@ -20,7 +17,7 @@ export const FieldsetDropdown: React.FC = () => {
   const selected_fieldset = useReactiveVar(selectedFieldset);
 
   const { loading, error, data, refetch } = useQuery<GetFieldsetsOutputs>(
-    REQUEST_GET_FIELDSETS,
+    GET_FIELDSETS,
     {
       variables: searchQuery
         ? {

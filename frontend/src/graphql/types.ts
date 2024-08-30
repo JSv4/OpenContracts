@@ -1002,6 +1002,7 @@ export type AnalyzerType = Node & {
   created: Scalars["DateTime"];
   modified: Scalars["DateTime"];
   id: Scalars["ID"];
+  taskName?: Scalars["String"];
   manifest?: Maybe<AnalyzerManifestType>;
   description: Scalars["String"];
   hostGremlin: GremlinEngineType_Write;

@@ -540,6 +540,7 @@ export interface GetAnnotationsInputs {
   annotationLabelId?: string;
   corpusId?: string;
   rawText_Contains?: string;
+  analysis_Isnull?: boolean;
   annotationLabel_description_search_string?: string;
   annotationLabel_title_search_string?: string;
   annotationLabel_Type?: string;
@@ -567,6 +568,7 @@ export const GET_ANNOTATIONS = gql`
     $annotationLabel_Type: AnnotationsAnnotationLabelLabelTypeChoices
     $createdWithAnalyzerId: String
     $createdByAnalysisIds: String
+    $analysis_Isnull: Boolean
     $cursor: String
     $limit: Int
   ) {
@@ -580,6 +582,7 @@ export const GET_ANNOTATIONS = gql`
       annotationLabel_LabelType: $annotationLabel_Type
       createdWithAnalyzerId: $createdWithAnalyzerId
       createdByAnalysisIds: $createdByAnalysisIds
+      analysis_Isnull: $analysis_Isnull
       first: $limit
       after: $cursor
     ) {
@@ -1271,7 +1274,7 @@ export interface GetFieldsetsOutputs {
   };
 }
 
-export const REQUEST_GET_FIELDSETS = gql`
+export const GET_FIELDSETS = gql`
   query GetFieldsets($searchText: String) {
     fieldsets(name_Contains: $searchText) {
       edges {

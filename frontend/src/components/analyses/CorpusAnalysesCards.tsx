@@ -57,6 +57,7 @@ export const CorpusAnalysesCards = () => {
     notifyOnNetworkStatusChange: true,
   });
   if (analyses_load_error) {
+    console.error("Corpus analysis fetch error", analyses_load_error);
     toast.error("ERROR\nCould not fetch analyses for corpus.");
   }
 

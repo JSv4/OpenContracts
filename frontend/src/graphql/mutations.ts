@@ -1063,7 +1063,7 @@ export const START_ANALYSIS_FOR_CORPUS = gql`
           analyzerId
           description
           manifest
-          annotationlabelSet {
+          labelsetSet {
             totalCount
           }
           hostGremlin {

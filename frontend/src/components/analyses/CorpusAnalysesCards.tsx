@@ -9,7 +9,7 @@ import {
   analysisSearchTerm,
   authToken,
   openedCorpus,
-  selectedAnalyses,
+  showCorpusActionOutputs,
 } from "../../graphql/cache";
 import { LooseObject } from "../types";
 import {
@@ -28,7 +28,7 @@ export const CorpusAnalysesCards = () => {
   const opened_corpus = useReactiveVar(openedCorpus);
   const analysis_search_term = useReactiveVar(analysisSearchTerm);
   const auth_token = useReactiveVar(authToken);
-  const analyses_to_display = useReactiveVar(selectedAnalyses);
+  const show_corpus_action_outputs = useReactiveVar(showCorpusActionOutputs);
 
   const location = useLocation();
 
@@ -36,6 +36,7 @@ export const CorpusAnalysesCards = () => {
   // Craft the query variables obj based on current application state
   const analyses_variables: LooseObject = {
     corpusId: opened_corpus?.id ? opened_corpus.id : "",
+    analyzedCorpus_Isnull: !show_corpus_action_outputs,
   };
   if (analysis_search_term) {
     analyses_variables["searchText"] = analysis_search_term;

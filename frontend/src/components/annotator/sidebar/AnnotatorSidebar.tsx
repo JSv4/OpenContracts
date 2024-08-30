@@ -41,7 +41,7 @@ import { SearchSidebarWidget } from "../search_widget/SearchSidebarWidget";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { ViewLabelSelector } from "../view_labels_selector/ViewLabelSelector";
-import { SingleDocumentExtractResults } from "../../../extracts/SingleDocumentExtractResults";
+import { SingleDocumentExtractResults } from "../../extracts/SingleDocumentExtractResults";
 import { AnnotatorModeToggle } from "../../widgets/buttons/AnnotatorModeToggle";
 
 const label_display_options = [

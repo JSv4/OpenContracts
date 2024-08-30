@@ -1,22 +1,14 @@
 import React, { useState, useEffect } from "react";
-import {
-  Table,
-  Icon,
-  Popup,
-  Modal,
-  Button,
-  Dimmer,
-  Loader,
-} from "semantic-ui-react";
+import { Table, Icon, Popup, Modal, Button, Loader } from "semantic-ui-react";
 
-import { DatacellType, ServerAnnotationType } from "../../graphql/types";
+import { DatacellType, ServerAnnotationType } from "../../../graphql/types";
 import { JSONTree } from "react-json-tree";
 import {
   displayAnnotationOnAnnotatorLoad,
   onlyDisplayTheseAnnotations,
   openedDocument,
   selectedAnnotation,
-} from "../../graphql/cache";
+} from "../../../graphql/cache";
 import _ from "lodash";
 
 interface ExtractDatacellProps {

@@ -98,6 +98,8 @@ import { SelectExportTypeModal } from "../components/widgets/modals/SelectExport
 import { CorpusQueryList } from "../components/queries/CorpusQueryList";
 import { NewQuerySearch } from "../components/queries/NewQuerySearch";
 import { ViewQueryResultsModal } from "../components/widgets/modals/ViewQueryResultsModal";
+import { FilterToCorpusActionOutputs } from "../components/widgets/model-filters/FilterToCorpusActionOutputs";
+import { CorpusExtractCards } from "../components/extracts/CorpusExtractCards";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
@@ -564,6 +566,18 @@ export const Corpuses = () => {
         </Tab.Pane>
       ),
     },
+    {
+      menuItem: {
+        key: "extracts",
+        icon: "table",
+        content: use_mobile_layout ? "" : "Extracts",
+      },
+      render: () => (
+        <Tab.Pane>
+          <CorpusExtractCards />
+        </Tab.Pane>
+      ),
+    },
   ];
 
   // Load our query view components. Show either ASK or VIEW component in the tab depending on global state setting.
@@ -666,6 +680,7 @@ export const Corpuses = () => {
           flexDirection: "row",
           justifyContent: "center",
           height: "100%",
+          flex: 1,
           overflowY: "hidden",
           ...(use_mobile_layout
             ? {
@@ -870,6 +885,7 @@ export const Corpuses = () => {
             filters={
               opened_corpus ? (
                 <>
+                  <FilterToCorpusActionOutputs />
                   <FilterToAnalysesSelector corpus={opened_corpus} />
                   <FilterToLabelSelector
                     only_labels_for_labelset_id={
@@ -891,7 +907,12 @@ export const Corpuses = () => {
             actions={analyses_actions}
             placeholder="Search for analyses..."
             value={analysesSearchCache}
-            filters={<FilterToAnalysesSelector corpus={opened_corpus} />}
+            filters={
+              <>
+                <FilterToCorpusActionOutputs />
+                <FilterToAnalysesSelector corpus={opened_corpus} />
+              </>
+            }
           />
         )
       }

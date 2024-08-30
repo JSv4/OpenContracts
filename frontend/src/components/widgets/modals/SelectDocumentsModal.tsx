@@ -12,10 +12,8 @@ import {
   RequestDocumentsInputs,
   SEARCH_DOCUMENTS,
 } from "../../../graphql/queries";
-import { DataGrid } from "../../../extracts/datagrid/DataGrid";
 import { CardLayout } from "../../layout/CardLayout";
 import { DocumentCards } from "../../documents/DocumentCards";
-import { AddToCorpusModal } from "../../corpuses/AddToCorpusModal";
 import { CreateAndSearchBar } from "../../layout/CreateAndSearchBar";
 import { FilterToLabelsetSelector } from "../model-filters/FilterToLabelsetSelector";
 import { FilterToCorpusSelector } from "../model-filters/FilterToCorpusSelector";

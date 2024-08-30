@@ -152,7 +152,7 @@ export const FilterToAnalysesSelector = ({
           justifyContent: "center",
         }}
       >
-        <div>Filter to Analyses:</div>
+        <div>Filter to Analyzer:</div>
       </Label>
       <Dropdown
         placeholder="Skills"

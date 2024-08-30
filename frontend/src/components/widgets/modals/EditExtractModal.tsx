@@ -23,7 +23,6 @@ import {
   REQUEST_GET_EXTRACT,
   RequestGetExtractInput,
 } from "../../../graphql/queries";
-import { DataGrid } from "../../../extracts/datagrid/DataGrid";
 import { useEffect, useState } from "react";
 import {
   REQUEST_ADD_DOC_TO_EXTRACT,
@@ -51,6 +50,7 @@ import {
   addingColumnToExtract,
   editingColumnForExtract,
 } from "../../../graphql/cache";
+import { DataGrid } from "../../extracts/datagrid/DataGrid";
 
 interface EditExtractModalProps {
   ext: ExtractType | null;

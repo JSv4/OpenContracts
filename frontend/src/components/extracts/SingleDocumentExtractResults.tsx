@@ -6,7 +6,7 @@ import {
   DatacellType,
   DocumentType,
   ExtractType,
-} from "../graphql/types";
+} from "../../graphql/types";
 
 interface SingleDocumentExtractResultsProps {
   datacells: DatacellType[];

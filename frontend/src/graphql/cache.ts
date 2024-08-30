@@ -182,7 +182,7 @@ export const editingDocument = makeVar<DocumentType | null>(null);
 /**
  * Extract-related global variables
  */
-export const selectedExtractId = makeVar<string | null>(null);
+export const selectedExtractIds = makeVar<string[]>([]);
 export const openedExtract = makeVar<ExtractType | null>(null);
 export const extractSearchTerm = makeVar<string>("");
 
@@ -199,6 +199,7 @@ export const editingCorpus = makeVar<CorpusType | null>(null);
 export const exportingCorpus = makeVar<CorpusType | null>(null);
 export const selectedCorpusIds = makeVar<string[]>([]);
 export const showAnalyzerSelectionForCorpus = makeVar<CorpusType | null>(null);
+export const showCorpusActionOutputs = makeVar<boolean>(true);
 
 /**
  * LabelSet-related global variables

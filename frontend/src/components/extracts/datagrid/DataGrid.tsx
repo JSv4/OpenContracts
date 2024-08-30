@@ -13,12 +13,12 @@ import {
   DatacellType,
   DocumentType,
   ExtractType,
-} from "../../graphql/types";
-import { SelectDocumentsModal } from "../../components/widgets/modals/SelectDocumentsModal";
+} from "../../../graphql/types";
+import { SelectDocumentsModal } from "../../widgets/modals/SelectDocumentsModal";
 import {
   addingColumnToExtract,
   editingColumnForExtract,
-} from "../../graphql/cache";
+} from "../../../graphql/cache";
 import { EmptyDatacell } from "./EmptyDataCell";
 import { ExtractDatacell } from "./DataCell";
 import { useMutation } from "@apollo/client";
@@ -32,7 +32,7 @@ import {
   RequestEditDatacellOutputType,
   RequestRejectDatacellInputType,
   RequestRejectDatacellOutputType,
-} from "../../graphql/mutations";
+} from "../../../graphql/mutations";
 import { toast } from "react-toastify";
 
 interface DataGridProps {

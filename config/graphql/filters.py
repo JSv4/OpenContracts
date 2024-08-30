@@ -100,6 +100,7 @@ class AnalysisFilter(django_filters.FilterSet):
     class Meta:
         model = Analysis
         fields = {
+            "analyzed_corpus": ["isnull"],
             "analysis_started": ["gte", "lte"],
             "analysis_completed": ["gte", "lte"],
             "status": ["exact"],
@@ -401,6 +402,7 @@ class ExtractFilter(django_filters.FilterSet):
     class Meta:
         model = Extract
         fields = {
+            "corpus_action": ['isnull'],
             "name": ["exact", "contains"],
             "created": ["lte", "gte"],
             "started": ["lte", "gte"],

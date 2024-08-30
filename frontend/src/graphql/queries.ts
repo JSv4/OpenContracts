@@ -771,6 +771,7 @@ export interface GetAnalysesInputs {
   corpusId?: string;
   docId?: string;
   searchText?: string;
+  analyzedCorpus_Isnull?: boolean;
 }
 
 export interface GetAnalysesOutputs {
@@ -783,11 +784,17 @@ export interface GetAnalysesOutputs {
 }
 
 export const GET_ANALYSES = gql`
-  query ($corpusId: String, $docId: String, $searchText: String) {
+  query (
+    $corpusId: String
+    $docId: String
+    $searchText: String
+    $analyzedCorpus_Isnull: Boolean
+  ) {
     analyses(
       analyzedCorpusId: $corpusId
       analyzedDocumentId: $docId
       searchText: $searchText
+      analyzedCorpus_Isnull: $analyzedCorpus_Isnull
     ) {
       pageInfo {
         hasNextPage
@@ -816,6 +823,11 @@ export const GET_ANALYSES = gql`
           receivedCallbackFile
           annotations {
             totalCount
+          }
+          corpusAction {
+            id
+            name
+            trigger
           }
           analyzer {
             id
@@ -1439,6 +1451,7 @@ export const REQUEST_GET_EXTRACT = gql`
 export interface GetExtractsInput {
   searchText?: string;
   corpusId?: string;
+  corpusAction_Isnull?: boolean;
 }
 
 export interface GetExtractsOutput {
@@ -1451,8 +1464,16 @@ export interface GetExtractsOutput {
 }
 
 export const GET_EXTRACTS = gql`
-  query GetExtracts($searchText: String, $corpusId: ID) {
-    extracts(name_Contains: $searchText, corpus: $corpusId) {
+  query GetExtracts(
+    $searchText: String
+    $corpusId: ID
+    $corpusAction_Isnull: Boolean
+  ) {
+    extracts(
+      name_Contains: $searchText
+      corpus: $corpusId
+      corpusAction_Isnull: $corpusAction_Isnull
+    ) {
       edges {
         node {
           id

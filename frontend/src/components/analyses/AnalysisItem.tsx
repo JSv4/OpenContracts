@@ -43,13 +43,6 @@ export const AnalysisItem = ({
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= 400;
 
-  console.log("AnalysisItem - analysis: ", analysis);
-
-  //////////////////////////////////////////////////////////////////////
-  // There is probably a way to move this to the parent component and pass
-  // it in, but the update() function requires a local var that I was having
-  // trouble figuring out how to pass in before knowing the analysis id. Obv
-  // workaround is defining the mutation within a given analysis' <Card/>
   const [requestDeleteAnalysis] = useMutation<
     RequestDeleteAnalysisOutputType,
     RequestDeleteAnalysisInputType

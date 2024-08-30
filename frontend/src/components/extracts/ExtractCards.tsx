@@ -4,7 +4,7 @@ import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
 import { ExtractType, CorpusType, PageInfo } from "../../graphql/types";
 import { useReactiveVar } from "@apollo/client";
-import { selectedExtractIds } from "../../graphql/cache";
+import { openedExtract, selectedExtractIds } from "../../graphql/cache";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";
 
@@ -32,18 +32,19 @@ export const ExtractCards = ({
   const card_cols = determineCardColCount(width);
   const use_mobile_layout = width <= 400;
 
-  const selected_extract_ids = useReactiveVar(selectedExtractIds);
+  //   const selected_extract_ids = useReactiveVar(selectedExtractIds);
+  const opened_extract = useReactiveVar(openedExtract);
 
-  const toggleExtract = (selected_extract: ExtractType) => {
-    if (selected_extract_ids.includes(selected_extract.id)) {
-      const cleaned_extracts = selected_extract_ids.filter(
-        (extract) => extract !== selected_extract.id
-      );
-      selectedExtractIds(cleaned_extracts);
-    } else {
-      selectedExtractIds([...selected_extract_ids, selected_extract.id]);
-    }
-  };
+  //   const toggleExtract = (selected_extract: ExtractType) => {
+  //     if (selected_extract_ids.includes(selected_extract.id)) {
+  //       const cleaned_extracts = selected_extract_ids.filter(
+  //         (extract) => extract !== selected_extract.id
+  //       );
+  //       selectedExtractIds(cleaned_extracts);
+  //     } else {
+  //       selectedExtractIds([...selected_extract_ids, selected_extract.id]);
+  //     }
+  //   };
 
   const extract_items =
     extracts.length > 0 && opened_corpus ? (
@@ -52,9 +53,9 @@ export const ExtractCards = ({
           key={extract.id}
           extract={extract}
           corpus={opened_corpus}
-          selected={selected_extract_ids.includes(extract.id)}
+          selected={opened_extract?.id === extract.id}
           read_only={read_only}
-          onSelect={() => toggleExtract(extract)}
+          onSelect={() => openedExtract(extract)}
         />
       ))
     ) : (

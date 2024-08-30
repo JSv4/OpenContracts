@@ -26,6 +26,7 @@ import {
   displayAnnotationOnAnnotatorLoad,
   showSelectedAnnotationOnly,
   showAnnotationBoundingBoxes,
+  openedExtract,
 } from "./graphql/cache";
 
 import { NavMenu } from "./components/layout/NavMenu";
@@ -52,6 +53,7 @@ import { CookieConsentDialog } from "./components/cookies/CookieConsent";
 import { Extracts } from "./views/Extracts";
 import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 import { useEnv } from "./components/hooks/UseEnv";
+import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
@@ -62,6 +64,7 @@ export const App = () => {
   );
   const selected_analyes = useReactiveVar(selectedAnalyses);
   const opened_corpus = useReactiveVar(openedCorpus);
+  const opened_extract = useReactiveVar(openedExtract);
   const opened_document = useReactiveVar(openedDocument);
   const opened_to_annotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
   const show_selected_annotation_only = useReactiveVar(
@@ -165,6 +168,13 @@ export const App = () => {
             <Dimmer active={false}>
               <Loader content="Logging in..." />
             </Dimmer>
+            {opened_extract && (
+              <EditExtractModal
+                ext={opened_extract}
+                open={opened_extract !== null}
+                toggleModal={() => openedExtract(null)}
+              />
+            )}
             {opened_document && only_display_these_annotations !== undefined ? (
               <DocumentAnnotator
                 open={Boolean(opened_document)}

@@ -192,11 +192,6 @@ export const Extracts = () => {
               refetchExtracts();
             }}
           />
-          <EditExtractModal
-            ext={opened_extract}
-            open={opened_extract !== null}
-            toggleModal={() => openedExtract(null)}
-          />
         </>
       }
       SearchBar={

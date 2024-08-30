@@ -17,7 +17,7 @@ from rest_framework.test import APIClient
 
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
-from opencontractserver.corpuses.models import Corpus
+from opencontractserver.corpuses.models import Corpus, CorpusAction
 from opencontractserver.documents.models import Document
 from opencontractserver.tasks.analyzer_tasks import (
     import_analysis,

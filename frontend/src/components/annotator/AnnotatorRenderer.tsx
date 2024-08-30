@@ -46,17 +46,12 @@ import {
   DocumentType,
   ExtractType,
   LabelDisplayBehavior,
-  ServerAnnotationType,
 } from "../../graphql/types";
 import { ViewState, TokenId, PermissionTypes } from "../types";
 import { toast } from "react-toastify";
 import { createTokenStringSearch } from "./utils";
 import { getPermissions } from "../../utils/transform";
 import _ from "lodash";
-import {
-  displayAnnotationOnAnnotatorLoad,
-  onlyDisplayTheseAnnotations,
-} from "../../graphql/cache";
 
 export interface TextSearchResultsProps {
   start: TokenId;
@@ -87,8 +82,8 @@ interface AnnotatorRendererProps {
   onSelectExtract?: (extract: ExtractType | null) => undefined | null | void;
   read_only: boolean;
   load_progress: number;
-  scroll_to_annotation_on_open: ServerAnnotationType | null;
-  display_annotations?: ServerAnnotationType[];
+  scrollToAnnotation?: ServerAnnotation;
+  selectedAnnotation?: ServerAnnotation[];
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
   show_annotation_labels: LabelDisplayBehavior;
@@ -112,7 +107,6 @@ interface AnnotatorRendererProps {
 }
 
 export const AnnotatorRenderer = ({
-  open,
   doc,
   pages,
   opened_document: openedDocument,
@@ -130,7 +124,8 @@ export const AnnotatorRenderer = ({
   onSelectAnalysis,
   onSelectExtract,
   read_only,
-  scroll_to_annotation_on_open,
+  scrollToAnnotation,
+  selectedAnnotation,
   show_selected_annotation_only,
   show_annotation_bounding_boxes,
   show_annotation_labels,
@@ -153,7 +148,7 @@ export const AnnotatorRenderer = ({
   const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
   const [doc_text, setDocText] = useState<string>("");
   const [loaded_page_for_annotation, setLoadedPageForAnnotation] =
-    useState<ServerAnnotationType | null>(null);
+    useState<ServerAnnotation | null>(null);
   const [jumped_to_annotation_on_load, setJumpedToAnnotationOnLoad] = useState<
     string | null
   >(null);
@@ -206,13 +201,6 @@ export const AnnotatorRenderer = ({
     }
   }, []);
 
-  // When unmounting... ensure we turn off limiting to provided set of annotations
-  useEffect(() => {
-    return () => {
-      onlyDisplayTheseAnnotations(undefined);
-    };
-  }, []);
-
   useEffect(() => {
     setPdfAnnotations(
       new PdfAnnotations(
@@ -259,14 +247,13 @@ export const AnnotatorRenderer = ({
     //
     // Like I said, there is probably a better way to do this with a more substantial redesign of
     // the <Annotator/> component, but I do want to release this app sometime this century.
-    if (scroll_to_annotation_on_open) {
+    if (scrollToAnnotation?.id) {
       if (
         jumped_to_annotation_on_load &&
         loaded_page_for_annotation &&
         loaded_page_for_annotation.id === jumped_to_annotation_on_load &&
-        loaded_page_for_annotation.id === scroll_to_annotation_on_open.id
+        loaded_page_for_annotation.id === scrollToAnnotation.id
       ) {
-        displayAnnotationOnAnnotatorLoad(null);
         setLoadedPageForAnnotation(null);
         setJumpedToAnnotationOnLoad(null);
       }
@@ -274,7 +261,7 @@ export const AnnotatorRenderer = ({
   }, [
     jumped_to_annotation_on_load,
     loaded_page_for_annotation,
-    scroll_to_annotation_on_open,
+    scrollToAnnotation,
   ]);
 
   // When the opened document is changed... reload...
@@ -289,22 +276,15 @@ export const AnnotatorRenderer = ({
   }, [pages, doc]);
 
   useEffect(() => {
-    // When modal is hidden, ensure we reset state and clear provided annotations to display
-    if (!open) {
-      onlyDisplayTheseAnnotations(undefined);
-    }
-  }, [open]);
-
-  useEffect(() => {
     // We only want to load annotation page for selected annotation on load ONCE
     if (
-      scroll_to_annotation_on_open !== null &&
+      scrollToAnnotation?.id &&
       loaded_page_for_annotation === null &&
-      jumped_to_annotation_on_load !== scroll_to_annotation_on_open.id
+      jumped_to_annotation_on_load !== scrollToAnnotation.id
     ) {
-      setLoadedPageForAnnotation(scroll_to_annotation_on_open);
+      setLoadedPageForAnnotation(scrollToAnnotation);
     }
-  }, [scroll_to_annotation_on_open]);
+  }, [scrollToAnnotation]);
 
   function addMultipleAnnotations(a: ServerAnnotation[]): void {
     setPdfAnnotations(
@@ -924,11 +904,7 @@ export const AnnotatorRenderer = ({
       show_selected_annotation_only={show_selected_annotation_only}
       show_annotation_bounding_boxes={show_annotation_bounding_boxes}
       show_annotation_labels={show_annotation_labels}
-      scroll_to_annotation_on_open={
-        jumped_to_annotation_on_load !== scroll_to_annotation_on_open?.id
-          ? scroll_to_annotation_on_open
-          : null
-      }
+      scroll_to_annotation_on_open={scrollToAnnotation}
       setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
       doc={doc}
       doc_text={doc_text}

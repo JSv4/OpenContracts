@@ -5,7 +5,7 @@ import { PDFPageInfo, AnnotationStore } from "./context";
 import { VerticallyJustifiedEndDiv } from "./sidebar/common";
 import { BoundingBox } from "../types";
 import { LabelDisplayBehavior } from "../../graphql/types";
-import { getBorderWidthFromBounds } from "./utils/transform";
+import { getBorderWidthFromBounds } from "../../utils/transform";
 import { LabelTagContainer } from "./LabelTagContainer";
 import { SearchSelectionTokens } from "./SelectionTokens";
 import { TextSearchResult } from "../types";

@@ -52,10 +52,10 @@ import { MobileNavMenu } from "./components/layout/MobileNavMenu";
 import { LabelDisplayBehavior } from "./graphql/types";
 import { CookieConsentDialog } from "./components/cookies/CookieConsent";
 import { Extracts } from "./views/Extracts";
-import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 import { useEnv } from "./components/hooks/UseEnv";
 import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
 import { SelectCorpusAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
+import { CorpusDocumentAnnotator } from "./components/annotator/CorpusDocumentAnnotator";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
@@ -188,7 +188,7 @@ export const App = () => {
               />
             )}
             {opened_document && only_display_these_annotations !== undefined ? (
-              <DocumentAnnotator
+              <CorpusDocumentAnnotator
                 open={Boolean(opened_document)}
                 onClose={() => {
                   openedDocument(null);
@@ -196,10 +196,8 @@ export const App = () => {
                   selectedAnalyses([]);
                   onlyDisplayTheseAnnotations(undefined);
                 }}
-                display_annotations={only_display_these_annotations}
                 opened_document={opened_document}
                 read_only={selected_analyes.length > 0 || banish_sidebar}
-                scroll_to_annotation_on_open={opened_to_annotation}
                 show_selected_annotation_only={show_selected_annotation_only}
                 show_annotation_bounding_boxes={show_annotation_bounding_boxes}
                 show_annotation_labels={show_annotation_labels}

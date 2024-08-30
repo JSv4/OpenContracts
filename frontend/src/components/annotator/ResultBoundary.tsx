@@ -2,7 +2,8 @@ import React from "react";
 import _ from "lodash";
 
 import { BoundingBox } from "../types";
-import { getBorderWidthFromBounds, hexToRgb } from "./utils/transform";
+import { getBorderWidthFromBounds } from "../../utils/transform";
+import { hexToRgb } from "../../utils/transform";
 
 interface ResultBoundaryProps {
   id?: number;

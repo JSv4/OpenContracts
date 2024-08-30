@@ -19,7 +19,6 @@ import {
   DocumentType,
   ExtractType,
   LabelDisplayBehavior,
-  ServerAnnotationType,
 } from "../../../graphql/types";
 import {
   PDFPageInfo,
@@ -129,7 +128,7 @@ export const PDFView = ({
     | React.MutableRefObject<Record<string, HTMLElement | null>>
     | undefined;
   pdfAnnotations: PdfAnnotations;
-  scroll_to_annotation_on_open: ServerAnnotationType | null;
+  scroll_to_annotation_on_open: ServerAnnotation | null | undefined;
   setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;

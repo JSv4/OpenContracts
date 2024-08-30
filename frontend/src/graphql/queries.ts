@@ -1533,7 +1533,7 @@ export interface GetDocumentAnalysesAndExtractsInput {
 }
 
 export interface GetDocumentAnalysesAndExtractsOutput {
-  documentCorpusActions: {
+  documentCorpusActions?: {
     corpusActions: Array<
       CorpusActionType & {
         extracts: {
@@ -1556,8 +1556,9 @@ export interface GetDocumentAnalysesAndExtractsOutput {
 }
 
 export const GET_DOCUMENT_ANALYSES_AND_EXTRACTS = gql`
-  query DocumentData($documentId: ID!, $corpusId: ID!) {
-    documentCorpusActions(documentId: $documentId, corpusId: $corpusId) {
+  query DocumentData($documentId: ID!, $corpusId: ID) {
+    documentCorpusActions(documentId: $documentId, corpusId: $corpusId)
+      @include(if: $corpusId) {
       corpusActions {
         id
         name

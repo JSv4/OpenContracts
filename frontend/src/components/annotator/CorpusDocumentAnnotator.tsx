@@ -1,4 +1,4 @@
-import { useLazyQuery, useQuery } from "@apollo/client";
+import { useLazyQuery, useQuery, useReactiveVar } from "@apollo/client";
 import { useEffect, useState } from "react";
 
 import {
@@ -43,11 +43,19 @@ import {
   PageTokens,
   Token,
 } from "../types";
-import { getPermissions } from "../../utils/transform";
+import {
+  convertToServerAnnotation,
+  convertToServerAnnotations,
+  getPermissions,
+} from "../../utils/transform";
 import _ from "lodash";
 import {
+  allowUserInput,
   displayAnnotationOnAnnotatorLoad,
+  editMode,
   onlyDisplayTheseAnnotations,
+  selectedAnnotation,
+  viewStateVar,
 } from "../../graphql/cache";
 import { Header, Icon, Modal, Progress } from "semantic-ui-react";
 import AnnotatorSidebar from "./sidebar/AnnotatorSidebar";
@@ -90,10 +98,8 @@ export interface PageTokenMapBuilderProps {
 interface CorpusDocumentAnnotatorProps {
   open: boolean;
   opened_document: DocumentType;
-  opened_corpus: CorpusType;
+  opened_corpus?: CorpusType;
   read_only: boolean;
-  scroll_to_annotation_on_open: ServerAnnotationType | null;
-  display_annotations?: ServerAnnotationType[];
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
   show_annotation_labels: LabelDisplayBehavior;
@@ -104,9 +110,7 @@ export const CorpusDocumentAnnotator = ({
   open,
   opened_document,
   opened_corpus,
-  display_annotations,
   read_only,
-  scroll_to_annotation_on_open,
   show_selected_annotation_only,
   show_annotation_bounding_boxes,
   show_annotation_labels,
@@ -115,14 +119,20 @@ export const CorpusDocumentAnnotator = ({
   const { width } = useWindowDimensions();
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";
 
-  const [viewState, setViewState] = useState<ViewState>(ViewState.LOADING);
+  const view_state = useReactiveVar(viewStateVar);
+  const edit_mode = useReactiveVar(editMode);
+  const allow_input = useReactiveVar(allowUserInput);
+
+  // Global state variables to jump to and/or load certain annotations on load
+  const scrollToAnnotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
+  const currentSelectedAnnotation = useReactiveVar(selectedAnnotation);
+  const displayOnlyTheseAnnotations = useReactiveVar(
+    onlyDisplayTheseAnnotations
+  );
+
   const [doc, setDocument] = useState<PDFDocumentProxy>();
   const [pages, setPages] = useState<PDFPageInfo[]>([]);
   const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
-
-  // Component states for user interaction
-  const [editMode, setEditMode] = useState<"ANNOTATE" | "ANALYZE">("ANNOTATE");
-  const [allowInput, setAllowInput] = useState<boolean>(false);
 
   // New states for analyses and extracts
   const [analyses, setAnalyses] = useState<AnalysisType[]>([]);
@@ -175,9 +185,14 @@ export const CorpusDocumentAnnotator = ({
 
   // Reset allow inputs when the mode switches
   useEffect(() => {
-    setAllowInput(false);
+    allowUserInput(false);
   }, [editMode]);
 
+  let corpus_id = opened_corpus?.id;
+  let analysis_vars = {
+    documentId: opened_document.id,
+    ...(corpus_id !== undefined ? { corpusId: corpus_id } : {}),
+  } as GetDocumentAnalysesAndExtractsInput;
   const {
     loading: analysesLoading,
     data: analysesData,
@@ -186,7 +201,8 @@ export const CorpusDocumentAnnotator = ({
     GetDocumentAnalysesAndExtractsOutput,
     GetDocumentAnalysesAndExtractsInput
   >(GET_DOCUMENT_ANALYSES_AND_EXTRACTS, {
-    variables: { documentId: opened_document.id, corpusId: opened_corpus?.id },
+    variables: analysis_vars,
+    skip: !!displayOnlyTheseAnnotations,
   });
 
   const [
@@ -227,7 +243,11 @@ export const CorpusDocumentAnnotator = ({
   }
 
   useEffect(() => {
-    if (editMode === "ANNOTATE" && opened_corpus?.labelSet && opened_document) {
+    if (
+      edit_mode === "ANNOTATE" &&
+      opened_corpus?.labelSet &&
+      opened_document
+    ) {
       getDocumentAnnotationsAndRelationships({
         variables: {
           documentId: opened_document.id,
@@ -333,14 +353,14 @@ export const CorpusDocumentAnnotator = ({
     //
     // Like I said, there is probably a better way to do this with a more substantial redesign of
     // the <Annotator/> component, but I do want to release this app sometime this century.
-    if (scroll_to_annotation_on_open) {
+    if (scrollToAnnotation) {
       if (
         jumped_to_annotation_on_load &&
         loaded_page_for_annotation &&
         loaded_page_for_annotation.id === jumped_to_annotation_on_load &&
-        loaded_page_for_annotation.id === scroll_to_annotation_on_open.id
+        loaded_page_for_annotation.id === scrollToAnnotation.id
       ) {
-        displayAnnotationOnAnnotatorLoad(null);
+        displayAnnotationOnAnnotatorLoad(undefined);
         setLoadedPageForAnnotation(null);
         setJumpedToAnnotationOnLoad(null);
       }
@@ -348,13 +368,13 @@ export const CorpusDocumentAnnotator = ({
   }, [
     jumped_to_annotation_on_load,
     loaded_page_for_annotation,
-    scroll_to_annotation_on_open,
+    scrollToAnnotation,
   ]);
 
   // Effect to load document and pawls layer
   useEffect(() => {
     if (open && opened_document && opened_document.pdfFile) {
-      setViewState(ViewState.LOADING);
+      viewStateVar(ViewState.LOADING);
       refetch();
       const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
         opened_document.pdfFile
@@ -365,9 +385,10 @@ export const CorpusDocumentAnnotator = ({
 
       // If we're in annotate mode and corpus has a labelset AND we don't have initial annotations to display
       if (
-        editMode === "ANNOTATE" &&
+        edit_mode === "ANNOTATE" &&
         opened_corpus?.labelSet &&
-        (!display_annotations || display_annotations.length == 0)
+        (!displayOnlyTheseAnnotations ||
+          displayOnlyTheseAnnotations.length == 0)
       ) {
         getDocumentAnnotationsAndRelationships({
           variables: {
@@ -444,14 +465,14 @@ export const CorpusDocumentAnnotator = ({
             ...pageTextMaps,
           });
 
-          setViewState(ViewState.LOADED);
+          viewStateVar(ViewState.LOADED);
         })
         .catch((err) => {
           console.error("Error loading document:", err);
-          setViewState(ViewState.ERROR);
+          viewStateVar(ViewState.ERROR);
         });
     }
-  }, [open, opened_document]);
+  }, [open, opened_document, displayOnlyTheseAnnotations]);
 
   useEffect(() => {
     // When modal is hidden, ensure we reset state and clear provided annotations to display
@@ -460,13 +481,31 @@ export const CorpusDocumentAnnotator = ({
     }
   }, [open]);
 
+  // When unmounting... ensure we turn off limiting to provided set of annotations
+  useEffect(() => {
+    return () => {
+      onlyDisplayTheseAnnotations(undefined);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (displayOnlyTheseAnnotations) {
+      setAnnotationObjs(
+        convertToServerAnnotations(displayOnlyTheseAnnotations)
+      );
+      // Clear other annotation types as they're not specified in onlyDisplayTheseAnnotations
+      setDocTypeAnnotations([]);
+      setRelationshipAnnotations([]);
+    }
+  }, [displayOnlyTheseAnnotations]);
+
   useEffect(() => {
     refetch();
   }, []);
 
   // Effect to process analyses and extracts data
   useEffect(() => {
-    if (analysesData) {
+    if (analysesData && analysesData.documentCorpusActions) {
       const { analysisRows, extracts } = analysesData.documentCorpusActions;
       setExtracts(extracts);
       setAnalysisRows(analysisRows);
@@ -581,7 +620,7 @@ export const CorpusDocumentAnnotator = ({
   };
 
   let rendered_component = <></>;
-  switch (viewState) {
+  switch (view_state) {
     case ViewState.LOADING:
       rendered_component = (
         <WithSidebar width={responsive_sidebar_width}>
@@ -653,10 +692,12 @@ export const CorpusDocumentAnnotator = ({
             load_progress={progress}
             opened_document={opened_document}
             opened_corpus={opened_corpus}
-            display_annotations={display_annotations}
             read_only={read_only}
             structural_annotations={structuralAnnotations}
-            scroll_to_annotation_on_open={scroll_to_annotation_on_open}
+            scrollToAnnotation={
+              scrollToAnnotation &&
+              convertToServerAnnotation(scrollToAnnotation)
+            }
             show_selected_annotation_only={show_selected_annotation_only}
             show_annotation_bounding_boxes={show_annotation_bounding_boxes}
             show_annotation_labels={show_annotation_labels}
@@ -669,17 +710,23 @@ export const CorpusDocumentAnnotator = ({
             relationship_annotations={relationship_annotations}
             data_cells={data_cells}
             columns={columns}
-            editMode={editMode}
-            setEditMode={setEditMode}
-            allowInput={allowInput}
-            setAllowInput={setAllowInput}
+            editMode={edit_mode}
+            setEditMode={(m: "ANALYZE" | "ANNOTATE") => {
+              editMode(m);
+            }}
+            allowInput={allow_input}
+            setAllowInput={(v: boolean) => {
+              allowUserInput(v);
+            }}
             analyses={analyses}
             extracts={extracts}
             selected_analysis={selected_analysis}
             selected_extract={selected_extract}
             onSelectAnalysis={onSelectAnalysis}
             onSelectExtract={onSelectExtract}
-            onError={setViewState}
+            onError={(vs: ViewState) => {
+              viewStateVar(vs);
+            }}
           />
         );
       }

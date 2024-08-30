@@ -722,7 +722,6 @@ export const Corpuses = () => {
         opened_document={opened_document}
         opened_corpus={opened_corpus}
         read_only={selected_analyes.length > 0 || banish_sidebar}
-        scroll_to_annotation_on_open={opened_to_annotation}
         show_selected_annotation_only={show_selected_annotation_only}
         show_annotation_bounding_boxes={show_annotation_bounding_boxes}
         show_annotation_labels={show_annotation_labels}

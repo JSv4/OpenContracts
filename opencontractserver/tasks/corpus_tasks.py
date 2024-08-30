@@ -6,7 +6,6 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from opencontractserver.analyzer.models import Analysis
 from opencontractserver.corpuses.models import CorpusAction
 from opencontractserver.documents.models import DocumentAnalysisRow
 from opencontractserver.extracts.models import Datacell, Extract
@@ -16,6 +15,7 @@ from opencontractserver.tasks.analyzer_tasks import (
 )
 from opencontractserver.tasks.extract_orchestrator_tasks import mark_extract_complete
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.analysis import create_and_setup_analysis
 from opencontractserver.utils.celery_tasks import (
     get_doc_analyzer_task_by_name,
     get_task_by_name,

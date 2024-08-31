@@ -130,8 +130,6 @@ const Page = ({
   onError,
   setJumpedToAnnotationOnLoad,
 }: PageProps) => {
-  const { width } = useWindowDimensions();
-
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [scale, setScale] = useState<number>(1);
   const [canvas_width, setCanvasWidth] = useState<number>();
@@ -303,7 +301,7 @@ const Page = ({
     const annots_to_render = !annotationStore.showStructuralLabels
       ? defined_annotations.filter((annot) => annot.annotationLabel.readonly)
       : defined_annotations;
-    // console.log("Annots to render", annots_to_render);
+    console.log("Annots to render ", pageInfo, annots_to_render);
 
     for (const [index, annotation] of annots_to_render.entries()) {
       page_annotation_components.push(

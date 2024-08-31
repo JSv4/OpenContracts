@@ -129,6 +129,10 @@ export const CorpusDocumentAnnotator = ({
   const displayOnlyTheseAnnotations = useReactiveVar(
     onlyDisplayTheseAnnotations
   );
+  console.log(
+    "CorpusDocumentAnnotator - displayOnlyTheseAnnotations",
+    displayOnlyTheseAnnotations
+  );
 
   const [doc, setDocument] = useState<PDFDocumentProxy>();
   const [pages, setPages] = useState<PDFPageInfo[]>([]);
@@ -262,17 +266,7 @@ export const CorpusDocumentAnnotator = ({
     if (humanAnnotationsAndRelationshipsData) {
       const processedAnnotations =
         humanAnnotationsAndRelationshipsData.document?.allAnnotations?.map(
-          (annotation) =>
-            new ServerAnnotation(
-              annotation.page,
-              annotation.annotationLabel,
-              annotation?.rawText ? annotation.rawText : "",
-              annotation?.json ? annotation.json : {},
-              annotation?.myPermissions
-                ? annotation.myPermissions
-                : ([] as PermissionTypes[]),
-              annotation.id
-            )
+          (annotation) => convertToServerAnnotation(annotation)
         ) ?? [];
       console.log("Processed annotations", processedAnnotations);
 
@@ -412,20 +406,17 @@ export const CorpusDocumentAnnotator = ({
           ]) => {
             setDocument(pdfDoc);
             setStructuralAnnotations(
-              structuralAnns.map(
-                (annotation) =>
-                  new ServerAnnotation(
-                    annotation.page,
-                    annotation.annotationLabel,
-                    annotation.rawText ? annotation.rawText : "",
-                    annotation.json ? annotation.json : {},
-                    annotation.myPermissions
-                      ? getPermissions(annotation.myPermissions)
-                      : [],
-                    annotation.id
-                  )
+              structuralAnns.map((annotation) =>
+                convertToServerAnnotation(annotation)
               )
             );
+
+            // // Fold in the displayOnlyTheseAnnotations values
+            // if (displayOnlyTheseAnnotations) {
+            //   setAnnotationObjs(
+            //     (oldObjs) => [...oldObjs, ...convertToServerAnnotations([displayOnlyTheseAnnotations[0]])]
+            //   )
+            // }
 
             const loadPages: Promise<PDFPageInfo>[] = [];
             for (let i = 1; i <= pdfDoc.numPages; i++) {
@@ -529,22 +520,9 @@ export const CorpusDocumentAnnotator = ({
         // TODO - properly parse resulting annotation data
         if (data && data.analysis && data.analysis.fullAnnotationList) {
           const processedAnnotations = data.analysis.fullAnnotationList.map(
-            (annotation) =>
-              new ServerAnnotation(
-                annotation.page,
-                annotation.annotationLabel,
-                annotation?.rawText ? annotation.rawText : "",
-                annotation?.json ? annotation.json : {},
-                annotation?.myPermissions
-                  ? annotation.myPermissions
-                  : ([] as PermissionTypes[]),
-                annotation.id
-              )
+            (annotation) => convertToServerAnnotation(annotation)
           );
           setAnnotationObjs(processedAnnotations);
-
-          // Process relationships
-          // TODO - add equivalent of fullAnnotationList for relationships...
 
           // Update span labels
           const uniqueLabels = _.uniqBy(
@@ -573,19 +551,7 @@ export const CorpusDocumentAnnotator = ({
           // Process annotations from datacells
           const processedAnnotations = (data.extract.fullDatacellList || [])
             .flatMap((datacell) => datacell.fullSourceList || [])
-            .map(
-              (annotation) =>
-                new ServerAnnotation(
-                  annotation.page,
-                  annotation.annotationLabel,
-                  annotation?.rawText ? annotation.rawText : "",
-                  annotation?.json ? annotation.json : {},
-                  annotation?.myPermissions
-                    ? annotation.myPermissions
-                    : ([] as PermissionTypes[]),
-                  annotation.id
-                )
-            );
+            .map((annotation) => convertToServerAnnotation(annotation));
           setAnnotationObjs(processedAnnotations);
 
           // Update span labels

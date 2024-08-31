@@ -54,6 +54,7 @@ import {
   showQueryViewState,
   openedQueryObj,
   showSelectCorpusAnalyzerOrFieldsetModal,
+  onlyDisplayTheseAnnotations,
 } from "../graphql/cache";
 import {
   UPDATE_CORPUS,
@@ -718,6 +719,7 @@ export const Corpuses = () => {
           openedDocument(null);
           selectedAnalysesIds([]);
           selectedAnalyses([]);
+          onlyDisplayTheseAnnotations(undefined);
         }}
         opened_document={opened_document}
         opened_corpus={opened_corpus}

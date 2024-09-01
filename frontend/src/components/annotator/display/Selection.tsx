@@ -25,22 +25,21 @@ import {
   PDFPageInfo,
   AnnotationStore,
   ServerAnnotation,
-} from "./context";
-import {} from "./";
+} from "../context";
 import {
   HorizontallyJustifiedEndDiv,
   HorizontallyJustifiedStartDiv,
   VerticallyJustifiedEndDiv,
-} from "./sidebar/common";
+} from "../sidebar/common";
 import {
   annotationSelectedViaRelationship,
   getRelationImageHref,
-} from "./utils";
-import { BoundingBox, PermissionTypes } from "../types";
+} from "../utils";
+import { BoundingBox, PermissionTypes } from "../../types";
 import {
   LabelDisplayBehavior,
   ServerAnnotationType,
-} from "../../graphql/types";
+} from "../../../graphql/types";
 
 function hexToRgb(hex: string) {
   // For shortsighted reasons, the color stored is missing #. Check first to see if number is missing hex, if so

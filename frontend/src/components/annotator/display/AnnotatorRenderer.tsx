@@ -1,5 +1,5 @@
 import { useMutation } from "@apollo/client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   NewAnnotationInputType,
   NewAnnotationOutputType,
@@ -25,8 +25,8 @@ import {
   UpdateAnnotationOutputType,
   UpdateRelationInputType,
   UpdateRelationOutputType,
-} from "../../graphql/mutations";
-import { PDFView } from "./pages";
+} from "../../../graphql/mutations";
+import { PDFView } from "../pages";
 
 import {
   DocTypeAnnotation,
@@ -34,7 +34,7 @@ import {
   PDFPageInfo,
   RelationGroup,
   ServerAnnotation,
-} from "./context";
+} from "../context";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 
 import {
@@ -46,11 +46,11 @@ import {
   DocumentType,
   ExtractType,
   LabelDisplayBehavior,
-} from "../../graphql/types";
-import { ViewState, TokenId, PermissionTypes } from "../types";
+} from "../../../graphql/types";
+import { ViewState, TokenId, PermissionTypes } from "../../types";
 import { toast } from "react-toastify";
-import { createTokenStringSearch } from "./utils";
-import { getPermissions } from "../../utils/transform";
+import { createTokenStringSearch } from "../utils";
+import { getPermissions } from "../../../utils/transform";
 import _ from "lodash";
 
 export interface TextSearchResultsProps {
@@ -147,9 +147,9 @@ export const AnnotatorRenderer = ({
 
   const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
   const [doc_text, setDocText] = useState<string>("");
-  const [loaded_page_for_annotation, setLoadedPageForAnnotation] =
-    useState<ServerAnnotation | null>(null);
-  const [jumped_to_annotation_on_load, setJumpedToAnnotationOnLoad] = useState<
+
+  // New state to track if we've scrolled to the annotation
+  const [hasScrolledToAnnotation, setHasScrolledToAnnotation] = useState<
     string | null
   >(null);
 
@@ -180,10 +180,10 @@ export const AnnotatorRenderer = ({
   }, []);
 
   // Refs for annotations
-  const annotationElementRefs = useRef({});
+  const annotationElementRefs = useRef<Record<string, HTMLElement | null>>({});
 
   // Refs for search results
-  const textSearchElementRefs = useRef({});
+  const textSearchElementRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const handleKeyUpPress = useCallback((event) => {
     const { keyCode } = event;
@@ -201,18 +201,35 @@ export const AnnotatorRenderer = ({
     }
   }, []);
 
-  useEffect(() => {
-    setPdfAnnotations(
-      new PdfAnnotations(
-        [
-          ...annotation_objs,
-          ...(structural_annotations ? structural_annotations : []),
-        ],
-        relationship_annotations,
-        doc_type_annotations
-      )
+  const memoizedPdfAnnotations = useMemo(() => {
+    return new PdfAnnotations(
+      [...annotation_objs, ...(structural_annotations || [])],
+      relationship_annotations,
+      doc_type_annotations
     );
-  }, [annotation_objs, relationship_annotations, doc_type_annotations]);
+  }, [
+    annotation_objs,
+    structural_annotations,
+    relationship_annotations,
+    doc_type_annotations,
+  ]);
+
+  useEffect(() => {
+    setPdfAnnotations(memoizedPdfAnnotations);
+  }, [memoizedPdfAnnotations]);
+
+  // useEffect(() => {
+  //   setPdfAnnotations(
+  //     new PdfAnnotations(
+  //       [
+  //         ...annotation_objs,
+  //         ...(structural_annotations ? structural_annotations : []),
+  //       ],
+  //       relationship_annotations,
+  //       doc_type_annotations
+  //     )
+  //   );
+  // }, [annotation_objs, relationship_annotations, doc_type_annotations]);
 
   useEffect(() => {
     window.addEventListener("keyup", handleKeyUpPress);
@@ -223,46 +240,29 @@ export const AnnotatorRenderer = ({
     };
   }, [handleKeyUpPress, handleKeyDownPress]);
 
-  // Update query vars as appropriate.
-  // Batching in useEffect to cut down on unecessary re-renders
+  // Handle scrolling to annotation
   useEffect(() => {
-    // If user wanted to nav right to an annotation, problem we have is we don't load
-    // an entire doc's worth of annotations, but we can pass annotation id to the backend
-    // which will determine the page that annotation is one and return annotations for that page
-
-    // I'm sure there is a better way to achieve what's happening here, but I think it will require
-    // (at least for me) a more thorough rethinking of how the Annotator is loading data
-    // and perhaps a move away from the Annotator context the original PAWLs application used which,
-    // while cool, is largely duplicative of my Apollo state store and is causing some caching oddities that
-    // I need to work around.
-    //
-    //    Anyway, this is checking to see if:
-    //
-    //    1) The annotator was told to open to a given annotation (should happen on mount)?
-    //    2) The page for that annotation was loaded (should happen on mount)
-    //    3) The annotation with requested id was loaded and jumped to itself (see the Selection component)
-    //
-    //    IF 1, 2 AND 3 are true, then the state variables that would jump to a specific page
-    //    are all reset.
-    //
-    // Like I said, there is probably a better way to do this with a more substantial redesign of
-    // the <Annotator/> component, but I do want to release this app sometime this century.
-    if (scrollToAnnotation?.id) {
-      if (
-        jumped_to_annotation_on_load &&
-        loaded_page_for_annotation &&
-        loaded_page_for_annotation.id === jumped_to_annotation_on_load &&
-        loaded_page_for_annotation.id === scrollToAnnotation.id
-      ) {
-        setLoadedPageForAnnotation(null);
-        setJumpedToAnnotationOnLoad(null);
-      }
+    if (
+      scrollToAnnotation &&
+      !hasScrolledToAnnotation &&
+      annotationElementRefs.current[scrollToAnnotation.id]
+    ) {
+      annotationElementRefs?.current[scrollToAnnotation.id]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      setHasScrolledToAnnotation(scrollToAnnotation.id);
     }
   }, [
-    jumped_to_annotation_on_load,
-    loaded_page_for_annotation,
     scrollToAnnotation,
+    hasScrolledToAnnotation,
+    annotationElementRefs.current,
   ]);
+
+  // Reset scroll state when scrollToAnnotation changes
+  useEffect(() => {
+    setHasScrolledToAnnotation(null);
+  }, [scrollToAnnotation]);
 
   // When the opened document is changed... reload...
   useEffect(() => {
@@ -274,17 +274,6 @@ export const AnnotatorRenderer = ({
     });
     setDocText(doc_text);
   }, [pages, doc]);
-
-  useEffect(() => {
-    // We only want to load annotation page for selected annotation on load ONCE
-    if (
-      scrollToAnnotation?.id &&
-      loaded_page_for_annotation === null &&
-      jumped_to_annotation_on_load !== scrollToAnnotation.id
-    ) {
-      setLoadedPageForAnnotation(scrollToAnnotation);
-    }
-  }, [scrollToAnnotation]);
 
   function addMultipleAnnotations(a: ServerAnnotation[]): void {
     setPdfAnnotations(
@@ -905,7 +894,7 @@ export const AnnotatorRenderer = ({
       show_annotation_bounding_boxes={show_annotation_bounding_boxes}
       show_annotation_labels={show_annotation_labels}
       scroll_to_annotation_on_open={scrollToAnnotation}
-      setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
+      setJumpedToAnnotationOnLoad={setHasScrolledToAnnotation}
       doc={doc}
       doc_text={doc_text}
       page_token_text_maps={pageTextMaps ? pageTextMaps : {}}

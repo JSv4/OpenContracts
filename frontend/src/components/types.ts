@@ -1,5 +1,6 @@
 import { ReactElement } from "react";
-import { AnnotationLabelType } from "../graphql/types";
+import { AnnotationLabelType, LabelDisplayBehavior } from "../graphql/types";
+import { PDFPageInfo } from "./annotator/context";
 
 /**
  * Type-related functions
@@ -196,3 +197,14 @@ export type TextSearchResult = {
 };
 
 export type MultipageAnnotationJson = Record<number, SinglePageAnnotationJson>;
+export interface PageProps {
+  pageInfo: PDFPageInfo;
+  doc_permissions: PermissionTypes[];
+  corpus_permissions: PermissionTypes[];
+  read_only: boolean;
+  show_selected_annotation_only: boolean;
+  show_annotation_bounding_boxes: boolean;
+  show_annotation_labels: LabelDisplayBehavior;
+  onError: (_err: Error) => void;
+  setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
+}

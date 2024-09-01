@@ -2,8 +2,7 @@ import { useEffect, useRef } from "react";
 import _ from "lodash";
 import uniqueId from "lodash/uniqueId";
 
-import { TokenId, PDFPageInfo } from "./context";
-import {} from "./";
+import { TokenId, PDFPageInfo } from "../context";
 import { TokenSpan } from "./TokenSpan";
 
 interface SearchSelectionTokenProps {

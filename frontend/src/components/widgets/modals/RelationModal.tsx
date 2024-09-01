@@ -1,8 +1,11 @@
 import { useState, useContext } from "react";
-import { Transfer as SemanticTransfer } from "../widgets/data-display/Transfer";
+import { Transfer as SemanticTransfer } from "../../../components/widgets/data-display/Transfer";
 import { Modal, Button, Label, Icon } from "semantic-ui-react";
-import { RelationGroup, AnnotationStore } from "./context";
-import { AnnotationLabelType } from "../../graphql/types";
+import {
+  RelationGroup,
+  AnnotationStore,
+} from "../../annotator/context/AnnotationStore";
+import { AnnotationLabelType } from "../../../graphql/types";
 import styled from "styled-components";
 
 interface RelationModalProps {

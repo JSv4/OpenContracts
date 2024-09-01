@@ -1,6 +1,5 @@
-import React from "react";
 import { Card, Icon, Popup, Header } from "semantic-ui-react";
-import { AnnotationLabelType } from "../../../graphql/types";
+import { AnnotationLabelType } from "../../../../graphql/types";
 
 interface LabelCardProps {
   label: AnnotationLabelType;

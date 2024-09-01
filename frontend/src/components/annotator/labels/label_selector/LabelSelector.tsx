@@ -9,10 +9,10 @@ import { LabelSelectorDialog } from "./LabelSelectorDialog";
 import _ from "lodash";
 
 import "./LabelSelector.css";
-import { AnnotationStore } from "../context";
-import { AnnotationLabelType } from "../../../graphql/types";
-import { TruncatedText } from "../../widgets/data-display/TruncatedText";
-import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import { AnnotationStore } from "../../context";
+import { AnnotationLabelType } from "../../../../graphql/types";
+import { TruncatedText } from "../../../widgets/data-display/TruncatedText";
+import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 
 interface LabelSelectorProps {
   sidebarWidth: string;

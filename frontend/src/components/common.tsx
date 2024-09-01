@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { HideableHasWidth } from "./annotator";
+import { HideableHasWidth } from "./annotator/common";
 
 export const OSLegalTheme = {
   main: "mediumseagreen",

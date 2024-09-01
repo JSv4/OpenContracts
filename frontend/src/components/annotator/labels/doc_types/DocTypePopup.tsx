@@ -1,9 +1,12 @@
 import React, { useState } from "react";
 import { Segment, Button, Comment, Input } from "semantic-ui-react";
-import { EmptyLabelListItem, LabelListItem } from "../sidebar/LabelListItems";
+import {
+  EmptyLabelListItem,
+  LabelListItem,
+} from "../../sidebar/LabelListItems";
 import Fuse from "fuse.js";
 import _ from "lodash";
-import { AnnotationLabelType } from "../../../graphql/types";
+import { AnnotationLabelType } from "../../../../graphql/types";
 
 interface DocTypePopupProps {
   labels: AnnotationLabelType[];

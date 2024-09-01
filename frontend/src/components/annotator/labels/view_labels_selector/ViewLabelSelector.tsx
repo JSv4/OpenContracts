@@ -2,8 +2,7 @@ import React, { useContext } from "react";
 import { Dropdown, DropdownProps } from "semantic-ui-react";
 
 import _ from "lodash";
-
-import { AnnotationStore } from "../context";
+import { AnnotationStore } from "../../context";
 
 export const ViewLabelSelector = () => {
   const annotationStore = useContext(AnnotationStore);

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import styled from "styled-components";
 
-import { PDF, RelationModal } from "..";
 import {
   BoundingBox,
   PermissionTypes,
@@ -33,9 +32,7 @@ import _, { String } from "lodash";
 
 import * as listeners from "../listeners";
 
-import { DocTypeLabelDisplay } from "../doc_types/DocTypeLabelDisplay";
 import AnnotatorSidebar from "../sidebar/AnnotatorSidebar";
-import { LabelSelector } from "../label_selector/LabelSelector";
 import { SidebarContainer } from "../../common";
 
 import { TextSearchResult } from "../../types";
@@ -43,6 +40,10 @@ import { AnnotatorTopbar } from "../topbar/AnnotatorTopbar";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 
 import "./PDFView.css";
+import { RelationModal } from "../../widgets/modals/RelationModal";
+import { PDF } from "../display/PDF";
+import { DocTypeLabelDisplay } from "../labels/doc_types/DocTypeLabelDisplay";
+import { LabelSelector } from "../labels/label_selector/LabelSelector";
 
 export const PDFView = ({
   doc_permissions,

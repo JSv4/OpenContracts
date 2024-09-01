@@ -6,12 +6,15 @@ import {
   Input,
   Label as SemanticLabel,
 } from "semantic-ui-react";
-import { EmptyLabelListItem, LabelListItem } from "../sidebar/LabelListItems";
 import styled from "styled-components";
 
 import Fuse from "fuse.js";
 import _ from "lodash";
-import { AnnotationLabelType } from "../../../graphql/types";
+import { AnnotationLabelType } from "../../../../graphql/types";
+import {
+  EmptyLabelListItem,
+  LabelListItem,
+} from "../../sidebar/LabelListItems";
 
 interface DocTypePopupProps {
   labels: AnnotationLabelType[];

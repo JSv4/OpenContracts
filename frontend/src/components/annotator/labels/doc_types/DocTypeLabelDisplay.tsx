@@ -17,11 +17,11 @@ import { DocTypePopup } from "./DocTypePopup";
 import _ from "lodash";
 
 import "./DocTypeLabelDisplayStyles.css";
-import { AnnotationStore, DocTypeAnnotation } from "../context";
-import { AnnotationLabelType } from "../../../graphql/types";
-import { PermissionTypes } from "../../types";
-import useWindowDimensions from "../../hooks/WindowDimensionHook";
-import { HideableHasWidth } from "../common";
+import { AnnotationStore, DocTypeAnnotation } from "../../context";
+import { AnnotationLabelType } from "../../../../graphql/types";
+import { PermissionTypes } from "../../../types";
+import useWindowDimensions from "../../../hooks/WindowDimensionHook";
+import { HideableHasWidth } from "../../common";
 
 export const DocTypeLabelDisplay = ({ read_only }: { read_only: boolean }) => {
   const { width } = useWindowDimensions();

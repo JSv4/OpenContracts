@@ -136,3 +136,33 @@ export function extractIconSrcFromAnalyzerManifest(
     return default_analyzer_icon;
   }
 }
+export function getPageBoundsFromCanvas(
+  canvas: HTMLCanvasElement
+): BoundingBox {
+  if (canvas.parentElement === null) {
+    throw new Error("No canvas parent");
+  }
+  const parent = canvas.parentElement;
+  const parentStyles = getComputedStyle(canvas.parentElement);
+
+  const leftPadding = parseFloat(parentStyles.paddingLeft || "0");
+  const left = parent.offsetLeft + leftPadding;
+
+  const topPadding = parseFloat(parentStyles.paddingTop || "0");
+  const top = parent.offsetTop + topPadding;
+
+  const parentWidth =
+    parent.clientWidth -
+    leftPadding -
+    parseFloat(parentStyles.paddingRight || "0");
+  const parentHeight =
+    parent.clientHeight -
+    topPadding -
+    parseFloat(parentStyles.paddingBottom || "0");
+  return {
+    left,
+    top,
+    right: left + parentWidth,
+    bottom: top + parentHeight,
+  };
+}

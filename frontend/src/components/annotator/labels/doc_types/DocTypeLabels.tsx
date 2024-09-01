@@ -1,7 +1,7 @@
 import { Card, Icon, Popup, Header } from "semantic-ui-react";
-import { AnnotationLabelType } from "../../../graphql/types";
-import useWindowDimensions from "../../hooks/WindowDimensionHook";
-import { TruncatedText } from "../../widgets/data-display/TruncatedText";
+import { AnnotationLabelType } from "../../../../graphql/types";
+import useWindowDimensions from "../../../hooks/WindowDimensionHook";
+import { TruncatedText } from "../../../widgets/data-display/TruncatedText";
 
 import "./DocTypeLabels.css";
 

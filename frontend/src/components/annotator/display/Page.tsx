@@ -1,125 +1,13 @@
-import { useContext, useRef, useEffect, useState } from "react";
-import styled from "styled-components";
-import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
-import _ from "lodash";
-
-import {
-  PDFPageInfo,
-  AnnotationStore,
-  PDFStore,
-  normalizeBounds,
-} from "./context";
-import { Selection } from "./Selection";
-import { SelectionBoundary, SelectionTokens } from "./Selection";
-import { AnnotationLabelType, LabelDisplayBehavior } from "../../graphql/types";
-import { BoundingBox, PermissionTypes } from "../types";
+import React, { useRef, useState, useContext, useEffect } from "react";
+import { AnnotationLabelType } from "../../../graphql/types";
+import { getPageBoundsFromCanvas } from "../../../utils/transform";
+import { PageProps, BoundingBox, PermissionTypes } from "../../types";
+import { AnnotationStore, normalizeBounds } from "../context";
+import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
+import { Selection, SelectionBoundary, SelectionTokens } from "./Selection";
 import { SearchResult } from "./SearchResult";
-import useWindowDimensions from "../hooks/WindowDimensionHook";
 
-class PDFPageRenderer {
-  private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
-  private isRendering: boolean = false;
-
-  constructor(
-    readonly page: PDFPageProxy,
-    readonly canvas: HTMLCanvasElement,
-    readonly onError: (e: Error) => void
-  ) {}
-
-  cancelCurrentRender() {
-    if (this.currentRenderTask) {
-      this.currentRenderTask.promise.then(
-        () => {
-          this.isRendering = false;
-        },
-        (err: any) => {
-          this.isRendering = false;
-          if (
-            err instanceof Error &&
-            err.message.indexOf("Rendering cancelled") !== -1
-          ) {
-            return;
-          }
-          const e = err instanceof Error ? err : new Error(err);
-          this.onError(e);
-        }
-      );
-      this.currentRenderTask.cancel();
-    }
-  }
-
-  async render(scale: number) {
-    if (this.isRendering) {
-      await this.cancelCurrentRender();
-    }
-
-    this.isRendering = true;
-    const viewport = this.page.getViewport({ scale });
-
-    this.canvas.height = viewport.height;
-    this.canvas.width = viewport.width;
-
-    const canvasContext = this.canvas.getContext("2d");
-    if (canvasContext === null) {
-      throw new Error("No canvas context");
-    }
-
-    try {
-      this.currentRenderTask = this.page.render({ canvasContext, viewport });
-      await this.currentRenderTask.promise;
-    } finally {
-      this.isRendering = false;
-    }
-  }
-
-  async rescaleAndRender(scale: number) {
-    await this.cancelCurrentRender();
-    return this.render(scale);
-  }
-}
-
-function getPageBoundsFromCanvas(canvas: HTMLCanvasElement): BoundingBox {
-  if (canvas.parentElement === null) {
-    throw new Error("No canvas parent");
-  }
-  const parent = canvas.parentElement;
-  const parentStyles = getComputedStyle(canvas.parentElement);
-
-  const leftPadding = parseFloat(parentStyles.paddingLeft || "0");
-  const left = parent.offsetLeft + leftPadding;
-
-  const topPadding = parseFloat(parentStyles.paddingTop || "0");
-  const top = parent.offsetTop + topPadding;
-
-  const parentWidth =
-    parent.clientWidth -
-    leftPadding -
-    parseFloat(parentStyles.paddingRight || "0");
-  const parentHeight =
-    parent.clientHeight -
-    topPadding -
-    parseFloat(parentStyles.paddingBottom || "0");
-  return {
-    left,
-    top,
-    right: left + parentWidth,
-    bottom: top + parentHeight,
-  };
-}
-
-interface PageProps {
-  pageInfo: PDFPageInfo;
-  doc_permissions: PermissionTypes[];
-  corpus_permissions: PermissionTypes[];
-  read_only: boolean;
-  show_selected_annotation_only: boolean;
-  show_annotation_bounding_boxes: boolean;
-  show_annotation_labels: LabelDisplayBehavior;
-  onError: (_err: Error) => void;
-  setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
-}
-
-const Page = ({
+export const Page = ({
   pageInfo,
   doc_permissions,
   corpus_permissions,
@@ -147,14 +35,12 @@ const Page = ({
     searchResultElementRefs,
   } = annotationStore;
   // console.log(`Multipage annotations for page #${pageInfo.page.pageNumber - 1}:`, annotations)
-
   // Given selected bounds (top, bottom, left, right), determine which tokens fall inside bounds
   function ConvertBoundsToSelections(
     selection: BoundingBox,
     activeLabel: AnnotationLabelType
   ): JSX.Element {
     // console.log("ConvertBoundsToSelections - selection", selection)
-
     const annotation = pageInfo.getAnnotationForBounds(
       normalizeBounds(selection),
       activeLabel
@@ -205,7 +91,6 @@ const Page = ({
       renderer.render(pageInfo.scale).catch(onError);
 
       // determinePageVisiblity();
-
       const handleResize = async () => {
         console.log("Handle Resize");
 
@@ -292,17 +177,14 @@ const Page = ({
     //   }`
     // );
     // console.log(defined_annotations);
-
     // OK... figured out kinda what's happening but not sure where... the tokens in the JSON are cumulative (as I suspected)
     // so each annotation adds a layer of tokens which eventually gets opaque. Find source of this issue... Don't think it's
     // parser... but look at backend annotation json data first to make sure.
-
     // This is where existing annotations get their selection tokens applied
     const annots_to_render = !annotationStore.showStructuralLabels
       ? defined_annotations.filter((annot) => annot.annotationLabel.readonly)
       : defined_annotations;
-    console.log("Annots to render ", pageInfo, annots_to_render);
-
+    // console.log("Annots to render", annots_to_render);
     for (const [index, annotation] of annots_to_render.entries()) {
       page_annotation_components.push(
         <Selection
@@ -333,7 +215,6 @@ const Page = ({
   //     page_annotation_components.length
   //   }`
   // );
-
   return (
     <PageAnnotationsContainer
       ref={containerRef}
@@ -414,6 +295,7 @@ const Page = ({
               ],
             });
           }
+
           // Otherwise, add page number as key and then add bounds to it.
           else {
             annotationStore.setMultiSelections({
@@ -439,21 +321,21 @@ const Page = ({
         {...(canvas_width ? { width: canvas_width } : {})}
       />
       {/* {pageInfo.page.pageNumber > 1 ? (
-        <FetchMoreOnVisible
-          style={{
-            position: "relative",
-            top: "0px",
-            left: "0px",
-            height: "0px",
-            width: "100%",
-          }}
-          fetchPreviousPage={() =>
-            handleFetchMoreAnnotatorSpans(pageInfo.page.pageNumber - 1)
-          }
-        />
-      ) : (
-        <></>
-      )} */}
+              <FetchMoreOnVisible
+                style={{
+                  position: "relative",
+                  top: "0px",
+                  left: "0px",
+                  height: "0px",
+                  width: "100%",
+                }}
+                fetchPreviousPage={() =>
+                  handleFetchMoreAnnotatorSpans(pageInfo.page.pageNumber - 1)
+                }
+              />
+            ) : (
+              <></>
+            )} */}
 
       {page_annotation_components}
 
@@ -495,73 +377,3 @@ const Page = ({
     </PageAnnotationsContainer>
   );
 };
-
-export const PDF = ({
-  shiftDown,
-  doc_permissions,
-  corpus_permissions,
-  read_only,
-  show_selected_annotation_only,
-  show_annotation_bounding_boxes,
-  show_annotation_labels,
-  setJumpedToAnnotationOnLoad,
-}: {
-  shiftDown?: boolean;
-  doc_permissions: PermissionTypes[];
-  corpus_permissions: PermissionTypes[];
-  read_only: boolean;
-  show_selected_annotation_only: boolean;
-  show_annotation_bounding_boxes: boolean;
-  show_annotation_labels: LabelDisplayBehavior;
-  setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
-}) => {
-  const pdfStore = useContext(PDFStore);
-
-  if (!pdfStore.doc) {
-    throw new Error("No Document");
-  }
-  if (!pdfStore.pages) {
-    throw new Error("Document without Pages");
-  }
-
-  return (
-    <>
-      {pdfStore.pages.map((p) => {
-        return (
-          <Page
-            key={p.page.pageNumber}
-            read_only={read_only}
-            doc_permissions={doc_permissions}
-            corpus_permissions={corpus_permissions}
-            pageInfo={p}
-            onError={pdfStore.onError}
-            show_selected_annotation_only={show_selected_annotation_only}
-            show_annotation_bounding_boxes={show_annotation_bounding_boxes}
-            show_annotation_labels={show_annotation_labels}
-            setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
-          />
-        );
-      })}
-    </>
-  );
-};
-
-const PageAnnotationsContainer = styled.div(
-  ({ theme }) => `
-    position: relative;
-    box-shadow: 2px 2px 4px 0 rgba(0, 0, 0, 0.2);
-    margin: 0 0 .5rem;
-    
-    &:last-child {
-        margin-bottom: 0;
-    }
-`
-);
-
-const PageCanvas = styled.canvas(
-  ({ width }: { width?: number }) => `
-  display: block;
-  ${width ? "width: " + width + "px;" : ""}
-  height: auto;
-`
-);

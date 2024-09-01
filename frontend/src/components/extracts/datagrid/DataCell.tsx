@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { Table, Icon, Popup, Modal, Button, Loader } from "semantic-ui-react";
 
-import { DatacellType, ServerAnnotationType } from "../../../graphql/types";
+import {
+  DatacellType,
+  LabelDisplayBehavior,
+  ServerAnnotationType,
+} from "../../../graphql/types";
 import { JSONTree } from "react-json-tree";
 import {
   displayAnnotationOnAnnotatorLoad,
   onlyDisplayTheseAnnotations,
   openedDocument,
   selectedAnnotation,
+  showAnnotationBoundingBoxes,
+  showAnnotationLabels,
+  showSelectedAnnotationOnly,
 } from "../../../graphql/cache";
 import _ from "lodash";
 
@@ -70,6 +77,10 @@ export const ExtractDatacell = ({
       openedDocument(viewSourceAnnotations[0].document); // All sources for doc should share same document
       onlyDisplayTheseAnnotations(viewSourceAnnotations);
       setViewSourceAnnotations(null);
+      // Want to make sure that we see all annotatations *clearly*
+      showSelectedAnnotationOnly(false);
+      showAnnotationBoundingBoxes(true);
+      showAnnotationLabels(LabelDisplayBehavior.ALWAYS);
     }
   }, [viewSourceAnnotations]);
 

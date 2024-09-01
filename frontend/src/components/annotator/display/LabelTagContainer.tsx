@@ -1,5 +1,5 @@
-import { LabelDisplayBehavior } from "../../graphql/types";
-import { HorizontallyJustifiedEndDiv } from "./sidebar/common";
+import { LabelDisplayBehavior } from "../../../graphql/types";
+import { HorizontallyJustifiedEndDiv } from "../sidebar/common";
 
 export const LabelTagContainer = ({
   hovered,

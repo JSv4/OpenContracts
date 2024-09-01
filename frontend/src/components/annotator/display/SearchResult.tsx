@@ -1,16 +1,15 @@
 import React, { useContext, useState } from "react";
 import styled from "styled-components";
 import _ from "lodash";
-import { PDFPageInfo, AnnotationStore } from "./context";
-import { VerticallyJustifiedEndDiv } from "./sidebar/common";
-import { BoundingBox } from "../types";
-import { LabelDisplayBehavior } from "../../graphql/types";
-import { getBorderWidthFromBounds } from "../../utils/transform";
+import { PDFPageInfo, AnnotationStore } from "../context";
+import { VerticallyJustifiedEndDiv } from "../sidebar/common";
 import { LabelTagContainer } from "./LabelTagContainer";
-import { SearchSelectionTokens } from "./SelectionTokens";
-import { TextSearchResult } from "../types";
 
 import { ResultBoundary } from "./ResultBoundary";
+import { BoundingBox, TextSearchResult } from "../../types";
+import { LabelDisplayBehavior } from "../../../graphql/types";
+import { getBorderWidthFromBounds } from "../../../utils/transform";
+import { SearchSelectionTokens } from "./SelectionTokens";
 
 interface SearchResultProps {
   total_results: number;

@@ -64,7 +64,7 @@ import { Result } from "../widgets/data-display/Result";
 import { SidebarContainer } from "../common";
 import { CenterOnPage } from "./CenterOnPage";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
-import { AnnotatorRenderer } from "./AnnotatorRenderer";
+import { AnnotatorRenderer } from "./display/AnnotatorRenderer";
 import { PDFDocumentLoadingTask } from "pdfjs-dist";
 import { toast } from "react-toastify";
 import { createTokenStringSearch } from "./utils";
@@ -116,6 +116,9 @@ export const CorpusDocumentAnnotator = ({
   show_annotation_labels,
   onClose,
 }: CorpusDocumentAnnotatorProps) => {
+  // Rerendering issue...
+  // 38 - first useLazyQuery ius triggering rerender
+
   const { width } = useWindowDimensions();
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";
 
@@ -134,8 +137,13 @@ export const CorpusDocumentAnnotator = ({
     displayOnlyTheseAnnotations
   );
 
+  // Hook 15
   const [doc, setDocument] = useState<PDFDocumentProxy>();
+
+  // Hook 16
   const [pages, setPages] = useState<PDFPageInfo[]>([]);
+
+  // Hook 17
   const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
 
   // New states for analyses and extracts
@@ -147,7 +155,7 @@ export const CorpusDocumentAnnotator = ({
     null
   );
 
-  // States for annotations and related data
+  // Hook 22
   const [structuralAnnotations, setStructuralAnnotations] = useState<
     ServerAnnotation[]
   >([]);
@@ -171,7 +179,26 @@ export const CorpusDocumentAnnotator = ({
     []
   );
 
+  // Hook 31 - progress is trigger LOTS of initial rerenders...
   const [progress, setProgress] = useState(0);
+
+  // Then when progress is complete this sequence of hooks:
+  // Hook 31 - fires a lot as progress, setProgress hook fires
+  // Hook 15 - PDFDocumentProxy hook - makes sense because PDF is now loaded
+  // Hook 22 - Structural Annotations Loaded
+  // Hook 16 - PDFPageInfo objs populated
+  // Hook 17 - page text maps are stored
+  // Hook 3 - ViewStateVar useReactiveVar is updated and AnnotatorRenderer is removed from tree
+  // Hook 3
+
+  // When loaded via Corpus
+  // 15 -> 22 --> **3** (usually indicates a failure) --> 16 --> 17 --> 3
+  // Hook 15 - PDFDocumentProxy hook - makes sense because PDF is now loaded
+  // Hook 22 - Structural Annotations Loaded
+  // Hook 3 - ViewStateVar useReactiveVar is updated (Loaded)
+  // Hook 16 - PDFPageInfo objs populated
+  // Hook 17 - page text maps are stored
+  // Hook 3 - ViewStateVar useReactiveVar is updated and AnnotatorRenderer is removed from tree (Error)
 
   const [loaded_page_for_annotation, setLoadedPageForAnnotation] =
     useState<ServerAnnotationType | null>(null);
@@ -192,6 +219,7 @@ export const CorpusDocumentAnnotator = ({
     allowUserInput(false);
   }, [editMode]);
 
+  // Hook #37
   let corpus_id = opened_corpus?.id;
   let analysis_vars = {
     documentId: opened_document.id,
@@ -206,9 +234,10 @@ export const CorpusDocumentAnnotator = ({
     GetDocumentAnalysesAndExtractsInput
   >(GET_DOCUMENT_ANALYSES_AND_EXTRACTS, {
     variables: analysis_vars,
-    skip: !!displayOnlyTheseAnnotations,
+    skip: !Boolean(displayOnlyTheseAnnotations),
   });
 
+  // Hook #38
   const [
     fetchAnnotationsForAnalysis,
     { loading: annotationsLoading, data: annotationsData },
@@ -405,18 +434,12 @@ export const CorpusDocumentAnnotator = ({
             ServerAnnotationType[]
           ]) => {
             setDocument(pdfDoc);
+
             setStructuralAnnotations(
               structuralAnns.map((annotation) =>
                 convertToServerAnnotation(annotation)
               )
             );
-
-            // // Fold in the displayOnlyTheseAnnotations values
-            // if (displayOnlyTheseAnnotations) {
-            //   setAnnotationObjs(
-            //     (oldObjs) => [...oldObjs, ...convertToServerAnnotations([displayOnlyTheseAnnotations[0]])]
-            //   )
-            // }
 
             const loadPages: Promise<PDFPageInfo>[] = [];
             for (let i = 1; i <= pdfDoc.numPages; i++) {
@@ -455,8 +478,6 @@ export const CorpusDocumentAnnotator = ({
             ...string_index_token_map,
             ...pageTextMaps,
           });
-
-          viewStateVar(ViewState.LOADED);
         })
         .catch((err) => {
           console.error("Error loading document:", err);
@@ -464,6 +485,13 @@ export const CorpusDocumentAnnotator = ({
         });
     }
   }, [open, opened_document, displayOnlyTheseAnnotations]);
+
+  // Only trigger state flip to "Loaded" if PDF, pageTextMaps and page info load properly
+  useEffect(() => {
+    if (doc && pageTextMaps && pages.length > 0) {
+      viewStateVar(ViewState.LOADED);
+    }
+  }, [pageTextMaps, pages, doc]);
 
   useEffect(() => {
     // When modal is hidden, ensure we reset state and clear provided annotations to display

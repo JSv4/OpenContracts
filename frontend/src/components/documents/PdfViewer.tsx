@@ -1,12 +1,16 @@
 import { Modal, Button, Icon, Statistic } from "semantic-ui-react";
 import { useState } from "react";
-import { pdfjs, Document, Page, Outline } from "react-pdf";
+import { Document, Page } from "react-pdf";
 import {
   HorizontallyCenteredDiv,
   VerticallyCenteredDiv,
 } from "../layout/Wrappers";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+const pdfjsLib = require("pdfjs-dist");
+
+// Setting worker path to worker bundle.
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
+// "../../build/webpack/pdf.worker.min.js';";
 
 export function PdfViewer({
   url,

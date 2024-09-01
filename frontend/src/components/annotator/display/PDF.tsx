@@ -9,8 +9,6 @@ import { Page } from "./Page";
 
 export class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
-  private isRendering: boolean = false;
-
   constructor(
     readonly page: PDFPageProxy,
     readonly canvas: HTMLCanvasElement,
@@ -18,33 +16,27 @@ export class PDFPageRenderer {
   ) {}
 
   cancelCurrentRender() {
-    if (this.currentRenderTask) {
-      this.currentRenderTask.promise.then(
-        () => {
-          this.isRendering = false;
-        },
-        (err: any) => {
-          this.isRendering = false;
-          if (
-            err instanceof Error &&
-            err.message.indexOf("Rendering cancelled") !== -1
-          ) {
-            return;
-          }
-          const e = err instanceof Error ? err : new Error(err);
-          this.onError(e);
-        }
-      );
-      this.currentRenderTask.cancel();
+    if (this.currentRenderTask === undefined) {
+      return;
     }
+    this.currentRenderTask.promise.then(
+      () => {},
+      (err: any) => {
+        if (
+          err instanceof Error &&
+          err.message.indexOf("Rendering cancelled") !== -1
+        ) {
+          // Swallow the error that's thrown when the render is canceled.
+          return;
+        }
+        const e = err instanceof Error ? err : new Error(err);
+        this.onError(e);
+      }
+    );
+    this.currentRenderTask.cancel();
   }
 
-  async render(scale: number) {
-    if (this.isRendering) {
-      await this.cancelCurrentRender();
-    }
-
-    this.isRendering = true;
+  render(scale: number) {
     const viewport = this.page.getViewport({ scale });
 
     this.canvas.height = viewport.height;
@@ -54,17 +46,12 @@ export class PDFPageRenderer {
     if (canvasContext === null) {
       throw new Error("No canvas context");
     }
-
-    try {
-      this.currentRenderTask = this.page.render({ canvasContext, viewport });
-      await this.currentRenderTask.promise;
-    } finally {
-      this.isRendering = false;
-    }
+    this.currentRenderTask = this.page.render({ canvasContext, viewport });
+    return this.currentRenderTask;
   }
 
-  async rescaleAndRender(scale: number) {
-    await this.cancelCurrentRender();
+  rescaleAndRender(scale: number) {
+    this.cancelCurrentRender();
     return this.render(scale);
   }
 }

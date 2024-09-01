@@ -61,6 +61,7 @@ llama-index-embeddings-huggingface==0.2.1
 llama-index-llms-openai==0.1.22
 marvin==2.3.7
 plasmapdf
+spacy
 
 # Data Processing Tools
 # -------------------------------------------------------------------------------

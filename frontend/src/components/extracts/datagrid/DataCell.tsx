@@ -17,6 +17,7 @@ import {
   showSelectedAnnotationOnly,
 } from "../../../graphql/cache";
 import _ from "lodash";
+import { useReactiveVar } from "@apollo/client";
 
 interface ExtractDatacellProps {
   cellData: DatacellType;
@@ -67,22 +68,35 @@ export const ExtractDatacell = ({
   const [viewSourceAnnotations, setViewSourceAnnotations] = useState<
     ServerAnnotationType[] | null
   >(null);
+  const only_display_these_annotations = useReactiveVar(
+    onlyDisplayTheseAnnotations
+  );
+  const display_annotation_on_annotator_load = useReactiveVar(
+    displayAnnotationOnAnnotatorLoad
+  );
+  const selected_annotation = useReactiveVar(selectedAnnotation);
 
   useEffect(() => {
+    console.log("DataCell - viewSourceAnnotations", viewSourceAnnotations);
     if (viewSourceAnnotations !== null) {
-      let open_doc = viewSourceAnnotations[0].document;
-      let source_annotations = viewSourceAnnotations;
-      displayAnnotationOnAnnotatorLoad(viewSourceAnnotations[0]);
-      selectedAnnotation(viewSourceAnnotations[0]); // Not sure which one to zoom in on... picking first
-      openedDocument(viewSourceAnnotations[0].document); // All sources for doc should share same document
       onlyDisplayTheseAnnotations(viewSourceAnnotations);
-      setViewSourceAnnotations(null);
       // Want to make sure that we see all annotatations *clearly*
       showSelectedAnnotationOnly(false);
       showAnnotationBoundingBoxes(true);
       showAnnotationLabels(LabelDisplayBehavior.ALWAYS);
     }
   }, [viewSourceAnnotations]);
+
+  useEffect(() => {
+    console.log(
+      "DataCell - display_annotation_on_annotator_load:",
+      only_display_these_annotations
+    );
+    if (only_display_these_annotations) {
+      openedDocument(only_display_these_annotations[0].document); // All sources for doc should share same document
+      setViewSourceAnnotations(null);
+    }
+  }, [only_display_these_annotations]);
 
   useEffect(() => {
     setEditData(cellData.correctedData ?? cellData.data ?? {});

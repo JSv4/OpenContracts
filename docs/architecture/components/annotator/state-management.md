@@ -194,16 +194,3 @@ application.
   incrementally, starting with isolated components and gradually expanding.
 - **Performance Monitoring**: We'll need to closely monitor performance during and after the migration to ensure the new
   system meets or exceeds the performance of the current implementation.
-
-#### Timeline:
-
-- **Phase 1 (Planning)**: Define the new data model and cache policies (2-3 weeks)
-- **Phase 2 (Initial Implementation)**: Migrate core annotation functionality to Apollo cache (4-6 weeks)
-- **Phase 3 (Expanded Implementation)**: Integrate relationship and document type management into Apollo cache (3-4
-  weeks)
-- **Phase 4 (Testing and Optimization)**: Comprehensive testing, performance optimization, and bug fixing (3-4 weeks)
-- **Phase 5 (Documentation and Training)**: Update documentation and conduct team training sessions (2 weeks)
-
-By migrating to Apollo cache for local state management, we aim to create a more robust, efficient, and maintainable
-Annotator system. This change will set the foundation for future enhancements and ensure our application remains
-scalable and performant as it grows.

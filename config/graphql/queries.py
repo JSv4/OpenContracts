@@ -803,23 +803,27 @@ class Query(graphene.ObjectType):
     document_corpus_actions = graphene.Field(
         DocumentCorpusActionsType,
         document_id=graphene.ID(required=True),
-        corpus_id=graphene.ID(required=True)
+        corpus_id=graphene.ID(required=False)
     )
 
-    def resolve_document_corpus_actions(self, info, document_id, corpus_id):
+    def resolve_document_corpus_actions(self, info, document_id, corpus_id=None):
 
         user = info.context.user
         if not user.is_authenticated:
             return None
 
         doc_id = from_global_id(document_id)[1]
-        corpus_id = from_global_id(corpus_id)[1]
+
+        if corpus_id is not None:
+            corpus_id = from_global_id(corpus_id)[1]
+            corpus = Corpus.objects.get(id=corpus_id)
+            corpus_actions = CorpusAction.objects.filter(corpus=corpus)
+
+        else:
+            corpus = None
+            corpus_actions = []
 
         document = Document.objects.get(id=doc_id)
-        corpus = Corpus.objects.get(id=corpus_id)
-
-        corpus_actions = CorpusAction.objects.filter(corpus=corpus)
-
         extracts = Extract.objects.filter(corpus=corpus, documents=document)
 
         analysis_rows = DocumentAnalysisRow.objects.filter(document=document, analysis__analyzed_corpus=corpus)

@@ -96,6 +96,9 @@ COPY download_embeddings_model.py .
 RUN mkdir -p /models
 RUN python download_embeddings_model.py
 
+# Download spacy model
+RUN python -m spacy download en_core_web_sm
+
 COPY ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
 RUN chmod +x /entrypoint

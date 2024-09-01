@@ -54,7 +54,6 @@ import {
   displayAnnotationOnAnnotatorLoad,
   editMode,
   onlyDisplayTheseAnnotations,
-  selectedAnnotation,
   viewStateVar,
 } from "../../graphql/cache";
 import { Header, Icon, Modal, Progress } from "semantic-ui-react";
@@ -128,7 +127,6 @@ export const CorpusDocumentAnnotator = ({
 
   // Global state variables to jump to and/or load certain annotations on load
   const scrollToAnnotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
-  const currentSelectedAnnotation = useReactiveVar(selectedAnnotation);
   const displayOnlyTheseAnnotations = useReactiveVar(
     onlyDisplayTheseAnnotations
   );

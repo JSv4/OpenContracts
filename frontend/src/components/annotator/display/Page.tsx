@@ -1,4 +1,11 @@
-import React, { useRef, useState, useContext, useEffect } from "react";
+import React, {
+  useRef,
+  useState,
+  useContext,
+  useEffect,
+  useMemo,
+  useLayoutEffect,
+} from "react";
 import { AnnotationLabelType } from "../../../graphql/types";
 import { getPageBoundsFromCanvas } from "../../../utils/transform";
 import { PageProps, BoundingBox, PermissionTypes } from "../../types";
@@ -9,7 +16,6 @@ import { SearchResult } from "./SearchResult";
 
 export const Page = ({
   pageInfo,
-  doc_permissions,
   corpus_permissions,
   read_only,
   show_selected_annotation_only,
@@ -19,8 +25,11 @@ export const Page = ({
   setJumpedToAnnotationOnLoad,
 }: PageProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rendererRef = useRef<PDFPageRenderer | null>(null);
+
   const [scale, setScale] = useState<number>(1);
   const [canvas_width, setCanvasWidth] = useState<number>();
+  const [hasPdfPageRendered, setPdfPageRendered] = useState(false);
 
   const annotationStore = useContext(AnnotationStore);
 
@@ -28,103 +37,123 @@ export const Page = ({
 
   const annotations = annotationStore.pdfAnnotations.annotations;
   // console.log(`${annotations.length} annotations in store`);
+
   const {
     scrollContainerRef,
     selectedTextSearchMatchIndex,
     selectionElementRefs: selectionRefs,
     searchResultElementRefs,
   } = annotationStore;
+
   // console.log(`Multipage annotations for page #${pageInfo.page.pageNumber - 1}:`, annotations)
   // Given selected bounds (top, bottom, left, right), determine which tokens fall inside bounds
-  function ConvertBoundsToSelections(
-    selection: BoundingBox,
-    activeLabel: AnnotationLabelType
-  ): JSX.Element {
-    // console.log("ConvertBoundsToSelections - selection", selection)
-    const annotation = pageInfo.getAnnotationForBounds(
-      normalizeBounds(selection),
-      activeLabel
-    );
+  const ConvertBoundsToSelections = useMemo(
+    () =>
+      (
+        selection: BoundingBox,
+        activeLabel: AnnotationLabelType
+      ): JSX.Element => {
+        const annotation = pageInfo.getAnnotationForBounds(
+          normalizeBounds(selection),
+          activeLabel
+        );
 
-    const tokens =
-      annotation && annotation.tokens && !annotationStore.freeFormAnnotations
-        ? annotation.tokens
-        : null;
+        const tokens =
+          annotation &&
+          annotation.tokens &&
+          !annotationStore.freeFormAnnotations
+            ? annotation.tokens
+            : null;
 
-    return (
-      <>
-        <SelectionBoundary
-          showBoundingBox
-          hidden={false}
-          color={
-            annotationStore?.activeSpanLabel?.color
-              ? annotationStore.activeSpanLabel.color
-              : ""
-          }
-          bounds={selection}
-          selected={false}
-        />
-        <SelectionTokens pageInfo={pageInfo} tokens={tokens} />
-      </>
-    );
-  }
+        return (
+          <>
+            <SelectionBoundary
+              showBoundingBox
+              hidden={false}
+              color={
+                annotationStore?.activeSpanLabel?.color
+                  ? annotationStore.activeSpanLabel.color
+                  : ""
+              }
+              bounds={selection}
+              selected={false}
+            />
+            <SelectionTokens pageInfo={pageInfo} tokens={tokens} />
+          </>
+        );
+      },
+    [pageInfo, annotationStore]
+  );
 
+  // Only run this effect once per page
   useEffect(() => {
-    try {
+    const handleResize = () => {
+      console.log("\t\tHandle Resize");
+
       if (canvasRef.current === null) {
-        onError(new Error("No canvas element"));
-        return;
-      }
-      if (scrollContainerRef && scrollContainerRef.current === null) {
-        onError(new Error("No scroll container element"));
+        onError(new Error("No canvas element!"));
         return;
       }
 
-      canvasRef.current.width = 800;
+      if (rendererRef.current === null) {
+        onError(new Error("Page renderer hasn't loaded!"));
+        return;
+      }
+
       pageInfo.bounds = getPageBoundsFromCanvas(canvasRef.current);
-      const renderer = new PDFPageRenderer(
-        pageInfo.page,
-        canvasRef.current,
-        onError
-      );
 
-      renderer.render(pageInfo.scale).catch(onError);
+      rendererRef.current.rescaleAndRender(pageInfo.scale);
+      setScale(pageInfo.scale);
+    };
 
-      // determinePageVisiblity();
-      const handleResize = async () => {
-        console.log("Handle Resize");
-
-        if (canvasRef.current === null) {
-          onError(new Error("No canvas element"));
-          return;
-        }
-        pageInfo.bounds = getPageBoundsFromCanvas(canvasRef.current);
-
+    if (!hasPdfPageRendered && canvasRef.current && containerRef.current) {
+      console.log("Try to initialize page", pageInfo);
+      const initializePage = async () => {
         try {
-          await renderer.rescaleAndRender(pageInfo.scale);
-          setScale(pageInfo.scale);
+          if (containerRef.current && canvasRef.current) {
+            console.log("\tSetup the renderer...");
+            canvasRef.current.width = 800;
+            pageInfo.bounds = getPageBoundsFromCanvas(canvasRef.current);
+            rendererRef.current = new PDFPageRenderer(
+              pageInfo.page,
+              canvasRef.current,
+              onError
+            );
+
+            console.log("\tAwait render...");
+            await rendererRef.current.render(pageInfo.scale);
+
+            if (
+              !(pageInfo.page.pageNumber - 1 in annotationStore.pdfPageInfoObjs)
+            ) {
+              console.log(`\tAdding pageInfo to ${pageInfo.page.pageNumber}`);
+              annotationStore.pdfPageInfoObjs[pageInfo.page.pageNumber - 1] =
+                pageInfo;
+            }
+
+            if (scrollContainerRef && scrollContainerRef.current) {
+              console.log(
+                `\tAdding resize handler to page ${pageInfo.page.pageNumber}`
+              );
+              scrollContainerRef.current.addEventListener(
+                "resize",
+                handleResize
+              );
+            }
+
+            annotationStore.insertPageRef(
+              pageInfo.page.pageNumber - 1,
+              canvasRef
+            );
+
+            setPdfPageRendered(true);
+          }
         } catch (error) {
           onError(error instanceof Error ? error : new Error(String(error)));
         }
-        // determinePageVisiblity();
       };
 
-      // Upon completion of page creation effects, store page info in the AnnotatorStore context. We need this to
-      // properly create annotations for multiple pages simultaneously.
-      if (!(pageInfo.page.pageNumber - 1 in annotationStore.pdfPageInfoObjs)) {
-        annotationStore.pdfPageInfoObjs[pageInfo.page.pageNumber - 1] =
-          pageInfo;
-      }
-
-      if (scrollContainerRef && scrollContainerRef.current) {
-        scrollContainerRef.current.addEventListener("resize", handleResize);
-        // scrollContainerRef.current.addEventListener(
-        //   "scroll",
-        //   determinePageVisiblity
-        // );
-      }
-
-      annotationStore.insertPageRef(pageInfo.page.pageNumber - 1, canvasRef);
+      initializePage();
 
       return () => {
         if (scrollContainerRef && scrollContainerRef.current !== null) {
@@ -132,17 +161,13 @@ export const Page = ({
             "resize",
             handleResize
           );
-          // scrollContainerRef.current.removeEventListener(
-          //   "scroll",
-          //   determinePageVisiblity
-          // );
         }
       };
-    } catch (e: any) {
-      console.log("Error determining visibility", e);
-      onError(e);
     }
+  }, [pageInfo, onError, hasPdfPageRendered, annotationStore]);
 
+  // Jump to selected annotation
+  useLayoutEffect(() => {
     if (annotationStore.selectedAnnotations.length === 1) {
       console.log(
         "Selected",
@@ -154,7 +179,23 @@ export const Page = ({
         annotationStore.selectedAnnotations[0]
       ]?.scrollIntoView();
     }
-  }, [pageInfo, onError]); // We deliberately only run this once (on component mount).
+  }, [annotationStore.selectedAnnotations]);
+
+  useEffect(() => {
+    if (hasPdfPageRendered) {
+      if (annotationStore.selectedAnnotations.length === 1) {
+        console.log(
+          "Selected",
+          annotationStore.selectionElementRefs?.current[
+            annotationStore.selectedAnnotations[0]
+          ]
+        );
+        annotationStore.selectionElementRefs?.current[
+          annotationStore.selectedAnnotations[0]
+        ]?.scrollIntoView();
+      }
+    }
+  }, [hasPdfPageRendered, annotationStore.selectedAnnotations]);
 
   const pageQueuedSelections = annotationStore.pageSelectionQueue[
     pageInfo.page.pageNumber - 1
@@ -162,59 +203,60 @@ export const Page = ({
     ? annotationStore.pageSelectionQueue[pageInfo.page.pageNumber - 1]
     : [];
 
-  let page_annotation_components: React.ReactNode[] = [];
-
   ////////////////
   if (scale && pageInfo.bounds && annotations) {
     // console.log("Total annotations", annotations);
     const defined_annotations = annotations.filter(
       (a) => a.json[pageInfo.page.pageNumber - 1] !== undefined
     );
+  }
 
-    // console.log(
-    //   `# of Annotations on page ${pageInfo.page.pageNumber - 1}: ${
-    //     defined_annotations.length
-    //   }`
-    // );
-    // console.log(defined_annotations);
-    // OK... figured out kinda what's happening but not sure where... the tokens in the JSON are cumulative (as I suspected)
-    // so each annotation adds a layer of tokens which eventually gets opaque. Find source of this issue... Don't think it's
-    // parser... but look at backend annotation json data first to make sure.
-    // This is where existing annotations get their selection tokens applied
-    const annots_to_render = !annotationStore.showStructuralLabels
+  const annots_to_render = useMemo(() => {
+    const defined_annotations = annotations.filter(
+      (a) => a.json[pageInfo.page.pageNumber - 1] !== undefined
+    );
+    return !annotationStore.showStructuralLabels
       ? defined_annotations.filter((annot) => annot.annotationLabel.readonly)
       : defined_annotations;
-    // console.log("Annots to render", annots_to_render);
-    for (const [index, annotation] of annots_to_render.entries()) {
-      page_annotation_components.push(
-        <Selection
-          hidden={
-            show_selected_annotation_only &&
-            !Boolean(
-              annotationStore.selectedAnnotations.includes(annotation.id)
-            )
-          }
-          showBoundingBox={show_annotation_bounding_boxes}
-          scrollIntoView={
-            annotationStore.selectedAnnotations
-              ? annotationStore.selectedAnnotations.includes(annotation.id)
-              : false
-          }
-          labelBehavior={show_annotation_labels}
-          selectionRef={selectionRefs}
-          pageInfo={pageInfo}
-          annotation={annotation}
-          key={annotation.toString()}
-          setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
-        />
-      );
-    }
-  }
-  // console.log(
-  //   `Number of React components on page ${pageInfo.page.pageNumber - 1}: ${
-  //     page_annotation_components.length
-  //   }`
-  // );
+  }, [
+    annotations,
+    pageInfo.page.pageNumber,
+    annotationStore.showStructuralLabels,
+  ]);
+
+  const page_annotation_components = useMemo(() => {
+    if (!hasPdfPageRendered || !scale || !pageInfo.bounds || !annotations)
+      return [];
+
+    return annots_to_render.map((annotation) => (
+      <Selection
+        key={annotation.id}
+        hidden={
+          show_selected_annotation_only &&
+          !annotationStore.selectedAnnotations.includes(annotation.id)
+        }
+        showBoundingBox={show_annotation_bounding_boxes}
+        scrollIntoView={annotationStore.selectedAnnotations.includes(
+          annotation.id
+        )}
+        labelBehavior={show_annotation_labels}
+        selectionRef={selectionRefs}
+        pageInfo={pageInfo}
+        annotation={annotation}
+        setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
+      />
+    ));
+  }, [
+    scale,
+    pageInfo.bounds,
+    annotations,
+    annots_to_render,
+    show_selected_annotation_only,
+    show_annotation_bounding_boxes,
+    show_annotation_labels,
+    annotationStore.selectedAnnotations,
+  ]);
+
   return (
     <PageAnnotationsContainer
       ref={containerRef}
@@ -320,22 +362,6 @@ export const Page = ({
         ref={canvasRef}
         {...(canvas_width ? { width: canvas_width } : {})}
       />
-      {/* {pageInfo.page.pageNumber > 1 ? (
-              <FetchMoreOnVisible
-                style={{
-                  position: "relative",
-                  top: "0px",
-                  left: "0px",
-                  height: "0px",
-                  width: "100%",
-                }}
-                fetchPreviousPage={() =>
-                  handleFetchMoreAnnotatorSpans(pageInfo.page.pageNumber - 1)
-                }
-              />
-            ) : (
-              <></>
-            )} */}
 
       {page_annotation_components}
 

@@ -1410,8 +1410,8 @@ class StartCorpusAnalysisMutation(graphene.Mutation):
                 # Use the new task-based workflow
                 process_corpus_action.delay(
                     corpus_id=corpus_pk,
-                    document_ids=list(corpus.documents.values_list('id', flat=True)),
-                    user_id=user.id
+                    document_ids=list(corpus.documents.values_list("id", flat=True)),
+                    user_id=user.id,
                 )
             else:
                 raise ValueError("Analyzer has neither host_gremlin nor task_name")

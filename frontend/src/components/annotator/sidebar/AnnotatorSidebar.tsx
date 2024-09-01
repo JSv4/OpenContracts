@@ -42,6 +42,7 @@ import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { SingleDocumentExtractResults } from "../../extracts/SingleDocumentExtractResults";
 import { AnnotatorModeToggle } from "../../widgets/buttons/AnnotatorModeToggle";
 import { ViewLabelSelector } from "../labels/view_labels_selector/ViewLabelSelector";
+import { ViewSettingsPopup } from "../../widgets/popups/ViewSettingsPopup";
 
 const label_display_options = [
   { key: 1, text: "Always Show", value: LabelDisplayBehavior.ALWAYS },
@@ -365,70 +366,23 @@ export const AnnotatorSidebar = ({
                     paddingBottom: ".5rem",
                   }}
                 >
-                  <Popup
-                    on="click"
-                    trigger={
-                      <Label as="a" corner="left" icon="eye" color="violet" />
+                  <ViewSettingsPopup
+                    show_selected_annotation_only={
+                      show_selected_annotation_only
                     }
-                    style={{ padding: "0px" }}
-                  >
-                    <Grid
-                      celled="internally"
-                      columns="equal"
-                      style={{ width: `400px` }}
-                    >
-                      <Grid.Row>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Only Selected</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) =>
-                              showSelectedAnnotationOnly(data.checked)
-                            }
-                            checked={show_selected_annotation_only}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Layout Blocks</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) => toggleShowStructuralLabels()}
-                            checked={showStructuralLabels}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Bounding Boxes</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) =>
-                              showAnnotationBoundingBoxes(data.checked)
-                            }
-                            checked={show_annotation_bounding_boxes}
-                          />
-                        </Grid.Column>
-                      </Grid.Row>
-                      <Grid.Row>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Label Display Behavior</Header>
-                          <Dropdown
-                            onChange={(e, { value }) =>
-                              showAnnotationLabels(
-                                value as LabelDisplayBehavior
-                              )
-                            }
-                            options={label_display_options}
-                            selection
-                            value={label_display_behavior}
-                            style={{ minWidth: "12em" }}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">These Labels Only</Header>
-                          <ViewLabelSelector />
-                        </Grid.Column>
-                      </Grid.Row>
-                    </Grid>
-                  </Popup>
+                    showSelectedAnnotationOnly={showSelectedAnnotationOnly}
+                    showStructuralLabels={
+                      showStructuralLabels ? showStructuralLabels : false
+                    }
+                    toggleShowStructuralLabels={toggleShowStructuralLabels}
+                    show_annotation_bounding_boxes={
+                      show_annotation_bounding_boxes
+                    }
+                    showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
+                    label_display_behavior={label_display_behavior}
+                    showAnnotationLabels={showAnnotationLabels}
+                    label_display_options={label_display_options}
+                  />
                   <div
                     style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}
                   >
@@ -521,70 +475,23 @@ export const AnnotatorSidebar = ({
                     paddingBottom: ".5rem",
                   }}
                 >
-                  <Popup
-                    on="click"
-                    trigger={
-                      <Label as="a" corner="left" icon="eye" color="violet" />
+                  <ViewSettingsPopup
+                    show_selected_annotation_only={
+                      show_selected_annotation_only
                     }
-                    style={{ padding: "0px" }}
-                  >
-                    <Grid
-                      celled="internally"
-                      columns="equal"
-                      style={{ width: `400px` }}
-                    >
-                      <Grid.Row>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Only Selected</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) =>
-                              showSelectedAnnotationOnly(data.checked)
-                            }
-                            checked={show_selected_annotation_only}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Layout Blocks</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) => toggleShowStructuralLabels()}
-                            checked={showStructuralLabels}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Bounding Boxes</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) =>
-                              showAnnotationBoundingBoxes(data.checked)
-                            }
-                            checked={show_annotation_bounding_boxes}
-                          />
-                        </Grid.Column>
-                      </Grid.Row>
-                      <Grid.Row>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Label Display Behavior</Header>
-                          <Dropdown
-                            onChange={(e, { value }) =>
-                              showAnnotationLabels(
-                                value as LabelDisplayBehavior
-                              )
-                            }
-                            options={label_display_options}
-                            selection
-                            value={label_display_behavior}
-                            style={{ minWidth: "12em" }}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">These Labels Only</Header>
-                          <ViewLabelSelector />
-                        </Grid.Column>
-                      </Grid.Row>
-                    </Grid>
-                  </Popup>
+                    showSelectedAnnotationOnly={showSelectedAnnotationOnly}
+                    showStructuralLabels={
+                      showStructuralLabels ? showStructuralLabels : false
+                    }
+                    toggleShowStructuralLabels={toggleShowStructuralLabels}
+                    show_annotation_bounding_boxes={
+                      show_annotation_bounding_boxes
+                    }
+                    showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
+                    label_display_behavior={label_display_behavior}
+                    showAnnotationLabels={showAnnotationLabels}
+                    label_display_options={label_display_options}
+                  />
                   <div
                     style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}
                   >
@@ -694,70 +601,23 @@ export const AnnotatorSidebar = ({
                     paddingBottom: ".5rem",
                   }}
                 >
-                  <Popup
-                    on="click"
-                    trigger={
-                      <Label as="a" corner="left" icon="eye" color="violet" />
+                  <ViewSettingsPopup
+                    show_selected_annotation_only={
+                      show_selected_annotation_only
                     }
-                    style={{ padding: "0px" }}
-                  >
-                    <Grid
-                      celled="internally"
-                      columns="equal"
-                      style={{ width: `400px` }}
-                    >
-                      <Grid.Row>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Only Selected</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) =>
-                              showSelectedAnnotationOnly(data.checked)
-                            }
-                            checked={show_selected_annotation_only}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Layout Blocks</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) => toggleShowStructuralLabels()}
-                            checked={showStructuralLabels}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Bounding Boxes</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) =>
-                              showAnnotationBoundingBoxes(data.checked)
-                            }
-                            checked={show_annotation_bounding_boxes}
-                          />
-                        </Grid.Column>
-                      </Grid.Row>
-                      <Grid.Row>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Label Display Behavior</Header>
-                          <Dropdown
-                            onChange={(e, { value }) =>
-                              showAnnotationLabels(
-                                value as LabelDisplayBehavior
-                              )
-                            }
-                            options={label_display_options}
-                            selection
-                            value={label_display_behavior}
-                            style={{ minWidth: "12em" }}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">These Labels Only</Header>
-                          <ViewLabelSelector />
-                        </Grid.Column>
-                      </Grid.Row>
-                    </Grid>
-                  </Popup>
+                    showSelectedAnnotationOnly={showSelectedAnnotationOnly}
+                    showStructuralLabels={
+                      showStructuralLabels ? showStructuralLabels : false
+                    }
+                    toggleShowStructuralLabels={toggleShowStructuralLabels}
+                    show_annotation_bounding_boxes={
+                      show_annotation_bounding_boxes
+                    }
+                    showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
+                    label_display_behavior={label_display_behavior}
+                    showAnnotationLabels={showAnnotationLabels}
+                    label_display_options={label_display_options}
+                  />
                   <div
                     style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}
                   >
@@ -888,70 +748,23 @@ export const AnnotatorSidebar = ({
                     paddingBottom: ".5rem",
                   }}
                 >
-                  <Popup
-                    on="click"
-                    trigger={
-                      <Label as="a" corner="left" icon="eye" color="violet" />
+                  <ViewSettingsPopup
+                    show_selected_annotation_only={
+                      show_selected_annotation_only
                     }
-                    style={{ padding: "0px" }}
-                  >
-                    <Grid
-                      celled="internally"
-                      columns="equal"
-                      style={{ width: `400px` }}
-                    >
-                      <Grid.Row>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Only Selected</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) =>
-                              showSelectedAnnotationOnly(data.checked)
-                            }
-                            checked={show_selected_annotation_only}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Layout Blocks</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) => toggleShowStructuralLabels()}
-                            checked={showStructuralLabels}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Show Bounding Boxes</Header>
-                          <Checkbox
-                            toggle
-                            onChange={(e, data) =>
-                              showAnnotationBoundingBoxes(data.checked)
-                            }
-                            checked={show_annotation_bounding_boxes}
-                          />
-                        </Grid.Column>
-                      </Grid.Row>
-                      <Grid.Row>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">Label Display Behavior</Header>
-                          <Dropdown
-                            onChange={(e, { value }) =>
-                              showAnnotationLabels(
-                                value as LabelDisplayBehavior
-                              )
-                            }
-                            options={label_display_options}
-                            selection
-                            value={label_display_behavior}
-                            style={{ minWidth: "12em" }}
-                          />
-                        </Grid.Column>
-                        <Grid.Column textAlign="center" verticalAlign="middle">
-                          <Header size="tiny">These Labels Only</Header>
-                          <ViewLabelSelector />
-                        </Grid.Column>
-                      </Grid.Row>
-                    </Grid>
-                  </Popup>
+                    showSelectedAnnotationOnly={showSelectedAnnotationOnly}
+                    showStructuralLabels={
+                      showStructuralLabels ? showStructuralLabels : false
+                    }
+                    toggleShowStructuralLabels={toggleShowStructuralLabels}
+                    show_annotation_bounding_boxes={
+                      show_annotation_bounding_boxes
+                    }
+                    showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
+                    label_display_behavior={label_display_behavior}
+                    showAnnotationLabels={showAnnotationLabels}
+                    label_display_options={label_display_options}
+                  />
                   <div
                     style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}
                   >

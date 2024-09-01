@@ -132,7 +132,8 @@ export const CorpusDocumentAnnotator = ({
   );
   console.log(
     "CorpusDocumentAnnotator - displayOnlyTheseAnnotations",
-    displayOnlyTheseAnnotations
+    displayOnlyTheseAnnotations,
+    !Boolean(displayOnlyTheseAnnotations)
   );
 
   // Hook 15
@@ -232,7 +233,7 @@ export const CorpusDocumentAnnotator = ({
     GetDocumentAnalysesAndExtractsInput
   >(GET_DOCUMENT_ANALYSES_AND_EXTRACTS, {
     variables: analysis_vars,
-    skip: !Boolean(displayOnlyTheseAnnotations),
+    skip: Boolean(displayOnlyTheseAnnotations),
   });
 
   // Hook #38
@@ -253,7 +254,7 @@ export const CorpusDocumentAnnotator = ({
 
   const [
     getDocumentAnnotationsAndRelationships,
-    { data: humanAnnotationsAndRelationshipsData },
+    { data: humanAnnotationsAndRelationshipsData, loading: humanDataLoading },
   ] = useLazyQuery<
     GetDocumentAnnotationsAndRelationshipsOutput,
     GetDocumentAnnotationsAndRelationshipsInput
@@ -522,8 +523,13 @@ export const CorpusDocumentAnnotator = ({
 
   // Effect to process analyses and extracts data
   useEffect(() => {
+    console.log("CorpusDocumentAnnotator - analysesData", analysesData);
     if (analysesData && analysesData.documentCorpusActions) {
       const { analysisRows, extracts } = analysesData.documentCorpusActions;
+      console.log(
+        "CorpusDocumentAnnotator - Retrieved analysisRows",
+        analysisRows
+      );
       setExtracts(extracts);
       setAnalysisRows(analysisRows);
       setAnalyses(
@@ -679,6 +685,13 @@ export const CorpusDocumentAnnotator = ({
         rendered_component = (
           <AnnotatorRenderer
             open={open}
+            loading_message="Loading Annotator Data"
+            data_loading={
+              dataCellsLoading ||
+              analysesLoading ||
+              annotationsLoading ||
+              humanDataLoading
+            }
             doc={doc}
             pages={pages}
             load_progress={progress}

@@ -19,7 +19,7 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus, CorpusQuery, CorpusAction
+from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport, UserImport
@@ -184,10 +184,12 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
         AnnotationType,
         corpus_id=graphene.ID(required=True),
         analysis_id=graphene.ID(),
-        is_structural=graphene.Boolean()
+        is_structural=graphene.Boolean(),
     )
 
-    def resolve_all_annotations(self, info, corpus_id, analysis_id=None, is_structural=None):
+    def resolve_all_annotations(
+        self, info, corpus_id, analysis_id=None, is_structural=None
+    ):
         try:
             corpus_pk = from_global_id(corpus_id)[1]
             annotations = self.doc_annotations.filter(corpus_id=corpus_pk)
@@ -205,14 +207,16 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
             return annotations.distinct()
         except Exception as e:
             logger.warning(
-                f"Failed resolving query for document {self.id} with input: corpus_id={corpus_id}, analysis_id={analysis_id}, is_structural={is_structural}. Error: {e}")
+                f"Failed resolving query for document {self.id} with input: corpus_id={corpus_id}, "
+                f"analysis_id={analysis_id}, is_structural={is_structural}. Error: {e}"
+            )
             return []
 
     # New field and resolver for all relationships
     all_relationships = graphene.List(
         RelationshipType,
         corpus_id=graphene.ID(required=True),
-        analysis_id=graphene.ID()
+        analysis_id=graphene.ID(),
     )
 
     def resolve_all_relationships(self, info, corpus_id, analysis_id=None):
@@ -220,7 +224,7 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
             corpus_pk = from_global_id(corpus_id)[1]
             relationships = self.relationships.filter(corpus_id=corpus_pk)
 
-            if analysis_id == '__none__':
+            if analysis_id == "__none__":
                 relationships = relationships.filter(analysis__isnull=True)
             elif analysis_id is not None:
                 analysis_pk = from_global_id(analysis_id)[1]
@@ -229,7 +233,9 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
             return relationships.distinct()
         except Exception as e:
             logger.warning(
-                f"Failed resolving relationships query for document {self.id} with input: corpus_id={corpus_id}, analysis_id={analysis_id}. Error: {e}")
+                f"Failed resolving relationships query for document {self.id} with input: corpus_id={corpus_id}, "
+                f"analysis_id={analysis_id}. Error: {e}"
+            )
             return []
 
     class Meta:
@@ -237,7 +243,6 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
         interfaces = [relay.Node]
         exclude = ("embedding",)
         connection_class = CountableConnection
-
 
 
 class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
@@ -291,7 +296,6 @@ class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class CorpusActionType(AnnotatePermissionsForReadMixin, ModelType):
-
     class Meta:
         model = CorpusAction
         interfaces = [relay.Node]

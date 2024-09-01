@@ -36,3 +36,7 @@
 .ui.page.modals.dimmer.transition.visible.active:has(.AnnotatorModal) {
   z-index: 2000 !important;
 }
+
+div > .SettingsPopup {
+  z-index: 2100 !important;
+}

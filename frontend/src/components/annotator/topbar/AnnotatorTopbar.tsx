@@ -37,6 +37,9 @@ export const AnnotatorTopbar = ({
   onSelectExtract,
   children,
 }: AnnotatorTopbarProps) => {
+  console.log("Annotator topbar - extracts", extracts);
+  console.log("Annotator topbar - analyses", analyses);
+
   const { width } = useWindowDimensions();
   const banish_sidebar = width <= 1000;
 

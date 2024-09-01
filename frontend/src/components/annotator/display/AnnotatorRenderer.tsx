@@ -52,6 +52,7 @@ import { toast } from "react-toastify";
 import { createTokenStringSearch } from "../utils";
 import { getPermissions } from "../../../utils/transform";
 import _ from "lodash";
+import { Dimmer, Loader } from "semantic-ui-react";
 
 export interface TextSearchResultsProps {
   start: TokenId;
@@ -71,6 +72,8 @@ export interface PageTokenMapBuilderProps {
 interface AnnotatorRendererProps {
   open: boolean;
   doc: PDFDocumentProxy;
+  data_loading?: boolean;
+  loading_message?: string;
   pages: PDFPageInfo[];
   opened_document: DocumentType;
   opened_corpus?: CorpusType;
@@ -109,6 +112,8 @@ interface AnnotatorRendererProps {
 export const AnnotatorRenderer = ({
   doc,
   pages,
+  data_loading,
+  loading_message,
   opened_document: openedDocument,
   opened_corpus: openedCorpus,
   analyses,
@@ -140,6 +145,7 @@ export const AnnotatorRenderer = ({
   onError,
 }: AnnotatorRendererProps) => {
   console.log("AnnotatorRenderer - annotation objs", annotation_objs);
+  console.log("AnnotatorRenderer - analyses", analyses);
 
   const [pdfAnnotations, setPdfAnnotations] = useState<PdfAnnotations>(
     new PdfAnnotations([], [], [])
@@ -877,6 +883,8 @@ export const AnnotatorRenderer = ({
       doc_permissions={doc_permissions}
       corpus_permissions={corpus_permissions}
       read_only={read_only}
+      data_loading={data_loading}
+      loading_message={loading_message}
       createAnnotation={requestCreateAnnotation}
       createRelation={requestCreateRelation}
       createDocTypeAnnotation={requestCreateDocTypeAnnotation}

@@ -41,6 +41,7 @@ from config.graphql.graphene_types import (
     CorpusQueryType,
     CorpusType,
     DatacellType,
+    DocumentCorpusActionsType,
     DocumentType,
     ExtractType,
     FieldsetType,
@@ -51,7 +52,6 @@ from config.graphql.graphene_types import (
     RelationshipType,
     UserExportType,
     UserImportType,
-    DocumentCorpusActionsType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -60,7 +60,7 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus, CorpusQuery, CorpusAction
+from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
@@ -803,7 +803,7 @@ class Query(graphene.ObjectType):
     document_corpus_actions = graphene.Field(
         DocumentCorpusActionsType,
         document_id=graphene.ID(required=True),
-        corpus_id=graphene.ID(required=False)
+        corpus_id=graphene.ID(required=False),
     )
 
     def resolve_document_corpus_actions(self, info, document_id, corpus_id=None):
@@ -826,10 +826,12 @@ class Query(graphene.ObjectType):
         document = Document.objects.get(id=doc_id)
         extracts = Extract.objects.filter(corpus=corpus, documents=document)
 
-        analysis_rows = DocumentAnalysisRow.objects.filter(document=document, analysis__analyzed_corpus=corpus)
+        analysis_rows = DocumentAnalysisRow.objects.filter(
+            document=document, analysis__analyzed_corpus=corpus
+        )
 
         return DocumentCorpusActionsType(
             corpus_actions=corpus_actions,
             extracts=extracts,
-            analysis_rows=analysis_rows
+            analysis_rows=analysis_rows,
         )

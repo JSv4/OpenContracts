@@ -44,11 +44,14 @@ import { RelationModal } from "../../widgets/modals/RelationModal";
 import { PDF } from "../display/PDF";
 import { DocTypeLabelDisplay } from "../labels/doc_types/DocTypeLabelDisplay";
 import { LabelSelector } from "../labels/label_selector/LabelSelector";
+import { Dimmer, Loader } from "semantic-ui-react";
 
 export const PDFView = ({
   doc_permissions,
   corpus_permissions,
   read_only,
+  data_loading,
+  loading_message,
   selected_corpus,
   selected_document,
   analyses,
@@ -95,6 +98,8 @@ export const PDFView = ({
   doc_permissions: PermissionTypes[];
   corpus_permissions: PermissionTypes[];
   read_only: boolean;
+  data_loading?: boolean;
+  loading_message?: string;
   selected_corpus?: CorpusType | null;
   selected_document: DocumentType;
   editMode: "ANNOTATE" | "ANALYZE";
@@ -649,6 +654,8 @@ export const PDFView = ({
             }}
           >
             {!read_only &&
+            allowInput &&
+            editMode !== "ANALYZE" &&
             corpus_permissions.includes(PermissionTypes.CAN_UPDATE) ? (
               <LabelSelector sidebarWidth={responsive_sidebar_width} />
             ) : (
@@ -656,11 +663,16 @@ export const PDFView = ({
             )}
             <DocTypeLabelDisplay
               read_only={
+                !allowInput ||
                 (read_only &&
                   !corpus_permissions.includes(PermissionTypes.CAN_UPDATE)) ||
-                banish_sidebar
+                banish_sidebar ||
+                editMode === "ANALYZE"
               }
             />
+            <Dimmer active={data_loading !== undefined ? data_loading : false}>
+              <Loader content={loading_message ? loading_message : ""} />
+            </Dimmer>
             <SidebarContainer
               width={responsive_sidebar_width}
               {...(banish_sidebar ? { display: "none" } : {})}

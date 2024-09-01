@@ -128,9 +128,7 @@ def doc_analyzer_task(max_retries=None):
 
                     # Create doc analysis row
                     data_row = DocumentAnalysisRow(
-                        document=doc,
-                        analysis=analysis,
-                        creator=analysis.creator
+                        document=doc, analysis=analysis, creator=analysis.creator
                     )
                     data_row.save()
 
@@ -178,37 +176,39 @@ def doc_analyzer_task(max_retries=None):
                                 )
 
                             # Convert (TextSpan, str) pairs to OpenContractsAnnotationPythonType
-                            for span, label in span_label_pairs:
-                                annotation_data = (
-                                    pdf_data_layer.create_opencontract_annotation_from_span(
-                                        {"span": span, "annotation_label": label}
-                                    )
+                            span, label = span_label_pair
+                            annotation_data = (
+                                pdf_data_layer.create_opencontract_annotation_from_span(
+                                    {"span": span, "annotation_label": label}
                                 )
-                                label, _ = AnnotationLabel.objects.get_or_create(
-                                    text=annotation_data["annotationLabel"],
-                                    label_type=LabelType.TOKEN_LABEL,
-                                    creator=analysis.creator,
-                                )
+                            )
+                            label, _ = AnnotationLabel.objects.get_or_create(
+                                text=annotation_data["annotationLabel"],
+                                label_type=LabelType.TOKEN_LABEL,
+                                creator=analysis.creator,
+                                analyzer=analysis.analyzer,
+                            )
 
-                                # Harder to filter these to ensure no duplicates...
-                                annot = Annotation(
-                                    document=doc,
-                                    analysis=analysis,
-                                    annotation_label=label,
-                                    page=annotation_data["page"],
-                                    raw_text=annotation_data["rawText"],
-                                    json=annotation_data["annotation_json"],
-                                    creator=analysis.creator,
-                                    **({"corpus_id": corpus_id} if corpus_id else {}),
-                                )
-                                annot.save()
-                                resulting_annotations.append(annot)
+                            # Harder to filter these to ensure no duplicates...
+                            annot = Annotation(
+                                document=doc,
+                                analysis=analysis,
+                                annotation_label=label,
+                                page=annotation_data["page"],
+                                raw_text=annotation_data["rawText"],
+                                json=annotation_data["annotation_json"],
+                                creator=analysis.creator,
+                                **({"corpus_id": corpus_id} if corpus_id else {}),
+                            )
+                            annot.save()
+                            resulting_annotations.append(annot)
 
                         for doc_label in doc_annotations:
                             label, _ = AnnotationLabel.objects.get_or_create(
                                 text=doc_label,
                                 label_type=LabelType.DOC_TYPE_LABEL,
                                 creator=analysis.creator,
+                                analyzer=analysis.analyzer,
                             )
 
                             annot = Annotation(
@@ -225,7 +225,9 @@ def doc_analyzer_task(max_retries=None):
                             resulting_annotations.append(annot)
 
                     # Link resulting annotations
-                    transaction.on_commit(lambda: data_row.annotations.add(*resulting_annotations))
+                    transaction.on_commit(
+                        lambda: data_row.annotations.add(*resulting_annotations)
+                    )
 
                 return result  # Return the result from the wrapped function
 

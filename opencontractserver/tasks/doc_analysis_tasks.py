@@ -23,6 +23,7 @@ def contract_not_contract(*args, pdf_text_extract, **kawrgs):
 
     return [category], [], [], True
 
+
 @doc_analyzer_task()
 def proper_name_tagger(*args, pdf_text_extract, **kawrgs):
     """
@@ -36,9 +37,24 @@ def proper_name_tagger(*args, pdf_text_extract, **kawrgs):
 
     results = []
 
-    for index, ent in enumerate([ent for ent in doc.ents if ent.label_ in ['ORG', 'GPE', "PERSON", "PRODUCT"]]):
-        results.append((TextSpan(id=str(index), start=ent.start_char, end=ent.end_char, text="First ten"), str(ent.label_)))
+    for index, ent in enumerate(
+        [ent for ent in doc.ents if ent.label_ in ["ORG", "GPE", "PERSON", "PRODUCT"]]
+    ):
+        results.append(
+            (
+                TextSpan(
+                    id=str(index),
+                    start=ent.start_char,
+                    end=ent.end_char,
+                    text="First ten",
+                ),
+                str(ent.label_),
+            )
+        )
         # print(ent.text, ent.start_char, ent.end_char, ent.label_)
 
-    return [], results, [], True
-
+    # This generates a TON of labels... so artificially limiting to 10 for now... Ideal fix here is using page aware
+    # annotations, which I know I was using before for virtual loading. Think it ran into some issues with the jump
+    # to annotation functionality, but that should be largely solved with new functionality to render specified annots
+    # on annotator load.
+    return [], results[:10], [], True

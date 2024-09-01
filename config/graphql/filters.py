@@ -189,7 +189,7 @@ class AnnotationFilter(django_filters.FilterSet):
             "analysis": ["isnull"],
             "document_id": ["exact"],
             "corpus_id": ["exact"],
-            "structural": ["exact"]
+            "structural": ["exact"],
         }
 
 
@@ -402,12 +402,12 @@ class ExtractFilter(django_filters.FilterSet):
     class Meta:
         model = Extract
         fields = {
-            "corpus_action": ['isnull'],
+            "corpus_action": ["isnull"],
             "name": ["exact", "contains"],
             "created": ["lte", "gte"],
             "started": ["lte", "gte"],
             "finished": ["lte", "gte"],
-            "corpus": ['exact']
+            "corpus": ["exact"],
         }
 
 

@@ -46,8 +46,8 @@ class AnnotationLabel(BaseOCModel):
         "analyzer.Analyzer",
         null=True,
         blank=True,
-        related_name='annotation_labels',
-        on_delete=django.db.models.SET_NULL
+        related_name="annotation_labels",
+        on_delete=django.db.models.SET_NULL,
     )
 
     # If this is meant to be a 'built-in' label and be used across corpuses without being explicitly added to a
@@ -55,7 +55,7 @@ class AnnotationLabel(BaseOCModel):
     read_only = django.db.models.BooleanField(default=False)
 
     color = django.db.models.CharField(
-        max_length=12, blank=False, null=False, default="#ffff00"
+        max_length=12, blank=False, null=False, default="#05313d"
     )
     description = django.db.models.TextField(null=False, default="")
     icon = django.db.models.CharField(
@@ -251,7 +251,7 @@ class Annotation(BaseOCModel):
         "analyzer.Analysis",
         null=True,
         blank=True,
-        on_delete=django.db.models.SET_NULL,
+        on_delete=django.db.models.CASCADE,
         related_name="annotations",
     )
 

@@ -52,7 +52,7 @@ def process_corpus_action(
                     fieldset=action.fieldset,
                     started=timezone.now(),
                     creator_id=user_id,
-                    corpus_action=action
+                    corpus_action=action,
                 )
                 extract.save()
 
@@ -101,11 +101,7 @@ def process_corpus_action(
 
         elif action.analyzer:
             analysis = create_and_setup_analysis(
-                action.analyzer,
-                corpus_id,
-                user_id,
-                document_ids,
-                corpus_action=action
+                action.analyzer, corpus_id, user_id, document_ids, corpus_action=action
             )
 
             if action.analyzer.task_name:
@@ -125,12 +121,13 @@ def process_corpus_action(
                         task_func.s(doc_id=doc_id, analysis_id=analysis.id)
                         for doc_id in document_ids
                     ]
-
                 )
 
                 transaction.on_commit(
                     lambda: chord(group(*action_tasks))(
-                        mark_analysis_complete.si(analysis_id=analysis.id, doc_ids=document_ids)
+                        mark_analysis_complete.si(
+                            analysis_id=analysis.id, doc_ids=document_ids
+                        )
                     )
                 )
 

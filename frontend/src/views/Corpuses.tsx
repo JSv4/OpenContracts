@@ -328,6 +328,7 @@ export const Corpuses = () => {
     if (!opened_corpus_id || opened_corpus_id === null) {
       refetchCorpuses();
     } else {
+      console.log("Fetch metdata for corpus id: ", opened_corpus_id);
       fetchMetadata({ variables: { metadataForCorpusId: opened_corpus_id } });
     }
   }, [opened_corpus_id]);

@@ -12,6 +12,8 @@ import {
   Icon,
   Placeholder,
   Message,
+  SemanticShorthandItem,
+  TabPaneProps,
 } from "semantic-ui-react";
 
 import _ from "lodash";
@@ -85,7 +87,7 @@ const getHeaderInfo = (
       } else {
         header_text += " (View Mode)";
         subheader_text =
-          "You are viewing human-created annotations. Editing is currently disabled.";
+          "You are viewing pre-existing annotations. Editing is currently disabled.";
         tooltip_text = "Switch to Edit Mode to make changes to annotations.";
       }
     } else {
@@ -305,25 +307,11 @@ export const AnnotatorSidebar = ({
     );
   });
 
-  let panes = [
-    {
-      menuItem: "Search",
-      render: () => (
-        <Tab.Pane
-          key="AnnotatorSidebar_Searchtab"
-          style={{
-            margin: "0px",
-            width: "100%",
-            height: "100%",
-            padding: "0px",
-            overflow: "hidden",
-          }}
-        >
-          <SearchSidebarWidget />
-        </Tab.Pane>
-      ),
-    },
-  ];
+  let panes: {
+    pane?: SemanticShorthandItem<TabPaneProps>;
+    menuItem?: any;
+    render?: () => React.ReactNode;
+  }[] = [];
 
   if (editMode === "ANALYZE") {
     if (selected_analysis) {
@@ -798,6 +786,26 @@ export const AnnotatorSidebar = ({
       ];
     }
   }
+  panes = [
+    ...panes,
+    {
+      menuItem: "Search",
+      render: () => (
+        <Tab.Pane
+          key="AnnotatorSidebar_Searchtab"
+          style={{
+            margin: "0px",
+            width: "100%",
+            height: "100%",
+            padding: "0px",
+            overflow: "hidden",
+          }}
+        >
+          <SearchSidebarWidget />
+        </Tab.Pane>
+      ),
+    },
+  ];
 
   return (
     <Segment

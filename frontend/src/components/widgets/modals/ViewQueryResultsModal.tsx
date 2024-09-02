@@ -37,7 +37,7 @@ export const ViewQueryResultsModal = ({
   useEffect(() => {
     if (data) {
       setLoadedQueryDetails(data.corpusQuery);
-      if (data.corpusQuery.completed && !data.corpusQuery.failed) {
+      if (!data.corpusQuery.completed && !data.corpusQuery.failed) {
         startPolling(5000);
       } else {
         stopPolling();

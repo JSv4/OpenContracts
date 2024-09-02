@@ -278,7 +278,8 @@ export const CorpusDocumentAnnotator = ({
     if (
       edit_mode === "ANNOTATE" &&
       opened_corpus?.labelSet &&
-      opened_document
+      opened_document &&
+      !displayOnlyTheseAnnotations
     ) {
       getDocumentAnnotationsAndRelationships({
         variables: {

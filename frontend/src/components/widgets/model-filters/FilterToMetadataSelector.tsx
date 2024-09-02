@@ -36,6 +36,7 @@ export const FilterToMetadataSelector = ({
         metadataForCorpusId: selected_corpus_id,
       },
       notifyOnNetworkStatusChange: true,
+      skip: !Boolean(selected_corpus_id),
     }
   );
 

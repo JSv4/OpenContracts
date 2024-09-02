@@ -1,7 +1,6 @@
-import { useReactiveVar } from "@apollo/client";
 import { ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { Image, Icon, Header, Segment, Sidebar, Card } from "semantic-ui-react";
-import { openedCorpus, selectedAnalyses } from "../../../graphql/cache";
+import { FileChartColumnIncreasing } from "lucide-react";
 
 import manual_annotation_icon from "../../../assets/icons/noun-quill-31093.png";
 import analyzer_lens_icon from "../../../assets/icons/noun-goggles-4650061.png";
@@ -26,6 +25,9 @@ interface AnnotatorTopbarProps {
   children?: ReactNode;
 }
 
+let expanded_toolbar_width = 120;
+let icon_toolbar_width = 120;
+
 export const AnnotatorTopbar = ({
   opened_corpus,
   opened_document,
@@ -45,24 +47,21 @@ export const AnnotatorTopbar = ({
 
   const container_ref = useRef<HTMLDivElement>(null);
   const topbar_ref = useRef<HTMLDivElement>(null);
+  const analyticsLabelRef = useRef<HTMLSpanElement>(null);
 
   const [container_width, setContainerWidth] = useState(0);
   const [topbar_height, setTopbarHeight] = useState(0);
-
-  let expanded_toolbar_width = 200;
-  let icon_toolbar_width = 40;
-  let minified_analysis_summaries = false;
+  const [analyticsLabelWidth, setAnalyticsLabelWidth] = useState(0);
 
   if (container_width <= 400) {
-    expanded_toolbar_width = 200;
-    icon_toolbar_width = 40;
-    minified_analysis_summaries = true;
+    expanded_toolbar_width = 100;
+    icon_toolbar_width = 100;
   } else if (container_width <= 1000) {
-    expanded_toolbar_width = 300;
-    icon_toolbar_width = 80;
+    expanded_toolbar_width = 100;
+    icon_toolbar_width = 100;
   } else {
-    expanded_toolbar_width = 0.25 * container_width;
-    icon_toolbar_width = 0.03 * container_width;
+    expanded_toolbar_width = 0.1 * container_width;
+    icon_toolbar_width = 0.01 * container_width;
   }
 
   // console.log("Expanded toolbar width", expanded_toolbar_width);
@@ -87,21 +86,35 @@ export const AnnotatorTopbar = ({
     // console.log("Pusher offset change", container_ref.current?.offsetLeft);
   }, [container_ref.current?.offsetLeft]);
 
+  useLayoutEffect(() => {
+    if (analyticsLabelRef.current) {
+      const labelWidth = analyticsLabelRef.current.offsetWidth;
+      console.log("Label width", labelWidth);
+      setAnalyticsLabelWidth(labelWidth);
+    }
+  }, [analyticsLabelRef.current?.clientWidth]);
+
   const collapseButtonHiddenStyle = {
     cursor: "pointer",
     display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
+    flexDirection: "row",
+    justifyContent: "flex-start",
     alignItems: "center",
     zIndex: 1000,
     position: "absolute",
-    right: `calc(50% - ${expanded_toolbar_width / 2}px)`,
+    right: `calc(30% - ${
+      (expanded_toolbar_width + analyticsLabelWidth) / 2
+    }px)`,
     borderRadius: "0px 0px 1em 1em",
-    width: `${expanded_toolbar_width}px`,
+    width: `${expanded_toolbar_width + analyticsLabelWidth + 20}px`, // Add 20px for padding
     height: "6vh",
     minHeight: "66px",
     backgroundColor: "#f3f4f5",
     transition: "all 500ms ease",
+    border: "2px solid #ccc",
+    borderTop: "none",
+    paddingLeft: "10px",
+    paddingRight: "10px",
   };
 
   const collapseButtonShownStyle = {
@@ -159,72 +172,20 @@ export const AnnotatorTopbar = ({
           }}
         >
           <div>
-            <Icon
-              name={topbarVisible ? "angle double up" : "angle double down"}
-              color={topbarVisible ? "red" : "green"}
-              size="big"
-            />
+            {topbarVisible ? (
+              <Icon
+                name={topbarVisible ? "angle double up" : "angle double down"}
+                color={topbarVisible ? "red" : "green"}
+                size="big"
+              />
+            ) : (
+              <FileChartColumnIncreasing size={36} />
+            )}
           </div>
-          {!topbarVisible ? (
-            <Card
-              style={{
-                margin: "auto",
-                width: "75%",
-              }}
-            >
-              <Card.Content
-                style={{
-                  width: "100%",
-                  padding: ".5em",
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    flex: 1,
-                  }}
-                >
-                  <div>
-                    <Header
-                      as="h3"
-                      style={
-                        container_width <= 400
-                          ? {
-                              fontSize: ".75rem",
-                              wordBreak: "break-all",
-                            }
-                          : container_width <= 1000
-                          ? {
-                              fontSize: ".9rem",
-                            }
-                          : {
-                              fontSize: "1rem",
-                            }
-                      }
-                    >
-                      {"Analyses & Extracts"}
-                    </Header>
-                  </div>
-                </div>
-                <div>
-                  <Image
-                    size="mini"
-                    src={
-                      selected_analysis || selected_extract
-                        ? analyzer_lens_icon
-                        : manual_annotation_icon
-                    }
-                  />
-                </div>
-              </Card.Content>
-            </Card>
-          ) : (
-            <></>
+          {!topbarVisible && (
+            <span style={{ fontSize: "14px", fontWeight: "bold" }}>
+              Analytics
+            </span>
           )}
         </div>
       </div>

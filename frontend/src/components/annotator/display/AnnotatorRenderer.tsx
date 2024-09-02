@@ -52,7 +52,6 @@ import { toast } from "react-toastify";
 import { createTokenStringSearch } from "../utils";
 import { getPermissions } from "../../../utils/transform";
 import _ from "lodash";
-import { Dimmer, Loader } from "semantic-ui-react";
 
 export interface TextSearchResultsProps {
   start: TokenId;
@@ -77,10 +76,13 @@ interface AnnotatorRendererProps {
   pages: PDFPageInfo[];
   opened_document: DocumentType;
   opened_corpus?: CorpusType;
+  view_document_only: boolean; // If true, won't show topbar or any of the label selectors.
   analyses?: AnalysisType[];
   extracts?: ExtractType[];
   selected_analysis?: AnalysisType | null;
   selected_extract?: ExtractType | null;
+  zoom_level: number;
+  setZoomLevel: (zl: number) => void;
   onSelectAnalysis?: (analysis: AnalysisType | null) => undefined | null | void;
   onSelectExtract?: (extract: ExtractType | null) => undefined | null | void;
   read_only: boolean;
@@ -124,6 +126,9 @@ export const AnnotatorRenderer = ({
   selected_extract,
   editMode,
   allowInput,
+  view_document_only,
+  zoom_level,
+  setZoomLevel,
   setAllowInput,
   setEditMode,
   onSelectAnalysis,
@@ -880,6 +885,9 @@ export const AnnotatorRenderer = ({
 
   return (
     <PDFView
+      zoom_level={zoom_level}
+      setZoomLevel={setZoomLevel}
+      view_document_only={view_document_only}
       doc_permissions={doc_permissions}
       corpus_permissions={corpus_permissions}
       read_only={read_only}

@@ -54,6 +54,7 @@ import {
   displayAnnotationOnAnnotatorLoad,
   editMode,
   onlyDisplayTheseAnnotations,
+  pdfZoomFactor,
   viewStateVar,
 } from "../../graphql/cache";
 import { Header, Icon, Modal, Progress } from "semantic-ui-react";
@@ -124,6 +125,8 @@ export const CorpusDocumentAnnotator = ({
   const view_state = useReactiveVar(viewStateVar);
   const edit_mode = useReactiveVar(editMode);
   const allow_input = useReactiveVar(allowUserInput);
+  const zoom_level = useReactiveVar(pdfZoomFactor);
+  const setZoomLevel = (zl: number) => pdfZoomFactor(zl);
 
   // Global state variables to jump to and/or load certain annotations on load
   const scrollToAnnotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
@@ -274,6 +277,13 @@ export const CorpusDocumentAnnotator = ({
     corpus_permissions = getPermissions(raw_corp_permissions);
   }
 
+  // Calculated control and display variables - in certain situations we want to change behavior based on available data or
+  // selected configurations.
+
+  // Depending on the edit mode and some state variables, we may wany to load all annotations for the document
+  // Particularly of node is when displayOnlyTheseAnnotations is set to something, we don't want to load additional
+  // annotations. We are just rendering and displaying the annotations stored in this state variable.
+  // TODO - load annotations on a page-by-page basis to cut down on server load.
   useEffect(() => {
     if (
       edit_mode === "ANNOTATE" &&
@@ -288,9 +298,9 @@ export const CorpusDocumentAnnotator = ({
         },
       });
     }
-  }, [editMode, opened_corpus, opened_document]);
+  }, [editMode, opened_corpus, opened_document, displayOnlyTheseAnnotations]);
 
-  // When corpus annotation data (not analysis or extract data is loaded... react to it)
+  // When corpus annotation data is loaded (not analysis or extract data is loaded... react to it)
   useEffect(() => {
     if (humanAnnotationsAndRelationshipsData) {
       const processedAnnotations =
@@ -353,7 +363,8 @@ export const CorpusDocumentAnnotator = ({
     };
   }, []);
 
-  // Batching in useEffect to cut down on unecessary re-renders
+  // Some artful React workarounds to jump to the annotations we specified to display on load - displayAnnotationOnAnnotatorLoad
+  // only ONCE
   useEffect(() => {
     // If user wanted to nav right to an annotation, problem we have is we don't load
     // an entire doc's worth of annotations, but we can pass annotation id to the backend
@@ -493,8 +504,8 @@ export const CorpusDocumentAnnotator = ({
     }
   }, [pageTextMaps, pages, doc]);
 
+  // When modal is hidden, ensure we reset state and clear provided annotations to display
   useEffect(() => {
-    // When modal is hidden, ensure we reset state and clear provided annotations to display
     if (!open) {
       onlyDisplayTheseAnnotations(undefined);
     }
@@ -507,6 +518,7 @@ export const CorpusDocumentAnnotator = ({
     };
   }, []);
 
+  // If we got a property of annotations to display (and ONLY those), do some post processing and update state variable(s) accordingly
   useEffect(() => {
     if (displayOnlyTheseAnnotations) {
       setAnnotationObjs(
@@ -522,7 +534,7 @@ export const CorpusDocumentAnnotator = ({
     refetch();
   }, []);
 
-  // Effect to process analyses and extracts data
+  // Effect to process analyses and extracts data retrieved
   useEffect(() => {
     console.log("CorpusDocumentAnnotator - analysesData", analysesData);
     if (analysesData && analysesData.documentCorpusActions) {
@@ -631,7 +643,6 @@ export const CorpusDocumentAnnotator = ({
               read_only={true}
               selected_analysis={selected_analysis}
               selected_extract={selected_extract}
-              opened_document={opened_document}
               allowInput={false}
               editMode="ANNOTATE"
               datacells={data_cells}
@@ -666,7 +677,6 @@ export const CorpusDocumentAnnotator = ({
               read_only={true}
               selected_analysis={selected_analysis}
               selected_extract={selected_extract}
-              opened_document={opened_document}
               allowInput={false}
               datacells={data_cells}
               columns={columns}
@@ -686,6 +696,7 @@ export const CorpusDocumentAnnotator = ({
         rendered_component = (
           <AnnotatorRenderer
             open={open}
+            view_document_only={false}
             loading_message="Loading Annotator Data"
             data_loading={
               dataCellsLoading ||
@@ -695,6 +706,8 @@ export const CorpusDocumentAnnotator = ({
             }
             doc={doc}
             pages={pages}
+            zoom_level={zoom_level}
+            setZoomLevel={setZoomLevel}
             load_progress={progress}
             opened_document={opened_document}
             opened_corpus={opened_corpus}
@@ -749,7 +762,6 @@ export const CorpusDocumentAnnotator = ({
               read_only={true}
               selected_analysis={selected_analysis}
               selected_extract={selected_extract}
-              opened_document={opened_document}
               allowInput={false}
               editMode="ANNOTATE"
               datacells={data_cells}

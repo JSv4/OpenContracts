@@ -219,6 +219,8 @@ interface _AnnotationStore {
   humanSpanLabelChoices: AnnotationLabelType[];
   showStructuralLabels?: boolean;
   activeSpanLabel?: AnnotationLabelType | undefined;
+  hideSidebar: boolean;
+  setHideSidebar: (hide: boolean) => void;
   showOnlySpanLabels?: AnnotationLabelType[];
   setActiveLabel: (label: AnnotationLabelType) => void;
 
@@ -327,6 +329,10 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   textSearchMatches: [],
   selectedTextSearchMatchIndex: 1,
   searchText: undefined,
+  hideSidebar: false,
+  setHideSidebar: () => {
+    throw new Error("setHideSidebar - not implemented;");
+  },
   toggleShowStructuralLabels: () => {
     throw new Error("toggleShowStructuralLabels() - not implemented");
   },

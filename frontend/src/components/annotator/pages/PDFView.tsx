@@ -45,9 +45,43 @@ import { PDF } from "../display/PDF";
 import { DocTypeLabelDisplay } from "../labels/doc_types/DocTypeLabelDisplay";
 import { LabelSelector } from "../labels/label_selector/LabelSelector";
 import { Dimmer, Loader } from "semantic-ui-react";
+import { Menu } from "semantic-ui-react";
+import { PDFActionBar } from "../display/ActionBar";
+
+export const PDFViewContainer = styled.div`
+  width: "100%",
+  height: "100%",
+  display: "flex",
+  flexDirection: "row",
+  justifyContent: "flex-start",
+`;
+
+export const PDFViewContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+`;
+
+export const StyledMenu = styled(Menu)`
+  &.ui.menu {
+    margin: 0;
+    border-radius: 0;
+  }
+`;
+
+const PDFContainer = styled.div<{ width?: number }>(
+  ({ width }) => `
+    overflow-y: scroll;
+    overflow-x: scroll;
+    height: 100%;
+    background: #f7f9f9;
+    padding: 1rem;${width ? `\nwidth: ${width}px` : ""}
+  `
+);
 
 export const PDFView = ({
   doc_permissions,
+  view_document_only,
   corpus_permissions,
   read_only,
   data_loading,
@@ -88,6 +122,8 @@ export const PDFView = ({
   doc_text,
   doc,
   pages,
+  zoom_level,
+  setZoomLevel,
   humanSpanLabelChoices,
   spanLabels,
   relationLabels,
@@ -98,12 +134,15 @@ export const PDFView = ({
   doc_permissions: PermissionTypes[];
   corpus_permissions: PermissionTypes[];
   read_only: boolean;
+  view_document_only: boolean;
   data_loading?: boolean;
   loading_message?: string;
   selected_corpus?: CorpusType | null;
   selected_document: DocumentType;
   editMode: "ANNOTATE" | "ANALYZE";
   allowInput: boolean;
+  zoom_level: number;
+  setZoomLevel: (zl: number) => void;
   setEditMode: (m: "ANNOTATE" | "ANALYZE") => void | undefined | null;
   setAllowInput: (v: boolean) => void | undefined | null;
   analyses: AnalysisType[];
@@ -151,9 +190,8 @@ export const PDFView = ({
   setViewState: (v: ViewState) => void;
 }) => {
   const { width } = useWindowDimensions();
-  const banish_sidebar = width <= 1000;
-  const responsive_sidebar_width = banish_sidebar ? "0px" : "400px";
 
+  const [hideSidebar, setHideSidebar] = useState<boolean>(false);
   const [selectionElementRefs, setSelectionElementRefs] = useState<
     Record<string, React.MutableRefObject<HTMLElement | null>>
   >({});
@@ -170,6 +208,9 @@ export const PDFView = ({
   const [searchText, setSearchText] = useState<string>();
   const [selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex] =
     useState<number>(0);
+
+  const handleZoomIn = () => setZoomLevel(Math.min(zoom_level + 0.1, 4));
+  const handleZoomOut = () => setZoomLevel(Math.max(zoom_level - 0.1, 0.5));
 
   const [selectedAnnotations, setSelectedAnnotations] = useState<string[]>(
     scroll_to_annotation_on_open ? [scroll_to_annotation_on_open.id] : []
@@ -202,6 +243,22 @@ export const PDFView = ({
   const [hideLabels, setHideLabels] = useState<boolean>(false);
   const [relationModalVisible, setRelationModalVisible] =
     useState<boolean>(false);
+
+  // We optionally hidesidebar where width < 1000 px OR we have annotation state hideSidebar flipped to false (which can happen in a number of places, including in sidebar)
+  const banish_sidebar = hideSidebar || width <= 1000;
+  const responsive_sidebar_width = hideSidebar ? "0px" : "400px";
+
+  // TODO - These are dummy placeholders
+  const actionBarItems = [
+    { key: "action1", text: "Action 1", value: "action1" },
+    { key: "action2", text: "Action 2", value: "action2" },
+    { key: "action3", text: "Action 3", value: "action3" },
+  ];
+
+  const handleActionSelect = (action: string) => {
+    // Handle action selection
+    console.log("Selected action:", action);
+  };
 
   const addSpanLabelsToViewSelection = (ls: AnnotationLabelType[]) => {
     setSpanLabelsToView([...spanLabelsToView, ...ls]);
@@ -580,6 +637,8 @@ export const PDFView = ({
             spanLabels,
             docText: doc_text,
             searchText,
+            hideSidebar,
+            setHideSidebar,
             textSearchMatches: textSearchMatches ? textSearchMatches : [],
             searchForText: setSearchText,
             selectedTextSearchMatchIndex,
@@ -679,7 +738,6 @@ export const PDFView = ({
             >
               <AnnotatorSidebar
                 read_only={read_only}
-                opened_document={selected_document}
                 selected_analysis={selected_analysis}
                 selected_extract={selected_extract}
                 selected_corpus={selected_corpus}
@@ -702,6 +760,12 @@ export const PDFView = ({
                 onSelectAnalysis={onSelectAnalysis}
                 onSelectExtract={onSelectExtract}
               >
+                <PDFActionBar
+                  zoom={zoom_level}
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  actionItems={actionBarItems}
+                />
                 <PDFContainer
                   className="PDFContainer"
                   ref={containerRefCallback}
@@ -743,13 +807,3 @@ export const PDFView = ({
     return <></>;
   }
 };
-
-const PDFContainer = styled.div<{ width?: number }>(
-  ({ width }) => `
-    overflow-y: scroll;
-    overflow-x: scroll;
-    height: 100%;
-    background: #f7f9f9;
-    padding: 1rem;${width ? `\nwidth: ${width}px` : ""}
-  `
-);

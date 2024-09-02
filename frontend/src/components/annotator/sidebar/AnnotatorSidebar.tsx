@@ -1,17 +1,12 @@
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
   Tab,
   Card,
   Segment,
-  Label,
   Popup,
-  Grid,
-  Checkbox,
   Header,
-  Dropdown,
   Icon,
   Placeholder,
-  Message,
   SemanticShorthandItem,
   TabPaneProps,
 } from "semantic-ui-react";
@@ -27,14 +22,12 @@ import {
   showSelectedAnnotationOnly,
   showAnnotationBoundingBoxes,
   showAnnotationLabels,
-  onlyDisplayTheseAnnotations,
 } from "../../../graphql/cache";
 import {
   AnalysisType,
   ColumnType,
   CorpusType,
   DatacellType,
-  DocumentType,
   ExtractType,
   LabelDisplayBehavior,
 } from "../../../graphql/types";
@@ -43,8 +36,9 @@ import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVis
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { SingleDocumentExtractResults } from "../../extracts/SingleDocumentExtractResults";
 import { AnnotatorModeToggle } from "../../widgets/buttons/AnnotatorModeToggle";
-import { ViewLabelSelector } from "../labels/view_labels_selector/ViewLabelSelector";
 import { ViewSettingsPopup } from "../../widgets/popups/ViewSettingsPopup";
+import { PermissionTypes } from "../../types";
+import { getPermissions } from "../../../utils/transform";
 
 const label_display_options = [
   { key: 1, text: "Always Show", value: LabelDisplayBehavior.ALWAYS },
@@ -112,7 +106,6 @@ export const AnnotatorSidebar = ({
   selected_corpus,
   selected_analysis,
   selected_extract,
-  opened_document,
   allowInput,
   editMode,
   datacells,
@@ -125,7 +118,6 @@ export const AnnotatorSidebar = ({
   selected_corpus?: CorpusType | null | undefined;
   selected_analysis?: AnalysisType | null | undefined;
   selected_extract?: ExtractType | null | undefined;
-  opened_document: DocumentType;
   editMode: "ANNOTATE" | "ANALYZE";
   allowInput: boolean;
   datacells: DatacellType[];
@@ -136,14 +128,6 @@ export const AnnotatorSidebar = ({
 }) => {
   const annotationStore = useContext(AnnotationStore);
   const label_display_behavior = useReactiveVar(showAnnotationLabels);
-  const display_specified_annotations = useReactiveVar(
-    onlyDisplayTheseAnnotations
-  );
-  console.log(
-    "Annotator sidebar - display_specified_annotations",
-    display_specified_annotations
-  );
-  console.log("Annotator sidebar - selected_corpus", selected_corpus);
 
   // Slightly kludgy way to handle responsive layout and drop sidebar once it becomes a pain
   // If there's enough interest to warrant a refactor, we can put some more thought into how
@@ -164,10 +148,61 @@ export const AnnotatorSidebar = ({
     showAnnotationBoundingBoxes
   );
 
-  const annotations = annotationStore.pdfAnnotations.annotations;
-  const relations = annotationStore.pdfAnnotations.relations;
-  const selectedRelations = annotationStore.selectedRelations;
-  const { showStructuralLabels, toggleShowStructuralLabels } = annotationStore;
+  const [showAnnotationPane, setShowAnnotationPane] = useState(true);
+  const [showRelationPane, setShowRelationPane] = useState(true);
+  const [showSearchPane, setShowSearchPane] = useState(true);
+  const [showDataPane, setShowDataPane] = useState(true);
+
+  const {
+    showStructuralLabels,
+    toggleShowStructuralLabels,
+    textSearchMatches,
+    selectedRelations,
+    pdfAnnotations,
+    setHideSidebar,
+    hideSidebar,
+  } = annotationStore;
+  const annotations = pdfAnnotations.annotations;
+  const relations = pdfAnnotations.relations;
+
+  useEffect(() => {
+    try {
+      let corpus_permissions: PermissionTypes[] = [];
+      let raw_corp_permissions = selected_corpus
+        ? selected_corpus.myPermissions
+        : ["READ"];
+      if (selected_corpus && raw_corp_permissions !== undefined) {
+        corpus_permissions = getPermissions(raw_corp_permissions);
+      }
+
+      // Show annotations IF we have annotations to display OR we can create them and have a valid labelSet
+      const show_annotation_pane =
+        annotations.length > 0 ||
+        (selected_corpus?.labelSet &&
+          corpus_permissions.includes(PermissionTypes.CAN_UPDATE));
+      setShowAnnotationPane(Boolean(show_annotation_pane));
+
+      const show_relation_pane =
+        relations.length > 0 ||
+        (selected_corpus?.labelSet &&
+          corpus_permissions.includes(PermissionTypes.CAN_UPDATE));
+      setShowRelationPane(Boolean(show_relation_pane));
+
+      const show_search_results_pane = textSearchMatches.length > 0;
+      setShowSearchPane(show_search_results_pane);
+
+      // Show data pane IF we have a selected_extract;
+      const show_data_pane = Boolean(selected_extract);
+      setShowDataPane(show_data_pane);
+
+      setHideSidebar(
+        !show_annotation_pane &&
+          !show_relation_pane &&
+          !show_search_results_pane &&
+          !show_data_pane
+      );
+    } catch {}
+  }, [annotations, relations, selected_corpus, hideSidebar, setHideSidebar]);
 
   const onRemoveAnnotationFromRelation = (
     annotationId: string,
@@ -185,7 +220,6 @@ export const AnnotatorSidebar = ({
   };
 
   const toggleSelectedAnnotation = (toggledId: string) => {
-    // console.log("Toggle annotation, ", toggledId);
     if (annotationStore.selectedAnnotations.includes(toggledId)) {
       annotationStore.setSelectedAnnotations(
         annotationStore.selectedAnnotations.filter(
@@ -230,22 +264,6 @@ export const AnnotatorSidebar = ({
       annotationStore.setSelectedAnnotations(implicated_annotations);
     }
   };
-
-  // const handleTabChange = (
-  //   event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-  //   data: TabProps
-  // ) => {
-  //   console.log("Sidebar tab changed to ", data.activeIndex);
-  //   // If we change to labels from relationships, make sure to unselect selected annotations
-  //   if (data.activeIndex === 0) {
-  //     annotationStore.setSelectedRelations([]);
-  //     annotationStore.setSelectedAnnotations([]);
-  //   }
-  //   // If we change from labels to relationships, make sure to unselect the selected labels
-  //   if (data.activeIndex === 1) {
-  //     annotationStore.setSelectedAnnotations([]);
-  //   }
-  // };
 
   let text_highlight_elements = [<></>];
   if (annotations && annotations?.length > 0) {
@@ -313,499 +331,144 @@ export const AnnotatorSidebar = ({
     render?: () => React.ReactNode;
   }[] = [];
 
-  if (editMode === "ANALYZE") {
-    if (selected_analysis) {
-      panes = [
-        ...panes,
-        {
-          menuItem: "Annotated Text",
-          render: () => (
-            <Tab.Pane
-              key="AnnotatorSidebar_Spantab"
+  if (showAnnotationPane) {
+    panes = [
+      ...panes,
+      {
+        menuItem: "Annotated Text",
+        render: () => (
+          <Tab.Pane
+            key="AnnotatorSidebar_Spantab"
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              justifyItems: "flex-start",
+              padding: "1em",
+              width: "100%",
+              flexBasis: "100px",
+            }}
+          >
+            <div
               style={{
-                flex: 1,
                 display: "flex",
                 flexDirection: "column",
                 justifyItems: "flex-start",
-                padding: "1em",
-                width: "100%",
+                flex: 1,
+                minHeight: 0,
                 flexBasis: "100px",
               }}
             >
-              <div
+              <Segment
+                attached="top"
                 style={{
                   display: "flex",
                   flexDirection: "column",
                   justifyItems: "flex-start",
                   flex: 1,
-                  minHeight: 0,
                   flexBasis: "100px",
+                  overflow: "hidden",
+                  paddingBottom: ".5rem",
                 }}
               >
-                <Segment
-                  attached="top"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyItems: "flex-start",
-                    flex: 1,
-                    flexBasis: "100px",
-                    overflow: "hidden",
-                    paddingBottom: ".5rem",
-                  }}
-                >
-                  <ViewSettingsPopup
-                    show_selected_annotation_only={
-                      show_selected_annotation_only
-                    }
-                    showSelectedAnnotationOnly={showSelectedAnnotationOnly}
-                    showStructuralLabels={
-                      showStructuralLabels ? showStructuralLabels : false
-                    }
-                    toggleShowStructuralLabels={toggleShowStructuralLabels}
-                    show_annotation_bounding_boxes={
-                      show_annotation_bounding_boxes
-                    }
-                    showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
-                    label_display_behavior={label_display_behavior}
-                    showAnnotationLabels={showAnnotationLabels}
-                    label_display_options={label_display_options}
-                  />
-                  <div
-                    style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}
-                  >
-                    <ul className="sidebar__annotations">
-                      {text_highlight_elements}
-                    </ul>
-                  </div>
-                </Segment>
-              </div>
-            </Tab.Pane>
-          ),
-        },
-        {
-          menuItem: "Relationships",
-          render: () => (
-            <Tab.Pane
-              key="AnnotatorSidebar_Relationshiptab"
-              style={{
-                overflowY: "scroll",
-                margin: "0px",
-                width: "100%",
-                flex: 1,
-              }}
-            >
-              <Card.Group key="relationship_card_group">
-                {relation_elements}
-              </Card.Group>
-            </Tab.Pane>
-          ),
-        },
-      ];
-    } else if (selected_extract) {
-      panes = [
-        ...panes,
-        {
-          menuItem: "Data",
-          render: () => (
-            <Tab.Pane style={{ flex: 1 }}>
-              {selected_extract ? (
-                // Render extract data here
-                <SingleDocumentExtractResults
-                  datacells={datacells}
-                  columns={columns}
+                <ViewSettingsPopup
+                  show_selected_annotation_only={show_selected_annotation_only}
+                  showSelectedAnnotationOnly={showSelectedAnnotationOnly}
+                  showStructuralLabels={
+                    showStructuralLabels ? showStructuralLabels : false
+                  }
+                  toggleShowStructuralLabels={toggleShowStructuralLabels}
+                  show_annotation_bounding_boxes={
+                    show_annotation_bounding_boxes
+                  }
+                  showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
+                  label_display_behavior={label_display_behavior}
+                  showAnnotationLabels={showAnnotationLabels}
+                  label_display_options={label_display_options}
                 />
-              ) : (
-                <Placeholder fluid />
-              )}
-            </Tab.Pane>
-          ),
-        },
-      ];
-    } else if (display_specified_annotations) {
-      console.log("XOXO - Setup sidebar for display_specified_annotations");
-      panes = [
-        ...panes,
-        {
-          menuItem: "Annotated Text",
-          render: () => (
-            <Tab.Pane
-              key="AnnotatorSidebar_Spantab"
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                justifyItems: "flex-start",
-                padding: "1em",
-                width: "100%",
-                flexBasis: "100px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyItems: "flex-start",
-                  flex: 1,
-                  minHeight: 0,
-                  flexBasis: "100px",
-                }}
-              >
-                <Segment
-                  attached="top"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyItems: "flex-start",
-                    flex: 1,
-                    flexBasis: "100px",
-                    overflow: "hidden",
-                    paddingBottom: ".5rem",
-                  }}
+                <div
+                  style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}
                 >
-                  <ViewSettingsPopup
-                    show_selected_annotation_only={
-                      show_selected_annotation_only
-                    }
-                    showSelectedAnnotationOnly={showSelectedAnnotationOnly}
-                    showStructuralLabels={
-                      showStructuralLabels ? showStructuralLabels : false
-                    }
-                    toggleShowStructuralLabels={toggleShowStructuralLabels}
-                    show_annotation_bounding_boxes={
-                      show_annotation_bounding_boxes
-                    }
-                    showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
-                    label_display_behavior={label_display_behavior}
-                    showAnnotationLabels={showAnnotationLabels}
-                    label_display_options={label_display_options}
-                  />
-                  <div
-                    style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}
-                  >
-                    <ul className="sidebar__annotations">
-                      {text_highlight_elements}
-                    </ul>
-                  </div>
-                </Segment>
-              </div>
-            </Tab.Pane>
-          ),
-        },
-        {
-          menuItem: "Relationships",
-          render: () => (
-            <Tab.Pane
-              key="AnnotatorSidebar_Relationshiptab"
-              style={{
-                overflowY: "scroll",
-                margin: "0px",
-                width: "100%",
-                flex: 1,
-              }}
-            >
-              <Card.Group key="relationship_card_group">
-                {relation_elements}
-              </Card.Group>
-            </Tab.Pane>
-          ),
-        },
-      ];
-    } else {
-      panes = [
-        ...panes,
-        {
-          menuItem: "Pick an Analysis",
-          render: () => (
-            <Tab.Pane
-              key="AnnotatorSidebar_Spantab"
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                justifyItems: "flex-start",
-                padding: "1em",
-                width: "100%",
-                flexBasis: "100px",
-              }}
-            >
-              <div>
-                <Message warning>
-                  <Message.Header>
-                    No Selected Extract or Analysis
-                  </Message.Header>
-                  <p>
-                    To view or provide feedback on annotations, you need to
-                    select an analysis or extract from the topbar. If none is
-                    available, try running one first!.
-                  </p>
-                </Message>
-              </div>
-            </Tab.Pane>
-          ),
-        },
-      ];
-    }
-  } else if (editMode === "ANNOTATE") {
-    // if a labelset is not selected... we have nothing to display and nothing to edit
-    if (display_specified_annotations) {
-      console.log("XOXO - Setup sidebar for display_specified_annotations");
-      panes = [
-        ...panes,
-        {
-          menuItem: "Annotated Text",
-          render: () => (
-            <Tab.Pane
-              key="AnnotatorSidebar_Spantab"
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                justifyItems: "flex-start",
-                padding: "1em",
-                width: "100%",
-                flexBasis: "100px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyItems: "flex-start",
-                  flex: 1,
-                  minHeight: 0,
-                  flexBasis: "100px",
-                }}
-              >
-                <Segment
-                  attached="top"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyItems: "flex-start",
-                    flex: 1,
-                    flexBasis: "100px",
-                    overflow: "hidden",
-                    paddingBottom: ".5rem",
-                  }}
-                >
-                  <ViewSettingsPopup
-                    show_selected_annotation_only={
-                      show_selected_annotation_only
-                    }
-                    showSelectedAnnotationOnly={showSelectedAnnotationOnly}
-                    showStructuralLabels={
-                      showStructuralLabels ? showStructuralLabels : false
-                    }
-                    toggleShowStructuralLabels={toggleShowStructuralLabels}
-                    show_annotation_bounding_boxes={
-                      show_annotation_bounding_boxes
-                    }
-                    showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
-                    label_display_behavior={label_display_behavior}
-                    showAnnotationLabels={showAnnotationLabels}
-                    label_display_options={label_display_options}
-                  />
-                  <div
-                    style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}
-                  >
-                    <ul className="sidebar__annotations">
-                      {text_highlight_elements}
-                    </ul>
-                  </div>
-                </Segment>
-              </div>
-            </Tab.Pane>
-          ),
-        },
-        {
-          menuItem: "Relationships",
-          render: () => (
-            <Tab.Pane
-              key="AnnotatorSidebar_Relationshiptab"
-              style={{
-                overflowY: "scroll",
-                margin: "0px",
-                width: "100%",
-                flex: 1,
-              }}
-            >
-              <Card.Group key="relationship_card_group">
-                {relation_elements}
-              </Card.Group>
-            </Tab.Pane>
-          ),
-        },
-      ];
-    } else if (!selected_corpus?.labelSet) {
-      panes = [
-        ...panes,
-        {
-          menuItem: "Annotated Text",
-          render: () => (
-            <Tab.Pane
-              key="AnnotatorSidebar_Spantab"
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                justifyItems: "flex-start",
-                padding: "1em",
-                width: "100%",
-                flexBasis: "100px",
-              }}
-            >
-              <div>
-                <Message warning>
-                  <Message.Header>
-                    No Selected Corpus or Labelset
-                  </Message.Header>
-                  <p>
-                    To view or edit human annotations, you need to ensure you're
-                    working with a corpus that has a linked Labelset.
-                  </p>
-                </Message>
-              </div>
-            </Tab.Pane>
-          ),
-        },
-        {
-          menuItem: "Relationships",
-          render: () => (
-            <Tab.Pane
-              key="AnnotatorSidebar_Relationshiptab"
-              style={{
-                overflowY: "scroll",
-                margin: "0px",
-                width: "100%",
-                flex: 1,
-              }}
-            >
-              <div>
-                <Message warning>
-                  <Message.Header>
-                    No Selected Corpus or Labelset
-                  </Message.Header>
-                  <p>
-                    To view or edit human annotations, you need to ensure you're
-                    working with a corpus that has a linked Labelset.
-                  </p>
-                </Message>
-              </div>
-            </Tab.Pane>
-          ),
-        },
-      ];
-    } else {
-      panes = [
-        ...panes,
-        {
-          menuItem: "Annotated Text",
-          render: () => (
-            <Tab.Pane
-              key="AnnotatorSidebar_Spantab"
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                justifyItems: "flex-start",
-                padding: "1em",
-                width: "100%",
-                flexBasis: "100px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyItems: "flex-start",
-                  flex: 1,
-                  minHeight: 0,
-                  flexBasis: "100px",
-                }}
-              >
-                <Segment
-                  attached="top"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyItems: "flex-start",
-                    flex: 1,
-                    flexBasis: "100px",
-                    overflow: "hidden",
-                    paddingBottom: ".5rem",
-                  }}
-                >
-                  <ViewSettingsPopup
-                    show_selected_annotation_only={
-                      show_selected_annotation_only
-                    }
-                    showSelectedAnnotationOnly={showSelectedAnnotationOnly}
-                    showStructuralLabels={
-                      showStructuralLabels ? showStructuralLabels : false
-                    }
-                    toggleShowStructuralLabels={toggleShowStructuralLabels}
-                    show_annotation_bounding_boxes={
-                      show_annotation_bounding_boxes
-                    }
-                    showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
-                    label_display_behavior={label_display_behavior}
-                    showAnnotationLabels={showAnnotationLabels}
-                    label_display_options={label_display_options}
-                  />
-                  <div
-                    style={{ flex: 1, flexBasis: "100px", overflow: "scroll" }}
-                  >
-                    <ul className="sidebar__annotations">
-                      {text_highlight_elements}
-                    </ul>
-                  </div>
-                </Segment>
-              </div>
-            </Tab.Pane>
-          ),
-        },
-        {
-          menuItem: "Relationships",
-          render: () => (
-            <Tab.Pane
-              key="AnnotatorSidebar_Relationshiptab"
-              style={{
-                overflowY: "scroll",
-                margin: "0px",
-                width: "100%",
-                flex: 1,
-              }}
-            >
-              <Card.Group key="relationship_card_group">
-                {relation_elements}
-              </Card.Group>
-            </Tab.Pane>
-          ),
-        },
-      ];
-    }
+                  <ul className="sidebar__annotations">
+                    {text_highlight_elements}
+                  </ul>
+                </div>
+              </Segment>
+            </div>
+          </Tab.Pane>
+        ),
+      },
+    ];
   }
-  panes = [
-    ...panes,
-    {
-      menuItem: "Search",
-      render: () => (
-        <Tab.Pane
-          key="AnnotatorSidebar_Searchtab"
-          style={{
-            margin: "0px",
-            width: "100%",
-            height: "100%",
-            padding: "0px",
-            overflow: "hidden",
-          }}
-        >
-          <SearchSidebarWidget />
-        </Tab.Pane>
-      ),
-    },
-  ];
+
+  if (showRelationPane) {
+    panes = [
+      ...panes,
+      {
+        menuItem: "Relationships",
+        render: () => (
+          <Tab.Pane
+            key="AnnotatorSidebar_Relationshiptab"
+            style={{
+              overflowY: "scroll",
+              margin: "0px",
+              width: "100%",
+              flex: 1,
+            }}
+          >
+            <Card.Group key="relationship_card_group">
+              {relation_elements}
+            </Card.Group>
+          </Tab.Pane>
+        ),
+      },
+    ];
+  }
+
+  if (showDataPane) {
+    panes = [
+      ...panes,
+      {
+        menuItem: "Data",
+        render: () => (
+          <Tab.Pane style={{ flex: 1 }}>
+            {selected_extract ? (
+              // Render extract data here
+              <SingleDocumentExtractResults
+                datacells={datacells}
+                columns={columns}
+              />
+            ) : (
+              <Placeholder fluid />
+            )}
+          </Tab.Pane>
+        ),
+      },
+    ];
+  }
+
+  if (showSearchPane) {
+    panes = [
+      ...panes,
+      {
+        menuItem: "Search",
+        render: () => (
+          <Tab.Pane
+            key="AnnotatorSidebar_Searchtab"
+            style={{
+              margin: "0px",
+              width: "100%",
+              height: "100%",
+              padding: "0px",
+              overflow: "hidden",
+            }}
+          >
+            <SearchSidebarWidget />
+          </Tab.Pane>
+        ),
+      },
+    ];
+  }
 
   return (
     <Segment
@@ -814,7 +477,7 @@ export const AnnotatorSidebar = ({
         width: "100%",
         height: "100%",
         padding: "0px",
-        display: show_minimal_layout ? "none" : "flex",
+        display: hideSidebar || show_minimal_layout ? "none" : "flex",
         margin: "0px",
         flexDirection: "column",
         alignItems: "flex-start",

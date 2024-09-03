@@ -285,6 +285,7 @@ export const Page = ({
 
   return (
     <PageAnnotationsContainer
+      className="PageAnnotationsContainer"
       ref={containerRef}
       onMouseDown={(event) => {
         //console.log("Shift click?", event.shiftKey);

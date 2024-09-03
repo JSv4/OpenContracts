@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Segment, Form, Button, Popup } from "semantic-ui-react";
+import { Segment, Form, Button, Popup, Icon } from "semantic-ui-react";
 import Fuse from "fuse.js";
 import { AnalysisType, CorpusType, ExtractType } from "../../graphql/types";
 import { AnalysisItem } from "./AnalysisItem";
@@ -172,39 +172,18 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
         >
           <Form>
             <Form.Input
-              icon="search"
+              icon={
+                <Icon
+                  name={searchTerm ? "cancel" : "search"}
+                  link
+                  onClick={searchTerm ? () => handleSearchChange("") : () => {}}
+                />
+              }
               placeholder={`Search for ${activeTab}...`}
               onChange={(e) => handleSearchChange(e.target.value)}
               value={searchTerm}
             />
           </Form>
-        </div>
-        <div
-          style={{
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            marginLeft: ".1vw",
-          }}
-        >
-          <Popup
-            content={`Clear Selected ${
-              activeTab === "analyses" ? "Analysis" : "Extract"
-            }`}
-            trigger={
-              <Button
-                color="blue"
-                circular
-                icon="cancel"
-                onClick={() =>
-                  activeTab === "analyses"
-                    ? onSelectAnalysis(null)
-                    : onSelectExtract(null)
-                }
-              />
-            }
-          />
         </div>
       </Segment>
       <Segment

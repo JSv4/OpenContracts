@@ -235,11 +235,17 @@ export const AnnotatorTopbar = ({
                 overflowY: "hidden",
                 height: "100%",
                 width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-start",
               }
             : {
                 overflow: "hidden",
                 height: "100%",
                 width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-start",
               }
         }
       >

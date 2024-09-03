@@ -1,5 +1,12 @@
 import React, { useContext, useRef, useState } from "react";
-import { Button, Dropdown, Form, Icon } from "semantic-ui-react";
+import {
+  Button,
+  ButtonGroup,
+  ButtonOr,
+  Dropdown,
+  Form,
+  Icon,
+} from "semantic-ui-react";
 import { ZoomIn, ZoomOut } from "lucide-react";
 import styled from "styled-components";
 import _ from "lodash";
@@ -13,7 +20,7 @@ const ActionBar = styled.div`
 const StyledMenu = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
 `;
 
 const LeftGroup = styled.div`
@@ -25,6 +32,7 @@ const LeftGroup = styled.div`
 const RightGroup = styled.div`
   display: flex;
   align-items: center;
+  padding-left: 1rem;
 `;
 
 interface PDFActionBarProps {
@@ -75,13 +83,15 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
     <ActionBar>
       <StyledMenu>
         <LeftGroup>
-          <Button icon onClick={onZoomOut}>
-            <ZoomOut />
-          </Button>
-          <Button icon onClick={onZoomIn}>
-            <ZoomIn />
-          </Button>
-          <span>{zoom}%</span>
+          <ButtonGroup>
+            <Button icon onClick={onZoomOut}>
+              <ZoomOut />
+            </Button>
+            <ButtonOr text={zoom.toFixed(1)} />
+            <Button icon onClick={onZoomIn}>
+              <ZoomIn />
+            </Button>
+          </ButtonGroup>
           <Form>
             <Form.Input
               iconPosition="left"
@@ -95,6 +105,7 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
               placeholder="Search document..."
               onChange={(e, data) => handleDocSearchChange(data.value)}
               value={docSearchCache}
+              style={textSearchMatches.length > 0 ? { color: "green" } : {}}
             />
           </Form>
         </LeftGroup>
@@ -111,6 +122,7 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
             onChange={(e, data) =>
               onActionSelect && onActionSelect(data.value as string)
             }
+            style={{ paddingRight: "5rem" }}
           />
         </RightGroup>
       </StyledMenu>

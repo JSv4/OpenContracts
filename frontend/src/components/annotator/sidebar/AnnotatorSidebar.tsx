@@ -1,4 +1,4 @@
-import { useContext, useEffect, useLayoutEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
   Tab,
   Card,
@@ -40,6 +40,7 @@ import { AnnotatorModeToggle } from "../../widgets/buttons/AnnotatorModeToggle";
 import { ViewSettingsPopup } from "../../widgets/popups/ViewSettingsPopup";
 import { PermissionTypes } from "../../types";
 import { getPermissions } from "../../../utils/transform";
+import { PlaceholderCard } from "../../placeholders/PlaceholderCard";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;
@@ -204,6 +205,40 @@ export const AnnotatorSidebar = ({
           corpus_permissions.includes(PermissionTypes.CAN_UPDATE));
 
       if (show_annotation_pane) {
+        let text_highlight_elements = [<></>];
+        if (annotations && annotations?.length > 0) {
+          text_highlight_elements = _.orderBy(
+            annotations,
+            (annotation) => annotation.page
+          ).map((annotation, index) => {
+            return (
+              <HighlightItem
+                key={`highlight_item_${index}`}
+                className={annotation.id}
+                annotation={annotation}
+                read_only={read_only}
+                relations={relations}
+                onDelete={onDeleteAnnotation}
+                onSelect={toggleSelectedAnnotation}
+              />
+            );
+          });
+          text_highlight_elements.push(
+            <FetchMoreOnVisible
+              fetchNextPage={fetchMore ? () => fetchMore() : () => {}}
+              fetchWithoutMotion
+            />
+          );
+        } else {
+          text_highlight_elements = [
+            <PlaceholderCard
+              style={{ flex: 1 }}
+              title="No Annotations Found"
+              description="Either no matching annotations were created or you didn't create them yet."
+            />,
+          ];
+        }
+
         panes = [
           ...panes,
           {
@@ -285,6 +320,52 @@ export const AnnotatorSidebar = ({
           corpus_permissions.includes(PermissionTypes.CAN_UPDATE));
 
       if (show_relation_pane) {
+        let relation_elements = [<></>];
+        if (relations && relations.length > 0) {
+          relation_elements = relations?.map((relation, index) => {
+            let source_annotations = _.intersectionWith(
+              annotations,
+              relation.sourceIds,
+              ({ id }, annotationId: string) => id === annotationId
+            );
+
+            let target_annotations = _.intersectionWith(
+              annotations,
+              relation.targetIds,
+              ({ id }, annotationId: string) => id === annotationId
+            );
+
+            return (
+              <RelationItem
+                key={`relation_item_${relation.id}`}
+                relation={relation}
+                read_only={read_only}
+                selected={selectedRelations.includes(relation)}
+                source_annotations={source_annotations}
+                target_annotations={target_annotations}
+                onSelectAnnotation={toggleSelectedAnnotation}
+                onSelectRelation={() =>
+                  toggleSelectedRelation(relation, [
+                    ...target_annotations.map((a) => a.id),
+                    ...source_annotations.map((a) => a.id),
+                  ])
+                }
+                onRemoveAnnotationFromRelation={onRemoveAnnotationFromRelation}
+                onDeleteRelation={onDeleteRelation}
+              />
+            );
+          });
+          // TODO - add fetch more on visible.
+        } else {
+          relation_elements = [
+            <PlaceholderCard
+              style={{ flex: 1 }}
+              title="No Relations Found"
+              description="Either no matching relations were created or you didn't create them yet."
+            />,
+          ];
+        }
+
         panes = [
           ...panes,
           {
@@ -331,6 +412,8 @@ export const AnnotatorSidebar = ({
           },
         ];
         setShowSearchPane(true);
+      } else {
+        setShowSearchPane(false);
       }
 
       // Show data pane IF we have a selected_extract;
@@ -377,10 +460,6 @@ export const AnnotatorSidebar = ({
 
   useEffect(() => {
     if (showSearchPane) {
-      console.log(
-        "showSearchPane changed... set active index to ",
-        panes.length
-      );
       setActiveIndex(panes.length - 1);
     }
   }, [showSearchPane, panes]);
@@ -454,67 +533,6 @@ export const AnnotatorSidebar = ({
       annotationStore.setSelectedAnnotations(implicated_annotations);
     }
   };
-
-  let text_highlight_elements = [<></>];
-  if (annotations && annotations?.length > 0) {
-    text_highlight_elements = _.orderBy(
-      annotations,
-      (annotation) => annotation.page
-    ).map((annotation, index) => {
-      return (
-        <HighlightItem
-          key={`highlight_item_${index}`}
-          className={annotation.id}
-          annotation={annotation}
-          read_only={read_only}
-          relations={relations}
-          onDelete={onDeleteAnnotation}
-          onSelect={toggleSelectedAnnotation}
-        />
-      );
-    });
-  }
-
-  text_highlight_elements.push(
-    <FetchMoreOnVisible
-      fetchNextPage={fetchMore ? () => fetchMore() : () => {}}
-      fetchWithoutMotion
-    />
-  );
-
-  let relation_elements = relations?.map((relation, index) => {
-    let source_annotations = _.intersectionWith(
-      annotations,
-      relation.sourceIds,
-      ({ id }, annotationId: string) => id === annotationId
-    );
-
-    let target_annotations = _.intersectionWith(
-      annotations,
-      relation.targetIds,
-      ({ id }, annotationId: string) => id === annotationId
-    );
-
-    return (
-      <RelationItem
-        key={`relation_item_${relation.id}`}
-        relation={relation}
-        read_only={read_only}
-        selected={selectedRelations.includes(relation)}
-        source_annotations={source_annotations}
-        target_annotations={target_annotations}
-        onSelectAnnotation={toggleSelectedAnnotation}
-        onSelectRelation={() =>
-          toggleSelectedRelation(relation, [
-            ...target_annotations.map((a) => a.id),
-            ...source_annotations.map((a) => a.id),
-          ])
-        }
-        onRemoveAnnotationFromRelation={onRemoveAnnotationFromRelation}
-        onDeleteRelation={onDeleteRelation}
-      />
-    );
-  });
 
   return (
     <Segment

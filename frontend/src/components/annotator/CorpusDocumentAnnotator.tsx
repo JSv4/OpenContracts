@@ -561,6 +561,7 @@ export const CorpusDocumentAnnotator = ({
     resetStates();
 
     if (selected_analysis) {
+      allowUserInput(false);
       setSelectedExtract(null); // Ensure extract is deselected
       fetchAnnotationsForAnalysis({
         variables: {
@@ -599,6 +600,8 @@ export const CorpusDocumentAnnotator = ({
           setDocTypeLabels(uniqueDocLabels);
         }
       });
+    } else {
+      allowUserInput(true);
     }
   }, [selected_analysis, opened_document.id, opened_corpus?.id]);
 
@@ -608,6 +611,7 @@ export const CorpusDocumentAnnotator = ({
     resetStates();
 
     if (selected_extract) {
+      allowUserInput(false);
       setSelectedAnalysis(null); // Ensure analysis is deselected
       fetchDataCellsForExtract({
         variables: {
@@ -632,6 +636,8 @@ export const CorpusDocumentAnnotator = ({
           setSpanLabels(uniqueLabels);
         }
       });
+    } else {
+      allowUserInput(true);
     }
   }, [selected_extract, opened_document.id, opened_corpus?.id]);
 

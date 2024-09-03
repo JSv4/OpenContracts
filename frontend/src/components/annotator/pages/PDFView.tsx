@@ -18,6 +18,7 @@ import {
   DocumentType,
   ExtractType,
   LabelDisplayBehavior,
+  LabelType,
 } from "../../../graphql/types";
 import {
   PDFPageInfo,
@@ -722,15 +723,19 @@ export const PDFView = ({
             ) : (
               <></>
             )}
-            <DocTypeLabelDisplay
-              read_only={
-                !allowInput ||
-                (read_only &&
-                  !corpus_permissions.includes(PermissionTypes.CAN_UPDATE)) ||
-                banish_sidebar ||
-                editMode === "ANALYZE"
-              }
-            />
+            {(!read_only ||
+              pdfAnnotations.annotations.filter(
+                (annot) =>
+                  annot.annotationLabel.labelType === LabelType.DocTypeLabel
+              ).length > 0) && (
+              <DocTypeLabelDisplay
+                read_only={
+                  read_only ||
+                  !corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
+                }
+              />
+            )}
+
             <Dimmer active={data_loading !== undefined ? data_loading : false}>
               <Loader content={loading_message ? loading_message : ""} />
             </Dimmer>

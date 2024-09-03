@@ -76,7 +76,8 @@ const PDFContainer = styled.div<{ width?: number }>(
     overflow-x: scroll;
     height: 100%;
     background: #f7f9f9;
-    padding: 1rem;${width ? `\nwidth: ${width}px` : ""}
+    padding: 1rem;
+    flex: 1;
   `
 );
 

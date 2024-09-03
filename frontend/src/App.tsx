@@ -68,7 +68,6 @@ export const App = () => {
   const opened_corpus = useReactiveVar(openedCorpus);
   const opened_extract = useReactiveVar(openedExtract);
   const opened_document = useReactiveVar(openedDocument);
-  const opened_to_annotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
   const show_selected_annotation_only = useReactiveVar(
     showSelectedAnnotationOnly
   );
@@ -187,7 +186,7 @@ export const App = () => {
                 toggleModal={() => openedExtract(null)}
               />
             )}
-            {opened_document && only_display_these_annotations !== undefined ? (
+            {opened_document ? (
               <CorpusDocumentAnnotator
                 open={Boolean(opened_document)}
                 onClose={() => {
@@ -196,6 +195,9 @@ export const App = () => {
                   selectedAnalyses([]);
                   onlyDisplayTheseAnnotations(undefined);
                 }}
+                opened_corpus={
+                  opened_corpus === null ? undefined : opened_corpus
+                }
                 opened_document={opened_document}
                 read_only={selected_analyes.length > 0 || banish_sidebar}
                 show_selected_annotation_only={show_selected_annotation_only}

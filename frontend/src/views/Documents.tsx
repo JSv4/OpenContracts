@@ -321,15 +321,6 @@ export const Documents = () => {
             toggleModal={() => showDeleteDocumentsModal(false)}
             visible={show_delete_documents_modal}
           />
-          {document_to_open && document_to_open.pdfFile ? (
-            <PdfViewer
-              url={document_to_open.pdfFile}
-              toggleModal={() => openedDocument(null)}
-              opened={Boolean(document_to_open)}
-            />
-          ) : (
-            <></>
-          )}
           <CRUDModal
             open={document_to_edit !== null}
             mode="EDIT"

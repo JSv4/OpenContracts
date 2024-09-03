@@ -3,10 +3,12 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.test import TestCase
 
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.corpuses.models import Corpus, CorpusAction
+from opencontractserver.documents.models import Document
 from opencontractserver.tests.fixtures import SAMPLE_GREMLIN_ENGINE_MANIFEST_PATH
 from opencontractserver.utils.analysis import create_and_setup_analysis
 
@@ -41,6 +43,14 @@ class TestAnalysisUtils(TestCase):
             creator=self.user,
             manifest={},
         )
+
+        self.doc_ids = []
+        for a in range(0, 3):
+            doc = Document(
+                title="Test Document", description="Test Description", creator=self.user
+            )
+            doc.save()
+            self.doc_ids.append(doc.id)
 
     def test_create_and_setup_analysis_gremlin(self):
         analysis = create_and_setup_analysis(
@@ -83,7 +93,7 @@ class TestAnalysisUtils(TestCase):
         self.assertEqual(analysis.corpus_action, corpus_action)
 
     def test_create_and_setup_analysis_with_doc_ids(self):
-        doc_ids = [1, 2, 3]  # Mock document IDs
+        doc_ids = self.doc_ids  # Mock document IDs
         analysis = create_and_setup_analysis(
             self.analyzer_gremlin, self.corpus.id, self.user.id, doc_ids=doc_ids
         )
@@ -93,8 +103,12 @@ class TestAnalysisUtils(TestCase):
         )
 
     def test_create_and_setup_analysis_invalid_analyzer(self):
-        invalid_analyzer = Analyzer(
-            description="Invalid Analyzer", creator=self.user, manifest={}
-        )
         with self.assertRaises(ValidationError):
-            create_and_setup_analysis(invalid_analyzer, self.corpus.id, self.user.id)
+            with transaction.atomic():
+                invalid_analyzer = Analyzer(
+                    description="Invalid Analyzer", creator=self.user, manifest={}
+                )
+                invalid_analyzer.full_clean()
+                create_and_setup_analysis(
+                    invalid_analyzer, self.corpus.id, self.user.id
+                )

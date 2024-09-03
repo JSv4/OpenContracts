@@ -9,7 +9,7 @@ import React, {
 import { AnnotationLabelType } from "../../../graphql/types";
 import { getPageBoundsFromCanvas } from "../../../utils/transform";
 import { PageProps, BoundingBox, PermissionTypes } from "../../types";
-import { AnnotationStore, normalizeBounds } from "../context";
+import { AnnotationStore, normalizeBounds, PDFStore } from "../context";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
 import { Selection, SelectionBoundary, SelectionTokens } from "./Selection";
 import { SearchResult } from "./SearchResult";
@@ -32,6 +32,7 @@ export const Page = ({
   const [hasPdfPageRendered, setPdfPageRendered] = useState(false);
 
   const annotationStore = useContext(AnnotationStore);
+  const pdfStore = useContext(PDFStore);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -87,8 +88,10 @@ export const Page = ({
 
   // Only run this effect once per page
   useEffect(() => {
+    console.log("Reacting to ", pdfStore.zoomLevel);
+
     const handleResize = () => {
-      console.log("\t\tHandle Resize");
+      console.log("\t\tHandle Resize!");
 
       if (canvasRef.current === null) {
         onError(new Error("No canvas element!"));
@@ -102,8 +105,8 @@ export const Page = ({
 
       pageInfo.bounds = getPageBoundsFromCanvas(canvasRef.current);
 
-      rendererRef.current.rescaleAndRender(pageInfo.scale);
-      setScale(pageInfo.scale);
+      rendererRef.current.rescaleAndRender(pdfStore.zoomLevel);
+      setScale(pdfStore.zoomLevel);
     };
 
     if (!hasPdfPageRendered && canvasRef.current && containerRef.current) {
@@ -121,7 +124,7 @@ export const Page = ({
             );
 
             console.log("\tAwait render...");
-            await rendererRef.current.render(pageInfo.scale);
+            await rendererRef.current.render(pdfStore.zoomLevel);
 
             if (
               !(pageInfo.page.pageNumber - 1 in annotationStore.pdfPageInfoObjs)
@@ -152,7 +155,6 @@ export const Page = ({
           onError(error instanceof Error ? error : new Error(String(error)));
         }
       };
-
       initializePage();
 
       return () => {
@@ -163,8 +165,39 @@ export const Page = ({
           );
         }
       };
+    } else if (
+      hasPdfPageRendered &&
+      canvasRef.current &&
+      containerRef.current
+    ) {
+      console.log("Page has rendered and Zoom level changed");
+
+      if (canvasRef.current === null) {
+        onError(new Error("No canvas element!"));
+        return;
+      }
+
+      if (rendererRef.current === null) {
+        onError(new Error("Page renderer hasn't loaded!"));
+        return;
+      }
+
+      pageInfo.bounds = getPageBoundsFromCanvas(canvasRef.current);
+
+      rendererRef.current.rescaleAndRender(pdfStore.zoomLevel);
+      setScale(pdfStore.zoomLevel);
     }
-  }, [pageInfo, onError, hasPdfPageRendered, annotationStore]);
+  }, [
+    pageInfo,
+    onError,
+    hasPdfPageRendered,
+    annotationStore,
+    pdfStore.zoomLevel,
+  ]);
+
+  useEffect(() => {
+    pageInfo.scale = pdfStore.zoomLevel;
+  }, [pdfStore.zoomLevel]);
 
   // Jump to selected annotation
   useLayoutEffect(() => {
@@ -204,13 +237,6 @@ export const Page = ({
     : [];
 
   ////////////////
-  if (scale && pageInfo.bounds && annotations) {
-    // console.log("Total annotations", annotations);
-    const defined_annotations = annotations.filter(
-      (a) => a.json[pageInfo.page.pageNumber - 1] !== undefined
-    );
-  }
-
   const annots_to_render = useMemo(() => {
     const defined_annotations = annotations.filter(
       (a) => a.json[pageInfo.page.pageNumber - 1] !== undefined

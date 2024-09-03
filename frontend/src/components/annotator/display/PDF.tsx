@@ -16,24 +16,27 @@ export class PDFPageRenderer {
   ) {}
 
   cancelCurrentRender() {
-    if (this.currentRenderTask === undefined) {
-      return;
-    }
-    this.currentRenderTask.promise.then(
-      () => {},
-      (err: any) => {
-        if (
-          err instanceof Error &&
-          err.message.indexOf("Rendering cancelled") !== -1
-        ) {
-          // Swallow the error that's thrown when the render is canceled.
-          return;
-        }
-        const e = err instanceof Error ? err : new Error(err);
-        this.onError(e);
+    try {
+      if (this.currentRenderTask === undefined) {
+        return;
       }
-    );
-    this.currentRenderTask.cancel();
+      this.currentRenderTask.promise.then(
+        () => {},
+        (err: any) => {
+          if (
+            err instanceof Error &&
+            err.message.indexOf("Rendering cancelled") !== -1
+          ) {
+            // Swallow the error that's thrown when the render is canceled.
+            return;
+          }
+          const e = err instanceof Error ? err : new Error(err);
+          // this.onError(e);
+          console.warn("Issue cancelling render", e);
+        }
+      );
+      this.currentRenderTask.cancel();
+    } catch {}
   }
 
   render(scale: number) {

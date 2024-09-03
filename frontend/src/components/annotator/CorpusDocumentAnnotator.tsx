@@ -472,7 +472,7 @@ export const CorpusDocumentAnnotator = ({
                   }
 
                   // console.log("Tokens", pageTokens);
-                  return new PDFPageInfo(p, pageTokens);
+                  return new PDFPageInfo(p, pageTokens, zoom_level);
                 }) as unknown as Promise<PDFPageInfo>
               );
             }

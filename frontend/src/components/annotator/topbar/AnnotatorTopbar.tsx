@@ -61,7 +61,7 @@ export const AnnotatorTopbar = ({
     icon_toolbar_width = 100;
   } else {
     expanded_toolbar_width = 0.1 * container_width;
-    icon_toolbar_width = 0.01 * container_width;
+    icon_toolbar_width = 0.05 * container_width;
   }
 
   // console.log("Expanded toolbar width", expanded_toolbar_width);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import styled from "styled-components";
 
@@ -629,6 +629,8 @@ export const PDFView = ({
           doc,
           pages,
           onError,
+          zoomLevel: zoom_level,
+          setZoomLevel,
         }}
       >
         <AnnotationStore.Provider

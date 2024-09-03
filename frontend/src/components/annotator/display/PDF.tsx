@@ -117,10 +117,10 @@ export const PageAnnotationsContainer = styled.div(
     &:last-child {
         margin-bottom: 0;
     }
-    align-items: center;
-    justify-content: center;
-    display: flex;
-    flex-direction: column;
+    // align-items: center;
+    // justify-content: center;
+    // display: flex;
+    // flex-direction: column;
 `
 );
 

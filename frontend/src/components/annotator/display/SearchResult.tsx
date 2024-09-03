@@ -39,9 +39,12 @@ export const SearchResult = ({
 
   const annotationStore = useContext(AnnotationStore);
 
+  console.log("Get scaled result for search result - scale", pageInfo.scale);
   const bounds = pageInfo.getScaledBounds(
     match.bounds[pageInfo.page.pageNumber - 1]
   );
+  console.log("Bounds", bounds);
+
   const border = getBorderWidthFromBounds(bounds);
 
   return (

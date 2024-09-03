@@ -12,7 +12,7 @@ import {
   TabProps,
 } from "semantic-ui-react";
 
-import _ from "lodash";
+import _, { isNumber } from "lodash";
 import { AnnotationStore, RelationGroup } from "../context";
 import { HighlightItem } from "./HighlightItem";
 import { RelationItem } from "./RelationItem";
@@ -156,13 +156,21 @@ export const AnnotatorSidebar = ({
   );
 
   const [showSearchPane, setShowSearchPane] = useState(true);
-  const [activeIndex, setActiveIndex] = useState<number | string>(0);
+  const [activeIndex, setActiveIndex] = useState<number>(0);
   const [panes, setPanes] = useState<TabPanelProps[]>([]);
 
   const handleTabChange = (
     event: React.MouseEvent<HTMLDivElement>,
     data: TabProps
-  ) => setActiveIndex(data?.activeIndex ? data.activeIndex : 0);
+  ) => {
+    if (data?.activeIndex) {
+      if (isNumber(data.activeIndex)) {
+        setActiveIndex(data.activeIndex);
+      } else {
+        setActiveIndex(parseInt(data.activeIndex));
+      }
+    }
+  };
 
   const {
     showStructuralLabels,
@@ -375,6 +383,13 @@ export const AnnotatorSidebar = ({
       setActiveIndex(panes.length - 1);
     }
   }, [showSearchPane]);
+
+  // If our activeIndex is out of bounds, reset to 0
+  useLayoutEffect(() => {
+    if (activeIndex > panes.length - 1) {
+      setActiveIndex(0);
+    }
+  }, [panes, activeIndex]);
 
   const onRemoveAnnotationFromRelation = (
     annotationId: string,

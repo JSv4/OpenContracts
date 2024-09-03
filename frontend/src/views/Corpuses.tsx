@@ -48,13 +48,11 @@ import {
   showAnalyzerSelectionForCorpus,
   selectedAnalyses,
   analysisSearchTerm,
-  selectedAnalysesIds,
   displayAnnotationOnAnnotatorLoad,
   exportingCorpus,
   showQueryViewState,
   openedQueryObj,
   showSelectCorpusAnalyzerOrFieldsetModal,
-  onlyDisplayTheseAnnotations,
 } from "../graphql/cache";
 import {
   UPDATE_CORPUS,
@@ -86,7 +84,6 @@ import {
 } from "../graphql/queries";
 import { CorpusType, LabelType } from "../graphql/types";
 import { LooseObject } from "../components/types";
-import { CorpusDocumentAnnotator } from "../components/annotator/CorpusDocumentAnnotator";
 import { toBase64 } from "../utils/files";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
 import { CorpusAnnotationCards } from "../components/annotations/CorpusAnnotationCards";

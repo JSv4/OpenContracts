@@ -55,7 +55,7 @@ import { Extracts } from "./views/Extracts";
 import { useEnv } from "./components/hooks/UseEnv";
 import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
 import { SelectCorpusAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
-import { CorpusDocumentAnnotator } from "./components/annotator/CorpusDocumentAnnotator";
+import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
@@ -187,7 +187,7 @@ export const App = () => {
               />
             )}
             {opened_document ? (
-              <CorpusDocumentAnnotator
+              <DocumentAnnotator
                 open={Boolean(opened_document)}
                 onClose={() => {
                   openedDocument(null);

@@ -97,7 +97,7 @@ export interface PageTokenMapBuilderProps {
   token_map: PageTokenMapProps;
 }
 
-interface CorpusDocumentAnnotatorProps {
+interface DocumentAnnotatorProps {
   open: boolean;
   opened_document: DocumentType;
   opened_corpus?: CorpusType;
@@ -108,7 +108,7 @@ interface CorpusDocumentAnnotatorProps {
   onClose: (args?: any) => void | any;
 }
 
-export const CorpusDocumentAnnotator = ({
+export const DocumentAnnotator = ({
   open,
   opened_document,
   opened_corpus,
@@ -117,7 +117,7 @@ export const CorpusDocumentAnnotator = ({
   show_annotation_bounding_boxes,
   show_annotation_labels,
   onClose,
-}: CorpusDocumentAnnotatorProps) => {
+}: DocumentAnnotatorProps) => {
   const { width } = useWindowDimensions();
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";
 
@@ -309,7 +309,6 @@ export const CorpusDocumentAnnotator = ({
         humanAnnotationsAndRelationshipsData.document?.allAnnotations?.map(
           (annotation) => convertToServerAnnotation(annotation)
         ) ?? [];
-      console.log("Processed annotations", processedAnnotations);
 
       const processedRelationships =
         humanAnnotationsAndRelationshipsData.document?.allRelationships?.map(
@@ -466,10 +465,7 @@ export const CorpusDocumentAnnotator = ({
                     );
                     // console.log("Loading up some data for page ", i, p);
                   } else {
-                    // console.log("Loading up some data for page ", i, p);
                     const pageIndex = p.pageNumber - 1;
-
-                    console.log("pageIndex", pageIndex);
                     pageTokens = pawlsData[pageIndex].tokens;
                   }
 
@@ -538,13 +534,8 @@ export const CorpusDocumentAnnotator = ({
 
   // Effect to process analyses and extracts data retrieved
   useEffect(() => {
-    console.log("CorpusDocumentAnnotator - analysesData", analysesData);
     if (analysesData && analysesData.documentCorpusActions) {
       const { analysisRows, extracts } = analysesData.documentCorpusActions;
-      console.log(
-        "CorpusDocumentAnnotator - Retrieved analysisRows",
-        analysisRows
-      );
       setExtracts(extracts);
       setAnalysisRows(analysisRows);
       setAnalyses(
@@ -650,13 +641,11 @@ export const CorpusDocumentAnnotator = ({
   }, [dataCellsData]);
 
   const onSelectAnalysis = (analysis: AnalysisType | null) => {
-    console.log("onSelectAnalysis", analysis);
     setSelectedAnalysis(analysis);
     setSelectedExtract(null);
   };
 
   const onSelectExtract = (extract: ExtractType | null) => {
-    console.log("Select extract", extract);
     setSelectedExtract(extract);
     setSelectedAnalysis(null);
   };

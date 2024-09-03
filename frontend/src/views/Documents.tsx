@@ -46,7 +46,6 @@ import {
   editDocForm_Schema,
   editDocForm_Ui_Schema,
 } from "../components/forms/schemas";
-import { PdfViewer } from "../components/documents/PdfViewer";
 import { FilterToLabelsetSelector } from "../components/widgets/model-filters/FilterToLabelsetSelector";
 import { FilterToCorpusSelector } from "../components/widgets/model-filters/FilterToCorpusSelector";
 

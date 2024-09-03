@@ -77,6 +77,11 @@ export const DocTypeLabelDisplay = ({ read_only }: { read_only: boolean }) => {
       } catch {}
     }
   }
+  console.log(
+    "DocTypeLabelDisplay - annotation_elements",
+    doc_annotations,
+    annotation_elements
+  );
 
   // Want to reduce the existing label ids to flat array of just ids...
   let existing_labels: string[] = [];

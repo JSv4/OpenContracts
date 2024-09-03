@@ -163,7 +163,8 @@ export const AnnotatorSidebar = ({
     event: React.MouseEvent<HTMLDivElement>,
     data: TabProps
   ) => {
-    if (data?.activeIndex) {
+    console.log("Should set active index to ", data.activeIndex);
+    if (data?.activeIndex !== undefined) {
       if (isNumber(data.activeIndex)) {
         setActiveIndex(data.activeIndex);
       } else {
@@ -374,22 +375,24 @@ export const AnnotatorSidebar = ({
     setHideSidebar,
   ]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (showSearchPane) {
       console.log(
         "showSearchPane changed... set active index to ",
-        panes.length - 1
+        panes.length
       );
       setActiveIndex(panes.length - 1);
     }
-  }, [showSearchPane]);
+  }, [showSearchPane, panes]);
 
   // If our activeIndex is out of bounds, reset to 0
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (activeIndex > panes.length - 1) {
       setActiveIndex(0);
     }
   }, [panes, activeIndex]);
+
+  // If we have search results pane open... set index to last index
 
   const onRemoveAnnotationFromRelation = (
     annotationId: string,

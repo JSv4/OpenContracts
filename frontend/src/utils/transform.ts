@@ -1,4 +1,7 @@
-import { ServerAnnotation } from "../components/annotator/context/AnnotationStore";
+import {
+  DocTypeAnnotation,
+  ServerAnnotation,
+} from "../components/annotator/context/AnnotationStore";
 import { BoundingBox, PermissionTypes } from "../components/types";
 import { AnalyzerManifestType, ServerAnnotationType } from "../graphql/types";
 import default_analyzer_icon from "../assets/icons/noun-quill-31093.png";
@@ -69,6 +72,22 @@ export function getPermissions(
   return base_permissions;
 }
 
+export function convertToDocTypeAnnotation(
+  serverAnnotation: ServerAnnotationType
+): DocTypeAnnotation {
+  // Check if the annotation is of the correct type
+  if (serverAnnotation.annotationLabel.labelType !== "DOC_TYPE_LABEL") {
+    throw new Error("Invalid annotation type. Expected DOC_TYPE_LABEL.");
+  }
+
+  // Create and return a new DocTypeAnnotation instance
+  return new DocTypeAnnotation(
+    serverAnnotation.annotationLabel,
+    serverAnnotation.myPermissions || [],
+    serverAnnotation.id
+  );
+}
+
 export function convertToServerAnnotation(
   annotation: ServerAnnotationType
 ): ServerAnnotation {
@@ -88,6 +107,7 @@ export function convertToServerAnnotations(
 ): ServerAnnotation[] {
   return annotations.map(convertToServerAnnotation);
 }
+
 export function hexToRgb(hex: string) {
   // For shortsighted reasons, the color stored is missing #. Check first to see if number is missing hex, if so
   // add it and THEN run the
@@ -111,6 +131,7 @@ export function hexToRgb(hex: string) {
     };
   }
 }
+
 export function getBorderWidthFromBounds(bounds: BoundingBox): number {
   //
   const width = bounds.right - bounds.left;
@@ -136,6 +157,7 @@ export function extractIconSrcFromAnalyzerManifest(
     return default_analyzer_icon;
   }
 }
+
 export function getPageBoundsFromCanvas(
   canvas: HTMLCanvasElement
 ): BoundingBox {

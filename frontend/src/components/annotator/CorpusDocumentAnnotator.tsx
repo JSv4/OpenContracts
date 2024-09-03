@@ -34,6 +34,7 @@ import {
   DocumentType,
   ExtractType,
   LabelDisplayBehavior,
+  LabelType,
   ServerAnnotationType,
 } from "../../graphql/types";
 import {
@@ -44,6 +45,7 @@ import {
   Token,
 } from "../types";
 import {
+  convertToDocTypeAnnotation,
   convertToServerAnnotation,
   convertToServerAnnotations,
   getPermissions,
@@ -116,9 +118,6 @@ export const CorpusDocumentAnnotator = ({
   show_annotation_labels,
   onClose,
 }: CorpusDocumentAnnotatorProps) => {
-  // Rerendering issue...
-  // 38 - first useLazyQuery ius triggering rerender
-
   const { width } = useWindowDimensions();
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";
 
@@ -133,13 +132,7 @@ export const CorpusDocumentAnnotator = ({
   const displayOnlyTheseAnnotations = useReactiveVar(
     onlyDisplayTheseAnnotations
   );
-  console.log(
-    "CorpusDocumentAnnotator - displayOnlyTheseAnnotations",
-    displayOnlyTheseAnnotations,
-    !Boolean(displayOnlyTheseAnnotations)
-  );
 
-  // Hook 15
   const [doc, setDocument] = useState<PDFDocumentProxy>();
 
   // Hook 16
@@ -215,6 +208,15 @@ export const CorpusDocumentAnnotator = ({
   const [human_span_labels, setHumanSpanLabels] = useState<
     AnnotationLabelType[]
   >([]);
+
+  const resetStates = () => {
+    setAnalysisRows([]);
+    setAnnotationObjs([]);
+    setDocTypeAnnotations([]);
+    setDocTypeLabels([]);
+    setSpanLabels([]);
+    setDataCells([]);
+  };
 
   // Reset allow inputs when the mode switches
   useEffect(() => {
@@ -555,6 +557,9 @@ export const CorpusDocumentAnnotator = ({
 
   // Effect to fetch annotations when an analysis is selected
   useEffect(() => {
+    // Clear existing state;
+    resetStates();
+
     if (selected_analysis) {
       setSelectedExtract(null); // Ensure extract is deselected
       fetchAnnotationsForAnalysis({
@@ -564,17 +569,34 @@ export const CorpusDocumentAnnotator = ({
       }).then(({ data }) => {
         // TODO - properly parse resulting annotation data
         if (data && data.analysis && data.analysis.fullAnnotationList) {
-          const processedAnnotations = data.analysis.fullAnnotationList.map(
+          const rawSpanAnnotations = data.analysis.fullAnnotationList.filter(
+            (annot) => annot.annotationLabel.labelType == LabelType.TokenLabel
+          );
+          const rawDocAnnotations = data.analysis.fullAnnotationList.filter(
+            (annot) => annot.annotationLabel.labelType == LabelType.DocTypeLabel
+          );
+
+          const processedSpanAnnotations = rawSpanAnnotations.map(
             (annotation) => convertToServerAnnotation(annotation)
           );
-          setAnnotationObjs(processedAnnotations);
+          setAnnotationObjs(processedSpanAnnotations);
 
           // Update span labels
           const uniqueLabels = _.uniqBy(
-            processedAnnotations.map((a) => a.annotationLabel),
+            processedSpanAnnotations.map((a) => a.annotationLabel),
             "id"
           );
           setSpanLabels(uniqueLabels);
+
+          const processedDocAnnotations = rawDocAnnotations.map((annotation) =>
+            convertToDocTypeAnnotation(annotation)
+          );
+          setDocTypeAnnotations(processedDocAnnotations);
+          const uniqueDocLabels = _.uniqBy(
+            processedDocAnnotations.map((a) => a.annotationLabel),
+            "id"
+          );
+          setDocTypeLabels(uniqueDocLabels);
         }
       });
     }
@@ -582,6 +604,9 @@ export const CorpusDocumentAnnotator = ({
 
   // Effect to fetch data cells when an extract is selected
   useEffect(() => {
+    // Clear existing state;
+    resetStates();
+
     if (selected_extract) {
       setSelectedAnalysis(null); // Ensure analysis is deselected
       fetchDataCellsForExtract({

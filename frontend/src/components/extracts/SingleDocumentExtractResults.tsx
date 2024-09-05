@@ -78,6 +78,7 @@ export const SingleDocumentExtractResults: React.FC<
   >(REQUEST_APPROVE_DATACELL, {
     onCompleted: (data) => {
       toast.success("Approved!");
+      console.log("Approved data", data);
       setLastCells((prevCells) =>
         prevCells.map((cell) =>
           cell.id === data.approveDatacell.obj.id
@@ -95,35 +96,16 @@ export const SingleDocumentExtractResults: React.FC<
   >(REQUEST_REJECT_DATACELL, {
     onCompleted: (data) => {
       toast.success("Rejected!");
+      console.log("Reject mutation received data", data);
       setLastCells((prevCells) =>
         prevCells.map((cell) =>
           cell.id === data.rejectDatacell.obj.id
-            ? { ...data.rejectDatacell.obj, ...cell }
+            ? { ...cell, ...data.rejectDatacell.obj }
             : cell
         )
       );
     },
     onError: () => toast.error("Could not register feedback!"),
-  });
-
-  const [requestEdit, { loading: trying_edit }] = useMutation<
-    RequestEditDatacellOutputType,
-    RequestEditDatacellInputType
-  >(REQUEST_EDIT_DATACELL, {
-    onCompleted: (data) => {
-      toast.success("Edit Saved!");
-      setLastCells((prevCells) =>
-        prevCells.map((cell) =>
-          cell.id === data.editDatacell.obj.id
-            ? { ...data.editDatacell.obj, ...cell }
-            : cell
-        )
-      );
-    },
-    onError: (error) => {
-      toast.error("Could not register feedback!");
-      setLastCells((prevCells) => [...prevCells]);
-    },
   });
 
   const renderJsonPreview = (data: Record<string, any>) => {
@@ -144,101 +126,93 @@ export const SingleDocumentExtractResults: React.FC<
     }
   };
 
+  const renderActionButtons = (cell: DatacellType) => (
+    <Button.Group size="mini" vertical>
+      <Button
+        icon="thumbs up"
+        color="green"
+        onClick={(e) => {
+          e.stopPropagation();
+          requestApprove({ variables: { datacellId: cell.id } });
+        }}
+      />
+      <Button
+        icon="thumbs down"
+        color="red"
+        onClick={(e) => {
+          e.stopPropagation();
+          requestReject({ variables: { datacellId: cell.id } });
+        }}
+      />
+    </Button.Group>
+  );
+
   return (
-    <Segment style={{ overflow: "auto", maxHeight: "100%" }}>
-      {(trying_approve || trying_edit || trying_reject) && (
-        <Dimmer active>
+    <Segment style={{ padding: 0, height: "100%", overflow: "hidden" }}>
+      <Dimmer.Dimmable
+        as={Segment}
+        dimmed={trying_approve || trying_reject}
+        style={{ height: "100%", overflow: "auto", margin: 0 }}
+      >
+        <Dimmer active={trying_approve || trying_reject}>
           <Loader>
             {trying_approve && "Approving..."}
-            {trying_edit && "Editing..."}
             {trying_reject && "Rejecting..."}
           </Loader>
         </Dimmer>
-      )}
-      <Table celled>
-        <Table.Header>
-          <Table.Row>
-            <Table.HeaderCell>Column</Table.HeaderCell>
-            <Table.HeaderCell>Data</Table.HeaderCell>
-            <Table.HeaderCell>Status</Table.HeaderCell>
-            <Table.HeaderCell>Actions</Table.HeaderCell>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {columns.map((column: ColumnType) => {
-            const cell = lastCells.find((c) => c.column.id === column.id);
-            return (
-              <Table.Row
-                key={column.id}
-                onClick={() => cell && handleRowClick(cell)}
-                onMouseEnter={() => setHoveredRow(column.id)}
-                onMouseLeave={() => setHoveredRow(null)}
-                style={{
-                  cursor: "pointer",
-                  backgroundColor:
-                    hoveredRow === column.id ? "#e6ffe6" : "inherit",
-                  transition: "background-color 0.3s ease",
-                }}
-              >
-                <Table.Cell>{column.name}</Table.Cell>
-                <Table.Cell>
-                  {cell ? renderJsonPreview(cell.data) : "-"}
-                </Table.Cell>
-                <Table.Cell>
-                  {cell ? (
-                    <>
-                      {cell.approvedBy && <Icon name="check" color="green" />}
-                      {cell.rejectedBy && <Icon name="x" color="red" />}
-                      {cell.correctedData && <Icon name="edit" color="blue" />}
-                    </>
-                  ) : (
-                    "-"
-                  )}
-                </Table.Cell>
-                <Table.Cell>
-                  {cell && (
-                    <Button.Group size="mini">
-                      <Button
-                        icon="thumbs up"
-                        color="green"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          requestApprove({
-                            variables: { datacellId: cell.id },
-                          });
-                        }}
-                      />
-                      <Button
-                        icon="thumbs down"
-                        color="red"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          requestReject({ variables: { datacellId: cell.id } });
-                        }}
-                      />
-                      <Button
-                        icon="edit"
-                        color="blue"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Note: You might want to implement an edit modal or form here
-                          // For now, we're just passing the current data
-                          requestEdit({
-                            variables: {
-                              datacellId: cell.id,
-                              editedData: cell.data,
-                            },
-                          });
-                        }}
-                      />
-                    </Button.Group>
-                  )}
-                </Table.Cell>
-              </Table.Row>
-            );
-          })}
-        </Table.Body>
-      </Table>
+        <Table compact size="small" style={{ fontSize: "0.8em" }}>
+          <Table.Header>
+            <Table.Row>
+              <Table.HeaderCell>Column</Table.HeaderCell>
+              <Table.HeaderCell>Data</Table.HeaderCell>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {columns.map((column: ColumnType) => {
+              const cell = lastCells.find((c) => c.column.id === column.id);
+              return (
+                <Table.Row
+                  key={column.id}
+                  onClick={() => cell && handleRowClick(cell)}
+                  onMouseEnter={() => setHoveredRow(column.id)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                  style={{
+                    cursor: "pointer",
+                    backgroundColor:
+                      hoveredRow === column.id ? "#e6ffe6" : "inherit",
+                    transition: "background-color 0.3s ease",
+                  }}
+                >
+                  <Table.Cell>
+                    {column.name}
+                    {cell && (
+                      <div style={{ float: "right" }}>
+                        {cell.approvedBy && <Icon name="check" color="green" />}
+                        {cell.rejectedBy && <Icon name="x" color="red" />}
+                        {cell.correctedData && (
+                          <Icon name="edit" color="blue" />
+                        )}
+                      </div>
+                    )}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      {cell ? renderJsonPreview(cell.data) : "-"}
+                      {cell && renderActionButtons(cell)}
+                    </div>
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })}
+          </Table.Body>
+        </Table>
+      </Dimmer.Dimmable>
     </Segment>
   );
 };

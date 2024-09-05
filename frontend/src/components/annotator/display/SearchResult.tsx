@@ -3,13 +3,13 @@ import styled from "styled-components";
 import _ from "lodash";
 import { PDFPageInfo, AnnotationStore } from "../context";
 import { VerticallyJustifiedEndDiv } from "../sidebar/common";
-import { LabelTagContainer } from "./LabelTagContainer";
 
 import { ResultBoundary } from "./ResultBoundary";
 import { BoundingBox, TextSearchResult } from "../../types";
 import { LabelDisplayBehavior } from "../../../graphql/types";
 import { getBorderWidthFromBounds } from "../../../utils/transform";
 import { SearchSelectionTokens } from "./SelectionTokens";
+import { LabelTagContainer } from "./Containers";
 
 interface SearchResultProps {
   total_results: number;
@@ -69,6 +69,7 @@ export const SearchResult = ({
             <SelectionInfoContainer>
               <VerticallyJustifiedEndDiv>
                 <LabelTagContainer
+                  hidden={false}
                   hovered={hovered}
                   color={color}
                   display_behavior={labelBehavior}

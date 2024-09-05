@@ -25,12 +25,9 @@ import { LabelDisplayBehavior } from "../../graphql/types";
 import { toast } from "react-toastify";
 import {
   REQUEST_APPROVE_DATACELL,
-  REQUEST_EDIT_DATACELL,
   REQUEST_REJECT_DATACELL,
   RequestApproveDatacellInputType,
   RequestApproveDatacellOutputType,
-  RequestEditDatacellInputType,
-  RequestEditDatacellOutputType,
   RequestRejectDatacellInputType,
   RequestRejectDatacellOutputType,
 } from "../../graphql/mutations";

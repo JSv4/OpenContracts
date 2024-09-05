@@ -200,9 +200,10 @@ export const AnnotatorSidebar = ({
 
       // Show annotations IF we have annotations to display OR we can create them and have a valid labelSet
       const show_annotation_pane =
-        annotations.length > 0 ||
-        (selected_corpus?.labelSet &&
-          corpus_permissions.includes(PermissionTypes.CAN_UPDATE));
+        !selected_extract &&
+        (annotations.length > 0 ||
+          (selected_corpus?.labelSet &&
+            corpus_permissions.includes(PermissionTypes.CAN_UPDATE)));
 
       if (show_annotation_pane) {
         let text_highlight_elements = [<></>];
@@ -315,9 +316,10 @@ export const AnnotatorSidebar = ({
       }
 
       const show_relation_pane =
-        relations.length > 0 ||
-        (selected_corpus?.labelSet &&
-          corpus_permissions.includes(PermissionTypes.CAN_UPDATE));
+        !selected_extract &&
+        (relations.length > 0 ||
+          (selected_corpus?.labelSet &&
+            corpus_permissions.includes(PermissionTypes.CAN_UPDATE)));
 
       if (show_relation_pane) {
         let relation_elements = [<></>];

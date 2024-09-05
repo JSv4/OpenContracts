@@ -2,7 +2,8 @@ import React, { useCallback } from "react";
 import { normalizeBounds, PDFPageInfo } from "../context";
 import { AnnotationLabelType } from "../../../graphql/types";
 import { BoundingBox } from "../../types";
-import { SelectionBoundary, SelectionTokens } from "./Selection";
+import { SelectionTokens } from "./Selection";
+import { SelectionBoundary } from "./SelectionBoundary";
 
 export const SelectionLayer = React.memo(
   ({

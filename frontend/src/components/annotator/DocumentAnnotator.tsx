@@ -57,6 +57,7 @@ import {
   editMode,
   onlyDisplayTheseAnnotations,
   pdfZoomFactor,
+  showStructuralAnnotations,
   viewStateVar,
 } from "../../graphql/cache";
 import { Header, Icon, Modal, Progress } from "semantic-ui-react";
@@ -125,6 +126,7 @@ export const DocumentAnnotator = ({
   const edit_mode = useReactiveVar(editMode);
   const allow_input = useReactiveVar(allowUserInput);
   const zoom_level = useReactiveVar(pdfZoomFactor);
+  const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
   const setZoomLevel = (zl: number) => pdfZoomFactor(zl);
 
   // Global state variables to jump to and/or load certain annotations on load
@@ -739,6 +741,7 @@ export const DocumentAnnotator = ({
               scrollToAnnotation &&
               convertToServerAnnotation(scrollToAnnotation)
             }
+            show_structural_annotations={show_structural_annotations}
             show_selected_annotation_only={show_selected_annotation_only}
             show_annotation_bounding_boxes={show_annotation_bounding_boxes}
             show_annotation_labels={show_annotation_labels}

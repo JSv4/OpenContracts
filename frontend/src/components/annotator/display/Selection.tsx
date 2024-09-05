@@ -6,7 +6,7 @@ import React, {
   SyntheticEvent,
   useRef,
 } from "react";
-import styled, { ThemeProps } from "styled-components";
+import styled from "styled-components";
 import _ from "lodash";
 import uniqueId from "lodash/uniqueId";
 
@@ -27,7 +27,6 @@ import {
   ServerAnnotation,
 } from "../context";
 import {
-  HorizontallyJustifiedEndDiv,
   HorizontallyJustifiedStartDiv,
   VerticallyJustifiedEndDiv,
 } from "../sidebar/common";
@@ -35,183 +34,15 @@ import {
   annotationSelectedViaRelationship,
   getRelationImageHref,
 } from "../utils";
-import { BoundingBox, PermissionTypes } from "../../types";
+import { PermissionTypes } from "../../types";
+import { LabelDisplayBehavior } from "../../../graphql/types";
+import { SelectionBoundary } from "./SelectionBoundary";
 import {
-  LabelDisplayBehavior,
-  ServerAnnotationType,
-} from "../../../graphql/types";
-
-function hexToRgb(hex: string) {
-  // For shortsighted reasons, the color stored is missing #. Check first to see if number is missing hex, if so
-  // add it and THEN run the
-  try {
-    let color_str = hex.substring(0, 1) !== "#" ? "#" + hex : hex;
-
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color_str);
-    if (!result) {
-      throw new Error("Unable to parse color.");
-    }
-    return {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16),
-    };
-  } catch {
-    return {
-      r: 255,
-      g: 255,
-      b: 0,
-    };
-  }
-}
-
-function getBorderWidthFromBounds(bounds: BoundingBox): number {
-  //
-  const width = bounds.right - bounds.left;
-  const height = bounds.bottom - bounds.top;
-  if (width < 100 || height < 100) {
-    return 1;
-  } else {
-    return 3;
-  }
-}
-
-interface SelectionBoundaryProps {
-  id?: string;
-  hidden: boolean;
-  showBoundingBox?: boolean;
-  scrollIntoView?: boolean;
-  selectionRef?:
-    | React.MutableRefObject<Record<string, HTMLElement | null>>
-    | undefined;
-  color: string;
-  bounds: BoundingBox;
-  selected: boolean;
-  children?: React.ReactNode;
-  annotationId?: string;
-  onHover?: (hovered: boolean) => void;
-  onClick?: () => void;
-  setJumpedToAnnotationOnLoad?: (annot_id: string) => null | void;
-}
-
-export const SelectionBoundary = ({
-  id,
-  hidden,
-  showBoundingBox,
-  scrollIntoView,
-  selectionRef,
-  color,
-  bounds,
-  children,
-  onHover,
-  onClick,
-  setJumpedToAnnotationOnLoad,
-  selected,
-}: SelectionBoundaryProps) => {
-  const width = bounds.right - bounds.left;
-  const height = bounds.bottom - bounds.top;
-  const rotateY = width < 0 ? -180 : 0;
-  const rotateX = height < 0 ? -180 : 0;
-  let rgbColor = hexToRgb(color);
-  let opacity = 0.1;
-  const border = getBorderWidthFromBounds(bounds);
-
-  if (!showBoundingBox || hidden) {
-    rgbColor = {
-      r: 255,
-      g: 255,
-      b: 255,
-    };
-    opacity = 0.0;
-  } else {
-    if (selected) {
-      opacity = 0.4;
-    }
-  }
-
-  const createRefAndScrollIfPreSelected = (element: HTMLSpanElement | null) => {
-    // console.log(`createRefAndScrollIfPreSelected - id ${id} check for element and ref`);
-
-    if (element && selectionRef && id) {
-      // console.log(`createRefAndScrollIfPreSelected - id ${id} has required values \n scrollIntoView ${scrollIntoView} \n handledScroll ${handledScroll}`);
-
-      // Link this annotation boundary to the annotation id in our mutatable ref that holds our annotation refs.
-      selectionRef.current[id] = element;
-
-      //if requested, scroll to Selection on render
-      if (scrollIntoView) {
-        // Guidance on getting a proper offset here (thanks, SO):
-        // https://stackoverflow.com/questions/49820013/javascript-scrollintoview-smooth-scroll-and-offset
-        element.scrollIntoView({
-          behavior: "auto" /*or smooth*/,
-          block: "center",
-        });
-
-        // As noted elsewhere, there are several layers of states in this Annotator due to preservation
-        // of the PAWLS application's context. Probably a better way to handle this on a more extensive
-        // redesign, but what we're doing here is using a method to update state on parent
-        // Annotator to log that this Selection with its annotation id was mostly recently "jumped" to.
-        // This is used to help determine if an annotation a user wanted to open the <Annotator/> directly to
-        // is still loading or was in fact displayed. This is then used to update query vars.
-        if (setJumpedToAnnotationOnLoad) {
-          setJumpedToAnnotationOnLoad(id);
-        }
-      }
-    }
-  };
-
-  // Some guidance on refs here: https://stackoverflow.com/questions/61489857/why-i-cant-call-useref-inside-callback
-  return (
-    <span
-      id={`SELECTION_${id}`}
-      ref={createRefAndScrollIfPreSelected}
-      onClick={(e) => {
-        // Here we are preventing the default PdfAnnotationsContainer
-        // behaviour of drawing a new bounding box if the shift key
-        // is pressed in order to allow users to select multiple
-        // annotations and associate them together with a relation.
-        if (e.shiftKey && onClick) {
-          e.stopPropagation();
-          onClick();
-        }
-      }}
-      onMouseDown={(e) => {
-        if (e.shiftKey && onClick) {
-          e.stopPropagation();
-        }
-      }}
-      onMouseEnter={
-        onHover && !hidden
-          ? (e) => {
-              // Don't show on hover if component is set to hidden
-              onHover(true);
-            }
-          : () => {}
-      }
-      onMouseLeave={
-        onHover && !hidden
-          ? (e) => {
-              // Don't show on hover if component is set to hidden
-              onHover(false);
-            }
-          : () => {}
-      }
-      style={{
-        position: "absolute",
-        left: `${bounds.left}px`,
-        top: `${bounds.top}px`,
-        width: `${Math.abs(width)}px`,
-        height: `${Math.abs(height)}px`,
-        transform: `rotateY(${rotateY}deg) rotateX(${rotateX}deg)`,
-        transformOrigin: "top left",
-        border: `${showBoundingBox && !hidden ? border : 0}px solid ${color}`,
-        background: `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, ${opacity})`,
-      }}
-    >
-      {children || null}
-    </span>
-  );
-};
+  LabelTagContainer,
+  SelectionInfo,
+  SelectionInfoContainer,
+} from "./Containers";
+import { getBorderWidthFromBounds } from "../../../utils/transform";
 
 interface TokenSpanProps {
   id?: string;
@@ -477,36 +308,7 @@ interface SelectionProps {
   setJumpedToAnnotationOnLoad: (annot: string) => null | void;
 }
 
-export const LabelTagContainer = ({
-  hovered,
-  hidden,
-  color,
-  display_behavior,
-  children,
-}: {
-  hovered: boolean;
-  hidden: boolean;
-  color?: string;
-  display_behavior?: LabelDisplayBehavior;
-  children: React.ReactNode;
-}) => {
-  let display = !hidden;
-  if (display) {
-    if (display_behavior === LabelDisplayBehavior.HIDE) {
-      display = false;
-    } else if (display_behavior === LabelDisplayBehavior.ON_HOVER) {
-      display = hovered;
-    }
-  }
-
-  return (
-    <HorizontallyJustifiedEndDiv color={color} hidden={!display}>
-      {children}
-    </HorizontallyJustifiedEndDiv>
-  );
-};
-
-export const Selection = ({
+export const Selection: React.FC<SelectionProps> = ({
   selectionRef,
   showBoundingBox,
   hidden,
@@ -517,23 +319,14 @@ export const Selection = ({
   children,
   showInfo = true,
   setJumpedToAnnotationOnLoad,
-}: SelectionProps) => {
-  const label = annotation.annotationLabel;
-
+}) => {
   const [hovered, setHovered] = useState(false);
   const [isEditLabelModalVisible, setIsEditLabelModalVisible] = useState(false);
 
   const annotationStore = useContext(AnnotationStore);
+  const label = annotation.annotationLabel;
+  const color = label?.color || "#616a6b"; // grey as the default
 
-  let color;
-  if (!label || !label.color) {
-    color = "#616a6b"; // grey as the default.
-  } else {
-    color = label.color;
-  }
-
-  //console.log("Try to get page scaled selection bounds", annotation.json[pageInfo.page.pageNumber - 1].bounds);
-  //console.log("pageInfo obj", pageInfo);
   const bounds = pageInfo.getScaledBounds(
     annotation.json[pageInfo.page.pageNumber - 1].bounds
   );
@@ -545,24 +338,17 @@ export const Selection = ({
 
   const onShiftClick = () => {
     const current = annotationStore.selectedAnnotations.slice(0);
-
-    // Current contains this annotation, so we remove it.
     if (current.some((other) => other === annotation.id)) {
       const next = current.filter((other) => other !== annotation.id);
       annotationStore.setSelectedAnnotations(next);
-      // Otherwise we add it.
     } else {
       current.push(annotation.id);
       annotationStore.setSelectedAnnotations(current);
     }
   };
 
-  const selected = Boolean(
-    annotationStore.selectedAnnotations.includes(annotation.id)
-  );
+  const selected = annotationStore.selectedAnnotations.includes(annotation.id);
 
-  // console.log("Annotation selected", selected, annotation);
-  // annotationStore.selectedAnnotations.includes(annotation);
   let relationship_type = "";
   if (selected && annotationStore.selectedRelations.length > 0) {
     relationship_type = annotationSelectedViaRelationship(
@@ -571,7 +357,6 @@ export const Selection = ({
       annotationStore.selectedRelations[0]
     );
   }
-  // console.log("Relationship type", relationship_type);
 
   return (
     <>
@@ -588,7 +373,7 @@ export const Selection = ({
         setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
         selected={selected}
       >
-        {showInfo && !annotationStore.hideLabels ? (
+        {showInfo && !annotationStore.hideLabels && (
           <SelectionInfo
             bounds={bounds}
             className={`selection_${annotation.id}`}
@@ -632,54 +417,52 @@ export const Selection = ({
                   </div>
                   {annotation.myPermissions.includes(
                     PermissionTypes.CAN_UPDATE
-                  ) && !annotation.annotationLabel.readonly ? (
-                    <Icon
-                      style={{
-                        marginLeft: ".25rem",
-                        marginRight: ".125rem",
-                        cursor: "pointer",
-                      }}
-                      name="pencil"
-                      onClick={(e: SyntheticEvent) => {
-                        e.stopPropagation();
-                        setIsEditLabelModalVisible(true);
-                      }}
-                      onMouseDown={(e: SyntheticEvent) => {
-                        e.stopPropagation();
-                      }}
-                    />
-                  ) : (
-                    <></>
-                  )}
+                  ) &&
+                    !annotation.annotationLabel.readonly && (
+                      <Icon
+                        style={{
+                          marginLeft: ".25rem",
+                          marginRight: ".125rem",
+                          cursor: "pointer",
+                        }}
+                        name="pencil"
+                        onClick={(e: React.SyntheticEvent) => {
+                          e.stopPropagation();
+                          setIsEditLabelModalVisible(true);
+                        }}
+                        onMouseDown={(e: React.SyntheticEvent) => {
+                          e.stopPropagation();
+                        }}
+                      />
+                    )}
                   {annotation.myPermissions.includes(
                     PermissionTypes.CAN_REMOVE
-                  ) && !annotation.annotationLabel.readonly ? (
-                    <Icon
-                      style={{
-                        marginLeft: ".125rem",
-                        marginRight: ".25rem",
-                        cursor: "pointer",
-                      }}
-                      name="trash alternate outline"
-                      onClick={(e: SyntheticEvent) => {
-                        e.stopPropagation();
-                        removeAnnotation();
-                      }}
-                      // We have to prevent the default behaviour for
-                      // the pdf canvas here, in order to be able to capture
-                      // the click event.
-                      onMouseDown={(e: SyntheticEvent) => {
-                        e.stopPropagation();
-                      }}
-                    />
-                  ) : (
-                    <></>
-                  )}
+                  ) &&
+                    !annotation.annotationLabel.readonly && (
+                      <Icon
+                        style={{
+                          marginLeft: ".125rem",
+                          marginRight: ".25rem",
+                          cursor: "pointer",
+                        }}
+                        name="trash alternate outline"
+                        onClick={(e: React.SyntheticEvent) => {
+                          e.stopPropagation();
+                          removeAnnotation();
+                        }}
+                        // We have to prevent the default behaviour for
+                        // the pdf canvas here, in order to be able to capture
+                        // the click event.
+                        onMouseDown={(e: React.SyntheticEvent) => {
+                          e.stopPropagation();
+                        }}
+                      />
+                    )}
                 </LabelTagContainer>
               </VerticallyJustifiedEndDiv>
             </SelectionInfoContainer>
           </SelectionInfo>
-        ) : null}
+        )}
         <div
           style={{
             width: "100%",
@@ -698,7 +481,7 @@ export const Selection = ({
         // to be relative to that and not another absolute/relatively
         // positioned element. This is why SelectionTokens are not inside
         // SelectionBoundary.
-        annotation.json[pageInfo.page.pageNumber - 1].tokensJsons ? (
+        annotation.json[pageInfo.page.pageNumber - 1].tokensJsons && (
           <SelectionTokens
             id={`SELECTION_TOKEN_${annotation.id}`}
             color={annotation.annotationLabel.color}
@@ -707,64 +490,15 @@ export const Selection = ({
             pageInfo={pageInfo}
             tokens={annotation.json[pageInfo.page.pageNumber - 1].tokensJsons}
           />
-        ) : null
+        )
       }
-      {isEditLabelModalVisible ? (
+      {isEditLabelModalVisible && (
         <EditLabelModal
           annotation={annotation}
           visible={isEditLabelModalVisible}
           onHide={() => setIsEditLabelModalVisible(false)}
         />
-      ) : null}
+      )}
     </>
   );
 };
-
-// We use transform here because we need to translate the label upward
-// to sit on top of the bounds as a function of *its own* height,
-// not the height of it's parent.
-interface SelectionInfoProps {
-  border: number;
-  bounds: BoundingBox;
-  color: string;
-  showBoundingBox: boolean;
-}
-const SelectionInfo = styled.div<SelectionInfoProps>(
-  ({ border, bounds, color, showBoundingBox }) => {
-    if (showBoundingBox) {
-      return `
-      position: absolute;
-      width: ${bounds.right - bounds.left}px;
-      right: -${border}px;
-      transform:translateY(-100%);
-      border: ${border} solid  ${color};
-      background: ${color};
-      font-weight: bold;
-      font-size: 12px;
-      user-select: none;
-      * {
-          vertical-align: middle;
-      }`;
-    } else {
-      return `
-      position: absolute;
-      width: ${bounds.right - bounds.left}px;
-      right: -${border}px;
-      transform:translateY(-100%);
-      border: ${border} solid ${color} transparent;
-      background: rgba(255, 255, 255, 0.0);
-      font-weight: bold;
-      font-size: 12px;
-      user-select: none;
-      * {
-          vertical-align: middle;
-      }`;
-    }
-  }
-);
-
-const SelectionInfoContainer = styled.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-`;

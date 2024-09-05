@@ -91,6 +91,7 @@ interface AnnotatorRendererProps {
   selectedAnnotation?: ServerAnnotation[];
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
+  show_structural_annotations: boolean;
   show_annotation_labels: LabelDisplayBehavior;
   span_labels: AnnotationLabelType[];
   human_span_labels: AnnotationLabelType[];
@@ -138,6 +139,7 @@ export const AnnotatorRenderer = ({
   selectedAnnotation,
   show_selected_annotation_only,
   show_annotation_bounding_boxes,
+  show_structural_annotations,
   show_annotation_labels,
   span_labels: span_label_lookup,
   human_span_labels: human_span_label_lookup,
@@ -228,19 +230,6 @@ export const AnnotatorRenderer = ({
   useEffect(() => {
     setPdfAnnotations(memoizedPdfAnnotations);
   }, [memoizedPdfAnnotations]);
-
-  // useEffect(() => {
-  //   setPdfAnnotations(
-  //     new PdfAnnotations(
-  //       [
-  //         ...annotation_objs,
-  //         ...(structural_annotations ? structural_annotations : []),
-  //       ],
-  //       relationship_annotations,
-  //       doc_type_annotations
-  //     )
-  //   );
-  // }, [annotation_objs, relationship_annotations, doc_type_annotations]);
 
   useEffect(() => {
     window.addEventListener("keyup", handleKeyUpPress);
@@ -906,6 +895,7 @@ export const AnnotatorRenderer = ({
       pdfAnnotations={pdfAnnotations}
       textSearchElementRefs={textSearchElementRefs}
       preAssignedSelectionElementRefs={annotationElementRefs}
+      show_structural_annotations={show_structural_annotations}
       show_selected_annotation_only={show_selected_annotation_only}
       show_annotation_bounding_boxes={show_annotation_bounding_boxes}
       show_annotation_labels={show_annotation_labels}

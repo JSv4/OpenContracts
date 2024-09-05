@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import styled from "styled-components";
 
@@ -48,6 +48,7 @@ import { LabelSelector } from "../labels/label_selector/LabelSelector";
 import { Dimmer, Loader } from "semantic-ui-react";
 import { Menu } from "semantic-ui-react";
 import { PDFActionBar } from "../display/ActionBar";
+import { showStructuralAnnotations } from "../../../graphql/cache";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -120,6 +121,7 @@ export const PDFView = ({
   show_selected_annotation_only,
   show_annotation_bounding_boxes,
   show_annotation_labels,
+  show_structural_annotations,
   page_token_text_maps,
   doc_text,
   doc,
@@ -179,6 +181,7 @@ export const PDFView = ({
   setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
+  show_structural_annotations: boolean;
   show_annotation_labels: LabelDisplayBehavior;
   page_token_text_maps: Record<number, TokenId>;
   doc_text: string;
@@ -231,7 +234,6 @@ export const PDFView = ({
     Record<number, PDFPageInfo>
   >([]);
 
-  const [showStructuralLabels, setShowStructuralLabels] = useState(true);
   const [activeSpanLabel, setActiveSpanLabel] = useState<
     AnnotationLabelType | undefined
   >(humanSpanLabelChoices.length > 0 ? humanSpanLabelChoices[0] : undefined);
@@ -669,11 +671,11 @@ export const PDFView = ({
             addLabelsToView: addSpanLabelsToViewSelection,
             removeLabelsToView: removeSpanLabelsToViewSelection,
             setActiveLabel: setActiveSpanLabel,
-            showStructuralLabels: showStructuralLabels,
+            showStructuralLabels: show_structural_annotations,
             setViewLabels: (ls: AnnotationLabelType[]) =>
               setSpanLabelsToView(ls),
             toggleShowStructuralLabels: () =>
-              setShowStructuralLabels((oldVal) => !oldVal),
+              showStructuralAnnotations(!show_structural_annotations),
             relationLabels,
             activeRelationLabel,
             setActiveRelationLabel,

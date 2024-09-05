@@ -11,8 +11,9 @@ import { getPageBoundsFromCanvas } from "../../../utils/transform";
 import { PageProps, BoundingBox, PermissionTypes } from "../../types";
 import { AnnotationStore, normalizeBounds, PDFStore } from "../context";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
-import { Selection, SelectionBoundary, SelectionTokens } from "./Selection";
+import { Selection, SelectionTokens } from "./Selection";
 import { SearchResult } from "./SearchResult";
+import { SelectionBoundary } from "./SelectionBoundary";
 
 export const Page = ({
   pageInfo,
@@ -187,13 +188,7 @@ export const Page = ({
       rendererRef.current.rescaleAndRender(pdfStore.zoomLevel);
       setScale(pdfStore.zoomLevel);
     }
-  }, [
-    pageInfo,
-    onError,
-    hasPdfPageRendered,
-    annotationStore,
-    pdfStore.zoomLevel,
-  ]);
+  }, [pageInfo, onError, hasPdfPageRendered, pdfStore.zoomLevel]);
 
   useEffect(() => {
     pageInfo.scale = pdfStore.zoomLevel;

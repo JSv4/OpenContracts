@@ -3,7 +3,7 @@ import _ from "lodash";
 import uniqueId from "lodash/uniqueId";
 
 import { TokenId, PDFPageInfo } from "../context";
-import { TokenSpan } from "./TokenSpan";
+import { TokenSpan } from "./Tokens";
 
 interface SearchSelectionTokenProps {
   color?: string;

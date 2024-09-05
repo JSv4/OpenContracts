@@ -25,6 +25,8 @@ export const LabelSelectorDialog = ({
   labels,
   onSelect,
 }: DocTypePopupProps) => {
+  console.log("LabelSelectorDialog - labels", labels);
+
   const [selectedLabel, selectLabel] = useState<AnnotationLabelType>();
   const [searchString, setSearchString] = useState("");
 
@@ -59,7 +61,7 @@ export const LabelSelectorDialog = ({
   }
 
   return (
-    <LabelSelectorDialogContainer>
+    <LabelSelectorDialogContainer className="LabelSelectorDialogContainer">
       <Segment
         secondary
         style={{ border: "0px", width: "100%", padding: "0px", margin: "0px" }}

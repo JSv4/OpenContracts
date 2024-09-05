@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { Divider, Header, Segment, Popup, Icon } from "semantic-ui-react";
 
 import styled, { ThemeContext } from "styled-components";
@@ -34,6 +34,7 @@ export const LabelSelector = ({ sidebarWidth }: LabelSelectorProps) => {
   // labels used by an analyzer (at least not for now), so we need to track that
   // list separately.
   const human_label_choices = annotationStore.humanSpanLabelChoices;
+  console.log("LabelSelector - human_label_choices", human_label_choices);
   const active_label = annotationStore.activeSpanLabel;
 
   const [open, setOpen] = useState(false);
@@ -44,6 +45,10 @@ export const LabelSelector = ({ sidebarWidth }: LabelSelectorProps) => {
     }, 500)
   );
 
+  useEffect(() => {
+    console.log("Should open label selector");
+  }, [open]);
+
   const onSelect = (label: AnnotationLabelType): void => {
     annotationStore.setActiveLabel(label);
   };
@@ -52,6 +57,8 @@ export const LabelSelector = ({ sidebarWidth }: LabelSelectorProps) => {
   let filtered_label_choices = active_label
     ? human_label_choices.filter((obj) => obj.id !== active_label.id)
     : human_label_choices;
+
+  console.log("Filtered label choices: ", filtered_label_choices);
 
   return (
     <Popup
@@ -112,7 +119,9 @@ export const LabelSelector = ({ sidebarWidth }: LabelSelectorProps) => {
           </div>
         </LabelSelectorWidgetContainer>
       }
+      style={{ zIndex: 9999 }}
     >
+      {console.log("Popup content is rendering")}
       <LabelSelectorDialog
         labels={filtered_label_choices}
         onSelect={onSelect}

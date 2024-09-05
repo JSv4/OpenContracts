@@ -720,19 +720,21 @@ export const PDFView = ({
           >
             {!read_only &&
             allowInput &&
-            editMode !== "ANALYZE" &&
+            !selected_analysis &&
             corpus_permissions.includes(PermissionTypes.CAN_UPDATE) ? (
               <LabelSelector sidebarWidth={responsive_sidebar_width} />
             ) : (
               <></>
             )}
-            {(!read_only ||
+            {(!selected_extract ||
               pdfAnnotations.annotations.filter(
                 (annot) =>
                   annot.annotationLabel.labelType === LabelType.DocTypeLabel
               ).length > 0) && (
               <DocTypeLabelDisplay
                 read_only={
+                  Boolean(selected_analysis) ||
+                  Boolean(selected_extract) ||
                   read_only ||
                   !corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
                 }

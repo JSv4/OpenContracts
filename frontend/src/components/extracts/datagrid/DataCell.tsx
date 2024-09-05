@@ -15,6 +15,7 @@ import {
   showAnnotationBoundingBoxes,
   showAnnotationLabels,
   showSelectedAnnotationOnly,
+  showStructuralAnnotations,
 } from "../../../graphql/cache";
 import _ from "lodash";
 import { useReactiveVar } from "@apollo/client";
@@ -71,10 +72,6 @@ export const ExtractDatacell = ({
   const only_display_these_annotations = useReactiveVar(
     onlyDisplayTheseAnnotations
   );
-  const display_annotation_on_annotator_load = useReactiveVar(
-    displayAnnotationOnAnnotatorLoad
-  );
-  const selected_annotation = useReactiveVar(selectedAnnotation);
 
   useEffect(() => {
     console.log("DataCell - viewSourceAnnotations", viewSourceAnnotations);
@@ -83,6 +80,7 @@ export const ExtractDatacell = ({
       // Want to make sure that we see all annotatations *clearly*
       showSelectedAnnotationOnly(false);
       showAnnotationBoundingBoxes(true);
+      showStructuralAnnotations(true);
       showAnnotationLabels(LabelDisplayBehavior.ALWAYS);
     }
   }, [viewSourceAnnotations]);

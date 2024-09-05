@@ -1,45 +1,67 @@
 import React, { useContext, useRef, useState } from "react";
-import {
-  Button,
-  ButtonGroup,
-  ButtonOr,
-  Dropdown,
-  Form,
-  Icon,
-} from "semantic-ui-react";
-import { ZoomIn, ZoomOut } from "lucide-react";
+import { Form, Icon, Popup, Menu, SemanticICONS } from "semantic-ui-react";
+import { Search, X } from "lucide-react";
 import styled from "styled-components";
 import _ from "lodash";
 import { AnnotationStore } from "../context"; // Adjust the import path as needed
+import { ZoomButtonGroup } from "../../widgets/buttons/ZoomButtonGroup";
 
 const ActionBar = styled.div`
-  padding: 10px;
-  background-color: #f0f0f0;
+  padding: 12px 16px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 `;
 
 const StyledMenu = styled.div`
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  gap: 16px;
 `;
 
-const LeftGroup = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
+const StyledSearchInput = styled(Form.Input)`
+  width: 50%;
+  max-width: 400px;
 
-const RightGroup = styled.div`
-  display: flex;
-  align-items: center;
-  padding-left: 1rem;
+  .ui.input {
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  input {
+    border: none !important;
+    padding-left: 40px !important;
+    padding-right: 40px !important;
+  }
+
+  i.icon {
+    height: 100%;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  i.icon:first-child {
+    left: 10px !important;
+  }
+
+  i.icon:last-child {
+    right: 10px !important;
+  }
 `;
 
 interface PDFActionBarProps {
   zoom: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
-  actionItems: { key: string; text: string; value: string }[];
+  actionItems: {
+    key: string;
+    text: string;
+    value: string;
+    icon?: SemanticICONS;
+  }[];
   onActionSelect?: (value: string) => void;
 }
 
@@ -51,6 +73,7 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   onActionSelect,
 }) => {
   const annotationStore = useContext(AnnotationStore);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   const {
     textSearchMatches,
@@ -71,7 +94,7 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   const debouncedDocSearch = useRef(
     _.debounce((searchTerm: string) => {
       searchForText(searchTerm);
-    }, 1000)
+    }, 300)
   );
 
   const clearSearch = () => {
@@ -79,52 +102,80 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
     searchForText("");
   };
 
+  const handleActionClick = () => {
+    setIsPopupOpen(!isPopupOpen);
+  };
+
+  const handleMenuItemClick = (value: string) => {
+    onActionSelect && onActionSelect(value);
+    setIsPopupOpen(false);
+  };
+
+  const actionMenu = (
+    <Menu vertical>
+      {actionItems.map((item) => (
+        <Menu.Item
+          key={item.key}
+          onClick={() => handleMenuItemClick(item.value)}
+        >
+          {item.icon && <Icon name={item.icon} />}
+          {item.text}
+        </Menu.Item>
+      ))}
+    </Menu>
+  );
+
   return (
     <ActionBar>
       <StyledMenu>
-        <LeftGroup>
-          <ButtonGroup>
-            <Button icon onClick={onZoomOut}>
-              <ZoomOut />
-            </Button>
-            <ButtonOr text={zoom.toFixed(1)} />
-            <Button icon onClick={onZoomIn}>
-              <ZoomIn />
-            </Button>
-          </ButtonGroup>
-          <Form>
-            <Form.Input
-              iconPosition="left"
-              icon={
-                <Icon
-                  name={searchText ? "cancel" : "search"}
-                  link
-                  onClick={searchText ? () => clearSearch() : () => {}}
-                />
-              }
-              placeholder="Search document..."
-              onChange={(e, data) => handleDocSearchChange(data.value)}
-              value={docSearchCache}
-              style={textSearchMatches.length > 0 ? { color: "green" } : {}}
+        <Popup
+          trigger={
+            <ZoomButtonGroup
+              onZoomOut={onZoomOut}
+              onZoomIn={onZoomIn}
+              zoomLevel={zoom}
+              onActionClick={handleActionClick}
             />
-          </Form>
-        </LeftGroup>
-        <RightGroup>
-          <Dropdown
-            button
-            className="icon"
-            floating
-            labeled
-            icon="tasks"
-            options={actionItems}
-            search
-            text="Actions"
-            onChange={(e, data) =>
-              onActionSelect && onActionSelect(data.value as string)
-            }
-            style={{ paddingRight: "5rem" }}
-          />
-        </RightGroup>
+          }
+          style={{ zIndex: 9999999 }}
+          content={actionMenu}
+          on="click"
+          position="bottom right"
+          open={isPopupOpen}
+          onClose={() => setIsPopupOpen(false)}
+          onOpen={() => setIsPopupOpen(true)}
+        />
+        <StyledSearchInput
+          icon={
+            searchText ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon as={X} link onClick={clearSearch} />
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon as={Search} />
+              </div>
+            )
+          }
+          iconPosition="left"
+          placeholder="Search document..."
+          onChange={(e: any, data: { value: string }) =>
+            handleDocSearchChange(data.value)
+          }
+          value={docSearchCache}
+        />
       </StyledMenu>
     </ActionBar>
   );

@@ -1,147 +1,170 @@
-import { Icon, Label, Button, Popup } from "semantic-ui-react";
-
+import React, { useContext } from "react";
+import { Label, Button, Popup, Icon, SemanticICONS } from "semantic-ui-react";
 import styled from "styled-components";
-
+import { Trash2, ArrowRight, ArrowLeft } from "lucide-react";
 import { HorizontallyJustifiedDiv } from "./common";
-import _ from "lodash";
-import { AnnotationStore, RelationGroup, ServerAnnotation } from "../context";
-
-import "./AnnotatorSidebar.css";
-import { useContext } from "react";
-import { getPermissions } from "../../../utils/transform";
+import { AnnotationStore, ServerAnnotation } from "../context";
 import { PermissionTypes } from "../../types";
 
-interface HasColor {
-  color: string;
+interface HighlightContainerProps {
+  color?: string;
+  selected?: boolean;
 }
 
-export const HighlightContainer = styled.div<HasColor>(
-  ({ theme, color }) => `
-    border: 2px solid ${color};
-    user-select: none;
-    -ms-user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    padding: 1.00rem;
-`
-);
+const HighlightContainer = styled.div<HighlightContainerProps>`
+  border-left: 4px solid ${(props) => props.color || "gray"};
+  background-color: ${(props) =>
+    props.selected ? "rgba(46, 204, 113, 0.1)" : "white"};
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
 
-export const HighlightItem = ({
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+`;
+
+const AnnotationLabel = styled(Label)`
+  &&& {
+    background-color: ${(props) => props.color || "grey"};
+    color: white;
+    margin: 0 0.5rem 0.5rem 0;
+    padding: 0.5em 0.8em;
+    font-weight: 600;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+  }
+`;
+
+const DeleteButton = styled(Button)`
+  &&& {
+    padding: 0.5em;
+    margin-left: 0.5rem;
+    background-color: transparent;
+    color: #e74c3c;
+    &:hover {
+      background-color: #e74c3c;
+      color: white;
+    }
+  }
+`;
+
+const BlockQuote = styled.blockquote`
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background-color: #f8f8f8;
+  border-left: 3px solid #ddd;
+  font-style: italic;
+  color: #555;
+`;
+
+const RelationshipLabel = styled(Label)`
+  &&& {
+    margin-top: 0.5rem;
+    font-size: 0.8em;
+    padding: 0.4em 0.8em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+  }
+`;
+
+const LocationText = styled.div`
+  font-size: 0.8em;
+  color: #888;
+  margin-top: 0.5rem;
+`;
+
+interface HighlightItemProps {
+  annotation: ServerAnnotation;
+  className?: string;
+  read_only: boolean;
+  relations: Array<{ sourceIds: string[]; targetIds: string[] }>;
+  onDelete?: (annotationId: string) => void;
+  onSelect: (annotationId: string) => void;
+}
+
+export const HighlightItem: React.FC<HighlightItemProps> = ({
   annotation,
   className,
   read_only,
   relations,
   onDelete,
   onSelect,
-}: {
-  annotation: ServerAnnotation;
-  className?: string;
-  read_only: boolean;
-  relations: RelationGroup[];
-  onDelete?: (annotationId: string) => void;
-  onSelect: (annotationId: string) => void;
 }) => {
   const annotationStore = useContext(AnnotationStore);
   const selected = annotationStore.selectedAnnotations.includes(annotation.id);
 
-  // if (selected)
-  //   console.log("Selected!", annotation);
-
-  let my_output_relationships = relations.filter((relation) =>
+  const my_output_relationships = relations.filter((relation) =>
     relation.sourceIds.includes(annotation.id)
   );
-  let my_input_relationships = relations.filter((relation) =>
+  const my_input_relationships = relations.filter((relation) =>
     relation.targetIds.includes(annotation.id)
   );
 
-  let prepared_className = "sidebar__annotation";
-  if (className) {
-    prepared_className =
-      prepared_className + ` sidebar__annotation_${className}`;
-  }
-
-  // console.log("Highlight item", annotation);
-
   return (
     <HighlightContainer
-      color={
-        annotation?.annotationLabel?.color
-          ? annotation.annotationLabel.color
-          : "gray"
-      }
-      key={annotation.id}
-      className={prepared_className}
+      color={annotation?.annotationLabel?.color}
+      selected={selected}
+      className={`sidebar__annotation ${className || ""}`}
       onClick={() => {
-        console.log("Highlight", annotation.id);
         annotationStore.selectionElementRefs?.current[
           annotation.id
         ]?.scrollIntoView();
         onSelect(annotation.id);
       }}
-      style={{
-        background: selected ? "green" : "none",
-      }}
     >
       <div>
-        <div>
-          <Label
-            style={{
-              display: "inline-block",
-              margin: "0.25rem 0.25rem 0.25rem 0",
-              color: annotation.annotationLabel.color || "grey",
-            }}
-          >
-            {annotation.annotationLabel.icon && (
-              <Icon name={annotation.annotationLabel.icon} />
-            )}
-            <strong>{annotation.annotationLabel.text}</strong>
-          </Label>
-          {!read_only &&
+        <AnnotationLabel color={annotation.annotationLabel.color}>
+          {annotation.annotationLabel.icon && (
+            <Icon name={annotation.annotationLabel.icon} />
+          )}
+          {annotation.annotationLabel.text}
+        </AnnotationLabel>
+        {!read_only &&
           annotation.myPermissions.includes(PermissionTypes.CAN_REMOVE) &&
-          onDelete ? (
-            <Button
-              circular
-              icon="trash"
+          onDelete && (
+            <DeleteButton
+              icon={<Trash2 size={16} />}
               size="mini"
-              floated="right"
-              color="red"
-              onClick={(e) => {
+              circular
+              onClick={(e: { stopPropagation: () => void }) => {
                 e.stopPropagation();
                 onDelete(annotation.id);
               }}
             />
-          ) : (
-            <></>
           )}
-          {annotation?.rawText ? (
-            <Popup
-              content={annotation.rawText}
-              trigger={
-                <blockquote style={{ marginTop: "0.5rem" }}>
-                  {`${annotation.rawText.slice(0, 90).trim()}…`}
-                </blockquote>
-              }
-            />
-          ) : null}
-        </div>
-        <HorizontallyJustifiedDiv>
-          {my_output_relationships.length > 0 ? (
-            <Label pointing="right">
-              Points To {my_output_relationships.length}
-            </Label>
-          ) : (
-            <></>
-          )}
-          {my_input_relationships.length > 0 ? (
-            <Label color="green" pointing="left">
-              {my_input_relationships.length} Referencing
-            </Label>
-          ) : (
-            <></>
-          )}
-          <div className="highlight__location">Page {annotation.page}</div>
-        </HorizontallyJustifiedDiv>
       </div>
+      {annotation?.rawText && (
+        <Popup
+          content={annotation.rawText}
+          trigger={
+            <BlockQuote>
+              {`${annotation.rawText.slice(0, 90).trim()}…`}
+            </BlockQuote>
+          }
+        />
+      )}
+      <HorizontallyJustifiedDiv>
+        {my_output_relationships.length > 0 && (
+          <RelationshipLabel pointing="right" basic color="blue">
+            <ArrowRight size={14} />
+            Points To {my_output_relationships.length}
+          </RelationshipLabel>
+        )}
+        {my_input_relationships.length > 0 && (
+          <RelationshipLabel pointing="left" basic color="green">
+            <ArrowLeft size={14} />
+            {my_input_relationships.length} Referencing
+          </RelationshipLabel>
+        )}
+      </HorizontallyJustifiedDiv>
+      <LocationText>Page {annotation.page}</LocationText>
     </HighlightContainer>
   );
 };

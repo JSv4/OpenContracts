@@ -493,7 +493,7 @@ export const DocumentAnnotator = ({
           viewStateVar(ViewState.ERROR);
         });
     }
-  }, [open, opened_document, displayOnlyTheseAnnotations]);
+  }, [open, opened_document]);
 
   // Only trigger state flip to "Loaded" if PDF, pageTextMaps and page info load properly
   useEffect(() => {
@@ -649,6 +649,8 @@ export const DocumentAnnotator = ({
     setSelectedExtract(extract);
     setSelectedAnalysis(null);
   };
+
+  // TODO - we're switching into loading state when an extract is loading... don't want that.
 
   let rendered_component = <></>;
   switch (view_state) {

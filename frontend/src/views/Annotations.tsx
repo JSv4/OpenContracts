@@ -11,6 +11,8 @@ import {
   openedCorpus,
   filterToCorpus,
   filterToLabelId,
+  showStructuralAnnotations,
+  filterToStructuralAnnotations,
 } from "../graphql/cache";
 import { LooseObject } from "../components/types";
 import { CardLayout } from "../components/layout/CardLayout";
@@ -33,6 +35,7 @@ import {
 } from "../graphql/types";
 import { AnnotationCards } from "../components/annotations/AnnotationCards";
 import { FilterToCorpusSelector } from "../components/widgets/model-filters/FilterToCorpusSelector";
+import { FilterToStructuralAnnotationsSelector } from "../components/widgets/model-filters/FilterStructuralAnnotations";
 
 export const Annotations = () => {
   const annotation_search_term = useReactiveVar(annotationContentSearchTerm);
@@ -41,6 +44,9 @@ export const Annotations = () => {
   const filter_to_label_id = useReactiveVar(filterToLabelId);
   const opened_corpus = useReactiveVar(openedCorpus);
   const auth_token = useReactiveVar(authToken);
+  const exclude_structural_annotations = useReactiveVar(
+    filterToStructuralAnnotations
+  );
 
   const location = useLocation();
 
@@ -49,6 +55,12 @@ export const Annotations = () => {
   let annotation_variables: LooseObject = {
     label_Type: "TEXT_LABEL",
   };
+  if (exclude_structural_annotations === "EXCLUDE") {
+    annotation_variables["structural"] = false;
+  } else if (exclude_structural_annotations === "ONLY") {
+    annotation_variables["structural"] = true;
+  }
+
   if (annotation_search_term) {
     annotation_variables["rawText_Contains"] = annotation_search_term;
   }
@@ -106,6 +118,9 @@ export const Annotations = () => {
   }, [annotation_search_term]);
   useEffect(() => {
     refetch_annotations();
+  }, [exclude_structural_annotations]);
+  useEffect(() => {
+    refetch_annotations();
   }, [location]);
   useEffect(() => {
     refetch_annotations();
@@ -153,6 +168,7 @@ export const Annotations = () => {
           actions={[]}
           filters={
             <>
+              <FilterToStructuralAnnotationsSelector />
               <FilterToLabelsetSelector
                 fixed_labelset_id={
                   filtered_to_corpus?.labelSet?.id

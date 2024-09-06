@@ -225,6 +225,9 @@ export const filterToLabelId = makeVar<string>("");
 export const filterToAnnotationLabelId = makeVar<string>(""); // Not used elsewhere. Maybe should be?
 export const selectedAnnotation = makeVar<ServerAnnotationType | null>(null);
 export const showStructuralAnnotations = makeVar<boolean>(false);
+export const filterToStructuralAnnotations = makeVar<
+  "ONLY" | "EXCLUDE" | "INCLUDE"
+>("EXCLUDE");
 export const displayAnnotationOnAnnotatorLoad = makeVar<
   ServerAnnotationType | undefined
 >(undefined);

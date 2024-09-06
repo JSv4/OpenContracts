@@ -546,6 +546,7 @@ export interface GetAnnotationsInputs {
   annotationLabel_Type?: string;
   createdWithAnalyzerId?: string;
   createdByAnalysisIds?: string;
+  structural?: boolean;
 }
 
 export interface GetAnnotationsOutputs {
@@ -569,6 +570,7 @@ export const GET_ANNOTATIONS = gql`
     $createdWithAnalyzerId: String
     $createdByAnalysisIds: String
     $analysis_Isnull: Boolean
+    $structural: Boolean
     $cursor: String
     $limit: Int
   ) {
@@ -583,6 +585,7 @@ export const GET_ANNOTATIONS = gql`
       createdWithAnalyzerId: $createdWithAnalyzerId
       createdByAnalysisIds: $createdByAnalysisIds
       analysis_Isnull: $analysis_Isnull
+      structural: $structural
       first: $limit
       after: $cursor
     ) {

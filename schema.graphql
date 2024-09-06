@@ -100,7 +100,7 @@ type Query {
     """The ID of the object"""
     id: ID!
   ): AnalysisType
-  analyses(offset: Int, before: String, after: String, first: Int, last: Int, analysisStarted_Gte: DateTime, analysisStarted_Lte: DateTime, analysisCompleted_Gte: DateTime, analysisCompleted_Lte: DateTime, status: AnalyzerAnalysisStatusChoices, receivedCallbackResults: Boolean, analyzedCorpusId: String, analyzedDocumentId: String, searchText: String): AnalysisTypeConnection
+  analyses(offset: Int, before: String, after: String, first: Int, last: Int, analyzedCorpus_Isnull: Boolean, analysisStarted_Gte: DateTime, analysisStarted_Lte: DateTime, analysisCompleted_Gte: DateTime, analysisCompleted_Lte: DateTime, status: AnalyzerAnalysisStatusChoices, receivedCallbackResults: Boolean, analyzedCorpusId: String, analyzedDocumentId: String, searchText: String): AnalysisTypeConnection
   fieldset(
     """The ID of the object"""
     id: ID!
@@ -115,7 +115,7 @@ type Query {
     """The ID of the object"""
     id: ID!
   ): ExtractType
-  extracts(offset: Int, before: String, after: String, first: Int, last: Int, name: String, name_Contains: String, created_Lte: DateTime, created_Gte: DateTime, started_Lte: DateTime, started_Gte: DateTime, finished_Lte: DateTime, finished_Gte: DateTime, corpus: ID): ExtractTypeConnection
+  extracts(offset: Int, before: String, after: String, first: Int, last: Int, corpusAction_Isnull: Boolean, name: String, name_Contains: String, created_Lte: DateTime, created_Gte: DateTime, started_Lte: DateTime, started_Gte: DateTime, finished_Lte: DateTime, finished_Gte: DateTime, corpus: ID): ExtractTypeConnection
   corpusQuery(
     """The ID of the object"""
     id: ID!
@@ -127,7 +127,7 @@ type Query {
   ): DatacellType
   datacells(offset: Int, before: String, after: String, first: Int, last: Int, dataDefinition: String, started_Lte: DateTime, started_Gte: DateTime, completed_Lte: DateTime, completed_Gte: DateTime, failed_Lte: DateTime, failed_Gte: DateTime, inCorpusWithId: String, forDocumentWithId: String): DatacellTypeConnection
   registeredExtractTasks: GenericScalar
-  documentCorpusActions(documentId: ID!, corpusId: ID!): DocumentCorpusActionsType
+  documentCorpusActions(documentId: ID!, corpusId: ID): DocumentCorpusActionsType
 }
 
 type AnnotationTypeConnection {

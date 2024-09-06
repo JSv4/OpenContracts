@@ -25,6 +25,91 @@ def contract_not_contract(*args, pdf_text_extract, **kawrgs):
 
 
 @doc_analyzer_task()
+def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
+    """
+    Use SALI tags plus GLINER plus SPACY sentence splitter to tag legal entities.
+    """
+    import spacy
+    from gliner import GLiNER
+
+    nlp = spacy.load("en_core_web_lg")
+
+    model = GLiNER.from_pretrained("urchade/gliner_base")
+    model.set_sampling_params(
+        max_types=25,  # maximum number of entity types during training
+        shuffle_types=True,  # if shuffle or not entity types
+        random_drop=True,  # randomly drop entity types
+        max_neg_type_ratio=1,  # ratio of positive/negative types, 1 mean 50%/50%, 2 mean 33%/66%, 3 mean 25%/75% ...
+        max_len=2500,  # maximum sentence length
+    )
+
+    labels = [
+        "Legal Entity",
+        "Entity",
+        "Business Trust",
+        "Cooperative",
+        "Corporation",
+        "B Corporation",
+        "C Corporation",
+        "S Corporation",
+        "Exempted Company",
+        "Governmental Entity",
+        "Limited Duration Company",
+        "Limited Liability Company",
+        "Municipal Corporation",
+        "Non-Governmental Organization",
+        "Non-Profit Organization",
+        "Partnership",
+        "Exempted Limited Partnership",
+        "General Partnership",
+        "Limited Liability Partnership",
+        "Limited Partnership",
+        "Political Party",
+        "Professional Limited Liability Company",
+        "Segregated Portfolio Company",
+        "Société Anonyme",
+        "Société en Commandite Simple",
+        "Société à Responsabilité Limitée",
+        "Sole Proprietorship",
+        "Sovereign State",
+        "Trade Union / Labor Union",
+        "Entity Groups",
+        "Board of Directors",
+        "Class",
+        "Committees",
+        "Ad Hoc/Unofficial Committee",
+        "Creditors' Committee",
+        "Independent Committee",
+        "Official Committee of Creditors",
+        "Official Committee of Unsecured Creditors",
+        "Joint Defense Group",
+        "Joint Defense Group Member"
+    ]
+
+    sentences = [i for i in nlp(pdf_text_extract).sents]
+    results = []
+
+    for index, sent in enumerate(sentences):
+        ents = model.predict_entities(sent.text, labels)
+        for e in ents:
+            if e['score'] > .7:
+                print(f"Found Entity with suitable score: {e}")
+                results.append(
+                    (
+                        TextSpan(
+                            id=str(index),
+                            start=sent.start_char + e['start'],
+                            end=sent.start_char + e['start'] + e['end'],
+                            text=e['text'],
+                        ),
+                        str(e['label']),
+                    )
+                )
+
+    return [], results[:10], [], True
+
+
+@doc_analyzer_task()
 def proper_name_tagger(*args, pdf_text_extract, **kawrgs):
     """
     Use Spacy to tag named entities for organizations, geopolitical entities, people and products.

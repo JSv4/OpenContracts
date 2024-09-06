@@ -615,6 +615,7 @@ export const PDFView = ({
           firstPage,
           activeSpanLabel,
           combinedRawText,
+          false,
           annotations,
           [
             PermissionTypes.CAN_CREATE,

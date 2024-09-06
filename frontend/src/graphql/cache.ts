@@ -190,6 +190,7 @@ export const editingDocument = makeVar<DocumentType | null>(null);
  * Extract-related global variables
  */
 export const selectedExtractIds = makeVar<string[]>([]);
+export const selectedExtract = makeVar<ExtractType | null>(null);
 export const openedExtract = makeVar<ExtractType | null>(null);
 export const extractSearchTerm = makeVar<string>("");
 
@@ -246,6 +247,7 @@ export const analyzerSearchTerm = makeVar<string | null>(null);
 /**
  * Analysis-related global variables
  */
+export const selectedAnalysis = makeVar<AnalysisType | null>(null);
 export const selectedAnalyses = makeVar<AnalysisType[]>([]);
 export const selectedAnalysesIds = makeVar<(string | number)[]>([]);
 export const analysisSearchTerm = makeVar<string>("");

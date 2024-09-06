@@ -1025,56 +1025,6 @@ export const REQUEST_REMOVE_RELATIONSHIPS = gql`
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ANALYZER-RELATED MUTATIONS
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-export interface StartAnalysisInputType {
-  analyzerId: string;
-  corpusId: string;
-}
-
-export interface StartAnalysisOutputType {
-  startAnalysisOnCorpus: {
-    ok: boolean;
-    message: string;
-    obj: AnalysisType;
-  };
-}
-
-export const START_ANALYSIS_FOR_CORPUS = gql`
-  mutation ($analyzerId: ID!, $corpusId: ID!) {
-    startAnalysisOnCorpus(corpusId: $corpusId, analyzerId: $analyzerId) {
-      ok
-      message
-      obj {
-        id
-        analysisStarted
-        analysisCompleted
-        analyzedDocuments {
-          edges {
-            node {
-              id
-            }
-          }
-        }
-        receivedCallbackFile
-        annotations {
-          totalCount
-        }
-        analyzer {
-          id
-          analyzerId
-          description
-          manifest
-          labelsetSet {
-            totalCount
-          }
-          hostGremlin {
-            id
-          }
-        }
-      }
-    }
-  }
-`;
-
 export interface RequestDeleteAnalysisOutputType {
   deleteAnalysis: {
     ok: boolean;
@@ -1538,6 +1488,105 @@ export const ASK_QUERY_OF_CORPUS = gql`
         completed
         failed
         stacktrace
+      }
+    }
+  }
+`;
+
+export interface StartAnalysisInput {
+  documentId?: string;
+  analyzerId: string;
+  corpusId?: string;
+}
+
+export interface StartAnalysisOutput {
+  startAnalysisOnDoc: {
+    ok: boolean;
+    message: string;
+    obj: AnalysisType;
+  };
+}
+
+export const START_ANALYSIS = gql`
+  mutation StartDocumentAnalysis(
+    $documentId: ID
+    $analyzerId: ID!
+    $corpusId: ID
+  ) {
+    startAnalysisOnDoc(
+      documentId: $documentId
+      analyzerId: $analyzerId
+      corpusId: $corpusId
+    ) {
+      ok
+      message
+      obj {
+        id
+        analysisStarted
+        analysisCompleted
+        analyzedDocuments {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+        receivedCallbackFile
+        annotations {
+          totalCount
+        }
+        analyzer {
+          id
+          analyzerId
+          description
+          manifest
+          labelsetSet {
+            totalCount
+          }
+          hostGremlin {
+            id
+          }
+        }
+      }
+    }
+  }
+`;
+
+export interface StartDocumentExtractInput {
+  documentId: string;
+  fieldsetId: string;
+  corpusId?: string;
+}
+
+export interface StartDocumentExtractOutput {
+  startDocumentExtract: {
+    ok: boolean;
+    message: string;
+    obj: ExtractType;
+  };
+}
+
+export const START_DOCUMENT_EXTRACT = gql`
+  mutation StartDocumentExtract(
+    $documentId: ID!
+    $fieldsetId: ID!
+    $corpusId: ID
+  ) {
+    startDocumentExtract(
+      documentId: $documentId
+      fieldsetId: $fieldsetId
+      corpusId: $corpusId
+    ) {
+      ok
+      message
+      obj {
+        id
+        name
+        started
+        corpus {
+          id
+          title
+        }
       }
     }
   }

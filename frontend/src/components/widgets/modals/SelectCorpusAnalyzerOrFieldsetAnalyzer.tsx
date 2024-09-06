@@ -19,27 +19,31 @@ import {
   GetFieldsetsOutputs,
 } from "../../../graphql/queries";
 import {
-  START_ANALYSIS_FOR_CORPUS,
   REQUEST_CREATE_EXTRACT,
   REQUEST_START_EXTRACT,
-  StartAnalysisInputType,
-  StartAnalysisOutputType,
+  START_ANALYSIS,
+  START_DOCUMENT_EXTRACT,
   RequestCreateExtractInputType,
   RequestCreateExtractOutputType,
   RequestStartExtractInputType,
   RequestStartExtractOutputType,
+  StartAnalysisInput,
+  StartAnalysisOutput,
+  StartDocumentExtractInput,
+  StartDocumentExtractOutput,
 } from "../../../graphql/mutations";
-import { AnalyzerType, FieldsetType, CorpusType } from "../../../graphql/types";
+import { CorpusType, DocumentType } from "../../../graphql/types";
 
-interface SelectCorpusAnalyzerOrFieldsetModalProps {
-  corpus: CorpusType;
+interface SelectAnalyzerOrFieldsetModalProps {
+  corpus?: CorpusType;
+  document?: DocumentType;
   open: boolean;
   onClose: () => void;
 }
 
-export const SelectCorpusAnalyzerOrFieldsetModal: React.FC<
-  SelectCorpusAnalyzerOrFieldsetModalProps
-> = ({ corpus, open, onClose }) => {
+export const SelectAnalyzerOrFieldsetModal: React.FC<
+  SelectAnalyzerOrFieldsetModalProps
+> = ({ corpus, document, open, onClose }) => {
   const [activeTab, setActiveTab] = useState<"analyzer" | "fieldset">(
     "analyzer"
   );
@@ -55,10 +59,6 @@ export const SelectCorpusAnalyzerOrFieldsetModal: React.FC<
     GetFieldsetsInputs
   >(GET_FIELDSETS);
 
-  const [startAnalysis, { loading: startingAnalysis }] = useMutation<
-    StartAnalysisOutputType,
-    StartAnalysisInputType
-  >(START_ANALYSIS_FOR_CORPUS);
   const [createExtract, { loading: creatingExtract }] = useMutation<
     RequestCreateExtractOutputType,
     RequestCreateExtractInputType
@@ -68,50 +68,82 @@ export const SelectCorpusAnalyzerOrFieldsetModal: React.FC<
     RequestStartExtractInputType
   >(REQUEST_START_EXTRACT);
 
+  const [startDocumentAnalysis, { loading: startingDocumentAnalysis }] =
+    useMutation<StartAnalysisOutput, StartAnalysisInput>(START_ANALYSIS);
+  const [startDocumentExtract, { loading: startingDocumentExtract }] =
+    useMutation<StartDocumentExtractOutput, StartDocumentExtractInput>(
+      START_DOCUMENT_EXTRACT
+    );
+
   useEffect(() => {
     console.log("Active tab changed", activeTab);
   }, [activeTab]);
 
   const handleRun = async () => {
     if (activeTab === "analyzer" && selectedItem) {
+      console.log("Handle Run - for analyzer");
       try {
-        console.log("Try to run analyzer");
-        const result = await startAnalysis({
-          variables: { analyzerId: selectedItem, corpusId: corpus.id },
-        });
-        if (result.data?.startAnalysisOnCorpus.ok) {
-          toast.success("Analysis started successfully");
-          onClose();
-        } else {
-          toast.error("Failed to start analysis");
-        }
-      } catch (error) {
-        toast.error("Error starting analysis");
-      }
-    } else if (activeTab === "fieldset" && selectedItem) {
-      try {
-        const createResult = await createExtract({
+        const result = await startDocumentAnalysis({
           variables: {
-            corpusId: corpus.id,
-            name: extractName,
-            fieldsetId: selectedItem,
+            ...(document ? { documentId: document.id } : {}),
+            analyzerId: selectedItem,
+            ...(corpus ? { corpusId: corpus.id } : {}),
           },
         });
-        if (createResult.data?.createExtract.ok) {
-          const startResult = await startExtract({
-            variables: { extractId: createResult.data.createExtract.obj.id },
-          });
-          if (startResult.data?.startExtract.ok) {
-            toast.success("Extract created and started successfully");
-            onClose();
-          } else {
-            toast.error("Failed to start extract");
-          }
+        if (result.data?.startAnalysisOnDoc.ok) {
+          toast.success("Document analysis started successfully");
+          onClose();
         } else {
-          toast.error("Failed to create extract");
+          toast.error("Failed to start document analysis");
         }
       } catch (error) {
-        toast.error("Error creating or starting extract");
+        toast.error("Error starting document analysis");
+      }
+    } else if (activeTab === "fieldset" && selectedItem) {
+      if (document) {
+        try {
+          const result = await startDocumentExtract({
+            variables: {
+              documentId: document.id,
+              fieldsetId: selectedItem,
+              corpusId: corpus?.id,
+            },
+          });
+          if (result.data?.startDocumentExtract.ok) {
+            toast.success("Document extract started successfully");
+            onClose();
+          } else {
+            toast.error("Failed to start document extract");
+          }
+        } catch (error) {
+          toast.error("Error starting document extract");
+        }
+      } else if (corpus) {
+        console.log("Create extract for corpus", corpus);
+        try {
+          const createResult = await createExtract({
+            variables: {
+              corpusId: corpus.id,
+              name: extractName,
+              fieldsetId: selectedItem,
+            },
+          });
+          if (createResult.data?.createExtract.ok) {
+            const startResult = await startExtract({
+              variables: { extractId: createResult.data.createExtract.obj.id },
+            });
+            if (startResult.data?.startExtract.ok) {
+              toast.success("Corpus extract created and started successfully");
+              onClose();
+            } else {
+              toast.error("Failed to start corpus extract");
+            }
+          } else {
+            toast.error("Failed to create corpus extract");
+          }
+        } catch (error) {
+          toast.error("Error creating or starting corpus extract");
+        }
       }
     }
   };
@@ -143,13 +175,15 @@ export const SelectCorpusAnalyzerOrFieldsetModal: React.FC<
       render: () => (
         <Tab.Pane>
           <Form>
-            <Form.Input
-              fluid
-              label="Extract Name"
-              placeholder="Enter extract name"
-              value={extractName}
-              onChange={(e, { value }) => setExtractName(value)}
-            />
+            {!document && (
+              <Form.Input
+                fluid
+                label="Extract Name"
+                placeholder="Enter extract name"
+                value={extractName}
+                onChange={(e, { value }) => setExtractName(value)}
+              />
+            )}
             <Form.Select
               fluid
               label="Select Fieldset"
@@ -172,14 +206,15 @@ export const SelectCorpusAnalyzerOrFieldsetModal: React.FC<
     <Modal open={open} onClose={onClose}>
       <Modal.Header>
         Select {activeTab === "analyzer" ? "Analyzer" : "Fieldset"} for{" "}
-        {corpus.title}
+        {document ? document.title : corpus?.title}
       </Modal.Header>
       <Modal.Content>
         {(loadingAnalyzers ||
           loadingFieldsets ||
-          startingAnalysis ||
           creatingExtract ||
-          startingExtract) && (
+          startingExtract ||
+          startingDocumentAnalysis ||
+          startingDocumentExtract) && (
           <Dimmer active>
             <Loader>Loading...</Loader>
           </Dimmer>
@@ -213,7 +248,10 @@ export const SelectCorpusAnalyzerOrFieldsetModal: React.FC<
         <Button
           positive
           onClick={handleRun}
-          disabled={!selectedItem || (activeTab === "fieldset" && !extractName)}
+          disabled={
+            !selectedItem ||
+            (activeTab === "fieldset" && !document && !extractName)
+          }
         >
           Run
         </Button>

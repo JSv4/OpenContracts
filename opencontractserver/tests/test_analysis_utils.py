@@ -54,7 +54,7 @@ class TestAnalysisUtils(TestCase):
 
     def test_create_and_setup_analysis_gremlin(self):
         analysis = create_and_setup_analysis(
-            self.analyzer_gremlin, self.corpus.id, self.user.id
+            self.analyzer_gremlin, self.user.id, corpus_id=self.corpus.id
         )
         self.assertIsInstance(analysis, Analysis)
         self.assertEqual(analysis.analyzer, self.analyzer_gremlin)
@@ -64,7 +64,7 @@ class TestAnalysisUtils(TestCase):
 
     def test_create_and_setup_analysis_task(self):
         analysis = create_and_setup_analysis(
-            self.analyzer_task, self.corpus.id, self.user.id
+            self.analyzer_task, self.user.id, corpus_id=self.corpus.id
         )
         self.assertIsInstance(analysis, Analysis)
         self.assertEqual(analysis.analyzer, self.analyzer_task)
@@ -82,8 +82,8 @@ class TestAnalysisUtils(TestCase):
         )
         analysis = create_and_setup_analysis(
             self.analyzer_task,
-            self.corpus.id,
             self.user.id,
+            corpus_id=self.corpus.id,
             corpus_action=corpus_action,
         )
         self.assertIsInstance(analysis, Analysis)
@@ -95,7 +95,7 @@ class TestAnalysisUtils(TestCase):
     def test_create_and_setup_analysis_with_doc_ids(self):
         doc_ids = self.doc_ids  # Mock document IDs
         analysis = create_and_setup_analysis(
-            self.analyzer_gremlin, self.corpus.id, self.user.id, doc_ids=doc_ids
+            self.analyzer_gremlin, self.user.id, corpus_id=self.corpus.id, doc_ids=doc_ids
         )
         self.assertIsInstance(analysis, Analysis)
         self.assertEqual(
@@ -110,5 +110,5 @@ class TestAnalysisUtils(TestCase):
                 )
                 invalid_analyzer.full_clean()
                 create_and_setup_analysis(
-                    invalid_analyzer, self.corpus.id, self.user.id
+                    invalid_analyzer, self.user.id, corpus_id=self.corpus.id
                 )

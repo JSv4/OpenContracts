@@ -203,8 +203,8 @@ def run_analysis(
     analyzer = analysis.analyzer
     gremlin = analyzer.host_gremlin
 
-    # If we're analyzing an entire corpus
-    if analysis.analyzed_corpus:
+    # If we're analyzing an entire corpus and we didn't override docs
+    if analysis.analyzed_corpus and (not isinstance(doc_ids, list) or len(doc_ids) == 0):
         corpus = analysis.analyzed_corpus
         docs = corpus.documents.all()
         logger.info(f"Analyze corpus {corpus.id} with {docs.count()} docs")

@@ -63,7 +63,7 @@ from opencontractserver.tasks import (
     package_annotated_docs,
 )
 from opencontractserver.tasks.analyzer_tasks import start_analysis
-from opencontractserver.tasks.corpus_tasks import process_corpus_action
+from opencontractserver.tasks.corpus_tasks import process_corpus_action, process_analyzer
 from opencontractserver.tasks.doc_tasks import convert_doc_to_funsd
 from opencontractserver.tasks.export_tasks import package_funsd_exports
 from opencontractserver.tasks.extract_orchestrator_tasks import run_extract
@@ -1378,47 +1378,79 @@ class CreateLabelForLabelsetMutation(graphene.Mutation):
         )
 
 
-class StartCorpusAnalysisMutation(graphene.Mutation):
+class StartDocumentAnalysisMutation(graphene.Mutation):
+
     class Arguments:
-        corpus_id = graphene.ID(
-            required=True, description="Id of the corpus that is to be analyzed."
-        )
-        analyzer_id = graphene.ID(
-            required=True, description="Id of the analyzer to use."
-        )
+        document_id = graphene.ID(required=False, description="Id of the document to be analyzed.")
+        analyzer_id = graphene.ID(required=True, description="Id of the analyzer to use.")
+        corpus_id = graphene.ID(required=False, description="Optional Id of the corpus to associate with the analysis.")
 
     ok = graphene.Boolean()
     message = graphene.String()
     obj = graphene.Field(AnalysisType)
 
     @login_required
-    def mutate(root, info, corpus_id, analyzer_id):
+    def mutate(root, info, analyzer_id, document_id=None, corpus_id=None):
+
+        print(f"StartDocumentAnalysisMutation - document_id is {document_id}")
+
         user = info.context.user
-        corpus_pk = from_global_id(corpus_id)[1]
+
+        document_pk = from_global_id(document_id)[1] if document_id else None
         analyzer_pk = from_global_id(analyzer_id)[1]
+        corpus_pk = from_global_id(corpus_id)[1] if corpus_id else None
+
+        if document_pk is None and corpus_pk is None:
+            raise ValueError("One of document_pk and corpus_pk must be provided")
 
         try:
-            corpus = Corpus.objects.get(pk=corpus_pk)
             analyzer = Analyzer.objects.get(pk=analyzer_pk)
 
-            analysis = create_and_setup_analysis(analyzer, corpus_pk, user.id)
+            analysis = process_analyzer(
+                user_id=user.id,
+                analyzer=analyzer,
+                corpus_id=corpus_pk,
+                document_ids=[document_pk] if document_pk else None,
+                corpus_action=None
+            )
 
-            if analyzer.host_gremlin:
-                # Use the original web-based callback workflow
-                start_analysis.delay(analysis_id=analysis.id)
-            elif analyzer.task_name:
-                # Use the new task-based workflow
-                process_corpus_action.delay(
-                    corpus_id=corpus_pk,
-                    document_ids=list(corpus.documents.values_list("id", flat=True)),
-                    user_id=user.id,
-                )
-            else:
-                raise ValueError("Analyzer has neither host_gremlin nor task_name")
-
-            return StartCorpusAnalysisMutation(ok=True, message="SUCCESS", obj=analysis)
+            return StartDocumentAnalysisMutation(ok=True, message="SUCCESS", obj=analysis)
         except Exception as e:
-            return StartCorpusAnalysisMutation(ok=False, message=f"Error: {str(e)}")
+            return StartDocumentAnalysisMutation(ok=False, message=f"Error: {str(e)}")
+
+
+class StartDocumentExtract(graphene.Mutation):
+    class Arguments:
+        document_id = graphene.ID(required=True)
+        fieldset_id = graphene.ID(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(ExtractType)
+
+    @staticmethod
+    @login_required
+    def mutate(root, info, document_id, fieldset_id):
+        doc_pk = from_global_id(document_id)[1]
+        fieldset_pk = from_global_id(fieldset_id)[1]
+
+        document = Document.objects.get(pk=doc_pk)
+        fieldset = Fieldset.objects.get(pk=fieldset_pk)
+
+        extract = Extract.objects.create(
+            name=f"Extract {uuid.uuid4()} for {document.title}",
+            fieldset=fieldset,
+            creator=info.context.user
+        )
+        extract.documents.add(document)
+        extract.save()
+
+        # Start celery task to process extract
+        extract.started = timezone.now()
+        extract.save()
+        run_extract.s(extract.id, info.context.user.id).apply_async()
+
+        return StartDocumentExtract(ok=True, message="STARTED!", obj=extract)
 
 
 class DeleteAnalysisMutation(graphene.Mutation):
@@ -1710,15 +1742,15 @@ class CreateExtract(graphene.Mutation):
         corpus = None
         if corpus_id is not None:
             corpus = Corpus.objects.get(pk=from_global_id(corpus_id)[1])
-            # print(f"Corpus is: {corpus}")
+            print(f"Corpus is: {corpus}")
 
         if fieldset_id is not None:
-            # print(f"Fieldset id is not None: {fieldset_id}")
+            print(f"Fieldset id is not None: {fieldset_id}")
             fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
         else:
             if fieldset_name is None:
                 fieldset_name = f"{name} Fieldset"
-            # print(f"Creating new fieldset... name will be: {fieldset_name}")
+            print(f"Creating new fieldset... name will be: {fieldset_name}")
 
             fieldset = Fieldset.objects.create(
                 name=fieldset_name,
@@ -1738,6 +1770,7 @@ class CreateExtract(graphene.Mutation):
             creator=info.context.user,
         )
         extract.save()
+        print(f"Extract created: {extract}")
 
         if corpus is not None:
             # print(f"Try to add corpus docs: {corpus.documents.all()}")
@@ -1942,11 +1975,10 @@ class Mutation(graphene.ObjectType):
     delete_export = DeleteExport.Field()
 
     # ANALYSIS MUTATIONS #########################################################
-    start_analysis_on_corpus = (
-        StartCorpusAnalysisMutation.Field()
-    )  # Limited by user.is_usage_capped
+    start_analysis_on_doc = StartDocumentAnalysisMutation.Field()
     delete_analysis = DeleteAnalysisMutation.Field()
     make_analysis_public = MakeAnalysisPublic.Field()
+
 
     # QUERY MUTATIONS #########################################################
     ask_query = StartQueryForCorpus.Field()
@@ -1967,3 +1999,4 @@ class Mutation(graphene.ObjectType):
     approve_datacell = ApproveDatacell.Field()  # TODO - add tests
     reject_datacell = RejectDatacell.Field()  # TODO - add tests
     edit_datacell = EditDatacell.Field()  # TODO - add tests
+    start_extract_for_doc = StartDocumentExtract.Field()

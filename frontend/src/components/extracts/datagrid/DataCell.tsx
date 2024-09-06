@@ -12,6 +12,7 @@ import {
   onlyDisplayTheseAnnotations,
   openedDocument,
   selectedAnnotation,
+  selectedExtract,
   showAnnotationBoundingBoxes,
   showAnnotationLabels,
   showSelectedAnnotationOnly,
@@ -74,7 +75,7 @@ export const ExtractDatacell = ({
   );
 
   useEffect(() => {
-    console.log("DataCell - viewSourceAnnotations", viewSourceAnnotations);
+    // console.log("DataCell - viewSourceAnnotations", viewSourceAnnotations);
     if (viewSourceAnnotations !== null) {
       onlyDisplayTheseAnnotations(viewSourceAnnotations);
       // Want to make sure that we see all annotatations *clearly*
@@ -158,10 +159,12 @@ export const ExtractDatacell = ({
                       onClick={
                         cellData?.fullSourceList &&
                         cellData.fullSourceList !== undefined
-                          ? () =>
+                          ? () => {
+                              selectedExtract(cellData.extract);
                               setViewSourceAnnotations(
                                 cellData.fullSourceList as ServerAnnotationType[]
-                              )
+                              );
+                            }
                           : () => {}
                       }
                     />

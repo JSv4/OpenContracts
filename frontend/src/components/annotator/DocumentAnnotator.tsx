@@ -57,6 +57,8 @@ import {
   editMode,
   onlyDisplayTheseAnnotations,
   pdfZoomFactor,
+  selectedAnalysis,
+  selectedExtract,
   showStructuralAnnotations,
   viewStateVar,
 } from "../../graphql/cache";
@@ -146,11 +148,8 @@ export const DocumentAnnotator = ({
   // New states for analyses and extracts
   const [analyses, setAnalyses] = useState<AnalysisType[]>([]);
   const [extracts, setExtracts] = useState<ExtractType[]>([]);
-  const [selected_analysis, setSelectedAnalysis] =
-    useState<AnalysisType | null>(null);
-  const [selected_extract, setSelectedExtract] = useState<ExtractType | null>(
-    null
-  );
+  const selected_analysis = useReactiveVar(selectedAnalysis);
+  const selected_extract = useReactiveVar(selectedExtract);
 
   // Hook 22
   const [structuralAnnotations, setStructuralAnnotations] = useState<
@@ -555,7 +554,7 @@ export const DocumentAnnotator = ({
 
     if (selected_analysis) {
       allowUserInput(false);
-      setSelectedExtract(null); // Ensure extract is deselected
+      selectedExtract(null); // Ensure extract is deselected
       fetchAnnotationsForAnalysis({
         variables: {
           analysisId: selected_analysis.id,
@@ -605,7 +604,7 @@ export const DocumentAnnotator = ({
 
     if (selected_extract) {
       allowUserInput(false);
-      setSelectedAnalysis(null); // Ensure analysis is deselected
+      selectedAnalysis(null); // Ensure analysis is deselected
       fetchDataCellsForExtract({
         variables: {
           extractId: selected_extract.id,
@@ -643,13 +642,13 @@ export const DocumentAnnotator = ({
   }, [dataCellsData]);
 
   const onSelectAnalysis = (analysis: AnalysisType | null) => {
-    setSelectedAnalysis(analysis);
-    setSelectedExtract(null);
+    selectedAnalysis(analysis);
+    selectedExtract(null);
   };
 
   const onSelectExtract = (extract: ExtractType | null) => {
-    setSelectedExtract(extract);
-    setSelectedAnalysis(null);
+    selectedExtract(extract);
+    selectedAnalysis(null);
   };
 
   // TODO - we're switching into loading state when an extract is loading... don't want that.

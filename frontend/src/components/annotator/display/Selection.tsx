@@ -211,6 +211,7 @@ const EditLabelModal = ({
               annotation.page,
               annotationStore.spanLabels[index],
               annotation.rawText,
+              annotation.structural,
               annotation.json,
               annotation.myPermissions,
               annotation.id
@@ -273,6 +274,7 @@ const EditLabelModal = ({
                 annotation.page,
                 selectedLabel,
                 annotation.rawText,
+                annotation.structural,
                 annotation.json,
                 annotation.myPermissions,
                 annotation.id

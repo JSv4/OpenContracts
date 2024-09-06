@@ -6,7 +6,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from opencontractserver.corpuses.models import CorpusAction
+from opencontractserver.analyzer.models import Analyzer, Analysis
+from opencontractserver.corpuses.models import CorpusAction, Corpus
 from opencontractserver.documents.models import DocumentAnalysisRow
 from opencontractserver.extracts.models import Datacell, Extract
 from opencontractserver.tasks.analyzer_tasks import (
@@ -26,6 +27,80 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
+def run_task_name_analyzer(
+    user_id: str | int,
+    analyzer_id: int | str,
+    corpus_id: str | int | None = None,
+    document_ids: list[str | int] | None = None,
+    corpus_action_id: str | int | None = None
+):
+
+    if corpus_id is None and document_ids is None:
+        raise ValueError("Either corpus_id or document_ids must be provided")
+
+    analyzer = Analyzer.objects.get(pk=analyzer_id)
+    action = CorpusAction.objects.get(pk=corpus_action_id) if corpus_action_id else None
+    analysis = create_and_setup_analysis(
+        analyzer, user_id, corpus_id=corpus_id, doc_ids=document_ids, corpus_action=action
+    )
+
+    task_name = analyzer.task_name
+    task_func = get_doc_analyzer_task_by_name(task_name)
+
+    if task_func is None:
+        msg = f"Queue {task_name} for corpus {corpus_id} failed as task could not be found..."
+        logger.error(msg)
+        raise ValueError(msg)
+
+    if document_ids is None:
+        corpus = Corpus.objects.get(pk=corpus_id)
+        document_ids = list(corpus.documents.values_list('id', flat=True))
+
+    logger.info(f"Added task {task_name} to queue: {task_func}")
+
+    transaction.on_commit(
+        lambda: chord(group([
+            task_func.s(doc_id=doc_id, analysis_id=analysis.id)
+            for doc_id in document_ids
+        ]))(
+            mark_analysis_complete.si(
+                analysis_id=analysis.id, doc_ids=document_ids
+            )
+        )
+    )
+
+
+def process_analyzer(
+    user_id: int | str,
+    analyzer: Analyzer | None,
+    corpus_id: str | int | None = None,
+    document_ids: list[str | int] | None = None,
+    corpus_action: CorpusAction | None = None
+) -> Analysis:
+
+    analysis = create_and_setup_analysis(
+        analyzer, user_id, corpus_id=corpus_id, doc_ids=document_ids, corpus_action=corpus_action
+    )
+    print(f"process_analyzer(...) - created analysis: {analysis}")
+
+    if analyzer.task_name:
+
+        run_task_name_analyzer.si(
+            user_id=user_id,
+            analyzer_id=analyzer.id,
+            corpus_id=corpus_id,
+            document_ids=document_ids,
+            corpus_action_id=corpus_action.id if corpus_action else None
+        ).apply_async()
+
+    else:
+        logger.info(f" - retrieved analysis: {analysis}")
+        start_analysis.s(analysis_id=analysis.id, doc_ids=document_ids).apply_async()
+
+    return analysis
+
+
+@shared_task
 def process_corpus_action(
     corpus_id: str | int, document_ids: list[str | int], user_id: str | int
 ):
@@ -38,8 +113,6 @@ def process_corpus_action(
     )
 
     for action in actions:
-
-        action_tasks = []
 
         if action.fieldset:
 
@@ -100,45 +173,14 @@ def process_corpus_action(
             )
 
         elif action.analyzer:
-            analysis = create_and_setup_analysis(
-                action.analyzer, corpus_id, user_id, document_ids, corpus_action=action
+
+            process_analyzer(
+                user_id=user_id,
+                analyzer=action.analyzer,
+                corpus_id=corpus_id,
+                document_ids=document_ids,
+                corpus_action=action
             )
-
-            if action.analyzer.task_name:
-
-                task_name = action.analyzer.task_name
-                task_func = get_doc_analyzer_task_by_name(task_name)
-
-                if task_func is None:
-                    logger.error(
-                        f"Queue {task_name} for corpus {corpus_id} failed as task could not be found..."
-                    )
-                    continue
-
-                logger.info(f"Added task {task_name} to queue: {task_func}")
-                action_tasks.extend(
-                    [
-                        task_func.s(doc_id=doc_id, analysis_id=analysis.id)
-                        for doc_id in document_ids
-                    ]
-                )
-
-                transaction.on_commit(
-                    lambda: chord(group(*action_tasks))(
-                        mark_analysis_complete.si(
-                            analysis_id=analysis.id, doc_ids=document_ids
-                        )
-                    )
-                )
-
-            else:
-                logger.info(f" - retrieved analysis: {analysis}")
-
-                action_tasks.append(
-                    start_analysis.s(analysis_id=analysis.id, doc_ids=document_ids)
-                )
-
-                transaction.on_commit(lambda: group(*action_tasks).apply_async())
 
         else:
             raise ValueError(

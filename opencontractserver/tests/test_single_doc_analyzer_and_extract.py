@@ -1,0 +1,321 @@
+#  Copyright (C) 2022  John Scrudato
+
+import json
+import logging
+
+import factory
+import requests
+import responses
+from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
+from django.db import transaction
+from django.db.models.signals import post_save
+from django.test import TestCase
+from django.test.client import Client as DjangoClient
+from graphene.test import Client
+from graphql_relay import to_global_id, from_global_id
+from rest_framework.test import APIClient
+
+from config.graphql.schema import schema
+from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
+from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
+from opencontractserver.corpuses.models import Corpus
+from opencontractserver.documents.models import Document
+from opencontractserver.tasks.analyzer_tasks import (
+    import_analysis,
+    install_analyzer_task,
+    request_gremlin_manifest,
+    start_analysis,
+)
+from opencontractserver.tests.fixtures import (
+    SAMPLE_GREMLIN_ENGINE_MANIFEST_PATH,
+    create_mock_submission_response,
+    generate_random_analyzer_return_values,
+    get_valid_pdf_urls,
+)
+
+User = get_user_model()
+
+logger = logging.getLogger(__name__)
+
+
+class TestContext:
+    def __init__(self, user):
+        self.user = user
+
+
+class GraphQLAnalyzerTestCase(TestCase):
+
+    @factory.django.mute_signals(post_save)
+    def setUp(self):
+        logger.info("Starting setUp method")
+
+        # Setup a test user
+        with transaction.atomic():
+            self.user = User.objects.create_user(username="bob", password="12345678")
+        logger.info(f"Created test user: {self.user}")
+
+        self.graphene_client = Client(schema, context_value=TestContext(self.user))
+        logger.info("Created graphene client")
+
+        # Setup a test JWT token for user
+        executed_login_data = self.graphene_client.execute(
+            """
+            mutation ($username: String!, $password: String!) {
+                tokenAuth(username: $username, password: $password) {
+                      token
+                      refreshExpiresIn
+                      payload
+                }
+            }
+            """,
+            variable_values={"username": "bob", "password": "12345678"},
+        )
+        logger.info(f"Executed login: {executed_login_data}")
+
+        self.jwt_token = executed_login_data["data"]["tokenAuth"]["token"]
+        logger.info(f"JWT token retrieved: {self.jwt_token}")
+
+        # Create a test client to make GraphQL requests
+        self.client_header = {"HTTP_AUTHORIZATION": f"Bearer {self.jwt_token}"}
+        self.django_client = DjangoClient()
+        self.authenticated_client = APIClient()
+        self.authenticated_client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self.jwt_token}"
+        )
+        logger.info("Created test clients")
+
+        # Create a test corpus
+        with transaction.atomic():
+            self.corpus = Corpus.objects.create(
+                title="Test Analysis Corpus", creator=self.user, backend_lock=False
+            )
+        self.global_corpus_id = to_global_id("CorpusType", self.corpus.id)
+        logger.info(f"Created test corpus: {self.corpus}")
+
+        self.doc_ids = []
+        for index, url in enumerate(get_valid_pdf_urls()):
+            response = requests.get(url)
+            self.assertEqual(response.status_code, 200)
+
+            pdf_contents = ContentFile(response.content)
+            with transaction.atomic():
+                document = Document.objects.create(
+                    title=f"TestDoc{index}",
+                    description="Manually created",
+                    creator=self.user,
+                )
+                document.pdf_file.save("dummy_file.pdf", pdf_contents)
+
+                self.doc_ids.append(document.id)
+                logger.info(f"Created document with id: {document.id}")
+
+        logger.info(f"{len(get_valid_pdf_urls())} pdfs loaded for analysis")
+
+        # Link docs to corpus
+        self.corpus.documents.add(*self.doc_ids)
+        logger.info("Linked documents to corpus")
+
+        # Setup a test gremlin + analyzers
+        with transaction.atomic():
+            self.gremlin = GremlinEngine.objects.create(
+                url="http://localhost:8000", creator=self.user
+            )
+        logger.info(f"Created GremlinEngine: {self.gremlin}")
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET,
+                self.gremlin.url + "/api/analyzers",
+                json=json.loads(SAMPLE_GREMLIN_ENGINE_MANIFEST_PATH.open("r").read()),
+                status=200,
+            )
+            analyzer_manifests = (
+                request_gremlin_manifest.si(gremlin_id=self.gremlin.id).apply().get()
+            )
+            self.assertIsNotNone(analyzer_manifests)
+        logger.info(f"Retrieved analyzer manifests: {analyzer_manifests}")
+
+        with transaction.atomic():
+            install_analyzer_task.si(
+                gremlin_id=self.gremlin.id,
+                analyzer_manifests=analyzer_manifests,
+            ).apply().get()
+
+        self.assertEqual(Analyzer.objects.all().count(), len(analyzer_manifests))
+        logger.info(f"Installed {Analyzer.objects.all().count()} analyzers")
+
+        # Import a faux analysis
+        self.analyzer = Analyzer.objects.all()[0]
+        self.analyzer_global_id = to_global_id("AnalyzerType", self.analyzer.id)
+        logger.info(f"Selected analyzer for faux analysis: {self.analyzer}")
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.POST,
+                f"{self.gremlin.url}/api/jobs/submit",
+                body=json.dumps(create_mock_submission_response(self.analyzer.id)),
+                status=200,
+                content_type="application/json",
+            )
+
+            with transaction.atomic():
+                self.analysis = Analysis.objects.create(
+                    analyzer_id=self.analyzer.id,
+                    analyzed_corpus_id=self.corpus.id,
+                    creator=self.user,
+                )
+            logger.info(f"Created Analysis object: {self.analysis}")
+
+            start_analysis.si(analysis_id=self.analysis.id).apply().get()
+
+        logger.info(f"Started analysis with ID: {self.analysis.id}")
+
+        # Mock callback results to actually create data
+        mock_gremlin_response_data = generate_random_analyzer_return_values(
+            doc_ids=self.doc_ids
+        )
+        logger.info("Generated mock gremlin response data")
+
+        analysis_result = (
+            import_analysis.si(
+                creator_id=self.user.id,
+                analysis_id=self.analysis.id,
+                analysis_results=mock_gremlin_response_data,
+            )
+            .apply()
+            .get()
+        )
+        logger.info(f"Imported analysis result: {analysis_result}")
+
+        self.assertTrue(analysis_result)
+
+        # Rough and ready test of imports - count database objs
+        annotation_count = Annotation.objects.all().count()
+        label_set_count = LabelSet.objects.all().count()
+        label_count = AnnotationLabel.objects.all().count()
+
+        logger.info(f"Created {annotation_count} annotations")
+        logger.info(f"Created {label_set_count} label sets")
+        logger.info(f"Created {label_count} labels")
+
+        self.assertTrue(annotation_count > 0)
+        self.assertTrue(label_set_count > 0)
+        self.assertTrue(label_count > 0)
+
+        logger.info("setUp method completed successfully")
+
+    def test_start_document_extract(self):
+        logger.info("Test start extract for single document...")
+
+        # First, create a fieldset
+        CREATE_FIELDSET_MUTATION = """
+        mutation createFieldset($name: String!, $description: String!) {
+          createFieldset(name: $name, description: $description) {
+            ok
+            message
+            obj {
+              id
+            }
+          }
+        }
+        """
+
+        fieldset_response = self.graphene_client.execute(
+            CREATE_FIELDSET_MUTATION,
+            variables={
+                "name": "Test Fieldset",
+                "description": "A test fieldset for document extract"
+            }
+        )
+
+        self.assertTrue(fieldset_response['data']['createFieldset']['ok'])
+        fieldset_id = fieldset_response['data']['createFieldset']['obj']['id']
+
+        # Now, start an extract for a single document
+        START_DOCUMENT_EXTRACT_MUTATION = """
+        mutation startExtractForDoc($documentId: ID!, $fieldsetId: ID!) {
+          startExtractForDoc(documentId: $documentId, fieldsetId: $fieldsetId) {
+            ok
+            message
+            obj {
+              id
+              name
+              started
+            }
+          }
+        }
+        """
+
+        document_id = to_global_id("DocumentType", self.doc_ids[0])  # Use the first document
+
+        extract_response = self.graphene_client.execute(
+            START_DOCUMENT_EXTRACT_MUTATION,
+            variables={
+                "documentId": document_id,
+                "fieldsetId": fieldset_id
+            }
+        )
+
+        logger.info(f"Start document extract response: {extract_response}")
+
+        self.assertTrue(extract_response['data']['startExtractForDoc']['ok'])
+        self.assertIsNotNone(extract_response['data']['startExtractForDoc']['obj']['id'])
+        self.assertIsNotNone(extract_response['data']['startExtractForDoc']['obj']['started'])
+
+        # Verify that an Extract object was created in the database
+        from opencontractserver.extracts.models import Extract
+        extract_id = from_global_id(extract_response['data']['startExtractForDoc']['obj']['id'])[1]
+        extract = Extract.objects.get(id=extract_id)
+
+        self.assertEqual(extract.documents.count(), 1)
+        self.assertEqual(extract.documents.first().id, self.doc_ids[0])
+
+        logger.info("SUCCESS - Document extract started successfully")
+
+    def test_start_document_analysis(self):
+        logger.info("Test start analysis for single document...")
+
+        START_DOCUMENT_ANALYSIS_MUTATION = """
+        mutation startAnalysisOnDoc($documentId: ID!, $analyzerId: ID!) {
+          startAnalysisOnDoc(documentId: $documentId, analyzerId: $analyzerId) {
+            ok
+            message
+            obj {
+              id
+              analysisStarted
+              analyzer {
+                id
+                analyzerId
+              }
+            }
+          }
+        }
+        """
+
+        document_id = to_global_id("DocumentType", self.doc_ids[0])  # Use the first document
+
+        analysis_response = self.graphene_client.execute(
+            START_DOCUMENT_ANALYSIS_MUTATION,
+            variables={
+                "documentId": document_id,
+                "analyzerId": self.analyzer_global_id
+            }
+        )
+
+        logger.info(f"Start document analysis response: {analysis_response}")
+
+        self.assertTrue(analysis_response['data']['startAnalysisOnDoc']['ok'])
+        self.assertIsNotNone(analysis_response['data']['startAnalysisOnDoc']['obj']['id'])
+        self.assertIsNotNone(analysis_response['data']['startAnalysisOnDoc']['obj']['analysisStarted'])
+        self.assertEqual(
+            analysis_response['data']['startAnalysisOnDoc']['obj']['analyzer']['analyzerId'],
+            self.analyzer.id
+        )
+
+        # Verify that an Analysis object was created in the database
+        analysis_id = from_global_id(analysis_response['data']['startAnalysisOnDoc']['obj']['id'])[1]
+        analysis = Analysis.objects.get(id=analysis_id)
+        self.assertIsNotNone(analysis)
+
+        logger.info("SUCCESS - Document analysis started successfully")

@@ -237,13 +237,19 @@ export const Page = ({
       (a) => a.json[pageInfo.page.pageNumber - 1] !== undefined
     );
     return !annotationStore.showStructuralLabels
-      ? defined_annotations.filter((annot) => annot.annotationLabel.readonly)
+      ? defined_annotations.filter((annot) => !annot.structural)
       : defined_annotations;
   }, [
     annotations,
     pageInfo.page.pageNumber,
     annotationStore.showStructuralLabels,
   ]);
+
+  console.log(
+    "Page show structural",
+    annotationStore.showStructuralLabels,
+    pageInfo
+  );
 
   const page_annotation_components = useMemo(() => {
     if (!hasPdfPageRendered || !scale || !pageInfo.bounds || !annotations)

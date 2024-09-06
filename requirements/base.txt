@@ -51,7 +51,7 @@ pdfminer
 pdf2image
 poppler-utils
 
-# Doc Analysis (NLP dependencies, placeholder)
+# Doc Analysis (NLP dependencies, placeholder) - WARNING, these are all in same environment... not ideal.
 # ------------------------------------------------------------------------------
 PyPDF2==3.0.1  # https://github.com/mstamy2/PyPDF2
 pandas
@@ -62,6 +62,7 @@ llama-index-llms-openai==0.1.22
 marvin==2.3.7
 plasmapdf
 spacy
+gliner
 
 # Data Processing Tools
 # -------------------------------------------------------------------------------

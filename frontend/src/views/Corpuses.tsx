@@ -560,7 +560,7 @@ export const Corpuses = () => {
         content: use_mobile_layout ? "" : "Analyses",
       },
       render: () => (
-        <Tab.Pane>
+        <Tab.Pane style={{ overflow: "hidden", height: "100%" }}>
           <CorpusAnalysesCards />
         </Tab.Pane>
       ),

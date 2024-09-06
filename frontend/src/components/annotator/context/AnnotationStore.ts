@@ -70,6 +70,7 @@ export class ServerAnnotation {
     public readonly page: number,
     public readonly annotationLabel: AnnotationLabelType,
     public readonly rawText: string,
+    public readonly structural: boolean,
     public readonly json: MultipageAnnotationJson,
     public readonly myPermissions: PermissionTypes[],
     id: string | undefined = undefined
@@ -90,6 +91,7 @@ export class ServerAnnotation {
       delta.page ?? this.page,
       delta.annotationLabel ?? Object.assign({}, this.annotationLabel),
       delta.rawText ?? this.rawText,
+      delta.structural ?? this.structural,
       delta.json ?? this.json,
       delta.myPermissions ?? this.myPermissions,
       this.id
@@ -101,6 +103,7 @@ export class ServerAnnotation {
       obj.page,
       obj.annotationLabel,
       obj.rawText,
+      obj.structural,
       obj.json,
       obj.myPermissions,
       obj.id

@@ -194,10 +194,10 @@ class Analysis(BaseOCModel):
     # Which corpus was analyzed
     analyzed_corpus = django.db.models.ForeignKey(
         Corpus,
-        on_delete=django.db.models.CASCADE,
+        on_delete=django.db.models.SET_NULL,
         related_name="analyses",
-        blank=False,
-        null=False,
+        blank=True,
+        null=True,
     )
 
     # If applicable, what CorpusAction ran?

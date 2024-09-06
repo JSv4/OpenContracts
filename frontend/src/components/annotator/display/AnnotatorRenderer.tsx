@@ -324,6 +324,7 @@ export const AnnotatorRenderer = ({
                   annotationObj.page,
                   annotationObj.annotationLabel,
                   annotationObj.rawText,
+                  false,
                   annotationObj.json,
                   getPermissions(
                     annotationObj?.myPermissions

@@ -95,6 +95,7 @@ export function convertToServerAnnotation(
     annotation.page,
     annotation.annotationLabel,
     annotation.rawText ?? "",
+    annotation.structural ?? false,
     annotation.json ?? {},
     annotation.myPermissions ?? [],
     annotation.id

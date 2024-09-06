@@ -54,7 +54,7 @@ import { CookieConsentDialog } from "./components/cookies/CookieConsent";
 import { Extracts } from "./views/Extracts";
 import { useEnv } from "./components/hooks/UseEnv";
 import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
-import { SelectCorpusAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
+import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
 import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 
 export const App = () => {
@@ -173,9 +173,10 @@ export const App = () => {
               <Loader content="Logging in..." />
             </Dimmer>
             {opened_corpus && (
-              <SelectCorpusAnalyzerOrFieldsetModal
+              <SelectAnalyzerOrFieldsetModal
                 open={show_corpus_analyzer_fieldset_modal}
                 corpus={opened_corpus}
+                document={opened_document ? opened_document : undefined}
                 onClose={() => showSelectCorpusAnalyzerOrFieldsetModal(false)}
               />
             )}

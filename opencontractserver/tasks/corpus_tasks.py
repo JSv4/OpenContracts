@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from opencontractserver.analyzer.models import Analysis, Analyzer
-from opencontractserver.corpuses.models import Corpus, CorpusAction
+from opencontractserver.corpuses.models import CorpusAction
 from opencontractserver.documents.models import DocumentAnalysisRow
 from opencontractserver.extracts.models import Datacell, Extract
 from opencontractserver.tasks.analyzer_tasks import (
@@ -27,37 +27,31 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def run_task_name_analyzer(
-    user_id: str | int,
-    analyzer_id: int | str,
-    corpus_id: str | int | None = None,
+    analysis_id: int | str,
     document_ids: list[str | int] | None = None,
-    corpus_action_id: str | int | None = None,
 ):
 
-    if corpus_id is None and document_ids is None:
-        raise ValueError("Either corpus_id or document_ids must be provided")
-
-    analyzer = Analyzer.objects.get(pk=analyzer_id)
-    action = CorpusAction.objects.get(pk=corpus_action_id) if corpus_action_id else None
-    analysis = create_and_setup_analysis(
-        analyzer,
-        user_id,
-        corpus_id=corpus_id,
-        doc_ids=document_ids,
-        corpus_action=action,
-    )
+    analysis = Analysis.objects.get(pk=analysis_id)
+    analyzer = analysis.analyzer
 
     task_name = analyzer.task_name
     task_func = get_doc_analyzer_task_by_name(task_name)
 
     if task_func is None:
-        msg = f"Queue {task_name} for corpus {corpus_id} failed as task could not be found..."
+        msg = f"Task {task_name} for analysis {analysis_id} failed as task could not be found..."
         logger.error(msg)
         raise ValueError(msg)
 
     if document_ids is None:
-        corpus = Corpus.objects.get(pk=corpus_id)
-        document_ids = list(corpus.documents.values_list("id", flat=True))
+        if analysis.analyzed_corpus is None:
+            raise ValueError(
+                "If Analysis is not linked to a corpus, it must be linked to docs at "
+                "run_task_name_analyzer() runtime..."
+            )
+
+        document_ids = list(
+            analysis.analyzed_corpus.documents.values_list("id", flat=True)
+        )
 
     logger.info(f"Added task {task_name} to queue: {task_func}")
 
@@ -93,11 +87,8 @@ def process_analyzer(
     if analyzer.task_name:
 
         run_task_name_analyzer.si(
-            user_id=user_id,
-            analyzer_id=analyzer.id,
-            corpus_id=corpus_id,
+            analysis_id=analysis.id,
             document_ids=document_ids,
-            corpus_action_id=corpus_action.id if corpus_action else None,
         ).apply_async()
 
     else:

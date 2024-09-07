@@ -1,4 +1,4 @@
-import { Menu, Image, Dropdown, Icon } from "semantic-ui-react";
+import { Menu, Image, Dropdown, Icon, Label } from "semantic-ui-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Link } from "react-router-dom";
@@ -62,6 +62,13 @@ export const NavMenu = () => {
         <Menu.Item header>
           <Image size="mini" src={logo} style={{ marginRight: "1.5em" }} />
           Open Contracts
+          <Label
+            size="tiny"
+            color="grey"
+            style={{ marginLeft: "0.5em", verticalAlign: "middle" }}
+          >
+            v2.5.0
+          </Label>
         </Menu.Item>
         {!isLoading && user ? [...items, ...private_items] : items}
         <Menu.Menu position="right">
@@ -111,6 +118,13 @@ export const NavMenu = () => {
         <Menu.Item header>
           <Image size="mini" src={logo} style={{ marginRight: "1.5em" }} />
           Open Contracts
+          <Label
+            size="tiny"
+            color="grey"
+            style={{ marginLeft: "0.5em", verticalAlign: "middle" }}
+          >
+            v2.5.0
+          </Label>
         </Menu.Item>
         {user ? [...items, ...private_items] : items}
         <Menu.Menu position="right">

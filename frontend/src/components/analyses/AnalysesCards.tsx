@@ -16,7 +16,7 @@ interface AnalysesCardsProps {
   read_only?: boolean;
   analyses: AnalysisType[];
   opened_corpus: CorpusType | null;
-  pageInfo: PageInfo | undefined;
+  pageInfo: PageInfo | undefined | null;
   loading: boolean;
   loading_message: string;
   fetchMore: (args?: any) => void | any;
@@ -27,10 +27,13 @@ export const AnalysesCards = ({
   read_only,
   analyses,
   opened_corpus,
+  pageInfo,
   loading_message,
   loading,
   fetchMore,
 }: AnalysesCardsProps) => {
+  console.log("AnalysesCards - ");
+
   // Let's figure out the viewport so we can size the cards appropriately.
   const { width } = useWindowDimensions();
   const card_cols = determineCardColCount(width);
@@ -58,6 +61,18 @@ export const AnalysesCards = ({
         )
       );
       selectedAnalyses([...analyses_to_display, selected_analysis]);
+    }
+  };
+
+  const handleUpdate = () => {
+    if (!loading && pageInfo?.hasNextPage) {
+      console.log("Fetching more annotation cards...");
+      fetchMore({
+        variables: {
+          limit: 20,
+          cursor: pageInfo.endCursor,
+        },
+      });
     }
   };
 
@@ -123,7 +138,7 @@ export const AnalysesCards = ({
         <Card.Group stackable itemsPerRow={card_cols} style={comp_style}>
           {analysis_items}
         </Card.Group>
-        <FetchMoreOnVisible fetchNextPage={fetchMore} />
+        <FetchMoreOnVisible fetchNextPage={handleUpdate} />
       </div>
     </>
   );

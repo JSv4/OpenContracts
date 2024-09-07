@@ -158,7 +158,7 @@ export const CorpusAnnotationCards = ({
       loading_message="Annotations Loading..."
       pageInfo={undefined}
       //pageInfo={annotation_response?.annotations?.pageInfo ? annotation_response.annotations.pageInfo : undefined}
-      style={{ minHeight: "70vh" }}
+      style={{ minHeight: "70vh", overflowY: "unset" }}
       fetchMore={handleFetchMoreAnnotations}
     />
   );

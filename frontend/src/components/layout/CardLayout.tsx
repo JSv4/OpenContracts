@@ -28,6 +28,7 @@ const ScrollableSegment = styled(StyledSegment)`
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #888 #f1f1f1;
+    color: red;
 
     &::-webkit-scrollbar {
       width: 8px;
@@ -74,6 +75,7 @@ export const CardLayout: React.FC<CardLayoutProps> = ({
         </StyledSegment>
       )}
       <ScrollableSegment
+        id="ScrollableSegment"
         style={{
           padding: use_mobile ? "5px" : use_responsive ? "10px" : "1rem",
           ...(use_mobile ? { paddingLeft: "0px", paddingRight: "0px" } : {}),

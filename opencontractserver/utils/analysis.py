@@ -20,6 +20,7 @@ def create_and_setup_analysis(
             creator_id=user_id,
             corpus_action=corpus_action,
         )
+        print(f"Attempted to filter for analysis with specific corpus: {analyses}")
         if analyses.count() == 1:
             analysis = analyses[0]
         else:

@@ -133,7 +133,7 @@ export const AnalysisItem = ({
   compact,
 }: AnalysisItemProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= 600;
   const descriptionRef = useRef<HTMLElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -233,7 +233,7 @@ export const AnalysisItem = ({
         <CardMeta>
           <span className="date">
             <u>Author</u>:{" "}
-            {analysis.analyzer.manifest?.metadata.author_name || ""}
+            {analysis.analyzer.manifest?.metadata?.author_name || ""}
           </span>
         </CardMeta>
         {!compact && (

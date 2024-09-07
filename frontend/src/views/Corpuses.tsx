@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button, Tab } from "semantic-ui-react";
-import _, { update } from "lodash";
+import _ from "lodash";
 import { toast } from "react-toastify";
 import {
   ApolloError,
@@ -40,15 +40,9 @@ import {
   authToken,
   annotationContentSearchTerm,
   openedDocument,
-  showSelectedAnnotationOnly,
-  showAnnotationBoundingBoxes,
-  showAnnotationLabels,
   selectedMetaAnnotationId,
   filterToLabelId,
-  showAnalyzerSelectionForCorpus,
-  selectedAnalyses,
   analysisSearchTerm,
-  displayAnnotationOnAnnotatorLoad,
   exportingCorpus,
   showQueryViewState,
   openedQueryObj,
@@ -533,7 +527,10 @@ export const Corpuses = () => {
         content: use_mobile_layout ? "" : "Documents",
       },
       render: () => (
-        <Tab.Pane>
+        <Tab.Pane
+          style={{ overflowY: "scroll" }}
+          id="CorpusDocumentCardTabPane"
+        >
           <CorpusDocumentCards opened_corpus_id={opened_corpus_id} />
         </Tab.Pane>
       ),
@@ -545,7 +542,7 @@ export const Corpuses = () => {
         content: use_mobile_layout ? "" : "Annotations",
       },
       render: () => (
-        <Tab.Pane>
+        <Tab.Pane style={{ overflowY: "scroll" }}>
           <CorpusAnnotationCards opened_corpus_id={opened_corpus_id} />
         </Tab.Pane>
       ),
@@ -557,7 +554,7 @@ export const Corpuses = () => {
         content: use_mobile_layout ? "" : "Analyses",
       },
       render: () => (
-        <Tab.Pane style={{ overflow: "hidden", height: "100%" }}>
+        <Tab.Pane style={{ overflowY: "scroll" }}>
           <CorpusAnalysesCards />
         </Tab.Pane>
       ),
@@ -569,7 +566,7 @@ export const Corpuses = () => {
         content: use_mobile_layout ? "" : "Extracts",
       },
       render: () => (
-        <Tab.Pane>
+        <Tab.Pane style={{ overflowY: "scroll" }}>
           <CorpusExtractCards />
         </Tab.Pane>
       ),
@@ -678,20 +675,19 @@ export const Corpuses = () => {
           height: "100%",
           flex: 1,
           overflowY: "hidden",
-          ...(use_mobile_layout
-            ? {
-                marginLeft: "5px",
-                marginRight: "5px",
-              }
-            : {
-                marginLeft: "1rem",
-                marginRight: "1rem",
-              }),
+          marginLeft: "5px",
+          marginRight: "5px",
         }}
       >
         <Tab
+          id="SelectedCorpusTabDiv"
           attached="bottom"
-          style={{ width: "100%" }}
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-start",
+          }}
           activeIndex={active_tab}
           onTabChange={(e, { activeIndex }) =>
             setActiveTab(activeIndex ? Number(activeIndex) : 0)
@@ -850,7 +846,7 @@ export const Corpuses = () => {
         ) : active_tab == 1 ? (
           <CreateAndSearchBar
             onChange={handleAnnotationSearchChange}
-            actions={[]}
+            actions={corpus_actions}
             placeholder="Search for annotated text in corpus..."
             value={annotationSearchCache}
             filters={

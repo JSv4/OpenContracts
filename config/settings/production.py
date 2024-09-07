@@ -15,8 +15,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.opensource.legal",
     "https://*.opensource.legal/",
     "https://opencontracts.opensource.legal",
-    "https://opencontracts.opensource.legal/"
-    "admin/login"
+    "https://opencontracts.opensource.legal/" "admin/login",
 ]
 print(f"Open Contracts Production CSRF Trusted Origins: {CSRF_TRUSTED_ORIGINS}")
 

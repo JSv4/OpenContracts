@@ -106,7 +106,7 @@ export const CorpusAnalysesCards = () => {
       loading_message="Analyses Loading..."
       pageInfo={analyses_response?.analyses?.pageInfo}
       fetchMore={fetchMoreAnalyses}
-      style={{ minHeight: "70vh" }}
+      style={{ minHeight: "70vh", overflowY: "unset" }}
     />
   );
 };

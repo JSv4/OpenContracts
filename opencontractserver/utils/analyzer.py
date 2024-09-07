@@ -10,8 +10,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
-from opencontractserver.documents.models import Document
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
+from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
     AnalyzerManifest,
     AnnotationLabelPythonType,

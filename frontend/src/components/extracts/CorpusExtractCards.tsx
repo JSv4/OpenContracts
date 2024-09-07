@@ -75,7 +75,7 @@ export const CorpusExtractCards = () => {
       loading_message="Extracts Loading..."
       pageInfo={extracts_response?.extracts?.pageInfo}
       fetchMore={fetchMoreExtracts}
-      style={{ minHeight: "70vh" }}
+      style={{ minHeight: "70vh", overflowY: "unset" }}
     />
   );
 };

@@ -48,7 +48,10 @@ import { LabelSelector } from "../labels/label_selector/LabelSelector";
 import { Dimmer, Loader } from "semantic-ui-react";
 import { Menu } from "semantic-ui-react";
 import { PDFActionBar } from "../display/ActionBar";
-import { showStructuralAnnotations } from "../../../graphql/cache";
+import {
+  showSelectCorpusAnalyzerOrFieldsetModal,
+  showStructuralAnnotations,
+} from "../../../graphql/cache";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -254,9 +257,13 @@ export const PDFView = ({
 
   // TODO - These are dummy placeholders
   const actionBarItems = [
-    { key: "action1", text: "Action 1", value: "action1" },
-    { key: "action2", text: "Action 2", value: "action2" },
-    { key: "action3", text: "Action 3", value: "action3" },
+    {
+      key: "action1",
+      text: "Analyze",
+      value: () => showSelectCorpusAnalyzerOrFieldsetModal(true),
+    },
+    // { key: "action2", text: "Action 2", value: "action2" },
+    // { key: "action3", text: "Action 3", value: "action3" },
   ];
 
   const handleActionSelect = (action: string) => {

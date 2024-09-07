@@ -235,7 +235,7 @@ export type CorpusType = Node & {
   modified?: Scalars["DateTime"];
   assignmentSet?: AssignmentTypeConnection;
   relationshipSet?: RelationshipTypeConnection;
-  annotationSet?: AnnotationTypeConnection;
+  annotations?: AnnotationTypeConnection;
   allAnnotationSummaries?: ServerAnnotationType[];
   analyses: AnalysisTypeConnection;
   isPublic?: Scalars["Boolean"];

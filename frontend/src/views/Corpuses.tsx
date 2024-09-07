@@ -83,7 +83,7 @@ import {
   GET_DOCUMENTS,
 } from "../graphql/queries";
 import { CorpusType, LabelType } from "../graphql/types";
-import { LooseObject } from "../components/types";
+import { LooseObject, PermissionTypes } from "../components/types";
 import { toBase64 } from "../utils/files";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
 import { CorpusAnnotationCards } from "../components/annotations/CorpusAnnotationCards";
@@ -91,13 +91,13 @@ import { CorpusDocumentCards } from "../components/documents/CorpusDocumentCards
 import { CorpusAnalysesCards } from "../components/analyses/CorpusAnalysesCards";
 import { FilterToAnalysesSelector } from "../components/widgets/model-filters/FilterToAnalysesSelector";
 import useWindowDimensions from "../components/hooks/WindowDimensionHook";
-import { FilterToMetadataSelector } from "../components/widgets/model-filters/FilterToMetadataSelector";
 import { SelectExportTypeModal } from "../components/widgets/modals/SelectExportTypeModal";
 import { CorpusQueryList } from "../components/queries/CorpusQueryList";
 import { NewQuerySearch } from "../components/queries/NewQuerySearch";
 import { ViewQueryResultsModal } from "../components/widgets/modals/ViewQueryResultsModal";
 import { FilterToCorpusActionOutputs } from "../components/widgets/model-filters/FilterToCorpusActionOutputs";
 import { CorpusExtractCards } from "../components/extracts/CorpusExtractCards";
+import { getPermissions } from "../utils/transform";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
@@ -111,27 +111,17 @@ export const Corpuses = () => {
     selectedMetaAnnotationId
   );
 
-  const selected_analyes = useReactiveVar(selectedAnalyses);
   const selected_document_ids = useReactiveVar(selectedDocumentIds);
   const document_search_term = useReactiveVar(documentSearchTerm);
   const corpus_search_term = useReactiveVar(corpusSearchTerm);
   const analysis_search_term = useReactiveVar(analysisSearchTerm);
   const deleting_corpus = useReactiveVar(deletingCorpus);
-  const corpus_to_analyze = useReactiveVar(showAnalyzerSelectionForCorpus);
   const corpus_to_edit = useReactiveVar(editingCorpus);
   const corpus_to_view = useReactiveVar(viewingCorpus);
   const opened_corpus = useReactiveVar(openedCorpus);
   const exporting_corpus = useReactiveVar(exportingCorpus);
   const opened_document = useReactiveVar(openedDocument);
   const filter_to_label_id = useReactiveVar(filterToLabelId);
-  const opened_to_annotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
-  const show_selected_annotation_only = useReactiveVar(
-    showSelectedAnnotationOnly
-  );
-  const show_annotation_bounding_boxes = useReactiveVar(
-    showAnnotationBoundingBoxes
-  );
-  const show_annotation_labels = useReactiveVar(showAnnotationLabels);
 
   const auth_token = useReactiveVar(authToken);
   const annotation_search_term = useReactiveVar(annotationContentSearchTerm);
@@ -159,6 +149,10 @@ export const Corpuses = () => {
   );
 
   const opened_corpus_id = opened_corpus?.id ? opened_corpus.id : null;
+  let raw_permissions = opened_corpus?.myPermissions;
+  if (opened_corpus && raw_permissions !== undefined) {
+    raw_permissions = getPermissions(raw_permissions);
+  }
 
   /**
    * Set up the debounced search handling for the two SearchBars (Corpus search is rendered first by this component,
@@ -494,7 +488,7 @@ export const Corpuses = () => {
 
     // Currently the import capability is enabled via an env variable in case we want it disabled
     // (which we'll probably do for the public demo to cut down on attack surface and load on server)
-    if (process.env.REACT_APP_ALLOW_IMPORTS) {
+    if (process.env.REACT_APP_ALLOW_IMPORTS && auth_token) {
       corpus_actions.push({
         icon: "cloud upload",
         title: "Import Corpus",
@@ -517,12 +511,15 @@ export const Corpuses = () => {
   }
 
   // Actions for analyzer pane (if user is signed in)
-  let analyses_actions: DropdownActionProps[] = [];
-  if (auth_token) {
-    analyses_actions.push({
+  if (
+    auth_token &&
+    raw_permissions?.includes(PermissionTypes.CAN_UPDATE) &&
+    raw_permissions?.includes(PermissionTypes.CAN_READ)
+  ) {
+    corpus_actions.push({
       icon: "factory",
       title: "Start New Analysis",
-      key: `Analysis_action_${analyses_actions.length}`,
+      key: `Analysis_action_${corpus_actions.length}`,
       color: "blue",
       action_function: () => showSelectCorpusAnalyzerOrFieldsetModal(true),
     });
@@ -878,7 +875,7 @@ export const Corpuses = () => {
         ) : (
           <CreateAndSearchBar
             onChange={handleAnalysisSearchChange}
-            actions={analyses_actions}
+            actions={corpus_actions}
             placeholder="Search for analyses..."
             value={analysesSearchCache}
             filters={

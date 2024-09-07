@@ -10,6 +10,7 @@ import {
   SemanticShorthandItem,
   TabPaneProps,
   TabProps,
+  SemanticICONS,
 } from "semantic-ui-react";
 
 import _, { isNumber } from "lodash";
@@ -23,6 +24,9 @@ import {
   showSelectedAnnotationOnly,
   showAnnotationBoundingBoxes,
   showAnnotationLabels,
+  openedCorpus,
+  openedDocument,
+  selectedAnalysis,
 } from "../../../graphql/cache";
 import {
   AnalysisType,
@@ -36,11 +40,12 @@ import { SearchSidebarWidget } from "../search_widget/SearchSidebarWidget";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { SingleDocumentExtractResults } from "../../extracts/SingleDocumentExtractResults";
-import { AnnotatorModeToggle } from "../../widgets/buttons/AnnotatorModeToggle";
 import { ViewSettingsPopup } from "../../widgets/popups/ViewSettingsPopup";
 import { PermissionTypes } from "../../types";
 import { getPermissions } from "../../../utils/transform";
 import { PlaceholderCard } from "../../placeholders/PlaceholderCard";
+import { CorpusStats } from "../../widgets/data-display/CorpusStatus";
+import styled from "styled-components";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;
@@ -109,6 +114,82 @@ const getHeaderInfo = (
   return { header_text, subheader_text, tooltip_text };
 };
 
+const SidebarContainer = styled.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+`;
+
+const TopSection = styled.div`
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+`;
+
+const HeaderText = styled(Header)`
+  margin: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .content {
+    font-size: 1.2em;
+    color: #2c3e50;
+  }
+
+  .sub.header {
+    margin-top: 0.25rem;
+    font-size: 0.9em;
+    color: #7f8c8d;
+  }
+`;
+
+const StyledTab = styled(Tab)`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  .ui.secondary.menu {
+    justify-content: center;
+    padding: 0;
+    padding-top: 1rem;
+    margin: 0;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .item {
+    flex: 1;
+    justify-content: center;
+    color: #34495e;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+
+    &.active {
+      color: #2185d0;
+      border-color: #2185d0;
+    }
+  }
+
+  .ui.segment {
+    flex: 1;
+    overflow-y: auto;
+    border: none;
+    border-radius: 0;
+    margin: 0;
+    padding: 1rem;
+  }
+`;
+
+const ContentContainer = styled.div`
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+`;
+
 export const AnnotatorSidebar = ({
   read_only,
   selected_corpus,
@@ -136,6 +217,8 @@ export const AnnotatorSidebar = ({
 }) => {
   const annotationStore = useContext(AnnotationStore);
   const label_display_behavior = useReactiveVar(showAnnotationLabels);
+  const opened_corpus = useReactiveVar(openedCorpus);
+  const opened_document = useReactiveVar(openedDocument);
 
   // Slightly kludgy way to handle responsive layout and drop sidebar once it becomes a pain
   // If there's enough interest to warrant a refactor, we can put some more thought into how
@@ -144,9 +227,10 @@ export const AnnotatorSidebar = ({
   const show_minimal_layout = width <= 1000;
 
   const { header_text, subheader_text, tooltip_text } = getHeaderInfo(
-    editMode,
+    selected_analysis || selected_extract ? "ANALYZE" : "ANNOTATE",
     allowInput,
-    read_only
+    read_only ||
+      (!selected_analysis && !selected_extract && !opened_corpus?.labelSet)
   );
 
   const show_selected_annotation_only = useReactiveVar(
@@ -156,6 +240,7 @@ export const AnnotatorSidebar = ({
     showAnnotationBoundingBoxes
   );
 
+  const [showCorpusStats, setShowCorpusStats] = useState(false);
   const [showSearchPane, setShowSearchPane] = useState(true);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [panes, setPanes] = useState<TabPanelProps[]>([]);
@@ -267,7 +352,6 @@ export const AnnotatorSidebar = ({
                   flexDirection: "column",
                   justifyItems: "flex-start",
                   padding: "1em",
-                  width: "100%",
                   flexBasis: "100px",
                 }}
               >
@@ -314,7 +398,7 @@ export const AnnotatorSidebar = ({
                       style={{
                         flex: 1,
                         flexBasis: "100px",
-                        overflow: "scroll",
+                        overflow: "auto",
                       }}
                     >
                       <ul className="sidebar__annotations">
@@ -551,100 +635,60 @@ export const AnnotatorSidebar = ({
   };
 
   return (
-    <Segment
-      raised
-      style={{
-        width: "100%",
-        height: "100%",
-        padding: "0px",
-        display: hideSidebar || show_minimal_layout ? "none" : "flex",
-        margin: "0px",
-        flexDirection: "column",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        userSelect: "none",
-        MsUserSelect: "none",
-        MozUserSelect: "none",
-      }}
+    <SidebarContainer
+      style={{ display: hideSidebar || show_minimal_layout ? "none" : "flex" }}
     >
-      {!show_minimal_layout ? (
-        <Popup
-          trigger={
-            <Icon
-              name="info circle"
-              color="blue"
-              style={{
-                position: "absolute",
-                top: ".25vh",
-                right: ".25vh",
-                fontSize: "2rem",
-              }}
-            />
-          }
-          content={tooltip_text}
-        />
-      ) : (
-        <></>
-      )}
-      <div style={{ width: "100%", textAlign: "center" }}>
-        <div
-          style={{
-            marginTop: "3vh",
-            marginLeft: "1vw",
-            marginRight: "1vw",
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: "space-around",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-            }}
+      <TopSection>
+        <HeaderText as="h3">
+          <Header.Content>
+            {header_text}
+            <Header.Subheader>{subheader_text}</Header.Subheader>
+          </Header.Content>
+          <Popup
+            on="click"
+            onClose={() => setShowCorpusStats(false)}
+            onOpen={() => setShowCorpusStats(true)}
+            open={showCorpusStats}
+            position="bottom right"
+            trigger={
+              <Icon
+                name={
+                  opened_corpus ? "book" : ("book outline" as SemanticICONS)
+                }
+                size="large"
+              />
+            }
+            flowing
+            hoverable
           >
-            <AnnotatorModeToggle
-              read_only={read_only}
-              allow_input={allowInput}
-              mode={editMode}
-              setAllowInput={setAllowInput}
-              setMode={setEditMode}
-            />
-          </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-            }}
-          >
-            <div style={{ paddingLeft: ".5vw" }}>
-              <Header as="h3">
-                {header_text}
-                <Header.Subheader style={{ padding: ".5rem" }}>
-                  {subheader_text}
-                </Header.Subheader>
+            {opened_corpus ? (
+              <CorpusStats
+                corpus={opened_corpus}
+                onUnselect={() => openedCorpus(null)}
+              />
+            ) : (
+              <Header as="h4" icon textAlign="center">
+                <Icon name="search" circular />
+                <Header.Content>No corpus selected</Header.Content>
               </Header>
-            </div>
-          </div>
-        </div>
-      </div>
-      <Tab
-        menu={{
-          pointing: true,
-          secondary: true,
-          className: "sidebar_tab_menu_style",
-          style: {
-            marginBottom: "0px",
-          },
-        }}
+            )}
+          </Popup>
+        </HeaderText>
+      </TopSection>
+      <StyledTab
+        menu={{ secondary: true, pointing: true }}
         activeIndex={activeIndex}
         onTabChange={handleTabChange}
-        panes={panes}
-        className="sidebar_tab_style"
+        panes={panes.map((pane) => ({
+          ...pane,
+          render: () => (
+            <ContentContainer>
+              {pane.render ? pane.render() : null}
+            </ContentContainer>
+          ),
+        }))}
       />
-    </Segment>
+    </SidebarContainer>
   );
 };
 

@@ -36,6 +36,7 @@
   list-style: none;
   color: black;
   padding: 0;
+  padding-right: 0.5rem;
   margin: 0;
 }
 
@@ -53,6 +54,7 @@
 
 .sidebar__annotation {
   padding: 2rem;
+  margin-top: 0.25rem;
   margin-bottom: 0.5rem;
   cursor: pointer;
   transition: background 140ms ease-in;

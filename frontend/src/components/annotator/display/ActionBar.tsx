@@ -59,7 +59,7 @@ interface PDFActionBarProps {
   actionItems: {
     key: string;
     text: string;
-    value: string;
+    value: CallableFunction;
     icon?: SemanticICONS;
   }[];
   onActionSelect?: (value: string) => void;
@@ -106,8 +106,8 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
     setIsPopupOpen(!isPopupOpen);
   };
 
-  const handleMenuItemClick = (value: string) => {
-    onActionSelect && onActionSelect(value);
+  const handleMenuItemClick = (value: CallableFunction) => {
+    value();
     setIsPopupOpen(false);
   };
 

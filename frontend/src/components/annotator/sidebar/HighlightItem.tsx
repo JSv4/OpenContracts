@@ -106,7 +106,7 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
   const my_input_relationships = relations.filter((relation) =>
     relation.targetIds.includes(annotation.id)
   );
-
+  console.log("Annotation over: ", annotation.rawText);
   return (
     <HighlightContainer
       color={annotation?.annotationLabel?.color}
@@ -144,9 +144,7 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
         <Popup
           content={annotation.rawText}
           trigger={
-            <BlockQuote>
-              {`${annotation.rawText.slice(0, 90).trim()}…`}
-            </BlockQuote>
+            <BlockQuote>{`${annotation.rawText.slice(0, 90)}…`}</BlockQuote>
           }
         />
       )}

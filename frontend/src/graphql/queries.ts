@@ -401,6 +401,9 @@ export const GET_CORPUSES = gql`
           id
           icon
           title
+          creator {
+            email
+          }
           description
           appliedAnalyzerIds
           isPublic
@@ -413,7 +416,11 @@ export const GET_CORPUSES = gql`
             title
             description
           }
+          annotations {
+            totalCount
+          }
           documents {
+            totalCount
             edges {
               node {
                 id

@@ -5,8 +5,6 @@ entryPoints:
   web:
     # http
     address: ":80"
-    forwardedHeaders:
-      insecure: true
     http:
       # https://docs.traefik.io/routing/entrypoints/#entrypoint
       redirections:
@@ -16,8 +14,6 @@ entryPoints:
   web-secure:
     # https
     address: ":443"
-    forwardedHeaders:
-      insecure: true
 
   flower:
     address: ":5555"
@@ -62,7 +58,7 @@ http:
       entryPoints:
         - "web-secure"
       middlewares:
-        - "security-headers"
+        - "csrf"
       service: django
       priority: 2
       tls:
@@ -70,18 +66,11 @@ http:
         certResolver: letsencrypt
 
   middlewares:
-    headers:
+    csrf:
+      # https://docs.traefik.io/master/middlewares/headers/#hostsproxyheaders
+      # https://docs.djangoproject.com/en/dev/ref/csrf/#ajax
       headers:
-        HostsProxyHeaders: [ "X-Forwarded-Host" ]
-        SSLProxyHeaders:
-          X-Forwarded-Proto: https
-
-    security-headers:
-      headers:
-        hostsProxyHeaders:
-          - "X-Forwarded-Host"
-        SSLProxyHeaders:
-          X-Forwarded-Proto: https
+        hostsProxyHeaders: [ "X-CSRFToken" ]
 
   services:
 

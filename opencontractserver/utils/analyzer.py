@@ -8,9 +8,9 @@ from django.conf import settings
 from django.core.handlers.wsgi import WSGIRequest
 from django.db import transaction
 from django.utils import timezone
-from llama_index.legacy.readers.bagel import Documents
 
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
+from opencontractserver.documents.models import Document
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
 from opencontractserver.types.dicts import (
     AnalyzerManifest,
@@ -213,7 +213,7 @@ def run_analysis(
 
     # Otherwise we need a list of valid doc_ids to apply to analysis
     elif isinstance(doc_ids, list) and len(doc_ids) > 0:
-        docs = Documents.filter(id__in=doc_ids)
+        docs = Document.objects.filter(id__in=doc_ids)
         if docs.count() != len(doc_ids):
             raise ValueError(f"Failed retrieving all documents in doc list {doc_ids}")
         logger.info(f"Analyze document list with d {doc_ids}")

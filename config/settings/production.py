@@ -59,6 +59,8 @@ SECURE_HSTS_PRELOAD = env.bool("DJANGO_SECURE_HSTS_PRELOAD", default=True)
 SECURE_CONTENT_TYPE_NOSNIFF = env.bool(
     "DJANGO_SECURE_CONTENT_TYPE_NOSNIFF", default=True
 )
+USE_X_FORWARDED_HOST = True
+
 
 # TEMPLATES
 # ------------------------------------------------------------------------------

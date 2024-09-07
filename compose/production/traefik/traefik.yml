@@ -58,7 +58,7 @@ http:
       entryPoints:
         - "web-secure"
       middlewares:
-        - "csrf"
+        - "security-headers"
       service: django
       priority: 2
       tls:
@@ -66,11 +66,18 @@ http:
         certResolver: letsencrypt
 
   middlewares:
-    csrf:
-      # https://docs.traefik.io/master/middlewares/headers/#hostsproxyheaders
-      # https://docs.djangoproject.com/en/dev/ref/csrf/#ajax
+    headers:
       headers:
-        hostsProxyHeaders: [ "X-CSRFToken" ]
+        HostsProxyHeaders: [ "X-Forwarded-Host" ]
+        SSLProxyHeaders:
+          X-Forwarded-Proto: https
+
+    security-headers:
+      headers:
+        hostsProxyHeaders:
+          - "X-Forwarded-Host"
+        SSLProxyHeaders:
+          X-Forwarded-Proto: https
 
   services:
 

@@ -1408,6 +1408,22 @@ class StartDocumentAnalysisMutation(graphene.Mutation):
             raise ValueError("One of document_pk and corpus_pk must be provided")
 
         try:
+            # Check permissions for document
+            if document_pk:
+                document = Document.objects.get(pk=document_pk)
+                if not (document.creator == user or document.is_public):
+                    raise PermissionError(
+                        "You don't have permission to analyze this document."
+                    )
+
+            # Check permissions for corpus
+            if corpus_pk:
+                corpus = Corpus.objects.get(pk=corpus_pk)
+                if not (corpus.creator == user or corpus.is_public):
+                    raise PermissionError(
+                        "You don't have permission to analyze this corpus."
+                    )
+
             analyzer = Analyzer.objects.get(pk=analyzer_pk)
 
             analysis = process_analyzer(
@@ -1747,8 +1763,14 @@ class CreateExtract(graphene.Mutation):
 
         corpus = None
         if corpus_id is not None:
-            corpus = Corpus.objects.get(pk=from_global_id(corpus_id)[1])
-            print(f"Corpus is: {corpus}")
+            corpus_pk = from_global_id(corpus_id)[1]
+            corpus = Corpus.objects.get(pk=corpus_pk)
+            if not (corpus.creator == info.context.user or corpus.is_public):
+                return CreateExtract(
+                    ok=False,
+                    msg="You don't have permission to create an extract for this corpus.",
+                    obj=None,
+                )
 
         if fieldset_id is not None:
             print(f"Fieldset id is not None: {fieldset_id}")

@@ -334,3 +334,133 @@ class GraphQLAnalyzerTestCase(TestCase):
         self.assertIsNotNone(analysis)
 
         logger.info("SUCCESS - Document analysis started successfully")
+
+    def test_start_document_analysis_permissions(self):
+        logger.info("Test start analysis permissions for single document...")
+
+        START_DOCUMENT_ANALYSIS_MUTATION = """
+        mutation startAnalysisOnDoc($documentId: ID!, $analyzerId: ID!) {
+          startAnalysisOnDoc(documentId: $documentId, analyzerId: $analyzerId) {
+            ok
+            message
+            obj {
+              id
+            }
+          }
+        }
+        """
+
+        # Test with a document owned by the user (should succeed)
+        owned_document_id = to_global_id("DocumentType", self.doc_ids[0])
+        owned_response = self.graphene_client.execute(
+            START_DOCUMENT_ANALYSIS_MUTATION,
+            variables={
+                "documentId": owned_document_id,
+                "analyzerId": self.analyzer_global_id,
+            },
+        )
+        self.assertTrue(owned_response["data"]["startAnalysisOnDoc"]["ok"])
+
+        # Create a document owned by another user
+        other_user = User.objects.create_user(username="alice", password="87654321")
+        with transaction.atomic():
+            other_document = Document.objects.create(
+                title="Other User's Document",
+                description="Document owned by another user",
+                creator=other_user,
+            )
+
+        # Test with a document not owned by the user (should fail)
+        other_document_id = to_global_id("DocumentType", other_document.id)
+        other_response = self.graphene_client.execute(
+            START_DOCUMENT_ANALYSIS_MUTATION,
+            variables={
+                "documentId": other_document_id,
+                "analyzerId": self.analyzer_global_id,
+            },
+        )
+        self.assertFalse(other_response["data"]["startAnalysisOnDoc"]["ok"])
+        self.assertIn(
+            "permission", other_response["data"]["startAnalysisOnDoc"]["message"]
+        )
+
+        # Make the other user's document public
+        other_document.is_public = True
+        other_document.save()
+
+        # Test with a public document not owned by the user (should succeed)
+        public_response = self.graphene_client.execute(
+            START_DOCUMENT_ANALYSIS_MUTATION,
+            variables={
+                "documentId": other_document_id,
+                "analyzerId": self.analyzer_global_id,
+            },
+        )
+        self.assertTrue(public_response["data"]["startAnalysisOnDoc"]["ok"])
+
+        logger.info("SUCCESS - Document analysis permission checks passed")
+
+    def test_create_extract_permissions(self):
+        logger.info("Test create extract permissions...")
+
+        CREATE_EXTRACT_MUTATION = """
+        mutation createExtract($name: String!, $corpusId: ID, $fieldsetName: String!) {
+          createExtract(name: $name, corpusId: $corpusId, fieldsetName: $fieldsetName) {
+            ok
+            msg
+            obj {
+              id
+            }
+          }
+        }
+        """
+
+        # Test with a corpus owned by the user (should succeed)
+        owned_response = self.graphene_client.execute(
+            CREATE_EXTRACT_MUTATION,
+            variables={
+                "name": "Owned Extract",
+                "corpusId": self.global_corpus_id,
+                "fieldsetName": "Owned Fieldset",
+            },
+        )
+        self.assertTrue(owned_response["data"]["createExtract"]["ok"])
+
+        # Create a corpus owned by another user
+        other_user = User.objects.create_user(username="charlie", password="87654321")
+        with transaction.atomic():
+            other_corpus = Corpus.objects.create(
+                title="Other User's Corpus",
+                creator=other_user,
+                backend_lock=False,
+            )
+
+        # Test with a corpus not owned by the user (should fail)
+        other_corpus_id = to_global_id("CorpusType", other_corpus.id)
+        other_response = self.graphene_client.execute(
+            CREATE_EXTRACT_MUTATION,
+            variables={
+                "name": "Other Extract",
+                "corpusId": other_corpus_id,
+                "fieldsetName": "Other Fieldset",
+            },
+        )
+        self.assertFalse(other_response["data"]["createExtract"]["ok"])
+        self.assertIn("permission", other_response["data"]["createExtract"]["msg"])
+
+        # Make the other user's corpus public
+        other_corpus.is_public = True
+        other_corpus.save()
+
+        # Test with a public corpus not owned by the user (should succeed)
+        public_response = self.graphene_client.execute(
+            CREATE_EXTRACT_MUTATION,
+            variables={
+                "name": "Public Extract",
+                "corpusId": other_corpus_id,
+                "fieldsetName": "Public Fieldset",
+            },
+        )
+        self.assertTrue(public_response["data"]["createExtract"]["ok"])
+
+        logger.info("SUCCESS - Extract creation permission checks passed")

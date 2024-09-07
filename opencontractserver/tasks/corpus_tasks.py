@@ -1,5 +1,4 @@
 import logging
-import uuid
 
 from celery import chord, group, shared_task
 from django.db import transaction
@@ -127,14 +126,18 @@ def process_corpus_action(
             tasks = []
 
             with transaction.atomic():
-                extract = Extract(
+                extract, created = Extract.objects.get_or_create(
                     corpus=action.corpus,
-                    name=f"Corpus Action {action.name} Extract {uuid.uuid4()}",
+                    name=f"Action {action.name} for {action.corpus.title}",
                     fieldset=action.fieldset,
-                    started=timezone.now(),
                     creator_id=user_id,
                     corpus_action=action,
                 )
+                extract.started = timezone.now()
+
+                if created:
+                    extract.finished = None
+
                 extract.save()
 
             fieldset = action.fieldset

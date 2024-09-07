@@ -112,7 +112,7 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
                 )
                 print(f"Expected text: {pdf_text_extract[span['start']:span['end']]}")
 
-    return [], results[:10], [], True
+    return [], results, [], True
 
 
 @doc_analyzer_task()

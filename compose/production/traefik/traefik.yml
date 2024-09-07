@@ -5,6 +5,8 @@ entryPoints:
   web:
     # http
     address: ":80"
+    forwardedHeaders:
+      insecure: true
     http:
       # https://docs.traefik.io/routing/entrypoints/#entrypoint
       redirections:
@@ -14,6 +16,8 @@ entryPoints:
   web-secure:
     # https
     address: ":443"
+    forwardedHeaders:
+      insecure: true
 
   flower:
     address: ":5555"

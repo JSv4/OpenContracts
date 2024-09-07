@@ -13,7 +13,7 @@ from opencontractserver.analyzer.views import AnalysisCallbackView
 logger = logging.getLogger(__name__)
 
 urlpatterns = [
-    path(settings.ADMIN_URL, csrf_exempt(admin.site.urls)),
+    path(settings.ADMIN_URL, admin.site.urls),
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     *(
         []

@@ -30,11 +30,9 @@ def create_and_setup_analysis(
                 corpus_action=corpus_action,
             )
             analysis.save()
-        analysis.analysis_started = timezone.now()
 
-        # If this already existed, make sure to reset completion time
-        if not created:
-            analysis.analysis_completed = None
+        analysis.analysis_completed = None
+        analysis.analysis_started = timezone.now()
 
         analysis.save()
 

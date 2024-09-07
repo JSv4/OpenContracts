@@ -13,7 +13,7 @@ from django.db.models.signals import post_save
 from django.test import TestCase
 from django.test.client import Client as DjangoClient
 from graphene.test import Client
-from graphql_relay import to_global_id, from_global_id
+from graphql_relay import from_global_id, to_global_id
 from rest_framework.test import APIClient
 
 from config.graphql.schema import schema
@@ -45,7 +45,6 @@ class TestContext:
 
 
 class GraphQLAnalyzerTestCase(TestCase):
-
     @factory.django.mute_signals(post_save)
     def setUp(self):
         logger.info("Starting setUp method")
@@ -225,12 +224,12 @@ class GraphQLAnalyzerTestCase(TestCase):
             CREATE_FIELDSET_MUTATION,
             variables={
                 "name": "Test Fieldset",
-                "description": "A test fieldset for document extract"
-            }
+                "description": "A test fieldset for document extract",
+            },
         )
 
-        self.assertTrue(fieldset_response['data']['createFieldset']['ok'])
-        fieldset_id = fieldset_response['data']['createFieldset']['obj']['id']
+        self.assertTrue(fieldset_response["data"]["createFieldset"]["ok"])
+        fieldset_id = fieldset_response["data"]["createFieldset"]["obj"]["id"]
 
         # Now, start an extract for a single document
         START_DOCUMENT_EXTRACT_MUTATION = """
@@ -247,25 +246,31 @@ class GraphQLAnalyzerTestCase(TestCase):
         }
         """
 
-        document_id = to_global_id("DocumentType", self.doc_ids[0])  # Use the first document
+        document_id = to_global_id(
+            "DocumentType", self.doc_ids[0]
+        )  # Use the first document
 
         extract_response = self.graphene_client.execute(
             START_DOCUMENT_EXTRACT_MUTATION,
-            variables={
-                "documentId": document_id,
-                "fieldsetId": fieldset_id
-            }
+            variables={"documentId": document_id, "fieldsetId": fieldset_id},
         )
 
         logger.info(f"Start document extract response: {extract_response}")
 
-        self.assertTrue(extract_response['data']['startExtractForDoc']['ok'])
-        self.assertIsNotNone(extract_response['data']['startExtractForDoc']['obj']['id'])
-        self.assertIsNotNone(extract_response['data']['startExtractForDoc']['obj']['started'])
+        self.assertTrue(extract_response["data"]["startExtractForDoc"]["ok"])
+        self.assertIsNotNone(
+            extract_response["data"]["startExtractForDoc"]["obj"]["id"]
+        )
+        self.assertIsNotNone(
+            extract_response["data"]["startExtractForDoc"]["obj"]["started"]
+        )
 
         # Verify that an Extract object was created in the database
         from opencontractserver.extracts.models import Extract
-        extract_id = from_global_id(extract_response['data']['startExtractForDoc']['obj']['id'])[1]
+
+        extract_id = from_global_id(
+            extract_response["data"]["startExtractForDoc"]["obj"]["id"]
+        )[1]
         extract = Extract.objects.get(id=extract_id)
 
         self.assertEqual(extract.documents.count(), 1)
@@ -293,28 +298,38 @@ class GraphQLAnalyzerTestCase(TestCase):
         }
         """
 
-        document_id = to_global_id("DocumentType", self.doc_ids[0])  # Use the first document
+        document_id = to_global_id(
+            "DocumentType", self.doc_ids[0]
+        )  # Use the first document
 
         analysis_response = self.graphene_client.execute(
             START_DOCUMENT_ANALYSIS_MUTATION,
             variables={
                 "documentId": document_id,
-                "analyzerId": self.analyzer_global_id
-            }
+                "analyzerId": self.analyzer_global_id,
+            },
         )
 
         logger.info(f"Start document analysis response: {analysis_response}")
 
-        self.assertTrue(analysis_response['data']['startAnalysisOnDoc']['ok'])
-        self.assertIsNotNone(analysis_response['data']['startAnalysisOnDoc']['obj']['id'])
-        self.assertIsNotNone(analysis_response['data']['startAnalysisOnDoc']['obj']['analysisStarted'])
+        self.assertTrue(analysis_response["data"]["startAnalysisOnDoc"]["ok"])
+        self.assertIsNotNone(
+            analysis_response["data"]["startAnalysisOnDoc"]["obj"]["id"]
+        )
+        self.assertIsNotNone(
+            analysis_response["data"]["startAnalysisOnDoc"]["obj"]["analysisStarted"]
+        )
         self.assertEqual(
-            analysis_response['data']['startAnalysisOnDoc']['obj']['analyzer']['analyzerId'],
-            self.analyzer.id
+            analysis_response["data"]["startAnalysisOnDoc"]["obj"]["analyzer"][
+                "analyzerId"
+            ],
+            self.analyzer.id,
         )
 
         # Verify that an Analysis object was created in the database
-        analysis_id = from_global_id(analysis_response['data']['startAnalysisOnDoc']['obj']['id'])[1]
+        analysis_id = from_global_id(
+            analysis_response["data"]["startAnalysisOnDoc"]["obj"]["id"]
+        )[1]
         analysis = Analysis.objects.get(id=analysis_id)
         self.assertIsNotNone(analysis)
 

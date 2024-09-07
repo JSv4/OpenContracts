@@ -6,8 +6,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from opencontractserver.analyzer.models import Analyzer, Analysis
-from opencontractserver.corpuses.models import CorpusAction, Corpus
+from opencontractserver.analyzer.models import Analysis, Analyzer
+from opencontractserver.corpuses.models import Corpus, CorpusAction
 from opencontractserver.documents.models import DocumentAnalysisRow
 from opencontractserver.extracts.models import Datacell, Extract
 from opencontractserver.tasks.analyzer_tasks import (
@@ -32,7 +32,7 @@ def run_task_name_analyzer(
     analyzer_id: int | str,
     corpus_id: str | int | None = None,
     document_ids: list[str | int] | None = None,
-    corpus_action_id: str | int | None = None
+    corpus_action_id: str | int | None = None,
 ):
 
     if corpus_id is None and document_ids is None:
@@ -41,7 +41,11 @@ def run_task_name_analyzer(
     analyzer = Analyzer.objects.get(pk=analyzer_id)
     action = CorpusAction.objects.get(pk=corpus_action_id) if corpus_action_id else None
     analysis = create_and_setup_analysis(
-        analyzer, user_id, corpus_id=corpus_id, doc_ids=document_ids, corpus_action=action
+        analyzer,
+        user_id,
+        corpus_id=corpus_id,
+        doc_ids=document_ids,
+        corpus_action=action,
     )
 
     task_name = analyzer.task_name
@@ -54,19 +58,19 @@ def run_task_name_analyzer(
 
     if document_ids is None:
         corpus = Corpus.objects.get(pk=corpus_id)
-        document_ids = list(corpus.documents.values_list('id', flat=True))
+        document_ids = list(corpus.documents.values_list("id", flat=True))
 
     logger.info(f"Added task {task_name} to queue: {task_func}")
 
     transaction.on_commit(
-        lambda: chord(group([
-            task_func.s(doc_id=doc_id, analysis_id=analysis.id)
-            for doc_id in document_ids
-        ]))(
-            mark_analysis_complete.si(
-                analysis_id=analysis.id, doc_ids=document_ids
+        lambda: chord(
+            group(
+                [
+                    task_func.s(doc_id=doc_id, analysis_id=analysis.id)
+                    for doc_id in document_ids
+                ]
             )
-        )
+        )(mark_analysis_complete.si(analysis_id=analysis.id, doc_ids=document_ids))
     )
 
 
@@ -75,11 +79,15 @@ def process_analyzer(
     analyzer: Analyzer | None,
     corpus_id: str | int | None = None,
     document_ids: list[str | int] | None = None,
-    corpus_action: CorpusAction | None = None
+    corpus_action: CorpusAction | None = None,
 ) -> Analysis:
 
     analysis = create_and_setup_analysis(
-        analyzer, user_id, corpus_id=corpus_id, doc_ids=document_ids, corpus_action=corpus_action
+        analyzer,
+        user_id,
+        corpus_id=corpus_id,
+        doc_ids=document_ids,
+        corpus_action=corpus_action,
     )
     print(f"process_analyzer(...) - created analysis: {analysis}")
 
@@ -90,7 +98,7 @@ def process_analyzer(
             analyzer_id=analyzer.id,
             corpus_id=corpus_id,
             document_ids=document_ids,
-            corpus_action_id=corpus_action.id if corpus_action else None
+            corpus_action_id=corpus_action.id if corpus_action else None,
         ).apply_async()
 
     else:
@@ -179,7 +187,7 @@ def process_corpus_action(
                 analyzer=action.analyzer,
                 corpus_id=corpus_id,
                 document_ids=document_ids,
-                corpus_action=action
+                corpus_action=action,
             )
 
         else:

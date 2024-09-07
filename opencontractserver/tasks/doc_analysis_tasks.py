@@ -83,28 +83,34 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
         "Official Committee of Creditors",
         "Official Committee of Unsecured Creditors",
         "Joint Defense Group",
-        "Joint Defense Group Member"
+        "Joint Defense Group Member",
     ]
 
     sentences = [i for i in nlp(pdf_text_extract).sents]
     results = []
 
     for index, sent in enumerate(sentences):
+        print(
+            f"Looking at sentence from {sent.start_char} to {sent.end_char}: {sent.text}"
+        )
         ents = model.predict_entities(sent.text, labels)
         for e in ents:
-            if e['score'] > .7:
+            if e["score"] > 0.7:
                 print(f"Found Entity with suitable score: {e}")
+                span = TextSpan(
+                    id=str(index),
+                    start=sent.start_char + e["start"],
+                    end=sent.start_char + e["end"],
+                    text=e["text"],
+                )
+                print(f"Mapped to span: {span}")
                 results.append(
                     (
-                        TextSpan(
-                            id=str(index),
-                            start=sent.start_char + e['start'],
-                            end=sent.start_char + e['start'] + e['end'],
-                            text=e['text'],
-                        ),
-                        str(e['label']),
+                        span,
+                        str(e["label"]),
                     )
                 )
+                print(f"Expected text: {pdf_text_extract[span['start']:span['end']]}")
 
     return [], results[:10], [], True
 

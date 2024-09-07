@@ -95,7 +95,10 @@ class TestAnalysisUtils(TestCase):
     def test_create_and_setup_analysis_with_doc_ids(self):
         doc_ids = self.doc_ids  # Mock document IDs
         analysis = create_and_setup_analysis(
-            self.analyzer_gremlin, self.user.id, corpus_id=self.corpus.id, doc_ids=doc_ids
+            self.analyzer_gremlin,
+            self.user.id,
+            corpus_id=self.corpus.id,
+            doc_ids=doc_ids,
         )
         self.assertIsInstance(analysis, Analysis)
         self.assertEqual(

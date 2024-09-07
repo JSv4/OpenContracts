@@ -14,6 +14,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile, File
 from django.core.files.storage import default_storage
+from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
 from pydantic import validate_arguments
 
 from config import celery_app
@@ -274,7 +275,16 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
         # Get PAWLS layer and text contents
         pawls_string = json.dumps(open_contracts_data["pawls_file_content"])
         pawls_file = ContentFile(pawls_string.encode("utf-8"))
-        txt_file = ContentFile(open_contracts_data["content"].encode("utf-8"))
+
+        # We want to use our own algorithm to create text layer from pawls tokens
+        span_translation_layer = makePdfTranslationLayerFromPawlsTokens(
+            json.loads(pawls_string.encode("utf-8"))
+        )
+
+        # We need to use the same translation algorithm from x,y tokens to spans EVERYWHERE... so when we first
+        # parse the document,we want to use the same translation algorithm we'll later use when we try to map spans
+        # BACK to the tokens.
+        txt_file = ContentFile(span_translation_layer.doc_text.encode("utf-8"))
 
         document.txt_extract_file.save(f"doc_{doc_id}.txt", txt_file)
         document.pawls_parse_file.save(f"doc_{doc_id}.pawls", pawls_file)

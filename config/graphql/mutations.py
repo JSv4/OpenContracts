@@ -62,8 +62,7 @@ from opencontractserver.tasks import (
     import_document_to_corpus,
     package_annotated_docs,
 )
-from opencontractserver.tasks.analyzer_tasks import start_analysis
-from opencontractserver.tasks.corpus_tasks import process_corpus_action, process_analyzer
+from opencontractserver.tasks.corpus_tasks import process_analyzer
 from opencontractserver.tasks.doc_tasks import convert_doc_to_funsd
 from opencontractserver.tasks.export_tasks import package_funsd_exports
 from opencontractserver.tasks.extract_orchestrator_tasks import run_extract
@@ -74,7 +73,6 @@ from opencontractserver.tasks.permissioning_tasks import (
 from opencontractserver.types.dicts import OpenContractsAnnotatedDocumentImportType
 from opencontractserver.types.enums import ExportType, PermissionTypes
 from opencontractserver.users.models import UserExport
-from opencontractserver.utils.analysis import create_and_setup_analysis
 from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
 from opencontractserver.utils.permissioning import (
     set_permissions_for_obj_to_user,
@@ -1379,11 +1377,17 @@ class CreateLabelForLabelsetMutation(graphene.Mutation):
 
 
 class StartDocumentAnalysisMutation(graphene.Mutation):
-
     class Arguments:
-        document_id = graphene.ID(required=False, description="Id of the document to be analyzed.")
-        analyzer_id = graphene.ID(required=True, description="Id of the analyzer to use.")
-        corpus_id = graphene.ID(required=False, description="Optional Id of the corpus to associate with the analysis.")
+        document_id = graphene.ID(
+            required=False, description="Id of the document to be analyzed."
+        )
+        analyzer_id = graphene.ID(
+            required=True, description="Id of the analyzer to use."
+        )
+        corpus_id = graphene.ID(
+            required=False,
+            description="Optional Id of the corpus to associate with the analysis.",
+        )
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -1411,10 +1415,12 @@ class StartDocumentAnalysisMutation(graphene.Mutation):
                 analyzer=analyzer,
                 corpus_id=corpus_pk,
                 document_ids=[document_pk] if document_pk else None,
-                corpus_action=None
+                corpus_action=None,
             )
 
-            return StartDocumentAnalysisMutation(ok=True, message="SUCCESS", obj=analysis)
+            return StartDocumentAnalysisMutation(
+                ok=True, message="SUCCESS", obj=analysis
+            )
         except Exception as e:
             return StartDocumentAnalysisMutation(ok=False, message=f"Error: {str(e)}")
 
@@ -1440,7 +1446,7 @@ class StartDocumentExtract(graphene.Mutation):
         extract = Extract.objects.create(
             name=f"Extract {uuid.uuid4()} for {document.title}",
             fieldset=fieldset,
-            creator=info.context.user
+            creator=info.context.user,
         )
         extract.documents.add(document)
         extract.save()
@@ -1978,7 +1984,6 @@ class Mutation(graphene.ObjectType):
     start_analysis_on_doc = StartDocumentAnalysisMutation.Field()
     delete_analysis = DeleteAnalysisMutation.Field()
     make_analysis_public = MakeAnalysisPublic.Field()
-
 
     # QUERY MUTATIONS #########################################################
     ask_query = StartQueryForCorpus.Field()

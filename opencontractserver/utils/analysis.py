@@ -14,12 +14,22 @@ def create_and_setup_analysis(
     analyzer, user_id, corpus_id=None, doc_ids=None, corpus_action=None
 ):
     with transaction.atomic():
-        analysis, created = Analysis.objects.get_or_create(
+        analyses = Analysis.objects.filter(
             analyzer=analyzer,
             analyzed_corpus_id=corpus_id,
             creator_id=user_id,
             corpus_action=corpus_action,
         )
+        if analyses.count() == 1:
+            analysis = analyses[0]
+        else:
+            analysis = Analysis(
+                analyzer=analyzer,
+                analyzed_corpus_id=corpus_id,
+                creator_id=user_id,
+                corpus_action=corpus_action,
+            )
+            analysis.save()
         analysis.analysis_started = timezone.now()
 
         # If this already existed, make sure to reset completion time

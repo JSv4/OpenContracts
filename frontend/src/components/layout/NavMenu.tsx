@@ -67,7 +67,7 @@ export const NavMenu = () => {
             color="grey"
             style={{ marginLeft: "0.5em", verticalAlign: "middle" }}
           >
-            v2.5.0
+            v3.0.0b1
           </Label>
         </Menu.Item>
         {!isLoading && user ? [...items, ...private_items] : items}
@@ -123,7 +123,7 @@ export const NavMenu = () => {
             color="grey"
             style={{ marginLeft: "0.5em", verticalAlign: "middle" }}
           >
-            v2.5.0
+            v3.0.0b1
           </Label>
         </Menu.Item>
         {user ? [...items, ...private_items] : items}

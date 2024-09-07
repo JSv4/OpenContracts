@@ -233,7 +233,7 @@ export const DocumentAnnotator = ({
   const {
     loading: analysesLoading,
     data: analysesData,
-    refetch,
+    refetch: fetchDocumentAnalysesAndExtracts,
   } = useQuery<
     GetDocumentAnalysesAndExtractsOutput,
     GetDocumentAnalysesAndExtractsInput
@@ -411,7 +411,7 @@ export const DocumentAnnotator = ({
   useEffect(() => {
     if (open && opened_document && opened_document.pdfFile) {
       viewStateVar(ViewState.LOADING);
-      refetch();
+      fetchDocumentAnalysesAndExtracts();
       const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
         opened_document.pdfFile
       );
@@ -496,6 +496,14 @@ export const DocumentAnnotator = ({
     }
   }, [open, opened_document]);
 
+  // If analysis or extract is deselected, try to refetch the data
+  useEffect(() => {
+    resetStates();
+    if (!selected_analysis && !selected_extract) {
+      fetchDocumentAnalysesAndExtracts();
+    }
+  }, [selected_analysis, selected_extract]);
+
   // Only trigger state flip to "Loaded" if PDF, pageTextMaps and page info load properly
   useEffect(() => {
     if (doc && pageTextMaps && pages.length > 0) {
@@ -530,7 +538,7 @@ export const DocumentAnnotator = ({
   }, [displayOnlyTheseAnnotations]);
 
   useEffect(() => {
-    refetch();
+    fetchDocumentAnalysesAndExtracts();
   }, []);
 
   // Effect to process analyses and extracts data retrieved
@@ -650,8 +658,6 @@ export const DocumentAnnotator = ({
     selectedExtract(extract);
     selectedAnalysis(null);
   };
-
-  // TODO - we're switching into loading state when an extract is loading... don't want that.
 
   let rendered_component = <></>;
   switch (view_state) {

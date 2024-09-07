@@ -97,10 +97,12 @@ export const ExtractCards = ({
         style={{
           width: "100%",
           height: "100%",
-          overflowY: "scroll",
+          overflowY: "auto",
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-start",
+          padding: "1rem",
+          paddingBottom: "6rem",
           ...style,
         }}
       >

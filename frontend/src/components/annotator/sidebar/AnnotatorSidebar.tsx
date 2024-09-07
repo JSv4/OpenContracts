@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import {
   Tab,
   Card,
@@ -186,6 +186,20 @@ export const AnnotatorSidebar = ({
   const annotations = pdfAnnotations.annotations;
   const relations = pdfAnnotations.relations;
 
+  const filteredAnnotations = useMemo(() => {
+    if (
+      !annotationStore.showOnlySpanLabels ||
+      annotationStore.showOnlySpanLabels.length === 0
+    ) {
+      return annotations;
+    }
+    return annotations.filter((annotation) =>
+      annotationStore.showOnlySpanLabels?.some(
+        (label) => label.id === annotation.annotationLabel.id
+      )
+    );
+  }, [annotations, annotationStore.showOnlySpanLabels]);
+
   useEffect(() => {
     try {
       let corpus_permissions: PermissionTypes[] = [];
@@ -207,9 +221,9 @@ export const AnnotatorSidebar = ({
 
       if (show_annotation_pane) {
         let text_highlight_elements = [<></>];
-        if (annotations && annotations?.length > 0) {
+        if (filteredAnnotations && filteredAnnotations.length > 0) {
           text_highlight_elements = _.orderBy(
-            annotations,
+            filteredAnnotations,
             (annotation) => annotation.page
           ).map((annotation, index) => {
             return (
@@ -234,8 +248,8 @@ export const AnnotatorSidebar = ({
           text_highlight_elements = [
             <PlaceholderCard
               style={{ flex: 1 }}
-              title="No Annotations Found"
-              description="Either no matching annotations were created or you didn't create them yet."
+              title="No Matching Annotations Found"
+              description="No annotations match the selected labels, or no annotations have been created yet."
             />,
           ];
         }
@@ -452,7 +466,7 @@ export const AnnotatorSidebar = ({
       setPanes(panes);
     } catch {}
   }, [
-    annotations,
+    filteredAnnotations,
     relations,
     textSearchMatches,
     selected_corpus,

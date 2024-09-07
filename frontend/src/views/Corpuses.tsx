@@ -833,9 +833,9 @@ export const Corpuses = () => {
             filters={
               opened_corpus ? (
                 <>
-                  <FilterToMetadataSelector
+                  {/* <FilterToMetadataSelector
                     selected_corpus_id={opened_corpus.id}
-                  />
+                  /> Temporarily disabled - not working and not really in-use*/}
                   <FilterToLabelSelector
                     only_labels_for_labelset_id={
                       opened_corpus.labelSet?.id

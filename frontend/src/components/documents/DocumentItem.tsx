@@ -11,6 +11,7 @@ import {
   Statistic,
 } from "semantic-ui-react";
 import _ from "lodash";
+import styled from "styled-components";
 
 import {
   editingDocument,
@@ -26,6 +27,55 @@ import { getPermissions } from "../../utils/transform";
 import { PermissionTypes } from "../types";
 import { MyPermissionsIndicator } from "../widgets/permissions/MyPermissionsIndicator";
 
+const StyledCard = styled(Card)`
+  &.ui.card {
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+
+    &:hover {
+      box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+      transform: translateY(-2px);
+    }
+
+    .content {
+      padding: 1.2em;
+    }
+
+    .header {
+      font-size: 1.2em;
+      font-weight: 600;
+      margin-bottom: 0.5em;
+    }
+
+    .meta {
+      font-size: 0.9em;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .description {
+      margin-top: 1em;
+      font-size: 0.95em;
+      line-height: 1.4;
+    }
+
+    .extra {
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      background-color: #f8f9fa;
+      padding: 0.8em 1.2em;
+    }
+  }
+`;
+
+const StyledLabel = styled(Label)`
+  &.ui.label {
+    margin: 0.2em;
+    padding: 0.5em 0.8em;
+    border-radius: 20px;
+  }
+`;
+
 interface DocumentItemProps {
   item: DocumentType;
   delete_caption?: string;
@@ -39,7 +89,7 @@ interface DocumentItemProps {
   setContextMenuOpen: (args: any) => any | void;
 }
 
-export const DocumentItem = ({
+export const DocumentItem: React.FC<DocumentItemProps> = ({
   item,
   add_caption = "Add Doc To Corpus",
   edit_caption = "Edit Doc Details",
@@ -50,7 +100,7 @@ export const DocumentItem = ({
   onClick,
   removeFromCorpus,
   setContextMenuOpen,
-}: DocumentItemProps) => {
+}) => {
   const contextRef = React.useRef<HTMLElement | null>(null);
 
   const createContextFromEvent = (
@@ -61,12 +111,6 @@ export const DocumentItem = ({
     const right = left + 1;
     const bottom = top + 1;
 
-    // This "as HTMLElement" is insanely hacky, but I know this is all semantic UI uses from the HTMLElement API based o
-    // on their docs. When I switched from JS to Typescript, however, you get errors because obv an
-    // HTMLElement needs a lot more than just getBoundingClientRect. Overriding TypeScript type on return
-    // with as HTMLElement makes TypeScript shut up and lets us have a properly positioned context menu.
-    // Perhaps at some point worth figuring out what actual types work, but it's burning up my time for
-    // very little benefit.
     return {
       getBoundingClientRect: () => ({
         left,
@@ -89,8 +133,8 @@ export const DocumentItem = ({
   const {
     id,
     icon,
-    is_open, // Apollo Local property
-    is_selected, // Apollo Local property
+    is_open,
+    is_selected,
     title,
     description,
     pdfFile,
@@ -105,9 +149,7 @@ export const DocumentItem = ({
   ) => {
     event.stopPropagation();
     if (event.shiftKey) {
-      // console.log("Shift Click - Check onSelect");
       if (onShiftClick && _.isFunction(onShiftClick)) {
-        // console.log("onSelect");
         onShiftClick(item);
       }
     } else {
@@ -133,7 +175,6 @@ export const DocumentItem = ({
     return null;
   };
 
-  ///////////////////////////////// VARY USER ACTIONS BASED ON PERMISSIONS ////////////////////////////////////////
   const my_permissions = getPermissions(
     item.myPermissions ? item.myPermissions : []
   );
@@ -148,8 +189,6 @@ export const DocumentItem = ({
     });
   }
 
-  // Only if backend is NOT still processing document, we can't open and don't want to let user do anything but delete in (in the event
-  // that there's a document which refuses to process, want people to be able to delete them on frontend)
   if (!backendLock) {
     if (my_permissions.includes(PermissionTypes.CAN_UPDATE)) {
       context_menus.push({
@@ -191,7 +230,6 @@ export const DocumentItem = ({
       onClick: () => removeFromCorpus([item.id]),
     });
   }
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   let doc_label_objs = item?.docLabelAnnotations
     ? item.docLabelAnnotations.edges
@@ -202,19 +240,19 @@ export const DocumentItem = ({
     : [];
 
   let doc_labels = doc_label_objs.map((label, index) => (
-    <Label key={`doc_${id}_label${index}`}>
+    <StyledLabel key={`doc_${id}_label${index}`}>
       <Icon
         style={{ color: label.color }}
         name={label.icon ? label.icon : "tag"}
       />{" "}
       {label?.text}
-    </Label>
+    </StyledLabel>
   ));
 
   return (
     <>
-      <Card
-        className="noselect GlowCard"
+      <StyledCard
+        className={`noselect GlowCard ${is_open ? "is-open" : ""}`}
         key={id}
         id={id}
         style={{
@@ -238,9 +276,7 @@ export const DocumentItem = ({
           <Dimmer active inverted>
             <Loader inverted>Processing...</Loader>
           </Dimmer>
-        ) : (
-          <></>
-        )}
+        ) : null}
         <Image src={icon ? icon : fallback_doc_icon} wrapped ui={false} />
         <Card.Content style={{ wordWrap: "break-word" }}>
           <Card.Header>
@@ -252,25 +288,20 @@ export const DocumentItem = ({
               <div style={{ float: "right" }}>
                 <Icon name="check circle" color="green" />
               </div>
-            ) : (
-              <></>
-            )}
+            ) : null}
           </Card.Header>
           <Card.Meta>{`Document Type: *.pdf`}</Card.Meta>
           <Card.Description>
             <span>
               <b>Description:</b> {description}
             </span>
-            <br />
           </Card.Description>
         </Card.Content>
         {doc_labels && doc_labels.length > 0 ? (
           <Card.Content extra>
             <Label.Group size="mini">{doc_labels}</Label.Group>
           </Card.Content>
-        ) : (
-          <></>
-        )}
+        ) : null}
         <Card.Content extra>
           <Statistic.Group size="mini" widths={3}>
             <MyPermissionsIndicator
@@ -279,7 +310,7 @@ export const DocumentItem = ({
             />
           </Statistic.Group>
         </Card.Content>
-      </Card>
+      </StyledCard>
       <Popup
         basic
         context={contextRef}

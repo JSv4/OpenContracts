@@ -625,6 +625,7 @@ export const GET_ANNOTATIONS = gql`
             icon
             description
           }
+          structural
           rawText
           isPublic
           myPermissions

@@ -1,18 +1,19 @@
-import React, { useContext } from "react";
+import React, { useContext, useMemo } from "react";
 import { Dropdown, DropdownProps } from "semantic-ui-react";
-
 import _ from "lodash";
 import { AnnotationStore } from "../../context";
+import { AnnotationLabelType } from "../../../../graphql/types";
 
-export const ViewLabelSelector = () => {
+export const ViewLabelSelector: React.FC = () => {
   const annotationStore = useContext(AnnotationStore);
 
-  // Some labels are not meant to be manually annotated (namely those for
-  // analyzer results). The label selector should not allow the user to select
-  // labels used by an analyzer (at least not for now), so we need to track that
-  // list separately.
-  const human_label_choices = annotationStore.humanSpanLabelChoices;
-  const label_choices = [...human_label_choices];
+  const allLabelChoices = useMemo(() => {
+    const humanLabels = annotationStore.humanSpanLabelChoices;
+    const spanLabels = annotationStore.spanLabels;
+
+    // Combine both label types and remove duplicates
+    return _.uniqBy([...humanLabels, ...spanLabels], "id");
+  }, [annotationStore.humanSpanLabelChoices, annotationStore.spanLabels]);
 
   const { showOnlySpanLabels, setViewLabels } = annotationStore;
 
@@ -20,20 +21,19 @@ export const ViewLabelSelector = () => {
     event: React.SyntheticEvent<HTMLElement, Event>,
     data: DropdownProps
   ) => {
-    console.log("Got event", event);
-    console.log("Event data", data);
-    const selected_labels = label_choices.filter((l) =>
+    const selectedLabels = allLabelChoices.filter((l) =>
       data?.value && Array.isArray(data.value) ? data.value.includes(l.id) : []
     );
-    setViewLabels(selected_labels);
+    setViewLabels(selectedLabels);
   };
 
-  // Filter out already applied labels from the label options
-  const labelOptions = _.map(label_choices, (label) => ({
-    key: label.id,
-    text: label.text ? label.text : "?",
-    value: label.id,
-  }));
+  const labelOptions = useMemo(() => {
+    return allLabelChoices.map((label: AnnotationLabelType) => ({
+      key: label.id,
+      text: label.text || "?",
+      value: label.id,
+    }));
+  }, [allLabelChoices]);
 
   return (
     <Dropdown

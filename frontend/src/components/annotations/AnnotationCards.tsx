@@ -1,14 +1,20 @@
-import { PlaceholderCard } from "../placeholders/PlaceholderCard";
+import React, { useEffect, useState } from "react";
 import { useReactiveVar } from "@apollo/client";
+import { useLocation, useNavigate } from "react-router-dom";
+import _ from "lodash";
+import styled from "styled-components";
+import { Card, Dimmer, Loader, Label, Header, Popup } from "semantic-ui-react";
 import {
-  Card,
-  Dimmer,
-  Loader,
-  Icon,
-  Label,
-  Header,
-  Popup,
-} from "semantic-ui-react";
+  Tags,
+  FileText,
+  BookOpen,
+  Database,
+  User,
+  BotIcon,
+  Layers,
+} from "lucide-react";
+
+import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import {
   selectedAnnotation,
   openedDocument,
@@ -22,12 +28,116 @@ import {
   CorpusType,
   DocumentType,
 } from "../../graphql/types";
-import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
-import _ from "lodash";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";
+
+const StyledCard = styled(Card)`
+  &.ui.card {
+    height: 220px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+
+    &:hover {
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header {
+      margin-bottom: 0.5rem;
+    }
+
+    .description {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+    }
+
+    .extra {
+      padding: 0.5rem 1rem;
+      background-color: rgba(248, 249, 250, 0.9);
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+  }
+`;
+
+const GradientOverlay = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.8) 100%
+  );
+  pointer-events: none;
+`;
+
+const PageNumber = styled.div`
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+`;
+
+const TagLabel = styled(Label)`
+  &.ui.label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    z-index: 2;
+
+    svg {
+      margin-right: 0.3rem;
+    }
+  }
+`;
+
+const SourceLabel = styled.div`
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #555;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background-color: #f0f0f0;
+
+  svg {
+    margin-right: 0.3rem;
+  }
+`;
 
 interface AnnotationToNavigateTo {
   selected_annotation: ServerAnnotationType;
@@ -36,7 +146,7 @@ interface AnnotationToNavigateTo {
 }
 
 interface AnnotationCardProps {
-  style?: Record<string, any>;
+  style?: React.CSSProperties;
   items: ServerAnnotationType[];
   pageInfo: PageInfo | undefined | null;
   loading: boolean;
@@ -44,14 +154,14 @@ interface AnnotationCardProps {
   fetchMore: (args?: any) => void | any;
 }
 
-export const AnnotationCards = ({
+export const AnnotationCards: React.FC<AnnotationCardProps> = ({
   style,
   items,
   pageInfo,
   loading,
   loading_message,
   fetchMore,
-}: AnnotationCardProps) => {
+}) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= 400;
   const card_cols = determineCardColCount(width);
@@ -61,10 +171,6 @@ export const AnnotationCards = ({
     useState<AnnotationToNavigateTo>();
   const location = useLocation();
   const navigate = useNavigate();
-
-  /**
-   * Setup updates to request more docs if user reaches end of card scroll component.
-   */
 
   const handleUpdate = () => {
     if (!loading && pageInfo?.hasNextPage) {
@@ -78,11 +184,8 @@ export const AnnotationCards = ({
     }
   };
 
-  // Using useEffect to batch updates to cache state. When target annotation changes, send batch updates to cache and,
-  // if we're not on the /corpuses page, navigate to that page.
   useEffect(() => {
     if (targetAnnotation) {
-      // console.log(`Annotation Card Selected for Id ${targetAnnotation.selected_annotation.id}`);
       displayAnnotationOnAnnotatorLoad(targetAnnotation.selected_annotation);
       selectedAnnotation(targetAnnotation.selected_annotation);
       openedDocument(targetAnnotation.selected_document);
@@ -97,19 +200,52 @@ export const AnnotationCards = ({
     }
   }, [targetAnnotation]);
 
-  let cards: React.ReactNode[] = [
-    <PlaceholderCard key={0} title="No Matching Annotations..." />,
-  ];
-  if (items && items.length > 0) {
-    cards = _.uniqBy(items, "id").map((item) => {
+  const getSourceInfo = (item: ServerAnnotationType) => {
+    if (item.structural) {
+      return {
+        icon: <Layers size={14} />,
+        label: "Structural Layout",
+        color: "#6200ea",
+      };
+    } else if (
+      item?.analysis?.analyzer?.analyzerId?.toLowerCase().includes("manually")
+    ) {
+      return {
+        icon: <User size={14} />,
+        label: "Manually-Annotated",
+        color: "#4CAF50",
+      };
+    } else if (
+      item.analysis?.analyzer?.analyzerId?.toLowerCase().includes("extract")
+    ) {
+      return {
+        icon: <Database size={14} />,
+        label: "Extract",
+        color: "#2196F3",
+      };
+    } else {
+      return {
+        icon: <BotIcon size={14} />,
+        label: item.analysis?.analyzer.analyzerId || "Analysis",
+        color: "#FF9800",
+      };
+    }
+  };
+
+  const renderCards = () => {
+    if (!items || items.length === 0) {
+      return [<PlaceholderCard key={0} title="No Matching Annotations..." />];
+    }
+
+    return _.uniqBy(items, "id").map((item) => {
+      const sourceInfo = getSourceInfo(item);
+
       return (
-        <Card
+        <StyledCard
           key={item.id}
           style={{
             backgroundColor:
               item.id === selected_annotation?.id ? "#e2ffdb" : "",
-            minHeight: "10vh",
-            height: "250px",
           }}
           onClick={() => {
             if (item && item.document && item.corpus) {
@@ -121,72 +257,60 @@ export const AnnotationCards = ({
             }
           }}
         >
+          <GradientOverlay />
           <Card.Content>
-            <div
-              className="PageNum"
-              style={{
-                position: "relative",
-                top: "30%",
-                right: "-75%",
-                width: "fit-content",
-              }}
-            >
-              <Header as="h5">Page {item.page + 1}</Header>
-            </div>
-            <Label
-              ribbon
-              style={{
-                color: item.annotationLabel
-                  ? item.annotationLabel.color
-                  : "grey",
-              }}
-            >
-              <Icon name="tags" />
+            <PageNumber>
+              <BookOpen size={14} style={{ marginRight: "4px" }} />
+              Page {item.page + 1}
+            </PageNumber>
+            <TagLabel color={item.annotationLabel?.color || "grey"}>
+              <Tags size={14} />
               {item.annotationLabel ? item.annotationLabel.text : "Unknown"}
-            </Label>
+            </TagLabel>
             <Header as="h4">Tagged Text:</Header>
             <Popup
               content={item.rawText}
-              trigger={<p>{item.rawText?.substring(0, 256)}</p>}
+              trigger={
+                <Card.Description>
+                  {item.rawText?.substring(0, 100)}...
+                </Card.Description>
+              }
             />
-            {item && item.document && item.corpus ? (
+          </Card.Content>
+          <Card.Content extra>
+            <SourceLabel
+              style={{
+                backgroundColor: `${sourceInfo.color}20`,
+                color: sourceInfo.color,
+              }}
+            >
+              {sourceInfo.icon}
+              <span>{sourceInfo.label}</span>
+            </SourceLabel>
+            {item && item.document && item.corpus && (
               <Popup
                 content={item.document.title}
-                trigger={<Label corner="right" icon="file text outline" />}
-              />
-            ) : (
-              <Popup
-                content={"Missing document for item!"}
-                trigger={<Label corner="right" icon="file text outline" />}
+                trigger={
+                  <Label
+                    as="div"
+                    corner="right"
+                    style={{ cursor: "pointer", zIndex: 2 }}
+                  >
+                    <FileText size={14} />
+                  </Label>
+                }
               />
             )}
           </Card.Content>
-          <Card.Content>
-            <Label>
-              Source:
-              <Label.Detail>
-                {item.analysis?.analyzer.analyzerId
-                  ? item.analysis.analyzer.analyzerId
-                  : "Manually-Annotated"}
-              </Label.Detail>
-            </Label>
-          </Card.Content>
-        </Card>
+        </StyledCard>
       );
     });
+  };
 
-    cards.push(<FetchMoreOnVisible fetchNextPage={fetchMore} />);
-  }
-
-  let comp_style = {
+  const cardGroupStyle: React.CSSProperties = {
     width: "100%",
     padding: "1rem",
-    ...(use_mobile_layout
-      ? {
-          paddingLeft: "0px",
-          paddingRight: "0px",
-        }
-      : {}),
+    ...(use_mobile_layout ? { paddingLeft: "0px", paddingRight: "0px" } : {}),
   };
 
   return (
@@ -198,12 +322,12 @@ export const AnnotationCards = ({
         style={{
           flex: 1,
           width: "100%",
-          overflowY: "scroll",
+          overflowY: "auto",
           ...style,
         }}
       >
-        <Card.Group stackable itemsPerRow={card_cols} style={comp_style}>
-          {cards}
+        <Card.Group stackable itemsPerRow={card_cols} style={cardGroupStyle}>
+          {renderCards()}
         </Card.Group>
         <FetchMoreOnVisible fetchNextPage={handleUpdate} />
       </div>

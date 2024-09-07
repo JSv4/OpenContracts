@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useMutation, useQuery } from "@apollo/client";
+import { gql, useMutation, useQuery } from "@apollo/client";
 import {
   Modal,
   Button,
@@ -62,17 +62,138 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
   const [createExtract, { loading: creatingExtract }] = useMutation<
     RequestCreateExtractOutputType,
     RequestCreateExtractInputType
-  >(REQUEST_CREATE_EXTRACT);
+  >(REQUEST_CREATE_EXTRACT, {
+    update(cache, { data }) {
+      if (data?.createExtract.ok && data.createExtract.obj) {
+        const newExtract = data.createExtract.obj;
+        cache.modify({
+          fields: {
+            extracts(existingExtracts = { edges: [] }) {
+              const newExtractRef = cache.writeFragment({
+                data: newExtract,
+                fragment: gql`
+                  fragment NewExtract on ExtractType {
+                    id
+                    name
+                    started
+                    corpus {
+                      id
+                      title
+                    }
+                  }
+                `,
+              });
+              return {
+                ...existingExtracts,
+                edges: [
+                  ...existingExtracts.edges,
+                  { __typename: "ExtractTypeEdge", node: newExtractRef },
+                ],
+              };
+            },
+          },
+        });
+      }
+    },
+  });
+
   const [startExtract, { loading: startingExtract }] = useMutation<
     RequestStartExtractOutputType,
     RequestStartExtractInputType
   >(REQUEST_START_EXTRACT);
 
   const [startDocumentAnalysis, { loading: startingDocumentAnalysis }] =
-    useMutation<StartAnalysisOutput, StartAnalysisInput>(START_ANALYSIS);
+    useMutation<StartAnalysisOutput, StartAnalysisInput>(START_ANALYSIS, {
+      update(cache, { data }) {
+        if (data?.startAnalysisOnDoc.ok && data.startAnalysisOnDoc.obj) {
+          const newAnalysis = data.startAnalysisOnDoc.obj;
+          cache.modify({
+            fields: {
+              analyses(existingAnalyses = { edges: [] }) {
+                const newAnalysisRef = cache.writeFragment({
+                  data: newAnalysis,
+                  fragment: gql`
+                    fragment NewAnalysis on AnalysisType {
+                      id
+                      analysisStarted
+                      analysisCompleted
+                      analyzedDocuments {
+                        edges {
+                          node {
+                            id
+                          }
+                        }
+                      }
+                      receivedCallbackFile
+                      annotations {
+                        totalCount
+                      }
+                      analyzer {
+                        id
+                        analyzerId
+                        description
+                        manifest
+                        labelsetSet {
+                          totalCount
+                        }
+                        hostGremlin {
+                          id
+                        }
+                      }
+                    }
+                  `,
+                });
+                return {
+                  ...existingAnalyses,
+                  edges: [
+                    ...existingAnalyses.edges,
+                    { __typename: "AnalysisTypeEdge", node: newAnalysisRef },
+                  ],
+                };
+              },
+            },
+          });
+        }
+      },
+    });
+
   const [startDocumentExtract, { loading: startingDocumentExtract }] =
     useMutation<StartDocumentExtractOutput, StartDocumentExtractInput>(
-      START_DOCUMENT_EXTRACT
+      START_DOCUMENT_EXTRACT,
+      {
+        update(cache, { data }) {
+          if (data?.startDocumentExtract.ok && data.startDocumentExtract.obj) {
+            const newExtract = data.startDocumentExtract.obj;
+            cache.modify({
+              fields: {
+                extracts(existingExtracts = { edges: [] }) {
+                  const newExtractRef = cache.writeFragment({
+                    data: newExtract,
+                    fragment: gql`
+                      fragment NewExtract on ExtractType {
+                        id
+                        name
+                        started
+                        corpus {
+                          id
+                          title
+                        }
+                      }
+                    `,
+                  });
+                  return {
+                    ...existingExtracts,
+                    edges: [
+                      ...existingExtracts.edges,
+                      { __typename: "ExtractTypeEdge", node: newExtractRef },
+                    ],
+                  };
+                },
+              },
+            });
+          }
+        },
+      }
     );
 
   useEffect(() => {

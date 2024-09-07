@@ -232,24 +232,37 @@ export const Page = ({
     : [];
 
   ////////////////
-  const annots_to_render = useMemo(() => {
-    const defined_annotations = annotations.filter(
-      (a) => a.json[pageInfo.page.pageNumber - 1] !== undefined
-    );
-    return !annotationStore.showStructuralLabels
-      ? defined_annotations.filter((annot) => !annot.structural)
-      : defined_annotations;
-  }, [
-    annotations,
-    pageInfo.page.pageNumber,
-    annotationStore.showStructuralLabels,
-  ]);
 
   console.log(
     "Page show structural",
     annotationStore.showStructuralLabels,
     pageInfo
   );
+
+  const annots_to_render = useMemo(() => {
+    const defined_annotations = annotations.filter(
+      (a) => a.json[pageInfo.page.pageNumber - 1] !== undefined
+    );
+
+    const filtered_by_structural = !annotationStore.showStructuralLabels
+      ? defined_annotations.filter((annot) => !annot.structural)
+      : defined_annotations;
+
+    // Apply showOnlySpanLabels filter
+    return annotationStore.showOnlySpanLabels &&
+      annotationStore.showOnlySpanLabels.length > 0
+      ? filtered_by_structural.filter((annot) =>
+          annotationStore.showOnlySpanLabels!.some(
+            (label) => label.id === annot.annotationLabel.id
+          )
+        )
+      : filtered_by_structural;
+  }, [
+    annotations,
+    pageInfo.page.pageNumber,
+    annotationStore.showStructuralLabels,
+    annotationStore.showOnlySpanLabels,
+  ]);
 
   const page_annotation_components = useMemo(() => {
     if (!hasPdfPageRendered || !scale || !pageInfo.bounds || !annotations)

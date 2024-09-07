@@ -94,6 +94,7 @@ export const AnalysesCards = ({
   let comp_style = {
     width: "100%",
     padding: "1rem",
+    paddingBottom: "6rem",
     ...(use_mobile_layout
       ? {
           paddingLeft: "0px",
@@ -101,12 +102,7 @@ export const AnalysesCards = ({
         }
       : {}),
   };
-  // if (style) {
-  //   comp_style = { ...comp_style, ...style };
-  // }
-  /**
-   * Return AnalysisItems
-   */
+
   return (
     <>
       <Dimmer active={loading}>

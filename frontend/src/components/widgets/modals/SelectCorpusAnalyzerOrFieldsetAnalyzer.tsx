@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { gql, useMutation, useQuery } from "@apollo/client";
+import {
+  gql,
+  Reference,
+  StoreObject,
+  useMutation,
+  useQuery,
+} from "@apollo/client";
 import {
   Modal,
   Button,
@@ -109,7 +115,7 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
           const newAnalysis = data.startAnalysisOnDoc.obj;
           cache.modify({
             fields: {
-              analyses(existingAnalyses = { edges: [] }) {
+              analyses(existingAnalyses = { edges: [] }, { readField }) {
                 const newAnalysisRef = cache.writeFragment({
                   data: newAnalysis,
                   fragment: gql`
@@ -143,10 +149,17 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
                     }
                   `,
                 });
+
+                // Filter out any existing analysis with the same ID
+                const filteredEdges = existingAnalyses.edges.filter(
+                  (edge: { node: Reference | StoreObject | undefined }) =>
+                    readField("id", edge.node) !== newAnalysis.id
+                );
+
                 return {
                   ...existingAnalyses,
                   edges: [
-                    ...existingAnalyses.edges,
+                    ...filteredEdges,
                     { __typename: "AnalysisTypeEdge", node: newAnalysisRef },
                   ],
                 };
@@ -166,7 +179,7 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
             const newExtract = data.startDocumentExtract.obj;
             cache.modify({
               fields: {
-                extracts(existingExtracts = { edges: [] }) {
+                extracts(existingExtracts = { edges: [] }, { readField }) {
                   const newExtractRef = cache.writeFragment({
                     data: newExtract,
                     fragment: gql`
@@ -181,10 +194,17 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
                       }
                     `,
                   });
+
+                  // Filter out any existing extract with the same ID
+                  const filteredEdges = existingExtracts.edges.filter(
+                    (edge: { node: Reference | StoreObject | undefined }) =>
+                      readField("id", edge.node) !== newExtract.id
+                  );
+
                   return {
                     ...existingExtracts,
                     edges: [
-                      ...existingExtracts.edges,
+                      ...filteredEdges,
                       { __typename: "ExtractTypeEdge", node: newExtractRef },
                     ],
                   };

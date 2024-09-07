@@ -59,7 +59,7 @@ def run_task_name_analyzer(
         lambda: chord(
             group(
                 [
-                    task_func.s(doc_id=doc_id, analysis_id=analysis.id)
+                    task_func.s(doc_id=doc_id, analysis_id=analysis.id, corpus_id=analysis.analyzed_corpus.id  if analysis.analyzed_corpus else None)
                     for doc_id in document_ids
                 ]
             )

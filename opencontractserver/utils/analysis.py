@@ -18,7 +18,7 @@ def create_and_setup_analysis(
             analyzer=analyzer,
             analyzed_corpus_id=corpus_id,
             creator_id=user_id,
-            corpus_action=corpus_action,
+            **({"corpus_action":corpus_action} if corpus_action is not None else {}),
         )
         print(f"Attempted to filter for analysis with specific corpus: {analyses}")
         if analyses.count() == 1:

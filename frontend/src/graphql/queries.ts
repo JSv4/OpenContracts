@@ -569,11 +569,11 @@ export const GET_ANNOTATIONS = gql`
   query (
     $annotationLabelId: ID
     $corpusId: ID
-    $usesLabelFromLabelsetId: String
+    $usesLabelFromLabelsetId: ID
     $rawText_Contains: String
     $annotationLabel_description_search_string: String
     $annotationLabel_title_search_string: String
-    $annotationLabel_Type: AnnotationsAnnotationLabelLabelTypeChoices
+    $annotationLabel_Type: String
     $createdWithAnalyzerId: String
     $createdByAnalysisIds: String
     $analysis_Isnull: Boolean
@@ -585,13 +585,13 @@ export const GET_ANNOTATIONS = gql`
       corpusId: $corpusId
       annotationLabelId: $annotationLabelId
       usesLabelFromLabelsetId: $usesLabelFromLabelsetId
-      rawText_Contains: $rawText_Contains
-      annotationLabel_Text_Contains: $annotationLabel_title_search_string
-      annotationLabel_Description_Contains: $annotationLabel_description_search_string
+      rawTextContains: $rawText_Contains
+      annotationLabel_TextContains: $annotationLabel_title_search_string
+      annotationLabel_DescriptionContains: $annotationLabel_description_search_string
       annotationLabel_LabelType: $annotationLabel_Type
       createdWithAnalyzerId: $createdWithAnalyzerId
       createdByAnalysisIds: $createdByAnalysisIds
-      analysis_Isnull: $analysis_Isnull
+      analysisIsnull: $analysis_Isnull
       structural: $structural
       first: $limit
       after: $cursor
@@ -607,23 +607,25 @@ export const GET_ANNOTATIONS = gql`
             icon
             title
             description
+            __typename
           }
           document {
             id
             title
-            is_selected @client
-            is_open @client
             description
             backendLock
             pdfFile
             pawlsParseFile
             icon
+            __typename
           }
           analysis {
             id
             analyzer {
               analyzerId
+              __typename
             }
+            __typename
           }
           annotationLabel {
             id
@@ -631,19 +633,24 @@ export const GET_ANNOTATIONS = gql`
             color
             icon
             description
+            __typename
           }
           structural
           rawText
           isPublic
           myPermissions
+          __typename
         }
+        __typename
       }
       pageInfo {
         hasNextPage
         hasPreviousPage
         startCursor
         endCursor
+        __typename
       }
+      __typename
     }
   }
 `;

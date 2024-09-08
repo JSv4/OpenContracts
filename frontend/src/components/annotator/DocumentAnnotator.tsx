@@ -43,6 +43,7 @@ import {
   PermissionTypes,
   PageTokens,
   Token,
+  label_display_options,
 } from "../types";
 import {
   convertToDocTypeAnnotation,
@@ -59,6 +60,9 @@ import {
   pdfZoomFactor,
   selectedAnalysis,
   selectedExtract,
+  showAnnotationBoundingBoxes,
+  showAnnotationLabels,
+  showSelectedAnnotationOnly,
   showStructuralAnnotations,
   viewStateVar,
 } from "../../graphql/cache";
@@ -73,6 +77,7 @@ import { AnnotatorRenderer } from "./display/AnnotatorRenderer";
 import { PDFDocumentLoadingTask } from "pdfjs-dist";
 import { toast } from "react-toastify";
 import { createTokenStringSearch } from "./utils";
+import { ViewSettingsPopup } from "../widgets/popups/ViewSettingsPopup";
 
 // Loading pdf js libraries without cdn is a right PITA... cobbled together a working
 // approach via these guides:
@@ -129,6 +134,7 @@ export const DocumentAnnotator = ({
   const allow_input = useReactiveVar(allowUserInput);
   const zoom_level = useReactiveVar(pdfZoomFactor);
   const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
+  const label_display_behavior = useReactiveVar(showAnnotationLabels);
   const setZoomLevel = (zl: number) => pdfZoomFactor(zl);
 
   // Global state variables to jump to and/or load certain annotations on load
@@ -820,6 +826,21 @@ export const DocumentAnnotator = ({
         className="AnnotatorModalContent"
         style={{ padding: "0px", height: "90vh", overflow: "hidden" }}
       >
+        <ViewSettingsPopup
+          show_selected_annotation_only={show_selected_annotation_only}
+          showSelectedAnnotationOnly={showSelectedAnnotationOnly}
+          showStructuralLabels={
+            show_structural_annotations ? show_structural_annotations : false
+          }
+          toggleShowStructuralLabels={() =>
+            showStructuralAnnotations(!show_structural_annotations)
+          }
+          show_annotation_bounding_boxes={show_annotation_bounding_boxes}
+          showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
+          label_display_behavior={label_display_behavior}
+          showAnnotationLabels={showAnnotationLabels}
+          label_display_options={label_display_options}
+        />
         {rendered_component}
       </Modal.Content>
     </Modal>

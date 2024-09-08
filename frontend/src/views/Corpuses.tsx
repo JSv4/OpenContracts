@@ -683,7 +683,7 @@ export const Corpuses = () => {
           id="SelectedCorpusTabDiv"
           attached="bottom"
           style={{
-            flex: 1,
+            width: "100%",
             display: "flex",
             flexDirection: "column",
             justifyContent: "flex-start",

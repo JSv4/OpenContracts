@@ -207,3 +207,8 @@ export interface PageProps {
   onError: (_err: Error) => void;
   setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
 }
+export const label_display_options = [
+  { key: 1, text: "Always Show", value: LabelDisplayBehavior.ALWAYS },
+  { key: 2, text: "Always Hide", value: LabelDisplayBehavior.HIDE },
+  { key: 3, text: "Show on Hover", value: LabelDisplayBehavior.ON_HOVER },
+];

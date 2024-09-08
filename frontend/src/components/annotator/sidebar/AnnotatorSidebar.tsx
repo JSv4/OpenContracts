@@ -34,14 +34,12 @@ import {
   CorpusType,
   DatacellType,
   ExtractType,
-  LabelDisplayBehavior,
 } from "../../../graphql/types";
 import { SearchSidebarWidget } from "../search_widget/SearchSidebarWidget";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { SingleDocumentExtractResults } from "../../extracts/SingleDocumentExtractResults";
-import { ViewSettingsPopup } from "../../widgets/popups/ViewSettingsPopup";
-import { PermissionTypes } from "../../types";
+import { label_display_options, PermissionTypes } from "../../types";
 import { getPermissions } from "../../../utils/transform";
 import { PlaceholderCard } from "../../placeholders/PlaceholderCard";
 import { CorpusStats } from "../../widgets/data-display/CorpusStatus";
@@ -52,12 +50,6 @@ interface TabPanelProps {
   menuItem?: any;
   render?: () => React.ReactNode;
 }
-
-const label_display_options = [
-  { key: 1, text: "Always Show", value: LabelDisplayBehavior.ALWAYS },
-  { key: 2, text: "Always Hide", value: LabelDisplayBehavior.HIDE },
-  { key: 3, text: "Show on Hover", value: LabelDisplayBehavior.ON_HOVER },
-];
 
 const getHeaderInfo = (
   edit_mode: "ANNOTATE" | "ANALYZE",
@@ -125,6 +117,7 @@ const SidebarContainer = styled.div`
 
 const TopSection = styled.div`
   padding: 1rem;
+  padding-left: 3rem;
   border-bottom: 1px solid #e0e0e0;
 `;
 
@@ -377,23 +370,6 @@ export const AnnotatorSidebar = ({
                       paddingBottom: ".5rem",
                     }}
                   >
-                    <ViewSettingsPopup
-                      show_selected_annotation_only={
-                        show_selected_annotation_only
-                      }
-                      showSelectedAnnotationOnly={showSelectedAnnotationOnly}
-                      showStructuralLabels={
-                        showStructuralLabels ? showStructuralLabels : false
-                      }
-                      toggleShowStructuralLabels={toggleShowStructuralLabels}
-                      show_annotation_bounding_boxes={
-                        show_annotation_bounding_boxes
-                      }
-                      showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
-                      label_display_behavior={label_display_behavior}
-                      showAnnotationLabels={showAnnotationLabels}
-                      label_display_options={label_display_options}
-                    />
                     <div
                       style={{
                         flex: 1,

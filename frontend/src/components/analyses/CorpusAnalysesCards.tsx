@@ -17,6 +17,7 @@ import {
   GetAnalysesOutputs,
   GET_ANALYSES,
 } from "../../graphql/queries";
+import useWindowDimensions from "../hooks/WindowDimensionHook";
 
 export const CorpusAnalysesCards = () => {
   /**
@@ -31,6 +32,8 @@ export const CorpusAnalysesCards = () => {
   const show_corpus_action_outputs = useReactiveVar(showCorpusActionOutputs);
 
   const location = useLocation();
+  const { width } = useWindowDimensions();
+  const use_mobile_layout = width <= 400;
 
   //////////////////////////////////////////////////////////////////////
   // Craft the query variables obj based on current application state
@@ -106,7 +109,11 @@ export const CorpusAnalysesCards = () => {
       loading_message="Analyses Loading..."
       pageInfo={analyses_response?.analyses?.pageInfo}
       fetchMore={fetchMoreAnalyses}
-      style={{ minHeight: "70vh", overflowY: "unset" }}
+      style={{
+        minHeight: "70vh",
+        overflowY: "unset",
+        ...(width > 400 && width < 600 ? { paddingLeft: "2rem" } : {}),
+      }}
     />
   );
 };

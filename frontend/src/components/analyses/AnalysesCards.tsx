@@ -37,7 +37,7 @@ export const AnalysesCards = ({
   // Let's figure out the viewport so we can size the cards appropriately.
   const { width } = useWindowDimensions();
   const card_cols = determineCardColCount(width);
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= 600;
 
   //////////////////////////////////////////////////////////////////////
   // Global State Vars in Apollo Cache

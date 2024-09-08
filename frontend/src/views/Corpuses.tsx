@@ -95,7 +95,7 @@ import { getPermissions } from "../utils/transform";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= 600;
   const banish_sidebar = width <= 1000;
 
   const show_remove_docs_from_corpus_modal = useReactiveVar(

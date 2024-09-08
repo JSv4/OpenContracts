@@ -32,7 +32,7 @@ export const ExtractItem = ({
   compact,
 }: ExtractItemProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= 600;
 
   const [requestDeleteExtract] = useMutation<
     RequestDeleteExtractOutputType,

@@ -6,7 +6,7 @@ import useWindowDimensions from "../../hooks/WindowDimensionHook";
 
 export const FilterToCorpusActionOutputs: React.FC = () => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= 600;
 
   const show_corpus_action_analyses = useReactiveVar(showCorpusActionOutputs);
 

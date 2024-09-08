@@ -163,7 +163,7 @@ export const AnnotationCards: React.FC<AnnotationCardProps> = ({
   fetchMore,
 }) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= 600;
   const card_cols = determineCardColCount(width);
 
   const selected_annotation = useReactiveVar(selectedAnnotation);

@@ -30,7 +30,7 @@ export const ExtractCards = ({
 }: ExtractCardsProps) => {
   const { width } = useWindowDimensions();
   const card_cols = determineCardColCount(width);
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= 600;
 
   //   const selected_extract_ids = useReactiveVar(selectedExtractIds);
   const opened_extract = useReactiveVar(openedExtract);

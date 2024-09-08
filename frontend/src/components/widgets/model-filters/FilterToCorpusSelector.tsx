@@ -25,7 +25,7 @@ export const FilterToCorpusSelector = ({
   uses_labelset_id,
 }: FilterToCorpusSelector) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= 600;
 
   const filtered_to_corpus = useReactiveVar(filterToCorpus);
   const user_obj = useReactiveVar(userObj);

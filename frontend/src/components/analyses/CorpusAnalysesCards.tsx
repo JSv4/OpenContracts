@@ -33,7 +33,6 @@ export const CorpusAnalysesCards = () => {
 
   const location = useLocation();
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
 
   //////////////////////////////////////////////////////////////////////
   // Craft the query variables obj based on current application state

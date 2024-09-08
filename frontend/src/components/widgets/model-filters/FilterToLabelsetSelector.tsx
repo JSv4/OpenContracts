@@ -25,7 +25,7 @@ export const FilterToLabelsetSelector = ({
   fixed_labelset_id,
 }: FilterToLabelsetSelectorProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= 600;
 
   const filtered_to_labelset_id = useReactiveVar(filterToLabelsetId);
   const user_obj = useReactiveVar(userObj);

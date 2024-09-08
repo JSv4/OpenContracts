@@ -31,7 +31,7 @@ export const FilterToAnalysesSelector = ({
   style,
 }: FilterToAnalysesSelectorProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= 600;
 
   const auth_token = useReactiveVar(authToken);
   const selected_analyses = useReactiveVar(selectedAnalyses);

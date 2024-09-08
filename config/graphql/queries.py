@@ -809,26 +809,35 @@ class Query(graphene.ObjectType):
     def resolve_document_corpus_actions(self, info, document_id, corpus_id=None):
 
         user = info.context.user
-        if not user.is_authenticated:
-            return None
+        if user.is_anonymous:
+            user = None
 
         doc_id = from_global_id(document_id)[1]
 
         if corpus_id is not None:
             corpus_id = from_global_id(corpus_id)[1]
             corpus = Corpus.objects.get(id=corpus_id)
-            corpus_actions = CorpusAction.objects.filter(corpus=corpus)
+            print(f"Corpus id wasn't none. Retrieved corpus {corpus}")
+            corpus_actions = CorpusAction.objects.filter(Q(corpus=corpus) & (Q(creator=user) | Q(is_public=True)))
+            print(f"Corpus action retrieved: {corpus_actions}")
 
         else:
             corpus = None
             corpus_actions = []
 
-        document = Document.objects.get(id=doc_id)
-        extracts = Extract.objects.filter(corpus=corpus, documents=document)
+        try:
+            document = Document.objects.get(Q(id=doc_id) & (Q(creator=user) | Q(is_public=True)))
+            print(f"Document: {document}")
+            extracts = Extract.objects.filter(Q(corpus=corpus) & Q(documents=document) & (Q(creator=user) | Q(is_public=True)))
+            print(f"Extracts:{extracts}")
+            analysis_rows = DocumentAnalysisRow.objects.filter(
+                Q(document=document) & Q(analysis__analyzed_corpus=corpus) & (Q(creator=user) | Q(is_public=True))
+            )
+            print(f"analysis_rows rows:{analysis_rows}")
 
-        analysis_rows = DocumentAnalysisRow.objects.filter(
-            document=document, analysis__analyzed_corpus=corpus
-        )
+        except Document.DoesNotExist:
+            extracts = []
+            analysis_rows = []
 
         return DocumentCorpusActionsType(
             corpus_actions=corpus_actions,

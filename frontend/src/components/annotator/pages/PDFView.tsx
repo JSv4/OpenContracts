@@ -49,6 +49,7 @@ import { Dimmer, Loader } from "semantic-ui-react";
 import { Menu } from "semantic-ui-react";
 import { PDFActionBar } from "../display/ActionBar";
 import {
+  setTopbarVisible,
   showSelectCorpusAnalyzerOrFieldsetModal,
   showStructuralAnnotations,
 } from "../../../graphql/cache";
@@ -198,6 +199,7 @@ export const PDFView = ({
   setViewState: (v: ViewState) => void;
 }) => {
   const { width } = useWindowDimensions();
+  const use_mobile_layout = width <= 600;
 
   const [hideSidebar, setHideSidebar] = useState<boolean>(false);
   const [selectionElementRefs, setSelectionElementRefs] = useState<
@@ -256,15 +258,23 @@ export const PDFView = ({
   const responsive_sidebar_width = hideSidebar ? "0px" : "400px";
 
   // TODO - These are dummy placeholders
-  const actionBarItems = [
+  let actionBarItems = [
     {
       key: "action1",
       text: "Analyze",
       value: () => showSelectCorpusAnalyzerOrFieldsetModal(true),
     },
-    // { key: "action2", text: "Action 2", value: "action2" },
-    // { key: "action3", text: "Action 3", value: "action3" },
   ];
+  if (use_mobile_layout) {
+    actionBarItems = [
+      ...actionBarItems,
+      {
+        key: "action2",
+        text: "Show Analytics Topbar",
+        value: () => setTopbarVisible(true),
+      },
+    ];
+  }
 
   const handleActionSelect = (action: string) => {
     // Handle action selection

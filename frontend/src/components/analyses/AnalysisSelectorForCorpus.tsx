@@ -6,6 +6,9 @@ import { AnalysisItem } from "./AnalysisItem";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { ExtractItem } from "../extracts/ExtractItem";
+import { setTopbarVisible } from "../../graphql/cache";
+import { useReactiveVar } from "@apollo/client";
+import { X } from "lucide-react";
 
 interface HorizontalSelectorForCorpusProps {
   corpus: CorpusType;
@@ -33,6 +36,7 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= 600;
 
+  const topbarVisible = useReactiveVar(setTopbarVisible);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"analyses" | "extracts">(
     "analyses"
@@ -199,6 +203,29 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
           borderRadius: "0px",
         }}
       >
+        {use_mobile_layout && topbarVisible && (
+          <div
+            onClick={() => setTopbarVisible(false)}
+            style={{
+              position: "absolute",
+              bottom: "10px",
+              right: "10px",
+              cursor: "pointer",
+              backgroundColor: "#DB2828",
+              color: "#fff",
+              borderRadius: "50%",
+              width: "36px",
+              height: "36px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
+              transition: "all 0.2s ease-in-out",
+            }}
+          >
+            <X size={24} color="#333" />
+          </div>
+        )}
         <div
           id="HorizontalSelectorForCorpus_CardTrack"
           style={{

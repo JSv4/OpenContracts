@@ -1,9 +1,7 @@
 import { ReactNode, useLayoutEffect, useRef, useState } from "react";
-import { Image, Icon, Header, Segment, Sidebar, Card } from "semantic-ui-react";
+import { Icon, Segment, Sidebar } from "semantic-ui-react";
 import { FileChartColumnIncreasing } from "lucide-react";
 
-import manual_annotation_icon from "../../../assets/icons/noun-quill-31093.png";
-import analyzer_lens_icon from "../../../assets/icons/noun-goggles-4650061.png";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import {
   AnalysisType,
@@ -12,6 +10,8 @@ import {
   ExtractType,
 } from "../../../graphql/types";
 import { ExtractAndAnalysisHorizontalSelector } from "../../analyses/AnalysisSelectorForCorpus";
+import { useReactiveVar } from "@apollo/client";
+import { setTopbarVisible } from "../../../graphql/cache";
 
 interface AnnotatorTopbarProps {
   opened_corpus: CorpusType | null | undefined;
@@ -43,6 +43,7 @@ export const AnnotatorTopbar = ({
   console.log("Annotator topbar - analyses", analyses);
 
   const { width } = useWindowDimensions();
+  const use_mobile_layout = width <= 600;
   const banish_sidebar = width <= 1000;
 
   const container_ref = useRef<HTMLDivElement>(null);
@@ -67,7 +68,7 @@ export const AnnotatorTopbar = ({
   // console.log("Expanded toolbar width", expanded_toolbar_width);
   // console.log("Icon toolbar width", icon_toolbar_width);
 
-  const [topbarVisible, setTopbarVisible] = useState<boolean>(false);
+  const topbarVisible = useReactiveVar(setTopbarVisible);
 
   useLayoutEffect(() => {
     if (container_ref.current) {
@@ -96,7 +97,7 @@ export const AnnotatorTopbar = ({
 
   const collapseButtonHiddenStyle = {
     cursor: "pointer",
-    display: "flex",
+    display: use_mobile_layout ? "none" : "flex",
     flexDirection: "row",
     justifyContent: "flex-start",
     alignItems: "center",
@@ -150,7 +151,7 @@ export const AnnotatorTopbar = ({
         className="SidebarCloser"
         onClick={() => setTopbarVisible(!topbarVisible)}
         style={
-          topbarVisible
+          topbarVisible && !use_mobile_layout
             ? (collapseButtonShownStyle as React.CSSProperties)
             : (collapseButtonHiddenStyle as React.CSSProperties)
         }

@@ -176,6 +176,7 @@ export const viewStateVar = makeVar<ViewState>(ViewState.LOADING);
 export const editMode = makeVar<"ANNOTATE" | "ANALYZE">("ANNOTATE");
 export const allowUserInput = makeVar<boolean>(false);
 export const pdfZoomFactor = makeVar<number>(1.5);
+export const setTopbarVisible = makeVar<boolean>(false);
 
 /**
  *  Document-related global variables.

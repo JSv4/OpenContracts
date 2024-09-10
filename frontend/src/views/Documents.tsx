@@ -38,8 +38,8 @@ import { CardLayout } from "../components/layout/CardLayout";
 import { DocumentCards } from "../components/documents/DocumentCards";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
 import { DocumentType, LabelType } from "../graphql/types";
-import { AddToCorpusModal } from "../components/corpuses/AddToCorpusModal";
-import { DocumentUploadModal } from "../components/documents/DocumentUploadModal";
+import { AddToCorpusModal } from "../components/widgets/modals/AddToCorpusModal";
+import { DocumentUploadModal } from "../components/widgets/modals/DocumentUploadModal";
 import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";
 import {

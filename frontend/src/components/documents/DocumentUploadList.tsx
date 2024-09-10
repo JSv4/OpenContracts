@@ -2,7 +2,7 @@ import React, { useCallback, useRef } from "react";
 import { Icon, Button, List, Segment, Header } from "semantic-ui-react";
 import { DropEvent, FileRejection, useDropzone } from "react-dropzone";
 import { ContractListItem } from "./DocumentListItem";
-import { FileUploadPackageProps } from "./DocumentUploadModal";
+import { FileUploadPackageProps } from "../widgets/modals/DocumentUploadModal";
 
 interface DocumentUploadListProps {
   documents: FileUploadPackageProps[];

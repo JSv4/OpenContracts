@@ -19,18 +19,19 @@ import {
   LinkDocumentsToCorpusInputs,
   LinkDocumentsToCorpusOutputs,
   LINK_DOCUMENTS_TO_CORPUS,
-} from "../../graphql/mutations";
-import { selectedDocumentIds } from "../../graphql/cache";
+} from "../../../graphql/mutations";
+import { selectedDocumentIds } from "../../../graphql/cache";
 import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
 import {
   GetCorpusesInputs,
   GetCorpusesOutputs,
   GET_CORPUSES,
-} from "../../graphql/queries";
-import { CorpusType, DocumentType } from "../../graphql/types";
+} from "../../../graphql/queries";
+import { CorpusType, DocumentType } from "../../../graphql/types";
 import { toast } from "react-toastify";
-import { getPermissions } from "../../utils/transform";
-import { PermissionTypes } from "../types";
+import { getPermissions } from "../../../utils/transform";
+import { PermissionTypes } from "../../types";
+import { CorpusSelector } from "../../corpuses/CorpusSelector";
 
 const SELECT_VIEW = "SELECT_VIEW";
 const CONFIRM_VIEW = "CONFIRM_VIEW";
@@ -125,72 +126,6 @@ function AddToCorpusModalConfirmDocuments({
     <List style={{ height: "100%", width: "100%" }} celled>
       {items}
     </List>
-  );
-}
-
-interface AddToCorpusModalSelectCorpusProps {
-  selected_corpus: CorpusType | null;
-  search_term: string;
-  corpuses: CorpusType[];
-  loading: boolean;
-  onClick: (args?: any) => any | void;
-  searchCorpus: (args?: any) => any | void;
-  setSearchTerm: (args?: any) => any | void;
-}
-
-function AddToCorpusModalSelectCorpus({
-  selected_corpus,
-  onClick,
-  searchCorpus,
-  setSearchTerm,
-  search_term,
-  corpuses,
-  loading,
-}: AddToCorpusModalSelectCorpusProps) {
-  const options =
-    corpuses && corpuses.length > 0
-      ? corpuses
-          .filter((corpus) =>
-            getPermissions(
-              corpus?.myPermissions ? corpus.myPermissions : []
-            ).includes(PermissionTypes.CAN_UPDATE)
-          )
-          .map((item, index) => (
-            <CorpusItem
-              key={index}
-              corpus={item}
-              selected={selected_corpus?.id === item?.id}
-              onClick={onClick}
-            />
-          ))
-      : [];
-
-  return (
-    <Segment.Group>
-      <Segment raised>
-        <div style={{ width: "25vw" }}>
-          <Form onSubmit={() => searchCorpus()}>
-            <Form.Input
-              icon="search"
-              placeholder="Search for corpus..."
-              onChange={(data) => setSearchTerm(data.target.value)}
-              value={search_term}
-              style={{ borderRadius: ".25rem" }}
-            />
-          </Form>
-        </div>
-      </Segment>
-      <Segment raised style={{ height: "40vh", overflowY: "scroll" }}>
-        {loading ? (
-          <Dimmer active inverted>
-            <Loader inverted>Loading</Loader>
-          </Dimmer>
-        ) : (
-          <></>
-        )}
-        <Card.Group itemsPerRow={2}>{options}</Card.Group>
-      </Segment>
-    </Segment.Group>
   );
 }
 
@@ -310,7 +245,7 @@ export function AddToCorpusModal({
   ) => {
     if (view === SELECT_VIEW) {
       return (
-        <AddToCorpusModalSelectCorpus
+        <CorpusSelector
           selected_corpus={selected_corpus}
           onClick={setSelectedCorpus}
           searchCorpus={refetch_corpuses}

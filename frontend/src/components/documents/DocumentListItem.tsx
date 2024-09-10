@@ -7,7 +7,7 @@ import {
   SUCCESS,
   FAILED,
   FileDetailsProps,
-} from "./DocumentUploadModal";
+} from "../widgets/modals/DocumentUploadModal";
 
 interface ContractListItemProps {
   document: FileDetailsProps;

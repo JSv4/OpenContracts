@@ -536,8 +536,10 @@ export interface UploadDocumentInputProps {
   base64FileString: string;
   filename: string;
   customMeta: Record<string, any>;
+  makePublic: boolean;
   description?: string;
   title?: string;
+  addToCorpusId?: string;
 }
 
 export interface UploadDocumentOutputProps {
@@ -567,6 +569,8 @@ export const UPLOAD_DOCUMENT = gql`
     $customMeta: GenericScalar!
     $description: String!
     $title: String!
+    $makePublic: Boolean!
+    $addToCorpusId: ID
   ) {
     uploadDocument(
       base64FileString: $base64FileString
@@ -574,6 +578,8 @@ export const UPLOAD_DOCUMENT = gql`
       customMeta: $customMeta
       description: $description
       title: $title
+      makePublic: $makePublic
+      addToCorpusId: $addToCorpusId
     ) {
       document {
         id

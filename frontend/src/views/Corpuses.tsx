@@ -224,6 +224,7 @@ export const Corpuses = () => {
     fetchMore: fetchMoreCorpusesOrig,
   } = useQuery<GetCorpusesOutputs, GetCorpusesInputs>(GET_CORPUSES, {
     variables: corpus_variables,
+    fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
   });
 

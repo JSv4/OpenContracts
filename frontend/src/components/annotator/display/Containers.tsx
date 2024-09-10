@@ -51,7 +51,7 @@ export const SelectionInfo = styled.div<SelectionInfoProps>`
   border-radius: 4px 4px 0 0;
   background: ${(props) =>
     props.showBoundingBox ? props.color : "rgba(255, 255, 255, 0.9)"};
-  padding: 4px 8px;
+  padding: 1px 8px;
   font-weight: bold;
   font-size: 12px;
   user-select: none;

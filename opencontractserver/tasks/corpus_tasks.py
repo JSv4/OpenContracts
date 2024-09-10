@@ -59,7 +59,13 @@ def run_task_name_analyzer(
         lambda: chord(
             group(
                 [
-                    task_func.s(doc_id=doc_id, analysis_id=analysis.id, corpus_id=analysis.analyzed_corpus.id  if analysis.analyzed_corpus else None)
+                    task_func.s(
+                        doc_id=doc_id,
+                        analysis_id=analysis.id,
+                        corpus_id=analysis.analyzed_corpus.id
+                        if analysis.analyzed_corpus
+                        else None,
+                    )
                     for doc_id in document_ids
                 ]
             )
@@ -82,18 +88,25 @@ def process_analyzer(
         doc_ids=document_ids,
         corpus_action=corpus_action,
     )
+
     print(f"process_analyzer(...) - created analysis: {analysis}")
 
     if analyzer.task_name:
 
-        run_task_name_analyzer.si(
-            analysis_id=analysis.id,
-            document_ids=document_ids,
-        ).apply_async()
+        transaction.on_commit(
+            lambda: run_task_name_analyzer.si(
+                analysis_id=analysis.id,
+                document_ids=document_ids,
+            ).apply_async()
+        )
 
     else:
         logger.info(f" - retrieved analysis: {analysis}")
-        start_analysis.s(analysis_id=analysis.id, doc_ids=document_ids).apply_async()
+        transaction.on_commit(
+            lambda: start_analysis.s(
+                analysis_id=analysis.id, doc_ids=document_ids
+            ).apply_async()
+        )
 
     return analysis
 

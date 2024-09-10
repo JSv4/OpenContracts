@@ -16,7 +16,6 @@ from config.graphql.base import OpenContractsNode
 from config.graphql.filters import (
     AnalysisFilter,
     AnalyzerFilter,
-    AnnotationFilter,
     AssignmentFilter,
     ColumnFilter,
     CorpusFilter,
@@ -71,27 +70,187 @@ logger = logging.getLogger(__name__)
 
 
 class Query(graphene.ObjectType):
+
     # ANNOTATION RESOLVERS #####################################
-    annotations = DjangoFilterConnectionField(
-        AnnotationType, filterset_class=AnnotationFilter
+    annotations = DjangoConnectionField(
+        AnnotationType,
+        raw_text_contains=graphene.String(),
+        annotation_label_id=graphene.ID(),
+        annotation_label__text=graphene.String(),
+        annotation_label__text_contains=graphene.String(),
+        annotation_label__description_contains=graphene.String(),
+        annotation_label__label_type=graphene.String(),
+        analysis_isnull=graphene.Boolean(),
+        document_id=graphene.ID(),
+        corpus_id=graphene.ID(),
+        structural=graphene.Boolean(),
+        uses_label_from_labelset_id=graphene.ID(),
+        created_by_analysis_ids=graphene.String(),
+        created_with_analyzer_id=graphene.String(),
+        order_by=graphene.String(),
     )
 
-    def resolve_annotations(self, info, **kwargs):
+    def resolve_annotations(
+        self, info, analysis_isnull=None, structural=None, **kwargs
+    ):
+        # Base filtering for user permissions
         if info.context.user.is_superuser:
-            return Annotation.objects.all().order_by("page")
+            logger.info("User is superuser, returning all annotations")
+            queryset = Annotation.objects.all()
         elif info.context.user.is_anonymous:
-            return Annotation.objects.filter(Q(is_public=True))
+            logger.info("User is anonymous, returning public annotations")
+            queryset = Annotation.objects.filter(Q(is_public=True))
+            logger.info(f"{queryset.count()} public annotations...")
         else:
-            return Annotation.objects.filter(
+            logger.info(
+                "User is authenticated, returning user's and public annotations"
+            )
+            queryset = Annotation.objects.filter(
                 Q(creator=info.context.user) | Q(is_public=True)
             )
+
+        # Filter by uses_label_from_labelset_id
+        labelset_id = kwargs.get("uses_label_from_labelset_id")
+        if labelset_id:
+            logger.info(f"Filtering by labelset_id: {labelset_id}")
+            django_pk = from_global_id(labelset_id)[1]
+            queryset = queryset.filter(annotation_label__included_in_labelset=django_pk)
+
+        # Filter by created_by_analysis_ids
+        analysis_ids = kwargs.get("created_by_analysis_ids")
+        if analysis_ids:
+            logger.info(f"Filtering by analysis_ids: {analysis_ids}")
+            analysis_id_list = analysis_ids.split(",")
+            if "~~MANUAL~~" in analysis_id_list:
+                logger.info("Including manual annotations in filter")
+                analysis_id_list = [id for id in analysis_id_list if id != "~~MANUAL~~"]
+                analysis_pks = [
+                    int(from_global_id(value)[1]) for value in analysis_id_list
+                ]
+                queryset = queryset.filter(
+                    Q(analysis__isnull=True) | Q(analysis_id__in=analysis_pks)
+                )
+            else:
+                logger.info("Filtering only by specified analysis IDs")
+                analysis_pks = [
+                    int(from_global_id(value)[1]) for value in analysis_id_list
+                ]
+                queryset = queryset.filter(analysis_id__in=analysis_pks)
+
+        # Filter by created_with_analyzer_id
+        analyzer_ids = kwargs.get("created_with_analyzer_id")
+        if analyzer_ids:
+            logger.info(f"Filtering by analyzer_ids: {analyzer_ids}")
+            analyzer_id_list = analyzer_ids.split(",")
+            if "~~MANUAL~~" in analyzer_id_list:
+                logger.info("Including manual annotations in filter")
+                analyzer_id_list = [id for id in analyzer_id_list if id != "~~MANUAL~~"]
+                analyzer_pks = [
+                    int(from_global_id(id)[1])
+                    for id in analyzer_id_list
+                    if id != "~~MANUAL~~"
+                ]
+                queryset = queryset.filter(
+                    Q(analysis__isnull=True) | Q(analysis__analyzer_id__in=analyzer_pks)
+                )
+            elif len(analyzer_id_list) > 0:
+                logger.info("Filtering only by specified analyzer IDs")
+                analyzer_pks = [int(from_global_id(id)[1]) for id in analyzer_id_list]
+                queryset = queryset.filter(analysis__analyzer_id__in=analyzer_pks)
+
+        # Filter by raw_text
+        raw_text = kwargs.get("raw_text_contains")
+        if raw_text:
+            logger.info(f"Filtering by raw_text containing: {raw_text}")
+            queryset = queryset.filter(raw_text__contains=raw_text)
+
+        # Filter by annotation_label_id
+        annotation_label_id = kwargs.get("annotation_label_id")
+        if annotation_label_id:
+            logger.info(f"Filtering by annotation_label_id: {annotation_label_id}")
+            django_pk = from_global_id(annotation_label_id)[1]
+            queryset = queryset.filter(annotation_label_id=django_pk)
+
+        # Filter by annotation_label__text
+        label_text = kwargs.get("annotation_label__text")
+        if label_text:
+            logger.info(f"Filtering by exact annotation_label__text: {label_text}")
+            queryset = queryset.filter(annotation_label__text=label_text)
+
+        label_text_contains = kwargs.get("annotation_label__text_contains")
+        if label_text_contains:
+            logger.info(
+                f"Filtering by annotation_label__text containing: {label_text_contains}"
+            )
+            queryset = queryset.filter(
+                annotation_label__text__contains=label_text_contains
+            )
+
+        # Filter by annotation_label__description
+        label_description = kwargs.get("annotation_label__description_contains")
+        if label_description:
+            logger.info(
+                f"Filtering by annotation_label__description containing: {label_description}"
+            )
+            queryset = queryset.filter(
+                annotation_label__description__contains=label_description
+            )
+
+        # Filter by annotation_label__label_type
+        logger.info(
+            f"Queryset county before filtering by annotation_label__label_type: {queryset.count()}"
+        )
+        label_type = kwargs.get("annotation_label__label_type")
+        if label_type:
+            logger.info(f"Filtering by annotation_label__label_type: {label_type}")
+            queryset = queryset.filter(annotation_label__label_type=label_type)
+
+        logger.info(f"QFilter value for analysis_isnull: {analysis_isnull}")
+        # Filter by analysis
+        if analysis_isnull is not None:
+            logger.info(f"Filtering by analysis_isnull: {queryset.count()}")
+            queryset = queryset.filter(analysis__isnull=analysis_isnull)
+
+        # Filter by document_id
+        document_id = kwargs.get("document_id")
+        if document_id:
+            logger.info(f"Filtering by document_id: {document_id}")
+            django_pk = from_global_id(document_id)[1]
+            queryset = queryset.filter(document_id=django_pk)
+
+        # Filter by corpus_id
+        logger.info(f"{queryset.count()} annotations pre corpus_id filter...")
+        corpus_id = kwargs.get("corpus_id")
+        if corpus_id:
+            django_pk = from_global_id(corpus_id)[1]
+            logger.info(f"Filtering by corpus_id: {django_pk}")
+            queryset = queryset.filter(corpus_id=django_pk)
+            logger.info(f"{queryset.count()} annotations post corpus_id filter...")
+
+        # Filter by structural
+        if structural is not None:
+            logger.info(f"Filtering by structural: {structural}")
+            queryset = queryset.filter(structural=structural)
+
+        # Ordering
+        order_by = kwargs.get("order_by")
+        if order_by:
+            logger.info(f"Ordering by: {order_by}")
+            queryset = queryset.order_by(order_by)
+        else:
+            logger.info("Ordering by default: -modified")
+            queryset = queryset.order_by("-modified")
+
+        logger.info(f"Final queryset: {queryset}")
+
+        return queryset
 
     label_type_enum = graphene.Enum.from_enum(LabelType)
 
     #############################################################################################
-    # For some annotations, it's not clear exactly how to paginate them and, mostl likely       #
+    # For some annotations, it's not clear exactly how to paginate them and, mostllikely        #
     # the total # of such annotations will be pretty minimal (specifically relationships and    #
-    # doc types). The bulk_doc_annotations_in_corpus field is allows you to request             #
+    # doc types). The bulk_doc_annotations_in_corpus field allows you to request                #
     # full complement of annotations for a given doc in a given corpus as a list                #
     # rather than a Relay-style connection.                                                     #
     #############################################################################################
@@ -615,7 +774,6 @@ class Query(graphene.ObjectType):
 
     fieldset = relay.Node.Field(FieldsetType)
 
-    @login_required
     def resolve_fieldset(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         if info.context.user.is_superuser:
@@ -631,7 +789,6 @@ class Query(graphene.ObjectType):
         FieldsetType, filterset_class=FieldsetFilter
     )
 
-    @login_required
     def resolve_fieldsets(self, info, **kwargs):
         if info.context.user.is_superuser:
             return Fieldset.objects.all()
@@ -644,7 +801,6 @@ class Query(graphene.ObjectType):
 
     column = relay.Node.Field(ColumnType)
 
-    @login_required
     def resolve_column(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         if info.context.user.is_superuser:
@@ -659,7 +815,6 @@ class Query(graphene.ObjectType):
 
     columns = DjangoFilterConnectionField(ColumnType, filterset_class=ColumnFilter)
 
-    @login_required
     def resolve_columns(self, info, **kwargs):
         if info.context.user.is_superuser:
             return Column.objects.all()
@@ -672,7 +827,6 @@ class Query(graphene.ObjectType):
 
     extract = relay.Node.Field(ExtractType)
 
-    @login_required
     def resolve_extract(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         if info.context.user.is_superuser:
@@ -688,7 +842,6 @@ class Query(graphene.ObjectType):
         ExtractType, filterset_class=ExtractFilter, max_limit=15
     )
 
-    @login_required
     def resolve_extracts(self, info, **kwargs):
         if info.context.user.is_superuser:
             return Extract.objects.all().order_by("-created")
@@ -730,7 +883,6 @@ class Query(graphene.ObjectType):
 
     datacell = relay.Node.Field(DatacellType)
 
-    @login_required
     def resolve_datacell(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         if info.context.user.is_superuser:
@@ -747,7 +899,6 @@ class Query(graphene.ObjectType):
         DatacellType, filterset_class=DatacellFilter
     )
 
-    @login_required
     def resolve_datacells(self, info, **kwargs):
         if info.context.user.is_superuser:
             return Datacell.objects.all()
@@ -818,7 +969,9 @@ class Query(graphene.ObjectType):
             corpus_id = from_global_id(corpus_id)[1]
             corpus = Corpus.objects.get(id=corpus_id)
             print(f"Corpus id wasn't none. Retrieved corpus {corpus}")
-            corpus_actions = CorpusAction.objects.filter(Q(corpus=corpus) & (Q(creator=user) | Q(is_public=True)))
+            corpus_actions = CorpusAction.objects.filter(
+                Q(corpus=corpus) & (Q(creator=user) | Q(is_public=True))
+            )
             print(f"Corpus action retrieved: {corpus_actions}")
 
         else:
@@ -826,12 +979,20 @@ class Query(graphene.ObjectType):
             corpus_actions = []
 
         try:
-            document = Document.objects.get(Q(id=doc_id) & (Q(creator=user) | Q(is_public=True)))
+            document = Document.objects.get(
+                Q(id=doc_id) & (Q(creator=user) | Q(is_public=True))
+            )
             print(f"Document: {document}")
-            extracts = Extract.objects.filter(Q(corpus=corpus) & Q(documents=document) & (Q(creator=user) | Q(is_public=True)))
+            extracts = Extract.objects.filter(
+                Q(corpus=corpus)
+                & Q(documents=document)
+                & (Q(creator=user) | Q(is_public=True))
+            )
             print(f"Extracts:{extracts}")
             analysis_rows = DocumentAnalysisRow.objects.filter(
-                Q(document=document) & Q(analysis__analyzed_corpus=corpus) & (Q(creator=user) | Q(is_public=True))
+                Q(document=document)
+                & Q(analysis__analyzed_corpus=corpus)
+                & Q(creator=user)
             )
             print(f"analysis_rows rows:{analysis_rows}")
 

@@ -176,6 +176,7 @@ def doc_analyzer_task(max_retries=None):
                                 )
 
                             # Convert (TextSpan, str) pairs to OpenContractsAnnotationPythonType
+                            logger.info(f"Create Annotation Linked to {corpus_id}")
                             span, label = span_label_pair
                             annotation_data = (
                                 pdf_data_layer.create_opencontract_annotation_from_span(

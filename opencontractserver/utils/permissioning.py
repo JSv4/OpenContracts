@@ -14,10 +14,14 @@ from guardian.shortcuts import assign_perm
 
 from config.graphql.permission_annotator.middleware import combine
 from opencontractserver.analyzer.models import Analysis, Analyzer
-from opencontractserver.annotations.models import Annotation, AnnotationLabel, Relationship
-from opencontractserver.corpuses.models import Corpus, CorpusQuery, CorpusAction
+from opencontractserver.annotations.models import (
+    Annotation,
+    AnnotationLabel,
+    Relationship,
+)
+from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentAnalysisRow
-from opencontractserver.extracts.models import Fieldset, Datacell, Extract
+from opencontractserver.extracts.models import Datacell, Extract, Fieldset
 from opencontractserver.types.enums import PermissionTypes
 
 User = get_user_model()
@@ -414,11 +418,15 @@ def make_corpus_public(corpus_id: int | str) -> MakePublicReturnType:
             logger.info(f"Set label_set {corpus.label_set.id} as public")
 
             # Make labels public
-            updated_labels = AnnotationLabel.objects.filter(included_in_labelset=corpus.label_set).update(is_public=True)
+            updated_labels = AnnotationLabel.objects.filter(
+                included_in_labelset=corpus.label_set
+            ).update(is_public=True)
             logger.info(f"Made {updated_labels} annotation labels public")
 
         # Make human annotations public
-        updated_annotations = Annotation.objects.filter(corpus=corpus, analysis__isnull=True).update(is_public=True)
+        updated_annotations = Annotation.objects.filter(
+            corpus=corpus, analysis__isnull=True
+        ).update(is_public=True)
         logger.info(f"Made {updated_annotations} human annotations public")
 
         # Make extracts public
@@ -427,43 +435,55 @@ def make_corpus_public(corpus_id: int | str) -> MakePublicReturnType:
 
         # Make analyses public
         analyses = Analysis.objects.filter(analyzed_corpus=corpus)
-        updated_analyses = Analysis.objects.filter(id__in=analyses).update(is_public=True)
+        updated_analyses = Analysis.objects.filter(id__in=analyses).update(
+            is_public=True
+        )
         logger.info(f"Made {updated_analyses} analyses public")
 
         # Make datacells public
-        updated_datacells = Datacell.objects.filter(extract__corpus=corpus).update(is_public=True)
+        updated_datacells = Datacell.objects.filter(extract__corpus=corpus).update(
+            is_public=True
+        )
         logger.info(f"Made {updated_datacells} datacells public")
 
         # Make fieldsets public
         fieldsets = Fieldset.objects.filter(extracts__corpus=corpus).distinct()
-        updated_fieldsets = Fieldset.objects.filter(id__in=fieldsets).update(is_public=True)
+        updated_fieldsets = Fieldset.objects.filter(id__in=fieldsets).update(
+            is_public=True
+        )
         logger.info(f"Made {updated_fieldsets} fieldsets public")
 
         # Make analyzers public
         analyzers = Analyzer.objects.filter(
-            Q(analysis__analyzed_corpus=corpus) |
-            Q(corpusaction__corpus=corpus)
+            Q(analysis__analyzed_corpus=corpus) | Q(corpusaction__corpus=corpus)
         ).distinct()
-        updated_analyzers = Analyzer.objects.filter(id__in=analyzers).update(is_public=True)
+        updated_analyzers = Analyzer.objects.filter(id__in=analyzers).update(
+            is_public=True
+        )
         logger.info(f"Made {updated_analyzers} analyzers public")
 
         # Make related objects public
         # Relationships
-        updated_relationships = Relationship.objects.filter(corpus=corpus).update(is_public=True)
+        updated_relationships = Relationship.objects.filter(corpus=corpus).update(
+            is_public=True
+        )
         logger.info(f"Made {updated_relationships} relationships public")
 
         # CorpusQueries
-        updated_queries = CorpusQuery.objects.filter(corpus=corpus).update(is_public=True)
+        updated_queries = CorpusQuery.objects.filter(corpus=corpus).update(
+            is_public=True
+        )
         logger.info(f"Made {updated_queries} corpus queries public")
 
         # CorpusActions
-        updated_actions = CorpusAction.objects.filter(corpus=corpus).update(is_public=True)
+        updated_actions = CorpusAction.objects.filter(corpus=corpus).update(
+            is_public=True
+        )
         logger.info(f"Made {updated_actions} corpus actions public")
 
         # DocumentAnalysisRows
         updated_rows = DocumentAnalysisRow.objects.filter(
-            Q(analysis__analyzed_corpus=corpus) |
-            Q(extract__corpus=corpus)
+            Q(analysis__analyzed_corpus=corpus) | Q(extract__corpus=corpus)
         ).update(is_public=True)
         logger.info(f"Made {updated_rows} document analysis rows public")
 

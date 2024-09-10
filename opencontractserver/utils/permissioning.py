@@ -411,7 +411,7 @@ def make_corpus_public(corpus_id: int | str) -> MakePublicReturnType:
         updated_docs = Document.objects.filter(id__in=docs).update(is_public=True)
         logger.info(f"Made {updated_docs} documents public")
 
-        # Handle label_set for human annotations
+        # !!DANGER!! - Make ALL labels for this corpus public
         if corpus.label_set:
             corpus.label_set.is_public = True
             corpus.label_set.save()
@@ -425,7 +425,7 @@ def make_corpus_public(corpus_id: int | str) -> MakePublicReturnType:
 
         # Make human annotations public
         updated_annotations = Annotation.objects.filter(
-            corpus=corpus, analysis__isnull=True
+            corpus=corpus
         ).update(is_public=True)
         logger.info(f"Made {updated_annotations} human annotations public")
 
@@ -474,12 +474,6 @@ def make_corpus_public(corpus_id: int | str) -> MakePublicReturnType:
             is_public=True
         )
         logger.info(f"Made {updated_queries} corpus queries public")
-
-        # CorpusActions
-        updated_actions = CorpusAction.objects.filter(corpus=corpus).update(
-            is_public=True
-        )
-        logger.info(f"Made {updated_actions} corpus actions public")
 
         # DocumentAnalysisRows
         updated_rows = DocumentAnalysisRow.objects.filter(

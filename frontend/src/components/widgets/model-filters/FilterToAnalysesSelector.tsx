@@ -20,6 +20,7 @@ import {
 } from "../../../graphql/queries";
 import { AnalysisType, CorpusType } from "../../../graphql/types";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 interface FilterToAnalysesSelectorProps {
   corpus: CorpusType;
@@ -31,7 +32,7 @@ export const FilterToAnalysesSelector = ({
   style,
 }: FilterToAnalysesSelectorProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const auth_token = useReactiveVar(authToken);
   const selected_analyses = useReactiveVar(selectedAnalyses);

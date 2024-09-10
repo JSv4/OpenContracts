@@ -9,6 +9,7 @@ import { DocumentType, PageInfo } from "../../graphql/types";
 import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";
+import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 
 interface DocumentCardProps {
   style?: Record<string, any>;
@@ -34,7 +35,7 @@ export const DocumentCards = ({
   fetchMore,
 }: DocumentCardProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
   const card_cols = determineCardColCount(width);
 
   const [contextMenuOpen, setContextMenuOpen] = useState<string | null>(null);

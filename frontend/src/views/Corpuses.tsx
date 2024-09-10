@@ -92,11 +92,11 @@ import { ViewQueryResultsModal } from "../components/widgets/modals/ViewQueryRes
 import { FilterToCorpusActionOutputs } from "../components/widgets/model-filters/FilterToCorpusActionOutputs";
 import { CorpusExtractCards } from "../components/extracts/CorpusExtractCards";
 import { getPermissions } from "../utils/transform";
+import { MOBILE_VIEW_BREAKPOINT } from "../assets/configurations/constants";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 600;
-  const banish_sidebar = width <= 1000;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const show_remove_docs_from_corpus_modal = useReactiveVar(
     showRemoveDocsFromCorpusModal

@@ -10,6 +10,7 @@ import { useReactiveVar } from "@apollo/client";
 import { selectedAnalyses, selectedAnalysesIds } from "../../graphql/cache";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";
+import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 
 interface AnalysesCardsProps {
   style?: Record<string, any>;
@@ -37,7 +38,7 @@ export const AnalysesCards = ({
   // Let's figure out the viewport so we can size the cards appropriately.
   const { width } = useWindowDimensions();
   const card_cols = determineCardColCount(width);
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   //////////////////////////////////////////////////////////////////////
   // Global State Vars in Apollo Cache

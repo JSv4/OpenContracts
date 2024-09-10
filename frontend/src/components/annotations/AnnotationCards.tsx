@@ -31,6 +31,7 @@ import {
 import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";
+import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 
 const StyledCard = styled(Card)`
   &.ui.card {
@@ -163,7 +164,7 @@ export const AnnotationCards: React.FC<AnnotationCardProps> = ({
   fetchMore,
 }) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
   const card_cols = determineCardColCount(width);
 
   const selected_annotation = useReactiveVar(selectedAnnotation);

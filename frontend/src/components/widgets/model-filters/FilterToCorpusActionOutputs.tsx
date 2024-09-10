@@ -3,10 +3,11 @@ import { useReactiveVar } from "@apollo/client";
 import { Checkbox, Menu, Label } from "semantic-ui-react";
 import { showCorpusActionOutputs } from "../../../graphql/cache";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 export const FilterToCorpusActionOutputs: React.FC = () => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const show_corpus_action_analyses = useReactiveVar(showCorpusActionOutputs);
 

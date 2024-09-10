@@ -24,6 +24,7 @@ import { PermissionTypes } from "../types";
 import { getPermissions } from "../../utils/transform";
 import { selectedAnalyses, selectedAnalysesIds } from "../../graphql/cache";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
+import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 
 interface AnalysisItemProps {
   analysis: AnalysisType;
@@ -133,7 +134,7 @@ export const AnalysisItem = ({
   compact,
 }: AnalysisItemProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
   const descriptionRef = useRef<HTMLElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);

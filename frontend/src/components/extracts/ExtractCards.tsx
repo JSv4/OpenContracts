@@ -7,6 +7,7 @@ import { useReactiveVar } from "@apollo/client";
 import { openedExtract, selectedExtractIds } from "../../graphql/cache";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";
+import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 
 interface ExtractCardsProps {
   style?: Record<string, any>;
@@ -30,7 +31,7 @@ export const ExtractCards = ({
 }: ExtractCardsProps) => {
   const { width } = useWindowDimensions();
   const card_cols = determineCardColCount(width);
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   //   const selected_extract_ids = useReactiveVar(selectedExtractIds);
   const opened_extract = useReactiveVar(openedExtract);

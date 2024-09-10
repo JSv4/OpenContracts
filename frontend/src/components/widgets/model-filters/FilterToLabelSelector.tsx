@@ -24,6 +24,7 @@ import { AnnotationLabelType, LabelType } from "../../../graphql/types";
 import { LooseObject } from "../../types";
 import { toast } from "react-toastify";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 interface FilterToLabelSelectorProps {
   style?: Record<string, any>;
@@ -39,7 +40,7 @@ export const FilterToLabelSelector = ({
   only_labels_for_labelset_id,
 }: FilterToLabelSelectorProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const filtered_to_label_id = useReactiveVar(filterToLabelId);
   const filtered_to_labelset_id = useReactiveVar(filterToLabelsetId);

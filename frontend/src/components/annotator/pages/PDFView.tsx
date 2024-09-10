@@ -53,6 +53,7 @@ import {
   showSelectCorpusAnalyzerOrFieldsetModal,
   showStructuralAnnotations,
 } from "../../../graphql/cache";
+import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -199,7 +200,7 @@ export const PDFView = ({
   setViewState: (v: ViewState) => void;
 }) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const [hideSidebar, setHideSidebar] = useState<boolean>(false);
   const [selectionElementRefs, setSelectionElementRefs] = useState<

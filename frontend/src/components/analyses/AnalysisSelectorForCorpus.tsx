@@ -9,6 +9,7 @@ import { ExtractItem } from "../extracts/ExtractItem";
 import { setTopbarVisible } from "../../graphql/cache";
 import { useReactiveVar } from "@apollo/client";
 import { X } from "lucide-react";
+import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 
 interface HorizontalSelectorForCorpusProps {
   corpus: CorpusType;
@@ -34,7 +35,7 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
   onSelectExtract,
 }) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const topbarVisible = useReactiveVar(setTopbarVisible);
   const [searchTerm, setSearchTerm] = useState<string>("");

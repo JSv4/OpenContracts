@@ -13,6 +13,7 @@ import _ from "lodash";
 import { PermissionTypes } from "../types";
 import { getPermissions } from "../../utils/transform";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
+import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 
 interface ExtractItemProps {
   extract: ExtractType;
@@ -32,7 +33,7 @@ export const ExtractItem = ({
   compact,
 }: ExtractItemProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const [requestDeleteExtract] = useMutation<
     RequestDeleteExtractOutputType,

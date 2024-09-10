@@ -12,6 +12,7 @@ import {
 import { ExtractAndAnalysisHorizontalSelector } from "../../analyses/AnalysisSelectorForCorpus";
 import { useReactiveVar } from "@apollo/client";
 import { setTopbarVisible } from "../../../graphql/cache";
+import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 interface AnnotatorTopbarProps {
   opened_corpus: CorpusType | null | undefined;
@@ -43,7 +44,7 @@ export const AnnotatorTopbar = ({
   console.log("Annotator topbar - analyses", analyses);
 
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 600;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
   const banish_sidebar = width <= 1000;
 
   const container_ref = useRef<HTMLDivElement>(null);

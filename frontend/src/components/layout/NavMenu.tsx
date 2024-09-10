@@ -9,6 +9,7 @@ import { header_menu_items } from "../../assets/configurations/menus";
 import { authToken, showExportModal, userObj } from "../../graphql/cache";
 import { useReactiveVar } from "@apollo/client";
 import { useEnv } from "../hooks/UseEnv";
+import { VERSION_TAG } from "../../assets/configurations/constants";
 
 export const NavMenu = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
@@ -67,7 +68,7 @@ export const NavMenu = () => {
             color="grey"
             style={{ marginLeft: "0.5em", verticalAlign: "middle" }}
           >
-            v3.0.0b1
+            {VERSION_TAG}
           </Label>
         </Menu.Item>
         {!isLoading && user ? [...items, ...private_items] : items}
@@ -123,7 +124,7 @@ export const NavMenu = () => {
             color="grey"
             style={{ marginLeft: "0.5em", verticalAlign: "middle" }}
           >
-            v3.0.0b1
+            {VERSION_TAG}
           </Label>
         </Menu.Item>
         {user ? [...items, ...private_items] : items}

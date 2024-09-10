@@ -161,7 +161,7 @@ def doc_analyzer_task(max_retries=None):
                     with transaction.atomic():
                         for span_label_pair in span_label_pairs:
 
-                            logger.info(f"Look at span_label_pair: {span_label_pair}")
+                            logger.debug(f"Look at span_label_pair: {span_label_pair}")
 
                             if not (
                                 isinstance(span_label_pair, tuple)

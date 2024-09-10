@@ -90,27 +90,25 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
     results = []
 
     for index, sent in enumerate(sentences):
-        print(
-            f"Looking at sentence from {sent.start_char} to {sent.end_char}: {sent.text}"
-        )
         ents = model.predict_entities(sent.text, labels)
         for e in ents:
+            # Rough heuristic - drop anything with score of less than .7. Anecdotally, anything much lower is garbage.
             if e["score"] > 0.7:
-                print(f"Found Entity with suitable score: {e}")
+                # print(f"Found Entity with suitable score: {e}")
                 span = TextSpan(
                     id=str(index),
                     start=sent.start_char + e["start"],
                     end=sent.start_char + e["end"],
                     text=e["text"],
                 )
-                print(f"Mapped to span: {span}")
+                # print(f"Mapped to span: {span}")
                 results.append(
                     (
                         span,
                         str(e["label"]),
                     )
                 )
-                print(f"Expected text: {pdf_text_extract[span['start']:span['end']]}")
+                # print(f"Expected text: {pdf_text_extract[span['start']:span['end']]}")
 
     return [], results, [], True
 

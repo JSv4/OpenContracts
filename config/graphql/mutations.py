@@ -806,6 +806,10 @@ class UploadDocument(graphene.Mutation):
             required=True, description="Description of the document."
         )
         custom_meta = GenericScalar(required=False, description="")
+        add_to_corpus_id = graphene.ID(required=False, description="If provided, successfully uploaded document will "
+                                                                   "be uploaded to corpus with specified id")
+        make_public = graphene.Boolean(required=True, description="If True, document is immediately public. "
+                                                                  "Defaults to False.")
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -813,7 +817,7 @@ class UploadDocument(graphene.Mutation):
 
     @login_required
     def mutate(
-        root, info, base64_file_string, filename, title, description, custom_meta
+        root, info, base64_file_string, filename, title, description, custom_meta, make_public, add_to_corpus_id=None
     ):
 
         ok = False
@@ -832,6 +836,8 @@ class UploadDocument(graphene.Mutation):
             )
 
         try:
+            message = "Success"
+
             file_bytes = base64.b64decode(base64_file_string)
 
             # Check file type
@@ -855,11 +861,20 @@ class UploadDocument(graphene.Mutation):
                 custom_meta=custom_meta,
                 pdf_file=pdf_file,
                 backend_lock=True,
+                is_public=make_public
             )
             document.save()
             set_permissions_for_obj_to_user(user, document, [PermissionTypes.CRUD])
+
+            # If add_to_corpus_id is not None, link uploaded document to corpus
+            if add_to_corpus_id is not None:
+                try:
+                    corpus = Corpus.objects.get(id=from_global_id(add_to_corpus_id)[1])
+                    transaction.on_commit(lambda: corpus.documents.add(document))
+                except Exception as e:
+                    message = f"Adding to corpus failed due to error: {e}"
+
             ok = True
-            message = "Success"
 
         except Exception as e:
             message = f"Error on upload: {e}"

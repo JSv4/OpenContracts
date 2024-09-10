@@ -656,6 +656,12 @@ export const DocumentAnnotator = ({
   }, [dataCellsData]);
 
   const onSelectAnalysis = (analysis: AnalysisType | null) => {
+    // When a new analysis is loaded, we want to reset the view
+    // behavior as, otherwise, particularly on mobile, it can get
+    // take a lot of clicks to enable.
+    showAnnotationBoundingBoxes(true);
+    showAnnotationLabels(LabelDisplayBehavior.ON_HOVER);
+    showSelectedAnnotationOnly(false);
     selectedAnalysis(analysis);
     selectedExtract(null);
   };

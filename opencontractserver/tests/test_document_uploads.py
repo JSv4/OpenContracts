@@ -100,6 +100,7 @@ class UploadDocumentMutationTestCase(TestCase):
                 "filename": "test.docx",
                 "title": "Test DOCX",
                 "description": "A test DOCX file",
+                "makePublic": False,
                 "customMeta": {},
             },
         )
@@ -119,6 +120,7 @@ class UploadDocumentMutationTestCase(TestCase):
                 "filename": "test.txt",
                 "title": "Test TXT",
                 "description": "A test TXT file",
+                "makePublic": False,
                 "customMeta": {},
             },
         )

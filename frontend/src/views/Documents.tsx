@@ -323,31 +323,31 @@ export const Documents = () => {
           <CRUDModal
             open={document_to_edit !== null}
             mode="EDIT"
-            old_instance={document_to_edit ? document_to_edit : {}}
-            model_name="document"
-            ui_schema={editDocForm_Ui_Schema}
-            data_schema={editDocForm_Schema}
+            oldInstance={document_to_edit ? document_to_edit : {}}
+            modelName="document"
+            uiSchema={editDocForm_Ui_Schema}
+            dataSchema={editDocForm_Schema}
             onSubmit={handleUpdateDocument}
             onClose={() => editingDocument(null)}
-            has_file={true}
-            file_field="pdfFile"
-            file_label="PDF File"
-            file_is_image={false}
-            accepted_file_types="pdf"
+            hasFile={true}
+            fileField="pdfFile"
+            fileLabel="PDF File"
+            fileIsImage={false}
+            acceptedFileTypes="pdf"
           />
           <CRUDModal
             open={document_to_view !== null}
             mode="VIEW"
-            old_instance={document_to_view ? document_to_view : {}}
-            model_name="document"
-            ui_schema={editDocForm_Ui_Schema}
-            data_schema={editDocForm_Schema}
+            oldInstance={document_to_view ? document_to_view : {}}
+            modelName="document"
+            uiSchema={editDocForm_Ui_Schema}
+            dataSchema={editDocForm_Schema}
             onClose={() => viewingDocument(null)}
-            has_file={true}
-            file_field="pdfFile"
-            file_label="PDF File"
-            file_is_image={false}
-            accepted_file_types="pdf"
+            hasFile={true}
+            fileField="pdfFile"
+            fileLabel="PDF File"
+            fileIsImage={false}
+            acceptedFileTypes="pdf"
           />
         </>
       }

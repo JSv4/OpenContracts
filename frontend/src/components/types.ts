@@ -156,17 +156,33 @@ export interface ActionDropdownItem {
   action_function: (props: any) => void;
 }
 
+export type EditMode = "EDIT" | "VIEW" | "CREATE";
+
 export interface CRUDProps {
-  mode: "CREATE" | "EDIT" | "VIEW";
-  model_name: string;
-  has_file: boolean;
-  file_field: string;
-  file_label: string;
-  file_is_image: boolean;
-  accepted_file_types: string;
-  ui_schema: Record<string, any>;
-  data_schema: Record<string, any>;
+  mode: EditMode;
+  modelName: string;
+  hasFile: boolean;
+  fileField: string;
+  fileLabel: string;
+  fileIsImage: boolean;
+  acceptedFileTypes: string;
+  uiSchema: Record<string, any>;
+  dataSchema: Record<string, any>;
 }
+
+// Define a more flexible prop type for property widgets
+export interface PropertyWidgetProps<T = any> {
+  onChange: (updatedFields: Record<string, T>) => void;
+  [key: string]: any; // Allow any additional props
+}
+
+// Define a type for the components that can be used as property widgets
+export type PropertyWidgetComponent = React.ComponentType<PropertyWidgetProps>;
+
+// Define a type for the propertyWidgets prop
+export type PropertyWidgets = {
+  [key: string]: React.ReactElement<PropertyWidgetProps>;
+};
 
 export type BoundingBox = {
   top: number;

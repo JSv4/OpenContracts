@@ -739,18 +739,18 @@ export const Corpuses = () => {
           <CRUDModal
             open={corpus_to_edit !== null}
             mode="EDIT"
-            old_instance={corpus_to_edit ? corpus_to_edit : {}}
-            model_name="corpus"
-            ui_schema={editCorpusForm_Ui_Schema}
-            data_schema={editCorpusForm_Schema}
+            oldInstance={corpus_to_edit ? corpus_to_edit : {}}
+            modelName="corpus"
+            uiSchema={editCorpusForm_Ui_Schema}
+            dataSchema={editCorpusForm_Schema}
             onSubmit={handleUpdateCorpus}
             onClose={() => editingCorpus(null)}
-            has_file={true}
-            file_field={"icon"}
-            file_label="Corpus Icon"
-            file_is_image={true}
-            accepted_file_types="image/*"
-            property_widgets={{ labelSet: <LabelSetSelector /> }}
+            hasFile={true}
+            fileField={"icon"}
+            fileLabel="Corpus Icon"
+            fileIsImage={true}
+            acceptedFileTypes="image/*"
+            propertyWidgets={{ labelSet: <LabelSetSelector /> }}
           />
           {exporting_corpus ? (
             <SelectExportTypeModal visible={Boolean(exportingCorpus)} />
@@ -770,17 +770,17 @@ export const Corpuses = () => {
             <CRUDModal
               open={corpus_to_view !== null}
               mode="VIEW"
-              old_instance={corpus_to_view ? corpus_to_view : {}}
-              model_name="corpus"
-              ui_schema={editCorpusForm_Ui_Schema}
-              data_schema={editCorpusForm_Schema}
+              oldInstance={corpus_to_view ? corpus_to_view : {}}
+              modelName="corpus"
+              uiSchema={editCorpusForm_Ui_Schema}
+              dataSchema={editCorpusForm_Schema}
               onClose={() => viewingCorpus(null)}
-              has_file={true}
-              file_field={"icon"}
-              file_label="Corpus Icon"
-              file_is_image={true}
-              accepted_file_types="image/*"
-              property_widgets={{
+              hasFile={true}
+              fileField={"icon"}
+              fileLabel="Corpus Icon"
+              fileIsImage={true}
+              acceptedFileTypes="image/*"
+              propertyWidgets={{
                 labelSet: <LabelSetSelector read_only={true} />,
               }}
             />
@@ -792,18 +792,18 @@ export const Corpuses = () => {
             <CRUDModal
               open={show_new_corpus_modal}
               mode="CREATE"
-              old_instance={{ shared_with: [], is_public: false }}
-              model_name="corpus"
-              ui_schema={newCorpusForm_Ui_Schema}
-              data_schema={newCorpusForm_Schema}
+              oldInstance={{ shared_with: [], is_public: false }}
+              modelName="corpus"
+              uiSchema={newCorpusForm_Ui_Schema}
+              dataSchema={newCorpusForm_Schema}
               onSubmit={handleCreateNewCorpus}
               onClose={() => setShowNewCorpusModal(!show_new_corpus_modal)}
-              has_file={true}
-              file_field={"icon"}
-              file_label="Corpus Icon"
-              file_is_image={true}
-              accepted_file_types="image/*"
-              property_widgets={{ labelSet: <LabelSetSelector /> }}
+              hasFile={true}
+              fileField={"icon"}
+              fileLabel="Corpus Icon"
+              fileIsImage={true}
+              acceptedFileTypes="image/*"
+              propertyWidgets={{ labelSet: <LabelSetSelector /> }}
             />
           ) : (
             <></>

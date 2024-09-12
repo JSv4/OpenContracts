@@ -136,17 +136,17 @@ export const Labelsets = () => {
             <CRUDModal
               open={show_new_label_modal}
               mode="CREATE"
-              old_instance={{}}
-              model_name="labelset"
-              ui_schema={newLabelSetForm_Ui_Schema}
-              data_schema={newLabelSetForm_Schema}
+              oldInstance={{}}
+              modelName="labelset"
+              uiSchema={newLabelSetForm_Ui_Schema}
+              dataSchema={newLabelSetForm_Schema}
               onSubmit={handleCreateLabelset}
               onClose={() => showNewLabelsetModal(false)}
-              has_file={true}
-              file_field="icon"
-              file_label="Labelset Icon"
-              file_is_image={true}
-              accepted_file_types="image/*"
+              hasFile={true}
+              fileField="icon"
+              fileLabel="Labelset Icon"
+              fileIsImage={true}
+              acceptedFileTypes="image/*"
             />
           ) : (
             <></>

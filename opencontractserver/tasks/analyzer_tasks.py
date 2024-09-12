@@ -46,6 +46,7 @@ def start_analysis(
     analysis_id: str,
     doc_ids: Optional[list[int | str]] = None,
 ) -> bool:
+
     run_analysis(analysis_id=analysis_id, doc_ids=doc_ids)
 
     return True
@@ -90,7 +91,8 @@ def install_analyzer_task(
 
 
 @celery_app.task()
-def mark_analysis_complete(analysis_id):
+def mark_analysis_complete(analysis_id: str | int, doc_ids: list[int | str]) -> None:
     analysis = Analysis.objects.get(pk=analysis_id)
     analysis.analysis_completed = timezone.now()
+    analysis.analyzed_documents.add(*doc_ids)
     analysis.save()

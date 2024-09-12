@@ -19,8 +19,8 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus, CorpusQuery
-from opencontractserver.documents.models import Document
+from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
+from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport, UserImport
 
@@ -69,6 +69,16 @@ class AnnotationInputType(AnnotatePermissionsForReadMixin, graphene.InputObjectT
 
 class AnnotationType(AnnotatePermissionsForReadMixin, ModelType):
     json = GenericScalar()
+
+    all_source_node_in_relationship = graphene.List(lambda: RelationshipType)
+
+    def resolve_all_source_node_in_relationship(self, info):
+        return self.source_node_in_relationships.all()
+
+    all_target_node_in_relationship = graphene.List(lambda: RelationshipType)
+
+    def resolve_all_target_node_in_relationship(self, info):
+        return self.target_node_in_relationships.all()
 
     class Meta:
         model = Annotation
@@ -164,6 +174,70 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
             else info.context.build_absolute_uri(self.pawls_parse_file.url)
         )
 
+    all_structural_annotations = graphene.List(AnnotationType)
+
+    def resolve_all_structural_annotations(self, info):
+        return self.doc_annotations.filter(structural=True).distinct()
+
+    # Updated field and resolver for all annotations with enhanced filtering
+    all_annotations = graphene.List(
+        AnnotationType,
+        corpus_id=graphene.ID(required=True),
+        analysis_id=graphene.ID(),
+        is_structural=graphene.Boolean(),
+    )
+
+    def resolve_all_annotations(
+        self, info, corpus_id, analysis_id=None, is_structural=None
+    ):
+        try:
+            corpus_pk = from_global_id(corpus_id)[1]
+            annotations = self.doc_annotations.filter(corpus_id=corpus_pk)
+
+            if analysis_id is not None:
+                if analysis_id == "__none__":
+                    annotations = annotations.filter(analysis__isnull=True)
+                else:
+                    analysis_pk = from_global_id(analysis_id)[1]
+                    annotations = annotations.filter(analysis_id=analysis_pk)
+
+            if is_structural is not None:
+                annotations = annotations.filter(structural=is_structural)
+
+            return annotations.distinct()
+        except Exception as e:
+            logger.warning(
+                f"Failed resolving query for document {self.id} with input: corpus_id={corpus_id}, "
+                f"analysis_id={analysis_id}, is_structural={is_structural}. Error: {e}"
+            )
+            return []
+
+    # New field and resolver for all relationships
+    all_relationships = graphene.List(
+        RelationshipType,
+        corpus_id=graphene.ID(required=True),
+        analysis_id=graphene.ID(),
+    )
+
+    def resolve_all_relationships(self, info, corpus_id, analysis_id=None):
+        try:
+            corpus_pk = from_global_id(corpus_id)[1]
+            relationships = self.relationships.filter(corpus_id=corpus_pk)
+
+            if analysis_id == "__none__":
+                relationships = relationships.filter(analysis__isnull=True)
+            elif analysis_id is not None:
+                analysis_pk = from_global_id(analysis_id)[1]
+                relationships = relationships.filter(analysis_id=analysis_pk)
+
+            return relationships.distinct()
+        except Exception as e:
+            logger.warning(
+                f"Failed resolving relationships query for document {self.id} with input: corpus_id={corpus_id}, "
+                f"analysis_id={analysis_id}. Error: {e}"
+            )
+            return []
+
     class Meta:
         model = Document
         interfaces = [relay.Node]
@@ -221,6 +295,22 @@ class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
+class CorpusActionType(AnnotatePermissionsForReadMixin, ModelType):
+    class Meta:
+        model = CorpusAction
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+        filter_fields = {
+            "id": ["exact"],
+            "name": ["exact", "icontains", "istartswith"],
+            "corpus__id": ["exact"],
+            "fieldset__id": ["exact"],
+            "analyzer__id": ["exact"],
+            "trigger": ["exact"],
+            "creator__id": ["exact"],
+        }
+
+
 class UserImportType(AnnotatePermissionsForReadMixin, ModelType):
     def resolve_zip(self, info):
         return "" if not self.file else info.context.build_absolute_uri(self.zip.url)
@@ -252,7 +342,7 @@ class AnalyzerType(AnnotatePermissionsForReadMixin, ModelType):
     full_label_list = graphene.List(AnnotationLabelType)
 
     def resolve_full_label_list(self, info):
-        return self.annotationlabel_set.all()
+        return self.annotation_labels.all()
 
     def resolve_icon(self, info):
         return "" if not self.icon else info.context.build_absolute_uri(self.icon.url)
@@ -279,6 +369,12 @@ class GremlinEngineType_WRITE(AnnotatePermissionsForReadMixin, ModelType):
 
 
 class AnalysisType(AnnotatePermissionsForReadMixin, ModelType):
+
+    full_annotation_list = graphene.List(AnnotationType)
+
+    def resolve_full_annotation_list(self, info):
+        return self.annotations.all()
+
     class Meta:
         model = Analysis
         interfaces = [relay.Node]
@@ -345,3 +441,16 @@ class CorpusQueryType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         model = CorpusQuery
         interfaces = [relay.Node]
         connection_class = CountableConnection
+
+
+class DocumentAnalysisRowType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    class Meta:
+        model = DocumentAnalysisRow
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+
+class DocumentCorpusActionsType(graphene.ObjectType):
+    corpus_actions = graphene.List(CorpusActionType)
+    extracts = graphene.List(ExtractType)
+    analysis_rows = graphene.List(DocumentAnalysisRowType)

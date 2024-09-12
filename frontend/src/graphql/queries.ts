@@ -16,6 +16,9 @@ import {
   ExtractType,
   CorpusQueryType,
   CorpusQueryTypeConnection,
+  CorpusActionType,
+  DocumentType,
+  AnalysisRowType,
 } from "./types";
 import { ExportObject } from "./types";
 
@@ -398,6 +401,9 @@ export const GET_CORPUSES = gql`
           id
           icon
           title
+          creator {
+            email
+          }
           description
           appliedAnalyzerIds
           isPublic
@@ -410,7 +416,11 @@ export const GET_CORPUSES = gql`
             title
             description
           }
+          annotations {
+            totalCount
+          }
           documents {
+            totalCount
             edges {
               node {
                 id
@@ -537,11 +547,13 @@ export interface GetAnnotationsInputs {
   annotationLabelId?: string;
   corpusId?: string;
   rawText_Contains?: string;
+  analysis_Isnull?: boolean;
   annotationLabel_description_search_string?: string;
   annotationLabel_title_search_string?: string;
   annotationLabel_Type?: string;
   createdWithAnalyzerId?: string;
   createdByAnalysisIds?: string;
+  structural?: boolean;
 }
 
 export interface GetAnnotationsOutputs {
@@ -557,13 +569,15 @@ export const GET_ANNOTATIONS = gql`
   query (
     $annotationLabelId: ID
     $corpusId: ID
-    $usesLabelFromLabelsetId: String
+    $usesLabelFromLabelsetId: ID
     $rawText_Contains: String
     $annotationLabel_description_search_string: String
     $annotationLabel_title_search_string: String
-    $annotationLabel_Type: AnnotationsAnnotationLabelLabelTypeChoices
+    $annotationLabel_Type: String
     $createdWithAnalyzerId: String
     $createdByAnalysisIds: String
+    $analysis_Isnull: Boolean
+    $structural: Boolean
     $cursor: String
     $limit: Int
   ) {
@@ -571,12 +585,14 @@ export const GET_ANNOTATIONS = gql`
       corpusId: $corpusId
       annotationLabelId: $annotationLabelId
       usesLabelFromLabelsetId: $usesLabelFromLabelsetId
-      rawText_Contains: $rawText_Contains
-      annotationLabel_Text_Contains: $annotationLabel_title_search_string
-      annotationLabel_Description_Contains: $annotationLabel_description_search_string
+      rawTextContains: $rawText_Contains
+      annotationLabel_TextContains: $annotationLabel_title_search_string
+      annotationLabel_DescriptionContains: $annotationLabel_description_search_string
       annotationLabel_LabelType: $annotationLabel_Type
       createdWithAnalyzerId: $createdWithAnalyzerId
       createdByAnalysisIds: $createdByAnalysisIds
+      analysisIsnull: $analysis_Isnull
+      structural: $structural
       first: $limit
       after: $cursor
     ) {
@@ -591,23 +607,25 @@ export const GET_ANNOTATIONS = gql`
             icon
             title
             description
+            __typename
           }
           document {
             id
             title
-            is_selected @client
-            is_open @client
             description
             backendLock
             pdfFile
             pawlsParseFile
             icon
+            __typename
           }
           analysis {
             id
             analyzer {
               analyzerId
+              __typename
             }
+            __typename
           }
           annotationLabel {
             id
@@ -615,18 +633,24 @@ export const GET_ANNOTATIONS = gql`
             color
             icon
             description
+            __typename
           }
+          structural
           rawText
           isPublic
           myPermissions
+          __typename
         }
+        __typename
       }
       pageInfo {
         hasNextPage
         hasPreviousPage
         startCursor
         endCursor
+        __typename
       }
+      __typename
     }
   }
 `;
@@ -768,6 +792,7 @@ export interface GetAnalysesInputs {
   corpusId?: string;
   docId?: string;
   searchText?: string;
+  analyzedCorpus_Isnull?: boolean;
 }
 
 export interface GetAnalysesOutputs {
@@ -780,11 +805,17 @@ export interface GetAnalysesOutputs {
 }
 
 export const GET_ANALYSES = gql`
-  query ($corpusId: String, $docId: String, $searchText: String) {
+  query (
+    $corpusId: String
+    $docId: String
+    $searchText: String
+    $analyzedCorpus_Isnull: Boolean
+  ) {
     analyses(
       analyzedCorpusId: $corpusId
       analyzedDocumentId: $docId
       searchText: $searchText
+      analyzedCorpus_Isnull: $analyzedCorpus_Isnull
     ) {
       pageInfo {
         hasNextPage
@@ -814,264 +845,25 @@ export const GET_ANALYSES = gql`
           annotations {
             totalCount
           }
+          corpusAction {
+            id
+            name
+            trigger
+          }
           analyzer {
             id
             analyzerId
             description
             manifest
-            annotationlabelSet {
-              totalCount
+            fullLabelList {
+              id
+              text
             }
             hostGremlin {
               id
             }
           }
         }
-      }
-    }
-  }
-`;
-
-export interface RequestAnnotatorDataForDocumentInCorpusInputs {
-  selectedDocumentId: string;
-  selectedCorpusId: string;
-  preloadAnnotations: boolean;
-  forAnalysisIds?: string; // value should be comma separated ID strings
-}
-
-export interface RequestAnnotatorDataForDocumentInCorpusOutputs {
-  existingTextAnnotations: ServerAnnotationType[];
-  existingDocLabelAnnotations: ServerAnnotationType[];
-  existingRelationships: RelationshipType[];
-  selectedAnalyzersWithLabels: {
-    edges: {
-      node: AnalyzerType;
-    }[];
-  };
-  corpus: {
-    id: string;
-    labelSet: LabelSet;
-  };
-}
-
-export const REQUEST_ANNOTATOR_DATA_FOR_DOCUMENT_IN_CORPUS = gql`
-  query (
-    $selectedDocumentId: ID!
-    $selectedCorpusId: ID!
-    $forAnalysisIds: String
-    $preloadAnnotations: Boolean!
-  ) {
-    selectedAnalyzersSpanAnnotations: pageAnnotations(
-      documentId: $selectedDocumentId
-      corpusId: $selectedCorpusId
-      forAnalysisIds: $forAnalysisIds
-      labelType: TOKEN_LABEL
-    ) {
-      pdfPageInfo {
-        pageCount
-        currentPage
-        hasNextPage
-        corpusId
-        documentId
-        labelType
-        forAnalysisIds
-      }
-      pageAnnotations {
-        id
-        isPublic
-        myPermissions
-        annotationLabel {
-          id
-          text
-          color
-          icon
-          description
-        }
-        boundingBox
-        page
-        rawText
-        tokensJsons
-        json
-        sourceNodeInRelationships {
-          edges {
-            node {
-              id
-            }
-          }
-        }
-        targetNodeInRelationships {
-          edges {
-            node {
-              id
-            }
-          }
-        }
-        creator {
-          id
-          email
-        }
-        isPublic
-        myPermissions
-      }
-    }
-    selectedAnalyzersWithLabels: analyzers(usedInAnalysisIds: $forAnalysisIds) {
-      edges {
-        node {
-          id
-          fullLabelList {
-            id
-            icon
-            color
-            description
-            text
-            labelType
-            analyzer {
-              id
-            }
-          }
-        }
-      }
-    }
-    annotationLabels(
-      usedInAnalysisIds: $forAnalysisIds
-      labelType: TOKEN_LABEL
-    ) @skip(if: $preloadAnnotations) {
-      totalCount
-      edges {
-        node {
-          id
-          icon
-          color
-          description
-          text
-          readOnly
-          labelType
-          analyzer {
-            id
-          }
-        }
-      }
-    }
-    existingTextAnnotations: bulkDocAnnotationsInCorpus(
-      documentId: $selectedDocumentId
-      corpusId: $selectedCorpusId
-      forAnalysisIds: $forAnalysisIds
-      labelType: TOKEN_LABEL
-    ) @skip(if: $preloadAnnotations) {
-      id
-      isPublic
-      myPermissions
-      annotationLabel {
-        id
-        icon
-        color
-        description
-        text
-        labelType
-        readOnly
-      }
-      boundingBox
-      page
-      rawText
-      tokensJsons
-      json
-      sourceNodeInRelationships {
-        edges {
-          node {
-            id
-          }
-        }
-      }
-      creator {
-        id
-        email
-      }
-      isPublic
-      myPermissions
-    }
-    existingDocLabelAnnotations: bulkDocAnnotationsInCorpus(
-      documentId: $selectedDocumentId
-      corpusId: $selectedCorpusId
-      labelType: DOC_TYPE_LABEL
-    ) @skip(if: $preloadAnnotations) {
-      id
-      isPublic
-      myPermissions
-      annotationLabel {
-        id
-      }
-      boundingBox
-      page
-      rawText
-      tokensJsons
-      json
-      sourceNodeInRelationships {
-        edges {
-          node {
-            id
-          }
-        }
-      }
-      creator {
-        id
-        email
-      }
-      isPublic
-      myPermissions
-    }
-    existingRelationships: bulkDocRelationshipsInCorpus(
-      documentId: $selectedDocumentId
-      corpusId: $selectedCorpusId
-    ) @skip(if: $preloadAnnotations) {
-      id
-      modified
-      sourceAnnotations {
-        edges {
-          node {
-            id
-          }
-        }
-      }
-      targetAnnotations {
-        edges {
-          node {
-            id
-          }
-        }
-      }
-      relationshipLabel {
-        id
-      }
-      creator {
-        id
-        email
-      }
-      isPublic
-      myPermissions
-    }
-    corpus(id: $selectedCorpusId) {
-      id
-      labelSet {
-        id
-        title
-        description
-        icon
-        isPublic
-        myPermissions
-        allAnnotationLabels {
-          id
-          icon
-          color
-          description
-          text
-          labelType
-          readOnly
-          analyzer {
-            id
-          }
-        }
-        isPublic
-        myPermissions
       }
     }
   }
@@ -1254,7 +1046,7 @@ export interface GetFieldsetsOutputs {
   };
 }
 
-export const REQUEST_GET_FIELDSETS = gql`
+export const GET_FIELDSETS = gql`
   query GetFieldsets($searchText: String) {
     fieldsets(name_Contains: $searchText) {
       edges {
@@ -1433,6 +1225,8 @@ export const REQUEST_GET_EXTRACT = gql`
 
 export interface GetExtractsInput {
   searchText?: string;
+  corpusId?: string;
+  corpusAction_Isnull?: boolean;
 }
 
 export interface GetExtractsOutput {
@@ -1444,9 +1238,17 @@ export interface GetExtractsOutput {
   };
 }
 
-export const REQUEST_GET_EXTRACTS = gql`
-  query GetExtracts($searchText: String) {
-    extracts(name_Contains: $searchText) {
+export const GET_EXTRACTS = gql`
+  query GetExtracts(
+    $searchText: String
+    $corpusId: ID
+    $corpusAction_Isnull: Boolean
+  ) {
+    extracts(
+      name_Contains: $searchText
+      corpus: $corpusId
+      corpusAction_Isnull: $corpusAction_Isnull
+    ) {
       edges {
         node {
           id
@@ -1494,5 +1296,353 @@ export interface GetRegisteredExtractTasksOutput {
 export const GET_REGISTERED_EXTRACT_TASKS = gql`
   query {
     registeredExtractTasks
+  }
+`;
+
+export interface GetDocumentAnalysesAndExtractsInput {
+  documentId: string;
+  corpusId?: string;
+}
+
+export interface GetDocumentAnalysesAndExtractsOutput {
+  documentCorpusActions?: {
+    corpusActions: Array<
+      CorpusActionType & {
+        extracts: {
+          pageInfo: PageInfo;
+          edges: Array<{
+            node: ExtractType;
+          }>;
+        };
+        analyses: {
+          pageInfo: PageInfo;
+          edges: Array<{
+            node: AnalysisType;
+          }>;
+        };
+      }
+    >;
+    extracts: Array<ExtractType>;
+    analysisRows: Array<AnalysisRowType>;
+  };
+}
+
+export const GET_DOCUMENT_ANALYSES_AND_EXTRACTS = gql`
+  query DocumentData($documentId: ID!, $corpusId: ID) {
+    documentCorpusActions(documentId: $documentId, corpusId: $corpusId) {
+      corpusActions {
+        id
+        name
+        trigger
+        extracts {
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+          edges {
+            node {
+              id
+              name
+              created
+              started
+              finished
+            }
+          }
+        }
+        analyses {
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+          edges {
+            node {
+              id
+              analyzer {
+                id
+                description
+              }
+              analysisStarted
+              analysisCompleted
+              status
+            }
+          }
+        }
+      }
+      extracts {
+        id
+        name
+        corpusAction {
+          id
+          name
+          trigger
+        }
+        created
+        started
+        finished
+      }
+      analysisRows {
+        id
+        analysis {
+          id
+          analyzer {
+            id
+            description
+          }
+          annotations {
+            totalCount
+          }
+          corpusAction {
+            id
+            name
+            trigger
+          }
+          analysisStarted
+          analysisCompleted
+          status
+        }
+        data {
+          edges {
+            node {
+              id
+              data
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+// Input type for the query
+export interface GetDatacellsForExtractInput {
+  extractId: string;
+}
+
+// Output types for the query
+export interface GetDatacellsForExtractOutput {
+  extract: ExtractType;
+}
+
+export const GET_DATACELLS_FOR_EXTRACT = gql`
+  query GetDatacellsForExtract($extractId: ID!) {
+    extract(id: $extractId) {
+      id
+      name
+      fieldset {
+        id
+        name
+        fullColumnList {
+          id
+          name
+          query
+          outputType
+          limitToLabel
+          instructions
+          extractIsList
+          taskName
+          agentic
+        }
+      }
+      fullDatacellList {
+        id
+        column {
+          id
+          name
+        }
+        document {
+          id
+          title
+        }
+        data
+        dataDefinition
+        started
+        completed
+        failed
+        correctedData
+        stacktrace
+        approvedBy {
+          email
+        }
+        rejectedBy {
+          email
+        }
+        fullSourceList {
+          id
+          annotationLabel {
+            id
+            text
+            color
+            icon
+            description
+          }
+          boundingBox
+          page
+          rawText
+          tokensJsons
+          json
+        }
+      }
+    }
+  }
+`;
+
+export interface GetAnnotationsForAnalysisInput {
+  analysisId: string;
+}
+
+export interface GetAnnotationsForAnalysisOutput {
+  analysis: AnalysisType;
+}
+
+export const GET_ANNOTATIONS_FOR_ANALYSIS = gql`
+  query GetAnnotationsForAnalysis($analysisId: ID!) {
+    analysis(id: $analysisId) {
+      id
+      analyzer {
+        id
+        analyzerId
+        description
+        fullLabelList {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+      }
+      fullAnnotationList {
+        id
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+        boundingBox
+        page
+        rawText
+        tokensJsons
+        json
+        allSourceNodeInRelationship {
+          id
+          relationshipLabel {
+            id
+            text
+            color
+            icon
+            description
+          }
+          targetAnnotations {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+        allTargetNodeInRelationship {
+          id
+          relationshipLabel {
+            id
+            text
+            color
+            icon
+            description
+          }
+          sourceAnnotations {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export interface GetDocumentAnnotationsAndRelationshipsInput {
+  documentId: string;
+  corpusId: string;
+  analysisId?: string;
+}
+
+export interface GetDocumentAnnotationsAndRelationshipsOutput {
+  document: DocumentType;
+  corpus: CorpusType;
+}
+
+/**
+ * If analysisId is set to __none__ you will get annotations and relationships with NO linked analysis
+ */
+export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
+  query GetDocumentAnnotationsAndRelationships(
+    $documentId: String!
+    $corpusId: ID!
+    $analysisId: ID
+  ) {
+    document(id: $documentId) {
+      id
+      allAnnotations(corpusId: $corpusId, analysisId: $analysisId) {
+        id
+        page
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+        }
+        rawText
+        json
+        myPermissions
+      }
+      allRelationships(corpusId: $corpusId, analysisId: $analysisId) {
+        id
+        relationshipLabel {
+          id
+          text
+          color
+          icon
+          description
+        }
+        sourceAnnotations {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+        targetAnnotations {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    }
+    corpus(id: $corpusId) {
+      id
+      labelSet {
+        id
+        allAnnotationLabels {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+      }
+    }
   }
 `;

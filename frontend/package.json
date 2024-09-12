@@ -26,6 +26,7 @@
     "graphql": "^16.2.0",
     "lodash": "^4.17.21",
     "lodash.uniqueid": "^4.0.1",
+    "lucide-react": "^0.438.0",
     "pdfjs-dist": "^2.13.216",
     "react": "16",
     "react-beautiful-dnd": "^13.1.0",
@@ -82,6 +83,7 @@
     "**/*": "prettier --write --ignore-unknown"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.2",
     "@types/lodash.uniqueid": "^4.0.9",
     "@types/uuid": "^8.3.4",
     "babel-jest": "^29.7.0",

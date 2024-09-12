@@ -1,8 +1,6 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button, Form, Dropdown, Popup } from "semantic-ui-react";
 import styled from "styled-components";
-import { FilterWrapper, MobileFilterWrapper } from "../common";
-import useWindowDimensions from "../hooks/WindowDimensionHook";
 
 export interface DropdownActionProps {
   icon: string;
@@ -17,156 +15,116 @@ interface CreateAndSearchBarProps {
   filters?: JSX.Element | JSX.Element[];
   placeholder?: string;
   value?: string;
-  style?: object | {};
   onChange?: (search_string: string) => any | void;
 }
 
-export const CreateAndSearchBar = ({
+export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
   actions,
   filters,
-  placeholder,
-  value,
-  style,
+  placeholder = "Search...",
+  value = "",
   onChange,
-}: CreateAndSearchBarProps) => {
-  const [expand_filters, setExpandFilters] = useState(false);
+}) => {
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const { width } = useWindowDimensions();
-  const use_responsive_layout = width <= 1000;
-  const use_mobile_layout = width <= 400;
+  const actionItems = actions.map((action) => (
+    <Dropdown.Item
+      icon={action.icon}
+      text={action.title}
+      onClick={action.action_function}
+      key={action.key}
+    />
+  ));
 
-  let buttongroup = <></>;
-  let buttons = [];
+  return (
+    <SearchBarContainer>
+      <SearchInputWrapper>
+        <Form>
+          <Form.Input
+            icon="search"
+            placeholder={placeholder}
+            value={value}
+            onChange={(e, { value }) => onChange && onChange(value as string)}
+            fluid
+          />
+        </Form>
+      </SearchInputWrapper>
 
-  if (actions && actions.length > 0) {
-    buttons = actions.map((action_json) => (
-      <Dropdown.Item
-        icon={action_json.icon}
-        text={action_json.title}
-        onClick={action_json.action_function}
-        key={action_json.title}
-        color={action_json.color}
-      />
-    ));
-
-    buttongroup = (
-      <Button.Group
-        color="teal"
-        floated="right"
-        style={{ marginRight: "10px" }}
-      >
-        {use_mobile_layout ? (
-          <></>
-        ) : (
-          <Button disabled={buttons?.length === 0}>Actions</Button>
-        )}
-        <Dropdown
-          disabled={buttons?.length === 0}
-          className="button icon"
-          floating
-          icon="ellipsis vertical"
-          trigger={<></>}
-        >
-          <Dropdown.Menu>{buttons}</Dropdown.Menu>
-        </Dropdown>
-      </Button.Group>
-    );
-  }
-
-  if (use_responsive_layout) {
-    return (
-      <MobileSearchBarContainer>
-        <SearchBarContainer style={style}>
-          {onChange ? (
-            <div
-              style={
-                use_mobile_layout
-                  ? {
-                      width: "175px",
-                    }
-                  : {
-                      width: "25vw",
-                      minWidth: "175px",
-                      maxWidth: "400px",
-                    }
-              }
-            >
-              <Form>
-                <Form.Input
-                  icon="search"
-                  placeholder={placeholder}
-                  onChange={(data) => onChange(data.target.value)}
-                  value={value}
-                />
-              </Form>
-            </div>
-          ) : (
-            <></>
-          )}
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "flex-end",
-            }}
-          >
-            {filters ? (
-              <Popup
-                trigger={
-                  <div>
-                    <Button icon="filter" />
-                  </div>
-                }
-                offset={[-35, 0]}
-                content={<MobileFilterWrapper>{filters}</MobileFilterWrapper>}
-                on="click"
-                position="bottom right"
+      <ActionsWrapper>
+        {filters && (
+          <Popup
+            trigger={
+              <Button
+                icon="filter"
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
               />
-            ) : (
-              <></>
-            )}
-            <div>{buttongroup}</div>
-          </div>
-        </SearchBarContainer>
-      </MobileSearchBarContainer>
-    );
-  } else {
-    return (
-      <SearchBarContainer style={style}>
-        {onChange ? (
-          <div style={{ width: "25vw" }}>
-            <Form>
-              <Form.Input
-                icon="search"
-                placeholder={placeholder}
-                onChange={(data) => onChange(data.target.value)}
-                value={value}
-              />
-            </Form>
-          </div>
-        ) : (
-          <></>
+            }
+            content={<FilterPopoverContent>{filters}</FilterPopoverContent>}
+            on="click"
+            open={isFilterOpen}
+            onClose={() => setIsFilterOpen(false)}
+            onOpen={() => setIsFilterOpen(true)}
+            position="bottom right"
+          />
         )}
-        <FilterWrapper>{filters}</FilterWrapper>
-        <div>{buttongroup}</div>
-      </SearchBarContainer>
-    );
-  }
+
+        {actions.length > 0 && (
+          <Button.Group color="teal">
+            <Dropdown className="button icon" floating trigger={<></>}>
+              <Dropdown.Menu>{actionItems}</Dropdown.Menu>
+            </Dropdown>
+          </Button.Group>
+        )}
+      </ActionsWrapper>
+    </SearchBarContainer>
+  );
 };
 
 const SearchBarContainer = styled.div`
-  height: 100%;
-  width: 100%;
   display: flex;
-  flex-direction: row;
+  align-items: center;
   justify-content: space-between;
+  padding: 1rem;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  border-radius: 4px;
 `;
 
-const MobileSearchBarContainer = styled.div`
-  height: 100%;
-  width: 100%;
+const SearchInputWrapper = styled.div`
+  flex-grow: 1;
+  margin-right: 1rem;
+  max-width: 50vw;
+`;
+
+const ActionsWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const FilterPopoverContent = styled.div`
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  gap: 1rem;
+
+  /* Customize scrollbar */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
 `;

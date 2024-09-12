@@ -1,5 +1,6 @@
 import { ReactElement } from "react";
-import { AnnotationLabelType } from "../graphql/types";
+import { AnnotationLabelType, LabelDisplayBehavior } from "../graphql/types";
+import { PDFPageInfo } from "./annotator/context";
 
 /**
  * Type-related functions
@@ -8,7 +9,6 @@ export function notEmpty<TValue>(
   value: TValue | null | undefined
 ): value is TValue {
   if (value === null || value === undefined) return false;
-  const testDummy: TValue = value;
   return true;
 }
 
@@ -156,17 +156,33 @@ export interface ActionDropdownItem {
   action_function: (props: any) => void;
 }
 
+export type EditMode = "EDIT" | "VIEW" | "CREATE";
+
 export interface CRUDProps {
-  mode: "CREATE" | "EDIT" | "VIEW";
-  model_name: string;
-  has_file: boolean;
-  file_field: string;
-  file_label: string;
-  file_is_image: boolean;
-  accepted_file_types: string;
-  ui_schema: Record<string, any>;
-  data_schema: Record<string, any>;
+  mode: EditMode;
+  modelName: string;
+  hasFile: boolean;
+  fileField: string;
+  fileLabel: string;
+  fileIsImage: boolean;
+  acceptedFileTypes: string;
+  uiSchema: Record<string, any>;
+  dataSchema: Record<string, any>;
 }
+
+// Define a more flexible prop type for property widgets
+export interface PropertyWidgetProps<T = any> {
+  onChange: (updatedFields: Record<string, T>) => void;
+  [key: string]: any; // Allow any additional props
+}
+
+// Define a type for the components that can be used as property widgets
+export type PropertyWidgetComponent = React.ComponentType<PropertyWidgetProps>;
+
+// Define a type for the propertyWidgets prop
+export type PropertyWidgets = {
+  [key: string]: React.ReactElement<PropertyWidgetProps>;
+};
 
 export type BoundingBox = {
   top: number;
@@ -196,3 +212,19 @@ export type TextSearchResult = {
 };
 
 export type MultipageAnnotationJson = Record<number, SinglePageAnnotationJson>;
+export interface PageProps {
+  pageInfo: PDFPageInfo;
+  doc_permissions: PermissionTypes[];
+  corpus_permissions: PermissionTypes[];
+  read_only: boolean;
+  show_selected_annotation_only: boolean;
+  show_annotation_bounding_boxes: boolean;
+  show_annotation_labels: LabelDisplayBehavior;
+  onError: (_err: Error) => void;
+  setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
+}
+export const label_display_options = [
+  { key: 1, text: "Always Show", value: LabelDisplayBehavior.ALWAYS },
+  { key: 2, text: "Always Hide", value: LabelDisplayBehavior.HIDE },
+  { key: 3, text: "Show on Hover", value: LabelDisplayBehavior.ON_HOVER },
+];

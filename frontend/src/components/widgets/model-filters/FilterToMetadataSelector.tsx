@@ -10,6 +10,7 @@ import {
 } from "../../../graphql/queries";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { toast } from "react-toastify";
+import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 interface FilterToMetadataSelectorProps {
   selected_corpus_id: string;
@@ -21,7 +22,7 @@ export const FilterToMetadataSelector = ({
   style,
 }: FilterToMetadataSelectorProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
   const selected_annotation_id = useReactiveVar(selectedMetaAnnotationId);
 
   const {
@@ -36,6 +37,7 @@ export const FilterToMetadataSelector = ({
         metadataForCorpusId: selected_corpus_id,
       },
       notifyOnNetworkStatusChange: true,
+      skip: !Boolean(selected_corpus_id),
     }
   );
 

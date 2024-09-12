@@ -5,11 +5,11 @@ import default_image from "../../../assets/images/defaults/default_image.png";
 import default_file from "../../../assets/images/defaults/default_file.png";
 
 interface FilePreviewAndUploadProps {
-  is_image: boolean;
-  accepted_types: string;
+  isImage: boolean;
+  acceptedTypes: string;
   style?: Record<string, any>;
   file: string | ArrayBuffer;
-  read_only: boolean;
+  readOnly: boolean;
   disabled: boolean;
   onChange: ({
     data,
@@ -21,11 +21,11 @@ interface FilePreviewAndUploadProps {
 }
 
 export const FilePreviewAndUpload = ({
-  is_image,
-  accepted_types,
+  isImage,
+  acceptedTypes,
   style,
   file,
-  read_only,
+  readOnly,
   disabled,
   onChange,
 }: FilePreviewAndUploadProps) => {
@@ -54,7 +54,7 @@ export const FilePreviewAndUpload = ({
   };
 
   const onFileClick = () => {
-    if (!read_only && fileRef?.current) {
+    if (!readOnly && fileRef?.current) {
       fileRef.current.click();
     }
   };
@@ -64,16 +64,16 @@ export const FilePreviewAndUpload = ({
   return (
     <Segment
       tertiary
-      disabled={read_only || disabled ? true : undefined}
+      disabled={readOnly || disabled ? true : undefined}
       raised
       style={{ width: "100%", ...style }}
     >
-      {!read_only && !disabled ? (
+      {!readOnly && !disabled ? (
         <Label corner="right" icon="edit outline" onClick={onFileClick} />
       ) : (
         <></>
       )}
-      {is_image ? (
+      {isImage ? (
         <Image
           style={{ width: "100%" }}
           src={new_file ? new_file : file ? file : default_image}
@@ -83,14 +83,14 @@ export const FilePreviewAndUpload = ({
       )}
       <input
         ref={fileRef}
-        readOnly={read_only}
+        readOnly={readOnly}
         id="selectImage"
-        accept={accepted_types}
+        accept={acceptedTypes}
         hidden
         type="file"
         onChange={onFileChange}
       />
-      {!is_image ? (
+      {!isImage ? (
         <Label attached="bottom" style={{ wordBreak: "break-all" }}>
           {new_filename ? new_filename : file}
         </Label>

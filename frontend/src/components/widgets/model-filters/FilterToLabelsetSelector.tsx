@@ -14,6 +14,7 @@ import { LabelSetType } from "../../../graphql/types";
 import { useEffect } from "react";
 import { LooseObject } from "../../types";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 interface FilterToLabelsetSelectorProps {
   style?: Record<string, any>;
@@ -25,7 +26,7 @@ export const FilterToLabelsetSelector = ({
   fixed_labelset_id,
 }: FilterToLabelsetSelectorProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const filtered_to_labelset_id = useReactiveVar(filterToLabelsetId);
   const user_obj = useReactiveVar(userObj);

@@ -9,8 +9,6 @@ import { AnnotationLabelType } from "../../../graphql/types";
 import { TokenId, RenderedSpanAnnotation } from "./AnnotationStore";
 import { convertAnnotationTokensToText } from "../utils";
 
-import { type } from "os";
-
 export type Optional<T> = T | undefined;
 
 // Somehow (still trying to figure this one out), undefined tokens are getting
@@ -127,6 +125,7 @@ export class PDFPageInfo {
   constructor(
     public readonly page: PDFPageProxy,
     public readonly tokens: Token[] = [],
+    public scale: number,
     public bounds?: BoundingBox
   ) {}
 
@@ -307,24 +306,30 @@ export class PDFPageInfo {
     return scaled(b, this.scale);
   }
 
-  get scale(): number {
-    if (this.bounds === undefined) {
-      throw new Error("Unknown Page Bounds");
-    }
-    const pdfPageWidth = this.page.view[2] - this.page.view[1];
-    const domPageWidth = this.bounds.right - this.bounds.left;
-    return domPageWidth / pdfPageWidth;
-  }
+  // get scale(): number {
+  //   if (this.bounds === undefined) {
+  //     throw new Error("Unknown Page Bounds");
+  //   }
+  //   const pdfPageWidth = this.page.view[2] - this.page.view[1];
+  //   const domPageWidth = this.bounds.right - this.bounds.left;
+  //   return domPageWidth / pdfPageWidth;
+  // }
 }
 
 interface _PDFStore {
   pages?: PDFPageInfo[];
   doc?: PDFDocumentProxy;
   onError: (err: Error) => void;
+  zoomLevel: number;
+  setZoomLevel: (zl: number) => void;
 }
 
 export const PDFStore = createContext<_PDFStore>({
   onError: (_: Error) => {
     throw new Error("Unimplemented");
   },
+  setZoomLevel: (zl: number) => {
+    throw new Error("setZoomLevel() not implemented");
+  },
+  zoomLevel: 1,
 });

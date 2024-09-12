@@ -9,13 +9,19 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
+from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
 from config.graphql.permission_annotator.middleware import combine
-from opencontractserver.analyzer.models import Analysis
-from opencontractserver.annotations.models import Annotation, AnnotationLabel
-from opencontractserver.corpuses.models import Corpus
-from opencontractserver.documents.models import Document
+from opencontractserver.analyzer.models import Analysis, Analyzer
+from opencontractserver.annotations.models import (
+    Annotation,
+    AnnotationLabel,
+    Relationship,
+)
+from opencontractserver.corpuses.models import Corpus, CorpusQuery
+from opencontractserver.documents.models import Document, DocumentAnalysisRow
+from opencontractserver.extracts.models import Datacell, Extract, Fieldset
 from opencontractserver.types.enums import PermissionTypes
 
 User = get_user_model()
@@ -383,64 +389,112 @@ def make_analysis_public(analysis_id: int | str) -> MakePublicReturnType:
 
 
 def make_corpus_public(corpus_id: int | str) -> MakePublicReturnType:
-
     """
-    Given a corpus ID, make it, its labelset, its docs and its HUMAN annotations
-    public. Ignore analyzer-created annotations.
+    Given a corpus ID, make it, its labelset, its docs, human annotations, extracts,
+    analyses, datacells, fieldsets, analyzers and related objects public.
     """
-
     ok = False
 
     try:
         corpus = Corpus.objects.get(id=corpus_id)
+        logger.info(f"Retrieved corpus with id {corpus_id}")
 
-        # Lock the corpus while we re-permission as this can take a while depending on the
-        # number of associated annotations and docs.
+        # Lock the corpus while we re-permission
         with transaction.atomic():
             corpus.backend_lock = True
             corpus.is_public = True
             corpus.save()
+            logger.info(f"Locked and set corpus {corpus_id} as public")
 
-        # Bulk update documents to public
+        # Make documents public
         docs = corpus.documents.all()
-        for doc in docs:
-            doc.is_public = True
-        Document.objects.bulk_update(docs, ["is_public"], batch_size=100)
+        updated_docs = Document.objects.filter(id__in=docs).update(is_public=True)
+        logger.info(f"Made {updated_docs} documents public")
 
-        # IF there is a label_set for human annotations, handle its permissions
+        # !!DANGER!! - Make ALL labels for this corpus public
         if corpus.label_set:
-
             corpus.label_set.is_public = True
             corpus.label_set.save()
+            logger.info(f"Set label_set {corpus.label_set.id} as public")
 
-            # Bulk update labels to public
-            labels = corpus.label_set.annotation_labels.all()
-            for label in labels:
-                logger.info(f"Make this annotation label public: {label.id}")
-                logger.info(f"Make this annotation label public: {label}")
-                label.is_public = True
-            AnnotationLabel.objects.bulk_update(labels, ["is_public"], batch_size=100)
+            # Make labels public
+            updated_labels = AnnotationLabel.objects.filter(
+                included_in_labelset=corpus.label_set
+            ).update(is_public=True)
+            logger.info(f"Made {updated_labels} annotation labels public")
 
-        # Bulk update actual annotations created by people (NOT ANALYZER)
-        # If you want to make an analyzers annotations public, make the analysis
-        # public
-        annotations = corpus.annotations.filter(analysis__isnull=True)
-        for annotation in annotations:
-            logger.info(f"Make annotation public: {annotation}")
-            annotation.is_public = True
-        Annotation.objects.bulk_update(annotations, ["is_public"], batch_size=100)
+        # Make human annotations public
+        updated_annotations = Annotation.objects.filter(corpus=corpus).update(
+            is_public=True
+        )
+        logger.info(f"Made {updated_annotations} human annotations public")
 
-        # Unlock the corpus now that we're done changing permission
+        # Make extracts public
+        updated_extracts = Extract.objects.filter(corpus=corpus).update(is_public=True)
+        logger.info(f"Made {updated_extracts} extracts public")
+
+        # Make analyses public
+        analyses = Analysis.objects.filter(analyzed_corpus=corpus)
+        updated_analyses = Analysis.objects.filter(id__in=analyses).update(
+            is_public=True
+        )
+        logger.info(f"Made {updated_analyses} analyses public")
+
+        # Make datacells public
+        updated_datacells = Datacell.objects.filter(extract__corpus=corpus).update(
+            is_public=True
+        )
+        logger.info(f"Made {updated_datacells} datacells public")
+
+        # Make fieldsets public
+        fieldsets = Fieldset.objects.filter(extracts__corpus=corpus).distinct()
+        updated_fieldsets = Fieldset.objects.filter(id__in=fieldsets).update(
+            is_public=True
+        )
+        logger.info(f"Made {updated_fieldsets} fieldsets public")
+
+        # Make analyzers public
+        analyzers = Analyzer.objects.filter(
+            Q(analysis__analyzed_corpus=corpus) | Q(corpusaction__corpus=corpus)
+        ).distinct()
+        updated_analyzers = Analyzer.objects.filter(id__in=analyzers).update(
+            is_public=True
+        )
+        logger.info(f"Made {updated_analyzers} analyzers public")
+
+        # Make related objects public
+        # Relationships
+        updated_relationships = Relationship.objects.filter(corpus=corpus).update(
+            is_public=True
+        )
+        logger.info(f"Made {updated_relationships} relationships public")
+
+        # CorpusQueries
+        updated_queries = CorpusQuery.objects.filter(corpus=corpus).update(
+            is_public=True
+        )
+        logger.info(f"Made {updated_queries} corpus queries public")
+
+        # DocumentAnalysisRows
+        updated_rows = DocumentAnalysisRow.objects.filter(
+            Q(analysis__analyzed_corpus=corpus) | Q(extract__corpus=corpus)
+        ).update(is_public=True)
+        logger.info(f"Made {updated_rows} document analysis rows public")
+
+        # Unlock the corpus
         with transaction.atomic():
             corpus.backend_lock = False
             corpus.save()
+            logger.info(f"Unlocked corpus {corpus_id}")
 
         corpus.refresh_from_db()
+        logger.info(f"Refreshed corpus {corpus_id} from database")
 
-        message = "SUCCESS - Corpus is Public"
+        message = "SUCCESS - Corpus and related objects are now public"
         ok = True
 
     except Exception as e:
         message = f"ERROR - Could not make public due to unexpected error: {e}"
+        logger.error(message, exc_info=True)
 
     return {"message": message, "ok": ok}

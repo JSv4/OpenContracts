@@ -187,7 +187,6 @@ export function generateMockCorpus(creator: UserType): CorpusType {
     modified: new Date().toISOString(),
     assignmentSet: generateMockAssignmentConnection(),
     relationshipSet: generateMockRelationshipConnection(),
-    annotationSet: generateMockAnnotationConnection(),
     allAnnotationSummaries: [],
     analyses: generateMockAnalysisConnection(),
     isPublic: false,

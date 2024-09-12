@@ -65,14 +65,18 @@ class GraphQLUsageLimitTestCase(TestCase):
                 $filename: String!
                 $customMeta: GenericScalar!
                 $description: String!
-                $title: String!
+                $title: String!,
+                $addToCorpusId: ID,
+                $makePublic: Boolean!
               ) {
                 uploadDocument(
                   base64FileString: $base64FileString
                   filename: $filename
                   customMeta: $customMeta
                   description: $description
-                  title: $title
+                  title: $title,
+                  addToCorpusId: $addToCorpusId,
+                  makePublic: $makePublic
                 ) {
                   document {
                     id
@@ -103,6 +107,7 @@ class GraphQLUsageLimitTestCase(TestCase):
                     "customMeta": {},
                     "description": "Some stuff happening here",
                     "title": "Taking up space!",
+                    "makePublic": True,
                 },
             )
             logger.info(f"Doc upload response: {doc_upload_response}")

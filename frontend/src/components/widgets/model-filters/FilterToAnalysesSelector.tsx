@@ -20,6 +20,7 @@ import {
 } from "../../../graphql/queries";
 import { AnalysisType, CorpusType } from "../../../graphql/types";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 interface FilterToAnalysesSelectorProps {
   corpus: CorpusType;
@@ -31,18 +32,14 @@ export const FilterToAnalysesSelector = ({
   style,
 }: FilterToAnalysesSelectorProps) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const auth_token = useReactiveVar(authToken);
   const selected_analyses = useReactiveVar(selectedAnalyses);
 
-  const analysis_ids_to_display = selected_analyses
-    .filter(
-      (analysis) =>
-        analysis.analyzer?.analyzerId &&
-        typeof analysis.analyzer.analyzerId === "string"
-    )
-    .map((analysis) => analysis.analyzer.analyzerId) as string[];
+  const analysis_ids_to_display = selected_analyses.map(
+    (analysis) => analysis.id
+  ) as string[];
 
   const handleChange = (
     event: React.SyntheticEvent<HTMLElement, Event>,
@@ -54,27 +51,15 @@ export const FilterToAnalysesSelector = ({
 
     if (data.value !== undefined && Array.isArray(data.value)) {
       for (let analysis_id of data.value) {
-        // console.log("Handle analyzer id", analysis_id);
-        // console.log(
-        //   "Add analysis",
-        //   analyses_response?.analyses.edges.filter(
-        //     (analysis_edge) =>
-        //       analysis_edge.node.analyzer.analyzerId === analysis_id
-        //   )
-        // );
         let analysis_to_add = analyses_response?.analyses.edges
-          .filter(
-            (analysis_edge) =>
-              analysis_edge.node.analyzer.analyzerId === analysis_id
-          )
+          .filter((analysis_edge) => analysis_edge.node.id === analysis_id)
           .map((edge) => edge.node);
 
         if (analysis_to_add !== undefined) {
           selected_analyses = [...selected_analyses, ...analysis_to_add];
         }
-
-        // console.log("Selected analyses:", selected_analyses);
       }
+      console.log("Set selected analyses", selected_analyses);
       selectedAnalyses(selected_analyses);
       selectedAnalysesIds(selected_analyses.map((analysis) => analysis.id));
     } else {
@@ -99,6 +84,7 @@ export const FilterToAnalysesSelector = ({
   });
   if (analyses_load_error) {
     toast.error("ERROR\nCould not fetch analyses for multiselector.");
+    console.error(analyses_load_error);
   }
 
   useEffect(() => {
@@ -111,28 +97,12 @@ export const FilterToAnalysesSelector = ({
 
   ///////////////////////////////////////////////////////////////////////////////
   let analysis_options: DropdownItemProps[] = [];
-  let analyses_with_analyzers =
-    analyses_response && analyses_response.analyses
-      ? analyses_response.analyses.edges.filter(
-          (edge) => edge?.node?.analyzer?.analyzerId
-        )
-      : [];
-
-  // console.log("analyses_with_analyzers", analyses_with_analyzers);
-  let analyzer_choices = analyses_with_analyzers.map(
-    (edge) => edge.node.analyzer.analyzerId as string
-  );
-
-  // console.log("analyzer_choices", analyzer_choices);
   if (analyses_response?.analyses?.edges) {
-    analysis_options = [
-      ...analysis_options,
-      ...analyzer_choices.map((analyzerId) => ({
-        key: analyzerId,
-        text: analyzerId,
-        value: analyzerId,
-      })),
-    ];
+    analysis_options = analyses_response?.analyses?.edges.map((edge) => ({
+      key: edge.node.id,
+      text: `${edge.node.id}: ${edge.node.analyzer.analyzerId}`,
+      value: edge.node.id,
+    }));
   }
 
   return (
@@ -152,13 +122,14 @@ export const FilterToAnalysesSelector = ({
           justifyContent: "center",
         }}
       >
-        <div>Filter to Analyses:</div>
+        <div>Created by Analysis:</div>
       </Label>
       <Dropdown
-        placeholder="Skills"
+        placeholder="Created by Analysis"
         fluid
         multiple
         selection
+        clearable
         options={analysis_options}
         onChange={handleChange}
         value={analysis_ids_to_display}

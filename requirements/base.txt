@@ -16,7 +16,7 @@ requests==2.*  # https://requests.readthedocs.io/en/latest/
 
 # Django
 # ------------------------------------------------------------------------------
-django==4.2.15  # pyup: < 4.0  # https://www.djangoproject.com/
+django==4.2.16  # pyup: < 4.0  # https://www.djangoproject.com/
 django-environ==0.9.0  # https://github.com/joke2k/django-environ
 django-model-utils==4.3.1  # https://github.com/jazzband/django-model-utils
 django-crispy-forms==2.3  # https://github.com/django-crispy-forms/django-crispy-forms
@@ -51,7 +51,7 @@ pdfminer
 pdf2image
 poppler-utils
 
-# Doc Analysis (NLP dependencies, placeholder)
+# Doc Analysis (NLP dependencies, placeholder) - WARNING, these are all in same environment... not ideal.
 # ------------------------------------------------------------------------------
 PyPDF2==3.0.1  # https://github.com/mstamy2/PyPDF2
 pandas
@@ -61,6 +61,8 @@ llama-index-embeddings-huggingface==0.2.1
 llama-index-llms-openai==0.1.22
 marvin==2.3.7
 plasmapdf
+spacy
+gliner
 
 # Data Processing Tools
 # -------------------------------------------------------------------------------

@@ -111,6 +111,15 @@ class Extract(BaseOCModel):
     finished = django.db.models.DateTimeField(null=True, blank=True)
     error = django.db.models.TextField(null=True, blank=True)
 
+    # If applicable, what CorpusAction ran?
+    corpus_action = django.db.models.ForeignKey(
+        "corpuses.CorpusAction",
+        related_name="extracts",
+        blank=True,
+        null=True,
+        on_delete=django.db.models.SET_NULL,
+    )
+
     class Meta:
         permissions = (
             ("permission_extract", "permission extract"),

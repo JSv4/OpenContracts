@@ -26,6 +26,8 @@ import {
   displayAnnotationOnAnnotatorLoad,
   showSelectedAnnotationOnly,
   showAnnotationBoundingBoxes,
+  openedExtract,
+  showSelectCorpusAnalyzerOrFieldsetModal,
 } from "./graphql/cache";
 
 import { NavMenu } from "./components/layout/NavMenu";
@@ -50,8 +52,10 @@ import { MobileNavMenu } from "./components/layout/MobileNavMenu";
 import { LabelDisplayBehavior } from "./graphql/types";
 import { CookieConsentDialog } from "./components/cookies/CookieConsent";
 import { Extracts } from "./views/Extracts";
-import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 import { useEnv } from "./components/hooks/UseEnv";
+import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
+import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
+import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
@@ -62,13 +66,16 @@ export const App = () => {
   );
   const selected_analyes = useReactiveVar(selectedAnalyses);
   const opened_corpus = useReactiveVar(openedCorpus);
+  const opened_extract = useReactiveVar(openedExtract);
   const opened_document = useReactiveVar(openedDocument);
-  const opened_to_annotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
   const show_selected_annotation_only = useReactiveVar(
     showSelectedAnnotationOnly
   );
   const show_annotation_bounding_boxes = useReactiveVar(
     showAnnotationBoundingBoxes
+  );
+  const show_corpus_analyzer_fieldset_modal = useReactiveVar(
+    showSelectCorpusAnalyzerOrFieldsetModal
   );
   const show_annotation_labels = useReactiveVar(showAnnotationLabels);
 
@@ -165,7 +172,22 @@ export const App = () => {
             <Dimmer active={false}>
               <Loader content="Logging in..." />
             </Dimmer>
-            {opened_document && only_display_these_annotations !== undefined ? (
+            {opened_corpus && (
+              <SelectAnalyzerOrFieldsetModal
+                open={show_corpus_analyzer_fieldset_modal}
+                corpus={opened_corpus}
+                document={opened_document ? opened_document : undefined}
+                onClose={() => showSelectCorpusAnalyzerOrFieldsetModal(false)}
+              />
+            )}
+            {opened_extract && (
+              <EditExtractModal
+                ext={opened_extract}
+                open={opened_extract !== null}
+                toggleModal={() => openedExtract(null)}
+              />
+            )}
+            {opened_document ? (
               <DocumentAnnotator
                 open={Boolean(opened_document)}
                 onClose={() => {
@@ -174,10 +196,11 @@ export const App = () => {
                   selectedAnalyses([]);
                   onlyDisplayTheseAnnotations(undefined);
                 }}
-                display_annotations={only_display_these_annotations}
+                opened_corpus={
+                  opened_corpus === null ? undefined : opened_corpus
+                }
                 opened_document={opened_document}
                 read_only={selected_analyes.length > 0 || banish_sidebar}
-                scroll_to_annotation_on_open={opened_to_annotation}
                 show_selected_annotation_only={show_selected_annotation_only}
                 show_annotation_bounding_boxes={show_annotation_bounding_boxes}
                 show_annotation_labels={show_annotation_labels}

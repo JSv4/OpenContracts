@@ -1,10 +1,7 @@
-import { useState } from "react";
-import { Button, Form, Header, Image, Segment } from "semantic-ui-react";
-
+import React, { useState } from "react";
+import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
-
 import { useMutation } from "@apollo/client";
-
 import { userObj, authToken } from "../graphql/cache";
 import {
   LoginInputs,
@@ -12,199 +9,152 @@ import {
   LOGIN_MUTATION,
 } from "../graphql/mutations";
 import { toast } from "react-toastify";
+import { User, Lock } from "lucide-react";
+import logo from "../assets/images/os_legal_128_regular.png";
 
-import logo_text from "../assets/images/os_legal_128_regular.png";
-import useWindowDimensions from "../components/hooks/WindowDimensionHook";
+const PageWrapper = styled.div`
+  width: 100vw;
+  height: 100vh;
+  background-image: url(/adam-rhodes-uBrWOHLgOcg-unsplash.jpg);
+  background-size: cover;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+`;
 
-const divStyle = {
-  width: "100vw",
-  height: "100vh",
-  backgroundImage: "url(/adam-rhodes-uBrWOHLgOcg-unsplash.jpg)",
-  backgroundSize: "cover",
-};
+const LoginCard = styled.div`
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+`;
+
+const Logo = styled.img`
+  width: 15vh;
+  height: auto;
+  margin-bottom: 0px;
+`;
+
+const Title = styled.h1`
+  font-size: 1.8rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+  margin-top: 0.25rem;
+`;
+
+const Subtitle = styled.p`
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 2rem;
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+`;
+
+const InputWrapper = styled.div`
+  position: relative;
+  margin-bottom: 1rem;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  &:focus {
+    outline: none;
+    border-color: #00b5ad;
+  }
+`;
+
+const IconWrapper = styled.div`
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+`;
+
+const LoginButton = styled.button`
+  background-color: #00b5ad;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.75rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  &:hover {
+    background-color: #009c95;
+  }
+`;
 
 export const Login = () => {
-  const { width } = useWindowDimensions();
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
   const navigate = useNavigate();
 
-  const [
-    tryLogin,
-    { loading: login_loading, error: login_error, data: login_data },
-  ] = useMutation<LoginOutputs, LoginInputs>(LOGIN_MUTATION, {
-    onCompleted: (data) => {
-      authToken(data.tokenAuth.token);
-      userObj(data.tokenAuth.user);
-      navigate("/");
-    },
-  });
+  const [tryLogin, { loading: login_loading, error: login_error }] =
+    useMutation<LoginOutputs, LoginInputs>(LOGIN_MUTATION, {
+      onCompleted: (data) => {
+        authToken(data.tokenAuth.token);
+        userObj(data.tokenAuth.user);
+        navigate("/");
+      },
+    });
+
   if (login_error) {
     toast.error("ERROR!\nCould not log you in!");
   }
 
-  // Try login with provider username and password
-  const handleLoginClick = (username: string, password: string) => {
-    let variables = {
-      variables: {
-        username,
-        password,
-      },
-    };
-    tryLogin(variables);
+  const handleLoginClick = (e: React.FormEvent) => {
+    e.preventDefault();
+    tryLogin({ variables: { username, password } });
   };
 
   return (
-    <div style={divStyle}>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          alignContent: "center",
-          height: "100%",
-        }}
-      >
-        <Segment
-          tertiary
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-            alignContent: "center",
-            paddingBottom: "4vh",
-            paddingTop: "4vh",
-            paddingLeft: "1.5vw",
-            paddingRight: "1.5vw",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              width: "100%",
-              marginBottom: "3vh",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                textAlign: "right",
-                justifyContent: "center",
-                paddingBottom: "1vh",
-                width: "100%",
-              }}
-            >
-              <div>
-                <Image
-                  style={{
-                    maxHeight: "100px",
-                    height: "10vh",
-                    paddingRight: "8px",
-                  }}
-                  src={logo_text}
-                />
-              </div>
-            </div>
-            <div
-              style={{
-                flex: "column",
-                textAlign: "center",
-                alignSelf: "center",
-                alignItems: "center",
-                alignContent: "center",
-                justifyContent: "center",
-                height: "auto",
-                marginRight: "5%",
-              }}
-            >
-              <div>
-                <Header style={{ marginTop: "1vh", fontSize: "2em" }}>
-                  Open Contracts
-                  <Header.Subheader
-                    style={{ marginTop: ".25em", fontSize: ".65em" }}
-                  >
-                    The Open Contract Analytics Platform
-                  </Header.Subheader>
-                </Header>
-              </div>
-            </div>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "center",
-              width: "100%",
-            }}
-          >
-            <Form
-              style={{
-                width: "100%",
-                display: "flex",
-                flexDirection: "row",
-                justifyContent: "center",
-              }}
-              size="large"
-            >
-              <Segment
-                secondary
-                style={
-                  width <= 1000
-                    ? {
-                        width: "80%",
-                        maxWidth: "300px",
-                        minWidth: "200px",
-                      }
-                    : {
-                        width: "25vw",
-                        maxWidth: "300px",
-                      }
-                }
-              >
-                <Header as="h4" textAlign="left">
-                  Please Login:
-                </Header>
-                <Form.Input
-                  fluid
-                  icon="user"
-                  iconPosition="left"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(data) => {
-                    setUsername(`${data.target.value}`);
-                  }}
-                />
-                <Form.Input
-                  fluid
-                  icon="lock"
-                  iconPosition="left"
-                  placeholder="Password"
-                  type="password"
-                  value={password}
-                  onChange={(data) => {
-                    setPassword(`${data.target.value}`);
-                  }}
-                />
-                <Button
-                  color="teal"
-                  fluid
-                  size="large"
-                  onClick={() => handleLoginClick(username, password)}
-                >
-                  Login
-                </Button>
-              </Segment>
-            </Form>
-          </div>
-        </Segment>
-      </div>
-    </div>
+    <PageWrapper>
+      <LoginCard>
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <Logo src={logo} alt="Open Contracts Logo" />
+          <Title>Open Contracts</Title>
+          <Subtitle>The Open Contract Analytics Platform</Subtitle>
+        </div>
+        <Form onSubmit={handleLoginClick}>
+          <InputWrapper>
+            <IconWrapper>
+              <User size={18} />
+            </IconWrapper>
+            <Input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </InputWrapper>
+          <InputWrapper>
+            <IconWrapper>
+              <Lock size={18} />
+            </IconWrapper>
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </InputWrapper>
+          <LoginButton type="submit" disabled={login_loading}>
+            {login_loading ? "Logging in..." : "Login"}
+          </LoginButton>
+        </Form>
+      </LoginCard>
+    </PageWrapper>
   );
 };
+
+export default Login;

@@ -14,6 +14,7 @@ import { CorpusType } from "../../../graphql/types";
 import { useEffect } from "react";
 import { LooseObject } from "../../types";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 interface FilterToCorpusSelector {
   style?: Record<string, any>;
@@ -25,7 +26,7 @@ export const FilterToCorpusSelector = ({
   uses_labelset_id,
 }: FilterToCorpusSelector) => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const filtered_to_corpus = useReactiveVar(filterToCorpus);
   const user_obj = useReactiveVar(userObj);

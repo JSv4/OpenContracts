@@ -96,6 +96,14 @@ COPY download_embeddings_model.py .
 RUN mkdir -p /models
 RUN python download_embeddings_model.py
 
+# Download spacy models
+RUN python -m spacy download en_core_web_sm
+RUN python -m spacy download en_core_web_lg
+
+# Download GLINER
+COPY download_GLINER.py .
+RUN python download_GLINER.py
+
 COPY ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
 RUN chmod +x /entrypoint

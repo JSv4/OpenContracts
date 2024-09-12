@@ -43,7 +43,11 @@ class AnnotationLabel(BaseOCModel):
     # If an analyzer requires a specific label, we want to track this so we can ensure we don't install copies of it
     # over and over again.
     analyzer = django.db.models.ForeignKey(
-        "analyzer.Analyzer", on_delete=django.db.models.SET_NULL, null=True, blank=True
+        "analyzer.Analyzer",
+        null=True,
+        blank=True,
+        related_name="annotation_labels",
+        on_delete=django.db.models.SET_NULL,
     )
 
     # If this is meant to be a 'built-in' label and be used across corpuses without being explicitly added to a
@@ -51,7 +55,7 @@ class AnnotationLabel(BaseOCModel):
     read_only = django.db.models.BooleanField(default=False)
 
     color = django.db.models.CharField(
-        max_length=12, blank=False, null=False, default="#ffff00"
+        max_length=12, blank=False, null=False, default="#05313d"
     )
     description = django.db.models.TextField(null=False, default="")
     icon = django.db.models.CharField(
@@ -91,8 +95,8 @@ class AnnotationLabel(BaseOCModel):
 
         constraints = [
             django.db.models.UniqueConstraint(
-                fields=["analyzer", "text"],
-                name="Only install one label of given name for each analyzer_id (no duplicates)",
+                fields=["analyzer", "text", "creator"],
+                name="Only install one label of given name for each analyzer_id PER user (no duplicates)",
             )
         ]
 
@@ -247,9 +251,12 @@ class Annotation(BaseOCModel):
         "analyzer.Analysis",
         null=True,
         blank=True,
-        on_delete=django.db.models.SET_NULL,
+        on_delete=django.db.models.CASCADE,
         related_name="annotations",
     )
+
+    # Mark structural / layout annotations explicitly.
+    structural = django.db.models.BooleanField(default=False)
 
     # Sharing
     is_public = django.db.models.BooleanField(default=False)

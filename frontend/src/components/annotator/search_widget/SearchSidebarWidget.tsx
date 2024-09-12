@@ -167,6 +167,7 @@ export const SearchSidebarWidget = () => {
           annotationStore.textSearchMatches.map((res, index) => {
             return (
               <SearchResultCard
+                key={`SearchResultCard_${index}`}
                 index={index}
                 totalMatches={textSearchMatches.length}
                 res={res}

@@ -8,10 +8,10 @@ from django.conf import settings
 from django.core.handlers.wsgi import WSGIRequest
 from django.db import transaction
 from django.utils import timezone
-from llama_index.legacy.readers.bagel import Documents
 
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
+from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
     AnalyzerManifest,
     AnnotationLabelPythonType,
@@ -203,15 +203,17 @@ def run_analysis(
     analyzer = analysis.analyzer
     gremlin = analyzer.host_gremlin
 
-    # If we're analyzing an entire corpus
-    if analysis.analyzed_corpus:
+    # If we're analyzing an entire corpus and we didn't override docs
+    if analysis.analyzed_corpus and (
+        not isinstance(doc_ids, list) or len(doc_ids) == 0
+    ):
         corpus = analysis.analyzed_corpus
         docs = corpus.documents.all()
         logger.info(f"Analyze corpus {corpus.id} with {docs.count()} docs")
 
     # Otherwise we need a list of valid doc_ids to apply to analysis
     elif isinstance(doc_ids, list) and len(doc_ids) > 0:
-        docs = Documents.filter(id__in=doc_ids)
+        docs = Document.objects.filter(id__in=doc_ids)
         if docs.count() != len(doc_ids):
             raise ValueError(f"Failed retrieving all documents in doc list {doc_ids}")
         logger.info(f"Analyze document list with d {doc_ids}")

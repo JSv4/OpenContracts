@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { HideableHasWidth } from "./annotator";
+import { HideableHasWidth } from "./annotator/common";
 
 export const OSLegalTheme = {
   main: "mediumseagreen",
@@ -31,8 +31,6 @@ export const MobileFilterWrapper = styled.div`
 export const SidebarContainer = styled.div<HideableHasWidth>(
   ({ width, display }) => ({
     width,
-    padding: ".25rem",
-    background: "gray",
     color: "black",
     margin: 0,
     fontFamily: `-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",

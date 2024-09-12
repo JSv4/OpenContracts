@@ -26,6 +26,7 @@ ALLOWED_HOSTS = env.list(
 )
 print(f"Open Contracts allowed hosts: {ALLOWED_HOSTS}")
 
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
 DEBUG = env.bool("DJANGO_DEBUG", False)
 

@@ -9,7 +9,7 @@ import {
   analysisSearchTerm,
   authToken,
   openedCorpus,
-  selectedAnalyses,
+  showCorpusActionOutputs,
 } from "../../graphql/cache";
 import { LooseObject } from "../types";
 import {
@@ -17,6 +17,7 @@ import {
   GetAnalysesOutputs,
   GET_ANALYSES,
 } from "../../graphql/queries";
+import useWindowDimensions from "../hooks/WindowDimensionHook";
 
 export const CorpusAnalysesCards = () => {
   /**
@@ -28,14 +29,16 @@ export const CorpusAnalysesCards = () => {
   const opened_corpus = useReactiveVar(openedCorpus);
   const analysis_search_term = useReactiveVar(analysisSearchTerm);
   const auth_token = useReactiveVar(authToken);
-  const analyses_to_display = useReactiveVar(selectedAnalyses);
+  const show_corpus_action_outputs = useReactiveVar(showCorpusActionOutputs);
 
   const location = useLocation();
+  const { width } = useWindowDimensions();
 
   //////////////////////////////////////////////////////////////////////
   // Craft the query variables obj based on current application state
   const analyses_variables: LooseObject = {
     corpusId: opened_corpus?.id ? opened_corpus.id : "",
+    analyzedCorpus_Isnull: !show_corpus_action_outputs,
   };
   if (analysis_search_term) {
     analyses_variables["searchText"] = analysis_search_term;
@@ -56,6 +59,7 @@ export const CorpusAnalysesCards = () => {
     notifyOnNetworkStatusChange: true,
   });
   if (analyses_load_error) {
+    console.error("Corpus analysis fetch error", analyses_load_error);
     toast.error("ERROR\nCould not fetch analyses for corpus.");
   }
 
@@ -104,7 +108,11 @@ export const CorpusAnalysesCards = () => {
       loading_message="Analyses Loading..."
       pageInfo={analyses_response?.analyses?.pageInfo}
       fetchMore={fetchMoreAnalyses}
-      style={{ minHeight: "70vh" }}
+      style={{
+        minHeight: "70vh",
+        overflowY: "unset",
+        ...(width > 400 && width < 600 ? { paddingLeft: "2rem" } : {}),
+      }}
     />
   );
 };

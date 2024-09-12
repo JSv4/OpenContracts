@@ -43,7 +43,7 @@ from config.graphql.serializers import (
     ExtractSerializer,
     LabelsetSerializer,
 )
-from opencontractserver.analyzer.models import Analysis
+from opencontractserver.analyzer.models import Analysis, Analyzer
 from opencontractserver.annotations.models import (
     Annotation,
     AnnotationLabel,
@@ -62,7 +62,7 @@ from opencontractserver.tasks import (
     import_document_to_corpus,
     package_annotated_docs,
 )
-from opencontractserver.tasks.analyzer_tasks import start_analysis
+from opencontractserver.tasks.corpus_tasks import process_analyzer
 from opencontractserver.tasks.doc_tasks import convert_doc_to_funsd
 from opencontractserver.tasks.export_tasks import package_funsd_exports
 from opencontractserver.tasks.extract_orchestrator_tasks import run_extract
@@ -806,6 +806,16 @@ class UploadDocument(graphene.Mutation):
             required=True, description="Description of the document."
         )
         custom_meta = GenericScalar(required=False, description="")
+        add_to_corpus_id = graphene.ID(
+            required=False,
+            description="If provided, successfully uploaded document will "
+            "be uploaded to corpus with specified id",
+        )
+        make_public = graphene.Boolean(
+            required=True,
+            description="If True, document is immediately public. "
+            "Defaults to False.",
+        )
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -813,7 +823,15 @@ class UploadDocument(graphene.Mutation):
 
     @login_required
     def mutate(
-        root, info, base64_file_string, filename, title, description, custom_meta
+        root,
+        info,
+        base64_file_string,
+        filename,
+        title,
+        description,
+        custom_meta,
+        make_public,
+        add_to_corpus_id=None,
     ):
 
         ok = False
@@ -832,6 +850,8 @@ class UploadDocument(graphene.Mutation):
             )
 
         try:
+            message = "Success"
+
             file_bytes = base64.b64decode(base64_file_string)
 
             # Check file type
@@ -855,11 +875,20 @@ class UploadDocument(graphene.Mutation):
                 custom_meta=custom_meta,
                 pdf_file=pdf_file,
                 backend_lock=True,
+                is_public=make_public,
             )
             document.save()
             set_permissions_for_obj_to_user(user, document, [PermissionTypes.CRUD])
+
+            # If add_to_corpus_id is not None, link uploaded document to corpus
+            if add_to_corpus_id is not None:
+                try:
+                    corpus = Corpus.objects.get(id=from_global_id(add_to_corpus_id)[1])
+                    transaction.on_commit(lambda: corpus.documents.add(document))
+                except Exception as e:
+                    message = f"Adding to corpus failed due to error: {e}"
+
             ok = True
-            message = "Success"
 
         except Exception as e:
             message = f"Error on upload: {e}"
@@ -1376,13 +1405,17 @@ class CreateLabelForLabelsetMutation(graphene.Mutation):
         )
 
 
-class StartCorpusAnalysisMutation(graphene.Mutation):
+class StartDocumentAnalysisMutation(graphene.Mutation):
     class Arguments:
-        corpus_id = graphene.ID(
-            required=True, description="Id of the corpus that is to be analyzed."
+        document_id = graphene.ID(
+            required=False, description="Id of the document to be analyzed."
         )
         analyzer_id = graphene.ID(
             required=True, description="Id of the analyzer to use."
+        )
+        corpus_id = graphene.ID(
+            required=False,
+            description="Optional Id of the corpus to associate with the analysis.",
         )
 
     ok = graphene.Boolean()
@@ -1390,46 +1423,85 @@ class StartCorpusAnalysisMutation(graphene.Mutation):
     obj = graphene.Field(AnalysisType)
 
     @login_required
-    def mutate(root, info, corpus_id, analyzer_id):
+    def mutate(root, info, analyzer_id, document_id=None, corpus_id=None):
 
-        obj = None
-        message = "SUCCESS"
-        ok = True
+        print(f"StartDocumentAnalysisMutation - document_id is {document_id}")
 
-        if (
-            info.context.user.is_usage_capped
-            and not settings.USAGE_CAPPED_USER_CAN_USE_ANALYZERS
-        ):
-            raise PermissionError(
-                "By default, new users cannot run analyzers. Please contact the admin to "
-                "authorize your account."
-            )
+        user = info.context.user
+
+        document_pk = from_global_id(document_id)[1] if document_id else None
+        analyzer_pk = from_global_id(analyzer_id)[1]
+        corpus_pk = from_global_id(corpus_id)[1] if corpus_id else None
+
+        if document_pk is None and corpus_pk is None:
+            raise ValueError("One of document_pk and corpus_pk must be provided")
 
         try:
+            # Check permissions for document
+            if document_pk:
+                document = Document.objects.get(pk=document_pk)
+                if not (document.creator == user or document.is_public):
+                    raise PermissionError(
+                        "You don't have permission to analyze this document."
+                    )
 
-            corpus_pk = from_global_id(corpus_id)[1]
-            analyzer_pk = from_global_id(analyzer_id)[1]
+            # Check permissions for corpus
+            if corpus_pk:
+                corpus = Corpus.objects.get(pk=corpus_pk)
+                if not (corpus.creator == user or corpus.is_public):
+                    raise PermissionError(
+                        "You don't have permission to analyze this corpus."
+                    )
 
-            obj = Analysis.objects.create(
-                analyzer_id=analyzer_pk,
-                analyzed_corpus_id=corpus_pk,
-                creator=info.context.user,
+            analyzer = Analyzer.objects.get(pk=analyzer_pk)
+
+            analysis = process_analyzer(
+                user_id=user.id,
+                analyzer=analyzer,
+                corpus_id=corpus_pk,
+                document_ids=[document_pk] if document_pk else None,
+                corpus_action=None,
             )
 
-            logger.info(f"StartCorpusAnalysisMutation - retrieved analysis: {obj}")
-
-            transaction.on_commit(
-                lambda: start_analysis.s(
-                    analysis_id=obj.id,
-                ).apply_async()
+            return StartDocumentAnalysisMutation(
+                ok=True, message="SUCCESS", obj=analysis
             )
-
         except Exception as e:
-            ok = False
-            message = f"Starting analysis failed due to unxpected error: {e}"
-            logger.error(message)
+            return StartDocumentAnalysisMutation(ok=False, message=f"Error: {str(e)}")
 
-        return StartCorpusAnalysisMutation(obj=obj, message=message, ok=ok)
+
+class StartDocumentExtract(graphene.Mutation):
+    class Arguments:
+        document_id = graphene.ID(required=True)
+        fieldset_id = graphene.ID(required=True)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(ExtractType)
+
+    @staticmethod
+    @login_required
+    def mutate(root, info, document_id, fieldset_id):
+        doc_pk = from_global_id(document_id)[1]
+        fieldset_pk = from_global_id(fieldset_id)[1]
+
+        document = Document.objects.get(pk=doc_pk)
+        fieldset = Fieldset.objects.get(pk=fieldset_pk)
+
+        extract = Extract.objects.create(
+            name=f"Extract {uuid.uuid4()} for {document.title}",
+            fieldset=fieldset,
+            creator=info.context.user,
+        )
+        extract.documents.add(document)
+        extract.save()
+
+        # Start celery task to process extract
+        extract.started = timezone.now()
+        extract.save()
+        run_extract.s(extract.id, info.context.user.id).apply_async()
+
+        return StartDocumentExtract(ok=True, message="STARTED!", obj=extract)
 
 
 class DeleteAnalysisMutation(graphene.Mutation):
@@ -1720,16 +1792,22 @@ class CreateExtract(graphene.Mutation):
 
         corpus = None
         if corpus_id is not None:
-            corpus = Corpus.objects.get(pk=from_global_id(corpus_id)[1])
-            # print(f"Corpus is: {corpus}")
+            corpus_pk = from_global_id(corpus_id)[1]
+            corpus = Corpus.objects.get(pk=corpus_pk)
+            if not (corpus.creator == info.context.user or corpus.is_public):
+                return CreateExtract(
+                    ok=False,
+                    msg="You don't have permission to create an extract for this corpus.",
+                    obj=None,
+                )
 
         if fieldset_id is not None:
-            # print(f"Fieldset id is not None: {fieldset_id}")
+            print(f"Fieldset id is not None: {fieldset_id}")
             fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
         else:
             if fieldset_name is None:
                 fieldset_name = f"{name} Fieldset"
-            # print(f"Creating new fieldset... name will be: {fieldset_name}")
+            print(f"Creating new fieldset... name will be: {fieldset_name}")
 
             fieldset = Fieldset.objects.create(
                 name=fieldset_name,
@@ -1749,6 +1827,7 @@ class CreateExtract(graphene.Mutation):
             creator=info.context.user,
         )
         extract.save()
+        print(f"Extract created: {extract}")
 
         if corpus is not None:
             # print(f"Try to add corpus docs: {corpus.documents.all()}")
@@ -1953,9 +2032,7 @@ class Mutation(graphene.ObjectType):
     delete_export = DeleteExport.Field()
 
     # ANALYSIS MUTATIONS #########################################################
-    start_analysis_on_corpus = (
-        StartCorpusAnalysisMutation.Field()
-    )  # Limited by user.is_usage_capped
+    start_analysis_on_doc = StartDocumentAnalysisMutation.Field()
     delete_analysis = DeleteAnalysisMutation.Field()
     make_analysis_public = MakeAnalysisPublic.Field()
 
@@ -1978,3 +2055,4 @@ class Mutation(graphene.ObjectType):
     approve_datacell = ApproveDatacell.Field()  # TODO - add tests
     reject_datacell = RejectDatacell.Field()  # TODO - add tests
     edit_datacell = EditDatacell.Field()  # TODO - add tests
+    start_extract_for_doc = StartDocumentExtract.Field()

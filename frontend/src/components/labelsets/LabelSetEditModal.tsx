@@ -461,15 +461,15 @@ export const LabelSetEditModal = ({
           }}
         >
           <CRUDWidget
-            has_file
+            hasFile
             mode={
               my_permissions.includes(PermissionTypes.CAN_UPDATE)
                 ? "EDIT"
                 : "VIEW"
             }
-            model_name="Label Set"
-            data_schema={newLabelSetForm_Schema}
-            ui_schema={newLabelSetForm_Ui_Schema}
+            modelName="Label Set"
+            dataSchema={newLabelSetForm_Schema}
+            uiSchema={newLabelSetForm_Ui_Schema}
             instance={
               _.isEmpty(updatedObject)
                 ? opened_labelset
@@ -477,12 +477,12 @@ export const LabelSetEditModal = ({
                   : {}
                 : updatedObject
             }
-            show_header
-            accepted_file_types=".png,.jpg"
+            showHeader
+            acceptedFileTypes=".png,.jpg"
             handleInstanceChange={onCRUDChange}
-            file_is_image
-            file_field="icon"
-            file_label="Labelset Icon"
+            fileIsImage
+            fileField="icon"
+            fileLabel="Labelset Icon"
           />
         </Tab.Pane>
       ),

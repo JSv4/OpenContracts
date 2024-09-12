@@ -6,7 +6,7 @@ import {
 import { Reference, relayStylePagination } from "@apollo/client/utilities";
 import { User } from "@auth0/auth0-react";
 import { FieldNode } from "graphql";
-import _, { truncate } from "lodash";
+import _ from "lodash";
 import {
   ServerAnnotationType,
   CorpusType,
@@ -19,6 +19,7 @@ import {
   ColumnType,
   CorpusQueryType,
 } from "./types";
+import { ViewState } from "../components/types";
 
 export const mergeArrayByIdFieldPolicy: FieldPolicy<Reference[]> = {
   // eslint-disable-next-line @typescript-eslint/default-param-last
@@ -169,6 +170,13 @@ export const showEditExtractModal = makeVar<boolean>(false);
 export const showDeleteExtractModal = makeVar<boolean>(false);
 export const showCreateExtractModal = makeVar<boolean>(false);
 export const showQueryViewState = makeVar<"ASK" | "VIEW" | "DETAILS">("ASK");
+export const showSelectCorpusAnalyzerOrFieldsetModal = makeVar<boolean>(false);
+
+export const viewStateVar = makeVar<ViewState>(ViewState.LOADING);
+export const editMode = makeVar<"ANNOTATE" | "ANALYZE">("ANNOTATE");
+export const allowUserInput = makeVar<boolean>(false);
+export const pdfZoomFactor = makeVar<number>(1.5);
+export const setTopbarVisible = makeVar<boolean>(false);
 
 /**
  *  Document-related global variables.
@@ -182,7 +190,8 @@ export const editingDocument = makeVar<DocumentType | null>(null);
 /**
  * Extract-related global variables
  */
-export const selectedExtractId = makeVar<string | null>(null);
+export const selectedExtractIds = makeVar<string[]>([]);
+export const selectedExtract = makeVar<ExtractType | null>(null);
 export const openedExtract = makeVar<ExtractType | null>(null);
 export const extractSearchTerm = makeVar<string>("");
 
@@ -199,6 +208,7 @@ export const editingCorpus = makeVar<CorpusType | null>(null);
 export const exportingCorpus = makeVar<CorpusType | null>(null);
 export const selectedCorpusIds = makeVar<string[]>([]);
 export const showAnalyzerSelectionForCorpus = makeVar<CorpusType | null>(null);
+export const showCorpusActionOutputs = makeVar<boolean>(true);
 
 /**
  * LabelSet-related global variables
@@ -216,8 +226,13 @@ export const selectedLabelsetIds = makeVar<string[]>([]);
 export const filterToLabelId = makeVar<string>("");
 export const filterToAnnotationLabelId = makeVar<string>(""); // Not used elsewhere. Maybe should be?
 export const selectedAnnotation = makeVar<ServerAnnotationType | null>(null);
-export const displayAnnotationOnAnnotatorLoad =
-  makeVar<ServerAnnotationType | null>(null);
+export const showStructuralAnnotations = makeVar<boolean>(false);
+export const filterToStructuralAnnotations = makeVar<
+  "ONLY" | "EXCLUDE" | "INCLUDE"
+>("EXCLUDE");
+export const displayAnnotationOnAnnotatorLoad = makeVar<
+  ServerAnnotationType | undefined
+>(undefined);
 export const onlyDisplayTheseAnnotations = makeVar<
   ServerAnnotationType[] | undefined
 >(undefined);
@@ -233,6 +248,7 @@ export const analyzerSearchTerm = makeVar<string | null>(null);
 /**
  * Analysis-related global variables
  */
+export const selectedAnalysis = makeVar<AnalysisType | null>(null);
 export const selectedAnalyses = makeVar<AnalysisType[]>([]);
 export const selectedAnalysesIds = makeVar<(string | number)[]>([]);
 export const analysisSearchTerm = makeVar<string>("");
@@ -247,7 +263,7 @@ export const addingColumnToExtract = makeVar<ExtractType | null>(null);
 export const editingColumnForExtract = makeVar<ColumnType | null>(null);
 
 /**
- * Query-realted global variables
+ * Query-related global variables
  */
 export const selectedQueryIds = makeVar<string[]>([]);
 export const openedQueryObj = makeVar<CorpusQueryType | null>(null);

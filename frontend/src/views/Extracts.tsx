@@ -12,12 +12,12 @@ import {
 import {
   GetExtractsOutput,
   GetExtractsInput,
-  REQUEST_GET_EXTRACTS,
+  GET_EXTRACTS,
 } from "../graphql/queries";
 import {
   authToken,
   openedExtract,
-  selectedExtractId,
+  selectedExtractIds,
   showDeleteExtractModal,
   showCreateExtractModal,
   extractSearchTerm,
@@ -27,16 +27,14 @@ import { ActionDropdownItem, LooseObject } from "../components/types";
 import { CardLayout } from "../components/layout/CardLayout";
 import { ExtractType } from "../graphql/types";
 import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
-import { ExtractList } from "../extracts/list/ExtractList";
+import { ExtractList } from "../components/extracts/list/ExtractList";
 import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";
 import { CreateExtractModal } from "../components/widgets/modals/CreateExtractModal";
-import { EditExtractModal } from "../components/widgets/modals/EditExtractModal";
 
 export const Extracts = () => {
   const auth_token = useReactiveVar(authToken);
-  const opened_extract = useReactiveVar(openedExtract);
   const extract_search_term = useReactiveVar(extractSearchTerm);
-  const selected_extract_id = useReactiveVar(selectedExtractId);
+  const selected_extract_ids = useReactiveVar(selectedExtractIds);
   const show_create_extract_modal = useReactiveVar(showCreateExtractModal);
   const show_delete_extract_modal = useReactiveVar(showDeleteExtractModal);
 
@@ -44,10 +42,6 @@ export const Extracts = () => {
     useState<string>(extract_search_term);
 
   const location = useLocation();
-
-  let extract_variables: LooseObject = {
-    includeMetadata: true,
-  };
 
   const debouncedExportSearch = useRef(
     _.debounce((searchTerm) => {
@@ -74,7 +68,7 @@ export const Extracts = () => {
     error: extracts_error,
     data: extracts_data,
     fetchMore: fetchMoreExtracts,
-  } = useQuery<GetExtractsOutput, GetExtractsInput>(REQUEST_GET_EXTRACTS, {
+  } = useQuery<GetExtractsOutput, GetExtractsInput>(GET_EXTRACTS, {
     variables: {
       searchText: extract_search_term,
     },
@@ -127,7 +121,7 @@ export const Extracts = () => {
     RequestDeleteExtractInputType
   >(REQUEST_DELETE_EXTRACT, {
     onCompleted: () => {
-      selectedExtractId(null);
+      selectedExtractIds([]);
       refetchExtracts();
     },
   });
@@ -171,11 +165,14 @@ export const Extracts = () => {
           <ConfirmModal
             message={`Are you sure you want to delete this extract?`}
             yesAction={
-              selected_extract_id
-                ? () =>
-                    handleDeleteExtract(selected_extract_id, () =>
-                      showDeleteExtractModal(false)
-                    )
+              selected_extract_ids.length > 0
+                ? async () => {
+                    for (const id of selected_extract_ids) {
+                      handleDeleteExtract(id);
+                    }
+                    showDeleteExtractModal(false);
+                    selectedExtractIds([]);
+                  }
                 : () => {}
             }
             noAction={() => showDeleteExtractModal(false)}
@@ -188,11 +185,6 @@ export const Extracts = () => {
               showCreateExtractModal(false);
               refetchExtracts();
             }}
-          />
-          <EditExtractModal
-            ext={opened_extract}
-            open={opened_extract !== null}
-            toggleModal={() => openedExtract(null)}
           />
         </>
       }

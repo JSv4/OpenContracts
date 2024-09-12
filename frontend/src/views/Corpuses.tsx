@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button, Tab } from "semantic-ui-react";
-import _, { update } from "lodash";
+import _ from "lodash";
 import { toast } from "react-toastify";
 import {
   ApolloError,
@@ -40,19 +40,13 @@ import {
   authToken,
   annotationContentSearchTerm,
   openedDocument,
-  showSelectedAnnotationOnly,
-  showAnnotationBoundingBoxes,
-  showAnnotationLabels,
   selectedMetaAnnotationId,
   filterToLabelId,
-  showAnalyzerSelectionForCorpus,
-  selectedAnalyses,
   analysisSearchTerm,
-  selectedAnalysesIds,
-  displayAnnotationOnAnnotatorLoad,
   exportingCorpus,
   showQueryViewState,
   openedQueryObj,
+  showSelectCorpusAnalyzerOrFieldsetModal,
 } from "../graphql/cache";
 import {
   UPDATE_CORPUS,
@@ -83,26 +77,26 @@ import {
   GET_DOCUMENTS,
 } from "../graphql/queries";
 import { CorpusType, LabelType } from "../graphql/types";
-import { LooseObject } from "../components/types";
-import { CorpusDocumentAnnotator } from "../components/annotator/CorpusDocumentAnnotator";
+import { LooseObject, PermissionTypes } from "../components/types";
 import { toBase64 } from "../utils/files";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
 import { CorpusAnnotationCards } from "../components/annotations/CorpusAnnotationCards";
 import { CorpusDocumentCards } from "../components/documents/CorpusDocumentCards";
-import { SelectAnalyzerModal } from "../components/analyzers/SelectAnalyzerModal";
 import { CorpusAnalysesCards } from "../components/analyses/CorpusAnalysesCards";
 import { FilterToAnalysesSelector } from "../components/widgets/model-filters/FilterToAnalysesSelector";
 import useWindowDimensions from "../components/hooks/WindowDimensionHook";
-import { FilterToMetadataSelector } from "../components/widgets/model-filters/FilterToMetadataSelector";
 import { SelectExportTypeModal } from "../components/widgets/modals/SelectExportTypeModal";
 import { CorpusQueryList } from "../components/queries/CorpusQueryList";
 import { NewQuerySearch } from "../components/queries/NewQuerySearch";
 import { ViewQueryResultsModal } from "../components/widgets/modals/ViewQueryResultsModal";
+import { FilterToCorpusActionOutputs } from "../components/widgets/model-filters/FilterToCorpusActionOutputs";
+import { CorpusExtractCards } from "../components/extracts/CorpusExtractCards";
+import { getPermissions } from "../utils/transform";
+import { MOBILE_VIEW_BREAKPOINT } from "../assets/configurations/constants";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= 400;
-  const banish_sidebar = width <= 1000;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const show_remove_docs_from_corpus_modal = useReactiveVar(
     showRemoveDocsFromCorpusModal
@@ -111,27 +105,17 @@ export const Corpuses = () => {
     selectedMetaAnnotationId
   );
 
-  const selected_analyes = useReactiveVar(selectedAnalyses);
   const selected_document_ids = useReactiveVar(selectedDocumentIds);
   const document_search_term = useReactiveVar(documentSearchTerm);
   const corpus_search_term = useReactiveVar(corpusSearchTerm);
   const analysis_search_term = useReactiveVar(analysisSearchTerm);
   const deleting_corpus = useReactiveVar(deletingCorpus);
-  const corpus_to_analyze = useReactiveVar(showAnalyzerSelectionForCorpus);
   const corpus_to_edit = useReactiveVar(editingCorpus);
   const corpus_to_view = useReactiveVar(viewingCorpus);
   const opened_corpus = useReactiveVar(openedCorpus);
   const exporting_corpus = useReactiveVar(exportingCorpus);
   const opened_document = useReactiveVar(openedDocument);
   const filter_to_label_id = useReactiveVar(filterToLabelId);
-  const opened_to_annotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
-  const show_selected_annotation_only = useReactiveVar(
-    showSelectedAnnotationOnly
-  );
-  const show_annotation_bounding_boxes = useReactiveVar(
-    showAnnotationBoundingBoxes
-  );
-  const show_annotation_labels = useReactiveVar(showAnnotationLabels);
 
   const auth_token = useReactiveVar(authToken);
   const annotation_search_term = useReactiveVar(annotationContentSearchTerm);
@@ -159,6 +143,10 @@ export const Corpuses = () => {
   );
 
   const opened_corpus_id = opened_corpus?.id ? opened_corpus.id : null;
+  let raw_permissions = opened_corpus?.myPermissions;
+  if (opened_corpus && raw_permissions !== undefined) {
+    raw_permissions = getPermissions(raw_permissions);
+  }
 
   /**
    * Set up the debounced search handling for the two SearchBars (Corpus search is rendered first by this component,
@@ -236,6 +224,7 @@ export const Corpuses = () => {
     fetchMore: fetchMoreCorpusesOrig,
   } = useQuery<GetCorpusesOutputs, GetCorpusesInputs>(GET_CORPUSES, {
     variables: corpus_variables,
+    fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
   });
 
@@ -325,6 +314,7 @@ export const Corpuses = () => {
     if (!opened_corpus_id || opened_corpus_id === null) {
       refetchCorpuses();
     } else {
+      console.log("Fetch metdata for corpus id: ", opened_corpus_id);
       fetchMetadata({ variables: { metadataForCorpusId: opened_corpus_id } });
     }
   }, [opened_corpus_id]);
@@ -420,7 +410,7 @@ export const Corpuses = () => {
 
   // TODO - Improve typing.
   const handleUpdateCorpus = (corpus_obj: any) => {
-    // console.log("handleUpdateCorpus", corpus_obj);
+    console.log("handleUpdateCorpus", corpus_obj);
     let variables = {
       variables: corpus_obj,
     };
@@ -493,7 +483,7 @@ export const Corpuses = () => {
 
     // Currently the import capability is enabled via an env variable in case we want it disabled
     // (which we'll probably do for the public demo to cut down on attack surface and load on server)
-    if (process.env.REACT_APP_ALLOW_IMPORTS) {
+    if (process.env.REACT_APP_ALLOW_IMPORTS && auth_token) {
       corpus_actions.push({
         icon: "cloud upload",
         title: "Import Corpus",
@@ -516,14 +506,17 @@ export const Corpuses = () => {
   }
 
   // Actions for analyzer pane (if user is signed in)
-  let analyses_actions: DropdownActionProps[] = [];
-  if (auth_token) {
-    analyses_actions.push({
+  if (
+    auth_token &&
+    raw_permissions?.includes(PermissionTypes.CAN_UPDATE) &&
+    raw_permissions?.includes(PermissionTypes.CAN_READ)
+  ) {
+    corpus_actions.push({
       icon: "factory",
       title: "Start New Analysis",
-      key: `Analysis_action_${analyses_actions.length}`,
+      key: `Analysis_action_${corpus_actions.length}`,
       color: "blue",
-      action_function: () => showAnalyzerSelectionForCorpus(opened_corpus),
+      action_function: () => showSelectCorpusAnalyzerOrFieldsetModal(true),
     });
   }
 
@@ -535,7 +528,10 @@ export const Corpuses = () => {
         content: use_mobile_layout ? "" : "Documents",
       },
       render: () => (
-        <Tab.Pane>
+        <Tab.Pane
+          style={{ overflowY: "scroll" }}
+          id="CorpusDocumentCardTabPane"
+        >
           <CorpusDocumentCards opened_corpus_id={opened_corpus_id} />
         </Tab.Pane>
       ),
@@ -547,7 +543,7 @@ export const Corpuses = () => {
         content: use_mobile_layout ? "" : "Annotations",
       },
       render: () => (
-        <Tab.Pane>
+        <Tab.Pane style={{ overflowY: "scroll" }}>
           <CorpusAnnotationCards opened_corpus_id={opened_corpus_id} />
         </Tab.Pane>
       ),
@@ -559,8 +555,20 @@ export const Corpuses = () => {
         content: use_mobile_layout ? "" : "Analyses",
       },
       render: () => (
-        <Tab.Pane>
+        <Tab.Pane style={{ overflowY: "scroll" }}>
           <CorpusAnalysesCards />
+        </Tab.Pane>
+      ),
+    },
+    {
+      menuItem: {
+        key: "extracts",
+        icon: "table",
+        content: use_mobile_layout ? "" : "Extracts",
+      },
+      render: () => (
+        <Tab.Pane style={{ overflowY: "scroll" }}>
+          <CorpusExtractCards />
         </Tab.Pane>
       ),
     },
@@ -666,21 +674,21 @@ export const Corpuses = () => {
           flexDirection: "row",
           justifyContent: "center",
           height: "100%",
+          flex: 1,
           overflowY: "hidden",
-          ...(use_mobile_layout
-            ? {
-                marginLeft: "5px",
-                marginRight: "5px",
-              }
-            : {
-                marginLeft: "1rem",
-                marginRight: "1rem",
-              }),
+          marginLeft: "5px",
+          marginRight: "5px",
         }}
       >
         <Tab
+          id="SelectedCorpusTabDiv"
           attached="bottom"
-          style={{ width: "100%" }}
+          style={{
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-start",
+          }}
           activeIndex={active_tab}
           onTabChange={(e, { activeIndex }) =>
             setActiveTab(activeIndex ? Number(activeIndex) : 0)
@@ -696,23 +704,7 @@ export const Corpuses = () => {
     opened_document !== undefined
   ) {
     console.log("Show annotator");
-    content = (
-      <CorpusDocumentAnnotator
-        open={Boolean(opened_document)}
-        onClose={() => {
-          openedDocument(null);
-          selectedAnalysesIds([]);
-          selectedAnalyses([]);
-        }}
-        opened_document={opened_document}
-        opened_corpus={opened_corpus}
-        read_only={selected_analyes.length > 0 || banish_sidebar}
-        scroll_to_annotation_on_open={opened_to_annotation}
-        show_selected_annotation_only={show_selected_annotation_only}
-        show_annotation_bounding_boxes={show_annotation_bounding_boxes}
-        show_annotation_labels={show_annotation_labels}
-      />
-    );
+    content = <></>;
   }
 
   return (
@@ -747,30 +739,21 @@ export const Corpuses = () => {
           <CRUDModal
             open={corpus_to_edit !== null}
             mode="EDIT"
-            old_instance={corpus_to_edit ? corpus_to_edit : {}}
-            model_name="corpus"
-            ui_schema={editCorpusForm_Ui_Schema}
-            data_schema={editCorpusForm_Schema}
+            oldInstance={corpus_to_edit ? corpus_to_edit : {}}
+            modelName="corpus"
+            uiSchema={editCorpusForm_Ui_Schema}
+            dataSchema={editCorpusForm_Schema}
             onSubmit={handleUpdateCorpus}
             onClose={() => editingCorpus(null)}
-            has_file={true}
-            file_field={"icon"}
-            file_label="Corpus Icon"
-            file_is_image={true}
-            accepted_file_types="image/*"
-            property_widgets={{ labelSet: <LabelSetSelector /> }}
+            hasFile={true}
+            fileField={"icon"}
+            fileLabel="Corpus Icon"
+            fileIsImage={true}
+            acceptedFileTypes="image/*"
+            propertyWidgets={{ labelSet: <LabelSetSelector /> }}
           />
           {exporting_corpus ? (
             <SelectExportTypeModal visible={Boolean(exportingCorpus)} />
-          ) : (
-            <></>
-          )}
-          {corpus_to_analyze !== null ? (
-            <SelectAnalyzerModal
-              corpus={corpus_to_analyze}
-              toggleModal={() => showAnalyzerSelectionForCorpus(null)}
-              open={corpus_to_analyze !== null}
-            />
           ) : (
             <></>
           )}
@@ -787,17 +770,17 @@ export const Corpuses = () => {
             <CRUDModal
               open={corpus_to_view !== null}
               mode="VIEW"
-              old_instance={corpus_to_view ? corpus_to_view : {}}
-              model_name="corpus"
-              ui_schema={editCorpusForm_Ui_Schema}
-              data_schema={editCorpusForm_Schema}
+              oldInstance={corpus_to_view ? corpus_to_view : {}}
+              modelName="corpus"
+              uiSchema={editCorpusForm_Ui_Schema}
+              dataSchema={editCorpusForm_Schema}
               onClose={() => viewingCorpus(null)}
-              has_file={true}
-              file_field={"icon"}
-              file_label="Corpus Icon"
-              file_is_image={true}
-              accepted_file_types="image/*"
-              property_widgets={{
+              hasFile={true}
+              fileField={"icon"}
+              fileLabel="Corpus Icon"
+              fileIsImage={true}
+              acceptedFileTypes="image/*"
+              propertyWidgets={{
                 labelSet: <LabelSetSelector read_only={true} />,
               }}
             />
@@ -809,18 +792,18 @@ export const Corpuses = () => {
             <CRUDModal
               open={show_new_corpus_modal}
               mode="CREATE"
-              old_instance={{ shared_with: [], is_public: false }}
-              model_name="corpus"
-              ui_schema={newCorpusForm_Ui_Schema}
-              data_schema={newCorpusForm_Schema}
+              oldInstance={{ shared_with: [], is_public: false }}
+              modelName="corpus"
+              uiSchema={newCorpusForm_Ui_Schema}
+              dataSchema={newCorpusForm_Schema}
               onSubmit={handleCreateNewCorpus}
               onClose={() => setShowNewCorpusModal(!show_new_corpus_modal)}
-              has_file={true}
-              file_field={"icon"}
-              file_label="Corpus Icon"
-              file_is_image={true}
-              accepted_file_types="image/*"
-              property_widgets={{ labelSet: <LabelSetSelector /> }}
+              hasFile={true}
+              fileField={"icon"}
+              fileLabel="Corpus Icon"
+              fileIsImage={true}
+              acceptedFileTypes="image/*"
+              propertyWidgets={{ labelSet: <LabelSetSelector /> }}
             />
           ) : (
             <></>
@@ -844,9 +827,9 @@ export const Corpuses = () => {
             filters={
               opened_corpus ? (
                 <>
-                  <FilterToMetadataSelector
+                  {/* <FilterToMetadataSelector
                     selected_corpus_id={opened_corpus.id}
-                  />
+                  /> Temporarily disabled - not working and not really in-use*/}
                   <FilterToLabelSelector
                     only_labels_for_labelset_id={
                       opened_corpus.labelSet?.id
@@ -864,12 +847,13 @@ export const Corpuses = () => {
         ) : active_tab == 1 ? (
           <CreateAndSearchBar
             onChange={handleAnnotationSearchChange}
-            actions={[]}
+            actions={corpus_actions}
             placeholder="Search for annotated text in corpus..."
             value={annotationSearchCache}
             filters={
               opened_corpus ? (
                 <>
+                  <FilterToCorpusActionOutputs />
                   <FilterToAnalysesSelector corpus={opened_corpus} />
                   <FilterToLabelSelector
                     only_labels_for_labelset_id={
@@ -888,10 +872,15 @@ export const Corpuses = () => {
         ) : (
           <CreateAndSearchBar
             onChange={handleAnalysisSearchChange}
-            actions={analyses_actions}
+            actions={corpus_actions}
             placeholder="Search for analyses..."
             value={analysesSearchCache}
-            filters={<FilterToAnalysesSelector corpus={opened_corpus} />}
+            filters={
+              <>
+                <FilterToCorpusActionOutputs />
+                <FilterToAnalysesSelector corpus={opened_corpus} />
+              </>
+            }
           />
         )
       }

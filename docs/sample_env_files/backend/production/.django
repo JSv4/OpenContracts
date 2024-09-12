@@ -1,3 +1,10 @@
+# Core Django Security Settings
+# ------------------------------------------------------------------------------
+DJANGO_SETTINGS_MODULE=config.settings.production
+DJANGO_SECRET_KEY=<SET SECRET KEY>
+DJANGO_ADMIN_URL=<SET ADMIN URL>
+DJANGO_SECURE_SSL_REDIRECT=false
+
 # Django Username and Password for Initial Admin Login
 # ------------------------------------------------------------------------------
 DJANGO_SUPERUSER_PASSWORD=Openc0ntracts_def@ult
@@ -7,6 +14,7 @@ DJANGO_SUPERUSER_USERNAME=admin
 # General
 # ------------------------------------------------------------------------------
 USE_DOCKER=yes
+WEB_CONCURRENCY=4
 IPYTHONDIR=/app/.ipython
 DJANGO_ALLOWED_HOSTS=django,127.0.0.1,localhost,0.0.0.0,opencontracts.opensource.legal
 DJANGO_WORKER_TIMEOUT=3600

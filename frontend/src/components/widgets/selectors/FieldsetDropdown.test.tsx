@@ -2,13 +2,13 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MockedProvider } from "@apollo/client/testing";
 import { FieldsetDropdown } from "./FieldsetDropdown";
-import { REQUEST_GET_FIELDSETS } from "../../../graphql/queries";
+import { GET_FIELDSETS } from "../../../graphql/queries";
 import { selectedFieldset } from "../../../graphql/cache";
 
 const mocks = [
   {
     request: {
-      query: REQUEST_GET_FIELDSETS,
+      query: GET_FIELDSETS,
     },
     result: {
       data: {
@@ -70,7 +70,7 @@ describe("FieldsetDropdown", () => {
     const errorMocks = [
       {
         request: {
-          query: REQUEST_GET_FIELDSETS,
+          query: GET_FIELDSETS,
         },
         error: new Error("An error occurred"),
       },

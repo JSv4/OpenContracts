@@ -26,13 +26,23 @@ class UploadDocumentMutationTestCase(TestCase):
 
     def test_upload_document_mime_type_check(self):
         mutation = """
-            mutation UploadDocument($file: String!, $filename: String!, $title: String!, $description: String!, $customMeta: GenericScalar!) {
+            mutation UploadDocument(
+                $file: String!,
+                $filename: String!,
+                $title: String!,
+                $description: String!,
+                $customMeta: GenericScalar!,
+                $addToCorpusId: ID,
+                $makePublic: Boolean!
+            ) {
                 uploadDocument(
                     base64FileString: $file,
                     filename: $filename,
                     title: $title,
                     description: $description,
-                    customMeta: $customMeta
+                    customMeta: $customMeta,
+                    addToCorpusId: $addToCorpusId,
+                    makePublic: $makePublic
                 ) {
                     ok
                     message
@@ -73,6 +83,7 @@ class UploadDocumentMutationTestCase(TestCase):
                     "filename": "test.pdf",
                     "title": "Test PDF",
                     "description": "A test PDF file",
+                    "makePublic": True,
                     "customMeta": {},
                 },
             )
@@ -89,6 +100,7 @@ class UploadDocumentMutationTestCase(TestCase):
                 "filename": "test.docx",
                 "title": "Test DOCX",
                 "description": "A test DOCX file",
+                "makePublic": False,
                 "customMeta": {},
             },
         )
@@ -108,6 +120,7 @@ class UploadDocumentMutationTestCase(TestCase):
                 "filename": "test.txt",
                 "title": "Test TXT",
                 "description": "A test TXT file",
+                "makePublic": False,
                 "customMeta": {},
             },
         )

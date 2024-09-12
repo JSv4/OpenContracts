@@ -15,7 +15,7 @@ export const AnalyzerSummaryCard = ({
   selected,
   onSelect,
 }: AnalyzerSummaryCardInputs) => {
-  const dependency_list = analyzer?.manifest
+  const dependency_list = analyzer?.manifest?.metadata?.dependencies
     ? analyzer.manifest.metadata.dependencies
     : [];
 
@@ -44,7 +44,11 @@ export const AnalyzerSummaryCard = ({
       )}
       <Card.Content>
         <Image floated="right" size="mini" src={analyzer_icon} />
-        <Card.Header>{analyzer.manifest?.metadata.title}</Card.Header>
+        <Card.Header>
+          {analyzer.manifest?.metadata?.title
+            ? analyzer.manifest.metadata.title
+            : ""}
+        </Card.Header>
         <Card.Meta>{analyzer.analyzerId}</Card.Meta>
         <Card.Description>{analyzer.description}</Card.Description>
       </Card.Content>
@@ -53,17 +57,17 @@ export const AnalyzerSummaryCard = ({
           <List.Item>
             <List.Icon name="users" />
             <List.Content>
-              Creator: {analyzer.manifest?.metadata.author_name}
+              Creator: {analyzer?.manifest?.metadata?.author_name ?? "Unknown"}
             </List.Content>
           </List.Item>
-          <List.Item>
-            <List.Icon name="mail" />
-            <List.Content>
-              <a href={`mailto:${analyzer.manifest?.metadata.author_email}`}>
-                {analyzer.manifest?.metadata.author_email}
-              </a>
-            </List.Content>
-          </List.Item>
+          {analyzer?.manifest?.metadata?.author_email && (
+            <List.Item>
+              <List.Icon name="mail" />
+              <List.Content>
+                Email: {analyzer.manifest.metadata.author_email}
+              </List.Content>
+            </List.Item>
+          )}
         </List>
       </Card.Content>
       {dependency_list ? (

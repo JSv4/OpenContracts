@@ -13,6 +13,7 @@ import {
   filterToLabelsetId,
   filterToLabelId,
   selectedAnalyses,
+  showCorpusActionOutputs,
 } from "../../graphql/cache";
 
 import {
@@ -38,6 +39,7 @@ export const CorpusAnnotationCards = ({
   const filter_to_labelset_id = useReactiveVar(filterToLabelsetId);
   const filter_to_label_id = useReactiveVar(filterToLabelId);
   const selected_analyses = useReactiveVar(selectedAnalyses);
+  const show_action_annotations = useReactiveVar(showCorpusActionOutputs);
 
   const location = useLocation();
 
@@ -60,6 +62,7 @@ export const CorpusAnnotationCards = ({
     variables: {
       annotationLabel_Type: "TOKEN_LABEL",
       createdByAnalysisIds: selected_analysis_id_string,
+      analysis_Isnull: !show_action_annotations,
       ...(opened_corpus_id ? { corpusId: opened_corpus_id } : {}),
       ...(filter_to_label_id ? { annotationLabelId: filter_to_label_id } : {}),
       ...(filter_to_labelset_id
@@ -111,6 +114,10 @@ export const CorpusAnnotationCards = ({
     refetchAnnotations();
   }, [selected_analyses]);
 
+  useEffect(() => {
+    refetchAnnotations();
+  }, [show_action_annotations]);
+
   // If we detech user navigated to this page, refetch
   useEffect(() => {
     // console.log(
@@ -151,7 +158,7 @@ export const CorpusAnnotationCards = ({
       loading_message="Annotations Loading..."
       pageInfo={undefined}
       //pageInfo={annotation_response?.annotations?.pageInfo ? annotation_response.annotations.pageInfo : undefined}
-      style={{ minHeight: "70vh" }}
+      style={{ minHeight: "70vh", overflowY: "unset" }}
       fetchMore={handleFetchMoreAnnotations}
     />
   );

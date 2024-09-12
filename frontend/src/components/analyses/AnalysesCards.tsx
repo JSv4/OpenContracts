@@ -10,13 +10,14 @@ import { useReactiveVar } from "@apollo/client";
 import { selectedAnalyses, selectedAnalysesIds } from "../../graphql/cache";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";
+import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 
 interface AnalysesCardsProps {
   style?: Record<string, any>;
   read_only?: boolean;
   analyses: AnalysisType[];
   opened_corpus: CorpusType | null;
-  pageInfo: PageInfo | undefined;
+  pageInfo: PageInfo | undefined | null;
   loading: boolean;
   loading_message: string;
   fetchMore: (args?: any) => void | any;
@@ -27,14 +28,17 @@ export const AnalysesCards = ({
   read_only,
   analyses,
   opened_corpus,
+  pageInfo,
   loading_message,
   loading,
   fetchMore,
 }: AnalysesCardsProps) => {
+  console.log("AnalysesCards - ");
+
   // Let's figure out the viewport so we can size the cards appropriately.
   const { width } = useWindowDimensions();
   const card_cols = determineCardColCount(width);
-  const use_mobile_layout = width <= 400;
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   //////////////////////////////////////////////////////////////////////
   // Global State Vars in Apollo Cache
@@ -58,6 +62,18 @@ export const AnalysesCards = ({
         )
       );
       selectedAnalyses([...analyses_to_display, selected_analysis]);
+    }
+  };
+
+  const handleUpdate = () => {
+    if (!loading && pageInfo?.hasNextPage) {
+      console.log("Fetching more annotation cards...");
+      fetchMore({
+        variables: {
+          limit: 20,
+          cursor: pageInfo.endCursor,
+        },
+      });
     }
   };
 
@@ -92,8 +108,8 @@ export const AnalysesCards = ({
     );
 
   let comp_style = {
-    width: "100%",
     padding: "1rem",
+    paddingBottom: "6rem",
     ...(use_mobile_layout
       ? {
           paddingLeft: "0px",
@@ -101,12 +117,7 @@ export const AnalysesCards = ({
         }
       : {}),
   };
-  // if (style) {
-  //   comp_style = { ...comp_style, ...style };
-  // }
-  /**
-   * Return AnalysisItems
-   */
+
   return (
     <>
       <Dimmer active={loading}>
@@ -127,7 +138,7 @@ export const AnalysesCards = ({
         <Card.Group stackable itemsPerRow={card_cols} style={comp_style}>
           {analysis_items}
         </Card.Group>
-        <FetchMoreOnVisible fetchNextPage={fetchMore} />
+        <FetchMoreOnVisible fetchNextPage={handleUpdate} />
       </div>
     </>
   );

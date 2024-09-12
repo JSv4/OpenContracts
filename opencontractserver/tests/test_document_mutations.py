@@ -28,13 +28,23 @@ class DocumentMutationTestCase(TestCase):
 
     def test_upload_document_mutation(self):
         mutation = """
-            mutation UploadDocument($file: String!, $filename: String!, $title: String!, $description: String!, $customMeta: GenericScalar!) {
+            mutation UploadDocument(
+                $file: String!,
+                $filename: String!,
+                $title: String!,
+                $description: String!,
+                $customMeta: GenericScalar!,
+                $addToCorpusId: ID,
+                $makePublic: Boolean!
+            ) {
                 uploadDocument(
                     base64FileString: $file,
                     filename: $filename,
                     title: $title,
                     description: $description,
-                    customMeta: $customMeta
+                    customMeta: $customMeta,
+                    makePublic: $makePublic,
+                    addToCorpusId: $addToCorpusId
                 ) {
                     ok
                     message
@@ -56,6 +66,7 @@ class DocumentMutationTestCase(TestCase):
             "filename": "test.pdf",
             "title": "Test PDF",
             "description": "A test PDF file",
+            "makePublic": False,
             "customMeta": {"key": "value"},
         }
 
@@ -76,13 +87,23 @@ class DocumentMutationTestCase(TestCase):
 
     def test_upload_non_pdf_document(self):
         mutation = """
-            mutation UploadDocument($file: String!, $filename: String!, $title: String!, $description: String!, $customMeta: GenericScalar!) {
+            mutation UploadDocument(
+                $file: String!,
+                $filename: String!,
+                $title: String!,
+                $description: String!,
+                $customMeta: GenericScalar!,
+                $addToCorpusId: ID,
+                $makePublic: Boolean!
+            ) {
                 uploadDocument(
                     base64FileString: $file,
                     filename: $filename,
                     title: $title,
                     description: $description,
-                    customMeta: $customMeta
+                    customMeta: $customMeta,
+                    addToCorpusId: $addToCorpusId,
+                    makePublic: $makePublic
                 ) {
                     ok
                     message
@@ -103,6 +124,7 @@ class DocumentMutationTestCase(TestCase):
             "filename": "test.txt",
             "title": "Test TXT",
             "description": "A test TXT file",
+            "makePublic": False,
             "customMeta": {},
         }
 

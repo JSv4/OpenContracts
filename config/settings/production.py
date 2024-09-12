@@ -9,6 +9,15 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS", default=["opencontracts.opensource.legal"]
 )
+print(f"Open Contracts Production Allowed Hosts: {ALLOWED_HOSTS}")
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.opensource.legal",
+    "https://*.opensource.legal/",
+    "https://opencontracts.opensource.legal",
+    "https://opencontracts.opensource.legal/" "admin/login",
+]
+print(f"Open Contracts Production CSRF Trusted Origins: {CSRF_TRUSTED_ORIGINS}")
 
 # DATABASES
 # ------------------------------------------------------------------------------
@@ -42,8 +51,12 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = env.bool("DJANGO_SECURE_SSL_REDIRECT", default=True)
 # https://docs.djangoproject.com/en/dev/ref/settings/#session-cookie-secure
 SESSION_COOKIE_SECURE = True
+# https://docs.djangoproject.com/en/dev/ref/settings/#session-cookie-name
+SESSION_COOKIE_NAME = "__Secure-sessionid"
 # https://docs.djangoproject.com/en/dev/ref/settings/#csrf-cookie-secure
 CSRF_COOKIE_SECURE = True
+# https://docs.djangoproject.com/en/dev/ref/settings/#csrf-cookie-name
+CSRF_COOKIE_NAME = "__Secure-csrftoken"
 # https://docs.djangoproject.com/en/dev/topics/security/#ssl-https
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-hsts-seconds
 # TODO: set this to 60 seconds first and then to 518400 once you prove the former works
@@ -58,6 +71,8 @@ SECURE_HSTS_PRELOAD = env.bool("DJANGO_SECURE_HSTS_PRELOAD", default=True)
 SECURE_CONTENT_TYPE_NOSNIFF = env.bool(
     "DJANGO_SECURE_CONTENT_TYPE_NOSNIFF", default=True
 )
+USE_X_FORWARDED_HOST = True
+
 
 # TEMPLATES
 # ------------------------------------------------------------------------------
@@ -94,16 +109,18 @@ ADMIN_URL = env("DJANGO_ADMIN_URL")
 # Anymail
 # ------------------------------------------------------------------------------
 # https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
-INSTALLED_APPS += ["anymail"]  # noqa F405
-# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-# https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
-# https://anymail.readthedocs.io/en/stable/esps/mailgun/
-EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
-ANYMAIL = {
-    "MAILGUN_API_KEY": env("MAILGUN_API_KEY"),
-    "MAILGUN_SENDER_DOMAIN": env("MAILGUN_DOMAIN"),
-    "MAILGUN_API_URL": env("MAILGUN_API_URL", default="https://api.mailgun.net/v3"),
-}
+
+# UNCOMMENT TO USE ANYMAIL
+# INSTALLED_APPS += ["anymail"]  # noqa F405
+# # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
+# # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
+# # https://anymail.readthedocs.io/en/stable/esps/mailgun/
+# EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+# ANYMAIL = {
+#     "MAILGUN_API_KEY": env("MAILGUN_API_KEY"),
+#     "MAILGUN_SENDER_DOMAIN": env("MAILGUN_DOMAIN"),
+#     "MAILGUN_API_URL": env("MAILGUN_API_URL", default="https://api.mailgun.net/v3"),
+# }
 
 # Collectfast
 # ------------------------------------------------------------------------------
@@ -158,5 +175,5 @@ LOGGING = {
 # CORS
 # ------------------------------------------------------------------------------
 CORS_ORIGIN_WHITELIST = ["https://opencontracts.opensource.legal"]
-
+CORS_ALLOWED_ORIGINS = ["https://opencontracts.opensource.legal"]
 CORS_ALLOW_CREDENTIALS = True

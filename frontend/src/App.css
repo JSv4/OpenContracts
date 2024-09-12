@@ -32,3 +32,25 @@
   box-shadow: 0 0 5px #ffee10;
   text-shadow: 0 0 5px #ffee10;
 }
+
+.ui.page.modals.dimmer.transition.visible.active:has(.AnnotatorModal) {
+  z-index: 2000 !important;
+}
+
+div > .SettingsPopup {
+  z-index: 2100 !important;
+}
+
+@media screen and (max-width: 600px) {
+  #SelectedCorpusTabDiv .ui.menu .item {
+    padding: 0.5em !important;
+  }
+
+  #SelectedCorpusTabDiv .ui.menu .item .icon:only-child {
+    margin: 0 !important;
+  }
+
+  #SelectedCorpusTabDiv .ui.menu .item > .content {
+    display: none !important;
+  }
+}

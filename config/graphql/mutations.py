@@ -806,10 +806,16 @@ class UploadDocument(graphene.Mutation):
             required=True, description="Description of the document."
         )
         custom_meta = GenericScalar(required=False, description="")
-        add_to_corpus_id = graphene.ID(required=False, description="If provided, successfully uploaded document will "
-                                                                   "be uploaded to corpus with specified id")
-        make_public = graphene.Boolean(required=True, description="If True, document is immediately public. "
-                                                                  "Defaults to False.")
+        add_to_corpus_id = graphene.ID(
+            required=False,
+            description="If provided, successfully uploaded document will "
+            "be uploaded to corpus with specified id",
+        )
+        make_public = graphene.Boolean(
+            required=True,
+            description="If True, document is immediately public. "
+            "Defaults to False.",
+        )
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -817,7 +823,15 @@ class UploadDocument(graphene.Mutation):
 
     @login_required
     def mutate(
-        root, info, base64_file_string, filename, title, description, custom_meta, make_public, add_to_corpus_id=None
+        root,
+        info,
+        base64_file_string,
+        filename,
+        title,
+        description,
+        custom_meta,
+        make_public,
+        add_to_corpus_id=None,
     ):
 
         ok = False
@@ -861,7 +875,7 @@ class UploadDocument(graphene.Mutation):
                 custom_meta=custom_meta,
                 pdf_file=pdf_file,
                 backend_lock=True,
-                is_public=make_public
+                is_public=make_public,
             )
             document.save()
             set_permissions_for_obj_to_user(user, document, [PermissionTypes.CRUD])

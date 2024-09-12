@@ -60,7 +60,7 @@ from opencontractserver.annotations.models import (
     Relationship,
 )
 from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
-from opencontractserver.documents.models import Document, DocumentAnalysisRow
+from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.types.enums import LabelType
@@ -970,8 +970,7 @@ class Query(graphene.ObjectType):
             corpus = Corpus.objects.get(id=corpus_pk)
             print(f"Corpus id wasn't none. Retrieved corpus {corpus}")
             corpus_actions = CorpusAction.objects.filter(
-                Q(corpus=corpus),
-                Q(creator=user) | Q(is_public=True)
+                Q(corpus=corpus), Q(creator=user) | Q(is_public=True)
             )
             print(f"Corpus action retrieved: {corpus_actions}")
 
@@ -981,21 +980,22 @@ class Query(graphene.ObjectType):
 
         try:
             document = Document.objects.get(
-                Q(id=document_pk),
-                Q(creator=user) | Q(is_public=True)
+                Q(id=document_pk), Q(creator=user) | Q(is_public=True)
             )
             print(f"Document: {document}")
-            extracts = document.extracts.filter(Q(is_public=True) | Q(creator=user), corpus=corpus)
+            extracts = document.extracts.filter(
+                Q(is_public=True) | Q(creator=user), corpus=corpus
+            )
             print(f"Extracts:{extracts}")
-            analysis_rows = document.rows.filter(Q(analysis__is_public=True)|Q(analysis__creator=user))
+            analysis_rows = document.rows.filter(
+                Q(analysis__is_public=True) | Q(analysis__creator=user)
+            )
             print(f"analysis_rows rows:{analysis_rows}")
 
         except Document.DoesNotExist:
             print("ERROR!")
             extracts = []
             analysis_rows = []
-
-        print(f"resolve_document_corpus_actions - user {info.context.user.id}, document_id: {document_id}, corpus_id: {corpus_id} ")
 
         return DocumentCorpusActionsType(
             corpus_actions=corpus_actions,

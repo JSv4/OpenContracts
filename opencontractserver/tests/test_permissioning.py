@@ -12,22 +12,26 @@ from graphene.test import Client
 from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
+from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
+from opencontractserver.analyzer.signals import install_gremlin_on_creation
+from opencontractserver.annotations.models import (
+    TOKEN_LABEL,
+    Annotation,
+    AnnotationLabel,
+)
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.tasks.permissioning_tasks import (
     make_analysis_public_task,
     make_corpus_public_task,
 )
-
-from ..analyzer.models import Analysis, Analyzer, GremlinEngine
-from ..analyzer.signals import install_gremlin_on_creation
-from ..annotations.models import TOKEN_LABEL, Annotation, AnnotationLabel
-from ..types.enums import PermissionTypes
-from ..utils.permissioning import (
+from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.permissioning import (
     get_users_permissions_for_obj,
     set_permissions_for_obj_to_user,
     user_has_permission_for_obj,
 )
+
 from .fixtures import SAMPLE_PDF_FILE_ONE_PATH
 
 User = get_user_model()
@@ -418,7 +422,8 @@ class PermissioningTestCase(TestCase):
         )
         self.assertEqual(True, make_public_task_results["ok"])
         self.assertEqual(
-            "SUCCESS - Corpus is Public", make_public_task_results["message"]
+            "SUCCESS - Corpus and related objects are now public",
+            make_public_task_results["message"],
         )
 
     def __test_make_analysis_public_mutation(self):

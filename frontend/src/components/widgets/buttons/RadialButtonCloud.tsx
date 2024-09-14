@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import styled, { keyframes, css } from "styled-components";
 import { Button, Icon, SemanticICONS, ButtonProps } from "semantic-ui-react";
 import { getLuminance, getContrast } from "polished";
+import useWindowDimensions from "../../hooks/WindowDimensionHook";
 
 const pulse = keyframes`
   0% {
@@ -41,25 +42,57 @@ const CloudContainer = styled.div`
   pointer-events: auto;
 `;
 
+interface ButtonPosition {
+  x: number;
+  y: number;
+}
+
+function calculateButtonPositions(
+  n: number,
+  a: number,
+  spacingAlong: number,
+  skipCount: number = 2
+): ButtonPosition[] {
+  const positions: ButtonPosition[] = [];
+  let t = 0;
+
+  for (let i = 0; i < n + skipCount; i++) {
+    const r = a * t;
+    positions.push({
+      x: r * Math.cos(t),
+      y: r * Math.sin(t),
+    });
+
+    // Calculate the next t value based on the desired arc length
+    // The arc length of a spiral from 0 to t is approximately (a/2) * (t^2)
+    // So, we solve for the next t that gives us an additional arc length of 'spacingAlong'
+    const currentArcLength = (a / 2) * (t * t);
+    const nextArcLength = currentArcLength + spacingAlong;
+    t = Math.sqrt((2 * nextArcLength) / a);
+  }
+
+  // Return only the positions after skipping the specified number
+  return positions.slice(skipCount);
+}
+
 interface CloudButtonProps extends ButtonProps {
   delay: number;
-  angle: number;
-  distance: number;
+  position: ButtonPosition;
 }
 
 const moveOut = (props: CloudButtonProps) => keyframes`
-  from {
-    opacity: 0;
-    transform: translate(0, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate(
-      ${Math.cos(props.angle) * props.distance}px,
-      ${Math.sin(props.angle) * props.distance}px
-    );
-  }
-`;
+    from {
+      opacity: 0;
+      transform: translate(0, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate(
+        ${props.position.x}px,
+        ${props.position.y}px
+      );
+    }
+  `;
 
 const CloudButton = styled(Button)<CloudButtonProps>`
   position: absolute;
@@ -83,9 +116,58 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
   parentBackgroundColor,
 }) => {
   const [cloudVisible, setCloudVisible] = useState(false);
+  const { height } = useWindowDimensions();
   const cloudRef = useRef<HTMLDivElement | null>(null);
 
   const buttonList: CloudButtonItem[] = [
+    {
+      name: "pencil",
+      color: "blue",
+      tooltip: "Edit Annotation",
+      onClick: () => {
+        console.log("Edit clicked");
+      },
+    },
+    {
+      name: "trash alternate outline",
+      color: "red",
+      tooltip: "Delete Annotation",
+      onClick: () => {
+        console.log("Delete clicked");
+      },
+    },
+    {
+      name: "pencil",
+      color: "blue",
+      tooltip: "Edit Annotation",
+      onClick: () => {
+        console.log("Edit clicked");
+      },
+    },
+    {
+      name: "trash alternate outline",
+      color: "red",
+      tooltip: "Delete Annotation",
+      onClick: () => {
+        console.log("Delete clicked");
+      },
+    },
+    {
+      name: "pencil",
+      color: "blue",
+      tooltip: "Edit Annotation",
+      onClick: () => {
+        console.log("Edit clicked");
+      },
+    },
+    {
+      name: "trash alternate outline",
+      color: "red",
+      tooltip: "Delete Annotation",
+      onClick: () => {
+        console.log("Delete clicked");
+      },
+    },
     {
       name: "pencil",
       color: "blue",
@@ -126,11 +208,19 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
     };
   }, [cloudVisible]);
 
-  // Calculate the radius based on viewport width, with a minimum of 5vw
-  const radius = Math.max(5, Math.min(10, window.innerWidth * 0.05)); // vw to px
-  const buttonSize = 30; // Assuming each button is roughly 30px
-  const arcLength = buttonList.length * (buttonSize + 10); // 10px padding between buttons
-  const arcAngle = arcLength / radius;
+  const numButtons = buttonList.length;
+  const a = 6; // Controls the growth rate of the spiral
+  const spacingAlongPercent = 3; // 5% of the container height
+  const spacingAlong = (height * spacingAlongPercent) / 100;
+  const skipCount = 2; // Number of inner positions to skip
+
+  // Calculate button positions
+  const buttonPositions = calculateButtonPositions(
+    numButtons,
+    a,
+    spacingAlong,
+    skipCount
+  );
 
   // Calculate dot color with good contrast
   const getContrastColor = (bgColor: string) => {
@@ -149,29 +239,25 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
       />
       {cloudVisible && (
         <CloudContainer ref={cloudRef}>
-          {buttonList.map((btn, index) => {
-            const angle = (index / (buttonList.length - 1) - 0.5) * arcAngle;
-            return (
-              <CloudButton
-                key={index}
-                color={btn.color as any}
-                icon
-                circular
-                size="mini"
-                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  e.stopPropagation();
-                  btn.onClick();
-                  setCloudVisible(false);
-                }}
-                title={btn.tooltip}
-                delay={index * 0.1}
-                angle={angle}
-                distance={radius}
-              >
-                <Icon name={btn.name} />
-              </CloudButton>
-            );
-          })}
+          {buttonList.map((btn, index) => (
+            <CloudButton
+              key={index}
+              color={btn.color as any}
+              icon
+              circular
+              size="mini"
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.stopPropagation();
+                btn.onClick();
+                setCloudVisible(false);
+              }}
+              title={btn.tooltip}
+              delay={index * 0.1}
+              position={buttonPositions[index]}
+            >
+              <Icon name={btn.name} />
+            </CloudButton>
+          ))}
         </CloudContainer>
       )}
     </div>

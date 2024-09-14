@@ -1,41 +1,20 @@
-import React, {
-  MouseEvent,
-  useContext,
-  useState,
-  useEffect,
-  SyntheticEvent,
-  useRef,
-} from "react";
-import styled, { css, keyframes } from "styled-components";
+import React, { useContext, useState, useEffect, useRef } from "react";
 import _ from "lodash";
-import uniqueId from "lodash/uniqueId";
 
-import {
-  Modal,
-  Dropdown,
-  DropdownItemProps,
-  DropdownProps,
-  Image,
-  Button,
-  Icon,
-  SemanticICONS,
-  ButtonProps,
-} from "semantic-ui-react";
+import { Image, Icon } from "semantic-ui-react";
 
-import {
-  TokenId,
-  PDFPageInfo,
-  AnnotationStore,
-  ServerAnnotation,
-} from "../context";
+import { PDFPageInfo, AnnotationStore, ServerAnnotation } from "../context";
+
 import {
   HorizontallyJustifiedStartDiv,
   VerticallyJustifiedEndDiv,
 } from "../sidebar/common";
+
 import {
   annotationSelectedViaRelationship,
   getRelationImageHref,
 } from "../utils";
+
 import { PermissionTypes } from "../../types";
 import { LabelDisplayBehavior } from "../../../graphql/types";
 import { SelectionBoundary } from "./SelectionBoundary";
@@ -45,290 +24,11 @@ import {
   SelectionInfoContainer,
 } from "./Containers";
 import { getBorderWidthFromBounds } from "../../../utils/transform";
-import RadialButtonCloud from "../../widgets/buttons/RadialButtonCloud";
-
-interface TokenSpanProps {
-  id?: string;
-  hidden?: boolean;
-  color?: string;
-  isSelected?: boolean;
-  highOpacity?: boolean;
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-  pointerEvents: string;
-  theme?: any;
-}
-
-const CloudContainer = styled.div`
-  position: absolute;
-  top: -60px; /* Adjust as needed */
-  left: -60px; /* Adjust as needed */
-  width: 120px;
-  height: 120px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-  opacity: 0;
-  animation: fadeIn 0.5s forwards;
-
-  @keyframes fadeIn {
-    to {
-      opacity: 1;
-    }
-  }
-`;
-
-interface CloudButtonProps extends ButtonProps {
-  delay: number;
-  xOffset: number;
-  yOffset: number;
-}
-
-interface CloudButtonItem {
-  name: SemanticICONS; // Semantic UI icon names
-  color: string;
-  tooltip: string;
-  onClick: () => void;
-}
-
-const CloudButton = styled(Button)<CloudButtonProps>`
-  position: absolute;
-  opacity: 0;
-  animation: moveOut 0.5s forwards;
-  animation-delay: ${(props) => props.delay}s;
-  transform: translate(0, 0);
-
-  @keyframes moveOut {
-    to {
-      opacity: 1;
-      transform: translate(
-        ${(props) => props.xOffset}px,
-        ${(props) => props.yOffset}px
-      );
-    }
-  }
-`;
-
-const TokenSpan = styled.span.attrs(
-  ({
-    id,
-    theme,
-    top,
-    bottom,
-    left,
-    right,
-    pointerEvents,
-    hidden,
-    color,
-    isSelected,
-    highOpacity,
-  }: TokenSpanProps) => ({
-    id,
-    style: {
-      background: isSelected
-        ? color
-          ? color.toUpperCase()
-          : theme.color.B3
-        : "none",
-      opacity: hidden ? 0.0 : highOpacity ? 0.4 : 0.2,
-      left: `${left}px`,
-      top: `${top}px`,
-      width: `${right - left}px`,
-      height: `${bottom - top}px`,
-      pointerEvents: pointerEvents,
-    },
-  })
-)`
-  position: absolute;
-  border-radius: 3px;
-`;
-
-interface SelectionTokenProps {
-  id?: string;
-  color?: string;
-  className?: string;
-  hidden?: boolean;
-  pageInfo: PDFPageInfo;
-  highOpacity?: boolean;
-  tokens: TokenId[] | null;
-  scrollTo?: boolean;
-}
-export const SelectionTokens = ({
-  id,
-  color,
-  className,
-  hidden,
-  pageInfo,
-  highOpacity,
-  tokens,
-  scrollTo,
-}: SelectionTokenProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (scrollTo) {
-      if (containerRef.current !== undefined && containerRef.current !== null) {
-        console.log("Scroll to", scrollTo);
-        containerRef.current.scrollIntoView();
-      }
-    }
-  }, [scrollTo]);
-
-  return (
-    <div ref={containerRef} id={`SelectionTokenWrapper_${uniqueId()}`}>
-      {tokens ? (
-        tokens.map((t, i) => {
-          const b = pageInfo.getScaledTokenBounds(
-            pageInfo.tokens[t.tokenIndex]
-          );
-          return (
-            <TokenSpan
-              id={`${uniqueId()}`}
-              hidden={hidden}
-              key={i}
-              className={className}
-              isSelected={true}
-              highOpacity={highOpacity}
-              color={color ? color : undefined}
-              left={b.left}
-              right={b.right}
-              top={b.top}
-              bottom={b.bottom}
-              pointerEvents="none"
-            />
-          );
-        })
-      ) : (
-        <></>
-      )}
-    </div>
-  );
-};
-
-interface EditLabelModalProps {
-  annotation: ServerAnnotation;
-  visible: boolean;
-  onHide: () => void;
-}
-
-const EditLabelModal = ({
-  annotation,
-  visible,
-  onHide,
-}: EditLabelModalProps) => {
-  const annotationStore = useContext(AnnotationStore);
-
-  const [selectedLabel, setSelectedLabel] = useState(
-    annotation.annotationLabel
-  );
-
-  // There are onMouseDown listeners on the <canvas> that handle the
-  // creation of new annotations. We use this function to prevent that
-  // from being triggered when the user engages with other UI elements.
-  const onMouseDown = (e: MouseEvent) => {
-    e.stopPropagation();
-  };
-
-  useEffect(() => {
-    const onKeyPress = (e: KeyboardEvent) => {
-      // Numeric keys 1-9
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.keyCode >= 49 && e.keyCode <= 57) {
-        const index = Number.parseInt(e.key) - 1;
-        if (index < annotationStore.spanLabels.length) {
-          annotationStore.updateAnnotation(
-            new ServerAnnotation(
-              annotation.page,
-              annotationStore.spanLabels[index],
-              annotation.rawText,
-              annotation.structural,
-              annotation.json,
-              annotation.myPermissions,
-              annotation.id
-            )
-          );
-          onHide();
-        }
-      }
-    };
-    window.addEventListener("keydown", onKeyPress);
-    return () => {
-      window.removeEventListener("keydown", onKeyPress);
-    };
-  }, [annotationStore, annotation]);
-
-  const dropdownOptions: DropdownItemProps[] = annotationStore.spanLabels.map(
-    (label, index) => ({
-      key: label.id,
-      text: label.text,
-      value: label.id,
-    })
-  );
-
-  const handleDropdownChange = (
-    event: SyntheticEvent<HTMLElement, Event>,
-    data: DropdownProps
-  ) => {
-    event.stopPropagation();
-    event.preventDefault();
-    const label = annotationStore.spanLabels.find((l) => l.id === data.value);
-    if (!label) {
-      return;
-    }
-    setSelectedLabel(label);
-  };
-
-  return (
-    <Modal header="Edit Label" open={visible} onMouseDown={onMouseDown}>
-      <Modal.Content>
-        <Dropdown
-          placeholder="Select label"
-          search
-          selection
-          options={dropdownOptions}
-          onChange={handleDropdownChange}
-          onMouseDown={onMouseDown}
-          value={selectedLabel.id}
-        />
-      </Modal.Content>
-      <Modal.Actions>
-        <Button
-          color="green"
-          onClick={(event: SyntheticEvent) => {
-            // Call mutation to update annotation on server and reflect change locally if it succeeds.
-            event.preventDefault();
-            event.stopPropagation();
-
-            annotationStore.updateAnnotation(
-              new ServerAnnotation(
-                annotation.page,
-                selectedLabel,
-                annotation.rawText,
-                annotation.structural,
-                annotation.json,
-                annotation.myPermissions,
-                annotation.id
-              )
-            );
-
-            onHide();
-          }}
-          onMouseDown={onMouseDown}
-        >
-          Save Change
-        </Button>
-        <Button color="black" onClick={onHide} onMouseDown={onMouseDown}>
-          Cancel
-        </Button>
-      </Modal.Actions>
-    </Modal>
-  );
-};
+import RadialButtonCloud, {
+  CloudButtonItem,
+} from "../../widgets/buttons/RadialButtonCloud";
+import { SelectionTokenGroup } from "./SelectionTokenGroup";
+import { EditLabelModal } from "../../widgets/modals/EditLabelModal";
 
 interface SelectionProps {
   selectionRef:
@@ -344,6 +44,7 @@ interface SelectionProps {
   children?: React.ReactNode;
   approved?: boolean;
   rejected?: boolean;
+  actions?: CloudButtonItem[];
   setJumpedToAnnotationOnLoad: (annot: string) => null | void;
 }
 
@@ -370,6 +71,76 @@ export const Selection: React.FC<SelectionProps> = ({
   const label = annotation.annotationLabel;
   const color = label?.color || "#616a6b"; // grey as the default
 
+  const actions: CloudButtonItem[] = [
+    {
+      name: "pencil",
+      color: "blue",
+      tooltip: "Edit Annotation",
+      onClick: () => {
+        console.log("Edit clicked");
+      },
+      protected_message: "Confirm shit",
+    },
+    {
+      name: "trash alternate outline",
+      color: "red",
+      tooltip: "Delete Annotation",
+      onClick: () => {
+        console.log("Delete clicked");
+      },
+      protected_message: "Are you sure you want to delete this annotation?",
+    },
+    {
+      name: "pencil",
+      color: "blue",
+      tooltip: "Edit Annotation",
+      onClick: () => {
+        console.log("Edit clicked");
+      },
+    },
+    {
+      name: "trash alternate outline",
+      color: "red",
+      tooltip: "Delete Annotation",
+      onClick: () => {
+        console.log("Delete clicked");
+      },
+    },
+    {
+      name: "pencil",
+      color: "blue",
+      tooltip: "Edit Annotation",
+      onClick: () => {
+        console.log("Edit clicked");
+      },
+    },
+    {
+      name: "trash alternate outline",
+      color: "red",
+      tooltip: "Delete Annotation",
+      onClick: () => {
+        console.log("Delete clicked");
+      },
+    },
+    {
+      name: "pencil",
+      color: "blue",
+      tooltip: "Edit Annotation",
+      onClick: () => {
+        console.log("Edit clicked");
+      },
+    },
+    {
+      name: "trash alternate outline",
+      color: "red",
+      tooltip: "Delete Annotation",
+      onClick: () => {
+        console.log("Delete clicked");
+      },
+    },
+    // Add more buttons as needed
+  ];
+
   const bounds = pageInfo.getScaledBounds(
     annotation.json[pageInfo.page.pageNumber - 1].bounds
   );
@@ -378,24 +149,6 @@ export const Selection: React.FC<SelectionProps> = ({
   const removeAnnotation = () => {
     annotationStore.deleteAnnotation(annotation.id);
   };
-
-  const buttonList: CloudButtonItem[] = [
-    {
-      name: "pencil",
-      color: "blue",
-      tooltip: "Edit Annotation",
-      onClick: () => {
-        setIsEditLabelModalVisible(true);
-      },
-    },
-    {
-      name: "trash alternate outline",
-      color: "red",
-      tooltip: "Delete Annotation",
-      onClick: removeAnnotation,
-    },
-    // Add more buttons as needed
-  ];
 
   const onShiftClick = () => {
     const current = annotationStore.selectedAnnotations.slice(0);
@@ -509,37 +262,10 @@ export const Selection: React.FC<SelectionProps> = ({
                       alignItems: "center",
                     }}
                   >
-                    <RadialButtonCloud parentBackgroundColor={color} />
-                    {cloudVisible && (
-                      <CloudContainer ref={cloudRef}>
-                        {buttonList.map((btn, index) => (
-                          <CloudButton
-                            key={index}
-                            color={btn.color as any}
-                            icon
-                            onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                              e.stopPropagation();
-                              btn.onClick();
-                              setCloudVisible(false);
-                            }}
-                            title={btn.tooltip}
-                            delay={index * 0.1}
-                            xOffset={
-                              Math.cos(
-                                (index / buttonList.length) * 2 * Math.PI
-                              ) * 50
-                            }
-                            yOffset={
-                              Math.sin(
-                                (index / buttonList.length) * 2 * Math.PI
-                              ) * 50
-                            }
-                          >
-                            <Icon name={btn.name} />
-                          </CloudButton>
-                        ))}
-                      </CloudContainer>
-                    )}
+                    <RadialButtonCloud
+                      parentBackgroundColor={color}
+                      actions={actions}
+                    />
                     <div
                       style={{
                         whiteSpace: "nowrap",
@@ -617,7 +343,7 @@ export const Selection: React.FC<SelectionProps> = ({
         // positioned element. This is why SelectionTokens are not inside
         // SelectionBoundary.
         annotation.json[pageInfo.page.pageNumber - 1].tokensJsons && (
-          <SelectionTokens
+          <SelectionTokenGroup
             id={`SELECTION_TOKEN_${annotation.id}`}
             color={annotation.annotationLabel.color}
             highOpacity={!showBoundingBox}

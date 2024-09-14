@@ -52,7 +52,7 @@ interface SelectionInfoProps {
 export const SelectionInfo = styled.div<SelectionInfoProps>`
   position: absolute;
   width: ${(props) => props.bounds.right - props.bounds.left}px;
-  right: -${(props) => props.border + (props?.approved || props?.rejected ? 1 : 0)}px;
+  right: -${(props) => props.border + ((props?.approved ? 1 : props?.rejected) ? -1 : 0)}px;
   bottom: calc(100% - 2px);
   border-radius: 4px 4px 0 0;
   background: ${(props) =>

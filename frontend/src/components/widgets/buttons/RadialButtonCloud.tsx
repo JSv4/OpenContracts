@@ -1,7 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
-import styled, { keyframes, css } from "styled-components";
-import { Button, Icon, SemanticICONS, ButtonProps } from "semantic-ui-react";
-import { getLuminance, getContrast } from "polished";
+import styled, { createGlobalStyle, keyframes } from "styled-components";
+import {
+  Button,
+  Icon,
+  SemanticICONS,
+  ButtonProps,
+  Modal,
+} from "semantic-ui-react";
+import { getLuminance } from "polished";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
@@ -102,91 +108,42 @@ const CloudButton = styled(Button)<CloudButtonProps>`
   animation-delay: ${(props) => props.delay}s;
 `;
 
-interface CloudButtonItem {
+const GlobalStyle = createGlobalStyle`
+  .confirm-modal-container.ui.page.modals.dimmer.transition.visible.active {
+    z-index: 20000 !important;
+  }
+
+  #ConfirmModal {
+    z-index: 20001 !important;
+  }
+`;
+
+export interface CloudButtonItem {
   name: SemanticICONS;
   color: string;
   tooltip: string;
+  protected_message?: string | null;
   onClick: () => void;
 }
 
 interface RadialButtonCloudProps {
   parentBackgroundColor: string;
+  actions: CloudButtonItem[];
 }
 
 const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
   parentBackgroundColor,
+  actions: buttonList,
 }) => {
   const [cloudVisible, setCloudVisible] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    message: string;
+    onConfirm: () => void;
+  }>({ open: false, message: "", onConfirm: () => {} });
+
   const { height, width } = useWindowDimensions();
   const cloudRef = useRef<HTMLDivElement | null>(null);
-
-  const buttonList: CloudButtonItem[] = [
-    {
-      name: "pencil",
-      color: "blue",
-      tooltip: "Edit Annotation",
-      onClick: () => {
-        console.log("Edit clicked");
-      },
-    },
-    {
-      name: "trash alternate outline",
-      color: "red",
-      tooltip: "Delete Annotation",
-      onClick: () => {
-        console.log("Delete clicked");
-      },
-    },
-    {
-      name: "pencil",
-      color: "blue",
-      tooltip: "Edit Annotation",
-      onClick: () => {
-        console.log("Edit clicked");
-      },
-    },
-    {
-      name: "trash alternate outline",
-      color: "red",
-      tooltip: "Delete Annotation",
-      onClick: () => {
-        console.log("Delete clicked");
-      },
-    },
-    {
-      name: "pencil",
-      color: "blue",
-      tooltip: "Edit Annotation",
-      onClick: () => {
-        console.log("Edit clicked");
-      },
-    },
-    {
-      name: "trash alternate outline",
-      color: "red",
-      tooltip: "Delete Annotation",
-      onClick: () => {
-        console.log("Delete clicked");
-      },
-    },
-    {
-      name: "pencil",
-      color: "blue",
-      tooltip: "Edit Annotation",
-      onClick: () => {
-        console.log("Edit clicked");
-      },
-    },
-    {
-      name: "trash alternate outline",
-      color: "red",
-      tooltip: "Delete Annotation",
-      onClick: () => {
-        console.log("Delete clicked");
-      },
-    },
-    // Add more buttons as needed
-  ];
 
   const handleClickOutside = (event: MouseEvent) => {
     if (
@@ -194,6 +151,24 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
       !cloudRef.current.contains(event.target as Node) &&
       !(event.target as Element).closest(".pulsing-dot")
     ) {
+      setCloudVisible(false);
+    }
+  };
+
+  const handleButtonClick = (btn: CloudButtonItem) => {
+    console.log("handleButtonClick", btn);
+    if (btn.protected_message) {
+      console.log("Should show confirm!");
+      setConfirmModal({
+        open: true,
+        message: btn.protected_message,
+        onConfirm: () => {
+          btn.onClick();
+          setCloudVisible(false);
+        },
+      });
+    } else {
+      btn.onClick();
       setCloudVisible(false);
     }
   };
@@ -238,6 +213,7 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
         onMouseEnter={() => setCloudVisible(true)}
         backgroundColor={dotColor}
       />
+      <GlobalStyle />
       {cloudVisible && (
         <CloudContainer ref={cloudRef}>
           {buttonList.map((btn, index) => (
@@ -249,8 +225,7 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
               size="mini"
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.stopPropagation();
-                btn.onClick();
-                setCloudVisible(false);
+                handleButtonClick(btn);
               }}
               title={btn.tooltip}
               delay={index * 0.1}
@@ -261,6 +236,37 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
           ))}
         </CloudContainer>
       )}
+      <Modal
+        id="ConfirmModal"
+        size="mini"
+        className="confirm-modal-container"
+        open={confirmModal.open}
+        onClose={() => setConfirmModal({ ...confirmModal, open: false })}
+      >
+        <Modal.Content>
+          <p>{confirmModal.message}</p>
+        </Modal.Content>
+        <Modal.Actions>
+          <Button
+            negative
+            onClick={() => {
+              setConfirmModal({ ...confirmModal, open: false });
+              setCloudVisible(false);
+            }}
+          >
+            No
+          </Button>
+          <Button
+            positive
+            onClick={() => {
+              confirmModal.onConfirm();
+              setConfirmModal({ ...confirmModal, open: false });
+            }}
+          >
+            Yes
+          </Button>
+        </Modal.Actions>
+      </Modal>
     </div>
   );
 };

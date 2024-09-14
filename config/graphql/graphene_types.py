@@ -4,12 +4,10 @@ import graphene
 from django.contrib.auth import get_user_model
 from graphene import relay
 from graphene.types.generic import GenericScalar
-from graphene_django import DjangoObjectType
-from graphene_django import DjangoObjectType as ModelType
 from graphene_django.filter import DjangoFilterConnectionField
 from graphql_relay import from_global_id
 
-from config.graphql.base import CountableConnection
+from config.graphql.base import CountableConnection, CustomDjangoObjectType
 from config.graphql.filters import AnnotationFilter, LabelFilter
 from config.graphql.permission_annotator.mixins import AnnotatePermissionsForReadMixin
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
@@ -22,27 +20,28 @@ from opencontractserver.annotations.models import (
 from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
+from opencontractserver.feedback.models import UserFeedback
 from opencontractserver.users.models import Assignment, UserExport, UserImport
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-class UserType(AnnotatePermissionsForReadMixin, ModelType):
+class UserType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     class Meta:
         model = User
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
 
-class AssignmentType(AnnotatePermissionsForReadMixin, ModelType):
+class AssignmentType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     class Meta:
         model = Assignment
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
 
-class RelationshipType(AnnotatePermissionsForReadMixin, ModelType):
+class RelationshipType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     class Meta:
         model = Relationship
         interfaces = [relay.Node]
@@ -67,7 +66,7 @@ class AnnotationInputType(AnnotatePermissionsForReadMixin, graphene.InputObjectT
     is_public = graphene.Boolean()
 
 
-class AnnotationType(AnnotatePermissionsForReadMixin, ModelType):
+class AnnotationType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     json = GenericScalar()
 
     all_source_node_in_relationship = graphene.List(lambda: RelationshipType)
@@ -121,14 +120,14 @@ class PageAwareAnnotationType(graphene.ObjectType):
     page_annotations = graphene.List(AnnotationType)
 
 
-class AnnotationLabelType(AnnotatePermissionsForReadMixin, ModelType):
+class AnnotationLabelType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     class Meta:
         model = AnnotationLabel
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
 
-class LabelSetType(AnnotatePermissionsForReadMixin, ModelType):
+class LabelSetType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     annotation_labels = DjangoFilterConnectionField(
         AnnotationLabelType, filterset_class=LabelFilter
     )
@@ -149,7 +148,7 @@ class LabelSetType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
+class DocumentType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     def resolve_pdf_file(self, info):
         return (
             ""
@@ -245,7 +244,7 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
+class CorpusType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     all_annotation_summaries = graphene.List(
         AnnotationType,
         analysis_id=graphene.ID(),
@@ -295,7 +294,7 @@ class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class CorpusActionType(AnnotatePermissionsForReadMixin, ModelType):
+class CorpusActionType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     class Meta:
         model = CorpusAction
         interfaces = [relay.Node]
@@ -311,7 +310,7 @@ class CorpusActionType(AnnotatePermissionsForReadMixin, ModelType):
         }
 
 
-class UserImportType(AnnotatePermissionsForReadMixin, ModelType):
+class UserImportType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     def resolve_zip(self, info):
         return "" if not self.file else info.context.build_absolute_uri(self.zip.url)
 
@@ -321,7 +320,7 @@ class UserImportType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class UserExportType(AnnotatePermissionsForReadMixin, ModelType):
+class UserExportType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     def resolve_file(self, info):
         return "" if not self.file else info.context.build_absolute_uri(self.file.url)
 
@@ -331,7 +330,7 @@ class UserExportType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class AnalyzerType(AnnotatePermissionsForReadMixin, ModelType):
+class AnalyzerType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     analyzer_id = graphene.String()
 
     def resolve_analyzer_id(self, info):
@@ -353,7 +352,7 @@ class AnalyzerType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class GremlinEngineType_READ(AnnotatePermissionsForReadMixin, ModelType):
+class GremlinEngineType_READ(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     class Meta:
         model = GremlinEngine
         exclude = ("api_key",)
@@ -361,15 +360,14 @@ class GremlinEngineType_READ(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class GremlinEngineType_WRITE(AnnotatePermissionsForReadMixin, ModelType):
+class GremlinEngineType_WRITE(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     class Meta:
         model = GremlinEngine
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
 
-class AnalysisType(AnnotatePermissionsForReadMixin, ModelType):
-
+class AnalysisType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     full_annotation_list = graphene.List(AnnotationType)
 
     def resolve_full_annotation_list(self, info):
@@ -381,14 +379,14 @@ class AnalysisType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class ColumnType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+class ColumnType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     class Meta:
         model = Column
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
 
-class FieldsetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+class FieldsetType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     full_column_list = graphene.List(ColumnType)
 
     class Meta:
@@ -400,8 +398,7 @@ class FieldsetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         return self.columns.all()
 
 
-class DatacellType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-
+class DatacellType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     data = GenericScalar()
     full_source_list = graphene.List(AnnotationType)
 
@@ -414,7 +411,7 @@ class DatacellType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         connection_class = CountableConnection
 
 
-class ExtractType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+class ExtractType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     full_datacell_list = graphene.List(DatacellType)
     full_document_list = graphene.List(DocumentType)
 
@@ -430,8 +427,7 @@ class ExtractType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         return self.documents.all()
 
 
-class CorpusQueryType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-
+class CorpusQueryType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     full_source_list = graphene.List(AnnotationType)
 
     def resolve_full_source_list(self, info):
@@ -443,7 +439,7 @@ class CorpusQueryType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         connection_class = CountableConnection
 
 
-class DocumentAnalysisRowType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+class DocumentAnalysisRowType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
     class Meta:
         model = DocumentAnalysisRow
         interfaces = [relay.Node]
@@ -454,3 +450,10 @@ class DocumentCorpusActionsType(graphene.ObjectType):
     corpus_actions = graphene.List(CorpusActionType)
     extracts = graphene.List(ExtractType)
     analysis_rows = graphene.List(DocumentAnalysisRowType)
+
+
+class UserFeedbackType(AnnotatePermissionsForReadMixin, CustomDjangoObjectType):
+    class Meta:
+        model = UserFeedback
+        interfaces = [relay.Node]
+        connection_class = CountableConnection

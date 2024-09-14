@@ -1,7 +1,8 @@
 import React, { useCallback } from "react";
-import styled, { keyframes, css } from "styled-components";
+import styled, { css } from "styled-components";
 import { BoundingBox } from "../../types";
 import { getBorderWidthFromBounds, hexToRgb } from "../../../utils/transform";
+import { pulseGreen, pulseMaroon } from "./effects";
 
 interface SelectionBoundaryProps {
   id?: string;
@@ -22,30 +23,6 @@ interface SelectionBoundaryProps {
   approved?: boolean;
   rejected?: boolean;
 }
-
-const pulseGreen = keyframes`
-  0% {
-    box-shadow: 0 0 0 0 rgba(0, 128, 0, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(0, 128, 0, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(0, 128, 0, 0);
-  }
-`;
-
-const pulseMaroon = keyframes`
-  0% {
-    box-shadow: 0 0 0 0 rgba(128, 0, 0, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(128, 0, 0, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(128, 0, 0, 0);
-  }
-`;
 
 const BoundarySpan = styled.span<{
   width: number;

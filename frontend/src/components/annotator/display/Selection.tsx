@@ -555,7 +555,7 @@ export const Selection: React.FC<SelectionProps> = ({
                       }, 200);
                     }}
                   /> */}
-                    <RadialButtonCloud />
+                    <RadialButtonCloud parentBackgroundColor={color} />
                     {cloudVisible && (
                       <CloudContainer ref={cloudRef}>
                         {buttonList.map((btn, index) => (

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
-import styled, { keyframes } from "styled-components";
+import styled, { keyframes, css } from "styled-components";
 import { Button, Icon, SemanticICONS, ButtonProps } from "semantic-ui-react";
+import { getLuminance, getContrast } from "polished";
 
 const pulse = keyframes`
   0% {
@@ -14,10 +15,14 @@ const pulse = keyframes`
   }
 `;
 
-const PulsingDot = styled.div`
+interface PulsingDotProps {
+  backgroundColor: string;
+}
+
+const PulsingDot = styled.div<PulsingDotProps>`
   width: 12px;
   height: 12px;
-  background-color: #00ff00;
+  background-color: ${(props) => props.backgroundColor};
   border-radius: 50%;
   animation: ${pulse} 2s infinite;
   cursor: pointer;
@@ -70,7 +75,13 @@ interface CloudButtonItem {
   onClick: () => void;
 }
 
-const RadialButtonCloud: React.FC = () => {
+interface RadialButtonCloudProps {
+  parentBackgroundColor: string;
+}
+
+const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
+  parentBackgroundColor,
+}) => {
   const [cloudVisible, setCloudVisible] = useState(false);
   const cloudRef = useRef<HTMLDivElement | null>(null);
 
@@ -115,16 +126,31 @@ const RadialButtonCloud: React.FC = () => {
     };
   }, [cloudVisible]);
 
+  // Calculate the radius based on viewport width, with a minimum of 5vw
+  const radius = Math.max(5, Math.min(10, window.innerWidth * 0.05)); // vw to px
+  const buttonSize = 30; // Assuming each button is roughly 30px
+  const arcLength = buttonList.length * (buttonSize + 10); // 10px padding between buttons
+  const arcAngle = arcLength / radius;
+
+  // Calculate dot color with good contrast
+  const getContrastColor = (bgColor: string) => {
+    const luminance = getLuminance(bgColor);
+    return luminance > 0.5 ? "#00aa00" : "#00ff00";
+  };
+
+  const dotColor = getContrastColor(parentBackgroundColor);
+
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
       <PulsingDot
         className="pulsing-dot"
         onMouseEnter={() => setCloudVisible(true)}
+        backgroundColor={dotColor}
       />
       {cloudVisible && (
         <CloudContainer ref={cloudRef}>
           {buttonList.map((btn, index) => {
-            const angle = (index / buttonList.length) * 2 * Math.PI;
+            const angle = (index / (buttonList.length - 1) - 0.5) * arcAngle;
             return (
               <CloudButton
                 key={index}
@@ -140,7 +166,7 @@ const RadialButtonCloud: React.FC = () => {
                 title={btn.tooltip}
                 delay={index * 0.1}
                 angle={angle}
-                distance={50}
+                distance={radius}
               >
                 <Icon name={btn.name} />
               </CloudButton>

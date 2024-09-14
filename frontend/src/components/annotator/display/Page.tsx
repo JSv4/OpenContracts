@@ -284,6 +284,8 @@ export const Page = ({
         pageInfo={pageInfo}
         annotation={annotation}
         setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
+        // approved
+        rejected
       />
     ));
   }, [

@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import styled from "styled-components";
+import styled, { keyframes, css } from "styled-components";
 import { BoundingBox } from "../../types";
 import { getBorderWidthFromBounds, hexToRgb } from "../../../utils/transform";
 
@@ -19,7 +19,33 @@ interface SelectionBoundaryProps {
   onHover?: (hovered: boolean) => void;
   onClick?: () => void;
   setJumpedToAnnotationOnLoad?: (annot_id: string) => null | void;
+  approved?: boolean;
+  rejected?: boolean;
 }
+
+const pulseGreen = keyframes`
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 128, 0, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 128, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 128, 0, 0);
+  }
+`;
+
+const pulseMaroon = keyframes`
+  0% {
+    box-shadow: 0 0 0 0 rgba(128, 0, 0, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(128, 0, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(128, 0, 0, 0);
+  }
+`;
 
 const BoundarySpan = styled.span<{
   width: number;
@@ -32,6 +58,8 @@ const BoundarySpan = styled.span<{
   color: string;
   bounds: BoundingBox;
   backgroundColor: string;
+  approved?: boolean;
+  rejected?: boolean;
 }>`
   position: absolute;
   left: ${(props) => props.bounds.left}px;
@@ -47,6 +75,20 @@ const BoundarySpan = styled.span<{
       : "none"};
   background-color: ${(props) => props.backgroundColor};
   transition: background-color 0.2s ease;
+
+  ${(props) =>
+    props.approved &&
+    css`
+      border: 2px solid green;
+      animation: ${pulseGreen} 2s infinite;
+    `}
+
+  ${(props) =>
+    props.rejected &&
+    css`
+      border: 2px solid maroon;
+      animation: ${pulseMaroon} 2s infinite;
+    `}
 `;
 
 export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
@@ -62,6 +104,8 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
   onClick,
   setJumpedToAnnotationOnLoad,
   selected,
+  approved,
+  rejected,
 }) => {
   const width = bounds.right - bounds.left;
   const height = bounds.bottom - bounds.top;
@@ -124,6 +168,8 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
       color={color}
       backgroundColor={backgroundColor}
       bounds={bounds}
+      approved={approved}
+      rejected={rejected}
     >
       {children || null}
     </BoundarySpan>

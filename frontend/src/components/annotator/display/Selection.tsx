@@ -6,7 +6,7 @@ import React, {
   SyntheticEvent,
   useRef,
 } from "react";
-import styled, { keyframes } from "styled-components";
+import styled, { css, keyframes } from "styled-components";
 import _ from "lodash";
 import uniqueId from "lodash/uniqueId";
 
@@ -61,29 +61,6 @@ interface TokenSpanProps {
   theme?: any;
 }
 
-// Define animations
-const pulse = keyframes`
-  0% {
-    box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(0, 255, 0, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(0, 255, 0, 0);
-  }
-`;
-
-const PulsingDot = styled.div`
-  width: 12px;
-  height: 12px;
-  background-color: #00ff00;
-  border-radius: 50%;
-  animation: ${pulse} 2s infinite;
-  cursor: pointer;
-  position: relative;
-`;
-
 const CloudContainer = styled.div`
   position: absolute;
   top: -60px; /* Adjust as needed */
@@ -135,26 +112,6 @@ const CloudButton = styled(Button)<CloudButtonProps>`
     }
   }
 `;
-
-/**
- * Originally Got This Error:
- * Over 200 classes were generated for component styled.div with the id of "sc-dlVxhl".
- * Consider using the attrs method, together with a style object for frequently changed styles.
- *
- * Example:
- * const Component = styled.div.attrs(props => ({
- *   style: {
- *     background: props.background,
- *   },
- * }))`width: 100%;`
- *
- * Refactored to reflect this pattern.
- *
- * FYI, Tokens don't respond to pointerEvents because
- * they are ontop of the bounding boxes and the canvas,
- * which do respond to pointer events.
- *
- */
 
 const TokenSpan = styled.span.attrs(
   ({
@@ -385,6 +342,8 @@ interface SelectionProps {
   labelBehavior: LabelDisplayBehavior;
   showInfo?: boolean;
   children?: React.ReactNode;
+  approved?: boolean;
+  rejected?: boolean;
   setJumpedToAnnotationOnLoad: (annot: string) => null | void;
 }
 
@@ -397,6 +356,8 @@ export const Selection: React.FC<SelectionProps> = ({
   labelBehavior,
   annotation,
   children,
+  approved,
+  rejected,
   showInfo = true,
   setJumpedToAnnotationOnLoad,
 }) => {
@@ -494,18 +455,23 @@ export const Selection: React.FC<SelectionProps> = ({
         bounds={bounds}
         onHover={setHovered}
         onClick={onShiftClick}
+        approved={approved}
+        rejected={rejected}
         setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
         selected={selected}
       >
         {showInfo && !annotationStore.hideLabels && (
           <SelectionInfo
+            id="SelectionInfo"
             bounds={bounds}
             className={`selection_${annotation.id}`}
             border={border}
             color={color}
             showBoundingBox={showBoundingBox}
+            approved={approved}
+            rejected={rejected}
           >
-            <SelectionInfoContainer>
+            <SelectionInfoContainer id="SelectionInfoContainer">
               <HorizontallyJustifiedStartDiv>
                 <VerticallyJustifiedEndDiv>
                   <div style={{ position: "absolute", top: "1rem" }}>
@@ -543,18 +509,6 @@ export const Selection: React.FC<SelectionProps> = ({
                       alignItems: "center",
                     }}
                   >
-                    {/* <PulsingDot
-                    className="pulsing-dot"
-                    onMouseEnter={() => setCloudVisible(true)}
-                    onMouseLeave={() => {
-                      // Delay hiding to allow interaction with the cloud
-                      setTimeout(() => {
-                        if (!cloudRef.current?.contains(document.activeElement as Node)) {
-                          setCloudVisible(false);
-                        }
-                      }, 200);
-                    }}
-                  /> */}
                     <RadialButtonCloud parentBackgroundColor={color} />
                     {cloudVisible && (
                       <CloudContainer ref={cloudRef}>

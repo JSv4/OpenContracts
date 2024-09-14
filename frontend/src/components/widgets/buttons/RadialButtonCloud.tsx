@@ -3,6 +3,7 @@ import styled, { keyframes, css } from "styled-components";
 import { Button, Icon, SemanticICONS, ButtonProps } from "semantic-ui-react";
 import { getLuminance, getContrast } from "polished";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 const pulse = keyframes`
   0% {
@@ -116,7 +117,7 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
   parentBackgroundColor,
 }) => {
   const [cloudVisible, setCloudVisible] = useState(false);
-  const { height } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   const cloudRef = useRef<HTMLDivElement | null>(null);
 
   const buttonList: CloudButtonItem[] = [
@@ -210,7 +211,7 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
 
   const numButtons = buttonList.length;
   const a = 6; // Controls the growth rate of the spiral
-  const spacingAlongPercent = 3; // 5% of the container height
+  const spacingAlongPercent = width <= MOBILE_VIEW_BREAKPOINT ? 8 : 3; // 5% of the container height
   const spacingAlong = (height * spacingAlongPercent) / 100;
   const skipCount = 2; // Number of inner positions to skip
 

@@ -6,7 +6,7 @@ import React, {
   SyntheticEvent,
   useRef,
 } from "react";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import _ from "lodash";
 import uniqueId from "lodash/uniqueId";
 
@@ -18,6 +18,8 @@ import {
   Image,
   Button,
   Icon,
+  SemanticICONS,
+  ButtonProps,
 } from "semantic-ui-react";
 
 import {
@@ -43,6 +45,7 @@ import {
   SelectionInfoContainer,
 } from "./Containers";
 import { getBorderWidthFromBounds } from "../../../utils/transform";
+import RadialButtonCloud from "../../widgets/buttons/RadialButtonCloud";
 
 interface TokenSpanProps {
   id?: string;
@@ -57,6 +60,81 @@ interface TokenSpanProps {
   pointerEvents: string;
   theme?: any;
 }
+
+// Define animations
+const pulse = keyframes`
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 255, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 255, 0, 0);
+  }
+`;
+
+const PulsingDot = styled.div`
+  width: 12px;
+  height: 12px;
+  background-color: #00ff00;
+  border-radius: 50%;
+  animation: ${pulse} 2s infinite;
+  cursor: pointer;
+  position: relative;
+`;
+
+const CloudContainer = styled.div`
+  position: absolute;
+  top: -60px; /* Adjust as needed */
+  left: -60px; /* Adjust as needed */
+  width: 120px;
+  height: 120px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  opacity: 0;
+  animation: fadeIn 0.5s forwards;
+
+  @keyframes fadeIn {
+    to {
+      opacity: 1;
+    }
+  }
+`;
+
+interface CloudButtonProps extends ButtonProps {
+  delay: number;
+  xOffset: number;
+  yOffset: number;
+}
+
+interface CloudButtonItem {
+  name: SemanticICONS; // Semantic UI icon names
+  color: string;
+  tooltip: string;
+  onClick: () => void;
+}
+
+const CloudButton = styled(Button)<CloudButtonProps>`
+  position: absolute;
+  opacity: 0;
+  animation: moveOut 0.5s forwards;
+  animation-delay: ${(props) => props.delay}s;
+  transform: translate(0, 0);
+
+  @keyframes moveOut {
+    to {
+      opacity: 1;
+      transform: translate(
+        ${(props) => props.xOffset}px,
+        ${(props) => props.yOffset}px
+      );
+    }
+  }
+`;
 
 /**
  * Originally Got This Error:
@@ -324,6 +402,8 @@ export const Selection: React.FC<SelectionProps> = ({
 }) => {
   const [hovered, setHovered] = useState(false);
   const [isEditLabelModalVisible, setIsEditLabelModalVisible] = useState(false);
+  const [cloudVisible, setCloudVisible] = useState(false);
+  const cloudRef = useRef<HTMLDivElement | null>(null);
 
   const annotationStore = useContext(AnnotationStore);
   const label = annotation.annotationLabel;
@@ -338,6 +418,24 @@ export const Selection: React.FC<SelectionProps> = ({
     annotationStore.deleteAnnotation(annotation.id);
   };
 
+  const buttonList: CloudButtonItem[] = [
+    {
+      name: "pencil",
+      color: "blue",
+      tooltip: "Edit Annotation",
+      onClick: () => {
+        setIsEditLabelModalVisible(true);
+      },
+    },
+    {
+      name: "trash alternate outline",
+      color: "red",
+      tooltip: "Delete Annotation",
+      onClick: removeAnnotation,
+    },
+    // Add more buttons as needed
+  ];
+
   const onShiftClick = () => {
     const current = annotationStore.selectedAnnotations.slice(0);
     if (current.some((other) => other === annotation.id)) {
@@ -348,6 +446,30 @@ export const Selection: React.FC<SelectionProps> = ({
       annotationStore.setSelectedAnnotations(current);
     }
   };
+
+  const handleClickOutside = (event: Event): void => {
+    if (
+      cloudRef.current &&
+      !cloudRef.current.contains(event.target as Node) &&
+      !(event.target as Element).closest(".pulsing-dot")
+    ) {
+      setCloudVisible(false);
+    }
+  };
+
+  useEffect(() => {
+    if (cloudVisible) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [cloudVisible]);
 
   const selected = annotationStore.selectedAnnotations.includes(annotation.id);
 
@@ -414,52 +536,109 @@ export const Selection: React.FC<SelectionProps> = ({
                   color={color}
                   display_behavior={labelBehavior}
                 >
-                  <div style={{ whiteSpace: "nowrap", overflowX: "visible" }}>
-                    <span>{label.text}</span>
+                  <div
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    {/* <PulsingDot
+                    className="pulsing-dot"
+                    onMouseEnter={() => setCloudVisible(true)}
+                    onMouseLeave={() => {
+                      // Delay hiding to allow interaction with the cloud
+                      setTimeout(() => {
+                        if (!cloudRef.current?.contains(document.activeElement as Node)) {
+                          setCloudVisible(false);
+                        }
+                      }, 200);
+                    }}
+                  /> */}
+                    <RadialButtonCloud />
+                    {cloudVisible && (
+                      <CloudContainer ref={cloudRef}>
+                        {buttonList.map((btn, index) => (
+                          <CloudButton
+                            key={index}
+                            color={btn.color as any}
+                            icon
+                            onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                              e.stopPropagation();
+                              btn.onClick();
+                              setCloudVisible(false);
+                            }}
+                            title={btn.tooltip}
+                            delay={index * 0.1}
+                            xOffset={
+                              Math.cos(
+                                (index / buttonList.length) * 2 * Math.PI
+                              ) * 50
+                            }
+                            yOffset={
+                              Math.sin(
+                                (index / buttonList.length) * 2 * Math.PI
+                              ) * 50
+                            }
+                          >
+                            <Icon name={btn.name} />
+                          </CloudButton>
+                        ))}
+                      </CloudContainer>
+                    )}
+                    <div
+                      style={{
+                        whiteSpace: "nowrap",
+                        overflowX: "visible",
+                        marginLeft: "8px",
+                      }}
+                    >
+                      <span>{label.text}</span>
+                    </div>
+                    {annotation.myPermissions.includes(
+                      PermissionTypes.CAN_UPDATE
+                    ) &&
+                      !annotation.annotationLabel.readonly && (
+                        <Icon
+                          style={{
+                            marginLeft: ".25rem",
+                            marginRight: ".125rem",
+                            cursor: "pointer",
+                          }}
+                          name="pencil"
+                          onClick={(e: React.SyntheticEvent) => {
+                            e.stopPropagation();
+                            setIsEditLabelModalVisible(true);
+                          }}
+                          onMouseDown={(e: React.SyntheticEvent) => {
+                            e.stopPropagation();
+                          }}
+                        />
+                      )}
+                    {annotation.myPermissions.includes(
+                      PermissionTypes.CAN_REMOVE
+                    ) &&
+                      !annotation.annotationLabel.readonly && (
+                        <Icon
+                          style={{
+                            marginLeft: ".125rem",
+                            marginRight: ".25rem",
+                            cursor: "pointer",
+                          }}
+                          name="trash alternate outline"
+                          onClick={(e: React.SyntheticEvent) => {
+                            e.stopPropagation();
+                            removeAnnotation();
+                          }}
+                          // We have to prevent the default behaviour for
+                          // the pdf canvas here, in order to be able to capture
+                          // the click event.
+                          onMouseDown={(e: React.SyntheticEvent) => {
+                            e.stopPropagation();
+                          }}
+                        />
+                      )}
                   </div>
-                  {annotation.myPermissions.includes(
-                    PermissionTypes.CAN_UPDATE
-                  ) &&
-                    !annotation.annotationLabel.readonly && (
-                      <Icon
-                        style={{
-                          marginLeft: ".25rem",
-                          marginRight: ".125rem",
-                          cursor: "pointer",
-                        }}
-                        name="pencil"
-                        onClick={(e: React.SyntheticEvent) => {
-                          e.stopPropagation();
-                          setIsEditLabelModalVisible(true);
-                        }}
-                        onMouseDown={(e: React.SyntheticEvent) => {
-                          e.stopPropagation();
-                        }}
-                      />
-                    )}
-                  {annotation.myPermissions.includes(
-                    PermissionTypes.CAN_REMOVE
-                  ) &&
-                    !annotation.annotationLabel.readonly && (
-                      <Icon
-                        style={{
-                          marginLeft: ".125rem",
-                          marginRight: ".25rem",
-                          cursor: "pointer",
-                        }}
-                        name="trash alternate outline"
-                        onClick={(e: React.SyntheticEvent) => {
-                          e.stopPropagation();
-                          removeAnnotation();
-                        }}
-                        // We have to prevent the default behaviour for
-                        // the pdf canvas here, in order to be able to capture
-                        // the click event.
-                        onMouseDown={(e: React.SyntheticEvent) => {
-                          e.stopPropagation();
-                        }}
-                      />
-                    )}
                 </LabelTagContainer>
               </VerticallyJustifiedEndDiv>
             </SelectionInfoContainer>

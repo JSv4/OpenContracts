@@ -25,6 +25,7 @@ export enum ExportTypes {
 export enum PermissionTypes {
   CAN_PERMISSION = "CAN_PERMISSION",
   CAN_PUBLISH = "CAN_PUBLISH",
+  CAN_COMMENT = "CAN_COMMENT",
   CAN_CREATE = "CAN_CREATE",
   CAN_READ = "CAN_READ",
   CAN_UPDATE = "CAN_UPDATE",

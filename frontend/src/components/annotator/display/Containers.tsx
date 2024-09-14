@@ -86,6 +86,7 @@ export const LabelTagContainer = styled.div<{
   color: ${(props) => getContrastColor(props.color)};
   padding: 2px 6px;
   border-radius: 3px;
+  position: relative;
 `;
 
 export const StyledIcon = styled(Icon)<{ color: string }>`

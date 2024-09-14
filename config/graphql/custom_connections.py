@@ -3,7 +3,6 @@ import logging
 from graphene import Connection, Int
 from graphene_django.filter import DjangoFilterConnectionField
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -37,17 +36,27 @@ class CustomPermissionFilteredConnection(Connection):
         abstract = True
 
     @classmethod
-    def connection_resolver(cls, resolver, connection, default_manager, max_limit,
-                            enforce_first_or_last, filterset_class, filtering_args,
-                            root, info, **args):
+    def connection_resolver(
+        cls,
+        resolver,
+        connection,
+        default_manager,
+        max_limit,
+        enforce_first_or_last,
+        filterset_class,
+        filtering_args,
+        root,
+        info,
+        **args,
+    ):
 
         # Get the model from the default_manager
         model = default_manager.model
 
         # Check if the user has the required permission
         user = info.context.user
-        if not user.has_perm(f'read_{model._meta.model_name}') and not model.is_public:
-            return super(CustomPermissionFilteredConnection, cls).connection_resolver(
+        if not user.has_perm(f"read_{model._meta.model_name}") and not model.is_public:
+            return super().connection_resolver(
                 lambda *args, **kwargs: default_manager.none(),
                 connection,
                 default_manager,
@@ -57,10 +66,10 @@ class CustomPermissionFilteredConnection(Connection):
                 filtering_args,
                 root,
                 info,
-                **args
+                **args,
             )
 
-        return super(CustomPermissionFilteredConnection, cls).connection_resolver(
+        return super().connection_resolver(
             resolver,
             connection,
             default_manager,
@@ -70,15 +79,25 @@ class CustomPermissionFilteredConnection(Connection):
             filtering_args,
             root,
             info,
-            **args
+            **args,
         )
 
 
 class CustomDjangoFilterConnectionField(DjangoFilterConnectionField):
     @classmethod
-    def connection_resolver(cls, resolver, connection, default_manager, max_limit,
-                            enforce_first_or_last, filterset_class, filtering_args,
-                            root, info, **args):
+    def connection_resolver(
+        cls,
+        resolver,
+        connection,
+        default_manager,
+        max_limit,
+        enforce_first_or_last,
+        filterset_class,
+        filtering_args,
+        root,
+        info,
+        **args,
+    ):
         return CustomPermissionFilteredConnection.connection_resolver(
             resolver,
             connection,
@@ -89,5 +108,5 @@ class CustomDjangoFilterConnectionField(DjangoFilterConnectionField):
             filtering_args,
             root,
             info,
-            **args
+            **args,
         )

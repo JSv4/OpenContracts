@@ -8,12 +8,14 @@ import graphene
 from graphene import Int
 from graphene.relay import Node
 from graphene_django import DjangoObjectType
+from graphene_django.filter import DjangoFilterConnectionField
 from graphql_jwt.decorators import login_required
 from graphql_relay import from_global_id, to_global_id
-from graphene_django import DjangoObjectType
-from graphene_django.filter import DjangoFilterConnectionField
 
-from config.graphql.custom_connections import CustomPermissionFilteredConnection, CustomDjangoFilterConnectionField
+from config.graphql.custom_connections import (
+    CustomDjangoFilterConnectionField,
+    CustomPermissionFilteredConnection,
+)
 from opencontractserver.shared.resolvers import resolve_single_oc_model_from_id
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.permissioning import (
@@ -59,16 +61,6 @@ class OpenContractsNode(Node):
             user=info.context.user,
             graphql_id=global_id,
         )
-
-
-class CountableConnection(graphene.relay.Connection):
-    class Meta:
-        abstract = True
-
-    total_count = graphene.Int()
-
-    def resolve_total_count(root, info):
-        return len(root.iterable)  # And no, root.iterable.count() did not work for me.
 
 
 class CountableConnection(CustomPermissionFilteredConnection):
@@ -278,10 +270,11 @@ class CustomDjangoObjectType(DjangoObjectType):
         interfaces=(),
         convert_choices_to_enum=None,
         _meta=None,
-        **options
+        **options,
     ):
         if filter_fields is not None and filterset_class is None:
             from graphene_django.filter.utils import get_filterset_class
+
             filterset_class = get_filterset_class(model, filter_fields)
 
         super().__init_subclass_with_meta__(
@@ -300,7 +293,7 @@ class CustomDjangoObjectType(DjangoObjectType):
             interfaces=interfaces,
             convert_choices_to_enum=convert_choices_to_enum,
             _meta=_meta,
-            **options
+            **options,
         )
 
         # Replace any DjangoFilterConnectionField with CustomDjangoFilterConnectionField
@@ -309,7 +302,9 @@ class CustomDjangoObjectType(DjangoObjectType):
                 if isinstance(field, DjangoFilterConnectionField):
                     new_field = CustomDjangoFilterConnectionField(
                         type(field.node),
-                        filters=field.filterset_class.Meta.fields if field.filterset_class else None,
+                        filters=field.filterset_class.Meta.fields
+                        if field.filterset_class
+                        else None,
                         filterset_class=field.filterset_class,
                     )
                     cls._meta.fields[name] = new_field

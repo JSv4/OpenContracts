@@ -1,12 +1,18 @@
 import { useMutation } from "@apollo/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  APPROVE_ANNOTATION,
+  ApproveAnnotationInput,
+  ApproveAnnotationOutput,
   NewAnnotationInputType,
   NewAnnotationOutputType,
   NewDocTypeAnnotationInputType,
   NewDocTypeAnnotationOutputType,
   NewRelationshipInputType as NewRelationInputType,
   NewRelationshipOutputType as NewRelationOutputType,
+  REJECT_ANNOTATION,
+  RejectAnnotationInput,
+  RejectAnnotationOutput,
   RemoveAnnotationInputType,
   RemoveAnnotationOutputType,
   RemoveRelationshipInputType,
@@ -726,6 +732,108 @@ export const AnnotatorRenderer = ({
     }
   };
 
+  const [approveAnnotationMutation] = useMutation<
+    ApproveAnnotationOutput,
+    ApproveAnnotationInput
+  >(APPROVE_ANNOTATION);
+  const approveAnnotation = (annotationId: string, comment?: string) => {
+    approveAnnotationMutation({
+      variables: { annotationId, comment },
+      update: (cache, { data }) => {
+        if (data?.approveAnnotation?.ok) {
+          const userFeedback = data.approveAnnotation.userFeedback;
+
+          // Update Apollo cache
+          cache.modify({
+            id: cache.identify({
+              __typename: "AnnotationType",
+              id: annotationId,
+            }),
+            fields: {
+              userFeedback(existingFeedback = []) {
+                return [...existingFeedback.edges, { node: userFeedback }];
+              },
+            },
+          });
+
+          // Update local PdfAnnotations state
+          setPdfAnnotations((prevState) => {
+            const updatedAnnotations = prevState.annotations.map((a) => {
+              if (a.id === annotationId) {
+                const updatedServerAnnotation = a.update({
+                  approved: true,
+                  rejected: false,
+                });
+                return updatedServerAnnotation;
+              }
+              return a;
+            });
+            return new PdfAnnotations(
+              updatedAnnotations,
+              prevState.relations,
+              prevState.docTypes,
+              true
+            );
+          });
+        }
+      },
+    }).catch((error) => {
+      console.error("Error approving annotation:", error);
+      toast.error("Failed to approve annotation");
+    });
+  };
+
+  const [rejectAnnotationMutation] = useMutation<
+    RejectAnnotationOutput,
+    RejectAnnotationInput
+  >(REJECT_ANNOTATION);
+  const rejectAnnotation = (annotationId: string, comment?: string) => {
+    rejectAnnotationMutation({
+      variables: { annotationId, comment },
+      update: (cache, { data }) => {
+        if (data?.rejectAnnotation?.ok) {
+          const userFeedback = data.rejectAnnotation.userFeedback;
+
+          // Update Apollo cache
+          cache.modify({
+            id: cache.identify({
+              __typename: "AnnotationType",
+              id: annotationId,
+            }),
+            fields: {
+              userFeedback(existingFeedback = []) {
+                return [...existingFeedback.edges, { node: userFeedback }];
+              },
+            },
+          });
+
+          // Update local PdfAnnotations state
+          setPdfAnnotations((prevState) => {
+            const updatedAnnotations = prevState.annotations.map((a) => {
+              if (a.id === annotationId) {
+                const updatedServerAnnotation = a.update({
+                  approved: false,
+                  rejected: true,
+                });
+                return updatedServerAnnotation;
+              }
+              return a;
+            });
+            return new PdfAnnotations(
+              updatedAnnotations,
+              prevState.relations,
+              prevState.docTypes,
+              true
+            );
+          });
+        }
+      },
+    }).catch((error) => {
+      console.error("Error rejecting annotation:", error);
+      toast.error("Failed to reject annotation");
+    });
+  };
+
   function removeRelation(relationshipId: string): RelationGroup[] {
     return pdfAnnotations.relations.filter((rel) => rel.id !== relationshipId);
   }
@@ -891,6 +999,8 @@ export const AnnotatorRenderer = ({
       createDocTypeAnnotation={requestCreateDocTypeAnnotation}
       deleteAnnotation={requestDeleteAnnotation}
       updateAnnotation={requestUpdateAnnotation}
+      approveAnnotation={approveAnnotation}
+      rejectAnnotation={rejectAnnotation}
       deleteRelation={requestDeleteRelation}
       removeAnnotationFromRelation={requestRemoveAnnotationFromRelationship}
       deleteDocTypeAnnotation={requestDeleteDocTypeAnnotation}

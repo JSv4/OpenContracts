@@ -308,7 +308,8 @@ interface _AnnotationStore {
 
   createDocTypeAnnotation: (dt: DocTypeAnnotation) => void;
   deleteDocTypeAnnotation: (doc_annotation_id: string) => void;
-
+  approveAnnotation: (annot_id: string, comment?: string) => void;
+  rejectAnnotation: (annot_id: string, comment?: string) => void;
   createRelation: (r: RelationGroup) => void;
   deleteRelation: (relation_id: string) => void;
   removeAnnotationFromRelation: (
@@ -344,8 +345,14 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   searchText: undefined,
   hideSidebar: false,
   allowComment: false,
+  approveAnnotation: (annot_id: string, comment?: string) => {
+    throw new Error("approveAnnotation- not implemented");
+  },
+  rejectAnnotation: (annot_id: string, comment?: string) => {
+    throw new Error("approveAnnotation- not implemented");
+  },
   setHideSidebar: () => {
-    throw new Error("setHideSidebar - not implemented;");
+    throw new Error("setHideSidebar - not implemented");
   },
   toggleShowStructuralLabels: () => {
     throw new Error("toggleShowStructuralLabels() - not implemented");

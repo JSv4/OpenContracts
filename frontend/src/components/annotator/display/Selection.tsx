@@ -29,6 +29,8 @@ import RadialButtonCloud, {
 } from "../../widgets/buttons/RadialButtonCloud";
 import { SelectionTokenGroup } from "./SelectionTokenGroup";
 import { EditLabelModal } from "../../widgets/modals/EditLabelModal";
+import { useReactiveVar } from "@apollo/client";
+import { authToken } from "../../../graphql/cache";
 
 interface SelectionProps {
   selectionRef:
@@ -64,6 +66,7 @@ export const Selection: React.FC<SelectionProps> = ({
   showInfo = true,
   setJumpedToAnnotationOnLoad,
 }) => {
+  const auth_token = useReactiveVar(authToken);
   const [hovered, setHovered] = useState(false);
   const [isEditLabelModalVisible, setIsEditLabelModalVisible] = useState(false);
   const [cloudVisible, setCloudVisible] = useState(false);
@@ -74,28 +77,41 @@ export const Selection: React.FC<SelectionProps> = ({
   const color = label?.color || "#616a6b"; // grey as the default
 
   let actions: CloudButtonItem[] = [];
-  if (allowFeedback) {
-    if (!approved) {
-      actions.push({
-        name: "thumbs up",
-        color: "green",
-        tooltip: "Upvote Annotation",
-        onClick: () => {
-          console.log("Edit clicked");
-        },
-      });
+
+  if (auth_token) {
+    if (allowFeedback) {
+      if (!approved) {
+        actions.push({
+          name: "thumbs up",
+          color: "green",
+          tooltip: "Upvote Annotation",
+          onClick: () => {
+            annotationStore.approveAnnotation(annotation.id);
+          },
+        });
+      }
+      if (!rejected) {
+        actions.push({
+          name: "thumbs down",
+          color: "red",
+          tooltip: "Downvote Annotation",
+          onClick: () => {
+            annotationStore.rejectAnnotation(annotation.id);
+          },
+        });
+      }
     }
-    if (!rejected) {
-      actions.push({
-        name: "thumbs down",
-        color: "red",
-        tooltip: "Downvote Annotation",
-        onClick: () => {
-          console.log("Edit clicked");
-        },
-      });
-    }
+  } else {
+    actions.push({
+      name: "question",
+      color: "red",
+      tooltip: "Login to see available actions!",
+      onClick: () => {
+        window.alert("Login to leave feedback and see other actions!");
+      },
+    });
   }
+
   if (
     annotation.myPermissions.includes(PermissionTypes.CAN_REMOVE) &&
     !annotation.annotationLabel.readonly

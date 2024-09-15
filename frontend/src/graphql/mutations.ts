@@ -1610,13 +1610,17 @@ export interface RejectAnnotationInput {
 }
 
 export interface ApproveAnnotationOutput {
-  ok: boolean;
-  userFeedback: FeedbackType | null;
+  approveAnnotation: {
+    ok: boolean;
+    userFeedback: FeedbackType | null;
+  };
 }
 
 export interface RejectAnnotationOutput {
-  ok: boolean;
-  userFeedback: FeedbackType | null;
+  rejectAnnotation: {
+    ok: boolean;
+    userFeedback: FeedbackType | null;
+  };
 }
 
 // Mutations

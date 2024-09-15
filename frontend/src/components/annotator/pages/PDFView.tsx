@@ -104,6 +104,8 @@ export const PDFView = ({
   selected_extract,
   editMode,
   allowInput,
+  approveAnnotation,
+  rejectAnnotation,
   setAllowInput,
   setEditMode,
   onSelectAnalysis,
@@ -164,6 +166,8 @@ export const PDFView = ({
   onSelectExtract: (extract: ExtractType | null) => undefined | null | void;
   createAnnotation: (added_annotation_obj: ServerAnnotation) => void;
   updateAnnotation: (updated_annotation: ServerAnnotation) => void;
+  approveAnnotation: (annot_id: string, comment?: string) => void;
+  rejectAnnotation: (annot_id: string, comment?: string) => void;
   createDocTypeAnnotation: (doc_type_annotation_obj: DocTypeAnnotation) => void;
   deleteAnnotation: (annotation_id: string) => void;
   deleteRelation: (relation_id: string) => void;
@@ -276,11 +280,6 @@ export const PDFView = ({
       },
     ];
   }
-
-  const handleActionSelect = (action: string) => {
-    // Handle action selection
-    console.log("Selected action:", action);
-  };
 
   const addSpanLabelsToViewSelection = (ls: AnnotationLabelType[]) => {
     setSpanLabelsToView([...spanLabelsToView, ...ls]);
@@ -668,6 +667,8 @@ export const PDFView = ({
             searchText,
             hideSidebar,
             setHideSidebar,
+            approveAnnotation,
+            rejectAnnotation,
             textSearchMatches: textSearchMatches ? textSearchMatches : [],
             searchForText: setSearchText,
             selectedTextSearchMatchIndex,

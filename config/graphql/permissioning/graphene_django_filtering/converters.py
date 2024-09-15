@@ -34,6 +34,9 @@ def convert_field_to_list_or_connection(field, registry=None):
     model = field.related_model
 
     def dynamic_type():
+
+        print("Dynamic type on convert_field_to_list_or_connection...")
+
         _type = registry.get_type_for_model(model)
         if not _type:
             return
@@ -49,12 +52,12 @@ def convert_field_to_list_or_connection(field, registry=None):
             # Use a DjangoFilterConnectionField if there are
             # defined filter_fields or a filterset_class in the
             # DjangoObjectType Meta
-            if _type._meta.filter_fields or _type._meta.filterset_class:
-                from graphene_django.filter.fields import DjangoFilterConnectionField
-
-                return DjangoFilterConnectionField(
-                    _type, required=True, description=description
-                )
+            # if _type._meta.filter_fields or _type._meta.filterset_class:
+            #     from graphene_django.filter.fields import DjangoFilterConnectionField
+            #
+            #     return DjangoFilterConnectionField(
+            #         _type, required=True, description=description
+            #     )
 
             return CustomDjangoFilterConnectionField(_type, required=True, description=description)
 

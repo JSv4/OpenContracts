@@ -440,7 +440,7 @@ MODEL_PATH = pathlib.Path(BASE_PATH, "model")
 GRAPHENE = {
     "SCHEMA": "config.graphql.schema.schema",
     "MIDDLEWARE": [
-        "config.graphql.permission_annotator.middleware.PermissionAnnotatingMiddleware",
+        "config.graphql.permissioning.permission_annotator.middleware.PermissionAnnotatingMiddleware",
         "graphql_jwt.middleware.JSONWebTokenMiddleware",
         "config.graphql_api_key_auth.middleware.ApiKeyTokenMiddleware",
     ],

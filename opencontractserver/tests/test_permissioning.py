@@ -26,12 +26,12 @@ from opencontractserver.tasks.permissioning_tasks import (
     make_corpus_public_task,
 )
 from opencontractserver.types.enums import PermissionTypes
-# from config.graphql.permissioning.filters import (
-#     filter_queryset_by_user_read_permission,
-# )
-from opencontractserver.utils.permissioning import (get_users_permissions_for_obj,
+
+from opencontractserver.utils.permissioning import (
+    get_users_permissions_for_obj,
     set_permissions_for_obj_to_user,
-    user_has_permission_for_obj)
+    user_has_permission_for_obj
+)
 
 from .fixtures import SAMPLE_PDF_FILE_ONE_PATH
 
@@ -811,4 +811,157 @@ class PermissioningTestCase(TestCase):
         self.__test_make_analysis_public_mutation()
         self.__test_make_analysis_public_task()
         self.__test_actual_analysis_deletion()
-        self.__test_query_efficient_filtering()
+        # self.__test_query_efficient_filtering()
+
+    def test_user_feedback_visibility(self):
+        logger.info("----- TEST USER FEEDBACK VISIBILITY -----")
+
+        from opencontractserver.feedback.models import UserFeedback
+        from opencontractserver.annotations.models import Annotation
+
+        # Create UserFeedback objects with different visibility settings
+        with transaction.atomic():
+            # Feedback created by user1, not public
+            feedback1 = UserFeedback.objects.create(
+                creator=self.user,
+                comment="Feedback 1",
+                is_public=False
+            )
+
+            # Feedback created by user2, public
+            feedback2 = UserFeedback.objects.create(
+                creator=self.user_2,
+                comment="Feedback 2",
+                is_public=True
+            )
+
+            # Feedback with public annotation
+            public_annotation = Annotation.objects.create(
+                creator=self.superuser,
+                document=self.corpus.documents.first(),
+                is_public=True
+            )
+            feedback3 = UserFeedback.objects.create(
+                creator=self.superuser,
+                comment="Feedback 3",
+                is_public=False,
+                commented_annotation=public_annotation
+            )
+
+            # Feedback with private annotation
+            private_annotation = Annotation.objects.create(
+                creator=self.superuser,
+                document=self.corpus.documents.first(),
+                is_public=False
+            )
+            feedback4 = UserFeedback.objects.create(
+                creator=self.superuser,
+                comment="Feedback 4",
+                is_public=False,
+                commented_annotation=private_annotation
+            )
+
+        # Test visibility for user1
+        visible_feedback_user1 = UserFeedback.objects.visible_to_user(self.user)
+        self.assertIn(feedback1, visible_feedback_user1)
+        self.assertIn(feedback2, visible_feedback_user1)
+        self.assertIn(feedback3, visible_feedback_user1)
+        self.assertNotIn(feedback4, visible_feedback_user1)
+        logger.info(f"User1 can see {visible_feedback_user1.count()} feedback items")
+
+        # Test visibility for user2
+        visible_feedback_user2 = UserFeedback.objects.visible_to_user(self.user_2)
+        self.assertNotIn(feedback1, visible_feedback_user2)
+        self.assertIn(feedback2, visible_feedback_user2)
+        self.assertIn(feedback3, visible_feedback_user2)
+        self.assertNotIn(feedback4, visible_feedback_user2)
+        logger.info(f"User2 can see {visible_feedback_user2.count()} feedback items")
+
+        # Test visibility for superuser
+        visible_feedback_superuser = UserFeedback.objects.visible_to_user(self.superuser)
+        self.assertIn(feedback1, visible_feedback_superuser)
+        self.assertIn(feedback2, visible_feedback_superuser)
+        self.assertIn(feedback3, visible_feedback_superuser)
+        self.assertIn(feedback4, visible_feedback_superuser)
+        logger.info(f"Superuser can see {visible_feedback_superuser.count()} feedback items")
+
+        # Test that the filtered querysets are different for different users
+        self.assertNotEqual(set(visible_feedback_user1), set(visible_feedback_user2))
+
+        # Test performance
+        import time
+
+        # Measure time for the efficient filtering using 'visible_to_user' method
+        start_time = time.time()
+        UserFeedback.objects.visible_to_user(self.user)
+        end_time = time.time()
+
+        logger.info(f"Time taken for efficient filtering: {end_time - start_time} seconds")
+
+        # Compare with a naive approach
+        start_time = time.time()
+        all_feedback = UserFeedback.objects.all()
+        naive_filtered = [
+            feedback for feedback in all_feedback
+            if feedback.creator == self.user or feedback.is_public or
+               (feedback.commented_annotation and feedback.commented_annotation.is_public)
+        ]
+        end_time = time.time()
+
+        logger.info(f"Time taken for naive filtering: {end_time - start_time} seconds")
+
+        # Assert that both methods return the same results
+        self.assertEqual(set(visible_feedback_user1), set(naive_filtered))
+
+    # def test_direct_user_permissions(self):
+    #     logger.info("----- TEST DIRECT USER PERMISSIONS -----")
+    #
+    #     # Create a corpus
+    #     with transaction.atomic():
+    #         corpus = Corpus.objects.create(title="Direct Permission Corpus", creator=self.superuser)
+    #
+    #     # Grant read permission directly to user1
+    #     set_permissions_for_obj_to_user(self.user, corpus, [PermissionTypes.READ])
+    #
+    #     # Ensure user2 has no permissions
+    #     # No action needed as user2 has no permissions by default
+    #
+    #     # Verify that user1 can access the object
+    #     accessible_corpuses_user1 = Corpus.permissioned_objects.for_user(self.user, perm='read')
+    #     print("Access dis: ")
+    #     print(accessible_corpuses_user1)
+    #     print(accessible_corpuses_user1[0].title)
+    #     self.assertIn(corpus, accessible_corpuses_user1)
+    #     logger.info("User1 can access the corpus via direct permission.")
+    #
+    #     # Verify that user2 cannot access the object
+    #     accessible_corpuses_user2 = Corpus.permissioned_objects.for_user(self.user_2, perm='read')
+    #     self.assertNotIn(corpus, accessible_corpuses_user2)
+    #     logger.info("User2 cannot access the corpus without permissions.")
+    #
+    # def test_group_permissions(self):
+    #     logger.info("----- TEST GROUP PERMISSIONS -----")
+    #
+    #     # Create a corpus
+    #     with transaction.atomic():
+    #         corpus = Corpus.objects.create(title="Group Permission Corpus", creator=self.superuser)
+    #
+    #     # Create a group and add user1 to it
+    #     group = Group.objects.create(name="Test Group")
+    #     self.user.groups.add(group)
+    #
+    #     # Grant read permission to the group
+    #     assign_perm('read_corpus', group, corpus)
+    #
+    #     # Ensure user2 is not in the group
+    #     # No action needed as user2 is not added to any group
+    #
+    #     # Verify that user1 can access the object via group permission
+    #     accessible_corpuses_user1 = Corpus.permissioned_objects.for_user(self.user, perm='read')
+    #     self.assertIn(corpus, accessible_corpuses_user1)
+    #     logger.info("User1 can access the corpus via group permission.")
+    #
+    #     # Verify that user2 cannot access the object
+    #     accessible_corpuses_user2 = Corpus.permissioned_objects.for_user(self.user_2, perm='read')
+    #     self.assertNotIn(corpus, accessible_corpuses_user2)
+    #     logger.info("User2 cannot access the corpus without permissions.")

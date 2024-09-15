@@ -459,3 +459,8 @@ class UserFeedbackType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         model = UserFeedback
         interfaces = [relay.Node]
         connection_class = CountableConnection
+
+    # https://docs.graphene-python.org/projects/django/en/latest/queries/#default-queryset
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        return queryset.objects.visible_to_user(info.context.user)

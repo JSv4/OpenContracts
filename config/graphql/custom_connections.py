@@ -64,34 +64,41 @@ class CustomDjangoFilterConnectionField(DjangoFilterConnectionField):
     def resolve_queryset(
         cls, connection, iterable, info, args, filtering_args, filterset_class
     ):
-        def filter_kwargs():
-            kwargs = {}
-            for k, v in args.items():
-                if k in filtering_args:
-                    if k == "order_by" and v is not None:
-                        v = to_snake_case(v)
-                    kwargs[k] = convert_enum(v)
-            return kwargs
+        # def filter_kwargs():
+        #     kwargs = {}
+        #     for k, v in args.items():
+        #         if k in filtering_args:
+        #             if k == "order_by" and v is not None:
+        #                 v = to_snake_case(v)
+        #             kwargs[k] = convert_enum(v)
+        #     return kwargs
 
         qs = super(DjangoFilterConnectionField, cls).resolve_queryset(
             connection, iterable, info, args
         )
 
-        filterset = filterset_class(
-            data=filter_kwargs(), queryset=qs, request=info.context
-        )
+        if hasattr(qs, 'visible_to_user'):
+            print(f"Custom connection... we are looking at permissioned model with visible_to_user(...) "
+                  f"function... use it.")
+            qs = qs.visible_to_user(user=info.context.user)
 
-        if filterset.is_valid():
-            qs = filterset.qs
-            # Apply permission filtering
-            model = qs.model
-            user = info.context.user
-            if hasattr(model, 'get_queryset'):
-                qs = model.get_queryset(qs, user)
-            elif hasattr(model, 'objects') and hasattr(model.objects, 'get_queryset'):
-                qs = model.objects.get_queryset(qs, user)
-            return qs
-        raise ValidationError(filterset.form.errors.as_json())
+        return qs
+
+        # filterset = filterset_class(
+        #     data=filter_kwargs(), queryset=qs, request=info.context
+        # )
+        #
+        # if filterset.is_valid():
+        #     qs = filterset.qs
+        #     # Apply permission filtering
+        #     model = qs.model
+        #     user = info.context.user
+        #     if hasattr(model, 'get_queryset'):
+        #         qs = model.get_queryset(qs, user)
+        #     elif hasattr(model, 'objects') and hasattr(model.objects, 'get_queryset'):
+        #         qs = model.objects.get_queryset(qs, user)
+        #     return qs
+        # raise ValidationError(filterset.form.errors.as_json())
 
     def get_queryset_resolver(self):
         return partial(

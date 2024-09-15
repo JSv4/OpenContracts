@@ -5,7 +5,7 @@ from django.db.models import Manager
 from django.utils import timezone
 from django.db import models
 
-from config.graphql.permissioning.filters import PermissionQuerySet
+from opencontractserver.shared.QuerySets import PermissionQuerySet
 
 
 # from config.graphql.permissioning.filters import filter_queryset_by_user_read_permission
@@ -16,12 +16,24 @@ from config.graphql.permissioning.filters import PermissionQuerySet
 #         return filter_queryset_by_user_read_permission(self, user)
 
 
+
+
 class PermissionManager(Manager):
     def get_queryset(self):
         return PermissionQuerySet(self.model, using=self._db)
 
     def for_user(self, user, perm, extra_conditions=None):
         return self.get_queryset().for_user(user, perm, extra_conditions)
+
+
+class PermissionedModel(models.Model):
+    # We have some models where we want both default model manager and PermissionManager
+    # https://docs.djangoproject.com/en/5.1/topics/db/managers/#custom-managers-and-model-inheritance
+    # permissioned_objects = PermissionManager()
+    permissioned_objects = PermissionQuerySet.as_manager()
+
+    class Meta:
+        abstract = True
 
 
 class BaseOCModel(models.Model):

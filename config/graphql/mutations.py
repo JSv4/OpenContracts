@@ -7,6 +7,7 @@ import graphene
 import graphql_jwt
 from celery import chain, chord, group
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Q
@@ -33,7 +34,7 @@ from config.graphql.graphene_types import (
     RelationInputType,
     RelationshipType,
     UserExportType,
-    UserType,
+    UserType, UserFeedbackType,
 )
 from config.graphql.serializers import (
     AnnotationLabelSerializer,
@@ -53,6 +54,7 @@ from opencontractserver.annotations.models import (
 from opencontractserver.corpuses.models import Corpus, CorpusQuery, TemporaryFileHandle
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
+from opencontractserver.feedback.models import UserFeedback
 from opencontractserver.tasks import (
     build_label_lookups_task,
     burn_doc_annotations,
@@ -954,6 +956,84 @@ class RemoveAnnotation(graphene.Mutation):
 
         return RemoveAnnotation(ok=True)
 
+
+class RejectAnnotation(graphene.Mutation):
+    class Arguments:
+        annotation_id = graphene.ID(required=True, description="ID of the annotation to reject")
+        comment = graphene.String(description="Optional comment for the rejection")
+
+    ok = graphene.Boolean()
+    user_feedback = graphene.Field(UserFeedbackType)
+
+    @login_required
+    @transaction.atomic
+    def mutate(root, info, annotation_id, comment=None):
+        user = info.context.user
+        annotation_pk = from_global_id(annotation_id)[1]
+
+        try:
+            annotation = Annotation.objects.get(pk=annotation_pk)
+        except ObjectDoesNotExist:
+            return RejectAnnotation(ok=False, user_feedback=None)
+
+        user_feedback, created = UserFeedback.objects.get_or_create(
+            commented_annotation=annotation,
+            defaults={
+                'creator': user,
+                'approved': False,
+                'rejected': True,
+                'comment': comment or ""
+            }
+        )
+
+        if not created:
+            user_feedback.approved = False
+            user_feedback.rejected = True
+            user_feedback.comment = comment or user_feedback.comment
+            user_feedback.save()
+
+        set_permissions_for_obj_to_user(user, user_feedback, [PermissionTypes.CRUD])
+
+        return RejectAnnotation(ok=True, user_feedback=user_feedback)
+
+class ApproveAnnotation(graphene.Mutation):
+    class Arguments:
+        annotation_id = graphene.ID(required=True, description="ID of the annotation to approve")
+        comment = graphene.String(description="Optional comment for the approval")
+
+    ok = graphene.Boolean()
+    user_feedback = graphene.Field(UserFeedbackType)
+
+    @login_required
+    @transaction.atomic
+    def mutate(root, info, annotation_id, comment=None):
+        user = info.context.user
+        annotation_pk = from_global_id(annotation_id)[1]
+
+        try:
+            annotation = Annotation.objects.get(pk=annotation_pk)
+        except ObjectDoesNotExist:
+            return ApproveAnnotation(ok=False, user_feedback=None)
+
+        user_feedback, created = UserFeedback.objects.get_or_create(
+            commented_annotation=annotation,
+            defaults={
+                'creator': user,
+                'approved': True,
+                'rejected': False,
+                'comment': comment or ""
+            }
+        )
+
+        if not created:
+            user_feedback.approved = True
+            user_feedback.rejected = False
+            user_feedback.comment = comment or user_feedback.comment
+            user_feedback.save()
+
+        set_permissions_for_obj_to_user(user, user_feedback, [PermissionTypes.CRUD])
+
+        return ApproveAnnotation(ok=True, user_feedback=user_feedback)
 
 class AddAnnotation(graphene.Mutation):
     class Arguments:
@@ -1987,6 +2067,8 @@ class Mutation(graphene.ObjectType):
     update_annotation = UpdateAnnotation.Field()
     add_doc_type_annotation = AddDocTypeAnnotation.Field()
     remove_doc_type_annotation = RemoveAnnotation.Field()
+    approve_annotation = ApproveAnnotation.Field()
+    reject_annotation = RejectAnnotation.Field()
 
     # RELATIONSHIP MUTATIONS #####################################################
     add_relationship = AddRelationship.Field()

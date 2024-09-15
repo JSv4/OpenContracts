@@ -9,7 +9,7 @@ from tree_queries.models import TreeNode
 from tree_queries.query import TreeQuerySet
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.shared.Models import BaseOCModel
+from opencontractserver.shared.Models import BaseOCModel, PermissionedModel
 from opencontractserver.shared.utils import calc_oc_file_path
 
 
@@ -61,12 +61,14 @@ class Corpus(TreeNode):
     label_set = django.db.models.ForeignKey(
         "annotations.LabelSet",
         null=True,
+        blank=True,
         on_delete=django.db.models.SET_NULL,
         related_name="used_by_corpuses",
         related_query_name="used_by_corpus",
     )
 
     # Sharing
+    allow_comments = django.db.models.BooleanField(default=False)
     is_public = django.db.models.BooleanField(default=False)
     creator = django.db.models.ForeignKey(
         get_user_model(),

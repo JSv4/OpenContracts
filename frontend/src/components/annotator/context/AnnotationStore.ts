@@ -73,6 +73,9 @@ export class ServerAnnotation {
     public readonly structural: boolean,
     public readonly json: MultipageAnnotationJson,
     public readonly myPermissions: PermissionTypes[],
+    public readonly approved: boolean,
+    public readonly rejected: boolean,
+    public readonly canComment: boolean = false,
     id: string | undefined = undefined
   ) {
     this.id = id || uuidv4();
@@ -94,6 +97,9 @@ export class ServerAnnotation {
       delta.structural ?? this.structural,
       delta.json ?? this.json,
       delta.myPermissions ?? this.myPermissions,
+      delta.approved ?? this.approved,
+      delta.rejected ?? this.rejected,
+      delta.canComment ?? this.canComment,
       this.id
     );
   }
@@ -106,6 +112,9 @@ export class ServerAnnotation {
       obj.structural,
       obj.json,
       obj.myPermissions,
+      obj.approved,
+      obj.rejected,
+      obj.canComment,
       obj.id
     );
   }
@@ -268,6 +277,7 @@ interface _AnnotationStore {
   textSearchMatches: TextSearchResult[];
   selectedTextSearchMatchIndex: number;
   searchText: string | undefined;
+  allowComment: boolean;
   toggleShowStructuralLabels: () => void;
   searchForText: (searchText: string) => void;
   advanceTextSearchMatch: () => void;
@@ -333,6 +343,7 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   selectedTextSearchMatchIndex: 1,
   searchText: undefined,
   hideSidebar: false,
+  allowComment: false,
   setHideSidebar: () => {
     throw new Error("setHideSidebar - not implemented;");
   },

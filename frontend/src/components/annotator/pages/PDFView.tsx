@@ -639,7 +639,10 @@ export const PDFView = ({
             PermissionTypes.CAN_CREATE,
             PermissionTypes.CAN_REMOVE,
             PermissionTypes.CAN_UPDATE,
-          ]
+          ],
+          false,
+          false,
+          true
         )
       );
     }
@@ -658,6 +661,7 @@ export const PDFView = ({
       >
         <AnnotationStore.Provider
           value={{
+            allowComment: selected_corpus?.allowComments ?? true,
             humanSpanLabelChoices,
             spanLabels,
             docText: doc_text,

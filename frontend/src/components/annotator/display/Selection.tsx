@@ -45,6 +45,7 @@ interface SelectionProps {
   approved?: boolean;
   rejected?: boolean;
   actions?: CloudButtonItem[];
+  allowFeedback?: boolean;
   setJumpedToAnnotationOnLoad: (annot: string) => null | void;
 }
 
@@ -59,6 +60,7 @@ export const Selection: React.FC<SelectionProps> = ({
   children,
   approved,
   rejected,
+  allowFeedback,
   showInfo = true,
   setJumpedToAnnotationOnLoad,
 }) => {
@@ -71,17 +73,34 @@ export const Selection: React.FC<SelectionProps> = ({
   const label = annotation.annotationLabel;
   const color = label?.color || "#616a6b"; // grey as the default
 
-  const actions: CloudButtonItem[] = [
-    {
-      name: "pencil",
-      color: "blue",
-      tooltip: "Edit Annotation",
-      onClick: () => {
-        console.log("Edit clicked");
-      },
-      protected_message: "Confirm shit",
-    },
-    {
+  let actions: CloudButtonItem[] = [];
+  if (allowFeedback) {
+    if (!approved) {
+      actions.push({
+        name: "thumbs up",
+        color: "green",
+        tooltip: "Upvote Annotation",
+        onClick: () => {
+          console.log("Edit clicked");
+        },
+      });
+    }
+    if (!rejected) {
+      actions.push({
+        name: "thumbs down",
+        color: "red",
+        tooltip: "Downvote Annotation",
+        onClick: () => {
+          console.log("Edit clicked");
+        },
+      });
+    }
+  }
+  if (
+    annotation.myPermissions.includes(PermissionTypes.CAN_REMOVE) &&
+    !annotation.annotationLabel.readonly
+  ) {
+    actions.push({
       name: "trash alternate outline",
       color: "red",
       tooltip: "Delete Annotation",
@@ -89,57 +108,22 @@ export const Selection: React.FC<SelectionProps> = ({
         console.log("Delete clicked");
       },
       protected_message: "Are you sure you want to delete this annotation?",
-    },
-    {
+    });
+  }
+
+  if (
+    annotation.myPermissions.includes(PermissionTypes.CAN_UPDATE) &&
+    !annotation.annotationLabel.readonly
+  ) {
+    actions.push({
       name: "pencil",
       color: "blue",
       tooltip: "Edit Annotation",
       onClick: () => {
         console.log("Edit clicked");
       },
-    },
-    {
-      name: "trash alternate outline",
-      color: "red",
-      tooltip: "Delete Annotation",
-      onClick: () => {
-        console.log("Delete clicked");
-      },
-    },
-    {
-      name: "pencil",
-      color: "blue",
-      tooltip: "Edit Annotation",
-      onClick: () => {
-        console.log("Edit clicked");
-      },
-    },
-    {
-      name: "trash alternate outline",
-      color: "red",
-      tooltip: "Delete Annotation",
-      onClick: () => {
-        console.log("Delete clicked");
-      },
-    },
-    {
-      name: "pencil",
-      color: "blue",
-      tooltip: "Edit Annotation",
-      onClick: () => {
-        console.log("Edit clicked");
-      },
-    },
-    {
-      name: "trash alternate outline",
-      color: "red",
-      tooltip: "Delete Annotation",
-      onClick: () => {
-        console.log("Delete clicked");
-      },
-    },
-    // Add more buttons as needed
-  ];
+    });
+  }
 
   const bounds = pageInfo.getScaledBounds(
     annotation.json[pageInfo.page.pageNumber - 1].bounds

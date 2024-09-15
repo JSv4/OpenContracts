@@ -285,8 +285,9 @@ export const Page = ({
         pageInfo={pageInfo}
         annotation={annotation}
         setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
-        approved
-        // rejected
+        approved={annotation.approved}
+        rejected={annotation.rejected}
+        allowFeedback={annotationStore.allowComment}
       />
     ));
   }, [

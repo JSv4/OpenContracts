@@ -1601,6 +1601,16 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
           icon
           description
         }
+        userFeedback {
+          edges {
+            node {
+              id
+              approved
+              rejected
+            }
+          }
+          totalCount
+        }
         rawText
         json
         myPermissions

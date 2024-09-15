@@ -10,6 +10,7 @@ import {
   DatacellType,
   DocumentType,
   ExtractType,
+  FeedbackType,
   FieldsetType,
   LabelSetType,
   LabelType,
@@ -1592,6 +1593,61 @@ export const START_DOCUMENT_EXTRACT = gql`
         corpus {
           id
           title
+        }
+      }
+    }
+  }
+`;
+
+export interface ApproveAnnotationInput {
+  annotationId: string;
+  comment?: string;
+}
+
+export interface RejectAnnotationInput {
+  annotationId: string;
+  comment?: string;
+}
+
+export interface ApproveAnnotationOutput {
+  ok: boolean;
+  userFeedback: FeedbackType | null;
+}
+
+export interface RejectAnnotationOutput {
+  ok: boolean;
+  userFeedback: FeedbackType | null;
+}
+
+// Mutations
+export const APPROVE_ANNOTATION = gql`
+  mutation ApproveAnnotation($annotationId: ID!, $comment: String) {
+    approveAnnotation(annotationId: $annotationId, comment: $comment) {
+      ok
+      userFeedback {
+        id
+        approved
+        rejected
+        comment
+        commentedAnnotation {
+          id
+        }
+      }
+    }
+  }
+`;
+
+export const REJECT_ANNOTATION = gql`
+  mutation RejectAnnotation($annotationId: ID!, $comment: String) {
+    rejectAnnotation(annotationId: $annotationId, comment: $comment) {
+      ok
+      userFeedback {
+        id
+        approved
+        rejected
+        comment
+        commentedAnnotation {
+          id
         }
       }
     }

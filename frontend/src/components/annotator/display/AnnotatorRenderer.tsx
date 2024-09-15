@@ -331,6 +331,9 @@ export const AnnotatorRenderer = ({
                       ? annotationObj.myPermissions
                       : []
                   ),
+                  false,
+                  false,
+                  false,
                   annotationObj.id
                 )
               );

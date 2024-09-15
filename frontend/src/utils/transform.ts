@@ -89,8 +89,18 @@ export function convertToDocTypeAnnotation(
 }
 
 export function convertToServerAnnotation(
-  annotation: ServerAnnotationType
+  annotation: ServerAnnotationType,
+  allowComments?: boolean
 ): ServerAnnotation {
+  let approved = false;
+  let rejected = false;
+  if (annotation.userFeedback?.edges.length === 1) {
+    approved =
+      Boolean(annotation.userFeedback.edges[0]?.node?.approved) ?? false;
+    rejected =
+      Boolean(annotation.userFeedback.edges[0]?.node?.rejected) ?? false;
+  }
+
   return new ServerAnnotation(
     annotation.page,
     annotation.annotationLabel,
@@ -98,15 +108,21 @@ export function convertToServerAnnotation(
     annotation.structural ?? false,
     annotation.json ?? {},
     annotation.myPermissions ?? [],
+    approved,
+    rejected,
+    allowComments !== undefined ? allowComments : false,
     annotation.id
   );
 }
 
 // Helper function to convert an array of ServerAnnotationType to ServerAnnotation
 export function convertToServerAnnotations(
-  annotations: ServerAnnotationType[]
+  annotations: ServerAnnotationType[],
+  allowComments?: boolean
 ): ServerAnnotation[] {
-  return annotations.map(convertToServerAnnotation);
+  return annotations.map((annot) =>
+    convertToServerAnnotation(annot, allowComments)
+  );
 }
 
 export function hexToRgb(hex: string) {

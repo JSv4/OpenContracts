@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from graphene.types.generic import GenericScalar
 
-from config.graphql.permission_annotator.middleware import (
+from config.graphql.permissioning.permission_annotator.middleware import (
     get_permissions_for_user_on_model_in_app,
 )
 from opencontractserver.types.enums import PermissionTypes

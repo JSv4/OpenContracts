@@ -8,14 +8,9 @@ import graphene
 from graphene import Int
 from graphene.relay import Node
 from graphene_django import DjangoObjectType
-from graphene_django.filter import DjangoFilterConnectionField
 from graphql_jwt.decorators import login_required
 from graphql_relay import from_global_id, to_global_id
 
-from config.graphql.custom_connections import (
-    CustomDjangoFilterConnectionField,
-    CustomPermissionFilteredConnection,
-)
 from opencontractserver.shared.resolvers import resolve_single_oc_model_from_id
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.permissioning import (
@@ -63,18 +58,14 @@ class OpenContractsNode(Node):
         )
 
 
-class CountableConnection(CustomPermissionFilteredConnection):
+class CountableConnection(graphene.relay.Connection):
     class Meta:
         abstract = True
 
-    total_count = Int()
-    edge_count = Int()
+    total_count = graphene.Int()
 
-    def resolve_total_count(root, info, **kwargs):
-        return root.length
-
-    def resolve_edge_count(root, info, **kwargs):
-        return len(root.edges)
+    def resolve_total_count(root, info):
+        return len(root.iterable)  # And no, root.iterable.count() did not work for me.
 
 
 class DRFDeletion(graphene.Mutation):
@@ -246,69 +237,3 @@ class DRFMutation(graphene.Mutation):
             message = f"Mutation failed due to error: {e}"
 
         return cls(ok=ok, message=message, obj_id=obj_id)
-
-
-class CustomDjangoObjectType(DjangoObjectType):
-    class Meta:
-        abstract = True
-
-    @classmethod
-    def __init_subclass_with_meta__(
-        cls,
-        model=None,
-        registry=None,
-        skip_registry=False,
-        only_fields=None,
-        fields=None,
-        exclude_fields=None,
-        exclude=None,
-        filter_fields=None,
-        filterset_class=None,
-        connection=None,
-        connection_class=None,
-        use_connection=None,
-        interfaces=(),
-        convert_choices_to_enum=None,
-        _meta=None,
-        **options,
-    ):
-        if filter_fields is not None and filterset_class is None:
-            from graphene_django.filter.utils import get_filterset_class
-
-            filterset_class = get_filterset_class(model, filter_fields)
-
-        super().__init_subclass_with_meta__(
-            model=model,
-            registry=registry,
-            skip_registry=skip_registry,
-            only_fields=only_fields,
-            fields=fields,
-            exclude_fields=exclude_fields,
-            exclude=exclude,
-            filter_fields=filter_fields,
-            filterset_class=filterset_class,
-            connection=connection,
-            connection_class=connection_class,
-            use_connection=use_connection,
-            interfaces=interfaces,
-            convert_choices_to_enum=convert_choices_to_enum,
-            _meta=_meta,
-            **options,
-        )
-
-        # Replace any DjangoFilterConnectionField with CustomDjangoFilterConnectionField
-        if cls._meta.fields:
-            for name, field in cls._meta.fields.items():
-                if isinstance(field, DjangoFilterConnectionField):
-                    new_field = CustomDjangoFilterConnectionField(
-                        type(field.node),
-                        filters=field.filterset_class.Meta.fields
-                        if field.filterset_class
-                        else None,
-                        filterset_class=field.filterset_class,
-                    )
-                    cls._meta.fields[name] = new_field
-
-    @classmethod
-    def get_node(cls, info, id):
-        return super().get_node(info, id)

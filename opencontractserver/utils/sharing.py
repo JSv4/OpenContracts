@@ -8,10 +8,14 @@ from django.db import transaction
 from django.db.models import Q
 
 from opencontractserver.analyzer.models import Analysis, Analyzer
-from opencontractserver.annotations.models import AnnotationLabel, Annotation, Relationship
+from opencontractserver.annotations.models import (
+    Annotation,
+    AnnotationLabel,
+    Relationship,
+)
 from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentAnalysisRow
-from opencontractserver.extracts.models import Extract, Datacell, Fieldset
+from opencontractserver.extracts.models import Datacell, Extract, Fieldset
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

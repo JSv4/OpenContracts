@@ -1,9 +1,11 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
+
+# from guardian.models import UserObjectPermission, GroupObjectPermission
+from django.db.models import Exists, OuterRef, Q
+
 # from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
-# from guardian.models import UserObjectPermission, GroupObjectPermission
-from django.db.models import Q, Exists, OuterRef
 from tree_queries.query import TreeQuerySet
 
 User = get_user_model()
@@ -24,7 +26,7 @@ class PermissionedTreeQuerySet(TreeQuerySet):
         return self.filter(created__gte=recent_date)
 
     def with_comments(self):
-        return self.exclude(comment='')
+        return self.exclude(comment="")
 
     def by_creator(self, creator):
         return self.filter(creator=creator)
@@ -39,14 +41,9 @@ class PermissionedTreeQuerySet(TreeQuerySet):
             return self.all()
 
         if user.is_anonymous:
-            queryset = self.filter(
-                Q(is_public=True)
-            ).distinct()
+            queryset = self.filter(Q(is_public=True)).distinct()
         else:
-            queryset = self.filter(
-                Q(creator=user) |
-                Q(is_public=True)
-            ).distinct()
+            queryset = self.filter(Q(creator=user) | Q(is_public=True)).distinct()
 
         return queryset.with_tree_fields()
 
@@ -69,35 +66,36 @@ class UserFeedbackQuerySet(models.QuerySet):
         return self.filter(created__gte=recent_date)
 
     def with_comments(self):
-        return self.exclude(comment='')
+        return self.exclude(comment="")
 
     def by_creator(self, creator):
         return self.filter(creator=creator)
 
     def visible_to_user(self, user):
-        from opencontractserver.annotations.models import Annotation  # Import here to avoid circular imports
+        from opencontractserver.annotations.models import (  # Import here to avoid circular imports
+            Annotation,
+        )
 
         if user.is_superuser:
             return self.all()
 
         if user.is_anonymous:
-            return self.filter(
-                Q(is_public=True)
-            ).distinct()
+            return self.filter(Q(is_public=True)).distinct()
 
         return self.filter(
-            Q(creator=user) |
-            Q(is_public=True) |
-            Q(commented_annotation__isnull=False) &
-            Exists(Annotation.objects.filter(
-                id=OuterRef('commented_annotation'),
-                is_public=True
-            ))
+            Q(creator=user)
+            | Q(is_public=True)
+            | Q(commented_annotation__isnull=False)
+            & Exists(
+                Annotation.objects.filter(
+                    id=OuterRef("commented_annotation"), is_public=True
+                )
+            )
         ).distinct()
 
 
 class PermissionQuerySet(models.QuerySet):
-    def visible_to_user(self, user, perm = None):
+    def visible_to_user(self, user, perm=None):
 
         if user.is_superuser:
             return self.all()
@@ -134,7 +132,7 @@ class PermissionQuerySet(models.QuerySet):
         # permission_filter = Q(has_user_perm=True) | Q(has_group_perm=True) | Q(is_public=True)
         permission_filter = Q(is_public=True)
         if not user.is_anonymous:
-            permission_filter |=  Q(creator=user)
+            permission_filter |= Q(creator=user)
 
         # # Add extra conditions based on permission type
         # if perm == 'read':

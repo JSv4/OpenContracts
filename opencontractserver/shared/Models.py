@@ -2,7 +2,6 @@ import django
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Manager
-from django.db import models
 
 from opencontractserver.shared.QuerySets import PermissionQuerySet
 
@@ -37,7 +36,7 @@ class BaseOCModel(models.Model):
         null=True,
         blank=True,
         related_name="locked_%(class)s_objects",
-        db_index=True
+        db_index=True,
     )
     # This should be set to true if a long-running job is set on a model (e.g. change permissions or delete)
     backend_lock = django.db.models.BooleanField(default=False)
@@ -49,7 +48,7 @@ class BaseOCModel(models.Model):
         on_delete=django.db.models.CASCADE,
         null=False,
         blank=False,
-        db_index=True
+        db_index=True,
     )
 
     # Timing variables

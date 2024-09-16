@@ -38,6 +38,7 @@ from config.graphql.graphene_types import (
     AssignmentType,
     ColumnType,
     CorpusQueryType,
+    CorpusStatsType,
     CorpusType,
     DatacellType,
     DocumentCorpusActionsType,
@@ -50,7 +51,7 @@ from config.graphql.graphene_types import (
     PdfPageInfoType,
     RelationshipType,
     UserExportType,
-    UserImportType, CorpusStatsType,
+    UserImportType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -952,10 +953,7 @@ class Query(graphene.ObjectType):
             if task.startswith("opencontractserver.tasks.data_extract_tasks")
         }
 
-    corpus_stats = graphene.Field(
-        CorpusStatsType,
-        corpus_id=graphene.ID(required=True)
-    )
+    corpus_stats = graphene.Field(CorpusStatsType, corpus_id=graphene.ID(required=True))
 
     def resolve_corpus_stats(self, info, corpus_id):
 
@@ -966,7 +964,9 @@ class Query(graphene.ObjectType):
         total_extracts = 0
 
         corpus_pk = from_global_id(corpus_id)[1]
-        corpuses = Corpus.objects.visible_to_user(info.context.user).filter(id=corpus_pk)
+        corpuses = Corpus.objects.visible_to_user(info.context.user).filter(
+            id=corpus_pk
+        )
 
         if corpuses.count() == 1:
             corpus = corpuses[0]
@@ -980,12 +980,11 @@ class Query(graphene.ObjectType):
 
         return CorpusStatsType(
             total_docs=total_docs,
-            total_annotations = total_annotations,
-            total_comments = total_comments,
-            total_analyses = total_analyses,
-            total_extracts = total_extracts
+            total_annotations=total_annotations,
+            total_comments=total_comments,
+            total_analyses=total_analyses,
+            total_extracts=total_extracts,
         )
-
 
     document_corpus_actions = graphene.Field(
         DocumentCorpusActionsType,

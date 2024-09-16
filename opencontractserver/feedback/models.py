@@ -3,9 +3,9 @@ from django.db import models
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.shared.Managers import UserFeedbackManager
 from opencontractserver.shared.defaults import jsonfield_default_value
 from opencontractserver.shared.fields import NullableJSONField
+from opencontractserver.shared.Managers import UserFeedbackManager
 from opencontractserver.shared.Models import BaseOCModel
 
 

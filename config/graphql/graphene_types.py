@@ -10,9 +10,10 @@ from graphene_django.filter import DjangoFilterConnectionField
 from graphql_relay import from_global_id
 
 from config.graphql.base import CountableConnection
-
 from config.graphql.filters import AnnotationFilter, LabelFilter
-from config.graphql.permissioning.permission_annotator.mixins import AnnotatePermissionsForReadMixin
+from config.graphql.permissioning.permission_annotator.mixins import (
+    AnnotatePermissionsForReadMixin,
+)
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
     Annotation,
@@ -250,7 +251,7 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     def get_queryset(cls, queryset, info):
         if issubclass(type(queryset), QuerySet):
             return queryset.visible_to_user(info.context.user)
-        elif 'RelatedManager' in str(type(queryset)):
+        elif "RelatedManager" in str(type(queryset)):
             # https://stackoverflow.com/questions/11320702/import-relatedmanager-from-django-db-models-fields-related
             return queryset.all().visible_to_user(info.context.user)
         else:
@@ -310,7 +311,7 @@ class CorpusType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     def get_queryset(cls, queryset, info):
         if issubclass(type(queryset), QuerySet):
             return queryset.visible_to_user(info.context.user)
-        elif 'RelatedManager' in str(type(queryset)):
+        elif "RelatedManager" in str(type(queryset)):
             # https://stackoverflow.com/questions/11320702/import-relatedmanager-from-django-db-models-fields-related
             return queryset.all().visible_to_user(info.context.user)
         else:
@@ -494,7 +495,7 @@ class UserFeedbackType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     def get_queryset(cls, queryset, info):
         if issubclass(type(queryset), QuerySet):
             return queryset.visible_to_user(info.context.user)
-        elif 'RelatedManager' in str(type(queryset)):
+        elif "RelatedManager" in str(type(queryset)):
             # https://stackoverflow.com/questions/11320702/import-relatedmanager-from-django-db-models-fields-related
             return queryset.all().visible_to_user(info.context.user)
         else:

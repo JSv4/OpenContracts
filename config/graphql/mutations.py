@@ -34,7 +34,8 @@ from config.graphql.graphene_types import (
     RelationInputType,
     RelationshipType,
     UserExportType,
-    UserType, UserFeedbackType,
+    UserFeedbackType,
+    UserType,
 )
 from config.graphql.serializers import (
     AnnotationLabelSerializer,
@@ -959,7 +960,9 @@ class RemoveAnnotation(graphene.Mutation):
 
 class RejectAnnotation(graphene.Mutation):
     class Arguments:
-        annotation_id = graphene.ID(required=True, description="ID of the annotation to reject")
+        annotation_id = graphene.ID(
+            required=True, description="ID of the annotation to reject"
+        )
         comment = graphene.String(description="Optional comment for the rejection")
 
     ok = graphene.Boolean()
@@ -979,11 +982,11 @@ class RejectAnnotation(graphene.Mutation):
         user_feedback, created = UserFeedback.objects.get_or_create(
             commented_annotation=annotation,
             defaults={
-                'creator': user,
-                'approved': False,
-                'rejected': True,
-                'comment': comment or ""
-            }
+                "creator": user,
+                "approved": False,
+                "rejected": True,
+                "comment": comment or "",
+            },
         )
 
         if not created:
@@ -996,9 +999,12 @@ class RejectAnnotation(graphene.Mutation):
 
         return RejectAnnotation(ok=True, user_feedback=user_feedback)
 
+
 class ApproveAnnotation(graphene.Mutation):
     class Arguments:
-        annotation_id = graphene.ID(required=True, description="ID of the annotation to approve")
+        annotation_id = graphene.ID(
+            required=True, description="ID of the annotation to approve"
+        )
         comment = graphene.String(description="Optional comment for the approval")
 
     ok = graphene.Boolean()
@@ -1018,11 +1024,11 @@ class ApproveAnnotation(graphene.Mutation):
         user_feedback, created = UserFeedback.objects.get_or_create(
             commented_annotation=annotation,
             defaults={
-                'creator': user,
-                'approved': True,
-                'rejected': False,
-                'comment': comment or ""
-            }
+                "creator": user,
+                "approved": True,
+                "rejected": False,
+                "comment": comment or "",
+            },
         )
 
         if not created:
@@ -1034,6 +1040,7 @@ class ApproveAnnotation(graphene.Mutation):
         set_permissions_for_obj_to_user(user, user_feedback, [PermissionTypes.CRUD])
 
         return ApproveAnnotation(ok=True, user_feedback=user_feedback)
+
 
 class AddAnnotation(graphene.Mutation):
     class Arguments:

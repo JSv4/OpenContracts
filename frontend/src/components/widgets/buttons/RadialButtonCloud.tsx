@@ -35,6 +35,16 @@ const PulsingDot = styled.div<PulsingDotProps>`
   animation: ${pulse} 2s infinite;
   cursor: pointer;
   position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    border-radius: 50%;
+  }
 `;
 
 const CloudContainer = styled.div`

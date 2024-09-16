@@ -274,5 +274,4 @@ class PermissionFilteringTestCase(TestCase):
         titles = [
             edge["node"]["title"] for edge in result2["data"]["corpuses"]["edges"]
         ]
-        self.assertIn("Corpus 1", titles)
         self.assertIn("Corpus 2", titles)

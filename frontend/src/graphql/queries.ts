@@ -1558,6 +1558,16 @@ export const GET_ANNOTATIONS_FOR_ANALYSIS = gql`
         rawText
         tokensJsons
         json
+        userFeedback {
+          edges {
+            node {
+              id
+              approved
+              rejected
+            }
+          }
+          totalCount
+        }
         allSourceNodeInRelationship {
           id
           relationshipLabel {

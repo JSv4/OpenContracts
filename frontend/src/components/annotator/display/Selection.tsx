@@ -104,7 +104,7 @@ export const Selection: React.FC<SelectionProps> = ({
   } else {
     actions.push({
       name: "question",
-      color: "red",
+      color: "blue",
       tooltip: "Login to see available actions!",
       onClick: () => {
         window.alert("Login to leave feedback and see other actions!");

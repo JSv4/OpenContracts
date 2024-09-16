@@ -243,6 +243,34 @@ export const GET_CORPUS_QUERY_DETAILS = gql`
   }
 `;
 
+export interface GetCorpusStatsInputType {
+  corpusId: string;
+}
+
+export interface CorpusStats {
+  totalDocs: number;
+  totalComments: number;
+  totalAnalyses: number;
+  totalExtracts: number;
+  totalAnnotations: number;
+}
+
+export interface GetCorpusStatsOutputType {
+  corpusStats: CorpusStats;
+}
+
+export const GET_CORPUS_STATS = gql`
+  query corpusStats($corpusId: ID!) {
+    corpusStats(corpusId: $corpusId) {
+      totalDocs
+      totalComments
+      totalAnalyses
+      totalExtracts
+      totalAnnotations
+    }
+  }
+`;
+
 export interface GetCorpusQueriesInput {
   corpusId: string;
 }

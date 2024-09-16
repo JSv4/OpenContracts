@@ -87,12 +87,12 @@ import { FilterToAnalysesSelector } from "../components/widgets/model-filters/Fi
 import useWindowDimensions from "../components/hooks/WindowDimensionHook";
 import { SelectExportTypeModal } from "../components/widgets/modals/SelectExportTypeModal";
 import { CorpusQueryList } from "../components/queries/CorpusQueryList";
-import { NewQuerySearch } from "../components/queries/NewQuerySearch";
 import { ViewQueryResultsModal } from "../components/widgets/modals/ViewQueryResultsModal";
 import { FilterToCorpusActionOutputs } from "../components/widgets/model-filters/FilterToCorpusActionOutputs";
 import { CorpusExtractCards } from "../components/extracts/CorpusExtractCards";
 import { getPermissions } from "../utils/transform";
 import { MOBILE_VIEW_BREAKPOINT } from "../assets/configurations/constants";
+import { CorpusDashboard } from "../components/corpuses/CorpusDashboard";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
@@ -581,16 +581,25 @@ export const Corpuses = () => {
       query_view = (
         <>
           <div style={{ position: "absolute", top: "1rem", right: "1rem" }}>
-            <Button
-              size="mini"
-              primary
-              content="Previous Queries"
-              icon="left arrow"
-              labelPosition="left"
-              onClick={() => showQueryViewState("VIEW")}
-            />
+            {use_mobile_layout ? (
+              <Button
+                circular
+                primary
+                icon="left arrow"
+                onClick={() => showQueryViewState("VIEW")}
+              />
+            ) : (
+              <Button
+                size="mini"
+                primary
+                content="Previous Queries"
+                icon="left arrow"
+                labelPosition="left"
+                onClick={() => showQueryViewState("VIEW")}
+              />
+            )}
           </div>
-          <NewQuerySearch corpus_id={opened_corpus_id} />;
+          {opened_corpus ? <CorpusDashboard corpus={opened_corpus} /> : <></>}
         </>
       );
     } else {

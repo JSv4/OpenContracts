@@ -184,7 +184,5 @@ class GraphQLTestCase(TestCase):
 
         response = client.execute(mutation, variables=variables)
 
-        print(f"Test response: {response}")
-
         assert response["data"]["importAnnotatedDocToCorpus"]["ok"] is True
         assert response["data"]["importAnnotatedDocToCorpus"]["message"] == "SUCCESS"

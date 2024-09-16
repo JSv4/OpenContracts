@@ -24,7 +24,6 @@ if READ_DOT_ENV_FILE:
 ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS", default=["localhost", "0.0.0.0", "127.0.0.1"]
 )
-print(f"Open Contracts allowed hosts: {ALLOWED_HOSTS}")
 
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug

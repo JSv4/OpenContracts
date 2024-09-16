@@ -39,7 +39,6 @@ def run_extract(extract_id: Optional[str | int], user_id: str | int):
     fieldset = extract.fieldset
 
     document_ids = extract.documents.all().values_list("id", flat=True)
-    print(f"Run extract {extract_id} over document ids {document_ids}")
     tasks = []
 
     for document_id in document_ids:

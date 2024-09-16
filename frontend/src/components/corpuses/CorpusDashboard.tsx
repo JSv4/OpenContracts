@@ -73,6 +73,7 @@ export const CorpusDashboard: React.FC<NewQuerySearchProps> = ({
     onCompleted: (data) => {
       setStats(data.corpusStats);
     },
+    fetchPolicy: "network-only",
   });
 
   const [sendQuery] = useMutation<

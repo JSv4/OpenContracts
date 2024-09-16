@@ -93,6 +93,16 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         # in the Graphene type
         filterset_class = AnnotationFilter
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if issubclass(type(queryset), QuerySet):
+            return queryset.visible_to_user(info.context.user)
+        elif "RelatedManager" in str(type(queryset)):
+            # https://stackoverflow.com/questions/11320702/import-relatedmanager-from-django-db-models-fields-related
+            return queryset.all().visible_to_user(info.context.user)
+        else:
+            return queryset
+
 
 class PdfPageInfoType(graphene.ObjectType):
     page_count = graphene.Int()

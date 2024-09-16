@@ -1003,11 +1003,9 @@ class Query(graphene.ObjectType):
         if corpus_id is not None:
             corpus_pk = from_global_id(corpus_id)[1]
             corpus = Corpus.objects.get(id=corpus_pk)
-            print(f"Corpus id wasn't none. Retrieved corpus {corpus}")
             corpus_actions = CorpusAction.objects.filter(
                 Q(corpus=corpus), Q(creator=user) | Q(is_public=True)
             )
-            print(f"Corpus action retrieved: {corpus_actions}")
 
         else:
             corpus = None
@@ -1017,18 +1015,15 @@ class Query(graphene.ObjectType):
             document = Document.objects.get(
                 Q(id=document_pk), Q(creator=user) | Q(is_public=True)
             )
-            print(f"Document: {document}")
             extracts = document.extracts.filter(
                 Q(is_public=True) | Q(creator=user), corpus=corpus
             )
-            print(f"Extracts:{extracts}")
             analysis_rows = document.rows.filter(
                 Q(analysis__is_public=True) | Q(analysis__creator=user)
             )
-            print(f"analysis_rows rows:{analysis_rows}")
 
         except Document.DoesNotExist:
-            print("ERROR!")
+            logger.error("ERROR!")
             extracts = []
             analysis_rows = []
 

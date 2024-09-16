@@ -71,7 +71,6 @@ class QueryTasksTestCase(TestCase):
     )
     def test_run_query(self):
 
-        print(self.query)
         # Call the run_query task
         run_query.delay(query_id=self.query.id)
 

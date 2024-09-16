@@ -145,7 +145,6 @@ class ExtractsTaskTestCase(TestCase):
         filter_headers=["authorization"],
     )
     def test_run_extract_task(self):
-        print(f"{self.extract.documents.all()}")
 
         # Run this SYNCHRONOUSLY for TESTIN' purposes
         run_extract.delay(self.extract.id, self.user.id)

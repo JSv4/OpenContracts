@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 
 import pytz
 import requests
@@ -15,6 +16,7 @@ if settings.USE_AUTH0:
 
 User = get_user_model()
 
+logger = logging.getLogger(__name__)
 
 # These tasks are only needed for AUTH0, so we don't define them unless we're using AUTH0
 if settings.USE_AUTH0:
@@ -60,7 +62,7 @@ if settings.USE_AUTH0:
             return newToken.token
 
         else:
-            print("Error retrieving access token to Auth0.")
+            logger.error("Error retrieving access token to Auth0.")
 
     @celery_app.task()
     def apply_data_to_user(data, userPk):
@@ -94,18 +96,15 @@ if settings.USE_AUTH0:
                 user.save()
 
             except Exception as inst:
-
-                print("Error on syncing user:")
-                print(type(inst))  # the exception instance
-                print(inst.args)  # arguments stored in .args
-                print(inst)
+                logger.error(
+                    f"Exception applying data to user - exception: {type(inst)}"
+                )
+                logger.error(
+                    f"Exception applying data to user - exception args; {inst.args}"
+                )
 
     @celery_app.task()
     def sync_remote_user(user_pk):
-
-        print(
-            f"Checking server token has not expired... before fetching data for {user_pk}"
-        )
 
         refresh = False
         tokens = Auth0APIToken.objects.all()
@@ -143,19 +142,19 @@ if settings.USE_AUTH0:
             # print("No Auth0 Tokens... Request one.")
             return get_new_auth0_token.delay().get()
         elif len(tokens) > 1:
-            print(
-                "Somehow there was more than 1 token. Going to delete all and refresh"
-            )
+            # print(
+            #     "Somehow there was more than 1 token. Going to delete all and refresh"
+            # )
             for tok in tokens:
                 tok.delete()
                 return get_new_auth0_token.delay().get()
         else:
             if tokens[0].expiration_Date < pytz.utc.localize(datetime.datetime.now()):
-                print("Token has expired. Refetching from Auth0")
+                # print("Token has expired. Refetching from Auth0")
                 tokens[0].delete()
                 return get_new_auth0_token.delay().get()
             else:
-                print("Token is good!")
+                # print("Token is good!")
                 return tokens[0].token
 
     @celery_app.task

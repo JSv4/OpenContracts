@@ -60,7 +60,7 @@ class PDFUtilsTestCase(TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             # Call the function
             result = split_pdf_into_images(self.need_ocr_pdf_content, temp_dir)
-            print(f"Result: {result}")
+
             # Check the results
             self.assertEqual(len(result), 1)
             self.assertTrue(all(path.endswith(".png") for path in result))

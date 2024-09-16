@@ -1512,8 +1512,6 @@ class StartDocumentAnalysisMutation(graphene.Mutation):
     @login_required
     def mutate(root, info, analyzer_id, document_id=None, corpus_id=None):
 
-        print(f"StartDocumentAnalysisMutation - document_id is {document_id}")
-
         user = info.context.user
 
         document_pk = from_global_id(document_id)[1] if document_id else None
@@ -1889,12 +1887,10 @@ class CreateExtract(graphene.Mutation):
                 )
 
         if fieldset_id is not None:
-            print(f"Fieldset id is not None: {fieldset_id}")
             fieldset = Fieldset.objects.get(pk=from_global_id(fieldset_id)[1])
         else:
             if fieldset_name is None:
                 fieldset_name = f"{name} Fieldset"
-            print(f"Creating new fieldset... name will be: {fieldset_name}")
 
             fieldset = Fieldset.objects.create(
                 name=fieldset_name,
@@ -1914,13 +1910,12 @@ class CreateExtract(graphene.Mutation):
             creator=info.context.user,
         )
         extract.save()
-        print(f"Extract created: {extract}")
 
         if corpus is not None:
             # print(f"Try to add corpus docs: {corpus.documents.all()}")
             extract.documents.add(*corpus.documents.all())
         else:
-            print("Corpus IS still None... no docs to add.")
+            logger.info("Corpus IS still None... no docs to add.")
 
         set_permissions_for_obj_to_user(
             info.context.user, extract, [PermissionTypes.CRUD]

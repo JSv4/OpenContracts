@@ -2,20 +2,9 @@ import django
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Manager
-from django.utils import timezone
 from django.db import models
 
 from opencontractserver.shared.QuerySets import PermissionQuerySet
-
-
-# from config.graphql.permissioning.filters import filter_queryset_by_user_read_permission
-
-
-# class PermissionQuerySet(models.QuerySet):
-#     def readable_by_user(self, user):
-#         return filter_queryset_by_user_read_permission(self, user)
-
-
 
 
 class PermissionManager(Manager):
@@ -24,16 +13,6 @@ class PermissionManager(Manager):
 
     def for_user(self, user, perm, extra_conditions=None):
         return self.get_queryset().for_user(user, perm, extra_conditions)
-
-
-class PermissionedModel(models.Model):
-    # We have some models where we want both default model manager and PermissionManager
-    # https://docs.djangoproject.com/en/5.1/topics/db/managers/#custom-managers-and-model-inheritance
-    # permissioned_objects = PermissionManager()
-    permissioned_objects = PermissionQuerySet.as_manager()
-
-    class Meta:
-        abstract = True
 
 
 class BaseOCModel(models.Model):
@@ -76,12 +55,3 @@ class BaseOCModel(models.Model):
     # Timing variables
     created = django.db.models.DateTimeField(auto_now_add=True, blank=False, null=False)
     modified = django.db.models.DateTimeField(auto_now=True, blank=False, null=False)
-
-    # Override save to update modified on save
-    def save(self, *args, **kwargs):
-        """On save, update timestamps"""
-        if not self.pk:
-            self.created = timezone.now()
-        self.modified = timezone.now()
-
-        return super().save(*args, **kwargs)

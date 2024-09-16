@@ -50,7 +50,7 @@ from config.graphql.graphene_types import (
     PdfPageInfoType,
     RelationshipType,
     UserExportType,
-    UserImportType,
+    UserImportType, CorpusStatsType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -62,6 +62,7 @@ from opencontractserver.annotations.models import (
 from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
+from opencontractserver.feedback.models import UserFeedback
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.types.enums import LabelType
 from opencontractserver.users.models import Assignment, UserExport, UserImport
@@ -950,6 +951,41 @@ class Query(graphene.ObjectType):
             for task, description in tasks.items()
             if task.startswith("opencontractserver.tasks.data_extract_tasks")
         }
+
+    corpus_stats = graphene.Field(
+        CorpusStatsType,
+        corpus_id=graphene.ID(required=True)
+    )
+
+    def resolve_corpus_stats(self, info, corpus_id):
+
+        total_docs = 0
+        total_annotations = 0
+        total_comments = 0
+        total_analyses = 0
+        total_extracts = 0
+
+        corpus_pk = from_global_id(corpus_id)[1]
+        corpuses = Corpus.objects.visible_to_user(info.context.user).filter(id=corpus_pk)
+
+        if corpuses.count() == 1:
+            corpus = corpuses[0]
+            total_docs = corpus.documents.all().count()
+            total_annotations = corpus.annotations.all().count()
+            total_comments = UserFeedback.objects.filter(
+                commented_annotation__corpus=corpus
+            ).count()
+            total_analyses = corpus.analyses.all().count()
+            total_extracts = corpus.extracts.all().count()
+
+        return CorpusStatsType(
+            total_docs=total_docs,
+            total_annotations = total_annotations,
+            total_comments = total_comments,
+            total_analyses = total_analyses,
+            total_extracts = total_extracts
+        )
+
 
     document_corpus_actions = graphene.Field(
         DocumentCorpusActionsType,

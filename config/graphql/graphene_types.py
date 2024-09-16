@@ -2,6 +2,7 @@ import logging
 
 import graphene
 from django.contrib.auth import get_user_model
+from django.db.models import QuerySet
 from graphene import relay
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType
@@ -245,6 +246,16 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         exclude = ("embedding",)
         connection_class = CountableConnection
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if issubclass(type(queryset), QuerySet):
+            return queryset.visible_to_user(info.context.user)
+        elif 'RelatedManager' in str(type(queryset)):
+            # https://stackoverflow.com/questions/11320702/import-relatedmanager-from-django-db-models-fields-related
+            return queryset.all().visible_to_user(info.context.user)
+        else:
+            return queryset
+
 
 class CorpusType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     all_annotation_summaries = graphene.List(
@@ -294,6 +305,16 @@ class CorpusType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         model = Corpus
         interfaces = [relay.Node]
         connection_class = CountableConnection
+
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if issubclass(type(queryset), QuerySet):
+            return queryset.visible_to_user(info.context.user)
+        elif 'RelatedManager' in str(type(queryset)):
+            # https://stackoverflow.com/questions/11320702/import-relatedmanager-from-django-db-models-fields-related
+            return queryset.all().visible_to_user(info.context.user)
+        else:
+            return queryset
 
 
 class CorpusActionType(AnnotatePermissionsForReadMixin, DjangoObjectType):
@@ -454,6 +475,14 @@ class DocumentCorpusActionsType(graphene.ObjectType):
     analysis_rows = graphene.List(DocumentAnalysisRowType)
 
 
+class CorpusStatsType(graphene.ObjectType):
+    total_docs = graphene.Int()
+    total_annotations = graphene.Int()
+    total_comments = graphene.Int()
+    total_analyses = graphene.Int()
+    total_extracts = graphene.Int()
+
+
 class UserFeedbackType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:
         model = UserFeedback
@@ -463,4 +492,10 @@ class UserFeedbackType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     # https://docs.graphene-python.org/projects/django/en/latest/queries/#default-queryset
     @classmethod
     def get_queryset(cls, queryset, info):
-        return queryset.objects.visible_to_user(info.context.user)
+        if issubclass(type(queryset), QuerySet):
+            return queryset.visible_to_user(info.context.user)
+        elif 'RelatedManager' in str(type(queryset)):
+            # https://stackoverflow.com/questions/11320702/import-relatedmanager-from-django-db-models-fields-related
+            return queryset.all().visible_to_user(info.context.user)
+        else:
+            return queryset

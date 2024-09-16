@@ -6,10 +6,10 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from tree_queries.models import TreeNode
-from tree_queries.query import TreeQuerySet
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.shared.Models import BaseOCModel, PermissionedModel
+from opencontractserver.shared.Models import BaseOCModel
+from opencontractserver.shared.QuerySets import PermissionedTreeQuerySet
 from opencontractserver.shared.utils import calc_oc_file_path
 
 
@@ -95,7 +95,7 @@ class Corpus(TreeNode):
     created = django.db.models.DateTimeField(default=timezone.now)
     modified = django.db.models.DateTimeField(default=timezone.now, blank=True)
 
-    objects = TreeQuerySet.as_manager(with_tree_fields=True)
+    objects = PermissionedTreeQuerySet.as_manager(with_tree_fields=True)
 
     class Meta:
         permissions = (

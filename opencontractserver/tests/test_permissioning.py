@@ -173,109 +173,6 @@ class PermissioningTestCase(TestCase):
                     analysis=self.analysis,
                 )
 
-    def __test_query_efficient_filtering(self):
-        def __test_query_efficient_filtering(self):
-            logger.info(
-                "----- TEST QUERY EFFICIENT FILTERING FOR USER READ PERMISSIONS ------------------------------------"
-            )
-
-            # Create additional test corpuses
-            for i in range(5):
-                with transaction.atomic():
-                    corpus = Corpus.objects.create(
-                        title=f"Test Corpus {i}",
-                        creator=self.superuser,
-                        backend_lock=False,
-                    )
-
-                # Assign different permissions to different corpuses
-                if i % 3 == 0:
-                    set_permissions_for_obj_to_user(
-                        self.user, corpus, [PermissionTypes.READ]
-                    )
-                elif i % 3 == 1:
-                    set_permissions_for_obj_to_user(
-                        self.user_2, corpus, [PermissionTypes.READ]
-                    )
-                else:
-                    corpus.is_public = True
-                    corpus.save()
-
-            # Test filtering for user 1 using the new PermissionQuerySet
-            all_corpuses = Corpus.objects.all()
-
-            # Use the new 'for_user' method with 'read' permission
-            user1_readable_corpuses = Corpus.objects.for_user(self.user, perm="read")
-
-            logger.info(f"User 1 can read {user1_readable_corpuses.count()} corpuses")
-            self.assertTrue(user1_readable_corpuses.count() > 0)
-            for corpus in user1_readable_corpuses:
-                self.assertTrue(
-                    corpus.is_public
-                    or user_has_permission_for_obj(
-                        self.user, corpus, PermissionTypes.READ
-                    )
-                )
-
-            # Test filtering for user 2
-            user2_readable_corpuses = Corpus.objects.for_user(self.user_2, perm="read")
-
-            logger.info(f"User 2 can read {user2_readable_corpuses.count()} corpuses")
-            self.assertTrue(user2_readable_corpuses.count() > 0)
-            for corpus in user2_readable_corpuses:
-                self.assertTrue(
-                    corpus.is_public
-                    or user_has_permission_for_obj(
-                        self.user_2, corpus, PermissionTypes.READ
-                    )
-                )
-
-            # Test filtering for superuser
-            superuser_readable_corpuses = Corpus.objects.for_user(
-                self.superuser, perm="read"
-            )
-
-            logger.info(
-                f"Superuser can read {superuser_readable_corpuses.count()} corpuses"
-            )
-            self.assertEqual(
-                superuser_readable_corpuses.count(), Corpus.objects.count()
-            )
-
-            # Test that the filtered querysets are different for different users
-            self.assertNotEqual(
-                set(user1_readable_corpuses), set(user2_readable_corpuses)
-            )
-
-            # Test performance
-            import time
-
-            # Measure time for the efficient filtering using 'for_user' method
-            start_time = time.time()
-            Corpus.objects.for_user(self.user, perm="read")
-            end_time = time.time()
-
-            logger.info(
-                f"Time taken for efficient filtering: {end_time - start_time} seconds"
-            )
-
-            # Compare with a naive approach
-            start_time = time.time()
-            naive_filtered = [
-                corpus
-                for corpus in all_corpuses
-                if corpus.is_public
-                or user_has_permission_for_obj(self.user, corpus, PermissionTypes.READ)
-            ]
-            end_time = time.time()
-
-            logger.info(
-                f"Time taken for naive filtering: {end_time - start_time} seconds"
-            )
-
-            # Assert that both methods return the same results
-            self.assertEqual(set(user1_readable_corpuses), set(naive_filtered))
-
     def __test_user_retrieval_permissions(self):
 
         logger.info(
@@ -835,7 +732,6 @@ class PermissioningTestCase(TestCase):
         self.__test_make_analysis_public_mutation()
         self.__test_make_analysis_public_task()
         self.__test_actual_analysis_deletion()
-        # self.__test_query_efficient_filtering()
 
     def test_user_feedback_visibility(self):
         logger.info("----- TEST USER FEEDBACK VISIBILITY -----")

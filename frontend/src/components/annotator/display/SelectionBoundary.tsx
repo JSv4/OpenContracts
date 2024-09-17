@@ -1,7 +1,8 @@
 import React, { useCallback } from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import { BoundingBox } from "../../types";
 import { getBorderWidthFromBounds, hexToRgb } from "../../../utils/transform";
+import { pulseGreen, pulseMaroon } from "./effects";
 
 interface SelectionBoundaryProps {
   id?: string;
@@ -19,6 +20,8 @@ interface SelectionBoundaryProps {
   onHover?: (hovered: boolean) => void;
   onClick?: () => void;
   setJumpedToAnnotationOnLoad?: (annot_id: string) => null | void;
+  approved?: boolean;
+  rejected?: boolean;
 }
 
 const BoundarySpan = styled.span<{
@@ -32,6 +35,8 @@ const BoundarySpan = styled.span<{
   color: string;
   bounds: BoundingBox;
   backgroundColor: string;
+  approved?: boolean;
+  rejected?: boolean;
 }>`
   position: absolute;
   left: ${(props) => props.bounds.left}px;
@@ -47,6 +52,20 @@ const BoundarySpan = styled.span<{
       : "none"};
   background-color: ${(props) => props.backgroundColor};
   transition: background-color 0.2s ease;
+
+  ${(props) =>
+    props.approved &&
+    css`
+      border: 2px solid green;
+      animation: ${pulseGreen} 2s infinite;
+    `}
+
+  ${(props) =>
+    props.rejected &&
+    css`
+      border: 2px solid maroon;
+      animation: ${pulseMaroon} 2s infinite;
+    `}
 `;
 
 export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
@@ -62,6 +81,8 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
   onClick,
   setJumpedToAnnotationOnLoad,
   selected,
+  approved,
+  rejected,
 }) => {
   const width = bounds.right - bounds.left;
   const height = bounds.bottom - bounds.top;
@@ -124,6 +145,8 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
       color={color}
       backgroundColor={backgroundColor}
       bounds={bounds}
+      approved={approved}
+      rejected={rejected}
     >
       {children || null}
     </BoundarySpan>

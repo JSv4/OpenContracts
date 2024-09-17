@@ -24,7 +24,6 @@ if READ_DOT_ENV_FILE:
 ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS", default=["localhost", "0.0.0.0", "127.0.0.1"]
 )
-print(f"Open Contracts allowed hosts: {ALLOWED_HOSTS}")
 
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
@@ -106,6 +105,7 @@ LOCAL_APPS = [
     "opencontractserver.annotations",
     "opencontractserver.analyzer",
     "opencontractserver.extracts",
+    "opencontractserver.feedback",
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -439,7 +439,7 @@ MODEL_PATH = pathlib.Path(BASE_PATH, "model")
 GRAPHENE = {
     "SCHEMA": "config.graphql.schema.schema",
     "MIDDLEWARE": [
-        "config.graphql.permission_annotator.middleware.PermissionAnnotatingMiddleware",
+        "config.graphql.permissioning.permission_annotator.middleware.PermissionAnnotatingMiddleware",
         "graphql_jwt.middleware.JSONWebTokenMiddleware",
         "config.graphql_api_key_auth.middleware.ApiKeyTokenMiddleware",
     ],

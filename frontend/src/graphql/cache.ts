@@ -122,11 +122,22 @@ export const cache = new InMemoryCache({
         },
       },
     },
+    ServerAnnotationType: {
+      fields: {
+        userFeedback: mergeArrayByIdFieldPolicy,
+      },
+    },
+    UserFeedbackType: {
+      fields: {
+        // You can add specific field policies for UserFeedbackType if needed
+      },
+    },
     Query: {
       fields: {
         annotations: relayStylePagination(
           ContextAwareRelayStylePaginationKeyArgsFunction
         ),
+        userFeedback: relayStylePagination(),
         pageAnnotations: {
           keyArgs: [
             "pdfPageInfo",

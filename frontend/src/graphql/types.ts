@@ -113,6 +113,7 @@ export type ServerAnnotationType = Node & {
   id: Scalars["ID"];
   page: Scalars["Int"];
   annotation_type?: AnnotationTypeEnum;
+  userFeedback?: FeedbackTypeConnection;
   created_by_analyses: AnalysisTypeConnection;
   rawText?: Maybe<Scalars["String"]>;
   json?: MultipageAnnotationJson;
@@ -219,6 +220,7 @@ export type CorpusType = Node & {
   __typename?: "CorpusType";
   id: Scalars["ID"];
   title?: Scalars["String"];
+  allowComments?: boolean;
   appliedAnalyzerIds?: string[];
   is_selected?: boolean;
   is_opened?: boolean;
@@ -1356,4 +1358,32 @@ export interface AnalysisRowType extends Node {
   myPermissions: Maybe<Array<PermissionTypes>>;
   isPublished: Maybe<Scalars["Boolean"]>;
   objectSharedWith: Maybe<Scalars["GenericScalar"]>;
+}
+
+export type FeedbackTypeConnection = {
+  __typename?: "UserFeedbackTypeConnection";
+  pageInfo: PageInfo;
+  edges: Array<Maybe<FeedbackTypeEdge>>;
+  totalCount?: Maybe<Scalars["Int"]>;
+};
+
+export type FeedbackTypeEdge = {
+  __typename?: "UserFeedbackTypeEdge";
+  node?: Maybe<FeedbackType>;
+  cursor: Scalars["String"];
+};
+
+export interface FeedbackType extends Node {
+  id: Scalars["ID"];
+  userLock: Maybe<UserType>;
+  backendLock: Scalars["Boolean"];
+  isPublic: Scalars["Boolean"];
+  creator: UserType;
+  created: Scalars["DateTime"];
+  modified: Scalars["DateTime"];
+  approved?: Boolean;
+  rejected?: Boolean;
+  markdown?: string;
+  metadata: Record<any, any>;
+  commented_annotation?: ServerAnnotationType | null;
 }

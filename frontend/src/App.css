@@ -54,3 +54,11 @@ div > .SettingsPopup {
     display: none !important;
   }
 }
+
+#ConfirmModal > div.ui.page.modals.dimmer.transition.visible.active {
+  z-index: 20000 !important;
+}
+
+#ConfirmModal {
+  z-index: 20001 !important;
+}

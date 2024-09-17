@@ -9,7 +9,6 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS", default=["opencontracts.opensource.legal"]
 )
-print(f"Open Contracts Production Allowed Hosts: {ALLOWED_HOSTS}")
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.opensource.legal",
@@ -17,7 +16,6 @@ CSRF_TRUSTED_ORIGINS = [
     "https://opencontracts.opensource.legal",
     "https://opencontracts.opensource.legal/" "admin/login",
 ]
-print(f"Open Contracts Production CSRF Trusted Origins: {CSRF_TRUSTED_ORIGINS}")
 
 # DATABASES
 # ------------------------------------------------------------------------------

@@ -2,16 +2,18 @@ import logging
 
 import graphene
 from django.contrib.auth import get_user_model
+from django.db.models import QuerySet
 from graphene import relay
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType
-from graphene_django import DjangoObjectType as ModelType
 from graphene_django.filter import DjangoFilterConnectionField
 from graphql_relay import from_global_id
 
 from config.graphql.base import CountableConnection
 from config.graphql.filters import AnnotationFilter, LabelFilter
-from config.graphql.permission_annotator.mixins import AnnotatePermissionsForReadMixin
+from config.graphql.permissioning.permission_annotator.mixins import (
+    AnnotatePermissionsForReadMixin,
+)
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
     Annotation,
@@ -22,27 +24,28 @@ from opencontractserver.annotations.models import (
 from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
+from opencontractserver.feedback.models import UserFeedback
 from opencontractserver.users.models import Assignment, UserExport, UserImport
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-class UserType(AnnotatePermissionsForReadMixin, ModelType):
+class UserType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:
         model = User
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
 
-class AssignmentType(AnnotatePermissionsForReadMixin, ModelType):
+class AssignmentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:
         model = Assignment
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
 
-class RelationshipType(AnnotatePermissionsForReadMixin, ModelType):
+class RelationshipType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:
         model = Relationship
         interfaces = [relay.Node]
@@ -67,7 +70,7 @@ class AnnotationInputType(AnnotatePermissionsForReadMixin, graphene.InputObjectT
     is_public = graphene.Boolean()
 
 
-class AnnotationType(AnnotatePermissionsForReadMixin, ModelType):
+class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     json = GenericScalar()
 
     all_source_node_in_relationship = graphene.List(lambda: RelationshipType)
@@ -89,6 +92,16 @@ class AnnotationType(AnnotatePermissionsForReadMixin, ModelType):
         # In order for filter options to show up in nested resolvers, you need to specify them
         # in the Graphene type
         filterset_class = AnnotationFilter
+
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if issubclass(type(queryset), QuerySet):
+            return queryset.visible_to_user(info.context.user)
+        elif "RelatedManager" in str(type(queryset)):
+            # https://stackoverflow.com/questions/11320702/import-relatedmanager-from-django-db-models-fields-related
+            return queryset.all().visible_to_user(info.context.user)
+        else:
+            return queryset
 
 
 class PdfPageInfoType(graphene.ObjectType):
@@ -121,14 +134,14 @@ class PageAwareAnnotationType(graphene.ObjectType):
     page_annotations = graphene.List(AnnotationType)
 
 
-class AnnotationLabelType(AnnotatePermissionsForReadMixin, ModelType):
+class AnnotationLabelType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:
         model = AnnotationLabel
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
 
-class LabelSetType(AnnotatePermissionsForReadMixin, ModelType):
+class LabelSetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     annotation_labels = DjangoFilterConnectionField(
         AnnotationLabelType, filterset_class=LabelFilter
     )
@@ -149,7 +162,7 @@ class LabelSetType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
+class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     def resolve_pdf_file(self, info):
         return (
             ""
@@ -244,8 +257,18 @@ class DocumentType(AnnotatePermissionsForReadMixin, ModelType):
         exclude = ("embedding",)
         connection_class = CountableConnection
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if issubclass(type(queryset), QuerySet):
+            return queryset.visible_to_user(info.context.user)
+        elif "RelatedManager" in str(type(queryset)):
+            # https://stackoverflow.com/questions/11320702/import-relatedmanager-from-django-db-models-fields-related
+            return queryset.all().visible_to_user(info.context.user)
+        else:
+            return queryset
 
-class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
+
+class CorpusType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     all_annotation_summaries = graphene.List(
         AnnotationType,
         analysis_id=graphene.ID(),
@@ -294,8 +317,18 @@ class CorpusType(AnnotatePermissionsForReadMixin, ModelType):
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if issubclass(type(queryset), QuerySet):
+            return queryset.visible_to_user(info.context.user)
+        elif "RelatedManager" in str(type(queryset)):
+            # https://stackoverflow.com/questions/11320702/import-relatedmanager-from-django-db-models-fields-related
+            return queryset.all().visible_to_user(info.context.user)
+        else:
+            return queryset
 
-class CorpusActionType(AnnotatePermissionsForReadMixin, ModelType):
+
+class CorpusActionType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:
         model = CorpusAction
         interfaces = [relay.Node]
@@ -311,7 +344,7 @@ class CorpusActionType(AnnotatePermissionsForReadMixin, ModelType):
         }
 
 
-class UserImportType(AnnotatePermissionsForReadMixin, ModelType):
+class UserImportType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     def resolve_zip(self, info):
         return "" if not self.file else info.context.build_absolute_uri(self.zip.url)
 
@@ -321,7 +354,7 @@ class UserImportType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class UserExportType(AnnotatePermissionsForReadMixin, ModelType):
+class UserExportType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     def resolve_file(self, info):
         return "" if not self.file else info.context.build_absolute_uri(self.file.url)
 
@@ -331,7 +364,7 @@ class UserExportType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class AnalyzerType(AnnotatePermissionsForReadMixin, ModelType):
+class AnalyzerType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     analyzer_id = graphene.String()
 
     def resolve_analyzer_id(self, info):
@@ -353,7 +386,7 @@ class AnalyzerType(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class GremlinEngineType_READ(AnnotatePermissionsForReadMixin, ModelType):
+class GremlinEngineType_READ(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:
         model = GremlinEngine
         exclude = ("api_key",)
@@ -361,15 +394,14 @@ class GremlinEngineType_READ(AnnotatePermissionsForReadMixin, ModelType):
         connection_class = CountableConnection
 
 
-class GremlinEngineType_WRITE(AnnotatePermissionsForReadMixin, ModelType):
+class GremlinEngineType_WRITE(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:
         model = GremlinEngine
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
 
-class AnalysisType(AnnotatePermissionsForReadMixin, ModelType):
-
+class AnalysisType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     full_annotation_list = graphene.List(AnnotationType)
 
     def resolve_full_annotation_list(self, info):
@@ -401,7 +433,6 @@ class FieldsetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
 
 class DatacellType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-
     data = GenericScalar()
     full_source_list = graphene.List(AnnotationType)
 
@@ -431,7 +462,6 @@ class ExtractType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
 
 class CorpusQueryType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-
     full_source_list = graphene.List(AnnotationType)
 
     def resolve_full_source_list(self, info):
@@ -454,3 +484,29 @@ class DocumentCorpusActionsType(graphene.ObjectType):
     corpus_actions = graphene.List(CorpusActionType)
     extracts = graphene.List(ExtractType)
     analysis_rows = graphene.List(DocumentAnalysisRowType)
+
+
+class CorpusStatsType(graphene.ObjectType):
+    total_docs = graphene.Int()
+    total_annotations = graphene.Int()
+    total_comments = graphene.Int()
+    total_analyses = graphene.Int()
+    total_extracts = graphene.Int()
+
+
+class UserFeedbackType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    class Meta:
+        model = UserFeedback
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+    # https://docs.graphene-python.org/projects/django/en/latest/queries/#default-queryset
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if issubclass(type(queryset), QuerySet):
+            return queryset.visible_to_user(info.context.user)
+        elif "RelatedManager" in str(type(queryset)):
+            # https://stackoverflow.com/questions/11320702/import-relatedmanager-from-django-db-models-fields-related
+            return queryset.all().visible_to_user(info.context.user)
+        else:
+            return queryset

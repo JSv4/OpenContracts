@@ -32,13 +32,10 @@ def run_query(
         llm = OpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY)
         Settings.llm = llm
 
-        print("Setting up vector store...")
         vector_store = DjangoAnnotationVectorStore.from_params(
             corpus_id=query.corpus.id
         )
-        print(f"Vector store: {vector_store}")
         index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
-        print(f"Index: {index}")
 
         query_engine = CitationQueryEngine.from_args(
             index,

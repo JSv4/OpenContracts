@@ -40,10 +40,6 @@ export function CRUDModal({
 
   const can_write = mode !== "VIEW" && (mode === "CREATE" || mode === "EDIT");
 
-  // console.log("---- CRUD MODAL ----");
-  // console.log("oldInstance", oldInstance);
-  // console.log("instance_obj", instance_obj);
-
   useEffect(() => {
     console.log("CRUD updated fields obj", updated_fields_obj);
   }, [updated_fields_obj]);

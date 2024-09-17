@@ -51,7 +51,6 @@ class CorpusQueryMutationTestCase(TestCase):
         )
 
         result = self.client.execute(mutation)
-        print(f"Test query mutation result: {result}")
         self.assertIsNone(result.get("errors"))
         self.assertTrue(result["data"]["askQuery"]["ok"])
 

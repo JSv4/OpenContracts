@@ -68,7 +68,6 @@ class ColumnMutationTestCase(TestCase):
 
         result = self.client.execute(mutation)
         self.assertIsNone(result.get("errors"))
-        print(result.get("data"))
         self.assertTrue(result["data"]["updateColumn"]["ok"])
 
         updated_column = Column.objects.get(id=self.column.id)

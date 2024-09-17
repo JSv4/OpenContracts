@@ -1,5 +1,5 @@
 import React, { useState, useContext } from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import { Icon, Image } from "semantic-ui-react";
 import { AnnotationStore, ServerAnnotation, PDFPageInfo } from "../context";
 import { BoundingBox, PermissionTypes } from "../../types";
@@ -10,6 +10,7 @@ import {
   getRelationImageHref,
 } from "../utils";
 import { getContrastColor } from "../../../utils/transform";
+import { pulseGreen, pulseMaroon } from "./effects";
 
 // ... (keep the existing interfaces)
 
@@ -36,18 +37,23 @@ export const SelectionContainer = styled.div<{
 // We use transform here because we need to translate the label upward
 // to sit on top of the bounds as a function of *its own* height,
 // not the height of it's parent.
-export interface SelectionInfoProps {
+interface SelectionInfoProps {
+  bounds: {
+    left: number;
+    right: number;
+  };
   border: number;
-  bounds: BoundingBox;
   color: string;
   showBoundingBox: boolean;
+  approved?: boolean;
+  rejected?: boolean;
 }
 
 export const SelectionInfo = styled.div<SelectionInfoProps>`
   position: absolute;
   width: ${(props) => props.bounds.right - props.bounds.left}px;
-  right: -${(props) => props.border}px;
-  transform: translateY(-100%);
+  right: -${(props) => props.border + ((props?.approved ? 1 : props?.rejected) ? -1 : 0)}px;
+  bottom: calc(100% - 2px);
   border-radius: 4px 4px 0 0;
   background: ${(props) =>
     props.showBoundingBox ? props.color : "rgba(255, 255, 255, 0.9)"};
@@ -55,7 +61,26 @@ export const SelectionInfo = styled.div<SelectionInfoProps>`
   font-weight: bold;
   font-size: 12px;
   user-select: none;
-  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+
+  ${(props) =>
+    props.approved &&
+    css`
+      border-top: 2px solid green;
+      border-left: 2px solid green;
+      border-right: 2px solid green;
+      animation: ${pulseGreen} 2s infinite;
+    `}
+
+  ${(props) =>
+    props.rejected &&
+    css`
+      border-top: 2px solid maroon;
+      border-left: 2px solid maroon;
+      border-right: 2px solid maroon;
+      animation: ${pulseMaroon} 2s infinite;
+    `}
+  
   * {
     vertical-align: middle;
   }
@@ -86,6 +111,7 @@ export const LabelTagContainer = styled.div<{
   color: ${(props) => getContrastColor(props.color)};
   padding: 2px 6px;
   border-radius: 3px;
+  position: relative;
 `;
 
 export const StyledIcon = styled(Icon)<{ color: string }>`

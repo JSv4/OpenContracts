@@ -59,6 +59,9 @@ export const EditLabelModal = ({
               annotation.structural,
               annotation.json,
               annotation.myPermissions,
+              annotation.approved,
+              annotation.rejected,
+              annotation.canComment,
               annotation.id
             )
           );
@@ -122,6 +125,9 @@ export const EditLabelModal = ({
                 annotation.structural,
                 annotation.json,
                 annotation.myPermissions,
+                annotation.approved,
+                annotation.rejected,
+                annotation.canComment,
                 annotation.id
               )
             );

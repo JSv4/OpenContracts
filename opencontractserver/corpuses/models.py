@@ -6,10 +6,10 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from tree_queries.models import TreeNode
-from tree_queries.query import TreeQuerySet
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.shared.Models import BaseOCModel
+from opencontractserver.shared.QuerySets import PermissionedTreeQuerySet
 from opencontractserver.shared.utils import calc_oc_file_path
 
 
@@ -61,12 +61,14 @@ class Corpus(TreeNode):
     label_set = django.db.models.ForeignKey(
         "annotations.LabelSet",
         null=True,
+        blank=True,
         on_delete=django.db.models.SET_NULL,
         related_name="used_by_corpuses",
         related_query_name="used_by_corpus",
     )
 
     # Sharing
+    allow_comments = django.db.models.BooleanField(default=False)
     is_public = django.db.models.BooleanField(default=False)
     creator = django.db.models.ForeignKey(
         get_user_model(),
@@ -93,7 +95,7 @@ class Corpus(TreeNode):
     created = django.db.models.DateTimeField(default=timezone.now)
     modified = django.db.models.DateTimeField(default=timezone.now, blank=True)
 
-    objects = TreeQuerySet.as_manager(with_tree_fields=True)
+    objects = PermissionedTreeQuerySet.as_manager(with_tree_fields=True)
 
     class Meta:
         permissions = (

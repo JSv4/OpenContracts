@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
-    path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
+    path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=settings.DEBUG))),
     *(
         []
         if not settings.USE_ANALYZER

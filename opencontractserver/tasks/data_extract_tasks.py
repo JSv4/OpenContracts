@@ -36,7 +36,6 @@ def oc_llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int
     """
 
     datacell = Datacell.objects.get(id=cell_id)
-    print(f"Process datacell {datacell}")
 
     try:
 

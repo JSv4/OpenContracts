@@ -11,9 +11,10 @@ import { getPageBoundsFromCanvas } from "../../../utils/transform";
 import { PageProps, BoundingBox, PermissionTypes } from "../../types";
 import { AnnotationStore, normalizeBounds, PDFStore } from "../context";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
-import { Selection, SelectionTokens } from "./Selection";
+import { Selection } from "./Selection";
 import { SearchResult } from "./SearchResult";
 import { SelectionBoundary } from "./SelectionBoundary";
+import { SelectionTokenGroup } from "./SelectionTokenGroup";
 
 export const Page = ({
   pageInfo,
@@ -80,7 +81,7 @@ export const Page = ({
               bounds={selection}
               selected={false}
             />
-            <SelectionTokens pageInfo={pageInfo} tokens={tokens} />
+            <SelectionTokenGroup pageInfo={pageInfo} tokens={tokens} />
           </>
         );
       },
@@ -284,6 +285,9 @@ export const Page = ({
         pageInfo={pageInfo}
         annotation={annotation}
         setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
+        approved={annotation.approved}
+        rejected={annotation.rejected}
+        allowFeedback={annotationStore.allowComment}
       />
     ));
   }, [

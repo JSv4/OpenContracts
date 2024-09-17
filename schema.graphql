@@ -1,27 +1,5 @@
 type Query {
-  annotations(
-    offset: Int
-    before: String
-    after: String
-    first: Int
-    last: Int
-    rawText_Contains: String
-    annotationLabelId: ID
-    annotationLabel_Text: String
-    annotationLabel_Text_Contains: String
-    annotationLabel_Description_Contains: String
-    annotationLabel_LabelType: AnnotationsAnnotationLabelLabelTypeChoices
-    analysis_Isnull: Boolean
-    documentId: ID
-    corpusId: ID
-    structural: Boolean
-    usesLabelFromLabelsetId: String
-    createdByAnalysisIds: String
-    createdWithAnalyzerId: String
-
-    """Ordering"""
-    orderBy: String
-  ): AnnotationTypeConnection
+  annotations(rawTextContains: String, annotationLabelId: ID, annotationLabel_Text: String, annotationLabel_TextContains: String, annotationLabel_DescriptionContains: String, annotationLabel_LabelType: String, analysisIsnull: Boolean, documentId: ID, corpusId: ID, structural: Boolean, usesLabelFromLabelsetId: ID, createdByAnalysisIds: String, createdWithAnalyzerId: String, orderBy: String, offset: Int, before: String, after: String, first: Int, last: Int): AnnotationTypeConnection
   bulkDocRelationshipsInCorpus(corpusId: ID!, documentId: ID!): [RelationshipType]
   bulkDocAnnotationsInCorpus(corpusId: ID!, documentId: ID, forAnalysisIds: String, labelType: LabelType): [AnnotationType]
   pageAnnotations(currentPage: Int, pageNumberList: String, pageContainingAnnotationWithId: ID, corpusId: ID, documentId: ID!, forAnalysisIds: String, labelType: LabelType): PageAwareAnnotationType
@@ -127,6 +105,7 @@ type Query {
   ): DatacellType
   datacells(offset: Int, before: String, after: String, first: Int, last: Int, dataDefinition: String, started_Lte: DateTime, started_Gte: DateTime, completed_Lte: DateTime, completed_Gte: DateTime, failed_Lte: DateTime, failed_Gte: DateTime, inCorpusWithId: String, forDocumentWithId: String): DatacellTypeConnection
   registeredExtractTasks: GenericScalar
+  corpusStats(corpusId: ID!): CorpusStatsType
   documentCorpusActions(documentId: ID!, corpusId: ID): DocumentCorpusActionsType
 }
 
@@ -190,6 +169,7 @@ type AnnotationType implements Node {
   targetNodeInRelationships(offset: Int, before: String, after: String, first: Int, last: Int): RelationshipTypeConnection!
   queries(offset: Int, before: String, after: String, first: Int, last: Int): CorpusQueryTypeConnection!
   referencingCells(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
+  userFeedback(offset: Int, before: String, after: String, first: Int, last: Int): UserFeedbackTypeConnection!
   myPermissions: GenericScalar
   isPublished: Boolean
   objectSharedWith: GenericScalar
@@ -318,6 +298,8 @@ type UserType implements Node {
   rejectedCells(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
   lockedDatacellObjects(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
   datacellSet(offset: Int, before: String, after: String, first: Int, last: Int): DatacellTypeConnection!
+  lockedUserfeedbackObjects(offset: Int, before: String, after: String, first: Int, last: Int): UserFeedbackTypeConnection!
+  userfeedbackSet(offset: Int, before: String, after: String, first: Int, last: Int): UserFeedbackTypeConnection!
   myPermissions: GenericScalar
   isPublished: Boolean
   objectSharedWith: GenericScalar
@@ -630,6 +612,7 @@ type CorpusType implements Node {
   icon: String
   documents(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
   labelSet: LabelSetType
+  allowComments: Boolean!
   isPublic: Boolean!
   creator: UserType!
   backendLock: Boolean!
@@ -1113,7 +1096,7 @@ type AnalysisType implements Node {
   analyzer: AnalyzerType!
   callbackToken: UUID!
   receivedCallbackFile: String
-  analyzedCorpus: CorpusType!
+  analyzedCorpus: CorpusType
   corpusAction: CorpusActionType
   importLog: String
   analyzedDocuments(offset: Int, before: String, after: String, first: Int, last: Int): DocumentTypeConnection!
@@ -1380,6 +1363,44 @@ type FieldsetTypeEdge {
   cursor: String!
 }
 
+type UserFeedbackTypeConnection {
+  """Pagination data for this connection."""
+  pageInfo: PageInfo!
+
+  """Contains the nodes in this connection."""
+  edges: [UserFeedbackTypeEdge]!
+  totalCount: Int
+}
+
+"""A Relay edge containing a `UserFeedbackType` and its cursor."""
+type UserFeedbackTypeEdge {
+  """The item at the end of the edge"""
+  node: UserFeedbackType
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type UserFeedbackType implements Node {
+  """The ID of the object"""
+  id: ID!
+  userLock: UserType
+  backendLock: Boolean!
+  isPublic: Boolean!
+  creator: UserType!
+  created: DateTime!
+  modified: DateTime!
+  approved: Boolean!
+  rejected: Boolean!
+  comment: String!
+  markdown: String!
+  metadata: JSONString
+  commentedAnnotation: AnnotationType
+  myPermissions: GenericScalar
+  isPublished: Boolean
+  objectSharedWith: GenericScalar
+}
+
 """An enumeration."""
 enum LabelType {
   DOC_TYPE_LABEL
@@ -1441,6 +1462,14 @@ type GremlinEngineType_READEdge {
   cursor: String!
 }
 
+type CorpusStatsType {
+  totalDocs: Int
+  totalAnnotations: Int
+  totalComments: Int
+  totalAnalyses: Int
+  totalExtracts: Int
+}
+
 type DocumentCorpusActionsType {
   corpusActions: [CorpusActionType]
   extracts: [ExtractType]
@@ -1489,6 +1518,20 @@ type Mutation {
     """Id of the annotation that is to be deleted."""
     annotationId: String!
   ): RemoveAnnotation
+  approveAnnotation(
+    """ID of the annotation to approve"""
+    annotationId: ID!
+
+    """Optional comment for the approval"""
+    comment: String
+  ): ApproveAnnotation
+  rejectAnnotation(
+    """ID of the annotation to reject"""
+    annotationId: ID!
+
+    """Optional comment for the rejection"""
+    comment: String
+  ): RejectAnnotation
   addRelationship(
     """ID of the corpus for this relationship."""
     corpusId: String!
@@ -1559,6 +1602,11 @@ type Mutation {
     labelsetId: String! = "Id of the labelset to delete the labels from"
   ): RemoveLabelsFromLabelsetMutation
   uploadDocument(
+    """
+    If provided, successfully uploaded document will be uploaded to corpus with specified id
+    """
+    addToCorpusId: ID
+
     """Base64-encoded file string for the file."""
     base64FileString: String!
 
@@ -1570,6 +1618,9 @@ type Mutation {
 
     """Filename of the document."""
     filename: String!
+
+    """If True, document is immediately public. Defaults to False."""
+    makePublic: Boolean!
 
     """Title of the document."""
     title: String!
@@ -1623,13 +1674,16 @@ type Mutation {
     exportFormat: ExportType
   ): StartCorpusExport
   deleteExport(id: String!): DeleteExport
-  startAnalysisOnCorpus(
+  startAnalysisOnDoc(
     """Id of the analyzer to use."""
     analyzerId: ID!
 
-    """Id of the corpus that is to be analyzed."""
-    corpusId: ID!
-  ): StartCorpusAnalysisMutation
+    """Optional Id of the corpus to associate with the analysis."""
+    corpusId: ID
+
+    """Id of the document to be analyzed."""
+    documentId: ID
+  ): StartDocumentAnalysisMutation
   deleteAnalysis(id: String!): DeleteAnalysisMutation
   makeAnalysisPublic(
     """Analysis id to make public (superuser only)"""
@@ -1673,6 +1727,7 @@ type Mutation {
   approveDatacell(datacellId: String!): ApproveDatacell
   rejectDatacell(datacellId: String!): RejectDatacell
   editDatacell(datacellId: String!, editedData: GenericScalar!): EditDatacell
+  startExtractForDoc(documentId: ID!, fieldsetId: ID!): StartDocumentExtract
 }
 
 type ObtainJSONWebTokenWithUser {
@@ -1712,6 +1767,16 @@ type UpdateAnnotation {
 type AddDocTypeAnnotation {
   ok: Boolean
   annotation: AnnotationType
+}
+
+type ApproveAnnotation {
+  ok: Boolean
+  userFeedback: UserFeedbackType
+}
+
+type RejectAnnotation {
+  ok: Boolean
+  userFeedback: UserFeedbackType
 }
 
 type AddRelationship {
@@ -1889,7 +1954,7 @@ type DeleteExport {
   message: String
 }
 
-type StartCorpusAnalysisMutation {
+type StartDocumentAnalysisMutation {
   ok: Boolean
   message: String
   obj: AnalysisType
@@ -1994,4 +2059,10 @@ type EditDatacell {
   ok: Boolean
   message: String
   obj: DatacellType
+}
+
+type StartDocumentExtract {
+  ok: Boolean
+  message: String
+  obj: ExtractType
 }

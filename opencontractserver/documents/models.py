@@ -2,7 +2,6 @@ import functools
 
 import django
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from pgvector.django import VectorField
 
@@ -76,15 +75,6 @@ class Document(BaseOCModel):
             django.db.models.Index(fields=["created"]),
             django.db.models.Index(fields=["modified"]),
         ]
-
-    # Override save to update modified on save
-    def save(self, *args, **kwargs):
-        """On save, update timestamps"""
-        if not self.pk:
-            self.created = timezone.now()
-        self.modified = timezone.now()
-
-        return super().save(*args, **kwargs)
 
     def __str__(self):
         """

@@ -402,10 +402,18 @@ class GremlinEngineType_WRITE(AnnotatePermissionsForReadMixin, DjangoObjectType)
 
 
 class AnalysisType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-    full_annotation_list = graphene.List(AnnotationType)
+    full_annotation_list = graphene.List(
+        AnnotationType,
+        document_id=graphene.ID(),
+    )
 
-    def resolve_full_annotation_list(self, info):
-        return self.annotations.all()
+    def resolve_full_annotation_list(self, info, document_id=None):
+
+        results = self.annotations.all()
+        if document_id is not None:
+            document_pk = from_global_id(document_id)[1]
+            results = results.filter(document_id=document_pk)
+        return results
 
     class Meta:
         model = Analysis

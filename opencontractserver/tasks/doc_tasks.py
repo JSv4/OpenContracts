@@ -230,7 +230,8 @@ def set_doc_lock_state(*args, locked: bool, doc_id: int):
     autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
 )
 def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
-
+    # TODO - seeing persistent failure of Thomas Foster Appelant vs ... and Caster Hinckley et all. vs...
+    #  need to investigate why parser keeps failing on these two.
     logger.info(f"nlm_ingest_pdf() - split doc {doc_id} for user {user_id}")
 
     doc = Document.objects.get(pk=doc_id)

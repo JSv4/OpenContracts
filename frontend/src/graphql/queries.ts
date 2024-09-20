@@ -1520,6 +1520,7 @@ export const GET_DATACELLS_FOR_EXTRACT = gql`
 
 export interface GetAnnotationsForAnalysisInput {
   analysisId: string;
+  documentId?: string;
 }
 
 export interface GetAnnotationsForAnalysisOutput {
@@ -1527,7 +1528,7 @@ export interface GetAnnotationsForAnalysisOutput {
 }
 
 export const GET_ANNOTATIONS_FOR_ANALYSIS = gql`
-  query GetAnnotationsForAnalysis($analysisId: ID!) {
+  query GetAnnotationsForAnalysis($analysisId: ID!, $documentId: ID) {
     analysis(id: $analysisId) {
       id
       analyzer {
@@ -1543,7 +1544,7 @@ export const GET_ANNOTATIONS_FOR_ANALYSIS = gql`
           labelType
         }
       }
-      fullAnnotationList {
+      fullAnnotationList(documentId: $documentId) {
         id
         annotationLabel {
           id

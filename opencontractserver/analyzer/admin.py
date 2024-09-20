@@ -16,7 +16,7 @@ class AnalyzerAdmin(GuardedModelAdmin):
 
 @admin.register(Analysis)
 class AnalysisAdmin(GuardedModelAdmin):
-    list_display = ["id"]
+    list_display = ["id", "analysis_started", "analysis_completed", "status"]
     search_fields = [
         "id",
         "analyzer__id",

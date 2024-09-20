@@ -16,4 +16,19 @@ class AnalyzerAdmin(GuardedModelAdmin):
 
 @admin.register(Analysis)
 class AnalysisAdmin(GuardedModelAdmin):
-    list_display = ["id"]
+    list_display = ["id", "analysis_started", "analysis_completed", "status"]
+    search_fields = [
+        "id",
+        "analyzer__id",
+        "analyzed_corpus__title",
+        "creator__username",
+    ]
+    list_filter = ("status", "created", "analysis_started", "analysis_completed")
+    raw_id_fields = (
+        "analyzer",
+        "analyzed_corpus",
+        "corpus_action",
+        "creator",
+        "analyzed_documents",
+    )
+    date_hierarchy = "created"

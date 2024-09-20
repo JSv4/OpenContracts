@@ -222,7 +222,9 @@ class Analysis(BaseOCModel):
     analysis_started = django.db.models.DateTimeField(blank=True, null=True)
     analysis_completed = django.db.models.DateTimeField(blank=True, null=True)
     status = django.db.models.CharField(
-        max_length=24, choices=JobStatus.choices(), default=JobStatus.CREATED.value
+        max_length=24,
+        choices=[(status.value, status.name) for status in JobStatus],
+        default=JobStatus.CREATED.value,
     )
 
 

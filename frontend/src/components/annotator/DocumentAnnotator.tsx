@@ -572,6 +572,7 @@ export const DocumentAnnotator = ({
       fetchAnnotationsForAnalysis({
         variables: {
           analysisId: selected_analysis.id,
+          documentId: opened_document.id,
         },
       }).then(({ data }) => {
         // TODO - properly parse resulting annotation data

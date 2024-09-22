@@ -746,7 +746,12 @@ export const PDFView = ({
             allowInput &&
             !selected_analysis &&
             corpus_permissions.includes(PermissionTypes.CAN_UPDATE) ? (
-              <LabelSelector sidebarWidth={responsive_sidebar_width} />
+              <LabelSelector
+                sidebarWidth={responsive_sidebar_width}
+                humanSpanLabelChoices={humanSpanLabelChoices}
+                activeSpanLabel={activeSpanLabel ? activeSpanLabel : null}
+                setActiveLabel={setActiveSpanLabel}
+              />
             ) : (
               <></>
             )}

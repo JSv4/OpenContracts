@@ -13107,6 +13107,11 @@ urlpattern-polyfill@^8.0.0:
   resolved "https://registry.yarnpkg.com/urlpattern-polyfill/-/urlpattern-polyfill-8.0.2.tgz#99f096e35eff8bf4b5a2aa7d58a1523d6ebc7ce5"
   integrity sha512-Qp95D4TPJl1kC9SKigDcqgyM2VDVO4RiJc2d4qe5GrYm+zbIQCWWKAFaJNQ4BhdFeDGwBmAxqJBwWSJDb9T3BQ==
 
+use-debounce@^10.0.3:
+  version "10.0.3"
+  resolved "https://registry.yarnpkg.com/use-debounce/-/use-debounce-10.0.3.tgz#636094a37f7aa2bcc77b26b961481a0b571bf7ea"
+  integrity sha512-DxQSI9ZKso689WM1mjgGU3ozcxU1TJElBJ3X6S4SMzMNcm2lVH0AHmyXB+K7ewjz2BSUKJTDqTcwtSMRfB89dg==
+
 use-memo-one@^1.1.1:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/use-memo-one/-/use-memo-one-1.1.2.tgz#0c8203a329f76e040047a35a1197defe342fab20"

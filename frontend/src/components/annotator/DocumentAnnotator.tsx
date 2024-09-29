@@ -5,7 +5,7 @@ import {
   DocTypeAnnotation,
   PDFPageInfo,
   RelationGroup,
-  ServerAnnotation,
+  ServerTokenAnnotation,
 } from "./context";
 import {
   GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
@@ -73,7 +73,7 @@ import { Result } from "../widgets/data-display/Result";
 import { SidebarContainer } from "../common";
 import { CenterOnPage } from "./CenterOnPage";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
-import { AnnotatorRenderer } from "./display/AnnotatorRenderer";
+import { AnnotatorRenderer } from "./display/components/AnnotatorRenderer";
 import { PDFDocumentLoadingTask } from "pdfjs-dist";
 import { toast } from "react-toastify";
 import { createTokenStringSearch } from "./utils";
@@ -159,9 +159,11 @@ export const DocumentAnnotator = ({
 
   // Hook 22
   const [structuralAnnotations, setStructuralAnnotations] = useState<
-    ServerAnnotation[]
+    ServerTokenAnnotation[]
   >([]);
-  const [annotation_objs, setAnnotationObjs] = useState<ServerAnnotation[]>([]);
+  const [annotation_objs, setAnnotationObjs] = useState<
+    ServerTokenAnnotation[]
+  >([]);
   const [doc_type_annotations, setDocTypeAnnotations] = useState<
     DocTypeAnnotation[]
   >([]);

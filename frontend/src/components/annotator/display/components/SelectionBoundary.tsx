@@ -1,8 +1,11 @@
 import React, { useCallback } from "react";
 import styled, { css } from "styled-components";
-import { BoundingBox } from "../../types";
-import { getBorderWidthFromBounds, hexToRgb } from "../../../utils/transform";
-import { pulseGreen, pulseMaroon } from "./effects";
+import { BoundingBox } from "../../../types";
+import {
+  getBorderWidthFromBounds,
+  hexToRgb,
+} from "../../../../utils/transform";
+import { pulseGreen, pulseMaroon } from "../effects";
 
 interface SelectionBoundaryProps {
   id?: string;

@@ -197,6 +197,11 @@ export type TokenId = {
   tokenIndex: number;
 };
 
+export type SpanAnnotationJson = {
+  start: number;
+  end: number;
+};
+
 export type SinglePageAnnotationJson = {
   bounds: BoundingBox;
   tokensJsons: TokenId[];
@@ -213,6 +218,7 @@ export type TextSearchResult = {
 };
 
 export type MultipageAnnotationJson = Record<number, SinglePageAnnotationJson>;
+
 export interface PageProps {
   pageInfo: PDFPageInfo;
   doc_permissions: PermissionTypes[];

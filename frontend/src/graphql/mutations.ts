@@ -679,6 +679,7 @@ export interface NewAnnotationOutputType {
       page: number;
       rawText: string;
       json: MultipageAnnotationJson;
+      annotationType: LabelType;
       annotationLabel: AnnotationLabelType;
       myPermissions: string[];
       isPublic: boolean;
@@ -730,6 +731,7 @@ export const REQUEST_ADD_ANNOTATION = gql`
         json
         isPublic
         myPermissions
+        annotationType
         annotationLabel {
           id
           icon

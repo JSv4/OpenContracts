@@ -3,7 +3,7 @@ import { Label, Button, Popup, Icon, SemanticICONS } from "semantic-ui-react";
 import styled from "styled-components";
 import { Trash2, ArrowRight, ArrowLeft } from "lucide-react";
 import { HorizontallyJustifiedDiv } from "./common";
-import { AnnotationStore, ServerAnnotation } from "../context";
+import { AnnotationStore, ServerTokenAnnotation } from "../context";
 import { PermissionTypes } from "../../types";
 
 interface HighlightContainerProps {
@@ -81,7 +81,7 @@ const LocationText = styled.div`
 `;
 
 interface HighlightItemProps {
-  annotation: ServerAnnotation;
+  annotation: ServerTokenAnnotation;
   className?: string;
   read_only: boolean;
   relations: Array<{ sourceIds: string[]; targetIds: string[] }>;

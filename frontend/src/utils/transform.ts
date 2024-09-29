@@ -1,9 +1,18 @@
 import {
   DocTypeAnnotation,
-  ServerAnnotation,
+  ServerTokenAnnotation,
+  ServerSpanAnnotation,
 } from "../components/annotator/context/AnnotationStore";
-import { BoundingBox, PermissionTypes } from "../components/types";
-import { AnalyzerManifestType, ServerAnnotationType } from "../graphql/types";
+import {
+  BoundingBox,
+  PermissionTypes,
+  SpanAnnotationJson,
+} from "../components/types";
+import {
+  AnalyzerManifestType,
+  LabelType,
+  ServerAnnotationType,
+} from "../graphql/types";
 import default_analyzer_icon from "../assets/icons/noun-quill-31093.png";
 
 // https://gist.github.com/JamieMason/0566f8412af9fe6a1d470aa1e089a752
@@ -91,7 +100,7 @@ export function convertToDocTypeAnnotation(
 export function convertToServerAnnotation(
   annotation: ServerAnnotationType,
   allowComments?: boolean
-): ServerAnnotation {
+): ServerTokenAnnotation | ServerSpanAnnotation {
   let approved = false;
   let rejected = false;
   if (annotation.userFeedback?.edges.length === 1) {
@@ -101,7 +110,21 @@ export function convertToServerAnnotation(
       Boolean(annotation.userFeedback.edges[0]?.node?.rejected) ?? false;
   }
 
-  return new ServerAnnotation(
+  if (annotation.annotationType == LabelType.SpanLabel) {
+    return new ServerSpanAnnotation(
+      annotation.page,
+      annotation.annotationLabel,
+      annotation.rawText ?? "",
+      annotation.structural ?? false,
+      (annotation.json as SpanAnnotationJson) ?? ({} as SpanAnnotationJson),
+      annotation.myPermissions ?? [],
+      approved,
+      rejected,
+      allowComments !== undefined ? allowComments : false,
+      annotation.id
+    );
+  }
+  return new ServerTokenAnnotation(
     annotation.page,
     annotation.annotationLabel,
     annotation.rawText ?? "",
@@ -119,7 +142,7 @@ export function convertToServerAnnotation(
 export function convertToServerAnnotations(
   annotations: ServerAnnotationType[],
   allowComments?: boolean
-): ServerAnnotation[] {
+): (ServerTokenAnnotation | ServerSpanAnnotation)[] {
   return annotations.map((annot) =>
     convertToServerAnnotation(annot, allowComments)
   );

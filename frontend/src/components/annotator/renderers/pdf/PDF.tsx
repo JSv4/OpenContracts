@@ -2,10 +2,10 @@ import { useContext } from "react";
 import styled from "styled-components";
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import _ from "lodash";
-import { PDFStore } from "../context";
-import { LabelDisplayBehavior } from "../../../graphql/types";
-import { PermissionTypes } from "../../types";
-import { Page } from "./Page";
+import { PDFStore } from "../../context";
+import { LabelDisplayBehavior } from "../../../../graphql/types";
+import { PermissionTypes } from "../../../types";
+import { PDFPage } from "./PDFPage";
 
 export class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
@@ -91,7 +91,7 @@ export const PDF = ({
     <>
       {pdfStore.pages.map((p) => {
         return (
-          <Page
+          <PDFPage
             key={p.page.pageNumber}
             read_only={read_only}
             doc_permissions={doc_permissions}

@@ -6,17 +6,17 @@ import React, {
   useMemo,
   useLayoutEffect,
 } from "react";
-import { AnnotationLabelType } from "../../../graphql/types";
-import { getPageBoundsFromCanvas } from "../../../utils/transform";
-import { PageProps, BoundingBox, PermissionTypes } from "../../types";
-import { AnnotationStore, normalizeBounds, PDFStore } from "../context";
+import { AnnotationLabelType } from "../../../../graphql/types";
+import { getPageBoundsFromCanvas } from "../../../../utils/transform";
+import { PageProps, BoundingBox, PermissionTypes } from "../../../types";
+import { AnnotationStore, normalizeBounds, PDFStore } from "../../context";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
-import { Selection } from "./Selection";
-import { SearchResult } from "./SearchResult";
-import { SelectionBoundary } from "./SelectionBoundary";
-import { SelectionTokenGroup } from "./SelectionTokenGroup";
+import { Selection } from "../../display/components/Selection";
+import { SearchResult } from "../../display/components/SearchResult";
+import { SelectionBoundary } from "../../display/components/SelectionBoundary";
+import { SelectionTokenGroup } from "../../display/components/SelectionTokenGroup";
 
-export const Page = ({
+export const PDFPage = ({
   pageInfo,
   corpus_permissions,
   read_only,

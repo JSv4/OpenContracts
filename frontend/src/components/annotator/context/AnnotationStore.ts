@@ -1,12 +1,13 @@
 import { createContext } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-import { AnnotationLabelType } from "../../../graphql/types";
+import { AnnotationLabelType, LabelType } from "../../../graphql/types";
 import { PDFPageInfo } from ".";
 import {
   BoundingBox,
   MultipageAnnotationJson,
   PermissionTypes,
+  SpanAnnotationJson,
 } from "../../types";
 import { TextSearchResult } from "../../types";
 
@@ -26,7 +27,9 @@ export class RelationGroup {
   }
 
   // TODO - need to find a way to integrate this into current application log, which does NOT account for this.
-  updateForAnnotationDeletion(a: ServerAnnotation): RelationGroup | undefined {
+  updateForAnnotationDeletion(
+    a: ServerTokenAnnotation
+  ): RelationGroup | undefined {
     const sourceEmpty = this.sourceIds.length === 0;
     const targetEmpty = this.targetIds.length === 0;
 
@@ -63,7 +66,60 @@ export class RelationGroup {
   }
 }
 
-export class ServerAnnotation {
+export class ServerSpanAnnotation {
+  public readonly id: string;
+
+  constructor(
+    public readonly page: number,
+    public readonly annotationLabel: AnnotationLabelType,
+    public readonly rawText: string,
+    public readonly structural: boolean,
+    public readonly json: SpanAnnotationJson,
+    public readonly myPermissions: PermissionTypes[],
+    public readonly approved: boolean,
+    public readonly rejected: boolean,
+    public readonly canComment: boolean = false,
+    id: string | undefined = undefined
+  ) {
+    this.id = id || uuidv4();
+  }
+
+  toString() {
+    return this.id;
+  }
+
+  update(delta: Partial<ServerSpanAnnotation> = {}): ServerSpanAnnotation {
+    return new ServerSpanAnnotation(
+      delta.page ?? this.page,
+      delta.annotationLabel ?? Object.assign({}, this.annotationLabel),
+      delta.rawText ?? this.rawText,
+      delta.structural ?? this.structural,
+      delta.json ?? this.json,
+      delta.myPermissions ?? this.myPermissions,
+      delta.approved ?? this.approved,
+      delta.rejected ?? this.rejected,
+      delta.canComment ?? this.canComment,
+      this.id
+    );
+  }
+
+  static fromObject(obj: ServerSpanAnnotation): ServerSpanAnnotation {
+    return new ServerSpanAnnotation(
+      obj.page,
+      obj.annotationLabel,
+      obj.rawText,
+      obj.structural,
+      obj.json,
+      obj.myPermissions,
+      obj.approved,
+      obj.rejected,
+      obj.canComment,
+      obj.id
+    );
+  }
+}
+
+export class ServerTokenAnnotation {
   public readonly id: string;
 
   constructor(
@@ -89,8 +145,8 @@ export class ServerAnnotation {
    * Returns a deep copy of the provided Annotation with the applied
    * changes.
    */
-  update(delta: Partial<ServerAnnotation> = {}) {
-    return new ServerAnnotation(
+  update(delta: Partial<ServerTokenAnnotation> = {}) {
+    return new ServerTokenAnnotation(
       delta.page ?? this.page,
       delta.annotationLabel ?? Object.assign({}, this.annotationLabel),
       delta.rawText ?? this.rawText,
@@ -104,8 +160,8 @@ export class ServerAnnotation {
     );
   }
 
-  static fromObject(obj: ServerAnnotation) {
-    return new ServerAnnotation(
+  static fromObject(obj: ServerTokenAnnotation) {
+    return new ServerTokenAnnotation(
       obj.page,
       obj.annotationLabel,
       obj.rawText,
@@ -191,7 +247,7 @@ export class DocTypeAnnotation {
 
 export class PdfAnnotations {
   constructor(
-    public readonly annotations: ServerAnnotation[],
+    public readonly annotations: ServerTokenAnnotation[],
     public readonly relations: RelationGroup[],
     public readonly docTypes: DocTypeAnnotation[],
     public readonly unsavedChanges: boolean = false
@@ -297,9 +353,9 @@ interface _AnnotationStore {
   setPdfPageInfoObjs: (b: Record<number, PDFPageInfo>) => void;
   createMultiPageAnnotation: () => void;
 
-  createAnnotation: (a: ServerAnnotation) => void;
+  createAnnotation: (a: ServerTokenAnnotation) => void;
   deleteAnnotation: (annotation_id: string) => void;
-  updateAnnotation: (a: ServerAnnotation) => void;
+  updateAnnotation: (a: ServerTokenAnnotation) => void;
 
   clearViewLabels: () => void;
   setViewLabels: (ls: AnnotationLabelType[]) => void;
@@ -426,13 +482,13 @@ export const AnnotationStore = createContext<_AnnotationStore>({
     throw new Error("setActiveRelationLabel() - Unimplemented");
   },
   docTypeLabels: [],
-  createAnnotation: (_?: ServerAnnotation) => {
+  createAnnotation: (_?: ServerTokenAnnotation) => {
     throw new Error("createAnnotation() - Unimplemented");
   },
   deleteAnnotation: (_?: string) => {
     throw new Error("deleteAnnotation() - Unimplemented");
   },
-  updateAnnotation: (_?: ServerAnnotation) => {
+  updateAnnotation: (_?: ServerTokenAnnotation) => {
     throw new Error("updateAnnotation() - Unimplemented");
   },
   createDocTypeAnnotation: (_?: DocTypeAnnotation) => {

@@ -5,7 +5,7 @@ import _ from "lodash";
 import source_icon from "../../../assets/icons/noun-bow-and-arrow-559923.png";
 import target_icon from "../../../assets/icons/noun-target-746597.png";
 
-import { ServerAnnotation } from "../context";
+import { ServerTokenAnnotation } from "../context";
 
 import "./AnnotatorSidebar.css";
 
@@ -28,7 +28,7 @@ export const RelationHighlightItem = ({
   onRemoveAnnotationFromRelation,
   onSelect,
 }: {
-  annotation: ServerAnnotation;
+  annotation: ServerTokenAnnotation;
   className?: string;
   type: "SOURCE" | "TARGET";
   read_only: boolean;

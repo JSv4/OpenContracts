@@ -8,7 +8,7 @@ import {
   SinglePageAnnotationJson,
   TokenId,
   ViewState,
-} from "../../types";
+} from "../../../types";
 import {
   AnalysisType,
   AnnotationLabelType,
@@ -19,7 +19,7 @@ import {
   ExtractType,
   LabelDisplayBehavior,
   LabelType,
-} from "../../../graphql/types";
+} from "../../../../graphql/types";
 import {
   PDFPageInfo,
   AnnotationStore,
@@ -27,33 +27,33 @@ import {
   RelationGroup,
   PdfAnnotations,
   DocTypeAnnotation,
-  ServerAnnotation,
-} from "../context";
+  ServerTokenAnnotation,
+} from "../../context";
 import _ from "lodash";
 
-import * as listeners from "../listeners";
+import * as listeners from "../../listeners";
 
-import AnnotatorSidebar from "../sidebar/AnnotatorSidebar";
-import { SidebarContainer } from "../../common";
+import AnnotatorSidebar from "../../sidebar/AnnotatorSidebar";
+import { SidebarContainer } from "../../../common";
 
-import { TextSearchResult } from "../../types";
-import { AnnotatorTopbar } from "../topbar/AnnotatorTopbar";
-import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import { TextSearchResult } from "../../../types";
+import { AnnotatorTopbar } from "../../topbar/AnnotatorTopbar";
+import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 
-import "./PDFView.css";
-import { RelationModal } from "../../widgets/modals/RelationModal";
-import { PDF } from "../display/PDF";
-import { DocTypeLabelDisplay } from "../labels/doc_types/DocTypeLabelDisplay";
-import { LabelSelector } from "../labels/label_selector/LabelSelector";
+import "./DocumentViewer.css";
+import { RelationModal } from "../../../widgets/modals/RelationModal";
+import { PDF } from "../../renderers/pdf/PDF";
+import { DocTypeLabelDisplay } from "../../labels/doc_types/DocTypeLabelDisplay";
+import { LabelSelector } from "../../labels/label_selector/LabelSelector";
 import { Dimmer, Loader } from "semantic-ui-react";
 import { Menu } from "semantic-ui-react";
-import { PDFActionBar } from "../display/ActionBar";
+import { PDFActionBar } from "../components/ActionBar";
 import {
   setTopbarVisible,
   showSelectCorpusAnalyzerOrFieldsetModal,
   showStructuralAnnotations,
-} from "../../../graphql/cache";
-import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
+} from "../../../../graphql/cache";
+import { MOBILE_VIEW_BREAKPOINT } from "../../../../assets/configurations/constants";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -87,7 +87,7 @@ const PDFContainer = styled.div<{ width?: number }>(
   `
 );
 
-export const PDFView = ({
+export const DocumentViewer = ({
   doc_permissions,
   view_document_only,
   corpus_permissions,
@@ -164,8 +164,8 @@ export const PDFView = ({
   selected_extract: ExtractType | null | undefined;
   onSelectAnalysis: (analysis: AnalysisType | null) => undefined | null | void;
   onSelectExtract: (extract: ExtractType | null) => undefined | null | void;
-  createAnnotation: (added_annotation_obj: ServerAnnotation) => void;
-  updateAnnotation: (updated_annotation: ServerAnnotation) => void;
+  createAnnotation: (added_annotation_obj: ServerTokenAnnotation) => void;
+  updateAnnotation: (updated_annotation: ServerTokenAnnotation) => void;
   approveAnnotation: (annot_id: string, comment?: string) => void;
   rejectAnnotation: (annot_id: string, comment?: string) => void;
   createDocTypeAnnotation: (doc_type_annotation_obj: DocTypeAnnotation) => void;
@@ -186,7 +186,7 @@ export const PDFView = ({
     | React.MutableRefObject<Record<string, HTMLElement | null>>
     | undefined;
   pdfAnnotations: PdfAnnotations;
-  scroll_to_annotation_on_open: ServerAnnotation | null | undefined;
+  scroll_to_annotation_on_open: ServerTokenAnnotation | null | undefined;
   setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
@@ -628,7 +628,7 @@ export const PDFView = ({
       setSelection(undefined);
       setMultiSelections([]);
       createAnnotation(
-        new ServerAnnotation(
+        new ServerTokenAnnotation(
           firstPage,
           activeSpanLabel,
           combinedRawText,
@@ -646,6 +646,34 @@ export const PDFView = ({
       );
     }
   };
+
+  let view_components = <></>;
+
+  switch (selected_document.fileType) {
+    case "application/pdf":
+      view_components = (
+        <PDF
+          read_only={read_only}
+          corpus_permissions={corpus_permissions}
+          doc_permissions={doc_permissions}
+          shiftDown={shiftDown}
+          show_selected_annotation_only={show_selected_annotation_only}
+          show_annotation_bounding_boxes={show_annotation_bounding_boxes}
+          show_annotation_labels={show_annotation_labels}
+          setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
+        />
+      );
+      break;
+    case "application/txt":
+      break;
+    default:
+      view_components = (
+        <div>
+          <p>Unsupported filetype: {selected_document.fileType}</p>
+        </div>
+      );
+      break;
+  }
 
   if (doc && pages && pdfAnnotations) {
     return (
@@ -824,20 +852,7 @@ export const PDFView = ({
                       label={activeRelationLabel}
                     />
                   ) : null}
-                  <PDF
-                    read_only={read_only}
-                    corpus_permissions={corpus_permissions}
-                    doc_permissions={doc_permissions}
-                    shiftDown={shiftDown}
-                    show_selected_annotation_only={
-                      show_selected_annotation_only
-                    }
-                    show_annotation_bounding_boxes={
-                      show_annotation_bounding_boxes
-                    }
-                    show_annotation_labels={show_annotation_labels}
-                    setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
-                  />
+                  {view_components}
                 </PDFContainer>
               </AnnotatorTopbar>
             </div>

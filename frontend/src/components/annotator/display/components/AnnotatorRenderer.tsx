@@ -31,16 +31,16 @@ import {
   UpdateAnnotationOutputType,
   UpdateRelationInputType,
   UpdateRelationOutputType,
-} from "../../../graphql/mutations";
-import { PDFView } from "../pages";
+} from "../../../../graphql/mutations";
+import { DocumentViewer } from "../viewer";
 
 import {
   DocTypeAnnotation,
   PdfAnnotations,
   PDFPageInfo,
   RelationGroup,
-  ServerAnnotation,
-} from "../context";
+  ServerTokenAnnotation,
+} from "../../context";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 
 import {
@@ -52,11 +52,11 @@ import {
   DocumentType,
   ExtractType,
   LabelDisplayBehavior,
-} from "../../../graphql/types";
-import { ViewState, TokenId, PermissionTypes } from "../../types";
+} from "../../../../graphql/types";
+import { ViewState, TokenId, PermissionTypes } from "../../../types";
 import { toast } from "react-toastify";
-import { createTokenStringSearch } from "../utils";
-import { getPermissions } from "../../../utils/transform";
+import { createTokenStringSearch } from "../../utils";
+import { getPermissions } from "../../../../utils/transform";
 import _ from "lodash";
 
 export interface TextSearchResultsProps {
@@ -93,8 +93,8 @@ interface AnnotatorRendererProps {
   onSelectExtract?: (extract: ExtractType | null) => undefined | null | void;
   read_only: boolean;
   load_progress: number;
-  scrollToAnnotation?: ServerAnnotation;
-  selectedAnnotation?: ServerAnnotation[];
+  scrollToAnnotation?: ServerTokenAnnotation;
+  selectedAnnotation?: ServerTokenAnnotation[];
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
   show_structural_annotations: boolean;
@@ -103,12 +103,12 @@ interface AnnotatorRendererProps {
   human_span_labels: AnnotationLabelType[];
   relationship_labels: AnnotationLabelType[];
   document_labels: AnnotationLabelType[];
-  annotation_objs: ServerAnnotation[];
+  annotation_objs: ServerTokenAnnotation[];
   doc_type_annotations: DocTypeAnnotation[];
   relationship_annotations: RelationGroup[];
   data_cells?: DatacellType[];
   columns?: ColumnType[];
-  structural_annotations?: ServerAnnotation[];
+  structural_annotations?: ServerTokenAnnotation[];
   editMode: "ANNOTATE" | "ANALYZE";
   allowInput: boolean;
   setEditMode: (m: "ANNOTATE" | "ANALYZE") => void | undefined | null;
@@ -281,7 +281,7 @@ export const AnnotatorRenderer = ({
     setDocText(doc_text);
   }, [pages, doc]);
 
-  function addMultipleAnnotations(a: ServerAnnotation[]): void {
+  function addMultipleAnnotations(a: ServerTokenAnnotation[]): void {
     setPdfAnnotations(
       new PdfAnnotations(
         pdfAnnotations.annotations.concat(a),
@@ -298,7 +298,7 @@ export const AnnotatorRenderer = ({
   >(REQUEST_ADD_ANNOTATION);
 
   const requestCreateAnnotation = (
-    added_annotation_obj: ServerAnnotation
+    added_annotation_obj: ServerTokenAnnotation
   ): void => {
     if (openedCorpus) {
       // Stray clicks on the canvas can trigger the annotation submission with empty token arrays and
@@ -322,11 +322,11 @@ export const AnnotatorRenderer = ({
           .then((data) => {
             toast.success("Annotated!\nAdded your annotation to the database.");
             //console.log("New annoation,", data);
-            let newRenderedAnnotations: ServerAnnotation[] = [];
+            let newRenderedAnnotations: ServerTokenAnnotation[] = [];
             let annotationObj = data?.data?.addAnnotation?.annotation;
             if (annotationObj) {
               newRenderedAnnotations.push(
-                new ServerAnnotation(
+                new ServerTokenAnnotation(
                   annotationObj.page,
                   annotationObj.annotationLabel,
                   annotationObj.rawText,
@@ -464,11 +464,13 @@ export const AnnotatorRenderer = ({
     };
   }
 
-  function removeAnnotation(id: string): ServerAnnotation[] {
+  function removeAnnotation(id: string): ServerTokenAnnotation[] {
     return pdfAnnotations.annotations.filter((ann) => ann.id !== id);
   }
 
-  const requestUpdateAnnotation = (updated_annotation: ServerAnnotation) => {
+  const requestUpdateAnnotation = (
+    updated_annotation: ServerTokenAnnotation
+  ) => {
     updateAnnotation({
       variables: {
         id: updated_annotation.id,
@@ -918,9 +920,9 @@ export const AnnotatorRenderer = ({
   };
 
   const replaceAnnotations = (
-    replacement_annotations: ServerAnnotation[],
-    obj_list_to_replace_in: ServerAnnotation[]
-  ): ServerAnnotation[] => {
+    replacement_annotations: ServerTokenAnnotation[],
+    obj_list_to_replace_in: ServerTokenAnnotation[]
+  ): ServerTokenAnnotation[] => {
     const updated_ids = replacement_annotations.map((a) => a.id);
     const unchanged_annotations = obj_list_to_replace_in.filter(
       (a) => !updated_ids.includes(a.id)
@@ -985,7 +987,7 @@ export const AnnotatorRenderer = ({
   };
 
   return (
-    <PDFView
+    <DocumentViewer
       zoom_level={zoom_level}
       setZoomLevel={setZoomLevel}
       view_document_only={view_document_only}

@@ -1,21 +1,22 @@
 import io
-from unittest.mock import patch
-
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from docx import Document
 from graphene.test import Client
+from docx import Document
+from graphql_relay import from_global_id
+
+# from openpyxl import Workbook
+# from pptx import Presentation
 
 from config.graphql.schema import schema
 from opencontractserver.utils.files import base_64_encode_bytes
+from opencontractserver.documents.models import Document as DocumentModel
 
 User = get_user_model()
-
 
 class TestContext:
     def __init__(self, user):
         self.user = user
-
 
 class UploadDocumentMutationTestCase(TestCase):
     def setUp(self):
@@ -23,9 +24,7 @@ class UploadDocumentMutationTestCase(TestCase):
             username="testuser", password="testpassword"
         )
         self.client = Client(schema, context_value=TestContext(self.user))
-
-    def test_upload_document_mime_type_check(self):
-        mutation = """
+        self.mutation = """
             mutation UploadDocument(
                 $file: String!,
                 $filename: String!,
@@ -49,84 +48,96 @@ class UploadDocumentMutationTestCase(TestCase):
                     document {
                         id
                         title
+                        fileType
                     }
                 }
             }
-        """  # noqa
+        """
 
-        # Mock file content
-        pdf_content = b"%PDF-1.5\n%\xe2\xe3\xcf\xd3\n"
+    def generate_file_content(self, file_type):
+        if file_type == 'pdf':
+            return b"%PDF-1.5\n%\xe2\xe3\xcf\xd3\n"
+        elif file_type == 'docx':
+            buffer = io.BytesIO()
+            doc = Document()
+            doc.add_paragraph("This is a test DOCX file.")
+            doc.save(buffer)
+            return buffer.getvalue()
+        # elif file_type == 'xlsx':
+        #     buffer = io.BytesIO()
+        #     wb = Workbook()
+        #     ws = wb.active
+        #     ws['A1'] = "This is a test XLSX file."
+        #     wb.save(buffer)
+        #     return buffer.getvalue()
+        # elif file_type == 'pptx':
+        #     buffer = io.BytesIO()
+        #     prs = Presentation()
+        #     slide = prs.slides.add_slide(prs.slide_layouts[0])
+        #     title = slide.shapes.title
+        #     title.text = "This is a test PPTX file."
+        #     prs.save(buffer)
+        #     return buffer.getvalue()
+        elif file_type == 'txt':
+            return b"This is a text file."
 
-        # Generate DOCX content
-        docx_buffer = io.BytesIO()
-        doc = Document()
-        doc.add_paragraph("This is a test DOCX file.")
-        doc.save(docx_buffer)
-        docx_content = docx_buffer.getvalue()
+    def test_upload_document(self):
+        file_types = {
+            'pdf': 'application/pdf',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            # 'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            # 'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'txt': 'application/txt'
+        }
 
-        txt_content = b"This is a text file."
+        for file_type, mime_type in file_types.items():
+            with self.subTest(file_type=file_type):
+                file_content = self.generate_file_content(file_type)
+                base64_content = base_64_encode_bytes(file_content)
 
-        # Encode file content
-        pdf_base64 = base_64_encode_bytes(pdf_content)
-        docx_base64 = base_64_encode_bytes(docx_content)
-        txt_base64 = base_64_encode_bytes(txt_content)
+                result = self.client.execute(
+                    self.mutation,
+                    variables={
+                        "file": base64_content,
+                        "filename": f"test.{file_type}",
+                        "title": f"Test {file_type.upper()}",
+                        "description": f"A test {file_type.upper()} file",
+                        "makePublic": True,
+                        "customMeta": {},
+                    },
+                )
 
-        # Test PDF upload (should succeed)
-        with patch(
-            "opencontractserver.documents.models.Document.objects.create"
-        ) as mock_create:
-            mock_create.return_value = None
-            result = self.client.execute(
-                mutation,
-                variables={
-                    "file": pdf_base64,
-                    "filename": "test.pdf",
-                    "title": "Test PDF",
-                    "description": "A test PDF file",
-                    "makePublic": True,
-                    "customMeta": {},
-                },
-            )
+                print(f"Result: {result}")
+                self.assertIsNone(result.get("errors"))
 
-        self.assertIsNone(result.get("errors"))
-        self.assertTrue(result["data"]["uploadDocument"]["ok"])
-        self.assertEqual(result["data"]["uploadDocument"]["message"], "Success")
+                if file_type in ['pdf', 'docx', 'pptx', 'xlsx']:
+                    self.assertTrue(result["data"]["uploadDocument"]["ok"])
+                    self.assertEqual(result["data"]["uploadDocument"]["message"], "Success")
+                    self.assertEqual(result["data"]["uploadDocument"]["document"]["title"], f"Test {file_type.upper()}")
+                    self.assertEqual(result["data"]["uploadDocument"]["document"]["fileType"], mime_type)
 
-        # Test DOCX upload (should fail)
-        result = self.client.execute(
-            mutation,
-            variables={
-                "file": docx_base64,
-                "filename": "test.docx",
-                "title": "Test DOCX",
-                "description": "A test DOCX file",
-                "makePublic": False,
-                "customMeta": {},
-            },
-        )
+                    # Verify the document was actually created in the database
+                    doc_id = result["data"]["uploadDocument"]["document"]["id"]
+                    doc = DocumentModel.objects.get(id=from_global_id(doc_id)[1])
+                    self.assertEqual(doc.title, f"Test {file_type.upper()}")
+                    self.assertEqual(doc.file_type, mime_type)
+                    self.assertEqual(doc.creator, self.user)
+                    self.assertTrue(doc.is_public)
 
-        self.assertIsNone(result.get("errors"))
-        self.assertFalse(result["data"]["uploadDocument"]["ok"])
-        self.assertEqual(
-            result["data"]["uploadDocument"]["message"],
-            "Unallowed filetype: application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
+                    if file_type == 'txt':
+                        self.assertIsNone(doc.pdf_file)
+                        self.assertIsNotNone(doc.txt_extract_file)
+                    else:
+                        self.assertIsNotNone(doc.txt_extract_file)
+                        self.assertIsNone(doc.pdf_file)
 
-        # Test TXT upload (should fail)
-        result = self.client.execute(
-            mutation,
-            variables={
-                "file": txt_base64,
-                "filename": "test.txt",
-                "title": "Test TXT",
-                "description": "A test TXT file",
-                "makePublic": False,
-                "customMeta": {},
-            },
-        )
+                else:  # txt file
+                    self.assertFalse(result["data"]["uploadDocument"]["ok"])
+                    self.assertEqual(result["data"]["uploadDocument"]["message"], "Unable to determine file type")
 
-        self.assertIsNone(result.get("errors"))
-        self.assertFalse(result["data"]["uploadDocument"]["ok"])
-        self.assertEqual(
-            result["data"]["uploadDocument"]["message"], "Unable to determine file type"
-        )
+                    # Verify no document was created for unsupported file type
+                    self.assertEqual(DocumentModel.objects.filter(title=f"Test {file_type.upper()}").count(), 0)
+
+    def tearDown(self):
+        # Clean up any files created during the test
+        DocumentModel.objects.all().delete()

@@ -77,6 +77,7 @@ from opencontractserver.types.dicts import OpenContractsAnnotatedDocumentImportT
 from opencontractserver.types.enums import ExportType, PermissionTypes
 from opencontractserver.users.models import UserExport
 from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
+from opencontractserver.utils.files import is_plaintext
 from opencontractserver.utils.permissioning import (
     set_permissions_for_obj_to_user,
     user_has_permission_for_obj,
@@ -860,27 +861,57 @@ class UploadDocument(graphene.Mutation):
             # Check file type
             kind = filetype.guess(file_bytes)
             if kind is None:
-                return UploadDocument(
-                    message="Unable to determine file type", ok=False, document=None
-                )
 
-            if kind.mime not in settings.ALLOWED_DOCUMENT_MIMETYPES:
+                if is_plaintext(file_bytes):
+                    kind = "application/txt"
+                else:
+                    return UploadDocument(
+                        message="Unable to determine file type", ok=False, document=None
+                    )
+            else:
+                kind = kind.mime
+
+            if kind not in settings.ALLOWED_DOCUMENT_MIMETYPES:
                 return UploadDocument(
-                    message=f"Unallowed filetype: {kind.mime}", ok=False, document=None
+                    message=f"Unallowed filetype: {kind}", ok=False, document=None
                 )
 
             user = info.context.user
-            pdf_file = ContentFile(file_bytes, name=filename)
-            document = Document(
-                creator=user,
-                title=title,
-                description=description,
-                custom_meta=custom_meta,
-                pdf_file=pdf_file,
-                backend_lock=True,
-                is_public=make_public,
-            )
-            document.save()
+
+            if kind in [
+                "application/pdf",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ]:
+                pdf_file = ContentFile(file_bytes, name=filename)
+                document = Document(
+                    creator=user,
+                    title=title,
+                    description=description,
+                    custom_meta=custom_meta,
+                    pdf_file=pdf_file,
+                    backend_lock=True,
+                    is_public=make_public,
+                    file_type=kind  # Store filetype
+                )
+                document.save()
+            elif kind in [
+                "application/txt"
+            ]:
+                txt_extract_file = ContentFile(file_bytes, name=filename)
+                document = Document(
+                    creator=user,
+                    title=title,
+                    description=description,
+                    custom_meta=custom_meta,
+                    txt_extract_file=txt_extract_file,
+                    backend_lock=True,
+                    is_public=make_public,
+                    file_type=kind
+                )
+                document.save()
+
             set_permissions_for_obj_to_user(user, document, [PermissionTypes.CRUD])
 
             # If add_to_corpus_id is not None, link uploaded document to corpus

@@ -14,6 +14,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile, File
 from django.core.files.storage import default_storage
+from django.utils import timezone
 from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
 from pydantic import validate_arguments
 
@@ -38,7 +39,7 @@ from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_fu
 from opencontractserver.utils.files import (
     check_if_pdf_needs_ocr,
     extract_pawls_from_pdfs_bytes,
-    split_pdf_into_images,
+    split_pdf_into_images, create_text_thumbnail,
 )
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 from opencontractserver.utils.text import __consolidate_common_equivalent_chars
@@ -223,6 +224,7 @@ def reassemble_extracted_pdf_parts(
 def set_doc_lock_state(*args, locked: bool, doc_id: int):
     document = Document.objects.get(pk=doc_id)
     document.backend_lock = locked
+    document.processing_finished = timezone.now()
     document.save()
 
 
@@ -342,87 +344,6 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
             set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
 
     document.save()
-
-
-@celery_app.task(
-    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
-)
-def split_pdf_for_processing(user_id: int, doc_id: int) -> list[tuple[int, str]]:
-
-    logger.info(f"split_pdf_for_processing() - split doc {doc_id} for user {user_id}")
-
-    from PyPDF2 import PdfReader, PdfWriter
-
-    doc = Document.objects.get(pk=doc_id)
-    doc_path = doc.pdf_file.name
-    doc_file = default_storage.open(doc_path, mode="rb")
-
-    if settings.USE_AWS:
-        import boto3
-
-        s3 = boto3.client("s3")
-
-    pdf = PdfReader(doc_file)
-
-    # TODO - for each page, store to disk as a temporary file OR
-    # store to cloud storage and pass the path to the storage
-    # location rather than the bytes themselves (to cut down on
-    # Redis usage)
-
-    pages_and_paths: list[tuple[int, str]] = []
-    processing_tasks = []
-    total_page_count = len(pdf.pages)
-
-    for page in range(total_page_count):
-
-        page_bytes_stream = io.BytesIO()
-
-        logger.info(f"split_pdf_for_processing() - process page {page}")
-        pdf_writer = PdfWriter()
-        pdf_writer.add_page(pdf.pages[page])
-        pdf_writer.write(page_bytes_stream)
-
-        if settings.USE_AWS:
-            page_path = f"user_{user_id}/fragments/{uuid.uuid4()}.pdf"
-            s3.put_object(
-                Key=page_path,
-                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-                Body=page_bytes_stream.getvalue(),
-            )
-        else:
-            pdf_fragment_folder_path = pathlib.Path(
-                f"/tmp/user_{user_id}/pdf_fragments"
-            )
-            pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
-            pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}.pdf"
-            with pdf_fragment_path.open("wb") as f:
-                f.write(page_bytes_stream.getvalue())
-
-            page_path = pdf_fragment_path.resolve().__str__()
-
-        pages_and_paths.append((page, page_path))
-        processing_tasks.append(
-            process_pdf_page.si(
-                total_page_count=total_page_count,
-                page_num=page,
-                page_path=page_path,
-                user_id=user_id,
-            )
-        )
-
-    logger.info("plit_pdf_for_processing() - launch processing workflow")
-    process_workflow = chord(
-        group(processing_tasks),
-        reassemble_extracted_pdf_parts.s(doc_id=doc_id),
-    )
-    process_workflow.apply_async()
-    logger.info(
-        f"plit_pdf_for_processing() - pdf for doc_id {doc_id} being processed async"
-    )
-
-    logger.info(f"split_pdf_for_processing() - pages_and_paths: {pages_and_paths}")
-    return pages_and_paths  # Leaving this here for tests for now... not a thorough way of evaluating underlying task
-    # completion
 
 
 @celery_app.task()
@@ -575,7 +496,7 @@ def convert_doc_to_funsd(
 
 
 @celery_app.task()
-def extract_thumbnail(*args, doc_id=-1, **kwargs):
+def extract_pdf_thumbnail(*args, doc_id=-1, **kwargs):
 
     logger.info(f"Extract thumbnail for doc #{doc_id}")
 
@@ -681,3 +602,23 @@ def extract_thumbnail(*args, doc_id=-1, **kwargs):
         logger.error(
             f"Unable to create a screenshot for doc_id {doc_id} due to error: {e}"
         )
+
+@celery_app.task()
+def extract_txt_thumbnail(*args, doc_id=-1, **kwargs):
+
+    try:
+        document = Document.objects.get(pk=doc_id)
+        file_object = default_storage.open(document.txt_extract_file.name, mode="r")
+        text = file_object.read()
+
+        img = create_text_thumbnail(text)
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
+
+        img_bytes = io.BytesIO()
+        icon_file = File(img_bytes)
+        document.icon.save(f"./{doc_id}_icon.png", icon_file)
+
+    except Exception as e:
+        logger.error(f"Unable to create a screenshot for doc_id {doc_id} due to error: {e}")

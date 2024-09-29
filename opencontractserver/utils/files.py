@@ -4,6 +4,8 @@ import pathlib
 import typing
 import uuid
 import string
+from PIL import Image, ImageDraw, ImageFont
+import textwrap
 from io import BytesIO
 
 from django.conf import settings
@@ -227,3 +229,36 @@ def is_plaintext(file_path, sample_size=1024, threshold=0.7):
     except IOError:
         print(f"Error: Unable to read file {file_path}")
         return False
+
+def create_text_thumbnail(text, width=300, height=400, font_size=12, margin=20, line_spacing=4):
+    # Create a new white image
+    img = Image.new('RGB', (width, height), color='white')
+    draw = ImageDraw.Draw(img)
+
+    # Load a font
+    try:
+        font = ImageFont.truetype("arial.ttf", font_size)
+    except IOError:
+        font = ImageFont.load_default()
+
+    # Calculate the maximum width of text
+    max_width = width - 2 * margin
+
+    # Wrap the text
+    lines = textwrap.wrap(text, width=max_width // (font_size // 2))
+
+    # Draw the text
+    y_text = margin
+    for line in lines:
+        draw.text((margin, y_text), line, font=font, fill='black')
+        y_text += font_size + line_spacing
+
+        # Stop if we've reached the bottom of the image
+        if y_text > height - margin:
+            break
+
+    # Add some lines to simulate ruled paper
+    for i in range(margin, height - margin, font_size + line_spacing):
+        draw.line([(margin, i), (width - margin, i)], fill='lightblue', width=1)
+
+    return img

@@ -17,10 +17,9 @@ from opencontractserver.documents.models import Document
 from opencontractserver.tasks.doc_tasks import (
     burn_doc_annotations,
     convert_doc_to_funsd,
-    extract_thumbnail,
+    extract_pdf_thumbnail,
     process_pdf_page,
     set_doc_lock_state,
-    split_pdf_for_processing,
 )
 from opencontractserver.tests.fixtures import (
     SAMPLE_PAWLS_FILE_ONE_PATH,
@@ -65,16 +64,7 @@ class DocParserTestCase(TestCase):
     def test_pdf_thumbnail_extraction(self):
 
         # TODO - expand test to actually check results
-        extract_thumbnail.s(doc_id=self.doc.id).apply().get()
-
-    def test_pdf_sharding(self):
-        shards = (
-            split_pdf_for_processing.s(user_id=self.user.id, doc_id=self.doc.id)
-            .apply()
-            .get()
-        )
-
-        self.assertEqual(len(shards), 23)
+        extract_pdf_thumbnail.s(doc_id=self.doc.id).apply().get()
 
     def test_process_pdf_page(self):
         page_bytes_stream = io.BytesIO()
@@ -117,13 +107,6 @@ class DocParserTestCase(TestCase):
 
         self.doc.refresh_from_db()
         self.assertTrue(self.doc.backend_lock)
-
-    def test_split_pdf_for_processing(self):
-
-        result = split_pdf_for_processing.apply(args=(self.user.id, self.doc.id)).get()
-
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 23)
 
     def test_burn_doc_annotations(self):
         # TODO - handle text labels and do substantive test

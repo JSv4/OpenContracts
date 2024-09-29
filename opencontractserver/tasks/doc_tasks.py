@@ -35,7 +35,7 @@ from opencontractserver.types.dicts import (
 )
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
-from opencontractserver.utils.pdf import (
+from opencontractserver.utils.files import (
     check_if_pdf_needs_ocr,
     extract_pawls_from_pdfs_bytes,
     split_pdf_into_images,

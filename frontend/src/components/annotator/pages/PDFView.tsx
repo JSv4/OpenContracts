@@ -791,6 +791,7 @@ export const PDFView = ({
               />
             </SidebarContainer>
             <div className="PDFViewTopBarWrapper">
+              {/**TODO - swap out these components based on file type */}
               <AnnotatorTopbar
                 opened_corpus={selected_corpus}
                 opened_document={selected_document}

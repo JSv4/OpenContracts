@@ -7,7 +7,7 @@ from docx import Document
 from graphene.test import Client
 
 from config.graphql.schema import schema
-from opencontractserver.utils.pdf import base_64_encode_bytes
+from opencontractserver.utils.files import base_64_encode_bytes
 
 User = get_user_model()
 

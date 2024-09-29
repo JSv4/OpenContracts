@@ -27,6 +27,7 @@ class Document(BaseOCModel):
     # File fields (Some of these are text blobs or jsons that could be huge, so we're storing them in S3 and going
     # to have the frontend fetch them from there. Will be much faster and cheaper than having a huge relational database
     # full of these kinds of things).
+    file_type=django.db.models.CharField(blank=False, null=False, max_length=255, default="application/pdf")
     icon = django.db.models.FileField(
         max_length=1024,
         blank=True,

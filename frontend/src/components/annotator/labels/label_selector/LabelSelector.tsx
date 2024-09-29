@@ -26,12 +26,6 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
 
   const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
 
-  const debouncedHover = useRef(
-    _.debounce((isOpen: boolean) => {
-      setOpen(isOpen);
-    }, 500)
-  ).current;
-
   const onSelect = (label: AnnotationLabelType): void => {
     setActiveLabel(label);
     setOpen(false);

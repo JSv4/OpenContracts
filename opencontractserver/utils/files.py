@@ -3,6 +3,7 @@ import logging
 import pathlib
 import typing
 import uuid
+import string
 from io import BytesIO
 
 from django.conf import settings
@@ -205,3 +206,24 @@ def check_if_pdf_needs_ocr(file_object, threshold=10):
 
     # If the total extracted text is less than the threshold, it likely needs OCR
     return len(total_text.strip()) < threshold
+
+
+def is_plaintext(file_path, sample_size=1024, threshold=0.7):
+    try:
+        with open(file_path, 'rb') as file:
+            # Read a sample of the file
+            sample = file.read(sample_size)
+            if len(sample) == 0:
+                return False
+
+            # Count printable characters
+            printable_count = sum(1 for byte in sample if chr(byte) in string.printable)
+
+            # Calculate the ratio of printable characters
+            printable_ratio = printable_count / len(sample)
+
+            # If the ratio is above the threshold, consider it plaintext
+            return printable_ratio > threshold
+    except IOError:
+        print(f"Error: Unable to read file {file_path}")
+        return False

@@ -10,7 +10,7 @@ from graphql_relay import to_global_id
 from config.graphql.schema import schema
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.tests import fixtures
-from opencontractserver.utils.pdf import base_64_encode_bytes
+from opencontractserver.utils.files import base_64_encode_bytes
 
 User = get_user_model()
 

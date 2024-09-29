@@ -5,8 +5,8 @@ from graphene.test import Client
 from docx import Document
 from graphql_relay import from_global_id
 
-# from openpyxl import Workbook
-# from pptx import Presentation
+from openpyxl import Workbook
+from pptx import Presentation
 
 from config.graphql.schema import schema
 from opencontractserver.utils.files import base_64_encode_bytes
@@ -63,21 +63,21 @@ class UploadDocumentMutationTestCase(TestCase):
             doc.add_paragraph("This is a test DOCX file.")
             doc.save(buffer)
             return buffer.getvalue()
-        # elif file_type == 'xlsx':
-        #     buffer = io.BytesIO()
-        #     wb = Workbook()
-        #     ws = wb.active
-        #     ws['A1'] = "This is a test XLSX file."
-        #     wb.save(buffer)
-        #     return buffer.getvalue()
-        # elif file_type == 'pptx':
-        #     buffer = io.BytesIO()
-        #     prs = Presentation()
-        #     slide = prs.slides.add_slide(prs.slide_layouts[0])
-        #     title = slide.shapes.title
-        #     title.text = "This is a test PPTX file."
-        #     prs.save(buffer)
-        #     return buffer.getvalue()
+        elif file_type == 'xlsx':
+            buffer = io.BytesIO()
+            wb = Workbook()
+            ws = wb.active
+            ws['A1'] = "This is a test XLSX file."
+            wb.save(buffer)
+            return buffer.getvalue()
+        elif file_type == 'pptx':
+            buffer = io.BytesIO()
+            prs = Presentation()
+            slide = prs.slides.add_slide(prs.slide_layouts[0])
+            title = slide.shapes.title
+            title.text = "This is a test PPTX file."
+            prs.save(buffer)
+            return buffer.getvalue()
         elif file_type == 'txt':
             return b"This is a text file."
 
@@ -125,11 +125,11 @@ class UploadDocumentMutationTestCase(TestCase):
                     self.assertTrue(doc.is_public)
 
                     if file_type == 'txt':
-                        self.assertIsNone(doc.pdf_file)
-                        self.assertIsNotNone(doc.txt_extract_file)
+                        self.assertFalse(bool(doc.pdf_file))  # Check if pdf_file is empty
+                        self.assertTrue(bool(doc.txt_extract_file))  # Check if txt_extract_file is not empty
                     else:
-                        self.assertIsNotNone(doc.txt_extract_file)
-                        self.assertIsNone(doc.pdf_file)
+                        self.assertTrue(bool(doc.pdf_file))  # Check if pdf_file is not empty
+                        self.assertFalse(bool(doc.txt_extract_file))  # Check if txt_extract_file is empty
 
                 else:  # txt file
                     self.assertFalse(result["data"]["uploadDocument"]["ok"])

@@ -247,7 +247,10 @@ export class DocTypeAnnotation {
 
 export class PdfAnnotations {
   constructor(
-    public readonly annotations: ServerTokenAnnotation[],
+    public readonly annotations: (
+      | ServerTokenAnnotation
+      | ServerSpanAnnotation
+    )[],
     public readonly relations: RelationGroup[],
     public readonly docTypes: DocTypeAnnotation[],
     public readonly unsavedChanges: boolean = false

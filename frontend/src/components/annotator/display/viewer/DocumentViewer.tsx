@@ -28,6 +28,7 @@ import {
   PdfAnnotations,
   DocTypeAnnotation,
   ServerTokenAnnotation,
+  ServerSpanAnnotation,
 } from "../../context";
 import _ from "lodash";
 
@@ -54,6 +55,7 @@ import {
   showStructuralAnnotations,
 } from "../../../../graphql/cache";
 import { MOBILE_VIEW_BREAKPOINT } from "../../../../assets/configurations/constants";
+import TxtAnnotator from "../../renderers/txt/TxtAnnotator";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -647,8 +649,30 @@ export const DocumentViewer = ({
     }
   };
 
+  const getSpan = (span: { start: number; end: number; text: string }) => {
+    const selectedLabel = spanLabels.find(
+      (label) => label.id === activeSpanLabel?.id
+    );
+    if (!selectedLabel) throw new Error("Selected label not found");
+
+    return new ServerSpanAnnotation(
+      0, // Page number (assuming single page)
+      selectedLabel,
+      span.text,
+      false, // structural
+      { start: span.start, end: span.end }, // json
+      [], // myPermissions
+      false, // approved
+      false // rejected
+    );
+  };
+
   let view_components = <></>;
 
+  console.log(
+    "DocumentViewer adapting to filetype: ",
+    selected_document.fileType
+  );
   switch (selected_document.fileType) {
     case "application/pdf":
       view_components = (
@@ -665,6 +689,28 @@ export const DocumentViewer = ({
       );
       break;
     case "application/txt":
+      view_components = (
+        <TxtAnnotator
+          text={doc_text}
+          annotations={pdfAnnotations.annotations.filter(
+            (annot) => annot instanceof ServerSpanAnnotation
+          )}
+          focusedAnnotationId={selectedAnnotations[0]}
+          onFocusAnnotation={(annotation: ServerSpanAnnotation | null) =>
+            setSelectedAnnotations(annotation ? [annotation.id] : [])
+          }
+          getSpan={getSpan}
+          visibleLabels={spanLabelsToView}
+          availableLabels={spanLabels}
+          selectedLabelTypeId={null}
+          read_only={read_only}
+          allowInput={allowInput}
+          zoom_level={zoom_level}
+          createAnnotation={createAnnotation}
+          updateAnnotation={updateAnnotation}
+          deleteAnnotation={deleteAnnotation}
+        />
+      );
       break;
     default:
       view_components = (

@@ -4,18 +4,18 @@ import { useDebouncedCallback } from "use-debounce";
 import RadialButtonCloud, { CloudButtonItem } from "./RadialButtonCloud";
 import { Modal, Button, Dropdown } from "semantic-ui-react";
 import { AnnotationLabelType } from "../../../../graphql/types";
-import { ServerTokenAnnotation } from "../../context";
+import { ServerSpanAnnotation } from "../../context";
 
-interface CharacterAnnotatorProps {
+interface TxtAnnotatorProps {
   text: string;
-  annotations: ServerTokenAnnotation[];
+  annotations: ServerSpanAnnotation[];
   getSpan: (span: {
     start: number;
     end: number;
     text: string;
-  }) => ServerTokenAnnotation;
-  focusedAnnotation: ServerTokenAnnotation | null;
-  onFocusAnnotation: (annotation: ServerTokenAnnotation | null) => void;
+  }) => ServerSpanAnnotation;
+  focusedAnnotationId: string | null;
+  onFocusAnnotation: (annotation: ServerSpanAnnotation | null) => void;
   visibleLabels: AnnotationLabelType[];
   availableLabels: AnnotationLabelType[];
   selectedLabelTypeId: string | null;
@@ -24,9 +24,8 @@ interface CharacterAnnotatorProps {
   loading_message?: string;
   allowInput: boolean;
   zoom_level: number;
-  setAllowInput: (v: boolean) => void | undefined | null;
-  createAnnotation: (added_annotation_obj: ServerTokenAnnotation) => void;
-  updateAnnotation: (updated_annotation: ServerTokenAnnotation) => void;
+  createAnnotation: (added_annotation_obj: ServerSpanAnnotation) => void;
+  updateAnnotation: (updated_annotation: ServerSpanAnnotation) => void;
   approveAnnotation?: (annot_id: string, comment?: string) => void;
   rejectAnnotation?: (annot_id: string, comment?: string) => void;
   deleteAnnotation: (annotation_id: string) => void;
@@ -35,16 +34,16 @@ interface CharacterAnnotatorProps {
 }
 
 interface LabelRenderData {
-  annotation: ServerTokenAnnotation;
+  annotation: ServerSpanAnnotation;
   position: { x: number; y: number };
   labelIndex: number;
 }
 
-const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
+const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   text,
   annotations,
   getSpan,
-  focusedAnnotation,
+  focusedAnnotationId,
   onFocusAnnotation,
   visibleLabels,
   availableLabels,
@@ -54,7 +53,6 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
   loading_message,
   allowInput,
   zoom_level,
-  setAllowInput,
   createAnnotation,
   updateAnnotation,
   approveAnnotation,
@@ -69,9 +67,22 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
   >(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [annotationToEdit, setAnnotationToEdit] =
-    useState<ServerTokenAnnotation | null>(null);
+    useState<ServerSpanAnnotation | null>(null);
   const [labelsToRender, setLabelsToRender] = useState<LabelRenderData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [focusedAnnotation, setFocusedAnnotation] =
+    useState<ServerSpanAnnotation | null>(null);
+
+  useEffect(() => {
+    if (focusedAnnotationId) {
+      const focusedAnnotationObjs = annotations.filter(
+        (annot) => annot.id == focusedAnnotationId
+      );
+      if (focusedAnnotationObjs.length == -1) {
+        setFocusedAnnotation(focusedAnnotationObjs[0]);
+      }
+    }
+  }, [focusedAnnotationId]);
 
   const debouncedSetHoveredSpanIndex = useDebouncedCallback(
     (spanIndex: number | null) => {
@@ -139,7 +150,7 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
   }, [debouncedSetHoveredSpanIndex]);
 
   const handleLabelClick = useCallback(
-    (annotation: ServerTokenAnnotation) => {
+    (annotation: ServerSpanAnnotation) => {
       if (focusedAnnotation && focusedAnnotation.id === annotation.id) {
         onFocusAnnotation(null);
         setSelectedAnnotationId(null);
@@ -152,7 +163,7 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
   );
 
   const isAnnotationSelected = useCallback(
-    (annotation: ServerTokenAnnotation) => {
+    (annotation: ServerSpanAnnotation) => {
       if (selectedAnnotationId) {
         return annotation.id === selectedAnnotationId;
       } else if (selectedLabelTypeId) {
@@ -164,15 +175,6 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
     [selectedAnnotationId, selectedLabelTypeId]
   );
 
-  const [spans, setSpans] = useState<
-    {
-      start: number;
-      end: number;
-      text: string;
-      annotations: ServerTokenAnnotation[];
-    }[]
-  >([]);
-
   useEffect(() => {
     const visibleLabelTexts = visibleLabels.map((label) => label.text);
 
@@ -182,14 +184,13 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
           ann.annotationLabel.text &&
           visibleLabelTexts.includes(ann.annotationLabel.text)
       )
-      .filter()
       .sort((a, b) => a.json.start - b.json.start);
 
     const newSpans: {
       start: number;
       end: number;
       text: string;
-      annotations: ServerTokenAnnotation[];
+      annotations: ServerSpanAnnotation[];
     }[] = [];
 
     let lastIndex = 0;
@@ -197,7 +198,7 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
     const addSpan = (
       start: number,
       end: number,
-      annotations: ServerTokenAnnotation[]
+      annotations: ServerSpanAnnotation[]
     ) => {
       if (start >= end) return;
       newSpans.push({
@@ -226,22 +227,18 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
       );
       addSpan(spanStart, spanEnd, spanAnnotations);
     }
-
-    setSpans(newSpans);
   }, [annotations, text, visibleLabels]);
 
   useEffect(() => {
     const calculateLabelPositions = () => {
       const newLabelsToRender: LabelRenderData[] = [];
 
-      spans.forEach((span, spanIndex) => {
+      annotations.forEach((annotation, spanIndex) => {
         if (hoveredSpanIndex !== spanIndex) return;
 
-        const { annotations: spanAnnotations } = span;
-
-        const selectedAnnotations = spanAnnotations.filter((ann) =>
-          isAnnotationSelected(ann)
-        );
+        const selectedAnnotations = isAnnotationSelected(annotation)
+          ? [annotation]
+          : [];
 
         if (selectedAnnotations.length === 0) return;
 
@@ -364,7 +361,7 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
     };
 
     calculateLabelPositions();
-  }, [hoveredSpanIndex, spans, isAnnotationSelected]);
+  }, [hoveredSpanIndex, annotations, isAnnotationSelected]);
 
   const hexToRgba = (hex: string, alpha: number): string => {
     let r = 0,
@@ -409,8 +406,10 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
         maxHeight={maxHeight}
         maxWidth={maxWidth}
       >
-        {spans.map((span, index) => {
-          const { text: spanText, annotations: spanAnnotations, start } = span;
+        {annotations.map((annot, index) => {
+          const text = annot.rawText;
+          const annotation = [annot];
+          const start = annot.json.start;
 
           const spanStyle: React.CSSProperties = {
             display: "inline",
@@ -421,9 +420,9 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
             borderRadius: "5px",
           };
 
-          const selectedAnnotations = spanAnnotations.filter((ann) =>
-            isAnnotationSelected(ann)
-          );
+          const selectedAnnotations = isAnnotationSelected(annot)
+            ? [annot]
+            : [];
 
           if (selectedAnnotations.length === 1) {
             spanStyle.backgroundColor = selectedAnnotations[0].annotationLabel
@@ -460,7 +459,7 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
               onMouseEnter={() => handleMouseEnter(index)}
               onMouseLeave={handleMouseLeave}
             >
-              {spanText}
+              {text}
             </span>
           );
         })}
@@ -589,4 +588,4 @@ const CharacterAnnotator: React.FC<CharacterAnnotatorProps> = ({
   );
 };
 
-export default React.memo(CharacterAnnotator);
+export default React.memo(TxtAnnotator);

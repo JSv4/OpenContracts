@@ -23,7 +23,7 @@ import {
 } from "../../graphql/queries";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 
-import { getPawlsLayer } from "./api/rest";
+import { getDocumentRawText, getPawlsLayer } from "./api/rest";
 import {
   AnalysisRowType,
   AnalysisType,
@@ -150,6 +150,7 @@ export const DocumentAnnotator = ({
 
   // Hook 17
   const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
+  const [rawText, setRawText] = useState<string>("");
 
   // New states for analyses and extracts
   const [analyses, setAnalyses] = useState<AnalysisType[]>([]);
@@ -417,15 +418,8 @@ export const DocumentAnnotator = ({
 
   // Effect to load document and pawls layer
   useEffect(() => {
-    if (open && opened_document && opened_document.pdfFile) {
-      viewStateVar(ViewState.LOADING);
-      fetchDocumentAnalysesAndExtracts();
-      const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
-        opened_document.pdfFile
-      );
-      loadingTask.onProgress = (p: { loaded: number; total: number }) => {
-        setProgress(Math.round((p.loaded / p.total) * 100));
-      };
+    if (open && opened_document) {
+      console.log("Open and opened_document");
 
       // If we're in annotate mode and corpus has a labelset AND we don't have initial annotations to display
       if (
@@ -442,65 +436,93 @@ export const DocumentAnnotator = ({
         });
       }
 
-      // Load PDF and pawls layer
-      Promise.all([
-        loadingTask.promise,
-        getPawlsLayer(opened_document.pawlsParseFile || ""),
-        opened_document.allStructuralAnnotations || Promise.resolve([]),
-      ])
-        .then(
-          ([pdfDoc, pawlsData, structuralAnns]: [
-            PDFDocumentProxy,
-            PageTokens[],
-            ServerAnnotationType[]
-          ]) => {
-            setDocument(pdfDoc);
+      console.log("Opened document", opened_document);
 
-            setStructuralAnnotations(
-              structuralAnns.map((annotation) =>
-                convertToServerAnnotation(annotation)
-              )
-            );
+      if (
+        opened_document.fileType === "application/pdf" &&
+        opened_document.pdfFile
+      ) {
+        viewStateVar(ViewState.LOADING);
+        fetchDocumentAnalysesAndExtracts();
+        const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
+          opened_document.pdfFile
+        );
+        loadingTask.onProgress = (p: { loaded: number; total: number }) => {
+          setProgress(Math.round((p.loaded / p.total) * 100));
+        };
 
-            const loadPages: Promise<PDFPageInfo>[] = [];
-            for (let i = 1; i <= pdfDoc.numPages; i++) {
-              // See line 50 for an explanation of the cast here.
-              loadPages.push(
-                pdfDoc.getPage(i).then((p) => {
-                  let pageTokens: Token[] = [];
-                  if (pawlsData.length === 0) {
-                    toast.error(
-                      "Token layer isn't available for this document... annotations can't be displayed."
-                    );
-                    // console.log("Loading up some data for page ", i, p);
-                  } else {
-                    const pageIndex = p.pageNumber - 1;
-                    pageTokens = pawlsData[pageIndex].tokens;
-                  }
+        // Load PDF and pawls layer
+        Promise.all([
+          loadingTask.promise,
+          getPawlsLayer(opened_document.pawlsParseFile || ""),
+          opened_document.allStructuralAnnotations || Promise.resolve([]),
+        ])
+          .then(
+            ([pdfDoc, pawlsData, structuralAnns]: [
+              PDFDocumentProxy,
+              PageTokens[],
+              ServerAnnotationType[]
+            ]) => {
+              setDocument(pdfDoc);
 
-                  // console.log("Tokens", pageTokens);
-                  return new PDFPageInfo(p, pageTokens, zoom_level);
-                }) as unknown as Promise<PDFPageInfo>
+              setStructuralAnnotations(
+                structuralAnns.map((annotation) =>
+                  convertToServerAnnotation(annotation)
+                )
               );
+
+              const loadPages: Promise<PDFPageInfo>[] = [];
+              for (let i = 1; i <= pdfDoc.numPages; i++) {
+                // See line 50 for an explanation of the cast here.
+                loadPages.push(
+                  pdfDoc.getPage(i).then((p) => {
+                    let pageTokens: Token[] = [];
+                    if (pawlsData.length === 0) {
+                      toast.error(
+                        "Token layer isn't available for this document... annotations can't be displayed."
+                      );
+                      // console.log("Loading up some data for page ", i, p);
+                    } else {
+                      const pageIndex = p.pageNumber - 1;
+                      pageTokens = pawlsData[pageIndex].tokens;
+                    }
+
+                    // console.log("Tokens", pageTokens);
+                    return new PDFPageInfo(p, pageTokens, zoom_level);
+                  }) as unknown as Promise<PDFPageInfo>
+                );
+              }
+              return Promise.all(loadPages);
             }
-            return Promise.all(loadPages);
-          }
-        )
-        .then((pages) => {
-          setPages(pages);
+          )
+          .then((pages) => {
+            setPages(pages);
 
-          let { doc_text, string_index_token_map } =
-            createTokenStringSearch(pages);
+            let { doc_text, string_index_token_map } =
+              createTokenStringSearch(pages);
 
-          setPageTextMaps({
-            ...string_index_token_map,
-            ...pageTextMaps,
+            setPageTextMaps({
+              ...string_index_token_map,
+              ...pageTextMaps,
+            });
+            setRawText(doc_text);
+          })
+          .catch((err) => {
+            console.error("Error loading document:", err);
+            viewStateVar(ViewState.ERROR);
           });
-        })
-        .catch((err) => {
-          console.error("Error loading document:", err);
-          viewStateVar(ViewState.ERROR);
-        });
+      } else if (opened_document.fileType === "application/txt") {
+        // If this is a txt file, we don't need to load pdf file or structural annoations
+        getDocumentRawText(opened_document.txtExtractFile || "")
+          .then((txt: string) => {
+            console.log("Retrieved rawText", txt);
+            setRawText(txt);
+            viewStateVar(ViewState.LOADED);
+          })
+          .catch((e) => {
+            viewStateVar(ViewState.ERROR);
+          });
+      }
     }
   }, [open, opened_document]);
 
@@ -514,8 +536,10 @@ export const DocumentAnnotator = ({
 
   // Only trigger state flip to "Loaded" if PDF, pageTextMaps and page info load properly
   useEffect(() => {
-    if (doc && pageTextMaps && pages.length > 0) {
-      viewStateVar(ViewState.LOADED);
+    if (opened_document.fileType === "application/pdf") {
+      if (doc && pageTextMaps && pages.length > 0) {
+        viewStateVar(ViewState.LOADED);
+      }
     }
   }, [pageTextMaps, pages, doc]);
 
@@ -675,6 +699,7 @@ export const DocumentAnnotator = ({
   };
 
   let rendered_component = <></>;
+  console.log("view_state", view_state, ViewState.LOADING, ViewState.LOADED);
   switch (view_state) {
     case ViewState.LOADING:
       rendered_component = (
@@ -736,64 +761,63 @@ export const DocumentAnnotator = ({
       );
       break;
     case ViewState.LOADED:
-      if (doc) {
-        rendered_component = (
-          <AnnotatorRenderer
-            open={open}
-            view_document_only={false}
-            loading_message="Loading Annotator Data"
-            data_loading={
-              dataCellsLoading ||
-              analysesLoading ||
-              annotationsLoading ||
-              humanDataLoading
-            }
-            doc={doc}
-            pages={pages}
-            zoom_level={zoom_level}
-            setZoomLevel={setZoomLevel}
-            load_progress={progress}
-            opened_document={opened_document}
-            opened_corpus={opened_corpus}
-            read_only={read_only}
-            structural_annotations={structuralAnnotations}
-            scrollToAnnotation={
-              scrollToAnnotation &&
-              convertToServerAnnotation(scrollToAnnotation)
-            }
-            show_structural_annotations={show_structural_annotations}
-            show_selected_annotation_only={show_selected_annotation_only}
-            show_annotation_bounding_boxes={show_annotation_bounding_boxes}
-            show_annotation_labels={show_annotation_labels}
-            span_labels={span_labels}
-            human_span_labels={human_span_labels}
-            relationship_labels={relation_labels}
-            document_labels={doc_type_labels}
-            annotation_objs={annotation_objs}
-            doc_type_annotations={doc_type_annotations}
-            relationship_annotations={relationship_annotations}
-            data_cells={data_cells}
-            columns={columns}
-            editMode={edit_mode}
-            setEditMode={(m: "ANALYZE" | "ANNOTATE") => {
-              editMode(m);
-            }}
-            allowInput={allow_input}
-            setAllowInput={(v: boolean) => {
-              allowUserInput(v);
-            }}
-            analyses={analyses}
-            extracts={extracts}
-            selected_analysis={selected_analysis}
-            selected_extract={selected_extract}
-            onSelectAnalysis={onSelectAnalysis}
-            onSelectExtract={onSelectExtract}
-            onError={(vs: ViewState) => {
-              viewStateVar(vs);
-            }}
-          />
-        );
-      }
+      rendered_component = (
+        <AnnotatorRenderer
+          open={open}
+          view_document_only={false}
+          loading_message="Loading Annotator Data"
+          data_loading={
+            dataCellsLoading ||
+            analysesLoading ||
+            annotationsLoading ||
+            humanDataLoading
+          }
+          doc={doc}
+          rawText={rawText}
+          pageTextMaps={pageTextMaps}
+          pages={pages}
+          zoom_level={zoom_level}
+          setZoomLevel={setZoomLevel}
+          load_progress={progress}
+          opened_document={opened_document}
+          opened_corpus={opened_corpus}
+          read_only={read_only}
+          structural_annotations={structuralAnnotations}
+          scrollToAnnotation={
+            scrollToAnnotation && convertToServerAnnotation(scrollToAnnotation)
+          }
+          show_structural_annotations={show_structural_annotations}
+          show_selected_annotation_only={show_selected_annotation_only}
+          show_annotation_bounding_boxes={show_annotation_bounding_boxes}
+          show_annotation_labels={show_annotation_labels}
+          span_labels={span_labels}
+          human_span_labels={human_span_labels}
+          relationship_labels={relation_labels}
+          document_labels={doc_type_labels}
+          annotation_objs={annotation_objs}
+          doc_type_annotations={doc_type_annotations}
+          relationship_annotations={relationship_annotations}
+          data_cells={data_cells}
+          columns={columns}
+          editMode={edit_mode}
+          setEditMode={(m: "ANALYZE" | "ANNOTATE") => {
+            editMode(m);
+          }}
+          allowInput={allow_input}
+          setAllowInput={(v: boolean) => {
+            allowUserInput(v);
+          }}
+          analyses={analyses}
+          extracts={extracts}
+          selected_analysis={selected_analysis}
+          selected_extract={selected_extract}
+          onSelectAnalysis={onSelectAnalysis}
+          onSelectExtract={onSelectExtract}
+          onError={(vs: ViewState) => {
+            viewStateVar(vs);
+          }}
+        />
+      );
       break;
     // eslint-disable-line: no-fallthrough
     case ViewState.ERROR:

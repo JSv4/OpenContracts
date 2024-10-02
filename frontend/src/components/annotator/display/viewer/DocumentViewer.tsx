@@ -205,6 +205,8 @@ export const DocumentViewer = ({
   shiftDown: boolean;
   setViewState: (v: ViewState) => void;
 }) => {
+  console.log("DocumentViewer");
+
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
@@ -272,6 +274,7 @@ export const DocumentViewer = ({
       value: () => showSelectCorpusAnalyzerOrFieldsetModal(true),
     },
   ];
+
   if (use_mobile_layout) {
     actionBarItems = [
       ...actionBarItems,
@@ -689,12 +692,15 @@ export const DocumentViewer = ({
       );
       break;
     case "application/txt":
+      console.log("Application txt detected!");
       view_components = (
         <TxtAnnotator
           text={doc_text}
-          annotations={pdfAnnotations.annotations.filter(
-            (annot) => annot instanceof ServerSpanAnnotation
-          )}
+          annotations={
+            pdfAnnotations.annotations.filter(
+              (annot) => annot instanceof ServerSpanAnnotation
+            ) as ServerSpanAnnotation[]
+          }
           focusedAnnotationId={selectedAnnotations[0]}
           onFocusAnnotation={(annotation: ServerSpanAnnotation | null) =>
             setSelectedAnnotations(annotation ? [annotation.id] : [])
@@ -721,192 +727,186 @@ export const DocumentViewer = ({
       break;
   }
 
-  if (doc && pages && pdfAnnotations) {
-    return (
-      <PDFStore.Provider
+  return (
+    <PDFStore.Provider
+      value={{
+        doc,
+        pages,
+        onError,
+        zoomLevel: zoom_level,
+        setZoomLevel,
+      }}
+    >
+      <AnnotationStore.Provider
         value={{
-          doc,
-          pages,
-          onError,
-          zoomLevel: zoom_level,
-          setZoomLevel,
+          allowComment: selected_corpus?.allowComments ?? true,
+          humanSpanLabelChoices,
+          spanLabels,
+          docText: doc_text,
+          searchText,
+          hideSidebar,
+          setHideSidebar,
+          approveAnnotation,
+          rejectAnnotation,
+          textSearchMatches: textSearchMatches ? textSearchMatches : [],
+          searchForText: setSearchText,
+          selectedTextSearchMatchIndex,
+          reverseTextSearchMatch,
+          advanceTextSearchMatch,
+          setSelectedTextSearchMatchIndex: safeSetSelectedTextSearchMatchIndex,
+          setSelection,
+          pageSelection,
+          setMultiSelections,
+          pageSelectionQueue,
+          scrollContainerRef,
+          setScrollContainerRef,
+          selectionElementRefs: preAssignedSelectionElementRefs,
+          insertSelectionElementRef,
+          searchResultElementRefs: textSearchElementRefs,
+          insertSearchResultElementRefs,
+          pageElementRefs,
+          insertPageRef,
+          removePageRef,
+          activeSpanLabel,
+          showOnlySpanLabels: spanLabelsToView,
+          clearViewLabels: clearSpanLabelsToView,
+          addLabelsToView: addSpanLabelsToViewSelection,
+          removeLabelsToView: removeSpanLabelsToViewSelection,
+          setActiveLabel: setActiveSpanLabel,
+          showStructuralLabels: show_structural_annotations,
+          setViewLabels: (ls: AnnotationLabelType[]) => setSpanLabelsToView(ls),
+          toggleShowStructuralLabels: () =>
+            showStructuralAnnotations(!show_structural_annotations),
+          relationLabels,
+          activeRelationLabel,
+          setActiveRelationLabel,
+          pdfAnnotations,
+          setPdfAnnotations: onUpdatePdfAnnotations,
+          docTypeLabels,
+          createAnnotation,
+          deleteAnnotation,
+          updateAnnotation,
+          createDocTypeAnnotation,
+          deleteDocTypeAnnotation,
+          pdfPageInfoObjs,
+          setPdfPageInfoObjs,
+          createMultiPageAnnotation,
+          createRelation,
+          deleteRelation,
+          removeAnnotationFromRelation,
+          selectedAnnotations,
+          setSelectedAnnotations,
+          selectedRelations,
+          setSelectedRelations,
+          freeFormAnnotations: useFreeFormAnnotations,
+          toggleFreeFormAnnotations: toggleUseFreeFormAnnotations,
+          hideLabels,
+          setHideLabels,
         }}
       >
-        <AnnotationStore.Provider
-          value={{
-            allowComment: selected_corpus?.allowComments ?? true,
-            humanSpanLabelChoices,
-            spanLabels,
-            docText: doc_text,
-            searchText,
-            hideSidebar,
-            setHideSidebar,
-            approveAnnotation,
-            rejectAnnotation,
-            textSearchMatches: textSearchMatches ? textSearchMatches : [],
-            searchForText: setSearchText,
-            selectedTextSearchMatchIndex,
-            reverseTextSearchMatch,
-            advanceTextSearchMatch,
-            setSelectedTextSearchMatchIndex:
-              safeSetSelectedTextSearchMatchIndex,
-            setSelection,
-            pageSelection,
-            setMultiSelections,
-            pageSelectionQueue,
-            scrollContainerRef,
-            setScrollContainerRef,
-            selectionElementRefs: preAssignedSelectionElementRefs,
-            insertSelectionElementRef,
-            searchResultElementRefs: textSearchElementRefs,
-            insertSearchResultElementRefs,
-            pageElementRefs,
-            insertPageRef,
-            removePageRef,
-            activeSpanLabel,
-            showOnlySpanLabels: spanLabelsToView,
-            clearViewLabels: clearSpanLabelsToView,
-            addLabelsToView: addSpanLabelsToViewSelection,
-            removeLabelsToView: removeSpanLabelsToViewSelection,
-            setActiveLabel: setActiveSpanLabel,
-            showStructuralLabels: show_structural_annotations,
-            setViewLabels: (ls: AnnotationLabelType[]) =>
-              setSpanLabelsToView(ls),
-            toggleShowStructuralLabels: () =>
-              showStructuralAnnotations(!show_structural_annotations),
-            relationLabels,
-            activeRelationLabel,
-            setActiveRelationLabel,
-            pdfAnnotations,
-            setPdfAnnotations: onUpdatePdfAnnotations,
-            docTypeLabels,
-            createAnnotation,
-            deleteAnnotation,
-            updateAnnotation,
-            createDocTypeAnnotation,
-            deleteDocTypeAnnotation,
-            pdfPageInfoObjs,
-            setPdfPageInfoObjs,
-            createMultiPageAnnotation,
-            createRelation,
-            deleteRelation,
-            removeAnnotationFromRelation,
-            selectedAnnotations,
-            setSelectedAnnotations,
-            selectedRelations,
-            setSelectedRelations,
-            freeFormAnnotations: useFreeFormAnnotations,
-            toggleFreeFormAnnotations: toggleUseFreeFormAnnotations,
-            hideLabels,
-            setHideLabels,
+        <listeners.UndoAnnotation />
+        <listeners.HandleAnnotationSelection
+          setModalVisible={setRelationModalVisible}
+        />
+        <listeners.HideAnnotationLabels />
+        <div
+          className="PDFViewContainer"
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "flex-start",
           }}
         >
-          <listeners.UndoAnnotation />
-          <listeners.HandleAnnotationSelection
-            setModalVisible={setRelationModalVisible}
-          />
-          <listeners.HideAnnotationLabels />
-          <div
-            className="PDFViewContainer"
-            style={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "flex-start",
-            }}
-          >
-            {!read_only &&
-            allowInput &&
-            !selected_analysis &&
-            corpus_permissions.includes(PermissionTypes.CAN_UPDATE) ? (
-              <LabelSelector
-                sidebarWidth={responsive_sidebar_width}
-                humanSpanLabelChoices={humanSpanLabelChoices}
-                activeSpanLabel={activeSpanLabel ? activeSpanLabel : null}
-                setActiveLabel={setActiveSpanLabel}
-              />
-            ) : (
-              <></>
-            )}
-            {(!selected_extract ||
-              pdfAnnotations.annotations.filter(
-                (annot) =>
-                  annot.annotationLabel.labelType === LabelType.DocTypeLabel
-              ).length > 0) && (
-              <DocTypeLabelDisplay
-                read_only={
-                  Boolean(selected_analysis) ||
-                  Boolean(selected_extract) ||
-                  read_only ||
-                  !corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
-                }
-              />
-            )}
+          {!read_only &&
+          allowInput &&
+          !selected_analysis &&
+          corpus_permissions.includes(PermissionTypes.CAN_UPDATE) ? (
+            <LabelSelector
+              sidebarWidth={responsive_sidebar_width}
+              humanSpanLabelChoices={humanSpanLabelChoices}
+              activeSpanLabel={activeSpanLabel ? activeSpanLabel : null}
+              setActiveLabel={setActiveSpanLabel}
+            />
+          ) : (
+            <></>
+          )}
+          {(!selected_extract ||
+            pdfAnnotations.annotations.filter(
+              (annot) =>
+                annot.annotationLabel.labelType === LabelType.DocTypeLabel
+            ).length > 0) && (
+            <DocTypeLabelDisplay
+              read_only={
+                Boolean(selected_analysis) ||
+                Boolean(selected_extract) ||
+                read_only ||
+                !corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
+              }
+            />
+          )}
 
-            <Dimmer active={data_loading !== undefined ? data_loading : false}>
-              <Loader content={loading_message ? loading_message : ""} />
-            </Dimmer>
-            <SidebarContainer
-              width={responsive_sidebar_width}
-              {...(banish_sidebar ? { display: "none" } : {})}
+          <Dimmer active={data_loading !== undefined ? data_loading : false}>
+            <Loader content={loading_message ? loading_message : ""} />
+          </Dimmer>
+          <SidebarContainer
+            width={responsive_sidebar_width}
+            {...(banish_sidebar ? { display: "none" } : {})}
+          >
+            <AnnotatorSidebar
+              read_only={read_only}
+              selected_analysis={selected_analysis}
+              selected_extract={selected_extract}
+              selected_corpus={selected_corpus}
+              columns={columns}
+              datacells={datacells}
+              editMode={editMode}
+              setEditMode={setEditMode}
+              allowInput={allowInput}
+              setAllowInput={setAllowInput}
+            />
+          </SidebarContainer>
+          <div className="PDFViewTopBarWrapper">
+            {/**TODO - swap out these components based on file type */}
+            <AnnotatorTopbar
+              opened_corpus={selected_corpus}
+              opened_document={selected_document}
+              extracts={extracts}
+              analyses={analyses}
+              selected_analysis={selected_analysis}
+              selected_extract={selected_extract}
+              onSelectAnalysis={onSelectAnalysis}
+              onSelectExtract={onSelectExtract}
             >
-              <AnnotatorSidebar
-                read_only={read_only}
-                selected_analysis={selected_analysis}
-                selected_extract={selected_extract}
-                selected_corpus={selected_corpus}
-                columns={columns}
-                datacells={datacells}
-                editMode={editMode}
-                setEditMode={setEditMode}
-                allowInput={allowInput}
-                setAllowInput={setAllowInput}
+              <PDFActionBar
+                zoom={zoom_level}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                actionItems={actionBarItems}
               />
-            </SidebarContainer>
-            <div className="PDFViewTopBarWrapper">
-              {/**TODO - swap out these components based on file type */}
-              <AnnotatorTopbar
-                opened_corpus={selected_corpus}
-                opened_document={selected_document}
-                extracts={extracts}
-                analyses={analyses}
-                selected_analysis={selected_analysis}
-                selected_extract={selected_extract}
-                onSelectAnalysis={onSelectAnalysis}
-                onSelectExtract={onSelectExtract}
+              <PDFContainer
+                className="PDFContainer"
+                ref={containerRefCallback}
+                width={banish_sidebar ? 1200 : undefined}
               >
-                <PDFActionBar
-                  zoom={zoom_level}
-                  onZoomIn={handleZoomIn}
-                  onZoomOut={handleZoomOut}
-                  actionItems={actionBarItems}
-                />
-                <PDFContainer
-                  className="PDFContainer"
-                  ref={containerRefCallback}
-                  width={banish_sidebar ? 1200 : undefined}
-                >
-                  {activeRelationLabel &&
-                  !read_only &&
-                  corpus_permissions.includes(PermissionTypes.CAN_UPDATE) ? (
-                    <RelationModal
-                      visible={relationModalVisible}
-                      onClick={onRelationModalOk}
-                      onCancel={onRelationModalCancel}
-                      source={selectedAnnotations}
-                      label={activeRelationLabel}
-                    />
-                  ) : null}
-                  {view_components}
-                </PDFContainer>
-              </AnnotatorTopbar>
-            </div>
+                {activeRelationLabel &&
+                !read_only &&
+                corpus_permissions.includes(PermissionTypes.CAN_UPDATE) ? (
+                  <RelationModal
+                    visible={relationModalVisible}
+                    onClick={onRelationModalOk}
+                    onCancel={onRelationModalCancel}
+                    source={selectedAnnotations}
+                    label={activeRelationLabel}
+                  />
+                ) : null}
+                {view_components}
+              </PDFContainer>
+            </AnnotatorTopbar>
           </div>
-        </AnnotationStore.Provider>
-      </PDFStore.Provider>
-    );
-  } else {
-    return <></>;
-  }
+        </div>
+      </AnnotationStore.Provider>
+    </PDFStore.Provider>
+  );
 };

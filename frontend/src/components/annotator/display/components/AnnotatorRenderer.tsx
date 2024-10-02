@@ -76,7 +76,9 @@ export interface PageTokenMapBuilderProps {
 
 interface AnnotatorRendererProps {
   open: boolean;
-  doc: PDFDocumentProxy;
+  doc: PDFDocumentProxy | undefined;
+  rawText: string;
+  pageTextMaps: Record<number, TokenId> | undefined;
   data_loading?: boolean;
   loading_message?: string;
   pages: PDFPageInfo[];
@@ -120,6 +122,8 @@ interface AnnotatorRendererProps {
 
 export const AnnotatorRenderer = ({
   doc,
+  rawText,
+  pageTextMaps,
   pages,
   data_loading,
   loading_message,
@@ -163,9 +167,6 @@ export const AnnotatorRenderer = ({
   const [pdfAnnotations, setPdfAnnotations] = useState<PdfAnnotations>(
     new PdfAnnotations([], [], [])
   );
-
-  const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
-  const [doc_text, setDocText] = useState<string>("");
 
   // New state to track if we've scrolled to the annotation
   const [hasScrolledToAnnotation, setHasScrolledToAnnotation] = useState<
@@ -269,17 +270,6 @@ export const AnnotatorRenderer = ({
   useEffect(() => {
     setHasScrolledToAnnotation(null);
   }, [scrollToAnnotation]);
-
-  // When the opened document is changed... reload...
-  useEffect(() => {
-    let { doc_text, string_index_token_map } = createTokenStringSearch(pages);
-
-    setPageTextMaps({
-      ...string_index_token_map,
-      ...pageTextMaps,
-    });
-    setDocText(doc_text);
-  }, [pages, doc]);
 
   function addMultipleAnnotations(a: ServerTokenAnnotation[]): void {
     setPdfAnnotations(
@@ -986,6 +976,7 @@ export const AnnotatorRenderer = ({
     }
   };
 
+  console.log("AnnotatorRenderer...");
   return (
     <DocumentViewer
       zoom_level={zoom_level}
@@ -1018,7 +1009,7 @@ export const AnnotatorRenderer = ({
       scroll_to_annotation_on_open={scrollToAnnotation}
       setJumpedToAnnotationOnLoad={setHasScrolledToAnnotation}
       doc={doc}
-      doc_text={doc_text}
+      doc_text={rawText}
       page_token_text_maps={pageTextMaps ? pageTextMaps : {}}
       pages={pages}
       spanLabels={span_label_lookup}

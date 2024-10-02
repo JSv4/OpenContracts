@@ -175,6 +175,15 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     [selectedAnnotationId, selectedLabelTypeId]
   );
 
+  const [spans, setSpans] = useState<
+    {
+      start: number;
+      end: number;
+      text: string;
+      annotations: ServerSpanAnnotation[];
+    }[]
+  >([]);
+
   useEffect(() => {
     const visibleLabelTexts = visibleLabels.map((label) => label.text);
 
@@ -227,18 +236,19 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       );
       addSpan(spanStart, spanEnd, spanAnnotations);
     }
+    setSpans(newSpans);
   }, [annotations, text, visibleLabels]);
 
   useEffect(() => {
     const calculateLabelPositions = () => {
       const newLabelsToRender: LabelRenderData[] = [];
 
-      annotations.forEach((annotation, spanIndex) => {
+      spans.forEach((span, spanIndex) => {
         if (hoveredSpanIndex !== spanIndex) return;
 
-        const selectedAnnotations = isAnnotationSelected(annotation)
-          ? [annotation]
-          : [];
+        const selectedAnnotations = annotations.filter((ann) =>
+          isAnnotationSelected(ann)
+        );
 
         if (selectedAnnotations.length === 0) return;
 
@@ -361,7 +371,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     };
 
     calculateLabelPositions();
-  }, [hoveredSpanIndex, annotations, isAnnotationSelected]);
+  }, [hoveredSpanIndex, spans, isAnnotationSelected]);
 
   const hexToRgba = (hex: string, alpha: number): string => {
     let r = 0,
@@ -392,6 +402,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   return (
     <>
       <PaperContainer
+        id="PaperContainer"
         ref={containerRef}
         onMouseUp={handleMouseUp}
         onClick={() => {
@@ -406,10 +417,8 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         maxHeight={maxHeight}
         maxWidth={maxWidth}
       >
-        {annotations.map((annot, index) => {
-          const text = annot.rawText;
-          const annotation = [annot];
-          const start = annot.json.start;
+        {spans.map((span, index) => {
+          const { text: spanText, annotations: spanAnnotations, start } = span;
 
           const spanStyle: React.CSSProperties = {
             display: "inline",
@@ -420,9 +429,9 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             borderRadius: "5px",
           };
 
-          const selectedAnnotations = isAnnotationSelected(annot)
-            ? [annot]
-            : [];
+          const selectedAnnotations = spanAnnotations.filter((ann) =>
+            isAnnotationSelected(ann)
+          );
 
           if (selectedAnnotations.length === 1) {
             spanStyle.backgroundColor = selectedAnnotations[0].annotationLabel
@@ -459,7 +468,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               onMouseEnter={() => handleMouseEnter(index)}
               onMouseLeave={handleMouseLeave}
             >
-              {text}
+              {spanText}
             </span>
           );
         })}

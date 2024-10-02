@@ -9,7 +9,12 @@ import React, {
 import { AnnotationLabelType } from "../../../../graphql/types";
 import { getPageBoundsFromCanvas } from "../../../../utils/transform";
 import { PageProps, BoundingBox, PermissionTypes } from "../../../types";
-import { AnnotationStore, normalizeBounds, PDFStore } from "../../context";
+import {
+  AnnotationStore,
+  normalizeBounds,
+  PDFStore,
+  ServerTokenAnnotation,
+} from "../../context";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
 import { Selection } from "../../display/components/Selection";
 import { SearchResult } from "../../display/components/SearchResult";
@@ -241,9 +246,13 @@ export const PDFPage = ({
   );
 
   const annots_to_render = useMemo(() => {
-    const defined_annotations = annotations.filter(
-      (a) => a.json[pageInfo.page.pageNumber - 1] !== undefined
-    );
+    const defined_annotations = annotations
+      .filter((annot) => annot instanceof ServerTokenAnnotation)
+      .filter(
+        (a) =>
+          (a as ServerTokenAnnotation).json[pageInfo.page.pageNumber - 1] !==
+          undefined
+      );
 
     const filtered_by_structural = !annotationStore.showStructuralLabels
       ? defined_annotations.filter((annot) => !annot.structural)

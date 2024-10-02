@@ -62,6 +62,7 @@ export const GET_DOCUMENTS = gql`
           description
           backendLock
           pdfFile
+          fileType
           pawlsParseFile
           icon
           isPublic
@@ -139,6 +140,7 @@ export const SEARCH_DOCUMENTS = gql`
           description
           backendLock
           pdfFile
+          fileType
           pawlsParseFile
           icon
           isPublic
@@ -234,6 +236,7 @@ export const GET_CORPUS_QUERY_DETAILS = gql`
           is_open @client
           description
           backendLock
+          fileType
           pdfFile
           pawlsParseFile
           icon

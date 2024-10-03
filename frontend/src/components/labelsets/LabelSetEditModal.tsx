@@ -10,6 +10,7 @@ import {
   Dimmer,
   Loader,
   TabProps,
+  Message,
 } from "semantic-ui-react";
 import _ from "lodash";
 import Fuse from "fuse.js";
@@ -94,6 +95,7 @@ const TabPane = styled(Tab.Pane)`
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
+    max-width: 100%;
   }
 `;
 
@@ -104,6 +106,25 @@ const SearchBarContainer = styled.div`
 const CardGroup = styled(Card.Group)`
   &&& {
     margin-top: 1rem;
+    width: 100%;
+  }
+`;
+
+const EmptyStateMessage = styled(Message)`
+  &&& {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    text-align: center;
+  }
+`;
+
+const ScrollableTabPane = styled(TabPane)`
+  &&& {
+    overflow-y: auto;
+    max-height: calc(60vh - 2rem); // Adjust this value as needed
   }
 `;
 
@@ -393,68 +414,36 @@ export const LabelSetEditModal = ({
     span_label_results = span_labels;
   }
 
-  let text_data_labels: JSX.Element[] = text_label_results.map(
-    (label, index) => (
-      <AnnotationLabelCard
-        key={label?.id ? label.id : index}
-        label={label}
-        selected={selectedLabels.map((label) => label.id).includes(label.id)}
-        onDelete={() => handleDeleteLabel([label])}
-        onSelect={toggleLabelSelect}
-        onSave={updateLabel}
-      />
-    )
-  );
+  const renderLabelCards = (labels: AnnotationLabelType[]) => {
+    if (labels.length === 0) {
+      return (
+        <EmptyStateMessage icon>
+          <Icon name="search" size="huge" />
+          <Message.Content>
+            <Message.Header>No matching labels found</Message.Header>
+            <p>Try adjusting your search or create a new label.</p>
+          </Message.Content>
+        </EmptyStateMessage>
+      );
+    }
 
-  let doc_data_labels: JSX.Element[] = doc_label_results.map((label, index) => (
-    <AnnotationLabelCard
-      key={label.id}
-      label={label}
-      selected={selectedLabels.map((label) => label.id).includes(label.id)}
-      onDelete={() => handleDeleteLabel([label])}
-      onSelect={toggleLabelSelect}
-      onSave={updateLabel}
-    />
-  ));
-
-  let relationship_data_labels: JSX.Element[] = relationship_label_results.map(
-    (label, index) => (
-      <AnnotationLabelCard
-        key={label.id}
-        label={label}
-        selected={selectedLabels.map((label) => label.id).includes(label.id)}
-        onDelete={() => handleDeleteLabel([label])}
-        onSelect={toggleLabelSelect}
-        onSave={updateLabel}
-      />
-    )
-  );
-
-  let metadata_data_labels: JSX.Element[] = metadata_label_results.map(
-    (label, index) => (
-      <AnnotationLabelCard
-        key={label.id}
-        label={label}
-        selected={selectedLabels.map((label) => label.id).includes(label.id)}
-        onDelete={() => handleDeleteLabel([label])}
-        onSelect={toggleLabelSelect}
-        onSave={updateLabel}
-      />
-    )
-  );
-
-  let span_data_labels: JSX.Element[] = span_label_results.map(
-    (label, index) => (
-      <AnnotationLabelCard
-        key={label.id}
-        label={label}
-        selected={selectedLabels.map((label) => label.id).includes(label.id)}
-        onDelete={() => handleDeleteLabel([label])}
-        onSelect={toggleLabelSelect}
-        onSave={updateLabel}
-      />
-    )
-  );
+    return (
+      <CardGroup itemsPerRow={1}>
+        {labels.map((label, index) => (
+          <AnnotationLabelCard
+            key={label.id}
+            label={label}
+            selected={selectedLabels
+              .map((label) => label.id)
+              .includes(label.id)}
+            onDelete={() => handleDeleteLabel([label])}
+            onSelect={toggleLabelSelect}
+            onSave={updateLabel}
+          />
+        ))}
+      </CardGroup>
+    );
+  };
 
   const panes = [
     {
@@ -464,7 +453,7 @@ export const LabelSetEditModal = ({
         content: "Details",
       },
       render: () => (
-        <TabPane>
+        <ScrollableTabPane>
           <CRUDWidget
             hasFile
             mode={
@@ -489,68 +478,52 @@ export const LabelSetEditModal = ({
             fileField="icon"
             fileLabel="Labelset Icon"
           />
-        </TabPane>
+        </ScrollableTabPane>
       ),
     },
     {
       menuItem: {
         key: "metadata",
         icon: "braille",
-        content: `Metadata (${metadata_data_labels?.length})`,
+        content: `Metadata (${metadata_label_results.length})`,
       },
       render: () => (
-        <TabPane>
-          <CardGroup itemsPerRow={1}>{metadata_data_labels}</CardGroup>
-        </TabPane>
+        <TabPane>{renderLabelCards(metadata_label_results)}</TabPane>
       ),
     },
     {
       menuItem: {
         key: "text",
         icon: "language",
-        content: `Text (${text_data_labels?.length})`,
+        content: `Text (${text_label_results.length})`,
       },
-      render: () => (
-        <TabPane>
-          <CardGroup itemsPerRow={1}>{text_data_labels}</CardGroup>
-        </TabPane>
-      ),
+      render: () => <TabPane>{renderLabelCards(text_label_results)}</TabPane>,
     },
     {
       menuItem: {
         key: "doc",
         icon: "file pdf outline",
-        content: `Doc Types (${doc_data_labels?.length})`,
+        content: `Doc Types (${doc_label_results.length})`,
       },
-      render: () => (
-        <TabPane>
-          <CardGroup itemsPerRow={1}>{doc_data_labels}</CardGroup>
-        </TabPane>
-      ),
+      render: () => <TabPane>{renderLabelCards(doc_label_results)}</TabPane>,
     },
     {
       menuItem: {
         key: "relation",
         icon: "handshake outline",
-        content: `Relations (${relationship_data_labels?.length})`,
+        content: `Relations (${relationship_label_results.length})`,
       },
       render: () => (
-        <TabPane>
-          <CardGroup itemsPerRow={1}>{relationship_data_labels}</CardGroup>
-        </TabPane>
+        <TabPane>{renderLabelCards(relationship_label_results)}</TabPane>
       ),
     },
     {
       menuItem: {
         key: "span",
         icon: "i cursor",
-        content: `Spans (${span_data_labels?.length})`,
+        content: `Spans (${span_label_results.length})`,
       },
-      render: () => (
-        <TabPane>
-          <CardGroup itemsPerRow={1}>{span_data_labels}</CardGroup>
-        </TabPane>
-      ),
+      render: () => <TabPane>{renderLabelCards(span_label_results)}</TabPane>,
     },
   ];
 

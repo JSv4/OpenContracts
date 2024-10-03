@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Button,
   Modal,
@@ -11,12 +11,9 @@ import {
   Loader,
   TabProps,
 } from "semantic-ui-react";
-
 import _ from "lodash";
 import Fuse from "fuse.js";
-
 import { AnnotationLabelCard } from "./AnnotationLabelCard";
-
 import { CRUDWidget } from "../widgets/CRUD/CRUDWidget";
 import { useQuery, useMutation, useReactiveVar } from "@apollo/client";
 import {
@@ -38,13 +35,11 @@ import {
   CreateAnnotationLabelForLabelsetInputs,
   CREATE_ANNOTATION_LABEL_FOR_LABELSET,
 } from "../../graphql/mutations";
-import { HorizontallyCenteredDiv } from "../layout/Wrappers";
 import {
   CreateAndSearchBar,
   DropdownActionProps,
 } from "../layout/CreateAndSearchBar";
 import { openedLabelset } from "../../graphql/cache";
-
 import {
   AnnotationLabelType,
   LabelSetType,
@@ -54,15 +49,14 @@ import {
   newLabelSetForm_Schema,
   newLabelSetForm_Ui_Schema,
 } from "../forms/schemas";
-
 import { toast } from "react-toastify";
 import { getPermissions } from "../../utils/transform";
 import { PermissionTypes } from "../types";
+import styled from "styled-components";
 
 const fuse_options = {
   includeScore: false,
   findAllMatches: true,
-  // Search in `label` and in `description` fields
   keys: ["label", "description"],
 };
 
@@ -71,13 +65,53 @@ interface LabelSetEditModalProps {
   toggleModal: () => any;
 }
 
+const StyledModal = styled(Modal)`
+  &&& {
+    max-width: 90vw;
+    width: 1200px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+`;
+
+const ModalContent = styled(Modal.Content)`
+  &&& {
+    padding: 2rem;
+  }
+`;
+
+const TabContainer = styled(Tab)`
+  &&& {
+    height: 60vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+`;
+
+const TabPane = styled(Tab.Pane)`
+  &&& {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+`;
+
+const SearchBarContainer = styled.div`
+  margin-bottom: 1rem;
+`;
+
+const CardGroup = styled(Card.Group)`
+  &&& {
+    margin-top: 1rem;
+  }
+`;
+
 export const LabelSetEditModal = ({
   open,
   toggleModal,
 }: LabelSetEditModalProps) => {
   const opened_labelset = useReactiveVar(openedLabelset);
-  console.log("Opened labelset", opened_labelset);
-
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeIndex, setActiveIndex] = useState<number | string>(0);
   const [updatedObject, setUpdatedObject] = useState<LabelSetType | {}>({});
@@ -90,24 +124,23 @@ export const LabelSetEditModal = ({
   let my_permissions = getPermissions(
     opened_labelset?.myPermissions ? opened_labelset.myPermissions : []
   );
-  console.log("my_permissions", my_permissions);
 
-  const [createAnnotationLabelForLabelset, {}] = useMutation<
+  const [createAnnotationLabelForLabelset] = useMutation<
     CreateAnnotationLabelForLabelsetOutputs,
     CreateAnnotationLabelForLabelsetInputs
   >(CREATE_ANNOTATION_LABEL_FOR_LABELSET);
 
-  const [
-    mutateLabelset,
-    { data: create_data, loading: create_loading, error: create_error },
-  ] = useMutation<CreateLabelsetOutputs, CreateLabelsetInputs>(CREATE_LABELSET);
+  const [mutateLabelset, { loading: create_loading }] = useMutation<
+    CreateLabelsetOutputs,
+    CreateLabelsetInputs
+  >(CREATE_LABELSET);
 
-  const [mutateAnnotationLabel, {}] = useMutation<
+  const [mutateAnnotationLabel] = useMutation<
     UpdateAnnotationLabelOutputs,
     UpdateAnnotationLabelInputs
   >(UPDATE_ANNOTATION_LABEL);
 
-  const [deleteMultipleLabels, {}] = useMutation<
+  const [deleteMultipleLabels] = useMutation<
     DeleteMultipleAnnotationLabelOutputs,
     DeleteMultipleAnnotationLabelInputs
   >(DELETE_MULTIPLE_ANNOTATION_LABELS);
@@ -117,56 +150,29 @@ export const LabelSetEditModal = ({
     loading: label_set_loading,
     error: label_set_fetch_error,
     data: label_set_data,
-    fetchMore,
   } = useQuery<GetLabelsetWithLabelsOutputs, GetLabelsetWithLabelsInputs>(
     GET_LABELSET_WITH_ALL_LABELS,
     {
       variables: {
         id: opened_labelset?.id ? opened_labelset.id : "",
       },
-      notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
+      notifyOnNetworkStatusChange: true,
     }
   );
 
   if (label_set_fetch_error || label_set_loading) {
     return (
-      <Modal closeIcon open={open} onClose={() => toggleModal()} size="large">
-        <HorizontallyCenteredDiv>
-          <CreateAndSearchBar
-            onChange={() => {}}
-            actions={[]}
-            placeholder="Search for label by description or name..."
-            value={""}
-          />
-        </HorizontallyCenteredDiv>
-        <Modal.Content>
-          {label_set_loading || create_loading ? (
-            <Dimmer active={true}>
-              <Loader
-                content={create_loading ? "Updating..." : "Loading labels..."}
-              />
-            </Dimmer>
-          ) : (
-            <></>
-          )}
-        </Modal.Content>
-        <Modal.Actions>
-          <Button basic color="grey">
-            <Icon name="remove" /> Close
-          </Button>
-          {canSave ? (
-            <Button color="green" inverted>
-              <Icon name="checkmark" /> Save
-            </Button>
-          ) : (
-            <></>
-          )}
-        </Modal.Actions>
-      </Modal>
+      <StyledModal closeIcon open={open} onClose={() => toggleModal()}>
+        <ModalContent>
+          <Dimmer active={true}>
+            <Loader
+              content={create_loading ? "Updating..." : "Loading labels..."}
+            />
+          </Dimmer>
+        </ModalContent>
+      </StyledModal>
     );
   }
-
-  // console.log("LabelSetEditModal - labelset data", label_set_data);
 
   const labels: AnnotationLabelType[] = label_set_data?.labelset
     ?.allAnnotationLabels
@@ -180,7 +186,6 @@ export const LabelSetEditModal = ({
       variables: { labelIdsToDelete: labels.map((label) => label.id) },
     })
       .then((data) => {
-        // console.log("Success deleting labels!", data);
         refetch();
       })
       .catch((err) => {
@@ -264,6 +269,23 @@ export const LabelSetEditModal = ({
       });
   };
 
+  const handleCreateSpanLabel = () => {
+    createAnnotationLabelForLabelset({
+      variables: {
+        color: "00000",
+        description: "New span label",
+        icon: "tag",
+        text: "New Span Label",
+        labelType: LabelType.SpanLabel,
+        labelsetId: opened_labelset?.id ? opened_labelset.id : "",
+      },
+    })
+      .then(() => refetch())
+      .catch((err) => {
+        console.log("Error trying to create span label: ", err);
+      });
+  };
+
   const updateLabelSet = (obj: LabelSetType) => {
     mutateLabelset({ variables: { ...obj } })
       .then(() => refetch())
@@ -273,7 +295,6 @@ export const LabelSetEditModal = ({
   };
 
   const updateLabel = (obj: UpdateAnnotationLabelInputs) => {
-    // console.log("Update label", obj);
     mutateAnnotationLabel({ variables: { ...obj } })
       .then((data) => {
         refetch();
@@ -284,11 +305,8 @@ export const LabelSetEditModal = ({
   };
 
   const onCRUDChange = (labelsetData: LabelSetType) => {
-    // console.log("On CRUD Change", onCRUDChange);
     setChangedValues({ ...changedValues, ...labelsetData });
-    // console.log("changedValues", changedValues);
     setUpdatedObject({ ...opened_labelset, ...updatedObject, ...labelsetData });
-    // console.log("Updated object", updatedObject);
     setCanSave(true);
   };
 
@@ -298,7 +316,6 @@ export const LabelSetEditModal = ({
   ) => setActiveIndex(data?.activeIndex ? data.activeIndex : 0);
 
   const handleSave = () => {
-    // console.log("Handle save", {id: opened_labelset?.id ? opened_labelset.id : "", ...changedValues});
     updateLabelSet({
       id: opened_labelset?.id ? opened_labelset.id : "",
       ...changedValues,
@@ -319,9 +336,6 @@ export const LabelSetEditModal = ({
     }
   };
 
-  // console.log("Labels is", labels);
-
-  // Split out the labels by type
   let text_labels = labels.filter(
     (label): label is AnnotationLabelType =>
       !!label && label !== undefined && label.labelType === LabelType.TokenLabel
@@ -338,18 +352,22 @@ export const LabelSetEditModal = ({
     (label): label is AnnotationLabelType =>
       !!label && label.labelType === LabelType.MetadataLabel
   );
-  // console.log("Filtered by type", text_labels, doc_type_labels, relationship_labels);
+  let span_labels = labels.filter(
+    (label): label is AnnotationLabelType =>
+      !!label && label.labelType === LabelType.SpanLabel
+  );
 
-  //Filter the text & doc label sets:
   let text_label_fuse = new Fuse(text_labels, fuse_options);
   let doc_label_fuse = new Fuse(doc_type_labels, fuse_options);
   let relationship_label_fuse = new Fuse(relationship_labels, fuse_options);
   let metadata_label_fuse = new Fuse(metadata_labels, fuse_options);
+  let span_label_fuse = new Fuse(span_labels, fuse_options);
 
   let text_label_results: AnnotationLabelType[] = [];
   let doc_label_results: AnnotationLabelType[] = [];
   let relationship_label_results: AnnotationLabelType[] = [];
   let metadata_label_results: AnnotationLabelType[] = [];
+  let span_label_results: AnnotationLabelType[] = [];
 
   if (searchTerm.length > 0) {
     text_label_results = text_label_fuse
@@ -364,84 +382,79 @@ export const LabelSetEditModal = ({
     metadata_label_results = metadata_label_fuse
       .search(searchTerm)
       .map((item) => item.item) as AnnotationLabelType[];
+    span_label_results = span_label_fuse
+      .search(searchTerm)
+      .map((item) => item.item) as AnnotationLabelType[];
   } else {
     text_label_results = text_labels;
     doc_label_results = doc_type_labels;
     relationship_label_results = relationship_labels;
     metadata_label_results = metadata_labels;
+    span_label_results = span_labels;
   }
 
-  //Build text label components
-  let text_data_labels: JSX.Element[] = [];
-  if (text_label_results && text_label_results.length > 0) {
-    text_data_labels = text_label_results.map((label, index) => {
-      return (
-        <AnnotationLabelCard
-          key={label?.id ? label.id : index}
-          label={label}
-          selected={selectedLabels.map((label) => label.id).includes(label.id)}
-          onDelete={() => handleDeleteLabel([label])}
-          onSelect={toggleLabelSelect}
-          onSave={updateLabel}
-        />
-      );
-    });
-  }
+  let text_data_labels: JSX.Element[] = text_label_results.map(
+    (label, index) => (
+      <AnnotationLabelCard
+        key={label?.id ? label.id : index}
+        label={label}
+        selected={selectedLabels.map((label) => label.id).includes(label.id)}
+        onDelete={() => handleDeleteLabel([label])}
+        onSelect={toggleLabelSelect}
+        onSave={updateLabel}
+      />
+    )
+  );
 
-  //Build doc label components
-  let doc_data_labels: JSX.Element[] = [];
-  if (doc_label_results && doc_label_results.length > 0) {
-    doc_data_labels = doc_label_results.map((label, index) => {
-      return (
-        <AnnotationLabelCard
-          key={label.id}
-          label={label}
-          selected={selectedLabels.map((label) => label.id).includes(label.id)}
-          onDelete={() => handleDeleteLabel([label])}
-          onSelect={toggleLabelSelect}
-          onSave={updateLabel}
-        />
-      );
-    });
-  }
+  let doc_data_labels: JSX.Element[] = doc_label_results.map((label, index) => (
+    <AnnotationLabelCard
+      key={label.id}
+      label={label}
+      selected={selectedLabels.map((label) => label.id).includes(label.id)}
+      onDelete={() => handleDeleteLabel([label])}
+      onSelect={toggleLabelSelect}
+      onSave={updateLabel}
+    />
+  ));
 
-  // Build relationship label components
-  let relationship_data_labels: JSX.Element[] = [];
-  if (relationship_label_results && relationship_label_results.length > 0) {
-    relationship_data_labels = relationship_label_results.map(
-      (label, index) => {
-        return (
-          <AnnotationLabelCard
-            key={label.id}
-            label={label}
-            selected={selectedLabels
-              .map((label) => label.id)
-              .includes(label.id)}
-            onDelete={() => handleDeleteLabel([label])}
-            onSelect={toggleLabelSelect}
-            onSave={updateLabel}
-          />
-        );
-      }
-    );
-  }
+  let relationship_data_labels: JSX.Element[] = relationship_label_results.map(
+    (label, index) => (
+      <AnnotationLabelCard
+        key={label.id}
+        label={label}
+        selected={selectedLabels.map((label) => label.id).includes(label.id)}
+        onDelete={() => handleDeleteLabel([label])}
+        onSelect={toggleLabelSelect}
+        onSave={updateLabel}
+      />
+    )
+  );
 
-  // Build metadata label components
-  let metadata_data_labels: JSX.Element[] = [];
-  if (metadata_label_results && metadata_label_results.length > 0) {
-    metadata_data_labels = metadata_label_results.map((label, index) => {
-      return (
-        <AnnotationLabelCard
-          key={label.id}
-          label={label}
-          selected={selectedLabels.map((label) => label.id).includes(label.id)}
-          onDelete={() => handleDeleteLabel([label])}
-          onSelect={toggleLabelSelect}
-          onSave={updateLabel}
-        />
-      );
-    });
-  }
+  let metadata_data_labels: JSX.Element[] = metadata_label_results.map(
+    (label, index) => (
+      <AnnotationLabelCard
+        key={label.id}
+        label={label}
+        selected={selectedLabels.map((label) => label.id).includes(label.id)}
+        onDelete={() => handleDeleteLabel([label])}
+        onSelect={toggleLabelSelect}
+        onSave={updateLabel}
+      />
+    )
+  );
+
+  let span_data_labels: JSX.Element[] = span_label_results.map(
+    (label, index) => (
+      <AnnotationLabelCard
+        key={label.id}
+        label={label}
+        selected={selectedLabels.map((label) => label.id).includes(label.id)}
+        onDelete={() => handleDeleteLabel([label])}
+        onSelect={toggleLabelSelect}
+        onSave={updateLabel}
+      />
+    )
+  );
 
   const panes = [
     {
@@ -451,15 +464,7 @@ export const LabelSetEditModal = ({
         content: "Details",
       },
       render: () => (
-        <Tab.Pane
-          key={0}
-          style={{
-            overflowY: "scroll",
-            padding: "1em",
-            width: "100%",
-            flex: 1,
-          }}
-        >
+        <TabPane>
           <CRUDWidget
             hasFile
             mode={
@@ -484,7 +489,7 @@ export const LabelSetEditModal = ({
             fileField="icon"
             fileLabel="Labelset Icon"
           />
-        </Tab.Pane>
+        </TabPane>
       ),
     },
     {
@@ -494,17 +499,9 @@ export const LabelSetEditModal = ({
         content: `Metadata (${metadata_data_labels?.length})`,
       },
       render: () => (
-        <Tab.Pane
-          key={1}
-          style={{
-            overflowY: "scroll",
-            padding: "1em",
-            width: "100%",
-            flex: 1,
-          }}
-        >
-          <Card.Group itemsPerRow={1}>{metadata_data_labels}</Card.Group>
-        </Tab.Pane>
+        <TabPane>
+          <CardGroup itemsPerRow={1}>{metadata_data_labels}</CardGroup>
+        </TabPane>
       ),
     },
     {
@@ -514,37 +511,21 @@ export const LabelSetEditModal = ({
         content: `Text (${text_data_labels?.length})`,
       },
       render: () => (
-        <Tab.Pane
-          key={1}
-          style={{
-            overflowY: "scroll",
-            padding: "1em",
-            width: "100%",
-            flex: 1,
-          }}
-        >
-          <Card.Group itemsPerRow={1}>{text_data_labels}</Card.Group>
-        </Tab.Pane>
+        <TabPane>
+          <CardGroup itemsPerRow={1}>{text_data_labels}</CardGroup>
+        </TabPane>
       ),
     },
     {
       menuItem: {
-        key: "text",
+        key: "doc",
         icon: "file pdf outline",
         content: `Doc Types (${doc_data_labels?.length})`,
       },
       render: () => (
-        <Tab.Pane
-          key={2}
-          style={{
-            overflowY: "scroll",
-            padding: "1em",
-            width: "100%",
-            flex: 1,
-          }}
-        >
-          <Card.Group itemsPerRow={1}>{doc_data_labels}</Card.Group>
-        </Tab.Pane>
+        <TabPane>
+          <CardGroup itemsPerRow={1}>{doc_data_labels}</CardGroup>
+        </TabPane>
       ),
     },
     {
@@ -554,17 +535,21 @@ export const LabelSetEditModal = ({
         content: `Relations (${relationship_data_labels?.length})`,
       },
       render: () => (
-        <Tab.Pane
-          key={2}
-          style={{
-            overflowY: "scroll",
-            padding: "1em",
-            width: "100%",
-            flex: 1,
-          }}
-        >
-          <Card.Group itemsPerRow={1}>{relationship_data_labels}</Card.Group>
-        </Tab.Pane>
+        <TabPane>
+          <CardGroup itemsPerRow={1}>{relationship_data_labels}</CardGroup>
+        </TabPane>
+      ),
+    },
+    {
+      menuItem: {
+        key: "span",
+        icon: "i cursor",
+        content: `Spans (${span_data_labels?.length})`,
+      },
+      render: () => (
+        <TabPane>
+          <CardGroup itemsPerRow={1}>{span_data_labels}</CardGroup>
+        </TabPane>
       ),
     },
   ];
@@ -572,7 +557,7 @@ export const LabelSetEditModal = ({
   let button_actions: DropdownActionProps[] = [];
 
   if (
-    [1, 2, 3, 4].includes(parseInt(`${activeIndex}`)) &&
+    [1, 2, 3, 4, 5].includes(parseInt(`${activeIndex}`)) &&
     my_permissions.includes(PermissionTypes.CAN_UPDATE)
   ) {
     button_actions.push({
@@ -586,7 +571,9 @@ export const LabelSetEditModal = ({
           : activeIndex === 3
           ? "Create Document Type Label"
           : activeIndex === 4
-          ? "Create OCR Label"
+          ? "Create Relationship Label"
+          : activeIndex === 5
+          ? "Create Span Label"
           : "",
       icon: "plus",
       action_function:
@@ -598,6 +585,8 @@ export const LabelSetEditModal = ({
           ? () => handleCreateDocumentLabel()
           : activeIndex === 4
           ? () => handleCreateRelationshipLabel()
+          : activeIndex === 5
+          ? () => handleCreateSpanLabel()
           : () => {},
     });
   }
@@ -615,101 +604,54 @@ export const LabelSetEditModal = ({
   }
 
   return (
-    <Modal closeIcon open={open} onClose={() => toggleModal()} size="large">
-      {label_set_loading || create_loading ? (
+    <StyledModal closeIcon open={open} onClose={() => toggleModal()}>
+      {(label_set_loading || create_loading) && (
         <Dimmer active={true}>
           <Loader
             content={create_loading ? "Updating..." : "Loading labels..."}
           />
         </Dimmer>
-      ) : (
-        <></>
       )}
-      <HorizontallyCenteredDiv>
-        <div style={{ marginTop: "1rem", textAlign: "left" }}>
-          <Header as="h2">
-            <Icon name="tags" />
-            <Header.Content>
-              Edit Label Set:{" "}
-              {updatedObject ? (updatedObject as LabelSetType).title : ""}
-            </Header.Content>
-          </Header>
-        </div>
-      </HorizontallyCenteredDiv>
-      <Segment
-        secondary
-        style={{
-          flex: 1,
-          marginRight: "1.5rem",
-          marginLeft: "1.5rem",
-          marginBottom: "0px",
-          paddingTop: ".75rem",
-          paddingBottom: ".75rem",
-        }}
-      >
-        <CreateAndSearchBar
-          onChange={(value) => setSearchTerm(value)}
-          actions={button_actions}
-          placeholder="Search for label by description or name..."
-          value={searchTerm}
-        />
-      </Segment>
-
-      <Modal.Content>
-        <Segment
-          raised
-          style={{
-            height: "50vh",
-            width: "100%",
-            padding: "0px",
-            display: "flex",
-            margin: "0px",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            justifyContent: "center",
-          }}
-        >
-          <Tab
-            menu={{
-              pointing: true,
-              secondary: true,
-              style: {
-                display: "flex",
-                flexDirection: "row",
-                justifyContent: "center",
-                fontSize: "large",
-                width: "100%",
-                margin: "0px",
-              },
-            }}
-            panes={panes}
-            activeIndex={activeIndex}
-            onTabChange={handleTabChange}
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              minHeight: "50%",
-              width: "100%",
-              overflow: "hidden",
-              flex: 1,
-            }}
+      <Modal.Header>
+        <Header as="h2">
+          <Icon name="tags" />
+          <Header.Content>
+            Edit Label Set:{" "}
+            {updatedObject ? (updatedObject as LabelSetType).title : ""}
+          </Header.Content>
+        </Header>
+      </Modal.Header>
+      <ModalContent>
+        <SearchBarContainer>
+          <CreateAndSearchBar
+            onChange={(value) => setSearchTerm(value)}
+            actions={button_actions}
+            placeholder="Search for label by description or name..."
+            value={searchTerm}
           />
-        </Segment>
-      </Modal.Content>
+        </SearchBarContainer>
+        <TabContainer
+          menu={{
+            pointing: true,
+            secondary: true,
+            fluid: true,
+            vertical: true,
+          }}
+          panes={panes}
+          activeIndex={activeIndex}
+          onTabChange={handleTabChange}
+        />
+      </ModalContent>
       <Modal.Actions>
         <Button basic color="grey" onClick={() => toggleModal()}>
           <Icon name="remove" /> Close
         </Button>
-        {canSave ? (
-          <Button color="green" inverted onClick={() => handleSave()}>
+        {canSave && (
+          <Button color="green" onClick={() => handleSave()}>
             <Icon name="checkmark" /> Save
           </Button>
-        ) : (
-          <></>
         )}
       </Modal.Actions>
-    </Modal>
+    </StyledModal>
   );
 };

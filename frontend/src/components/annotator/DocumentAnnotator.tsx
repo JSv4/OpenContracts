@@ -144,6 +144,7 @@ export const DocumentAnnotator = ({
   );
 
   const [doc, setDocument] = useState<PDFDocumentProxy>();
+  const [documentType, setDocumentType] = useState<string>("");
 
   // Hook 16
   const [pages, setPages] = useState<PDFPageInfo[]>([]);
@@ -232,6 +233,11 @@ export const DocumentAnnotator = ({
   useEffect(() => {
     allowUserInput(false);
   }, [editMode]);
+
+  // store doc type in state
+  useEffect(() => {
+    setDocumentType(opened_document.fileType ? opened_document.fileType : "");
+  }, [opened_document]);
 
   // Hook #37
   let corpus_id = opened_corpus?.id;
@@ -347,21 +353,27 @@ export const DocumentAnnotator = ({
           ?.allAnnotationLabels ?? [];
 
       // Filter and set span labels
-      const spanLabels = allLabels.filter(
-        (label) => label.labelType === "TOKEN_LABEL"
+      // Filter labels based on document type
+      const relevantLabelType =
+        documentType === "application/pdf"
+          ? LabelType.TokenLabel
+          : LabelType.SpanLabel;
+      const relevantLabels = allLabels.filter(
+        (label) => label.labelType === relevantLabelType
       );
-      setSpanLabels(spanLabels);
-      setHumanSpanLabels(spanLabels);
+
+      setSpanLabels(relevantLabels);
+      setHumanSpanLabels(relevantLabels);
 
       // Filter and set relation labels
       const relationLabels = allLabels.filter(
-        (label) => label.labelType === "RELATIONSHIP_LABEL"
+        (label) => label.labelType === LabelType.RelationshipLabel
       );
       setRelationLabels(relationLabels);
 
       // Filter and set document labels (if needed)
       const docLabels = allLabels.filter(
-        (label) => label.labelType === "DOC_TYPE_LABEL"
+        (label) => label.labelType === LabelType.DocTypeLabel
       );
       setDocTypeLabels(docLabels);
     }

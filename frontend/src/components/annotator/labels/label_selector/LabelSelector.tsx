@@ -1,6 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
-import { Popup, Icon } from "semantic-ui-react";
+import { Icon, Popup } from "semantic-ui-react";
 import _ from "lodash";
 import { AnnotationLabelType } from "../../../../graphql/types";
 import { SpanLabelCard, BlankLabelElement } from "./LabelElements";
@@ -23,6 +23,7 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
 }) => {
   const { width } = useWindowDimensions();
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
 
@@ -35,48 +36,68 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
     ? humanSpanLabelChoices.filter((obj) => obj.id !== activeSpanLabel.id)
     : humanSpanLabelChoices;
 
+  const handleOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
   return (
-    <Popup
-      open={open}
-      onOpen={() => setOpen(true)}
-      onClose={() => setOpen(false)}
-      on="click"
-      position="top left"
-      offset={[0, 10]}
-      trigger={
-        <LabelSelectorWidgetContainer sidebarWidth={sidebarWidth}>
-          <LabelSelectorContent>
-            <HeaderSection>
-              <IconWrapper onClick={() => setOpen(!open)}>
-                <StyledIcon name="ellipsis vertical" />
-              </IconWrapper>
-              <TruncatedText
-                text={
-                  activeSpanLabel
-                    ? "Text Label To Apply:"
-                    : "Select Text Label to Apply"
-                }
-                limit={titleCharCount}
-              />
-            </HeaderSection>
-            <BodySection>
-              {activeSpanLabel ? (
-                <SpanLabelCard
-                  key={activeSpanLabel.id}
-                  label={activeSpanLabel}
+    <LabelSelectorContainer ref={containerRef}>
+      <StyledPopup
+        trigger={
+          <LabelSelectorWidgetContainer sidebarWidth={sidebarWidth}>
+            <LabelSelectorContent>
+              <HeaderSection>
+                <IconWrapper>
+                  <StyledIcon name="ellipsis vertical" />
+                </IconWrapper>
+                <TruncatedText
+                  text={
+                    activeSpanLabel
+                      ? "Text Label To Apply:"
+                      : "Select Text Label to Apply"
+                  }
+                  limit={titleCharCount}
                 />
-              ) : (
-                <BlankLabelElement key="Blank_LABEL" />
-              )}
-            </BodySection>
-          </LabelSelectorContent>
-        </LabelSelectorWidgetContainer>
-      }
-    >
-      <LabelSelectorDialog labels={filteredLabelChoices} onSelect={onSelect} />
-    </Popup>
+              </HeaderSection>
+              <BodySection>
+                {activeSpanLabel ? (
+                  <SpanLabelCard
+                    key={activeSpanLabel.id}
+                    label={activeSpanLabel}
+                  />
+                ) : (
+                  <BlankLabelElement key="Blank_LABEL" />
+                )}
+              </BodySection>
+            </LabelSelectorContent>
+          </LabelSelectorWidgetContainer>
+        }
+        on="click"
+        open={open}
+        onClose={handleClose}
+        onOpen={handleOpen}
+        position="top center"
+        flowing
+        hoverable
+      >
+        <PopupContent>
+          <LabelSelectorDialog
+            labels={filteredLabelChoices}
+            onSelect={onSelect}
+          />
+        </PopupContent>
+      </StyledPopup>
+    </LabelSelectorContainer>
   );
 };
+
+const LabelSelectorContainer = styled.div`
+  position: relative;
+`;
 
 const LabelSelectorWidgetContainer = styled.div<{ sidebarWidth: string }>`
   position: fixed;
@@ -91,6 +112,7 @@ const LabelSelectorWidgetContainer = styled.div<{ sidebarWidth: string }>`
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   transition: all 0.3s ease;
+  cursor: pointer;
 
   &:hover {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
@@ -113,7 +135,6 @@ const HeaderSection = styled.div`
 
 const IconWrapper = styled.div`
   margin-right: 10px;
-  cursor: pointer;
 `;
 
 const StyledIcon = styled(Icon)`
@@ -127,4 +148,15 @@ const StyledIcon = styled(Icon)`
 
 const BodySection = styled.div`
   padding: 15px;
+`;
+
+const PopupContent = styled.div`
+  width: 300px;
+  max-width: 90vw;
+`;
+
+const StyledPopup = styled(Popup)`
+  &.ui.popup {
+    z-index: 2000 !important;
+  }
 `;

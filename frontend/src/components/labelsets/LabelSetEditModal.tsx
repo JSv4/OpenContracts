@@ -5,7 +5,6 @@ import {
   Header,
   Icon,
   Card,
-  Segment,
   Tab,
   Dimmer,
   Loader,

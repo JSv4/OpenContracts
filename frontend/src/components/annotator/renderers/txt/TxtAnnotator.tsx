@@ -44,13 +44,19 @@
  * @returns {React.ReactElement} The rendered TxtAnnotator component
  */
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useContext,
+} from "react";
 import { Label, LabelContainer, PaperContainer } from "./StyledComponents";
 import { useDebouncedCallback } from "use-debounce";
 import RadialButtonCloud, { CloudButtonItem } from "./RadialButtonCloud";
 import { Modal, Button, Dropdown } from "semantic-ui-react";
 import { AnnotationLabelType } from "../../../../graphql/types";
-import { ServerSpanAnnotation } from "../../context";
+import { AnnotationStore, ServerSpanAnnotation } from "../../context";
 
 interface TxtAnnotatorProps {
   text: string;
@@ -89,8 +95,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   text,
   annotations,
   getSpan,
-  focusedAnnotationId,
-  onFocusAnnotation,
   visibleLabels,
   availableLabels,
   selectedLabelTypeId,
@@ -107,28 +111,15 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   maxHeight,
   maxWidth,
 }) => {
+  const annotationStore = useContext(AnnotationStore);
+  const { selectedAnnotations, setSelectedAnnotations } = annotationStore;
+
   const [hoveredSpanIndex, setHoveredSpanIndex] = useState<number | null>(null);
-  const [selectedAnnotationId, setSelectedAnnotationId] = useState<
-    string | null
-  >(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [annotationToEdit, setAnnotationToEdit] =
     useState<ServerSpanAnnotation | null>(null);
   const [labelsToRender, setLabelsToRender] = useState<LabelRenderData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [focusedAnnotation, setFocusedAnnotation] =
-    useState<ServerSpanAnnotation | null>(null);
-
-  useEffect(() => {
-    if (focusedAnnotationId) {
-      const focusedAnnotationObjs = annotations.filter(
-        (annot) => annot.id == focusedAnnotationId
-      );
-      if (focusedAnnotationObjs.length == -1) {
-        setFocusedAnnotation(focusedAnnotationObjs[0]);
-      }
-    }
-  }, [focusedAnnotationId, annotations]);
 
   const debouncedSetHoveredSpanIndex = useDebouncedCallback(
     (spanIndex: number | null) => {
@@ -137,6 +128,9 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     100
   );
 
+  /**
+   * Handles text selection and creates a new annotation.
+   */
   const handleMouseUp = useCallback(() => {
     if (read_only || !allowInput) return;
     const selection = window.getSelection();
@@ -176,6 +170,10 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     selection.removeAllRanges();
   }, [allowInput, createAnnotation, getSpan, read_only, text]);
 
+  /**
+   * Handles mouse entering a span.
+   * @param spanIndex - Index of the hovered span
+   */
   const handleMouseEnter = useCallback(
     (spanIndex: number) => {
       debouncedSetHoveredSpanIndex(spanIndex);
@@ -183,42 +181,57 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     [debouncedSetHoveredSpanIndex]
   );
 
+  /**
+   * Handles mouse leaving a span.
+   */
   const handleMouseLeave = useCallback(() => {
     debouncedSetHoveredSpanIndex(null);
   }, [debouncedSetHoveredSpanIndex]);
 
+  /**
+   * Handles mouse entering a label, cancelling hover effects.
+   */
   const handleLabelMouseEnter = useCallback(() => {
     debouncedSetHoveredSpanIndex.cancel();
   }, [debouncedSetHoveredSpanIndex]);
 
+  /**
+   * Handles mouse leaving a label.
+   */
   const handleLabelMouseLeave = useCallback(() => {
     debouncedSetHoveredSpanIndex(null);
   }, [debouncedSetHoveredSpanIndex]);
 
+  /**
+   * Handles clicking on a label to select or deselect an annotation.
+   * @param annotation - The annotation being clicked
+   */
   const handleLabelClick = useCallback(
     (annotation: ServerSpanAnnotation) => {
-      if (focusedAnnotation && focusedAnnotation.id === annotation.id) {
-        onFocusAnnotation(null);
-        setSelectedAnnotationId(null);
+      if (selectedAnnotations.includes(annotation.id)) {
+        setSelectedAnnotations(
+          selectedAnnotations.filter((id) => id !== annotation.id)
+        );
       } else {
-        onFocusAnnotation(annotation);
-        setSelectedAnnotationId(annotation.id);
+        setSelectedAnnotations([annotation.id]);
       }
     },
-    [focusedAnnotation, onFocusAnnotation]
+    [selectedAnnotations, setSelectedAnnotations]
   );
 
+  /**
+   * Determines if an annotation is selected.
+   * @param annotation - The annotation to check
+   * @returns boolean indicating selection status
+   */
   const isAnnotationSelected = useCallback(
     (annotation: ServerSpanAnnotation) => {
-      if (selectedAnnotationId) {
-        return annotation.id === selectedAnnotationId;
-      } else if (selectedLabelTypeId) {
-        return annotation.annotationLabel.id === selectedLabelTypeId;
-      } else {
-        return true;
+      if (selectedAnnotations.length > 0) {
+        return annotation.id === selectedAnnotations[0];
       }
+      return false;
     },
-    [selectedAnnotationId, selectedLabelTypeId]
+    [selectedAnnotations]
   );
 
   const [spans, setSpans] = useState<
@@ -301,11 +314,11 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       const hoveredSpan = spans[hoveredSpanIndex];
       if (!hoveredSpan) return;
 
-      const selectedAnnotations = hoveredSpan.annotations.filter((ann) =>
+      const selectedAnnotationsForSpan = hoveredSpan.annotations.filter((ann) =>
         isAnnotationSelected(ann)
       );
 
-      if (selectedAnnotations.length === 0) {
+      if (selectedAnnotationsForSpan.length === 0) {
         setLabelsToRender([]);
         return;
       }
@@ -331,7 +344,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         const labelWidth = 80; // Approximate width of a label
         const labelHeight = 20; // Approximate height of a label
 
-        selectedAnnotations.forEach((annotation, index) => {
+        selectedAnnotationsForSpan.forEach((annotation, index) => {
           let layer = 0;
           let labelsInPreviousLayers = 0;
 
@@ -430,6 +443,12 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     calculateLabelPositions();
   }, [hoveredSpanIndex, spans, isAnnotationSelected]);
 
+  /**
+   * Converts a hex color code to RGBA.
+   * @param hex - The hex color string
+   * @param alpha - The alpha value
+   * @returns The RGBA color string
+   */
   const hexToRgba = (hex: string, alpha: number): string => {
     let r = 0,
       g = 0,
@@ -463,12 +482,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         ref={containerRef}
         onMouseUp={handleMouseUp}
         onClick={() => {
-          if (focusedAnnotation) {
-            onFocusAnnotation(null);
-          }
-          if (selectedAnnotationId) {
-            setSelectedAnnotationId(null);
-          }
+          setSelectedAnnotations([]);
         }}
         style={containerStyle}
         maxHeight={maxHeight}
@@ -486,29 +500,32 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             borderRadius: "5px",
           };
 
-          const selectedAnnotations = spanAnnotations.filter((ann) =>
+          const selectedAnnotationsForSpan = spanAnnotations.filter((ann) =>
             isAnnotationSelected(ann)
           );
 
-          if (selectedAnnotations.length === 1) {
-            spanStyle.backgroundColor = selectedAnnotations[0].annotationLabel
-              .color
-              ? hexToRgba(selectedAnnotations[0].annotationLabel.color, 0.3)
+          if (selectedAnnotationsForSpan.length === 1) {
+            spanStyle.backgroundColor = selectedAnnotationsForSpan[0]
+              .annotationLabel.color
+              ? hexToRgba(
+                  selectedAnnotationsForSpan[0].annotationLabel.color,
+                  0.3
+                )
               : "transparent";
-          } else if (selectedAnnotations.length === 2) {
+          } else if (selectedAnnotationsForSpan.length === 2) {
             spanStyle.backgroundImage = `linear-gradient(to bottom, ${hexToRgba(
-              selectedAnnotations[0].annotationLabel.color
-                ? selectedAnnotations[0].annotationLabel.color
+              selectedAnnotationsForSpan[0].annotationLabel.color
+                ? selectedAnnotationsForSpan[0].annotationLabel.color
                 : "#fdfd96",
               0.3
             )} 50%, ${hexToRgba(
-              selectedAnnotations[1].annotationLabel.color
-                ? selectedAnnotations[1].annotationLabel.color
+              selectedAnnotationsForSpan[1].annotationLabel.color
+                ? selectedAnnotationsForSpan[1].annotationLabel.color
                 : "#fdfd96",
               0.3
             )} 50%)`;
-          } else if (selectedAnnotations.length > 2) {
-            const gradientColors = selectedAnnotations
+          } else if (selectedAnnotationsForSpan.length > 2) {
+            const gradientColors = selectedAnnotationsForSpan
               .map((ann) =>
                 hexToRgba(ann.annotationLabel.color || "transparent", 0.3)
               )

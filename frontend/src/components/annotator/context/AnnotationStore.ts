@@ -28,7 +28,7 @@ export class RelationGroup {
 
   // TODO - need to find a way to integrate this into current application log, which does NOT account for this.
   updateForAnnotationDeletion(
-    a: ServerTokenAnnotation
+    a: ServerTokenAnnotation | ServerSpanAnnotation
   ): RelationGroup | undefined {
     const sourceEmpty = this.sourceIds.length === 0;
     const targetEmpty = this.targetIds.length === 0;
@@ -292,7 +292,7 @@ interface _AnnotationStore {
   activeSpanLabel?: AnnotationLabelType | undefined;
   hideSidebar: boolean;
   setHideSidebar: (hide: boolean) => void;
-  showOnlySpanLabels?: AnnotationLabelType[];
+  showOnlySpanLabels?: AnnotationLabelType[] | null;
   setActiveLabel: (label: AnnotationLabelType) => void;
 
   scrollContainerRef: React.RefObject<HTMLDivElement> | undefined;
@@ -356,9 +356,9 @@ interface _AnnotationStore {
   setPdfPageInfoObjs: (b: Record<number, PDFPageInfo>) => void;
   createMultiPageAnnotation: () => void;
 
-  createAnnotation: (a: ServerTokenAnnotation) => void;
+  createAnnotation: (a: ServerTokenAnnotation | ServerSpanAnnotation) => void;
   deleteAnnotation: (annotation_id: string) => void;
-  updateAnnotation: (a: ServerTokenAnnotation) => void;
+  updateAnnotation: (a: ServerTokenAnnotation | ServerSpanAnnotation) => void;
 
   clearViewLabels: () => void;
   setViewLabels: (ls: AnnotationLabelType[]) => void;
@@ -485,13 +485,13 @@ export const AnnotationStore = createContext<_AnnotationStore>({
     throw new Error("setActiveRelationLabel() - Unimplemented");
   },
   docTypeLabels: [],
-  createAnnotation: (_?: ServerTokenAnnotation) => {
+  createAnnotation: (_?: ServerTokenAnnotation | ServerSpanAnnotation) => {
     throw new Error("createAnnotation() - Unimplemented");
   },
   deleteAnnotation: (_?: string) => {
     throw new Error("deleteAnnotation() - Unimplemented");
   },
-  updateAnnotation: (_?: ServerTokenAnnotation) => {
+  updateAnnotation: (_?: ServerTokenAnnotation | ServerSpanAnnotation) => {
     throw new Error("updateAnnotation() - Unimplemented");
   },
   createDocTypeAnnotation: (_?: DocTypeAnnotation) => {

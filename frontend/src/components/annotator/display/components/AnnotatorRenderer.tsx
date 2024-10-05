@@ -39,6 +39,7 @@ import {
   PdfAnnotations,
   PDFPageInfo,
   RelationGroup,
+  ServerSpanAnnotation,
   ServerTokenAnnotation,
 } from "../../context";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
@@ -46,14 +47,21 @@ import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import {
   AnalysisType,
   AnnotationLabelType,
+  AnnotationTypeEnum,
   ColumnType,
   CorpusType,
   DatacellType,
   DocumentType,
   ExtractType,
   LabelDisplayBehavior,
+  LabelType,
 } from "../../../../graphql/types";
-import { ViewState, TokenId, PermissionTypes } from "../../../types";
+import {
+  ViewState,
+  TokenId,
+  PermissionTypes,
+  SpanAnnotationJson,
+} from "../../../types";
 import { toast } from "react-toastify";
 import { createTokenStringSearch } from "../../utils";
 import { getPermissions } from "../../../../utils/transform";
@@ -288,7 +296,7 @@ export const AnnotatorRenderer = ({
   >(REQUEST_ADD_ANNOTATION);
 
   const requestCreateAnnotation = (
-    added_annotation_obj: ServerTokenAnnotation
+    added_annotation_obj: ServerTokenAnnotation | ServerSpanAnnotation
   ): void => {
     if (openedCorpus) {
       // Stray clicks on the canvas can trigger the annotation submission with empty token arrays and
@@ -307,32 +315,60 @@ export const AnnotatorRenderer = ({
             annotationLabelId: added_annotation_obj.annotationLabel.id,
             rawText: added_annotation_obj.rawText,
             page: added_annotation_obj.page,
+            annotationType:
+              added_annotation_obj instanceof ServerSpanAnnotation
+                ? LabelType.SpanLabel
+                : LabelType.TokenLabel,
           },
         })
           .then((data) => {
             toast.success("Annotated!\nAdded your annotation to the database.");
             //console.log("New annoation,", data);
-            let newRenderedAnnotations: ServerTokenAnnotation[] = [];
+            let newRenderedAnnotations: (
+              | ServerTokenAnnotation
+              | ServerSpanAnnotation
+            )[] = [];
             let annotationObj = data?.data?.addAnnotation?.annotation;
             if (annotationObj) {
-              newRenderedAnnotations.push(
-                new ServerTokenAnnotation(
-                  annotationObj.page,
-                  annotationObj.annotationLabel,
-                  annotationObj.rawText,
-                  false,
-                  annotationObj.json,
-                  getPermissions(
-                    annotationObj?.myPermissions
-                      ? annotationObj.myPermissions
-                      : []
-                  ),
-                  false,
-                  false,
-                  false,
-                  annotationObj.id
-                )
-              );
+              if (openedDocument.fileType === "application/txt") {
+                newRenderedAnnotations.push(
+                  new ServerSpanAnnotation(
+                    annotationObj.page,
+                    annotationObj.annotationLabel,
+                    annotationObj.rawText,
+                    false,
+                    annotationObj.json as SpanAnnotationJson,
+                    getPermissions(
+                      annotationObj?.myPermissions
+                        ? annotationObj.myPermissions
+                        : []
+                    ),
+                    false,
+                    false,
+                    false,
+                    annotationObj.id
+                  )
+                );
+              } else {
+                newRenderedAnnotations.push(
+                  new ServerTokenAnnotation(
+                    annotationObj.page,
+                    annotationObj.annotationLabel,
+                    annotationObj.rawText,
+                    false,
+                    annotationObj.json,
+                    getPermissions(
+                      annotationObj?.myPermissions
+                        ? annotationObj.myPermissions
+                        : []
+                    ),
+                    false,
+                    false,
+                    false,
+                    annotationObj.id
+                  )
+                );
+              }
             }
             addMultipleAnnotations(newRenderedAnnotations);
           })

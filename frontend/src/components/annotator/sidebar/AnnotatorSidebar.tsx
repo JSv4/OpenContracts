@@ -26,7 +26,6 @@ import {
   showAnnotationLabels,
   openedCorpus,
   openedDocument,
-  selectedAnalysis,
 } from "../../../graphql/cache";
 import {
   AnalysisType,
@@ -39,7 +38,7 @@ import { SearchSidebarWidget } from "../search_widget/SearchSidebarWidget";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { SingleDocumentExtractResults } from "../../extracts/SingleDocumentExtractResults";
-import { label_display_options, PermissionTypes } from "../../types";
+import { PermissionTypes } from "../../types";
 import { getPermissions } from "../../../utils/transform";
 import { PlaceholderCard } from "../../placeholders/PlaceholderCard";
 import { CorpusStats } from "../../widgets/data-display/CorpusStatus";

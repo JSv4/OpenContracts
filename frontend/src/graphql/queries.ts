@@ -11,7 +11,6 @@ import {
   RelationshipType,
   AnalyzerType,
   AnalysisType,
-  AnnotationLabelType,
   FieldsetType,
   ExtractType,
   CorpusQueryType,
@@ -1189,6 +1188,7 @@ export const REQUEST_GET_EXTRACT = gql`
         id
         column {
           id
+          name
         }
         document {
           id
@@ -1653,6 +1653,7 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
           }
           totalCount
         }
+        annotationType
         rawText
         json
         myPermissions
@@ -1695,6 +1696,49 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
           labelType
         }
       }
+    }
+  }
+`;
+
+export const getAnnotationsByDocumentId = /* GraphQL */ `
+  query GetAnnotationsByDocumentId($documentId: ID!) {
+    getAnnotationsByDocumentId(documentId: $documentId) {
+      items {
+        id
+        documentId
+        start
+        end
+        selectedText
+        comment
+        annotationType
+        createdAt
+        updatedAt
+        owner
+      }
+    }
+  }
+`;
+
+export const listAnnotations = /* GraphQL */ `
+  query ListAnnotations(
+    $filter: ModelAnnotationFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listAnnotations(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        documentId
+        start
+        end
+        selectedText
+        comment
+        annotationType
+        createdAt
+        updatedAt
+        owner
+      }
+      nextToken
     }
   }
 `;

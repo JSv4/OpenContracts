@@ -29,7 +29,7 @@ const HighlightContainer = styled.div<HighlightContainerProps>`
 
 const AnnotationLabel = styled(Label)`
   &&& {
-    background-color: ${(props) => props.color || "grey"};
+    background-color: #${(props) => props.color || "grey"};
     color: white;
     margin: 0 0.5rem 0.5rem 0;
     padding: 0.5em 0.8em;

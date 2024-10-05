@@ -252,8 +252,8 @@ export const DocumentViewer = ({
     AnnotationLabelType | undefined
   >(humanSpanLabelChoices.length > 0 ? humanSpanLabelChoices[0] : undefined);
   const [spanLabelsToView, setSpanLabelsToView] = useState<
-    AnnotationLabelType[]
-  >([]);
+    AnnotationLabelType[] | null
+  >(null);
   const [activeRelationLabel, setActiveRelationLabel] =
     useState<AnnotationLabelType>(relationLabels[0]);
   const [useFreeFormAnnotations, toggleUseFreeFormAnnotations] =
@@ -287,7 +287,11 @@ export const DocumentViewer = ({
   }
 
   const addSpanLabelsToViewSelection = (ls: AnnotationLabelType[]) => {
-    setSpanLabelsToView([...spanLabelsToView, ...ls]);
+    if (spanLabelsToView) {
+      setSpanLabelsToView([...spanLabelsToView, ...ls]);
+    } else {
+      setSpanLabelsToView(ls);
+    }
   };
 
   const clearSpanLabelsToView = () => {
@@ -297,11 +301,14 @@ export const DocumentViewer = ({
   const removeSpanLabelsToViewSelection = (
     labelsToRemove: AnnotationLabelType[]
   ) => {
-    setSpanLabelsToView((prevData) =>
-      [...prevData].filter((viewingLabel) =>
-        labelsToRemove.map((l) => l.id).includes(viewingLabel.id)
-      )
-    );
+    setSpanLabelsToView((prevData) => {
+      if (prevData) {
+        return [...prevData].filter((viewingLabel) =>
+          labelsToRemove.map((l) => l.id).includes(viewingLabel.id)
+        );
+      }
+      return null;
+    });
   };
 
   // Add selection references

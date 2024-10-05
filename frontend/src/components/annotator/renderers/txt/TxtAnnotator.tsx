@@ -1,3 +1,49 @@
+/**
+ * TxtAnnotator Component
+ *
+ * This component provides a text annotation interface for labeling and managing
+ * span annotations within a given text.
+ *
+ * Key Features:
+ * 1. Text display with highlighting for annotations
+ * 2. Interactive label creation through text selection
+ * 3. Hoverable and clickable labels for existing annotations
+ * 4. Radial button cloud for annotation actions (edit, delete, approve, reject)
+ * 5. Modal for editing annotation labels
+ * 6. Support for multiple overlapping annotations
+ * 7. Responsive label positioning around annotated spans
+ * 8. Zoom functionality for text size adjustment
+ *
+ * Operation:
+ * - Renders the input text as a series of spans, each potentially containing annotations
+ * - Allows users to select text to create new annotations (if not in read-only mode)
+ * - Displays floating labels for annotations when hovering over annotated spans
+ * - Provides a radial button cloud for each label with annotation actions
+ * - Supports focusing and selecting annotations for detailed view or actions
+ * - Handles overlapping annotations with multi-color highlighting
+ * - Dynamically calculates and positions labels around annotated spans
+ * - Supports approval and rejection of annotations (if enabled)
+ *
+ * State Management:
+ * - Uses multiple useState hooks for managing component state
+ * - Utilizes useEffect for side effects like span calculation and label positioning
+ * - Implements useDebouncedCallback for optimizing hover effects
+ *
+ * Styling:
+ * - Applies dynamic styles for highlighting and label positioning
+ * - Uses styled-components for consistent styling of sub-components
+ *
+ * Performance Considerations:
+ * - Memoized with React.memo to prevent unnecessary re-renders
+ * - Uses debounced callbacks for hover effects to reduce computation
+ *
+ * Accessibility:
+ * - Supports keyboard navigation and screen readers (to be verified)
+ *
+ * @param {TxtAnnotatorProps} props - The properties passed to the component
+ * @returns {React.ReactElement} The rendered TxtAnnotator component
+ */
+
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Label, LabelContainer, PaperContainer } from "./StyledComponents";
 import { useDebouncedCallback } from "use-debounce";
@@ -16,7 +62,7 @@ interface TxtAnnotatorProps {
   }) => ServerSpanAnnotation;
   focusedAnnotationId: string | null;
   onFocusAnnotation: (annotation: ServerSpanAnnotation | null) => void;
-  visibleLabels: AnnotationLabelType[];
+  visibleLabels: AnnotationLabelType[] | null;
   availableLabels: AnnotationLabelType[];
   selectedLabelTypeId: string | null;
   read_only: boolean;
@@ -82,7 +128,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         setFocusedAnnotation(focusedAnnotationObjs[0]);
       }
     }
-  }, [focusedAnnotationId]);
+  }, [focusedAnnotationId, annotations]);
 
   const debouncedSetHoveredSpanIndex = useDebouncedCallback(
     (spanIndex: number | null) => {
@@ -185,13 +231,15 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   >([]);
 
   useEffect(() => {
-    const visibleLabelTexts = visibleLabels.map((label) => label.text);
+    const isLabelVisible = (labelText: string) => {
+      if (visibleLabels === null) return true; // Show all labels if visibleLabels is null
+      return visibleLabels.some((label) => label.text === labelText);
+    };
 
     const sortedAnnotations = annotations
       .filter(
         (ann) =>
-          ann.annotationLabel.text &&
-          visibleLabelTexts.includes(ann.annotationLabel.text)
+          ann.annotationLabel.text && isLabelVisible(ann.annotationLabel.text)
       )
       .sort((a, b) => a.json.start - b.json.start);
 
@@ -201,8 +249,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       text: string;
       annotations: ServerSpanAnnotation[];
     }[] = [];
-
-    let lastIndex = 0;
 
     const addSpan = (
       start: number,
@@ -240,65 +286,56 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   }, [annotations, text, visibleLabels]);
 
   useEffect(() => {
+    /**
+     * Calculates label positions around the hovered span, considering only annotations
+     * that are applicable to the hovered character.
+     */
     const calculateLabelPositions = () => {
       const newLabelsToRender: LabelRenderData[] = [];
 
-      spans.forEach((span, spanIndex) => {
-        if (hoveredSpanIndex !== spanIndex) return;
+      if (hoveredSpanIndex === null) {
+        setLabelsToRender([]);
+        return;
+      }
 
-        const selectedAnnotations = annotations.filter((ann) =>
-          isAnnotationSelected(ann)
-        );
+      const hoveredSpan = spans[hoveredSpanIndex];
+      if (!hoveredSpan) return;
 
-        if (selectedAnnotations.length === 0) return;
+      const selectedAnnotations = hoveredSpan.annotations.filter((ann) =>
+        isAnnotationSelected(ann)
+      );
 
-        const containerElement = containerRef.current;
-        const spanElement = containerElement?.querySelector(
-          `span[data-span-index="${spanIndex}"]`
-        ) as HTMLElement;
+      if (selectedAnnotations.length === 0) {
+        setLabelsToRender([]);
+        return;
+      }
 
-        if (containerElement && spanElement) {
-          const containerRect = containerElement.getBoundingClientRect();
-          const spanRect = spanElement.getBoundingClientRect();
+      const containerElement = containerRef.current;
+      const spanElement = containerElement?.querySelector(
+        `span[data-span-index="${hoveredSpanIndex}"]`
+      ) as HTMLElement;
 
-          const spanOffsetX = spanRect.left - containerRect.left;
-          const spanOffsetY = spanRect.top - containerRect.top;
+      if (containerElement && spanElement) {
+        const containerRect = containerElement.getBoundingClientRect();
+        const spanRect = spanElement.getBoundingClientRect();
 
-          // Variables for label positioning
-          const margin = 20; // Distance from the span
-          const layerMarginIncrement = 20; // Amount by which the rectangle grows each layer
-          const labelSpacing = 10; // Spacing between labels
+        const spanOffsetX = spanRect.left - containerRect.left;
+        const spanOffsetY = spanRect.top - containerRect.top;
 
-          // Assuming labels have approximate dimensions
-          const labelWidth = 80; // Approximate width of a label
-          const labelHeight = 20; // Approximate height of a label
+        // Variables for label positioning
+        const margin = 20; // Distance from the span
+        const layerMarginIncrement = 20; // Amount by which the rectangle grows each layer
+        const labelSpacing = 10; // Spacing between labels
 
-          selectedAnnotations.forEach((annotation, index) => {
-            let layer = 0;
-            let labelsInPreviousLayers = 0;
+        // Assuming labels have approximate dimensions
+        const labelWidth = 80; // Approximate width of a label
+        const labelHeight = 20; // Approximate height of a label
 
-            while (true) {
-              const rectWidth =
-                spanRect.width + 2 * (margin + layer * layerMarginIncrement);
-              const rectHeight =
-                spanRect.height + 2 * (margin + layer * layerMarginIncrement);
+        selectedAnnotations.forEach((annotation, index) => {
+          let layer = 0;
+          let labelsInPreviousLayers = 0;
 
-              const perimeter = 2 * (rectWidth + rectHeight);
-
-              const maxLabelsInLayer = Math.floor(
-                perimeter / (Math.max(labelWidth, labelHeight) + labelSpacing)
-              );
-
-              if (index < labelsInPreviousLayers + maxLabelsInLayer) {
-                break;
-              } else {
-                labelsInPreviousLayers += maxLabelsInLayer;
-                layer++;
-              }
-            }
-
-            const positionInLayer = index - labelsInPreviousLayers;
-
+          while (true) {
             const rectWidth =
               spanRect.width + 2 * (margin + layer * layerMarginIncrement);
             const rectHeight =
@@ -306,66 +343,86 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
 
             const perimeter = 2 * (rectWidth + rectHeight);
 
-            const labelPositionAlongPerimeter =
-              positionInLayer *
-              (Math.max(labelWidth, labelHeight) + labelSpacing);
+            const maxLabelsInLayer = Math.floor(
+              perimeter / (Math.max(labelWidth, labelHeight) + labelSpacing)
+            );
 
-            let x = 0;
-            let y = 0;
-
-            let positionRemaining = labelPositionAlongPerimeter % perimeter;
-
-            const leftEdgeX =
-              spanOffsetX - margin - layer * layerMarginIncrement - labelWidth;
-            const topEdgeY =
-              spanOffsetY - margin - layer * layerMarginIncrement - labelHeight;
-            const rightEdgeX =
-              spanOffsetX +
-              spanRect.width +
-              margin +
-              layer * layerMarginIncrement;
-            const bottomEdgeY =
-              spanOffsetY +
-              spanRect.height +
-              margin +
-              layer * layerMarginIncrement;
-
-            if (positionRemaining < rectWidth) {
-              // Top edge
-              x = leftEdgeX + labelWidth + positionRemaining;
-              y = topEdgeY;
-            } else if (positionRemaining < rectWidth + rectHeight) {
-              // Right edge
-              x = rightEdgeX;
-              y = topEdgeY + (positionRemaining - rectWidth) + labelHeight;
-            } else if (positionRemaining < 2 * rectWidth + rectHeight) {
-              // Bottom edge
-              x =
-                rightEdgeX -
-                (positionRemaining - (rectWidth + rectHeight)) -
-                labelWidth;
-              y = bottomEdgeY;
+            if (index < labelsInPreviousLayers + maxLabelsInLayer) {
+              break;
             } else {
-              // Left edge
-              x = leftEdgeX;
-              y =
-                bottomEdgeY -
-                (positionRemaining - (2 * rectWidth + rectHeight)) -
-                labelHeight;
+              labelsInPreviousLayers += maxLabelsInLayer;
+              layer++;
             }
+          }
 
-            // Adjust x and y to ensure labels are within bounds
-            x = Math.max(0, Math.min(x, containerRect.width - labelWidth));
-            y = Math.max(0, Math.min(y, containerRect.height - labelHeight));
+          const positionInLayer = index - labelsInPreviousLayers;
 
-            newLabelsToRender.push({
-              annotation,
-              position: { x, y },
-              labelIndex: index,
-            });
+          const rectWidth =
+            spanRect.width + 2 * (margin + layer * layerMarginIncrement);
+          const rectHeight =
+            spanRect.height + 2 * (margin + layer * layerMarginIncrement);
+
+          const perimeter = 2 * (rectWidth + rectHeight);
+
+          const labelPositionAlongPerimeter =
+            positionInLayer *
+            (Math.max(labelWidth, labelHeight) + labelSpacing);
+
+          let x = 0;
+          let y = 0;
+
+          let positionRemaining = labelPositionAlongPerimeter % perimeter;
+
+          const leftEdgeX =
+            spanOffsetX - margin - layer * layerMarginIncrement - labelWidth;
+          const topEdgeY =
+            spanOffsetY - margin - layer * layerMarginIncrement - labelHeight;
+          const rightEdgeX =
+            spanOffsetX +
+            spanRect.width +
+            margin +
+            layer * layerMarginIncrement;
+          const bottomEdgeY =
+            spanOffsetY +
+            spanRect.height +
+            margin +
+            layer * layerMarginIncrement;
+
+          if (positionRemaining < rectWidth) {
+            // Top edge
+            x = leftEdgeX + labelWidth + positionRemaining;
+            y = topEdgeY;
+          } else if (positionRemaining < rectWidth + rectHeight) {
+            // Right edge
+            x = rightEdgeX;
+            y = topEdgeY + (positionRemaining - rectWidth) + labelHeight;
+          } else if (positionRemaining < 2 * rectWidth + rectHeight) {
+            // Bottom edge
+            x =
+              rightEdgeX -
+              (positionRemaining - (rectWidth + rectHeight)) -
+              labelWidth;
+            y = bottomEdgeY;
+          } else {
+            // Left edge
+            x = leftEdgeX;
+            y =
+              bottomEdgeY -
+              (positionRemaining - (2 * rectWidth + rectHeight)) -
+              labelHeight;
+          }
+
+          // Adjust x and y to ensure labels are within bounds
+          x = Math.max(0, Math.min(x, containerRect.width - labelWidth));
+          y = Math.max(0, Math.min(y, containerRect.height - labelHeight));
+
+          newLabelsToRender.push({
+            annotation,
+            position: { x, y },
+            labelIndex: index,
           });
-        }
-      });
+        });
+      }
 
       setLabelsToRender(newLabelsToRender);
     };

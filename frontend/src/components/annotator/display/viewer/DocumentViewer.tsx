@@ -708,20 +708,22 @@ export const DocumentViewer = ({
               (annot) => annot instanceof ServerSpanAnnotation
             ) as ServerSpanAnnotation[]
           }
-          focusedAnnotationId={selectedAnnotations[0]}
-          onFocusAnnotation={(annotation: ServerSpanAnnotation | null) =>
-            setSelectedAnnotations(annotation ? [annotation.id] : [])
-          }
           getSpan={getSpan}
           visibleLabels={spanLabelsToView}
           availableLabels={spanLabels}
-          selectedLabelTypeId={null}
+          selectedLabelTypeId={activeSpanLabel?.id || null}
           read_only={read_only}
           allowInput={allowInput}
           zoom_level={zoom_level}
           createAnnotation={createAnnotation}
           updateAnnotation={updateAnnotation}
+          approveAnnotation={approveAnnotation}
+          rejectAnnotation={rejectAnnotation}
           deleteAnnotation={deleteAnnotation}
+          maxHeight="100%"
+          maxWidth="100%"
+          selectedAnnotations={selectedAnnotations}
+          setSelectedAnnotations={setSelectedAnnotations}
         />
       );
       break;

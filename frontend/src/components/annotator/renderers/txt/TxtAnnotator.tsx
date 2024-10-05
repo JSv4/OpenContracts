@@ -66,8 +66,6 @@ interface TxtAnnotatorProps {
     end: number;
     text: string;
   }) => ServerSpanAnnotation;
-  focusedAnnotationId: string | null;
-  onFocusAnnotation: (annotation: ServerSpanAnnotation | null) => void;
   visibleLabels: AnnotationLabelType[] | null;
   availableLabels: AnnotationLabelType[];
   selectedLabelTypeId: string | null;
@@ -83,6 +81,8 @@ interface TxtAnnotatorProps {
   deleteAnnotation: (annotation_id: string) => void;
   maxHeight?: string;
   maxWidth?: string;
+  selectedAnnotations: string[]; // Array of selected annotation IDs
+  setSelectedAnnotations: (annotations: string[]) => void;
 }
 
 interface LabelRenderData {
@@ -110,10 +110,9 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   deleteAnnotation,
   maxHeight,
   maxWidth,
+  selectedAnnotations,
+  setSelectedAnnotations,
 }) => {
-  const annotationStore = useContext(AnnotationStore);
-  const { selectedAnnotations, setSelectedAnnotations } = annotationStore;
-
   const [hoveredSpanIndex, setHoveredSpanIndex] = useState<number | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [annotationToEdit, setAnnotationToEdit] =
@@ -335,14 +334,11 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         const spanOffsetX = spanRect.left - containerRect.left;
         const spanOffsetY = spanRect.top - containerRect.top;
 
-        // Variables for label positioning
-        const margin = 20; // Distance from the span
-        const layerMarginIncrement = 20; // Amount by which the rectangle grows each layer
-        const labelSpacing = 10; // Spacing between labels
-
-        // Assuming labels have approximate dimensions
-        const labelWidth = 80; // Approximate width of a label
-        const labelHeight = 20; // Approximate height of a label
+        const margin = 10;
+        const layerMarginIncrement = 10;
+        const labelWidth = 100; // Adjust as needed
+        const labelHeight = 30; // Adjust as needed
+        const labelSpacing = 10;
 
         selectedAnnotationsForSpan.forEach((annotation, index) => {
           let layer = 0;

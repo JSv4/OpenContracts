@@ -63,7 +63,6 @@ import {
   SpanAnnotationJson,
 } from "../../../types";
 import { toast } from "react-toastify";
-import { createTokenStringSearch } from "../../utils";
 import { getPermissions } from "../../../../utils/transform";
 import _ from "lodash";
 

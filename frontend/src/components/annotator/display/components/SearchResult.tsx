@@ -5,7 +5,7 @@ import { PDFPageInfo, AnnotationStore } from "../../context";
 import { VerticallyJustifiedEndDiv } from "../../sidebar/common";
 
 import { ResultBoundary } from "./ResultBoundary";
-import { BoundingBox, TextSearchResult } from "../../../types";
+import { BoundingBox, TextSearchTokenResult } from "../../../types";
 import { LabelDisplayBehavior } from "../../../../graphql/types";
 import { getBorderWidthFromBounds } from "../../../../utils/transform";
 import { SearchSelectionTokens } from "./SelectionTokens";
@@ -19,7 +19,7 @@ interface SearchResultProps {
   showBoundingBox: boolean;
   hidden: boolean;
   pageInfo: PDFPageInfo;
-  match: TextSearchResult;
+  match: TextSearchTokenResult;
   labelBehavior: LabelDisplayBehavior;
   showInfo?: boolean;
 }

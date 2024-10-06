@@ -8,7 +8,12 @@ import React, {
 } from "react";
 import { AnnotationLabelType } from "../../../../graphql/types";
 import { getPageBoundsFromCanvas } from "../../../../utils/transform";
-import { PageProps, BoundingBox, PermissionTypes } from "../../../types";
+import {
+  PageProps,
+  BoundingBox,
+  PermissionTypes,
+  TextSearchTokenResult,
+} from "../../../types";
 import {
   AnnotationStore,
   normalizeBounds,
@@ -422,6 +427,7 @@ export const PDFPage = ({
       {scale &&
         pageInfo.bounds &&
         annotationStore.textSearchMatches
+          .filter((match): match is TextSearchTokenResult => "tokens" in match)
           .filter(
             (match) => match.tokens[pageInfo.page.pageNumber - 1] !== undefined
           )

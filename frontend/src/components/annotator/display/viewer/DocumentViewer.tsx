@@ -6,6 +6,7 @@ import {
   BoundingBox,
   PermissionTypes,
   SinglePageAnnotationJson,
+  TextSearchSpanResult,
   TokenId,
   ViewState,
 } from "../../../types";
@@ -37,7 +38,7 @@ import * as listeners from "../../listeners";
 import AnnotatorSidebar from "../../sidebar/AnnotatorSidebar";
 import { SidebarContainer } from "../../../common";
 
-import { TextSearchResult } from "../../../types";
+import { TextSearchTokenResult } from "../../../types";
 import { AnnotatorTopbar } from "../../topbar/AnnotatorTopbar";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 
@@ -223,7 +224,7 @@ export const DocumentViewer = ({
   const [scrollContainerRef, setScrollContainerRef] =
     useState<React.RefObject<HTMLDivElement>>();
   const [textSearchMatches, setTextSearchMatches] =
-    useState<TextSearchResult[]>();
+    useState<(TextSearchTokenResult | TextSearchSpanResult)[]>();
   const [searchText, setSearchText] = useState<string>();
   const [selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex] =
     useState<number>(0);
@@ -353,8 +354,7 @@ export const DocumentViewer = ({
 
   // Search for text when search text changes.
   useEffect(() => {
-    let token_matches = [];
-    let refs = {};
+    let search_hits = [];
 
     // If there is searchText, search document for matches
     if (searchText) {
@@ -362,137 +362,155 @@ export const DocumentViewer = ({
       let exactMatch = new RegExp("\\b(" + searchText + ")\\b", "gi");
       const matches = [...doc_text.matchAll(exactMatch)];
 
-      // Cycle over matches to convert to tokens and page indices
-      for (let i = 0; i < matches.length; i++) {
-        // Make sure match has index and we have a map of doc char
-        // index to page and token indices
-        if (matches && matches[i].index && page_token_text_maps) {
-          let start_index = matches[i].index;
-          if (start_index) {
+      if (selected_document.fileType === "application/txt") {
+        for (let i = 0; i < matches.length; i++) {
+          // Make sure match has index and we have a map of doc char
+          // index to page and token indices
+          if (matches && matches[i].index !== undefined) {
+            console.log(matches);
+            let start_index = matches[i].index as number;
             let end_index = start_index + searchText.length;
-            if (end_index) {
-              let target_tokens = [];
-              let lead_in_tokens = [];
-              let lead_out_tokens = [];
-              let end_page = 0;
-              let start_page = 0;
+            search_hits.push({
+              id: i,
+              text: doc_text.substring(start_index, end_index),
+              start_index: start_index,
+              end_index: end_index,
+            } as TextSearchSpanResult);
+          }
+        }
+      } else if (selected_document.fileType === "application/pdf") {
+        // Cycle over matches to convert to tokens and page indices
+        for (let i = 0; i < matches.length; i++) {
+          // Make sure match has index and we have a map of doc char
+          // index to page and token indices
+          if (matches && matches[i].index && page_token_text_maps) {
+            let start_index = matches[i].index;
+            if (start_index) {
+              let end_index = start_index + searchText.length;
+              if (end_index) {
+                let target_tokens = [];
+                let lead_in_tokens = [];
+                let lead_out_tokens = [];
+                let end_page = 0;
+                let start_page = 0;
 
-              // How many chars before and after results do we want to show
-              // as context
-              let context_length = 128;
+                // How many chars before and after results do we want to show
+                // as context
+                let context_length = 128;
 
-              if (start_index > 0) {
-                // How many tokens BEFORE the search result must we traverse to cover the context_length's
-                // worth of characters?
+                if (start_index > 0) {
+                  // How many tokens BEFORE the search result must we traverse to cover the context_length's
+                  // worth of characters?
+                  let end_text_index =
+                    start_index >= context_length
+                      ? start_index - context_length
+                      : start_index;
+                  let previous_token: TokenId | undefined = undefined;
+
+                  // Get the tokens BEFORE the results for up to 128 chars
+                  for (let a = start_index; a >= end_text_index; a--) {
+                    if (previous_token === undefined) {
+                      // console.log("Last_token was undefined and a is", a);
+                      // console.log("Token is", page_token_text_maps[a]);
+                      if (page_token_text_maps[a]) {
+                        previous_token = page_token_text_maps[a];
+                        start_page = previous_token.pageIndex;
+                      }
+                    } else if (
+                      page_token_text_maps[a] &&
+                      (page_token_text_maps[a].pageIndex !==
+                        previous_token.pageIndex ||
+                        page_token_text_maps[a].tokenIndex !==
+                          previous_token.tokenIndex)
+                    ) {
+                      let chap = page_token_text_maps[a];
+                      previous_token = chap;
+                      lead_in_tokens.push(
+                        pages[chap.pageIndex].tokens[chap.tokenIndex]
+                      );
+                      start_page = chap.pageIndex;
+                    }
+                  }
+                }
+                let lead_in_text = lead_in_tokens
+                  .reverse()
+                  .reduce((prev, curr) => prev + " " + curr.text, "");
+
+                // Get actual result tokens based on the start and end token inde
+                for (let j = start_index; j < end_index; j++) {
+                  target_tokens.push(page_token_text_maps[j]);
+                }
+                var grouped_tokens = _.groupBy(target_tokens, "pageIndex");
+
+                // Now get the text after the search match... and check context length doesn't overshoot the entire document...
+                // if it does, just go to end of document.
                 let end_text_index =
-                  start_index >= context_length
-                    ? start_index - context_length
-                    : start_index;
+                  doc_text.length - end_index >= context_length
+                    ? end_index + context_length
+                    : end_index;
                 let previous_token: TokenId | undefined = undefined;
 
                 // Get the tokens BEFORE the results for up to 128 chars
-                for (let a = start_index; a >= end_text_index; a--) {
+                for (let b = end_index; b < end_text_index; b++) {
                   if (previous_token === undefined) {
-                    // console.log("Last_token was undefined and a is", a);
-                    // console.log("Token is", page_token_text_maps[a]);
-                    if (page_token_text_maps[a]) {
-                      previous_token = page_token_text_maps[a];
-                      start_page = previous_token.pageIndex;
+                    if (page_token_text_maps[b]) {
+                      previous_token = page_token_text_maps[b];
                     }
                   } else if (
-                    page_token_text_maps[a] &&
-                    (page_token_text_maps[a].pageIndex !==
+                    page_token_text_maps[b] &&
+                    (page_token_text_maps[b].pageIndex !==
                       previous_token.pageIndex ||
-                      page_token_text_maps[a].tokenIndex !==
+                      page_token_text_maps[b].tokenIndex !==
                         previous_token.tokenIndex)
                   ) {
-                    let chap = page_token_text_maps[a];
+                    let chap = page_token_text_maps[b];
                     previous_token = chap;
-                    lead_in_tokens.push(
+                    lead_out_tokens.push(
                       pages[chap.pageIndex].tokens[chap.tokenIndex]
                     );
-                    start_page = chap.pageIndex;
+                    end_page = chap.pageIndex;
                   }
                 }
-              }
-              let lead_in_text = lead_in_tokens
-                .reverse()
-                .reduce((prev, curr) => prev + " " + curr.text, "");
+                let lead_out_text = lead_out_tokens.reduce(
+                  (prev, curr) => prev + " " + curr.text,
+                  ""
+                );
 
-              // Get actual result tokens based on the start and end token inde
-              for (let j = start_index; j < end_index; j++) {
-                target_tokens.push(page_token_text_maps[j]);
-              }
-              var grouped_tokens = _.groupBy(target_tokens, "pageIndex");
-
-              // Now get the text after the search match... and check context length doesn't overshoot the entire document...
-              // if it does, just go to end of document.
-              let end_text_index =
-                doc_text.length - end_index >= context_length
-                  ? end_index + context_length
-                  : end_index;
-              let previous_token: TokenId | undefined = undefined;
-
-              // Get the tokens BEFORE the results for up to 128 chars
-              for (let b = end_index; b < end_text_index; b++) {
-                if (previous_token === undefined) {
-                  if (page_token_text_maps[b]) {
-                    previous_token = page_token_text_maps[b];
-                  }
-                } else if (
-                  page_token_text_maps[b] &&
-                  (page_token_text_maps[b].pageIndex !==
-                    previous_token.pageIndex ||
-                    page_token_text_maps[b].tokenIndex !==
-                      previous_token.tokenIndex)
-                ) {
-                  let chap = page_token_text_maps[b];
-                  previous_token = chap;
-                  lead_out_tokens.push(
-                    pages[chap.pageIndex].tokens[chap.tokenIndex]
-                  );
-                  end_page = chap.pageIndex;
-                }
-              }
-              let lead_out_text = lead_out_tokens.reduce(
-                (prev, curr) => prev + " " + curr.text,
-                ""
-              );
-
-              // Determine bounds for the results
-              let bounds: Record<number, BoundingBox> = {};
-              for (const [key, value] of Object.entries(grouped_tokens)) {
-                if (pages[parseInt(key)] !== undefined) {
-                  var page_bounds =
-                    pages[parseInt(key)].getBoundsForTokens(value);
-                  if (page_bounds) {
-                    bounds[parseInt(key)] = page_bounds;
+                // Determine bounds for the results
+                let bounds: Record<number, BoundingBox> = {};
+                for (const [key, value] of Object.entries(grouped_tokens)) {
+                  if (pages[parseInt(key)] !== undefined) {
+                    var page_bounds =
+                      pages[parseInt(key)].getBoundsForTokens(value);
+                    if (page_bounds) {
+                      bounds[parseInt(key)] = page_bounds;
+                    }
                   }
                 }
-              }
 
-              // Now add the results detailas to the resulting matches.
-              let fullContext = (
-                <span>
-                  <i>{lead_in_text}</i> <b>{searchText}</b>
-                  <i>{lead_out_text}</i>
-                </span>
-              );
-              token_matches.push({
-                id: i,
-                tokens: grouped_tokens,
-                bounds,
-                fullContext,
-                end_page,
-                start_page,
-              });
+                // Now add the results detailas to the resulting matches.
+                let fullContext = (
+                  <span>
+                    <i>{lead_in_text}</i> <b>{searchText}</b>
+                    <i>{lead_out_text}</i>
+                  </span>
+                );
+                search_hits.push({
+                  id: i,
+                  tokens: grouped_tokens,
+                  bounds,
+                  fullContext,
+                  end_page,
+                  start_page,
+                });
+              }
             }
           }
         }
       }
     }
     // console.log("New token matches", token_matches);
-    setTextSearchMatches(token_matches);
+    setTextSearchMatches(search_hits);
     setSelectedTextSearchMatchIndex(0);
   }, [searchText]);
 
@@ -708,10 +726,15 @@ export const DocumentViewer = ({
               (annot) => annot instanceof ServerSpanAnnotation
             ) as ServerSpanAnnotation[]
           }
+          searchResults={
+            textSearchMatches?.filter(
+              (match): match is TextSearchSpanResult => "start_index" in match
+            ) ?? []
+          }
           getSpan={getSpan}
           visibleLabels={spanLabelsToView}
           availableLabels={spanLabels}
-          selectedLabelTypeId={activeSpanLabel?.id || null}
+          selectedLabelTypeId={activeSpanLabel?.id ?? null}
           read_only={read_only}
           allowInput={allowInput}
           zoom_level={zoom_level}

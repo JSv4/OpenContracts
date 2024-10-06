@@ -208,13 +208,21 @@ export type SinglePageAnnotationJson = {
   rawText: string;
 };
 
-export type TextSearchResult = {
+export type TextSearchTokenResult = {
   id: number;
   tokens: Record<number, TokenId[]>;
   bounds: Record<number, BoundingBox>;
   fullContext: ReactElement | null;
   start_page: number;
   end_page: number;
+};
+
+export type TextSearchSpanResult = {
+  id: number;
+  start_index: number;
+  end_index: number;
+  fullContext: ReactElement | null;
+  text: string;
 };
 
 export type MultipageAnnotationJson = Record<number, SinglePageAnnotationJson>;

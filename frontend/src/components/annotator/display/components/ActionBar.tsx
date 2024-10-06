@@ -93,6 +93,7 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
 
   const debouncedDocSearch = useRef(
     _.debounce((searchTerm: string) => {
+      console.log("Searching for", searchTerm);
       searchForText(searchTerm);
     }, 300)
   );

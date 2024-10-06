@@ -8,8 +8,9 @@ import {
   MultipageAnnotationJson,
   PermissionTypes,
   SpanAnnotationJson,
+  TextSearchSpanResult,
 } from "../../types";
-import { TextSearchResult } from "../../types";
+import { TextSearchTokenResult } from "../../types";
 
 export interface TokenId {
   pageIndex: number;
@@ -333,7 +334,7 @@ interface _AnnotationStore {
   docTypeLabels: AnnotationLabelType[];
 
   docText: string | undefined;
-  textSearchMatches: TextSearchResult[];
+  textSearchMatches: (TextSearchTokenResult | TextSearchSpanResult)[];
   selectedTextSearchMatchIndex: number;
   searchText: string | undefined;
   allowComment: boolean;

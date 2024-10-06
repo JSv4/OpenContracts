@@ -612,6 +612,24 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               ann.annotationLabel?.text?.startsWith("Search Result") ?? false
           );
 
+          // **Create a ref callback to register the span's DOM element**
+          const refCallback = (el: HTMLElement | null) => {
+            if (isSearchResult) {
+              if (searchResultElementRefs?.current) {
+                searchResultElementRefs.current[
+                  parseInt(span.annotations[0].id)
+                ] = el;
+              }
+            } else if (spanAnnotations.length > 0) {
+              // **Register the ref for jump-to-annotation functionality**
+              if (annotationStore.selectionElementRefs?.current) {
+                annotationStore.selectionElementRefs.current[
+                  spanAnnotations[0].id
+                ] = el;
+              }
+            }
+          };
+
           return (
             <span
               key={`span-${index}`}
@@ -620,18 +638,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               data-span-index={index}
               onMouseEnter={() => handleMouseEnter(index)}
               onMouseLeave={handleMouseLeave}
-              ref={
-                // Start of Selection
-                isSearchResult
-                  ? (el: HTMLElement | null) => {
-                      if (searchResultElementRefs?.current) {
-                        searchResultElementRefs.current[
-                          parseInt(span.annotations[0].id)
-                        ] = el;
-                      }
-                    }
-                  : undefined
-              }
+              ref={refCallback}
             >
               {spanText}
             </span>

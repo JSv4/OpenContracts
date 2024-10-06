@@ -49,7 +49,10 @@ const SearchResultCard: React.FC<{
         transition: "all 0.3s ease",
         boxShadow: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)",
       }}
-      onClick={() => onResultClick(index)}
+      onClick={() => {
+        console.log("Clicked on result", index);
+        onResultClick(index);
+      }}
       className="hover-effect"
     >
       <Message.Header>
@@ -124,11 +127,26 @@ export const SearchSidebarWidget: React.FC = () => {
   };
 
   useEffect(() => {
+    console.log(
+      "Selected text search match index",
+      selectedTextSearchMatchIndex
+    );
+    console.log(
+      "Search result element refs",
+      annotationStore?.searchResultElementRefs?.current
+    );
     if (
       annotationStore.searchResultElementRefs?.current[
         selectedTextSearchMatchIndex
       ]
     ) {
+      console.log(
+        "Scrolling to result",
+        selectedTextSearchMatchIndex,
+        annotationStore.searchResultElementRefs.current[
+          selectedTextSearchMatchIndex
+        ]
+      );
       annotationStore.searchResultElementRefs.current[
         selectedTextSearchMatchIndex
       ]?.scrollIntoView({
@@ -159,7 +177,7 @@ export const SearchSidebarWidget: React.FC = () => {
           backgroundColor: "#ffffff",
           borderBottom: "1px solid #e0e0e0",
           flex: "unset",
-          "-webkit-box-flex": "unset",
+          WebkitBoxFlex: "unset",
         }}
       >
         <Form>

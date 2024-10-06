@@ -44,13 +44,19 @@
  * @returns {React.ReactElement} The rendered TxtAnnotator component
  */
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useContext,
+} from "react";
 import { Label, LabelContainer, PaperContainer } from "./StyledComponents";
 import { useDebouncedCallback } from "use-debounce";
 import RadialButtonCloud, { CloudButtonItem } from "./RadialButtonCloud";
 import { Modal, Button, Dropdown } from "semantic-ui-react";
 import { AnnotationLabelType } from "../../../../graphql/types";
-import { ServerSpanAnnotation } from "../../context";
+import { ServerSpanAnnotation, AnnotationStore } from "../../context";
 import { TextSearchSpanResult } from "../../../types";
 
 interface TxtAnnotatorProps {
@@ -120,9 +126,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     useState<ServerSpanAnnotation | null>(null);
   const [labelsToRender, setLabelsToRender] = useState<LabelRenderData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const searchResultElementRefs = useRef<{
-    [key: string]: HTMLSpanElement | null;
-  }>({});
 
   const debouncedSetHoveredSpanIndex = useDebouncedCallback(
     (spanIndex: number | null) => {
@@ -130,6 +133,9 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     },
     100
   );
+
+  const annotationStore = useContext(AnnotationStore);
+  const { searchResultElementRefs } = annotationStore;
 
   /**
    * Handles text selection and creates a new annotation.
@@ -236,7 +242,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         selectedSearchResultIndex !== undefined &&
         selectedSearchResultIndex !== null
       ) {
-        return annotation.id === `search-result-${selectedSearchResultIndex}`;
+        return parseInt(annotation.id) === selectedSearchResultIndex;
       }
       return true; // When no annotation is selected, all are visible
     },
@@ -257,35 +263,61 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       if (visibleLabels === null) return true; // Show all labels if visibleLabels is null
       return visibleLabels.some((label) => label.text === labelText);
     };
-    const searchResultAnnotations = searchResults.map((result, index) => {
-      return new ServerSpanAnnotation(
-        0, // page number (assuming single page for text)
-        {
-          id: "search-result",
-          text: "Search Result",
-          color: "#ffff00",
-          used_by_analyses: {
-            pageInfo: {
-              hasNextPage: false,
-              hasPreviousPage: false, // Added missing required property
+
+    /** Adjust search results based on selectedSearchResultIndex */
+    const filteredSearchResults =
+      selectedSearchResultIndex !== undefined &&
+      selectedSearchResultIndex !== null
+        ? [searchResults[selectedSearchResultIndex]]
+        : searchResults;
+
+    const searchResultAnnotations = filteredSearchResults
+      .map((result, index) => {
+        const actualIndex =
+          selectedSearchResultIndex !== undefined &&
+          selectedSearchResultIndex !== null
+            ? selectedSearchResultIndex
+            : index;
+
+        if (
+          !result ||
+          typeof result.start_index === "undefined" ||
+          typeof result.end_index === "undefined"
+        ) {
+          console.warn(`Invalid search result at index ${index}`);
+          return null;
+        }
+
+        return new ServerSpanAnnotation(
+          0, // page number (assuming single page for text)
+          {
+            id: "search-result",
+            text: "Search Result",
+            color: "#ffff00",
+            used_by_analyses: {
+              pageInfo: {
+                hasNextPage: false,
+                hasPreviousPage: false,
+              },
+              edges: [],
             },
-            edges: [],
           },
-          // Include other required properties if necessary
-        },
-        text.slice(result.start_index, result.end_index),
-        false, // structural
-        {
-          start: result.start_index,
-          end: result.end_index,
-        },
-        [], // myPermissions
-        false, // approved
-        false, // rejected
-        false, // canComment
-        `search-result-${index}` // id
+          text.slice(result.start_index, result.end_index),
+          false, // structural
+          {
+            start: result.start_index,
+            end: result.end_index,
+          },
+          [], // myPermissions
+          false, // approved
+          false, // rejected
+          false, // canComment
+          `${actualIndex}` // id
+        );
+      })
+      .filter(
+        (annotation): annotation is ServerSpanAnnotation => annotation !== null
       );
-    });
 
     const sortedAnnotations = [...annotations, ...searchResultAnnotations]
       .filter(
@@ -335,9 +367,14 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       );
       addSpan(spanStart, spanEnd, spanAnnotations);
     }
-    console.log("New spans", newSpans);
     setSpans(newSpans);
-  }, [annotations, text, visibleLabels, searchResults]);
+  }, [
+    annotations,
+    text,
+    visibleLabels,
+    searchResults,
+    selectedSearchResultIndex,
+  ]);
 
   useEffect(() => {
     /**
@@ -527,7 +564,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         maxWidth={maxWidth}
       >
         {spans.map((span, index) => {
-          console.log("Span", span, index);
           const { text: spanText, annotations: spanAnnotations, start } = span;
 
           const spanStyle: React.CSSProperties = {
@@ -571,9 +607,9 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               .join(", ");
             spanStyle.backgroundImage = `linear-gradient(to right, ${gradientColors})`;
           }
-
-          const isSearchResult = spanAnnotations.some((ann) =>
-            ann.id.startsWith("search-result-")
+          const isSearchResult = spanAnnotations.some(
+            (ann) =>
+              ann.annotationLabel?.text?.startsWith("Search Result") ?? false
           );
 
           return (
@@ -585,11 +621,14 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               onMouseEnter={() => handleMouseEnter(index)}
               onMouseLeave={handleMouseLeave}
               ref={
+                // Start of Selection
                 isSearchResult
-                  ? (el) => {
-                      searchResultElementRefs.current[
-                        `search-result-${index}`
-                      ] = el;
+                  ? (el: HTMLElement | null) => {
+                      if (searchResultElementRefs?.current) {
+                        searchResultElementRefs.current[
+                          parseInt(span.annotations[0].id)
+                        ] = el;
+                      }
                     }
                   : undefined
               }

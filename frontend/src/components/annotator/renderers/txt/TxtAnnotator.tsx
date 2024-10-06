@@ -79,6 +79,9 @@ interface TxtAnnotatorProps {
   maxWidth?: string;
   selectedAnnotations: string[]; // Array of selected annotation IDs
   setSelectedAnnotations: (annotations: string[]) => void;
+
+  /** New prop to handle selected search result index */
+  selectedSearchResultIndex?: number;
 }
 
 interface LabelRenderData {
@@ -109,6 +112,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   maxWidth,
   selectedAnnotations,
   setSelectedAnnotations,
+  selectedSearchResultIndex,
 }) => {
   const [hoveredSpanIndex, setHoveredSpanIndex] = useState<number | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -228,9 +232,15 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       if (selectedAnnotations.length > 0) {
         return annotation.id === selectedAnnotations[0];
       }
-      return false;
+      if (
+        selectedSearchResultIndex !== undefined &&
+        selectedSearchResultIndex !== null
+      ) {
+        return annotation.id === `search-result-${selectedSearchResultIndex}`;
+      }
+      return true; // When no annotation is selected, all are visible
     },
-    [selectedAnnotations]
+    [selectedAnnotations, selectedSearchResultIndex]
   );
 
   const [spans, setSpans] = useState<

@@ -102,8 +102,8 @@ interface AnnotatorRendererProps {
   onSelectExtract?: (extract: ExtractType | null) => undefined | null | void;
   read_only: boolean;
   load_progress: number;
-  scrollToAnnotation?: ServerTokenAnnotation;
-  selectedAnnotation?: ServerTokenAnnotation[];
+  scrollToAnnotation?: ServerTokenAnnotation | ServerSpanAnnotation;
+  selectedAnnotation?: (ServerTokenAnnotation | ServerSpanAnnotation)[];
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
   show_structural_annotations: boolean;
@@ -112,7 +112,7 @@ interface AnnotatorRendererProps {
   human_span_labels: AnnotationLabelType[];
   relationship_labels: AnnotationLabelType[];
   document_labels: AnnotationLabelType[];
-  annotation_objs: ServerTokenAnnotation[];
+  annotation_objs: (ServerTokenAnnotation | ServerSpanAnnotation)[];
   doc_type_annotations: DocTypeAnnotation[];
   relationship_annotations: RelationGroup[];
   data_cells?: DatacellType[];

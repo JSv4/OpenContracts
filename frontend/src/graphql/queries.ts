@@ -647,6 +647,7 @@ export const GET_ANNOTATIONS = gql`
             pdfFile
             pawlsParseFile
             icon
+            fileType
             __typename
           }
           analysis {
@@ -663,8 +664,10 @@ export const GET_ANNOTATIONS = gql`
             color
             icon
             description
+            labelType
             __typename
           }
+          annotationType
           structural
           rawText
           isPublic
@@ -943,7 +946,9 @@ export const REQUEST_PAGE_ANNOTATION_DATA = gql`
           color
           icon
           description
+          labelType
         }
+        annotationType
         boundingBox
         page
         rawText
@@ -1203,6 +1208,7 @@ export const REQUEST_GET_EXTRACT = gql`
             text
             color
             icon
+            labelType
             description
           }
           document {
@@ -1215,6 +1221,7 @@ export const REQUEST_GET_EXTRACT = gql`
           rawText
           tokensJsons
           json
+          annotationType
           sourceNodeInRelationships {
             edges {
               node {
@@ -1508,6 +1515,7 @@ export const GET_DATACELLS_FOR_EXTRACT = gql`
             text
             color
             icon
+            labelType
             description
           }
           boundingBox
@@ -1557,6 +1565,7 @@ export const GET_ANNOTATIONS_FOR_ANALYSIS = gql`
           description
           labelType
         }
+        annotationType
         boundingBox
         page
         rawText
@@ -1642,6 +1651,7 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
           color
           icon
           description
+          labelType
         }
         userFeedback {
           edges {

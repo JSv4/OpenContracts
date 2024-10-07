@@ -436,6 +436,11 @@ export const DocumentAnnotator = ({
   // Effect to load document and pawls layer
   useEffect(() => {
     if (open && opened_document) {
+      console.log(
+        "React to DocumentAnnotator opening or document change",
+        opened_document
+      );
+
       viewStateVar(ViewState.LOADING);
       fetchDocumentAnalysesAndExtracts();
 
@@ -517,13 +522,15 @@ export const DocumentAnnotator = ({
               ...pageTextMaps,
             });
             setRawText(doc_text);
-            viewStateVar(ViewState.LOADED);
+            // Loaded state set by useEffect for state change in doc state store.
           })
           .catch((err) => {
             console.error("Error loading PDF document:", err);
             viewStateVar(ViewState.ERROR);
           });
       } else if (opened_document.fileType === "application/txt") {
+        console.log("React to TXT document");
+
         Promise.all([
           getDocumentRawText(opened_document.txtExtractFile || ""),
           loadAnnotations(),
@@ -614,6 +621,7 @@ export const DocumentAnnotator = ({
   useEffect(() => {
     if (opened_document.fileType === "application/pdf") {
       if (doc && pageTextMaps && pages.length > 0) {
+        console.log("React to PDF document loading properly", doc);
         viewStateVar(ViewState.LOADED);
       }
     }
@@ -635,6 +643,10 @@ export const DocumentAnnotator = ({
 
   // If we got a property of annotations to display (and ONLY those), do some post processing and update state variable(s) accordingly
   useEffect(() => {
+    console.log(
+      "React to displayOnlyTheseAnnotations",
+      displayOnlyTheseAnnotations
+    );
     if (displayOnlyTheseAnnotations) {
       setAnnotationObjs(
         convertToServerAnnotations(displayOnlyTheseAnnotations)
@@ -870,7 +882,12 @@ export const DocumentAnnotator = ({
           human_span_labels={human_span_labels}
           relationship_labels={relation_labels}
           document_labels={doc_type_labels}
-          annotation_objs={annotation_objs}
+          annotation_objs={[
+            ...annotation_objs,
+            ...(scrollToAnnotation
+              ? [convertToServerAnnotation(scrollToAnnotation)]
+              : []),
+          ]}
           doc_type_annotations={doc_type_annotations}
           relationship_annotations={relationship_annotations}
           data_cells={data_cells}
@@ -928,7 +945,10 @@ export const DocumentAnnotator = ({
       className="AnnotatorModal"
       closeIcon
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        onClose();
+        setDocument(undefined);
+      }}
       size="fullscreen"
     >
       <Modal.Content

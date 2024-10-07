@@ -81,10 +81,15 @@ export const PDF = ({
   const pdfStore = useContext(PDFStore);
 
   if (!pdfStore.doc) {
-    throw new Error("No Document");
+    // Instead of throwing an error, render nothing or a fallback UI
+    console.warn("PDF component rendered without a valid document.");
+    return null; // Or return a fallback UI
   }
+
   if (!pdfStore.pages) {
-    throw new Error("Document without Pages");
+    // Similarly, handle missing pages gracefully
+    console.warn("PDF component rendered without pages.");
+    return <div>No pages available.</div>;
   }
 
   return (

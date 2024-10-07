@@ -701,6 +701,14 @@ export const DocumentViewer = ({
     "DocumentViewer adapting to filetype: ",
     selected_document.fileType
   );
+
+  if (
+    !selected_document ||
+    (selected_document.fileType === "application/pdf" && !doc)
+  ) {
+    view_components = <></>;
+  }
+
   switch (selected_document.fileType) {
     case "application/pdf":
       view_components = (
@@ -761,6 +769,7 @@ export const DocumentViewer = ({
 
   return (
     <PDFStore.Provider
+      key={selected_document.id}
       value={{
         doc,
         pages,
@@ -900,7 +909,6 @@ export const DocumentViewer = ({
             />
           </SidebarContainer>
           <div className="PDFViewTopBarWrapper">
-            {/**TODO - swap out these components based on file type */}
             <AnnotatorTopbar
               opened_corpus={selected_corpus}
               opened_document={selected_document}

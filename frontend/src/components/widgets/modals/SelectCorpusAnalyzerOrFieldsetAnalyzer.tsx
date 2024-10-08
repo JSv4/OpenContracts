@@ -344,7 +344,12 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
   ];
 
   return (
-    <Modal open={open} onClose={onClose} style={{ zIndex: 999999 }}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      style={{ zIndex: 999999 }}
+      className="high-z-index-modal"
+    >
       <Modal.Header>
         Select {activeTab === "analyzer" ? "Analyzer" : "Fieldset"} for{" "}
         {document ? document.title : corpus?.title}

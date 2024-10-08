@@ -7,14 +7,14 @@ from django.utils import timezone
 from opencontractserver.tasks.doc_tasks import (
     extract_pdf_thumbnail,
     nlm_ingest_pdf,
-    set_doc_lock_state, extract_txt_thumbnail,
+    set_doc_lock_state, extract_txt_thumbnail, ingest_txt,
 )
 from opencontractserver.tasks.embeddings_task import calculate_embedding_for_doc_text
 
-logger= logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+
 
 def process_doc_on_create_atomic(sender, instance, created, **kwargs):
-
     # When a new document is created *AND* a pawls_parse_file is NOT present at creation,
     # run OCR and token extract. Sometimes a doc will be created with tokens preloaded,
     # such as when we do an import.
@@ -54,6 +54,7 @@ def process_doc_on_create_atomic(sender, instance, created, **kwargs):
 
             ingest_tasks = [
                 extract_txt_thumbnail.s(doc_id=instance.id),
+                ingest_txt.si(user_id=instance.creator.id, doc_id=instance.id),  # Currently a sentence parser
                 *(
                     [calculate_embedding_for_doc_text.si(doc_id=instance.id)]
                     if instance.embedding is None
@@ -63,7 +64,7 @@ def process_doc_on_create_atomic(sender, instance, created, **kwargs):
             ]
 
         else:
-            logger.warning(f"No ingest pipeline registered for {instance.file_type}")
+            logger.warning(f"No ingest pipeline configured for {instance.file_type}")
 
         # Send tasks to celery for async execution
         instance.processing_started = timezone.now()

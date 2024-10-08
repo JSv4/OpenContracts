@@ -142,6 +142,7 @@ const StyledTab = styled(Tab)`
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: hidden;
 
   .ui.secondary.menu {
     justify-content: center;
@@ -472,6 +473,7 @@ export const AnnotatorSidebar = ({
             menuItem: "Search",
             render: () => (
               <Tab.Pane
+                className="AnnotatorSidebar_Searchtab"
                 key="AnnotatorSidebar_Searchtab"
                 style={{
                   margin: "0px",
@@ -611,6 +613,7 @@ export const AnnotatorSidebar = ({
 
   return (
     <SidebarContainer
+      id="AnnotatorSidebarContainer"
       style={{ display: hideSidebar || show_minimal_layout ? "none" : "flex" }}
     >
       <TopSection>

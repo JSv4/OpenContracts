@@ -35,7 +35,7 @@ from config.graphql.graphene_types import (
     RelationshipType,
     UserExportType,
     UserFeedbackType,
-    UserType,
+    UserType, LabelTypeEnum,
 )
 from config.graphql.serializers import (
     AnnotationLabelSerializer,
@@ -74,10 +74,10 @@ from opencontractserver.tasks.permissioning_tasks import (
     make_corpus_public_task,
 )
 from opencontractserver.types.dicts import OpenContractsAnnotatedDocumentImportType
-from opencontractserver.types.enums import ExportType, PermissionTypes
+from opencontractserver.types.enums import ExportType, PermissionTypes, LabelType
 from opencontractserver.users.models import UserExport
 from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
-from opencontractserver.utils.files import is_plaintext
+from opencontractserver.utils.files import is_plaintext, is_plaintext_content
 from opencontractserver.utils.permissioning import (
     set_permissions_for_obj_to_user,
     user_has_permission_for_obj,
@@ -862,7 +862,7 @@ class UploadDocument(graphene.Mutation):
             kind = filetype.guess(file_bytes)
             if kind is None:
 
-                if is_plaintext(file_bytes):
+                if is_plaintext_content(file_bytes):
                     kind = "application/txt"
                 else:
                     return UploadDocument(
@@ -1094,13 +1094,14 @@ class AddAnnotation(graphene.Mutation):
             required=True,
             description="Id of the label that is applied via this annotation.",
         )
+        annotation_type = graphene.Argument(graphene.Enum.from_enum(LabelType), required=True)
 
     ok = graphene.Boolean()
     annotation = graphene.Field(AnnotationType)
 
     @login_required
     def mutate(
-        root, info, json, page, raw_text, corpus_id, document_id, annotation_label_id
+        root, info, json, page, raw_text, corpus_id, document_id, annotation_label_id, annotation_type
     ):
         corpus_pk = from_global_id(corpus_id)[1]
         document_pk = from_global_id(document_id)[1]
@@ -1116,6 +1117,7 @@ class AddAnnotation(graphene.Mutation):
             annotation_label_id=label_pk,
             creator=user,
             json=json,
+            annotation_type=annotation_type.value
         )
         annotation.save()
         set_permissions_for_obj_to_user(user, annotation, [PermissionTypes.CRUD])

@@ -48,6 +48,7 @@ const SearchResultCard: React.FC<{
         cursor: "pointer",
         transition: "all 0.3s ease",
         boxShadow: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)",
+        marginRight: ".5vw",
       }}
       onClick={() => {
         console.log("Clicked on result", index);
@@ -208,19 +209,21 @@ export const SearchSidebarWidget: React.FC = () => {
         }}
         attached="bottom"
       >
-        {textSearchMatches.length > 0 ? (
-          textSearchMatches.map((res, index) => (
-            <SearchResultCard
-              key={`SearchResultCard_${index}`}
-              index={index}
-              totalMatches={textSearchMatches.length}
-              res={res}
-              onResultClick={onResultClick}
-            />
-          ))
-        ) : (
-          <PlaceholderSearchResultCard />
-        )}
+        <div style={{ overflowY: "auto", height: "100%" }}>
+          {textSearchMatches.length > 0 ? (
+            textSearchMatches.map((res, index) => (
+              <SearchResultCard
+                key={`SearchResultCard_${index}`}
+                index={index}
+                totalMatches={textSearchMatches.length}
+                res={res}
+                onResultClick={onResultClick}
+              />
+            ))
+          ) : (
+            <PlaceholderSearchResultCard />
+          )}
+        </div>
       </Segment>
     </div>
   );

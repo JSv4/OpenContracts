@@ -35,7 +35,7 @@ def base_64_encode_bytes(doc_bytes: bytes):
 
 
 def convert_hex_to_rgb_tuple(color: str) -> tuple[int, ...]:
-    color_tuple = tuple(int(color[i : i + 2], 16) for i in (0, 2, 4))
+    color_tuple = tuple(int(color[i: i + 2], 16) for i in (0, 2, 4))
     return color_tuple
 
 
@@ -44,7 +44,6 @@ def convert_hex_to_rgb_tuple(color: str) -> tuple[int, ...]:
 def createHighlight(
     x1: int, y1: int, x2: int, y2: int, meta: dict, color: tuple[float, float, float]
 ) -> DictionaryObject:
-
     logger.info("createHighlight() - Starting...")
     logger.info(f"meta: {meta}")
     logger.info(f"color: {color}")
@@ -103,7 +102,6 @@ def add_highlight_to_page(highlight: DictionaryObject, page):
 def extract_pawls_from_pdfs_bytes(
     pdf_bytes: bytes,
 ) -> list[PawlsPagePythonType]:
-
     from pdfpreprocessor.preprocessors.tesseract import process_tesseract
 
     pdf_fragment_folder_path = pathlib.Path("/tmp/user_0/pdf_fragments")
@@ -229,6 +227,20 @@ def is_plaintext(file_path, sample_size=1024, threshold=0.7):
     except IOError:
         print(f"Error: Unable to read file {file_path}")
         return False
+
+
+def is_plaintext_content(content, sample_size=1024, threshold=0.7):
+    sample = content[0:sample_size]
+
+    # Count printable characters
+    printable_count = sum(1 for byte in sample if chr(byte) in string.printable)
+
+    # Calculate the ratio of printable characters
+    printable_ratio = printable_count / len(sample)
+
+    # If the ratio is above the threshold, consider it plaintext
+    return printable_ratio > threshold
+
 
 def create_text_thumbnail(text, width=300, height=400, font_size=12, margin=20, line_spacing=4):
     # Create a new white image

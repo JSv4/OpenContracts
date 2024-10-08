@@ -21,6 +21,7 @@ from pydantic import validate_arguments
 from config import celery_app
 from config.graphql.serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import (
+    SPAN_LABEL,
     TOKEN_LABEL,
     Annotation,
     AnnotationLabel,
@@ -231,6 +232,58 @@ def set_doc_lock_state(*args, locked: bool, doc_id: int):
 @celery_app.task(
     autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
 )
+def ingest_txt(user_id: int, doc_id: int) -> list[tuple[int, str]]:
+    import spacy
+
+    logger.info(f"ingest_txt() - split doc {doc_id} for user {user_id}")
+
+    label_obj = AnnotationLabel.objects.filter(
+        text="SENTENCE",
+        creator_id=user_id,
+        label_type=SPAN_LABEL,
+        read_only=True,
+    )
+    if label_obj.count() > 0:
+        label_obj = label_obj[0]
+    else:
+        label_obj = AnnotationLabel(
+            label_type=TOKEN_LABEL,
+            color="grey",
+            description="Sentence",
+            icon="expand",
+            text="SENTENCE",
+            creator_id=user_id,
+            read_only=True,
+        )
+        label_obj.save()
+
+    set_permissions_for_obj_to_user(
+        user_id, label_obj, [PermissionTypes.ALL]
+    )
+
+    doc = Document.objects.get(pk=doc_id)
+    doc_path = doc.txt_extract_file.name
+    txt_file = default_storage.open(doc_path, mode="r")
+
+    nlp = spacy.load("en_core_web_lg")
+
+    for sentence in nlp(txt_file).sents:
+        annot_obj = Annotation.objects.create(
+            raw_text=sent.text,
+            page=label_data["page"],
+            json={"start": sentence.start_char, "end":sentence.end_char},
+            annotation_label=label_obj,
+            document=doc,
+            creator_id=user_id,
+            annotation_type=SPAN_LABEL,
+            structural=True,  # Mark these explicitly as structural annotations.
+        )
+        annot_obj.save()
+        set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
+
+@celery_app.task(
+    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+)
 def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
     # TODO - seeing persistent failure of Thomas Foster Appelant vs ... and Caster Hinckley et all. vs...
     #  need to investigate why parser keeps failing on these two.
@@ -338,6 +391,7 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
                 annotation_label=label_obj,
                 document=doc,
                 creator_id=user_id,
+                annotation_type=TOKEN_LABEL,
                 structural=True,  # Mark these explicitly as structural annotations.
             )
             annot_obj.save()

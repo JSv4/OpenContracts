@@ -229,7 +229,7 @@ class Annotation(BaseOCModel):
 
     # This is kind of duplicative of the AnnotationLabel label_type, BUT,
     # it makes mores sense here. Slowly going to transition to this
-    label_type = django.db.models.CharField(
+    annotation_type = django.db.models.CharField(
         max_length=128,
         blank=False,
         null=False,

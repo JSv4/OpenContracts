@@ -62,3 +62,7 @@ div > .SettingsPopup {
 #ConfirmModal {
   z-index: 20001 !important;
 }
+
+.ui.dimmer.modals.page:has(.high-z-index-modal) {
+  z-index: 99996 !important;
+}

@@ -61,6 +61,7 @@ export const GET_DOCUMENTS = gql`
           description
           backendLock
           pdfFile
+          txtExtractFile
           fileType
           pawlsParseFile
           icon
@@ -139,6 +140,7 @@ export const SEARCH_DOCUMENTS = gql`
           description
           backendLock
           pdfFile
+          txtExtractFile
           fileType
           pawlsParseFile
           icon
@@ -237,6 +239,7 @@ export const GET_CORPUS_QUERY_DETAILS = gql`
           backendLock
           fileType
           pdfFile
+          txtExtractFile
           pawlsParseFile
           icon
         }
@@ -645,6 +648,7 @@ export const GET_ANNOTATIONS = gql`
             description
             backendLock
             pdfFile
+            txtExtractFile
             pawlsParseFile
             icon
             fileType
@@ -1214,6 +1218,7 @@ export const REQUEST_GET_EXTRACT = gql`
           document {
             id
             pdfFile
+            txtExtractFile
             pawlsParseFile
           }
           boundingBox

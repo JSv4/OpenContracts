@@ -133,7 +133,13 @@ USAGE_CAPPED_USER_CAN_EXPORT_CORPUS = env.bool(
 
 # UPLOAD CONTROLS
 # ------------------------------------------------------------------------------
-ALLOWED_DOCUMENT_MIMETYPES = ["application/pdf"]
+ALLOWED_DOCUMENT_MIMETYPES = [
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/txt"
+]
 
 # AUTHENTICATION
 # ------------------------------------------------------------------------------

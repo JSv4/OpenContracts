@@ -1,148 +1,162 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
-import { Divider, Header, Segment, Popup, Icon } from "semantic-ui-react";
-
-import styled, { ThemeContext } from "styled-components";
-
+import React, { useState, useRef, useEffect } from "react";
+import styled from "styled-components";
+import { Icon, Popup } from "semantic-ui-react";
+import _ from "lodash";
+import { AnnotationLabelType } from "../../../../graphql/types";
 import { SpanLabelCard, BlankLabelElement } from "./LabelElements";
 import { LabelSelectorDialog } from "./LabelSelectorDialog";
-
-import _ from "lodash";
-
-import "./LabelSelector.css";
-import { AnnotationStore } from "../../context";
-import { AnnotationLabelType } from "../../../../graphql/types";
 import { TruncatedText } from "../../../widgets/data-display/TruncatedText";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 
 interface LabelSelectorProps {
   sidebarWidth: string;
+  humanSpanLabelChoices: AnnotationLabelType[];
+  activeSpanLabel: AnnotationLabelType | null;
+  setActiveLabel: (label: AnnotationLabelType) => void;
 }
 
-export const LabelSelector = ({ sidebarWidth }: LabelSelectorProps) => {
+export const LabelSelector: React.FC<LabelSelectorProps> = ({
+  sidebarWidth,
+  humanSpanLabelChoices,
+  activeSpanLabel,
+  setActiveLabel,
+}) => {
   const { width } = useWindowDimensions();
-  let title_char_count = 24;
-  if (width >= 800) {
-    title_char_count = 36;
-  } else if (width >= 1024) {
-    title_char_count = 64;
-  }
-
-  const annotationStore = useContext(AnnotationStore);
-
-  // Some labels are not meant to be manually annotated (namely those for
-  // analyzer results). The label selector should not allow the user to select
-  // labels used by an analyzer (at least not for now), so we need to track that
-  // list separately.
-  const human_label_choices = annotationStore.humanSpanLabelChoices;
-  console.log("LabelSelector - human_label_choices", human_label_choices);
-  const active_label = annotationStore.activeSpanLabel;
-
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const debouncedHover = useRef(
-    _.debounce((open) => {
-      setOpen(open);
-    }, 500)
-  );
-
-  useEffect(() => {
-    console.log("Should open label selector");
-  }, [open]);
+  const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
 
   const onSelect = (label: AnnotationLabelType): void => {
-    annotationStore.setActiveLabel(label);
+    setActiveLabel(label);
+    setOpen(false);
   };
 
-  // Filter out already applied labels from the label options
-  let filtered_label_choices = active_label
-    ? human_label_choices.filter((obj) => obj.id !== active_label.id)
-    : human_label_choices;
+  const filteredLabelChoices = activeSpanLabel
+    ? humanSpanLabelChoices.filter((obj) => obj.id !== activeSpanLabel.id)
+    : humanSpanLabelChoices;
 
-  console.log("Filtered label choices: ", filtered_label_choices);
+  const handleOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
 
   return (
-    <Popup
-      open={open}
-      onMouseEnter={() => debouncedHover.current(true)}
-      onMouseLeave={() => debouncedHover.current(false)}
-      position="top left"
-      offset={[100, 0]}
-      trigger={
-        <LabelSelectorWidgetContainer
-          sidebarWidth={sidebarWidth}
-          onMouseEnter={() => debouncedHover.current(true)}
-          onMouseLeave={() => debouncedHover.current(false)}
-        >
-          <div className="LabelSelector_ContentFlexContainer">
-            <Segment
-              inverted
-              secondary
-              className="LabelSelector_HeaderSegment"
-              attached="top"
-            >
-              <div
-                className="LabelSelector_Ellipses"
-                onClick={() => setOpen(!open)}
-              >
-                <Icon className="glowable_icon" name="ellipsis vertical" />
-              </div>
-              <Divider
-                horizontal
-                style={{ margin: "0px", paddingRight: "10px" }}
-              >
-                <Header as="h5">
-                  <TruncatedText
-                    text={
-                      active_label
-                        ? "Text Label To Apply:"
-                        : "Select Text Label to Apply"
-                    }
-                    limit={title_char_count}
+    <LabelSelectorContainer ref={containerRef}>
+      <StyledPopup
+        trigger={
+          <LabelSelectorWidgetContainer sidebarWidth={sidebarWidth}>
+            <LabelSelectorContent>
+              <HeaderSection>
+                <IconWrapper>
+                  <StyledIcon name="ellipsis vertical" />
+                </IconWrapper>
+                <TruncatedText
+                  text={
+                    activeSpanLabel
+                      ? "Text Label To Apply:"
+                      : "Select Text Label to Apply"
+                  }
+                  limit={titleCharCount}
+                />
+              </HeaderSection>
+              <BodySection>
+                {activeSpanLabel ? (
+                  <SpanLabelCard
+                    key={activeSpanLabel.id}
+                    label={activeSpanLabel}
                   />
-                </Header>
-              </Divider>
-            </Segment>
-            <Segment
-              className="LabelSelector_BodySegment"
-              inverted
-              secondary
-              attached="bottom"
-            >
-              <div className="LabelSelector_CardWrapperDiv">
-                {active_label ? (
-                  <SpanLabelCard key={active_label.id} label={active_label} />
                 ) : (
                   <BlankLabelElement key="Blank_LABEL" />
                 )}
-              </div>
-            </Segment>
-          </div>
-        </LabelSelectorWidgetContainer>
-      }
-      style={{ zIndex: 9999 }}
-    >
-      {console.log("Popup content is rendering")}
-      <LabelSelectorDialog
-        labels={filtered_label_choices}
-        onSelect={onSelect}
-      />
-    </Popup>
+              </BodySection>
+            </LabelSelectorContent>
+          </LabelSelectorWidgetContainer>
+        }
+        on="click"
+        open={open}
+        onClose={handleClose}
+        onOpen={handleOpen}
+        position="top center"
+        flowing
+        hoverable
+      >
+        <PopupContent>
+          <LabelSelectorDialog
+            labels={filteredLabelChoices}
+            onSelect={onSelect}
+          />
+        </PopupContent>
+      </StyledPopup>
+    </LabelSelectorContainer>
   );
 };
 
-interface LabelSelectorWidgetContainerProps {
-  sidebarWidth: string;
-}
+const LabelSelectorContainer = styled.div`
+  position: relative;
+`;
 
-const LabelSelectorWidgetContainer =
-  styled.div<LabelSelectorWidgetContainerProps>(
-    ({ sidebarWidth }) => `
+const LabelSelectorWidgetContainer = styled.div<{ sidebarWidth: string }>`
   position: fixed;
   z-index: 1000;
   bottom: 2vh;
-  left: calc(${sidebarWidth} + 2vw);
+  left: calc(${(props) => props.sidebarWidth} + 2vw);
   display: flex;
   flex-direction: row;
   justify-content: center;
-`
-  );
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+const LabelSelectorContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+`;
+
+const HeaderSection = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #e9ecef;
+  border-bottom: 1px solid #dee2e6;
+`;
+
+const IconWrapper = styled.div`
+  margin-right: 10px;
+`;
+
+const StyledIcon = styled(Icon)`
+  color: #495057;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #212529;
+  }
+`;
+
+const BodySection = styled.div`
+  padding: 15px;
+`;
+
+const PopupContent = styled.div`
+  width: 300px;
+  max-width: 90vw;
+`;
+
+const StyledPopup = styled(Popup)`
+  &.ui.popup {
+    z-index: 2000 !important;
+  }
+`;

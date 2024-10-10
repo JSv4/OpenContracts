@@ -36,22 +36,6 @@ djangorestframework==3.15.2  # https://github.com/encode/django-rest-framework
 django-cors-headers==3.13.0  # https://github.com/adamchainz/django-cors-headers
 drf-extra-fields==3.7.0  # https://github.com/Hipo/drf-extra-fields
 
-# PAWLS-related (for creating features for PDF annotation frontend based on PAWLS)
-# ------------------------------------------------------------------------------
-# Pawls preprocessors are available as a command line utility in their repo for now
-# BUT we can install them from their github repo subdirectory using the syntax below:
-git+https://github.com/JSv4/PDF-Preprocessors@v1.0.5  # TODO - DEPRECATED. REMOVE.
-scikit-learn
-pdfplumber
-pytesseract
-tabulate
-pycocotools
-click>=6.7
-tqdm
-pdfminer
-pdf2image
-poppler-utils
-
 # Doc Analysis (NLP dependencies, placeholder) - WARNING, these are all in same environment... not ideal.
 # ------------------------------------------------------------------------------
 PyPDF2==3.0.1  # https://github.com/mstamy2/PyPDF2

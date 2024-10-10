@@ -26,7 +26,6 @@ import {
   showAnnotationLabels,
   openedCorpus,
   openedDocument,
-  selectedAnalysis,
 } from "../../../graphql/cache";
 import {
   AnalysisType,
@@ -39,7 +38,7 @@ import { SearchSidebarWidget } from "../search_widget/SearchSidebarWidget";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { SingleDocumentExtractResults } from "../../extracts/SingleDocumentExtractResults";
-import { label_display_options, PermissionTypes } from "../../types";
+import { PermissionTypes } from "../../types";
 import { getPermissions } from "../../../utils/transform";
 import { PlaceholderCard } from "../../placeholders/PlaceholderCard";
 import { CorpusStats } from "../../widgets/data-display/CorpusStatus";
@@ -143,6 +142,7 @@ const StyledTab = styled(Tab)`
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: hidden;
 
   .ui.secondary.menu {
     justify-content: center;
@@ -473,6 +473,7 @@ export const AnnotatorSidebar = ({
             menuItem: "Search",
             render: () => (
               <Tab.Pane
+                className="AnnotatorSidebar_Searchtab"
                 key="AnnotatorSidebar_Searchtab"
                 style={{
                   margin: "0px",
@@ -612,6 +613,7 @@ export const AnnotatorSidebar = ({
 
   return (
     <SidebarContainer
+      id="AnnotatorSidebarContainer"
       style={{ display: hideSidebar || show_minimal_layout ? "none" : "flex" }}
     >
       <TopSection>

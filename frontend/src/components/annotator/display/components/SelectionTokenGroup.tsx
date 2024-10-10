@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { PDFPageInfo, TokenId } from "../context";
+import { PDFPageInfo, TokenId } from "../../context";
 import { SelectionTokenSpan } from "./Tokens";
 
 import uniqueId from "lodash/uniqueId";

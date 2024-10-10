@@ -120,6 +120,7 @@ class LabelTypeEnum(graphene.Enum):
     DOC_TYPE_LABEL = "DOC_TYPE_LABEL"
     TOKEN_LABEL = "TOKEN_LABEL"
     METADATA_LABEL = "METADATA_LABEL"
+    SPAN_LABEL = "SPAN_LABEL"
 
 
 class AnnotationSummaryType(graphene.ObjectType):

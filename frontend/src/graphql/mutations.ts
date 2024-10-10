@@ -679,6 +679,7 @@ export interface NewAnnotationOutputType {
       page: number;
       rawText: string;
       json: MultipageAnnotationJson;
+      annotationType: LabelType;
       annotationLabel: AnnotationLabelType;
       myPermissions: string[];
       isPublic: boolean;
@@ -702,6 +703,7 @@ export interface NewAnnotationInputType {
   corpusId: string;
   documentId: string;
   annotationLabelId: string;
+  annotationType: LabelType;
 }
 
 export const REQUEST_ADD_ANNOTATION = gql`
@@ -712,6 +714,7 @@ export const REQUEST_ADD_ANNOTATION = gql`
     $corpusId: String!
     $documentId: String!
     $annotationLabelId: String!
+    $annotationType: LabelType!
   ) {
     addAnnotation(
       json: $json
@@ -720,6 +723,7 @@ export const REQUEST_ADD_ANNOTATION = gql`
       corpusId: $corpusId
       documentId: $documentId
       annotationLabelId: $annotationLabelId
+      annotationType: $annotationType
     ) {
       ok
       annotation {
@@ -730,6 +734,7 @@ export const REQUEST_ADD_ANNOTATION = gql`
         json
         isPublic
         myPermissions
+        annotationType
         annotationLabel {
           id
           icon

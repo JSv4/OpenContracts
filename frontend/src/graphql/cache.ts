@@ -18,6 +18,7 @@ import {
   FieldsetType,
   ColumnType,
   CorpusQueryType,
+  LabelType,
 } from "./types";
 import { ViewState } from "../components/types";
 
@@ -234,6 +235,7 @@ export const selectedLabelsetIds = makeVar<string[]>([]);
 /**
  * Annotation-related global variables
  */
+export const filterToAnnotationType = makeVar<LabelType | null>(null);
 export const filterToLabelId = makeVar<string>("");
 export const filterToAnnotationLabelId = makeVar<string>(""); // Not used elsewhere. Maybe should be?
 export const selectedAnnotation = makeVar<ServerAnnotationType | null>(null);

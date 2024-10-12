@@ -85,7 +85,7 @@ interface TxtAnnotatorProps {
   maxWidth?: string;
   selectedAnnotations: string[]; // Array of selected annotation IDs
   setSelectedAnnotations: (annotations: string[]) => void;
-
+  showStructuralAnnotations: boolean;
   /** New prop to handle selected search result index */
   selectedSearchResultIndex?: number;
 }
@@ -118,6 +118,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   maxWidth,
   selectedAnnotations,
   setSelectedAnnotations,
+  showStructuralAnnotations,
   selectedSearchResultIndex,
 }) => {
   const [hoveredSpanIndex, setHoveredSpanIndex] = useState<number | null>(null);
@@ -326,8 +327,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       )
       .sort((a, b) => a.json.start - b.json.start);
 
-    console.log("Sorted annotations", sortedAnnotations);
-
     const newSpans: {
       start: number;
       end: number;
@@ -392,8 +391,10 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       const hoveredSpan = spans[hoveredSpanIndex];
       if (!hoveredSpan) return;
 
-      const selectedAnnotationsForSpan = hoveredSpan.annotations.filter((ann) =>
-        isAnnotationSelected(ann)
+      const selectedAnnotationsForSpan = hoveredSpan.annotations.filter(
+        (ann) =>
+          isAnnotationSelected(ann) &&
+          (showStructuralAnnotations || !ann.structural)
       );
 
       if (selectedAnnotationsForSpan.length === 0) {
@@ -516,7 +517,12 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     };
 
     calculateLabelPositions();
-  }, [hoveredSpanIndex, spans, isAnnotationSelected]);
+  }, [
+    hoveredSpanIndex,
+    spans,
+    isAnnotationSelected,
+    showStructuralAnnotations,
+  ]);
 
   /**
    * Converts a hex color code to RGBA.
@@ -575,8 +581,10 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             borderRadius: "5px",
           };
 
-          const selectedAnnotationsForSpan = spanAnnotations.filter((ann) =>
-            isAnnotationSelected(ann)
+          const selectedAnnotationsForSpan = spanAnnotations.filter(
+            (ann) =>
+              isAnnotationSelected(ann) &&
+              (showStructuralAnnotations || !ann.structural)
           );
 
           if (selectedAnnotationsForSpan.length === 1) {

@@ -260,6 +260,7 @@ export const DocumentAnnotator = ({
   >(GET_DOCUMENT_ANALYSES_AND_EXTRACTS, {
     variables: analysis_vars,
     skip: Boolean(displayOnlyTheseAnnotations),
+    fetchPolicy: "network-only",
   });
 
   // Hook #38
@@ -470,14 +471,12 @@ export const DocumentAnnotator = ({
         Promise.all([
           loadingTask.promise,
           getPawlsLayer(opened_document.pawlsParseFile || ""),
-          opened_document.allStructuralAnnotations || Promise.resolve([]),
           loadAnnotations(),
         ])
           .then(
-            ([pdfDoc, pawlsData, structuralAnns, annotationsData]: [
+            ([pdfDoc, pawlsData, annotationsData]: [
               PDFDocumentProxy,
               PageTokens[],
-              ServerAnnotationType[],
               QueryResult<
                 GetDocumentAnnotationsAndRelationshipsOutput,
                 GetDocumentAnnotationsAndRelationshipsInput
@@ -486,11 +485,6 @@ export const DocumentAnnotator = ({
               console.log("Retrieved annotations data:", annotationsData);
 
               setDocument(pdfDoc);
-              setStructuralAnnotations(
-                structuralAnns.map((ann, index, array) =>
-                  convertToServerAnnotation(ann)
-                )
-              );
               processAnnotationsData(annotationsData);
 
               const loadPages: Promise<PDFPageInfo>[] = [];
@@ -571,6 +565,13 @@ export const DocumentAnnotator = ({
           convertToServerAnnotation(annotation)
         ) ?? [];
       setAnnotationObjs(processedAnnotations);
+
+      if (data.data.document?.allStructuralAnnotations) {
+        const structuralAnns = data.data.document.allStructuralAnnotations.map(
+          (ann) => convertToServerAnnotation(ann)
+        );
+        setStructuralAnnotations(structuralAnns);
+      }
 
       const processedRelationships = data.data.document.allRelationships?.map(
         (rel) =>
@@ -692,7 +693,9 @@ export const DocumentAnnotator = ({
         // TODO - properly parse resulting annotation data
         if (data && data.analysis && data.analysis.fullAnnotationList) {
           const rawSpanAnnotations = data.analysis.fullAnnotationList.filter(
-            (annot) => annot.annotationLabel.labelType == LabelType.TokenLabel
+            (annot) =>
+              annot.annotationLabel.labelType === LabelType.TokenLabel ||
+              annot.annotationLabel.labelType === LabelType.SpanLabel
           );
           const rawDocAnnotations = data.analysis.fullAnnotationList.filter(
             (annot) => annot.annotationLabel.labelType == LabelType.DocTypeLabel

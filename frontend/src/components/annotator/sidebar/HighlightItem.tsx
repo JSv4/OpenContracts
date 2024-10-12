@@ -106,7 +106,6 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
   const my_input_relationships = relations.filter((relation) =>
     relation.targetIds.includes(annotation.id)
   );
-  console.log("Annotation over: ", annotation.rawText);
   return (
     <HighlightContainer
       color={annotation?.annotationLabel?.color}

@@ -213,6 +213,7 @@ export const GET_CORPUS_QUERY_DETAILS = gql`
           labelType
           readOnly
         }
+        annotationType
         rawText
         json
         sourceNodeInRelationships {
@@ -1647,6 +1648,23 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
   ) {
     document(id: $documentId) {
       id
+      allStructuralAnnotations {
+        id
+        page
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+        annotationType
+        rawText
+        json
+        myPermissions
+        structural
+      }
       allAnnotations(corpusId: $corpusId, analysisId: $analysisId) {
         id
         page

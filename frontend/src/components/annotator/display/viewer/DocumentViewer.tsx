@@ -755,6 +755,7 @@ export const DocumentViewer = ({
           maxWidth="100%"
           selectedAnnotations={selectedAnnotations}
           setSelectedAnnotations={setSelectedAnnotations}
+          showStructuralAnnotations={show_structural_annotations}
         />
       );
       break;

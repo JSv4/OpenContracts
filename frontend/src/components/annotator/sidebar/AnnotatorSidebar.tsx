@@ -21,11 +21,8 @@ import { RelationItem } from "./RelationItem";
 import "./AnnotatorSidebar.css";
 import { useReactiveVar } from "@apollo/client";
 import {
-  showSelectedAnnotationOnly,
-  showAnnotationBoundingBoxes,
-  showAnnotationLabels,
   openedCorpus,
-  openedDocument,
+  showStructuralAnnotations,
 } from "../../../graphql/cache";
 import {
   AnalysisType,
@@ -209,9 +206,8 @@ export const AnnotatorSidebar = ({
   fetchMore?: () => void;
 }) => {
   const annotationStore = useContext(AnnotationStore);
-  const label_display_behavior = useReactiveVar(showAnnotationLabels);
   const opened_corpus = useReactiveVar(openedCorpus);
-  const opened_document = useReactiveVar(openedDocument);
+  const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
 
   // Slightly kludgy way to handle responsive layout and drop sidebar once it becomes a pain
   // If there's enough interest to warrant a refactor, we can put some more thought into how
@@ -224,13 +220,6 @@ export const AnnotatorSidebar = ({
     allowInput,
     read_only ||
       (!selected_analysis && !selected_extract && !opened_corpus?.labelSet)
-  );
-
-  const show_selected_annotation_only = useReactiveVar(
-    showSelectedAnnotationOnly
-  );
-  const show_annotation_bounding_boxes = useReactiveVar(
-    showAnnotationBoundingBoxes
   );
 
   const [showCorpusStats, setShowCorpusStats] = useState(false);
@@ -253,8 +242,6 @@ export const AnnotatorSidebar = ({
   };
 
   const {
-    showStructuralLabels,
-    toggleShowStructuralLabels,
     textSearchMatches,
     selectedRelations,
     pdfAnnotations,
@@ -265,18 +252,29 @@ export const AnnotatorSidebar = ({
   const relations = pdfAnnotations.relations;
 
   const filteredAnnotations = useMemo(() => {
+    let return_annotations = [...annotations];
+    if (!show_structural_annotations) {
+      return_annotations = return_annotations.filter(
+        (annotation) => !annotation.structural
+      );
+    }
+
     if (
       !annotationStore.showOnlySpanLabels ||
       annotationStore.showOnlySpanLabels.length === 0
     ) {
-      return annotations;
+      return return_annotations;
     }
-    return annotations.filter((annotation) =>
+    return return_annotations.filter((annotation) =>
       annotationStore.showOnlySpanLabels?.some(
         (label) => label.id === annotation.annotationLabel.id
       )
     );
-  }, [annotations, annotationStore.showOnlySpanLabels]);
+  }, [
+    annotations,
+    annotationStore.showOnlySpanLabels,
+    show_structural_annotations,
+  ]);
 
   useEffect(() => {
     try {

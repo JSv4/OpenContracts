@@ -10,6 +10,7 @@ import {
   DocTypeAnnotation,
   PDFPageInfo,
   RelationGroup,
+  ServerSpanAnnotation,
   ServerTokenAnnotation,
 } from "./context";
 import {
@@ -169,7 +170,7 @@ export const DocumentAnnotator = ({
     ServerTokenAnnotation[]
   >([]);
   const [annotation_objs, setAnnotationObjs] = useState<
-    ServerTokenAnnotation[]
+    (ServerTokenAnnotation | ServerSpanAnnotation)[]
   >([]);
   const [doc_type_annotations, setDocTypeAnnotations] = useState<
     DocTypeAnnotation[]
@@ -332,6 +333,28 @@ export const DocumentAnnotator = ({
           (annotation) => convertToServerAnnotation(annotation)
         ) ?? [];
 
+      setAnnotationObjs((prevAnnotations) => {
+        const updatedAnnotations = prevAnnotations.map((prevAnnot) => {
+          const matchingNewAnnot = processedAnnotations.find(
+            (newAnnot) => newAnnot.id === prevAnnot.id
+          );
+          return matchingNewAnnot
+            ? { ...prevAnnot, ...matchingNewAnnot }
+            : prevAnnot;
+        });
+
+        const newAnnotations = processedAnnotations.filter(
+          (newAnnot) =>
+            !prevAnnotations.some((prevAnnot) => prevAnnot.id === newAnnot.id)
+        );
+
+        return [...updatedAnnotations, ...newAnnotations] as (
+          | ServerTokenAnnotation
+          | ServerSpanAnnotation
+        )[];
+      });
+
+      // Process relationships similarly if needed
       const processedRelationships =
         humanAnnotationsAndRelationshipsData.document?.allRelationships?.map(
           (relationship) =>
@@ -347,11 +370,21 @@ export const DocumentAnnotator = ({
             )
         ) ?? [];
 
-      setAnnotationObjs((prevAnnotations) => [
-        ...prevAnnotations,
-        ...processedAnnotations,
-      ]);
-      setRelationshipAnnotations(processedRelationships);
+      setRelationshipAnnotations((prevRelationships) => {
+        const updatedRelationships = prevRelationships.map((prevRel) => {
+          const matchingNewRel = processedRelationships.find(
+            (newRel) => newRel.id === prevRel.id
+          );
+          return matchingNewRel || prevRel;
+        });
+
+        const newRelationships = processedRelationships.filter(
+          (newRel) =>
+            !prevRelationships.some((prevRel) => prevRel.id === newRel.id)
+        );
+
+        return [...updatedRelationships, ...newRelationships];
+      });
 
       // Use labelSet.allAnnotationLabels to set the labels
       const allLabels =

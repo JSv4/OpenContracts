@@ -358,8 +358,8 @@ export const DocumentViewer = ({
 
     // If there is searchText, search document for matches
     if (searchText) {
-      // Use RegEx search
-      let exactMatch = new RegExp("\\b(" + searchText + ")\\b", "gi");
+      // Use RegEx search without word boundaries and case insensitive
+      let exactMatch = new RegExp(searchText, "gi");
       const matches = [...doc_text.matchAll(exactMatch)];
 
       if (selected_document.fileType === "application/txt") {
@@ -509,7 +509,6 @@ export const DocumentViewer = ({
         }
       }
     }
-    // console.log("New token matches", token_matches);
     setTextSearchMatches(search_hits);
     setSelectedTextSearchMatchIndex(0);
   }, [searchText]);

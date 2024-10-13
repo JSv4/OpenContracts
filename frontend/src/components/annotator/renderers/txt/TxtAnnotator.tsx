@@ -49,6 +49,7 @@ import React, {
   useCallback,
   useEffect,
   useContext,
+  createRef,
 } from "react";
 import { Label, LabelContainer, PaperContainer } from "./StyledComponents";
 import RadialButtonCloud, { CloudButtonItem } from "./RadialButtonCloud";
@@ -182,7 +183,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   const hideLabelsTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const annotationStore = useContext(AnnotationStore);
-  const { searchResultElementRefs } = annotationStore;
+  const { selectionElementRefs, searchResultElementRefs } = annotationStore;
 
   /**
    * Handles text selection and creates a new annotation.
@@ -340,6 +341,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         ? [searchResults[selectedSearchResultIndex]]
         : searchResults;
 
+    console.log("filteredSearchResults", filteredSearchResults);
     const searchResultAnnotations = filteredSearchResults
       .map((result, index) => {
         const actualIndex =
@@ -616,6 +618,27 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             spanStyle.backgroundImage = `linear-gradient(to right, ${gradientColors})`;
           }
 
+          // Collect refs for annotations associated with this span
+          const spanAnnotationRefs = spanAnnotations.map((annotation) => {
+            if (selectionElementRefs && selectionElementRefs.current) {
+              return selectionElementRefs.current?.[annotation.id];
+            }
+            return null;
+          });
+
+          // Collect ref for search result associated with this span
+          const searchResultIndex = searchResults
+            .map((result, i) => {
+              if (
+                result.start_index >= span.start &&
+                result.end_index <= span.end
+              ) {
+                return i;
+              }
+              return null;
+            })
+            .find((ref) => ref !== null);
+
           return (
             <AnnotatedSpan
               key={`span-${index}`}
@@ -626,6 +649,24 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               onMouseLeave={handleMouseLeave}
               approved={approved}
               rejected={rejected}
+              ref={(element) => {
+                // Assign the DOM element to all associated annotation refs
+
+                spanAnnotations.forEach((annotation) => {
+                  if (selectionElementRefs && selectionElementRefs.current) {
+                    selectionElementRefs.current[annotation.id] = element;
+                  }
+                });
+                // Assign the DOM element to the search result ref if applicable
+                if (
+                  searchResultIndex &&
+                  searchResultElementRefs &&
+                  searchResultElementRefs.current &&
+                  element
+                ) {
+                  searchResultElementRefs.current[searchResultIndex] = element;
+                }
+              }}
             >
               {spanText}
             </AnnotatedSpan>

@@ -4,6 +4,7 @@ import _ from "lodash";
 import { AnnotationStore } from "../context";
 import "./SearchWidgetStyles.css";
 import { TextSearchSpanResult, TextSearchTokenResult } from "../../types";
+import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 
 const PageHeader: React.FC<{
   result: TextSearchTokenResult | TextSearchSpanResult;
@@ -84,13 +85,7 @@ const SearchResultCard: React.FC<{
           {isTokenResult ? (
             res.fullContext
           ) : (
-            <span>
-              ...{res.text.slice(0, 50)}
-              <span style={{ backgroundColor: "yellow" }}>
-                {res.text.slice(50, -50)}
-              </span>
-              {res.text.slice(-50)}...
-            </span>
+            <TruncatedText text={res.text} limit={64} />
           )}
         </div>
       </Message.Content>

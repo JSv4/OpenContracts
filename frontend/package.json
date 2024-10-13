@@ -22,6 +22,7 @@
     "@types/react-textfit": "^1.1.0",
     "@types/styled-components": "^5.1.19",
     "axios": "^0.24.0",
+    "d3": "^7.9.0",
     "framer-motion": "6.*",
     "fuse.js": "^6.5.3",
     "graphql": "^16.2.0",
@@ -88,6 +89,7 @@
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.2",
+    "@types/d3": "^7.4.3",
     "@types/lodash.uniqueid": "^4.0.9",
     "@types/uuid": "^8.3.4",
     "babel-jest": "^29.7.0",

@@ -1,46 +1,12 @@
 /**
  * TxtAnnotator Component
  *
- * This component provides a text annotation interface for labeling and managing
- * span annotations within a given text.
- *
- * Key Features:
- * 1. Text display with highlighting for annotations
- * 2. Interactive label creation through text selection
- * 3. Hoverable and clickable labels for existing annotations
- * 4. Radial button cloud for annotation actions (edit, delete, approve, reject)
- * 5. Modal for editing annotation labels
- * 6. Support for multiple overlapping annotations
- * 7. Responsive label positioning around annotated spans
- * 8. Zoom functionality for text size adjustment
- *
- * Operation:
- * - Renders the input text as a series of spans, each potentially containing annotations
- * - Allows users to select text to create new annotations (if not in read-only mode)
- * - Displays floating labels for annotations when hovering over annotated spans
- * - Provides a radial button cloud for each label with annotation actions
- * - Supports focusing and selecting annotations for detailed view or actions
- * - Handles overlapping annotations with multi-color highlighting
- * - Dynamically calculates and positions labels around the mouse position over the annotated text
- * - Supports approval and rejection of annotations (if enabled)
- *
- * State Management:
- * - Uses multiple useState hooks for managing component state
- * - Utilizes useEffect for side effects like span calculation and label positioning
- * - Implements timers for delaying hover effects
- *
- * Styling:
- * - Applies dynamic styles for highlighting and label positioning
- * - Uses styled-components for consistent styling of sub-components
- *
- * Performance Considerations:
- * - Memoized with React.memo to prevent unnecessary re-renders
- *
- * Accessibility:
- * - Supports keyboard navigation and screen readers (to be verified)
- *
- * @param {TxtAnnotatorProps} props - The properties passed to the component
- * @returns {React.ReactElement} The rendered TxtAnnotator component
+ * Modifications:
+ * 1. Utilizes existing `selectedAnnotations` to focus on a single annotation when a label is clicked, hiding other labels for annotations applicable to the same character.
+ * 2. Enhances label-cloud visualization by:
+ *    - Enclosing each annotation covering the hovered character with a distinct colored dashed border.
+ *    - Drawing animated, moving dotted lines from each label to its corresponding annotation border.
+ * 3. Improves label positioning by ensuring a minimum offset from the span's bounding box to prevent overlap when spans are short.
  */
 
 import React, {
@@ -49,7 +15,6 @@ import React, {
   useCallback,
   useEffect,
   useContext,
-  createRef,
 } from "react";
 import { Label, LabelContainer, PaperContainer } from "./StyledComponents";
 import RadialButtonCloud, { CloudButtonItem } from "./RadialButtonCloud";
@@ -59,6 +24,7 @@ import { ServerSpanAnnotation, AnnotationStore } from "../../context";
 import { TextSearchSpanResult } from "../../../types";
 import { PermissionTypes } from "../../../types";
 import styled, { keyframes, css } from "styled-components";
+import * as d3 from "d3";
 
 interface TxtAnnotatorProps {
   text: string;
@@ -92,39 +58,50 @@ interface TxtAnnotatorProps {
 
 interface LabelRenderData {
   annotation: ServerSpanAnnotation;
-  position: { x: number; y: number };
+  x: number;
+  y: number;
+  width: number;
+  height: number;
   labelIndex: number;
 }
 
-// Define keyframe animations for glowing effects
+interface ConnectorLineProps {
+  color: string;
+}
+
 const glowGreen = keyframes`
-  0% {
+  from {
     box-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
   }
-  50% {
+  to {
     box-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
-  }
-  100% {
-    box-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
   }
 `;
 
 const glowRed = keyframes`
-  0% {
+  from {
     box-shadow: 0 0 5px rgba(255, 0, 0, 0.8);
   }
-  50% {
+  to {
     box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
-  }
-  100% {
-    box-shadow: 0 0 5px rgba(255, 0, 0, 0.8);
   }
 `;
 
-// Styled component for the span to include glowing effect
+const ConnectorLine = styled.svg`
+  position: absolute;
+  pointer-events: none;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+`;
+
 const AnnotatedSpan = styled.span<{
   approved?: boolean;
   rejected?: boolean;
+  hasBorder?: boolean;
+  borderColor?: string;
+  zIndex?: number;
 }>`
   position: relative;
   cursor: text;
@@ -145,6 +122,19 @@ const AnnotatedSpan = styled.span<{
       animation: ${glowRed} 2s infinite;
       border: 1px solid red;
       border-radius: 2px;
+    `}
+
+  ${(props) =>
+    props.hasBorder &&
+    css`
+      border: 2px dashed ${props.borderColor || "#000"};
+      border-radius: 4px;
+    `}
+
+  ${(props) =>
+    props.zIndex !== undefined &&
+    css`
+      z-index: ${props.zIndex};
     `}
 `;
 
@@ -178,92 +168,26 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   const [annotationToEdit, setAnnotationToEdit] =
     useState<ServerSpanAnnotation | null>(null);
   const [labelsToRender, setLabelsToRender] = useState<LabelRenderData[]>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const hideLabelsTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const annotationStore = useContext(AnnotationStore);
-  const { selectionElementRefs, searchResultElementRefs } = annotationStore;
+  const annotationElementRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  /**
-   * Handles text selection and creates a new annotation.
-   */
-  const handleMouseUp = useCallback(() => {
-    if (read_only || !allowInput) return;
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed) return;
-
-    const getCharIndex = (node: Node, offset: number): number => {
-      let el = node;
-      while (el && el.nodeType !== Node.TEXT_NODE) {
-        el = el.childNodes[offset] || el.nextSibling || el.parentNode;
-      }
-      if (!el) return 0;
-      const range = document.createRange();
-      range.setStart(containerRef.current!, 0);
-      range.setEnd(el, offset);
-      return range.toString().length;
-    };
-
-    const start = getCharIndex(selection.anchorNode!, selection.anchorOffset);
-    const end = getCharIndex(selection.focusNode!, selection.focusOffset);
-
-    let annotationStart = Math.min(start, end);
-    let annotationEnd = Math.max(start, end);
-
-    annotationEnd = Math.min(annotationEnd, text.length);
-
-    if (annotationEnd === annotationStart) return;
-
-    const newSpan = {
-      start: annotationStart,
-      end: annotationEnd,
-      text: text.slice(annotationStart, annotationEnd),
-    };
-
-    const newAnnotation = getSpan(newSpan);
-    createAnnotation(newAnnotation);
-
-    selection.removeAllRanges();
-  }, [allowInput, createAnnotation, getSpan, read_only, text]);
-
-  /**
-   * Handles mouse entering a span.
-   * @param spanIndex - Index of the hovered span
-   */
-  const handleMouseEnter = useCallback((spanIndex: number) => {
+  const handleMouseEnter = useCallback((index: number) => {
     if (hideLabelsTimeout.current) {
       clearTimeout(hideLabelsTimeout.current);
       hideLabelsTimeout.current = null;
     }
-    setHoveredSpanIndex(spanIndex);
+    setHoveredSpanIndex(index);
   }, []);
 
-  /**
-   * Handles mouse movement over a span.
-   * Not updating mousePosition anymore.
-   */
-  const handleMouseMove = useCallback(
-    (event: React.MouseEvent<HTMLSpanElement>, spanIndex: number) => {
-      // No need to update mousePosition
-      setHoveredSpanIndex(spanIndex);
-    },
-    []
-  );
-
-  /**
-   * Handles mouse leaving a span.
-   */
   const handleMouseLeave = useCallback(() => {
-    // Start a delay before hiding labels to allow time to move mouse to labels
     hideLabelsTimeout.current = setTimeout(() => {
       setHoveredSpanIndex(null);
     }, 200); // Adjust delay as needed
   }, []);
 
-  /**
-   * Handles mouse entering a label or action button.
-   */
   const handleLabelMouseEnter = useCallback(() => {
     if (hideLabelsTimeout.current) {
       clearTimeout(hideLabelsTimeout.current);
@@ -271,26 +195,16 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     }
   }, []);
 
-  /**
-   * Handles mouse leaving a label or action button.
-   */
   const handleLabelMouseLeave = useCallback(() => {
-    // Start a delay before hiding labels to allow time to move mouse back
     hideLabelsTimeout.current = setTimeout(() => {
       setHoveredSpanIndex(null);
     }, 200); // Adjust delay as needed
   }, []);
 
-  /**
-   * Handles clicking on a label to select or deselect an annotation.
-   * @param annotation - The annotation being clicked
-   */
   const handleLabelClick = useCallback(
     (annotation: ServerSpanAnnotation) => {
       if (selectedAnnotations.includes(annotation.id)) {
-        setSelectedAnnotations(
-          selectedAnnotations.filter((id) => id !== annotation.id)
-        );
+        setSelectedAnnotations([]);
       } else {
         setSelectedAnnotations([annotation.id]);
       }
@@ -298,25 +212,14 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     [selectedAnnotations, setSelectedAnnotations]
   );
 
-  /**
-   * Determines if an annotation is selected.
-   * @param annotation - The annotation to check
-   * @returns boolean indicating selection status
-   */
   const isAnnotationSelected = useCallback(
     (annotation: ServerSpanAnnotation) => {
       if (selectedAnnotations.length > 0) {
         return annotation.id === selectedAnnotations[0];
       }
-      if (
-        selectedSearchResultIndex !== undefined &&
-        selectedSearchResultIndex !== null
-      ) {
-        return parseInt(annotation.id) === selectedSearchResultIndex;
-      }
-      return true; // When no annotation is selected, all are visible
+      return true;
     },
-    [selectedAnnotations, selectedSearchResultIndex]
+    [selectedAnnotations]
   );
 
   const [spans, setSpans] = useState<
@@ -330,67 +233,11 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
 
   useEffect(() => {
     const isLabelVisible = (labelText: string) => {
-      if (visibleLabels === null) return true; // Show all labels if visibleLabels is null
+      if (visibleLabels === null) return true;
       return visibleLabels.some((label) => label.text === labelText);
     };
 
-    /** Adjust search results based on selectedSearchResultIndex */
-    const filteredSearchResults =
-      selectedSearchResultIndex !== undefined &&
-      selectedSearchResultIndex !== null
-        ? [searchResults[selectedSearchResultIndex]]
-        : searchResults;
-
-    console.log("filteredSearchResults", filteredSearchResults);
-    const searchResultAnnotations = filteredSearchResults
-      .map((result, index) => {
-        const actualIndex =
-          selectedSearchResultIndex !== undefined &&
-          selectedSearchResultIndex !== null
-            ? selectedSearchResultIndex
-            : index;
-
-        if (
-          !result ||
-          typeof result.start_index === "undefined" ||
-          typeof result.end_index === "undefined"
-        ) {
-          console.warn(`Invalid search result at index ${index}`);
-          return null;
-        }
-
-        return new ServerSpanAnnotation(
-          0, // page number (assuming single page for text)
-          {
-            id: "search-result",
-            text: "Search Result",
-            color: "#ffff00",
-            used_by_analyses: {
-              pageInfo: {
-                hasNextPage: false,
-                hasPreviousPage: false,
-              },
-              edges: [],
-            },
-          },
-          text.slice(result.start_index, result.end_index),
-          false, // structural
-          {
-            start: result.start_index,
-            end: result.end_index,
-          },
-          [], // myPermissions
-          false, // approved
-          false, // rejected
-          false, // canComment
-          `${actualIndex}` // id
-        );
-      })
-      .filter(
-        (annotation): annotation is ServerSpanAnnotation => annotation !== null
-      );
-
-    const sortedAnnotations = [...annotations, ...searchResultAnnotations]
+    const sortedAnnotations = annotations
       .filter(
         (ann) =>
           ann.annotationLabel.text && isLabelVisible(ann.annotationLabel.text)
@@ -437,18 +284,9 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       addSpan(spanStart, spanEnd, spanAnnotations);
     }
     setSpans(newSpans);
-  }, [
-    annotations,
-    text,
-    visibleLabels,
-    searchResults,
-    selectedSearchResultIndex,
-  ]);
+  }, [annotations, text, visibleLabels]);
 
   useEffect(() => {
-    /**
-     * Calculates label positions around the hovered span.
-     */
     const calculateLabelPositions = () => {
       const newLabelsToRender: LabelRenderData[] = [];
 
@@ -460,7 +298,15 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       const hoveredSpan = spans[hoveredSpanIndex];
       if (!hoveredSpan) return;
 
-      const selectedAnnotationsForSpan = hoveredSpan.annotations.filter(
+      // Filter annotations to show only the selected one if any
+      const annotationsToRender =
+        selectedAnnotations.length > 0
+          ? hoveredSpan.annotations.filter((ann) =>
+              selectedAnnotations.includes(ann.id)
+            )
+          : hoveredSpan.annotations;
+
+      const selectedAnnotationsForSpan = annotationsToRender.filter(
         (ann) => showStructuralAnnotations || !ann.structural
       );
 
@@ -489,77 +335,84 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         const baseX = spanX + spanRect.width / 2;
         const baseY = spanY + spanRect.height / 2;
 
-        const radius = 50; // Adjust radius as needed
-        const labelWidth = 100; // Adjust as needed
-        const labelHeight = 30; // Adjust as needed
+        // Calculate minimum radius based on span size to ensure offset
+        const minOffset = 20; // Minimum pixels between span and labels
+        const dynamicRadius =
+          Math.max(spanRect.width, spanRect.height) / 2 + minOffset;
+        const radius = Math.max(100, dynamicRadius); // Ensure a minimum radius
 
-        selectedAnnotationsForSpan.forEach((annotation, index) => {
-          const angle =
-            (index / selectedAnnotationsForSpan.length) * Math.PI * 2;
+        const labelWidth = 100; // Approximate label width
+        const labelHeight = 30; // Approximate label height
 
-          const x = baseX + radius * Math.cos(angle) - labelWidth / 2;
-          const y = baseY + radius * Math.sin(angle) - labelHeight / 2;
+        // Initialize label positions around the span
+        const initialPositions: LabelRenderData[] =
+          selectedAnnotationsForSpan.map((annotation, index) => {
+            const angle =
+              (index / selectedAnnotationsForSpan.length) * Math.PI * 2;
 
-          // Adjust x and y to ensure labels are within bounds
-          const adjustedX = Math.max(
-            0,
-            Math.min(x, containerElement.scrollWidth - labelWidth)
-          );
-          const adjustedY = Math.max(
-            0,
-            Math.min(y, containerElement.scrollHeight - labelHeight)
-          );
+            const x = baseX + radius * Math.cos(angle) - labelWidth / 2;
+            const y = baseY + radius * Math.sin(angle) - labelHeight / 2;
 
-          newLabelsToRender.push({
-            annotation,
-            position: { x: adjustedX, y: adjustedY },
-            labelIndex: index,
+            return {
+              annotation,
+              x,
+              y,
+              width: labelWidth,
+              height: labelHeight,
+              labelIndex: index,
+            };
           });
-        });
-      }
 
-      setLabelsToRender(newLabelsToRender);
+        // Run force simulation to adjust label positions
+        const simulation = d3
+          .forceSimulation(initialPositions)
+          .force(
+            "collide",
+            d3.forceCollide<LabelRenderData>((d) => d.width / 2 + 10)
+          )
+          .force(
+            "x",
+            d3
+              .forceX(baseX)
+              .strength(0.1)
+              .x((d) => d.x ?? 0)
+          )
+          .force(
+            "y",
+            d3
+              .forceY(baseY)
+              .strength(0.1)
+              .y((d) => d.y ?? 0)
+          )
+          .stop();
+
+        simulation.tick(100);
+
+        // Ensure labels stay within the container bounds
+        initialPositions.forEach((d) => {
+          d.x = Math.max(
+            0,
+            Math.min(d.x, containerElement.scrollWidth - d.width)
+          );
+          d.y = Math.max(
+            0,
+            Math.min(d.y, containerElement.scrollHeight - d.height)
+          );
+        });
+
+        setLabelsToRender(initialPositions);
+      }
     };
 
     calculateLabelPositions();
-  }, [
-    hoveredSpanIndex,
-    spans,
-    showStructuralAnnotations,
-    // Removed mousePosition from dependencies
-  ]);
+  }, [hoveredSpanIndex, spans, showStructuralAnnotations, selectedAnnotations]);
 
-  /**
-   * Converts a hex color code to RGBA.
-   * @param hex - The hex color string
-   * @param alpha - The alpha value
-   * @returns The RGBA color string
-   */
-  const hexToRgba = (hex: string, alpha: number): string => {
-    let r = 0,
-      g = 0,
-      b = 0;
-    if (hex.startsWith("#")) {
-      hex = hex.slice(1);
-    }
-    if (hex.length === 3) {
-      r = parseInt(hex[0] + hex[0], 16);
-      g = parseInt(hex[1] + hex[1], 16);
-      b = parseInt(hex[2] + hex[2], 16);
-    } else if (hex.length === 6) {
-      r = parseInt(hex.substring(0, 2), 16);
-      g = parseInt(hex.substring(2, 4), 16);
-      b = parseInt(hex.substring(4, 6), 16);
-    }
-    return `rgba(${r},${g},${b},${alpha})`;
-  };
-
-  const containerStyle: React.CSSProperties = {
-    fontSize: `${16 * zoom_level}px`,
-    lineHeight: `${1.6 * zoom_level}`,
-    position: "relative",
-    flex: 1,
-    overflow: "auto", // Ensure container can scroll
+  const hexToRgba = (hex: string, alpha: number) => {
+    const bigint = parseInt(hex.replace("#", ""), 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
   return (
@@ -567,27 +420,27 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       <PaperContainer
         id="PaperContainer"
         ref={containerRef}
-        onMouseUp={handleMouseUp}
+        style={{ position: "relative" }}
+        maxHeight={maxHeight}
+        maxWidth={maxWidth}
         onClick={() => {
           setSelectedAnnotations([]);
         }}
-        style={containerStyle}
-        maxHeight={maxHeight}
-        maxWidth={maxWidth}
       >
         {spans.map((span, index) => {
           const { text: spanText, annotations: spanAnnotations } = span;
 
-          const spanStyle: React.CSSProperties = {
-            display: "inline",
-            position: "relative",
-            cursor: "text",
-            userSelect: "text",
-            whiteSpace: "pre-wrap",
-          };
+          const spanStyle: React.CSSProperties = {};
 
-          // Determine if the span should have an approval/rejection glow
-          const selectedAnnotationsForSpan = spanAnnotations.filter(
+          // Filter annotations based on selection
+          const annotationsToRender =
+            selectedAnnotations.length > 0
+              ? spanAnnotations.filter((ann) =>
+                  selectedAnnotations.includes(ann.id)
+                )
+              : spanAnnotations;
+
+          const selectedAnnotationsForSpan = annotationsToRender.filter(
             (ann) =>
               isAnnotationSelected(ann) &&
               (showStructuralAnnotations || !ann.structural)
@@ -618,53 +471,27 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             spanStyle.backgroundImage = `linear-gradient(to right, ${gradientColors})`;
           }
 
-          // Collect refs for annotations associated with this span
-          const spanAnnotationRefs = spanAnnotations.map((annotation) => {
-            if (selectionElementRefs && selectionElementRefs.current) {
-              return selectionElementRefs.current?.[annotation.id];
-            }
-            return null;
-          });
-
-          // Collect ref for search result associated with this span
-          const searchResultIndex = searchResults
-            .map((result, i) => {
-              if (
-                result.start_index >= span.start &&
-                result.end_index <= span.end
-              ) {
-                return i;
-              }
-              return null;
-            })
-            .find((ref) => ref !== null);
+          // Determine if the span should have a border for connector lines
+          const hasBorder =
+            hoveredSpanIndex === index && selectedAnnotationsForSpan.length > 0;
 
           return (
             <AnnotatedSpan
               key={`span-${index}`}
               data-span-index={index}
-              style={spanStyle}
               onMouseEnter={() => handleMouseEnter(index)}
-              onMouseMove={(event) => handleMouseMove(event, index)}
               onMouseLeave={handleMouseLeave}
               approved={approved}
               rejected={rejected}
+              hasBorder={hasBorder}
+              borderColor={selectedAnnotationsForSpan[0]?.annotationLabel.color}
+              style={spanStyle}
               ref={(element) => {
-                // Assign the DOM element to all associated annotation refs
-
-                spanAnnotations.forEach((annotation) => {
-                  if (selectionElementRefs && selectionElementRefs.current) {
-                    selectionElementRefs.current[annotation.id] = element;
-                  }
-                });
-                // Assign the DOM element to the search result ref if applicable
-                if (
-                  searchResultIndex &&
-                  searchResultElementRefs &&
-                  searchResultElementRefs.current &&
-                  element
-                ) {
-                  searchResultElementRefs.current[searchResultIndex] = element;
+                if (element) {
+                  // Assign the DOM element to all associated annotation refs
+                  spanAnnotations.forEach((annotation) => {
+                    annotationElementRefs.current[annotation.id] = element;
+                  });
                 }
               }}
             >
@@ -672,97 +499,162 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             </AnnotatedSpan>
           );
         })}
-        {labelsToRender.map(({ annotation, position, labelIndex }) => {
-          // Build the list of actions based on permissions and structural property
-          const actions: CloudButtonItem[] = [];
-
-          // Include edit action if annotation is not structural and user has CAN_UPDATE permission
-          if (
-            !annotation.structural &&
-            annotation.myPermissions.includes(PermissionTypes.CAN_UPDATE)
-          ) {
-            actions.push({
-              name: "edit",
-              color: "#a3a3a3",
-              tooltip: "Edit Annotation",
-              onClick: () => {
-                setAnnotationToEdit(annotation);
-                setEditModalOpen(true);
-              },
-            });
-          }
-
-          // Include delete action if annotation is not structural and user has CAN_REMOVE permission
-          if (
-            !annotation.structural &&
-            annotation.myPermissions.includes(PermissionTypes.CAN_REMOVE)
-          ) {
-            actions.push({
-              name: "trash",
-              color: "#d3d3d3",
-              tooltip: "Delete Annotation",
-              onClick: () => {
-                deleteAnnotation(annotation.id);
-              },
-            });
-          }
-
-          if (approveAnnotation) {
-            actions.push({
-              name: "thumbs up",
-              color: "#b3b3b3",
-              tooltip: "Approve Annotation",
-              onClick: () => {
-                approveAnnotation(annotation.id);
-              },
-            });
-          }
-
-          if (rejectAnnotation) {
-            actions.push({
-              name: "thumbs down",
-              color: "#c3c3c3",
-              tooltip: "Reject Annotation",
-              onClick: () => {
-                rejectAnnotation(annotation.id);
-              },
-            });
-          }
-
-          return (
-            <LabelContainer
-              key={`${annotation.id}-${labelIndex}`}
-              style={{
-                position: "absolute",
-                left: `${position.x}px`,
-                top: `${position.y}px`,
-                transitionDelay: `${labelIndex * 0.05}s`,
-                opacity: 1,
-                pointerEvents: "auto", // Ensure labels can be interacted with
-              }}
-              onMouseEnter={handleLabelMouseEnter}
-              onMouseLeave={handleLabelMouseLeave}
-            >
-              <Label
-                id={`label-${annotation.id}-${labelIndex}`}
-                color={annotation.annotationLabel.color || "#cccccc"}
-                $index={labelIndex}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleLabelClick(annotation);
-                }}
-              >
-                {annotation.annotationLabel.text}
-              </Label>
-              <RadialButtonCloud
-                parentBackgroundColor={
-                  annotation.annotationLabel.color || "#cccccc"
+        {/* Render connector lines */}
+        {labelsToRender.length > 0 && (
+          <ConnectorLine>
+            <defs>
+              {labelsToRender.map(({ annotation }) => (
+                <marker
+                  key={`arrowhead-${annotation.id}`}
+                  id={`arrowhead-${annotation.id}`}
+                  viewBox="0 0 10 10"
+                  refX="5"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto"
+                >
+                  <path
+                    d="M 0 0 L 10 5 L 0 10 z"
+                    fill={annotation.annotationLabel.color || "#000"}
+                  />
+                </marker>
+              ))}
+            </defs>
+            {labelsToRender.map(
+              ({ annotation, x, y, width, height, labelIndex }) => {
+                const annotationElement =
+                  annotationElementRefs.current[annotation.id];
+                if (!annotationElement) {
+                  return null;
                 }
-                actions={actions}
-              />
-            </LabelContainer>
-          );
-        })}
+                const annotationRect =
+                  annotationElement.getBoundingClientRect();
+                const containerRect =
+                  containerRef.current!.getBoundingClientRect();
+
+                const endX =
+                  annotationRect.left -
+                  containerRect.left +
+                  annotationRect.width / 2;
+                const endY =
+                  annotationRect.top -
+                  containerRect.top +
+                  annotationRect.height / 2;
+
+                const labelCenterX = x + width / 2;
+                const labelCenterY = y + height / 2;
+
+                const pathData = `M${labelCenterX},${labelCenterY} 
+                                C${(labelCenterX + endX) / 2},${labelCenterY} 
+                                ${(labelCenterX + endX) / 2},${endY} 
+                                ${endX},${endY}`;
+
+                return (
+                  <path
+                    key={`connector-${annotation.id}`}
+                    d={pathData}
+                    stroke={annotation.annotationLabel.color || "#000"}
+                    strokeWidth="2"
+                    fill="none"
+                    markerEnd={`url(#arrowhead-${annotation.id})`}
+                  />
+                );
+              }
+            )}
+          </ConnectorLine>
+        )}
+        {/* Render labels */}
+        {labelsToRender.map(
+          ({ annotation, x, y, width, height, labelIndex }) => {
+            const actions: CloudButtonItem[] = [];
+
+            if (
+              !annotation.structural &&
+              annotation.myPermissions.includes(PermissionTypes.CAN_UPDATE)
+            ) {
+              actions.push({
+                name: "edit",
+                color: "#a3a3a3",
+                tooltip: "Edit Annotation",
+                onClick: () => {
+                  setAnnotationToEdit(annotation);
+                  setEditModalOpen(true);
+                },
+              });
+            }
+
+            if (
+              !annotation.structural &&
+              annotation.myPermissions.includes(PermissionTypes.CAN_REMOVE)
+            ) {
+              actions.push({
+                name: "trash",
+                color: "#d3d3d3",
+                tooltip: "Delete Annotation",
+                onClick: () => {
+                  deleteAnnotation(annotation.id);
+                },
+              });
+            }
+
+            if (approveAnnotation) {
+              actions.push({
+                name: "thumbs up",
+                color: "#b3b3b3",
+                tooltip: "Approve Annotation",
+                onClick: () => {
+                  approveAnnotation(annotation.id);
+                },
+              });
+            }
+
+            if (rejectAnnotation) {
+              actions.push({
+                name: "thumbs down",
+                color: "#c3c3c3",
+                tooltip: "Reject Annotation",
+                onClick: () => {
+                  rejectAnnotation(annotation.id);
+                },
+              });
+            }
+
+            return (
+              <LabelContainer
+                key={`${annotation.id}-${labelIndex}`}
+                style={{
+                  position: "absolute",
+                  left: `${x}px`,
+                  top: `${y}px`,
+                  opacity: 1,
+                  pointerEvents: "auto",
+                  zIndex: 1000 + labelIndex,
+                }}
+                onMouseEnter={handleLabelMouseEnter}
+                onMouseLeave={handleLabelMouseLeave}
+              >
+                <Label
+                  id={`label-${annotation.id}-${labelIndex}`}
+                  color={annotation.annotationLabel.color || "#cccccc"}
+                  $index={labelIndex}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLabelClick(annotation);
+                  }}
+                >
+                  {annotation.annotationLabel.text}
+                </Label>
+                <RadialButtonCloud
+                  parentBackgroundColor={
+                    annotation.annotationLabel.color || "#cccccc"
+                  }
+                  actions={actions}
+                />
+              </LabelContainer>
+            );
+          }
+        )}
       </PaperContainer>
       <Modal
         open={editModalOpen}

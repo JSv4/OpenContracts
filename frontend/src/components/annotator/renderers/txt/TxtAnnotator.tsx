@@ -57,6 +57,7 @@ import { AnnotationLabelType } from "../../../../graphql/types";
 import { ServerSpanAnnotation, AnnotationStore } from "../../context";
 import { TextSearchSpanResult } from "../../../types";
 import { PermissionTypes } from "../../../types";
+import styled, { keyframes, css } from "styled-components";
 
 interface TxtAnnotatorProps {
   text: string;
@@ -93,6 +94,58 @@ interface LabelRenderData {
   position: { x: number; y: number };
   labelIndex: number;
 }
+
+// Define keyframe animations for glowing effects
+const glowGreen = keyframes`
+  0% {
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
+  }
+`;
+
+const glowRed = keyframes`
+  0% {
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.8);
+  }
+`;
+
+// Styled component for the span to include glowing effect
+const AnnotatedSpan = styled.span<{
+  approved?: boolean;
+  rejected?: boolean;
+}>`
+  position: relative;
+  cursor: text;
+  user-select: text;
+  white-space: pre-wrap;
+
+  ${(props) =>
+    props.approved &&
+    css`
+      animation: ${glowGreen} 2s infinite;
+      border: 1px solid green;
+      border-radius: 2px;
+    `}
+
+  ${(props) =>
+    props.rejected &&
+    css`
+      animation: ${glowRed} 2s infinite;
+      border: 1px solid red;
+      border-radius: 2px;
+    `}
+`;
 
 const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   text,
@@ -521,7 +574,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         maxWidth={maxWidth}
       >
         {spans.map((span, index) => {
-          const { text: spanText, annotations: spanAnnotations, start } = span;
+          const { text: spanText, annotations: spanAnnotations } = span;
 
           const spanStyle: React.CSSProperties = {
             display: "inline",
@@ -531,33 +584,30 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             whiteSpace: "pre-wrap",
           };
 
+          // Determine if the span should have an approval/rejection glow
           const selectedAnnotationsForSpan = spanAnnotations.filter(
             (ann) =>
               isAnnotationSelected(ann) &&
               (showStructuralAnnotations || !ann.structural)
           );
 
+          let approved = false;
+          let rejected = false;
+
+          if (selectedAnnotationsForSpan.length > 0) {
+            approved = selectedAnnotationsForSpan.some((ann) => ann.approved);
+            rejected = selectedAnnotationsForSpan.some((ann) => ann.rejected);
+          }
+
+          // Apply background highlights based on annotations
           if (selectedAnnotationsForSpan.length === 1) {
-            spanStyle.backgroundColor = selectedAnnotationsForSpan[0]
-              .annotationLabel.color
-              ? hexToRgba(
-                  selectedAnnotationsForSpan[0].annotationLabel.color,
-                  0.3
-                )
+            const annotationColor =
+              selectedAnnotationsForSpan[0].annotationLabel.color;
+            spanStyle.backgroundColor = annotationColor
+              ? hexToRgba(annotationColor, 0.3)
               : "transparent";
-          } else if (selectedAnnotationsForSpan.length === 2) {
-            spanStyle.backgroundImage = `linear-gradient(to bottom, ${hexToRgba(
-              selectedAnnotationsForSpan[0].annotationLabel.color
-                ? selectedAnnotationsForSpan[0].annotationLabel.color
-                : "#fdfd96",
-              0.3
-            )} 50%, ${hexToRgba(
-              selectedAnnotationsForSpan[1].annotationLabel.color
-                ? selectedAnnotationsForSpan[1].annotationLabel.color
-                : "#fdfd96",
-              0.3
-            )} 50%)`;
-          } else if (selectedAnnotationsForSpan.length > 2) {
+          } else if (selectedAnnotationsForSpan.length > 1) {
+            // Handle overlapping annotations with gradients
             const gradientColors = selectedAnnotationsForSpan
               .map((ann) =>
                 hexToRgba(ann.annotationLabel.color || "transparent", 0.3)
@@ -565,42 +615,20 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               .join(", ");
             spanStyle.backgroundImage = `linear-gradient(to right, ${gradientColors})`;
           }
-          const isSearchResult = spanAnnotations.some(
-            (ann) =>
-              ann.annotationLabel?.text?.startsWith("Search Result") ?? false
-          );
-
-          // **Create a ref callback to register the span's DOM element**
-          const refCallback = (el: HTMLElement | null) => {
-            if (isSearchResult) {
-              if (searchResultElementRefs?.current) {
-                searchResultElementRefs.current[
-                  parseInt(span.annotations[0].id)
-                ] = el;
-              }
-            } else if (spanAnnotations.length > 0) {
-              // **Register the ref for jump-to-annotation functionality**
-              if (annotationStore.selectionElementRefs?.current) {
-                annotationStore.selectionElementRefs.current[
-                  spanAnnotations[0].id
-                ] = el;
-              }
-            }
-          };
 
           return (
-            <span
+            <AnnotatedSpan
               key={`span-${index}`}
-              style={spanStyle}
-              data-char-index={start}
               data-span-index={index}
+              style={spanStyle}
               onMouseEnter={() => handleMouseEnter(index)}
+              onMouseMove={(event) => handleMouseMove(event, index)}
               onMouseLeave={handleMouseLeave}
-              onMouseMove={(e) => handleMouseMove(e, index)}
-              ref={refCallback}
+              approved={approved}
+              rejected={rejected}
             >
               {spanText}
-            </span>
+            </AnnotatedSpan>
           );
         })}
         {labelsToRender.map(({ annotation, position, labelIndex }) => {

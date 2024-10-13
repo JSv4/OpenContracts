@@ -119,13 +119,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   showStructuralAnnotations,
   selectedSearchResultIndex,
 }) => {
-  // State to track hovered span index
   const [hoveredSpanIndex, setHoveredSpanIndex] = useState<number | null>(null);
-  // State to track mouse position over the span
-  const [mousePosition, setMousePosition] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [annotationToEdit, setAnnotationToEdit] =
     useState<ServerSpanAnnotation | null>(null);
@@ -192,19 +186,13 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   }, []);
 
   /**
-   * Handles mouse movement over a span to get mouse position.
+   * Handles mouse movement over a span.
+   * Not updating mousePosition anymore.
    */
   const handleMouseMove = useCallback(
     (event: React.MouseEvent<HTMLSpanElement>, spanIndex: number) => {
-      const containerElement = containerRef.current;
-      if (containerElement) {
-        const containerRect = containerElement.getBoundingClientRect();
-        const x = event.clientX - containerRect.left;
-        const y = event.clientY - containerRect.top;
-        setMousePosition({ x, y });
-        // Update hovered span index on mouse move
-        setHoveredSpanIndex(spanIndex);
-      }
+      // No need to update mousePosition
+      setHoveredSpanIndex(spanIndex);
     },
     []
   );
@@ -216,7 +204,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     // Start a delay before hiding labels to allow time to move mouse to labels
     hideLabelsTimeout.current = setTimeout(() => {
       setHoveredSpanIndex(null);
-      setMousePosition(null);
     }, 200); // Adjust delay as needed
   }, []);
 
@@ -237,7 +224,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     // Start a delay before hiding labels to allow time to move mouse back
     hideLabelsTimeout.current = setTimeout(() => {
       setHoveredSpanIndex(null);
-      setMousePosition(null);
     }, 200); // Adjust delay as needed
   }, []);
 
@@ -406,12 +392,12 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
 
   useEffect(() => {
     /**
-     * Calculates label positions around the mouse position over the annotated text.
+     * Calculates label positions around the hovered span.
      */
     const calculateLabelPositions = () => {
       const newLabelsToRender: LabelRenderData[] = [];
 
-      if (hoveredSpanIndex === null || mousePosition === null) {
+      if (hoveredSpanIndex === null) {
         setLabelsToRender([]);
         return;
       }
@@ -429,14 +415,26 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       }
 
       const containerElement = containerRef.current;
+      const spanElement = containerElement?.querySelector(
+        `span[data-span-index="${hoveredSpanIndex}"]`
+      ) as HTMLElement;
 
-      if (containerElement) {
+      if (containerElement && spanElement) {
         const containerRect = containerElement.getBoundingClientRect();
+        const spanRect = spanElement.getBoundingClientRect();
 
-        const baseX = mousePosition.x;
-        const baseY = mousePosition.y;
+        // Get scroll positions
+        const scrollLeft = containerElement.scrollLeft;
+        const scrollTop = containerElement.scrollTop;
 
-        const radius = 60; // Adjust radius as needed
+        // Calculate position relative to the container
+        const spanX = spanRect.left - containerRect.left + scrollLeft;
+        const spanY = spanRect.top - containerRect.top + scrollTop;
+
+        const baseX = spanX + spanRect.width / 2;
+        const baseY = spanY + spanRect.height / 2;
+
+        const radius = 50; // Adjust radius as needed
         const labelWidth = 100; // Adjust as needed
         const labelHeight = 30; // Adjust as needed
 
@@ -450,11 +448,11 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
           // Adjust x and y to ensure labels are within bounds
           const adjustedX = Math.max(
             0,
-            Math.min(x, containerRect.width - labelWidth)
+            Math.min(x, containerElement.scrollWidth - labelWidth)
           );
           const adjustedY = Math.max(
             0,
-            Math.min(y, containerRect.height - labelHeight)
+            Math.min(y, containerElement.scrollHeight - labelHeight)
           );
 
           newLabelsToRender.push({
@@ -469,7 +467,12 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     };
 
     calculateLabelPositions();
-  }, [hoveredSpanIndex, spans, showStructuralAnnotations, mousePosition]);
+  }, [
+    hoveredSpanIndex,
+    spans,
+    showStructuralAnnotations,
+    // Removed mousePosition from dependencies
+  ]);
 
   /**
    * Converts a hex color code to RGBA.
@@ -501,6 +504,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     lineHeight: `${1.6 * zoom_level}`,
     position: "relative",
     flex: 1,
+    overflow: "auto", // Ensure container can scroll
   };
 
   return (
@@ -660,10 +664,12 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             <LabelContainer
               key={`${annotation.id}-${labelIndex}`}
               style={{
-                left: position.x,
-                top: position.y,
+                position: "absolute",
+                left: `${position.x}px`,
+                top: `${position.y}px`,
                 transitionDelay: `${labelIndex * 0.05}s`,
                 opacity: 1,
+                pointerEvents: "auto", // Ensure labels can be interacted with
               }}
               onMouseEnter={handleLabelMouseEnter}
               onMouseLeave={handleLabelMouseLeave}

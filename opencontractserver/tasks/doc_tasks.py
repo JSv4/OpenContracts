@@ -4,8 +4,6 @@ import enum
 import io
 import json
 import logging
-import pathlib
-import uuid
 from typing import Any
 
 import requests
@@ -39,7 +37,8 @@ from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.files import (
     check_if_pdf_needs_ocr,
-    split_pdf_into_images, create_text_thumbnail,
+    split_pdf_into_images,
+    create_text_thumbnail,
 )
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 from opencontractserver.utils.text import __consolidate_common_equivalent_chars

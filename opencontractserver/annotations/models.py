@@ -97,7 +97,7 @@ class AnnotationLabel(BaseOCModel):
 
         constraints = [
             django.db.models.UniqueConstraint(
-                fields=["analyzer", "text", "creator"],
+                fields=["analyzer", "text", "creator", "label_type"],
                 name="Only install one label of given name for each analyzer_id PER user (no duplicates)",
             )
         ]

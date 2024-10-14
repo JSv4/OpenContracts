@@ -242,7 +242,30 @@ def is_plaintext_content(content, sample_size=1024, threshold=0.7):
     return printable_ratio > threshold
 
 
-def create_text_thumbnail(text, width=300, height=400, font_size=12, margin=20, line_spacing=4):
+def create_text_thumbnail(
+    text: str,
+    width: int = 300,
+    height: int = 400,
+    font_size: int = 12,
+    margin: int = 20,
+    line_spacing: int = 4
+) -> Image.Image:
+    """
+    Create a thumbnail image from the given text.
+
+    Args:
+        text (str): The text to render in the thumbnail.
+        width (int): The width of the thumbnail image.
+        height (int): The height of the thumbnail image.
+        font_size (int): The font size to use for the text.
+        margin (int): The margin around the text.
+        line_spacing (int): The spacing between lines of text.
+
+    Returns:
+        Image.Image: A PIL Image object containing the rendered text thumbnail.
+    """
+    logger.debug(f"Creating text thumbnail with dimensions {width}x{height}")
+
     # Create a new white image
     img = Image.new('RGB', (width, height), color='white')
     draw = ImageDraw.Draw(img)
@@ -250,14 +273,17 @@ def create_text_thumbnail(text, width=300, height=400, font_size=12, margin=20, 
     # Load a font
     try:
         font = ImageFont.truetype("arial.ttf", font_size)
+        logger.debug("Using Arial font")
     except IOError:
         font = ImageFont.load_default()
+        logger.debug("Using default font")
 
     # Calculate the maximum width of text
     max_width = width - 2 * margin
 
     # Wrap the text
     lines = textwrap.wrap(text, width=max_width // (font_size // 2))
+    logger.debug(f"Text wrapped into {len(lines)} lines")
 
     # Draw the text
     y_text = margin
@@ -267,10 +293,12 @@ def create_text_thumbnail(text, width=300, height=400, font_size=12, margin=20, 
 
         # Stop if we've reached the bottom of the image
         if y_text > height - margin:
+            logger.debug("Reached bottom of image, truncating text")
             break
 
     # Add some lines to simulate ruled paper
     for i in range(margin, height - margin, font_size + line_spacing):
         draw.line([(margin, i), (width - margin, i)], fill='lightblue', width=1)
 
+    logger.debug("Text thumbnail created successfully")
     return img

@@ -320,6 +320,9 @@ export const DocumentAnnotator = ({
         variables: {
           documentId: opened_document.id,
           corpusId: opened_corpus.id,
+          ...(selected_analysis
+            ? { analysisId: selected_analysis.id }
+            : { analysisId: "__none__" }),
         },
       });
     }
@@ -484,6 +487,9 @@ export const DocumentAnnotator = ({
             variables: {
               documentId: opened_document.id,
               corpusId: opened_corpus.id,
+              ...(selected_analysis
+                ? { analysisId: selected_analysis.id }
+                : { analysisId: "__none__" }),
             },
           });
         }

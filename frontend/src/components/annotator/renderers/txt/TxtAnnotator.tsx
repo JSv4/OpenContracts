@@ -132,6 +132,7 @@ const AnnotatedSpan = styled.span<{
 const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   text,
   annotations,
+  searchResults,
   getSpan,
   visibleLabels,
   availableLabels,
@@ -147,6 +148,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   selectedAnnotations,
   setSelectedAnnotations,
   showStructuralAnnotations,
+  selectedSearchResultIndex,
 }) => {
   const [hoveredSpanIndex, setHoveredSpanIndex] = useState<number | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -168,7 +170,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   const handleMouseLeave = useCallback(() => {
     hideLabelsTimeout.current = setTimeout(() => {
       setHoveredSpanIndex(null);
-    }, 200); // Adjust delay as needed
+    }, 1000); // Adjust delay as needed
   }, []);
 
   const handleLabelMouseEnter = useCallback(() => {
@@ -181,7 +183,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   const handleLabelMouseLeave = useCallback(() => {
     hideLabelsTimeout.current = setTimeout(() => {
       setHoveredSpanIndex(null);
-    }, 200); // Adjust delay as needed
+    }, 2000); // Adjust delay as needed
   }, []);
 
   const handleLabelClick = useCallback(
@@ -201,6 +203,8 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       end: number;
       text: string;
       annotations: ServerSpanAnnotation[];
+      isSearchResult?: boolean;
+      isSelectedSearchResult?: boolean;
     }[]
   >([]);
 
@@ -222,12 +226,16 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       end: number;
       text: string;
       annotations: ServerSpanAnnotation[];
+      isSearchResult?: boolean;
+      isSelectedSearchResult?: boolean;
     }[] = [];
 
     const addSpan = (
       start: number,
       end: number,
-      annotations: ServerSpanAnnotation[]
+      annotations: ServerSpanAnnotation[],
+      isSearchResult = false,
+      isSelectedSearchResult = false
     ) => {
       if (start >= end) return;
       newSpans.push({
@@ -235,6 +243,8 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         end,
         text: text.slice(start, end),
         annotations,
+        isSearchResult,
+        isSelectedSearchResult,
       });
     };
 
@@ -242,6 +252,10 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     sortedAnnotations.forEach((ann) => {
       annotationBoundaries.add(ann.json.start);
       annotationBoundaries.add(ann.json.end);
+    });
+    searchResults.forEach((result) => {
+      annotationBoundaries.add(result.start_index);
+      annotationBoundaries.add(result.end_index);
     });
     annotationBoundaries.add(0);
     annotationBoundaries.add(text.length);
@@ -254,10 +268,31 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       const spanAnnotations = sortedAnnotations.filter(
         (ann) => ann.json.start < spanEnd && ann.json.end > spanStart
       );
-      addSpan(spanStart, spanEnd, spanAnnotations);
+      const isSearchResult = searchResults.some(
+        (result) =>
+          result.start_index <= spanStart && result.end_index >= spanEnd
+      );
+      const isSelectedSearchResult =
+        isSearchResult &&
+        selectedSearchResultIndex !== undefined &&
+        searchResults[selectedSearchResultIndex].start_index <= spanStart &&
+        searchResults[selectedSearchResultIndex].end_index >= spanEnd;
+      addSpan(
+        spanStart,
+        spanEnd,
+        spanAnnotations,
+        isSearchResult,
+        isSelectedSearchResult
+      );
     }
     setSpans(newSpans);
-  }, [annotations, text, visibleLabels]);
+  }, [
+    annotations,
+    text,
+    visibleLabels,
+    searchResults,
+    selectedSearchResultIndex,
+  ]);
 
   useEffect(() => {
     const calculateLabelPositions = () => {
@@ -406,6 +441,52 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     calculateLabelPositions();
   }, [hoveredSpanIndex, spans, showStructuralAnnotations, selectedAnnotations]);
 
+  interface Corner {
+    x: number;
+    y: number;
+    distance?: number;
+  }
+
+  const getClosestCorner = (
+    labelX: number,
+    labelY: number,
+    spanRect: DOMRect,
+    containerRect: DOMRect,
+    scrollLeft: number,
+    scrollTop: number
+  ): Corner => {
+    const corners: Corner[] = [
+      {
+        x: spanRect.left - containerRect.left + scrollLeft,
+        y: spanRect.top - containerRect.top + scrollTop,
+      },
+      {
+        x: spanRect.right - containerRect.left + scrollLeft,
+        y: spanRect.top - containerRect.top + scrollTop,
+      },
+      {
+        x: spanRect.left - containerRect.left + scrollLeft,
+        y: spanRect.bottom - containerRect.top + scrollTop,
+      },
+      {
+        x: spanRect.right - containerRect.left + scrollLeft,
+        y: spanRect.bottom - containerRect.top + scrollTop,
+      },
+    ];
+
+    return corners.reduce(
+      (closest, corner) => {
+        const distance = Math.sqrt(
+          Math.pow(labelX - corner.x, 2) + Math.pow(labelY - corner.y, 2)
+        );
+        return distance < (closest.distance ?? Infinity)
+          ? { ...corner, distance }
+          : closest;
+      },
+      { x: 0, y: 0, distance: Infinity } as Corner
+    );
+  };
+
   return (
     <>
       <PaperContainer
@@ -419,7 +500,12 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         }}
       >
         {spans.map((span, index) => {
-          const { text: spanText, annotations: spanAnnotations } = span;
+          const {
+            text: spanText,
+            annotations: spanAnnotations,
+            isSearchResult,
+            isSelectedSearchResult,
+          } = span;
 
           const spanStyle: React.CSSProperties = {};
 
@@ -462,6 +548,12 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
 
           const borderColor =
             selectedAnnotationsForSpan[0]?.annotationLabel.color || "#000";
+
+          if (isSearchResult) {
+            spanStyle.backgroundColor = isSelectedSearchResult
+              ? "#FFFF00"
+              : "#FFFF99";
+          }
 
           return (
             <AnnotatedSpan
@@ -517,16 +609,14 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
                   const scrollLeft = containerElement?.scrollLeft ?? 0;
                   const scrollTop = containerElement?.scrollTop ?? 0;
 
-                  const endX =
-                    spanRect.left -
-                    containerRect.left +
-                    scrollLeft +
-                    spanRect.width / 2;
-                  const endY =
-                    spanRect.top -
-                    containerRect.top +
-                    scrollTop +
-                    spanRect.height / 2;
+                  const { x: endX, y: endY } = getClosestCorner(
+                    x + width / 2,
+                    y + height / 2,
+                    spanRect,
+                    containerRect,
+                    scrollLeft,
+                    scrollTop
+                  );
 
                   const labelCenterX = x + width / 2;
                   const labelCenterY = y + height / 2;

@@ -67,12 +67,12 @@ def doc_analyzer_task(max_retries=None):
                 delay = min(INITIAL_DELAY + (retry_count * DELAY_INCREMENT), MAX_DELAY)
                 logger.info(f"\tNew delay: {delay}")
 
-                # If we've reached MAX_DELAY, reset the retry count
-                if delay >= MAX_DELAY:
-                    delay = INITIAL_DELAY
+                # If we've reached MAX_DELAY, STOP.
+                if delay < MAX_DELAY:
+                    # delay = INITIAL_DELAY
 
-                logger.info("Starting retry...")
-                raise self.retry(countdown=delay)
+                    logger.info("Starting retry...")
+                    raise self.retry(countdown=delay)
 
             try:
                 # Retrieve necessary file contents
@@ -179,7 +179,7 @@ def doc_analyzer_task(max_retries=None):
 
                             # Convert to appropriate form of annotation depending on the document type...
                             # FOR application/pdf... we want token annotations
-                            if doc.file_type == "application/pdf":
+                            if doc.file_type in ["application/pdf"]:
                                 # Convert (TextSpan, str) pairs to OpenContractsAnnotationPythonType
                                 logger.info(f"Create Annotation Linked to {corpus_id}")
                                 span, label = span_label_pair
@@ -211,11 +211,11 @@ def doc_analyzer_task(max_retries=None):
                                 resulting_annotations.append(annot)
 
                             # FOR application/txt... we want span-based annotations
-                            elif doc.file_type == "application/txt":
+                            elif doc.file_type in ["application/txt"]:
                                 logger.info(f"Create Annotation Linked to {corpus_id}")
                                 span, label = span_label_pair
                                 label, _ = AnnotationLabel.objects.get_or_create(
-                                    text=annotation_data["annotationLabel"],
+                                    text=label,
                                     label_type=LabelType.SPAN_LABEL,
                                     creator=analysis.creator,
                                     analyzer=analysis.analyzer,
@@ -226,8 +226,8 @@ def doc_analyzer_task(max_retries=None):
                                     document=doc,
                                     analysis=analysis,
                                     annotation_label=label,
-                                    page=annotation_data["page"],
-                                    raw_text=annotation_data["rawText"],
+                                    page=1,
+                                    raw_text=pdf_text_extract[ span['start']:span['end']],
                                     annotation_type=LabelType.SPAN_LABEL,
                                     json={"start": span['start'], "end": span['end']},
                                     creator=analysis.creator,

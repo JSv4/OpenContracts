@@ -410,10 +410,13 @@ class AnalysisType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
     def resolve_full_annotation_list(self, info, document_id=None):
 
+
         results = self.annotations.all()
         if document_id is not None:
             document_pk = from_global_id(document_id)[1]
+            logger.info(f"Resolve full annotations for analysis {self.id} with doc {document_pk}")
             results = results.filter(document_id=document_pk)
+
         return results
 
     class Meta:

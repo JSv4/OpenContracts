@@ -46,7 +46,7 @@ class Document(BaseOCModel):
         null=True,
     )
     page_count = django.db.models.IntegerField(
-        default=-1,  # insane default to make it easy to find unhandled docs
+        default=0,
         null=False,
         blank=True,
     )

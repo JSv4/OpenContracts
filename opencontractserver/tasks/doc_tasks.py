@@ -9,12 +9,12 @@ import uuid
 from typing import Any
 
 import requests
-from celery import chord, group
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile, File
 from django.core.files.storage import default_storage
 from django.utils import timezone
+from PIL import Image
 from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
 from pydantic import validate_arguments
 
@@ -267,10 +267,10 @@ def ingest_txt(user_id: int, doc_id: int) -> list[tuple[int, str]]:
 
     nlp = spacy.load("en_core_web_lg")
 
-    for sentence in nlp(txt_file).sents:
+    for sentence in nlp(txt_file.read()).sents:
         annot_obj = Annotation.objects.create(
-            raw_text=sent.text,
-            page=label_data["page"],
+            raw_text=sentence.text,
+            page=1,
             json={"start": sentence.start_char, "end":sentence.end_char},
             annotation_label=label_obj,
             document=doc,
@@ -657,22 +657,45 @@ def extract_pdf_thumbnail(*args, doc_id=-1, **kwargs):
             f"Unable to create a screenshot for doc_id {doc_id} due to error: {e}"
         )
 
-@celery_app.task()
-def extract_txt_thumbnail(*args, doc_id=-1, **kwargs):
 
+@celery_app.task()
+def extract_txt_thumbnail(doc_id: int) -> None:
+    """
+    Create a thumbnail image from the text content of a document.
+
+    Args:
+        doc_id (int): The ID of the document to process.
+
+    Raises:
+        Exception: If there's an error during the thumbnail creation process.
+    """
     try:
         document = Document.objects.get(pk=doc_id)
-        file_object = default_storage.open(document.txt_extract_file.name, mode="r")
-        text = file_object.read()
+        
+        # Read the text content
+        with default_storage.open(document.txt_extract_file.name, 'r') as file_object:
+            text = file_object.read()
+        
+        logger.debug(f"Text content length: {len(text)}")
 
+        # Create the thumbnail image
         img = create_text_thumbnail(text)
+        
+        if img is None or not isinstance(img, Image.Image):
+            logger.error(f"create_text_thumbnail returned invalid image for doc_id {doc_id}")
+            return
+
+        logger.debug(f"Thumbnail image size: {img.size}")
+
+        # Save the image
         img_byte_arr = io.BytesIO()
         img.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
+        
+        icon_file = ContentFile(img_byte_arr.getvalue())
+        document.icon.save(f"{doc_id}_icon.png", icon_file)
 
-        img_bytes = io.BytesIO()
-        icon_file = File(img_bytes)
-        document.icon.save(f"./{doc_id}_icon.png", icon_file)
+        logger.info(f"Thumbnail created successfully for doc_id {doc_id}")
 
     except Exception as e:
-        logger.error(f"Unable to create a screenshot for doc_id {doc_id} due to error: {e}")
+        logger.exception(f"Error creating thumbnail for doc_id {doc_id}: {str(e)}")

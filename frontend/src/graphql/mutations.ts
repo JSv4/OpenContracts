@@ -544,7 +544,7 @@ export interface UploadDocumentInputProps {
 }
 
 export interface UploadDocumentOutputProps {
-  data: {
+  uploadDocument: {
     document: {
       id: string;
       icon: string;
@@ -589,6 +589,7 @@ export const UPLOAD_DOCUMENT = gql`
         title
         description
         backendLock
+        fileType
         docAnnotations {
           edges {
             node {

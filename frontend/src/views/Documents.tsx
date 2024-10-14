@@ -28,19 +28,17 @@ import {
   selectedDocumentIds,
   showAddDocsToCorpusModal,
   showDeleteDocumentsModal,
-  showUploadNewDocumentsModal,
   viewingDocument,
-  uploadModalPreloadedFiles,
+  openedCorpus,
+  showUploadNewDocumentsModal,
 } from "../graphql/cache";
 
 import { CRUDModal } from "../components/widgets/CRUD/CRUDModal";
 import { ActionDropdownItem, LooseObject } from "../components/types";
 import { CardLayout } from "../components/layout/CardLayout";
-import { DocumentCards } from "../components/documents/DocumentCards";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
 import { DocumentType, LabelType } from "../graphql/types";
 import { AddToCorpusModal } from "../components/widgets/modals/AddToCorpusModal";
-import { DocumentUploadModal } from "../components/widgets/modals/DocumentUploadModal";
 import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";
 import {
@@ -49,13 +47,16 @@ import {
 } from "../components/forms/schemas";
 import { FilterToLabelsetSelector } from "../components/widgets/model-filters/FilterToLabelsetSelector";
 import { FilterToCorpusSelector } from "../components/widgets/model-filters/FilterToCorpusSelector";
+import { CorpusDocumentCards } from "../components/documents/CorpusDocumentCards";
 
 export const Documents = () => {
   const auth_token = useReactiveVar(authToken);
   const document_to_edit = useReactiveVar(editingDocument);
   const document_to_view = useReactiveVar(viewingDocument);
-  const document_to_open = useReactiveVar(openedDocument);
 
+  const show_upload_new_documents_modal = useReactiveVar(
+    showUploadNewDocumentsModal
+  );
   const filtered_to_labelset_id = useReactiveVar(filterToLabelsetId);
   const filtered_to_label_id = useReactiveVar(filterToLabelId);
   const filtered_to_corpus = useReactiveVar(filterToCorpus);
@@ -63,9 +64,6 @@ export const Documents = () => {
   const document_search_term = useReactiveVar(documentSearchTerm);
   const show_add_docs_to_corpus_modal = useReactiveVar(
     showAddDocsToCorpusModal
-  );
-  const show_upload_new_documents_modal = useReactiveVar(
-    showUploadNewDocumentsModal
   );
   const show_delete_documents_modal = useReactiveVar(showDeleteDocumentsModal);
 
@@ -290,6 +288,8 @@ export const Documents = () => {
   // LONG POLL CODE                                                             //
   ////////////////////////////////////////////////////////////////////////////////
 
+  const opened_corpus = useReactiveVar(openedCorpus);
+
   return (
     <CardLayout
       Modals={
@@ -300,18 +300,6 @@ export const Documents = () => {
               showAddDocsToCorpusModal(!show_add_docs_to_corpus_modal)
             }
             documents={document_items}
-          />
-          <DocumentUploadModal
-            refetch={() => {
-              refetchDocuments();
-              showUploadNewDocumentsModal(false);
-              uploadModalPreloadedFiles([]); // Clear preloaded files when closing the modal
-            }}
-            open={Boolean(show_upload_new_documents_modal)}
-            onClose={() => {
-              showUploadNewDocumentsModal(false);
-              uploadModalPreloadedFiles([]); // Clear preloaded files when closing the modal
-            }}
           />
           <ConfirmModal
             message={`Are you sure you want to delete these documents?`}
@@ -393,15 +381,7 @@ export const Documents = () => {
         />
       }
     >
-      <DocumentCards
-        onClick={onOpen}
-        onShiftClick={onSelect}
-        items={document_items}
-        pageInfo={documents_data?.documents?.pageInfo}
-        loading={documents_loading}
-        loading_message="Loading Documents..."
-        fetchMore={fetchMoreDocuments}
-      />
+      <CorpusDocumentCards opened_corpus_id={opened_corpus?.id || null} />
     </CardLayout>
   );
 };

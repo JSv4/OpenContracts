@@ -11,11 +11,6 @@ import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisibl
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
-import {
-  showUploadNewDocumentsModal,
-  uploadModalPreloadedFiles,
-} from "../../graphql/cache";
-import { FileUploadPackageProps } from "../widgets/modals/DocumentUploadModal";
 
 interface DocumentCardProps {
   style?: Record<string, any>;
@@ -27,6 +22,8 @@ interface DocumentCardProps {
   onClick?: (document: DocumentType) => void;
   removeFromCorpus?: (doc_ids: string[]) => void | any;
   fetchMore: (args?: any) => void | any;
+  onDrop: (acceptedFiles: File[]) => void;
+  corpusId: string | null;
 }
 
 export const DocumentCards = ({
@@ -39,6 +36,8 @@ export const DocumentCards = ({
   onClick,
   removeFromCorpus,
   fetchMore,
+  onDrop,
+  corpusId,
 }: DocumentCardProps) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
@@ -110,23 +109,6 @@ export const DocumentCards = ({
   /**
    * Return DocumentItems
    */
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const filePackages: FileUploadPackageProps[] = acceptedFiles.map(
-      (file) => ({
-        file,
-        formData: {
-          title: file.name,
-          description: `Content summary for ${file.name}`,
-        },
-      })
-    );
-    showUploadNewDocumentsModal(true);
-    // We'll need to create a new reactive variable to store these files
-    // Add this to src/graphql/cache.ts:
-    // export const uploadModalPreloadedFiles = makeVar<FileUploadPackageProps[]>([]);
-    uploadModalPreloadedFiles(filePackages);
-  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

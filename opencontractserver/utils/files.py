@@ -245,7 +245,7 @@ def is_plaintext_content(content, sample_size=1024, threshold=0.7):
 def create_text_thumbnail(
     text: str,
     width: int = 300,
-    height: int = 400,
+    height: int = 300,
     font_size: int = 12,
     margin: int = 20,
     line_spacing: int = 4

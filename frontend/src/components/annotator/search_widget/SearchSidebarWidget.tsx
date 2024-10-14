@@ -1,4 +1,10 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { Header, Segment, Icon, Message, Form } from "semantic-ui-react";
 import _ from "lodash";
 import { AnnotationStore } from "../context";
@@ -102,23 +108,19 @@ export const SearchSidebarWidget: React.FC = () => {
     selectedTextSearchMatchIndex,
   } = annotationStore;
 
-  const [docSearchCache, setDocSearchCache] = useState<string | undefined>(
-    searchText
-  );
-
-  const debouncedExportSearch = useRef(
+  const debouncedExportSearch = useCallback(
     _.debounce((searchTerm: string) => {
       searchForText(searchTerm);
-    }, 1000)
+    }, 300),
+    [searchForText]
   );
 
   const handleDocSearchChange = (value: string) => {
-    setDocSearchCache(value);
-    debouncedExportSearch.current(value);
+    searchForText(value);
+    debouncedExportSearch(value);
   };
 
   const clearSearch = () => {
-    setDocSearchCache("");
     searchForText("");
   };
 
@@ -189,7 +191,7 @@ export const SearchSidebarWidget: React.FC = () => {
             }
             placeholder="Search document..."
             onChange={(e) => handleDocSearchChange(e.target.value)}
-            value={docSearchCache}
+            value={searchText}
             style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
           />
         </Form>

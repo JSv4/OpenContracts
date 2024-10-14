@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useState } from "react";
+import React, { useContext, useRef, useState, useCallback } from "react";
 import { Form, Icon, Popup, Menu, SemanticICONS } from "semantic-ui-react";
 import { Search, X } from "lucide-react";
 import styled from "styled-components";
@@ -75,31 +75,23 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   const annotationStore = useContext(AnnotationStore);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-  const {
-    textSearchMatches,
-    searchForText,
-    searchText,
-    selectedTextSearchMatchIndex,
-  } = annotationStore;
+  const { searchForText, searchText } = annotationStore;
 
-  const [docSearchCache, setDocSeachCache] = useState<string | undefined>(
-    searchText
-  );
-
-  const handleDocSearchChange = (value: string) => {
-    setDocSeachCache(value);
-    debouncedDocSearch.current(value);
-  };
-
-  const debouncedDocSearch = useRef(
+  const debouncedDocSearch = useCallback(
     _.debounce((searchTerm: string) => {
       console.log("Searching for", searchTerm);
       searchForText(searchTerm);
-    }, 300)
+    }, 300),
+    [searchForText]
   );
 
+  const handleDocSearchChange = (value: string) => {
+    searchForText(value);
+    debouncedDocSearch(value);
+  };
+
   const clearSearch = () => {
-    setDocSeachCache("");
+    searchForText("");
     searchForText("");
   };
 
@@ -172,10 +164,10 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
           }
           iconPosition="left"
           placeholder="Search document..."
+          value={searchText}
           onChange={(e: any, data: { value: string }) =>
             handleDocSearchChange(data.value)
           }
-          value={docSearchCache}
         />
       </StyledMenu>
     </ActionBar>

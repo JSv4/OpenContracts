@@ -1,11 +1,8 @@
 import unittest
-from PIL import Image
 from io import BytesIO
-import sys
-import os
 
-# Assuming the create_text_thumbnail function is in a file named text_thumbnail.py
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from PIL import Image
+
 from opencontractserver.utils.files import create_text_thumbnail
 
 
@@ -26,15 +23,17 @@ class TestTextThumbnail(unittest.TestCase):
         text = "Hello, World!"
         img = create_text_thumbnail(text)
         img_bytes = BytesIO()
-        img.save(img_bytes, format='PNG')
+        img.save(img_bytes, format="PNG")
         img_bytes.seek(0)
         img_loaded = Image.open(img_bytes)
 
         # Convert image to RGB mode for compatibility
-        img_loaded = img_loaded.convert('RGB')
+        img_loaded = img_loaded.convert("RGB")
 
         pixels = list(img_loaded.getdata())
-        self.assertNotEqual(pixels.count((0, 0, 0)), 0, "No black pixels found, text might be missing")
+        self.assertNotEqual(
+            pixels.count((0, 0, 0)), 0, "No black pixels found, text might be missing"
+        )
 
     def test_empty_text(self):
         """Test if the function handles empty text"""
@@ -60,5 +59,5 @@ class TestTextThumbnail(unittest.TestCase):
         self.assertNotEqual(list(img1.getdata()), list(img2.getdata()))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

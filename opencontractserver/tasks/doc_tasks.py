@@ -37,8 +37,8 @@ from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.files import (
     check_if_pdf_needs_ocr,
-    split_pdf_into_images,
     create_text_thumbnail,
+    split_pdf_into_images,
 )
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 from opencontractserver.utils.text import __consolidate_common_equivalent_chars
@@ -57,6 +57,7 @@ class TaskStates(str, enum.Enum):
 
 
 TEMP_DIR = "./tmp"
+
 
 @celery_app.task(
     autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
@@ -197,9 +198,7 @@ def ingest_txt(user_id: int, doc_id: int) -> list[tuple[int, str]]:
         )
         label_obj.save()
 
-    set_permissions_for_obj_to_user(
-        user_id, label_obj, [PermissionTypes.ALL]
-    )
+    set_permissions_for_obj_to_user(user_id, label_obj, [PermissionTypes.ALL])
 
     doc = Document.objects.get(pk=doc_id)
     doc_path = doc.txt_extract_file.name
@@ -211,7 +210,7 @@ def ingest_txt(user_id: int, doc_id: int) -> list[tuple[int, str]]:
         annot_obj = Annotation.objects.create(
             raw_text=sentence.text,
             page=1,
-            json={"start": sentence.start_char, "end":sentence.end_char},
+            json={"start": sentence.start_char, "end": sentence.end_char},
             annotation_label=label_obj,
             document=doc,
             creator_id=user_id,
@@ -220,6 +219,7 @@ def ingest_txt(user_id: int, doc_id: int) -> list[tuple[int, str]]:
         )
         annot_obj.save()
         set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
+
 
 @celery_app.task(
     autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
@@ -613,7 +613,7 @@ def extract_txt_thumbnail(doc_id: int) -> None:
         document = Document.objects.get(pk=doc_id)
 
         # Read the text content
-        with default_storage.open(document.txt_extract_file.name, 'r') as file_object:
+        with default_storage.open(document.txt_extract_file.name, "r") as file_object:
             text = file_object.read()
 
         logger.debug(f"Text content length: {len(text)}")
@@ -622,14 +622,16 @@ def extract_txt_thumbnail(doc_id: int) -> None:
         img = create_text_thumbnail(text)
 
         if img is None or not isinstance(img, Image.Image):
-            logger.error(f"create_text_thumbnail returned invalid image for doc_id {doc_id}")
+            logger.error(
+                f"create_text_thumbnail returned invalid image for doc_id {doc_id}"
+            )
             return
 
         logger.debug(f"Thumbnail image size: {img.size}")
 
         # Save the image
         img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format='PNG')
+        img.save(img_byte_arr, format="PNG")
         img_byte_arr.seek(0)
 
         icon_file = ContentFile(img_byte_arr.getvalue())

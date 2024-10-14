@@ -6,10 +6,10 @@ from django.utils import timezone
 
 from opencontractserver.tasks.doc_tasks import (
     extract_pdf_thumbnail,
-    nlm_ingest_pdf,
-    set_doc_lock_state,
     extract_txt_thumbnail,
     ingest_txt,
+    nlm_ingest_pdf,
+    set_doc_lock_state,
 )
 from opencontractserver.tasks.embeddings_task import calculate_embedding_for_doc_text
 
@@ -37,17 +37,26 @@ def process_doc_on_create_atomic(sender, instance, created, **kwargs):
                 set_doc_lock_state.si(locked=False, doc_id=instance.id),
             ]
 
-        elif instance.file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        elif (
+            instance.file_type
+            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ):
 
             # TODO - process docx
             ingest_tasks = []
 
-        elif instance.file_type == "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+        elif (
+            instance.file_type
+            == "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        ):
 
             # TODO - process pptx
             ingest_tasks = []
 
-        elif instance.file_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        elif (
+            instance.file_type
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ):
 
             # TODO - process xlsx
             ingest_tasks = []
@@ -56,7 +65,9 @@ def process_doc_on_create_atomic(sender, instance, created, **kwargs):
 
             ingest_tasks = [
                 extract_txt_thumbnail.s(doc_id=instance.id),
-                ingest_txt.si(user_id=instance.creator.id, doc_id=instance.id),  # Currently a sentence parser
+                ingest_txt.si(
+                    user_id=instance.creator.id, doc_id=instance.id
+                ),  # Currently a sentence parser
                 *(
                     [calculate_embedding_for_doc_text.si(doc_id=instance.id)]
                     if instance.embedding is None

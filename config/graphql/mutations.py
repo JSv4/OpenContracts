@@ -35,7 +35,7 @@ from config.graphql.graphene_types import (
     RelationshipType,
     UserExportType,
     UserFeedbackType,
-    UserType, LabelTypeEnum,
+    UserType,
 )
 from config.graphql.serializers import (
     AnnotationLabelSerializer,
@@ -74,10 +74,10 @@ from opencontractserver.tasks.permissioning_tasks import (
     make_corpus_public_task,
 )
 from opencontractserver.types.dicts import OpenContractsAnnotatedDocumentImportType
-from opencontractserver.types.enums import ExportType, PermissionTypes, LabelType
+from opencontractserver.types.enums import ExportType, LabelType, PermissionTypes
 from opencontractserver.users.models import UserExport
 from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
-from opencontractserver.utils.files import is_plaintext, is_plaintext_content
+from opencontractserver.utils.files import is_plaintext_content
 from opencontractserver.utils.permissioning import (
     set_permissions_for_obj_to_user,
     user_has_permission_for_obj,
@@ -882,7 +882,7 @@ class UploadDocument(graphene.Mutation):
                 "application/pdf",
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ]:
                 pdf_file = ContentFile(file_bytes, name=filename)
                 document = Document(
@@ -893,12 +893,10 @@ class UploadDocument(graphene.Mutation):
                     pdf_file=pdf_file,
                     backend_lock=True,
                     is_public=make_public,
-                    file_type=kind  # Store filetype
+                    file_type=kind,  # Store filetype
                 )
                 document.save()
-            elif kind in [
-                "application/txt"
-            ]:
+            elif kind in ["application/txt"]:
                 txt_extract_file = ContentFile(file_bytes, name=filename)
                 document = Document(
                     creator=user,
@@ -908,7 +906,7 @@ class UploadDocument(graphene.Mutation):
                     txt_extract_file=txt_extract_file,
                     backend_lock=True,
                     is_public=make_public,
-                    file_type=kind
+                    file_type=kind,
                 )
                 document.save()
 
@@ -1094,14 +1092,24 @@ class AddAnnotation(graphene.Mutation):
             required=True,
             description="Id of the label that is applied via this annotation.",
         )
-        annotation_type = graphene.Argument(graphene.Enum.from_enum(LabelType), required=True)
+        annotation_type = graphene.Argument(
+            graphene.Enum.from_enum(LabelType), required=True
+        )
 
     ok = graphene.Boolean()
     annotation = graphene.Field(AnnotationType)
 
     @login_required
     def mutate(
-        root, info, json, page, raw_text, corpus_id, document_id, annotation_label_id, annotation_type
+        root,
+        info,
+        json,
+        page,
+        raw_text,
+        corpus_id,
+        document_id,
+        annotation_label_id,
+        annotation_type,
     ):
         corpus_pk = from_global_id(corpus_id)[1]
         document_pk = from_global_id(document_id)[1]
@@ -1117,7 +1125,7 @@ class AddAnnotation(graphene.Mutation):
             annotation_label_id=label_pk,
             creator=user,
             json=json,
-            annotation_type=annotation_type.value
+            annotation_type=annotation_type.value,
         )
         annotation.save()
         set_permissions_for_obj_to_user(user, annotation, [PermissionTypes.CRUD])

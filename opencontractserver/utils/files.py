@@ -1,14 +1,14 @@
 import base64
 import logging
 import pathlib
+import string
+import textwrap
 import typing
 import uuid
-import string
-from PIL import Image, ImageDraw, ImageFont
-import textwrap
 from io import BytesIO
 
 from django.conf import settings
+from PIL import Image, ImageDraw, ImageFont
 from PyPDF2 import PdfReader
 from PyPDF2.generic import (
     ArrayObject,
@@ -33,7 +33,7 @@ def base_64_encode_bytes(doc_bytes: bytes):
 
 
 def convert_hex_to_rgb_tuple(color: str) -> tuple[int, ...]:
-    color_tuple = tuple(int(color[i: i + 2], 16) for i in (0, 2, 4))
+    color_tuple = tuple(int(color[i : i + 2], 16) for i in (0, 2, 4))
     return color_tuple
 
 
@@ -187,27 +187,6 @@ def check_if_pdf_needs_ocr(file_object, threshold=10):
     return len(total_text.strip()) < threshold
 
 
-def is_plaintext(file_path, sample_size=1024, threshold=0.7):
-    try:
-        with open(file_path, 'rb') as file:
-            # Read a sample of the file
-            sample = file.read(sample_size)
-            if len(sample) == 0:
-                return False
-
-            # Count printable characters
-            printable_count = sum(1 for byte in sample if chr(byte) in string.printable)
-
-            # Calculate the ratio of printable characters
-            printable_ratio = printable_count / len(sample)
-
-            # If the ratio is above the threshold, consider it plaintext
-            return printable_ratio > threshold
-    except IOError:
-        print(f"Error: Unable to read file {file_path}")
-        return False
-
-
 def is_plaintext_content(content, sample_size=1024, threshold=0.7):
     sample = content[0:sample_size]
 
@@ -227,7 +206,7 @@ def create_text_thumbnail(
     height: int = 300,
     font_size: int = 12,
     margin: int = 20,
-    line_spacing: int = 4
+    line_spacing: int = 4,
 ) -> Image.Image:
     """
     Create a thumbnail image from the given text.
@@ -246,14 +225,14 @@ def create_text_thumbnail(
     logger.debug(f"Creating text thumbnail with dimensions {width}x{height}")
 
     # Create a new white image
-    img = Image.new('RGB', (width, height), color='white')
+    img = Image.new("RGB", (width, height), color="white")
     draw = ImageDraw.Draw(img)
 
     # Load a font
     try:
         font = ImageFont.truetype("arial.ttf", font_size)
         logger.debug("Using Arial font")
-    except IOError:
+    except OSError:
         font = ImageFont.load_default()
         logger.debug("Using default font")
 
@@ -267,7 +246,7 @@ def create_text_thumbnail(
     # Draw the text
     y_text = margin
     for line in lines:
-        draw.text((margin, y_text), line, font=font, fill='black')
+        draw.text((margin, y_text), line, font=font, fill="black")
         y_text += font_size + line_spacing
 
         # Stop if we've reached the bottom of the image
@@ -277,7 +256,7 @@ def create_text_thumbnail(
 
     # Add some lines to simulate ruled paper
     for i in range(margin, height - margin, font_size + line_spacing):
-        draw.line([(margin, i), (width - margin, i)], fill='lightblue', width=1)
+        draw.line([(margin, i), (width - margin, i)], fill="lightblue", width=1)
 
     logger.debug("Text thumbnail created successfully")
     return img

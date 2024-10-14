@@ -211,7 +211,9 @@ class Query(graphene.ObjectType):
         logger.info(f"Q Filter value for analysis_isnull: {analysis_isnull}")
         # Filter by analysis
         if analysis_isnull is not None:
-            logger.info(f"QS count before filtering by analysis is null: {queryset.count()}")
+            logger.info(
+                f"QS count before filtering by analysis is null: {queryset.count()}"
+            )
             queryset = queryset.filter(analysis__isnull=analysis_isnull)
             logger.info(f"Filtered by analysis_isnull: {queryset.count()}")
 

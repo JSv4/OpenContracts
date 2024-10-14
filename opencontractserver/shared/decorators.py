@@ -94,9 +94,11 @@ def doc_analyzer_task(max_retries=None):
                 )
 
                 # Create PdfDataLayer
-                pdf_data_layer = makePdfTranslationLayerFromPawlsTokens(
-                    pdf_pawls_extract
-                ) if pdf_pawls_extract else []
+                pdf_data_layer = (
+                    makePdfTranslationLayerFromPawlsTokens(pdf_pawls_extract)
+                    if pdf_pawls_extract
+                    else []
+                )
 
                 # Call the wrapped function with the retrieved data
                 result = func(
@@ -183,10 +185,8 @@ def doc_analyzer_task(max_retries=None):
                                 # Convert (TextSpan, str) pairs to OpenContractsAnnotationPythonType
                                 logger.info(f"Create Annotation Linked to {corpus_id}")
                                 span, label = span_label_pair
-                                annotation_data = (
-                                    pdf_data_layer.create_opencontract_annotation_from_span(
-                                        {"span": span, "annotation_label": label}
-                                    )
+                                annotation_data = pdf_data_layer.create_opencontract_annotation_from_span(
+                                    {"span": span, "annotation_label": label}
                                 )
                                 label, _ = AnnotationLabel.objects.get_or_create(
                                     text=annotation_data["annotationLabel"],
@@ -227,9 +227,11 @@ def doc_analyzer_task(max_retries=None):
                                     analysis=analysis,
                                     annotation_label=label,
                                     page=1,
-                                    raw_text=pdf_text_extract[ span['start']:span['end']],
+                                    raw_text=pdf_text_extract[
+                                        span["start"] : span["end"]
+                                    ],
                                     annotation_type=LabelType.SPAN_LABEL,
-                                    json={"start": span['start'], "end": span['end']},
+                                    json={"start": span["start"], "end": span["end"]},
                                     creator=analysis.creator,
                                     **({"corpus_id": corpus_id} if corpus_id else {}),
                                 )
@@ -237,7 +239,9 @@ def doc_analyzer_task(max_retries=None):
                                 resulting_annotations.append(annot)
 
                             else:
-                                raise ValueError(f"Unexpected file type: {doc.file_type}")
+                                raise ValueError(
+                                    f"Unexpected file type: {doc.file_type}"
+                                )
 
                         for doc_label in doc_annotations:
                             label, _ = AnnotationLabel.objects.get_or_create(

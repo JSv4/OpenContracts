@@ -94,7 +94,10 @@ def build_document_export(
 
     from PyPDF2 import PdfReader, PdfWriter
 
-    from opencontractserver.utils.files import add_highlight_to_new_page, createHighlight
+    from opencontractserver.utils.files import (
+        add_highlight_to_new_page,
+        createHighlight,
+    )
 
     try:
 

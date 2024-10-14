@@ -191,7 +191,6 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
                 makePublic: false,
               },
               update: (cache, { data }) => {
-                console.log("data", data);
                 if (
                   !data ||
                   !data.uploadDocument ||
@@ -201,30 +200,44 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
 
                 const newDocument = data.uploadDocument.document;
 
-                // Read the current documents from the cache
-                const existingDocuments = cache.readQuery<{
-                  documents: { edges: { node: DocumentType }[] };
-                }>({
-                  query: GET_DOCUMENTS,
-                  variables: { first: 20 }, // Adjust this based on your pagination setup
-                });
+                cache.modify({
+                  fields: {
+                    documents(existingDocuments = { edges: [] }) {
+                      const newDocumentRef = cache.writeFragment({
+                        data: newDocument,
+                        fragment: gql`
+                          fragment NewDocument on DocumentType {
+                            id
+                            icon
+                            pdfFile
+                            title
+                            description
+                            backendLock
+                            fileType
+                            docAnnotations {
+                              edges {
+                                node {
+                                  id
+                                }
+                              }
+                            }
+                          }
+                        `,
+                      });
 
-                if (existingDocuments) {
-                  // Write the new document to the cache
-                  cache.writeQuery({
-                    query: GET_DOCUMENTS,
-                    variables: { first: 20 },
-                    data: {
-                      documents: {
-                        ...existingDocuments.documents,
+                      return {
+                        ...existingDocuments,
                         edges: [
-                          { node: newDocument, __typename: "DocumentTypeEdge" },
-                          ...existingDocuments.documents.edges,
+                          {
+                            __typename: "DocumentTypeEdge",
+                            node: newDocumentRef,
+                          },
+                          ...existingDocuments.edges,
                         ],
-                      },
+                      };
                     },
-                  });
-                }
+                  },
+                });
 
                 // If a corpus is specified, update the corpus' documents as well
                 if (corpusId || selected_corpus?.id) {

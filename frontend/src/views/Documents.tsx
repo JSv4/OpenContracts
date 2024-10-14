@@ -30,6 +30,7 @@ import {
   showDeleteDocumentsModal,
   showUploadNewDocumentsModal,
   viewingDocument,
+  uploadModalPreloadedFiles,
 } from "../graphql/cache";
 
 import { CRUDModal } from "../components/widgets/CRUD/CRUDModal";
@@ -304,9 +305,13 @@ export const Documents = () => {
             refetch={() => {
               refetchDocuments();
               showUploadNewDocumentsModal(false);
+              uploadModalPreloadedFiles([]); // Clear preloaded files when closing the modal
             }}
             open={Boolean(show_upload_new_documents_modal)}
-            onClose={() => showUploadNewDocumentsModal(false)}
+            onClose={() => {
+              showUploadNewDocumentsModal(false);
+              uploadModalPreloadedFiles([]); // Clear preloaded files when closing the modal
+            }}
           />
           <ConfirmModal
             message={`Are you sure you want to delete these documents?`}

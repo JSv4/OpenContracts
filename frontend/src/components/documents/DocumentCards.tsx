@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, Dimmer, Loader } from "semantic-ui-react";
+import { useDropzone } from "react-dropzone";
 
 import _ from "lodash";
 
@@ -10,6 +11,11 @@ import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisibl
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
+import {
+  showUploadNewDocumentsModal,
+  uploadModalPreloadedFiles,
+} from "../../graphql/cache";
+import { FileUploadPackageProps } from "../widgets/modals/DocumentUploadModal";
 
 interface DocumentCardProps {
   style?: Record<string, any>;
@@ -104,8 +110,59 @@ export const DocumentCards = ({
   /**
    * Return DocumentItems
    */
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const filePackages: FileUploadPackageProps[] = acceptedFiles.map(
+      (file) => ({
+        file,
+        formData: {
+          title: file.name,
+          description: `Content summary for ${file.name}`,
+        },
+      })
+    );
+    showUploadNewDocumentsModal(true);
+    // We'll need to create a new reactive variable to store these files
+    // Add this to src/graphql/cache.ts:
+    // export const uploadModalPreloadedFiles = makeVar<FileUploadPackageProps[]>([]);
+    uploadModalPreloadedFiles(filePackages);
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+  });
+
   return (
-    <>
+    <div {...getRootProps()}>
+      <input {...getInputProps()} />
+      {isDragActive && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              padding: "20px",
+              backgroundColor: "white",
+              borderRadius: "5px",
+            }}
+          >
+            Drop files here to upload
+          </div>
+        </div>
+      )}
       <Dimmer active={loading}>
         <Loader content={loading_message} />
       </Dimmer>
@@ -123,6 +180,6 @@ export const DocumentCards = ({
         </Card.Group>
         <FetchMoreOnVisible fetchNextPage={handleUpdate} />
       </div>
-    </>
+    </div>
   );
 };

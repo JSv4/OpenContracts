@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useReactiveVar } from "@apollo/client";
 import {
   Button,
   Modal,
@@ -39,6 +40,7 @@ import {
   GetCorpusesOutputs,
 } from "../../../graphql/queries";
 import { CorpusSelector } from "../../corpuses/CorpusSelector";
+import { uploadModalPreloadedFiles } from "../../../graphql/cache";
 
 export const NOT_STARTED = "NOT_STARTED";
 export const SUCCESS = "SUCCESS";
@@ -100,6 +102,7 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
 
   const { open, onClose, refetch } = props;
   const [files, setFiles] = useState<FileUploadPackageProps[]>([]);
+  const preloadedFiles = useReactiveVar(uploadModalPreloadedFiles);
   const [upload_state, setUploadState] = useState<
     ("NOT_STARTED" | "SUCCESS" | "FAILED" | "UPLOADING")[]
   >([]);
@@ -111,6 +114,13 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
     null
   );
   const [search_term, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    if (open && preloadedFiles.length > 0) {
+      setFiles(preloadedFiles);
+      uploadModalPreloadedFiles([]); // Clear the preloaded files
+    }
+  }, [open, preloadedFiles]);
 
   useEffect(() => {
     if (!open) {

@@ -21,6 +21,7 @@ import {
   LabelType,
 } from "./types";
 import { ViewState } from "../components/types";
+import { FileUploadPackageProps } from "../components/widgets/modals/DocumentUploadModal";
 
 export const mergeArrayByIdFieldPolicy: FieldPolicy<Reference[]> = {
   // eslint-disable-next-line @typescript-eslint/default-param-last
@@ -286,3 +287,5 @@ export const openedQueryObj = makeVar<CorpusQueryType | null>(null);
  */
 export const userObj = makeVar<User | null>(null);
 export const authToken = makeVar<string>("");
+
+export const uploadModalPreloadedFiles = makeVar<FileUploadPackageProps[]>([]);

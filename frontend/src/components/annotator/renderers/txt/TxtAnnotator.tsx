@@ -1,30 +1,23 @@
 /**
  * TxtAnnotator Component
  *
- * Modifications:
- * 1. Utilizes existing `selectedAnnotations` to focus on a single annotation when a label is clicked, hiding other labels for annotations applicable to the same character.
- * 2. Enhances label-cloud visualization by:
- *    - Enclosing each annotation covering the hovered character with a distinct colored dashed border.
- *    - Drawing animated, moving dotted lines from each label to its corresponding annotation border.
- * 3. Improves label positioning by ensuring a minimum offset from the span's bounding box to prevent overlap when spans are short.
+ * Improvements:
+ * 1. Enhanced label positioning for nested annotations by assigning layers and adjusting radii.
+ * 2. Improved collision detection and boundary avoidance in force simulation.
+ * 3. Connector lines accurately connect labels to annotations with clarity.
  */
 
-import React, {
-  useState,
-  useRef,
-  useCallback,
-  useEffect,
-  useContext,
-} from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Label, LabelContainer, PaperContainer } from "./StyledComponents";
 import RadialButtonCloud, { CloudButtonItem } from "./RadialButtonCloud";
 import { Modal, Button, Dropdown } from "semantic-ui-react";
 import { AnnotationLabelType } from "../../../../graphql/types";
-import { ServerSpanAnnotation, AnnotationStore } from "../../context";
+import { ServerSpanAnnotation } from "../../context";
 import { TextSearchSpanResult } from "../../../types";
 import { PermissionTypes } from "../../../types";
 import styled, { keyframes, css } from "styled-components";
 import * as d3 from "d3";
+import { hexToRgba } from "./utils";
 
 interface TxtAnnotatorProps {
   text: string;
@@ -65,25 +58,27 @@ interface LabelRenderData {
   labelIndex: number;
 }
 
-interface ConnectorLineProps {
-  color: string;
-}
-
 const glowGreen = keyframes`
-  from {
+  0% {
     box-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
   }
-  to {
+  50% {
     box-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
   }
 `;
 
 const glowRed = keyframes`
-  from {
+  0% {
     box-shadow: 0 0 5px rgba(255, 0, 0, 0.8);
   }
-  to {
-    box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+  50% {
+    box-shadow: 0 0 15px rgba(255, 0, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 0, 0.8);
   }
 `;
 
@@ -131,26 +126,17 @@ const AnnotatedSpan = styled.span<{
       border-radius: 4px;
     `}
 
-  ${(props) =>
-    props.zIndex !== undefined &&
-    css`
-      z-index: ${props.zIndex};
-    `}
+  z-index: ${(props) => props.zIndex || 1};
 `;
 
 const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   text,
   annotations,
-  searchResults,
   getSpan,
   visibleLabels,
   availableLabels,
-  selectedLabelTypeId,
   read_only,
-  data_loading,
-  loading_message,
   allowInput,
-  zoom_level,
   createAnnotation,
   updateAnnotation,
   approveAnnotation,
@@ -161,7 +147,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   selectedAnnotations,
   setSelectedAnnotations,
   showStructuralAnnotations,
-  selectedSearchResultIndex,
 }) => {
   const [hoveredSpanIndex, setHoveredSpanIndex] = useState<number | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -171,8 +156,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const hideLabelsTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  const annotationElementRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const handleMouseEnter = useCallback((index: number) => {
     if (hideLabelsTimeout.current) {
@@ -210,16 +193,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       }
     },
     [selectedAnnotations, setSelectedAnnotations]
-  );
-
-  const isAnnotationSelected = useCallback(
-    (annotation: ServerSpanAnnotation) => {
-      if (selectedAnnotations.length > 0) {
-        return annotation.id === selectedAnnotations[0];
-      }
-      return true;
-    },
-    [selectedAnnotations]
   );
 
   const [spans, setSpans] = useState<
@@ -298,7 +271,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       const hoveredSpan = spans[hoveredSpanIndex];
       if (!hoveredSpan) return;
 
-      // Filter annotations to show only the selected one if any
       const annotationsToRender =
         selectedAnnotations.length > 0
           ? hoveredSpan.annotations.filter((ann) =>
@@ -324,31 +296,42 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         const containerRect = containerElement.getBoundingClientRect();
         const spanRect = spanElement.getBoundingClientRect();
 
-        // Get scroll positions
         const scrollLeft = containerElement.scrollLeft;
         const scrollTop = containerElement.scrollTop;
 
-        // Calculate position relative to the container
         const spanX = spanRect.left - containerRect.left + scrollLeft;
         const spanY = spanRect.top - containerRect.top + scrollTop;
 
         const baseX = spanX + spanRect.width / 2;
         const baseY = spanY + spanRect.height / 2;
 
-        // Calculate minimum radius based on span size to ensure offset
-        const minOffset = 20; // Minimum pixels between span and labels
-        const dynamicRadius =
-          Math.max(spanRect.width, spanRect.height) / 2 + minOffset;
-        const radius = Math.max(100, dynamicRadius); // Ensure a minimum radius
+        // Sort annotations by length
+        const sortedAnnotations = selectedAnnotationsForSpan.sort(
+          (a, b) => a.json.end - a.json.start - (b.json.end - b.json.start)
+        );
+
+        // Assign layers based on nesting levels
+        const layers = sortedAnnotations.map((ann) => {
+          return sortedAnnotations.filter(
+            (otherAnn) =>
+              otherAnn.json.start <= ann.json.start &&
+              otherAnn.json.end >= ann.json.end
+          ).length;
+        });
+
+        const maxLayer = Math.max(...layers);
 
         const labelWidth = 100; // Approximate label width
         const labelHeight = 30; // Approximate label height
 
-        // Initialize label positions around the span
-        const initialPositions: LabelRenderData[] =
-          selectedAnnotationsForSpan.map((annotation, index) => {
+        // Initialize label positions with layered radii
+        const initialPositions: LabelRenderData[] = sortedAnnotations.map(
+          (annotation, index) => {
             const angle =
               (index / selectedAnnotationsForSpan.length) * Math.PI * 2;
+
+            const layerIndex = layers[index];
+            const radius = 80 + layerIndex * 40;
 
             const x = baseX + radius * Math.cos(angle) - labelWidth / 2;
             const y = baseY + radius * Math.sin(angle) - labelHeight / 2;
@@ -361,11 +344,12 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               height: labelHeight,
               labelIndex: index,
             };
-          });
+          }
+        );
 
         // Run force simulation to adjust label positions
         const simulation = d3
-          .forceSimulation(initialPositions)
+          .forceSimulation<LabelRenderData>(initialPositions)
           .force(
             "collide",
             d3.forceCollide<LabelRenderData>((d) => d.width / 2 + 10)
@@ -373,17 +357,32 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
           .force(
             "x",
             d3
-              .forceX(baseX)
+              .forceX<LabelRenderData>(baseX)
               .strength(0.1)
-              .x((d) => d.x ?? 0)
+              .x((d) => d.x + d.width / 2)
           )
           .force(
             "y",
             d3
-              .forceY(baseY)
+              .forceY<LabelRenderData>(baseY)
               .strength(0.1)
-              .y((d) => d.y ?? 0)
+              .y((d) => d.y + d.height / 2)
           )
+          .force("avoidance", (alpha) => {
+            initialPositions.forEach((d, i) => {
+              const annRect = spanElement.getBoundingClientRect();
+              const dx = d.x + d.width / 2 - (spanX + annRect.width / 2);
+              const dy = d.y + d.height / 2 - (spanY + annRect.height / 2);
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              const minDist = annRect.width / 2 + d.width / 2 + 20;
+              if (dist < minDist) {
+                const force = (minDist - dist) * alpha;
+                d.x += (dx / dist) * force;
+                d.y += (dy / dist) * force;
+              }
+            });
+          })
+          .alphaDecay(0.1)
           .stop();
 
         simulation.tick(100);
@@ -407,22 +406,14 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     calculateLabelPositions();
   }, [hoveredSpanIndex, spans, showStructuralAnnotations, selectedAnnotations]);
 
-  const hexToRgba = (hex: string, alpha: number) => {
-    const bigint = parseInt(hex.replace("#", ""), 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-
   return (
     <>
       <PaperContainer
-        id="PaperContainer"
         ref={containerRef}
-        style={{ position: "relative" }}
-        maxHeight={maxHeight}
-        maxWidth={maxWidth}
+        style={{
+          maxHeight: maxHeight || "auto",
+          maxWidth: maxWidth || "auto",
+        }}
         onClick={() => {
           setSelectedAnnotations([]);
         }}
@@ -432,7 +423,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
 
           const spanStyle: React.CSSProperties = {};
 
-          // Filter annotations based on selection
           const annotationsToRender =
             selectedAnnotations.length > 0
               ? spanAnnotations.filter((ann) =>
@@ -441,9 +431,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               : spanAnnotations;
 
           const selectedAnnotationsForSpan = annotationsToRender.filter(
-            (ann) =>
-              isAnnotationSelected(ann) &&
-              (showStructuralAnnotations || !ann.structural)
+            (ann) => showStructuralAnnotations || !ann.structural
           );
 
           let approved = false;
@@ -454,7 +442,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             rejected = selectedAnnotationsForSpan.some((ann) => ann.rejected);
           }
 
-          // Apply background highlights based on annotations
           if (selectedAnnotationsForSpan.length === 1) {
             const annotationColor =
               selectedAnnotationsForSpan[0].annotationLabel.color;
@@ -462,7 +449,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               ? hexToRgba(annotationColor, 0.3)
               : "transparent";
           } else if (selectedAnnotationsForSpan.length > 1) {
-            // Handle overlapping annotations with gradients
             const gradientColors = selectedAnnotationsForSpan
               .map((ann) =>
                 hexToRgba(ann.annotationLabel.color || "transparent", 0.3)
@@ -471,29 +457,23 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             spanStyle.backgroundImage = `linear-gradient(to right, ${gradientColors})`;
           }
 
-          // Determine if the span should have a border for connector lines
           const hasBorder =
             hoveredSpanIndex === index && selectedAnnotationsForSpan.length > 0;
 
+          const borderColor =
+            selectedAnnotationsForSpan[0]?.annotationLabel.color || "#000";
+
           return (
             <AnnotatedSpan
-              key={`span-${index}`}
+              key={index}
               data-span-index={index}
               onMouseEnter={() => handleMouseEnter(index)}
               onMouseLeave={handleMouseLeave}
               approved={approved}
               rejected={rejected}
               hasBorder={hasBorder}
-              borderColor={selectedAnnotationsForSpan[0]?.annotationLabel.color}
+              borderColor={borderColor}
               style={spanStyle}
-              ref={(element) => {
-                if (element) {
-                  // Assign the DOM element to all associated annotation refs
-                  spanAnnotations.forEach((annotation) => {
-                    annotationElementRefs.current[annotation.id] = element;
-                  });
-                }
-              }}
             >
               {spanText}
             </AnnotatedSpan>
@@ -502,66 +482,73 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         {/* Render connector lines */}
         {labelsToRender.length > 0 && (
           <ConnectorLine>
-            <defs>
-              {labelsToRender.map(({ annotation }) => (
-                <marker
-                  key={`arrowhead-${annotation.id}`}
-                  id={`arrowhead-${annotation.id}`}
-                  viewBox="0 0 10 10"
-                  refX="5"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto"
-                >
-                  <path
-                    d="M 0 0 L 10 5 L 0 10 z"
-                    fill={annotation.annotationLabel.color || "#000"}
-                  />
-                </marker>
-              ))}
-            </defs>
-            {labelsToRender.map(
-              ({ annotation, x, y, width, height, labelIndex }) => {
-                const annotationElement =
-                  annotationElementRefs.current[annotation.id];
-                if (!annotationElement) {
-                  return null;
+            <svg width="100%" height="100%">
+              <defs>
+                {labelsToRender.map(({ annotation }) => (
+                  <marker
+                    key={`arrowhead-${annotation.id}`}
+                    id={`arrowhead-${annotation.id}`}
+                    viewBox="0 0 10 10"
+                    refX="5"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto"
+                  >
+                    <path
+                      d="M 0 0 L 10 5 L 0 10 z"
+                      fill={annotation.annotationLabel.color || "#000"}
+                    />
+                  </marker>
+                ))}
+              </defs>
+              {labelsToRender.map(
+                ({ annotation, x, y, width, height, labelIndex }) => {
+                  const containerElement = containerRef.current;
+                  const spanElement = containerElement?.querySelector(
+                    `span[data-span-index="${hoveredSpanIndex}"]`
+                  ) as HTMLElement;
+
+                  if (!spanElement) return null;
+                  const containerRect =
+                    containerElement?.getBoundingClientRect() ?? new DOMRect();
+                  const spanRect = spanElement.getBoundingClientRect();
+
+                  const scrollLeft = containerElement?.scrollLeft ?? 0;
+                  const scrollTop = containerElement?.scrollTop ?? 0;
+
+                  const endX =
+                    spanRect.left -
+                    containerRect.left +
+                    scrollLeft +
+                    spanRect.width / 2;
+                  const endY =
+                    spanRect.top -
+                    containerRect.top +
+                    scrollTop +
+                    spanRect.height / 2;
+
+                  const labelCenterX = x + width / 2;
+                  const labelCenterY = y + height / 2;
+
+                  const pathData = `M${labelCenterX},${labelCenterY} 
+                    C${(labelCenterX + endX) / 2},${labelCenterY} 
+                    ${(labelCenterX + endX) / 2},${endY} 
+                    ${endX},${endY}`;
+
+                  return (
+                    <path
+                      key={`connector-${annotation.id}-${labelIndex}`}
+                      d={pathData}
+                      stroke={annotation.annotationLabel.color || "#000"}
+                      strokeWidth="2"
+                      fill="none"
+                      markerEnd={`url(#arrowhead-${annotation.id})`}
+                    />
+                  );
                 }
-                const annotationRect =
-                  annotationElement.getBoundingClientRect();
-                const containerRect =
-                  containerRef.current!.getBoundingClientRect();
-
-                const endX =
-                  annotationRect.left -
-                  containerRect.left +
-                  annotationRect.width / 2;
-                const endY =
-                  annotationRect.top -
-                  containerRect.top +
-                  annotationRect.height / 2;
-
-                const labelCenterX = x + width / 2;
-                const labelCenterY = y + height / 2;
-
-                const pathData = `M${labelCenterX},${labelCenterY} 
-                                C${(labelCenterX + endX) / 2},${labelCenterY} 
-                                ${(labelCenterX + endX) / 2},${endY} 
-                                ${endX},${endY}`;
-
-                return (
-                  <path
-                    key={`connector-${annotation.id}`}
-                    d={pathData}
-                    stroke={annotation.annotationLabel.color || "#000"}
-                    strokeWidth="2"
-                    fill="none"
-                    markerEnd={`url(#arrowhead-${annotation.id})`}
-                  />
-                );
-              }
-            )}
+              )}
+            </svg>
           </ConnectorLine>
         )}
         {/* Render labels */}

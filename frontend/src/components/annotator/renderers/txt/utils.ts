@@ -43,6 +43,11 @@ export const blendColors = (colors: string[]): string => {
   return `rgb(${r}, ${g}, ${b})`;
 };
 
+/**
+ * Converts a hex color to an RGB object
+ * @param hex - The hex color string (e.g., "#FF0000" or "#F00")
+ * @returns An object with r, g, b number values
+ */
 const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
   hex = hex.replace("#", "");
   if (hex.length === 3) {
@@ -57,6 +62,17 @@ const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
   const b = bigint & 255;
   return { r, g, b };
 };
+
+/**
+ * Converts a hex color to an RGBA color string
+ * @param hex - The hex color string (e.g., "#FF0000" or "#F00")
+ * @param alpha - The opacity value (0 to 1)
+ * @returns An RGBA color string
+ */
+export function hexToRgba(hex: string, alpha: number): string {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export const selectionIsEmpty = (selection: Selection) => {
   let position =

@@ -31,13 +31,12 @@ class TestTextThumbnail(unittest.TestCase):
         img_loaded = img_loaded.convert("RGB")
 
         pixels = list(img_loaded.getdata())
-        
+
         # Check for any non-white pixels instead of just black
         non_white_pixels = [p for p in pixels if p != (255, 255, 255)]
-        
+
         self.assertGreater(
-            len(non_white_pixels), 0, 
-            "No non-white pixels found, text might be missing"
+            len(non_white_pixels), 0, "No non-white pixels found, text might be missing"
         )
 
     def test_empty_text(self):

@@ -132,7 +132,7 @@ class DocumentMutationTestCase(TestCase):
 
         self.assertIsNone(result.get("errors"))
         self.assertTrue(result["data"]["uploadDocument"]["ok"])
-    
+
     def test_upload_zip_document(self):
         mutation = """
             mutation UploadDocument(
@@ -181,7 +181,8 @@ class DocumentMutationTestCase(TestCase):
         self.assertIsNone(result.get("errors"))
         self.assertFalse(result["data"]["uploadDocument"]["ok"])
         self.assertEqual(
-            result["data"]["uploadDocument"]["message"], "Unallowed filetype: application/zip"
+            result["data"]["uploadDocument"]["message"],
+            "Unallowed filetype: application/zip",
         )
 
     def test_update_document_mutation(self):

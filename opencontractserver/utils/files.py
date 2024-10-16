@@ -1,11 +1,11 @@
 import base64
 import logging
+import os
 import pathlib
 import string
 import textwrap
 import typing
 import uuid
-import os
 from io import BytesIO
 from typing import Union
 
@@ -189,7 +189,9 @@ def check_if_pdf_needs_ocr(file_object, threshold=10):
     return len(total_text.strip()) < threshold
 
 
-def is_plaintext_content(content: Union[str, bytes], sample_size: int = 1024, threshold: float = 0.8) -> bool:
+def is_plaintext_content(
+    content: Union[str, bytes], sample_size: int = 1024, threshold: float = 0.8
+) -> bool:
     """
     Check if the given content is plaintext.
 
@@ -207,7 +209,7 @@ def is_plaintext_content(content: Union[str, bytes], sample_size: int = 1024, th
     if isinstance(content, str):
         if not os.path.exists(content):
             raise FileNotFoundError(f"File not found: {content}")
-        with open(content, 'rb') as f:
+        with open(content, "rb") as f:
             sample = f.read(sample_size)
     else:
         sample = content[:sample_size]

@@ -152,7 +152,6 @@ class UploadDocumentMutationTestCase(TestCase):
                 else:  # txt file
                     self.assertTrue(result["data"]["uploadDocument"]["ok"])
 
-
     def tearDown(self):
         # Clean up any files created during the test
         DocumentModel.objects.all().delete()

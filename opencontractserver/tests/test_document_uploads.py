@@ -150,19 +150,8 @@ class UploadDocumentMutationTestCase(TestCase):
                         )  # Check if txt_extract_file is empty
 
                 else:  # txt file
-                    self.assertFalse(result["data"]["uploadDocument"]["ok"])
-                    self.assertEqual(
-                        result["data"]["uploadDocument"]["message"],
-                        "Unable to determine file type",
-                    )
+                    self.assertTrue(result["data"]["uploadDocument"]["ok"])
 
-                    # Verify no document was created for unsupported file type
-                    self.assertEqual(
-                        DocumentModel.objects.filter(
-                            title=f"Test {file_type.upper()}"
-                        ).count(),
-                        0,
-                    )
 
     def tearDown(self):
         # Clean up any files created during the test

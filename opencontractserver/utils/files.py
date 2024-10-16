@@ -5,7 +5,9 @@ import string
 import textwrap
 import typing
 import uuid
+import os
 from io import BytesIO
+from typing import Union
 
 from django.conf import settings
 from PIL import Image, ImageDraw, ImageFont
@@ -187,17 +189,36 @@ def check_if_pdf_needs_ocr(file_object, threshold=10):
     return len(total_text.strip()) < threshold
 
 
-def is_plaintext_content(content, sample_size=1024, threshold=0.7):
-    sample = content[0:sample_size]
+def is_plaintext_content(content: Union[str, bytes], sample_size: int = 1024, threshold: float = 0.8) -> bool:
+    """
+    Check if the given content is plaintext.
 
-    # Count printable characters
+    Args:
+        content (Union[str, bytes]): The content to check. Can be a file path, bytes, or string.
+        sample_size (int): The number of bytes to sample for the check.
+        threshold (float): The threshold ratio of printable characters to consider as plaintext.
+
+    Returns:
+        bool: True if the content is plaintext, False otherwise.
+
+    Raises:
+        FileNotFoundError: If the provided content is a non-existent file path.
+    """
+    if isinstance(content, str):
+        if not os.path.exists(content):
+            raise FileNotFoundError(f"File not found: {content}")
+        with open(content, 'rb') as f:
+            sample = f.read(sample_size)
+    else:
+        sample = content[:sample_size]
+
+    if not sample:
+        return False  # Empty content is not considered plaintext
+
     printable_count = sum(1 for byte in sample if chr(byte) in string.printable)
-
-    # Calculate the ratio of printable characters
     printable_ratio = printable_count / len(sample)
 
-    # If the ratio is above the threshold, consider it plaintext
-    return printable_ratio > threshold
+    return printable_ratio >= threshold
 
 
 def create_text_thumbnail(

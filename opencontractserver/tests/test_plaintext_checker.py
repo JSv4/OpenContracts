@@ -37,7 +37,8 @@ class TestPlaintextDetector(unittest.TestCase):
         os.remove(path)
 
     def test_nonexistent_file(self):
-        self.assertFalse(is_plaintext_content("nonexistent_file.txt"))
+        with self.assertRaises(FileNotFoundError):
+            is_plaintext_content("nonexistent_file.txt")
 
     def test_plaintext_content(self):
         content = b"This is a plaintext file.\nIt contains normal text."

@@ -48,6 +48,7 @@ marvin==2.3.7
 plasmapdf
 spacy
 gliner
+pdf2image
 
 # Data Processing Tools
 # -------------------------------------------------------------------------------

@@ -72,24 +72,24 @@ class QueryTasksTestCase(TestCase):
     def test_run_query(self):
         # Call the run_query task
         result = run_query.delay(query_id=self.query.id)
-        
+
         # Wait for the task to complete and get the result
         task_result = result.get()
-        
+
         # Print debugging information
         print(f"Task result: {task_result}")
         print(f"Task state: {result.state}")
-        
+
         # Refresh the query object from the database
         self.query.refresh_from_db()
-        
+
         # Print query object details
         print(f"Query started: {self.query.started}")
         print(f"Query completed: {self.query.completed}")
         print(f"Query failed: {self.query.failed}")
         print(f"Query stacktrace: {self.query.stacktrace}")
         print(f"Query response: {self.query.response}")
-        
+
         # Assert the expected behavior
         self.assertIsNotNone(self.query.started)
         self.assertIsNotNone(self.query.completed)

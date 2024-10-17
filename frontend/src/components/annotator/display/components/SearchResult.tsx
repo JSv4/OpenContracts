@@ -1,13 +1,13 @@
 import React, { useContext, useState } from "react";
 import styled from "styled-components";
 import _ from "lodash";
-import { PDFPageInfo, AnnotationStore } from "../context";
-import { VerticallyJustifiedEndDiv } from "../sidebar/common";
+import { PDFPageInfo, AnnotationStore } from "../../context";
+import { VerticallyJustifiedEndDiv } from "../../sidebar/common";
 
 import { ResultBoundary } from "./ResultBoundary";
-import { BoundingBox, TextSearchResult } from "../../types";
-import { LabelDisplayBehavior } from "../../../graphql/types";
-import { getBorderWidthFromBounds } from "../../../utils/transform";
+import { BoundingBox, TextSearchTokenResult } from "../../../types";
+import { LabelDisplayBehavior } from "../../../../graphql/types";
+import { getBorderWidthFromBounds } from "../../../../utils/transform";
 import { SearchSelectionTokens } from "./SelectionTokens";
 import { LabelTagContainer } from "./Containers";
 
@@ -19,7 +19,7 @@ interface SearchResultProps {
   showBoundingBox: boolean;
   hidden: boolean;
   pageInfo: PDFPageInfo;
-  match: TextSearchResult;
+  match: TextSearchTokenResult;
   labelBehavior: LabelDisplayBehavior;
   showInfo?: boolean;
 }

@@ -1,7 +1,7 @@
 import { Label, Card, Divider, List } from "semantic-ui-react";
 
 import _ from "lodash";
-import { RelationGroup, ServerAnnotation } from "../context";
+import { RelationGroup, ServerTokenAnnotation } from "../context";
 
 import "./AnnotatorSidebar.css";
 import { RelationHighlightItem } from "./RelationHighlightItem";
@@ -20,8 +20,8 @@ export function RelationItem({
   relation: RelationGroup;
   read_only: boolean;
   selected: boolean;
-  target_annotations: ServerAnnotation[];
-  source_annotations: ServerAnnotation[];
+  target_annotations: ServerTokenAnnotation[];
+  source_annotations: ServerTokenAnnotation[];
   onSelectRelation: () => void;
   onSelectAnnotation: (annotationId: string) => void;
   onDeleteRelation: (relationId: string) => void;

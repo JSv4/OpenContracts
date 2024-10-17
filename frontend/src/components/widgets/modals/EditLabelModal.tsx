@@ -16,11 +16,11 @@ import {
 } from "semantic-ui-react";
 import {
   AnnotationStore,
-  ServerAnnotation,
+  ServerTokenAnnotation,
 } from "../../annotator/context/AnnotationStore";
 
 interface EditLabelModalProps {
-  annotation: ServerAnnotation;
+  annotation: ServerTokenAnnotation;
   visible: boolean;
   onHide: () => void;
 }
@@ -52,7 +52,7 @@ export const EditLabelModal = ({
         const index = Number.parseInt(e.key) - 1;
         if (index < annotationStore.spanLabels.length) {
           annotationStore.updateAnnotation(
-            new ServerAnnotation(
+            new ServerTokenAnnotation(
               annotation.page,
               annotationStore.spanLabels[index],
               annotation.rawText,
@@ -118,7 +118,7 @@ export const EditLabelModal = ({
             event.stopPropagation();
 
             annotationStore.updateAnnotation(
-              new ServerAnnotation(
+              new ServerTokenAnnotation(
                 annotation.page,
                 selectedLabel,
                 annotation.rawText,

@@ -69,6 +69,10 @@ export const CorpusAnalysesCards = () => {
 
   useEffect(() => {
     refetchAnalyses();
+  }, []);
+
+  useEffect(() => {
+    refetchAnalyses();
   }, [analysis_search_term]);
 
   // If user logs in while on this page... refetch to get their authorized corpuses

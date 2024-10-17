@@ -200,18 +200,22 @@ class Query(graphene.ObjectType):
 
         # Filter by annotation_label__label_type
         logger.info(
-            f"Queryset county before filtering by annotation_label__label_type: {queryset.count()}"
+            f"Queryset count before filtering by annotation_label__label_type: {queryset.count()}"
         )
         label_type = kwargs.get("annotation_label__label_type")
         if label_type:
             logger.info(f"Filtering by annotation_label__label_type: {label_type}")
             queryset = queryset.filter(annotation_label__label_type=label_type)
+        logger.info(f"Queryset count after filtering by label type: {queryset.count()}")
 
-        logger.info(f"QFilter value for analysis_isnull: {analysis_isnull}")
+        logger.info(f"Q Filter value for analysis_isnull: {analysis_isnull}")
         # Filter by analysis
         if analysis_isnull is not None:
-            logger.info(f"Filtering by analysis_isnull: {queryset.count()}")
+            logger.info(
+                f"QS count before filtering by analysis is null: {queryset.count()}"
+            )
             queryset = queryset.filter(analysis__isnull=analysis_isnull)
+            logger.info(f"Filtered by analysis_isnull: {queryset.count()}")
 
         # Filter by document_id
         document_id = kwargs.get("document_id")

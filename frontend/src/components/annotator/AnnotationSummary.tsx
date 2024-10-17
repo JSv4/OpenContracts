@@ -3,7 +3,7 @@ import {
   RenderedSpanAnnotation,
   PDFStore,
   AnnotationStore,
-  ServerAnnotation,
+  ServerTokenAnnotation,
 } from "./context";
 import { Label, Card } from "semantic-ui-react";
 import styled from "styled-components";
@@ -21,7 +21,7 @@ export const AnnotationSummary = ({ annotation }: AnnotationSummaryProps) => {
   const annotationStore = useContext(AnnotationStore);
   const this_annotation = _.find(annotationStore.pdfAnnotations.annotations, {
     id: annotation,
-  }) as ServerAnnotation;
+  }) as ServerTokenAnnotation;
 
   if (!pdfStore.pages) {
     return null;

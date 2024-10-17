@@ -31,32 +31,39 @@ import {
   UpdateAnnotationOutputType,
   UpdateRelationInputType,
   UpdateRelationOutputType,
-} from "../../../graphql/mutations";
-import { PDFView } from "../pages";
+} from "../../../../graphql/mutations";
+import { DocumentViewer } from "../viewer";
 
 import {
   DocTypeAnnotation,
   PdfAnnotations,
   PDFPageInfo,
   RelationGroup,
-  ServerAnnotation,
-} from "../context";
+  ServerSpanAnnotation,
+  ServerTokenAnnotation,
+} from "../../context";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 
 import {
   AnalysisType,
   AnnotationLabelType,
+  AnnotationTypeEnum,
   ColumnType,
   CorpusType,
   DatacellType,
   DocumentType,
   ExtractType,
   LabelDisplayBehavior,
-} from "../../../graphql/types";
-import { ViewState, TokenId, PermissionTypes } from "../../types";
+  LabelType,
+} from "../../../../graphql/types";
+import {
+  ViewState,
+  TokenId,
+  PermissionTypes,
+  SpanAnnotationJson,
+} from "../../../types";
 import { toast } from "react-toastify";
-import { createTokenStringSearch } from "../utils";
-import { getPermissions } from "../../../utils/transform";
+import { getPermissions } from "../../../../utils/transform";
 import _ from "lodash";
 
 export interface TextSearchResultsProps {
@@ -76,7 +83,9 @@ export interface PageTokenMapBuilderProps {
 
 interface AnnotatorRendererProps {
   open: boolean;
-  doc: PDFDocumentProxy;
+  doc: PDFDocumentProxy | undefined;
+  rawText: string;
+  pageTextMaps: Record<number, TokenId> | undefined;
   data_loading?: boolean;
   loading_message?: string;
   pages: PDFPageInfo[];
@@ -93,8 +102,8 @@ interface AnnotatorRendererProps {
   onSelectExtract?: (extract: ExtractType | null) => undefined | null | void;
   read_only: boolean;
   load_progress: number;
-  scrollToAnnotation?: ServerAnnotation;
-  selectedAnnotation?: ServerAnnotation[];
+  scrollToAnnotation?: ServerTokenAnnotation | ServerSpanAnnotation;
+  selectedAnnotation?: (ServerTokenAnnotation | ServerSpanAnnotation)[];
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
   show_structural_annotations: boolean;
@@ -103,12 +112,12 @@ interface AnnotatorRendererProps {
   human_span_labels: AnnotationLabelType[];
   relationship_labels: AnnotationLabelType[];
   document_labels: AnnotationLabelType[];
-  annotation_objs: ServerAnnotation[];
+  annotation_objs: (ServerTokenAnnotation | ServerSpanAnnotation)[];
   doc_type_annotations: DocTypeAnnotation[];
   relationship_annotations: RelationGroup[];
   data_cells?: DatacellType[];
   columns?: ColumnType[];
-  structural_annotations?: ServerAnnotation[];
+  structural_annotations?: ServerTokenAnnotation[];
   editMode: "ANNOTATE" | "ANALYZE";
   allowInput: boolean;
   setEditMode: (m: "ANNOTATE" | "ANALYZE") => void | undefined | null;
@@ -120,6 +129,8 @@ interface AnnotatorRendererProps {
 
 export const AnnotatorRenderer = ({
   doc,
+  rawText,
+  pageTextMaps,
   pages,
   data_loading,
   loading_message,
@@ -163,9 +174,6 @@ export const AnnotatorRenderer = ({
   const [pdfAnnotations, setPdfAnnotations] = useState<PdfAnnotations>(
     new PdfAnnotations([], [], [])
   );
-
-  const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
-  const [doc_text, setDocText] = useState<string>("");
 
   // New state to track if we've scrolled to the annotation
   const [hasScrolledToAnnotation, setHasScrolledToAnnotation] = useState<
@@ -270,18 +278,7 @@ export const AnnotatorRenderer = ({
     setHasScrolledToAnnotation(null);
   }, [scrollToAnnotation]);
 
-  // When the opened document is changed... reload...
-  useEffect(() => {
-    let { doc_text, string_index_token_map } = createTokenStringSearch(pages);
-
-    setPageTextMaps({
-      ...string_index_token_map,
-      ...pageTextMaps,
-    });
-    setDocText(doc_text);
-  }, [pages, doc]);
-
-  function addMultipleAnnotations(a: ServerAnnotation[]): void {
+  function addMultipleAnnotations(a: ServerTokenAnnotation[]): void {
     setPdfAnnotations(
       new PdfAnnotations(
         pdfAnnotations.annotations.concat(a),
@@ -298,7 +295,7 @@ export const AnnotatorRenderer = ({
   >(REQUEST_ADD_ANNOTATION);
 
   const requestCreateAnnotation = (
-    added_annotation_obj: ServerAnnotation
+    added_annotation_obj: ServerTokenAnnotation | ServerSpanAnnotation
   ): void => {
     if (openedCorpus) {
       // Stray clicks on the canvas can trigger the annotation submission with empty token arrays and
@@ -317,32 +314,60 @@ export const AnnotatorRenderer = ({
             annotationLabelId: added_annotation_obj.annotationLabel.id,
             rawText: added_annotation_obj.rawText,
             page: added_annotation_obj.page,
+            annotationType:
+              added_annotation_obj instanceof ServerSpanAnnotation
+                ? LabelType.SpanLabel
+                : LabelType.TokenLabel,
           },
         })
           .then((data) => {
             toast.success("Annotated!\nAdded your annotation to the database.");
             //console.log("New annoation,", data);
-            let newRenderedAnnotations: ServerAnnotation[] = [];
+            let newRenderedAnnotations: (
+              | ServerTokenAnnotation
+              | ServerSpanAnnotation
+            )[] = [];
             let annotationObj = data?.data?.addAnnotation?.annotation;
             if (annotationObj) {
-              newRenderedAnnotations.push(
-                new ServerAnnotation(
-                  annotationObj.page,
-                  annotationObj.annotationLabel,
-                  annotationObj.rawText,
-                  false,
-                  annotationObj.json,
-                  getPermissions(
-                    annotationObj?.myPermissions
-                      ? annotationObj.myPermissions
-                      : []
-                  ),
-                  false,
-                  false,
-                  false,
-                  annotationObj.id
-                )
-              );
+              if (openedDocument.fileType === "application/txt") {
+                newRenderedAnnotations.push(
+                  new ServerSpanAnnotation(
+                    annotationObj.page,
+                    annotationObj.annotationLabel,
+                    annotationObj.rawText,
+                    false,
+                    annotationObj.json as SpanAnnotationJson,
+                    getPermissions(
+                      annotationObj?.myPermissions
+                        ? annotationObj.myPermissions
+                        : []
+                    ),
+                    false,
+                    false,
+                    false,
+                    annotationObj.id
+                  )
+                );
+              } else {
+                newRenderedAnnotations.push(
+                  new ServerTokenAnnotation(
+                    annotationObj.page,
+                    annotationObj.annotationLabel,
+                    annotationObj.rawText,
+                    false,
+                    annotationObj.json,
+                    getPermissions(
+                      annotationObj?.myPermissions
+                        ? annotationObj.myPermissions
+                        : []
+                    ),
+                    false,
+                    false,
+                    false,
+                    annotationObj.id
+                  )
+                );
+              }
             }
             addMultipleAnnotations(newRenderedAnnotations);
           })
@@ -464,11 +489,13 @@ export const AnnotatorRenderer = ({
     };
   }
 
-  function removeAnnotation(id: string): ServerAnnotation[] {
+  function removeAnnotation(id: string): ServerTokenAnnotation[] {
     return pdfAnnotations.annotations.filter((ann) => ann.id !== id);
   }
 
-  const requestUpdateAnnotation = (updated_annotation: ServerAnnotation) => {
+  const requestUpdateAnnotation = (
+    updated_annotation: ServerTokenAnnotation
+  ) => {
     updateAnnotation({
       variables: {
         id: updated_annotation.id,
@@ -918,9 +945,9 @@ export const AnnotatorRenderer = ({
   };
 
   const replaceAnnotations = (
-    replacement_annotations: ServerAnnotation[],
-    obj_list_to_replace_in: ServerAnnotation[]
-  ): ServerAnnotation[] => {
+    replacement_annotations: ServerTokenAnnotation[],
+    obj_list_to_replace_in: ServerTokenAnnotation[]
+  ): ServerTokenAnnotation[] => {
     const updated_ids = replacement_annotations.map((a) => a.id);
     const unchanged_annotations = obj_list_to_replace_in.filter(
       (a) => !updated_ids.includes(a.id)
@@ -984,8 +1011,9 @@ export const AnnotatorRenderer = ({
     }
   };
 
+  console.log("AnnotatorRenderer...");
   return (
-    <PDFView
+    <DocumentViewer
       zoom_level={zoom_level}
       setZoomLevel={setZoomLevel}
       view_document_only={view_document_only}
@@ -1016,7 +1044,7 @@ export const AnnotatorRenderer = ({
       scroll_to_annotation_on_open={scrollToAnnotation}
       setJumpedToAnnotationOnLoad={setHasScrolledToAnnotation}
       doc={doc}
-      doc_text={doc_text}
+      doc_text={rawText}
       page_token_text_maps={pageTextMaps ? pageTextMaps : {}}
       pages={pages}
       spanLabels={span_label_lookup}

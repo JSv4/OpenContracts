@@ -76,5 +76,5 @@ django-guardian
 
 # GraphQL
 # ------------------------------------------------------------------------------
-graphene-django==3.0.0  # TODO - upgrade at some point. Will require some refactoring.
+graphene-django==3.2.2  # TODO - upgrade at some point. Will require some refactoring.
 django-graphql-jwt

@@ -329,6 +329,32 @@ class DocAnalyzerTaskTestCase(TestCase):
                 doc_id=self.document.id, analysis_id=self.analysis.id
             ).apply().get()
 
+    def test_other_error_handling(self):
+        @doc_analyzer_task()
+        def other_error_task(*args, **kwargs):
+            raise ZeroDivisionError(
+                "Oops! Someone divided by zero in a parallel universe."
+            )
+
+        result = (
+            other_error_task.si(
+                doc_id=self.unlocked_document.id, analysis_id=self.analysis.id
+            )
+            .apply()
+            .get()
+        )
+
+        self.assertEqual(result[0], [])  # Empty list for doc labels
+        self.assertEqual(result[1], [])  # Empty list for text annotations
+        self.assertEqual(len(result[2]), 1)  # One metadata item
+        self.assertIn("data", result[2][0])
+        self.assertIn("error", result[2][0]["data"])
+        self.assertIn(
+            "Oops! Someone divided by zero in a parallel universe.",
+            result[2][0]["data"]["error"],
+        )
+        self.assertFalse(result[3])  # Last element should be False
+
     def test_doc_analyzer_task_invalid_metadata(self):
         self.document.backend_lock = False
         self.document.save()

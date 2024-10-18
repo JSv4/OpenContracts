@@ -3,8 +3,14 @@ import { Button, Modal, Icon, Header } from "semantic-ui-react";
 import _ from "lodash";
 import { CRUDWidget } from "./CRUDWidget";
 import { CRUDProps, LooseObject, PropertyWidgets } from "../../types";
-import { HorizontallyCenteredDiv } from "../../layout/Wrappers";
+import {
+  HorizontallyCenteredDiv,
+  VerticallyCenteredDiv,
+} from "../../layout/Wrappers";
 
+/**
+ * Props for the ObjectCRUDModal component.
+ */
 export interface ObjectCRUDModalProps extends CRUDProps {
   open: boolean;
   oldInstance: Record<string, any>;
@@ -14,6 +20,13 @@ export interface ObjectCRUDModalProps extends CRUDProps {
   children?: React.ReactNode;
 }
 
+/**
+ * CRUDModal component provides a modal interface for creating, viewing, and editing instances.
+ * It integrates the CRUDWidget for form handling and supports custom property widgets.
+ *
+ * @param {ObjectCRUDModalProps} props - The properties passed to the component.
+ * @returns {JSX.Element} The rendered CRUD modal component.
+ */
 export function CRUDModal({
   open,
   mode,
@@ -30,62 +43,73 @@ export function CRUDModal({
   onSubmit,
   onClose,
   children,
-}: ObjectCRUDModalProps) {
-  const [instance_obj, setInstanceObj] = useState(
-    oldInstance ? oldInstance : {}
+}: ObjectCRUDModalProps): JSX.Element {
+  const [instanceObj, setInstanceObj] = useState<Record<string, any>>(
+    oldInstance || {}
   );
-  const [updated_fields_obj, setUpdatedFields] = useState({
-    id: oldInstance?.id ? oldInstance.id : -1,
+  const [updatedFieldsObj, setUpdatedFields] = useState<Record<string, any>>({
+    id: oldInstance?.id ?? -1,
   });
 
-  const can_write = mode !== "VIEW" && (mode === "CREATE" || mode === "EDIT");
+  const canWrite = mode !== "VIEW" && (mode === "CREATE" || mode === "EDIT");
 
   useEffect(() => {
-    console.log("CRUD updated fields obj", updated_fields_obj);
-  }, [updated_fields_obj]);
+    console.log("CRUD updated fields obj", updatedFieldsObj);
+  }, [updatedFieldsObj]);
 
   useEffect(() => {
     console.log("oldInstance changed", oldInstance);
-    setInstanceObj(oldInstance ? oldInstance : {});
-    if (oldInstance.length >= 0 && oldInstance.hasOwnProperty("id")) {
+    setInstanceObj(oldInstance || {});
+    if (
+      Array.isArray(oldInstance) &&
+      oldInstance.length > 0 &&
+      typeof oldInstance[0] === "object" &&
+      "id" in oldInstance[0]
+    ) {
+      setUpdatedFields({ id: oldInstance[0].id });
+    } else if (
+      typeof oldInstance === "object" &&
+      oldInstance !== null &&
+      "id" in oldInstance
+    ) {
       setUpdatedFields({ id: oldInstance.id });
     }
   }, [oldInstance]);
 
-  const handleModelChange = (updated_fields: LooseObject) => {
-    console.log("HandleModelChange: ", updated_fields);
-    setInstanceObj((instance_obj) => ({ ...instance_obj, ...updated_fields }));
-    setUpdatedFields((updated_fields_obj) => ({
-      ...updated_fields_obj,
-      ...updated_fields,
+  /**
+   * Handles changes in the model and updates the state accordingly.
+   *
+   * @param {LooseObject} updatedFields - The updated fields from the form.
+   */
+  const handleModelChange = (updatedFields: LooseObject): void => {
+    console.log("HandleModelChange: ", updatedFields);
+    setInstanceObj((prevObj) => ({ ...prevObj, ...updatedFields }));
+    setUpdatedFields((prevFields) => ({
+      ...prevFields,
+      ...updatedFields,
     }));
   };
 
-  let ui_schema_as_applied = { ...uiSchema };
-  if (!can_write) {
-    ui_schema_as_applied["ui:readonly"] = true;
-  }
+  const appliedUISchema = useMemo(() => {
+    return canWrite ? { ...uiSchema } : { ...uiSchema, "ui:readonly": true };
+  }, [uiSchema, canWrite]);
 
-  let listening_children: JSX.Element[] = [];
-
-  // If we need specific widgets to render and interact with certain fields, loop over the dict between field names and widgets
-  // and inject listeners and obj values
-  if (propertyWidgets) {
-    const keys = Object.keys(propertyWidgets);
-
-    // iterate over object
-    keys.forEach((key, index) => {
-      if (React.isValidElement(propertyWidgets[key])) {
-        listening_children?.push(
-          React.cloneElement(propertyWidgets[key], {
-            [key]: instance_obj ? instance_obj[key] : "",
+  const listeningChildren: JSX.Element[] = useMemo(() => {
+    if (!propertyWidgets) return [];
+    return Object.keys(propertyWidgets)
+      .map((key, index) => {
+        const widget = propertyWidgets[key];
+        if (React.isValidElement(widget)) {
+          return React.cloneElement(widget, {
+            [key]: instanceObj[key] || "",
             onChange: handleModelChange,
             key: index,
-          })
-        );
-      }
-    });
-  }
+          });
+        }
+        return null;
+      })
+      .filter(Boolean) as JSX.Element[];
+  }, [propertyWidgets, instanceObj, handleModelChange]);
 
   const descriptiveName = useMemo(
     () => modelName.charAt(0).toUpperCase() + modelName.slice(1),
@@ -95,22 +119,16 @@ export function CRUDModal({
   const headerText = useMemo(() => {
     switch (mode) {
       case "EDIT":
-        return `Edit ${descriptiveName}: ${instance_obj.title}`;
+        return `Edit ${descriptiveName}: ${instanceObj.title}`;
       case "VIEW":
         return `View ${descriptiveName}`;
       default:
         return `Create ${descriptiveName}`;
     }
-  }, [mode, descriptiveName, instance_obj.title]);
+  }, [mode, descriptiveName, instanceObj.title]);
 
   return (
-    <Modal
-      centered
-      size="large"
-      closeIcon
-      open={open}
-      onClose={() => onClose()}
-    >
+    <Modal centered size="large" closeIcon open={open} onClose={onClose}>
       <Modal.Header>
         <HorizontallyCenteredDiv>
           <div style={{ marginTop: "1rem", textAlign: "left", width: "100%" }}>
@@ -127,9 +145,9 @@ export function CRUDModal({
       <Modal.Content scrolling>
         <CRUDWidget
           mode={mode}
-          instance={instance_obj}
+          instance={instanceObj}
           modelName={modelName}
-          uiSchema={uiSchema}
+          uiSchema={appliedUISchema}
           dataSchema={dataSchema}
           showHeader={false}
           handleInstanceChange={handleModelChange}
@@ -139,29 +157,30 @@ export function CRUDModal({
           fileIsImage={fileIsImage}
           acceptedFileTypes={acceptedFileTypes}
         />
-        {listening_children}
+        <VerticallyCenteredDiv>{listeningChildren}</VerticallyCenteredDiv>
+        {children}
       </Modal.Content>
       <Modal.Actions>
-        <Button basic color="grey" onClick={() => onClose()}>
-          <Icon name="remove" /> Close
-        </Button>
-        {can_write && onSubmit && !_.isEqual(oldInstance, instance_obj) ? (
-          <Button
-            color="green"
-            inverted
-            onClick={() => {
-              console.log(
-                "Submitting",
-                mode === "EDIT" ? updated_fields_obj : instance_obj
-              );
-              onSubmit(mode === "EDIT" ? updated_fields_obj : instance_obj);
-            }}
-          >
-            <Icon name="checkmark" /> {mode === "EDIT" ? "Update" : "Create"}
+        <HorizontallyCenteredDiv>
+          <Button basic color="grey" onClick={onClose}>
+            <Icon name="remove" /> Close
           </Button>
-        ) : (
-          <></>
-        )}
+          {canWrite && onSubmit && !_.isEqual(oldInstance, instanceObj) && (
+            <Button
+              color="green"
+              inverted
+              onClick={() => {
+                console.log(
+                  "Submitting",
+                  mode === "EDIT" ? updatedFieldsObj : instanceObj
+                );
+                onSubmit(mode === "EDIT" ? updatedFieldsObj : instanceObj);
+              }}
+            >
+              <Icon name="checkmark" /> {mode === "EDIT" ? "Update" : "Create"}
+            </Button>
+          )}
+        </HorizontallyCenteredDiv>
       </Modal.Actions>
     </Modal>
   );

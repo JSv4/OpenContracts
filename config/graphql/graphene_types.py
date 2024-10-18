@@ -120,6 +120,7 @@ class LabelTypeEnum(graphene.Enum):
     DOC_TYPE_LABEL = "DOC_TYPE_LABEL"
     TOKEN_LABEL = "TOKEN_LABEL"
     METADATA_LABEL = "METADATA_LABEL"
+    SPAN_LABEL = "SPAN_LABEL"
 
 
 class AnnotationSummaryType(graphene.ObjectType):
@@ -412,7 +413,11 @@ class AnalysisType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         results = self.annotations.all()
         if document_id is not None:
             document_pk = from_global_id(document_id)[1]
+            logger.info(
+                f"Resolve full annotations for analysis {self.id} with doc {document_pk}"
+            )
             results = results.filter(document_id=document_pk)
+
         return results
 
     class Meta:

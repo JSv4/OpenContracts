@@ -27,6 +27,9 @@ class Document(BaseOCModel):
     # File fields (Some of these are text blobs or jsons that could be huge, so we're storing them in S3 and going
     # to have the frontend fetch them from there. Will be much faster and cheaper than having a huge relational database
     # full of these kinds of things).
+    file_type = django.db.models.CharField(
+        blank=False, null=False, max_length=255, default="application/pdf"
+    )
     icon = django.db.models.FileField(
         max_length=1024,
         blank=True,
@@ -34,8 +37,8 @@ class Document(BaseOCModel):
     )
     pdf_file = django.db.models.FileField(
         max_length=1024,
-        blank=False,
-        null=False,
+        blank=True,
+        null=True,
         upload_to=functools.partial(calc_oc_file_path, sub_folder="pdf_files"),
     )
     txt_extract_file = django.db.models.FileField(
@@ -45,7 +48,7 @@ class Document(BaseOCModel):
         null=True,
     )
     page_count = django.db.models.IntegerField(
-        default=-1,  # insane default to make it easy to find unhandled docs
+        default=0,
         null=False,
         blank=True,
     )
@@ -55,6 +58,9 @@ class Document(BaseOCModel):
         upload_to=functools.partial(calc_oc_file_path, sub_folder="pawls_layers_files"),
         null=True,
     )
+
+    processing_started = django.db.models.DateTimeField(null=True)
+    processing_finished = django.db.models.DateTimeField(null=True)
 
     # Vector for vector search
     embedding = VectorField(dimensions=384, null=True)

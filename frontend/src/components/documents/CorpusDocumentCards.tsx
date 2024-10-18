@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import _ from "lodash";
 import { toast } from "react-toastify";
 import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
@@ -13,6 +13,8 @@ import {
   filterToLabelId,
   selectedMetaAnnotationId,
   openedDocument,
+  showUploadNewDocumentsModal,
+  uploadModalPreloadedFiles,
 } from "../../graphql/cache";
 import {
   REMOVE_DOCUMENTS_FROM_CORPUS,
@@ -25,6 +27,7 @@ import {
   GET_DOCUMENTS,
 } from "../../graphql/queries";
 import { DocumentType } from "../../graphql/types";
+import { FileUploadPackageProps } from "../widgets/modals/DocumentUploadModal";
 
 export const CorpusDocumentCards = ({
   opened_corpus_id,
@@ -171,6 +174,20 @@ export const CorpusDocumentCards = ({
     openedDocument(document);
   };
 
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const filePackages: FileUploadPackageProps[] = acceptedFiles.map(
+      (file) => ({
+        file,
+        formData: {
+          title: file.name,
+          description: `Content summary for ${file.name}`,
+        },
+      })
+    );
+    showUploadNewDocumentsModal(true);
+    uploadModalPreloadedFiles(filePackages);
+  }, []);
+
   return (
     <DocumentCards
       items={document_items}
@@ -182,6 +199,8 @@ export const CorpusDocumentCards = ({
       onShiftClick={onSelect}
       onClick={onOpen}
       removeFromCorpus={opened_corpus_id ? handleRemoveContracts : undefined}
+      onDrop={onDrop}
+      corpusId={opened_corpus_id}
     />
   );
 };

@@ -4,6 +4,7 @@ import {
   ExportTypes,
   MultipageAnnotationJson,
   PermissionTypes,
+  SpanAnnotationJson,
 } from "../components/types";
 
 export type Maybe<T> = T | null;
@@ -112,11 +113,11 @@ export type ServerAnnotationType = Node & {
   __typename?: "AnnotationType";
   id: Scalars["ID"];
   page: Scalars["Int"];
-  annotation_type?: AnnotationTypeEnum;
+  annotationType?: LabelType;
   userFeedback?: FeedbackTypeConnection;
   created_by_analyses: AnalysisTypeConnection;
   rawText?: Maybe<Scalars["String"]>;
-  json?: MultipageAnnotationJson;
+  json?: MultipageAnnotationJson | SpanAnnotationJson;
   annotationLabel: AnnotationLabelType;
   document: DocumentType;
   structural?: boolean;
@@ -303,6 +304,7 @@ export type DocumentType = Node & {
   txtExtractFile?: Maybe<Scalars["String"]>;
   pawlsParseFile?: Maybe<Scalars["String"]>;
   backendLock?: Scalars["Boolean"];
+  fileType?: Scalars["String"];
   userLock?: Maybe<UserType>;
   creator?: UserType;
   created?: Scalars["DateTime"];
@@ -408,6 +410,7 @@ export enum LabelType {
   DocTypeLabel = "DOC_TYPE_LABEL",
   TokenLabel = "TOKEN_LABEL",
   MetadataLabel = "METADATA_LABEL",
+  SpanLabel = "SPAN_LABEL",
 }
 
 export enum AnnotationTypeEnum {

@@ -3,7 +3,7 @@ import { Label, Button, Popup, Icon, SemanticICONS } from "semantic-ui-react";
 import styled from "styled-components";
 import { Trash2, ArrowRight, ArrowLeft } from "lucide-react";
 import { HorizontallyJustifiedDiv } from "./common";
-import { AnnotationStore, ServerAnnotation } from "../context";
+import { AnnotationStore, ServerTokenAnnotation } from "../context";
 import { PermissionTypes } from "../../types";
 
 interface HighlightContainerProps {
@@ -29,7 +29,7 @@ const HighlightContainer = styled.div<HighlightContainerProps>`
 
 const AnnotationLabel = styled(Label)`
   &&& {
-    background-color: ${(props) => props.color || "grey"};
+    background-color: #${(props) => props.color || "grey"};
     color: white;
     margin: 0 0.5rem 0.5rem 0;
     padding: 0.5em 0.8em;
@@ -81,7 +81,7 @@ const LocationText = styled.div`
 `;
 
 interface HighlightItemProps {
-  annotation: ServerAnnotation;
+  annotation: ServerTokenAnnotation;
   className?: string;
   read_only: boolean;
   relations: Array<{ sourceIds: string[]; targetIds: string[] }>;
@@ -100,13 +100,14 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
   const annotationStore = useContext(AnnotationStore);
   const selected = annotationStore.selectedAnnotations.includes(annotation.id);
 
+  console.log("Selection element refs: ", annotationStore.selectionElementRefs);
+
   const my_output_relationships = relations.filter((relation) =>
     relation.sourceIds.includes(annotation.id)
   );
   const my_input_relationships = relations.filter((relation) =>
     relation.targetIds.includes(annotation.id)
   );
-  console.log("Annotation over: ", annotation.rawText);
   return (
     <HighlightContainer
       color={annotation?.annotationLabel?.color}

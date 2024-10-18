@@ -14,6 +14,7 @@ import {
   filterToLabelId,
   selectedAnalyses,
   showCorpusActionOutputs,
+  filterToAnnotationType,
 } from "../../graphql/cache";
 
 import {
@@ -40,7 +41,7 @@ export const CorpusAnnotationCards = ({
   const filter_to_label_id = useReactiveVar(filterToLabelId);
   const selected_analyses = useReactiveVar(selectedAnalyses);
   const show_action_annotations = useReactiveVar(showCorpusActionOutputs);
-
+  const filter_to_annotation_type = useReactiveVar(filterToAnnotationType);
   const location = useLocation();
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -58,12 +59,15 @@ export const CorpusAnnotationCards = ({
     data: annotation_response,
     fetchMore: fetchMoreAnnotations,
   } = useQuery<GetAnnotationsOutputs, GetAnnotationsInputs>(GET_ANNOTATIONS, {
+    fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true, // necessary in order to trigger loading signal on fetchMore
     variables: {
-      annotationLabel_Type: "TOKEN_LABEL",
       createdByAnalysisIds: selected_analysis_id_string,
       analysis_Isnull: !show_action_annotations,
       ...(opened_corpus_id ? { corpusId: opened_corpus_id } : {}),
+      ...(filter_to_annotation_type
+        ? { annotationLabel_Type: filter_to_annotation_type }
+        : {}),
       ...(filter_to_label_id ? { annotationLabelId: filter_to_label_id } : {}),
       ...(filter_to_labelset_id
         ? { usesLabelFromLabelsetId: filter_to_labelset_id }
@@ -156,8 +160,11 @@ export const CorpusAnnotationCards = ({
       items={annotation_items}
       loading={annotation_loading}
       loading_message="Annotations Loading..."
-      pageInfo={undefined}
-      //pageInfo={annotation_response?.annotations?.pageInfo ? annotation_response.annotations.pageInfo : undefined}
+      pageInfo={
+        annotation_response?.annotations?.pageInfo
+          ? annotation_response.annotations.pageInfo
+          : undefined
+      }
       style={{ minHeight: "70vh", overflowY: "unset" }}
       fetchMore={handleFetchMoreAnnotations}
     />

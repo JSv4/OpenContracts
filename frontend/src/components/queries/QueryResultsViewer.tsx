@@ -37,6 +37,7 @@ const QueryResultsViewer: React.FC<QueryResultsViewerProps> = ({
 
   useEffect(() => {
     if (viewSourceAnnotation) {
+      console.log("viewSourceAnnotation", viewSourceAnnotation);
       displayAnnotationOnAnnotatorLoad(viewSourceAnnotation);
       selectedAnnotation(viewSourceAnnotation);
       openedDocument(viewSourceAnnotation.document);

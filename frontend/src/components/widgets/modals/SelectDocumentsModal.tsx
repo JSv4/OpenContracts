@@ -18,10 +18,15 @@ import { CreateAndSearchBar } from "../../layout/CreateAndSearchBar";
 import { FilterToLabelsetSelector } from "../model-filters/FilterToLabelsetSelector";
 import { FilterToCorpusSelector } from "../model-filters/FilterToCorpusSelector";
 import { FilterToLabelSelector } from "../model-filters/FilterToLabelSelector";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CorpusType, DocumentType, LabelType } from "../../../graphql/types";
 import { LooseObject } from "../../types";
 import { selectedDocumentIds } from "../../../graphql/cache";
+import {
+  showUploadNewDocumentsModal,
+  uploadModalPreloadedFiles,
+} from "../../../graphql/cache";
+import { FileUploadPackageProps } from "./DocumentUploadModal";
 
 interface SelectDocumentsModalProps {
   open: boolean;
@@ -152,6 +157,20 @@ export const SelectDocumentsModal = ({
     // console.log("selected doc ids", selected_document_ids);
   };
 
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const filePackages: FileUploadPackageProps[] = acceptedFiles.map(
+      (file) => ({
+        file,
+        formData: {
+          title: file.name,
+          description: `Content summary for ${file.name}`,
+        },
+      })
+    );
+    showUploadNewDocumentsModal(true);
+    uploadModalPreloadedFiles(filePackages);
+  }, []);
+
   return (
     <Modal
       size="fullscreen"
@@ -215,6 +234,8 @@ export const SelectDocumentsModal = ({
             loading={documents_loading}
             loading_message="Loading Documents..."
             fetchMore={fetchMoreDocuments}
+            onDrop={onDrop}
+            corpusId={filtered_to_corpus?.id || null}
           />
         </CardLayout>
       </ModalContent>

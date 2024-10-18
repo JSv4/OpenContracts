@@ -83,7 +83,7 @@ def ingest_txt(user_id: int, doc_id: int) -> list[tuple[int, str]]:
         label_obj = label_obj[0]
     else:
         label_obj = AnnotationLabel(
-            label_type=TOKEN_LABEL,
+            label_type=SPAN_LABEL,
             color="grey",
             description="Sentence",
             icon="expand",

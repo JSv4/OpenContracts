@@ -87,8 +87,8 @@ class UploadDocumentMutationTestCase(TestCase):
         file_types = {
             "pdf": "application/pdf",
             "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "txt": "application/txt",
         }
 

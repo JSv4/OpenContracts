@@ -1,4 +1,5 @@
 import json
+import logging
 
 from celery.exceptions import Retry
 from django.contrib.auth import get_user_model
@@ -22,6 +23,7 @@ from opencontractserver.tests.fixtures import (
 from opencontractserver.types.dicts import TextSpan
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 @doc_analyzer_task(max_retries=10)
@@ -61,7 +63,7 @@ class DocAnalyzerTaskTestCase(TestCase):
         with open(SAMPLE_TXT_FILE_ONE_PATH) as txt_file:
             self.txt_content = ContentFile(txt_file.read(), name=txt_file.name)
 
-        # Create a real Document instance
+        # Create a real PDF Document instance
         self.document = Document.objects.create(
             title="Test Document",
             description="A test document",
@@ -73,6 +75,26 @@ class DocAnalyzerTaskTestCase(TestCase):
             ),
             backend_lock=True,
             creator=self.user,
+        )
+
+        # Create a real TXT Document instance
+        self.txt_document = Document.objects.create(
+            title="Test Document 3",
+            description="A test txt document",
+            txt_extract_file=self.txt_content,
+            backend_lock=False,
+            creator=self.user,
+            file_type="application/txt",
+        )
+
+        # Create a random doc type that will fail to be processed
+        self.random_document = Document.objects.create(
+            title="Test Document 4",
+            description="It's a wild missingno!",
+            txt_extract_file=self.txt_content,
+            backend_lock=False,
+            creator=self.user,
+            file_type="random/type",
         )
 
         self.unlocked_document = Document.objects.create(
@@ -175,6 +197,42 @@ class DocAnalyzerTaskTestCase(TestCase):
         )
 
         self.assertEqual(processed_text, expected_text)
+
+    def test_function_has_access_to_txt_text(self):
+        @doc_analyzer_task()
+        def test_txt_text_received(*args, pdf_text_extract, **kwargs):
+            return [], [], [{"data": pdf_text_extract}], True
+
+        expected_text = SAMPLE_TXT_FILE_ONE_PATH.read_text()
+        processed_text = (
+            test_txt_text_received.si(
+                doc_id=self.txt_document.id, analysis_id=self.analysis.id
+            )
+            .apply()
+            .get()[2][0]["data"]
+        )
+        logger.info(processed_text)
+        self.assertEqual(processed_text, expected_text)
+
+    def test_function_has_access_to_txt_text_no_analysis(self):
+        @doc_analyzer_task()
+        def test_txt_text_received(*args, pdf_text_extract, **kwargs):
+            return [], [], [{"data": pdf_text_extract}], True
+
+        with self.assertRaisesRegex(
+            ValueError, r"analysis_id is required for doc_analyzer_task"
+        ):
+            test_txt_text_received.si(doc_id=self.txt_document.id).apply().get()
+
+    def test_function_has_access_to_txt_text_invalid_analysis(self):
+        @doc_analyzer_task()
+        def test_txt_text_received(*args, pdf_text_extract, **kwargs):
+            return [], [], [{"data": pdf_text_extract}], True
+
+        with self.assertRaisesRegex(ValueError, r"Analysis with id -1 does not exist"):
+            test_txt_text_received.si(
+                doc_id=self.txt_document.id, analysis_id=-1
+            ).apply().get()
 
     def test_function_has_access_to_pawls_tokens(self):
         @doc_analyzer_task()

@@ -1,5 +1,7 @@
 #  Copyright (C) 2022  John Scrudato
+import io
 import logging
+import re
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -58,10 +60,59 @@ class DocParserTestCase(TestCase):
             )
             self.corpus.save()
 
-    def test_pdf_thumbnail_extraction(self):
+    def create_mock_image(self, width: int, height: int) -> Image.Image:
+        """Create a mock image with the given dimensions."""
+        return Image.new("RGB", (width, height), color="red")
 
-        # TODO - expand test to actually check results
-        extract_pdf_thumbnail.s(doc_id=self.doc.id).apply().get()
+    def image_to_bytes(self, image: Image.Image) -> bytes:
+        """Convert a PIL Image to bytes."""
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format="PNG")
+        return img_byte_arr.getvalue()
+
+    @patch("opencontractserver.tasks.doc_tasks.convert_from_bytes")
+    def test_pdf_thumbnail_extraction(self, mock_convert_from_bytes):
+        test_cases = [
+            (400, 400, "square"),
+            (600, 400, "landscape"),
+            (400, 600, "portrait"),
+        ]
+
+        for width, height, orientation in test_cases:
+            with self.subTest(orientation=orientation):
+                # Create a mock image
+                mock_image = self.create_mock_image(width, height)
+                mock_convert_from_bytes.return_value = [mock_image]
+
+                # Call the task
+                extract_pdf_thumbnail(doc_id=self.doc.id)
+
+                # Refresh the document from the database
+                self.doc.refresh_from_db()
+
+                # Check that the icon was created
+                self.assertTrue(self.doc.icon)
+                self.assertTrue(
+                    re.match(
+                        r"uploadfiles/pdf_icons/\d+_icon_[a-zA-Z0-9]+\.jpg",
+                        self.doc.icon.name,
+                    )
+                )
+
+                # Open the saved image and check its properties
+                with self.doc.icon.open("rb") as icon_file:
+                    saved_image = Image.open(icon_file)
+
+                    # Check the dimensions of the saved image
+                    self.assertEqual(saved_image.size, (400, 200))
+
+                    # Check that the image is not empty (all white)
+                    self.assertNotEqual(
+                        saved_image.getcolors(), [(400 * 200, (255, 255, 255))]
+                    )
+
+                # Clean up
+                self.doc.icon.delete()
 
     def test_set_doc_lock_state(self):
         set_doc_lock_state.apply(kwargs={"locked": True, "doc_id": self.doc.id}).get()

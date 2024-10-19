@@ -6,12 +6,14 @@ import json
 import logging
 from typing import Any
 
+import numpy as np
 import requests
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile, File
 from django.core.files.storage import default_storage
 from django.utils import timezone
+from pdf2image import convert_from_bytes
 from PIL import Image
 from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
 from pydantic import validate_arguments
@@ -415,10 +417,7 @@ def extract_pdf_thumbnail(*args, doc_id=-1, **kwargs):
     try:
 
         import cv2
-        import numpy as np
         from django.core.files.storage import default_storage
-        from pdf2image import convert_from_bytes
-        from PIL import Image
 
         document = Document.objects.get(pk=doc_id)
 

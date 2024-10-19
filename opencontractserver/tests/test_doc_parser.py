@@ -1,10 +1,12 @@
 #  Copyright (C) 2022  John Scrudato
 import logging
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.test import TestCase
+from PIL import Image
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
@@ -13,6 +15,7 @@ from opencontractserver.tasks.doc_tasks import (
     burn_doc_annotations,
     convert_doc_to_funsd,
     extract_pdf_thumbnail,
+    extract_txt_thumbnail,
     set_doc_lock_state,
 )
 from opencontractserver.tests.fixtures import (
@@ -112,3 +115,40 @@ class DocParserTestCase(TestCase):
         self.assertEqual(result[0], self.doc.id)
         self.assertIsInstance(result[1], dict)
         self.assertIsInstance(result[2], list)
+
+    @patch("opencontractserver.tasks.doc_tasks.create_text_thumbnail")
+    def test_extract_txt_thumbnail(self, mock_create_text_thumbnail):
+        # Create a mock image
+        mock_image = Image.new("RGB", (100, 100), color="red")
+        mock_create_text_thumbnail.return_value = mock_image
+
+        # Create a sample text content
+        sample_text = "This is a sample text for thumbnail extraction."
+        text_file = ContentFile(sample_text.encode("utf-8"), name="test_extract.txt")
+
+        # Update the document with the text extract file
+        self.doc.txt_extract_file = text_file
+        self.doc.save()
+
+        # Call the task
+        extract_txt_thumbnail.apply(kwargs={"doc_id": self.doc.id}).get()
+
+        # Refresh the document from the database
+        self.doc.refresh_from_db()
+
+        # Assert that the icon field is not empty
+        self.assertTrue(self.doc.icon)
+        self.assertIn("_icon.png", self.doc.icon.name)
+
+        # Assert that create_text_thumbnail was called with the correct text
+        mock_create_text_thumbnail.assert_called_once_with(sample_text)
+
+        # Verify the content of the saved image
+        with self.doc.icon.open("rb") as icon_file:
+            saved_image = Image.open(icon_file)
+            self.assertEqual(saved_image.size, (100, 100))
+            self.assertEqual(saved_image.mode, "RGB")
+
+        # Clean up
+        self.doc.icon.delete()
+        self.doc.txt_extract_file.delete()

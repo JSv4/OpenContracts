@@ -24,7 +24,7 @@ class TxtIngestorTestCase(TestCase):
             self.user = User.objects.create_user(username="bob", password="12345678")
 
         # Create a test document with a text file
-        with SAMPLE_TXT_FILE_ONE_PATH.open('rb') as f:
+        with SAMPLE_TXT_FILE_ONE_PATH.open("rb") as f:
             txt_content = f.read()
 
         txt_file = ContentFile(txt_content, name="test.txt")
@@ -47,10 +47,7 @@ class TxtIngestorTestCase(TestCase):
 
         # Check if the SENTENCE label was created
         sentence_label = AnnotationLabel.objects.filter(
-            text="SENTENCE",
-            creator=self.user,
-            label_type="SPAN_LABEL",
-            read_only=True
+            text="SENTENCE", creator=self.user, label_type="SPAN_LABEL", read_only=True
         ).first()
         self.assertIsNotNone(sentence_label)
 
@@ -66,8 +63,8 @@ class TxtIngestorTestCase(TestCase):
         self.assertEqual(first_annotation.creator, self.user)
 
         # Check if the annotation JSON contains start and end
-        self.assertIn('start', first_annotation.json)
-        self.assertIn('end', first_annotation.json)
+        self.assertIn("start", first_annotation.json)
+        self.assertIn("end", first_annotation.json)
 
         # Verify that all annotations have non-empty raw_text
         for annotation in annotations:

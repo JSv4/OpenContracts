@@ -8,7 +8,7 @@ from opencontractserver.tests.fixtures import (
     NLM_INGESTOR_SAMPLE_PDF,
     NLM_INGESTOR_SAMPLE_PDF_NEEDS_OCR,
 )
-from opencontractserver.utils.pdf import (
+from opencontractserver.utils.files import (
     base_64_encode_bytes,
     check_if_pdf_needs_ocr,
     convert_hex_to_rgb_tuple,

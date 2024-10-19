@@ -1,16 +1,20 @@
 import React, { useState, useContext } from "react";
 import styled, { css } from "styled-components";
 import { Icon, Image } from "semantic-ui-react";
-import { AnnotationStore, ServerAnnotation, PDFPageInfo } from "../context";
-import { BoundingBox, PermissionTypes } from "../../types";
-import { LabelDisplayBehavior } from "../../../graphql/types";
+import {
+  AnnotationStore,
+  ServerTokenAnnotation,
+  PDFPageInfo,
+} from "../../context";
+import { BoundingBox, PermissionTypes } from "../../../types";
+import { LabelDisplayBehavior } from "../../../../graphql/types";
 import { SelectionBoundary } from "./SelectionBoundary";
 import {
   annotationSelectedViaRelationship,
   getRelationImageHref,
-} from "../utils";
-import { getContrastColor } from "../../../utils/transform";
-import { pulseGreen, pulseMaroon } from "./effects";
+} from "../../utils";
+import { getContrastColor } from "../../../../utils/transform";
+import { pulseGreen, pulseMaroon } from "../effects";
 
 // ... (keep the existing interfaces)
 

@@ -3,34 +3,38 @@ import _ from "lodash";
 
 import { Image, Icon } from "semantic-ui-react";
 
-import { PDFPageInfo, AnnotationStore, ServerAnnotation } from "../context";
+import {
+  PDFPageInfo,
+  AnnotationStore,
+  ServerTokenAnnotation,
+} from "../../context";
 
 import {
   HorizontallyJustifiedStartDiv,
   VerticallyJustifiedEndDiv,
-} from "../sidebar/common";
+} from "../../sidebar/common";
 
 import {
   annotationSelectedViaRelationship,
   getRelationImageHref,
-} from "../utils";
+} from "../../utils";
 
-import { PermissionTypes } from "../../types";
-import { LabelDisplayBehavior } from "../../../graphql/types";
+import { PermissionTypes } from "../../../types";
+import { LabelDisplayBehavior } from "../../../../graphql/types";
 import { SelectionBoundary } from "./SelectionBoundary";
 import {
   LabelTagContainer,
   SelectionInfo,
   SelectionInfoContainer,
 } from "./Containers";
-import { getBorderWidthFromBounds } from "../../../utils/transform";
+import { getBorderWidthFromBounds } from "../../../../utils/transform";
 import RadialButtonCloud, {
   CloudButtonItem,
-} from "../../widgets/buttons/RadialButtonCloud";
+} from "../../../widgets/buttons/RadialButtonCloud";
 import { SelectionTokenGroup } from "./SelectionTokenGroup";
-import { EditLabelModal } from "../../widgets/modals/EditLabelModal";
+import { EditLabelModal } from "../../../widgets/modals/EditLabelModal";
 import { useReactiveVar } from "@apollo/client";
-import { authToken } from "../../../graphql/cache";
+import { authToken } from "../../../../graphql/cache";
 
 interface SelectionProps {
   selectionRef:
@@ -40,7 +44,7 @@ interface SelectionProps {
   hidden: boolean;
   scrollIntoView: boolean;
   pageInfo: PDFPageInfo;
-  annotation: ServerAnnotation;
+  annotation: ServerTokenAnnotation;
   labelBehavior: LabelDisplayBehavior;
   showInfo?: boolean;
   children?: React.ReactNode;

@@ -12,7 +12,7 @@ import {
   PDFPageInfo,
   RelationGroup,
   TokenId,
-  ServerAnnotation,
+  ServerTokenAnnotation,
 } from "./context";
 import { Token } from "../types";
 import {
@@ -52,8 +52,8 @@ export function getRelationImageHref(type: string): string {
 }
 
 export function annotationSelectedViaRelationship(
-  this_annotation: ServerAnnotation,
-  annotations: ServerAnnotation[],
+  this_annotation: ServerTokenAnnotation,
+  annotations: ServerTokenAnnotation[],
   relation: RelationGroup
 ): "SOURCE" | "TARGET" | "" {
   // console.log("this_annotation", this_annotation);

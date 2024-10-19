@@ -48,6 +48,8 @@ pytest-django==4.9.0  # https://github.com/pytest-dev/pytest-django
 # ------------------------------------------------------------------------------
 pypdf
 
-# Docx
+# Office files
 # ------------------------------------------------------------------------------
 python-docx
+openpyxl
+python-pptx

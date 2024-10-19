@@ -4,22 +4,24 @@ import enum
 import io
 import json
 import logging
-import pathlib
-import uuid
 from typing import Any
 
+import numpy as np
 import requests
-from celery import chord, group
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile, File
 from django.core.files.storage import default_storage
+from django.utils import timezone
+from pdf2image import convert_from_bytes
+from PIL import Image
 from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
 from pydantic import validate_arguments
 
 from config import celery_app
 from config.graphql.serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import (
+    SPAN_LABEL,
     TOKEN_LABEL,
     Annotation,
     AnnotationLabel,
@@ -30,18 +32,16 @@ from opencontractserver.types.dicts import (
     FunsdTokenType,
     LabelLookupPythonType,
     OpenContractDocExport,
-    PawlsPagePythonType,
     PawlsTokenPythonType,
 )
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
-from opencontractserver.utils.pdf import (
+from opencontractserver.utils.files import (
     check_if_pdf_needs_ocr,
-    extract_pawls_from_pdfs_bytes,
+    create_text_thumbnail,
     split_pdf_into_images,
 )
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
-from opencontractserver.utils.text import __consolidate_common_equivalent_chars
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -59,171 +59,63 @@ class TaskStates(str, enum.Enum):
 TEMP_DIR = "./tmp"
 
 
-@celery_app.task(
-    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
-)
-def process_pdf_page(
-    total_page_count: int, page_num: int, page_path: str, user_id: int
-) -> tuple[int, str, str]:
-
-    logger.info(
-        f"process_pdf_page() - Process page {page_num} of {total_page_count} from path {page_path}"
-    )
-
-    if settings.USE_AWS:
-        import boto3
-
-        logger.info("process_pdf_page() - Load obj from s3")
-        s3 = boto3.client("s3")
-
-        page_obj = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=page_path)
-        page_data = page_obj["Body"].read()
-    else:
-        with open(page_path, "rb") as page_file:
-            page_data = page_file.read()
-
-    # logger.info(f"Page data: {page_data}")
-    annotations = extract_pawls_from_pdfs_bytes(pdf_bytes=page_data)
-
-    logger.info(
-        f"process_pdf_page() - processing complete with annotations of type {type(annotations)} and len "
-        f"{len(annotations)}"
-    )
-
-    logger.info(
-        "process_pdf_page() - write to temporary storage to avoid overloading Redis"
-    )
-
-    if settings.USE_AWS:
-        pawls_fragment_path = f"user_{user_id}/pawls_fragments/{uuid.uuid4()}.json"
-        s3.put_object(
-            Key=pawls_fragment_path,
-            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-            Body=json.dumps(annotations[0]),
-        )
-    else:
-        pawls_fragment_folder_path = pathlib.Path(
-            f"/tmp/user_{user_id}/pawls_fragments"
-        )
-        pawls_fragment_folder_path.mkdir(parents=True, exist_ok=True)
-        pawls_fragment_path = pawls_fragment_folder_path / f"{uuid.uuid4()}.json"
-        with pawls_fragment_path.open("w") as f:
-            f.write(json.dumps(annotations[0]))
-        pawls_fragment_path = pawls_fragment_path.resolve().__str__()
-
-    logger.info(f"process_pdf_page() - annotations written to {pawls_fragment_path}")
-
-    return page_num, pawls_fragment_path, page_path
-
-
-@celery_app.task(
-    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
-)
-def reassemble_extracted_pdf_parts(
-    doc_parts: list[list[int, str, str]],
-    doc_id: int,
-):
-
-    logger.info(f"reassemble_extracted_pdf_parts() - received parts: {doc_parts}")
-
-    sorted_doc_parts = sorted(doc_parts)
-    pawls_layer: list[PawlsPagePythonType] = []
-
-    doc_text = ""
-    line_start_char = 0
-    last_token_height = -1
-
-    for doc_part in sorted_doc_parts:
-
-        page_num, pawls_page_path, pdf_page_path = doc_part
-
-        if settings.USE_AWS:
-            import boto3
-
-            logger.info("process_pdf_page() - Load obj from s3")
-            s3 = boto3.client("s3")
-
-            page_obj = s3.get_object(
-                Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=pawls_page_path
-            )
-            page_pawls_layer = json.loads(page_obj["Body"].read().decode("utf-8"))
-
-        else:
-            with open(pawls_page_path) as f:
-                page_pawls_layer = json.loads(f.read())
-
-        # Process PAWLS tokens to create a text layer
-        # We DO want to reset y pos on every page, which will be set to y of first token.
-        last_y = -1
-        line_text = ""
-        lines: list[tuple[int, int, int, int]] = []
-
-        for page_token_index, token in enumerate(page_pawls_layer["tokens"]):
-
-            token_text = __consolidate_common_equivalent_chars(token["text"])
-
-            new_y = round(token["y"], 0)
-            new_token_height = round(token["height"], 0)
-
-            if last_y == -1:
-                last_y = round(token["y"], 0)
-
-            if last_token_height == -1:
-                # Not really sure how to handle situations where the token height is 0 at the beginning... just
-                # try 1 pixel, I guess?
-                last_token_height = new_token_height if new_token_height > 0 else 1
-
-            # Tesseract line positions seem a bit erratic, honestly. Figuring out when a token is on the same line is
-            # not as easy as checking if y positions are the same as they are often off by a couple pixels. This is
-            # dependent on document, font size, OCR quality, and more... Decent heuristic I came up with was to look
-            # at two consecutive tokens, take the max token height and then see if the y difference was more than some
-            # percentage of the larger of the two token heights (to account for things like periods or dashes or
-            # whatever next to a word). Seems to work pretty well, though I am *SURE* it will fail in some cases. Easy
-            # enough fix there... just don't give a cr@p about line height and newlines and always use a space. That's
-            # actually probably fine for ML purposes.
-            # logger.info(f"Token: {token['text']} (len {len(token['text'])})")
-            # logger.info(f"Line y difference: {abs(new_y - last_y)}")
-            # logger.info(f"Compared to averaged token height: {0.5 * max(new_token_height, last_token_height)}")
-
-            if abs(new_y - last_y) > (0.5 * max(new_token_height, last_token_height)):
-
-                lines.append(
-                    (
-                        page_num,
-                        len(lines),
-                        line_start_char,
-                        len(line_text) + line_start_char,
-                    )
-                )
-
-                line_start_char = len(doc_text) + 1  # Accounting for newline
-                line_text = token_text
-
-            else:
-                line_text += " " if len(line_text) > 0 else ""
-                line_text += token_text
-
-            doc_text += " " if len(doc_text) > 0 else ""
-            doc_text += token_text
-
-        pawls_layer.append(page_pawls_layer)
-
-    pawls_string = json.dumps(pawls_layer)
-    pawls_file = ContentFile(pawls_string.encode("utf-8"))
-    txt_file = ContentFile(doc_text.encode("utf-8"))
-
-    document = Document.objects.get(pk=doc_id)
-    document.txt_extract_file.save(f"doc_{doc_id}.txt", txt_file)
-    document.pawls_parse_file.save(f"doc_{doc_id}.pawls", pawls_file)
-    document.page_count = len(sorted_doc_parts)
-    document.save()
-
-
 @celery_app.task()
 def set_doc_lock_state(*args, locked: bool, doc_id: int):
     document = Document.objects.get(pk=doc_id)
     document.backend_lock = locked
+    document.processing_finished = timezone.now()
     document.save()
+
+
+@celery_app.task(
+    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+)
+def ingest_txt(user_id: int, doc_id: int) -> list[tuple[int, str]]:
+    import spacy
+
+    logger.info(f"ingest_txt() - split doc {doc_id} for user {user_id}")
+
+    label_obj = AnnotationLabel.objects.filter(
+        text="SENTENCE",
+        creator_id=user_id,
+        label_type=SPAN_LABEL,
+        read_only=True,
+    )
+    if label_obj.count() > 0:
+        label_obj = label_obj[0]
+    else:
+        label_obj = AnnotationLabel(
+            label_type=SPAN_LABEL,
+            color="grey",
+            description="Sentence",
+            icon="expand",
+            text="SENTENCE",
+            creator_id=user_id,
+            read_only=True,
+        )
+        label_obj.save()
+
+    set_permissions_for_obj_to_user(user_id, label_obj, [PermissionTypes.ALL])
+
+    doc = Document.objects.get(pk=doc_id)
+    doc_path = doc.txt_extract_file.name
+    txt_file = default_storage.open(doc_path, mode="r")
+
+    nlp = spacy.load("en_core_web_lg")
+
+    for sentence in nlp(txt_file.read()).sents:
+        annot_obj = Annotation.objects.create(
+            raw_text=sentence.text,
+            page=1,
+            json={"start": sentence.start_char, "end": sentence.end_char},
+            annotation_label=label_obj,
+            document=doc,
+            creator_id=user_id,
+            annotation_type=SPAN_LABEL,
+            structural=True,  # Mark these explicitly as structural annotations.
+        )
+        annot_obj.save()
+        set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
 
 
 @celery_app.task(
@@ -336,93 +228,13 @@ def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
                 annotation_label=label_obj,
                 document=doc,
                 creator_id=user_id,
+                annotation_type=TOKEN_LABEL,
                 structural=True,  # Mark these explicitly as structural annotations.
             )
             annot_obj.save()
             set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
 
     document.save()
-
-
-@celery_app.task(
-    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
-)
-def split_pdf_for_processing(user_id: int, doc_id: int) -> list[tuple[int, str]]:
-
-    logger.info(f"split_pdf_for_processing() - split doc {doc_id} for user {user_id}")
-
-    from PyPDF2 import PdfReader, PdfWriter
-
-    doc = Document.objects.get(pk=doc_id)
-    doc_path = doc.pdf_file.name
-    doc_file = default_storage.open(doc_path, mode="rb")
-
-    if settings.USE_AWS:
-        import boto3
-
-        s3 = boto3.client("s3")
-
-    pdf = PdfReader(doc_file)
-
-    # TODO - for each page, store to disk as a temporary file OR
-    # store to cloud storage and pass the path to the storage
-    # location rather than the bytes themselves (to cut down on
-    # Redis usage)
-
-    pages_and_paths: list[tuple[int, str]] = []
-    processing_tasks = []
-    total_page_count = len(pdf.pages)
-
-    for page in range(total_page_count):
-
-        page_bytes_stream = io.BytesIO()
-
-        logger.info(f"split_pdf_for_processing() - process page {page}")
-        pdf_writer = PdfWriter()
-        pdf_writer.add_page(pdf.pages[page])
-        pdf_writer.write(page_bytes_stream)
-
-        if settings.USE_AWS:
-            page_path = f"user_{user_id}/fragments/{uuid.uuid4()}.pdf"
-            s3.put_object(
-                Key=page_path,
-                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-                Body=page_bytes_stream.getvalue(),
-            )
-        else:
-            pdf_fragment_folder_path = pathlib.Path(
-                f"/tmp/user_{user_id}/pdf_fragments"
-            )
-            pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
-            pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}.pdf"
-            with pdf_fragment_path.open("wb") as f:
-                f.write(page_bytes_stream.getvalue())
-
-            page_path = pdf_fragment_path.resolve().__str__()
-
-        pages_and_paths.append((page, page_path))
-        processing_tasks.append(
-            process_pdf_page.si(
-                total_page_count=total_page_count,
-                page_num=page,
-                page_path=page_path,
-                user_id=user_id,
-            )
-        )
-
-    logger.info("plit_pdf_for_processing() - launch processing workflow")
-    process_workflow = chord(
-        group(processing_tasks),
-        reassemble_extracted_pdf_parts.s(doc_id=doc_id),
-    )
-    process_workflow.apply_async()
-    logger.info(
-        f"plit_pdf_for_processing() - pdf for doc_id {doc_id} being processed async"
-    )
-
-    logger.info(f"split_pdf_for_processing() - pages_and_paths: {pages_and_paths}")
-    return pages_and_paths  # Leaving this here for tests for now... not a thorough way of evaluating underlying task
-    # completion
 
 
 @celery_app.task()
@@ -575,7 +387,7 @@ def convert_doc_to_funsd(
 
 
 @celery_app.task()
-def extract_thumbnail(*args, doc_id=-1, **kwargs):
+def extract_pdf_thumbnail(*args, doc_id=-1, **kwargs):
 
     logger.info(f"Extract thumbnail for doc #{doc_id}")
 
@@ -605,10 +417,7 @@ def extract_thumbnail(*args, doc_id=-1, **kwargs):
     try:
 
         import cv2
-        import numpy as np
         from django.core.files.storage import default_storage
-        from pdf2image import convert_from_bytes
-        from PIL import Image
 
         document = Document.objects.get(pk=doc_id)
 
@@ -681,3 +490,48 @@ def extract_thumbnail(*args, doc_id=-1, **kwargs):
         logger.error(
             f"Unable to create a screenshot for doc_id {doc_id} due to error: {e}"
         )
+
+
+@celery_app.task()
+def extract_txt_thumbnail(doc_id: int) -> None:
+    """
+    Create a thumbnail image from the text content of a document.
+
+    Args:
+        doc_id (int): The ID of the document to process.
+
+    Raises:
+        Exception: If there's an error during the thumbnail creation process.
+    """
+    try:
+        document = Document.objects.get(pk=doc_id)
+
+        # Read the text content
+        with default_storage.open(document.txt_extract_file.name, "r") as file_object:
+            text = file_object.read()
+
+        logger.debug(f"Text content length: {len(text)}")
+
+        # Create the thumbnail image
+        img = create_text_thumbnail(text)
+
+        if img is None or not isinstance(img, Image.Image):
+            logger.error(
+                f"create_text_thumbnail returned invalid image for doc_id {doc_id}"
+            )
+            return
+
+        logger.debug(f"Thumbnail image size: {img.size}")
+
+        # Save the image
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format="PNG")
+        img_byte_arr.seek(0)
+
+        icon_file = ContentFile(img_byte_arr.getvalue())
+        document.icon.save(f"{doc_id}_icon.png", icon_file)
+
+        logger.info(f"Thumbnail created successfully for doc_id {doc_id}")
+
+    except Exception as e:
+        logger.exception(f"Error creating thumbnail for doc_id {doc_id}: {str(e)}")

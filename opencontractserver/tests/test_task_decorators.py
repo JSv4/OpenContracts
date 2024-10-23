@@ -135,7 +135,6 @@ class DocAnalyzerTaskTestCase(TestCase):
             task = sample_task.s(
                 doc_id=self.document.id, analysis_id=self.analysis.id
             ).apply()
-            task.get()
 
     def test_doc_analyzer_task_no_backend_lock(self):
         task = sample_task.si(

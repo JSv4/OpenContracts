@@ -63,12 +63,6 @@ class DocParserTestCase(TestCase):
         """Create a mock image with the given dimensions."""
         return Image.new("RGB", (width, height), color="red")
 
-    def image_to_bytes(self, image: Image.Image) -> bytes:
-        """Convert a PIL Image to bytes."""
-        img_byte_arr = io.BytesIO()
-        image.save(img_byte_arr, format="PNG")
-        return img_byte_arr.getvalue()
-
     @patch("opencontractserver.tasks.doc_tasks.convert_from_bytes")
     def test_pdf_thumbnail_extraction(self, mock_convert_from_bytes):
         """Test PDF thumbnail extraction with various image sizes and orientations."""

@@ -66,3 +66,26 @@ div > .SettingsPopup {
 .ui.dimmer.modals.page:has(.high-z-index-modal) {
   z-index: 99996 !important;
 }
+
+.custom-data-grid {
+  border: none !important;
+  height: calc(100% - 50px) !important;
+}
+
+.rdg-cell {
+  border-right: 1px solid #f0f0f0 !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+  padding: 8px 16px !important;
+}
+
+.rdg-header-row {
+  background-color: #f8f9fa !important;
+}
+
+.rdg-row:hover {
+  background-color: #f8f9fa !important;
+}
+
+.rdg-row.rdg-row-selected {
+  background-color: #e8f4ff !important;
+}

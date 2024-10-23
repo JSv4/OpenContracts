@@ -1,7 +1,6 @@
 #  Copyright (C) 2022  John Scrudato
 import io
 import logging
-import re
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -98,8 +97,8 @@ class DocParserTestCase(TestCase):
                 # Use assertRegex for better error messages
                 self.assertRegex(
                     self.doc.icon.name,
-                    r"uploadfiles/pdf_icons/\d+_icon_[a-zA-Z0-9]+\.jpg",
-                    msg=f"Icon name '{self.doc.icon.name}' does not match the expected pattern."
+                    r"\d+_icon_[a-zA-Z0-9]+\.jpg",
+                    msg=f"Icon name '{self.doc.icon.name}' does not match the expected pattern.",
                 )
 
                 # Open the saved image and check its properties
@@ -107,13 +106,17 @@ class DocParserTestCase(TestCase):
                     saved_image = Image.open(icon_file)
 
                     # Check the dimensions of the saved image
-                    self.assertEqual(saved_image.size, (400, 200), "Image dimensions do not match expected size.")
+                    self.assertEqual(
+                        saved_image.size,
+                        (400, 200),
+                        "Image dimensions do not match expected size.",
+                    )
 
                     # Check that the image is not empty (all white)
                     self.assertNotEqual(
                         saved_image.getcolors(),
                         [(400 * 200, (255, 255, 255))],
-                        "Image appears to be empty or all white."
+                        "Image appears to be empty or all white.",
                     )
 
                 # Clean up

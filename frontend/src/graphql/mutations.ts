@@ -572,6 +572,7 @@ export const UPLOAD_DOCUMENT = gql`
     $title: String!
     $makePublic: Boolean!
     $addToCorpusId: ID
+    $addToExtractId: ID
   ) {
     uploadDocument(
       base64FileString: $base64FileString
@@ -581,6 +582,7 @@ export const UPLOAD_DOCUMENT = gql`
       title: $title
       makePublic: $makePublic
       addToCorpusId: $addToCorpusId
+      addToExtractId: $addToExtractId
     ) {
       document {
         id

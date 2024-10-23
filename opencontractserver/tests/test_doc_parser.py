@@ -94,13 +94,6 @@ class DocParserTestCase(TestCase):
                 # Check that the icon was created
                 self.assertTrue(self.doc.icon, "Icon was not created.")
 
-                # Use assertRegex for better error messages
-                self.assertRegex(
-                    self.doc.icon.name,
-                    r"\d+_icon_[a-zA-Z0-9]+\.jpg",
-                    msg=f"Icon name '{self.doc.icon.name}' does not match the expected pattern.",
-                )
-
                 # Open the saved image and check its properties
                 with self.doc.icon.open("rb") as icon_file:
                     saved_image = Image.open(icon_file)

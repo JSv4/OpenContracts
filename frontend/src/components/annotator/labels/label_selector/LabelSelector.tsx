@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import { Icon, Popup } from "semantic-ui-react";
 import _ from "lodash";
-import { AnnotationLabelType } from "../../../../graphql/types";
+import { AnnotationLabelType } from "../../../../types/graphql-api";
 import { SpanLabelCard, BlankLabelElement } from "./LabelElements";
 import { LabelSelectorDialog } from "./LabelSelectorDialog";
 import { TruncatedText } from "../../../widgets/data-display/TruncatedText";

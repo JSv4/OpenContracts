@@ -20,7 +20,7 @@ import {
   GetAnnotationLabelsOutput,
   GET_ANNOTATION_LABELS,
 } from "../../../graphql/queries";
-import { AnnotationLabelType, LabelType } from "../../../graphql/types";
+import { AnnotationLabelType, LabelType } from "../../../types/graphql-api";
 import { LooseObject } from "../../types";
 import { toast } from "react-toastify";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";

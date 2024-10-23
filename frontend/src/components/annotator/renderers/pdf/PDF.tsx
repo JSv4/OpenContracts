@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import _ from "lodash";
 import { PDFStore } from "../../context";
-import { LabelDisplayBehavior } from "../../../../graphql/types";
+import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { PermissionTypes } from "../../../types";
 import { PDFPage } from "./PDFPage";
 
@@ -129,10 +129,12 @@ export const PageAnnotationsContainer = styled.div(
 `
 );
 
-export const PageCanvas = styled.canvas(
-  ({ width }: { width?: number }) => `
+interface PageCanvasProps {
+  width?: number;
+}
+
+export const PageCanvas = styled.canvas<PageCanvasProps>`
   display: block;
-  ${width ? "width: " + width + "px;" : ""}
+  ${(props) => (props.width ? `width: ${props.width}px;` : "")}
   height: auto;
-`
-);
+`;

@@ -11,7 +11,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Label, LabelContainer, PaperContainer } from "./StyledComponents";
 import RadialButtonCloud, { CloudButtonItem } from "./RadialButtonCloud";
 import { Modal, Button, Dropdown } from "semantic-ui-react";
-import { AnnotationLabelType } from "../../../../graphql/types";
+import { AnnotationLabelType } from "../../../../types/graphql-api";
 import { ServerSpanAnnotation } from "../../context";
 import { TextSearchSpanResult } from "../../../types";
 import { PermissionTypes } from "../../../types";
@@ -715,7 +715,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
                   id={`label-${annotation.id}-${labelIndex}`}
                   color={annotation.annotationLabel.color || "#cccccc"}
                   $index={labelIndex}
-                  onClick={(e) => {
+                  onClick={(e: React.MouseEvent<HTMLElement>) => {
                     e.stopPropagation();
                     handleLabelClick(annotation);
                   }}

@@ -16,7 +16,7 @@ import {
   DatacellType,
   DocumentType,
   ExtractType,
-} from "../../../graphql/types";
+} from "../../../types/graphql-api";
 import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
 import {
   RequestGetExtractOutput,
@@ -50,7 +50,7 @@ import {
   addingColumnToExtract,
   editingColumnForExtract,
 } from "../../../graphql/cache";
-import { DataGrid } from "../../extracts/datagrid/DataGrid";
+import { ExtractDataGrid } from "../../extracts/datagrid/DataGrid";
 
 interface EditExtractModalProps {
   ext: ExtractType | null;
@@ -435,7 +435,7 @@ export const EditExtractModal = ({
               )}
             </div>
           </div>
-          <DataGrid
+          <ExtractDataGrid
             onAddDocIds={handleAddDocIdsToExtract}
             onRemoveDocIds={handleRemoveDocIdsFromExtract}
             onRemoveColumnId={handleDeleteColumnIdFromExtract}

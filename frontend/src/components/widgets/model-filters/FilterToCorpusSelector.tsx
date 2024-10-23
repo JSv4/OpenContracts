@@ -10,7 +10,7 @@ import {
   GetCorpusesInputs,
   GET_CORPUSES,
 } from "../../../graphql/queries";
-import { CorpusType } from "../../../graphql/types";
+import { CorpusType } from "../../../types/graphql-api";
 import { useEffect } from "react";
 import { LooseObject } from "../../types";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";

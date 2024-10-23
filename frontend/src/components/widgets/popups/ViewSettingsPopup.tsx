@@ -9,7 +9,7 @@ import {
   DropdownItemProps,
 } from "semantic-ui-react";
 import { ViewLabelSelector } from "../../annotator/labels/view_labels_selector/ViewLabelSelector";
-import { LabelDisplayBehavior } from "../../../graphql/types";
+import { LabelDisplayBehavior } from "../../../types/graphql-api";
 
 interface ViewSettingsPopupProps {
   show_selected_annotation_only: boolean;

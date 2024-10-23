@@ -6,7 +6,7 @@ import { VerticallyJustifiedEndDiv } from "../../sidebar/common";
 
 import { ResultBoundary } from "./ResultBoundary";
 import { BoundingBox, TextSearchTokenResult } from "../../../types";
-import { LabelDisplayBehavior } from "../../../../graphql/types";
+import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { getBorderWidthFromBounds } from "../../../../utils/transform";
 import { SearchSelectionTokens } from "./SelectionTokens";
 import { LabelTagContainer } from "./Containers";

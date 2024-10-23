@@ -1,5 +1,5 @@
 import { Card, Image } from "semantic-ui-react";
-import { AnalysisType } from "../../../graphql/types";
+import { AnalysisType } from "../../../types/graphql-api";
 
 export const SelectedAnalysisCard = () => {
   return (

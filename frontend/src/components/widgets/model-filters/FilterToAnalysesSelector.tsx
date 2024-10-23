@@ -18,7 +18,7 @@ import {
   GetAnalysesOutputs,
   GET_ANALYSES,
 } from "../../../graphql/queries";
-import { AnalysisType, CorpusType } from "../../../graphql/types";
+import { AnalysisType, CorpusType } from "../../../types/graphql-api";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 

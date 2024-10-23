@@ -42,7 +42,7 @@ import {
   LabelDisplayBehavior,
   LabelType,
   ServerAnnotationType,
-} from "../../graphql/types";
+} from "../../types/graphql-api";
 import {
   ViewState,
   TokenId,

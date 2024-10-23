@@ -19,7 +19,7 @@ import {
   ColumnType,
   CorpusQueryType,
   LabelType,
-} from "./types";
+} from "../types/graphql-api";
 import { ViewState } from "../components/types";
 import { FileUploadPackageProps } from "../components/widgets/modals/DocumentUploadModal";
 

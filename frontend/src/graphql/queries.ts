@@ -18,8 +18,8 @@ import {
   CorpusActionType,
   DocumentType,
   AnalysisRowType,
-} from "./types";
-import { ExportObject } from "./types";
+} from "../types/graphql-api";
+import { ExportObject } from "../types/graphql-api";
 
 export interface RequestDocumentsInputs {
   textSearch?: string;

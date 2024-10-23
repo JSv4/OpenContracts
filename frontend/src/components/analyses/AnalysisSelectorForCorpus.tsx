@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Segment, Form, Button, Popup, Icon } from "semantic-ui-react";
 import Fuse from "fuse.js";
-import { AnalysisType, CorpusType, ExtractType } from "../../graphql/types";
+import { AnalysisType, CorpusType, ExtractType } from "../../types/graphql-api";
 import { AnalysisItem } from "./AnalysisItem";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import useWindowDimensions from "../hooks/WindowDimensionHook";

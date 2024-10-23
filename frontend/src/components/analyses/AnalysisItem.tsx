@@ -18,7 +18,7 @@ import {
   REQUEST_DELETE_ANALYSIS,
 } from "../../graphql/mutations";
 import { GetAnalysesOutputs, GET_ANALYSES } from "../../graphql/queries";
-import { AnalysisType, CorpusType } from "../../graphql/types";
+import { AnalysisType, CorpusType } from "../../types/graphql-api";
 import _ from "lodash";
 import { PermissionTypes } from "../types";
 import { getPermissions } from "../../utils/transform";
@@ -242,7 +242,7 @@ export const AnalysisItem = ({
             {analysis.analyzer.description}
             {isOverflowing && !showFullDescription && (
               <ReadMoreLink
-                onClick={(e) => {
+                onClick={(e: React.MouseEvent<HTMLSpanElement, MouseEvent>) => {
                   e.stopPropagation();
                   setShowFullDescription(true);
                 }}

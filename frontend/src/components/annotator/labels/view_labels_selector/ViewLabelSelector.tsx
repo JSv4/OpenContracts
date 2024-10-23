@@ -2,7 +2,7 @@ import React, { useContext, useMemo } from "react";
 import { Dropdown, DropdownProps } from "semantic-ui-react";
 import _ from "lodash";
 import { AnnotationStore } from "../../context";
-import { AnnotationLabelType } from "../../../../graphql/types";
+import { AnnotationLabelType } from "../../../../types/graphql-api";
 
 export const ViewLabelSelector: React.FC = () => {
   const annotationStore = useContext(AnnotationStore);

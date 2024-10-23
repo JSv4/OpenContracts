@@ -20,7 +20,7 @@ import {
   showDeleteDocumentsModal,
   viewingDocument,
 } from "../../graphql/cache";
-import { AnnotationLabelType, DocumentType } from "../../graphql/types";
+import { AnnotationLabelType, DocumentType } from "../../types/graphql-api";
 import { downloadFile } from "../../utils/files";
 import fallback_doc_icon from "../../assets/images/defaults/default_doc_icon.jpg";
 import { getPermissions } from "../../utils/transform";
@@ -180,7 +180,7 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
     item.myPermissions ? item.myPermissions : []
   );
 
-  let context_menus: React.ReactNode[] = [];
+  let context_menus: ContextMenuItem[] = [];
   if (my_permissions.includes(PermissionTypes.CAN_REMOVE)) {
     context_menus.push({
       key: "delete",
@@ -321,14 +321,27 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
         open={contextMenuOpen === id}
         hideOnScroll
       >
-        <Menu
-          className="Corpus_Context_Menu"
-          items={context_menus}
-          onItemClick={() => setContextMenuOpen(-1)}
-          secondary
-          vertical
-        />
+        <Menu className="Corpus_Context_Menu" secondary vertical>
+          {context_menus.map((item) => (
+            <Menu.Item
+              key={item.key}
+              icon={item.icon}
+              content={item.content}
+              onClick={() => {
+                item.onClick();
+                setContextMenuOpen(-1);
+              }}
+            />
+          ))}
+        </Menu>
       </Popup>
     </>
   );
 };
+
+interface ContextMenuItem {
+  key: string;
+  icon: string;
+  content: string;
+  onClick: () => void;
+}

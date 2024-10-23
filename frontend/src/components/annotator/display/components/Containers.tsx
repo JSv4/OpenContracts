@@ -7,7 +7,7 @@ import {
   PDFPageInfo,
 } from "../../context";
 import { BoundingBox, PermissionTypes } from "../../../types";
-import { LabelDisplayBehavior } from "../../../../graphql/types";
+import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { SelectionBoundary } from "./SelectionBoundary";
 import {
   annotationSelectedViaRelationship,

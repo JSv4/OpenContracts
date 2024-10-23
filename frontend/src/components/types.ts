@@ -1,5 +1,8 @@
 import { ReactElement } from "react";
-import { AnnotationLabelType, LabelDisplayBehavior } from "../graphql/types";
+import {
+  AnnotationLabelType,
+  LabelDisplayBehavior,
+} from "../types/graphql-api";
 import { PDFPageInfo } from "./annotator/context";
 
 /**

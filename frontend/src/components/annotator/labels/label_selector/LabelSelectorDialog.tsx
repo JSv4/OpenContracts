@@ -10,7 +10,7 @@ import styled from "styled-components";
 
 import Fuse from "fuse.js";
 import _ from "lodash";
-import { AnnotationLabelType } from "../../../../graphql/types";
+import { AnnotationLabelType } from "../../../../types/graphql-api";
 import {
   EmptyLabelListItem,
   LabelListItem,

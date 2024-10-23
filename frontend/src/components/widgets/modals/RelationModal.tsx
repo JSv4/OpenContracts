@@ -5,7 +5,7 @@ import {
   RelationGroup,
   AnnotationStore,
 } from "../../annotator/context/AnnotationStore";
-import { AnnotationLabelType } from "../../../graphql/types";
+import { AnnotationLabelType } from "../../../types/graphql-api";
 import styled from "styled-components";
 
 interface RelationModalProps {

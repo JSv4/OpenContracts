@@ -13,7 +13,7 @@ import {
 
 import styled from "styled-components";
 import _ from "lodash";
-import { CorpusType } from "../../graphql/types";
+import { CorpusType } from "../../types/graphql-api";
 import { getPermissions } from "../../utils/transform";
 import { PermissionTypes } from "../types";
 import { GetCorpusesInputs, GetCorpusesOutputs } from "../../graphql/queries";

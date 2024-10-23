@@ -1,51 +1,39 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
+import DataGrid from "react-data-grid";
+import { useMutation } from "@apollo/client";
+import { toast } from "react-toastify";
+import { Button, Icon, Popup } from "semantic-ui-react";
 import {
-  Table,
-  Button,
-  Icon,
-  Dropdown,
-  Segment,
-  Dimmer,
-  Loader,
-} from "semantic-ui-react";
+  REQUEST_APPROVE_DATACELL,
+  REQUEST_EDIT_DATACELL,
+  REQUEST_REJECT_DATACELL,
+} from "../../../graphql/mutations";
+import { ExtractCellFormatter } from "./ExtractCellFormatter";
+import {
+  ExtractGridColumn,
+  ExtractGridRow,
+  CellStatus,
+  FormatterProps,
+} from "../../../types/extract-grid";
 import {
   ColumnType,
   DatacellType,
   DocumentType,
   ExtractType,
-} from "../../../graphql/types";
-import { SelectDocumentsModal } from "../../widgets/modals/SelectDocumentsModal";
-import {
-  addingColumnToExtract,
-  editingColumnForExtract,
-} from "../../../graphql/cache";
-import { EmptyDatacell } from "./EmptyDataCell";
-import { ExtractDatacell } from "./DataCell";
-import { useMutation } from "@apollo/client";
-import {
-  REQUEST_APPROVE_DATACELL,
-  REQUEST_EDIT_DATACELL,
-  REQUEST_REJECT_DATACELL,
-  RequestApproveDatacellInputType,
-  RequestApproveDatacellOutputType,
-  RequestEditDatacellInputType,
-  RequestEditDatacellOutputType,
-  RequestRejectDatacellInputType,
-  RequestRejectDatacellOutputType,
-} from "../../../graphql/mutations";
-import { toast } from "react-toastify";
+} from "../../../types/graphql-api";
+import "react-data-grid/lib/styles.css";
 
 interface DataGridProps {
   extract: ExtractType;
   cells: DatacellType[];
   rows: DocumentType[];
+  columns: ColumnType[];
   onAddDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveColumnId: (columnId: string) => void;
-  columns: ColumnType[];
 }
 
-export const DataGrid = ({
+export const ExtractDataGrid: React.FC<DataGridProps> = ({
   extract,
   cells,
   rows,
@@ -53,276 +41,192 @@ export const DataGrid = ({
   onAddDocIds,
   onRemoveDocIds,
   onRemoveColumnId,
-}: DataGridProps) => {
-  const [lastCells, setLastCells] = useState(cells);
-  const [isAddingColumn, setIsAddingColumn] = useState(false);
-  const [showAddRowButton, setShowAddRowButton] = useState(false);
-  const [openAddRowModal, setOpenAddRowModal] = useState(false);
+}) => {
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [cellStatuses, setCellStatuses] = useState<Record<string, CellStatus>>(
+    {}
+  );
 
-  useEffect(() => {
-    setLastCells(cells);
-  }, [cells]);
+  // Convert data to grid format
+  const gridRows = useMemo<ExtractGridRow[]>(
+    () =>
+      rows.map((row) => ({
+        id: row.id,
+        documentId: row.id,
+        documentTitle: row.title || "",
+        ...cells
+          .filter((cell) => cell.document.id === row.id)
+          .reduce(
+            (acc, cell) => ({
+              ...acc,
+              [cell.column.id]: cell.correctedData || cell.data,
+            }),
+            {}
+          ),
+      })),
+    [rows, cells]
+  );
 
-  const [requestApprove, { loading: trying_approve }] = useMutation<
-    RequestApproveDatacellOutputType,
-    RequestApproveDatacellInputType
-  >(REQUEST_APPROVE_DATACELL, {
+  // Column Actions Component
+  const ColumnActions: React.FC<{ column: ExtractGridColumn }> = ({
+    column,
+  }) => {
+    if (column.key === "documentTitle") return null;
+
+    return (
+      <Popup
+        trigger={
+          <Icon name="ellipsis vertical" style={{ cursor: "pointer" }} />
+        }
+        content={
+          <Button
+            icon="trash"
+            color="red"
+            onClick={() => onRemoveColumnId(column.key)}
+            content="Remove Column"
+          />
+        }
+        position="bottom right"
+      />
+    );
+  };
+
+  // Mutations
+  const [requestApprove] = useMutation(REQUEST_APPROVE_DATACELL, {
     onCompleted: (data) => {
       toast.success("Approved!");
-      setLastCells((prevCells) =>
-        prevCells.map((cell) =>
-          cell.id === data.approveDatacell.obj.id
-            ? { ...cell, ...data.approveDatacell.obj }
-            : cell
-        )
-      );
+      setCellStatuses((prev) => ({
+        ...prev,
+        [data.approveDatacell.obj.id]: {
+          ...prev[data.approveDatacell.obj.id],
+          isApproved: true,
+          isRejected: false,
+          approvedBy: data.approveDatacell.obj.approvedBy,
+        },
+      }));
     },
     onError: () => toast.error("Could not register feedback!"),
   });
 
-  const [requestReject, { loading: trying_reject }] = useMutation<
-    RequestRejectDatacellOutputType,
-    RequestRejectDatacellInputType
-  >(REQUEST_REJECT_DATACELL, {
-    onCompleted: (data) => {
-      toast.success("Rejected!");
-      setLastCells((prevCells) =>
-        prevCells.map((cell) =>
-          cell.id === data.rejectDatacell.obj.id
-            ? { ...data.rejectDatacell.obj, ...cell }
-            : cell
-        )
+  const getCellContent = useCallback(
+    (row: ExtractGridRow, column: ExtractGridColumn) => {
+      const cell = cells.find(
+        (c) => c.document.id === row.documentId && c.column.id === column.key
       );
-    },
-    onError: () => toast.error("Could not register feedback!"),
-  });
 
-  const [requestEdit, { loading: trying_edit }] = useMutation<
-    RequestEditDatacellOutputType,
-    RequestEditDatacellInputType
-  >(REQUEST_EDIT_DATACELL, {
-    onCompleted: (data) => {
-      toast.success("Edit Saved!");
-      setLastCells((prevCells) =>
-        prevCells.map((cell) =>
-          cell.id === data.editDatacell.obj.id
-            ? { ...data.editDatacell.obj, ...cell }
-            : cell
-        )
-      );
+      if (!cell) return null;
+
+      const status = cellStatuses[cell.id] || {
+        isApproved: Boolean(cell.approvedBy),
+        isRejected: Boolean(cell.rejectedBy),
+        isEdited: Boolean(cell.correctedData),
+        originalData: cell.data,
+        correctedData: cell.correctedData,
+      };
+
+      return {
+        value: row[column.key],
+        cellStatus: status,
+        onApprove: () => requestApprove({ variables: { datacellId: cell.id } }),
+        // ... other handlers
+      };
     },
-    onError: (error) => {
-      toast.error("Could not register feedback!");
-      // Roll back the state if the mutation fails
-      setLastCells((prevCells) => [...prevCells]);
-    },
-  });
+    [cells, cellStatuses, requestApprove]
+  );
+
+  const gridColumns = useMemo<ExtractGridColumn[]>(
+    () => [
+      {
+        key: "documentTitle",
+        name: "Document",
+        frozen: true,
+        width: 200,
+        headerRenderer: (props: { column: { name: string } }) => (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "0 8px",
+            }}
+          >
+            <span>{props.column.name}</span>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {selectedRows.size > 0 && (
+                <Button
+                  icon="trash"
+                  color="red"
+                  size="mini"
+                  onClick={() => {
+                    onRemoveDocIds(extract.id, Array.from(selectedRows));
+                    setSelectedRows(new Set());
+                  }}
+                />
+              )}
+              <Button
+                icon="plus"
+                color="green"
+                size="mini"
+                onClick={() => {
+                  const newDocIds = ["example-id"]; // Replace with actual document selection
+                  onAddDocIds(extract.id, newDocIds);
+                }}
+              />
+            </div>
+          </div>
+        ),
+      },
+      ...columns.map((col) => ({
+        key: col.id,
+        name: col.name,
+        formatter: (
+          props: JSX.IntrinsicAttributes &
+            FormatterProps & { children?: React.ReactNode | undefined }
+        ) => {
+          const content = getCellContent(props.row, props.column);
+          if (!content) return null;
+          return <ExtractCellFormatter {...props} {...content} />;
+        },
+        editable: !extract.started,
+        sortable: true,
+        width: 250,
+        headerRenderer: (props: { column: ExtractGridColumn }) => (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "0 8px",
+            }}
+          >
+            <span>{props.column.name}</span>
+            <ColumnActions column={props.column} />
+          </div>
+        ),
+      })),
+    ],
+    [
+      columns,
+      extract.started,
+      extract.id,
+      selectedRows,
+      onRemoveDocIds,
+      onAddDocIds,
+      onRemoveColumnId,
+      getCellContent,
+    ]
+  );
 
   return (
-    <Segment
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        height: "100%",
-        width: "100%",
-        position: "relative",
-      }}
-      onMouseMove={(e: {
-        currentTarget: {
-          getBoundingClientRect: () => { (): any; new (): any; right: any };
-        };
-        clientX: any;
-      }) => {
-        const rightEdge = e.currentTarget.getBoundingClientRect().right;
-        const mouseX = e.clientX;
-        setIsAddingColumn(mouseX >= rightEdge - 20);
-      }}
-      onMouseEnter={() => setShowAddRowButton(true)}
-      onMouseLeave={() => setShowAddRowButton(false)}
-    >
-      {trying_approve ? (
-        <Dimmer>
-          <Loader>Approving...</Loader>
-        </Dimmer>
-      ) : (
-        <></>
-      )}
-      {trying_edit ? (
-        <Dimmer>
-          <Loader>Editing...</Loader>
-        </Dimmer>
-      ) : (
-        <></>
-      )}
-      {trying_reject ? (
-        <Dimmer>
-          <Loader>Rejecting...</Loader>
-        </Dimmer>
-      ) : (
-        <></>
-      )}
-
-      <SelectDocumentsModal
-        open={openAddRowModal}
-        onAddDocumentIds={(documentIds: string[]) =>
-          onAddDocIds(extract.id, documentIds)
-        }
-        filterDocIds={rows.map((row) => row.id)}
-        toggleModal={() => setOpenAddRowModal(!openAddRowModal)}
+    <div style={{ height: "100%", width: "100%" }}>
+      <DataGrid
+        columns={gridColumns}
+        rows={gridRows}
+        rowKeyGetter={(row) => row.id}
+        selectedRows={selectedRows}
+        onSelectedRowsChange={setSelectedRows}
+        onRowsChange={() => {}} // Handle edits here
       />
-      <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-        <Table celled style={{ flex: "none" }}>
-          <Table.Header fullWidth fixed>
-            <Table.Row>
-              <Table.HeaderCell>
-                <h3>Document</h3>
-              </Table.HeaderCell>
-              {columns.map((column) => (
-                <Table.HeaderCell key={column.id}>
-                  {column.name}
-                  {!extract.started ? (
-                    <Dropdown
-                      icon={null}
-                      trigger={<Icon name="cog" style={{ float: "right" }} />}
-                      pointing="right"
-                      style={{ float: "right" }}
-                    >
-                      <Dropdown.Menu>
-                        <Dropdown.Item
-                          text="Edit"
-                          onClick={() => editingColumnForExtract(column)}
-                        />
-                        <Dropdown.Item
-                          text="Delete"
-                          onClick={() => onRemoveColumnId(column.id)}
-                        />
-                      </Dropdown.Menu>
-                    </Dropdown>
-                  ) : (
-                    <></>
-                  )}
-                </Table.HeaderCell>
-              ))}
-            </Table.Row>
-          </Table.Header>
-          <Table.Body style={{ overflow: "auto", maxHeight: "100%" }}>
-            {rows.length === 0 ? (
-              <Table.Row>
-                <Table.Cell colSpan={columns.length + 1} textAlign="center">
-                  Please Click the "+" at the Bottom to Add Documents...
-                </Table.Cell>
-              </Table.Row>
-            ) : (
-              rows.map((row) => (
-                <Table.Row key={`Row_${row.id}`}>
-                  <Table.Cell>
-                    {row.title}
-                    {!extract.started ? (
-                      <Dropdown
-                        icon={null}
-                        trigger={<Icon name="cog" style={{ float: "right" }} />}
-                        pointing="bottom right"
-                        style={{ float: "right" }}
-                      >
-                        <Dropdown.Menu>
-                          <Dropdown.Item
-                            text="Delete"
-                            icon="trash"
-                            onClick={() => onRemoveDocIds(extract.id, [row.id])}
-                          />
-                        </Dropdown.Menu>
-                      </Dropdown>
-                    ) : (
-                      <></>
-                    )}
-                  </Table.Cell>
-                  {columns.map((column) => {
-                    const cell = lastCells.find(
-                      (cell) =>
-                        cell.document.id === row.id &&
-                        cell.column.id === column.id
-                    );
-                    if (cell) {
-                      return (
-                        <ExtractDatacell
-                          key={`Cell_ ${cell.id}`}
-                          cellData={cell}
-                          onApprove={() =>
-                            requestApprove({
-                              variables: { datacellId: cell.id },
-                            })
-                          }
-                          onReject={() =>
-                            requestReject({
-                              variables: { datacellId: cell.id },
-                            })
-                          }
-                          onEdit={(
-                            id: string,
-                            editedData: Record<string, any>
-                          ) =>
-                            requestEdit({
-                              variables: { datacellId: cell.id, editedData },
-                            })
-                          }
-                        />
-                      );
-                    }
-                    return <EmptyDatacell id={`CELL_${row.id}.${column.id}`} />;
-                  })}
-                </Table.Row>
-              ))
-            )}
-          </Table.Body>
-        </Table>
-        <div style={{ flex: 1 }} />
-      </div>
-      {!extract.started && isAddingColumn && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: "40px",
-            background: "rgba(0, 0, 0, 0.1)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            cursor: "pointer",
-            zIndex: 100000,
-          }}
-        >
-          <Button
-            icon="plus"
-            circular
-            onClick={() => addingColumnToExtract(extract)}
-          />
-        </div>
-      )}
-      {!extract.started && showAddRowButton && (
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: "40px",
-            background: "rgba(0, 0, 0, 0.1)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            marginTop: "8px",
-          }}
-        >
-          <Button
-            icon="plus"
-            circular
-            onClick={() => setOpenAddRowModal(true)}
-          />
-        </div>
-      )}
-    </Segment>
+    </div>
   );
 };

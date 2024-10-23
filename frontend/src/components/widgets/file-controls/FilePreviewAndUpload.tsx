@@ -92,7 +92,7 @@ export const FilePreviewAndUpload = ({
       />
       {!isImage ? (
         <Label attached="bottom" style={{ wordBreak: "break-all" }}>
-          {new_filename ? new_filename : file}
+          {new_filename ? new_filename : typeof file === "string" ? file : ""}
         </Label>
       ) : (
         <></>

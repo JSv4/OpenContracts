@@ -8,7 +8,7 @@ import {
   CorpusType,
   DocumentType,
   ExtractType,
-} from "../../../graphql/types";
+} from "../../../types/graphql-api";
 import { ExtractAndAnalysisHorizontalSelector } from "../../analyses/AnalysisSelectorForCorpus";
 import { useReactiveVar } from "@apollo/client";
 import { setTopbarVisible } from "../../../graphql/cache";

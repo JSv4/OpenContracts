@@ -6,7 +6,7 @@ import _ from "lodash";
 
 import { DocumentItem } from "./DocumentItem";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
-import { DocumentType, PageInfo } from "../../graphql/types";
+import { DocumentType, PageInfo } from "../../types/graphql-api";
 import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";

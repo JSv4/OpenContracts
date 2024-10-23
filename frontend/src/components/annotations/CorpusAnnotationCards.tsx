@@ -22,7 +22,7 @@ import {
   GetAnnotationsOutputs,
   GET_ANNOTATIONS,
 } from "../../graphql/queries";
-import { ServerAnnotationType } from "../../graphql/types";
+import { ServerAnnotationType } from "../../types/graphql-api";
 
 export const CorpusAnnotationCards = ({
   opened_corpus_id,

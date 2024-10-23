@@ -27,7 +27,7 @@ import {
   GetCorpusesOutputs,
   GET_CORPUSES,
 } from "../../../graphql/queries";
-import { CorpusType, DocumentType } from "../../../graphql/types";
+import { CorpusType, DocumentType } from "../../../types/graphql-api";
 import { toast } from "react-toastify";
 import { getPermissions } from "../../../utils/transform";
 import { PermissionTypes } from "../../types";

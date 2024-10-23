@@ -19,7 +19,11 @@ import { FilterToLabelsetSelector } from "../model-filters/FilterToLabelsetSelec
 import { FilterToCorpusSelector } from "../model-filters/FilterToCorpusSelector";
 import { FilterToLabelSelector } from "../model-filters/FilterToLabelSelector";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CorpusType, DocumentType, LabelType } from "../../../graphql/types";
+import {
+  CorpusType,
+  DocumentType,
+  LabelType,
+} from "../../../types/graphql-api";
 import { LooseObject } from "../../types";
 import { selectedDocumentIds } from "../../../graphql/cache";
 import {

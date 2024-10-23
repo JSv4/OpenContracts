@@ -30,7 +30,7 @@ import {
   CorpusType,
   DatacellType,
   ExtractType,
-} from "../../../graphql/types";
+} from "../../../types/graphql-api";
 import { SearchSidebarWidget } from "../search_widget/SearchSidebarWidget";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";

@@ -7,7 +7,7 @@ import {
   REQUEST_DELETE_EXTRACT,
 } from "../../graphql/mutations";
 import { GetExtractsOutput, GET_EXTRACTS } from "../../graphql/queries";
-import { ExtractType, CorpusType } from "../../graphql/types";
+import { ExtractType, CorpusType } from "../../types/graphql-api";
 
 import _ from "lodash";
 import { PermissionTypes } from "../types";

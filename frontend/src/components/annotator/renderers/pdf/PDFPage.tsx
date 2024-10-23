@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useLayoutEffect,
 } from "react";
-import { AnnotationLabelType } from "../../../../graphql/types";
+import { AnnotationLabelType } from "../../../../types/graphql-api";
 import { getPageBoundsFromCanvas } from "../../../../utils/transform";
 import {
   PageProps,
@@ -319,7 +319,7 @@ export const PDFPage = ({
     <PageAnnotationsContainer
       className="PageAnnotationsContainer"
       ref={containerRef}
-      onMouseDown={(event) => {
+      onMouseDown={(event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
         //console.log("Shift click?", event.shiftKey);
         if (containerRef.current === null) {
           throw new Error("No Container");
@@ -351,7 +351,7 @@ export const PDFPage = ({
       }}
       onMouseMove={
         annotationStore.pageSelection
-          ? (event) => {
+          ? (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
               if (containerRef.current === null) {
                 throw new Error("No Container");
               }
@@ -377,7 +377,7 @@ export const PDFPage = ({
             }
           : undefined
       }
-      onMouseUp={(event) => {
+      onMouseUp={(event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
         if (annotationStore.pageSelection) {
           // If page number is already in queue... append to queue at page number key
           if (

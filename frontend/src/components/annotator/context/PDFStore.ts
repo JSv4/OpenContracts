@@ -5,7 +5,7 @@ import {
 } from "pdfjs-dist/types/src/display/api";
 
 import { BoundingBox, SinglePageAnnotationJson, Token } from "../../types";
-import { AnnotationLabelType } from "../../../graphql/types";
+import { AnnotationLabelType } from "../../../types/graphql-api";
 import { TokenId, RenderedSpanAnnotation } from "./AnnotationStore";
 import { convertAnnotationTokensToText } from "../utils";
 

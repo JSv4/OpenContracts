@@ -1,7 +1,7 @@
 import { createContext } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-import { AnnotationLabelType, LabelType } from "../../../graphql/types";
+import { AnnotationLabelType, LabelType } from "../../../types/graphql-api";
 import { PDFPageInfo } from ".";
 import {
   BoundingBox,

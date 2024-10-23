@@ -1,8 +1,37 @@
 import { useEffect, useRef } from "react";
 import { PDFPageInfo, TokenId } from "../../context";
-import { SelectionTokenSpan } from "./Tokens";
 
 import uniqueId from "lodash/uniqueId";
+import styled from "styled-components";
+
+// Add interface for the custom props
+interface SelectionBoxProps {
+  isSelected?: boolean;
+  highOpacity?: boolean;
+  color?: string;
+  left?: number;
+  right?: number;
+  top?: number;
+  bottom?: number;
+  pointerEvents?: string;
+}
+
+// Update the styled component definition to include the custom props
+const SelectionBox = styled.span<SelectionBoxProps>`
+  position: absolute;
+  background-color: ${(props) => props.color || "yellow"};
+  opacity: ${(props) => (props.highOpacity ? 0.5 : 0.3)};
+  pointer-events: none;
+  ${(props) =>
+    props.isSelected &&
+    `
+    border: 2px solid blue;
+  `}
+  ${(props) => props.left !== undefined && `left: ${props.left}px;`}
+  ${(props) => props.right !== undefined && `right: ${props.right}px;`}
+  ${(props) => props.top !== undefined && `top: ${props.top}px;`}
+  ${(props) => props.bottom !== undefined && `bottom: ${props.bottom}px;`}
+`;
 
 export interface SelectionTokenGroupProps {
   id?: string;
@@ -44,7 +73,7 @@ export const SelectionTokenGroup = ({
             pageInfo.tokens[t.tokenIndex]
           );
           return (
-            <SelectionTokenSpan
+            <SelectionBox
               id={`${uniqueId()}`}
               hidden={hidden}
               key={i}

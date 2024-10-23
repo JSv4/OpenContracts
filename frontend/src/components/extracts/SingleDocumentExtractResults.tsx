@@ -13,7 +13,7 @@ import {
   ColumnType,
   DatacellType,
   ServerAnnotationType,
-} from "../../graphql/types";
+} from "../../types/graphql-api";
 import { useReactiveVar, useMutation } from "@apollo/client";
 import {
   onlyDisplayTheseAnnotations,
@@ -21,7 +21,7 @@ import {
   showAnnotationBoundingBoxes,
   showAnnotationLabels,
 } from "../../graphql/cache";
-import { LabelDisplayBehavior } from "../../graphql/types";
+import { LabelDisplayBehavior } from "../../types/graphql-api";
 import { toast } from "react-toastify";
 import {
   REQUEST_APPROVE_DATACELL,

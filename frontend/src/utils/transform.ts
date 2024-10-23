@@ -12,7 +12,7 @@ import {
   AnalyzerManifestType,
   LabelType,
   ServerAnnotationType,
-} from "../graphql/types";
+} from "../types/graphql-api";
 import default_analyzer_icon from "../assets/icons/noun-quill-31093.png";
 
 // https://gist.github.com/JamieMason/0566f8412af9fe6a1d470aa1e089a752

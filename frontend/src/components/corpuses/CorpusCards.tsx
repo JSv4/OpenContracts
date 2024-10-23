@@ -15,7 +15,7 @@ import {
 import { Card, Dimmer, Loader } from "semantic-ui-react";
 
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
-import { CorpusType, PageInfo } from "../../graphql/types";
+import { CorpusType, PageInfo } from "../../types/graphql-api";
 import {
   StartForkCorpusInput,
   StartForkCorpusOutput,

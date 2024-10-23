@@ -20,7 +20,7 @@ import {
   ExtractType,
   LabelDisplayBehavior,
   LabelType,
-} from "../../../../graphql/types";
+} from "../../../../types/graphql-api";
 import {
   PDFPageInfo,
   AnnotationStore,

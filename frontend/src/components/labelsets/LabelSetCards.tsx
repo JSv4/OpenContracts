@@ -10,7 +10,7 @@ import {
   openedLabelset,
   selectedLabelsetIds,
 } from "../../graphql/cache";
-import { LabelSetType, PageInfo } from "../../graphql/types";
+import { LabelSetType, PageInfo } from "../../types/graphql-api";
 import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";

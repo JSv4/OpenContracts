@@ -1,7 +1,7 @@
 import { Table, Dimmer, Loader } from "semantic-ui-react";
 import { ExtractItemRow } from "./ExtractListItem";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
-import { ExtractType, PageInfo } from "../../../graphql/types";
+import { ExtractType, PageInfo } from "../../../types/graphql-api";
 
 interface ExtractListProps {
   items: ExtractType[] | undefined;

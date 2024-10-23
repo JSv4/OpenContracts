@@ -55,7 +55,7 @@ import {
   ExtractType,
   LabelDisplayBehavior,
   LabelType,
-} from "../../../../graphql/types";
+} from "../../../../types/graphql-api";
 import {
   ViewState,
   TokenId,
@@ -212,7 +212,7 @@ export const AnnotatorRenderer = ({
   // Refs for search results
   const textSearchElementRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  const handleKeyUpPress = useCallback((event) => {
+  const handleKeyUpPress = useCallback((event: { keyCode: any }) => {
     const { keyCode } = event;
     if (keyCode === 16) {
       //console.log("Shift released");
@@ -220,7 +220,7 @@ export const AnnotatorRenderer = ({
     }
   }, []);
 
-  const handleKeyDownPress = useCallback((event) => {
+  const handleKeyDownPress = useCallback((event: { keyCode: any }) => {
     const { keyCode } = event;
     if (keyCode === 16) {
       //console.log("Shift depressed")

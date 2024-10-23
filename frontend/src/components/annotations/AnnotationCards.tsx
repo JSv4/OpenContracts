@@ -27,7 +27,7 @@ import {
   PageInfo,
   CorpusType,
   DocumentType,
-} from "../../graphql/types";
+} from "../../types/graphql-api";
 import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";

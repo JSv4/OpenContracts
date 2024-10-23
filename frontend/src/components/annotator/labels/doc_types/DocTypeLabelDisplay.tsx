@@ -17,7 +17,7 @@ import _ from "lodash";
 
 import "./DocTypeLabelDisplayStyles.css";
 import { AnnotationStore, DocTypeAnnotation } from "../../context";
-import { AnnotationLabelType } from "../../../../graphql/types";
+import { AnnotationLabelType } from "../../../../types/graphql-api";
 import { PermissionTypes } from "../../../types";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 import { HideableHasWidth } from "../../common";

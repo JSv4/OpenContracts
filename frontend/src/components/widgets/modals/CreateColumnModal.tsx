@@ -12,7 +12,7 @@ import {
   Icon,
 } from "semantic-ui-react";
 import { LooseObject } from "../../types";
-import { ColumnType } from "../../../graphql/types";
+import { ColumnType } from "../../../types/graphql-api";
 import { ExtractTaskDropdown } from "../selectors/ExtractTaskDropdown";
 
 interface CreateColumnModalProps {

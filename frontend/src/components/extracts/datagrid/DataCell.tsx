@@ -5,7 +5,7 @@ import {
   DatacellType,
   LabelDisplayBehavior,
   ServerAnnotationType,
-} from "../../../graphql/types";
+} from "../../../types/graphql-api";
 import { JSONTree } from "react-json-tree";
 import {
   displayAnnotationOnAnnotatorLoad,

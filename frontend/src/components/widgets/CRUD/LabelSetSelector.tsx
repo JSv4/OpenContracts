@@ -8,7 +8,7 @@ import {
   GetLabelsetOutputs,
   GET_LABELSETS,
 } from "../../../graphql/queries";
-import { LabelSetType } from "../../../graphql/types";
+import { LabelSetType } from "../../../types/graphql-api";
 
 interface LabelSetSelectorProps {
   read_only?: boolean;

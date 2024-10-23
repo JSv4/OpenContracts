@@ -26,7 +26,7 @@ import {
   RequestDocumentsOutputs,
   GET_DOCUMENTS,
 } from "../../graphql/queries";
-import { DocumentType } from "../../graphql/types";
+import { DocumentType } from "../../types/graphql-api";
 import { FileUploadPackageProps } from "../widgets/modals/DocumentUploadModal";
 
 export const CorpusDocumentCards = ({

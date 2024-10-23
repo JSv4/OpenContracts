@@ -1,5 +1,5 @@
 import { Card, Icon } from "semantic-ui-react";
-import { AnnotationLabelType } from "../../../graphql/types";
+import { AnnotationLabelType } from "../../../types/graphql-api";
 
 interface LabelListItemProps {
   label: AnnotationLabelType;

@@ -10,12 +10,12 @@ import {
   Icon,
   Label,
   Header,
+  MenuItemProps,
 } from "semantic-ui-react";
 import _ from "lodash";
 import styled from "styled-components";
 
-import { LabelSetStatistic } from "../widgets/data-display/LabelSetStatisticWidget";
-import { CorpusType } from "../../graphql/types";
+import { CorpusType } from "../../types/graphql-api";
 import default_corpus_icon from "../../assets/images/defaults/default_corpus.png";
 import { getPermissions } from "../../utils/transform";
 import { PermissionTypes } from "../types";
@@ -154,7 +154,7 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
     item.myPermissions ? item.myPermissions : []
   );
 
-  let context_menus: React.ReactNode[] = [];
+  let context_menus: MenuItemProps[] = [];
 
   if (analyzers_available) {
     context_menus.push({
@@ -316,12 +316,16 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
         open={contextMenuOpen === id}
         hideOnScroll
       >
-        <Menu
-          items={context_menus}
-          onItemClick={() => setContextMenuOpen(-1)}
-          secondary
-          vertical
-        />
+        <Menu secondary vertical>
+          {context_menus.map((item) => (
+            <Menu.Item
+              key={item.key}
+              icon={item.icon}
+              content={item.content}
+              onItemClick={() => setContextMenuOpen(-1)}
+            />
+          ))}
+        </Menu>
       </Popup>
     </>
   );

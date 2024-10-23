@@ -72,6 +72,8 @@ class DocParserTestCase(TestCase):
 
     @patch("opencontractserver.tasks.doc_tasks.convert_from_bytes")
     def test_pdf_thumbnail_extraction(self, mock_convert_from_bytes):
+        """Test PDF thumbnail extraction with various image sizes and orientations."""
+
         test_cases = [
             (400, 400, "square"),
             (600, 400, "landscape"),
@@ -91,12 +93,13 @@ class DocParserTestCase(TestCase):
                 self.doc.refresh_from_db()
 
                 # Check that the icon was created
-                self.assertTrue(self.doc.icon)
-                self.assertTrue(
-                    re.match(
-                        r"uploadfiles/pdf_icons/\d+_icon_[a-zA-Z0-9]+\.jpg",
-                        self.doc.icon.name,
-                    )
+                self.assertTrue(self.doc.icon, "Icon was not created.")
+
+                # Use assertRegex for better error messages
+                self.assertRegex(
+                    self.doc.icon.name,
+                    r"uploadfiles/pdf_icons/\d+_icon_[a-zA-Z0-9]+\.jpg",
+                    msg=f"Icon name '{self.doc.icon.name}' does not match the expected pattern."
                 )
 
                 # Open the saved image and check its properties
@@ -104,11 +107,13 @@ class DocParserTestCase(TestCase):
                     saved_image = Image.open(icon_file)
 
                     # Check the dimensions of the saved image
-                    self.assertEqual(saved_image.size, (400, 200))
+                    self.assertEqual(saved_image.size, (400, 200), "Image dimensions do not match expected size.")
 
                     # Check that the image is not empty (all white)
                     self.assertNotEqual(
-                        saved_image.getcolors(), [(400 * 200, (255, 255, 255))]
+                        saved_image.getcolors(),
+                        [(400 * 200, (255, 255, 255))],
+                        "Image appears to be empty or all white."
                     )
 
                 # Clean up

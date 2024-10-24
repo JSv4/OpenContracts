@@ -26,6 +26,8 @@ import { useDropzone } from "react-dropzone";
 import { addingColumnToExtract } from "../../../graphql/cache";
 import { CreateColumnModal } from "../../widgets/modals/CreateColumnModal";
 import { UPLOAD_DOCUMENT } from "../../../graphql/mutations";
+import styled from "styled-components";
+import { Dimmer, Loader } from "semantic-ui-react";
 
 interface DragState {
   isDragging: boolean;
@@ -40,6 +42,7 @@ interface DataGridProps {
   onAddDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveColumnId: (columnId: string) => void;
+  loading?: boolean;
 }
 
 // Add these styles near the top of the file
@@ -104,6 +107,39 @@ const styles = {
   },
 };
 
+// Add this styled component at the top if using styled-components
+const AddColumnDropzone = styled.div`
+  min-width: 200px;
+  border: 2px dashed rgba(34, 36, 38, 0.15); // Semantic UI's default border color
+  border-radius: 0.28571429rem; // Semantic UI's default border radius
+  background-color: rgba(0, 0, 0, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 1rem 0;
+  height: calc(100% - 2rem);
+
+  &:hover {
+    border-color: #21ba45; // Semantic UI's green
+    background-color: rgba(33, 186, 69, 0.05);
+
+    .add-icon {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .add-icon {
+    color: #21ba45;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.2s ease;
+    font-size: 2rem;
+  }
+`;
+
 export const ExtractDataGrid: React.FC<DataGridProps> = ({
   extract,
   cells,
@@ -112,6 +148,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
   onAddDocIds,
   onRemoveDocIds,
   onRemoveColumnId,
+  loading,
 }) => {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [cellStatuses, setCellStatuses] = useState<Record<string, CellStatus>>(
@@ -126,20 +163,55 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
   // Convert data to grid format
   const gridRows = useMemo<ExtractGridRow[]>(
     () =>
-      rows.map((row) => ({
-        id: row.id,
-        documentId: row.id,
-        documentTitle: row.title || "",
-        ...cells
+      rows.map((row) => {
+        const rowData: ExtractGridRow = {
+          id: row.id,
+          documentId: row.id,
+          documentTitle: row.title || "",
+        };
+
+        // Process cells for this row
+        cells
           .filter((cell) => cell.document.id === row.id)
-          .reduce(
-            (acc, cell) => ({
-              ...acc,
-              [cell.column.id]: cell.correctedData || cell.data,
-            }),
-            {}
-          ),
-      })),
+          .forEach((cell) => {
+            console.log("Render value for ", cell);
+
+            // Handle the cell value more carefully
+            let cellValue: string;
+            if (cell.data?.data) {
+              // If we have nested data
+              try {
+                cellValue =
+                  typeof cell.data.data === "object"
+                    ? JSON.stringify(cell.data.data)
+                    : String(cell.data.data);
+              } catch {
+                cellValue = "";
+              }
+            } else if (cell.data) {
+              // If we have direct data
+              try {
+                cellValue =
+                  typeof cell.data === "object"
+                    ? JSON.stringify(cell.data)
+                    : String(cell.data);
+              } catch {
+                cellValue = "";
+              }
+            } else {
+              // No data
+              cellValue = "";
+            }
+
+            rowData[cell.column.id] = cellValue;
+            // Add status fields
+            rowData[`${cell.column.id}_started`] = cell.started;
+            rowData[`${cell.column.id}_completed`] = cell.completed;
+            rowData[`${cell.column.id}_failed`] = cell.failed;
+          });
+
+        return rowData;
+      }),
     [rows, cells]
   );
 
@@ -190,9 +262,59 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
         (c) => c.document.id === row.documentId && c.column.id === column.key
       );
 
-      if (!cell) return null;
+      if (!cell) {
+        return {
+          value: "",
+          cellStatus: {
+            isLoading: false,
+            isApproved: false,
+            isRejected: false,
+            isEdited: false,
+            originalData: null,
+            correctedData: null,
+          },
+          onApprove: () => {},
+          onReject: () => {},
+          onEdit: () => {},
+        };
+      }
+
+      // Process the cell value first
+      let displayValue: string;
+      const rawValue = row[column.key];
+
+      if (rawValue === null || rawValue === undefined) {
+        displayValue = "";
+      } else if (typeof rawValue === "object") {
+        try {
+          displayValue = JSON.stringify(rawValue);
+        } catch {
+          displayValue = "";
+        }
+      } else {
+        displayValue = String(rawValue);
+      }
+
+      // Handle loading state
+      if (row[`${column.key}_started`] && !row[`${column.key}_completed`]) {
+        return {
+          value: "",
+          cellStatus: {
+            isLoading: true,
+            isApproved: false,
+            isRejected: false,
+            isEdited: false,
+            originalData: null,
+            correctedData: null,
+          },
+          onApprove: () => {},
+          onReject: () => {},
+          onEdit: () => {},
+        };
+      }
 
       const status = cellStatuses[cell.id] || {
+        isLoading: false,
         isApproved: Boolean(cell.approvedBy),
         isRejected: Boolean(cell.rejectedBy),
         isEdited: Boolean(cell.correctedData),
@@ -201,10 +323,11 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
       };
 
       return {
-        value: row[column.key],
+        value: displayValue,
         cellStatus: status,
         onApprove: () => requestApprove({ variables: { datacellId: cell.id } }),
-        // ... other handlers
+        onReject: () => {},
+        onEdit: (value: string) => {},
       };
     },
     [cells, cellStatuses, requestApprove]
@@ -400,6 +523,12 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
   return (
     <>
+      {loading && (
+        <Dimmer active>
+          <Loader>Loading...</Loader>
+        </Dimmer>
+      )}
+
       <CreateColumnModal
         open={isAddingColumn}
         onSubmit={handleCreateColumn}
@@ -428,18 +557,13 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           className="custom-data-grid"
         />
 
-        <div
-          style={styles.phantomColumn}
-          onClick={() => setIsAddingColumn(true)}
-          title="Add new column"
+        <AddColumnDropzone
+          onClick={() => addingColumnToExtract(extract)}
+          role="button"
+          aria-label="Add new column"
         >
-          <Icon
-            name="plus"
-            size="large"
-            style={{ color: "#ccc" }}
-            className="phantom-column-icon"
-          />
-        </div>
+          <Icon name="plus circle" className="add-icon" />
+        </AddColumnDropzone>
 
         {isDragActive && (
           <div style={styles.dropOverlay}>

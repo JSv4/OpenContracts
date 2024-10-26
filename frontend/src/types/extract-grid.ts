@@ -19,13 +19,13 @@ export interface ExtractGridColumn {
 }
 
 export interface CellStatus {
+  isLoading: boolean;
   isApproved: boolean;
   isRejected: boolean;
-  approvedBy?: UserType;
-  rejectedBy?: UserType;
   isEdited: boolean;
-  originalData?: any;
-  correctedData?: any;
+  originalData: any | null;
+  correctedData: any | null;
+  error?: any | null;
 }
 
 export interface FormatterProps {

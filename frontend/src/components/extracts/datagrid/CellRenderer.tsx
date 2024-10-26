@@ -1,30 +1,20 @@
 import React from "react";
+import { RenderCellProps } from "react-data-grid";
 import { Icon } from "semantic-ui-react";
+import { ExtractGridRow } from "../../../types/extract-grid";
+import { CellStatus } from "../../../types/extract-grid";
 
-interface ExtractCellFormatterProps {
-  value: string;
-  cellStatus: {
-    isLoading: boolean;
-    isApproved: boolean;
-    isRejected: boolean;
-    isEdited: boolean;
-    originalData: any;
-    correctedData: any;
-    error?: any;
-  };
-  onApprove: () => void;
-  onReject: () => void;
-  onEdit: () => void;
-  // Include any additional props if necessary
+interface CellRendererProps extends RenderCellProps<ExtractGridRow, unknown> {
+  cellStatus: CellStatus;
 }
 
-export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
-  value,
+export const CellRenderer: React.FC<CellRendererProps> = ({
+  column,
+  row,
   cellStatus,
-  onApprove,
-  onReject,
-  onEdit,
 }) => {
+  const value = row[column.key as keyof ExtractGridRow];
+
   const cellStyle = {
     display: "flex",
     alignItems: "center",

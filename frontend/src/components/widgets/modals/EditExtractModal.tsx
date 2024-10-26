@@ -279,6 +279,8 @@ export const EditExtractModal = ({
       // Add debug logging here
       console.log("Setting columns to:", fieldset?.fullColumnList);
       setColumns(fieldset?.fullColumnList ? fieldset.fullColumnList : []);
+      // Update the extract state with the latest data
+      setExtract(extract_data.extract);
     }
   }, [extract_data]);
 

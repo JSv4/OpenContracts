@@ -1,13 +1,20 @@
-import React, { useState } from "react";
-import { CellStatus, FormatterProps } from "../../../types/extract-grid";
-import { Button, Icon } from "semantic-ui-react";
+import React from "react";
+import { FormatterProps } from "../../../types/extract-grid";
+import { Icon } from "semantic-ui-react";
 
 interface ExtractCellFormatterProps extends FormatterProps {
   value: string;
-  cellStatus: CellStatus;
+  cellStatus: {
+    isLoading: boolean;
+    isApproved: boolean;
+    isRejected: boolean;
+    isEdited: boolean;
+    originalData: any;
+    correctedData: any;
+  };
   onApprove: () => void;
   onReject: () => void;
-  onEdit: (value: string) => void;
+  onEdit: () => void;
 }
 
 export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
@@ -17,35 +24,14 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
   onReject,
   onEdit,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value);
+  console.log("ExtractCellFormatter received:", { value, cellStatus });
 
   return (
-    <div
-      className={`cell-formatter ${cellStatus.isApproved ? "approved" : ""} ${
-        cellStatus.isRejected ? "rejected" : ""
-      }`}
-    >
-      {isEditing ? (
-        <input
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onBlur={() => {
-            setIsEditing(false);
-            if (editValue !== value) {
-              onEdit(editValue);
-            }
-          }}
-        />
+    <div className="cell-content">
+      {cellStatus.isLoading ? (
+        <Icon name="spinner" loading />
       ) : (
-        <>
-          <span>{value}</span>
-          <div className="cell-actions">
-            <Button icon="check" onClick={onApprove} />
-            <Button icon="x" onClick={onReject} />
-            <Button icon="edit" onClick={() => setIsEditing(true)} />
-          </div>
-        </>
+        <span>{String(value || "")}</span>
       )}
     </div>
   );

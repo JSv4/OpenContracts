@@ -1,3 +1,5 @@
+import { Loader } from "semantic-ui-react";
+
 interface CellStatus {
   isLoading?: boolean;
   isApproved: boolean;
@@ -23,19 +25,35 @@ export const ExtractCellFormatter: React.FC<FormatterProps> = ({
   onReject,
   onEdit,
 }) => {
-  // Ensure value is always a string
-  const displayValue =
-    value === null || value === undefined || typeof value === "object"
-      ? "-"
-      : String(value);
-
-  if (cellStatus?.isLoading) {
-    return <div>Loading...</div>;
+  // Explicitly check isLoading is true (not just truthy)
+  if (cellStatus.isLoading === true) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100%",
+          backgroundColor: "rgba(0, 0, 0, 0.05)",
+          width: "100%",
+          padding: "8px",
+          position: "relative",
+        }}
+      >
+        <Loader active={true} size="small" inline="centered" />
+      </div>
+    );
   }
 
   if (cellStatus?.error) {
     return <div>Error</div>;
   }
 
-  return <div>{displayValue}</div>;
+  // Ensure value is always a string
+  const displayValue =
+    value === null || value === undefined || typeof value === "object"
+      ? "-"
+      : String(value);
+
+  return <div style={{ padding: "8px" }}>{displayValue}</div>;
 };

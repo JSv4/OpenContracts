@@ -34,6 +34,7 @@ import { CreateColumnModal } from "../../widgets/modals/CreateColumnModal";
 import { UPLOAD_DOCUMENT } from "../../../graphql/mutations";
 import styled from "styled-components";
 import { Dimmer, Loader } from "semantic-ui-react";
+import { CellRenderer } from "./CellRenderer"; // Import the custom cell renderer
 
 interface DragState {
   isDragging: boolean;
@@ -255,6 +256,32 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     onError: () => toast.error("Could not register feedback!"),
   });
 
+  // Update cell statuses when cells change
+  useEffect(() => {
+    const newStatuses: Record<string, CellStatus> = {};
+
+    cells.forEach((cell) => {
+      const extractIsProcessing =
+        extract.started && !extract.finished && !extract.error;
+      const cellIsProcessing = cell.started && !cell.completed && !cell.failed;
+      const isProcessing =
+        cellIsProcessing || (extractIsProcessing && !cell.started);
+
+      newStatuses[cell.id] = {
+        isLoading: Boolean(isProcessing),
+        isApproved: Boolean(cell.approvedBy),
+        isRejected: Boolean(cell.rejectedBy),
+        isEdited: Boolean(cell.correctedData),
+        originalData: cell.data || null,
+        correctedData: cell.correctedData || null,
+        error: cell.failed || null,
+      };
+    });
+
+    console.log("Updating cell statuses:", newStatuses);
+    setCellStatuses(newStatuses);
+  }, [cells, extract]); // Added extract to dependencies
+
   const getCellContent = useCallback(
     (row: ExtractGridRow, column: ExtractGridColumn) => {
       console.log("getCellContent called with:", { row, column });
@@ -279,70 +306,116 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
       const cellValue = row[column.key];
       console.log("Cell value:", cellValue);
 
+      // Find the actual cell data
+      const cell = cells.find(
+        (c) => c.document.id === row.id && c.column.id === column.key
+      );
+      console.log("Found cell:", cell);
+
+      // Use the stored cell status if available
+      const cellStatus = cell
+        ? cellStatuses[cell.id]
+        : {
+            isLoading: false,
+            isApproved: false,
+            isRejected: false,
+            isEdited: false,
+            originalData: null,
+            correctedData: null,
+            error: null,
+          };
+
+      console.log("Cell status for", cell?.id, ":", cellStatus);
+
       return {
         value:
           typeof cellValue === "object"
             ? JSON.stringify(cellValue)
             : String(cellValue || ""),
-        cellStatus: {
-          isLoading: Boolean(
-            row[`${column.key}_started`] && !row[`${column.key}_completed`]
-          ),
-          isApproved: false,
-          isRejected: false,
-          isEdited: false,
-          originalData: null,
-          correctedData: null,
-        },
+        cellStatus,
+        cellId: cell?.id || "", // Add this line
         onApprove: () => {},
         onReject: () => {},
         onEdit: () => {},
       };
     },
-    [cells]
+    [cells, cellStatuses] // Add cellStatuses to dependencies
   );
 
-  const gridColumns = useMemo<ExtractGridColumn[]>(() => {
-    console.log("Creating gridColumns with:", columns);
-    const cols = [
+  // Map cell statuses for quick access
+  const cellStatusMap = useMemo(() => {
+    const map = new Map<string, CellStatus>();
+    cells.forEach((cell) => {
+      const extractIsProcessing =
+        extract.started && !extract.finished && !extract.error;
+      const cellIsProcessing = cell.started && !cell.completed && !cell.failed;
+      const isProcessing =
+        cellIsProcessing || (extractIsProcessing && !cell.started);
+
+      const status: CellStatus = {
+        isLoading: Boolean(isProcessing),
+        isApproved: Boolean(cell.approvedBy),
+        isRejected: Boolean(cell.rejectedBy),
+        isEdited: Boolean(cell.correctedData),
+        originalData: cell.data || null,
+        correctedData: cell.correctedData || null,
+        error: cell.failed || null,
+      };
+      map.set(`${cell.document.id}-${cell.column.id}`, status);
+    });
+    return map;
+  }, [cells, extract]);
+
+  // Prepare columns with custom renderCell functions
+  const gridColumns = useMemo(() => {
+    return [
       {
         key: "documentTitle",
         name: "Document",
         frozen: true,
         width: 200,
-        formatter: (props: FormatterProps) => {
-          console.log("Document title formatter props:", props);
-          return <div>{String(props.row.documentTitle || "")}</div>;
+        renderCell: (props: any) => {
+          return <div>{props.row.documentTitle}</div>;
         },
       },
       ...columns.map((col) => ({
         key: col.id,
         name: col.name,
-        formatter: (props: FormatterProps) => {
-          console.log("Column formatter props:", { column: col.id, props });
-          const content = getCellContent(props.row, {
-            key: col.id,
-            name: col.name,
-          });
-          console.log("Formatter content:", content);
+        width: 250,
+        renderCell: (props: any) => {
+          const cellKey = `${props.row.documentId}-${col.id}`;
+          const cellStatus = cellStatusMap.get(cellKey) || {
+            isLoading: true,
+            isApproved: false,
+            isRejected: false,
+            isEdited: false,
+            originalData: null,
+            correctedData: null,
+            error: null,
+          };
+
+          const value = props.row[col.id] || "";
 
           return (
             <ExtractCellFormatter
               {...props}
-              value={content.value}
-              cellStatus={content.cellStatus}
-              onApprove={content.onApprove}
-              onReject={content.onReject}
-              onEdit={content.onEdit}
+              value={String(value)}
+              cellStatus={cellStatus}
+              onApprove={() => {}}
+              onReject={() => {}}
+              onEdit={() => {}}
             />
           );
         },
-        width: 250,
       })),
     ];
-    console.log("Final gridColumns:", cols);
-    return cols;
-  }, [columns, getCellContent]);
+  }, [columns, cellStatusMap]);
+
+  // Add an effect to monitor columns changes
+  useEffect(() => {
+    console.log("Columns changed:", columns);
+    console.log("Current gridColumns:", gridColumns);
+  }, [columns, gridColumns]);
 
   // Add debug logging after column processing
   useEffect(() => {

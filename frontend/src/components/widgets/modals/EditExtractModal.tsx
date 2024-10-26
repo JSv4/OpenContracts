@@ -267,13 +267,18 @@ export const EditExtractModal = ({
   }, [open]);
 
   useEffect(() => {
+    console.log("XOXO - Extract Data", extract_data);
     if (extract_data) {
       const { fullDatacellList, fullDocumentList, fieldset } =
         extract_data.extract;
+      console.log("XOXO - Full Datacell List", fullDatacellList);
+      console.log("XOXO - Full Document List", fullDocumentList);
+      console.log("XOXO - Fieldset", fieldset);
       setCells(fullDatacellList ? fullDatacellList : []);
       setRows(fullDocumentList ? fullDocumentList : []);
+      // Add debug logging here
+      console.log("Setting columns to:", fieldset?.fullColumnList);
       setColumns(fieldset?.fullColumnList ? fieldset.fullColumnList : []);
-      setExtract(extract_data.extract);
     }
   }, [extract_data]);
 

@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useState, useRef } from "react";
+import React, {
+  useCallback,
+  useMemo,
+  useState,
+  useRef,
+  useEffect,
+} from "react";
 import DataGrid from "react-data-grid";
 import { useMutation } from "@apollo/client";
 import { toast } from "react-toastify";
@@ -150,10 +156,23 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
   onRemoveColumnId,
   loading,
 }) => {
+  console.log("ExtractDataGrid received columns:", columns);
+  console.log("ExtractDataGrid received extract:", extract);
+  console.log("ExtractDataGrid received rows:", rows);
+
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [cellStatuses, setCellStatuses] = useState<Record<string, CellStatus>>(
     {}
   );
+
+  console.log("Cell Statuses", cellStatuses);
+  console.log("Cells", cells);
+
+  useEffect(() => {
+    console.log("Cells", cells);
+    console.log("Columns", columns);
+  }, [cells, columns]);
+
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
     dragY: null,
@@ -161,59 +180,39 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Convert data to grid format
-  const gridRows = useMemo<ExtractGridRow[]>(
-    () =>
-      rows.map((row) => {
-        const rowData: ExtractGridRow = {
-          id: row.id,
-          documentId: row.id,
-          documentTitle: row.title || "",
-        };
+  const gridRows = useMemo<ExtractGridRow[]>(() => {
+    console.log("Creating gridRows with:", { rows, cells, columns, extract });
+    return rows.map((row) => {
+      const rowData: ExtractGridRow = {
+        id: row.id,
+        documentId: row.id,
+        documentTitle: row.title || "",
+      };
 
-        // Process cells for this row
-        cells
-          .filter((cell) => cell.document.id === row.id)
-          .forEach((cell) => {
-            console.log("Render value for ", cell);
+      console.log("Processing row:", row.id);
 
-            // Handle the cell value more carefully
-            let cellValue: string;
-            if (cell.data?.data) {
-              // If we have nested data
-              try {
-                cellValue =
-                  typeof cell.data.data === "object"
-                    ? JSON.stringify(cell.data.data)
-                    : String(cell.data.data);
-              } catch {
-                cellValue = "";
-              }
-            } else if (cell.data) {
-              // If we have direct data
-              try {
-                cellValue =
-                  typeof cell.data === "object"
-                    ? JSON.stringify(cell.data)
-                    : String(cell.data);
-              } catch {
-                cellValue = "";
-              }
-            } else {
-              // No data
-              cellValue = "";
-            }
+      columns.forEach((column) => {
+        console.log("Processing column for row:", {
+          rowId: row.id,
+          columnId: column.id,
+        });
+        const cell = cells.find(
+          (c) => c.document.id === row.id && c.column.id === column.id
+        );
+        console.log("Found cell:", cell);
 
-            rowData[cell.column.id] = cellValue;
-            // Add status fields
-            rowData[`${cell.column.id}_started`] = cell.started;
-            rowData[`${cell.column.id}_completed`] = cell.completed;
-            rowData[`${cell.column.id}_failed`] = cell.failed;
-          });
+        if (cell) {
+          console.log("Cell data:", cell.data?.data);
+          rowData[column.id] = cell.data?.data || ""; // Ensure empty string instead of empty object
+        } else {
+          rowData[column.id] = ""; // Ensure empty string instead of empty object
+        }
+      });
 
-        return rowData;
-      }),
-    [rows, cells]
-  );
+      console.log("Final rowData:", rowData);
+      return rowData;
+    });
+  }, [rows, cells, columns, extract]);
 
   // Column Actions Component
   const ColumnActions: React.FC<{ column: ExtractGridColumn }> = ({
@@ -258,13 +257,11 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
   const getCellContent = useCallback(
     (row: ExtractGridRow, column: ExtractGridColumn) => {
-      const cell = cells.find(
-        (c) => c.document.id === row.documentId && c.column.id === column.key
-      );
+      console.log("getCellContent called with:", { row, column });
 
-      if (!cell) {
+      if (column.key === "documentTitle") {
         return {
-          value: "",
+          value: String(row.documentTitle || ""),
           cellStatus: {
             isLoading: false,
             isApproved: false,
@@ -279,142 +276,83 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
         };
       }
 
-      // Process the cell value first
-      let displayValue: string;
-      const rawValue = row[column.key];
-
-      if (rawValue === null || rawValue === undefined) {
-        displayValue = "";
-      } else if (typeof rawValue === "object") {
-        try {
-          displayValue = JSON.stringify(rawValue);
-        } catch {
-          displayValue = "";
-        }
-      } else {
-        displayValue = String(rawValue);
-      }
-
-      // Handle loading state
-      if (row[`${column.key}_started`] && !row[`${column.key}_completed`]) {
-        return {
-          value: "",
-          cellStatus: {
-            isLoading: true,
-            isApproved: false,
-            isRejected: false,
-            isEdited: false,
-            originalData: null,
-            correctedData: null,
-          },
-          onApprove: () => {},
-          onReject: () => {},
-          onEdit: () => {},
-        };
-      }
-
-      const status = cellStatuses[cell.id] || {
-        isLoading: false,
-        isApproved: Boolean(cell.approvedBy),
-        isRejected: Boolean(cell.rejectedBy),
-        isEdited: Boolean(cell.correctedData),
-        originalData: cell.data,
-        correctedData: cell.correctedData,
-      };
+      const cellValue = row[column.key];
+      console.log("Cell value:", cellValue);
 
       return {
-        value: displayValue,
-        cellStatus: status,
-        onApprove: () => requestApprove({ variables: { datacellId: cell.id } }),
+        value:
+          typeof cellValue === "object"
+            ? JSON.stringify(cellValue)
+            : String(cellValue || ""),
+        cellStatus: {
+          isLoading: Boolean(
+            row[`${column.key}_started`] && !row[`${column.key}_completed`]
+          ),
+          isApproved: false,
+          isRejected: false,
+          isEdited: false,
+          originalData: null,
+          correctedData: null,
+        },
+        onApprove: () => {},
         onReject: () => {},
-        onEdit: (value: string) => {},
+        onEdit: () => {},
       };
     },
-    [cells, cellStatuses, requestApprove]
+    [cells]
   );
 
-  const gridColumns = useMemo<ExtractGridColumn[]>(
-    () => [
+  const gridColumns = useMemo<ExtractGridColumn[]>(() => {
+    console.log("Creating gridColumns with:", columns);
+    const cols = [
       {
         key: "documentTitle",
         name: "Document",
         frozen: true,
         width: 200,
-        headerRenderer: (props: { column: { name: string } }) => (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "0 8px",
-            }}
-          >
-            <span>{props.column.name}</span>
-            <div style={{ display: "flex", gap: "8px" }}>
-              {selectedRows.size > 0 && (
-                <Button
-                  icon="trash"
-                  color="red"
-                  size="mini"
-                  onClick={() => {
-                    onRemoveDocIds(extract.id, Array.from(selectedRows));
-                    setSelectedRows(new Set());
-                  }}
-                />
-              )}
-              <Button
-                icon="plus"
-                color="green"
-                size="mini"
-                onClick={() => {
-                  const newDocIds = ["example-id"]; // Replace with actual document selection
-                  onAddDocIds(extract.id, newDocIds);
-                }}
-              />
-            </div>
-          </div>
-        ),
+        formatter: (props: FormatterProps) => {
+          console.log("Document title formatter props:", props);
+          return <div>{String(props.row.documentTitle || "")}</div>;
+        },
       },
       ...columns.map((col) => ({
         key: col.id,
         name: col.name,
-        formatter: (
-          props: JSX.IntrinsicAttributes &
-            FormatterProps & { children?: React.ReactNode | undefined }
-        ) => {
-          const content = getCellContent(props.row, props.column);
-          if (!content) return null;
-          return <ExtractCellFormatter {...props} {...content} />;
+        formatter: (props: FormatterProps) => {
+          console.log("Column formatter props:", { column: col.id, props });
+          const content = getCellContent(props.row, {
+            key: col.id,
+            name: col.name,
+          });
+          console.log("Formatter content:", content);
+
+          return (
+            <ExtractCellFormatter
+              {...props}
+              value={content.value}
+              cellStatus={content.cellStatus}
+              onApprove={content.onApprove}
+              onReject={content.onReject}
+              onEdit={content.onEdit}
+            />
+          );
         },
-        editable: !extract.started,
-        sortable: true,
         width: 250,
-        headerRenderer: (props: { column: ExtractGridColumn }) => (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "0 8px",
-            }}
-          >
-            <span>{props.column.name}</span>
-            <ColumnActions column={props.column} />
-          </div>
-        ),
       })),
-    ],
-    [
-      columns,
-      extract.started,
-      extract.id,
-      selectedRows,
-      onRemoveDocIds,
-      onAddDocIds,
-      onRemoveColumnId,
-      getCellContent,
-    ]
-  );
+    ];
+    console.log("Final gridColumns:", cols);
+    return cols;
+  }, [columns, getCellContent]);
+
+  // Add debug logging after column processing
+  useEffect(() => {
+    console.log("Processed gridColumns:", gridColumns);
+  }, [gridColumns]);
+
+  useEffect(() => {
+    console.log("Grid Columns", gridColumns);
+    console.log("Grid Rows", gridRows);
+  }, [gridColumns, gridRows]);
 
   // Upload document mutation - but we'll use the response to call onAddDocIds
   const [uploadDocument] = useMutation(UPLOAD_DOCUMENT);

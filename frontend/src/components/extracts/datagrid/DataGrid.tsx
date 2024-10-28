@@ -5,7 +5,7 @@ import React, {
   useRef,
   useEffect,
 } from "react";
-import DataGrid from "react-data-grid";
+import DataGrid, { RowsChangeData, textEditor } from "react-data-grid";
 import { useMutation } from "@apollo/client";
 import { toast } from "react-toastify";
 import { Button, Icon, Popup } from "semantic-ui-react";
@@ -13,13 +13,18 @@ import {
   REQUEST_APPROVE_DATACELL,
   REQUEST_EDIT_DATACELL,
   REQUEST_REJECT_DATACELL,
+  RequestApproveDatacellInputType,
+  RequestApproveDatacellOutputType,
+  RequestEditDatacellInputType,
+  RequestEditDatacellOutputType,
+  RequestRejectDatacellInputType,
+  RequestRejectDatacellOutputType,
 } from "../../../graphql/mutations";
 import { ExtractCellFormatter } from "./ExtractCellFormatter";
 import {
   ExtractGridColumn,
   ExtractGridRow,
   CellStatus,
-  FormatterProps,
 } from "../../../types/extract-grid";
 import {
   ColumnType,
@@ -34,7 +39,6 @@ import { CreateColumnModal } from "../../widgets/modals/CreateColumnModal";
 import { UPLOAD_DOCUMENT } from "../../../graphql/mutations";
 import styled from "styled-components";
 import { Dimmer, Loader } from "semantic-ui-react";
-import { CellRenderer } from "./CellRenderer"; // Import the custom cell renderer
 
 interface DragState {
   isDragging: boolean;
@@ -49,6 +53,7 @@ interface DataGridProps {
   onAddDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveColumnId: (columnId: string) => void;
+  onUpdateRow?: (newRow: DocumentType) => void; // Add this prop
   loading?: boolean;
 }
 
@@ -149,12 +154,13 @@ const AddColumnDropzone = styled.div`
 
 export const ExtractDataGrid: React.FC<DataGridProps> = ({
   extract,
-  cells,
+  cells: initialCells,
   rows,
   columns,
   onAddDocIds,
   onRemoveDocIds,
   onRemoveColumnId,
+  onUpdateRow,
   loading,
 }) => {
   console.log("ExtractDataGrid received columns:", columns);
@@ -162,17 +168,13 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
   console.log("ExtractDataGrid received rows:", rows);
 
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
-  const [cellStatuses, setCellStatuses] = useState<Record<string, CellStatus>>(
-    {}
-  );
 
-  console.log("Cell Statuses", cellStatuses);
-  console.log("Cells", cells);
+  console.log("Cells", initialCells);
 
   useEffect(() => {
-    console.log("Cells", cells);
+    console.log("Cells", initialCells);
     console.log("Columns", columns);
-  }, [cells, columns]);
+  }, [initialCells, columns]);
 
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
@@ -180,9 +182,54 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
   });
   const gridRef = useRef<HTMLDivElement>(null);
 
+  // Local state for cells
+  const [localCells, setLocalCells] = useState<DatacellType[]>(initialCells);
+
+  // Add an effect to update localCells when initialCells changes
+  useEffect(() => {
+    console.log("Initial cells received:", initialCells);
+    setLocalCells(initialCells);
+  }, [initialCells]);
+
+  // Also add this debug log
+  useEffect(() => {
+    console.log("Local cells state:", localCells);
+  }, [localCells]);
+
+  // Add a function to derive cell status from a cell
+  const deriveCellStatus = useCallback(
+    (cell: DatacellType): CellStatus => {
+      const extractIsProcessing =
+        extract.started && !extract.finished && !extract.error;
+      const cellIsProcessing = cell.started && !cell.completed && !cell.failed;
+      const isProcessing =
+        cellIsProcessing || (extractIsProcessing && !cell.started);
+
+      return {
+        isLoading: Boolean(isProcessing),
+        isApproved: Boolean(cell.approvedBy),
+        isRejected: Boolean(cell.rejectedBy),
+        isEdited: Boolean(cell.correctedData),
+        originalData: cell.data || null,
+        correctedData: cell.correctedData || null,
+        error: cell.failed || null,
+      };
+    },
+    [extract]
+  );
+
+  // Check if extract is complete
+  const isExtractComplete =
+    extract.started && extract.finished && !extract.error;
+
   // Convert data to grid format
   const gridRows = useMemo<ExtractGridRow[]>(() => {
-    console.log("Creating gridRows with:", { rows, cells, columns, extract });
+    console.log("Creating gridRows with:", {
+      rows,
+      cells: initialCells,
+      columns,
+      extract,
+    });
     return rows.map((row) => {
       const rowData: ExtractGridRow = {
         id: row.id,
@@ -197,7 +244,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           rowId: row.id,
           columnId: column.id,
         });
-        const cell = cells.find(
+        const cell = initialCells.find(
           (c) => c.document.id === row.id && c.column.id === column.id
         );
         console.log("Found cell:", cell);
@@ -213,7 +260,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
       console.log("Final rowData:", rowData);
       return rowData;
     });
-  }, [rows, cells, columns, extract]);
+  }, [rows, initialCells, columns, extract]);
 
   // Column Actions Component
   const ColumnActions: React.FC<{ column: ExtractGridColumn }> = ({
@@ -239,28 +286,140 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     );
   };
 
-  // Mutations
-  const [requestApprove] = useMutation(REQUEST_APPROVE_DATACELL, {
+  // Separate mutations for edit, approve, and reject
+  const [editDatacell] = useMutation<
+    RequestEditDatacellOutputType,
+    RequestEditDatacellInputType
+  >(REQUEST_EDIT_DATACELL, {
     onCompleted: (data) => {
-      toast.success("Approved!");
-      setCellStatuses((prev) => ({
-        ...prev,
-        [data.approveDatacell.obj.id]: {
-          ...prev[data.approveDatacell.obj.id],
-          isApproved: true,
-          isRejected: false,
-          approvedBy: data.approveDatacell.obj.approvedBy,
-        },
-      }));
+      toast.success("Cell updated!");
+      const updatedCell = data.editDatacell.obj;
+      setLocalCells((prev) =>
+        prev.map((cell) => (cell.id === updatedCell.id ? updatedCell : cell))
+      );
     },
-    onError: () => toast.error("Could not register feedback!"),
+    onError: () => toast.error("Failed to update cell!"),
   });
+
+  const [approveDatacell] = useMutation<
+    RequestApproveDatacellOutputType,
+    RequestApproveDatacellInputType
+  >(REQUEST_APPROVE_DATACELL, {
+    onCompleted: (data) => {
+      if (data.approveDatacell.ok) {
+        toast.success("Cell approved!");
+        const updatedCell = data.approveDatacell.obj;
+        console.log("Updated cell:", updatedCell);
+        setLocalCells((prev) =>
+          prev.map((cell) => (cell.id === updatedCell.id ? updatedCell : cell))
+        );
+      } else {
+        toast.error("Failed to approve cell: " + data.approveDatacell.message);
+      }
+    },
+    onError: () => toast.error("Failed to approve cell!"),
+  });
+
+  const [rejectDatacell] = useMutation<
+    RequestRejectDatacellOutputType,
+    RequestRejectDatacellInputType
+  >(REQUEST_REJECT_DATACELL, {
+    onCompleted: (data) => {
+      toast.success("Cell rejected!");
+      const updatedCell = data.rejectDatacell.obj;
+      setLocalCells((prev) =>
+        prev.map((cell) => (cell.id === updatedCell.id ? updatedCell : cell))
+      );
+    },
+    onError: () => toast.error("Failed to reject cell!"),
+  });
+
+  // Separate handlers for edit, approve, and reject
+  const handleEditDatacell = useCallback(
+    async (datacellId: string, editedData: any) => {
+      if (!isExtractComplete) {
+        toast.warn("Cannot edit cells until extract is complete");
+        return;
+      }
+
+      // Set loading state
+      setLocalCells((prev) =>
+        prev.map((cell) =>
+          cell.id === datacellId
+            ? {
+                ...cell,
+                started: cell.started || "",
+                completed: cell.completed || "",
+              }
+            : cell
+        )
+      );
+
+      await editDatacell({
+        variables: {
+          datacellId,
+          editedData,
+        },
+      });
+    },
+    [editDatacell, isExtractComplete]
+  );
+
+  const handleApproveCell = useCallback(
+    async (datacellId: string) => {
+      if (!isExtractComplete) {
+        toast.warn("Cannot approve cells until extract is complete");
+        return;
+      }
+
+      // Set loading state
+      setLocalCells((prev) =>
+        prev.map((cell) =>
+          cell.id === datacellId
+            ? { ...cell, started: new Date().toISOString(), completed: "" }
+            : cell
+        )
+      );
+
+      await approveDatacell({
+        variables: {
+          datacellId,
+        },
+      });
+    },
+    [approveDatacell, isExtractComplete]
+  );
+
+  const handleRejectCell = useCallback(
+    async (datacellId: string) => {
+      if (!isExtractComplete) {
+        toast.warn("Cannot reject cells until extract is complete");
+        return;
+      }
+
+      // Set loading state
+      setLocalCells((prev) =>
+        prev.map((cell) =>
+          cell.id === datacellId
+            ? { ...cell, started: new Date().toISOString(), completed: "" }
+            : cell
+        )
+      );
+
+      await rejectDatacell({
+        variables: {
+          datacellId,
+        },
+      });
+    },
+    [rejectDatacell, isExtractComplete]
+  );
 
   // Update cell statuses when cells change
   useEffect(() => {
     const newStatuses: Record<string, CellStatus> = {};
 
-    cells.forEach((cell) => {
+    initialCells.forEach((cell) => {
       const extractIsProcessing =
         extract.started && !extract.finished && !extract.error;
       const cellIsProcessing = cell.started && !cell.completed && !cell.failed;
@@ -279,42 +438,31 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     });
 
     console.log("Updating cell statuses:", newStatuses);
-    setCellStatuses(newStatuses);
-  }, [cells, extract]); // Added extract to dependencies
+    setLocalCells((prev) =>
+      prev.map((cell) =>
+        newStatuses[cell.id] ? { ...cell, ...newStatuses[cell.id] } : cell
+      )
+    );
+  }, [initialCells, extract]); // Added extract to dependencies
 
   const getCellContent = useCallback(
     (row: ExtractGridRow, column: ExtractGridColumn) => {
-      console.log("getCellContent called with:", { row, column });
-
       if (column.key === "documentTitle") {
         return {
           value: String(row.documentTitle || ""),
-          cellStatus: {
-            isLoading: false,
-            isApproved: false,
-            isRejected: false,
-            isEdited: false,
-            originalData: null,
-            correctedData: null,
-          },
-          onApprove: () => {},
-          onReject: () => {},
-          onEdit: () => {},
+          cellStatus: null,
+          cellId: "",
         };
       }
 
-      const cellValue = row[column.key];
-      console.log("Cell value:", cellValue);
-
       // Find the actual cell data
-      const cell = cells.find(
-        (c) => c.document.id === row.id && c.column.id === column.key
+      const cell = localCells.find(
+        (c) => c.document?.id === row.id && c.column?.id === column.key
       );
-      console.log("Found cell:", cell);
 
-      // Use the stored cell status if available
+      // Derive cell status even if cell is not found
       const cellStatus = cell
-        ? cellStatuses[cell.id]
+        ? deriveCellStatus(cell)
         : {
             isLoading: false,
             isApproved: false,
@@ -325,46 +473,27 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
             error: null,
           };
 
-      console.log("Cell status for", cell?.id, ":", cellStatus);
-
       return {
-        value:
-          typeof cellValue === "object"
-            ? JSON.stringify(cellValue)
-            : String(cellValue || ""),
-        cellStatus,
-        cellId: cell?.id || "", // Add this line
-        onApprove: () => {},
-        onReject: () => {},
-        onEdit: () => {},
+        value: String(row[column.key] || ""),
+        cellStatus, // This should now always be defined
+        cellId: cell?.id || "",
       };
     },
-    [cells, cellStatuses] // Add cellStatuses to dependencies
+    [localCells, deriveCellStatus]
   );
 
   // Map cell statuses for quick access
   const cellStatusMap = useMemo(() => {
     const map = new Map<string, CellStatus>();
-    cells.forEach((cell) => {
-      const extractIsProcessing =
-        extract.started && !extract.finished && !extract.error;
-      const cellIsProcessing = cell.started && !cell.completed && !cell.failed;
-      const isProcessing =
-        cellIsProcessing || (extractIsProcessing && !cell.started);
-
-      const status: CellStatus = {
-        isLoading: Boolean(isProcessing),
-        isApproved: Boolean(cell.approvedBy),
-        isRejected: Boolean(cell.rejectedBy),
-        isEdited: Boolean(cell.correctedData),
-        originalData: cell.data || null,
-        correctedData: cell.correctedData || null,
-        error: cell.failed || null,
-      };
-      map.set(`${cell.document.id}-${cell.column.id}`, status);
+    localCells.forEach((cell) => {
+      if (cell?.document?.id && cell?.column?.id) {
+        // Add null checks
+        const status = deriveCellStatus(cell);
+        map.set(`${cell.document.id}-${cell.column.id}`, status);
+      }
     });
     return map;
-  }, [cells, extract]);
+  }, [localCells, deriveCellStatus]);
 
   // Prepare columns with custom renderCell functions
   const gridColumns = useMemo(() => {
@@ -382,34 +511,74 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
         key: col.id,
         name: col.name,
         width: 250,
+        resizable: true,
         renderCell: (props: any) => {
-          const cellKey = `${props.row.documentId}-${col.id}`;
-          const cellStatus = cellStatusMap.get(cellKey) || {
-            isLoading: true,
-            isApproved: false,
-            isRejected: false,
-            isEdited: false,
-            originalData: null,
-            correctedData: null,
-            error: null,
-          };
+          // Add debug logging
+          console.log("Looking for cell with:", {
+            documentId: props.row.documentId,
+            columnId: col.id,
+            availableCells: localCells.map((c) => ({
+              docId: c.document?.id,
+              colId: c.column?.id,
+              cellId: c.id,
+            })),
+          });
 
-          const value = props.row[col.id] || "";
+          const cell = localCells.find(
+            (c) =>
+              c.document?.id === props.row.documentId && c.column?.id === col.id
+          );
+
+          // Log if cell was found
+          console.log("Found cell:", cell);
+
+          const cellStatus = cell
+            ? deriveCellStatus(cell)
+            : {
+                isLoading: false,
+                isApproved: false,
+                isRejected: false,
+                isEdited: false,
+                originalData: null,
+                correctedData: null,
+                error: null,
+              };
 
           return (
             <ExtractCellFormatter
-              {...props}
-              value={String(value)}
+              value={String(props.row[col.id] || "")}
               cellStatus={cellStatus}
-              onApprove={() => {}}
-              onReject={() => {}}
-              onEdit={() => {}}
+              cellId={cell?.id || ""}
+              onApprove={() => {
+                if (!cell?.id) {
+                  console.warn("Cannot approve cell: No cell ID found", {
+                    documentId: props.row.documentId,
+                    columnId: col.id,
+                    cell,
+                  });
+                  return;
+                }
+                console.log("Approving cell:", cell.id);
+                handleApproveCell(cell.id);
+              }}
+              onReject={() => {
+                if (!cell?.id) return;
+                handleRejectCell(cell.id);
+              }}
+              isExtractComplete={Boolean(isExtractComplete)}
             />
           );
         },
       })),
     ];
-  }, [columns, cellStatusMap]);
+  }, [
+    columns,
+    localCells,
+    handleApproveCell,
+    handleRejectCell,
+    isExtractComplete,
+    deriveCellStatus,
+  ]);
 
   // Add an effect to monitor columns changes
   useEffect(() => {
@@ -532,6 +701,35 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     [extract.fieldset]
   );
 
+  // Handle row changes (edits)
+  const onRowsChange = useCallback(
+    (newRows: ExtractGridRow[], changes: RowsChangeData<ExtractGridRow>) => {
+      // Get the updated cell
+      const { indexes, column } = changes;
+      if (column.key === "documentTitle") return; // Do not allow editing the title
+
+      const rowIndex = indexes[0];
+      const updatedRow = newRows[rowIndex];
+      const newValue = updatedRow[column.key];
+
+      // Find the datacellId
+      const cell = localCells.find(
+        (c) =>
+          c.document.id === updatedRow.documentId && c.column.id === column.key
+      );
+
+      if (cell) {
+        handleEditDatacell(cell.id, newValue);
+      }
+
+      // Notify parent of row update if callback provided
+      if (onUpdateRow) {
+        onUpdateRow(updatedRow);
+      }
+    },
+    [localCells, handleEditDatacell, onUpdateRow]
+  );
+
   return (
     <>
       {loading && (
@@ -566,6 +764,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           selectedRows={selectedRows}
           onSelectedRowsChange={setSelectedRows}
           className="custom-data-grid"
+          onRowsChange={onRowsChange} // Use onRowsChange to handle cell edits
         />
 
         <AddColumnDropzone

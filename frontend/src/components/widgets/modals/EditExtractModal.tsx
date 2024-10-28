@@ -23,7 +23,7 @@ import {
   REQUEST_GET_EXTRACT,
   RequestGetExtractInput,
 } from "../../../graphql/queries";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   REQUEST_ADD_DOC_TO_EXTRACT,
   REQUEST_CREATE_COLUMN,
@@ -299,6 +299,13 @@ export const EditExtractModal = ({
     },
   });
 
+  // Add handler for row updates
+  const handleRowUpdate = useCallback((updatedRow: DocumentType) => {
+    setRows((prevRows) =>
+      prevRows.map((row) => (row.id === updatedRow.id ? updatedRow : row))
+    );
+  }, []);
+
   if (!extract || !extract.id) {
     return <></>;
   }
@@ -446,6 +453,7 @@ export const EditExtractModal = ({
             onAddDocIds={handleAddDocIdsToExtract}
             onRemoveDocIds={handleRemoveDocIdsFromExtract}
             onRemoveColumnId={handleDeleteColumnIdFromExtract}
+            onUpdateRow={handleRowUpdate} // Add this prop
             extract={extract}
             cells={cells}
             rows={rows}

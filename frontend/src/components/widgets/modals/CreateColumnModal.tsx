@@ -15,6 +15,8 @@ import {
 import { ExtractTaskDropdown } from "../selectors/ExtractTaskDropdown";
 import { ModelFieldBuilder } from "../ModelFieldBuilder";
 import { LooseObject } from "../../types";
+import styled from "styled-components";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CreateColumnModalProps {
   open: boolean;
@@ -32,6 +34,35 @@ interface FieldType {
   fieldName: string;
   fieldType: string;
 }
+
+const OutputTypeSection = styled.div`
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  border: 1px solid #e9ecef;
+`;
+
+const SectionTitle = styled.h4`
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  font-weight: 500;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 0.5rem;
+`;
+
+const outputTypeVariants = {
+  hidden: {
+    opacity: 0,
+    height: 0,
+    transition: { duration: 0.2 },
+  },
+  visible: {
+    opacity: 1,
+    height: "auto",
+    transition: { duration: 0.3 },
+  },
+};
 
 /**
  * Modal component for creating a new data extract column.
@@ -164,9 +195,24 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
   };
 
   return (
-    <Modal style={{ height: "70vh" }} open={open} closeIcon onClose={onClose}>
+    <Modal
+      open={open}
+      closeIcon
+      onClose={onClose}
+      style={{
+        maxHeight: "90vh",
+        marginTop: "5vh",
+        marginBottom: "5vh",
+      }}
+    >
       <Modal.Header>Create a New Data Extract Column</Modal.Header>
-      <Modal.Content style={{ overflowY: "scroll" }}>
+      <Modal.Content
+        style={{
+          maxHeight: "calc(90vh - 120px)", // Account for header and footer
+          overflowY: "auto",
+          padding: "1rem",
+        }}
+      >
         <Form>
           <Grid stackable>
             <Grid.Row>
@@ -362,67 +408,81 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
             </Grid.Row>
             <Grid.Row>
               <Grid.Column width={16}>
-                <Form.Field>
-                  <label>Output Type</label>
-                  <Form.Group inline>
-                    <label>Select Type:</label>
-                    <Form.Radio
-                      label="Primitive Type"
-                      value="primitive"
-                      checked={outputTypeOption === "primitive"}
-                      onChange={handleOutputTypeChange}
-                    />
-                    <Form.Radio
-                      label="Custom Model"
-                      value="custom"
-                      checked={outputTypeOption === "custom"}
-                      onChange={handleOutputTypeChange}
-                    />
-                  </Form.Group>
-                </Form.Field>
+                <OutputTypeSection>
+                  <SectionTitle>Output Type Configuration</SectionTitle>
+                  <Form.Field>
+                    <Form.Group inline>
+                      <label>Select Type:</label>
+                      <Form.Radio
+                        label="Primitive Type"
+                        value="primitive"
+                        checked={outputTypeOption === "primitive"}
+                        onChange={handleOutputTypeChange}
+                      />
+                      <Form.Radio
+                        label="Custom Model"
+                        value="custom"
+                        checked={outputTypeOption === "custom"}
+                        onChange={handleOutputTypeChange}
+                      />
+                    </Form.Group>
+                  </Form.Field>
+
+                  <AnimatePresence>
+                    {outputTypeOption === "primitive" ? (
+                      <motion.div
+                        key="primitive"
+                        variants={outputTypeVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="hidden"
+                      >
+                        <Form.Field>
+                          <label>
+                            Primitive Type
+                            <Popup
+                              trigger={<Icon name="question circle outline" />}
+                              content="Select one of the supported Python primitive types."
+                            />
+                          </label>
+                          <Form.Select
+                            placeholder="Select primitive type"
+                            name="outputType"
+                            value={outputType}
+                            options={[
+                              { key: "int", text: "int", value: "int" },
+                              { key: "float", text: "float", value: "float" },
+                              { key: "str", text: "str", value: "str" },
+                              { key: "bool", text: "bool", value: "bool" },
+                            ]}
+                            onChange={(e, data) =>
+                              setObjData({ ...objData, outputType: data.value })
+                            }
+                            fluid
+                          />
+                        </Form.Field>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="custom"
+                        variants={outputTypeVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="hidden"
+                      >
+                        <SectionTitle as="h5">
+                          Define Custom Model Fields
+                        </SectionTitle>
+                        <ModelFieldBuilder
+                          onFieldsChange={handleFieldsChange}
+                          initialFields={fields}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </OutputTypeSection>
               </Grid.Column>
             </Grid.Row>
-            {outputTypeOption === "primitive" && (
-              <Grid.Row>
-                <Grid.Column width={16}>
-                  <Form.Field>
-                    <label>
-                      Primitive Type
-                      <Popup
-                        trigger={<Icon name="question circle outline" />}
-                        content="Select one of the supported Python primitive types."
-                      />
-                    </label>
-                    <Form.Select
-                      placeholder="Select primitive type"
-                      name="outputType"
-                      value={outputType}
-                      options={[
-                        { key: "int", text: "int", value: "int" },
-                        { key: "float", text: "float", value: "float" },
-                        { key: "str", text: "str", value: "str" },
-                        { key: "bool", text: "bool", value: "bool" },
-                      ]}
-                      onChange={(e, data) =>
-                        setObjData({ ...objData, outputType: data.value })
-                      }
-                      fluid
-                    />
-                  </Form.Field>
-                </Grid.Column>
-              </Grid.Row>
-            )}
-            {outputTypeOption === "custom" && (
-              <Grid.Row>
-                <Grid.Column width={16}>
-                  <Header as="h4">Define Custom Model Fields</Header>
-                  <ModelFieldBuilder
-                    onFieldsChange={handleFieldsChange}
-                    initialFields={fields}
-                  />
-                </Grid.Column>
-              </Grid.Row>
-            )}
           </Grid>
         </Form>
       </Modal.Content>

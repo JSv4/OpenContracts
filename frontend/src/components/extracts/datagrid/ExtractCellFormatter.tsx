@@ -1,7 +1,9 @@
-import React, { useState } from "react";
-import { Button, Popup } from "semantic-ui-react";
+import React, { useState, useEffect } from "react";
+import { Button, Popup, Icon } from "semantic-ui-react";
 import { CellStatus } from "../../../types/extract-grid";
 import styled from "styled-components";
+import { JSONSchema7 } from "json-schema";
+import { ExtractCellEditor } from "./ExtractCellEditor";
 
 const StatusDot = styled.div`
   width: 10px;
@@ -120,11 +122,17 @@ const CellContainer = styled.div`
 
 interface ExtractCellFormatterProps {
   value: string;
-  cellStatus: CellStatus;
+  cellStatus: CellStatus | null;
   cellId: string;
   onApprove: () => void;
   onReject: () => void;
+  onEdit: (cellId: string, editedData: any) => void;
+  readOnly: boolean;
   isExtractComplete: boolean;
+  schema: JSONSchema7;
+  extractIsList: boolean;
+  row: any;
+  column: any;
 }
 
 export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
@@ -133,66 +141,123 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
   cellId,
   onApprove,
   onReject,
+  onEdit,
+  readOnly,
   isExtractComplete,
+  schema,
+  extractIsList,
+  row,
+  column,
 }) => {
+  useEffect(() => {
+    console.log("ExtractCellFormatter rendered with:", {
+      value,
+      cellStatus,
+      cellId,
+      isExtractComplete,
+    });
+  }, [value, cellStatus, cellId, isExtractComplete]);
+
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   console.log("Cell status:", cellStatus);
   console.log("Is extract complete:", isExtractComplete);
   console.log("Value:", value);
 
   const getCellBackground = () => {
-    if (cellStatus === undefined) return "transparent";
+    if (!cellStatus) return "transparent";
     if (cellStatus.isApproved) return "rgba(76, 175, 80, 0.1)";
     if (cellStatus.isRejected) return "rgba(244, 67, 54, 0.1)";
     return "transparent";
   };
 
+  const displayValue = () => {
+    if (typeof value === "object") {
+      return <Icon name="code" />; // Indicate that it's an object
+    } else {
+      return <div className="cell-value">{String(value)}</div>;
+    }
+  };
+
   return (
     <CellContainer style={{ background: getCellBackground() }}>
-      <div className="cell-value">{value}</div>
+      {displayValue()}
       {cellStatus?.isLoading && <div className="cell-loader">Loading...</div>}
       {!cellStatus?.isLoading && isExtractComplete && (
-        <Popup
-          trigger={<StatusDot />}
-          on="click"
-          position="top right"
-          open={isPopupOpen}
-          onOpen={() => setIsPopupOpen(true)}
-          onClose={() => setIsPopupOpen(false)}
-          mouseLeaveDelay={300}
-          content={
-            <ButtonContainer>
-              <div className="buttons">
-                <Button
-                  icon="check"
-                  color="green"
-                  size="tiny"
-                  onClick={() => {
-                    onApprove();
-                    setIsPopupOpen(false);
-                  }}
-                  disabled={cellStatus?.isApproved || !isExtractComplete}
-                  title="Approve"
-                />
-                <Button
-                  icon="close"
-                  color="red"
-                  size="tiny"
-                  onClick={() => {
-                    onReject();
-                    setIsPopupOpen(false);
-                  }}
-                  disabled={cellStatus?.isRejected || !isExtractComplete}
-                  title="Reject"
-                />
-              </div>
-              {cellStatus?.isApproved && (
-                <div className="status-message">Cell is currently approved</div>
-              )}
-            </ButtonContainer>
-          }
-        />
+        <>
+          <Popup
+            trigger={<StatusDot />}
+            on="click"
+            position="top right"
+            open={isPopupOpen}
+            onOpen={() => setIsPopupOpen(true)}
+            onClose={() => setIsPopupOpen(false)}
+            mouseLeaveDelay={300}
+            content={
+              <ButtonContainer>
+                <div className="buttons">
+                  <Button
+                    icon="check"
+                    color="green"
+                    size="tiny"
+                    onClick={() => {
+                      onApprove();
+                      setIsPopupOpen(false);
+                    }}
+                    disabled={
+                      cellStatus?.isApproved || readOnly || !isExtractComplete
+                    }
+                    title="Approve"
+                  />
+                  <Button
+                    icon="edit"
+                    color="grey"
+                    size="tiny"
+                    onClick={() => {
+                      setIsEditing(true);
+                      setIsPopupOpen(false);
+                    }}
+                    disabled={readOnly || !isExtractComplete}
+                    title="Edit"
+                  />
+                  <Button
+                    icon="close"
+                    color="red"
+                    size="tiny"
+                    onClick={() => {
+                      onReject();
+                      setIsPopupOpen(false);
+                    }}
+                    disabled={
+                      cellStatus?.isRejected || readOnly || !isExtractComplete
+                    }
+                    title="Reject"
+                  />
+                </div>
+                {cellStatus?.isApproved && (
+                  <div className="status-message">
+                    Cell is currently approved
+                  </div>
+                )}
+              </ButtonContainer>
+            }
+          />
+          {isEditing && (
+            <ExtractCellEditor
+              row={row}
+              column={column}
+              onRowChange={(updatedRow, commitChanges) => {
+                if (commitChanges) {
+                  onEdit(cellId, updatedRow[column.key]);
+                }
+              }}
+              onClose={() => setIsEditing(false)}
+              schema={schema}
+              extractIsList={extractIsList}
+            />
+          )}
+        </>
       )}
     </CellContainer>
   );

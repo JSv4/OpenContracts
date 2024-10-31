@@ -888,22 +888,37 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
         {isDragActive && dragState.isDragging && <DragPreviewRow />}
 
-        {!extract.started && selectedRows.size > 0 && (
+        {!extract.started && (
           <div
             style={{
               padding: "8px",
               borderBottom: "1px solid #e0e0e0",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
+            {selectedRows.size > 0 && (
+              <Button
+                negative
+                size="small"
+                onClick={handleRowsDelete}
+                icon
+                labelPosition="left"
+              >
+                <Icon name="trash" />
+                Delete Selected ({selectedRows.size})
+              </Button>
+            )}
             <Button
-              negative
+              positive
               size="small"
-              onClick={handleRowsDelete}
               icon
               labelPosition="left"
+              onClick={() => setIsAddingColumn(true)}
             >
-              <Icon name="trash" />
-              Delete Selected ({selectedRows.size})
+              <Icon name="plus" />
+              Add Column
             </Button>
           </div>
         )}

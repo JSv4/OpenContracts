@@ -8,6 +8,7 @@ export interface ExtractGridRow {
 }
 
 export interface ExtractGridColumn {
+  id?: string;
   key: string;
   name: string;
   width?: number;

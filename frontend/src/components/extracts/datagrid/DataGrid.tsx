@@ -5,7 +5,12 @@ import React, {
   useRef,
   useEffect,
 } from "react";
-import DataGrid, { RowsChangeData, textEditor } from "react-data-grid";
+import DataGrid, {
+  RowsChangeData,
+  CopyEvent,
+  PasteEvent,
+  SelectColumn,
+} from "react-data-grid";
 import { useMutation } from "@apollo/client";
 import { toast } from "react-toastify";
 import { Button, Icon, Popup } from "semantic-ui-react";
@@ -39,6 +44,10 @@ import { CreateColumnModal } from "../../widgets/modals/CreateColumnModal";
 import { UPLOAD_DOCUMENT } from "../../../graphql/mutations";
 import styled from "styled-components";
 import { Dimmer, Loader } from "semantic-ui-react";
+import { parseOutputType } from "../../../utils/parseOutputType";
+import { JSONSchema7 } from "json-schema";
+import { ExtractCellEditor } from "./ExtractCellEditor";
+import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 
 interface DragState {
   isDragging: boolean;
@@ -66,6 +75,10 @@ const styles = {
     backgroundColor: "#fff",
     borderRadius: "8px",
     boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+    minHeight: "400px",
+    display: "flex",
+    flexDirection: "column" as const,
+    border: "1px solid #e0e0e0",
   },
   headerCell: {
     display: "flex",
@@ -118,39 +131,6 @@ const styles = {
     fontSize: "1.1em",
   },
 };
-
-// Add this styled component at the top if using styled-components
-const AddColumnDropzone = styled.div`
-  min-width: 200px;
-  border: 2px dashed rgba(34, 36, 38, 0.15); // Semantic UI's default border color
-  border-radius: 0.28571429rem; // Semantic UI's default border radius
-  background-color: rgba(0, 0, 0, 0.02);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin: 1rem 0;
-  height: calc(100% - 2rem);
-
-  &:hover {
-    border-color: #21ba45; // Semantic UI's green
-    background-color: rgba(33, 186, 69, 0.05);
-
-    .add-icon {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  .add-icon {
-    color: #21ba45;
-    opacity: 0;
-    transform: scale(0.8);
-    transition: all 0.2s ease;
-    font-size: 2rem;
-  }
-`;
 
 export const ExtractDataGrid: React.FC<DataGridProps> = ({
   extract,
@@ -224,6 +204,20 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
   // Convert data to grid format
   const gridRows = useMemo<ExtractGridRow[]>(() => {
+    if (!rows || rows.length === 0) {
+      return [
+        {
+          id: "placeholder",
+          documentId: "",
+          documentTitle: "Drop PDF documents here or click to upload",
+          ...columns.reduce((acc, col) => {
+            acc[col.id] = "";
+            return acc;
+          }, {} as Record<string, string>),
+        },
+      ];
+    }
+
     console.log("Creating gridRows with:", {
       rows,
       cells: initialCells,
@@ -325,11 +319,16 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     RequestRejectDatacellInputType
   >(REQUEST_REJECT_DATACELL, {
     onCompleted: (data) => {
-      toast.success("Cell rejected!");
-      const updatedCell = data.rejectDatacell.obj;
-      setLocalCells((prev) =>
-        prev.map((cell) => (cell.id === updatedCell.id ? updatedCell : cell))
-      );
+      if (data.rejectDatacell.ok) {
+        toast.success("Cell rejected!");
+        const updatedCell = data.rejectDatacell.obj;
+        console.log("Updated cell:", updatedCell);
+        setLocalCells((prev) =>
+          prev.map((cell) => (cell.id === updatedCell.id ? updatedCell : cell))
+        );
+      } else {
+        toast.error("Failed to reject cell: " + data.rejectDatacell.message);
+      }
     },
     onError: () => toast.error("Failed to reject cell!"),
   });
@@ -496,80 +495,142 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
   }, [localCells, deriveCellStatus]);
 
   // Prepare columns with custom renderCell functions
+  const CellRenderer = ({ value }: { value: string }) => {
+    return (
+      <div
+        style={{
+          maxWidth: "100%",
+          minWidth: 0,
+          overflow: "hidden",
+        }}
+      >
+        <TruncatedText text={value || ""} limit={100} />{" "}
+        {/* Adjust limit as needed */}
+      </div>
+    );
+  };
+
   const gridColumns = useMemo(() => {
     return [
+      ...(extract.started ? [] : [SelectColumn]),
       {
         key: "documentTitle",
         name: "Document",
         frozen: true,
         width: 200,
         renderCell: (props: any) => {
-          return <div>{props.row.documentTitle}</div>;
+          if (props.row.id === "placeholder") {
+            return (
+              <div
+                style={{
+                  width: "100%",
+                  textAlign: "center",
+                  color: "#6c757d",
+                  fontStyle: "italic",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                <Icon name="file pdf outline" />
+                {props.row.documentTitle}
+              </div>
+            );
+          }
+          return (
+            <div
+              style={{
+                maxWidth: "100%",
+                minWidth: 0,
+                overflow: "hidden",
+              }}
+            >
+              <TruncatedText text={props.row.documentTitle || ""} limit={100} />
+            </div>
+          );
         },
       },
-      ...columns.map((col) => ({
-        key: col.id,
-        name: col.name,
-        width: 250,
-        resizable: true,
-        renderCell: (props: any) => {
-          // Add debug logging
-          console.log("Looking for cell with:", {
-            documentId: props.row.documentId,
-            columnId: col.id,
-            availableCells: localCells.map((c) => ({
-              docId: c.document?.id,
-              colId: c.column?.id,
-              cellId: c.id,
-            })),
-          });
+      ...columns.map((col) => {
+        const gridColumn: ExtractGridColumn = {
+          key: col.id,
+          name: col.name,
+          id: col.id,
+          width: 200,
+          // Add any other required properties from ExtractGridColumn
+        };
 
-          const cell = localCells.find(
-            (c) =>
-              c.document?.id === props.row.documentId && c.column?.id === col.id
-          );
+        return {
+          ...gridColumn,
+          renderCell: (props: any) => {
+            if (props.row.id === "placeholder") {
+              return <div></div>;
+            }
+            const content = getCellContent(props.row, gridColumn);
+            const cellStatus = cellStatusMap.get(`${props.row.id}-${col.id}`);
 
-          // Log if cell was found
-          console.log("Found cell:", cell);
-
-          const cellStatus = cell
-            ? deriveCellStatus(cell)
-            : {
-                isLoading: false,
-                isApproved: false,
-                isRejected: false,
-                isEdited: false,
-                originalData: null,
-                correctedData: null,
-                error: null,
-              };
-
-          return (
-            <ExtractCellFormatter
-              value={String(props.row[col.id] || "")}
-              cellStatus={cellStatus}
-              cellId={cell?.id || ""}
-              onApprove={() => {
-                if (!cell?.id) {
-                  console.warn("Cannot approve cell: No cell ID found", {
-                    documentId: props.row.documentId,
-                    columnId: col.id,
-                    cell,
-                  });
-                  return;
-                }
-                console.log("Approving cell:", cell.id);
-                handleApproveCell(cell.id);
+            return (
+              <ExtractCellFormatter
+                value={content.value}
+                cellStatus={cellStatus || null}
+                onApprove={() => handleApproveCell(content.cellId)}
+                onReject={() => handleRejectCell(content.cellId)}
+                onEdit={handleEditDatacell}
+                cellId={content.cellId}
+                readOnly={!isExtractComplete}
+                isExtractComplete={Boolean(isExtractComplete)}
+                schema={columnSchemas.get(col.id) || {}}
+                extractIsList={Boolean(col.extractIsList)}
+                row={props.row}
+                column={gridColumn}
+              />
+            );
+          },
+        };
+      }),
+      {
+        key: "__add_column__",
+        name: " ",
+        width: 50,
+        headerRenderer: () => (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+              width: "100%",
+            }}
+          >
+            <Button
+              icon
+              basic
+              size="tiny"
+              style={{
+                padding: "4px",
+                margin: 0,
+                minWidth: "30px",
+                height: "30px",
               }}
-              onReject={() => {
-                if (!cell?.id) return;
-                handleRejectCell(cell.id);
+              onClick={() => {
+                console.log("Add column clicked");
+                setIsAddingColumn(true);
               }}
-              isExtractComplete={Boolean(isExtractComplete)}
-            />
-          );
-        },
-      })),
+            >
+              <Icon
+                name="plus"
+                style={{
+                  margin: 0,
+                  fontSize: "14px",
+                }}
+              />
+            </Button>
+          </div>
+        ),
+        renderCell: () => null,
+        frozen: true,
+        resizable: false,
+      },
     ];
   }, [
     columns,
@@ -578,6 +639,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     handleRejectCell,
     isExtractComplete,
     deriveCellStatus,
+    getCellContent,
   ]);
 
   // Add an effect to monitor columns changes
@@ -730,6 +792,77 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     [localCells, handleEditDatacell, onUpdateRow]
   );
 
+  const handleCopy = useCallback((args: CopyEvent<ExtractGridRow>): void => {
+    const { sourceRow, sourceColumnKey } = args;
+    const value = sourceRow[sourceColumnKey as keyof ExtractGridRow];
+    if (window.isSecureContext) {
+      // Serialize value to string
+      const textToCopy =
+        typeof value === "object" ? JSON.stringify(value) : String(value);
+      navigator.clipboard.writeText(textToCopy);
+    }
+  }, []);
+
+  const handlePaste = useCallback(
+    (args: PasteEvent<ExtractGridRow>): ExtractGridRow => {
+      const { sourceColumnKey, sourceRow, targetColumnKey, targetRow } = args;
+      const sourceValue = sourceRow[sourceColumnKey as keyof ExtractGridRow];
+
+      // Retrieve the target column to get its outputType and schema
+      const targetColumn = columns.find((col) => col.id === targetColumnKey);
+      if (!targetColumn) return targetRow;
+
+      let parsedValue = sourceValue;
+
+      // Parse the pasted value based on the target column's outputType
+      try {
+        const schema = parseOutputType(targetColumn.outputType);
+
+        if (schema.type === "number") {
+          parsedValue = Number(sourceValue);
+        } else if (schema.type === "boolean") {
+          parsedValue = sourceValue === "true";
+        } else if (schema.type === "object" || targetColumn.extractIsList) {
+          parsedValue = JSON.parse(sourceValue);
+        } else {
+          parsedValue = String(sourceValue);
+        }
+      } catch (error) {
+        console.error("Failed to parse pasted value:", error);
+        parsedValue = sourceValue;
+      }
+
+      // Return the updated row
+      return {
+        ...targetRow,
+        [targetColumnKey]: parsedValue,
+      };
+    },
+    [columns]
+  );
+
+  // Add this near the top of the component, with other memoized values
+  const columnSchemas = useMemo(() => {
+    const schemas = new Map<string, JSONSchema7>();
+    columns.forEach((col) => {
+      try {
+        schemas.set(col.id, parseOutputType(col.outputType));
+      } catch (error) {
+        console.error(`Failed to parse schema for column ${col.id}:`, error);
+        schemas.set(col.id, {}); // Fallback empty schema
+      }
+    });
+    return schemas;
+  }, [columns]);
+
+  const handleRowsDelete = useCallback(() => {
+    if (!extract.started && selectedRows.size > 0) {
+      const documentIds = Array.from(selectedRows);
+      onRemoveDocIds(extract.id, documentIds);
+      setSelectedRows(new Set()); // Clear selection after delete
+    }
+  }, [extract, selectedRows, onRemoveDocIds]);
+
   return (
     <>
       {loading && (
@@ -755,25 +888,46 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
         {isDragActive && dragState.isDragging && <DragPreviewRow />}
 
-        {/* Remove the Add Column button here */}
+        {!extract.started && selectedRows.size > 0 && (
+          <div
+            style={{
+              padding: "8px",
+              borderBottom: "1px solid #e0e0e0",
+            }}
+          >
+            <Button
+              negative
+              size="small"
+              onClick={handleRowsDelete}
+              icon
+              labelPosition="left"
+            >
+              <Icon name="trash" />
+              Delete Selected ({selectedRows.size})
+            </Button>
+          </div>
+        )}
 
         <DataGrid
+          style={{ minHeight: 300 }}
           columns={gridColumns}
           rows={gridRows}
           rowKeyGetter={(row) => row.id}
           selectedRows={selectedRows}
-          onSelectedRowsChange={setSelectedRows}
+          onSelectedRowsChange={(newSelection) => {
+            console.log("Rows selected:", newSelection);
+            if (!extract.started) {
+              setSelectedRows(newSelection);
+            }
+          }}
+          isRowSelectionDisabled={(row) =>
+            Boolean(extract.started) || row.id === "placeholder"
+          }
           className="custom-data-grid"
-          onRowsChange={onRowsChange} // Use onRowsChange to handle cell edits
+          onRowsChange={onRowsChange}
+          onCopy={handleCopy}
+          onPaste={handlePaste}
         />
-
-        <AddColumnDropzone
-          onClick={() => addingColumnToExtract(extract)}
-          role="button"
-          aria-label="Add new column"
-        >
-          <Icon name="plus circle" className="add-icon" />
-        </AddColumnDropzone>
 
         {isDragActive && (
           <div style={styles.dropOverlay}>
@@ -787,9 +941,14 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
       <style>{`
         .custom-data-grid {
-          border: 1px solid #e0e0e0 !important;
+          border: none !important;
           height: 100% !important;
           background: white;
+        }
+
+        .rdg {
+          border: none !important;
+          flex: 1;
         }
 
         .rdg-cell {
@@ -812,13 +971,78 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           background-color: #e9ecef !important;
         }
 
-        .phantom-column-icon {
-          transition: all 0.2s ease !important;
+        /* Style for the placeholder row */
+        .rdg-row[aria-rowindex="1"] {
+          color: #6c757d;
+          font-style: italic;
+          background-color: #f8f9fa;
         }
 
-        ${styles.phantomColumn}:hover .phantom-column-icon {
-          color: #4caf50 !important;
-          transform: scale(1.2);
+        /* Style for the "No documents available" text */
+        .rdg-row[aria-rowindex="1"] .rdg-cell:first-child {
+          justify-content: center;
+          text-align: center;
+          grid-column: 1 / -1;
+        }
+
+        /* Add Column button styling */
+        .rdg-header-row .ui.button {
+          padding: 6px !important;
+          background: transparent !important;
+          color: #6c757d !important;
+          border: 1px solid #dee2e6 !important;
+        }
+
+        .rdg-header-row .ui.button:hover {
+          background: #f8f9fa !important;
+          color: #212529 !important;
+          border-color: #adb5bd !important;
+        }
+
+        .rdg-cell {
+          padding: 8px !important;
+          white-space: normal !important;
+          line-height: 1.4 !important;
+        }
+
+        .rdg-cell > div {
+          width: 100%;
+          height: 100%;
+        }
+
+        /* Ensure popup content is readable */
+        .ui.popup {
+          max-width: 400px !important;
+          line-height: 1.4 !important;
+        }
+
+        /* Style the add column button */
+        .rdg-header-row .ui.button {
+          opacity: 0.8;
+          transition: opacity 0.2s;
+        }
+
+        .rdg-header-row .ui.button:hover {
+          opacity: 1;
+        }
+
+        .rdg-header-row .ui.button {
+          background: transparent !important;
+          border: 1px solid #ddd !important;
+          box-shadow: none !important;
+        }
+
+        .rdg-header-row .ui.button:hover {
+          background: #f8f9fa !important;
+          border-color: #adb5bd !important;
+        }
+
+        .rdg-header-row .ui.button .icon {
+          color: #6c757d !important;
+        }
+
+        .rdg-header-row .ui.button:hover .icon {
+          color: #212529 !important;
         }
       `}</style>
     </>

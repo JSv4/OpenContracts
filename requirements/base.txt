@@ -56,7 +56,7 @@ poppler-utils
 # ------------------------------------------------------------------------------
 PyPDF2==3.0.1  # https://github.com/mstamy2/PyPDF2
 pandas
-llama-index==0.10.43
+llama-index==0.11.21
 llama-index-agent-openai==0.2.7
 llama-index-embeddings-huggingface==0.2.1
 llama-index-llms-openai==0.1.22

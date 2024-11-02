@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Modal, Form, Grid, Button } from "semantic-ui-react";
 import { BasicConfigSection } from "./sections/BasicConfigSection";
 import { OutputTypeSection } from "./sections/OutputTypeSection";
@@ -6,17 +6,13 @@ import { ExtractionConfigSection } from "./sections/ExtractionConfigSection";
 import { AdvancedOptionsSection } from "./sections/AdvancedOptionsSection";
 import { LooseObject } from "../../types";
 import styled from "styled-components";
+import { ColumnType } from "../../../types/graphql-api";
 
 interface CreateColumnModalProps {
   open: boolean;
-  existing_column?: ColumnType;
+  existing_column?: ColumnType | null;
   onClose: () => void;
   onSubmit: (data: any) => void;
-}
-
-interface ColumnType extends LooseObject {
-  isCustomModel?: boolean;
-  fields?: FieldType[];
 }
 
 interface FieldType {
@@ -41,7 +37,7 @@ const StyledGrid = styled(Grid)`
 `;
 
 /**
- * Modal component for creating a new data extract column.
+ * Modal component for creating or editing a data extract column.
  *
  * @param open - Whether the modal is open.
  * @param existing_column - An existing column to edit.
@@ -55,12 +51,31 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
   onSubmit,
 }) => {
   const [formData, setFormData] = useState<LooseObject>(
-    existing_column ? existing_column : {}
+    existing_column ? { ...existing_column } : {}
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [outputTypeOption, setOutputTypeOption] = useState<string>(
-    existing_column?.isCustomModel ? "custom" : "primitive"
+
+  // Determine if the existing_column.outputType is a primitive type
+  const isPrimitiveType = ["str", "int", "float", "bool"].includes(
+    existing_column?.outputType || ""
   );
+
+  const [outputTypeOption, setOutputTypeOption] = useState<string>(
+    isPrimitiveType ? "primitive" : "custom"
+  );
+
+  useEffect(() => {
+    if (existing_column) {
+      setFormData({ ...existing_column });
+      const isPrimitiveType = ["str", "int", "float", "bool"].includes(
+        existing_column.outputType || ""
+      );
+      setOutputTypeOption(isPrimitiveType ? "primitive" : "custom");
+    } else {
+      setFormData({});
+      setOutputTypeOption("primitive");
+    }
+  }, [existing_column]);
 
   const handleChange = useCallback(
     (
@@ -79,40 +94,34 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
     data: any
   ) => {
     setOutputTypeOption(data.value);
+    // Reset outputType in formData when outputTypeOption changes
+    setFormData((prev) => ({
+      ...prev,
+      outputType: data.value === "primitive" ? "" : prev.outputType,
+    }));
   };
 
   const isFormValid = useCallback((): boolean => {
-    if (!existing_column) {
-      const requiredFields: RequiredFields = {
-        query: formData.query || "",
-        taskName: formData.taskName || "",
-        name: formData.name || "",
-        agentic: formData.agentic ?? false,
-        ...(outputTypeOption === "primitive"
-          ? { primitiveType: formData.primitiveType }
-          : {}),
-      };
-
-      return Object.entries(requiredFields).every(([key, value]) => {
-        if (key === "agentic") return typeof value === "boolean";
-        return Boolean(value);
-      });
-    }
-    return true;
-  }, [formData, outputTypeOption, existing_column]);
-
-  const handleSubmit = async () => {
-    console.log("Submitting form data:", formData);
-
-    const submitData = {
-      ...formData,
-      agentic: Boolean(formData.agentic),
-      outputType: formData.outputType,
+    const requiredFields: RequiredFields = {
+      query: formData.query || "",
+      taskName: formData.taskName || "",
+      name: formData.name || "",
+      agentic: formData.agentic ?? false,
+      ...(outputTypeOption === "primitive"
+        ? { primitiveType: formData.primitiveType }
+        : {}),
     };
 
+    return Object.entries(requiredFields).every(([key, value]) => {
+      if (key === "agentic") return typeof value === "boolean";
+      return Boolean(value);
+    });
+  }, [formData, outputTypeOption]);
+
+  const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await onSubmit(submitData);
+      await onSubmit(formData);
       onClose();
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -123,7 +132,9 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
 
   return (
     <Modal open={open} closeIcon onClose={onClose} size="large">
-      <Modal.Header>Create a New Data Extract Column</Modal.Header>
+      <Modal.Header>
+        {existing_column ? "Edit Column" : "Create a New Data Extract Column"}
+      </Modal.Header>
       <ModalContent>
         <Form>
           <StyledGrid>
@@ -167,7 +178,7 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
           onClick={handleSubmit}
           positive
           loading={isSubmitting}
-          disabled={isSubmitting || (!existing_column && !isFormValid())}
+          disabled={isSubmitting || !isFormValid()}
         />
       </Modal.Actions>
     </Modal>

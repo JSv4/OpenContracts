@@ -53,7 +53,6 @@ export const OutputTypeSection: React.FC<OutputTypeSectionProps> = ({
       ...prev,
       fields,
       outputType: generateOutputType(outputTypeOption, primitiveType, fields),
-      isCustomModel: outputTypeOption === "custom",
     }));
   };
 
@@ -63,7 +62,6 @@ export const OutputTypeSection: React.FC<OutputTypeSectionProps> = ({
       setFormData((prev) => ({
         ...prev,
         outputType: generateOutputType(outputTypeOption, primitiveType, []),
-        isCustomModel: false,
       }));
     }
   }, [primitiveType, outputTypeOption]);

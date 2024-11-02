@@ -404,7 +404,7 @@ export const EditExtractModal = ({
     <>
       <CreateColumnModal
         open={adding_column_to_extract !== null}
-        existing_column={adding_column_to_extract as ExtractType | undefined}
+        existing_column={null}
         onSubmit={
           adding_column_to_extract
             ? (data) => handleCreateColumn(data)

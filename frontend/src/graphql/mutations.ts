@@ -1665,3 +1665,51 @@ export const REJECT_ANNOTATION = gql`
     }
   }
 `;
+
+export interface RequestUpdateExtractInputType {
+  id: string;
+  title?: string;
+  description?: string;
+  icon?: string;
+  labelSet?: string;
+  // Additional pk_fields that accept graphene IDs
+  corpus?: string;
+  fieldset?: string;
+  creator?: string;
+}
+
+export interface RequestUpdateExtractOutputType {
+  updateExtract: {
+    ok: boolean;
+    message?: string;
+    objId?: string;
+  };
+}
+
+export const REQUEST_UPDATE_EXTRACT = gql`
+  mutation UpdateExtract(
+    $id: String!
+    $title: String
+    $description: String
+    $icon: String
+    $labelSet: String
+    $corpus: String
+    $fieldset: String
+    $creator: String
+  ) {
+    updateExtract(
+      id: $id
+      title: $title
+      description: $description
+      icon: $icon
+      labelSet: $labelSet
+      corpus: $corpus
+      fieldset: $fieldset
+      creator: $creator
+    ) {
+      ok
+      message
+      objId
+    }
+  }
+`;

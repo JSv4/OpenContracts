@@ -83,6 +83,21 @@ const DeleteButton = styled(Button)`
 `;
 
 /**
+ * Converts field definitions to a Pydantic model string representation
+ * @param fields - Array of field definitions
+ * @returns Pydantic model as a string
+ */
+const generatePydanticModel = (fields: FieldType[]): string => {
+  if (fields.length === 0) return "";
+
+  const fieldLines = fields
+    .map((field) => `    ${field.fieldName}: ${field.fieldType}`)
+    .join("\n");
+
+  return `class CustomModel(BaseModel):\n${fieldLines}`;
+};
+
+/**
  * Component for building custom model fields with animations.
  */
 export const ModelFieldBuilder: React.FC<ModelFieldBuilderProps> = ({

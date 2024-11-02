@@ -43,6 +43,12 @@ import {
   RequestStartExtractOutputType,
   RequestUpdateColumnInputType,
   RequestUpdateColumnOutputType,
+  REQUEST_CREATE_FIELDSET,
+  RequestCreateFieldsetInputType,
+  RequestCreateFieldsetOutputType,
+  REQUEST_UPDATE_EXTRACT,
+  RequestUpdateExtractInputType,
+  RequestUpdateExtractOutputType,
 } from "../../../graphql/mutations";
 import { toast } from "react-toastify";
 import { CreateColumnModal } from "./CreateColumnModal";
@@ -154,12 +160,79 @@ export const EditExtractModal = ({
     },
   });
 
-  const handleDeleteColumnIdFromExtract = (columnId: string) => {
-    deleteColumn({
-      variables: {
-        id: columnId,
-      },
-    });
+  const [createFieldset] = useMutation<
+    RequestCreateFieldsetOutputType,
+    RequestCreateFieldsetInputType
+  >(REQUEST_CREATE_FIELDSET);
+
+  const [updateExtract] = useMutation<
+    RequestUpdateExtractOutputType,
+    RequestUpdateExtractInputType
+  >(REQUEST_UPDATE_EXTRACT, {
+    onCompleted: () => {
+      toast.success("Extract updated with new fieldset.");
+      refetch();
+    },
+    onError: () => {
+      toast.error("Failed to update extract with new fieldset.");
+    },
+  });
+
+  const handleDeleteColumnIdFromExtract = async (columnId: string) => {
+    if (!extract?.fieldset?.id) return;
+
+    try {
+      // Step 1: Create a new fieldset
+      const { data: fieldsetData } = await createFieldset({
+        variables: {
+          name: `${extract.fieldset.name} (edited)`,
+          description: extract.fieldset.description || "",
+        },
+      });
+
+      const newFieldsetId = fieldsetData?.createFieldset.obj.id;
+
+      if (!newFieldsetId) throw new Error("Fieldset creation failed.");
+
+      // Step 2: Copy existing columns except the deleted one
+      const columnsToCopy = columns.filter((col) => col.id !== columnId);
+      for (const column of columnsToCopy) {
+        await createColumn({
+          variables: {
+            fieldsetId: newFieldsetId,
+            name: column.name,
+            query: column.query || "",
+            matchText: column.matchText,
+            outputType: column.outputType,
+            limitToLabel: column.limitToLabel,
+            instructions: column.instructions,
+            taskName: column.taskName,
+            agentic: Boolean(column.agentic),
+          },
+        });
+      }
+
+      // Step 3: Update the extract to use the new fieldset
+      await updateExtract({
+        variables: {
+          id: extract.id,
+          fieldset: newFieldsetId,
+        },
+      });
+
+      // Update local state
+      setExtract((prevExtract) =>
+        prevExtract
+          ? { ...prevExtract, fieldset: fieldsetData.createFieldset.obj }
+          : prevExtract
+      );
+
+      // Refetch data to get updated columns
+      refetch();
+    } catch (error) {
+      console.error(error);
+      toast.error("Error while deleting column from extract.");
+    }
   };
 
   const [createColumn, { loading: create_column_loading }] = useMutation<
@@ -177,14 +250,24 @@ export const EditExtractModal = ({
     },
   });
 
-  const handleCreateColumn = (data: any, fieldsetId: string) => {
-    createColumn({
-      variables: {
-        fieldsetId,
-        ...data,
-      },
-    });
-  };
+  const handleCreateColumn = useCallback(
+    (data: any) => {
+      if (!extract?.fieldset?.id) return;
+      createColumn({
+        variables: {
+          fieldsetId: extract.fieldset.id,
+          ...data,
+        },
+      });
+    },
+    [createColumn, extract?.fieldset?.id]
+  );
+
+  // Define the handler for adding a column
+  const handleAddColumn = useCallback(() => {
+    if (!extract?.fieldset) return;
+    addingColumnToExtract(extract);
+  }, [extract?.fieldset]);
 
   const {
     loading,
@@ -306,18 +389,25 @@ export const EditExtractModal = ({
     );
   }, []);
 
+  const isLoading =
+    loading ||
+    create_column_loading ||
+    update_column_loading ||
+    add_docs_loading ||
+    remove_docs_loading;
+
   if (!extract || !extract.id) {
-    return <></>;
+    return null;
   }
 
   return (
     <>
       <CreateColumnModal
         open={adding_column_to_extract !== null}
+        existing_column={adding_column_to_extract as ExtractType | undefined}
         onSubmit={
           adding_column_to_extract
-            ? (data) =>
-                handleCreateColumn(data, adding_column_to_extract.fieldset.id)
+            ? (data) => handleCreateColumn(data)
             : () => {}
         }
         onClose={() => addingColumnToExtract(null)}
@@ -345,16 +435,10 @@ export const EditExtractModal = ({
           justifyContent: "center",
         }}
       >
-        {loading ||
-        adding_column_to_extract ||
-        update_column_loading ||
-        add_docs_loading ||
-        remove_docs_loading ? (
-          <Dimmer>
+        {isLoading && (
+          <Dimmer active>
             <Loader>Loading...</Loader>
           </Dimmer>
-        ) : (
-          <></>
         )}
         <ModalHeader>Editing Extract {extract.name}</ModalHeader>
         <ModalContent style={{ flex: 1 }}>
@@ -453,7 +537,8 @@ export const EditExtractModal = ({
             onAddDocIds={handleAddDocIdsToExtract}
             onRemoveDocIds={handleRemoveDocIdsFromExtract}
             onRemoveColumnId={handleDeleteColumnIdFromExtract}
-            onUpdateRow={handleRowUpdate} // Add this prop
+            onUpdateRow={handleRowUpdate}
+            onAddColumn={handleAddColumn}
             extract={extract}
             cells={cells}
             rows={rows}

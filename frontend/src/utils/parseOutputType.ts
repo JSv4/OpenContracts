@@ -1,40 +1,68 @@
 import { JSONSchema7, JSONSchema7TypeName } from "json-schema";
 
-// Type mapping for primitives
-const primitiveTypeMap: Record<string, string> = {
-  int: "number",
-  float: "number",
-  str: "string",
-  bool: "boolean",
-};
-
-// Function to parse the outputType string
+/**
+ * Parse a string representation of a Python Pydantic model or a primitive type
+ * into a JSONSchema7 object.
+ *
+ * This function attempts to parse the given string as either a primitive type
+ * ("int", "float", "str", "bool") or as an object type defined by key-value pairs.
+ * It does not support nested models; it only supports simple objects with one level
+ * of key-value pairs.
+ *
+ * @param outputType - The string representation of the type to parse.
+ * @returns A JSONSchema7 object representing the parsed type.
+ * @throws Will throw an error if the input is invalid or unsupported.
+ */
 export function parseOutputType(outputType: string): JSONSchema7 {
-  // Trim the outputType string
+  const primitiveTypeMap: Record<string, JSONSchema7TypeName> = {
+    int: "number",
+    float: "number",
+    str: "string",
+    bool: "boolean",
+  };
+
   const trimmedOutputType = outputType.trim();
 
   // Check if it's a primitive type
-  if (primitiveTypeMap[trimmedOutputType]) {
-    return { type: primitiveTypeMap[trimmedOutputType] as JSONSchema7TypeName };
+  if (primitiveTypeMap.hasOwnProperty(trimmedOutputType)) {
+    return { type: primitiveTypeMap[trimmedOutputType] };
   }
 
   // Check if it's an object type
   if (trimmedOutputType.includes(":")) {
-    const lines = trimmedOutputType.split("\n").map((line) => line.trim());
+    const lines = trimmedOutputType.split("\n");
     const properties: Record<string, JSONSchema7> = {};
 
-    lines.forEach((line) => {
-      if (!line) return;
+    for (let index = 0; index < lines.length; index++) {
+      const line = lines[index].trim();
+
+      if (line === "") continue;
+
+      if (line.includes("=")) {
+        throw new Error("We don't support default values, sorry.");
+      }
+
       if (!line.includes(":")) {
-        throw new Error(`Invalid line in outputType: "${line}"`);
+        throw new Error(
+          `Every property needs to be typed! Error in line ${
+            index + 1
+          }: "${line}"`
+        );
       }
-      const [key, value] = line.split(":").map((part) => part.trim());
-      if (!key || !value) {
-        throw new Error(`Invalid property definition in outputType: "${line}"`);
+
+      const parts = line.split(":");
+      if (parts.length !== 2) {
+        throw new Error(
+          `There is an error in line ${index + 1} of your model: "${line}"`
+        );
       }
+
+      const key = parts[0].trim();
+      const value = parts[1].trim();
+
       const type = primitiveTypeMap[value] || "string";
-      properties[key] = { type: type as JSONSchema7TypeName };
-    });
+      properties[key] = { type: type };
+    }
 
     return {
       type: "object",
@@ -42,5 +70,5 @@ export function parseOutputType(outputType: string): JSONSchema7 {
     };
   }
 
-  throw new Error(`Unsupported outputType: "${outputType}"`);
+  throw new Error(`Invalid model or primitive type: "${outputType}"`);
 }

@@ -39,14 +39,10 @@ import {
 } from "../../../types/graphql-api";
 import "react-data-grid/lib/styles.css";
 import { useDropzone } from "react-dropzone";
-import { addingColumnToExtract } from "../../../graphql/cache";
-import { CreateColumnModal } from "../../widgets/modals/CreateColumnModal";
 import { UPLOAD_DOCUMENT } from "../../../graphql/mutations";
-import styled from "styled-components";
 import { Dimmer, Loader } from "semantic-ui-react";
 import { parseOutputType } from "../../../utils/parseOutputType";
 import { JSONSchema7 } from "json-schema";
-import { ExtractCellEditor } from "./ExtractCellEditor";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 
 interface DragState {
@@ -62,7 +58,8 @@ interface DataGridProps {
   onAddDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveDocIds: (extractId: string, documentIds: string[]) => void;
   onRemoveColumnId: (columnId: string) => void;
-  onUpdateRow?: (newRow: DocumentType) => void; // Add this prop
+  onUpdateRow?: (newRow: DocumentType) => void;
+  onAddColumn: () => void;
   loading?: boolean;
 }
 
@@ -141,6 +138,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
   onRemoveDocIds,
   onRemoveColumnId,
   onUpdateRow,
+  onAddColumn,
   loading,
 }) => {
   console.log("ExtractDataGrid received columns:", columns);
@@ -511,8 +509,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
   };
 
   const gridColumns = useMemo(() => {
-    return [
-      ...(extract.started ? [] : [SelectColumn]),
+    const columnsArray = [
       {
         key: "documentTitle",
         name: "Document",
@@ -588,59 +585,24 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           },
         };
       }),
-      {
-        key: "__add_column__",
-        name: " ",
-        width: 50,
-        headerRenderer: () => (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100%",
-              width: "100%",
-            }}
-          >
-            <Button
-              icon
-              basic
-              size="tiny"
-              style={{
-                padding: "4px",
-                margin: 0,
-                minWidth: "30px",
-                height: "30px",
-              }}
-              onClick={() => {
-                console.log("Add column clicked");
-                setIsAddingColumn(true);
-              }}
-            >
-              <Icon
-                name="plus"
-                style={{
-                  margin: 0,
-                  fontSize: "14px",
-                }}
-              />
-            </Button>
+    ];
+
+    // Conditionally add the 'Add Column Placeholder' column
+    if (!extract.started) {
+      columnsArray.push({
+        key: "addColumn",
+        name: "",
+        width: 60,
+        renderCell: () => (
+          <div style={styles.phantomColumn} onClick={onAddColumn}>
+            <Icon name="plus" color="grey" />
           </div>
         ),
-        renderCell: () => null,
-        frozen: true,
-        resizable: false,
-      },
-    ];
-  }, [
-    columns,
-    localCells,
-    handleApproveCell,
-    handleRejectCell,
-    isExtractComplete,
-    deriveCellStatus,
-    getCellContent,
-  ]);
+      });
+    }
+
+    return columnsArray;
+  }, [extract.started, columns, onAddColumn]);
 
   // Add an effect to monitor columns changes
   useEffect(() => {
@@ -747,20 +709,6 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
         zIndex: 1000,
       }}
     />
-  );
-
-  // Column management
-  const [isAddingColumn, setIsAddingColumn] = useState(false);
-
-  const handleCreateColumn = useCallback(
-    (data: any) => {
-      if (!extract.fieldset?.id) return;
-      addingColumnToExtract({
-        fieldset: extract.fieldset,
-        ...data,
-      });
-    },
-    [extract.fieldset]
   );
 
   // Handle row changes (edits)
@@ -871,12 +819,6 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
         </Dimmer>
       )}
 
-      <CreateColumnModal
-        open={isAddingColumn}
-        onSubmit={handleCreateColumn}
-        onClose={() => setIsAddingColumn(false)}
-      />
-
       <div
         {...getRootProps()}
         ref={gridRef}
@@ -915,7 +857,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
               size="small"
               icon
               labelPosition="left"
-              onClick={() => setIsAddingColumn(true)}
+              onClick={() => onAddColumn()}
             >
               <Icon name="plus" />
               Add Column

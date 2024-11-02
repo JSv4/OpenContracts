@@ -1,22 +1,11 @@
-import React, { useEffect, useState } from "react";
-import {
-  Modal,
-  Form,
-  Input,
-  TextArea,
-  Grid,
-  Button,
-  Header,
-  Checkbox,
-  Popup,
-  Icon,
-  CheckboxProps,
-} from "semantic-ui-react";
-import { ExtractTaskDropdown } from "../selectors/ExtractTaskDropdown";
-import { ModelFieldBuilder } from "../ModelFieldBuilder";
+import React, { useState, useCallback } from "react";
+import { Modal, Form, Grid, Button } from "semantic-ui-react";
+import { BasicConfigSection } from "./sections/BasicConfigSection";
+import { OutputTypeSection } from "./sections/OutputTypeSection";
+import { ExtractionConfigSection } from "./sections/ExtractionConfigSection";
+import { AdvancedOptionsSection } from "./sections/AdvancedOptionsSection";
 import { LooseObject } from "../../types";
 import styled from "styled-components";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface CreateColumnModalProps {
   open: boolean;
@@ -35,34 +24,21 @@ interface FieldType {
   fieldType: string;
 }
 
-const OutputTypeSection = styled.div`
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin: 1rem 0;
-  border: 1px solid #e9ecef;
+interface RequiredFields {
+  query: string;
+  primitiveType?: string;
+  taskName: string;
+  name: string;
+  agentic: boolean;
+}
+
+const ModalContent = styled(Modal.Content)`
+  padding: 2rem !important;
 `;
 
-const SectionTitle = styled.h4`
-  color: #2c3e50;
-  margin-bottom: 1rem;
-  font-weight: 500;
-  border-bottom: 2px solid #e9ecef;
-  padding-bottom: 0.5rem;
+const StyledGrid = styled(Grid)`
+  margin: 0 !important;
 `;
-
-const outputTypeVariants = {
-  hidden: {
-    opacity: 0,
-    height: 0,
-    transition: { duration: 0.2 },
-  },
-  visible: {
-    opacity: 1,
-    height: "auto",
-    transition: { duration: 0.3 },
-  },
-};
 
 /**
  * Modal component for creating a new data extract column.
@@ -78,416 +54,110 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [objData, setObjData] = useState<LooseObject>(
+  const [formData, setFormData] = useState<LooseObject>(
     existing_column ? existing_column : {}
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [outputTypeOption, setOutputTypeOption] = useState<string>(
-    existing_column && existing_column.isCustomModel ? "custom" : "primitive"
+    existing_column?.isCustomModel ? "custom" : "primitive"
   );
 
-  useEffect(() => {
-    if (existing_column) {
-      setObjData(existing_column);
-      setOutputTypeOption(
-        existing_column.isCustomModel ? "custom" : "primitive"
-      );
-    } else {
-      setObjData({});
-      setOutputTypeOption("primitive");
-    }
-  }, [existing_column]);
+  const handleChange = useCallback(
+    (
+      event: React.SyntheticEvent<HTMLElement>,
+      data: any,
+      fieldName: string
+    ) => {
+      const value = data.type === "checkbox" ? data.checked : data.value;
+      setFormData((prev) => ({ ...prev, [fieldName]: value }));
+    },
+    []
+  );
 
-  const {
-    name,
-    query,
-    matchText,
-    outputType,
-    limitToLabel,
-    instructions,
-    agentic,
-    extractIsList,
-    mustContainText,
-    taskName,
-    fields,
-  } = objData;
-
-  /**
-   * Handles input changes for text, textarea, and select fields.
-   *
-   * @param event - The event object.
-   * @param data - The data from the input.
-   * @param name - The name of the field.
-   */
-  const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    data: any,
-    name: string
-  ) => {
-    setObjData({ ...objData, [name]: data.value });
-  };
-
-  /**
-   * Handles changes to the output type selection (primitive or custom model).
-   *
-   * @param e - The event object.
-   * @param data - The data from the input, containing value and other properties.
-   */
   const handleOutputTypeChange = (
     e: React.FormEvent<HTMLInputElement>,
-    data: CheckboxProps
+    data: any
   ) => {
-    const { value } = data;
-
-    if (typeof value === "string") {
-      setOutputTypeOption(value);
-      // Reset outputType and fields when switching options
-      setObjData({ ...objData, outputType: "", fields: [] });
-    } else {
-      console.error("Unexpected value in handleOutputTypeChange:", value);
-    }
+    setOutputTypeOption(data.value);
   };
 
-  /**
-   * Handles changes to the custom model fields.
-   *
-   * @param updatedFields - The updated array of fields.
-   */
-  const handleFieldsChange = (updatedFields: FieldType[]) => {
-    setObjData({ ...objData, fields: updatedFields });
-  };
+  const isFormValid = useCallback((): boolean => {
+    if (!existing_column) {
+      const requiredFields: RequiredFields = {
+        query: formData.query || "",
+        taskName: formData.taskName || "",
+        name: formData.name || "",
+        agentic: formData.agentic ?? false,
+        ...(outputTypeOption === "primitive"
+          ? { primitiveType: formData.primitiveType }
+          : {}),
+      };
 
-  /**
-   * Validates the custom model fields.
-   *
-   * @returns A boolean indicating if the fields are valid.
-   */
-  const validateFields = (): boolean => {
-    if (outputTypeOption === "custom" && (!fields || fields.length === 0)) {
-      return false;
+      return Object.entries(requiredFields).every(([key, value]) => {
+        if (key === "agentic") return typeof value === "boolean";
+        return Boolean(value);
+      });
     }
     return true;
-  };
+  }, [formData, outputTypeOption, existing_column]);
 
-  /**
-   * Handles form submission, preparing the data to be sent.
-   */
-  const handleSubmit = () => {
-    if (!validateFields()) {
-      alert("Please add at least one field to your custom model.");
-      return;
-    }
-
-    let finalOutputType = outputType;
-    if (outputTypeOption === "custom" && fields) {
-      const modelDefinition = fields
-        .map((field: FieldType) => `${field.fieldName}: ${field.fieldType}`)
-        .join("\n");
-      finalOutputType = modelDefinition;
-    }
+  const handleSubmit = async () => {
+    console.log("Submitting form data:", formData);
 
     const submitData = {
-      ...objData,
-      outputType: finalOutputType,
-      isCustomModel: outputTypeOption === "custom",
+      ...formData,
+      agentic: Boolean(formData.agentic),
+      outputType: formData.outputType,
     };
-    console.log("Submit data", submitData);
-    onSubmit(submitData);
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit(submitData);
+      onClose();
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Modal
-      open={open}
-      closeIcon
-      onClose={onClose}
-      style={{
-        maxHeight: "90vh",
-        marginTop: "5vh",
-        marginBottom: "5vh",
-      }}
-    >
+    <Modal open={open} closeIcon onClose={onClose} size="large">
       <Modal.Header>Create a New Data Extract Column</Modal.Header>
-      <Modal.Content
-        style={{
-          maxHeight: "calc(90vh - 120px)", // Account for header and footer
-          overflowY: "auto",
-          padding: "1rem",
-        }}
-      >
+      <ModalContent>
         <Form>
-          <Grid stackable>
-            <Grid.Row>
-              <Grid.Column width={8}>
-                <Form.Field>
-                  <label>Name</label>
-                  <Input
-                    placeholder="Enter column name"
-                    name="name"
-                    value={name}
-                    onChange={(e, { value }) =>
-                      setObjData({ ...objData, name: value })
-                    }
-                    fluid
-                  />
-                </Form.Field>
-              </Grid.Column>
-              <Grid.Column width={8}>
-                <Form.Field>
-                  <label>
-                    Output Type
-                    <Popup
-                      trigger={<Icon name="question circle outline" />}
-                      content="Specify the output type for the column. Currently we support Python primitives (e.g. int, str, boolean, float) or simple (non-nested) Pydantic models. Parser is still a WIP, so please keep it simple."
-                    />
-                  </label>
-                  <Input
-                    placeholder="e.g., str"
-                    name="outputType"
-                    value={outputType}
-                    onChange={(e, { value }) =>
-                      setObjData({ ...objData, outputType: value })
-                    }
-                    fluid
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Form.Field>
-                  <label>Extract Task</label>
-                  <ExtractTaskDropdown
-                    onChange={(taskName: string | null) => {
-                      if (taskName) {
-                        setObjData({ ...objData, taskName });
-                      }
-                    }}
-                    taskName={taskName}
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Header as="h4">Query</Header>
-                <Form.Field>
-                  <TextArea
-                    rows={3}
-                    name="query"
-                    placeholder="What query shall we use to guide the LLM extraction?"
-                    value={query}
-                    onChange={(e, data) => handleChange(e, data, "query")}
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Header as="h4">Must Contain Text</Header>
-                <Form.Field>
-                  <TextArea
-                    rows={3}
-                    name="mustContainText"
-                    placeholder="Only look in annotations that contain this string (case insensitive)?"
-                    value={mustContainText}
-                    onChange={(e, data) =>
-                      handleChange(e, data, "mustContainText")
-                    }
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Header as="h4">
-                  Representative Example
-                  <Popup
-                    trigger={
-                      <Icon
-                        name="question circle outline"
-                        size="tiny"
-                        style={{ fontSize: "1rem" }}
-                      />
-                    }
-                    content="Find text that is semantically similar to this example FIRST if provided. If not provided, query is used for RAG retrieval ('naive RAG' - not recommended)."
-                  />
-                </Header>
-                <Form.Field>
-                  <TextArea
-                    rows={3}
-                    name="matchText"
-                    placeholder="Place example of text containing relevant data here."
-                    value={matchText}
-                    onChange={(e, data) => handleChange(e, data, "matchText")}
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Header as="h4">Parser Instructions</Header>
-                <Form.Field>
-                  <TextArea
-                    rows={3}
-                    name="instructions"
-                    placeholder="Provide detailed instructions for extracting object properties here..."
-                    value={instructions}
-                    onChange={(e, data) =>
-                      handleChange(e, data, "instructions")
-                    }
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={8}>
-                <Form.Field>
-                  <Checkbox
-                    label={
-                      <label>
-                        Agentic (Extra API Calls)
-                        <Popup
-                          trigger={<Icon name="question circle outline" />}
-                          content="Uses a LlamaIndex agent to attempt to find additional, referenced context from the retrieved text."
-                        />
-                      </label>
-                    }
-                    checked={agentic}
-                    onChange={(_, data) =>
-                      setObjData({
-                        ...objData,
-                        agentic: data.checked || false,
-                      })
-                    }
-                  />
-                </Form.Field>
-              </Grid.Column>
-              <Grid.Column width={8}>
-                <Form.Field>
-                  <Checkbox
-                    label={
-                      <label>
-                        List of Values
-                        <Popup
-                          trigger={<Icon name="question circle outline" />}
-                          content="Check if the column should extract a list of values of type output type"
-                        />
-                      </label>
-                    }
-                    checked={extractIsList}
-                    onChange={(_, data) =>
-                      setObjData({
-                        ...objData,
-                        extractIsList: data.checked || false,
-                      })
-                    }
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Form.Field>
-                  <label>
-                    Limit Search to Label
-                    <Popup
-                      trigger={<Icon name="question circle outline" />}
-                      content="Specify a label name to limit the search scope"
-                    />
-                  </label>
-                  <Input
-                    placeholder="Enter label name"
-                    name="limitToLabel"
-                    value={limitToLabel}
-                    onChange={(e, { value }) =>
-                      setObjData({ ...objData, limitToLabel: value })
-                    }
-                    fluid
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <OutputTypeSection>
-                  <SectionTitle>Output Type Configuration</SectionTitle>
-                  <Form.Field>
-                    <Form.Group inline>
-                      <label>Select Type:</label>
-                      <Form.Radio
-                        label="Primitive Type"
-                        value="primitive"
-                        checked={outputTypeOption === "primitive"}
-                        onChange={handleOutputTypeChange}
-                      />
-                      <Form.Radio
-                        label="Custom Model"
-                        value="custom"
-                        checked={outputTypeOption === "custom"}
-                        onChange={handleOutputTypeChange}
-                      />
-                    </Form.Group>
-                  </Form.Field>
-
-                  <AnimatePresence>
-                    {outputTypeOption === "primitive" ? (
-                      <motion.div
-                        key="primitive"
-                        variants={outputTypeVariants}
-                        initial="hidden"
-                        animate="visible"
-                        exit="hidden"
-                      >
-                        <Form.Field>
-                          <label>
-                            Primitive Type
-                            <Popup
-                              trigger={<Icon name="question circle outline" />}
-                              content="Select one of the supported Python primitive types."
-                            />
-                          </label>
-                          <Form.Select
-                            placeholder="Select primitive type"
-                            name="outputType"
-                            value={outputType}
-                            options={[
-                              { key: "int", text: "int", value: "int" },
-                              { key: "float", text: "float", value: "float" },
-                              { key: "str", text: "str", value: "str" },
-                              { key: "bool", text: "bool", value: "bool" },
-                            ]}
-                            onChange={(e, data) =>
-                              setObjData({ ...objData, outputType: data.value })
-                            }
-                            fluid
-                          />
-                        </Form.Field>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="custom"
-                        variants={outputTypeVariants}
-                        initial="hidden"
-                        animate="visible"
-                        exit="hidden"
-                      >
-                        <SectionTitle as="h5">
-                          Define Custom Model Fields
-                        </SectionTitle>
-                        <ModelFieldBuilder
-                          onFieldsChange={handleFieldsChange}
-                          initialFields={fields}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </OutputTypeSection>
-              </Grid.Column>
-            </Grid.Row>
-          </Grid>
+          <StyledGrid>
+            <BasicConfigSection
+              name={formData.name || ""}
+              taskName={formData.taskName || ""}
+              handleChange={handleChange}
+              setFormData={setFormData}
+            />
+            <OutputTypeSection
+              outputTypeOption={outputTypeOption}
+              extractIsList={formData.extractIsList || false}
+              primitiveType={formData.primitiveType || ""}
+              handleOutputTypeChange={handleOutputTypeChange}
+              handleChange={handleChange}
+              setFormData={setFormData}
+            />
+            <ExtractionConfigSection
+              query={formData.query || ""}
+              mustContainText={formData.mustContainText || ""}
+              matchText={formData.matchText || ""}
+              handleChange={handleChange}
+            />
+            <AdvancedOptionsSection
+              instructions={formData.instructions || ""}
+              agentic={formData.agentic || false}
+              limitToLabel={formData.limitToLabel || ""}
+              handleChange={handleChange}
+            />
+          </StyledGrid>
         </Form>
-      </Modal.Content>
+      </ModalContent>
       <Modal.Actions>
-        <Button color="black" onClick={() => onClose()}>
+        <Button color="black" onClick={onClose} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button
@@ -496,6 +166,8 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
           icon="checkmark"
           onClick={handleSubmit}
           positive
+          loading={isSubmitting}
+          disabled={isSubmitting || (!existing_column && !isFormValid())}
         />
       </Modal.Actions>
     </Modal>

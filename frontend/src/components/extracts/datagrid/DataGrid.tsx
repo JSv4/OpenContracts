@@ -129,6 +129,16 @@ const styles = {
   },
 };
 
+// Add new interfaces for filter state
+interface ColumnFilter {
+  value: string;
+  enabled: boolean;
+}
+
+interface FilterState {
+  [columnId: string]: ColumnFilter;
+}
+
 export const ExtractDataGrid: React.FC<DataGridProps> = ({
   extract,
   cells: initialCells,
@@ -146,6 +156,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
   console.log("ExtractDataGrid received rows:", rows);
 
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
 
   console.log("Cells", initialCells);
 
@@ -510,6 +521,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
   const gridColumns = useMemo(() => {
     const columnsArray = [
+      SelectColumn,
       {
         key: "documentTitle",
         name: "Document",
@@ -803,13 +815,131 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     return schemas;
   }, [columns]);
 
-  const handleRowsDelete = useCallback(() => {
+  const handleRowsDelete = useCallback(async () => {
     if (!extract.started && selectedRows.size > 0) {
-      const documentIds = Array.from(selectedRows);
-      onRemoveDocIds(extract.id, documentIds);
-      setSelectedRows(new Set()); // Clear selection after delete
+      setIsDeleting(true);
+      try {
+        const documentIds = Array.from(selectedRows);
+        await onRemoveDocIds(extract.id, documentIds);
+        setSelectedRows(new Set()); // Clear selection after delete
+        toast.success(`Successfully removed ${documentIds.length} document(s)`);
+      } catch (error) {
+        toast.error("Failed to remove selected documents");
+        console.error("Delete error:", error);
+      } finally {
+        setIsDeleting(false);
+      }
     }
-  }, [extract, selectedRows, onRemoveDocIds]);
+  }, [extract.id, selectedRows, onRemoveDocIds]);
+
+  // Add filter state
+  const [filters, setFilters] = useState<FilterState>({});
+  const [filtersEnabled, setFiltersEnabled] = useState(false);
+
+  // Add filter-related styles
+  const filterColumnClassName = "filter-cell";
+
+  const filterStyles = {
+    filterInput: {
+      width: "100%",
+      padding: "4px",
+      fontSize: "14px",
+      border: "1px solid #ddd",
+      borderRadius: "4px",
+    },
+    filterContainer: {
+      padding: "8px",
+      borderBottom: "1px solid var(--rdg-border-color)",
+    },
+  };
+
+  // Function to determine if a column is primitive
+  const isPrimitiveColumn = useCallback(
+    (columnId: string) => {
+      const column = columns.find((col) => col.id === columnId);
+      if (!column) return false;
+
+      try {
+        const schema = parseOutputType(column.outputType);
+        return ["string", "number", "boolean"].includes(schema.type as string);
+      } catch {
+        return false;
+      }
+    },
+    [columns]
+  );
+
+  // Filter handler
+  const handleFilterChange = useCallback((columnId: string, value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      [columnId]: {
+        value,
+        enabled: true,
+      },
+    }));
+  }, []);
+
+  // Clear filters
+  const clearFilters = useCallback(() => {
+    setFilters({});
+  }, []);
+
+  // Toggle filters
+  const toggleFilters = useCallback(() => {
+    setFiltersEnabled((prev) => !prev);
+  }, []);
+
+  // Filter the rows
+  const filteredGridRows = useMemo(() => {
+    if (!filtersEnabled || Object.keys(filters).length === 0) return gridRows;
+
+    return gridRows.filter((row) => {
+      return Object.entries(filters).every(([columnId, filter]) => {
+        if (!filter.enabled || !filter.value) return true;
+
+        const cellValue = String(row[columnId] || "").toLowerCase();
+        const filterValue = filter.value.toLowerCase();
+
+        return cellValue.includes(filterValue);
+      });
+    });
+  }, [gridRows, filters, filtersEnabled]);
+
+  // Update gridColumns to include filter headers
+  const gridColumnsWithFilters = useMemo(() => {
+    return gridColumns.map((col) => {
+      if (!isPrimitiveColumn(col.key)) return col;
+
+      return {
+        ...col,
+        headerCellClass: filterColumnClassName,
+        renderHeaderCell: (props: any) => (
+          <div>
+            <div>{col.name}</div>
+            {filtersEnabled && (
+              <div style={filterStyles.filterContainer}>
+                <input
+                  style={filterStyles.filterInput}
+                  value={filters[col.key]?.value || ""}
+                  onChange={(e) => handleFilterChange(col.key, e.target.value)}
+                  placeholder={`Filter ${col.name}...`}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
+              </div>
+            )}
+          </div>
+        ),
+      };
+    });
+  }, [
+    gridColumns,
+    filters,
+    filtersEnabled,
+    isPrimitiveColumn,
+    handleFilterChange,
+  ]);
 
   return (
     <>
@@ -830,7 +960,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
         {isDragActive && dragState.isDragging && <DragPreviewRow />}
 
-        {!extract.started && (
+        {!extract.started && selectedRows.size > 0 && (
           <div
             style={{
               padding: "8px",
@@ -840,43 +970,28 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
               alignItems: "center",
             }}
           >
-            {selectedRows.size > 0 && (
-              <Button
-                negative
-                size="small"
-                onClick={handleRowsDelete}
-                icon
-                labelPosition="left"
-              >
-                <Icon name="trash" />
-                Delete Selected ({selectedRows.size})
-              </Button>
-            )}
             <Button
-              positive
+              negative
               size="small"
+              onClick={handleRowsDelete}
               icon
               labelPosition="left"
-              onClick={() => onAddColumn()}
+              loading={isDeleting}
+              disabled={isDeleting}
             >
-              <Icon name="plus" />
-              Add Column
+              <Icon name="trash" />
+              Delete Selected ({selectedRows.size})
             </Button>
           </div>
         )}
 
         <DataGrid
           style={{ minHeight: 300 }}
-          columns={gridColumns}
-          rows={gridRows}
+          columns={gridColumnsWithFilters}
+          rows={filteredGridRows}
           rowKeyGetter={(row) => row.id}
           selectedRows={selectedRows}
-          onSelectedRowsChange={(newSelection) => {
-            console.log("Rows selected:", newSelection);
-            if (!extract.started) {
-              setSelectedRows(newSelection);
-            }
-          }}
+          onSelectedRowsChange={setSelectedRows}
           isRowSelectionDisabled={(row) =>
             Boolean(extract.started) || row.id === "placeholder"
           }
@@ -884,6 +999,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           onRowsChange={onRowsChange}
           onCopy={handleCopy}
           onPaste={handlePaste}
+          headerRowHeight={filtersEnabled ? 70 : undefined}
         />
 
         {isDragActive && (
@@ -1000,6 +1116,18 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
         .rdg-header-row .ui.button:hover .icon {
           color: #212529 !important;
+        }
+
+        .filter-cell {
+          padding: 0 !important;
+        }
+
+        .filter-cell > div {
+          padding: 8px;
+        }
+
+        .filter-cell > div:first-child {
+          border-bottom: 1px solid var(--rdg-border-color);
         }
       `}</style>
     </>

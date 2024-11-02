@@ -24,6 +24,12 @@ import {
   RequestEditDatacellOutputType,
   RequestRejectDatacellInputType,
   RequestRejectDatacellOutputType,
+  REQUEST_UPDATE_COLUMN,
+  RequestUpdateColumnInputType,
+  RequestUpdateColumnOutputType,
+  REQUEST_DELETE_COLUMN,
+  RequestDeleteColumnInputType,
+  RequestDeleteColumnOutputType,
 } from "../../../graphql/mutations";
 import { ExtractCellFormatter } from "./ExtractCellFormatter";
 import {
@@ -44,6 +50,7 @@ import { Dimmer, Loader } from "semantic-ui-react";
 import { parseOutputType } from "../../../utils/parseOutputType";
 import { JSONSchema7 } from "json-schema";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
+import { CreateColumnModal } from "../../widgets/modals/CreateColumnModal";
 
 interface DragState {
   isDragging: boolean;
@@ -519,6 +526,23 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     );
   };
 
+  // Add state and handlers for editing columns
+  const [isCreateColumnModalOpen, setIsCreateColumnModalOpen] = useState(false);
+  const [editingColumn, setEditingColumn] = useState<ColumnType | null>(null);
+
+  const handleEditColumn = (column: ColumnType) => {
+    setEditingColumn(column);
+    setIsCreateColumnModalOpen(true);
+  };
+
+  const handleColumnSubmit = async (data: any) => {
+    // Implement the logic to update the column
+    // For example, you might have:
+    await updateColumnMutation({ variables: { ...data } });
+    // Refresh the columns data or refetch queries as needed
+    setIsCreateColumnModalOpen(false);
+  };
+
   const gridColumns = useMemo(() => {
     const columnsArray = [
       SelectColumn,
@@ -566,11 +590,36 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           name: col.name,
           id: col.id,
           width: 200,
-          // Add any other required properties from ExtractGridColumn
         };
 
         return {
           ...gridColumn,
+          renderHeaderCell: () => (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>{col.name}</span>
+              <div>
+                <Button
+                  icon="edit"
+                  size="mini"
+                  onClick={() => handleEditColumn(col)}
+                  disabled={Boolean(extract.started)}
+                />
+                <Button
+                  icon="trash"
+                  size="mini"
+                  color="red"
+                  onClick={() => onRemoveColumnId(col.id)}
+                  disabled={Boolean(extract.started)}
+                />
+              </div>
+            </div>
+          ),
           renderCell: (props: any) => {
             if (props.row.id === "placeholder") {
               return <div></div>;
@@ -614,7 +663,13 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     }
 
     return columnsArray;
-  }, [extract.started, columns, onAddColumn]);
+  }, [
+    extract.started,
+    columns,
+    handleEditColumn,
+    onRemoveColumnId,
+    onAddColumn,
+  ]);
 
   // Add an effect to monitor columns changes
   useEffect(() => {
@@ -941,6 +996,42 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     handleFilterChange,
   ]);
 
+  const [updateColumnMutation] = useMutation<
+    RequestUpdateColumnOutputType,
+    RequestUpdateColumnInputType
+  >(REQUEST_UPDATE_COLUMN, {
+    onCompleted: (data) => {
+      if (data.updateColumn.ok) {
+        toast.success("Column updated successfully!");
+        // Update your state or refetch queries as needed
+      } else {
+        toast.error(`Failed to update column: ${data.updateColumn.message}`);
+      }
+    },
+    onError: (error) => {
+      console.error("Update column error:", error);
+      toast.error("An error occurred while updating the column.");
+    },
+  });
+
+  const [deleteColumnMutation] = useMutation<
+    RequestDeleteColumnOutputType,
+    RequestDeleteColumnInputType
+  >(REQUEST_DELETE_COLUMN, {
+    onCompleted: (data) => {
+      if (data.deleteColumn.ok) {
+        toast.success("Column deleted successfully!");
+        // Update your state or refetch queries as needed
+      } else {
+        toast.error(`Failed to delete column: ${data.deleteColumn.message}`);
+      }
+    },
+    onError: (error) => {
+      console.error("Delete column error:", error);
+      toast.error("An error occurred while deleting the column.");
+    },
+  });
+
   return (
     <>
       {loading && (
@@ -1011,6 +1102,16 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           </div>
         )}
       </div>
+
+      <CreateColumnModal
+        open={isCreateColumnModalOpen}
+        existing_column={editingColumn}
+        onClose={() => {
+          setIsCreateColumnModalOpen(false);
+          setEditingColumn(null);
+        }}
+        onSubmit={handleColumnSubmit}
+      />
 
       <style>{`
         .custom-data-grid {
@@ -1128,6 +1229,19 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
         .filter-cell > div:first-child {
           border-bottom: 1px solid var(--rdg-border-color);
+        }
+
+        .rdg-header-row .ui.button {
+          padding: 4px !important;
+          margin-left: 4px !important;
+        }
+
+        .rdg-header-row .ui.button .icon {
+          margin: 0 !important;
+        }
+
+        .rdg-header-cell {
+          overflow: visible !important;
         }
       `}</style>
     </>

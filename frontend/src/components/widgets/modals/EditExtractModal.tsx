@@ -178,60 +178,92 @@ export const EditExtractModal = ({
     },
   });
 
+  /**
+   * Handles the deletion of a column from the extract.
+   * If the fieldset is not in use, deletes the column directly.
+   * If the fieldset is in use, creates a new fieldset without the column and updates the extract.
+   *
+   * @param {string} columnId - The ID of the column to delete.
+   */
   const handleDeleteColumnIdFromExtract = async (columnId: string) => {
     if (!extract?.fieldset?.id) return;
 
-    try {
-      // Step 1: Create a new fieldset
-      const { data: fieldsetData } = await createFieldset({
-        variables: {
-          name: `${extract.fieldset.name} (edited)`,
-          description: extract.fieldset.description || "",
-        },
-      });
-
-      const newFieldsetId = fieldsetData?.createFieldset.obj.id;
-
-      if (!newFieldsetId) throw new Error("Fieldset creation failed.");
-
-      // Step 2: Copy existing columns except the deleted one
-      const columnsToCopy = columns.filter((col) => col.id !== columnId);
-      for (const column of columnsToCopy) {
-        await createColumn({
+    if (!extract.fieldset.inUse) {
+      // Fieldset is not in use; delete the column directly
+      try {
+        await deleteColumn({
           variables: {
-            fieldsetId: newFieldsetId,
-            name: column.name,
-            query: column.query || "",
-            matchText: column.matchText,
-            outputType: column.outputType,
-            limitToLabel: column.limitToLabel,
-            instructions: column.instructions,
-            taskName: column.taskName,
-            agentic: Boolean(column.agentic),
+            id: columnId,
           },
         });
+        // Remove the column from local state
+        setColumns((prevColumns) =>
+          prevColumns.filter((column) => column.id !== columnId)
+        );
+        // Refetch data to get updated columns
+        refetch();
+        toast.success("SUCCESS! Removed column from Extract.");
+      } catch (error) {
+        console.error(error);
+        toast.error("Error while deleting column from extract.");
       }
+    } else {
+      // Fieldset is in use; proceed with existing logic
+      try {
+        // Step 1: Create a new fieldset
+        const { data: fieldsetData } = await createFieldset({
+          variables: {
+            name: `${extract.fieldset.name} (edited)`,
+            description: extract.fieldset.description || "",
+          },
+        });
 
-      // Step 3: Update the extract to use the new fieldset
-      await updateExtract({
-        variables: {
-          id: extract.id,
-          fieldset: newFieldsetId,
-        },
-      });
+        const newFieldsetId = fieldsetData?.createFieldset.obj.id;
 
-      // Update local state
-      setExtract((prevExtract) =>
-        prevExtract
-          ? { ...prevExtract, fieldset: fieldsetData.createFieldset.obj }
-          : prevExtract
-      );
+        if (!newFieldsetId) throw new Error("Fieldset creation failed.");
 
-      // Refetch data to get updated columns
-      refetch();
-    } catch (error) {
-      console.error(error);
-      toast.error("Error while deleting column from extract.");
+        // Step 2: Copy existing columns except the deleted one
+        const columnsToCopy = columns.filter((col) => col.id !== columnId);
+        await Promise.all(
+          columnsToCopy.map((column) =>
+            createColumn({
+              variables: {
+                fieldsetId: newFieldsetId,
+                name: column.name,
+                query: column.query || "",
+                matchText: column.matchText,
+                outputType: column.outputType,
+                limitToLabel: column.limitToLabel,
+                instructions: column.instructions,
+                taskName: column.taskName,
+                agentic: Boolean(column.agentic),
+              },
+            })
+          )
+        );
+
+        // Step 3: Update the extract to use the new fieldset
+        console.log("Updating extract to use new fieldset", newFieldsetId);
+        await updateExtract({
+          variables: {
+            id: extract.id,
+            fieldsetId: newFieldsetId,
+          },
+        });
+
+        // Update local state
+        setExtract((prevExtract) =>
+          prevExtract
+            ? { ...prevExtract, fieldset: fieldsetData.createFieldset.obj }
+            : prevExtract
+        );
+
+        // Refetch data to get updated columns
+        refetch();
+      } catch (error) {
+        console.error(error);
+        toast.error("Error while deleting column from extract.");
+      }
     }
   };
 
@@ -289,27 +321,14 @@ export const EditExtractModal = ({
     RequestUpdateColumnOutputType,
     RequestUpdateColumnInputType
   >(REQUEST_UPDATE_COLUMN, {
-    onCompleted: (data) => {
+    refetchQueries: [
+      {
+        query: REQUEST_GET_EXTRACT,
+        variables: { id: extract ? extract.id : "" },
+      },
+    ],
+    onCompleted: () => {
       toast.success("SUCCESS! Updated column.");
-      setColumns((oldCols) => {
-        // Find the index of the object to be updated
-        const index = oldCols.findIndex(
-          (item) => item.id === data.updateColumn.obj.id
-        );
-
-        // If the object exists, replace it with the new object
-        if (index !== -1) {
-          // Create a new array with the updated object
-          return [
-            ...oldCols.slice(0, index),
-            data.updateColumn.obj,
-            ...oldCols.slice(index + 1),
-          ];
-        } else {
-          // If the object doesn't exist, just add it to the end of the list
-          return [...oldCols, data.updateColumn.obj];
-        }
-      });
       editingColumnForExtract(null);
     },
     onError: (err) => {

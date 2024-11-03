@@ -329,78 +329,103 @@ def pawls_bbox_to_funsd_box(
         pawls_bbox["bottom"],
     )
 
-
 def parse_model_or_primitive(value: str) -> type:
     """
     Parse a string value as either a Pydantic model or a primitive type.
 
-    This function attempts to parse the given string value as a Pydantic model using the
-    `parse_raw_as` function from the `pydantic` module. If the parsing succeeds, it means
-    the value represents a valid Pydantic model, and the function returns the parsed model.
-
-    If parsing as a Pydantic model fails with a `ValidationError`, the function then checks
-    if the value is one of the supported primitive type names ("int", "float", "str", "bool").
-    If it is, the function uses `eval` to evaluate the primitive type name and returns the
-    corresponding type object.
-
-    If the value is neither a valid model nor a supported primitive type name, the function
-    raises a `ValueError` indicating an invalid model or primitive type.
+    This function attempts to parse the given string value as a Pydantic model by dynamically creating
+    a model with the specified fields. If the value represents a primitive type name ("int", "float",
+    "str", "bool"), it returns the corresponding type object.
 
     Args:
         value (str): The string value to parse as either a Pydantic model or a primitive type.
 
     Returns:
-        The parsed Pydantic model if the value represents a valid model, or the corresponding
-        primitive type object if the value is a supported primitive type name.
+        Type: The dynamically created Pydantic model or the corresponding primitive type.
 
     Raises:
-        ValueError: If the value is neither a valid Pydantic model nor a supported primitive
-                    type name.
-
-    Example:        model_string = '''
-        class User(BaseModel):
-            name: str
-            age: int
-            email: str
-        '''
-        model = parse_model_or_primitive(model_string)
-        print(type(model))  # Output: <class 'pydantic.main.BaseModel'>
-
-        primitive_type_string = "int"
-        primitive_type = parse_model_or_primitive(primitive_type_string)
-        print(primitive_type)  # Output: <class 'int'>
+        ValueError: If the value is neither a valid model definition nor a supported primitive type.
     """
+    logger.info(f"Attempting to parse model or primitive from value: {value}")
+
+    # Check for primitive types
     if value == "int":
+        logger.info("Parsed value as int type")
         return int
     elif value == "float":
+        logger.info("Parsed value as float type") 
         return float
     elif value == "str":
+        logger.info("Parsed value as str type")
         return str
     elif value == "bool":
+        logger.info("Parsed value as bool type")
         return bool
+
+    # Process as a model definition
     elif ":" in value:
+        logger.info("Value appears to be a model definition, attempting to parse...")
         try:
             props = {}
             lines = value.split("\n")
-            for index, line in enumerate(lines):
+            logger.debug(f"Split model definition into {len(lines)} lines")
 
+            # Define allowed types
+            allowed_types = {
+                'str': str,
+                'int': int,
+                'float': float,
+                'bool': bool,
+                # Add more types as needed
+            }
+
+            for index, line in enumerate(lines):
+                logger.debug(f"Processing line {index+1}: {line}")
                 line = line.strip()
                 if line == "":
+                    logger.debug(f"Skipping empty line {index+1}")
                     continue
-
+                # Skip class definitions or non-field lines
+                if line.startswith("class") or "(" in line or ")" in line:
+                    logger.debug(f"Skipping class definition or non-field line: {line}")
+                    continue
                 if "=" in line:
+                    logger.error(f"Found default value in line {line} which is not supported")
                     raise ValueError("We don't support default values, sorry.")
                 elif ":" not in line:
+                    logger.error(f"Missing type annotation in line: {line}")
                     raise ValueError("Every property needs to be typed!")
+
                 parts = line.split(":")
                 if len(parts) != 2:
-                    raise ValueError(f"There is an error in line {index+1} your model")
-                props[parts[0].strip()] = (parts[1].strip(), ...)
+                    logger.error(f"Invalid line format at line {index+1}: {line}")
+                    raise ValueError(f"There is an error in line {index+1} of your model")
 
-            model = create_model(uuid.uuid4().__str__(), **props)
+                field_name = parts[0].strip()
+                field_type_str = parts[1].strip()
+                logger.debug(f"Attempting to parse field '{field_name}' with type '{field_type_str}'")
+
+                # Get the actual type from allowed_types
+                if field_type_str in allowed_types:
+                    field_type = allowed_types[field_type_str]
+                    logger.debug(f"Successfully parsed type for field '{field_name}': {field_type}")
+                else:
+                    logger.error(f"Unsupported type '{field_type_str}' for field '{field_name}'")
+                    raise ValueError(f"Unsupported type '{field_type_str}' for field '{field_name}'")
+
+                props[field_name] = (field_type, ...)
+                logger.debug(f"Added field '{field_name}' to model properties")
+
+            # Generate a valid Python identifier for the model name
+            model_name = f"DynamicModel_{uuid.uuid4().hex}"
+            logger.info(f"Creating model with name {model_name} and properties: {props}")
+            model = create_model(model_name, **props)
+            logger.info("Successfully created model")
             return model
-        except Exception as e:
-            raise ValueError(f"Failed to parse model from value due to error: {e}")
 
+        except Exception as e:
+            logger.error(f"Failed to parse model definition: {str(e)}", exc_info=True)
+            raise ValueError(f"Failed to parse model from value due to error: {e}")
     else:
+        logger.error(f"Value '{value}' is neither a primitive type nor a valid model definition")
         raise ValueError(f"Invalid model or primitive type: {value}")

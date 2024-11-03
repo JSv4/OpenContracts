@@ -1057,6 +1057,7 @@ export const GET_EXPORT = gql`
         isPublic
       }
       fieldset {
+        inUse
         fullColumnList {
           id
           instructions
@@ -1098,6 +1099,7 @@ export const GET_FIELDSETS = gql`
           }
           name
           description
+          inUse
           columns {
             edges {
               node {
@@ -1133,6 +1135,7 @@ export const GET_FIELDSET = gql`
       }
       name
       description
+      inUse
       columns {
         id
         query
@@ -1168,6 +1171,7 @@ export const REQUEST_GET_EXTRACT = gql`
       fieldset {
         id
         name
+        inUse
         fullColumnList {
           id
           name
@@ -1304,6 +1308,7 @@ export const GET_EXTRACTS = gql`
           fieldset {
             id
             name
+            inUse
             columns {
               edges {
                 node {
@@ -1479,6 +1484,7 @@ export const GET_DATACELLS_FOR_EXTRACT = gql`
       fieldset {
         id
         name
+        inUse
         fullColumnList {
           id
           name

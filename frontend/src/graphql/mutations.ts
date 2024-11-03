@@ -1077,7 +1077,7 @@ export const REQUEST_CREATE_FIELDSET = gql`
   mutation CreateFieldset($name: String!, $description: String!) {
     createFieldset(name: $name, description: $description) {
       ok
-      msg
+      message
       obj {
         id
         name
@@ -1669,47 +1669,27 @@ export const REJECT_ANNOTATION = gql`
 export interface RequestUpdateExtractInputType {
   id: string;
   title?: string;
-  description?: string;
-  icon?: string;
-  labelSet?: string;
-  // Additional pk_fields that accept graphene IDs
-  corpus?: string;
-  fieldset?: string;
-  creator?: string;
+  fieldsetId?: string;
 }
 
 export interface RequestUpdateExtractOutputType {
   updateExtract: {
     ok: boolean;
-    message?: string;
-    objId?: string;
+    message: string;
+    obj: {
+      id: string;
+    };
   };
 }
 
 export const REQUEST_UPDATE_EXTRACT = gql`
-  mutation UpdateExtract(
-    $id: String!
-    $title: String
-    $description: String
-    $icon: String
-    $labelSet: String
-    $corpus: String
-    $fieldset: String
-    $creator: String
-  ) {
-    updateExtract(
-      id: $id
-      title: $title
-      description: $description
-      icon: $icon
-      labelSet: $labelSet
-      corpus: $corpus
-      fieldset: $fieldset
-      creator: $creator
-    ) {
+  mutation UpdateExtract($id: ID!, $title: String, $fieldsetId: ID) {
+    updateExtract(id: $id, title: $title, fieldsetId: $fieldsetId) {
       ok
       message
-      objId
+      obj {
+        id
+      }
     }
   }
 `;

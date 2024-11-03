@@ -434,12 +434,21 @@ class ColumnType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
 
 class FieldsetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    in_use = graphene.Boolean(
+        description="True if the fieldset is used in any extract that has started."
+    )
     full_column_list = graphene.List(ColumnType)
 
     class Meta:
         model = Fieldset
         interfaces = [relay.Node]
         connection_class = CountableConnection
+
+    def resolve_in_use(self, info) -> bool:
+        """
+        Returns True if the fieldset is used in any extract that has started.
+        """
+        return self.extracts.filter(started__isnull=False).exists()
 
     def resolve_full_column_list(self, info):
         return self.columns.all()

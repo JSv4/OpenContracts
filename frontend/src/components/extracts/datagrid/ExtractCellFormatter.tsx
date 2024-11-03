@@ -1,33 +1,34 @@
-import React, { useState } from "react";
-import { Icon, Modal, Button } from "semantic-ui-react";
+import React, { useState, useEffect } from "react";
+import { Button, Popup, Icon, Modal } from "semantic-ui-react";
 import { CellStatus } from "../../../types/extract-grid";
 import styled from "styled-components";
 import { JSONSchema7 } from "json-schema";
+import { ExtractCellEditor } from "./ExtractCellEditor";
 import ReactJson from "react-json-view";
 
-const StatusDot = styled.div`
+const StatusDot = styled.div<{ statusColor: string }>`
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: #4caf50;
+  background-color: ${({ statusColor }) => statusColor};
   position: absolute;
   top: 4px;
   right: 4px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: pulse 2s infinite;
-  box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
+  box-shadow: 0 0 10px ${({ statusColor }) => statusColor};
 
   &:hover {
     transform: scale(1.3);
-    background-color: #45a049;
-    box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+    background-color: ${({ statusColor }) => statusColor};
+    box-shadow: 0 0 15px ${({ statusColor }) => statusColor};
   }
 
   @keyframes pulse {
     0% {
       transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+      box-shadow: 0 0 0 0 ${({ statusColor }) => statusColor};
     }
     70% {
       transform: scale(1);
@@ -35,7 +36,7 @@ const StatusDot = styled.div`
     }
     100% {
       transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+      box-shadow: 0 0 0 0 ${({ statusColor }) => statusColor};
     }
   }
 `;
@@ -149,7 +150,25 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
   row,
   column,
 }) => {
+  useEffect(() => {
+    console.log("ExtractCellFormatter rendered with:", {
+      value,
+      cellStatus,
+      cellId,
+      isExtractComplete,
+    });
+  }, [value, cellStatus, cellId, isExtractComplete]);
+
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const getCellBackground = () => {
+    if (!cellStatus) return "transparent";
+    if (cellStatus.isApproved) return "rgba(76, 175, 80, 0.1)";
+    if (cellStatus.isRejected) return "rgba(244, 67, 54, 0.1)";
+    return "transparent";
+  };
 
   const openViewer = () => {
     setIsModalOpen(true);
@@ -164,12 +183,23 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
     onEdit(cellId, updatedValue);
   };
 
+  const statusColor = () => {
+    if (cellStatus?.isApproved) return "rgba(76, 175, 80, 1)";
+    if (cellStatus?.isRejected) return "rgba(244, 67, 54, 1)";
+    if (cellStatus?.isEdited) return "rgba(33, 150, 243, 1)";
+    return "rgba(128, 128, 128, 1)";
+  };
+
   const displayValue = () => {
     if (typeof value === "object" && value !== null) {
       return (
         <div
           onClick={openViewer}
-          style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+          style={{
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+          }}
         >
           <Icon name="code" />
           <span style={{ marginLeft: "5px" }}>View/Edit JSON</span>
@@ -181,26 +211,114 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
   };
 
   return (
-    <>
+    <CellContainer style={{ background: getCellBackground() }}>
       {displayValue()}
-      <Modal open={isModalOpen} onClose={closeModal} size="large">
-        <Modal.Header>Edit JSON Data</Modal.Header>
-        <Modal.Content>
-          <ReactJson
-            src={value}
-            onEdit={handleJsonEdit}
-            onAdd={handleJsonEdit}
-            onDelete={handleJsonEdit}
-            theme="rjv-default"
-            style={{ padding: "20px" }}
-            enableClipboard={false}
-            displayDataTypes={false}
+      {cellStatus?.isLoading && <div className="cell-loader">Loading...</div>}
+      {!cellStatus?.isLoading && isExtractComplete && (
+        <>
+          <Popup
+            trigger={<StatusDot statusColor={statusColor()} />}
+            on="click"
+            position="top right"
+            open={isPopupOpen}
+            onOpen={() => setIsPopupOpen(true)}
+            onClose={() => setIsPopupOpen(false)}
+            mouseLeaveDelay={300}
+            content={
+              <ButtonContainer>
+                <div className="buttons">
+                  <Button
+                    icon="check"
+                    color="green"
+                    size="tiny"
+                    onClick={() => {
+                      onApprove();
+                      setIsPopupOpen(false);
+                    }}
+                    disabled={
+                      cellStatus?.isApproved || readOnly || !isExtractComplete
+                    }
+                    title="Approve"
+                  />
+                  <Button
+                    icon="edit"
+                    color="grey"
+                    size="tiny"
+                    onClick={() => {
+                      if (typeof value === "object" && value !== null) {
+                        openViewer();
+                      } else {
+                        setIsEditing(true);
+                      }
+                      setIsPopupOpen(false);
+                    }}
+                    disabled={readOnly || !isExtractComplete}
+                    title="Edit"
+                  />
+                  <Button
+                    icon="close"
+                    color="red"
+                    size="tiny"
+                    onClick={() => {
+                      onReject();
+                      setIsPopupOpen(false);
+                    }}
+                    disabled={
+                      cellStatus?.isRejected || readOnly || !isExtractComplete
+                    }
+                    title="Reject"
+                  />
+                </div>
+                {cellStatus?.isApproved && (
+                  <div className="status-message">
+                    Cell is currently approved
+                  </div>
+                )}
+                {cellStatus?.isRejected && (
+                  <div className="status-message">
+                    Cell is currently rejected
+                  </div>
+                )}
+                {cellStatus?.isEdited && !cellStatus?.isApproved && (
+                  <div className="status-message">Cell has been edited</div>
+                )}
+              </ButtonContainer>
+            }
           />
-        </Modal.Content>
-        <Modal.Actions>
-          <Button onClick={closeModal}>Close</Button>
-        </Modal.Actions>
-      </Modal>
-    </>
+          {isEditing && (
+            <ExtractCellEditor
+              row={row}
+              column={column}
+              onRowChange={(updatedRow: any, commitChanges?: boolean) => {
+                if (commitChanges) {
+                  onEdit(cellId, updatedRow[column.key]);
+                }
+              }}
+              onClose={() => setIsEditing(false)}
+              schema={schema}
+              extractIsList={extractIsList}
+            />
+          )}
+          <Modal open={isModalOpen} onClose={closeModal} size="large">
+            <Modal.Header>Edit JSON Data</Modal.Header>
+            <Modal.Content>
+              <ReactJson
+                src={value}
+                onEdit={handleJsonEdit}
+                onAdd={handleJsonEdit}
+                onDelete={handleJsonEdit}
+                theme="rjv-default"
+                style={{ padding: "20px" }}
+                enableClipboard={false}
+                displayDataTypes={false}
+              />
+            </Modal.Content>
+            <Modal.Actions>
+              <Button onClick={closeModal}>Close</Button>
+            </Modal.Actions>
+          </Modal>
+        </>
+      )}
+    </CellContainer>
   );
 };

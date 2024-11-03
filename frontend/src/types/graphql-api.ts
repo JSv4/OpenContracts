@@ -1193,6 +1193,7 @@ export interface FieldsetType extends Node {
   description: string;
   columns: ColumnTypeEdge;
   fullColumnList?: ColumnType[];
+  inUse?: boolean;
 }
 
 export interface ColumnType extends Node {

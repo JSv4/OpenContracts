@@ -181,16 +181,14 @@ export const SelectDocumentsModal = ({
       open={open}
       closeIcon
       onClose={() => toggleModal()}
-      style={{
-        height: "90vh",
-        display: "flex !important",
-        flexDirection: "column",
-        alignContent: "flex-start",
-        justifyContent: "center",
-      }}
+      // style={{
+      //   margin: "5vh auto",
+      //   display: "flex",
+      //   flexDirection: "column",
+      // }}
     >
       <ModalHeader>Select Document(s)</ModalHeader>
-      <ModalContent style={{ flex: 1 }}>
+      <ModalContent style={{ flex: 1, overflow: "hidden" }}>
         <CardLayout
           Modals={<></>}
           SearchBar={
@@ -230,8 +228,17 @@ export const SelectDocumentsModal = ({
               onChange={handleSearchChange}
             />
           }
+          style={{ height: "100%", display: "flex", flexDirection: "column" }}
         >
           <DocumentCards
+            containerStyle={{
+              flex: 1, // Take remaining space
+              minHeight: 0, // Important for Firefox flex scroll
+              position: "relative",
+            }}
+            style={{
+              height: "100%",
+            }}
             onClick={onSelect}
             items={document_items}
             pageInfo={documents_data?.documents?.pageInfo}

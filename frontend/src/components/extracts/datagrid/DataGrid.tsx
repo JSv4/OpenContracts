@@ -51,6 +51,7 @@ import { parseOutputType } from "../../../utils/parseOutputType";
 import { JSONSchema7 } from "json-schema";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 import { CreateColumnModal } from "../../widgets/modals/CreateColumnModal";
+import { SelectDocumentsModal } from "../../widgets/modals/SelectDocumentsModal";
 
 interface DragState {
   isDragging: boolean;
@@ -1032,6 +1033,9 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     },
   });
 
+  const [openSelectDocumentsModal, setOpenSelectDocumentsModal] =
+    useState<boolean>(false);
+
   return (
     <>
       {loading && (
@@ -1039,6 +1043,17 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           <Loader>Loading...</Loader>
         </Dimmer>
       )}
+
+      <SelectDocumentsModal
+        open={openSelectDocumentsModal}
+        onAddDocumentIds={(documentIds: string[]) =>
+          onAddDocIds(extract.id, documentIds)
+        }
+        filterDocIds={rows.map((row) => row.id)}
+        toggleModal={() =>
+          setOpenSelectDocumentsModal(!openSelectDocumentsModal)
+        }
+      />
 
       <div
         {...getRootProps()}
@@ -1092,6 +1107,20 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           onPaste={handlePaste}
           headerRowHeight={filtersEnabled ? 70 : undefined}
         />
+
+        {!extract.started && (
+          <Button
+            icon="plus"
+            circular
+            onClick={() => setOpenSelectDocumentsModal(true)}
+            style={{
+              position: "absolute",
+              bottom: "16px",
+              left: "16px",
+              zIndex: 1000,
+            }}
+          />
+        )}
 
         {isDragActive && (
           <div style={styles.dropOverlay}>

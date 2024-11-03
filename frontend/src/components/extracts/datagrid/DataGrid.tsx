@@ -465,7 +465,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
     (row: ExtractGridRow, column: ExtractGridColumn) => {
       if (column.key === "documentTitle") {
         return {
-          value: String(row.documentTitle || ""),
+          value: row.documentTitle || "",
           cellStatus: null,
           cellId: "",
         };
@@ -490,7 +490,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           };
 
       return {
-        value: String(row[column.key] || ""),
+        value: row[column.key] !== undefined ? row[column.key] : "",
         cellStatus, // This should now always be defined
         cellId: cell?.id || "",
       };

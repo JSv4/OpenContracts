@@ -20,11 +20,6 @@ interface ExtractCellEditorProps {
   extractIsList: boolean;
 }
 
-interface JsonEdit {
-  updated_src: any;
-  // You can add other properties if needed
-}
-
 export const ExtractCellEditor: React.FC<ExtractCellEditorProps> = ({
   row,
   column,

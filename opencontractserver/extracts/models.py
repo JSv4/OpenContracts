@@ -182,7 +182,7 @@ class Datacell(BaseOCModel):
         related_name="rejected_cells",
     )
     corrected_data = NullableJSONField(
-        default=jsonfield_default_value, null=True, blank=True
+        default=None, null=True, blank=True
     )
 
     class Meta:

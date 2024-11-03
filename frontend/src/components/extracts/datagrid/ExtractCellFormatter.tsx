@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { Button, Popup, Icon } from "semantic-ui-react";
+import React, { useState } from "react";
+import { Icon, Modal, Button } from "semantic-ui-react";
 import { CellStatus } from "../../../types/extract-grid";
 import styled from "styled-components";
 import { JSONSchema7 } from "json-schema";
-import { ExtractCellEditor } from "./ExtractCellEditor";
+import ReactJson from "react-json-view";
 
 const StatusDot = styled.div`
   width: 10px;
@@ -121,7 +121,7 @@ const CellContainer = styled.div`
 `;
 
 interface ExtractCellFormatterProps {
-  value: string;
+  value: any;
   cellStatus: CellStatus | null;
   cellId: string;
   onApprove: () => void;
@@ -149,116 +149,58 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
   row,
   column,
 }) => {
-  useEffect(() => {
-    console.log("ExtractCellFormatter rendered with:", {
-      value,
-      cellStatus,
-      cellId,
-      isExtractComplete,
-    });
-  }, [value, cellStatus, cellId, isExtractComplete]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const openViewer = () => {
+    setIsModalOpen(true);
+  };
 
-  console.log("Cell status:", cellStatus);
-  console.log("Is extract complete:", isExtractComplete);
-  console.log("Value:", value);
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
 
-  const getCellBackground = () => {
-    if (!cellStatus) return "transparent";
-    if (cellStatus.isApproved) return "rgba(76, 175, 80, 0.1)";
-    if (cellStatus.isRejected) return "rgba(244, 67, 54, 0.1)";
-    return "transparent";
+  const handleJsonEdit = (edit: any) => {
+    const updatedValue = edit.updated_src;
+    onEdit(cellId, updatedValue);
   };
 
   const displayValue = () => {
-    if (typeof value === "object") {
-      return <Icon name="code" />; // Indicate that it's an object
+    if (typeof value === "object" && value !== null) {
+      return (
+        <div
+          onClick={openViewer}
+          style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+        >
+          <Icon name="code" />
+          <span style={{ marginLeft: "5px" }}>View/Edit JSON</span>
+        </div>
+      );
     } else {
       return <div className="cell-value">{String(value)}</div>;
     }
   };
 
   return (
-    <CellContainer style={{ background: getCellBackground() }}>
+    <>
       {displayValue()}
-      {cellStatus?.isLoading && <div className="cell-loader">Loading...</div>}
-      {!cellStatus?.isLoading && isExtractComplete && (
-        <>
-          <Popup
-            trigger={<StatusDot />}
-            on="click"
-            position="top right"
-            open={isPopupOpen}
-            onOpen={() => setIsPopupOpen(true)}
-            onClose={() => setIsPopupOpen(false)}
-            mouseLeaveDelay={300}
-            content={
-              <ButtonContainer>
-                <div className="buttons">
-                  <Button
-                    icon="check"
-                    color="green"
-                    size="tiny"
-                    onClick={() => {
-                      onApprove();
-                      setIsPopupOpen(false);
-                    }}
-                    disabled={
-                      cellStatus?.isApproved || readOnly || !isExtractComplete
-                    }
-                    title="Approve"
-                  />
-                  <Button
-                    icon="edit"
-                    color="grey"
-                    size="tiny"
-                    onClick={() => {
-                      setIsEditing(true);
-                      setIsPopupOpen(false);
-                    }}
-                    disabled={readOnly || !isExtractComplete}
-                    title="Edit"
-                  />
-                  <Button
-                    icon="close"
-                    color="red"
-                    size="tiny"
-                    onClick={() => {
-                      onReject();
-                      setIsPopupOpen(false);
-                    }}
-                    disabled={
-                      cellStatus?.isRejected || readOnly || !isExtractComplete
-                    }
-                    title="Reject"
-                  />
-                </div>
-                {cellStatus?.isApproved && (
-                  <div className="status-message">
-                    Cell is currently approved
-                  </div>
-                )}
-              </ButtonContainer>
-            }
+      <Modal open={isModalOpen} onClose={closeModal} size="large">
+        <Modal.Header>Edit JSON Data</Modal.Header>
+        <Modal.Content>
+          <ReactJson
+            src={value}
+            onEdit={handleJsonEdit}
+            onAdd={handleJsonEdit}
+            onDelete={handleJsonEdit}
+            theme="rjv-default"
+            style={{ padding: "20px" }}
+            enableClipboard={false}
+            displayDataTypes={false}
           />
-          {isEditing && (
-            <ExtractCellEditor
-              row={row}
-              column={column}
-              onRowChange={(updatedRow, commitChanges) => {
-                if (commitChanges) {
-                  onEdit(cellId, updatedRow[column.key]);
-                }
-              }}
-              onClose={() => setIsEditing(false)}
-              schema={schema}
-              extractIsList={extractIsList}
-            />
-          )}
-        </>
-      )}
-    </CellContainer>
+        </Modal.Content>
+        <Modal.Actions>
+          <Button onClick={closeModal}>Close</Button>
+        </Modal.Actions>
+      </Modal>
+    </>
   );
 };

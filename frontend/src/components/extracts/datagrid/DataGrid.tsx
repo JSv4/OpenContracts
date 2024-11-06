@@ -10,6 +10,7 @@ import DataGrid, {
   CopyEvent,
   PasteEvent,
   SelectColumn,
+  SortColumn,
 } from "react-data-grid";
 import { useMutation } from "@apollo/client";
 import { toast } from "react-toastify";
@@ -165,6 +166,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sortColumns, setSortColumns] = useState<readonly SortColumn[]>([]);
 
   console.log("Cells", initialCells);
 
@@ -987,6 +989,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
             )}
           </div>
         ),
+        sortable: true,
       };
     });
   }, [
@@ -1035,6 +1038,48 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
 
   const [openSelectDocumentsModal, setOpenSelectDocumentsModal] =
     useState<boolean>(false);
+
+  // Add this function inside your component
+  const getComparator = useCallback((sortColumn: string) => {
+    return (a: ExtractGridRow, b: ExtractGridRow) => {
+      const aValue = a[sortColumn];
+      const bValue = b[sortColumn];
+
+      // Handle undefined or null values
+      if (aValue == null && bValue != null) return -1;
+      if (aValue != null && bValue == null) return 1;
+      if (aValue == null && bValue == null) return 0;
+
+      // Compare numbers
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return aValue - bValue;
+      }
+
+      // Compare strings
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return aValue.localeCompare(bValue);
+      }
+
+      // Fallback
+      return 0;
+    };
+  }, []);
+
+  // Replace your existing filteredGridRows with sortedGridRows
+  const sortedGridRows = useMemo(() => {
+    if (sortColumns.length === 0) return filteredGridRows;
+
+    return [...filteredGridRows].sort((a, b) => {
+      for (const sort of sortColumns) {
+        const comparator = getComparator(sort.columnKey);
+        const compResult = comparator(a, b);
+        if (compResult !== 0) {
+          return sort.direction === "ASC" ? compResult : -compResult;
+        }
+      }
+      return 0;
+    });
+  }, [filteredGridRows, sortColumns, getComparator]);
 
   return (
     <>
@@ -1094,7 +1139,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
         <DataGrid
           style={{ minHeight: 300 }}
           columns={gridColumnsWithFilters}
-          rows={filteredGridRows}
+          rows={sortedGridRows}
           rowKeyGetter={(row) => row.id}
           selectedRows={selectedRows}
           onSelectedRowsChange={setSelectedRows}
@@ -1106,6 +1151,9 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           onCopy={handleCopy}
           onPaste={handlePaste}
           headerRowHeight={filtersEnabled ? 70 : undefined}
+          defaultColumnOptions={{ sortable: true }}
+          sortColumns={sortColumns}
+          onSortColumnsChange={setSortColumns}
         />
 
         {!extract.started && (

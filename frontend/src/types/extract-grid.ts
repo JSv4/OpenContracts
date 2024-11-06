@@ -17,6 +17,7 @@ export interface ExtractGridColumn {
   editor?: React.ComponentType<EditorProps>;
   editable?: boolean;
   sortable?: boolean;
+  resizable?: boolean;
 }
 
 export interface CellStatus {

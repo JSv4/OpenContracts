@@ -593,6 +593,7 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
           name: col.name,
           id: col.id,
           width: 200,
+          resizable: true,
         };
 
         return {

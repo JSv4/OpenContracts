@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { Button, Popup, Icon, Modal, Input } from "semantic-ui-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Button, Popup, Icon, Modal } from "semantic-ui-react";
 import { CellStatus } from "../../../types/extract-grid";
 import styled from "styled-components";
 import { JSONSchema7 } from "json-schema";
 import { ExtractCellEditor } from "./ExtractCellEditor";
 import ReactJson from "react-json-view";
+import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 
 const StatusDot = styled.div<{ statusColor: string }>`
   width: 10px;
@@ -156,19 +157,23 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
   row,
   column,
 }) => {
-  useEffect(() => {
-    console.log("ExtractCellFormatter rendered with:", {
-      value,
-      cellStatus,
-      cellId,
-      isExtractComplete,
-    });
-  }, [value, cellStatus, cellId, isExtractComplete]);
-
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isOriginalModalOpen, setIsOriginalModalOpen] = useState(false); // New state for original value modal
+  const [isOriginalModalOpen, setIsOriginalModalOpen] = useState(false);
+
+  const cellRef = useRef<HTMLDivElement>(null);
+  const [cellWidth, setCellWidth] = useState<number>(0);
+
+  useEffect(() => {
+    if (cellRef.current) {
+      const computedStyle = getComputedStyle(cellRef.current);
+      const padding =
+        parseFloat(computedStyle.paddingLeft) +
+        parseFloat(computedStyle.paddingRight);
+      setCellWidth(cellRef.current.offsetWidth - padding);
+    }
+  }, [cellRef]);
 
   const getCellBackground = () => {
     if (!cellStatus) return "transparent";
@@ -224,12 +229,12 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
         </div>
       );
     } else {
-      return <div className="cell-value">{String(displayedValue)}</div>;
+      return <TruncatedText text={String(displayedValue)} limit={cellWidth} />;
     }
   };
 
   return (
-    <CellContainer style={{ background: getCellBackground() }}>
+    <CellContainer ref={cellRef} style={{ background: getCellBackground() }}>
       {displayValue()}
       {cellStatus?.isLoading && <div className="cell-loader">Loading...</div>}
       {!cellStatus?.isLoading && isExtractComplete && (

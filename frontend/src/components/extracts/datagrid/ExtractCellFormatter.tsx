@@ -136,6 +136,12 @@ interface ExtractCellFormatterProps {
   column: any;
 }
 
+/**
+ * ExtractCellFormatter component displays the content of a cell in the extract data grid.
+ * It handles displaying the value, editing, approving, and rejecting the cell.
+ * If the cell has correctedData, it displays that instead of the original data.
+ * It also provides a control to view the original value when correctedData is present.
+ */
 export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
   value,
   cellStatus,
@@ -162,6 +168,7 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isOriginalModalOpen, setIsOriginalModalOpen] = useState(false); // New state for original value modal
 
   const getCellBackground = () => {
     if (!cellStatus) return "transparent";
@@ -178,6 +185,14 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
     setIsModalOpen(false);
   };
 
+  const openOriginalViewer = () => {
+    setIsOriginalModalOpen(true);
+  };
+
+  const closeOriginalModal = () => {
+    setIsOriginalModalOpen(false);
+  };
+
   const handleJsonEdit = (edit: any) => {
     const updatedValue = edit.updated_src;
     onEdit(cellId, updatedValue);
@@ -190,8 +205,11 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
     return "rgba(128, 128, 128, 1)";
   };
 
+  const displayedValue =
+    cellStatus?.correctedData != null ? cellStatus.correctedData : value;
+
   const displayValue = () => {
-    if (typeof value === "object" && value !== null) {
+    if (typeof displayedValue === "object" && displayedValue !== null) {
       return (
         <div
           onClick={openViewer}
@@ -206,7 +224,7 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
         </div>
       );
     } else {
-      return <div className="cell-value">{String(value)}</div>;
+      return <div className="cell-value">{String(displayedValue)}</div>;
     }
   };
 
@@ -245,7 +263,10 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
                     color="grey"
                     size="tiny"
                     onClick={() => {
-                      if (typeof value === "object" && value !== null) {
+                      if (
+                        typeof displayedValue === "object" &&
+                        displayedValue !== null
+                      ) {
                         openViewer();
                       } else {
                         setIsEditing(true);
@@ -254,6 +275,17 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
                     }}
                     disabled={readOnly || !isExtractComplete}
                     title="Edit"
+                  />
+                  <Button
+                    icon="eye"
+                    color="blue"
+                    size="tiny"
+                    onClick={() => {
+                      openOriginalViewer();
+                      setIsPopupOpen(false);
+                    }}
+                    disabled={!cellStatus?.correctedData}
+                    title="View Original"
                   />
                   <Button
                     icon="close"
@@ -303,7 +335,7 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
             <Modal.Header>Edit JSON Data</Modal.Header>
             <Modal.Content>
               <ReactJson
-                src={value}
+                src={displayedValue}
                 onEdit={handleJsonEdit}
                 onAdd={handleJsonEdit}
                 onDelete={handleJsonEdit}
@@ -315,6 +347,29 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
             </Modal.Content>
             <Modal.Actions>
               <Button onClick={closeModal}>Close</Button>
+            </Modal.Actions>
+          </Modal>
+          <Modal
+            open={isOriginalModalOpen}
+            onClose={closeOriginalModal}
+            size="large"
+          >
+            <Modal.Header>Original Value</Modal.Header>
+            <Modal.Content>
+              {typeof value === "object" && value !== null ? (
+                <ReactJson
+                  src={value}
+                  theme="rjv-default"
+                  style={{ padding: "20px" }}
+                  enableClipboard={false}
+                  displayDataTypes={false}
+                />
+              ) : (
+                <div style={{ padding: "20px" }}>{String(value)}</div>
+              )}
+            </Modal.Content>
+            <Modal.Actions>
+              <Button onClick={closeOriginalModal}>Close</Button>
             </Modal.Actions>
           </Modal>
         </>

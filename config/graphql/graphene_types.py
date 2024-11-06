@@ -456,6 +456,7 @@ class FieldsetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
 class DatacellType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     data = GenericScalar()
+    corrected_data = GenericScalar()
     full_source_list = graphene.List(AnnotationType)
 
     def resolve_full_source_list(self, info):

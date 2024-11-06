@@ -967,15 +967,21 @@ export const ExtractDataGrid: React.FC<DataGridProps> = ({
   // Update gridColumns to include filter headers
   const gridColumnsWithFilters = useMemo(() => {
     return gridColumns.map((col) => {
-      if (!isPrimitiveColumn(col.key)) return col;
+      const isPrimitive = isPrimitiveColumn(col.key);
 
       return {
         ...col,
-        headerCellClass: filterColumnClassName,
+        headerCellClass: isPrimitive ? filterColumnClassName : undefined,
         renderHeaderCell: (props: any) => (
           <div>
-            <div>{col.name}</div>
-            {filtersEnabled && (
+            {/* Retain existing renderHeaderCell */}
+            {"renderHeaderCell" in col && col.renderHeaderCell ? (
+              col.renderHeaderCell(props)
+            ) : (
+              <div>{col.name}</div>
+            )}
+            {/* Add filter input for primitive columns */}
+            {isPrimitive && filtersEnabled && (
               <div style={filterStyles.filterContainer}>
                 <input
                   style={filterStyles.filterInput}

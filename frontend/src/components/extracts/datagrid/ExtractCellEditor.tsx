@@ -97,13 +97,7 @@ export const ExtractCellEditor: React.FC<ExtractCellEditorProps> = ({
     switch (type) {
       case "string":
         return (
-          <Input
-            fluid
-            value={value}
-            onChange={handleInputChange}
-            onBlur={handleCommit}
-            autoFocus
-          />
+          <Input fluid value={value} onChange={handleInputChange} autoFocus />
         );
 
       case "number":
@@ -113,18 +107,13 @@ export const ExtractCellEditor: React.FC<ExtractCellEditorProps> = ({
             type="number"
             value={value}
             onChange={handleInputChange}
-            onBlur={handleCommit}
             autoFocus
           />
         );
 
       case "boolean":
         return (
-          <Checkbox
-            checked={value}
-            onChange={handleCheckboxChange}
-            onBlur={handleCommit}
-          />
+          <Checkbox checked={value} onChange={handleCheckboxChange} autoFocus />
         );
 
       default:
@@ -133,7 +122,6 @@ export const ExtractCellEditor: React.FC<ExtractCellEditorProps> = ({
             fluid
             value={String(value)}
             onChange={handleInputChange}
-            onBlur={handleCommit}
             autoFocus
           />
         );
@@ -153,5 +141,15 @@ export const ExtractCellEditor: React.FC<ExtractCellEditorProps> = ({
     );
   }
 
-  return renderPrimitiveEditor();
+  return (
+    <>
+      {renderPrimitiveEditor()}
+      <div style={{ marginTop: "1em", textAlign: "right" }}>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button primary onClick={handleCommit}>
+          Save
+        </Button>
+      </div>
+    </>
+  );
 };

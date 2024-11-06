@@ -3,7 +3,7 @@ import { Button, Form, Grid } from "semantic-ui-react";
 import { motion, AnimatePresence } from "framer-motion";
 import styled from "styled-components";
 
-interface FieldType {
+export interface FieldType {
   fieldName: string;
   fieldType: string;
   id: string; // Added for stable animations

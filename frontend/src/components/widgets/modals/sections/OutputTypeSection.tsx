@@ -1,7 +1,7 @@
 import React from "react";
 import { Grid, Form } from "semantic-ui-react";
 import { FormSection, SectionTitle, StyledFormField } from "../styled";
-import { ModelFieldBuilder } from "../../ModelFieldBuilder";
+import { FieldType, ModelFieldBuilder } from "../../ModelFieldBuilder";
 
 interface OutputTypeSectionProps {
   outputTypeOption: string;
@@ -19,6 +19,7 @@ interface OutputTypeSectionProps {
   setFormData: (
     updater: (prev: Record<string, any>) => Record<string, any>
   ) => void;
+  initialFields?: FieldType[];
 }
 
 /**
@@ -47,6 +48,7 @@ export const OutputTypeSection: React.FC<OutputTypeSectionProps> = ({
   handleOutputTypeChange,
   handleChange,
   setFormData,
+  initialFields = [],
 }) => {
   const handleFieldsChange = (fields: any[]) => {
     setFormData((prev) => ({
@@ -126,7 +128,7 @@ export const OutputTypeSection: React.FC<OutputTypeSectionProps> = ({
             <Grid.Column width={16}>
               <ModelFieldBuilder
                 onFieldsChange={handleFieldsChange}
-                initialFields={[]}
+                initialFields={initialFields}
               />
             </Grid.Column>
           </Grid.Row>

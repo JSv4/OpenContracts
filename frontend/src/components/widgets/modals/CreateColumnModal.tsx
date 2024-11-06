@@ -7,17 +7,14 @@ import { AdvancedOptionsSection } from "./sections/AdvancedOptionsSection";
 import { LooseObject } from "../../types";
 import styled from "styled-components";
 import { ColumnType } from "../../../types/graphql-api";
+import { parsePydanticModel } from "../../../utils/parseOutputType";
+import { FieldType } from "../ModelFieldBuilder";
 
 interface CreateColumnModalProps {
   open: boolean;
   existing_column?: ColumnType | null;
   onClose: () => void;
   onSubmit: (data: any) => void;
-}
-
-interface FieldType {
-  fieldName: string;
-  fieldType: string;
 }
 
 interface RequiredFields {
@@ -55,14 +52,10 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Determine if the existing_column.outputType is a primitive type
-  const isPrimitiveType = ["str", "int", "float", "bool"].includes(
-    existing_column?.outputType || ""
-  );
-
-  const [outputTypeOption, setOutputTypeOption] = useState<string>(
-    isPrimitiveType ? "primitive" : "custom"
-  );
+  const [outputTypeOption, setOutputTypeOption] = useState<string>("primitive");
+  const [primitiveType, setPrimitiveType] = useState<string>("str");
+  const [extractIsList, setExtractIsList] = useState<boolean>(false);
+  const [initialFields, setInitialFields] = useState<FieldType[]>([]);
 
   useEffect(() => {
     if (existing_column) {
@@ -71,9 +64,15 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
         existing_column.outputType || ""
       );
       setOutputTypeOption(isPrimitiveType ? "primitive" : "custom");
+      setPrimitiveType(existing_column.outputType);
+      setExtractIsList(Boolean(existing_column.extractIsList));
+      setInitialFields(parsePydanticModel(existing_column.outputType));
     } else {
       setFormData({});
       setOutputTypeOption("primitive");
+      setPrimitiveType("str");
+      setExtractIsList(false);
+      setInitialFields([]);
     }
   }, [existing_column]);
 
@@ -94,10 +93,9 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
     data: any
   ) => {
     setOutputTypeOption(data.value);
-    // Reset outputType in formData when outputTypeOption changes
     setFormData((prev) => ({
       ...prev,
-      outputType: data.value === "primitive" ? "" : prev.outputType,
+      outputType: data.value === "primitive" ? primitiveType : "",
     }));
   };
 
@@ -146,11 +144,12 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
             />
             <OutputTypeSection
               outputTypeOption={outputTypeOption}
-              extractIsList={formData.extractIsList || false}
-              primitiveType={formData.primitiveType || ""}
+              extractIsList={extractIsList}
+              primitiveType={primitiveType}
               handleOutputTypeChange={handleOutputTypeChange}
               handleChange={handleChange}
               setFormData={setFormData}
+              initialFields={initialFields}
             />
             <ExtractionConfigSection
               query={formData.query || ""}

@@ -1,4 +1,5 @@
 import { JSONSchema7, JSONSchema7TypeName } from "json-schema";
+import { FieldType } from "../components/widgets/ModelFieldBuilder";
 
 /**
  * Parse a string representation of a Python Pydantic model or a primitive type
@@ -71,4 +72,26 @@ export function parseOutputType(outputType: string): JSONSchema7 {
   }
 
   throw new Error(`Invalid model or primitive type: "${outputType}"`);
+}
+
+/**
+ * Parses a Pydantic model string and extracts field definitions.
+ *
+ * @param modelStr - The Pydantic model as a string.
+ * @returns An array of field definitions.
+ */
+export function parsePydanticModel(modelStr: string): FieldType[] {
+  const lines = modelStr.split("\n").map((line) => line.trim());
+  const fieldLines = lines.filter(
+    (line) => line && line.includes(":") && !line.startsWith("class")
+  );
+  const fields: FieldType[] = fieldLines.map((line) => {
+    const [fieldName, fieldType] = line.split(":").map((part) => part.trim());
+    return {
+      id: Math.random().toString(),
+      fieldName,
+      fieldType,
+    };
+  });
+  return fields;
 }

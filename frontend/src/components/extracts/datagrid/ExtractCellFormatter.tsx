@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, Popup, Icon, Modal } from "semantic-ui-react";
+import { Button, Popup, Icon, Modal, Input } from "semantic-ui-react";
 import { CellStatus } from "../../../types/extract-grid";
 import styled from "styled-components";
 import { JSONSchema7 } from "json-schema";
@@ -318,18 +318,27 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
             }
           />
           {isEditing && (
-            <ExtractCellEditor
-              row={row}
-              column={column}
-              onRowChange={(updatedRow: any, commitChanges?: boolean) => {
-                if (commitChanges) {
-                  onEdit(cellId, updatedRow[column.key]);
-                }
-              }}
+            <Modal
+              open={isEditing}
               onClose={() => setIsEditing(false)}
-              schema={schema}
-              extractIsList={extractIsList}
-            />
+              size="small"
+            >
+              <Modal.Header>Edit {column.name}</Modal.Header>
+              <Modal.Content>
+                <ExtractCellEditor
+                  row={row}
+                  column={column}
+                  onRowChange={(updatedRow: any, commitChanges?: boolean) => {
+                    if (commitChanges) {
+                      onEdit(cellId, updatedRow[column.key]);
+                    }
+                  }}
+                  onClose={() => setIsEditing(false)}
+                  schema={schema}
+                  extractIsList={extractIsList}
+                />
+              </Modal.Content>
+            </Modal>
           )}
           <Modal open={isModalOpen} onClose={closeModal} size="large">
             <Modal.Header>Edit JSON Data</Modal.Header>

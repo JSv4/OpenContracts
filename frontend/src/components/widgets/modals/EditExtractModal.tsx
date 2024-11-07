@@ -23,7 +23,7 @@ import {
   REQUEST_GET_EXTRACT,
   RequestGetExtractInput,
 } from "../../../graphql/queries";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   REQUEST_ADD_DOC_TO_EXTRACT,
   REQUEST_CREATE_COLUMN,
@@ -56,7 +56,10 @@ import {
   addingColumnToExtract,
   editingColumnForExtract,
 } from "../../../graphql/cache";
-import { ExtractDataGrid } from "../../extracts/datagrid/DataGrid";
+import {
+  ExtractDataGrid,
+  ExtractDataGridHandle,
+} from "../../extracts/datagrid/DataGrid";
 
 interface EditExtractModalProps {
   ext: ExtractType | null;
@@ -69,6 +72,8 @@ export const EditExtractModal = ({
   ext,
   toggleModal,
 }: EditExtractModalProps) => {
+  const dataGridRef = useRef<ExtractDataGridHandle>(null);
+
   const [extract, setExtract] = useState<ExtractType | null>(ext);
   const [cells, setCells] = useState<DatacellType[]>([]);
   const [rows, setRows] = useState<DocumentType[]>([]);
@@ -533,7 +538,13 @@ export const EditExtractModal = ({
                     ? { disabled: true, loading: true }
                     : {})}
                   labelPosition="right"
-                  onClick={() => window.alert("Not implemented yet")}
+                  onClick={() => {
+                    if (dataGridRef.current) {
+                      dataGridRef.current.exportToCsv();
+                    } else {
+                      console.error("DataGrid ref is not available");
+                    }
+                  }}
                 >
                   Download
                   <Icon name="download" />
@@ -553,6 +564,7 @@ export const EditExtractModal = ({
             </div>
           </div>
           <ExtractDataGrid
+            ref={dataGridRef}
             onAddDocIds={handleAddDocIdsToExtract}
             onRemoveDocIds={handleRemoveDocIdsFromExtract}
             onRemoveColumnId={handleDeleteColumnIdFromExtract}

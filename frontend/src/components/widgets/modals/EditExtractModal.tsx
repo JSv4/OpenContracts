@@ -67,6 +67,94 @@ interface EditExtractModalProps {
   toggleModal: () => void;
 }
 
+// Add new styled components at the top
+const styles = {
+  modalWrapper: {
+    height: "90vh",
+    display: "flex",
+    flexDirection: "column" as const,
+    background: "linear-gradient(to bottom, #f8fafc, #ffffff)",
+  },
+  modalHeader: {
+    background: "white",
+    padding: "1.5rem 2rem",
+    borderBottom: "1px solid #e2e8f0",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+  },
+  headerTitle: {
+    display: "flex",
+    alignItems: "center",
+    gap: "1rem",
+  },
+  extractName: {
+    fontSize: "1.5rem",
+    fontWeight: 600,
+    color: "#1e293b",
+    margin: 0,
+  },
+  extractMeta: {
+    fontSize: "0.875rem",
+    color: "#64748b",
+  },
+  statsContainer: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gap: "1rem",
+    padding: "1.5rem 2rem",
+    background: "white",
+    borderRadius: "0.5rem",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+    margin: "1rem 2rem",
+  },
+  statCard: {
+    padding: "1.25rem",
+    background: "#ffffff",
+    borderRadius: "0.5rem",
+    border: "1px solid #e2e8f0",
+    transition: "transform 0.2s ease",
+    "&:hover": {
+      transform: "translateY(-2px)",
+    },
+  },
+  statLabel: {
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    color: "#64748b",
+    marginBottom: "0.5rem",
+  },
+  statValue: {
+    fontSize: "1.25rem",
+    fontWeight: 600,
+    color: "#1e293b",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+  },
+  actionButtons: {
+    padding: "1rem 2rem",
+    display: "flex",
+    gap: "1rem",
+    justifyContent: "flex-end",
+    background: "white",
+    borderTop: "1px solid #e2e8f0",
+  },
+  errorMessage: {
+    margin: "1rem 2rem",
+    padding: "1rem",
+    borderRadius: "0.5rem",
+    background: "#fee2e2",
+    border: "1px solid #fecaca",
+    color: "#991b1b",
+  },
+  dataGridContainer: {
+    padding: "0 2rem",
+    marginBottom: "1rem",
+  },
+};
+
 export const EditExtractModal = ({
   open,
   ext,
@@ -450,134 +538,134 @@ export const EditExtractModal = ({
         closeIcon
         size="fullscreen"
         open={open}
-        onClose={() => toggleModal()}
-        style={{
-          height: "90vh",
-          display: "flex !important",
-          flexDirection: "column",
-          alignContent: "flex-start",
-          justifyContent: "center",
-        }}
+        onClose={toggleModal}
+        style={styles.modalWrapper}
       >
         {isLoading && (
           <Dimmer active>
             <Loader>Loading...</Loader>
           </Dimmer>
         )}
-        <ModalHeader>Editing Extract {extract.name}</ModalHeader>
-        <ModalContent style={{ flex: 1 }}>
-          <Segment.Group horizontal>
-            <Segment textAlign="center">
-              <Statistic size="mini">
-                <Statistic.Label>Status</Statistic.Label>
-                <Statistic.Value>
-                  {extract.started && !extract.finished && !extract.error ? (
-                    <Icon name="spinner" loading />
-                  ) : extract.finished ? (
-                    <Icon name="check circle" color="green" />
-                  ) : extract.error ? (
-                    <Icon name="exclamation circle" color="red" />
-                  ) : (
-                    <Icon name="pause circle" color="grey" />
-                  )}
-                </Statistic.Value>
-              </Statistic>
-            </Segment>
-            {extract.started && (
-              <Segment textAlign="center">
-                <Statistic size="mini">
-                  <Statistic.Label>Started</Statistic.Label>
-                  <Statistic.Value>
-                    {new Date(extract.started).toLocaleString()}
-                  </Statistic.Value>
-                </Statistic>
-              </Segment>
-            )}
-            {extract.finished && (
-              <Segment textAlign="center">
-                <Statistic size="mini">
-                  <Statistic.Label>Completed</Statistic.Label>
-                  <Statistic.Value>
-                    {new Date(extract.finished).toLocaleString()}
-                  </Statistic.Value>
-                </Statistic>
-              </Segment>
-            )}
-            {extract.error && extract.finished && (
-              <Segment textAlign="center" color="red">
-                <Statistic size="mini">
-                  <Statistic.Label>Failed</Statistic.Label>
-                  <Statistic.Value>
-                    {new Date(extract.finished).toLocaleString()}
-                  </Statistic.Value>
-                </Statistic>
-              </Segment>
-            )}
-          </Segment.Group>
-          {extract.error && (
-            <Message negative>
-              <Message.Header>Error</Message.Header>
-              <pre>{extract.error}</pre>
-            </Message>
-          )}
-          <div
-            style={{
-              width: "100%",
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "flex-end",
-              padding: "1rem",
-            }}
-          >
-            <div>
-              {extract.started ? (
-                <Button
-                  positive
-                  icon
-                  {...(!extract.finished
-                    ? { disabled: true, loading: true }
-                    : {})}
-                  labelPosition="right"
-                  onClick={() => {
-                    if (dataGridRef.current) {
-                      dataGridRef.current.exportToCsv();
-                    } else {
-                      console.error("DataGrid ref is not available");
-                    }
-                  }}
-                >
-                  Download
-                  <Icon name="download" />
-                </Button>
-              ) : (
-                <Button
-                  icon
-                  labelPosition="left"
-                  onClick={() =>
-                    startExtract({ variables: { extractId: extract.id } })
-                  }
-                >
-                  <Icon name="play" />
-                  Run
-                </Button>
-              )}
-            </div>
+
+        <div style={styles.modalHeader}>
+          <div style={styles.headerTitle}>
+            <h2 style={styles.extractName}>{extract.name}</h2>
+            <span style={styles.extractMeta}>
+              Created by {extract.creator?.email} on{" "}
+              {new Date(extract.created).toLocaleDateString()}
+            </span>
           </div>
-          <ExtractDataGrid
-            ref={dataGridRef}
-            onAddDocIds={handleAddDocIdsToExtract}
-            onRemoveDocIds={handleRemoveDocIdsFromExtract}
-            onRemoveColumnId={handleDeleteColumnIdFromExtract}
-            onUpdateRow={handleRowUpdate}
-            onAddColumn={handleAddColumn}
-            extract={extract}
-            cells={cells}
-            rows={rows}
-            columns={columns}
-          />
+        </div>
+
+        <ModalContent style={{ flex: 1, padding: 0 }}>
+          <div style={styles.statsContainer}>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>Status</div>
+              <div style={styles.statValue}>
+                {extract.started && !extract.finished && !extract.error ? (
+                  <>
+                    <Icon name="spinner" loading color="blue" />
+                    <span>Processing</span>
+                  </>
+                ) : extract.finished ? (
+                  <>
+                    <Icon name="check circle" color="green" />
+                    <span>Completed</span>
+                  </>
+                ) : extract.error ? (
+                  <>
+                    <Icon name="exclamation circle" color="red" />
+                    <span>Failed</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon name="clock outline" color="grey" />
+                    <span>Not Started</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>Documents</div>
+              <div style={styles.statValue}>
+                <Icon name="file outline" />
+                {rows.length}
+              </div>
+            </div>
+
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>Columns</div>
+              <div style={styles.statValue}>
+                <Icon name="columns" />
+                {columns.length}
+              </div>
+            </div>
+
+            {extract.corpus && (
+              <div style={styles.statCard}>
+                <div style={styles.statLabel}>Corpus</div>
+                <div style={styles.statValue}>
+                  <Icon name="database" />
+                  {extract.corpus.title}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {extract.error && (
+            <div style={styles.errorMessage}>
+              <h4>Error Details</h4>
+              <pre>{extract.error}</pre>
+            </div>
+          )}
+
+          <div style={styles.actionButtons}>
+            {extract.started ? (
+              <Button
+                primary
+                icon
+                labelPosition="right"
+                disabled={!extract.finished}
+                loading={!extract.finished}
+                onClick={() => dataGridRef.current?.exportToCsv()}
+              >
+                Export Results
+                <Icon name="download" />
+              </Button>
+            ) : (
+              <Button
+                primary
+                icon
+                labelPosition="left"
+                onClick={() =>
+                  startExtract({ variables: { extractId: extract.id } })
+                }
+              >
+                <Icon name="play" />
+                Start Extract
+              </Button>
+            )}
+          </div>
+
+          <div style={styles.dataGridContainer}>
+            <ExtractDataGrid
+              ref={dataGridRef}
+              onAddDocIds={handleAddDocIdsToExtract}
+              onRemoveDocIds={handleRemoveDocIdsFromExtract}
+              onRemoveColumnId={handleDeleteColumnIdFromExtract}
+              onUpdateRow={handleRowUpdate}
+              onAddColumn={handleAddColumn}
+              extract={extract}
+              cells={cells}
+              rows={rows}
+              columns={columns}
+            />
+          </div>
         </ModalContent>
-        <ModalActions>
-          <Button onClick={() => toggleModal()}>Close</Button>
+
+        <ModalActions style={styles.actionButtons}>
+          <Button onClick={toggleModal}>Close</Button>
         </ModalActions>
       </Modal>
     </>

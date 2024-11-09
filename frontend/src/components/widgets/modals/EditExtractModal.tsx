@@ -71,9 +71,16 @@ interface EditExtractModalProps {
 const styles = {
   modalWrapper: {
     height: "90vh",
-    display: "flex",
+    display: "flex !important",
     flexDirection: "column" as const,
     background: "linear-gradient(to bottom, #f8fafc, #ffffff)",
+  },
+  modalContent: {
+    flex: "1 1 auto",
+    display: "flex",
+    flexDirection: "column" as const,
+    padding: 0,
+    overflow: "auto",
   },
   modalHeader: {
     background: "white",
@@ -97,7 +104,7 @@ const styles = {
   },
   extractMeta: {
     fontSize: "0.875rem",
-    color: "#64748b",
+    color: "#475569",
   },
   statsContainer: {
     display: "grid",
@@ -113,7 +120,7 @@ const styles = {
     padding: "1.25rem",
     background: "#ffffff",
     borderRadius: "0.5rem",
-    border: "1px solid #e2e8f0",
+    border: "1px solid #cbd5e1",
     transition: "transform 0.2s ease",
     "&:hover": {
       transform: "translateY(-2px)",
@@ -122,7 +129,7 @@ const styles = {
   statLabel: {
     fontSize: "0.875rem",
     fontWeight: 500,
-    color: "#64748b",
+    color: "#475569",
     marginBottom: "0.5rem",
   },
   statValue: {
@@ -134,7 +141,7 @@ const styles = {
     gap: "0.5rem",
   },
   actionButtons: {
-    padding: "1rem 2rem",
+    padding: "0.75rem 2rem",
     display: "flex",
     gap: "1rem",
     justifyContent: "flex-end",
@@ -152,6 +159,32 @@ const styles = {
   dataGridContainer: {
     padding: "0 2rem",
     marginBottom: "1rem",
+  },
+  modalActions: {
+    minHeight: "auto !important", // Override Semantic UI's default
+    padding: "0.5rem 2rem !important", // Smaller padding, using !important to override Semantic UI
+    background: "white",
+    borderTop: "1px solid #e2e8f0",
+  },
+  startButton: {
+    marginTop: "0.5rem",
+    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+    transition: "all 0.2s ease",
+    border: "none",
+    "&:hover": {
+      transform: "translateY(-2px)",
+      boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
+      background: "linear-gradient(135deg, #1d4ed8, #1e40af)",
+    },
+    "&:active": {
+      transform: "translateY(0)",
+    },
+  },
+  statusWithButton: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
   },
 };
 
@@ -557,7 +590,7 @@ export const EditExtractModal = ({
           </div>
         </div>
 
-        <ModalContent style={{ flex: 1, padding: 0 }}>
+        <ModalContent style={styles.modalContent}>
           <div style={styles.statsContainer}>
             <div style={styles.statCard}>
               <div style={styles.statLabel}>Status</div>
@@ -578,10 +611,23 @@ export const EditExtractModal = ({
                     <span>Failed</span>
                   </>
                 ) : (
-                  <>
-                    <Icon name="clock outline" color="grey" />
-                    <span>Not Started</span>
-                  </>
+                  <div style={styles.statusWithButton}>
+                    <div>
+                      <Icon name="clock outline" color="grey" />
+                      <span>Not Started</span>
+                    </div>
+                    <Button
+                      circular
+                      icon
+                      primary
+                      style={styles.startButton}
+                      onClick={() =>
+                        startExtract({ variables: { extractId: extract.id } })
+                      }
+                    >
+                      <Icon name="play" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -620,34 +666,6 @@ export const EditExtractModal = ({
             </div>
           )}
 
-          <div style={styles.actionButtons}>
-            {extract.started ? (
-              <Button
-                primary
-                icon
-                labelPosition="right"
-                disabled={!extract.finished}
-                loading={!extract.finished}
-                onClick={() => dataGridRef.current?.exportToCsv()}
-              >
-                Export Results
-                <Icon name="download" />
-              </Button>
-            ) : (
-              <Button
-                primary
-                icon
-                labelPosition="left"
-                onClick={() =>
-                  startExtract({ variables: { extractId: extract.id } })
-                }
-              >
-                <Icon name="play" />
-                Start Extract
-              </Button>
-            )}
-          </div>
-
           <div style={styles.dataGridContainer}>
             <ExtractDataGrid
               ref={dataGridRef}
@@ -664,9 +682,9 @@ export const EditExtractModal = ({
           </div>
         </ModalContent>
 
-        <ModalActions style={styles.actionButtons}>
+        <div className="actions" style={styles.modalActions}>
           <Button onClick={toggleModal}>Close</Button>
-        </ModalActions>
+        </div>
       </Modal>
     </>
   );

@@ -8,36 +8,35 @@ import ReactJson from "react-json-view";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 
 const StatusDot = styled.div<{ statusColor: string }>`
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background-color: ${({ statusColor }) => statusColor};
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 8px;
+  right: 8px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: pulse 2s infinite;
-  box-shadow: 0 0 10px ${({ statusColor }) => statusColor};
+  box-shadow: 0 0 8px ${({ statusColor }) => `${statusColor}80`};
 
   &:hover {
-    transform: scale(1.3);
-    background-color: ${({ statusColor }) => statusColor};
-    box-shadow: 0 0 15px ${({ statusColor }) => statusColor};
+    transform: scale(1.2);
+    box-shadow: 0 0 12px ${({ statusColor }) => statusColor};
   }
 
   @keyframes pulse {
     0% {
       transform: scale(0.95);
-      box-shadow: 0 0 0 0 ${({ statusColor }) => statusColor};
+      box-shadow: 0 0 0 0 ${({ statusColor }) => `${statusColor}80`};
     }
     70% {
       transform: scale(1);
-      box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+      box-shadow: 0 0 0 6px ${({ statusColor }) => `${statusColor}00`};
     }
     100% {
       transform: scale(0.95);
-      box-shadow: 0 0 0 0 ${({ statusColor }) => statusColor};
+      box-shadow: 0 0 0 0 ${({ statusColor }) => `${statusColor}00`};
     }
   }
 `;
@@ -45,38 +44,41 @@ const StatusDot = styled.div<{ statusColor: string }>`
 const ButtonContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.98);
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(10px);
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.99);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.04);
 
   .buttons {
     display: flex;
-    gap: 12px;
+    gap: 8px;
   }
 
   .status-message {
-    font-size: 11px;
-    color: #666;
+    font-size: 0.75rem;
+    color: #64748b;
     text-align: center;
     margin-top: 4px;
+    font-weight: 500;
   }
 
   .ui.button {
     margin: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 6px;
-    min-width: 36px;
-    height: 36px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 8px;
+    min-width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: none;
 
     &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     &:active:not(:disabled) {
@@ -84,30 +86,30 @@ const ButtonContainer = styled.div`
     }
 
     &.green {
-      background: linear-gradient(135deg, #4caf50, #45a049);
+      background: linear-gradient(135deg, #22c55e, #16a34a);
 
       &:hover:not(:disabled) {
-        background: linear-gradient(135deg, #45a049, #388e3c);
+        background: linear-gradient(135deg, #16a34a, #15803d);
       }
     }
 
     &.red {
-      background: linear-gradient(135deg, #f44336, #e53935);
+      background: linear-gradient(135deg, #ef4444, #dc2626);
 
       &:hover:not(:disabled) {
-        background: linear-gradient(135deg, #e53935, #d32f2f);
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
       }
     }
 
     &:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
       filter: grayscale(40%);
     }
 
     i.icon {
       margin: 0 !important;
-      font-size: 1.1em;
+      font-size: 0.9em;
     }
   }
 `;
@@ -118,8 +120,15 @@ const CellContainer = styled.div`
   height: 100%;
   display: flex;
   align-items: center;
-  padding: 8px;
-  transition: background 0.3s ease;
+  padding: 8px 24px 8px 12px;
+  transition: background 0.2s ease;
+  font-size: 0.9rem;
+  color: #334155;
+  line-height: 1.5;
+
+  &:hover {
+    background: rgba(248, 250, 252, 0.5);
+  }
 `;
 
 interface ExtractCellFormatterProps {

@@ -74,28 +74,31 @@ interface DataGridProps {
   loading?: boolean;
 }
 
-// Add these styles near the top of the file
+// Update the styles object with modern styling
 const styles = {
   gridWrapper: {
     height: "100%",
     width: "100%",
     position: "relative" as const,
     backgroundColor: "#fff",
-    borderRadius: "8px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+    borderRadius: "12px",
+    boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
     minHeight: "400px",
     display: "flex",
     flexDirection: "column" as const,
-    border: "1px solid #e0e0e0",
+    border: "1px solid rgba(0,0,0,0.08)",
+    overflow: "hidden",
   },
   headerCell: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "8px 16px",
-    backgroundColor: "#f8f9fa",
-    borderBottom: "2px solid #e9ecef",
+    padding: "12px 16px",
+    backgroundColor: "#f8fafc",
+    borderBottom: "2px solid #e2e8f0",
     fontWeight: 600,
+    fontSize: "0.9rem",
+    color: "#334155",
   },
   phantomColumn: {
     position: "absolute" as const,
@@ -104,16 +107,16 @@ const styles = {
     bottom: 0,
     width: "60px",
     cursor: "pointer",
-    border: "2px dashed #dee2e6",
+    border: "2px dashed #cbd5e1",
     borderLeft: "none",
-    background: "#fff",
+    background: "linear-gradient(to right, rgba(255,255,255,0), #fff)",
     transition: "all 0.2s ease",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     "&:hover": {
-      background: "#f8f9fa",
-      borderColor: "#4caf50",
+      background: "linear-gradient(to right, rgba(248,250,252,0), #f8fafc)",
+      borderColor: "#0ea5e9",
     },
   },
   dropOverlay: {
@@ -122,8 +125,8 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 120, 255, 0.05)",
-    backdropFilter: "blur(2px)",
+    backgroundColor: "rgba(59, 130, 246, 0.03)",
+    backdropFilter: "blur(4px)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -131,12 +134,14 @@ const styles = {
     pointerEvents: "none" as const,
   },
   dropMessage: {
-    padding: "20px 30px",
-    backgroundColor: "white",
-    borderRadius: "8px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-    border: "2px dashed #0078ff",
+    padding: "24px 36px",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: "12px",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+    border: "2px dashed #3b82f6",
     fontSize: "1.1em",
+    color: "#1e293b",
+    backdropFilter: "blur(8px)",
   },
 };
 
@@ -532,22 +537,6 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       return map;
     }, [localCells, deriveCellStatus]);
 
-    // Prepare columns with custom renderCell functions
-    const CellRenderer = ({ value }: { value: string }) => {
-      return (
-        <div
-          style={{
-            maxWidth: "100%",
-            minWidth: 0,
-            overflow: "hidden",
-          }}
-        >
-          <TruncatedText text={value || ""} limit={100} />{" "}
-          {/* Adjust limit as needed */}
-        </div>
-      );
-    };
-
     // Add state and handlers for editing columns
     const [isCreateColumnModalOpen, setIsCreateColumnModalOpen] =
       useState(false);
@@ -568,12 +557,18 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
 
     const gridColumns = useMemo(() => {
       const columnsArray = [
-        SelectColumn,
+        {
+          ...SelectColumn,
+          width: 60,
+          minWidth: 60,
+          resizable: false,
+        },
         {
           key: "documentTitle",
           name: "Document",
           frozen: true,
-          width: 200,
+          width: 300,
+          minWidth: 200,
           renderCell: (props: any) => {
             if (props.row.id === "placeholder") {
               return (
@@ -615,22 +610,16 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
             key: col.id,
             name: col.name,
             id: col.id,
-            width: 200,
+            width: 250,
             resizable: true,
           };
 
           return {
             ...gridColumn,
             renderHeaderCell: () => (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
+              <div>
                 <span>{col.name}</span>
-                <div>
+                <div className="header-controls">
                   <Button
                     icon="edit"
                     size="mini"
@@ -649,7 +638,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
             ),
             renderCell: (props: any) => {
               if (props.row.id === "placeholder") {
-                return <div></div>;
+                return <div>Bro</div>;
               }
               const content = getCellContent(props.row, gridColumn);
               const cellStatus = cellStatusMap.get(`${props.row.id}-${col.id}`);
@@ -675,17 +664,32 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
         }),
       ];
 
-      // Conditionally add the 'Add Column Placeholder' column
       if (!extract.started) {
         columnsArray.push({
           key: "addColumn",
           name: "",
           width: 60,
-          renderCell: () => (
-            <div style={styles.phantomColumn} onClick={onAddColumn}>
-              <Icon name="plus" color="grey" />
+          minWidth: 60,
+          maxWidth: 60,
+          resizable: false,
+          renderHeaderCell: () => (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                width: "100%",
+              }}
+            >
+              <Button
+                icon="plus"
+                circular
+                size="mini"
+                color="green"
+                onClick={onAddColumn}
+              />
             </div>
           ),
+          renderCell: () => null,
         });
       }
 
@@ -1176,6 +1180,21 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       exportToCsv,
     }));
 
+    // Add this function near your other utility functions
+    const getRowHeight = useCallback((row: ExtractGridRow) => {
+      if (row.id === "placeholder") {
+        return 40;
+      }
+
+      const documentTitleLength = row.documentTitle?.length || 0;
+      const baseHeight = 44;
+      const lineHeight = 20;
+      const charsPerLine = 30;
+
+      const estimatedLines = Math.ceil(documentTitleLength / charsPerLine);
+      return Math.max(baseHeight, estimatedLines * lineHeight + 28); // Increased padding
+    }, []);
+
     return (
       <>
         {loading && (
@@ -1245,10 +1264,11 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
             onRowsChange={onRowsChange}
             onCopy={handleCopy}
             onPaste={handlePaste}
-            headerRowHeight={filtersEnabled ? 70 : undefined}
+            headerRowHeight={56}
             defaultColumnOptions={{ sortable: true }}
             sortColumns={sortColumns}
             onSortColumnsChange={setSortColumns}
+            rowHeight={getRowHeight}
           />
 
           {!extract.started && (
@@ -1286,134 +1306,165 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
         />
 
         <style>{`
+          @keyframes gradientMove {
+            0% {
+              background-position: 0% 50%;
+            }
+            50% {
+              background-position: 100% 50%;
+            }
+            100% {
+              background-position: 0% 50%;
+            }
+          }
+
           .custom-data-grid {
             border: none !important;
             height: 100% !important;
             background: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
           }
 
           .rdg {
             border: none !important;
             flex: 1;
+            --rdg-selection-color: #eff6ff;
+            --rdg-border-color: #e2e8f0;
           }
 
           .rdg-cell {
-            border-right: 1px solid #e0e0e0 !important;
-            border-bottom: 1px solid #e0e0e0 !important;
-            padding: 8px 16px !important;
+            border-right: 1px solid #e2e8f0 !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 12px 16px !important;
+            color: #334155;
+            font-size: 0.9rem;
+            line-height: 1.5;
           }
 
           .rdg-header-row {
-            background-color: #f8f9fa !important;
+            background-color: #f8fafc !important;
             font-weight: 600 !important;
-            border-bottom: 2px solid #dee2e6 !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+            color: #334155;
           }
 
-          .rdg-row:hover {
-            background-color: #f8f9fa !important;
+          .rdg-cell-frozen {
+            box-shadow: 2px 0 4px rgba(0,0,0,0.04) !important;
           }
 
-          .rdg-row.rdg-row-selected {
-            background-color: #e9ecef !important;
+          .rdg-cell-frozen-last {
+            box-shadow: 2px 0 4px rgba(0,0,0,0.04) !important;
           }
 
-          /* Style for the placeholder row */
-          .rdg-row[aria-rowindex="1"] {
-            color: #6c757d;
-            font-style: italic;
-            background-color: #f8f9fa;
+          /* Only the essential header controls styling */
+          .header-controls {
+            display: flex !important;
+            gap: 6px !important;
+            margin-left: 12px !important;
+            flex-shrink: 0 !important;
           }
 
-          /* Style for the "No documents available" text */
-          .rdg-row[aria-rowindex="1"] .rdg-cell:first-child {
-            justify-content: center;
-            text-align: center;
-            grid-column: 1 / -1;
+          .rdg-header-row .rdg-cell > div {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+            white-space: nowrap !important;
           }
 
-          /* Add Column button styling */
-          .rdg-header-row .ui.button {
-            padding: 6px !important;
-            background: transparent !important;
-            color: #6c757d !important;
-            border: 1px solid #dee2e6 !important;
+          .header-controls {
+            display: flex !important;
+            gap: 6px !important;
+            margin-left: 12px !important;
+            flex-shrink: 0 !important;
           }
 
-          .rdg-header-row .ui.button:hover {
-            background: #f8f9fa !important;
-            color: #212529 !important;
-            border-color: #adb5bd !important;
+          .rdg-header-row .rdg-cell span {
+            flex: 1 !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            min-width: 0 !important;
           }
 
-          .rdg-cell {
-            padding: 8px !important;
-            white-space: normal !important;
-            line-height: 1.4 !important;
+          /* Target the specific nested structure */
+          .rdg-cell[role="columnheader"] > div {
+            display: flex !important;
+            flex-direction: column !important;
           }
 
-          .rdg-cell > div {
-            width: 100%;
-            height: 100%;
+          .rdg-cell[role="columnheader"] > div > div {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+            white-space: nowrap !important;
+            min-height: 32px !important;
           }
 
-          /* Ensure popup content is readable */
-          .ui.popup {
-            max-width: 400px !important;
-            line-height: 1.4 !important;
+          .rdg-cell[role="columnheader"] span {
+            flex: 1 !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            min-width: 0 !important;
           }
 
-          /* Style the add column button */
-          .rdg-header-row .ui.button {
-            opacity: 0.8;
-            transition: opacity 0.2s;
+          /* Ensure resize handle doesn't interfere with buttons and is visible */
+          .rdg-cell-resizer {
+            position: absolute !important;
+            right: 0 !important;
+            width: 8px !important;
+            z-index: 1 !important;
+            background-color: rgba(0, 0, 0, 0.1) !important;  /* subtle background */
           }
 
-          .rdg-header-row .ui.button:hover {
-            opacity: 1;
+          .rdg-cell-resizer:hover {
+            background-color: rgba(0, 0, 0, 0.2) !important;  /* darker on hover */
           }
 
-          .rdg-header-row .ui.button {
-            background: transparent !important;
-            border: 1px solid #ddd !important;
-            box-shadow: none !important;
+          /* Make the resize cursor black */
+          .rdg-cell-resizer.rdg-cell-resizer-hover {
+            cursor: col-resize !important;
+            color: black !important;
           }
 
-          .rdg-header-row .ui.button:hover {
-            background: #f8f9fa !important;
-            border-color: #adb5bd !important;
+          .header-controls {
+            position: relative !important;
+            z-index: 2 !important;
           }
 
-          .rdg-header-row .ui.button .icon {
-            color: #6c757d !important;
+          /* Make resize cursor black throughout header */
+          .rdg-header-row .rdg-cell-resizable {
+            cursor: col-resize !important;
+            color: black !important;
           }
 
-          .rdg-header-row .ui.button:hover .icon {
-            color: #212529 !important;
+          /* Ensure resize handle doesn't interfere with buttons */
+          .rdg-cell-resizer {
+            position: absolute !important;
+            right: 0 !important;
+            width: 8px !important;
+            z-index: 1 !important;
           }
 
-          .filter-cell {
-            padding: 0 !important;
+          .header-controls {
+            position: relative !important;
+            z-index: 2 !important;
           }
 
-          .filter-cell > div {
-            padding: 8px;
+          /* Center align checkboxes in both header and content cells */
+          .rdg-row > .rdg-cell:first-child,
+          .rdg-header-row > .rdg-cell:first-child {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
           }
 
-          .filter-cell > div:first-child {
-            border-bottom: 1px solid var(--rdg-border-color);
-          }
-
-          .rdg-header-row .ui.button {
-            padding: 4px !important;
-            margin-left: 4px !important;
-          }
-
-          .rdg-header-row .ui.button .icon {
-            margin: 0 !important;
-          }
-
-          .rdg-header-cell {
-            overflow: visible !important;
+          /* If needed, also ensure the checkbox container itself is centered */
+          .rdg-checkbox-label {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
           }
         `}</style>
       </>

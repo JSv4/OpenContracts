@@ -66,12 +66,41 @@ export const ExtractCellEditor: React.FC<ExtractCellEditorProps> = ({
   };
 
   const renderJsonEditor = () => (
-    <Modal open={isJsonModalOpen} onClose={() => setIsJsonModalOpen(false)}>
-      <Modal.Header>Edit {column.name}</Modal.Header>
-      <Modal.Content>
+    <Modal
+      open={isJsonModalOpen}
+      onClose={() => setIsJsonModalOpen(false)}
+      style={{
+        borderRadius: "12px",
+        overflow: "hidden",
+        boxShadow: "0 12px 48px rgba(0, 0, 0, 0.12)",
+      }}
+    >
+      <Modal.Header
+        style={{
+          background: "#f8fafc",
+          borderBottom: "1px solid #e2e8f0",
+          padding: "16px 24px",
+          fontSize: "1.1rem",
+          color: "#0f172a",
+        }}
+      >
+        Edit {column.name}
+      </Modal.Header>
+      <Modal.Content
+        style={{
+          padding: "24px",
+          maxHeight: "70vh",
+          overflow: "auto",
+        }}
+      >
         <JsonView
           src={value}
-          theme={darkTheme}
+          theme={{
+            ...darkTheme,
+            backgroundColor: "#0f172a",
+            fontSize: "14px",
+            borderRadius: "8px",
+          }}
           displayDataTypes={true}
           displayObjectSize={true}
           enableClipboard={true}
@@ -82,9 +111,37 @@ export const ExtractCellEditor: React.FC<ExtractCellEditorProps> = ({
           collapsed={false}
         />
       </Modal.Content>
-      <Modal.Actions>
-        <Button onClick={() => setIsJsonModalOpen(false)}>Cancel</Button>
-        <Button primary onClick={handleCommit}>
+      <Modal.Actions
+        style={{
+          background: "#f8fafc",
+          borderTop: "1px solid #e2e8f0",
+          padding: "16px 24px",
+        }}
+      >
+        <Button
+          onClick={() => setIsJsonModalOpen(false)}
+          style={{
+            marginRight: "12px",
+            background: "#f1f5f9",
+            color: "#64748b",
+            border: "none",
+            borderRadius: "6px",
+            padding: "8px 16px",
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          primary
+          onClick={handleCommit}
+          style={{
+            background: "#3b82f6",
+            color: "#fff",
+            border: "none",
+            borderRadius: "6px",
+            padding: "8px 16px",
+          }}
+        >
           Save
         </Button>
       </Modal.Actions>

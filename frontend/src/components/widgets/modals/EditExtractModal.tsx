@@ -60,6 +60,7 @@ import {
   ExtractDataGrid,
   ExtractDataGridHandle,
 } from "../../extracts/datagrid/DataGrid";
+import { CSSProperties } from "react";
 
 interface EditExtractModalProps {
   ext: ExtractType | null;
@@ -167,19 +168,44 @@ const styles = {
     borderTop: "1px solid #e2e8f0",
   },
   startButton: {
-    marginTop: "0.5rem",
+    width: "40px",
+    height: "40px",
     background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-    transition: "all 0.2s ease",
+    transition: "all 0.3s ease",
     border: "none",
+    padding: "0",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
     "&:hover": {
       transform: "translateY(-2px)",
-      boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
-      background: "linear-gradient(135deg, #1d4ed8, #1e40af)",
+      boxShadow: "0 8px 20px -2px rgba(37, 99, 235, 0.35)",
+      background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+      "& .play-icon": {
+        transform: "scale(0)",
+        opacity: 0,
+      },
+      "& .rocket-icon": {
+        transform: "scale(1)",
+        opacity: 1,
+      },
     },
-    "&:active": {
-      transform: "translateY(0)",
-    },
-  },
+  } as CSSProperties,
+  iconBase: {
+    position: "absolute",
+    fontSize: "16px",
+    margin: "0",
+    transition: "all 0.3s ease",
+  } as CSSProperties,
+  playIcon: {
+    transform: "scale(1)",
+    opacity: 1,
+  } as CSSProperties,
+  rocketIcon: {
+    transform: "scale(0)",
+    opacity: 0,
+  } as CSSProperties,
   statusWithButton: {
     display: "flex",
     justifyContent: "space-between",
@@ -625,7 +651,14 @@ export const EditExtractModal = ({
                         startExtract({ variables: { extractId: extract.id } })
                       }
                     >
-                      <Icon name="play" />
+                      <i
+                        className="play icon play-icon"
+                        style={{ ...styles.iconBase, ...styles.playIcon }}
+                      />
+                      <i
+                        className="rocket icon rocket-icon"
+                        style={{ ...styles.iconBase, ...styles.rocketIcon }}
+                      />
                     </Button>
                   </div>
                 )}

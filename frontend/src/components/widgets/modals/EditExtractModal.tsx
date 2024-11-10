@@ -624,6 +624,25 @@ export const EditExtractModal = ({
               {new Date(extract.created).toLocaleDateString()}
             </span>
           </div>
+          {extract.finished && !extract.error && (
+            <Button
+              icon
+              labelPosition="left"
+              primary
+              size="small"
+              onClick={() => dataGridRef.current?.exportToCsv()}
+              style={{
+                background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                color: "white",
+                boxShadow: "0 2px 4px rgba(37, 99, 235, 0.1)",
+                transition: "all 0.2s ease",
+              }}
+              className="download-button"
+            >
+              <Icon name="download" />
+              Download CSV
+            </Button>
+          )}
         </div>
 
         <ModalContent style={styles.modalContent}>
@@ -736,6 +755,13 @@ export const EditExtractModal = ({
           <Button onClick={toggleModal}>Close</Button>
         </div>
       </Modal>
+      <style>{`
+        .download-button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+          background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+        }
+      `}</style>
     </>
   );
 };

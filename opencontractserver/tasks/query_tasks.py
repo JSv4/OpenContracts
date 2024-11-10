@@ -1,3 +1,4 @@
+import os
 import re
 import traceback
 from typing import NoReturn
@@ -24,9 +25,13 @@ def run_query(
     query.save()
 
     try:
+        model_path = "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model path not found: {model_path}")
+        print(f"Loading model from: {model_path}")
         embed_model = HuggingFaceEmbedding(
-            model_name="multi-qa-MiniLM-L6-cos-v1", cache_folder="/models"
-        )  # Using our pre-load cache path where the model was stored on container build
+            model_name=model_path,
+        )
         Settings.embed_model = embed_model
 
         llm = OpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY)

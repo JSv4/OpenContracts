@@ -2173,11 +2173,11 @@ class Mutation(graphene.ObjectType):
 
     create_extract = CreateExtract.Field()
     start_extract = StartExtract.Field()
-    delete_extract = DeleteExtract.Field()  # TODO - test
+    delete_extract = DeleteExtract.Field()
     update_extract = UpdateExtractMutation.Field()
     add_docs_to_extract = AddDocumentsToExtract.Field()
     remove_docs_from_extract = RemoveDocumentsFromExtract.Field()
-    approve_datacell = ApproveDatacell.Field()  # TODO - add tests
-    reject_datacell = RejectDatacell.Field()  # TODO - add tests
-    edit_datacell = EditDatacell.Field()  # TODO - add tests
+    approve_datacell = ApproveDatacell.Field()
+    reject_datacell = RejectDatacell.Field()
+    edit_datacell = EditDatacell.Field()
     start_extract_for_doc = StartDocumentExtract.Field()

@@ -1206,12 +1206,6 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
 
     return (
       <>
-        {loading && (
-          <Dimmer active inverted style={{ position: "absolute", margin: 0 }}>
-            <Loader>Processing...</Loader>
-          </Dimmer>
-        )}
-
         <SelectDocumentsModal
           open={openSelectDocumentsModal}
           onAddDocumentIds={(documentIds: string[]) =>
@@ -1228,8 +1222,21 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
           ref={gridRef}
           onDragOver={handleDragOver}
           onDragLeave={() => setDragState({ isDragging: false, dragY: null })}
-          style={styles.gridWrapper}
+          style={{ ...styles.gridWrapper, position: "relative" }}
         >
+          {loading && (
+            <Dimmer
+              active
+              inverted
+              style={{ position: "absolute", margin: 0, borderRadius: "12px" }}
+            >
+              <Loader>
+                {extract.started && !extract.finished
+                  ? "Processing..."
+                  : "Loading..."}
+              </Loader>
+            </Dimmer>
+          )}
           <input {...getInputProps()} />
 
           {isDragActive && dragState.isDragging && <DragPreviewRow />}

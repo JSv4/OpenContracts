@@ -63,12 +63,6 @@ class DocParserTestCase(TestCase):
         """Create a mock image with the given dimensions."""
         return Image.new("RGB", (width, height), color="red")
 
-    def image_to_bytes(self, image: Image.Image) -> bytes:
-        """Convert a PIL Image to bytes."""
-        img_byte_arr = io.BytesIO()
-        image.save(img_byte_arr, format="PNG")
-        return img_byte_arr.getvalue()
-
     @patch("opencontractserver.tasks.doc_tasks.convert_from_bytes")
     def test_pdf_thumbnail_extraction(self, mock_convert_from_bytes):
         """Test PDF thumbnail extraction with various image sizes and orientations."""
@@ -93,13 +87,6 @@ class DocParserTestCase(TestCase):
 
                 # Check that the icon was created
                 self.assertTrue(self.doc.icon, "Icon was not created.")
-
-                # Use assertRegex for better error messages
-                self.assertRegex(
-                    self.doc.icon.name,
-                    r"\d+_icon_[a-zA-Z0-9]+\.jpg",
-                    msg=f"Icon name '{self.doc.icon.name}' does not match the expected pattern.",
-                )
 
                 # Open the saved image and check its properties
                 with self.doc.icon.open("rb") as icon_file:

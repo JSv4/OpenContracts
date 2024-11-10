@@ -26,7 +26,7 @@ django-redis==5.2.0  # https://github.com/jazzband/django-redis
 django-filter==22.1  # https://github.com/carltongibson/django-filter
 django-storages[boto3]==1.13.1  # https://github.com/jschneier/django-storages
 django-extensions==3.2.3  # https://github.com/django-extensions/django-extensions
-whitenoise==6.7.0
+whitenoise==6.8.2
 django-tree-queries
 pgvector  # For vector embeddings
 

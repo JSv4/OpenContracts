@@ -19,7 +19,7 @@ git+https://github.com/kevin1024/vcrpy.git@35650b141b5689eed84eac05c23b48412c76d
 # Profiling
 # ------------------------------------------------------------------------------
 django-cprofile-middleware
-django-silk
+django-silk==5.3.1
 
 # Documentation
 # ------------------------------------------------------------------------------

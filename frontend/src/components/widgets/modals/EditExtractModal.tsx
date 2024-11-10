@@ -18,10 +18,10 @@ import {
   ExtractType,
 } from "../../../types/graphql-api";
 import {
-  NetworkStatus,
   useMutation,
   useQuery,
   useReactiveVar,
+  NetworkStatus,
 } from "@apollo/client";
 import {
   RequestGetExtractOutput,
@@ -217,6 +217,44 @@ const styles = {
     alignItems: "center",
     width: "100%",
   },
+  downloadButton: {
+    background: "transparent",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    padding: "8px 16px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    color: "#64748b",
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    transition: "all 0.2s ease",
+    "&:hover:not(:disabled)": {
+      background: "#f8fafc",
+      borderColor: "#94a3b8",
+      transform: "translateY(-1px)",
+      color: "#334155",
+      boxShadow: "0 2px 4px rgba(148, 163, 184, 0.1)",
+    },
+    "&:active:not(:disabled)": {
+      transform: "translateY(0)",
+    },
+    "&:disabled": {
+      opacity: 0.5,
+      cursor: "not-allowed",
+    },
+  } as CSSProperties,
+  downloadIcon: {
+    fontSize: "16px",
+    transition: "transform 0.2s ease",
+  } as CSSProperties,
+  controlsContainer: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "12px",
+    padding: "0 2rem 1rem",
+    alignItems: "center",
+  } as CSSProperties,
 };
 
 export const EditExtractModal = ({
@@ -566,9 +604,9 @@ export const EditExtractModal = ({
     );
   }, []);
 
-  // Adjust isLoading to exclude refetching status
+  // Adjust isLoading to show loading indicator when data is first loading
   const isLoading =
-    (loading && networkStatus !== NetworkStatus.refetch) ||
+    loading ||
     create_column_loading ||
     update_column_loading ||
     add_docs_loading ||
@@ -610,12 +648,6 @@ export const EditExtractModal = ({
         onClose={toggleModal}
         style={styles.modalWrapper}
       >
-        {isLoading && (
-          <Dimmer active>
-            <Loader>Loading...</Loader>
-          </Dimmer>
-        )}
-
         <div style={styles.modalHeader}>
           <div style={styles.headerTitle}>
             <h2 style={styles.extractName}>{extract.name}</h2>
@@ -624,25 +656,6 @@ export const EditExtractModal = ({
               {new Date(extract.created).toLocaleDateString()}
             </span>
           </div>
-          {extract.finished && !extract.error && (
-            <Button
-              icon
-              labelPosition="left"
-              primary
-              size="small"
-              onClick={() => dataGridRef.current?.exportToCsv()}
-              style={{
-                background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-                color: "white",
-                boxShadow: "0 2px 4px rgba(37, 99, 235, 0.1)",
-                transition: "all 0.2s ease",
-              }}
-              className="download-button"
-            >
-              <Icon name="download" />
-              Download CSV
-            </Button>
-          )}
         </div>
 
         <ModalContent style={styles.modalContent}>
@@ -721,20 +734,40 @@ export const EditExtractModal = ({
             )}
           </div>
 
-          {extract.error && (
-            <div style={styles.errorMessage}>
-              <h4>Error Details</h4>
-              <pre>{extract.error}</pre>
-            </div>
-          )}
+          <div style={styles.controlsContainer}>
+            <Button
+              basic
+              style={styles.downloadButton}
+              onClick={() => dataGridRef.current?.exportToCsv()}
+              disabled={
+                loading ||
+                isGridLoading ||
+                networkStatus === NetworkStatus.refetch
+              }
+            >
+              <Icon name="download" style={styles.downloadIcon} />
+              Export CSV
+            </Button>
+          </div>
 
-          <div
-            id="data-grid-container"
-            style={{
-              ...styles.dataGridContainer,
-              position: "relative",
-            }}
-          >
+          <div style={{ ...styles.dataGridContainer, position: "relative" }}>
+            {loading && (
+              <Dimmer
+                active
+                inverted
+                style={{
+                  position: "absolute",
+                  margin: 0,
+                  borderRadius: "12px",
+                }}
+              >
+                <Loader>
+                  {extract.started && !extract.finished
+                    ? "Processing..."
+                    : "Loading..."}
+                </Loader>
+              </Dimmer>
+            )}
             <ExtractDataGrid
               ref={dataGridRef}
               onAddDocIds={handleAddDocIdsToExtract}
@@ -755,13 +788,6 @@ export const EditExtractModal = ({
           <Button onClick={toggleModal}>Close</Button>
         </div>
       </Modal>
-      <style>{`
-        .download-button:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
-          background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
-        }
-      `}</style>
     </>
   );
 };

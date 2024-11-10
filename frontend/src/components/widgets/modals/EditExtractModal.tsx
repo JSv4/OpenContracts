@@ -17,7 +17,12 @@ import {
   DocumentType,
   ExtractType,
 } from "../../../types/graphql-api";
-import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
+import {
+  NetworkStatus,
+  useMutation,
+  useQuery,
+  useReactiveVar,
+} from "@apollo/client";
 import {
   RequestGetExtractOutput,
   REQUEST_GET_EXTRACT,
@@ -458,6 +463,7 @@ export const EditExtractModal = ({
     error,
     data: extract_data,
     refetch,
+    networkStatus,
   } = useQuery<RequestGetExtractOutput, RequestGetExtractInput>(
     REQUEST_GET_EXTRACT,
     {
@@ -560,12 +566,16 @@ export const EditExtractModal = ({
     );
   }, []);
 
+  // Adjust isLoading to exclude refetching status
   const isLoading =
-    loading ||
+    (loading && networkStatus !== NetworkStatus.refetch) ||
     create_column_loading ||
     update_column_loading ||
     add_docs_loading ||
     remove_docs_loading;
+
+  // Determine if the grid should show loading
+  const isGridLoading = extract?.started && !extract.finished && !extract.error;
 
   if (!extract || !extract.id) {
     return null;
@@ -699,7 +709,13 @@ export const EditExtractModal = ({
             </div>
           )}
 
-          <div style={styles.dataGridContainer}>
+          <div
+            id="data-grid-container"
+            style={{
+              ...styles.dataGridContainer,
+              position: "relative",
+            }}
+          >
             <ExtractDataGrid
               ref={dataGridRef}
               onAddDocIds={handleAddDocIdsToExtract}
@@ -711,6 +727,7 @@ export const EditExtractModal = ({
               cells={cells}
               rows={rows}
               columns={columns}
+              loading={Boolean(isGridLoading)}
             />
           </div>
         </ModalContent>

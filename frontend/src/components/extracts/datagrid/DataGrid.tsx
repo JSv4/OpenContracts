@@ -16,7 +16,7 @@ import DataGrid, {
 } from "react-data-grid";
 import { useMutation } from "@apollo/client";
 import { toast } from "react-toastify";
-import { Button, Icon, Popup } from "semantic-ui-react";
+import { Button, Icon, Popup, Dimmer, Loader } from "semantic-ui-react";
 import {
   REQUEST_APPROVE_DATACELL,
   REQUEST_EDIT_DATACELL,
@@ -49,7 +49,6 @@ import {
 import "react-data-grid/lib/styles.css";
 import { useDropzone } from "react-dropzone";
 import { UPLOAD_DOCUMENT } from "../../../graphql/mutations";
-import { Dimmer, Loader } from "semantic-ui-react";
 import { parseOutputType } from "../../../utils/parseOutputType";
 import { JSONSchema7 } from "json-schema";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
@@ -555,6 +554,20 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       setIsCreateColumnModalOpen(false);
     };
 
+    // Add this near the top of the component, with other memoized values
+    const columnSchemas = useMemo(() => {
+      const schemas = new Map<string, JSONSchema7>();
+      columns.forEach((col) => {
+        try {
+          schemas.set(col.id, parseOutputType(col.outputType));
+        } catch (error) {
+          console.error(`Failed to parse schema for column ${col.id}:`, error);
+          schemas.set(col.id, {}); // Fallback empty schema
+        }
+      });
+      return schemas;
+    }, [columns]);
+
     const gridColumns = useMemo(() => {
       const columnsArray = [
         {
@@ -619,21 +632,23 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
             renderHeaderCell: () => (
               <div>
                 <span>{col.name}</span>
-                <div className="header-controls">
-                  <Button
-                    icon="edit"
-                    size="mini"
-                    onClick={() => handleEditColumn(col)}
-                    disabled={Boolean(extract.started)}
-                  />
-                  <Button
-                    icon="trash"
-                    size="mini"
-                    color="red"
-                    onClick={() => onRemoveColumnId(col.id)}
-                    disabled={Boolean(extract.started)}
-                  />
-                </div>
+                {!extract.started && (
+                  <div className="header-controls">
+                    <Button
+                      icon="edit"
+                      size="mini"
+                      onClick={() => handleEditColumn(col)}
+                      disabled={Boolean(extract.started)}
+                    />
+                    <Button
+                      icon="trash"
+                      size="mini"
+                      color="red"
+                      onClick={() => onRemoveColumnId(col.id)}
+                      disabled={Boolean(extract.started)}
+                    />
+                  </div>
+                )}
               </div>
             ),
             renderCell: (props: any) => {
@@ -651,7 +666,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
                   onReject={() => handleRejectCell(content.cellId)}
                   onEdit={handleEditDatacell}
                   cellId={content.cellId}
-                  readOnly={!isExtractComplete}
+                  readOnly={Boolean(!isExtractComplete || loading)}
                   isExtractComplete={Boolean(isExtractComplete)}
                   schema={columnSchemas.get(col.id) || {}}
                   extractIsList={Boolean(col.extractIsList)}
@@ -700,6 +715,14 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       handleEditColumn,
       onRemoveColumnId,
       onAddColumn,
+      cellStatusMap,
+      handleApproveCell,
+      handleRejectCell,
+      handleEditDatacell,
+      isExtractComplete,
+      loading,
+      getCellContent,
+      columnSchemas,
     ]);
 
     // Add an effect to monitor columns changes
@@ -888,19 +911,44 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       [columns]
     );
 
-    // Add this near the top of the component, with other memoized values
-    const columnSchemas = useMemo(() => {
-      const schemas = new Map<string, JSONSchema7>();
-      columns.forEach((col) => {
-        try {
-          schemas.set(col.id, parseOutputType(col.outputType));
-        } catch (error) {
-          console.error(`Failed to parse schema for column ${col.id}:`, error);
-          schemas.set(col.id, {}); // Fallback empty schema
+    const [updateColumnMutation] = useMutation<
+      RequestUpdateColumnOutputType,
+      RequestUpdateColumnInputType
+    >(REQUEST_UPDATE_COLUMN, {
+      onCompleted: (data) => {
+        if (data.updateColumn.ok) {
+          toast.success("Column updated successfully!");
+          // Update your state or refetch queries as needed
+        } else {
+          toast.error(`Failed to update column: ${data.updateColumn.message}`);
         }
-      });
-      return schemas;
-    }, [columns]);
+      },
+      onError: (error) => {
+        console.error("Update column error:", error);
+        toast.error("An error occurred while updating the column.");
+      },
+    });
+
+    const [deleteColumnMutation] = useMutation<
+      RequestDeleteColumnOutputType,
+      RequestDeleteColumnInputType
+    >(REQUEST_DELETE_COLUMN, {
+      onCompleted: (data) => {
+        if (data.deleteColumn.ok) {
+          toast.success("Column deleted successfully!");
+          // Update your state or refetch queries as needed
+        } else {
+          toast.error(`Failed to delete column: ${data.deleteColumn.message}`);
+        }
+      },
+      onError: (error) => {
+        console.error("Delete column error:", error);
+        toast.error("An error occurred while deleting the column.");
+      },
+    });
+
+    const [openSelectDocumentsModal, setOpenSelectDocumentsModal] =
+      useState<boolean>(false);
 
     const handleRowsDelete = useCallback(async () => {
       if (!extract.started && selectedRows.size > 0) {
@@ -1044,45 +1092,6 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       handleFilterChange,
     ]);
 
-    const [updateColumnMutation] = useMutation<
-      RequestUpdateColumnOutputType,
-      RequestUpdateColumnInputType
-    >(REQUEST_UPDATE_COLUMN, {
-      onCompleted: (data) => {
-        if (data.updateColumn.ok) {
-          toast.success("Column updated successfully!");
-          // Update your state or refetch queries as needed
-        } else {
-          toast.error(`Failed to update column: ${data.updateColumn.message}`);
-        }
-      },
-      onError: (error) => {
-        console.error("Update column error:", error);
-        toast.error("An error occurred while updating the column.");
-      },
-    });
-
-    const [deleteColumnMutation] = useMutation<
-      RequestDeleteColumnOutputType,
-      RequestDeleteColumnInputType
-    >(REQUEST_DELETE_COLUMN, {
-      onCompleted: (data) => {
-        if (data.deleteColumn.ok) {
-          toast.success("Column deleted successfully!");
-          // Update your state or refetch queries as needed
-        } else {
-          toast.error(`Failed to delete column: ${data.deleteColumn.message}`);
-        }
-      },
-      onError: (error) => {
-        console.error("Delete column error:", error);
-        toast.error("An error occurred while deleting the column.");
-      },
-    });
-
-    const [openSelectDocumentsModal, setOpenSelectDocumentsModal] =
-      useState<boolean>(false);
-
     // Add this function inside your component
     const getComparator = useCallback((sortColumn: string) => {
       return (a: ExtractGridRow, b: ExtractGridRow) => {
@@ -1198,8 +1207,8 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
     return (
       <>
         {loading && (
-          <Dimmer active>
-            <Loader>Loading...</Loader>
+          <Dimmer active inverted style={{ position: "absolute", margin: 0 }}>
+            <Loader>Processing...</Loader>
           </Dimmer>
         )}
 
@@ -1256,18 +1265,18 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
             rows={sortedGridRows}
             rowKeyGetter={(row) => row.id}
             selectedRows={selectedRows}
-            onSelectedRowsChange={setSelectedRows}
+            onSelectedRowsChange={!loading ? setSelectedRows : undefined}
             isRowSelectionDisabled={(row) =>
               Boolean(extract.started) || row.id === "placeholder"
             }
             className="custom-data-grid"
-            onRowsChange={onRowsChange}
-            onCopy={handleCopy}
-            onPaste={handlePaste}
+            onRowsChange={!loading ? onRowsChange : undefined}
+            onCopy={!loading ? handleCopy : undefined}
+            onPaste={!loading ? handlePaste : undefined}
             headerRowHeight={56}
             defaultColumnOptions={{ sortable: true }}
             sortColumns={sortColumns}
-            onSortColumnsChange={setSortColumns}
+            onSortColumnsChange={!loading ? setSortColumns : undefined}
             rowHeight={getRowHeight}
           />
 
@@ -1282,6 +1291,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
                 left: "16px",
                 zIndex: 1000,
               }}
+              disabled={loading}
             />
           )}
 
@@ -1414,24 +1424,18 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
             right: 0 !important;
             width: 8px !important;
             z-index: 1 !important;
-            background-color: rgba(0, 0, 0, 0.1) !important;
+            background-color: black !important;
             cursor: col-resize !important;
-            color: rgba(0, 0, 0, 0.9) !important;
           }
 
           .rdg-cell-resizer:hover {
-            background-color: rgba(0, 0, 0, 0.2) !important;  /* darker on hover */
+            background-color: black !important;
           }
 
           /* Make the resize cursor black */
           .rdg-cell-resizer.rdg-cell-resizer-hover {
             cursor: col-resize !important;
             color: black !important;
-          }
-
-          .header-controls {
-            position: relative !important;
-            z-index: 2 !important;
           }
 
           /* Make resize cursor black throughout header */

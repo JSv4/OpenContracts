@@ -1414,7 +1414,9 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
             right: 0 !important;
             width: 8px !important;
             z-index: 1 !important;
-            background-color: rgba(0, 0, 0, 0.1) !important;  /* subtle background */
+            background-color: rgba(0, 0, 0, 0.1) !important;
+            cursor: col-resize !important;
+            color: rgba(0, 0, 0, 0.9) !important;
           }
 
           .rdg-cell-resizer:hover {

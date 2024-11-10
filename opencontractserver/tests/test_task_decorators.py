@@ -132,9 +132,7 @@ class DocAnalyzerTaskTestCase(TestCase):
 
     def test_doc_analyzer_task_backend_lock_retry_cycle(self):
         with self.assertRaises(Retry):
-            task = sample_task.s(
-                doc_id=self.document.id, analysis_id=self.analysis.id
-            ).apply()
+            sample_task.s(doc_id=self.document.id, analysis_id=self.analysis.id).apply()
 
     def test_doc_analyzer_task_no_backend_lock(self):
         task = sample_task.si(
@@ -215,7 +213,8 @@ class DocAnalyzerTaskTestCase(TestCase):
 
     def test_function_has_access_to_txt_text_no_analysis(self):
         @doc_analyzer_task()
-        def test_txt_text_received(*args, pdf_text_extract, **kwargs): return [], [], [{"data": pdf_text_extract}], True  # noqa
+        def test_txt_text_received(*args, pdf_text_extract, **kwargs):
+            return [], [], [{"data": pdf_text_extract}], True  # noqa
 
         with self.assertRaisesRegex(
             ValueError, r"analysis_id is required for doc_analyzer_task"
@@ -224,7 +223,8 @@ class DocAnalyzerTaskTestCase(TestCase):
 
     def test_function_has_access_to_txt_text_invalid_analysis(self):
         @doc_analyzer_task()
-        def test_txt_text_received(*args, pdf_text_extract, **kwargs): return [], [], [{"data": pdf_text_extract}], True  # noqa
+        def test_txt_text_received(*args, pdf_text_extract, **kwargs):
+            return [], [], [{"data": pdf_text_extract}], True  # noqa
 
         with self.assertRaisesRegex(ValueError, r"Analysis with id -1 does not exist"):
             test_txt_text_received.si(

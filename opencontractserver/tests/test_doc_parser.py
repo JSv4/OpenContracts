@@ -1,5 +1,4 @@
 #  Copyright (C) 2022  John Scrudato
-import io
 import logging
 from unittest.mock import patch
 

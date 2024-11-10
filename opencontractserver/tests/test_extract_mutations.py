@@ -1,4 +1,3 @@
-import json
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -295,7 +294,7 @@ class ExtractsMutationTestCase(TestCase):
             mutation {{
                 editDatacell(
                     datacellId: "{}",
-                    editedData: {}
+                    editedData: {{corrected: "New Test Data"}}
                 ) {{
                     ok
                     message
@@ -306,7 +305,7 @@ class ExtractsMutationTestCase(TestCase):
                 }}
             }}
         """.format(
-            to_global_id("DatacellType", datacell.id), json.dumps(new_data)
+            to_global_id("DatacellType", datacell.id)
         )
 
         result = self.client.execute(mutation)

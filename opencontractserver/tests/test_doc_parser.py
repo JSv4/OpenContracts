@@ -1,15 +1,12 @@
 #  Copyright (C) 2022  John Scrudato
-import io
 import logging
-import pathlib
-import uuid
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
 from django.db import transaction
 from django.test import TestCase
-from PyPDF2 import PdfReader, PdfWriter
+from PIL import Image
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
@@ -17,10 +14,9 @@ from opencontractserver.documents.models import Document
 from opencontractserver.tasks.doc_tasks import (
     burn_doc_annotations,
     convert_doc_to_funsd,
-    extract_thumbnail,
-    process_pdf_page,
+    extract_pdf_thumbnail,
+    extract_txt_thumbnail,
     set_doc_lock_state,
-    split_pdf_for_processing,
 )
 from opencontractserver.tests.fixtures import (
     SAMPLE_PAWLS_FILE_ONE_PATH,
@@ -62,68 +58,61 @@ class DocParserTestCase(TestCase):
             )
             self.corpus.save()
 
-    def test_pdf_thumbnail_extraction(self):
+    def create_mock_image(self, width: int, height: int) -> Image.Image:
+        """Create a mock image with the given dimensions."""
+        return Image.new("RGB", (width, height), color="red")
 
-        # TODO - expand test to actually check results
-        extract_thumbnail.s(doc_id=self.doc.id).apply().get()
+    @patch("opencontractserver.tasks.doc_tasks.convert_from_bytes")
+    def test_pdf_thumbnail_extraction(self, mock_convert_from_bytes):
+        """Test PDF thumbnail extraction with various image sizes and orientations."""
 
-    def test_pdf_sharding(self):
-        shards = (
-            split_pdf_for_processing.s(user_id=self.user.id, doc_id=self.doc.id)
-            .apply()
-            .get()
-        )
+        test_cases = [
+            (400, 400, "square"),
+            (600, 400, "landscape"),
+            (400, 600, "portrait"),
+        ]
 
-        self.assertEqual(len(shards), 23)
+        for width, height, orientation in test_cases:
+            with self.subTest(orientation=orientation):
+                # Create a mock image
+                mock_image = self.create_mock_image(width, height)
+                mock_convert_from_bytes.return_value = [mock_image]
 
-    def test_process_pdf_page(self):
-        page_bytes_stream = io.BytesIO()
-        doc_path = self.doc.pdf_file.name
-        doc_file = default_storage.open(doc_path, mode="rb")
-        pdf = PdfReader(doc_file)
-        page = pdf.pages[0]
-        pdf_writer = PdfWriter()
-        pdf_writer.add_page(page)
-        pdf_writer.write(page_bytes_stream)
+                # Call the task
+                extract_pdf_thumbnail(doc_id=self.doc.id)
 
-        pdf_fragment_folder_path = pathlib.Path(
-            f"/tmp/user_{self.user.id}/pdf_fragments"
-        )
-        pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
-        pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}.pdf"
-        with pdf_fragment_path.open("wb") as f:
-            f.write(page_bytes_stream.getvalue())
+                # Refresh the document from the database
+                self.doc.refresh_from_db()
 
-        page_path = pdf_fragment_path.resolve().__str__()
+                # Check that the icon was created
+                self.assertTrue(self.doc.icon, "Icon was not created.")
 
-        result = (
-            process_pdf_page.si(
-                total_page_count=23,
-                page_num=0,
-                page_path=page_path,
-                user_id=self.user.id,
-            )
-            .apply()
-            .get()
-        )
+                # Open the saved image and check its properties
+                with self.doc.icon.open("rb") as icon_file:
+                    saved_image = Image.open(icon_file)
 
-        self.assertEqual(len(result), 3)
-        self.assertEqual(result[0], 0)  # page number
-        self.assertIsInstance(result[1], str)  # pawls fragment path
-        self.assertEqual(result[2], pdf_fragment_path.__str__())  # page path
+                    # Check the dimensions of the saved image
+                    self.assertEqual(
+                        saved_image.size,
+                        (400, 200),
+                        "Image dimensions do not match expected size.",
+                    )
+
+                    # Check that the image is not empty (all white)
+                    self.assertNotEqual(
+                        saved_image.getcolors(),
+                        [(400 * 200, (255, 255, 255))],
+                        "Image appears to be empty or all white.",
+                    )
+
+                # Clean up
+                self.doc.icon.delete()
 
     def test_set_doc_lock_state(self):
         set_doc_lock_state.apply(kwargs={"locked": True, "doc_id": self.doc.id}).get()
 
         self.doc.refresh_from_db()
         self.assertTrue(self.doc.backend_lock)
-
-    def test_split_pdf_for_processing(self):
-
-        result = split_pdf_for_processing.apply(args=(self.user.id, self.doc.id)).get()
-
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 23)
 
     def test_burn_doc_annotations(self):
         # TODO - handle text labels and do substantive test
@@ -171,3 +160,40 @@ class DocParserTestCase(TestCase):
         self.assertEqual(result[0], self.doc.id)
         self.assertIsInstance(result[1], dict)
         self.assertIsInstance(result[2], list)
+
+    @patch("opencontractserver.tasks.doc_tasks.create_text_thumbnail")
+    def test_extract_txt_thumbnail(self, mock_create_text_thumbnail):
+        # Create a mock image
+        mock_image = Image.new("RGB", (100, 100), color="red")
+        mock_create_text_thumbnail.return_value = mock_image
+
+        # Create a sample text content
+        sample_text = "This is a sample text for thumbnail extraction."
+        text_file = ContentFile(sample_text.encode("utf-8"), name="test_extract.txt")
+
+        # Update the document with the text extract file
+        self.doc.txt_extract_file = text_file
+        self.doc.save()
+
+        # Call the task
+        extract_txt_thumbnail.apply(kwargs={"doc_id": self.doc.id}).get()
+
+        # Refresh the document from the database
+        self.doc.refresh_from_db()
+
+        # Assert that the icon field is not empty
+        self.assertTrue(self.doc.icon)
+        self.assertIn("_icon.png", self.doc.icon.name)
+
+        # Assert that create_text_thumbnail was called with the correct text
+        mock_create_text_thumbnail.assert_called_once_with(sample_text)
+
+        # Verify the content of the saved image
+        with self.doc.icon.open("rb") as icon_file:
+            saved_image = Image.open(icon_file)
+            self.assertEqual(saved_image.size, (100, 100))
+            self.assertEqual(saved_image.mode, "RGB")
+
+        # Clean up
+        self.doc.icon.delete()
+        self.doc.txt_extract_file.delete()

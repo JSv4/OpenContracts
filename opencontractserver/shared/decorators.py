@@ -54,6 +54,7 @@ def doc_analyzer_task(max_retries=None):
             if analysis_id:
                 try:
                     analysis = Analysis.objects.get(id=analysis_id)
+                    logger.info(f"Link to analysis: {analysis}")
                 except ObjectDoesNotExist:
                     raise ValueError(f"Analysis with id {analysis_id} does not exist")
             else:
@@ -66,12 +67,12 @@ def doc_analyzer_task(max_retries=None):
                 delay = min(INITIAL_DELAY + (retry_count * DELAY_INCREMENT), MAX_DELAY)
                 logger.info(f"\tNew delay: {delay}")
 
-                # If we've reached MAX_DELAY, reset the retry count
-                if delay >= MAX_DELAY:
-                    delay = INITIAL_DELAY
+                # If we've reached MAX_DELAY, STOP.
+                if delay < MAX_DELAY:
+                    # delay = INITIAL_DELAY
 
-                logger.info("Starting retry...")
-                raise self.retry(countdown=delay)
+                    logger.info("Starting retry...")
+                    raise self.retry(countdown=delay)
 
             try:
                 # Retrieve necessary file contents
@@ -93,8 +94,10 @@ def doc_analyzer_task(max_retries=None):
                 )
 
                 # Create PdfDataLayer
-                pdf_data_layer = makePdfTranslationLayerFromPawlsTokens(
-                    pdf_pawls_extract
+                pdf_data_layer = (
+                    makePdfTranslationLayerFromPawlsTokens(pdf_pawls_extract)
+                    if pdf_pawls_extract
+                    else []
                 )
 
                 # Call the wrapped function with the retrieved data
@@ -127,9 +130,10 @@ def doc_analyzer_task(max_retries=None):
                     logger.info("Doc analyzer task passed... handle outputs.")
 
                     # Create doc analysis row
-                    data_row = DocumentAnalysisRow(
+                    data_row, _ = DocumentAnalysisRow.objects.get_or_create(
                         document=doc, analysis=analysis, creator=analysis.creator
                     )
+                    logger.info(f"Retrieved data row: {data_row}")
                     data_row.save()
 
                     # Check returned types if passed.
@@ -175,42 +179,79 @@ def doc_analyzer_task(max_retries=None):
                                     "Second element of the tuple must be a list of (TextSpan, str) tuples"
                                 )
 
-                            # Convert (TextSpan, str) pairs to OpenContractsAnnotationPythonType
-                            logger.info(f"Create Annotation Linked to {corpus_id}")
-                            span, label = span_label_pair
-                            annotation_data = (
-                                pdf_data_layer.create_opencontract_annotation_from_span(
+                            # Convert to appropriate form of annotation depending on the document type...
+                            # FOR application/pdf... we want token annotations
+                            if doc.file_type in ["application/pdf"]:
+                                # Convert (TextSpan, str) pairs to OpenContractsAnnotationPythonType
+                                logger.info(f"Create Annotation Linked to {corpus_id}")
+                                span, label = span_label_pair
+                                annotation_data = pdf_data_layer.create_opencontract_annotation_from_span(
                                     {"span": span, "annotation_label": label}
                                 )
-                            )
-                            label, _ = AnnotationLabel.objects.get_or_create(
-                                text=annotation_data["annotationLabel"],
-                                label_type=LabelType.TOKEN_LABEL,
-                                creator=analysis.creator,
-                                analyzer=analysis.analyzer,
-                            )
+                                label, _ = AnnotationLabel.objects.get_or_create(
+                                    text=annotation_data["annotationLabel"],
+                                    label_type=LabelType.TOKEN_LABEL,
+                                    creator=analysis.creator,
+                                    analyzer=analysis.analyzer,
+                                )
 
-                            # Harder to filter these to ensure no duplicates...
-                            annot = Annotation(
-                                document=doc,
-                                analysis=analysis,
-                                annotation_label=label,
-                                page=annotation_data["page"],
-                                raw_text=annotation_data["rawText"],
-                                json=annotation_data["annotation_json"],
-                                creator=analysis.creator,
-                                **({"corpus_id": corpus_id} if corpus_id else {}),
-                            )
-                            annot.save()
-                            resulting_annotations.append(annot)
+                                # Harder to filter these to ensure no duplicates...
+                                annot = Annotation(
+                                    document=doc,
+                                    analysis=analysis,
+                                    annotation_label=label,
+                                    page=annotation_data["page"],
+                                    raw_text=annotation_data["rawText"],
+                                    json=annotation_data["annotation_json"],
+                                    annotation_type=LabelType.TOKEN_LABEL,
+                                    creator=analysis.creator,
+                                    **({"corpus_id": corpus_id} if corpus_id else {}),
+                                )
+                                annot.save()
+                                resulting_annotations.append(annot)
+
+                            # FOR application/txt... we want span-based annotations
+                            elif doc.file_type in ["application/txt"]:
+                                logger.info(f"Create Annotation Linked to {corpus_id}")
+                                span, label = span_label_pair
+                                label, _ = AnnotationLabel.objects.get_or_create(
+                                    text=label,
+                                    label_type=LabelType.SPAN_LABEL,
+                                    creator=analysis.creator,
+                                    analyzer=analysis.analyzer,
+                                )
+
+                                # Harder to filter these to ensure no duplicates...
+                                annot = Annotation(
+                                    document=doc,
+                                    analysis=analysis,
+                                    annotation_label=label,
+                                    page=1,
+                                    raw_text=pdf_text_extract[
+                                        span["start"] : span["end"]
+                                    ],
+                                    annotation_type=LabelType.SPAN_LABEL,
+                                    json={"start": span["start"], "end": span["end"]},
+                                    creator=analysis.creator,
+                                    **({"corpus_id": corpus_id} if corpus_id else {}),
+                                )
+                                annot.save()
+                                resulting_annotations.append(annot)
+
+                            else:
+                                raise ValueError(
+                                    f"Unexpected file type: {doc.file_type}"
+                                )
 
                         for doc_label in doc_annotations:
+                            logger.info(f"Creating doc label annotation: {doc_label}")
                             label, _ = AnnotationLabel.objects.get_or_create(
                                 text=doc_label,
                                 label_type=LabelType.DOC_TYPE_LABEL,
                                 creator=analysis.creator,
                                 analyzer=analysis.analyzer,
                             )
+                            logger.info(f"Created/found label: {label}")
 
                             annot = Annotation(
                                 document=doc,
@@ -219,10 +260,13 @@ def doc_analyzer_task(max_retries=None):
                                 page=1,
                                 raw_text="",
                                 json={},
+                                annotation_type=LabelType.DOC_TYPE_LABEL,
                                 creator=analysis.creator,
                                 **({"corpus_id": corpus_id} if corpus_id else {}),
                             )
+                            logger.info(f"Created annotation object: {annot}")
                             annot.save()
+                            logger.info(f"Saved annotation: {annot.id}")
                             resulting_annotations.append(annot)
 
                     # Link resulting annotations

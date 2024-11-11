@@ -6,17 +6,27 @@ import React, {
   useMemo,
   useLayoutEffect,
 } from "react";
-import { AnnotationLabelType } from "../../../graphql/types";
-import { getPageBoundsFromCanvas } from "../../../utils/transform";
-import { PageProps, BoundingBox, PermissionTypes } from "../../types";
-import { AnnotationStore, normalizeBounds, PDFStore } from "../context";
+import { AnnotationLabelType } from "../../../../graphql/types";
+import { getPageBoundsFromCanvas } from "../../../../utils/transform";
+import {
+  PageProps,
+  BoundingBox,
+  PermissionTypes,
+  TextSearchTokenResult,
+} from "../../../types";
+import {
+  AnnotationStore,
+  normalizeBounds,
+  PDFStore,
+  ServerTokenAnnotation,
+} from "../../context";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
-import { Selection } from "./Selection";
-import { SearchResult } from "./SearchResult";
-import { SelectionBoundary } from "./SelectionBoundary";
-import { SelectionTokenGroup } from "./SelectionTokenGroup";
+import { Selection } from "../../display/components/Selection";
+import { SearchResult } from "../../display/components/SearchResult";
+import { SelectionBoundary } from "../../display/components/SelectionBoundary";
+import { SelectionTokenGroup } from "../../display/components/SelectionTokenGroup";
 
-export const Page = ({
+export const PDFPage = ({
   pageInfo,
   corpus_permissions,
   read_only,
@@ -241,9 +251,13 @@ export const Page = ({
   );
 
   const annots_to_render = useMemo(() => {
-    const defined_annotations = annotations.filter(
-      (a) => a.json[pageInfo.page.pageNumber - 1] !== undefined
-    );
+    const defined_annotations = annotations
+      .filter((annot) => annot instanceof ServerTokenAnnotation)
+      .filter(
+        (a) =>
+          (a as ServerTokenAnnotation).json[pageInfo.page.pageNumber - 1] !==
+          undefined
+      );
 
     const filtered_by_structural = !annotationStore.showStructuralLabels
       ? defined_annotations.filter((annot) => !annot.structural)
@@ -413,6 +427,7 @@ export const Page = ({
       {scale &&
         pageInfo.bounds &&
         annotationStore.textSearchMatches
+          .filter((match): match is TextSearchTokenResult => "tokens" in match)
           .filter(
             (match) => match.tokens[pageInfo.page.pageNumber - 1] !== undefined
           )

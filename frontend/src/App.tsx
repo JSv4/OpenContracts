@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 
 import { useAuth0 } from "@auth0/auth0-react";
 
@@ -23,11 +23,12 @@ import {
   selectedAnalyses,
   onlyDisplayTheseAnnotations,
   openedCorpus,
-  displayAnnotationOnAnnotatorLoad,
   showSelectedAnnotationOnly,
   showAnnotationBoundingBoxes,
   openedExtract,
   showSelectCorpusAnalyzerOrFieldsetModal,
+  showUploadNewDocumentsModal,
+  uploadModalPreloadedFiles,
 } from "./graphql/cache";
 
 import { NavMenu } from "./components/layout/NavMenu";
@@ -56,6 +57,8 @@ import { useEnv } from "./components/hooks/UseEnv";
 import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
 import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
 import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
+import { DocumentUploadModal } from "./components/widgets/modals/DocumentUploadModal";
+import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUploadModal";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
@@ -78,6 +81,9 @@ export const App = () => {
     showSelectCorpusAnalyzerOrFieldsetModal
   );
   const show_annotation_labels = useReactiveVar(showAnnotationLabels);
+  const show_upload_new_documents_modal = useReactiveVar(
+    showUploadNewDocumentsModal
+  );
 
   const { getAccessTokenSilently, user } = useAuth0();
 
@@ -124,6 +130,20 @@ export const App = () => {
   }, [getAccessTokenSilently, REACT_APP_USE_AUTH0, user?.sub]);
 
   console.log("Cookie Accepted: ", show_cookie_modal);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const filePackages: FileUploadPackageProps[] = acceptedFiles.map(
+      (file) => ({
+        file,
+        formData: {
+          title: file.name,
+          description: `Content summary for ${file.name}`,
+        },
+      })
+    );
+    showUploadNewDocumentsModal(true);
+    uploadModalPreloadedFiles(filePackages);
+  }, []);
 
   return (
     <div
@@ -208,7 +228,18 @@ export const App = () => {
             ) : (
               <></>
             )}
-
+            <DocumentUploadModal
+              refetch={() => {
+                showUploadNewDocumentsModal(false);
+                uploadModalPreloadedFiles([]);
+              }}
+              open={Boolean(show_upload_new_documents_modal)}
+              onClose={() => {
+                showUploadNewDocumentsModal(false);
+                uploadModalPreloadedFiles([]);
+              }}
+              corpusId={opened_corpus?.id || null}
+            />
             <Routes>
               <Route path="/" element={<Corpuses />} />
               {!REACT_APP_USE_AUTH0 ? (

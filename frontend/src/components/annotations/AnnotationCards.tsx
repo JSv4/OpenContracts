@@ -224,6 +224,12 @@ export const AnnotationCards: React.FC<AnnotationCardProps> = ({
         label: "Extract",
         color: "#2196F3",
       };
+    } else if (!item.analysis) {
+      return {
+        icon: <User size={14} />,
+        label: "Manually-Annotated",
+        color: "#4CAF50",
+      };
     } else {
       return {
         icon: <BotIcon size={14} />,

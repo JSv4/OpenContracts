@@ -106,4 +106,5 @@ const LabelSelectorDialogContainer = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  z-index: 100000;
 `;

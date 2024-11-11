@@ -1,11 +1,16 @@
 import base64
 import logging
+import os
 import pathlib
+import string
+import textwrap
 import typing
 import uuid
 from io import BytesIO
+from typing import Union
 
 from django.conf import settings
+from PIL import Image, ImageDraw, ImageFont
 from PyPDF2 import PdfReader
 from PyPDF2.generic import (
     ArrayObject,
@@ -15,8 +20,6 @@ from PyPDF2.generic import (
     NumberObject,
     TextStringObject,
 )
-
-from opencontractserver.types.dicts import PawlsPagePythonType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -41,7 +44,6 @@ def convert_hex_to_rgb_tuple(color: str) -> tuple[int, ...]:
 def createHighlight(
     x1: int, y1: int, x2: int, y2: int, meta: dict, color: tuple[float, float, float]
 ) -> DictionaryObject:
-
     logger.info("createHighlight() - Starting...")
     logger.info(f"meta: {meta}")
     logger.info(f"color: {color}")
@@ -95,26 +97,6 @@ def add_highlight_to_page(highlight: DictionaryObject, page):
         page[NameObject("/Annots")].append(highlight_ref)
     else:
         page[NameObject("/Annots")] = ArrayObject([highlight_ref])
-
-
-def extract_pawls_from_pdfs_bytes(
-    pdf_bytes: bytes,
-) -> list[PawlsPagePythonType]:
-
-    from pdfpreprocessor.preprocessors.tesseract import process_tesseract
-
-    pdf_fragment_folder_path = pathlib.Path("/tmp/user_0/pdf_fragments")
-    pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
-    pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}.pdf"
-    with pdf_fragment_path.open("wb") as f:
-        f.write(pdf_bytes)
-
-    page_path = pdf_fragment_path.resolve().__str__()
-    annotations: list = process_tesseract(page_path)
-
-    pdf_fragment_path.unlink()
-
-    return annotations
 
 
 def split_pdf_into_images(
@@ -205,3 +187,99 @@ def check_if_pdf_needs_ocr(file_object, threshold=10):
 
     # If the total extracted text is less than the threshold, it likely needs OCR
     return len(total_text.strip()) < threshold
+
+
+def is_plaintext_content(
+    content: Union[str, bytes], sample_size: int = 1024, threshold: float = 0.8
+) -> bool:
+    """
+    Check if the given content is plaintext.
+
+    Args:
+        content (Union[str, bytes]): The content to check. Can be a file path, bytes, or string.
+        sample_size (int): The number of bytes to sample for the check.
+        threshold (float): The threshold ratio of printable characters to consider as plaintext.
+
+    Returns:
+        bool: True if the content is plaintext, False otherwise.
+
+    Raises:
+        FileNotFoundError: If the provided content is a non-existent file path.
+    """
+    if isinstance(content, str):
+        if not os.path.exists(content):
+            raise FileNotFoundError(f"File not found: {content}")
+        with open(content, "rb") as f:
+            sample = f.read(sample_size)
+    else:
+        sample = content[:sample_size]
+
+    if not sample:
+        return False  # Empty content is not considered plaintext
+
+    printable_count = sum(1 for byte in sample if chr(byte) in string.printable)
+    printable_ratio = printable_count / len(sample)
+
+    return printable_ratio >= threshold
+
+
+def create_text_thumbnail(
+    text: str,
+    width: int = 300,
+    height: int = 300,
+    font_size: int = 12,
+    margin: int = 20,
+    line_spacing: int = 4,
+) -> Image.Image:
+    """
+    Create a thumbnail image from the given text.
+
+    Args:
+        text (str): The text to render in the thumbnail.
+        width (int): The width of the thumbnail image.
+        height (int): The height of the thumbnail image.
+        font_size (int): The font size to use for the text.
+        margin (int): The margin around the text.
+        line_spacing (int): The spacing between lines of text.
+
+    Returns:
+        Image.Image: A PIL Image object containing the rendered text thumbnail.
+    """
+    logger.debug(f"Creating text thumbnail with dimensions {width}x{height}")
+
+    # Create a new white image
+    img = Image.new("RGB", (width, height), color="white")
+    draw = ImageDraw.Draw(img)
+
+    # Load a font
+    try:
+        font = ImageFont.truetype("arial.ttf", font_size)
+        logger.debug("Using Arial font")
+    except OSError:
+        font = ImageFont.load_default()
+        logger.debug("Using default font")
+
+    # Calculate the maximum width of text
+    max_width = width - 2 * margin
+
+    # Wrap the text
+    lines = textwrap.wrap(text, width=max_width // (font_size // 2))
+    logger.debug(f"Text wrapped into {len(lines)} lines")
+
+    # Draw the text
+    y_text = margin
+    for line in lines:
+        draw.text((margin, y_text), line, font=font, fill="black")
+        y_text += font_size + line_spacing
+
+        # Stop if we've reached the bottom of the image
+        if y_text > height - margin:
+            logger.debug("Reached bottom of image, truncating text")
+            break
+
+    # Add some lines to simulate ruled paper
+    for i in range(margin, height - margin, font_size + line_spacing):
+        draw.line([(margin, i), (width - margin, i)], fill="lightblue", width=1)
+
+    logger.debug("Text thumbnail created successfully")
+    return img

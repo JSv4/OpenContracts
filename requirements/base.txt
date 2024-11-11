@@ -26,7 +26,7 @@ django-redis==5.2.0  # https://github.com/jazzband/django-redis
 django-filter==22.1  # https://github.com/carltongibson/django-filter
 django-storages[boto3]==1.13.1  # https://github.com/jschneier/django-storages
 django-extensions==3.2.3  # https://github.com/django-extensions/django-extensions
-whitenoise
+whitenoise==6.7.0
 django-tree-queries
 pgvector  # For vector embeddings
 
@@ -35,22 +35,6 @@ pgvector  # For vector embeddings
 djangorestframework==3.15.2  # https://github.com/encode/django-rest-framework
 django-cors-headers==3.13.0  # https://github.com/adamchainz/django-cors-headers
 drf-extra-fields==3.7.0  # https://github.com/Hipo/drf-extra-fields
-
-# PAWLS-related (for creating features for PDF annotation frontend based on PAWLS)
-# ------------------------------------------------------------------------------
-# Pawls preprocessors are available as a command line utility in their repo for now
-# BUT we can install them from their github repo subdirectory using the syntax below:
-git+https://github.com/JSv4/PDF-Preprocessors@v1.0.5  # TODO - DEPRECATED. REMOVE.
-scikit-learn
-pdfplumber
-pytesseract
-tabulate
-pycocotools
-click>=6.7
-tqdm
-pdfminer
-pdf2image
-poppler-utils
 
 # Doc Analysis (NLP dependencies, placeholder) - WARNING, these are all in same environment... not ideal.
 # ------------------------------------------------------------------------------
@@ -64,6 +48,7 @@ marvin==2.3.7
 plasmapdf
 spacy
 gliner
+pdf2image
 
 # Data Processing Tools
 # -------------------------------------------------------------------------------

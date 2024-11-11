@@ -8,7 +8,9 @@ from graphql_relay import to_global_id
 from config.graphql.schema import schema
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.extracts.models import Extract, Fieldset
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
+from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()
 
@@ -184,3 +186,159 @@ class ExtractsMutationTestCase(TestCase):
         self.extract.refresh_from_db()
         self.assertNotIn(self.document1, self.extract.documents.all())
         self.assertNotIn(self.document2, self.extract.documents.all())
+
+    def test_approve_datacell_mutation(self):
+        """Test approving a datacell."""
+        datacell = Datacell.objects.create(
+            extract=self.extract,
+            column=Column.objects.create(
+                name="TestColumn",
+                fieldset=self.fieldset,
+                output_type="str",
+                creator=self.user,
+            ),
+            document=self.document1,
+            data="Test Data",
+            data_definition="Test Definition",
+            creator=self.user,
+        )
+
+        mutation = """
+            mutation {{
+                approveDatacell(
+                    datacellId: "{}"
+                ) {{
+                    ok
+                    message
+                    obj {{
+                        id
+                        approvedBy {{
+                            username
+                        }}
+                    }}
+                }}
+            }}
+        """.format(
+            to_global_id("DatacellType", datacell.id)
+        )
+
+        result = self.client.execute(mutation)
+        self.assertIsNone(result.get("errors"))
+        self.assertTrue(result["data"]["approveDatacell"]["ok"])
+
+        datacell.refresh_from_db()
+        self.assertEqual(datacell.approved_by, self.user)
+        self.assertIsNone(datacell.rejected_by)
+
+    def test_reject_datacell_mutation(self):
+        """Test rejecting a datacell."""
+        datacell = Datacell.objects.create(
+            extract=self.extract,
+            column=Column.objects.create(
+                name="TestColumn",
+                fieldset=self.fieldset,
+                output_type="str",
+                creator=self.user,
+            ),
+            document=self.document1,
+            data="Test Data",
+            data_definition="Test Definition",
+            creator=self.user,
+        )
+
+        mutation = """
+            mutation {{
+                rejectDatacell(
+                    datacellId: "{}"
+                ) {{
+                    ok
+                    message
+                    obj {{
+                        id
+                        rejectedBy {{
+                            username
+                        }}
+                    }}
+                }}
+            }}
+        """.format(
+            to_global_id("DatacellType", datacell.id)
+        )
+
+        result = self.client.execute(mutation)
+        self.assertIsNone(result.get("errors"))
+        self.assertTrue(result["data"]["rejectDatacell"]["ok"])
+
+        datacell.refresh_from_db()
+        self.assertEqual(datacell.rejected_by, self.user)
+        self.assertIsNone(datacell.approved_by)
+
+    def test_edit_datacell_mutation(self):
+        """Test editing a datacell's corrected data."""
+        datacell = Datacell.objects.create(
+            extract=self.extract,
+            column=Column.objects.create(
+                name="TestColumn",
+                fieldset=self.fieldset,
+                output_type="str",
+                creator=self.user,
+            ),
+            document=self.document1,
+            data="Test Data",
+            data_definition="Test Definition",
+            creator=self.user,
+        )
+
+        new_data = {"corrected": "New Test Data"}
+        mutation = """
+            mutation {{
+                editDatacell(
+                    datacellId: "{}",
+                    editedData: {{corrected: "New Test Data"}}
+                ) {{
+                    ok
+                    message
+                    obj {{
+                        id
+                        correctedData
+                    }}
+                }}
+            }}
+        """.format(
+            to_global_id("DatacellType", datacell.id)
+        )
+
+        result = self.client.execute(mutation)
+        self.assertIsNone(result.get("errors"))
+        self.assertTrue(result["data"]["editDatacell"]["ok"])
+
+        datacell.refresh_from_db()
+        self.assertEqual(datacell.corrected_data, new_data)
+
+    def test_delete_extract_mutation(self):
+        """Test deleting an extract."""
+        # Set proper permissions for the user to delete the extract
+        set_permissions_for_obj_to_user(
+            self.user, self.extract, [PermissionTypes.DELETE]
+        )
+
+        mutation = """
+            mutation {{
+                deleteExtract(
+                    id: "{}"
+                ) {{
+                    ok
+                    message
+                }}
+            }}
+        """.format(
+            to_global_id("ExtractType", self.extract.id)
+        )
+
+        result = self.client.execute(mutation)
+        self.assertIsNone(result.get("errors"))
+        self.assertTrue(result["data"]["deleteExtract"]["ok"])
+
+        # Verify the extract was deleted
+        with self.assertRaises(Extract.DoesNotExist):
+            Extract.objects.get(id=self.extract.id)

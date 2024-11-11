@@ -141,6 +141,7 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
     backendLock,
     isPublic,
     myPermissions,
+    fileType,
   } = item;
 
   const cardClickHandler = (
@@ -290,7 +291,9 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
               </div>
             ) : null}
           </Card.Header>
-          <Card.Meta>{`Document Type: *.pdf`}</Card.Meta>
+          <Card.Meta>
+            Document Type: <Label size="mini">{fileType}</Label>
+          </Card.Meta>
           <Card.Description>
             <span>
               <b>Description:</b> {description}

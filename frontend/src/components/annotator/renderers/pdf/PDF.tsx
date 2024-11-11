@@ -2,10 +2,10 @@ import { useContext } from "react";
 import styled from "styled-components";
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import _ from "lodash";
-import { PDFStore } from "../context";
-import { LabelDisplayBehavior } from "../../../graphql/types";
-import { PermissionTypes } from "../../types";
-import { Page } from "./Page";
+import { PDFStore } from "../../context";
+import { LabelDisplayBehavior } from "../../../../graphql/types";
+import { PermissionTypes } from "../../../types";
+import { PDFPage } from "./PDFPage";
 
 export class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
@@ -81,17 +81,22 @@ export const PDF = ({
   const pdfStore = useContext(PDFStore);
 
   if (!pdfStore.doc) {
-    throw new Error("No Document");
+    // Instead of throwing an error, render nothing or a fallback UI
+    console.warn("PDF component rendered without a valid document.");
+    return null; // Or return a fallback UI
   }
+
   if (!pdfStore.pages) {
-    throw new Error("Document without Pages");
+    // Similarly, handle missing pages gracefully
+    console.warn("PDF component rendered without pages.");
+    return <div>No pages available.</div>;
   }
 
   return (
     <>
       {pdfStore.pages.map((p) => {
         return (
-          <Page
+          <PDFPage
             key={p.page.pageNumber}
             read_only={read_only}
             doc_permissions={doc_permissions}

@@ -8,7 +8,7 @@ from graphql_relay import to_global_id
 from config.graphql.schema import schema
 from opencontractserver.documents.models import Document
 from opencontractserver.types.enums import PermissionTypes
-from opencontractserver.utils.pdf import base_64_encode_bytes
+from opencontractserver.utils.files import base_64_encode_bytes
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()
@@ -85,7 +85,7 @@ class DocumentMutationTestCase(TestCase):
             result["data"]["uploadDocument"]["document"]["title"], "Test PDF"
         )
 
-    def test_upload_non_pdf_document(self):
+    def test_upload_txt_document(self):
         mutation = """
             mutation UploadDocument(
                 $file: String!,
@@ -131,9 +131,58 @@ class DocumentMutationTestCase(TestCase):
         result = self.client.execute(mutation, variables=variables)
 
         self.assertIsNone(result.get("errors"))
+        self.assertTrue(result["data"]["uploadDocument"]["ok"])
+
+    def test_upload_zip_document(self):
+        mutation = """
+            mutation UploadDocument(
+                $file: String!,
+                $filename: String!,
+                $title: String!,
+                $description: String!,
+                $customMeta: GenericScalar!,
+                $addToCorpusId: ID,
+                $makePublic: Boolean!
+            ) {
+                uploadDocument(
+                    base64FileString: $file,
+                    filename: $filename,
+                    title: $title,
+                    description: $description,
+                    customMeta: $customMeta,
+                    addToCorpusId: $addToCorpusId,
+                    makePublic: $makePublic
+                ) {
+                    ok
+                    message
+                    document {
+                        id
+                        title
+                    }
+                }
+            }
+        """  # noqa
+
+        # Create a mock ZIP file content
+        zip_content = b"PK\x03\x04\x14\x00\x00\x00\x08\x00"  # Minimal ZIP file header
+        zip_base64 = base_64_encode_bytes(zip_content)
+
+        variables = {
+            "file": zip_base64,
+            "filename": "test.zip",
+            "title": "Test ZIP",
+            "description": "A test ZIP file",
+            "makePublic": False,
+            "customMeta": {},
+        }
+
+        result = self.client.execute(mutation, variables=variables)
+
+        self.assertIsNone(result.get("errors"))
         self.assertFalse(result["data"]["uploadDocument"]["ok"])
         self.assertEqual(
-            result["data"]["uploadDocument"]["message"], "Unable to determine file type"
+            result["data"]["uploadDocument"]["message"],
+            "Unallowed filetype: application/zip",
         )
 
     def test_update_document_mutation(self):

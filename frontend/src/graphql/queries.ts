@@ -11,7 +11,6 @@ import {
   RelationshipType,
   AnalyzerType,
   AnalysisType,
-  AnnotationLabelType,
   FieldsetType,
   ExtractType,
   CorpusQueryType,
@@ -62,6 +61,8 @@ export const GET_DOCUMENTS = gql`
           description
           backendLock
           pdfFile
+          txtExtractFile
+          fileType
           pawlsParseFile
           icon
           isPublic
@@ -139,6 +140,8 @@ export const SEARCH_DOCUMENTS = gql`
           description
           backendLock
           pdfFile
+          txtExtractFile
+          fileType
           pawlsParseFile
           icon
           isPublic
@@ -210,6 +213,7 @@ export const GET_CORPUS_QUERY_DETAILS = gql`
           labelType
           readOnly
         }
+        annotationType
         rawText
         json
         sourceNodeInRelationships {
@@ -234,7 +238,9 @@ export const GET_CORPUS_QUERY_DETAILS = gql`
           is_open @client
           description
           backendLock
+          fileType
           pdfFile
+          txtExtractFile
           pawlsParseFile
           icon
         }
@@ -643,8 +649,10 @@ export const GET_ANNOTATIONS = gql`
             description
             backendLock
             pdfFile
+            txtExtractFile
             pawlsParseFile
             icon
+            fileType
             __typename
           }
           analysis {
@@ -661,8 +669,10 @@ export const GET_ANNOTATIONS = gql`
             color
             icon
             description
+            labelType
             __typename
           }
+          annotationType
           structural
           rawText
           isPublic
@@ -941,7 +951,9 @@ export const REQUEST_PAGE_ANNOTATION_DATA = gql`
           color
           icon
           description
+          labelType
         }
+        annotationType
         boundingBox
         page
         rawText
@@ -1186,6 +1198,7 @@ export const REQUEST_GET_EXTRACT = gql`
         id
         column {
           id
+          name
         }
         document {
           id
@@ -1200,11 +1213,13 @@ export const REQUEST_GET_EXTRACT = gql`
             text
             color
             icon
+            labelType
             description
           }
           document {
             id
             pdfFile
+            txtExtractFile
             pawlsParseFile
           }
           boundingBox
@@ -1212,6 +1227,7 @@ export const REQUEST_GET_EXTRACT = gql`
           rawText
           tokensJsons
           json
+          annotationType
           sourceNodeInRelationships {
             edges {
               node {
@@ -1505,6 +1521,7 @@ export const GET_DATACELLS_FOR_EXTRACT = gql`
             text
             color
             icon
+            labelType
             description
           }
           boundingBox
@@ -1554,6 +1571,7 @@ export const GET_ANNOTATIONS_FOR_ANALYSIS = gql`
           description
           labelType
         }
+        annotationType
         boundingBox
         page
         rawText
@@ -1630,6 +1648,23 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
   ) {
     document(id: $documentId) {
       id
+      allStructuralAnnotations {
+        id
+        page
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+        annotationType
+        rawText
+        json
+        myPermissions
+        structural
+      }
       allAnnotations(corpusId: $corpusId, analysisId: $analysisId) {
         id
         page
@@ -1639,6 +1674,7 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
           color
           icon
           description
+          labelType
         }
         userFeedback {
           edges {
@@ -1650,6 +1686,7 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
           }
           totalCount
         }
+        annotationType
         rawText
         json
         myPermissions
@@ -1692,6 +1729,49 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
           labelType
         }
       }
+    }
+  }
+`;
+
+export const getAnnotationsByDocumentId = /* GraphQL */ `
+  query GetAnnotationsByDocumentId($documentId: ID!) {
+    getAnnotationsByDocumentId(documentId: $documentId) {
+      items {
+        id
+        documentId
+        start
+        end
+        selectedText
+        comment
+        annotationType
+        createdAt
+        updatedAt
+        owner
+      }
+    }
+  }
+`;
+
+export const listAnnotations = /* GraphQL */ `
+  query ListAnnotations(
+    $filter: ModelAnnotationFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listAnnotations(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        documentId
+        start
+        end
+        selectedText
+        comment
+        annotationType
+        createdAt
+        updatedAt
+        owner
+      }
+      nextToken
     }
   }
 `;

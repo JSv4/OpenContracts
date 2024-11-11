@@ -21,11 +21,13 @@ RELATIONSHIP_LABEL = "RELATIONSHIP_LABEL"
 DOC_TYPE_LABEL = "DOC_TYPE_LABEL"
 TOKEN_LABEL = "TOKEN_LABEL"
 METADATA_LABEL = "METADATA_LABEL"
+SPAN_LABEL = "SPAN_LABEL"
 
 LABEL_TYPES = [
     (RELATIONSHIP_LABEL, _("Relationship label.")),
     (DOC_TYPE_LABEL, _("Document-level type label.")),
-    (TOKEN_LABEL, _("Token-level labels for spans and NER labeling")),
+    (TOKEN_LABEL, _("Token-level labels for token-based labeling")),
+    (SPAN_LABEL, _("Span labels for span-based labeling")),
     (METADATA_LABEL, _("Metadata label for manual entry field")),
 ]
 
@@ -95,7 +97,7 @@ class AnnotationLabel(BaseOCModel):
 
         constraints = [
             django.db.models.UniqueConstraint(
-                fields=["analyzer", "text", "creator"],
+                fields=["analyzer", "text", "creator", "label_type"],
                 name="Only install one label of given name for each analyzer_id PER user (no duplicates)",
             )
         ]
@@ -222,8 +224,18 @@ class Annotation(BaseOCModel):
     tokens_jsons = NullableJSONField(
         default=jsonfield_empty_array, null=True, blank=True
     )
-    bounding_box = NullableJSONField(default=empty_bounding_box, null=False)
+    bounding_box = NullableJSONField(default=empty_bounding_box, null=True)
     json = NullableJSONField(default=jsonfield_default_value, null=False)
+
+    # This is kind of duplicative of the AnnotationLabel label_type, BUT,
+    # it makes mores sense here. Slowly going to transition to this
+    annotation_type = django.db.models.CharField(
+        max_length=128,
+        blank=False,
+        null=False,
+        choices=LABEL_TYPES,
+        default=TOKEN_LABEL,
+    )
 
     annotation_label = django.db.models.ForeignKey(
         "annotations.AnnotationLabel", null=True, on_delete=django.db.models.CASCADE

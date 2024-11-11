@@ -18,8 +18,10 @@ import {
   FieldsetType,
   ColumnType,
   CorpusQueryType,
+  LabelType,
 } from "./types";
 import { ViewState } from "../components/types";
+import { FileUploadPackageProps } from "../components/widgets/modals/DocumentUploadModal";
 
 export const mergeArrayByIdFieldPolicy: FieldPolicy<Reference[]> = {
   // eslint-disable-next-line @typescript-eslint/default-param-last
@@ -234,6 +236,7 @@ export const selectedLabelsetIds = makeVar<string[]>([]);
 /**
  * Annotation-related global variables
  */
+export const filterToAnnotationType = makeVar<LabelType | null>(null);
 export const filterToLabelId = makeVar<string>("");
 export const filterToAnnotationLabelId = makeVar<string>(""); // Not used elsewhere. Maybe should be?
 export const selectedAnnotation = makeVar<ServerAnnotationType | null>(null);
@@ -284,3 +287,5 @@ export const openedQueryObj = makeVar<CorpusQueryType | null>(null);
  */
 export const userObj = makeVar<User | null>(null);
 export const authToken = makeVar<string>("");
+
+export const uploadModalPreloadedFiles = makeVar<FileUploadPackageProps[]>([]);

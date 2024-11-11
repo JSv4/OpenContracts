@@ -19,7 +19,7 @@ git+https://github.com/kevin1024/vcrpy.git@35650b141b5689eed84eac05c23b48412c76d
 # Profiling
 # ------------------------------------------------------------------------------
 django-cprofile-middleware
-django-silk
+django-silk==5.2.0
 
 # Documentation
 # ------------------------------------------------------------------------------
@@ -48,6 +48,8 @@ pytest-django==4.9.0  # https://github.com/pytest-dev/pytest-django
 # ------------------------------------------------------------------------------
 pypdf
 
-# Docx
+# Office files
 # ------------------------------------------------------------------------------
 python-docx
+openpyxl
+python-pptx

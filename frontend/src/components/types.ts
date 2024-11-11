@@ -197,13 +197,18 @@ export type TokenId = {
   tokenIndex: number;
 };
 
+export type SpanAnnotationJson = {
+  start: number;
+  end: number;
+};
+
 export type SinglePageAnnotationJson = {
   bounds: BoundingBox;
   tokensJsons: TokenId[];
   rawText: string;
 };
 
-export type TextSearchResult = {
+export type TextSearchTokenResult = {
   id: number;
   tokens: Record<number, TokenId[]>;
   bounds: Record<number, BoundingBox>;
@@ -212,7 +217,16 @@ export type TextSearchResult = {
   end_page: number;
 };
 
+export type TextSearchSpanResult = {
+  id: number;
+  start_index: number;
+  end_index: number;
+  fullContext: ReactElement | null;
+  text: string;
+};
+
 export type MultipageAnnotationJson = Record<number, SinglePageAnnotationJson>;
+
 export interface PageProps {
   pageInfo: PDFPageInfo;
   doc_permissions: PermissionTypes[];

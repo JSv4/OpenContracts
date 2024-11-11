@@ -1,10 +1,10 @@
-import React, { useContext, useRef, useState } from "react";
+import React, { useContext, useRef, useState, useCallback } from "react";
 import { Form, Icon, Popup, Menu, SemanticICONS } from "semantic-ui-react";
 import { Search, X } from "lucide-react";
 import styled from "styled-components";
 import _ from "lodash";
-import { AnnotationStore } from "../context"; // Adjust the import path as needed
-import { ZoomButtonGroup } from "../../widgets/buttons/ZoomButtonGroup";
+import { AnnotationStore } from "../../context"; // Adjust the import path as needed
+import { ZoomButtonGroup } from "../../../widgets/buttons/ZoomButtonGroup";
 
 const ActionBar = styled.div`
   padding: 12px 16px;
@@ -75,30 +75,23 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   const annotationStore = useContext(AnnotationStore);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-  const {
-    textSearchMatches,
-    searchForText,
-    searchText,
-    selectedTextSearchMatchIndex,
-  } = annotationStore;
+  const { searchForText, searchText } = annotationStore;
 
-  const [docSearchCache, setDocSeachCache] = useState<string | undefined>(
-    searchText
+  const debouncedDocSearch = useCallback(
+    _.debounce((searchTerm: string) => {
+      console.log("Searching for", searchTerm);
+      searchForText(searchTerm);
+    }, 300),
+    [searchForText]
   );
 
   const handleDocSearchChange = (value: string) => {
-    setDocSeachCache(value);
-    debouncedDocSearch.current(value);
+    searchForText(value);
+    debouncedDocSearch(value);
   };
 
-  const debouncedDocSearch = useRef(
-    _.debounce((searchTerm: string) => {
-      searchForText(searchTerm);
-    }, 300)
-  );
-
   const clearSearch = () => {
-    setDocSeachCache("");
+    searchForText("");
     searchForText("");
   };
 
@@ -171,10 +164,10 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
           }
           iconPosition="left"
           placeholder="Search document..."
+          value={searchText}
           onChange={(e: any, data: { value: string }) =>
             handleDocSearchChange(data.value)
           }
-          value={docSearchCache}
         />
       </StyledMenu>
     </ActionBar>

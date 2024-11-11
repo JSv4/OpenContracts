@@ -74,9 +74,10 @@ from opencontractserver.tasks.permissioning_tasks import (
     make_corpus_public_task,
 )
 from opencontractserver.types.dicts import OpenContractsAnnotatedDocumentImportType
-from opencontractserver.types.enums import ExportType, PermissionTypes
+from opencontractserver.types.enums import ExportType, LabelType, PermissionTypes
 from opencontractserver.users.models import UserExport
 from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
+from opencontractserver.utils.files import is_plaintext_content
 from opencontractserver.utils.permissioning import (
     set_permissions_for_obj_to_user,
     user_has_permission_for_obj,
@@ -860,27 +861,55 @@ class UploadDocument(graphene.Mutation):
             # Check file type
             kind = filetype.guess(file_bytes)
             if kind is None:
-                return UploadDocument(
-                    message="Unable to determine file type", ok=False, document=None
-                )
 
-            if kind.mime not in settings.ALLOWED_DOCUMENT_MIMETYPES:
+                if is_plaintext_content(file_bytes):
+                    kind = "application/txt"
+                else:
+                    return UploadDocument(
+                        message="Unable to determine file type", ok=False, document=None
+                    )
+            else:
+                kind = kind.mime
+
+            if kind not in settings.ALLOWED_DOCUMENT_MIMETYPES:
                 return UploadDocument(
-                    message=f"Unallowed filetype: {kind.mime}", ok=False, document=None
+                    message=f"Unallowed filetype: {kind}", ok=False, document=None
                 )
 
             user = info.context.user
-            pdf_file = ContentFile(file_bytes, name=filename)
-            document = Document(
-                creator=user,
-                title=title,
-                description=description,
-                custom_meta=custom_meta,
-                pdf_file=pdf_file,
-                backend_lock=True,
-                is_public=make_public,
-            )
-            document.save()
+
+            if kind in [
+                "application/pdf",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ]:
+                pdf_file = ContentFile(file_bytes, name=filename)
+                document = Document(
+                    creator=user,
+                    title=title,
+                    description=description,
+                    custom_meta=custom_meta,
+                    pdf_file=pdf_file,
+                    backend_lock=True,
+                    is_public=make_public,
+                    file_type=kind,  # Store filetype
+                )
+                document.save()
+            elif kind in ["application/txt"]:
+                txt_extract_file = ContentFile(file_bytes, name=filename)
+                document = Document(
+                    creator=user,
+                    title=title,
+                    description=description,
+                    custom_meta=custom_meta,
+                    txt_extract_file=txt_extract_file,
+                    backend_lock=True,
+                    is_public=make_public,
+                    file_type=kind,
+                )
+                document.save()
+
             set_permissions_for_obj_to_user(user, document, [PermissionTypes.CRUD])
 
             # If add_to_corpus_id is not None, link uploaded document to corpus
@@ -1063,13 +1092,24 @@ class AddAnnotation(graphene.Mutation):
             required=True,
             description="Id of the label that is applied via this annotation.",
         )
+        annotation_type = graphene.Argument(
+            graphene.Enum.from_enum(LabelType), required=True
+        )
 
     ok = graphene.Boolean()
     annotation = graphene.Field(AnnotationType)
 
     @login_required
     def mutate(
-        root, info, json, page, raw_text, corpus_id, document_id, annotation_label_id
+        root,
+        info,
+        json,
+        page,
+        raw_text,
+        corpus_id,
+        document_id,
+        annotation_label_id,
+        annotation_type,
     ):
         corpus_pk = from_global_id(corpus_id)[1]
         document_pk = from_global_id(document_id)[1]
@@ -1085,6 +1125,7 @@ class AddAnnotation(graphene.Mutation):
             annotation_label_id=label_pk,
             creator=user,
             json=json,
+            annotation_type=annotation_type.value,
         )
         annotation.save()
         set_permissions_for_obj_to_user(user, annotation, [PermissionTypes.CRUD])
@@ -2132,11 +2173,11 @@ class Mutation(graphene.ObjectType):
 
     create_extract = CreateExtract.Field()
     start_extract = StartExtract.Field()
-    delete_extract = DeleteExtract.Field()  # TODO - test
+    delete_extract = DeleteExtract.Field()
     update_extract = UpdateExtractMutation.Field()
     add_docs_to_extract = AddDocumentsToExtract.Field()
     remove_docs_from_extract = RemoveDocumentsFromExtract.Field()
-    approve_datacell = ApproveDatacell.Field()  # TODO - add tests
-    reject_datacell = RejectDatacell.Field()  # TODO - add tests
-    edit_datacell = EditDatacell.Field()  # TODO - add tests
+    approve_datacell = ApproveDatacell.Field()
+    reject_datacell = RejectDatacell.Field()
+    edit_datacell = EditDatacell.Field()
     start_extract_for_doc = StartDocumentExtract.Field()

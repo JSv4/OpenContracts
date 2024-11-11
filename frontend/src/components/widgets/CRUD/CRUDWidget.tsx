@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { Header, Icon, Segment, Label } from "semantic-ui-react";
+import { Header, Icon, Segment, Label, Grid } from "semantic-ui-react";
 import Form from "@rjsf/semantic-ui";
 import {
   HorizontallyCenteredDiv,
@@ -8,13 +8,26 @@ import {
 import { FilePreviewAndUpload } from "../file-controls/FilePreviewAndUpload";
 import { CRUDProps, LooseObject } from "../../types";
 
-interface CRUDWidgetProps extends CRUDProps {
-  instance: Record<string, any>;
+/**
+ * Props for the CRUDWidget component.
+ *
+ * @template T - The type of the instance being managed.
+ */
+interface CRUDWidgetProps<T extends Record<string, any>> extends CRUDProps {
+  instance: T | Partial<T>;
   showHeader: boolean;
-  handleInstanceChange: (a: any) => void;
+  handleInstanceChange: (updatedInstance: T) => void;
 }
 
-export const CRUDWidget: React.FC<CRUDWidgetProps> = ({
+/**
+ * CRUDWidget component provides a form interface for creating, viewing, and editing instances.
+ * It includes optional file upload functionality and responsive layout adjustments.
+ *
+ * @template T - The type of the instance being managed.
+ * @param {CRUDWidgetProps<T>} props - The properties passed to the component.
+ * @returns {JSX.Element} The rendered CRUD widget component.
+ */
+export const CRUDWidget = <T extends Record<string, any>>({
   mode,
   instance,
   modelName,
@@ -27,24 +40,36 @@ export const CRUDWidget: React.FC<CRUDWidgetProps> = ({
   dataSchema,
   showHeader,
   handleInstanceChange,
-}) => {
+}: CRUDWidgetProps<T>): JSX.Element => {
   const canWrite = mode === "CREATE" || mode === "EDIT";
 
+  /**
+   * Cleans the form data by retaining only the properties defined in the data schema.
+   *
+   * @param {LooseObject} instanceData - The current instance data.
+   * @param {LooseObject} schema - The data schema defining the properties.
+   * @returns {Partial<T>} The cleaned form data.
+   */
   const cleanFormData = useCallback(
-    (instance: LooseObject, dataSchema: LooseObject) => {
-      return Object.keys(dataSchema.properties).reduce((acc, key) => {
-        if (key in instance) {
-          acc[key] = instance[key];
+    (instanceData: LooseObject, schema: LooseObject): Partial<T> => {
+      return Object.keys(schema.properties).reduce((acc, key) => {
+        if (key in instanceData) {
+          acc[key as keyof T] = instanceData[key];
         }
         return acc;
-      }, {} as Record<string, any>);
+      }, {} as Partial<T>);
     },
     []
   );
 
+  /**
+   * Handles changes in the form data and propagates them upwards.
+   *
+   * @param {Record<string, any>} param0 - The form data change event.
+   */
   const handleChange = useCallback(
     ({ formData }: Record<string, any>) => {
-      handleInstanceChange(formData);
+      handleInstanceChange(formData as T);
     },
     [handleInstanceChange]
   );
@@ -66,7 +91,7 @@ export const CRUDWidget: React.FC<CRUDWidgetProps> = ({
   }, [mode, descriptiveName, instance.title]);
 
   const formData = useMemo(
-    () => cleanFormData(instance, dataSchema),
+    () => cleanFormData(instance as T, dataSchema),
     [instance, dataSchema, cleanFormData]
   );
 
@@ -75,8 +100,13 @@ export const CRUDWidget: React.FC<CRUDWidgetProps> = ({
       {showHeader && (
         <HorizontallyCenteredDiv>
           <div style={{ marginTop: "1rem", textAlign: "left", width: "100%" }}>
-            <Header as="h2">
-              <Icon name="box" />
+            <Header as="h2" textAlign="center">
+              <Icon
+                name="box"
+                size="large"
+                style={{ maxWidth: "50px", height: "auto", margin: "0 auto" }}
+                className="responsive-icon"
+              />
               <Header.Content>
                 {headerText}
                 <Header.Subheader>{`Values for: ${descriptiveName}`}</Header.Subheader>
@@ -87,31 +117,63 @@ export const CRUDWidget: React.FC<CRUDWidgetProps> = ({
       )}
       <HorizontallyCenteredDiv>
         <VerticallyCenteredDiv>
-          <Segment raised style={{ width: "100%" }}>
-            {hasFile && (
-              <div style={{ marginBottom: "1rem" }}>
-                <Label>{fileLabel}</Label>
-                <FilePreviewAndUpload
-                  readOnly={!canWrite}
-                  isImage={fileIsImage}
-                  acceptedTypes={acceptedFileTypes}
-                  disabled={!canWrite}
-                  file={instance?.icon || null}
-                  onChange={({ data, filename }) =>
-                    handleInstanceChange({ [fileField]: data, filename })
-                  }
-                />
-              </div>
-            )}
-            <Form
-              schema={dataSchema}
-              uiSchema={uiSchema}
-              onChange={handleChange}
-              formData={formData}
-              noHtml5Validate
-            >
-              <></>
-            </Form>
+          <Segment
+            raised
+            style={{
+              width: "100%",
+              padding: "1.5rem",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+              borderRadius: "8px",
+            }}
+          >
+            <Grid stackable>
+              {hasFile && (
+                <Grid.Row>
+                  <Grid.Column width={16}>
+                    <Label>{fileLabel}</Label>
+                    <FilePreviewAndUpload
+                      readOnly={!canWrite}
+                      isImage={fileIsImage}
+                      acceptedTypes={acceptedFileTypes}
+                      disabled={!canWrite}
+                      file={instance?.[fileField] || null}
+                      onChange={({ data, filename }) =>
+                        handleInstanceChange({
+                          ...instance,
+                          [fileField]: data,
+                          filename,
+                        } as T)
+                      }
+                    />
+                  </Grid.Column>
+                </Grid.Row>
+              )}
+              <Grid.Row>
+                <Grid.Column width={16}>
+                  <Form
+                    schema={dataSchema}
+                    uiSchema={uiSchema}
+                    onChange={handleChange}
+                    formData={formData}
+                    noHtml5Validate
+                    liveValidate
+                    showErrorList={false}
+                    className="responsive-form"
+                  >
+                    <Grid columns={2} stackable>
+                      <Grid.Row>
+                        <Grid.Column>
+                          <></>
+                        </Grid.Column>
+                        <Grid.Column>
+                          <></>
+                        </Grid.Column>
+                      </Grid.Row>
+                    </Grid>
+                  </Form>
+                </Grid.Column>
+              </Grid.Row>
+            </Grid>
           </Segment>
         </VerticallyCenteredDiv>
       </HorizontallyCenteredDiv>

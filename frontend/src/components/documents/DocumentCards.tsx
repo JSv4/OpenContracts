@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, Dimmer, Loader } from "semantic-ui-react";
+import { useDropzone } from "react-dropzone";
 
 import _ from "lodash";
 
@@ -21,6 +22,8 @@ interface DocumentCardProps {
   onClick?: (document: DocumentType) => void;
   removeFromCorpus?: (doc_ids: string[]) => void | any;
   fetchMore: (args?: any) => void | any;
+  onDrop: (acceptedFiles: File[]) => void;
+  corpusId: string | null;
 }
 
 export const DocumentCards = ({
@@ -33,6 +36,8 @@ export const DocumentCards = ({
   onClick,
   removeFromCorpus,
   fetchMore,
+  onDrop,
+  corpusId,
 }: DocumentCardProps) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
@@ -104,8 +109,42 @@ export const DocumentCards = ({
   /**
    * Return DocumentItems
    */
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+  });
+
   return (
-    <>
+    <div {...getRootProps()}>
+      <input {...getInputProps()} />
+      {isDragActive && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              padding: "20px",
+              backgroundColor: "white",
+              borderRadius: "5px",
+            }}
+          >
+            Drop files here to upload
+          </div>
+        </div>
+      )}
       <Dimmer active={loading}>
         <Loader content={loading_message} />
       </Dimmer>
@@ -123,6 +162,6 @@ export const DocumentCards = ({
         </Card.Group>
         <FetchMoreOnVisible fetchNextPage={handleUpdate} />
       </div>
-    </>
+    </div>
   );
 };

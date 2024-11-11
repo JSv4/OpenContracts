@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { gql, useReactiveVar } from "@apollo/client";
 import {
   Button,
   Modal,
@@ -7,16 +8,12 @@ import {
   Segment,
   Header,
   Icon,
-  Message,
 } from "semantic-ui-react";
 import _ from "lodash";
 
 import Form from "@rjsf/semantic-ui";
 import { DocumentUploadList } from "../../documents/DocumentUploadList";
-import {
-  HorizontallyCenteredDiv,
-  VerticallyCenteredDiv,
-} from "../../layout/Wrappers";
+import { HorizontallyCenteredDiv } from "../../layout/Wrappers";
 import { newDocForm_Schema, newDocForm_Ui_Schema } from "../../forms/schemas";
 import {
   ApolloError,
@@ -31,14 +28,15 @@ import {
 } from "../../../graphql/mutations";
 import { toBase64 } from "../../../utils/files";
 import { toast } from "react-toastify";
-import { CorpusDropdown } from "../selectors/CorpusDropdown";
-import { CorpusType } from "../../../graphql/types";
+import { CorpusType, DocumentType } from "../../../graphql/types";
 import {
   GET_CORPUSES,
   GetCorpusesInputs,
   GetCorpusesOutputs,
 } from "../../../graphql/queries";
 import { CorpusSelector } from "../../corpuses/CorpusSelector";
+import { uploadModalPreloadedFiles } from "../../../graphql/cache";
+import { GET_DOCUMENTS } from "../../../graphql/queries";
 
 export const NOT_STARTED = "NOT_STARTED";
 export const SUCCESS = "SUCCESS";
@@ -93,13 +91,15 @@ interface DocumentUploadModalProps {
   open: boolean;
   onClose: () => void;
   refetch?: (args?: any) => any | void;
+  corpusId?: string | null;
 }
 
 export function DocumentUploadModal(props: DocumentUploadModalProps) {
   const client = useApolloClient();
 
-  const { open, onClose, refetch } = props;
+  const { open, onClose, refetch, corpusId } = props;
   const [files, setFiles] = useState<FileUploadPackageProps[]>([]);
+  const preloadedFiles = useReactiveVar(uploadModalPreloadedFiles);
   const [upload_state, setUploadState] = useState<
     ("NOT_STARTED" | "SUCCESS" | "FAILED" | "UPLOADING")[]
   >([]);
@@ -113,6 +113,13 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
   const [search_term, setSearchTerm] = useState("");
 
   useEffect(() => {
+    if (open && preloadedFiles.length > 0) {
+      setFiles(preloadedFiles);
+      uploadModalPreloadedFiles([]); // Clear the preloaded files
+    }
+  }, [open, preloadedFiles]);
+
+  useEffect(() => {
     if (!open) {
       setUploadState([]);
       setFiles([]);
@@ -123,12 +130,8 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
     }
   }, [open]);
 
-  const [uploadDocument, {}] = useMutation<
-    UploadDocumentOutputProps,
-    UploadDocumentInputProps
-  >(UPLOAD_DOCUMENT, {
-    onCompleted: refetch ? () => refetch() : () => undefined,
-  });
+  const [uploadDocument] =
+    useMutation<UploadDocumentOutputProps>(UPLOAD_DOCUMENT);
 
   const {
     refetch: refetch_corpuses,
@@ -170,7 +173,7 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
   const uploadFiles = async () => {
     toast.info("Starting upload...");
     setStep("uploading");
-    let uploads: any = [];
+    let uploads: Promise<any>[] = [];
     if (files) {
       files.forEach(async (file_package, file_index) => {
         setFileStatus(UPLOADING, file_index);
@@ -184,12 +187,114 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
                 customMeta: {},
                 description: file_package.formData.description,
                 title: file_package.formData.title,
-                addToCorpusId: selected_corpus?.id,
+                addToCorpusId: corpusId || selected_corpus?.id,
                 makePublic: false,
               },
+              update: (cache, { data }) => {
+                if (
+                  !data ||
+                  !data.uploadDocument ||
+                  !data.uploadDocument.document
+                )
+                  return;
+
+                const newDocument = data.uploadDocument.document;
+
+                cache.modify({
+                  fields: {
+                    documents(existingDocuments = { edges: [] }) {
+                      const newDocumentRef = cache.writeFragment({
+                        data: newDocument,
+                        fragment: gql`
+                          fragment NewDocument on DocumentType {
+                            id
+                            icon
+                            pdfFile
+                            title
+                            description
+                            backendLock
+                            fileType
+                            docAnnotations {
+                              edges {
+                                node {
+                                  id
+                                }
+                              }
+                            }
+                          }
+                        `,
+                      });
+
+                      return {
+                        ...existingDocuments,
+                        edges: [
+                          {
+                            __typename: "DocumentTypeEdge",
+                            node: newDocumentRef,
+                          },
+                          ...existingDocuments.edges,
+                        ],
+                      };
+                    },
+                  },
+                });
+
+                // If a corpus is specified, update the corpus' documents as well
+                if (corpusId || selected_corpus?.id) {
+                  const calcedcorpusId = corpusId || selected_corpus?.id;
+                  const existingCorpus = cache.readFragment<{
+                    documents: { edges: { node: { id: string } }[] };
+                  }>({
+                    id: `CorpusType:${calcedcorpusId}`,
+                    fragment: gql`
+                      fragment CorpusDocuments on CorpusType {
+                        id
+                        documents {
+                          edges {
+                            node {
+                              id
+                            }
+                          }
+                        }
+                      }
+                    `,
+                  });
+
+                  if (existingCorpus) {
+                    cache.writeFragment({
+                      id: `CorpusType:${corpusId}`,
+                      fragment: gql`
+                        fragment UpdateCorpusDocuments on CorpusType {
+                          documents {
+                            edges {
+                              node {
+                                id
+                              }
+                            }
+                          }
+                        }
+                      `,
+                      data: {
+                        documents: {
+                          ...existingCorpus.documents,
+                          edges: [
+                            {
+                              node: { id: newDocument.id },
+                              __typename: "DocumentTypeEdge",
+                            },
+                            ...existingCorpus.documents.edges,
+                          ],
+                        },
+                      },
+                    });
+                  }
+                }
+              },
             })
-              .then((upload_data: any) => {
-                setFileStatus(SUCCESS, file_index);
+              .then(({ data }) => {
+                if (data?.uploadDocument) {
+                  setFileStatus(SUCCESS, file_index);
+                }
               })
               .catch((upload_error: ApolloError) => {
                 toast.error(upload_error.message);
@@ -201,6 +306,9 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
     }
     await Promise.all(uploads);
     onClose();
+    if (refetch) {
+      refetch();
+    }
   };
 
   const removeFile = (file_index: number) => {
@@ -334,7 +442,7 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
       <Modal.Content>
         {step === "upload" && renderUploadStep()}
         {step === "edit" && renderEditStep()}
-        {step === "corpus" && renderCorpusStep()}
+        {step === "corpus" && !corpusId && renderCorpusStep()}
         {step === "uploading" && renderUploadingStep()}
       </Modal.Content>
       <Modal.Actions>
@@ -351,15 +459,27 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
             <Button color="grey" inverted onClick={() => setStep("upload")}>
               <Icon name="arrow left" /> Back
             </Button>
-            <Button color="blue" inverted onClick={() => setStep("corpus")}>
-              <Icon name="arrow right" /> Skip
-            </Button>
-            <Button color="green" inverted onClick={() => setStep("corpus")}>
-              <Icon name="checkmark" /> Next
-            </Button>
+            {corpusId ? (
+              <Button color="green" inverted onClick={() => uploadFiles()}>
+                <Icon name="checkmark" /> Upload
+              </Button>
+            ) : (
+              <>
+                <Button color="blue" inverted onClick={() => uploadFiles()}>
+                  <Icon name="arrow right" /> Skip
+                </Button>
+                <Button
+                  color="green"
+                  inverted
+                  onClick={() => setStep("corpus")}
+                >
+                  <Icon name="checkmark" /> Next
+                </Button>
+              </>
+            )}
           </>
         )}
-        {step === "corpus" && (
+        {step === "corpus" && !corpusId && (
           <>
             <Button color="grey" inverted onClick={() => setStep("edit")}>
               <Icon name="arrow left" /> Back

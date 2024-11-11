@@ -18,6 +18,7 @@ class LabelType(str, enum.Enum):
     TOKEN_LABEL = "TOKEN_LABEL"
     RELATIONSHIP_LABEL = "RELATIONSHIP_LABEL"
     METADATA_LABEL = "METADATA_LABEL"
+    SPAN_LABEL = "SPAN_LABEL"
 
 
 class JobStatus(str, enum.Enum):

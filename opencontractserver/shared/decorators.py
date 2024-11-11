@@ -244,12 +244,14 @@ def doc_analyzer_task(max_retries=None):
                                 )
 
                         for doc_label in doc_annotations:
+                            logger.info(f"Creating doc label annotation: {doc_label}")
                             label, _ = AnnotationLabel.objects.get_or_create(
                                 text=doc_label,
                                 label_type=LabelType.DOC_TYPE_LABEL,
                                 creator=analysis.creator,
                                 analyzer=analysis.analyzer,
                             )
+                            logger.info(f"Created/found label: {label}")
 
                             annot = Annotation(
                                 document=doc,
@@ -258,10 +260,13 @@ def doc_analyzer_task(max_retries=None):
                                 page=1,
                                 raw_text="",
                                 json={},
+                                annotation_type=LabelType.DOC_TYPE_LABEL,
                                 creator=analysis.creator,
                                 **({"corpus_id": corpus_id} if corpus_id else {}),
                             )
+                            logger.info(f"Created annotation object: {annot}")
                             annot.save()
+                            logger.info(f"Saved annotation: {annot.id}")
                             resulting_annotations.append(annot)
 
                     # Link resulting annotations

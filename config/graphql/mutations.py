@@ -42,7 +42,6 @@ from config.graphql.serializers import (
     AnnotationSerializer,
     CorpusSerializer,
     DocumentSerializer,
-    ExtractSerializer,
     LabelsetSerializer,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer
@@ -933,7 +932,7 @@ class UploadDocument(graphene.Mutation):
             elif add_to_extract_id is not None:
                 try:
                     extract = Extract.objects.get(
-                        Q(pk=from_global_id(add_to_extract_id)[1]) 
+                        Q(pk=from_global_id(add_to_extract_id)[1])
                         & (Q(creator=user) | Q(is_public=True))
                     )
                     if extract.finished is not None:
@@ -1994,12 +1993,23 @@ class UpdateExtractMutation(graphene.Mutation):
     Supports updating the name (title), corpus, fieldset, and error fields.
     Ensures proper permission checks are applied.
     """
+
     class Arguments:
         id = graphene.ID(required=True, description="ID of the Extract to update.")
-        title = graphene.String(required=False, description="New title for the Extract.")
-        corpus_id = graphene.ID(required=False, description="ID of the Corpus to associate with the Extract.")
-        fieldset_id = graphene.ID(required=False, description="ID of the Fieldset to associate with the Extract.")
-        error = graphene.String(required=False, description="Error message to update on the Extract.")
+        title = graphene.String(
+            required=False, description="New title for the Extract."
+        )
+        corpus_id = graphene.ID(
+            required=False,
+            description="ID of the Corpus to associate with the Extract.",
+        )
+        fieldset_id = graphene.ID(
+            required=False,
+            description="ID of the Fieldset to associate with the Extract.",
+        )
+        error = graphene.String(
+            required=False, description="Error message to update on the Extract."
+        )
         # The Extract model does not have 'description', 'icon', or 'label_set' fields.
         # If these fields are added to the model, they can be included here.
 
@@ -2009,25 +2019,32 @@ class UpdateExtractMutation(graphene.Mutation):
 
     @staticmethod
     @login_required
-    def mutate(root, info, id, title=None, corpus_id=None, fieldset_id=None, error=None):
-        print(f"UpdateExtractMutation.mutate called with: id={id}, title={title}, corpus_id={corpus_id}, fieldset_id={fieldset_id}, error={error}")
+    def mutate(
+        root, info, id, title=None, corpus_id=None, fieldset_id=None, error=None
+    ):
         user = info.context.user
 
         try:
             extract_pk = from_global_id(id)[1]
             extract = Extract.objects.get(pk=extract_pk)
         except Extract.DoesNotExist:
-            return UpdateExtractMutation(ok=False, message="Extract not found.", obj=None)
-        
+            return UpdateExtractMutation(
+                ok=False, message="Extract not found.", obj=None
+            )
+
         # Check if the user has permission to update the Extract object
         if not user_has_permission_for_obj(
-                user_val=user,
-                instance=extract,
-                permission=PermissionTypes.UPDATE,
-                include_group_permissions=True,
-            ):
-            return UpdateExtractMutation(ok=False, message="You don't have permission to update this extract.", obj=None)
-        
+            user_val=user,
+            instance=extract,
+            permission=PermissionTypes.UPDATE,
+            include_group_permissions=True,
+        ):
+            return UpdateExtractMutation(
+                ok=False,
+                message="You don't have permission to update this extract.",
+                obj=None,
+            )
+
         # Update fields
         if title is not None:
             extract.name = title
@@ -2041,41 +2058,59 @@ class UpdateExtractMutation(graphene.Mutation):
                 corpus = Corpus.objects.get(pk=corpus_pk)
                 # Check permission
                 if not user_has_permission_for_obj(
-                        user_val=user,
-                        instance=corpus,
-                        permission=PermissionTypes.READ,
-                        include_group_permissions=True,
-                    ):
-                    return UpdateExtractMutation(ok=False, message="You don't have permission to use this corpus.", obj=None)
+                    user_val=user,
+                    instance=corpus,
+                    permission=PermissionTypes.READ,
+                    include_group_permissions=True,
+                ):
+                    return UpdateExtractMutation(
+                        ok=False,
+                        message="You don't have permission to use this corpus.",
+                        obj=None,
+                    )
                 extract.corpus = corpus
             except Corpus.DoesNotExist:
-                return UpdateExtractMutation(ok=False, message="Corpus not found.", obj=None)
+                return UpdateExtractMutation(
+                    ok=False, message="Corpus not found.", obj=None
+                )
 
         if fieldset_id is not None:
             fieldset_pk = from_global_id(fieldset_id)[1]
-            print(f"Attempting to update extract {extract.id} with fieldset_id {fieldset_id} (pk: {fieldset_pk})")
+            print(
+                f"Attempting to update extract {extract.id} with fieldset_id {fieldset_id} (pk: {fieldset_pk})"
+            )
             try:
                 fieldset = Fieldset.objects.get(pk=fieldset_pk)
                 print(f"Found fieldset {fieldset.id} for update")
                 # Check permission
                 if not user_has_permission_for_obj(
-                        user_val=user,
-                        instance=fieldset,
-                        permission=PermissionTypes.READ,
-                        include_group_permissions=True,
-                    ):
-                    print(f"User {user.id} denied permission to use fieldset {fieldset.id}")
-                    return UpdateExtractMutation(ok=False, message="You don't have permission to use this fieldset.", obj=None)
+                    user_val=user,
+                    instance=fieldset,
+                    permission=PermissionTypes.READ,
+                    include_group_permissions=True,
+                ):
+                    print(
+                        f"User {user.id} denied permission to use fieldset {fieldset.id}"
+                    )
+                    return UpdateExtractMutation(
+                        ok=False,
+                        message="You don't have permission to use this fieldset.",
+                        obj=None,
+                    )
                 print(f"Updating extract {extract.id} fieldset to {fieldset.id}")
                 extract.fieldset = fieldset
             except Fieldset.DoesNotExist:
                 print(f"Fieldset with pk {fieldset_pk} not found")
-                return UpdateExtractMutation(ok=False, message="Fieldset not found.", obj=None)
+                return UpdateExtractMutation(
+                    ok=False, message="Fieldset not found.", obj=None
+                )
 
         extract.save()
         extract.refresh_from_db()
-        
-        return UpdateExtractMutation(ok=True, message="Extract updated successfully.", obj=extract)
+
+        return UpdateExtractMutation(
+            ok=True, message="Extract updated successfully.", obj=extract
+        )
 
 
 class AddDocumentsToExtract(DRFMutation):

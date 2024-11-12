@@ -487,6 +487,32 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     );
   };
 
+  const handleMouseUp = (event: any) => {
+    const selection = document.getSelection();
+    if (selection && selection.toString().length > 0) {
+      const start = selection.anchorOffset;
+      const end = selection.focusOffset;
+      const selectedText = selection.toString();
+
+      // Ensure that start is less than end
+      const adjustedStart = Math.min(start, end);
+      const adjustedEnd = Math.max(start, end);
+
+      // Create the span object
+      const span = {
+        start: adjustedStart,
+        end: adjustedEnd,
+        text: selectedText,
+      };
+
+      // Convert span to ServerSpanAnnotation
+      const annotation = getSpan(span);
+
+      // Call createAnnotation with the correct type
+      createAnnotation(annotation);
+    }
+  };
+
   return (
     <>
       <PaperContainer
@@ -498,6 +524,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         onClick={() => {
           setSelectedAnnotations([]);
         }}
+        onMouseUp={handleMouseUp}
       >
         {spans.map((span, index) => {
           const {

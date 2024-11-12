@@ -677,6 +677,7 @@ export const DocumentViewer = ({
   };
 
   const getSpan = (span: { start: number; end: number; text: string }) => {
+    console.log("getSpan called with span", span);
     const selectedLabel = spanLabels.find(
       (label) => label.id === activeSpanLabel?.id
     );
@@ -692,6 +693,34 @@ export const DocumentViewer = ({
       false, // approved
       false // rejected
     );
+  };
+
+  const handleCreateAnnotation = (span: ServerSpanAnnotation) => {
+    console.log("Creating span annotation with:", span);
+    const selectedLabel = spanLabels.find(
+      (label) => label.id === activeSpanLabel?.id
+    );
+    if (!selectedLabel) {
+      console.warn("No active label selected.");
+      return;
+    }
+
+    const newAnnotation = new ServerSpanAnnotation(
+      0,
+      selectedLabel,
+      span.rawText,
+      false,
+      { start: span.json.start, end: span.json.end },
+      [
+        PermissionTypes.CAN_CREATE,
+        PermissionTypes.CAN_REMOVE,
+        PermissionTypes.CAN_UPDATE,
+      ],
+      false,
+      false
+    );
+
+    createAnnotation(newAnnotation);
   };
 
   let view_components = <></>;
@@ -745,7 +774,7 @@ export const DocumentViewer = ({
           read_only={read_only}
           allowInput={allowInput}
           zoom_level={zoom_level}
-          createAnnotation={createAnnotation}
+          createAnnotation={handleCreateAnnotation}
           updateAnnotation={updateAnnotation}
           approveAnnotation={approveAnnotation}
           rejectAnnotation={rejectAnnotation}

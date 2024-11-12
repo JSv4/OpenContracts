@@ -62,7 +62,8 @@ class ParseModelOrPrimitiveTestCase(TestCase):
         email: str
         """
         with self.assertRaisesRegex(
-            ValueError, r"There is an error in line \d+ your model"
+            ValueError,
+            r"Failed to parse model from value due to error: There is an error in line \d+ of your model",
         ):
             parse_model_or_primitive(invalid_model_string)
 

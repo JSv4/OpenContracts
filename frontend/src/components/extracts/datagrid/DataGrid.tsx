@@ -658,6 +658,12 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
               const content = getCellContent(props.row, gridColumn);
               const cellStatus = cellStatusMap.get(`${props.row.id}-${col.id}`);
 
+              // Find the corresponding cell
+              const cell = localCells.find(
+                (c) =>
+                  c.document?.id === props.row.id && c.column?.id === col.id
+              );
+
               return (
                 <ExtractCellFormatter
                   value={content.value}
@@ -672,6 +678,8 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
                   extractIsList={Boolean(col.extractIsList)}
                   row={props.row}
                   column={gridColumn}
+                  cell={cell}
+                  extract={extract}
                 />
               );
             },

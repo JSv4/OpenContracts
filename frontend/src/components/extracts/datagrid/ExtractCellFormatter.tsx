@@ -6,6 +6,24 @@ import { JSONSchema7 } from "json-schema";
 import { ExtractCellEditor } from "./ExtractCellEditor";
 import ReactJson from "react-json-view";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
+import { useReactiveVar } from "@apollo/client";
+import {
+  displayAnnotationOnAnnotatorLoad,
+  onlyDisplayTheseAnnotations,
+  openedDocument,
+  selectedAnnotation,
+  selectedExtract,
+  showAnnotationBoundingBoxes,
+  showAnnotationLabels,
+  showSelectedAnnotationOnly,
+  showStructuralAnnotations,
+} from "../../../graphql/cache";
+import {
+  DatacellType,
+  ExtractType,
+  ServerAnnotationType,
+  LabelDisplayBehavior,
+} from "../../../types/graphql-api";
 
 const StatusDot = styled.div<{ statusColor: string }>`
   width: 8px;
@@ -144,6 +162,8 @@ interface ExtractCellFormatterProps {
   extractIsList: boolean;
   row: any;
   column: any;
+  cell?: DatacellType;
+  extract?: ExtractType;
 }
 
 /**
@@ -165,11 +185,21 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
   extractIsList,
   row,
   column,
+  cell,
+  extract,
 }) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOriginalModalOpen, setIsOriginalModalOpen] = useState(false);
+
+  const [viewSourceAnnotations, setViewSourceAnnotations] = useState<
+    ServerAnnotationType[] | null
+  >(null);
+
+  const only_display_these_annotations = useReactiveVar(
+    onlyDisplayTheseAnnotations
+  );
 
   const cellRef = useRef<HTMLDivElement>(null);
   const [cellWidth, setCellWidth] = useState<number>(0);
@@ -242,6 +272,26 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (viewSourceAnnotations !== null) {
+      onlyDisplayTheseAnnotations(viewSourceAnnotations);
+      showSelectedAnnotationOnly(false);
+      showAnnotationBoundingBoxes(true);
+      showStructuralAnnotations(true);
+      showAnnotationLabels(LabelDisplayBehavior.ALWAYS);
+    }
+  }, [viewSourceAnnotations]);
+
+  useEffect(() => {
+    if (
+      only_display_these_annotations &&
+      only_display_these_annotations.length > 0
+    ) {
+      openedDocument(only_display_these_annotations[0].document);
+      setViewSourceAnnotations(null);
+    }
+  }, [only_display_these_annotations]);
+
   return (
     <CellContainer ref={cellRef} style={{ background: getCellBackground() }}>
       {displayValue()}
@@ -295,11 +345,21 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
                     color="blue"
                     size="tiny"
                     onClick={() => {
-                      openOriginalViewer();
+                      if (
+                        cell?.fullSourceList &&
+                        cell.fullSourceList.length > 0
+                      ) {
+                        selectedExtract(extract);
+                        setViewSourceAnnotations(
+                          cell.fullSourceList as ServerAnnotationType[]
+                        );
+                      }
                       setIsPopupOpen(false);
                     }}
-                    disabled={!cellStatus?.correctedData}
-                    title="View Original"
+                    disabled={
+                      !cell?.fullSourceList || cell.fullSourceList.length === 0
+                    }
+                    title="View Sources"
                   />
                   <Button
                     icon="close"

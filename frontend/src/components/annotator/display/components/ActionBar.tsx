@@ -1,12 +1,12 @@
-import React, { useContext, useRef, useState, useCallback } from "react";
+import React, { useContext, useCallback, useState } from "react";
 import { Form, Icon, Popup, Menu, SemanticICONS } from "semantic-ui-react";
 import { Search, X } from "lucide-react";
 import styled from "styled-components";
 import _ from "lodash";
-import { AnnotationStore } from "../../context"; // Adjust the import path as needed
+import { AnnotationStore } from "../../context";
 import { ZoomButtonGroup } from "../../../widgets/buttons/ZoomButtonGroup";
 
-const ActionBar = styled.div`
+const ActionBarContainer = styled.div`
   padding: 12px 16px;
   background-color: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
@@ -65,6 +65,9 @@ interface PDFActionBarProps {
   onActionSelect?: (value: string) => void;
 }
 
+/**
+ * Action bar for the PDF viewer, including zoom controls and a search bar.
+ */
 export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   zoom,
   onZoomIn,
@@ -119,7 +122,7 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   );
 
   return (
-    <ActionBar>
+    <ActionBarContainer>
       <StyledMenu>
         <Popup
           trigger={
@@ -130,7 +133,7 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
               onActionClick={handleActionClick}
             />
           }
-          style={{ zIndex: 9999999 }}
+          style={{ zIndex: 9999 }}
           content={actionMenu}
           on="click"
           position="bottom right"
@@ -170,6 +173,6 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
           }
         />
       </StyledMenu>
-    </ActionBar>
+    </ActionBarContainer>
   );
 };

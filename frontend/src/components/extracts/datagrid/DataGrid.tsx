@@ -175,20 +175,15 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
     },
     ref
   ) => {
-    console.log("ExtractDataGrid received columns:", columns);
-    console.log("ExtractDataGrid received extract:", extract);
-    console.log("ExtractDataGrid received rows:", rows);
+    // console.log("ExtractDataGrid received columns:", columns);
+    // console.log("ExtractDataGrid received extract:", extract);
+    // console.log("ExtractDataGrid received rows:", rows);
 
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
     const [isDeleting, setIsDeleting] = useState(false);
     const [sortColumns, setSortColumns] = useState<readonly SortColumn[]>([]);
 
-    console.log("Cells", initialCells);
-
-    useEffect(() => {
-      console.log("Cells", initialCells);
-      console.log("Columns", columns);
-    }, [initialCells, columns]);
+    // console.log("Cells", initialCells);
 
     const [dragState, setDragState] = useState<DragState>({
       isDragging: false,
@@ -201,14 +196,9 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
 
     // Add an effect to update localCells when initialCells changes
     useEffect(() => {
-      console.log("Initial cells received:", initialCells);
+      // console.log("Initial cells received:", initialCells);
       setLocalCells(initialCells);
     }, [initialCells]);
-
-    // Also add this debug log
-    useEffect(() => {
-      console.log("Local cells state:", localCells);
-    }, [localCells]);
 
     // Add a function to derive cell status from a cell
     const deriveCellStatus = useCallback(
@@ -253,12 +243,12 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
         ];
       }
 
-      console.log("Creating gridRows with:", {
-        rows,
-        cells: initialCells,
-        columns,
-        extract,
-      });
+      // console.log("Creating gridRows with:", {
+      //   rows,
+      //   cells: initialCells,
+      //   columns,
+      //   extract,
+      //});
       return rows.map((row) => {
         const rowData: ExtractGridRow = {
           id: row.id,
@@ -266,27 +256,27 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
           documentTitle: row.title || "",
         };
 
-        console.log("Processing row:", row.id);
+        // console.log("Processing row:", row.id);
 
         columns.forEach((column) => {
-          console.log("Processing column for row:", {
-            rowId: row.id,
-            columnId: column.id,
-          });
+          // console.log("Processing column for row:", {
+          //   rowId: row.id,
+          //   columnId: column.id,
+          // });
           const cell = initialCells.find(
             (c) => c.document.id === row.id && c.column.id === column.id
           );
-          console.log("Found cell:", cell);
+          // console.log("Found cell:", cell);
 
           if (cell) {
-            console.log("Cell data:", cell.data?.data);
+            // console.log("Cell data:", cell.data?.data);
             rowData[column.id] = cell.data?.data || ""; // Ensure empty string instead of empty object
           } else {
             rowData[column.id] = ""; // Ensure empty string instead of empty object
           }
         });
 
-        console.log("Final rowData:", rowData);
+        // console.log("Final rowData:", rowData);
         return rowData;
       });
     }, [rows, initialCells, columns, extract]);
@@ -338,7 +328,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
         if (data.approveDatacell.ok) {
           toast.success("Cell approved!");
           const updatedCell = data.approveDatacell.obj;
-          console.log("Updated cell:", updatedCell);
+          // console.log("Updated cell:", updatedCell);
           setLocalCells((prev) =>
             prev.map((cell) =>
               cell.id === updatedCell.id ? updatedCell : cell
@@ -361,7 +351,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
         if (data.rejectDatacell.ok) {
           toast.success("Cell rejected!");
           const updatedCell = data.rejectDatacell.obj;
-          console.log("Updated cell:", updatedCell);
+          // console.log("Updated cell:", updatedCell);
           setLocalCells((prev) =>
             prev.map((cell) =>
               cell.id === updatedCell.id ? updatedCell : cell
@@ -478,7 +468,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
         };
       });
 
-      console.log("Updating cell statuses:", newStatuses);
+      // console.log("Updating cell statuses:", newStatuses);
       setLocalCells((prev) =>
         prev.map((cell) =>
           newStatuses[cell.id] ? { ...cell, ...newStatuses[cell.id] } : cell
@@ -704,12 +694,19 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
               }}
             >
               <Button
-                icon="plus"
+                icon="file outline"
                 circular
-                size="mini"
-                color="green"
-                onClick={onAddColumn}
-              />
+                onClick={() => setOpenSelectDocumentsModal(true)}
+                style={{
+                  position: "absolute",
+                  bottom: "16px",
+                  left: "16px",
+                  zIndex: 1000,
+                }}
+                disabled={loading}
+              >
+                <Icon name="plus" corner="top right" />
+              </Button>
             </div>
           ),
           renderCell: () => null,
@@ -732,22 +729,6 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       getCellContent,
       columnSchemas,
     ]);
-
-    // Add an effect to monitor columns changes
-    useEffect(() => {
-      console.log("Columns changed:", columns);
-      console.log("Current gridColumns:", gridColumns);
-    }, [columns, gridColumns]);
-
-    // Add debug logging after column processing
-    useEffect(() => {
-      console.log("Processed gridColumns:", gridColumns);
-    }, [gridColumns]);
-
-    useEffect(() => {
-      console.log("Grid Columns", gridColumns);
-      console.log("Grid Rows", gridRows);
-    }, [gridColumns, gridRows]);
 
     // Upload document mutation - but we'll use the response to call onAddDocIds
     const [uploadDocument] = useMutation(UPLOAD_DOCUMENT);
@@ -1297,7 +1278,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
 
           {!extract.started && (
             <Button
-              icon="plus"
+              icon="file outline"
               circular
               onClick={() => setOpenSelectDocumentsModal(true)}
               style={{
@@ -1307,7 +1288,9 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
                 zIndex: 1000,
               }}
               disabled={loading}
-            />
+            >
+              <Icon name="plus" corner="top right" />
+            </Button>
           )}
 
           {isDragActive && (

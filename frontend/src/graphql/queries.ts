@@ -458,6 +458,7 @@ export const GET_CORPUSES = gql`
             edges {
               node {
                 id
+                fileType
                 backendLock
                 description
               }
@@ -1197,6 +1198,7 @@ export const REQUEST_GET_EXTRACT = gql`
         title
         description
         pageCount
+        fileType
       }
       fullDatacellList {
         id
@@ -1207,6 +1209,7 @@ export const REQUEST_GET_EXTRACT = gql`
         document {
           id
           title
+          fileType
         }
         fullSourceList {
           id
@@ -1222,6 +1225,7 @@ export const REQUEST_GET_EXTRACT = gql`
           }
           document {
             id
+            fileType
             pdfFile
             txtExtractFile
             pawlsParseFile
@@ -1668,6 +1672,7 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
         annotationType
         rawText
         json
+        fileType
         myPermissions
         structural
       }

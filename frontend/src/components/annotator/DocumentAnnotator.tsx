@@ -684,16 +684,38 @@ export const DocumentAnnotator = ({
   // If we got a property of annotations to display (and ONLY those), do some post processing and update state variable(s) accordingly
   useEffect(() => {
     console.log(
-      "React to displayOnlyTheseAnnotations",
+      "useEffect [displayOnlyTheseAnnotations] triggered with:",
       displayOnlyTheseAnnotations
     );
-    if (displayOnlyTheseAnnotations) {
-      setAnnotationObjs(
-        convertToServerAnnotations(displayOnlyTheseAnnotations)
-      );
-      // Clear other annotation types as they're not specified in onlyDisplayTheseAnnotations
-      setDocTypeAnnotations([]);
-      setRelationshipAnnotations([]);
+    if (displayOnlyTheseAnnotations && displayOnlyTheseAnnotations.length > 0) {
+      console.log("Processing displayOnlyTheseAnnotations");
+
+      try {
+        // Convert the annotations
+        const processedAnnotations = displayOnlyTheseAnnotations.map(
+          (annotation) => convertToServerAnnotation(annotation)
+        );
+        console.log("Processed Annotations:", processedAnnotations);
+        setAnnotationObjs(processedAnnotations);
+
+        // Update span labels
+        const uniqueLabels = _.uniqBy(
+          processedAnnotations.map((a) => a.annotationLabel),
+          "id"
+        );
+        console.log("Unique Span Labels:", uniqueLabels);
+        setSpanLabels(uniqueLabels);
+
+        // Set the view state to LOADED
+        console.log(
+          "Setting view state to LOADED after processing annotations"
+        );
+        viewStateVar(ViewState.LOADED);
+      } catch (error) {
+        console.error("Error processing displayOnlyTheseAnnotations:", error);
+        // Optionally, set the view state to ERROR if appropriate
+        viewStateVar(ViewState.ERROR);
+      }
     }
   }, [displayOnlyTheseAnnotations]);
 

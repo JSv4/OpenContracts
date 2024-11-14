@@ -1,15 +1,10 @@
 import {
-  ModalHeader,
   ModalContent,
-  ModalActions,
   Button,
   Modal,
   Icon,
   Dimmer,
   Loader,
-  Statistic,
-  Segment,
-  Message,
 } from "semantic-ui-react";
 import {
   ColumnType,

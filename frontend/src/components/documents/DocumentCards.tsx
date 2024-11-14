@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Card, Dimmer, Loader } from "semantic-ui-react";
 import { useDropzone } from "react-dropzone";
 

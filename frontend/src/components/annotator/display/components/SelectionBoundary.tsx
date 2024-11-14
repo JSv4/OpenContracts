@@ -27,46 +27,47 @@ interface SelectionBoundaryProps {
   rejected?: boolean;
 }
 
-const BoundarySpan = styled.span<{
-  width: number;
-  height: number;
-  rotateX: number;
-  rotateY: number;
-  showBoundingBox: boolean;
-  hidden: boolean;
-  border: number;
-  color: string;
-  bounds: BoundingBox;
-  backgroundColor: string;
-  approved?: boolean;
-  rejected?: boolean;
-}>`
-  position: absolute;
-  left: ${(props) => props.bounds.left}px;
-  top: ${(props) => props.bounds.top}px;
-  width: ${(props) => Math.abs(props.width)}px;
-  height: ${(props) => Math.abs(props.height)}px;
-  transform: rotateY(${(props) => props.rotateY}deg)
-    rotateX(${(props) => props.rotateX}deg);
-  transform-origin: top left;
-  border: ${(props) =>
-    props.showBoundingBox && !props.hidden
-      ? `${props.border}px solid ${props.color}`
-      : "none"};
-  background-color: ${(props) => props.backgroundColor};
-  transition: background-color 0.2s ease;
-
+const BoundarySpan = styled.span.attrs<{
+  $width: number;
+  $height: number;
+  $rotateX: number;
+  $rotateY: number;
+  $bounds: BoundingBox;
+  $backgroundColor: string;
+  $border: number;
+  $color: string;
+  $hidden: boolean;
+  $showBoundingBox: boolean;
+  $approved?: boolean;
+  $rejected?: boolean;
+}>((props) => ({
+  style: {
+    position: "absolute",
+    left: `${props.$bounds.left}px`,
+    top: `${props.$bounds.top}px`,
+    width: `${Math.abs(props.$width)}px`,
+    height: `${Math.abs(props.$height)}px`,
+    transform: `rotateY(${props.$rotateY}deg) rotateX(${props.$rotateX}deg)`,
+    backgroundColor: props.$backgroundColor,
+    border:
+      props.$showBoundingBox && !props.$hidden
+        ? `${props.$border}px solid ${props.$color}`
+        : "none",
+    transformOrigin: "top left",
+    transition: "background-color 0.2s ease",
+  },
+}))`
   ${(props) =>
-    props.approved &&
+    props.$approved &&
     css`
-      border: 2px solid green;
+      border: 2px solid green !important;
       animation: ${pulseGreen} 2s infinite;
     `}
 
   ${(props) =>
-    props.rejected &&
+    props.$rejected &&
     css`
-      border: 2px solid maroon;
+      border: 2px solid maroon !important;
       animation: ${pulseMaroon} 2s infinite;
     `}
 `;
@@ -138,18 +139,18 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
       onMouseDown={handleMouseDown}
       onMouseEnter={onHover && !hidden ? () => onHover(true) : undefined}
       onMouseLeave={onHover && !hidden ? () => onHover(false) : undefined}
-      width={width}
-      height={height}
-      rotateX={rotateX}
-      rotateY={rotateY}
-      showBoundingBox={showBoundingBox}
-      hidden={hidden}
-      border={border}
-      color={color}
-      backgroundColor={backgroundColor}
-      bounds={bounds}
-      approved={approved}
-      rejected={rejected}
+      $width={width}
+      $height={height}
+      $rotateX={rotateX}
+      $rotateY={rotateY}
+      $showBoundingBox={showBoundingBox}
+      $hidden={hidden}
+      $border={border}
+      $color={color}
+      $backgroundColor={backgroundColor}
+      $bounds={bounds}
+      $approved={approved}
+      $rejected={rejected}
     >
       {children || null}
     </BoundarySpan>

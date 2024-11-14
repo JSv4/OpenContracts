@@ -47,7 +47,6 @@ import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import {
   AnalysisType,
   AnnotationLabelType,
-  AnnotationTypeEnum,
   ColumnType,
   CorpusType,
   DatacellType,

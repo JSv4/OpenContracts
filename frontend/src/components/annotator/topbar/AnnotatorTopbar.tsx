@@ -119,13 +119,13 @@ export const AnnotatorTopbar = ({
     paddingRight: "10px",
   };
 
-  const collapseButtonShownStyle = {
+  const collapseButtonShownStyle: React.CSSProperties = {
     cursor: "pointer",
     display: "flex",
-    flexDirection: "center",
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1000,
+    zIndex: 1001,
     position: "absolute",
     right: `calc(50% - ${icon_toolbar_width / 2}px)`,
     borderRadius: "0px 0px 1em 1em",
@@ -150,7 +150,11 @@ export const AnnotatorTopbar = ({
     >
       <div
         className="SidebarCloser"
-        onClick={() => setTopbarVisible(!topbarVisible)}
+        onClick={() => {
+          const newState = !topbarVisible;
+          console.log("Topbar visibility changing to:", newState);
+          setTopbarVisible(newState);
+        }}
         style={
           topbarVisible && !use_mobile_layout
             ? (collapseButtonShownStyle as React.CSSProperties)
@@ -193,8 +197,8 @@ export const AnnotatorTopbar = ({
       </div>
       <Sidebar
         as={Segment}
-        animation={"overlay"}
-        direction={"top"}
+        animation="overlay"
+        direction="top"
         icon="labeled"
         inverted
         vertical
@@ -205,6 +209,13 @@ export const AnnotatorTopbar = ({
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
+          position: "fixed",
+          top: topbarVisible ? 0 : "-100%",
+          left: 0,
+          right: 0,
+          height: "auto",
+          zIndex: 1000,
+          transition: "top 0.5s ease",
         }}
       >
         <div
@@ -230,26 +241,23 @@ export const AnnotatorTopbar = ({
       </Sidebar>
 
       <Sidebar.Pusher
-        style={
-          banish_sidebar
+        style={{
+          ...(banish_sidebar
             ? {
                 overflowX: "scroll",
                 overflowY: "hidden",
-                height: "100%",
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-start",
               }
             : {
                 overflow: "hidden",
-                height: "100%",
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-start",
-              }
-        }
+              }),
+          height: "100%",
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-start",
+          marginTop: topbarVisible ? `${topbar_height}px` : "0",
+          transition: "margin-top 0.5s ease",
+        }}
       >
         <div
           ref={container_ref}

@@ -937,7 +937,10 @@ export const DocumentViewer = ({
               setAllowInput={setAllowInput}
             />
           </SidebarContainer>
-          <div className="PDFViewTopBarWrapper">
+          <div
+            className="PDFViewTopBarWrapper"
+            style={{ position: "relative" }}
+          >
             <AnnotatorTopbar
               opened_corpus={selected_corpus}
               opened_document={selected_document}

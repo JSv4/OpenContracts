@@ -17,20 +17,23 @@ interface SelectionBoxProps {
 }
 
 // Update the styled component definition to include the custom props
-const SelectionBox = styled.span<SelectionBoxProps>`
+const SelectionBox = styled.span.attrs<SelectionBoxProps>((props) => ({
+  style: {
+    left: `${props.left}px`,
+    top: `${props.top}px`,
+    width: `${props.right && props.left ? props.right - props.left : 0}px`,
+    height: `${props.bottom && props.top ? props.bottom - props.top : 0}px`,
+    backgroundColor: props.color || "yellow",
+    opacity: props.highOpacity ? 0.5 : 0.3,
+  },
+}))<SelectionBoxProps>`
   position: absolute;
-  background-color: ${(props) => props.color || "yellow"};
-  opacity: ${(props) => (props.highOpacity ? 0.5 : 0.3)};
   pointer-events: none;
   ${(props) =>
     props.isSelected &&
     `
     border: 2px solid blue;
   `}
-  ${(props) => props.left !== undefined && `left: ${props.left}px;`}
-  ${(props) => props.right !== undefined && `right: ${props.right}px;`}
-  ${(props) => props.top !== undefined && `top: ${props.top}px;`}
-  ${(props) => props.bottom !== undefined && `bottom: ${props.bottom}px;`}
 `;
 
 export interface SelectionTokenGroupProps {

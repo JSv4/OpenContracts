@@ -100,8 +100,6 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
   const annotationStore = useContext(AnnotationStore);
   const selected = annotationStore.selectedAnnotations.includes(annotation.id);
 
-  console.log("Selection element refs: ", annotationStore.selectionElementRefs);
-
   const my_output_relationships = relations.filter((relation) =>
     relation.sourceIds.includes(annotation.id)
   );

@@ -48,7 +48,7 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
     <LabelSelectorContainer ref={containerRef}>
       <StyledPopup
         trigger={
-          <LabelSelectorWidgetContainer sidebarWidth={sidebarWidth}>
+          <LabelSelectorWidgetContainer $sidebarWidth={sidebarWidth}>
             <LabelSelectorContent>
               <HeaderSection>
                 <IconWrapper>
@@ -99,11 +99,11 @@ const LabelSelectorContainer = styled.div`
   position: relative;
 `;
 
-const LabelSelectorWidgetContainer = styled.div<{ sidebarWidth: string }>`
+const LabelSelectorWidgetContainer = styled.div<{ $sidebarWidth: string }>`
   position: fixed;
   z-index: 1000;
   bottom: 2vh;
-  left: calc(${(props) => props.sidebarWidth} + 2vw);
+  left: calc(${(props) => props.$sidebarWidth} + 2vw);
   display: flex;
   flex-direction: row;
   justify-content: center;

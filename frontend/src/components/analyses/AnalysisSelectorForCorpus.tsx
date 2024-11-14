@@ -1,4 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
 import { Segment, Form, Button, Popup, Icon } from "semantic-ui-react";
 import Fuse from "fuse.js";
 import { AnalysisType, CorpusType, ExtractType } from "../../types/graphql-api";
@@ -68,7 +74,27 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
     setSearchTerm(value);
   };
 
-  const renderItems = () => {
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+    }
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log("Topbar visibility changed:", {
+      topbarVisible,
+      isMobile: use_mobile_layout,
+      shouldShowCloseButton: use_mobile_layout && topbarVisible,
+    });
+  }, [topbarVisible, use_mobile_layout]);
+
+  const renderItems = useCallback(() => {
     if (filteredItems.length === 0) {
       return (
         <PlaceholderCard
@@ -127,7 +153,15 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
         />
       )
     );
-  };
+  }, [
+    filteredItems,
+    use_mobile_layout,
+    read_only,
+    selected_analysis,
+    selected_extract,
+    onSelectAnalysis,
+    onSelectExtract,
+  ]);
 
   return (
     <Segment.Group
@@ -206,7 +240,10 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
       >
         {use_mobile_layout && topbarVisible && (
           <div
-            onClick={() => setTopbarVisible(false)}
+            onClick={() => {
+              console.log("Closing topbar");
+              setTopbarVisible(false);
+            }}
             style={{
               position: "absolute",
               bottom: "10px",
@@ -239,7 +276,7 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
             flex: 1,
           }}
         >
-          {renderItems()}
+          {mountedRef.current && renderItems()}
         </div>
       </Segment>
     </Segment.Group>

@@ -226,6 +226,16 @@ export const DocumentAnnotator = ({
     AnnotationLabelType[]
   >([]);
 
+  // Log when span labels change
+  useEffect(() => {
+    console.log("span_labels changed:", span_labels);
+  }, [span_labels]);
+
+  // Log when human span labels change
+  useEffect(() => {
+    console.log("human_span_labels changed:", human_span_labels);
+  }, [human_span_labels]);
+
   const resetStates = () => {
     setAnalysisRows([]);
     setAnnotationObjs([]);
@@ -521,6 +531,7 @@ export const DocumentAnnotator = ({
                 GetDocumentAnnotationsAndRelationshipsInput
               > | null
             ]) => {
+              console.log("Retrieved pawls data:", pawlsData);
               console.log("Retrieved annotations data:", annotationsData);
 
               setDocument(pdfDoc);

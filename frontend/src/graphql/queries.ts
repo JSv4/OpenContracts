@@ -1672,7 +1672,6 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
         annotationType
         rawText
         json
-        fileType
         myPermissions
         structural
       }

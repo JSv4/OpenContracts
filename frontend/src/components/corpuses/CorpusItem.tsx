@@ -10,23 +10,25 @@ import {
   Icon,
   Label,
   Header,
-  MenuItemProps,
+  Portal, // ADDED
 } from "semantic-ui-react";
 import _ from "lodash";
 import styled from "styled-components";
 
-import { CorpusType } from "../../types/graphql-api";
 import default_corpus_icon from "../../assets/images/defaults/default_corpus.png";
 import { getPermissions } from "../../utils/transform";
 import { PermissionTypes } from "../types";
 import { MyPermissionsIndicator } from "../widgets/permissions/MyPermissionsIndicator";
+import { CorpusType } from "../../types/graphql-api";
 
 const StyledCard = styled(Card)`
   &.ui.card {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
     transition: all 0.3s ease;
-    overflow: hidden;
 
     &:hover {
       box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
@@ -58,15 +60,58 @@ const StyledCard = styled(Card)`
       border-top: 1px solid rgba(0, 0, 0, 0.05);
       background-color: #f8f9fa;
       padding: 0.8em 1.2em;
+      margin-top: auto !important;
+      min-height: 80px !important;
     }
   }
 `;
 
 const StyledLabel = styled(Label)`
   &.ui.label {
-    margin: 0.2em;
+    margin: 0 !important;
     padding: 0.5em 0.8em;
     border-radius: 20px;
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    z-index: 1;
+  }
+`;
+
+const StyledImage = styled(Image)`
+  &.ui.image {
+    flex: none !important;
+    height: 200px !important;
+    width: 100% !important;
+    background: linear-gradient(to bottom, #f8f9fa, #f8f9fa 50%, #e9ecef 100%);
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+
+    img {
+      max-height: 100% !important;
+      width: auto !important;
+      height: auto !important;
+      object-fit: contain !important;
+    }
+  }
+`;
+
+const StyledCardContent = styled(Card.Content)`
+  &.content {
+    flex: 1 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+`;
+
+const StyledCardExtra = styled(Card.Content)`
+  &.extra {
+    flex: 0 0 auto !important;
+    min-height: 80px !important;
+    padding: 0.8em 1.2em;
   }
 `;
 
@@ -84,6 +129,13 @@ interface CorpusItemProps {
   setContextMenuOpen: (args?: any) => any | void;
 }
 
+interface ContextMenuItem {
+  key: string;
+  content: string;
+  icon: string;
+  onClick: () => void;
+}
+
 export const CorpusItem: React.FC<CorpusItemProps> = ({
   item,
   contextMenuOpen,
@@ -99,6 +151,9 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
 }) => {
   const analyzers_available = process.env.REACT_APP_USE_ANALYZERS;
   const contextRef = React.useRef<HTMLElement | null>(null);
+  // ADDED: These two lines
+  const [isPopupOpen, setIsPopupOpen] = React.useState(false);
+  const labelRef = React.useRef<HTMLDivElement>(null);
 
   const {
     id,
@@ -154,7 +209,7 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
     item.myPermissions ? item.myPermissions : []
   );
 
-  let context_menus: MenuItemProps[] = [];
+  let context_menus: ContextMenuItem[] = [];
 
   if (analyzers_available) {
     context_menus.push({
@@ -233,37 +288,58 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
             <Loader>Preparing...</Loader>
           </Dimmer>
         ) : null}
-        <Image src={icon ? icon : default_corpus_icon} wrapped ui={false} />
-        <Card.Content style={{ wordWrap: "break-word" }}>
-          <Popup
-            trigger={
-              <StyledLabel
-                style={{ cursor: "pointer" }}
-                color={labelSet ? "green" : "red"}
-                corner="right"
-                icon={labelSet ? "tags" : "cancel"}
-              />
-            }
-            flowing
-            hoverable
+        <StyledImage
+          src={icon ? icon : default_corpus_icon}
+          wrapped
+          ui={false}
+        />
+        <StyledCardContent>
+          <div
+            ref={labelRef}
+            style={{ position: "absolute", top: 0, right: 0 }}
           >
-            {labelSet ? (
-              <div>
-                <Header
-                  as="h3"
-                  image={labelSet?.icon}
-                  content={labelSet?.title}
-                  subheader={labelSet?.description}
-                />
-              </div>
-            ) : (
-              <Header
-                as="h3"
-                content="No labelset selected for this corpus."
-                subheader="Please right click this corpus and select edit (if you have edit rights) to select a labelset."
-              />
-            )}
-          </Popup>
+            <StyledLabel
+              style={{ cursor: "pointer" }}
+              color={labelSet ? "green" : "red"}
+              corner="right"
+              icon={labelSet ? "tags" : "cancel"}
+              onMouseEnter={() => setIsPopupOpen(true)}
+              onMouseLeave={() => setIsPopupOpen(false)}
+            />
+          </div>
+
+          {labelRef.current && (
+            <Portal open={isPopupOpen}>
+              <Popup
+                open={isPopupOpen}
+                position="top right"
+                context={labelRef.current}
+                onClose={() => setIsPopupOpen(false)}
+                style={{
+                  zIndex: 1000,
+                  position: "fixed",
+                  marginTop: "10px",
+                }}
+              >
+                {labelSet ? (
+                  <div>
+                    <Header
+                      as="h3"
+                      image={labelSet?.icon}
+                      content={labelSet?.title}
+                      subheader={labelSet?.description}
+                    />
+                  </div>
+                ) : (
+                  <Header
+                    as="h3"
+                    content="No labelset selected for this corpus."
+                    subheader="Please right click this corpus and select edit (if you have edit rights) to select a labelset."
+                  />
+                )}
+              </Popup>
+            </Portal>
+          )}
           <Card.Header>{title}</Card.Header>
           <Card.Meta>{`Created by: `}</Card.Meta>
           <Card.Description>
@@ -271,8 +347,8 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
               <b>Description:</b> {description}
             </span>
           </Card.Description>
-        </Card.Content>
-        <Card.Content extra>
+        </StyledCardContent>
+        <StyledCardExtra>
           <Statistic.Group size="mini" widths={3}>
             <Statistic>
               <Statistic.Value>
@@ -307,7 +383,7 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
               </Popup>
             ) : null}
           </Statistic.Group>
-        </Card.Content>
+        </StyledCardExtra>
       </StyledCard>
       <Popup
         basic
@@ -316,16 +392,12 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
         open={contextMenuOpen === id}
         hideOnScroll
       >
-        <Menu secondary vertical>
-          {context_menus.map((item) => (
-            <Menu.Item
-              key={item.key}
-              icon={item.icon}
-              content={item.content}
-              onItemClick={() => setContextMenuOpen(-1)}
-            />
-          ))}
-        </Menu>
+        <Menu
+          items={context_menus}
+          onItemClick={() => setContextMenuOpen(-1)}
+          secondary
+          vertical
+        />
       </Popup>
     </>
   );

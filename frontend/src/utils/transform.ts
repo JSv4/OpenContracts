@@ -1,8 +1,6 @@
-import {
-  DocTypeAnnotation,
-  ServerTokenAnnotation,
-  ServerSpanAnnotation,
-} from "../components/annotator/context/AnnotationStore";
+import { DocTypeAnnotation } from "../components/annotator/types/annotations";
+import { ServerTokenAnnotation } from "../components/annotator/types/annotations";
+import { ServerSpanAnnotation } from "../components/annotator/types/annotations";
 import {
   BoundingBox,
   PermissionTypes,

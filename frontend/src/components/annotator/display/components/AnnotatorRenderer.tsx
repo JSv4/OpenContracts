@@ -34,14 +34,6 @@ import {
 } from "../../../../graphql/mutations";
 import { DocumentViewer } from "../viewer";
 
-import {
-  DocTypeAnnotation,
-  PdfAnnotations,
-  PDFPageInfo,
-  RelationGroup,
-  ServerSpanAnnotation,
-  ServerTokenAnnotation,
-} from "../../context";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 
 import {
@@ -64,6 +56,14 @@ import {
 import { toast } from "react-toastify";
 import { getPermissions } from "../../../../utils/transform";
 import _ from "lodash";
+import { PDFPageInfo } from "../../types/pdf";
+import {
+  DocTypeAnnotation,
+  PdfAnnotations,
+  RelationGroup,
+  ServerSpanAnnotation,
+  ServerTokenAnnotation,
+} from "../../types/annotations";
 
 export interface TextSearchResultsProps {
   start: TokenId;

@@ -14,10 +14,8 @@ import {
   DropdownProps,
   Button,
 } from "semantic-ui-react";
-import {
-  AnnotationStore,
-  ServerTokenAnnotation,
-} from "../../annotator/context/AnnotationStore";
+import { AnnotationStore } from "../../annotator/context/AnnotationStore";
+import { ServerTokenAnnotation } from "../../annotator/types/annotations";
 
 interface EditLabelModalProps {
   annotation: ServerTokenAnnotation;

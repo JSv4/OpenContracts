@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@apollo/client": "^3.5.6",
+    "@apollo/client": "^3.11.10",
     "@auth0/auth0-react": "^1.8.0",
     "@rjsf/core": "^3.2.1",
     "@rjsf/semantic-ui": "^3.2.1",
@@ -28,6 +28,8 @@
     "fuse.js": "^6.5.3",
     "graphql": "^16.2.0",
     "history": "^5.3.0",
+    "jotai": "^2.10.2",
+    "jotai-apollo": "^0.2.1",
     "lodash": "^4.17.21",
     "lodash.uniqueid": "^4.0.1",
     "lucide-react": "^0.438.0",

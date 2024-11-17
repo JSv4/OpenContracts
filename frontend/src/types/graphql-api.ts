@@ -1,10 +1,10 @@
 import { SemanticICONS } from "semantic-ui-react";
-import { TokenId } from "../components/annotator/context";
 import {
   ExportTypes,
   MultipageAnnotationJson,
   PermissionTypes,
   SpanAnnotationJson,
+  TokenId,
 } from "../components/types";
 
 export type Maybe<T> = T | null;

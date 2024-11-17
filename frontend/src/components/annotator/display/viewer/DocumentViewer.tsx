@@ -21,16 +21,7 @@ import {
   LabelDisplayBehavior,
   LabelType,
 } from "../../../../types/graphql-api";
-import {
-  PDFPageInfo,
-  AnnotationStore,
-  PDFStore,
-  RelationGroup,
-  PdfAnnotations,
-  DocTypeAnnotation,
-  ServerTokenAnnotation,
-  ServerSpanAnnotation,
-} from "../../context";
+import { AnnotationStore, PDFStore } from "../../context";
 import _ from "lodash";
 
 import * as listeners from "../../listeners";
@@ -57,6 +48,14 @@ import {
 } from "../../../../graphql/cache";
 import { MOBILE_VIEW_BREAKPOINT } from "../../../../assets/configurations/constants";
 import TxtAnnotator from "../../renderers/txt/TxtAnnotator";
+import {
+  DocTypeAnnotation,
+  PdfAnnotations,
+  RelationGroup,
+  ServerSpanAnnotation,
+  ServerTokenAnnotation,
+} from "../../types/annotations";
+import { PDFPageInfo } from "../../types/pdf";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -603,11 +602,6 @@ export const DocumentViewer = ({
 
     // Only proceed if there's an active span label... otherwise, do nothing
     if (activeSpanLabel) {
-      //console.log("XOXO - createMultiPageAnnotation called")
-      //console.log("Queued annotations are", pageSelectionQueue);
-      //console.log("Current selection is", pageSelection);
-      //console.log("Page info", pdfPageInfoObjs);
-
       // Need to merge the queue and current selection area
       let updatedPageSelectionQueue: Record<number, BoundingBox[]> =
         pageSelectionQueue;

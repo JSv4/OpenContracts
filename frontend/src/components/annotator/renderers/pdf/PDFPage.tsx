@@ -21,6 +21,7 @@ import { SearchResult } from "../../display/components/SearchResult";
 import { SelectionBoundary } from "../../display/components/SelectionBoundary";
 import { SelectionTokenGroup } from "../../display/components/SelectionTokenGroup";
 import { ServerTokenAnnotation } from "../../types/annotations";
+import { useDocumentContext } from "../../context/DocumentContext";
 
 export const PDFPage = ({
   pageInfo,
@@ -47,11 +48,14 @@ export const PDFPage = ({
   const annotations = annotationStore.pdfAnnotations.annotations;
   // console.log(`${annotations.length} annotations in store`);
 
+  const { scrollContainerRef, pdfPageInfoObjs } = useDocumentContext();
+
   const {
-    scrollContainerRef,
     selectedTextSearchMatchIndex,
     selectionElementRefs: selectionRefs,
     searchResultElementRefs,
+    pageSelectionQueue,
+    pageSelection,
   } = annotationStore;
 
   // console.log(`Multipage annotations for page #${pageInfo.page.pageNumber - 1}:`, annotations)
@@ -134,12 +138,9 @@ export const PDFPage = ({
             console.log("\tAwait render...");
             await rendererRef.current.render(pdfStore.zoomLevel);
 
-            if (
-              !(pageInfo.page.pageNumber - 1 in annotationStore.pdfPageInfoObjs)
-            ) {
+            if (!(pageInfo.page.pageNumber - 1 in pdfPageInfoObjs)) {
               console.log(`\tAdding pageInfo to ${pageInfo.page.pageNumber}`);
-              annotationStore.pdfPageInfoObjs[pageInfo.page.pageNumber - 1] =
-                pageInfo;
+              pdfPageInfoObjs[pageInfo.page.pageNumber - 1] = pageInfo;
             }
 
             if (scrollContainerRef && scrollContainerRef.current) {
@@ -232,10 +233,8 @@ export const PDFPage = ({
     }
   }, [hasPdfPageRendered, annotationStore.selectedAnnotations]);
 
-  const pageQueuedSelections = annotationStore.pageSelectionQueue[
-    pageInfo.page.pageNumber - 1
-  ]
-    ? annotationStore.pageSelectionQueue[pageInfo.page.pageNumber - 1]
+  const pageQueuedSelections = pageSelectionQueue[pageInfo.page.pageNumber - 1]
+    ? pageSelectionQueue[pageInfo.page.pageNumber - 1]
     : [];
 
   ////////////////
@@ -328,7 +327,7 @@ export const PDFPage = ({
           !read_only &&
           corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
         ) {
-          if (!annotationStore.pageSelection && event.buttons === 1) {
+          if (!pageSelection && event.buttons === 1) {
             const { left: containerAbsLeftOffset, top: containerAbsTopOffset } =
               containerRef.current.getBoundingClientRect();
             const left = event.pageX - containerAbsLeftOffset;

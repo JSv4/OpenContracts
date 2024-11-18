@@ -927,7 +927,6 @@ export const DocumentAnnotator = ({
       rendered_component = (
         <AnnotatorRenderer
           open={open}
-          view_document_only={false}
           loading_message="Loading Annotator Data"
           data_loading={
             dataCellsLoading ||

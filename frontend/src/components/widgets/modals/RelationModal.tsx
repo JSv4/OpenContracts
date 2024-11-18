@@ -8,22 +8,39 @@ import styled from "styled-components";
 
 interface RelationModalProps {
   visible: boolean;
-  onClick: (group: RelationGroup) => void;
-  onCancel: () => void;
   source: string[];
   label: AnnotationLabelType;
 }
 
 export const RelationModal = ({
   visible,
-  onClick,
-  onCancel,
   source,
   label,
 }: RelationModalProps) => {
   const annotationStore = useContext(AnnotationStore);
   const [targetKeys, setTargetKeys] = useState<string[]>([]);
   const transferSource = source.map((a) => ({ key: a, annotation: a }));
+
+  const handleOk = () => {
+    const sourceIds = source
+      .filter((s) => !targetKeys.some((k) => k === s))
+      .map((s) => s);
+
+    // Create the relation using the store
+    annotationStore.createRelation(
+      new RelationGroup(sourceIds, targetKeys, label)
+    );
+
+    // Reset state
+    setTargetKeys([]);
+    annotationStore.setSelectedAnnotations([]);
+  };
+
+  const handleCancel = () => {
+    // Reset state
+    setTargetKeys([]);
+    annotationStore.setSelectedAnnotations([]);
+  };
 
   return (
     <Modal
@@ -64,25 +81,10 @@ export const RelationModal = ({
         </TransferContainer>
       </Modal.Content>
       <Modal.Actions>
-        <Button
-          color="green"
-          onClick={() => {
-            const sourceIds = source
-              .filter((s) => !targetKeys.some((k) => k === s))
-              .map((s) => s);
-            onClick(new RelationGroup(sourceIds, targetKeys, label));
-            setTargetKeys([]);
-          }}
-        >
+        <Button color="green" onClick={handleOk}>
           Save Change
         </Button>
-        <Button
-          color="black"
-          onClick={() => {
-            setTargetKeys([]);
-            onCancel();
-          }}
-        >
+        <Button color="black" onClick={handleCancel}>
           Cancel
         </Button>
       </Modal.Actions>

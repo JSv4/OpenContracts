@@ -1,5 +1,6 @@
 import { useMutation } from "@apollo/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { showStructuralAnnotations } from "../../../../graphql/cache";
 import {
   APPROVE_ANNOTATION,
   ApproveAnnotationInput,
@@ -34,6 +35,8 @@ import {
 } from "../../../../graphql/mutations";
 import { DocumentViewer } from "../viewer";
 
+import * as listeners from "../../listeners";
+
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 
 import {
@@ -52,18 +55,36 @@ import {
   TokenId,
   PermissionTypes,
   SpanAnnotationJson,
+  TextSearchSpanResult,
+  SinglePageAnnotationJson,
+  TextSearchTokenResult,
 } from "../../../types";
 import { toast } from "react-toastify";
 import { getPermissions } from "../../../../utils/transform";
 import _ from "lodash";
 import { PDFPageInfo } from "../../types/pdf";
 import {
+  BoundingBox,
   DocTypeAnnotation,
   PdfAnnotations,
   RelationGroup,
   ServerSpanAnnotation,
   ServerTokenAnnotation,
 } from "../../types/annotations";
+import { AnnotationStore } from "../../context/AnnotationStore";
+import {
+  DocumentContext,
+  createDocumentContextValue,
+} from "../../context/DocumentContext";
+import {
+  CorpusContext,
+  createCorpusContextValue,
+} from "../../context/CorpusContext";
+import {
+  createUIContextValue,
+  UIContext,
+  useUIContext,
+} from "../../context/UIContext";
 
 export interface TextSearchResultsProps {
   start: TokenId;
@@ -90,7 +111,6 @@ interface AnnotatorRendererProps {
   pages: PDFPageInfo[];
   opened_document: DocumentType;
   opened_corpus?: CorpusType;
-  view_document_only: boolean; // If true, won't show topbar or any of the label selectors.
   analyses?: AnalysisType[];
   extracts?: ExtractType[];
   selected_analysis?: AnalysisType | null;
@@ -143,7 +163,6 @@ export const AnnotatorRenderer = ({
   selected_extract,
   editMode,
   allowInput,
-  view_document_only,
   zoom_level,
   setZoomLevel,
   setAllowInput,
@@ -170,16 +189,62 @@ export const AnnotatorRenderer = ({
   console.log("AnnotatorRenderer - annotation objs", annotation_objs);
   console.log("AnnotatorRenderer - analyses", analyses);
 
+  const { shiftDown, setShiftDown, zoomLevel } = useUIContext();
+  const [selectionElementRefs, setSelectionElementRefs] = useState<
+    Record<string, React.MutableRefObject<HTMLElement | null>>
+  >({});
+  // New state to track if we've scrolled to the annotation
+  const [searchResultElementRefs, setSearchResultElementRefs] = useState<
+    Record<string, React.MutableRefObject<HTMLElement | null>>
+  >({});
+  const [pageElementRefs, setPageElementRefs] = useState<
+    Record<number, React.MutableRefObject<HTMLElement | null>>
+  >({});
+  const [hideSidebar, setHideSidebar] = useState<boolean>(false);
+  const [selectedAnnotations, setSelectedAnnotations] = useState<string[]>([]);
   const [pdfAnnotations, setPdfAnnotations] = useState<PdfAnnotations>(
     new PdfAnnotations([], [], [])
+  );
+  const [selectedRelations, setSelectedRelations] = useState<RelationGroup[]>(
+    []
+  );
+  const [pageSelection, setSelection] = useState<{
+    pageNumber: number;
+    bounds: BoundingBox;
+  }>();
+  const [selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex] =
+    useState<number>(0);
+  const [pageSelectionQueue, setMultiSelections] = useState<
+    Record<number, BoundingBox[]>
+  >({});
+  const [pdfPageInfoObjs, setPdfPageInfoObjs] = useState<
+    Record<number, PDFPageInfo>
+  >([]);
+  const [relationModalVisible, setRelationModalVisible] =
+    useState<boolean>(false);
+  const [useFreeFormAnnotations, toggleUseFreeFormAnnotations] =
+    useState<boolean>(false);
+  const [activeRelationLabel, setActiveRelationLabel] =
+    useState<AnnotationLabelType>(relationship_label_lookup[0]);
+  const [spanLabelsToView, setSpanLabelsToView] = useState<
+    AnnotationLabelType[] | null
+  >(null);
+  const [hideLabels, setHideLabels] = useState<boolean>(false);
+  const [searchText, setSearchText] = useState<string>();
+  const [textSearchMatches, setTextSearchMatches] =
+    useState<(TextSearchTokenResult | TextSearchSpanResult)[]>();
+  const [scrollContainerRef, setScrollContainerRef] =
+    useState<React.RefObject<HTMLDivElement>>();
+  const [activeSpanLabel, setActiveSpanLabel] = useState<
+    AnnotationLabelType | undefined
+  >(
+    human_span_label_lookup.length > 0 ? human_span_label_lookup[0] : undefined
   );
 
   // New state to track if we've scrolled to the annotation
   const [hasScrolledToAnnotation, setHasScrolledToAnnotation] = useState<
     string | null
   >(null);
-
-  const [shiftDown, setShiftDown] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -214,7 +279,6 @@ export const AnnotatorRenderer = ({
   const handleKeyUpPress = useCallback((event: { keyCode: any }) => {
     const { keyCode } = event;
     if (keyCode === 16) {
-      //console.log("Shift released");
       setShiftDown(false);
     }
   }, []);
@@ -222,7 +286,6 @@ export const AnnotatorRenderer = ({
   const handleKeyDownPress = useCallback((event: { keyCode: any }) => {
     const { keyCode } = event;
     if (keyCode === 16) {
-      //console.log("Shift depressed")
       setShiftDown(true);
     }
   }, []);
@@ -244,6 +307,20 @@ export const AnnotatorRenderer = ({
     setPdfAnnotations(memoizedPdfAnnotations);
   }, [memoizedPdfAnnotations]);
 
+  // Listen for change in shift key and clear selections or triggered annotation creation as needed
+  useEffect(() => {
+    // If user released the shift key...
+    if (!shiftDown) {
+      // If there is a page selection in progress or a queue... then fire off DB request to store annotation
+      if (
+        pageSelection !== undefined ||
+        Object.keys(pageSelectionQueue).length !== 0
+      ) {
+        createMultiPageAnnotation();
+      }
+    }
+  }, [shiftDown]);
+
   useEffect(() => {
     window.addEventListener("keyup", handleKeyUpPress);
     window.addEventListener("keydown", handleKeyDownPress);
@@ -252,6 +329,14 @@ export const AnnotatorRenderer = ({
       window.removeEventListener("keydown", handleKeyDownPress);
     };
   }, [handleKeyUpPress, handleKeyDownPress]);
+
+  // Set scroll container ref on load
+  useEffect(() => {
+    if (containerRef) {
+      setScrollContainerRef(containerRef);
+    }
+    return () => setScrollContainerRef(undefined);
+  }, [containerRef]);
 
   // Handle scrolling to annotation
   useEffect(() => {
@@ -277,6 +362,164 @@ export const AnnotatorRenderer = ({
     setHasScrolledToAnnotation(null);
   }, [scrollToAnnotation]);
 
+  // Search for text when search text changes.
+  useEffect(() => {
+    let search_hits = [];
+
+    // If there is searchText, search document for matches
+    if (searchText) {
+      // Use RegEx search without word boundaries and case insensitive
+      let exactMatch = new RegExp(searchText, "gi");
+      const matches = [...rawText.matchAll(exactMatch)];
+
+      if (openedDocument.fileType === "application/txt") {
+        for (let i = 0; i < matches.length; i++) {
+          // Make sure match has index and we have a map of doc char
+          // index to page and token indices
+          if (matches && matches[i].index !== undefined) {
+            console.log(matches);
+            let start_index = matches[i].index as number;
+            let end_index = start_index + searchText.length;
+            search_hits.push({
+              id: i,
+              text: rawText.substring(start_index, end_index),
+              start_index: start_index,
+              end_index: end_index,
+            } as TextSearchSpanResult);
+          }
+        }
+      } else if (openedDocument.fileType === "application/pdf") {
+        // Cycle over matches to convert to tokens and page indices
+        for (let i = 0; i < matches.length; i++) {
+          // Make sure match has index and we have a map of doc char
+          // index to page and token indices
+          if (matches && matches[i].index && pageTextMaps) {
+            let start_index = matches[i].index;
+            if (start_index) {
+              let end_index = start_index + searchText.length;
+              if (end_index) {
+                let target_tokens = [];
+                let lead_in_tokens = [];
+                let lead_out_tokens = [];
+                let end_page = 0;
+                let start_page = 0;
+
+                // How many chars before and after results do we want to show
+                // as context
+                let context_length = 128;
+
+                if (start_index > 0) {
+                  // How many tokens BEFORE the search result must we traverse to cover the context_length's
+                  // worth of characters?
+                  let end_text_index =
+                    start_index >= context_length
+                      ? start_index - context_length
+                      : start_index;
+                  let previous_token: TokenId | undefined = undefined;
+
+                  // Get the tokens BEFORE the results for up to 128 chars
+                  for (let a = start_index; a >= end_text_index; a--) {
+                    if (previous_token === undefined) {
+                      // console.log("Last_token was undefined and a is", a);
+                      // console.log("Token is", page_token_text_maps[a]);
+                      if (pageTextMaps[a]) {
+                        previous_token = pageTextMaps[a];
+                        start_page = previous_token.pageIndex;
+                      }
+                    } else if (
+                      pageTextMaps[a] &&
+                      (pageTextMaps[a].pageIndex !== previous_token.pageIndex ||
+                        pageTextMaps[a].tokenIndex !==
+                          previous_token.tokenIndex)
+                    ) {
+                      let chap = pageTextMaps[a];
+                      previous_token = chap;
+                      lead_in_tokens.push(
+                        pages[chap.pageIndex].tokens[chap.tokenIndex]
+                      );
+                      start_page = chap.pageIndex;
+                    }
+                  }
+                }
+                let lead_in_text = lead_in_tokens
+                  .reverse()
+                  .reduce((prev, curr) => prev + " " + curr.text, "");
+
+                // Get actual result tokens based on the start and end token inde
+                for (let j = start_index; j < end_index; j++) {
+                  target_tokens.push(pageTextMaps[j]);
+                }
+                var grouped_tokens = _.groupBy(target_tokens, "pageIndex");
+
+                // Now get the text after the search match... and check context length doesn't overshoot the entire document...
+                // if it does, just go to end of document.
+                let end_text_index =
+                  rawText.length - end_index >= context_length
+                    ? end_index + context_length
+                    : end_index;
+                let previous_token: TokenId | undefined = undefined;
+
+                // Get the tokens BEFORE the results for up to 128 chars
+                for (let b = end_index; b < end_text_index; b++) {
+                  if (previous_token === undefined) {
+                    if (pageTextMaps[b]) {
+                      previous_token = pageTextMaps[b];
+                    }
+                  } else if (
+                    pageTextMaps[b] &&
+                    (pageTextMaps[b].pageIndex !== previous_token.pageIndex ||
+                      pageTextMaps[b].tokenIndex !== previous_token.tokenIndex)
+                  ) {
+                    let chap = pageTextMaps[b];
+                    previous_token = chap;
+                    lead_out_tokens.push(
+                      pages[chap.pageIndex].tokens[chap.tokenIndex]
+                    );
+                    end_page = chap.pageIndex;
+                  }
+                }
+                let lead_out_text = lead_out_tokens.reduce(
+                  (prev, curr) => prev + " " + curr.text,
+                  ""
+                );
+
+                // Determine bounds for the results
+                let bounds: Record<number, BoundingBox> = {};
+                for (const [key, value] of Object.entries(grouped_tokens)) {
+                  if (pages[parseInt(key)] !== undefined) {
+                    var page_bounds =
+                      pages[parseInt(key)].getBoundsForTokens(value);
+                    if (page_bounds) {
+                      bounds[parseInt(key)] = page_bounds;
+                    }
+                  }
+                }
+
+                // Now add the results detailas to the resulting matches.
+                let fullContext = (
+                  <span>
+                    <i>{lead_in_text}</i> <b>{searchText}</b>
+                    <i>{lead_out_text}</i>
+                  </span>
+                );
+                search_hits.push({
+                  id: i,
+                  tokens: grouped_tokens,
+                  bounds,
+                  fullContext,
+                  end_page,
+                  start_page,
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+    setTextSearchMatches(search_hits);
+    setSelectedTextSearchMatchIndex(0);
+  }, [searchText]);
+
   function addMultipleAnnotations(a: ServerTokenAnnotation[]): void {
     setPdfAnnotations(
       new PdfAnnotations(
@@ -292,95 +535,6 @@ export const AnnotatorRenderer = ({
     NewAnnotationOutputType,
     NewAnnotationInputType
   >(REQUEST_ADD_ANNOTATION);
-
-  const requestCreateAnnotation = (
-    added_annotation_obj: ServerTokenAnnotation | ServerSpanAnnotation
-  ): void => {
-    if (openedCorpus) {
-      // Stray clicks on the canvas can trigger the annotation submission with empty token arrays and
-      // empty text strings (or strings with a single empty space). This check should remove this behavior
-      // by making sure we have more than am empty string or single space.
-      if (
-        added_annotation_obj.rawText.length > 0 &&
-        added_annotation_obj.rawText !== " "
-      ) {
-        //console.log("requestCreateAnnotation received WITH CONTENT", added_annotation_obj);
-        createAnnotation({
-          variables: {
-            json: added_annotation_obj.json,
-            corpusId: openedCorpus.id,
-            documentId: openedDocument.id,
-            annotationLabelId: added_annotation_obj.annotationLabel.id,
-            rawText: added_annotation_obj.rawText,
-            page: added_annotation_obj.page,
-            annotationType:
-              added_annotation_obj instanceof ServerSpanAnnotation
-                ? LabelType.SpanLabel
-                : LabelType.TokenLabel,
-          },
-        })
-          .then((data) => {
-            toast.success("Annotated!\nAdded your annotation to the database.");
-            //console.log("New annoation,", data);
-            let newRenderedAnnotations: (
-              | ServerTokenAnnotation
-              | ServerSpanAnnotation
-            )[] = [];
-            let annotationObj = data?.data?.addAnnotation?.annotation;
-            if (annotationObj) {
-              if (openedDocument.fileType === "application/txt") {
-                newRenderedAnnotations.push(
-                  new ServerSpanAnnotation(
-                    annotationObj.page,
-                    annotationObj.annotationLabel,
-                    annotationObj.rawText,
-                    false,
-                    annotationObj.json as SpanAnnotationJson,
-                    getPermissions(
-                      annotationObj?.myPermissions
-                        ? annotationObj.myPermissions
-                        : []
-                    ),
-                    false,
-                    false,
-                    false,
-                    annotationObj.id
-                  )
-                );
-              } else {
-                newRenderedAnnotations.push(
-                  new ServerTokenAnnotation(
-                    annotationObj.page,
-                    annotationObj.annotationLabel,
-                    annotationObj.rawText,
-                    false,
-                    annotationObj.json,
-                    getPermissions(
-                      annotationObj?.myPermissions
-                        ? annotationObj.myPermissions
-                        : []
-                    ),
-                    false,
-                    false,
-                    false,
-                    annotationObj.id
-                  )
-                );
-              }
-            }
-            addMultipleAnnotations(newRenderedAnnotations);
-          })
-          .catch((err) => {
-            toast.error(
-              `Sorry, something went wrong!\nUnable to add that annotation via OpenContracts GraphQL endpoint: ${err}`
-            );
-            return null;
-          });
-      }
-    } else {
-      toast.warning("No corpus selected!");
-    }
-  };
 
   interface calcRelationUpdatesForAnnotationRemovalReturnType {
     relation: RelationGroup | null;
@@ -927,6 +1081,95 @@ export const AnnotatorRenderer = ({
       });
   };
 
+  const requestCreateAnnotation = (
+    added_annotation_obj: ServerTokenAnnotation | ServerSpanAnnotation
+  ): void => {
+    if (openedCorpus) {
+      // Stray clicks on the canvas can trigger the annotation submission with empty token arrays and
+      // empty text strings (or strings with a single empty space). This check should remove this behavior
+      // by making sure we have more than am empty string or single space.
+      if (
+        added_annotation_obj.rawText.length > 0 &&
+        added_annotation_obj.rawText !== " "
+      ) {
+        //console.log("requestCreateAnnotation received WITH CONTENT", added_annotation_obj);
+        createAnnotation({
+          variables: {
+            json: added_annotation_obj.json,
+            corpusId: openedCorpus.id,
+            documentId: openedDocument.id,
+            annotationLabelId: added_annotation_obj.annotationLabel.id,
+            rawText: added_annotation_obj.rawText,
+            page: added_annotation_obj.page,
+            annotationType:
+              added_annotation_obj instanceof ServerSpanAnnotation
+                ? LabelType.SpanLabel
+                : LabelType.TokenLabel,
+          },
+        })
+          .then((data) => {
+            toast.success("Annotated!\nAdded your annotation to the database.");
+            //console.log("New annoation,", data);
+            let newRenderedAnnotations: (
+              | ServerTokenAnnotation
+              | ServerSpanAnnotation
+            )[] = [];
+            let annotationObj = data?.data?.addAnnotation?.annotation;
+            if (annotationObj) {
+              if (openedDocument.fileType === "application/txt") {
+                newRenderedAnnotations.push(
+                  new ServerSpanAnnotation(
+                    annotationObj.page,
+                    annotationObj.annotationLabel,
+                    annotationObj.rawText,
+                    false,
+                    annotationObj.json as SpanAnnotationJson,
+                    getPermissions(
+                      annotationObj?.myPermissions
+                        ? annotationObj.myPermissions
+                        : []
+                    ),
+                    false,
+                    false,
+                    false,
+                    annotationObj.id
+                  )
+                );
+              } else {
+                newRenderedAnnotations.push(
+                  new ServerTokenAnnotation(
+                    annotationObj.page,
+                    annotationObj.annotationLabel,
+                    annotationObj.rawText,
+                    false,
+                    annotationObj.json,
+                    getPermissions(
+                      annotationObj?.myPermissions
+                        ? annotationObj.myPermissions
+                        : []
+                    ),
+                    false,
+                    false,
+                    false,
+                    annotationObj.id
+                  )
+                );
+              }
+            }
+            addMultipleAnnotations(newRenderedAnnotations);
+          })
+          .catch((err) => {
+            toast.error(
+              `Sorry, something went wrong!\nUnable to add that annotation via OpenContracts GraphQL endpoint: ${err}`
+            );
+            return null;
+          });
+      }
+    } else {
+      toast.warning("No corpus selected!");
+    }
+  };
+
   const [updateRelations, {}] = useMutation<
     UpdateRelationOutputType,
     UpdateRelationInputType
@@ -1010,66 +1253,283 @@ export const AnnotatorRenderer = ({
     }
   };
 
-  console.log("AnnotatorRenderer...");
+  const addSpanLabelsToViewSelection = (ls: AnnotationLabelType[]) => {
+    if (spanLabelsToView) {
+      setSpanLabelsToView([...spanLabelsToView, ...ls]);
+    } else {
+      setSpanLabelsToView(ls);
+    }
+  };
+
+  const clearSpanLabelsToView = () => {
+    setSpanLabelsToView([]);
+  };
+
+  const removeSpanLabelsToViewSelection = (
+    labelsToRemove: AnnotationLabelType[]
+  ) => {
+    setSpanLabelsToView((prevData) => {
+      if (prevData) {
+        return [...prevData].filter((viewingLabel) =>
+          labelsToRemove.map((l) => l.id).includes(viewingLabel.id)
+        );
+      }
+      return null;
+    });
+  };
+
+  // Add selection references
+  const insertSelectionElementRef = (
+    id: string,
+    ref: React.MutableRefObject<HTMLElement | null>
+  ) => {
+    setSelectionElementRefs((prevData) => ({
+      ...prevData,
+      [id]: ref,
+    }));
+  };
+
+  // Add search result references
+  const insertSearchResultElementRefs = (
+    id: number,
+    ref: React.MutableRefObject<HTMLElement | null>
+  ) => {
+    setSearchResultElementRefs((prevData) => ({
+      ...prevData,
+      [id]: ref,
+    }));
+  };
+
+  // Add page reference
+  const insertPageRef = (
+    id: number,
+    ref: React.MutableRefObject<HTMLElement | null>
+  ) => {
+    setPageElementRefs((prevData) => ({
+      ...prevData,
+      [id]: ref,
+    }));
+  };
+
+  const removePageRef = (id: number) => {
+    if (pageElementRefs.hasOwnProperty(id)) {
+      const { [id]: omitted, ...rest } = pageElementRefs;
+      setPageElementRefs(rest);
+    }
+  };
+
+  // Go to next search match (not being used anymore due to new GUI)
+  const advanceTextSearchMatch = () => {
+    if (textSearchMatches) {
+      if (selectedTextSearchMatchIndex < textSearchMatches.length - 1) {
+        setSelectedTextSearchMatchIndex(selectedTextSearchMatchIndex + 1);
+        return;
+      }
+    }
+    setSelectedTextSearchMatchIndex(0);
+  };
+
+  // Go to last search match (not being used anymore due to new GUI)
+  const reverseTextSearchMatch = () => {
+    if (textSearchMatches) {
+      if (selectedTextSearchMatchIndex > 0) {
+        setSelectedTextSearchMatchIndex(selectedTextSearchMatchIndex - 1);
+        return;
+      }
+    }
+    setSelectedTextSearchMatchIndex(0);
+  };
+
+  const safeSetSelectedTextSearchMatchIndex = (index: number) => {
+    if (textSearchMatches && textSearchMatches[index]) {
+      setSelectedTextSearchMatchIndex(index);
+    }
+  };
+
+  // TODO - need to figure out why this should be retained
+  const onUpdatePdfAnnotations = (new_store: PdfAnnotations) => {
+    console.log("onUpdatePdfAnnotations triggered...");
+  };
+
+  const createMultiPageAnnotation = () => {
+    // This will action look in our selection queue and build a json obj that
+    // can be submitted to the database for storage and retrieval.
+
+    // Only proceed if there's an active span label... otherwise, do nothing
+    if (activeSpanLabel) {
+      // Need to merge the queue and current selection area
+      let updatedPageSelectionQueue: Record<number, BoundingBox[]> =
+        pageSelectionQueue;
+
+      // If page number is already in queue... append to queue at page number key
+      if (pageSelection && pageSelection.hasOwnProperty("pageNumber")) {
+        if (pageSelection.pageNumber in updatedPageSelectionQueue) {
+          updatedPageSelectionQueue = {
+            ...updatedPageSelectionQueue,
+            [pageSelection.pageNumber]: [
+              ...updatedPageSelectionQueue[pageSelection.pageNumber],
+              pageSelection.bounds,
+            ],
+          };
+        } else {
+          // Otherwise, add page number as key and then add bounds to it.
+          updatedPageSelectionQueue = {
+            ...updatedPageSelectionQueue,
+            [pageSelection?.pageNumber]: [pageSelection.bounds],
+          };
+        }
+      }
+
+      let annotations: Record<number, SinglePageAnnotationJson> = {};
+      let combinedRawText = "";
+      let firstPage = -1;
+
+      //console.log("updatedPageSelectionQueue", updatedPageSelectionQueue);
+
+      for (var pageNumber in updatedPageSelectionQueue) {
+        //console.log("Update annotation queue for pageNumber", pageNumber);
+        if (firstPage === -1) firstPage = parseInt(pageNumber);
+        let page_annotation = pdfPageInfoObjs[
+          parseInt(pageNumber)
+        ].getPageAnnotationJson(updatedPageSelectionQueue[pageNumber]);
+        if (page_annotation) {
+          annotations[pageNumber] = page_annotation;
+          combinedRawText += " " + page_annotation.rawText;
+        }
+      }
+
+      //console.log("New Annotation json is: ", annotations);
+      // Once the selection is converted to an annotation, set the the
+      // selection queue to undefined to empty it and also
+      // clear out our multi-selection array which is used to hold multiple selections
+      // when user hits SHIFT + click to select text.
+      setSelection(undefined);
+      setMultiSelections([]);
+      requestCreateAnnotation(
+        new ServerTokenAnnotation(
+          firstPage,
+          activeSpanLabel,
+          combinedRawText,
+          false,
+          annotations,
+          [
+            PermissionTypes.CAN_CREATE,
+            PermissionTypes.CAN_REMOVE,
+            PermissionTypes.CAN_UPDATE,
+          ],
+          false,
+          false,
+          true
+        )
+      );
+    }
+  };
+
+  // Create context values
+  const documentContextValue = createDocumentContextValue(
+    openedDocument,
+    openedCorpus,
+    rawText,
+    doc,
+    pageTextMaps,
+    data_loading,
+    pages,
+    pageSelectionQueue,
+    scrollContainerRef,
+    setScrollContainerRef,
+    pdfPageInfoObjs,
+    setPdfPageInfoObjs
+  );
+
+  const corpusContextValue = createCorpusContextValue(openedCorpus);
+
+  const uiContextValue = createUIContextValue(1.0, 1000);
+
+  // Create annotation store value
+  const annotationStoreValue = {
+    allowComment: openedCorpus?.allowComments ?? true,
+    humanSpanLabelChoices: human_span_label_lookup,
+    spanLabels: span_label_lookup,
+    searchText,
+    hideSidebar,
+    relationModalVisible,
+    approveAnnotation,
+    rejectAnnotation,
+    textSearchMatches: textSearchMatches ? textSearchMatches : [],
+    searchForText: setSearchText,
+    selectedTextSearchMatchIndex,
+    reverseTextSearchMatch,
+    advanceTextSearchMatch,
+    setSelectedTextSearchMatchIndex: safeSetSelectedTextSearchMatchIndex,
+    setSelection,
+    pageSelection,
+    pageSelectionQueue,
+    setMultiSelections,
+    selectionElementRefs: annotationElementRefs,
+    insertSelectionElementRef,
+    searchResultElementRefs: textSearchElementRefs,
+    insertSearchResultElementRefs,
+    pageElementRefs,
+    insertPageRef,
+    removePageRef,
+    activeSpanLabel,
+    showOnlySpanLabels: spanLabelsToView,
+    clearViewLabels: clearSpanLabelsToView,
+    addLabelsToView: addSpanLabelsToViewSelection,
+    removeLabelsToView: removeSpanLabelsToViewSelection,
+    setActiveLabel: setActiveSpanLabel,
+    showStructuralLabels: show_structural_annotations,
+    setViewLabels: (ls: AnnotationLabelType[]) => setSpanLabelsToView(ls),
+    toggleShowStructuralLabels: () =>
+      showStructuralAnnotations(!show_structural_annotations),
+    relationLabels: relationship_label_lookup,
+    activeRelationLabel,
+    setActiveRelationLabel,
+    pdfAnnotations,
+    setPdfAnnotations: onUpdatePdfAnnotations,
+    docTypeLabels: document_label_lookup,
+    createAnnotation: requestCreateAnnotation,
+    deleteAnnotation: requestDeleteAnnotation,
+    updateAnnotation: requestUpdateAnnotation,
+    createDocTypeAnnotation: requestCreateDocTypeAnnotation,
+    deleteDocTypeAnnotation: requestDeleteDocTypeAnnotation,
+    createMultiPageAnnotation,
+    createRelation: requestCreateRelation,
+    deleteRelation: requestDeleteRelation,
+    removeAnnotationFromRelation: requestRemoveAnnotationFromRelationship,
+    selectedAnnotations,
+    setSelectedAnnotations,
+    selectedRelations,
+    setSelectedRelations,
+    freeFormAnnotations: useFreeFormAnnotations,
+    toggleFreeFormAnnotations: toggleUseFreeFormAnnotations,
+    hideLabels,
+    setHideLabels,
+    showAnnotationBoundingBoxes: show_annotation_bounding_boxes,
+    showAnnotationLabels: show_annotation_labels,
+    setJumpedToAnnotationOnLoad: setHasScrolledToAnnotation,
+  };
+
   return (
-    <DocumentViewer
-      zoom_level={zoom_level}
-      setZoomLevel={setZoomLevel}
-      view_document_only={view_document_only}
-      doc_permissions={doc_permissions}
-      corpus_permissions={corpus_permissions}
-      read_only={read_only}
-      data_loading={data_loading}
-      loading_message={loading_message}
-      createAnnotation={requestCreateAnnotation}
-      createRelation={requestCreateRelation}
-      createDocTypeAnnotation={requestCreateDocTypeAnnotation}
-      deleteAnnotation={requestDeleteAnnotation}
-      updateAnnotation={requestUpdateAnnotation}
-      approveAnnotation={approveAnnotation}
-      rejectAnnotation={rejectAnnotation}
-      deleteRelation={requestDeleteRelation}
-      removeAnnotationFromRelation={requestRemoveAnnotationFromRelationship}
-      deleteDocTypeAnnotation={requestDeleteDocTypeAnnotation}
-      containerRef={containerRef}
-      containerRefCallback={containerRefCallback}
-      pdfAnnotations={pdfAnnotations}
-      textSearchElementRefs={textSearchElementRefs}
-      preAssignedSelectionElementRefs={annotationElementRefs}
-      show_structural_annotations={show_structural_annotations}
-      show_selected_annotation_only={show_selected_annotation_only}
-      show_annotation_bounding_boxes={show_annotation_bounding_boxes}
-      show_annotation_labels={show_annotation_labels}
-      scroll_to_annotation_on_open={scrollToAnnotation}
-      setJumpedToAnnotationOnLoad={setHasScrolledToAnnotation}
-      doc={doc}
-      doc_text={rawText}
-      page_token_text_maps={pageTextMaps ? pageTextMaps : {}}
-      pages={pages}
-      spanLabels={span_label_lookup}
-      humanSpanLabelChoices={human_span_label_lookup}
-      relationLabels={relationship_label_lookup}
-      docTypeLabels={document_label_lookup}
-      setViewState={onError}
-      shiftDown={shiftDown}
-      selected_corpus={openedCorpus}
-      selected_document={openedDocument}
-      analyses={analyses ? analyses : []}
-      extracts={extracts ? extracts : []}
-      datacells={data_cells ? data_cells : []}
-      columns={columns ? columns : []}
-      editMode={editMode}
-      setEditMode={setEditMode}
-      allowInput={allowInput}
-      setAllowInput={setAllowInput}
-      selected_analysis={selected_analysis}
-      selected_extract={selected_extract}
-      onSelectAnalysis={
-        onSelectAnalysis ? onSelectAnalysis : (a: AnalysisType | null) => null
-      }
-      onSelectExtract={
-        onSelectExtract ? onSelectExtract : (e: ExtractType | null) => null
-      }
-    />
+    <UIContext.Provider value={uiContextValue}>
+      <CorpusContext.Provider value={corpusContextValue}>
+        <DocumentContext.Provider value={documentContextValue}>
+          <AnnotationStore.Provider value={annotationStoreValue}>
+            <listeners.UndoAnnotation />
+            <listeners.HandleAnnotationSelection
+              setModalVisible={setRelationModalVisible}
+            />
+            <listeners.HideAnnotationLabels />
+            <DocumentViewer
+              read_only={read_only}
+              editMode={editMode}
+              allowInput={allowInput}
+              setEditMode={setEditMode}
+              setAllowInput={setAllowInput}
+            />
+          </AnnotationStore.Provider>
+        </DocumentContext.Provider>
+      </CorpusContext.Provider>
+    </UIContext.Provider>
   );
 };

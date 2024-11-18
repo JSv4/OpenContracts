@@ -41,6 +41,7 @@ import { PlaceholderCard } from "../../placeholders/PlaceholderCard";
 import { CorpusStats } from "../../widgets/data-display/CorpusStatus";
 import styled from "styled-components";
 import { RelationGroup } from "../types/annotations";
+import { useUIContext } from "../context/UIContext";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;
@@ -207,6 +208,7 @@ export const AnnotatorSidebar = ({
   fetchMore?: () => void;
 }) => {
   const annotationStore = useContext(AnnotationStore);
+  const { hideSidebar, setHideSidebar } = useUIContext();
   const opened_corpus = useReactiveVar(openedCorpus);
   const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
 
@@ -242,13 +244,8 @@ export const AnnotatorSidebar = ({
     }
   };
 
-  const {
-    textSearchMatches,
-    selectedRelations,
-    pdfAnnotations,
-    setHideSidebar,
-    hideSidebar,
-  } = annotationStore;
+  const { textSearchMatches, selectedRelations, pdfAnnotations } =
+    annotationStore;
   const annotations = pdfAnnotations.annotations;
   const relations = pdfAnnotations.relations;
 

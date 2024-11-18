@@ -1,6 +1,10 @@
 import { createContext } from "react";
 
-import { AnnotationLabelType, LabelType } from "../../../types/graphql-api";
+import {
+  AnnotationLabelType,
+  LabelDisplayBehavior,
+  LabelType,
+} from "../../../types/graphql-api";
 import { BoundingBox, TextSearchSpanResult } from "../../types";
 import { TextSearchTokenResult } from "../../types";
 import {
@@ -13,19 +17,13 @@ import {
 import { PDFPageInfo } from "../types/pdf";
 
 interface _AnnotationStore {
+  relationModalVisible: boolean;
   spanLabels: AnnotationLabelType[];
   humanSpanLabelChoices: AnnotationLabelType[];
   showStructuralLabels?: boolean;
   activeSpanLabel?: AnnotationLabelType | undefined;
-  hideSidebar: boolean;
-  setHideSidebar: (hide: boolean) => void;
   showOnlySpanLabels?: AnnotationLabelType[] | null;
   setActiveLabel: (label: AnnotationLabelType) => void;
-
-  scrollContainerRef: React.RefObject<HTMLDivElement> | undefined;
-  setScrollContainerRef: (
-    ref: React.RefObject<HTMLDivElement> | undefined
-  ) => void;
 
   // Obj that lets us store the refs to the rendered selections so we can scroll to them
   selectionElementRefs:
@@ -59,7 +57,6 @@ interface _AnnotationStore {
 
   docTypeLabels: AnnotationLabelType[];
 
-  docText: string | undefined;
   textSearchMatches: (TextSearchTokenResult | TextSearchSpanResult)[];
   selectedTextSearchMatchIndex: number;
   searchText: string | undefined;
@@ -71,16 +68,11 @@ interface _AnnotationStore {
   setSelectedTextSearchMatchIndex: (index: number) => void;
 
   pdfAnnotations: PdfAnnotations;
-  pageSelection: { pageNumber: number; bounds: BoundingBox } | undefined;
-  pageSelectionQueue: Record<number, BoundingBox[]>;
   setPdfAnnotations: (t: PdfAnnotations) => void;
   setSelection: (
     b: { pageNumber: number; bounds: BoundingBox } | undefined
   ) => void;
   setMultiSelections: (b: Record<number, BoundingBox[]>) => void;
-
-  pdfPageInfoObjs: Record<number, PDFPageInfo>;
-  setPdfPageInfoObjs: (b: Record<number, PDFPageInfo>) => void;
   createMultiPageAnnotation: () => void;
 
   createAnnotation: (a: ServerTokenAnnotation | ServerSpanAnnotation) => void;
@@ -114,31 +106,35 @@ interface _AnnotationStore {
 
   hideLabels: boolean;
   setHideLabels: (state: boolean) => void;
+
+  showAnnotationBoundingBoxes: boolean;
+  showAnnotationLabels: LabelDisplayBehavior;
+  setJumpedToAnnotationOnLoad: (annot_id: string) => void | null;
+
+  pageSelection?: {
+    pageNumber: number;
+    bounds: BoundingBox;
+  };
+  pageSelectionQueue: Record<number, BoundingBox[]>;
 }
 
 export const AnnotationStore = createContext<_AnnotationStore>({
   pdfAnnotations: new PdfAnnotations([], [], []),
-  pageSelection: undefined,
-  pageSelectionQueue: [],
   spanLabels: [],
   humanSpanLabelChoices: [],
   showStructuralLabels: true,
   activeSpanLabel: undefined,
   showOnlySpanLabels: [],
-  docText: undefined,
   textSearchMatches: [],
   selectedTextSearchMatchIndex: 1,
   searchText: undefined,
-  hideSidebar: false,
   allowComment: false,
+  relationModalVisible: false,
   approveAnnotation: (annot_id: string, comment?: string) => {
     throw new Error("approveAnnotation- not implemented");
   },
   rejectAnnotation: (annot_id: string, comment?: string) => {
     throw new Error("approveAnnotation- not implemented");
-  },
-  setHideSidebar: () => {
-    throw new Error("setHideSidebar - not implemented");
   },
   toggleShowStructuralLabels: () => {
     throw new Error("toggleShowStructuralLabels() - not implemented");
@@ -177,10 +173,6 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   },
   removeLabelsToView: (_?: AnnotationLabelType[]) => {
     throw new Error("removeLabelsToViewis not implemented");
-  },
-  scrollContainerRef: undefined,
-  setScrollContainerRef: (ref: React.RefObject<HTMLDivElement> | undefined) => {
-    throw new Error("setScrollContainerRef is not implemented");
   },
   selectionElementRefs: undefined,
   insertSelectionElementRef: (
@@ -227,12 +219,6 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   deleteDocTypeAnnotation: (_?: string) => {
     throw new Error("deleteDocTypeAnnotation() - Unimplemented");
   },
-  pdfPageInfoObjs: [],
-  setPdfPageInfoObjs: (_?: Record<number, PDFPageInfo>) => {
-    throw new Error(
-      "setPdfPageInfoObjs is unimplemented. This is needed for multi-page annotations."
-    );
-  },
   createMultiPageAnnotation: () => {
     throw new Error(
       "createMultiPageAnnotation is unimplemented. This is needed for multi-page annotations."
@@ -269,4 +255,11 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   setHideLabels: (_: boolean) => {
     throw new Error("Unimplemented");
   },
+  showAnnotationBoundingBoxes: false,
+  showAnnotationLabels: LabelDisplayBehavior.ALWAYS,
+  setJumpedToAnnotationOnLoad: () => {
+    throw new Error("setJumpedToAnnotationOnLoad - not implemented");
+  },
+  pageSelection: undefined,
+  pageSelectionQueue: {},
 });

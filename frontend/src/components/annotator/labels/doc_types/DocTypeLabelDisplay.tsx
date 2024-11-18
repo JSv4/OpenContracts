@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import { useContext, useState } from "react";
 import {
   Divider,
   Header,
@@ -16,11 +16,12 @@ import { DocTypePopup } from "./DocTypePopup";
 import _ from "lodash";
 
 import "./DocTypeLabelDisplayStyles.css";
-import { AnnotationStore, DocTypeAnnotation } from "../../context";
+import { AnnotationStore } from "../../context";
 import { AnnotationLabelType } from "../../../../types/graphql-api";
 import { PermissionTypes } from "../../../types";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 import { HideableHasWidth } from "../../common";
+import { DocTypeAnnotation } from "../../types/annotations";
 
 export const DocTypeLabelDisplay = ({ read_only }: { read_only: boolean }) => {
   const { width } = useWindowDimensions();

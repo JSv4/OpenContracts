@@ -3,8 +3,9 @@ import { Label, Button, Popup, Icon, SemanticICONS } from "semantic-ui-react";
 import styled from "styled-components";
 import { Trash2, ArrowRight, ArrowLeft } from "lucide-react";
 import { HorizontallyJustifiedDiv } from "./common";
-import { AnnotationStore, ServerTokenAnnotation } from "../context";
+import { AnnotationStore } from "../context";
 import { PermissionTypes } from "../../types";
+import { ServerTokenAnnotation } from "../types/annotations";
 
 interface HighlightContainerProps {
   color?: string;

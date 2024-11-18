@@ -14,7 +14,7 @@ import {
 } from "semantic-ui-react";
 
 import _, { isNumber } from "lodash";
-import { AnnotationStore, RelationGroup } from "../context";
+import { AnnotationStore } from "../context";
 import { HighlightItem } from "./HighlightItem";
 import { RelationItem } from "./RelationItem";
 
@@ -40,6 +40,7 @@ import { getPermissions } from "../../../utils/transform";
 import { PlaceholderCard } from "../../placeholders/PlaceholderCard";
 import { CorpusStats } from "../../widgets/data-display/CorpusStatus";
 import styled from "styled-components";
+import { RelationGroup } from "../types/annotations";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;

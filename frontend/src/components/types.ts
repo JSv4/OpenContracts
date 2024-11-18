@@ -3,7 +3,7 @@ import {
   AnnotationLabelType,
   LabelDisplayBehavior,
 } from "../types/graphql-api";
-import { PDFPageInfo } from "./annotator/context";
+import { PDFPageInfo } from "./annotator/types/pdf";
 
 /**
  * Type-related functions

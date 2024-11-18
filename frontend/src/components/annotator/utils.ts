@@ -8,15 +8,11 @@ import target_icon from "../../assets/icons/noun-target-746597.png";
 
 import { useEffect, useRef } from "react";
 
-import {
-  PDFPageInfo,
-  RelationGroup,
-  TokenId,
-  ServerTokenAnnotation,
-} from "./context";
-import { Token } from "../types";
+import { Token, TokenId } from "../types";
 import { PageTokenMapBuilderProps } from "../../types/ui";
 import { PageTokenMapProps } from "../../types/ui";
+import { RelationGroup, ServerTokenAnnotation } from "./types/annotations";
+import { PDFPageInfo } from "./types/pdf";
 
 /**
  * Query string values can be strings or an array of strings. This utility

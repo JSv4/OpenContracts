@@ -1,5 +1,4 @@
 import { TokenId } from "../components/types";
-import { PageTokenMapProps } from "./ui";
 
 export interface MenuItemProps {
   key: string;

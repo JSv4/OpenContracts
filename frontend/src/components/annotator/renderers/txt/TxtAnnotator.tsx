@@ -12,12 +12,12 @@ import { Label, LabelContainer, PaperContainer } from "./StyledComponents";
 import RadialButtonCloud, { CloudButtonItem } from "./RadialButtonCloud";
 import { Modal, Button, Dropdown } from "semantic-ui-react";
 import { AnnotationLabelType } from "../../../../types/graphql-api";
-import { ServerSpanAnnotation } from "../../context";
 import { TextSearchSpanResult } from "../../../types";
 import { PermissionTypes } from "../../../types";
 import styled, { keyframes, css } from "styled-components";
 import * as d3 from "d3";
 import { hexToRgba } from "./utils";
+import { ServerSpanAnnotation } from "../../types/annotations";
 
 interface TxtAnnotatorProps {
   text: string;

@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
-import { PDFPageInfo, TokenId } from "../../context";
 
 import uniqueId from "lodash/uniqueId";
 import styled from "styled-components";
+import { PDFPageInfo } from "../../types/pdf";
+import { TokenId } from "../../types/annotations";
 
 // Add interface for the custom props
 interface SelectionBoxProps {

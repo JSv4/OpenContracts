@@ -3,11 +3,7 @@ import _ from "lodash";
 
 import { Image, Icon } from "semantic-ui-react";
 
-import {
-  PDFPageInfo,
-  AnnotationStore,
-  ServerTokenAnnotation,
-} from "../../context";
+import { AnnotationStore } from "../../context";
 
 import {
   HorizontallyJustifiedStartDiv,
@@ -35,6 +31,8 @@ import { SelectionTokenGroup } from "./SelectionTokenGroup";
 import { EditLabelModal } from "../../../widgets/modals/EditLabelModal";
 import { useReactiveVar } from "@apollo/client";
 import { authToken } from "../../../../graphql/cache";
+import { PDFPageInfo } from "../../types/pdf";
+import { ServerTokenAnnotation } from "../../types/annotations";
 
 interface SelectionProps {
   selectionRef:

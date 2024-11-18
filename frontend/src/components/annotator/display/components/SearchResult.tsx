@@ -1,7 +1,7 @@
 import React, { useContext, useState } from "react";
 import styled from "styled-components";
 import _ from "lodash";
-import { PDFPageInfo, AnnotationStore } from "../../context";
+import { AnnotationStore } from "../../context";
 import { VerticallyJustifiedEndDiv } from "../../sidebar/common";
 
 import { ResultBoundary } from "./ResultBoundary";
@@ -10,6 +10,7 @@ import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { getBorderWidthFromBounds } from "../../../../utils/transform";
 import { SearchSelectionTokens } from "./SelectionTokens";
 import { LabelTagContainer } from "./Containers";
+import { PDFPageInfo } from "../../types/pdf";
 
 interface SearchResultProps {
   total_results: number;

@@ -14,17 +14,13 @@ import {
   PermissionTypes,
   TextSearchTokenResult,
 } from "../../../types";
-import {
-  AnnotationStore,
-  normalizeBounds,
-  PDFStore,
-  ServerTokenAnnotation,
-} from "../../context";
+import { AnnotationStore, normalizeBounds, PDFStore } from "../../context";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
 import { Selection } from "../../display/components/Selection";
 import { SearchResult } from "../../display/components/SearchResult";
 import { SelectionBoundary } from "../../display/components/SelectionBoundary";
 import { SelectionTokenGroup } from "../../display/components/SelectionTokenGroup";
+import { ServerTokenAnnotation } from "../../types/annotations";
 
 export const PDFPage = ({
   pageInfo,

@@ -1,14 +1,13 @@
 import { useContext } from "react";
-import {
-  RenderedSpanAnnotation,
-  PDFStore,
-  AnnotationStore,
-  ServerTokenAnnotation,
-} from "./context";
+import { PDFStore, AnnotationStore } from "./context";
 import { Label, Card } from "semantic-ui-react";
 import styled from "styled-components";
 import _ from "lodash";
 import { TruncatedText } from "../widgets/data-display/TruncatedText";
+import {
+  RenderedSpanAnnotation,
+  ServerTokenAnnotation,
+} from "./types/annotations";
 
 interface AnnotationSummaryProps {
   annotation: RenderedSpanAnnotation;

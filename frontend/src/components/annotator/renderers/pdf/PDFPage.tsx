@@ -41,6 +41,7 @@ export const PDFPage = ({
   const rendererRef = useRef<PDFPageRenderer | null>(null);
   const annotationRefs = useAnnotationRefs();
   const textSearch = useAnnotationSearch();
+  const { annotations: pdfAnnotations } = useAnnotationManager();
 
   const [scale, setScale] = useState<number>(1);
   const [canvas_width, setCanvasWidth] = useState<number>();
@@ -52,7 +53,7 @@ export const PDFPage = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const annotations = annotationStore.pdfAnnotations.annotations;
+  const annotations = pdfAnnotations.annotations;
   // console.log(`${annotations.length} annotations in store`);
 
   const { scrollContainerRef, pdfPageInfoObjs } = useDocumentContext();

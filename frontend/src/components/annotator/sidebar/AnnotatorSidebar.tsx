@@ -44,6 +44,7 @@ import { RelationGroup } from "../types/annotations";
 import { useAnnotationSearch } from "../hooks/useAnnotationSearch";
 import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
 import { useUISettings } from "../hooks/useUISettings";
+import { useAnnotationManager } from "../hooks/useAnnotationManager";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;
@@ -248,7 +249,8 @@ export const AnnotatorSidebar = ({
 
   const { searchResults } = useAnnotationSearch();
   const { selectionElementRefs } = useAnnotationRefs();
-  const { selectedRelations, pdfAnnotations } = annotationStore;
+  const { selectedRelations } = annotationStore;
+  const { annotations: pdfAnnotations } = useAnnotationManager();
   const annotations = pdfAnnotations.annotations;
   const relations = pdfAnnotations.relations;
 
@@ -573,7 +575,7 @@ export const AnnotatorSidebar = ({
     }
     // If the toggle is flipping us over to SELECTED
     else {
-      let annotation = annotationStore.pdfAnnotations.annotations.filter(
+      let annotation = pdfAnnotations.annotations.filter(
         (annotation_obj) => annotation_obj.id === toggledId
       )[0];
       // Check the proposed id is actually in the annotation store

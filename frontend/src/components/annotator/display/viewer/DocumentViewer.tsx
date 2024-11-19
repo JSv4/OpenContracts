@@ -93,7 +93,6 @@ const PDFContainer = styled.div<{ width?: number }>(
 
 export const DocumentViewer = ({
   doc_permissions,
-  view_document_only,
   corpus_permissions,
   read_only,
   data_loading,
@@ -742,8 +741,6 @@ export const DocumentViewer = ({
             showStructuralAnnotations(!show_structural_annotations),
           activeRelationLabel,
           setActiveRelationLabel,
-          pdfAnnotations,
-          setPdfAnnotations: onUpdatePdfAnnotations,
           createAnnotation,
           deleteAnnotation,
           updateAnnotation,

@@ -300,9 +300,7 @@ interface _AnnotationStore {
   allowComment: boolean;
   toggleShowStructuralLabels: () => void;
 
-  pdfAnnotations: PdfAnnotations;
   pageSelection: { pageNumber: number; bounds: BoundingBox } | undefined;
-  setPdfAnnotations: (t: PdfAnnotations) => void;
   setSelection: (
     b: { pageNumber: number; bounds: BoundingBox } | undefined
   ) => void;
@@ -344,7 +342,6 @@ interface _AnnotationStore {
 }
 
 export const AnnotationStore = createContext<_AnnotationStore>({
-  pdfAnnotations: new PdfAnnotations([], [], []),
   pageSelection: undefined,
   showStructuralLabels: true,
   activeSpanLabel: undefined,
@@ -428,9 +425,6 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   },
   selectedRelations: [],
   setSelectedRelations: (_?: RelationGroup[]) => {
-    throw new Error("Unimplemented");
-  },
-  setPdfAnnotations: (_: PdfAnnotations) => {
     throw new Error("Unimplemented");
   },
   freeFormAnnotations: false,

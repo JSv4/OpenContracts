@@ -1029,11 +1029,6 @@ export const DocumentAnnotator = ({
             annotationsLoading ||
             humanDataLoading
           }
-          pageSelectionQueue={{}} // You might want to add state for this if needed
-          scrollContainerRef={undefined} // You might want to add a ref for this if needed
-          setScrollContainerRef={(ref) => {}} // Add handler if needed
-          pdfPageInfoObjs={{}} // You might want to add state for this if needed
-          setPdfPageInfoObjs={() => {}} // Add handler if needed
           viewState={view_state}
         >
           {rendered_component}

@@ -3,7 +3,7 @@ import { Form, Icon, Popup, Menu, SemanticICONS } from "semantic-ui-react";
 import { Search, X } from "lucide-react";
 import styled from "styled-components";
 import _ from "lodash";
-import { AnnotationStore } from "../../context";
+import { AnnotationStore } from "../../context/AnnotationStore";
 import { ZoomButtonGroup } from "../../../widgets/buttons/ZoomButtonGroup";
 
 const ActionBarContainer = styled.div`

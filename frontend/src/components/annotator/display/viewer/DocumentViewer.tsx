@@ -58,6 +58,7 @@ import {
 import { PDFPageInfo } from "../../types/pdf";
 import { AnnotationStore } from "../../context/AnnotationStore";
 import { PDFStore } from "../../context/PDFStore";
+import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -124,8 +125,6 @@ export const DocumentViewer = ({
   removeAnnotationFromRelation,
   containerRef,
   containerRefCallback,
-  textSearchElementRefs,
-  preAssignedSelectionElementRefs,
   pdfAnnotations,
   scroll_to_annotation_on_open,
   setJumpedToAnnotationOnLoad,
@@ -183,12 +182,6 @@ export const DocumentViewer = ({
   createRelation: (relation: RelationGroup) => void;
   containerRefCallback: (containerDivElement: HTMLDivElement | null) => void;
   containerRef: React.MutableRefObject<HTMLDivElement | null>;
-  textSearchElementRefs:
-    | React.MutableRefObject<Record<string, HTMLElement | null>>
-    | undefined;
-  preAssignedSelectionElementRefs:
-    | React.MutableRefObject<Record<string, HTMLElement | null>>
-    | undefined;
   pdfAnnotations: PdfAnnotations;
   scroll_to_annotation_on_open: ServerTokenAnnotation | null | undefined;
   setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
@@ -207,21 +200,10 @@ export const DocumentViewer = ({
   shiftDown: boolean;
   setViewState: (v: ViewState) => void;
 }) => {
-  console.log("DocumentViewer");
-
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const [hideSidebar, setHideSidebar] = useState<boolean>(false);
-  const [selectionElementRefs, setSelectionElementRefs] = useState<
-    Record<string, React.MutableRefObject<HTMLElement | null>>
-  >({});
-  const [searchResultElementRefs, setSearchResultElementRefs] = useState<
-    Record<string, React.MutableRefObject<HTMLElement | null>>
-  >({});
-  const [pageElementRefs, setPageElementRefs] = useState<
-    Record<number, React.MutableRefObject<HTMLElement | null>>
-  >({});
   const [scrollContainerRef, setScrollContainerRef] =
     useState<React.RefObject<HTMLDivElement>>();
   const [textSearchMatches, setTextSearchMatches] =
@@ -311,46 +293,6 @@ export const DocumentViewer = ({
       }
       return null;
     });
-  };
-
-  // Add selection references
-  const insertSelectionElementRef = (
-    id: string,
-    ref: React.MutableRefObject<HTMLElement | null>
-  ) => {
-    setSelectionElementRefs((prevData) => ({
-      ...prevData,
-      [id]: ref,
-    }));
-  };
-
-  // Add search result references
-  const insertSearchResultElementRefs = (
-    id: number,
-    ref: React.MutableRefObject<HTMLElement | null>
-  ) => {
-    setSearchResultElementRefs((prevData) => ({
-      ...prevData,
-      [id]: ref,
-    }));
-  };
-
-  // Add page reference
-  const insertPageRef = (
-    id: number,
-    ref: React.MutableRefObject<HTMLElement | null>
-  ) => {
-    setPageElementRefs((prevData) => ({
-      ...prevData,
-      [id]: ref,
-    }));
-  };
-
-  const removePageRef = (id: number) => {
-    if (pageElementRefs.hasOwnProperty(id)) {
-      const { [id]: omitted, ...rest } = pageElementRefs;
-      setPageElementRefs(rest);
-    }
   };
 
   // Search for text when search text changes.
@@ -802,13 +744,6 @@ export const DocumentViewer = ({
           pageSelectionQueue,
           scrollContainerRef,
           setScrollContainerRef,
-          selectionElementRefs: preAssignedSelectionElementRefs,
-          insertSelectionElementRef,
-          searchResultElementRefs: textSearchElementRefs,
-          insertSearchResultElementRefs,
-          pageElementRefs,
-          insertPageRef,
-          removePageRef,
           activeSpanLabel,
           showOnlySpanLabels: spanLabelsToView,
           clearViewLabels: clearSpanLabelsToView,

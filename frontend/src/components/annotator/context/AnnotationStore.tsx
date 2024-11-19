@@ -302,30 +302,6 @@ interface _AnnotationStore {
   ) => void;
 
   // Obj that lets us store the refs to the rendered selections so we can scroll to them
-  selectionElementRefs:
-    | React.MutableRefObject<Record<string, HTMLElement | null>>
-    | undefined;
-  insertSelectionElementRef: (
-    id: string,
-    ref: React.MutableRefObject<HTMLElement | null>
-  ) => void | never;
-
-  // Obj that lets us store the refs to the rendered search results so we can scroll to them
-  searchResultElementRefs:
-    | React.MutableRefObject<Record<string, HTMLElement | null>>
-    | undefined;
-  insertSearchResultElementRefs: (
-    id: number,
-    ref: React.MutableRefObject<HTMLElement | null>
-  ) => void | never;
-
-  // Obj that lets us store the refs to the rendered pages so we can scroll to them
-  pageElementRefs: Record<number, React.MutableRefObject<HTMLElement | null>>;
-  insertPageRef: (
-    id: number,
-    ref: React.MutableRefObject<HTMLElement | null>
-  ) => void | never;
-  removePageRef: (id: number) => void | never;
 
   relationLabels: AnnotationLabelType[];
   activeRelationLabel?: AnnotationLabelType;
@@ -455,30 +431,6 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   scrollContainerRef: undefined,
   setScrollContainerRef: (ref: React.RefObject<HTMLDivElement> | undefined) => {
     throw new Error("setScrollContainerRef is not implemented");
-  },
-  selectionElementRefs: undefined,
-  insertSelectionElementRef: (
-    id: string,
-    ref: React.MutableRefObject<HTMLElement | null>
-  ) => {
-    throw new Error("insertSelectionElementRef() not implemented");
-  },
-  searchResultElementRefs: undefined,
-  insertSearchResultElementRefs: (
-    id: number,
-    ref: React.MutableRefObject<HTMLElement | null>
-  ) => {
-    throw new Error("insertSearchResultElementRefs() not implemented");
-  },
-  pageElementRefs: {},
-  insertPageRef: (
-    id: number,
-    ref: React.MutableRefObject<HTMLElement | null>
-  ) => {
-    throw new Error("insertPageRef() not implemented");
-  },
-  removePageRef: (id: number) => {
-    throw new Error("removePageRef() not implemented");
   },
   relationLabels: [],
   activeRelationLabel: undefined,

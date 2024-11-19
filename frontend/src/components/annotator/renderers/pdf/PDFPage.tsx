@@ -14,7 +14,8 @@ import {
   PermissionTypes,
   TextSearchTokenResult,
 } from "../../../types";
-import { AnnotationStore, normalizeBounds, PDFStore } from "../../context";
+import { AnnotationStore } from "../../context/AnnotationStore";
+import { normalizeBounds, PDFStore } from "../../context/PDFStore";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
 import { Selection } from "../../display/components/Selection";
 import { SearchResult } from "../../display/components/SearchResult";
@@ -22,6 +23,7 @@ import { SelectionBoundary } from "../../display/components/SelectionBoundary";
 import { SelectionTokenGroup } from "../../display/components/SelectionTokenGroup";
 import { ServerTokenAnnotation } from "../../types/annotations";
 import { useDocumentContext } from "../../context/DocumentContext";
+import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 
 export const PDFPage = ({
   pageInfo,
@@ -35,12 +37,14 @@ export const PDFPage = ({
 }: PageProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<PDFPageRenderer | null>(null);
+  const annotationRefs = useAnnotationRefs();
 
   const [scale, setScale] = useState<number>(1);
   const [canvas_width, setCanvasWidth] = useState<number>();
   const [hasPdfPageRendered, setPdfPageRendered] = useState(false);
 
   const annotationStore = useContext(AnnotationStore);
+
   const pdfStore = useContext(PDFStore);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -50,13 +54,11 @@ export const PDFPage = ({
 
   const { scrollContainerRef, pdfPageInfoObjs } = useDocumentContext();
 
-  const {
-    selectedTextSearchMatchIndex,
-    selectionElementRefs: selectionRefs,
-    searchResultElementRefs,
-    pageSelectionQueue,
-    pageSelection,
-  } = annotationStore;
+  const { selectedTextSearchMatchIndex, pageSelectionQueue, pageSelection } =
+    annotationStore;
+
+  const { selectionElementRefs: selectionRefs, searchResultElementRefs } =
+    annotationRefs;
 
   // console.log(`Multipage annotations for page #${pageInfo.page.pageNumber - 1}:`, annotations)
   // Given selected bounds (top, bottom, left, right), determine which tokens fall inside bounds
@@ -153,7 +155,8 @@ export const PDFPage = ({
               );
             }
 
-            annotationStore.insertPageRef(
+            annotationRefs.registerRef(
+              "page",
               pageInfo.page.pageNumber - 1,
               canvasRef
             );
@@ -167,7 +170,8 @@ export const PDFPage = ({
       initializePage();
 
       return () => {
-        if (scrollContainerRef && scrollContainerRef.current !== null) {
+        annotationRefs.unregisterRef("page", pageInfo.page.pageNumber - 1);
+        if (scrollContainerRef && scrollContainerRef.current) {
           scrollContainerRef.current.removeEventListener(
             "resize",
             handleResize
@@ -205,33 +209,32 @@ export const PDFPage = ({
   // Jump to selected annotation
   useLayoutEffect(() => {
     if (annotationStore.selectedAnnotations.length === 1) {
+      const selectedId = annotationStore.selectedAnnotations[0];
       console.log(
         "Selected",
-        annotationStore.selectionElementRefs?.current[
-          annotationStore.selectedAnnotations[0]
-        ]
+        annotationRefs.selectionElementRefs.current[selectedId]
       );
-      annotationStore.selectionElementRefs?.current[
+      annotationRefs.selectionElementRefs.current[selectedId]?.scrollIntoView();
+    }
+  }, [
+    annotationStore.selectedAnnotations,
+    annotationRefs.selectionElementRefs,
+  ]);
+
+  useEffect(() => {
+    if (
+      hasPdfPageRendered &&
+      annotationStore.selectedAnnotations.length === 1
+    ) {
+      annotationRefs.selectionElementRefs.current[
         annotationStore.selectedAnnotations[0]
       ]?.scrollIntoView();
     }
-  }, [annotationStore.selectedAnnotations]);
-
-  useEffect(() => {
-    if (hasPdfPageRendered) {
-      if (annotationStore.selectedAnnotations.length === 1) {
-        console.log(
-          "Selected",
-          annotationStore.selectionElementRefs?.current[
-            annotationStore.selectedAnnotations[0]
-          ]
-        );
-        annotationStore.selectionElementRefs?.current[
-          annotationStore.selectedAnnotations[0]
-        ]?.scrollIntoView();
-      }
-    }
-  }, [hasPdfPageRendered, annotationStore.selectedAnnotations]);
+  }, [
+    hasPdfPageRendered,
+    annotationStore.selectedAnnotations,
+    annotationRefs.selectionElementRefs,
+  ]);
 
   const pageQueuedSelections = pageSelectionQueue[pageInfo.page.pageNumber - 1]
     ? pageSelectionQueue[pageInfo.page.pageNumber - 1]
@@ -290,7 +293,7 @@ export const PDFPage = ({
           annotation.id
         )}
         labelBehavior={show_annotation_labels}
-        selectionRef={selectionRefs}
+        selectionRef={annotationRefs.selectionElementRefs}
         pageInfo={pageInfo}
         annotation={annotation}
         setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}

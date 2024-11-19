@@ -1,16 +1,11 @@
-import React, {
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-} from "react";
+import React, { useContext, useEffect, useCallback } from "react";
 import { Header, Segment, Icon, Message, Form } from "semantic-ui-react";
 import _ from "lodash";
-import { AnnotationStore } from "../context";
+import { AnnotationStore } from "../context/AnnotationStore";
 import "./SearchWidgetStyles.css";
 import { TextSearchSpanResult, TextSearchTokenResult } from "../../types";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
+import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
 
 const PageHeader: React.FC<{
   result: TextSearchTokenResult | TextSearchSpanResult;
@@ -100,6 +95,7 @@ const SearchResultCard: React.FC<{
 };
 
 export const SearchSidebarWidget: React.FC = () => {
+  const annotationRefs = useAnnotationRefs();
   const annotationStore = useContext(AnnotationStore);
   const {
     textSearchMatches,
@@ -125,34 +121,17 @@ export const SearchSidebarWidget: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log(
-      "Selected text search match index",
-      selectedTextSearchMatchIndex
-    );
-    console.log(
-      "Search result element refs",
-      annotationStore?.searchResultElementRefs?.current
-    );
-    if (
-      annotationStore.searchResultElementRefs?.current[
+    const currentRef =
+      annotationRefs.searchResultElementRefs.current[
         selectedTextSearchMatchIndex
-      ]
-    ) {
-      console.log(
-        "Scrolling to result",
-        selectedTextSearchMatchIndex,
-        annotationStore.searchResultElementRefs.current[
-          selectedTextSearchMatchIndex
-        ]
-      );
-      annotationStore.searchResultElementRefs.current[
-        selectedTextSearchMatchIndex
-      ]?.scrollIntoView({
+      ];
+    if (currentRef) {
+      currentRef?.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
     }
-  }, [selectedTextSearchMatchIndex, annotationStore.searchResultElementRefs]);
+  }, [selectedTextSearchMatchIndex, annotationRefs.searchResultElementRefs]);
 
   const onResultClick = (index: number) => {
     annotationStore.setSelectedTextSearchMatchIndex(index);

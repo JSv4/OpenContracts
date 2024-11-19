@@ -310,15 +310,8 @@ interface _AnnotationStore {
   docTypeLabels: AnnotationLabelType[];
 
   docText: string | undefined;
-  textSearchMatches: (TextSearchTokenResult | TextSearchSpanResult)[];
-  selectedTextSearchMatchIndex: number;
-  searchText: string | undefined;
   allowComment: boolean;
   toggleShowStructuralLabels: () => void;
-  searchForText: (searchText: string) => void;
-  advanceTextSearchMatch: () => void;
-  reverseTextSearchMatch: () => void;
-  setSelectedTextSearchMatchIndex: (index: number) => void;
 
   pdfAnnotations: PdfAnnotations;
   pageSelection: { pageNumber: number; bounds: BoundingBox } | undefined;
@@ -376,9 +369,6 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   activeSpanLabel: undefined,
   showOnlySpanLabels: [],
   docText: undefined,
-  textSearchMatches: [],
-  selectedTextSearchMatchIndex: 1,
-  searchText: undefined,
   hideSidebar: false,
   allowComment: false,
   approveAnnotation: (annot_id: string, comment?: string) => {
@@ -392,18 +382,6 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   },
   toggleShowStructuralLabels: () => {
     throw new Error("toggleShowStructuralLabels() - not implemented");
-  },
-  searchForText: (searchText: string) => {
-    throw new Error("searchForText() - not implemented");
-  },
-  advanceTextSearchMatch: () => {
-    throw new Error("advanceTextSearchMatch() - not implemented");
-  },
-  reverseTextSearchMatch: () => {
-    throw new Error("reverseTextSearchMatch() - not implemented");
-  },
-  setSelectedTextSearchMatchIndex: () => {
-    throw new Error("setSelectedTextSearchMatchIndex() - not implemented");
   },
   setSelection: (
     _?: { pageNumber: number; bounds: BoundingBox } | undefined

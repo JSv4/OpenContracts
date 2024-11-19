@@ -3,8 +3,8 @@ import { Form, Icon, Popup, Menu, SemanticICONS } from "semantic-ui-react";
 import { Search, X } from "lucide-react";
 import styled from "styled-components";
 import _ from "lodash";
-import { AnnotationStore } from "../../context/AnnotationStore";
 import { ZoomButtonGroup } from "../../../widgets/buttons/ZoomButtonGroup";
+import { useAnnotationSearch } from "../../hooks/useAnnotationSearch";
 
 const ActionBarContainer = styled.div`
   padding: 12px 16px;
@@ -75,27 +75,15 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   actionItems,
   onActionSelect,
 }) => {
-  const annotationStore = useContext(AnnotationStore);
+  const { searchText, setSearchText } = useAnnotationSearch();
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-  const { searchForText, searchText } = annotationStore;
-
-  const debouncedDocSearch = useCallback(
-    _.debounce((searchTerm: string) => {
-      console.log("Searching for", searchTerm);
-      searchForText(searchTerm);
-    }, 300),
-    [searchForText]
-  );
-
   const handleDocSearchChange = (value: string) => {
-    searchForText(value);
-    debouncedDocSearch(value);
+    setSearchText(value);
   };
 
   const clearSearch = () => {
-    searchForText("");
-    searchForText("");
+    setSearchText("");
   };
 
   const handleActionClick = () => {

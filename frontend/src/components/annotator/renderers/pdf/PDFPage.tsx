@@ -24,6 +24,7 @@ import { SelectionTokenGroup } from "../../display/components/SelectionTokenGrou
 import { ServerTokenAnnotation } from "../../types/annotations";
 import { useDocumentContext } from "../../context/DocumentContext";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
+import { useAnnotationSearch } from "../../hooks/useAnnotationSearch";
 
 export const PDFPage = ({
   pageInfo,
@@ -38,6 +39,7 @@ export const PDFPage = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<PDFPageRenderer | null>(null);
   const annotationRefs = useAnnotationRefs();
+  const textSearch = useAnnotationSearch();
 
   const [scale, setScale] = useState<number>(1);
   const [canvas_width, setCanvasWidth] = useState<number>();
@@ -54,8 +56,9 @@ export const PDFPage = ({
 
   const { scrollContainerRef, pdfPageInfoObjs } = useDocumentContext();
 
-  const { selectedTextSearchMatchIndex, pageSelectionQueue, pageSelection } =
-    annotationStore;
+  const { selectedSearchResultIndex, searchResults } = textSearch;
+
+  const { pageSelectionQueue, pageSelection } = annotationStore;
 
   const { selectionElementRefs: selectionRefs, searchResultElementRefs } =
     annotationRefs;
@@ -424,19 +427,19 @@ export const PDFPage = ({
 
       {scale &&
         pageInfo.bounds &&
-        annotationStore.textSearchMatches
+        searchResults
           .filter((match): match is TextSearchTokenResult => "tokens" in match)
           .filter(
             (match) => match.tokens[pageInfo.page.pageNumber - 1] !== undefined
           )
           .map((match, token_index) => (
             <SearchResult
-              total_results={annotationStore.textSearchMatches.length}
+              total_results={searchResults.length}
               selectionRef={searchResultElementRefs}
               showBoundingBox={true}
               hidden={
                 show_selected_annotation_only &&
-                token_index !== selectedTextSearchMatchIndex
+                token_index !== selectedSearchResultIndex
               }
               pageInfo={pageInfo}
               match={match}

@@ -1,11 +1,11 @@
 import React, { useContext, useEffect, useCallback } from "react";
 import { Header, Segment, Icon, Message, Form } from "semantic-ui-react";
 import _ from "lodash";
-import { AnnotationStore } from "../context/AnnotationStore";
 import "./SearchWidgetStyles.css";
 import { TextSearchSpanResult, TextSearchTokenResult } from "../../types";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
+import { useAnnotationSearch } from "../hooks/useAnnotationSearch";
 
 const PageHeader: React.FC<{
   result: TextSearchTokenResult | TextSearchSpanResult;
@@ -96,45 +96,27 @@ const SearchResultCard: React.FC<{
 
 export const SearchSidebarWidget: React.FC = () => {
   const annotationRefs = useAnnotationRefs();
-  const annotationStore = useContext(AnnotationStore);
   const {
-    textSearchMatches,
-    searchForText,
     searchText,
-    selectedTextSearchMatchIndex,
-  } = annotationStore;
-
-  const debouncedExportSearch = useCallback(
-    _.debounce((searchTerm: string) => {
-      searchForText(searchTerm);
-    }, 300),
-    [searchForText]
-  );
-
-  const handleDocSearchChange = (value: string) => {
-    searchForText(value);
-    debouncedExportSearch(value);
-  };
-
-  const clearSearch = () => {
-    searchForText("");
-  };
+    searchResults,
+    selectedSearchResultIndex,
+    setSearchText,
+    setSelectedSearchResultIndex,
+  } = useAnnotationSearch();
 
   useEffect(() => {
     const currentRef =
-      annotationRefs.searchResultElementRefs.current[
-        selectedTextSearchMatchIndex
-      ];
+      annotationRefs.searchResultElementRefs.current[selectedSearchResultIndex];
     if (currentRef) {
       currentRef?.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
     }
-  }, [selectedTextSearchMatchIndex, annotationRefs.searchResultElementRefs]);
+  }, [selectedSearchResultIndex, annotationRefs.searchResultElementRefs]);
 
   const onResultClick = (index: number) => {
-    annotationStore.setSelectedTextSearchMatchIndex(index);
+    setSelectedSearchResultIndex(index);
   };
 
   return (
@@ -164,12 +146,12 @@ export const SearchSidebarWidget: React.FC = () => {
               <Icon
                 name={searchText ? "cancel" : "search"}
                 link
-                onClick={searchText ? clearSearch : undefined}
+                onClick={searchText ? setSearchText("") : undefined}
                 style={{ color: searchText ? "#db2828" : "#2185d0" }}
               />
             }
             placeholder="Search document..."
-            onChange={(e) => handleDocSearchChange(e.target.value)}
+            onChange={(e) => setSearchText(e.target.value)}
             value={searchText}
             style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
           />
@@ -186,12 +168,12 @@ export const SearchSidebarWidget: React.FC = () => {
         attached="bottom"
       >
         <div style={{ overflowY: "auto", height: "100%" }}>
-          {textSearchMatches.length > 0 ? (
-            textSearchMatches.map((res, index) => (
+          {searchResults.length > 0 ? (
+            searchResults.map((res, index) => (
               <SearchResultCard
                 key={`SearchResultCard_${index}`}
                 index={index}
-                totalMatches={textSearchMatches.length}
+                totalMatches={searchResults.length}
                 res={res}
                 onResultClick={onResultClick}
               />

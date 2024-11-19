@@ -14,7 +14,7 @@ import {
 } from "semantic-ui-react";
 
 import _, { isNumber } from "lodash";
-import { AnnotationStore } from "../context";
+import { AnnotationStore } from "../context/AnnotationStore";
 import { HighlightItem } from "./HighlightItem";
 import { RelationItem } from "./RelationItem";
 
@@ -41,7 +41,8 @@ import { PlaceholderCard } from "../../placeholders/PlaceholderCard";
 import { CorpusStats } from "../../widgets/data-display/CorpusStatus";
 import styled from "styled-components";
 import { RelationGroup } from "../types/annotations";
-import { useUIContext } from "../context/UIContext";
+import { useAnnotationSearch } from "../hooks/useAnnotationSearch";
+import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;
@@ -244,8 +245,9 @@ export const AnnotatorSidebar = ({
     }
   };
 
-  const { textSearchMatches, selectedRelations, pdfAnnotations } =
-    annotationStore;
+  const { searchResults } = useAnnotationSearch();
+  const { selectionElementRefs } = useAnnotationRefs();
+  const { selectedRelations, pdfAnnotations } = annotationStore;
   const annotations = pdfAnnotations.annotations;
   const relations = pdfAnnotations.relations;
 
@@ -461,7 +463,7 @@ export const AnnotatorSidebar = ({
         ];
       }
 
-      const show_search_results_pane = textSearchMatches.length > 0;
+      const show_search_results_pane = searchResults.length > 0;
       if (show_search_results_pane) {
         panes = [
           ...panes,
@@ -525,7 +527,7 @@ export const AnnotatorSidebar = ({
   }, [
     filteredAnnotations,
     relations,
-    textSearchMatches,
+    searchResults,
     selected_corpus,
     hideSidebar,
     setHideSidebar,
@@ -577,11 +579,9 @@ export const AnnotatorSidebar = ({
       // Check the proposed id is actually in the annotation store
       if (annotation) {
         // If it is, and we have a reference to it in our annotation reference obj
-        if (annotationStore.selectionElementRefs?.current[annotation.id]) {
+        if (selectionElementRefs?.current[annotation.id]) {
           // Scroll annotation into view.
-          annotationStore.selectionElementRefs?.current[
-            annotation.id
-          ]?.scrollIntoView();
+          selectionElementRefs?.current[annotation.id]?.scrollIntoView();
         }
       }
       annotationStore.setSelectedAnnotations([toggledId]);

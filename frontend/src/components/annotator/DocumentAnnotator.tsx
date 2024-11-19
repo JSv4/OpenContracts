@@ -4,7 +4,7 @@ import {
   useReactiveVar,
   QueryResult,
 } from "@apollo/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import {
   GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
@@ -85,6 +85,7 @@ import {
 } from "./types/annotations";
 import { useUISettings } from "./hooks/useUISettings";
 import { DocumentProvider } from "./context/DocumentContext";
+import { CorpusProvider } from "./context/CorpusContext";
 
 // Loading pdf js libraries without cdn is a right PITA... cobbled together a working
 // approach via these guides:
@@ -230,6 +231,30 @@ export const DocumentAnnotator = ({
     AnnotationLabelType[]
   >([]);
 
+  const [queryLoadingStates, setQueryLoadingStates] = useState<{
+    analyses: boolean;
+    annotations: boolean;
+    relationships: boolean;
+    datacells: boolean;
+  }>({
+    analyses: false,
+    annotations: false,
+    relationships: false,
+    datacells: false,
+  });
+
+  const [queryErrors, setQueryErrors] = useState<{
+    analyses?: Error;
+    annotations?: Error;
+    relationships?: Error;
+    datacells?: Error;
+  }>({});
+
+  const isLoading = useMemo(
+    () => Object.values(queryLoadingStates).some((loading) => loading),
+    [queryLoadingStates]
+  );
+
   const resetStates = () => {
     setAnalysisRows([]);
     setAnnotationObjs([]);
@@ -259,6 +284,7 @@ export const DocumentAnnotator = ({
     loading: analysesLoading,
     data: analysesData,
     refetch: fetchDocumentAnalysesAndExtracts,
+    error: analysesError,
   } = useQuery<
     GetDocumentAnalysesAndExtractsOutput,
     GetDocumentAnalysesAndExtractsInput
@@ -266,6 +292,12 @@ export const DocumentAnnotator = ({
     variables: analysis_vars,
     skip: Boolean(displayOnlyTheseAnnotations),
     fetchPolicy: "network-only",
+    onCompleted: () => {
+      setQueryLoadingStates((prev) => ({ ...prev, analyses: false }));
+    },
+    onError: (error) => {
+      setQueryErrors((prev) => ({ ...prev, analyses: error }));
+    },
   });
 
   // Hook #38
@@ -339,27 +371,7 @@ export const DocumentAnnotator = ({
         humanAnnotationsAndRelationshipsData.document?.allAnnotations?.map(
           (annotation) => convertToServerAnnotation(annotation)
         ) ?? [];
-
-      setAnnotationObjs((prevAnnotations) => {
-        const updatedAnnotations = prevAnnotations.map((prevAnnot) => {
-          const matchingNewAnnot = processedAnnotations.find(
-            (newAnnot) => newAnnot.id === prevAnnot.id
-          );
-          return matchingNewAnnot
-            ? { ...prevAnnot, ...matchingNewAnnot }
-            : prevAnnot;
-        });
-
-        const newAnnotations = processedAnnotations.filter(
-          (newAnnot) =>
-            !prevAnnotations.some((prevAnnot) => prevAnnot.id === newAnnot.id)
-        );
-
-        return [...updatedAnnotations, ...newAnnotations] as (
-          | ServerTokenAnnotation
-          | ServerSpanAnnotation
-        )[];
-      });
+      setAnnotationObjs(processedAnnotations);
 
       // Process relationships similarly if needed
       const processedRelationships =
@@ -1016,23 +1028,31 @@ export const DocumentAnnotator = ({
           showAnnotationLabels={showAnnotationLabels}
           label_display_options={label_display_options}
         />
-        <DocumentProvider
-          selectedDocument={opened_document}
+        <CorpusProvider
           selectedCorpus={opened_corpus}
-          docText={rawText}
-          pdfDoc={doc}
-          pages={pages}
-          pageTextMaps={pageTextMaps}
-          isLoading={
-            dataCellsLoading ||
-            analysesLoading ||
-            annotationsLoading ||
-            humanDataLoading
-          }
-          viewState={view_state}
+          annotations={annotation_objs}
+          relationships={relationship_annotations}
+          structuralAnnotations={structuralAnnotations}
+          docTypeAnnotations={doc_type_annotations}
+          spanLabels={span_labels}
+          humanSpanLabels={human_span_labels}
+          relationLabels={relation_labels}
+          docTypeLabels={doc_type_labels}
+          isLoading={isLoading}
         >
-          {rendered_component}
-        </DocumentProvider>
+          <DocumentProvider
+            selectedDocument={opened_document}
+            selectedCorpus={opened_corpus}
+            docText={rawText}
+            pdfDoc={doc}
+            pages={pages}
+            pageTextMaps={pageTextMaps}
+            isLoading={isLoading}
+            viewState={view_state}
+          >
+            {rendered_component}
+          </DocumentProvider>
+        </CorpusProvider>
       </Modal.Content>
     </Modal>
   );

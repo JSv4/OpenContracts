@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo } from "react";
+import React, { createContext, useContext, useMemo, useState } from "react";
 import { getPermissions } from "../../../utils/transform";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import { PDFPageInfo } from "../types/pdf";
@@ -50,13 +50,6 @@ interface DocumentProviderProps {
   pageTextMaps: Record<number, TokenId> | undefined;
   isLoading?: boolean;
   pages: PDFPageInfo[];
-  pageSelectionQueue: Record<number, BoundingBox[]>;
-  scrollContainerRef: React.RefObject<HTMLDivElement> | undefined;
-  setScrollContainerRef: (
-    ref: React.RefObject<HTMLDivElement> | undefined
-  ) => void;
-  pdfPageInfoObjs: Record<number, PDFPageInfo>;
-  setPdfPageInfoObjs: (pageInfos: Record<number, PDFPageInfo>) => void;
   viewState: ViewState;
 }
 
@@ -69,13 +62,18 @@ export function DocumentProvider({
   pageTextMaps,
   isLoading = false,
   pages,
-  pageSelectionQueue,
-  scrollContainerRef,
-  setScrollContainerRef,
-  pdfPageInfoObjs,
-  setPdfPageInfoObjs,
   viewState,
 }: DocumentProviderProps) {
+  // Add internal state management
+  const [pageSelectionQueue, setPageSelectionQueue] = useState<
+    Record<number, BoundingBox[]>
+  >({});
+  const [scrollContainerRef, setScrollContainerRef] =
+    useState<React.RefObject<HTMLDivElement>>();
+  const [pdfPageInfoObjs, setPdfPageInfoObjs] = useState<
+    Record<number, PDFPageInfo>
+  >({});
+
   // Process permissions
   const permissions = useMemo(() => {
     const rawPermissions = selectedDocument?.myPermissions ?? ["READ"];

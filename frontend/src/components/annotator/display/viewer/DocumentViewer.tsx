@@ -58,7 +58,6 @@ import {
 import { PDFPageInfo } from "../../types/pdf";
 import { AnnotationStore } from "../../context/AnnotationStore";
 import { PDFStore } from "../../context/PDFStore";
-import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -724,8 +723,6 @@ export const DocumentViewer = ({
       <AnnotationStore.Provider
         value={{
           allowComment: selected_corpus?.allowComments ?? true,
-          humanSpanLabelChoices,
-          spanLabels,
           hideSidebar,
           setHideSidebar,
           approveAnnotation,
@@ -743,12 +740,10 @@ export const DocumentViewer = ({
           setViewLabels: (ls: AnnotationLabelType[]) => setSpanLabelsToView(ls),
           toggleShowStructuralLabels: () =>
             showStructuralAnnotations(!show_structural_annotations),
-          relationLabels,
           activeRelationLabel,
           setActiveRelationLabel,
           pdfAnnotations,
           setPdfAnnotations: onUpdatePdfAnnotations,
-          docTypeLabels,
           createAnnotation,
           deleteAnnotation,
           updateAnnotation,

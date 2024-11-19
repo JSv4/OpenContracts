@@ -287,8 +287,6 @@ export class PdfAnnotations {
 }
 
 interface _AnnotationStore {
-  spanLabels: AnnotationLabelType[];
-  humanSpanLabelChoices: AnnotationLabelType[];
   showStructuralLabels?: boolean;
   activeSpanLabel?: AnnotationLabelType | undefined;
   hideSidebar: boolean;
@@ -296,12 +294,8 @@ interface _AnnotationStore {
   showOnlySpanLabels?: AnnotationLabelType[] | null;
   setActiveLabel: (label: AnnotationLabelType) => void;
 
-  // Obj that lets us store the refs to the rendered selections so we can scroll to them
-  relationLabels: AnnotationLabelType[];
   activeRelationLabel?: AnnotationLabelType;
   setActiveRelationLabel: (label: AnnotationLabelType) => void;
-
-  docTypeLabels: AnnotationLabelType[];
 
   allowComment: boolean;
   toggleShowStructuralLabels: () => void;
@@ -352,8 +346,6 @@ interface _AnnotationStore {
 export const AnnotationStore = createContext<_AnnotationStore>({
   pdfAnnotations: new PdfAnnotations([], [], []),
   pageSelection: undefined,
-  spanLabels: [],
-  humanSpanLabelChoices: [],
   showStructuralLabels: true,
   activeSpanLabel: undefined,
   showOnlySpanLabels: [],
@@ -394,12 +386,10 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   removeLabelsToView: (_?: AnnotationLabelType[]) => {
     throw new Error("removeLabelsToViewis not implemented");
   },
-  relationLabels: [],
   activeRelationLabel: undefined,
   setActiveRelationLabel: (_?: AnnotationLabelType) => {
     throw new Error("setActiveRelationLabel() - Unimplemented");
   },
-  docTypeLabels: [],
   createAnnotation: (_?: ServerTokenAnnotation | ServerSpanAnnotation) => {
     throw new Error("createAnnotation() - Unimplemented");
   },

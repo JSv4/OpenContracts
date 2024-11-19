@@ -296,34 +296,24 @@ interface _AnnotationStore {
   showOnlySpanLabels?: AnnotationLabelType[] | null;
   setActiveLabel: (label: AnnotationLabelType) => void;
 
-  scrollContainerRef: React.RefObject<HTMLDivElement> | undefined;
-  setScrollContainerRef: (
-    ref: React.RefObject<HTMLDivElement> | undefined
-  ) => void;
-
   // Obj that lets us store the refs to the rendered selections so we can scroll to them
-
   relationLabels: AnnotationLabelType[];
   activeRelationLabel?: AnnotationLabelType;
   setActiveRelationLabel: (label: AnnotationLabelType) => void;
 
   docTypeLabels: AnnotationLabelType[];
 
-  docText: string | undefined;
   allowComment: boolean;
   toggleShowStructuralLabels: () => void;
 
   pdfAnnotations: PdfAnnotations;
   pageSelection: { pageNumber: number; bounds: BoundingBox } | undefined;
-  pageSelectionQueue: Record<number, BoundingBox[]>;
   setPdfAnnotations: (t: PdfAnnotations) => void;
   setSelection: (
     b: { pageNumber: number; bounds: BoundingBox } | undefined
   ) => void;
   setMultiSelections: (b: Record<number, BoundingBox[]>) => void;
 
-  pdfPageInfoObjs: Record<number, PDFPageInfo>;
-  setPdfPageInfoObjs: (b: Record<number, PDFPageInfo>) => void;
   createMultiPageAnnotation: () => void;
 
   createAnnotation: (a: ServerTokenAnnotation | ServerSpanAnnotation) => void;
@@ -362,13 +352,11 @@ interface _AnnotationStore {
 export const AnnotationStore = createContext<_AnnotationStore>({
   pdfAnnotations: new PdfAnnotations([], [], []),
   pageSelection: undefined,
-  pageSelectionQueue: [],
   spanLabels: [],
   humanSpanLabelChoices: [],
   showStructuralLabels: true,
   activeSpanLabel: undefined,
   showOnlySpanLabels: [],
-  docText: undefined,
   hideSidebar: false,
   allowComment: false,
   approveAnnotation: (annot_id: string, comment?: string) => {
@@ -406,10 +394,6 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   removeLabelsToView: (_?: AnnotationLabelType[]) => {
     throw new Error("removeLabelsToViewis not implemented");
   },
-  scrollContainerRef: undefined,
-  setScrollContainerRef: (ref: React.RefObject<HTMLDivElement> | undefined) => {
-    throw new Error("setScrollContainerRef is not implemented");
-  },
   relationLabels: [],
   activeRelationLabel: undefined,
   setActiveRelationLabel: (_?: AnnotationLabelType) => {
@@ -430,12 +414,6 @@ export const AnnotationStore = createContext<_AnnotationStore>({
   },
   deleteDocTypeAnnotation: (_?: string) => {
     throw new Error("deleteDocTypeAnnotation() - Unimplemented");
-  },
-  pdfPageInfoObjs: [],
-  setPdfPageInfoObjs: (_?: Record<number, PDFPageInfo>) => {
-    throw new Error(
-      "setPdfPageInfoObjs is unimplemented. This is needed for multi-page annotations."
-    );
   },
   createMultiPageAnnotation: () => {
     throw new Error(

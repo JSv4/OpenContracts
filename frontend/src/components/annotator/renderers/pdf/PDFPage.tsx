@@ -25,6 +25,7 @@ import { ServerTokenAnnotation } from "../../types/annotations";
 import { useDocumentContext } from "../../context/DocumentContext";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 import { useAnnotationSearch } from "../../hooks/useAnnotationSearch";
+import { useAnnotationManager } from "../../hooks/useAnnotationManager";
 
 export const PDFPage = ({
   pageInfo,
@@ -58,8 +59,8 @@ export const PDFPage = ({
 
   const { selectedSearchResultIndex, searchResults } = textSearch;
 
-  const { pageSelectionQueue, pageSelection } = annotationStore;
-
+  const { pageSelection } = annotationStore;
+  const { pageSelectionQueue } = useAnnotationManager();
   const { selectionElementRefs: selectionRefs, searchResultElementRefs } =
     annotationRefs;
 
@@ -382,17 +383,14 @@ export const PDFPage = ({
         if (annotationStore.pageSelection) {
           // If page number is already in queue... append to queue at page number key
           if (
-            pageInfo.page.pageNumber - 1 in
-              annotationStore.pageSelectionQueue &&
+            pageInfo.page.pageNumber - 1 in pageSelectionQueue &&
             annotationStore.pageSelection.pageNumber ===
               pageInfo.page.pageNumber - 1
           ) {
             annotationStore.setMultiSelections({
-              ...annotationStore.pageSelectionQueue,
+              ...pageSelectionQueue,
               [pageInfo.page.pageNumber - 1]: [
-                ...annotationStore.pageSelectionQueue[
-                  pageInfo.page.pageNumber - 1
-                ],
+                ...pageSelectionQueue[pageInfo.page.pageNumber - 1],
                 annotationStore.pageSelection.bounds,
               ],
             });
@@ -401,7 +399,7 @@ export const PDFPage = ({
           // Otherwise, add page number as key and then add bounds to it.
           else {
             annotationStore.setMultiSelections({
-              ...annotationStore.pageSelectionQueue,
+              ...pageSelectionQueue,
               [annotationStore.pageSelection.pageNumber]: [
                 annotationStore.pageSelection.bounds,
               ],

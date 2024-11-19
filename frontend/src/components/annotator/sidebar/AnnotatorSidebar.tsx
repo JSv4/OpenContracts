@@ -43,6 +43,7 @@ import styled from "styled-components";
 import { RelationGroup } from "../types/annotations";
 import { useAnnotationSearch } from "../hooks/useAnnotationSearch";
 import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
+import { useUISettings } from "../hooks/useUISettings";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;
@@ -209,7 +210,7 @@ export const AnnotatorSidebar = ({
   fetchMore?: () => void;
 }) => {
   const annotationStore = useContext(AnnotationStore);
-  const { hideSidebar, setHideSidebar } = useUIContext();
+  const { isSidebarVisible, setSidebarVisible } = useUISettings();
   const opened_corpus = useReactiveVar(openedCorpus);
   const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
 
@@ -515,7 +516,7 @@ export const AnnotatorSidebar = ({
         ];
       }
 
-      setHideSidebar(
+      setSidebarVisible(
         !show_annotation_pane &&
           !show_relation_pane &&
           !show_search_results_pane &&
@@ -529,8 +530,7 @@ export const AnnotatorSidebar = ({
     relations,
     searchResults,
     selected_corpus,
-    hideSidebar,
-    setHideSidebar,
+    isSidebarVisible,
   ]);
 
   useEffect(() => {
@@ -610,7 +610,9 @@ export const AnnotatorSidebar = ({
   return (
     <SidebarContainer
       id="AnnotatorSidebarContainer"
-      style={{ display: hideSidebar || show_minimal_layout ? "none" : "flex" }}
+      style={{
+        display: !isSidebarVisible || show_minimal_layout ? "none" : "flex",
+      }}
     >
       <TopSection>
         <HeaderText as="h3">

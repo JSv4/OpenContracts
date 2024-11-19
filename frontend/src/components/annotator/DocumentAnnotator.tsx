@@ -4,7 +4,7 @@ import {
   useReactiveVar,
   QueryResult,
 } from "@apollo/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 import {
   GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
@@ -84,6 +84,7 @@ import {
   ServerSpanAnnotation,
   ServerTokenAnnotation,
 } from "./types/annotations";
+import { useUISettings } from "./hooks/useUISettings";
 
 // Loading pdf js libraries without cdn is a right PITA... cobbled together a working
 // approach via these guides:
@@ -133,15 +134,18 @@ export const DocumentAnnotator = ({
   onClose,
 }: DocumentAnnotatorProps) => {
   const { width } = useWindowDimensions();
+
+  const { zoomLevel, setZoomLevel } = useUISettings({
+    width,
+  });
+
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";
 
   const view_state = useReactiveVar(viewStateVar);
   const edit_mode = useReactiveVar(editMode);
   const allow_input = useReactiveVar(allowUserInput);
-  const zoom_level = useReactiveVar(pdfZoomFactor);
   const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
   const label_display_behavior = useReactiveVar(showAnnotationLabels);
-  const setZoomLevel = (zl: number) => pdfZoomFactor(zl);
 
   // Global state variables to jump to and/or load certain annotations on load
   const scrollToAnnotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
@@ -539,7 +543,7 @@ export const DocumentAnnotator = ({
                       const pageIndex = p.pageNumber - 1;
                       pageTokens = pawlsData[pageIndex].tokens;
                     }
-                    return new PDFPageInfo(p, pageTokens, zoom_level);
+                    return new PDFPageInfo(p, pageTokens, zoomLevel);
                   }) as unknown as Promise<PDFPageInfo>
                 );
               }
@@ -906,7 +910,7 @@ export const DocumentAnnotator = ({
           rawText={rawText}
           pageTextMaps={pageTextMaps}
           pages={pages}
-          zoom_level={zoom_level}
+          zoom_level={zoomLevel}
           setZoomLevel={setZoomLevel}
           load_progress={progress}
           opened_document={opened_document}

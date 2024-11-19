@@ -4,7 +4,7 @@ import {
   useReactiveVar,
   QueryResult,
 } from "@apollo/client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
 import {
   GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
@@ -56,7 +56,6 @@ import {
   displayAnnotationOnAnnotatorLoad,
   editMode,
   onlyDisplayTheseAnnotations,
-  pdfZoomFactor,
   selectedAnalysis,
   selectedExtract,
   showAnnotationBoundingBoxes,
@@ -85,6 +84,7 @@ import {
   ServerTokenAnnotation,
 } from "./types/annotations";
 import { useUISettings } from "./hooks/useUISettings";
+import { DocumentProvider } from "./context/DocumentContext";
 
 // Loading pdf js libraries without cdn is a right PITA... cobbled together a working
 // approach via these guides:
@@ -1016,7 +1016,28 @@ export const DocumentAnnotator = ({
           showAnnotationLabels={showAnnotationLabels}
           label_display_options={label_display_options}
         />
-        {rendered_component}
+        <DocumentProvider
+          selectedDocument={opened_document}
+          selectedCorpus={opened_corpus}
+          docText={rawText}
+          pdfDoc={doc}
+          pages={pages}
+          pageTextMaps={pageTextMaps}
+          isLoading={
+            dataCellsLoading ||
+            analysesLoading ||
+            annotationsLoading ||
+            humanDataLoading
+          }
+          pageSelectionQueue={{}} // You might want to add state for this if needed
+          scrollContainerRef={undefined} // You might want to add a ref for this if needed
+          setScrollContainerRef={(ref) => {}} // Add handler if needed
+          pdfPageInfoObjs={{}} // You might want to add state for this if needed
+          setPdfPageInfoObjs={() => {}} // Add handler if needed
+          viewState={view_state}
+        >
+          {rendered_component}
+        </DocumentProvider>
       </Modal.Content>
     </Modal>
   );

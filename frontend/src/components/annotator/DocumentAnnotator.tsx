@@ -1,51 +1,19 @@
-import {
-  useLazyQuery,
-  useQuery,
-  useReactiveVar,
-  QueryResult,
-} from "@apollo/client";
+import { useReactiveVar } from "@apollo/client";
 import { useEffect, useState, useMemo } from "react";
 
 import {
-  GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
-  GetDocumentAnalysesAndExtractsOutput,
-  GetDocumentAnalysesAndExtractsInput,
-  GET_DATACELLS_FOR_EXTRACT,
-  GET_ANNOTATIONS_FOR_ANALYSIS,
-  GetAnnotationsForAnalysisOutput,
-  GetAnnotationsForAnalysisInput,
-  GetDatacellsForExtractOutput,
-  GetDatacellsForExtractInput,
-  GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS,
-  GetDocumentAnnotationsAndRelationshipsOutput,
-  GetDocumentAnnotationsAndRelationshipsInput,
-} from "../../graphql/queries";
-import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
-
-import { getDocumentRawText, getPawlsLayer } from "./api/rest";
-import {
-  AnalysisRowType,
-  AnalysisType,
-  AnnotationLabelType,
-  ColumnType,
   CorpusType,
-  DatacellType,
   DocumentType,
-  ExtractType,
   LabelDisplayBehavior,
-  LabelType,
   ServerAnnotationType,
 } from "../../types/graphql-api";
 import {
   ViewState,
   TokenId,
   PermissionTypes,
-  PageTokens,
-  Token,
   label_display_options,
 } from "../types";
 import {
-  convertToDocTypeAnnotation,
   convertToServerAnnotation,
   convertToServerAnnotations,
   getPermissions,
@@ -72,31 +40,12 @@ import { SidebarContainer } from "../common";
 import { CenterOnPage } from "./CenterOnPage";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { AnnotatorRenderer } from "./display/components/AnnotatorRenderer";
-import { PDFDocumentLoadingTask } from "pdfjs-dist";
-import { toast } from "react-toastify";
-import { createTokenStringSearch } from "./utils";
 import { ViewSettingsPopup } from "../widgets/popups/ViewSettingsPopup";
-import { PDFPageInfo } from "./types/pdf";
-import {
-  DocTypeAnnotation,
-  RelationGroup,
-  ServerSpanAnnotation,
-  ServerTokenAnnotation,
-} from "./types/annotations";
+import { PdfAnnotations } from "./types/annotations";
 import { useUISettings } from "./hooks/useUISettings";
-import { DocumentProvider } from "./context/DocumentContext";
 import { CorpusProvider } from "./context/CorpusContext";
-
-// Loading pdf js libraries without cdn is a right PITA... cobbled together a working
-// approach via these guides:
-// https://stackoverflow.com/questions/63553008/looking-for-help-to-make-npm-pdfjs-dist-work-with-webpack-and-django
-// https://github.com/mozilla/pdf.js/issues/12379
-// https://github.com/mozilla/pdf.js/blob/f40bbe838e3c09b84e6f69df667a453c55de25f8/examples/webpack/main.js
-const pdfjsLib = require("pdfjs-dist");
-
-// Setting worker path to worker bundle.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
-// "../../build/webpack/pdf.worker.min.js';";
+import { useAnnotationManager } from "./hooks/useAnnotationManager";
+import { useAnalysisManager } from "./hooks/useAnalysisData";
 
 export interface TextSearchResultsProps {
   start: TokenId;
@@ -136,9 +85,23 @@ export const DocumentAnnotator = ({
 }: DocumentAnnotatorProps) => {
   const { width } = useWindowDimensions();
 
-  const { zoomLevel, setZoomLevel } = useUISettings({
-    width,
-  });
+  // Effect to load document and pawls layer
+  const annotationManager = useAnnotationManager();
+
+  const { zoomLevel, progress, setProgress, queryLoadingStates } =
+    useUISettings({
+      width,
+    });
+
+  const {
+    resetStates: analysisResetStates,
+    onSelectAnalysis,
+    onSelectExtract,
+    dataCells,
+    columns,
+    extracts,
+    analyses,
+  } = useAnalysisManager(opened_document, opened_corpus);
 
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";
 
@@ -154,68 +117,9 @@ export const DocumentAnnotator = ({
     onlyDisplayTheseAnnotations
   );
 
-  const [doc, setDocument] = useState<PDFDocumentProxy>();
-  const [documentType, setDocumentType] = useState<string>("");
-
-  // Hook 16
-  const [pages, setPages] = useState<PDFPageInfo[]>([]);
-
-  // Hook 17
-  const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
-  const [rawText, setRawText] = useState<string>("");
-
   // New states for analyses and extracts
-  const [analyses, setAnalyses] = useState<AnalysisType[]>([]);
-  const [extracts, setExtracts] = useState<ExtractType[]>([]);
   const selected_analysis = useReactiveVar(selectedAnalysis);
   const selected_extract = useReactiveVar(selectedExtract);
-
-  // Hook 22
-  const [structuralAnnotations, setStructuralAnnotations] = useState<
-    ServerTokenAnnotation[]
-  >([]);
-  const [annotation_objs, setAnnotationObjs] = useState<
-    (ServerTokenAnnotation | ServerSpanAnnotation)[]
-  >([]);
-  const [doc_type_annotations, setDocTypeAnnotations] = useState<
-    DocTypeAnnotation[]
-  >([]);
-  const [relationship_annotations, setRelationshipAnnotations] = useState<
-    RelationGroup[]
-  >([]);
-  const [analysisRows, setAnalysisRows] = useState<AnalysisRowType[]>([]);
-  const [data_cells, setDataCells] = useState<DatacellType[]>([]);
-  const [columns, setColumns] = useState<ColumnType[]>([]);
-
-  // Hold our query variables (using a state var lets us bundle updates to the
-  // query var in a single useEffect that prevents multiple re-renders)
-  const [relation_labels, setRelationLabels] = useState<AnnotationLabelType[]>(
-    []
-  );
-  const [doc_type_labels, setDocTypeLabels] = useState<AnnotationLabelType[]>(
-    []
-  );
-
-  // Hook 31 - progress is trigger LOTS of initial rerenders...
-  const [progress, setProgress] = useState(0);
-
-  // Then when progress is complete this sequence of hooks:
-  // Hook 31 - fires a lot as progress, setProgress hook fires
-  // Hook 15 - PDFDocumentProxy hook - makes sense because PDF is now loaded
-  // Hook 22 - Structural Annotations Loaded
-  // Hook 16 - PDFPageInfo objs populated
-  // Hook 17 - page text maps are stored
-  // Hook 3 - ViewStateVar useReactiveVar is updated and AnnotatorRenderer is removed from tree
-  // Hook 3
-
-  // When loaded via Corpus
-  // 15 -> 22 --> **3** (usually indicates a failure) --> 16 --> 17 --> 3
-  // Hook 15 - PDFDocumentProxy hook - makes sense because PDF is now loaded
-  // Hook 22 - Structural Annotations Loaded
-  // Hook 3 - ViewStateVar useReactiveVar is updated (Loaded)
-  // Hook 16 - PDFPageInfo objs populated
-  // Hook 17 - page text maps are stored
-  // Hook 3 - ViewStateVar useReactiveVar is updated and AnnotatorRenderer is removed from tree (Error)
 
   const [loaded_page_for_annotation, setLoadedPageForAnnotation] =
     useState<ServerAnnotationType | null>(null);
@@ -223,106 +127,15 @@ export const DocumentAnnotator = ({
     string | null
   >(null);
 
-  // Hold all span labels displayable between analyzers and human labelset
-  const [span_labels, setSpanLabels] = useState<AnnotationLabelType[]>([]);
-
-  // Hold span labels selectable for human annotation only
-  const [human_span_labels, setHumanSpanLabels] = useState<
-    AnnotationLabelType[]
-  >([]);
-
-  const [queryLoadingStates, setQueryLoadingStates] = useState<{
-    analyses: boolean;
-    annotations: boolean;
-    relationships: boolean;
-    datacells: boolean;
-  }>({
-    analyses: false,
-    annotations: false,
-    relationships: false,
-    datacells: false,
-  });
-
-  const [queryErrors, setQueryErrors] = useState<{
-    analyses?: Error;
-    annotations?: Error;
-    relationships?: Error;
-    datacells?: Error;
-  }>({});
-
   const isLoading = useMemo(
     () => Object.values(queryLoadingStates).some((loading) => loading),
     [queryLoadingStates]
   );
 
-  const resetStates = () => {
-    setAnalysisRows([]);
-    setAnnotationObjs([]);
-    setDocTypeAnnotations([]);
-    setDocTypeLabels([]);
-    setSpanLabels([]);
-    setDataCells([]);
-  };
-
   // Reset allow inputs when the mode switches
   useEffect(() => {
     allowUserInput(false);
   }, [editMode]);
-
-  // store doc type in state
-  useEffect(() => {
-    setDocumentType(opened_document.fileType ? opened_document.fileType : "");
-  }, [opened_document]);
-
-  // Hook #37
-  let corpus_id = opened_corpus?.id;
-  let analysis_vars = {
-    documentId: opened_document.id,
-    ...(corpus_id !== undefined ? { corpusId: corpus_id } : {}),
-  } as GetDocumentAnalysesAndExtractsInput;
-  const {
-    loading: analysesLoading,
-    data: analysesData,
-    refetch: fetchDocumentAnalysesAndExtracts,
-    error: analysesError,
-  } = useQuery<
-    GetDocumentAnalysesAndExtractsOutput,
-    GetDocumentAnalysesAndExtractsInput
-  >(GET_DOCUMENT_ANALYSES_AND_EXTRACTS, {
-    variables: analysis_vars,
-    skip: Boolean(displayOnlyTheseAnnotations),
-    fetchPolicy: "network-only",
-    onCompleted: () => {
-      setQueryLoadingStates((prev) => ({ ...prev, analyses: false }));
-    },
-    onError: (error) => {
-      setQueryErrors((prev) => ({ ...prev, analyses: error }));
-    },
-  });
-
-  // Hook #38
-  const [
-    fetchAnnotationsForAnalysis,
-    { loading: annotationsLoading, data: annotationsData },
-  ] = useLazyQuery<
-    GetAnnotationsForAnalysisOutput,
-    GetAnnotationsForAnalysisInput
-  >(GET_ANNOTATIONS_FOR_ANALYSIS);
-
-  const [
-    fetchDataCellsForExtract,
-    { loading: dataCellsLoading, data: dataCellsData },
-  ] = useLazyQuery<GetDatacellsForExtractOutput, GetDatacellsForExtractInput>(
-    GET_DATACELLS_FOR_EXTRACT
-  );
-
-  const [
-    getDocumentAnnotationsAndRelationships,
-    { data: humanAnnotationsAndRelationshipsData, loading: humanDataLoading },
-  ] = useLazyQuery<
-    GetDocumentAnnotationsAndRelationshipsOutput,
-    GetDocumentAnnotationsAndRelationshipsInput
-  >(GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS);
 
   let doc_permissions: PermissionTypes[] = [];
   let raw_permissions = opened_document.myPermissions;
@@ -337,105 +150,6 @@ export const DocumentAnnotator = ({
   if (opened_corpus && raw_corp_permissions !== undefined) {
     corpus_permissions = getPermissions(raw_corp_permissions);
   }
-
-  // Calculated control and display variables - in certain situations we want to change behavior based on available data or
-  // selected configurations.
-
-  // Depending on the edit mode and some state variables, we may want to load all annotations for the document
-  // Particularly of node is when displayOnlyTheseAnnotations is set to something, we don't want to load additional
-  // annotations. We are just rendering and displaying the annotations stored in this state variable.
-  // TODO - load annotations on a page-by-page basis to cut down on server load.
-  useEffect(() => {
-    if (
-      edit_mode === "ANNOTATE" &&
-      opened_corpus?.labelSet &&
-      opened_document &&
-      !displayOnlyTheseAnnotations
-    ) {
-      getDocumentAnnotationsAndRelationships({
-        variables: {
-          documentId: opened_document.id,
-          corpusId: opened_corpus.id,
-          ...(selected_analysis
-            ? { analysisId: selected_analysis.id }
-            : { analysisId: "__none__" }),
-        },
-      });
-    }
-  }, [editMode, opened_corpus, opened_document, displayOnlyTheseAnnotations]);
-
-  // When corpus annotation data is loaded (not analysis or extract data is loaded... react to it)
-  useEffect(() => {
-    if (humanAnnotationsAndRelationshipsData) {
-      const processedAnnotations =
-        humanAnnotationsAndRelationshipsData.document?.allAnnotations?.map(
-          (annotation) => convertToServerAnnotation(annotation)
-        ) ?? [];
-      setAnnotationObjs(processedAnnotations);
-
-      // Process relationships similarly if needed
-      const processedRelationships =
-        humanAnnotationsAndRelationshipsData.document?.allRelationships?.map(
-          (relationship) =>
-            new RelationGroup(
-              relationship.sourceAnnotations?.edges
-                ?.map((edge) => edge?.node?.id)
-                .filter((id): id is string => id != null) ?? [],
-              relationship.targetAnnotations?.edges
-                ?.map((edge) => edge?.node?.id)
-                .filter((id): id is string => id != null) ?? [],
-              relationship.relationshipLabel,
-              relationship.id
-            )
-        ) ?? [];
-
-      setRelationshipAnnotations((prevRelationships) => {
-        const updatedRelationships = prevRelationships.map((prevRel) => {
-          const matchingNewRel = processedRelationships.find(
-            (newRel) => newRel.id === prevRel.id
-          );
-          return matchingNewRel || prevRel;
-        });
-
-        const newRelationships = processedRelationships.filter(
-          (newRel) =>
-            !prevRelationships.some((prevRel) => prevRel.id === newRel.id)
-        );
-
-        return [...updatedRelationships, ...newRelationships];
-      });
-
-      // Use labelSet.allAnnotationLabels to set the labels
-      const allLabels =
-        humanAnnotationsAndRelationshipsData?.corpus?.labelSet
-          ?.allAnnotationLabels ?? [];
-
-      // Filter and set span labels
-      // Filter labels based on document type
-      const relevantLabelType =
-        documentType === "application/pdf"
-          ? LabelType.TokenLabel
-          : LabelType.SpanLabel;
-      const relevantLabels = allLabels.filter(
-        (label) => label.labelType === relevantLabelType
-      );
-
-      setSpanLabels(relevantLabels);
-      setHumanSpanLabels(relevantLabels);
-
-      // Filter and set relation labels
-      const relationLabels = allLabels.filter(
-        (label) => label.labelType === LabelType.RelationshipLabel
-      );
-      setRelationLabels(relationLabels);
-
-      // Filter and set document labels (if needed)
-      const docLabels = allLabels.filter(
-        (label) => label.labelType === LabelType.DocTypeLabel
-      );
-      setDocTypeLabels(docLabels);
-    }
-  }, [humanAnnotationsAndRelationshipsData]);
 
   // When unmounting... ensure we turn off limiting to provided set of annotations
   useEffect(() => {
@@ -486,203 +200,6 @@ export const DocumentAnnotator = ({
     scrollToAnnotation,
   ]);
 
-  // Effect to load document and pawls layer
-  useEffect(() => {
-    if (open && opened_document) {
-      console.log(
-        "React to DocumentAnnotator opening or document change",
-        opened_document
-      );
-
-      viewStateVar(ViewState.LOADING);
-      fetchDocumentAnalysesAndExtracts();
-
-      const loadAnnotations = () => {
-        if (opened_corpus?.labelSet && !displayOnlyTheseAnnotations) {
-          return getDocumentAnnotationsAndRelationships({
-            variables: {
-              documentId: opened_document.id,
-              corpusId: opened_corpus.id,
-              ...(selected_analysis
-                ? { analysisId: selected_analysis.id }
-                : { analysisId: "__none__" }),
-            },
-          });
-        }
-        return Promise.resolve(null);
-      };
-
-      if (
-        opened_document.fileType === "application/pdf" &&
-        opened_document.pdfFile
-      ) {
-        const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
-          opened_document.pdfFile
-        );
-        loadingTask.onProgress = (p: { loaded: number; total: number }) => {
-          setProgress(Math.round((p.loaded / p.total) * 100));
-        };
-
-        Promise.all([
-          loadingTask.promise,
-          getPawlsLayer(opened_document.pawlsParseFile || ""),
-          loadAnnotations(),
-        ])
-          .then(
-            ([pdfDoc, pawlsData, annotationsData]: [
-              PDFDocumentProxy,
-              PageTokens[],
-              QueryResult<
-                GetDocumentAnnotationsAndRelationshipsOutput,
-                GetDocumentAnnotationsAndRelationshipsInput
-              > | null
-            ]) => {
-              console.log("Retrieved annotations data:", annotationsData);
-
-              setDocument(pdfDoc);
-              processAnnotationsData(annotationsData);
-
-              const loadPages: Promise<PDFPageInfo>[] = [];
-              for (let i = 1; i <= pdfDoc.numPages; i++) {
-                loadPages.push(
-                  pdfDoc.getPage(i).then((p) => {
-                    let pageTokens: Token[] = [];
-                    if (pawlsData.length === 0) {
-                      toast.error(
-                        "Token layer isn't available for this document... annotations can't be displayed."
-                      );
-                    } else {
-                      const pageIndex = p.pageNumber - 1;
-                      pageTokens = pawlsData[pageIndex].tokens;
-                    }
-                    return new PDFPageInfo(p, pageTokens, zoomLevel);
-                  }) as unknown as Promise<PDFPageInfo>
-                );
-              }
-              return Promise.all(loadPages);
-            }
-          )
-          .then((pages) => {
-            setPages(pages);
-            let { doc_text, string_index_token_map } =
-              createTokenStringSearch(pages);
-            setPageTextMaps({
-              ...string_index_token_map,
-              ...pageTextMaps,
-            });
-            setRawText(doc_text);
-            // Loaded state set by useEffect for state change in doc state store.
-          })
-          .catch((err) => {
-            console.error("Error loading PDF document:", err);
-            viewStateVar(ViewState.ERROR);
-          });
-      } else if (opened_document.fileType === "application/txt") {
-        console.log("React to TXT document");
-
-        Promise.all([
-          getDocumentRawText(opened_document.txtExtractFile || ""),
-          loadAnnotations(),
-        ])
-          .then(
-            ([txt, annotationsData]: [
-              string,
-              QueryResult<
-                GetDocumentAnnotationsAndRelationshipsOutput,
-                GetDocumentAnnotationsAndRelationshipsInput
-              > | null
-            ]) => {
-              console.log("Retrieved annotations data:", annotationsData);
-
-              setRawText(txt);
-              processAnnotationsData(annotationsData);
-              viewStateVar(ViewState.LOADED);
-            }
-          )
-          .catch((err) => {
-            console.error("Error loading TXT document:", err);
-            viewStateVar(ViewState.ERROR);
-          });
-      }
-    }
-  }, [open, opened_document, opened_corpus, displayOnlyTheseAnnotations]);
-
-  const processAnnotationsData = (
-    data: QueryResult<
-      GetDocumentAnnotationsAndRelationshipsOutput,
-      GetDocumentAnnotationsAndRelationshipsInput
-    > | null
-  ) => {
-    console.log("Processing annotations data:", data);
-    if (data?.data?.document) {
-      const processedAnnotations =
-        data.data.document.allAnnotations?.map((annotation) =>
-          convertToServerAnnotation(annotation)
-        ) ?? [];
-      setAnnotationObjs(processedAnnotations);
-
-      if (data.data.document?.allStructuralAnnotations) {
-        const structuralAnns = data.data.document.allStructuralAnnotations.map(
-          (ann) => convertToServerAnnotation(ann)
-        );
-        setStructuralAnnotations(structuralAnns);
-      }
-
-      const processedRelationships = data.data.document.allRelationships?.map(
-        (rel) =>
-          new RelationGroup(
-            rel.sourceAnnotations.edges
-              .map((edge) => edge?.node?.id)
-              .filter((id): id is string => id !== undefined),
-            rel.targetAnnotations.edges
-              .map((edge) => edge?.node?.id)
-              .filter((id): id is string => id !== undefined),
-            rel.relationshipLabel,
-            rel.id
-          )
-      );
-      setRelationshipAnnotations(processedRelationships ?? []);
-
-      if (data.data.corpus && data.data.corpus.labelSet) {
-        const allLabels = data.data.corpus.labelSet.allAnnotationLabels ?? [];
-        setSpanLabels(
-          allLabels.filter((label) => label.labelType === LabelType.SpanLabel)
-        );
-        setHumanSpanLabels(
-          allLabels.filter((label) => label.labelType === LabelType.SpanLabel)
-        );
-        setRelationLabels(
-          allLabels.filter(
-            (label) => label.labelType === LabelType.RelationshipLabel
-          )
-        );
-        setDocTypeLabels(
-          allLabels.filter(
-            (label) => label.labelType === LabelType.DocTypeLabel
-          )
-        );
-      }
-    }
-  };
-
-  // If analysis or extract is deselected, try to refetch the data
-  useEffect(() => {
-    resetStates();
-    if (!selected_analysis && !selected_extract) {
-      fetchDocumentAnalysesAndExtracts();
-    }
-  }, [selected_analysis, selected_extract]);
-
-  // Only trigger state flip to "Loaded" if PDF, pageTextMaps and page info load properly
-  useEffect(() => {
-    if (opened_document.fileType === "application/pdf") {
-      if (doc && pageTextMaps && pages.length > 0) {
-        console.log("React to PDF document loading properly", doc);
-        viewStateVar(ViewState.LOADED);
-      }
-    }
-  }, [pageTextMaps, pages, doc]);
-
   // When modal is hidden, ensure we reset state and clear provided annotations to display
   useEffect(() => {
     if (!open) {
@@ -697,155 +214,27 @@ export const DocumentAnnotator = ({
     };
   }, []);
 
-  // If we got a property of annotations to display (and ONLY those), do some post processing and update state variable(s) accordingly
+  // When annotations are provided to display only, update annotation manager's state
   useEffect(() => {
     console.log(
       "React to displayOnlyTheseAnnotations",
       displayOnlyTheseAnnotations
     );
     if (displayOnlyTheseAnnotations) {
-      setAnnotationObjs(
-        convertToServerAnnotations(displayOnlyTheseAnnotations)
+      const annotations = convertToServerAnnotations(
+        displayOnlyTheseAnnotations
       );
+      annotationManager.setAnnotationObjs(annotations);
+
       // Clear other annotation types as they're not specified in onlyDisplayTheseAnnotations
-      setDocTypeAnnotations([]);
-      setRelationshipAnnotations([]);
+      annotationManager.setDocTypeAnnotations([]);
+      annotationManager.setPdfAnnotations(
+        new PdfAnnotations(annotations, [], [], true)
+      );
     }
   }, [displayOnlyTheseAnnotations]);
 
-  useEffect(() => {
-    fetchDocumentAnalysesAndExtracts();
-  }, []);
-
-  // Effect to process analyses and extracts data retrieved
-  useEffect(() => {
-    if (analysesData && analysesData.documentCorpusActions) {
-      const { analysisRows, extracts } = analysesData.documentCorpusActions;
-      setExtracts(extracts);
-      setAnalysisRows(analysisRows);
-      setAnalyses(
-        analysisRows
-          .map((row) => row.analysis)
-          .filter((a): a is AnalysisType => a !== null && a !== undefined)
-      );
-    }
-  }, [analysesData]);
-
-  // Effect to fetch annotations when an analysis is selected
-  useEffect(() => {
-    // Clear existing state;
-    resetStates();
-
-    if (selected_analysis) {
-      allowUserInput(false);
-      selectedExtract(null); // Ensure extract is deselected
-      fetchAnnotationsForAnalysis({
-        variables: {
-          analysisId: selected_analysis.id,
-          documentId: opened_document.id,
-        },
-      }).then(({ data }) => {
-        // TODO - properly parse resulting annotation data
-        if (data && data.analysis && data.analysis.fullAnnotationList) {
-          const rawSpanAnnotations = data.analysis.fullAnnotationList.filter(
-            (annot) =>
-              annot.annotationLabel.labelType === LabelType.TokenLabel ||
-              annot.annotationLabel.labelType === LabelType.SpanLabel
-          );
-          const rawDocAnnotations = data.analysis.fullAnnotationList.filter(
-            (annot) => annot.annotationLabel.labelType == LabelType.DocTypeLabel
-          );
-
-          const processedSpanAnnotations = rawSpanAnnotations.map(
-            (annotation) => convertToServerAnnotation(annotation)
-          );
-          setAnnotationObjs(processedSpanAnnotations);
-
-          // Update span labels
-          const uniqueLabels = _.uniqBy(
-            processedSpanAnnotations.map((a) => a.annotationLabel),
-            "id"
-          );
-          setSpanLabels(uniqueLabels);
-
-          const processedDocAnnotations = rawDocAnnotations.map((annotation) =>
-            convertToDocTypeAnnotation(annotation)
-          );
-          setDocTypeAnnotations(processedDocAnnotations);
-          const uniqueDocLabels = _.uniqBy(
-            processedDocAnnotations.map((a) => a.annotationLabel),
-            "id"
-          );
-          setDocTypeLabels(uniqueDocLabels);
-        }
-      });
-    } else {
-      allowUserInput(true);
-    }
-  }, [selected_analysis, opened_document.id, opened_corpus?.id]);
-
-  // Effect to fetch data cells when an extract is selected
-  useEffect(() => {
-    // Clear existing state;
-    resetStates();
-
-    if (selected_extract) {
-      allowUserInput(false);
-      selectedAnalysis(null); // Ensure analysis is deselected
-      fetchDataCellsForExtract({
-        variables: {
-          extractId: selected_extract.id,
-        },
-      }).then(({ data }) => {
-        if (data && data.extract) {
-          setDataCells(data.extract.fullDatacellList || []);
-          setColumns(data.extract.fieldset.fullColumnList || []);
-
-          // Process annotations from datacells
-          const processedAnnotations = (data.extract.fullDatacellList || [])
-            .flatMap((datacell) => datacell.fullSourceList || [])
-            .map((annotation) => convertToServerAnnotation(annotation));
-          setAnnotationObjs(processedAnnotations);
-
-          // Update span labels
-          const uniqueLabels = _.uniqBy(
-            processedAnnotations.map((a) => a.annotationLabel),
-            "id"
-          );
-          setSpanLabels(uniqueLabels);
-        }
-      });
-    } else {
-      allowUserInput(true);
-    }
-  }, [selected_extract, opened_document.id, opened_corpus?.id]);
-
-  // Effect to process data cells and columns
-  useEffect(() => {
-    if (dataCellsData) {
-      setDataCells(dataCellsData.extract.fullDatacellList ?? []);
-      setColumns(dataCellsData.extract.fieldset.fullColumnList ?? []);
-    }
-  }, [dataCellsData]);
-
-  const onSelectAnalysis = (analysis: AnalysisType | null) => {
-    // When a new analysis is loaded, we want to reset the view
-    // behavior as, otherwise, particularly on mobile, it can get
-    // take a lot of clicks to enable.
-    showAnnotationBoundingBoxes(true);
-    showAnnotationLabels(LabelDisplayBehavior.ON_HOVER);
-    showSelectedAnnotationOnly(false);
-    selectedAnalysis(analysis);
-    selectedExtract(null);
-  };
-
-  const onSelectExtract = (extract: ExtractType | null) => {
-    selectedExtract(extract);
-    selectedAnalysis(null);
-  };
-
   let rendered_component = <></>;
-  console.log("view_state", view_state, ViewState.LOADING, ViewState.LOADED);
   switch (view_state) {
     case ViewState.LOADING:
       rendered_component = (
@@ -860,7 +249,7 @@ export const DocumentAnnotator = ({
               selected_extract={selected_extract}
               allowInput={false}
               editMode="ANNOTATE"
-              datacells={data_cells}
+              datacells={dataCells}
               columns={columns}
               setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
               setAllowInput={(v: boolean) => {}}
@@ -894,7 +283,7 @@ export const DocumentAnnotator = ({
               selected_extract={selected_extract}
               allowInput={false}
               editMode="ANNOTATE"
-              datacells={data_cells}
+              datacells={dataCells}
               columns={columns}
               setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
               setAllowInput={(v: boolean) => {}}
@@ -910,25 +299,12 @@ export const DocumentAnnotator = ({
       rendered_component = (
         <AnnotatorRenderer
           open={open}
+          read_only={true}
           view_document_only={false}
           loading_message="Loading Annotator Data"
-          data_loading={
-            dataCellsLoading ||
-            analysesLoading ||
-            annotationsLoading ||
-            humanDataLoading
-          }
-          doc={doc}
-          rawText={rawText}
-          pageTextMaps={pageTextMaps}
-          pages={pages}
-          zoom_level={zoomLevel}
-          setZoomLevel={setZoomLevel}
+          data_loading={false}
           load_progress={progress}
-          opened_document={opened_document}
-          opened_corpus={opened_corpus}
-          read_only={read_only}
-          structural_annotations={structuralAnnotations}
+          structural_annotations={annotationManager.structuralAnnotations}
           scrollToAnnotation={
             scrollToAnnotation && convertToServerAnnotation(scrollToAnnotation)
           }
@@ -936,19 +312,7 @@ export const DocumentAnnotator = ({
           show_selected_annotation_only={show_selected_annotation_only}
           show_annotation_bounding_boxes={show_annotation_bounding_boxes}
           show_annotation_labels={show_annotation_labels}
-          span_labels={span_labels}
-          human_span_labels={human_span_labels}
-          relationship_labels={relation_labels}
-          document_labels={doc_type_labels}
-          annotation_objs={[
-            ...annotation_objs,
-            ...(scrollToAnnotation
-              ? [convertToServerAnnotation(scrollToAnnotation)]
-              : []),
-          ]}
-          doc_type_annotations={doc_type_annotations}
-          relationship_annotations={relationship_annotations}
-          data_cells={data_cells}
+          data_cells={dataCells}
           columns={columns}
           editMode={edit_mode}
           setEditMode={(m: "ANALYZE" | "ANNOTATE") => {
@@ -984,7 +348,7 @@ export const DocumentAnnotator = ({
               selected_extract={selected_extract}
               allowInput={false}
               editMode="ANNOTATE"
-              datacells={data_cells}
+              datacells={dataCells}
               columns={columns}
               setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
               setAllowInput={(v: boolean) => {}}
@@ -1005,7 +369,6 @@ export const DocumentAnnotator = ({
       open={open}
       onClose={() => {
         onClose();
-        setDocument(undefined);
       }}
       size="fullscreen"
     >
@@ -1030,28 +393,13 @@ export const DocumentAnnotator = ({
         />
         <CorpusProvider
           selectedCorpus={opened_corpus}
-          annotations={annotation_objs}
-          relationships={relationship_annotations}
-          structuralAnnotations={structuralAnnotations}
-          docTypeAnnotations={doc_type_annotations}
-          spanLabels={span_labels}
-          humanSpanLabels={human_span_labels}
-          relationLabels={relation_labels}
-          docTypeLabels={doc_type_labels}
+          spanLabels={[]}
+          humanSpanLabels={[]}
+          relationLabels={[]}
+          docTypeLabels={[]}
           isLoading={isLoading}
         >
-          <DocumentProvider
-            selectedDocument={opened_document}
-            selectedCorpus={opened_corpus}
-            docText={rawText}
-            pdfDoc={doc}
-            pages={pages}
-            pageTextMaps={pageTextMaps}
-            isLoading={isLoading}
-            viewState={view_state}
-          >
-            {rendered_component}
-          </DocumentProvider>
+          {rendered_component}
         </CorpusProvider>
       </Modal.Content>
     </Modal>

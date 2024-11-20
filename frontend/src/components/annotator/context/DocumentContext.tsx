@@ -7,38 +7,53 @@ import { ViewState } from "../types/enums";
 import { PermissionTypes, TokenId } from "../../types";
 import { CorpusType, DocumentType } from "../../../types/graphql-api";
 
+/**
+ * Interface defining the shape of the DocumentContext.
+ */
 interface DocumentContextValue {
   // Core document data
-  selectedDocument: DocumentType;
-  selectedCorpus: CorpusType | null | undefined;
-  fileType: string;
-  docText: string;
+  getSelectedDocument: () => DocumentType;
+  setSelectedDocument: (doc: DocumentType) => void;
+  getSelectedCorpus: () => CorpusType | null | undefined;
+  setSelectedCorpus: (corpus: CorpusType | null | undefined) => void;
+  getFileType: () => string;
+  setFileType: (type: string) => void;
+  getDocText: () => string;
+  setDocText: (text: string) => void;
 
   // PDF specific data
-  pdfDoc: PDFDocumentProxy | undefined;
-  pages: PDFPageInfo[];
-  pageTextMaps: Record<number, TokenId> | undefined;
+  getPdfDoc: () => PDFDocumentProxy | undefined;
+  getPages: () => PDFPageInfo[];
+  getPageTextMaps: () => Record<number, TokenId> | undefined;
+  getDocumentType: () => string;
+  setDocumentType: (type: string) => void;
 
   // Document state
-  isLoading: boolean;
-  viewState: ViewState;
+  getIsLoading: () => boolean;
+  setIsLoading: (loading: boolean) => void;
+  getViewState: () => ViewState;
+  setViewState: (state: ViewState) => void;
 
   // Permissions
-  permissions: PermissionTypes[];
-  canUpdateDocument: boolean;
-  canDeleteDocument: boolean;
+  getPermissions: () => PermissionTypes[];
+  getCanUpdateDocument: () => boolean;
+  getCanDeleteDocument: () => boolean;
   hasDocumentPermission: (permission: PermissionTypes) => boolean;
 
   // Page and scroll management
-  pageSelectionQueue: Record<number, BoundingBox[]>;
-  scrollContainerRef: React.RefObject<HTMLDivElement> | undefined;
+  getPageSelectionQueue: () => Record<number, BoundingBox[]>;
+  setPageSelectionQueue: (queue: Record<number, BoundingBox[]>) => void;
+  getScrollContainerRef: () => React.RefObject<HTMLDivElement> | undefined;
   setScrollContainerRef: (
     ref: React.RefObject<HTMLDivElement> | undefined
   ) => void;
-  pdfPageInfoObjs: Record<number, PDFPageInfo>;
+  getPdfPageInfoObjs: () => Record<number, PDFPageInfo>;
   setPdfPageInfoObjs: (pageInfos: Record<number, PDFPageInfo>) => void;
 }
 
+/**
+ * Create the DocumentContext.
+ */
 const DocumentContext = createContext<DocumentContextValue | null>(null);
 
 interface DocumentProviderProps {
@@ -46,25 +61,35 @@ interface DocumentProviderProps {
   selectedDocument: DocumentType;
   selectedCorpus: CorpusType | null | undefined;
   docText: string;
-  pdfDoc: PDFDocumentProxy | undefined;
   pageTextMaps: Record<number, TokenId> | undefined;
   isLoading?: boolean;
-  pages: PDFPageInfo[];
   viewState: ViewState;
+
+  // New props being passed from AnnotatorModal
+  pdfDoc: PDFDocumentProxy | undefined;
+  pages: PDFPageInfo[];
+  documentType: string;
 }
 
+/**
+ * DocumentProvider component that provides document-related context values.
+ */
 export function DocumentProvider({
   children,
   selectedDocument,
   selectedCorpus,
   docText,
-  pdfDoc,
   pageTextMaps,
   isLoading = false,
+  viewState: initialViewState,
+  pdfDoc,
   pages,
-  viewState,
+  documentType,
 }: DocumentProviderProps) {
-  // Add internal state management
+  // State management for dynamic values
+  const [viewState, setViewState] = useState<ViewState>(initialViewState);
+
+  // Internal state
   const [pageSelectionQueue, setPageSelectionQueue] = useState<
     Record<number, BoundingBox[]>
   >({});
@@ -82,24 +107,44 @@ export function DocumentProvider({
 
   const value = useMemo(
     () => ({
-      selectedDocument,
-      selectedCorpus,
-      fileType: selectedDocument.fileType || "",
-      docText,
-      pdfDoc,
-      pages,
-      pageTextMaps,
-      isLoading,
-      viewState,
-      permissions,
-      canUpdateDocument: permissions.includes(PermissionTypes.CAN_UPDATE),
-      canDeleteDocument: permissions.includes(PermissionTypes.CAN_REMOVE),
+      // Core document data
+      getSelectedDocument: () => selectedDocument,
+      setSelectedDocument: () => {},
+      getSelectedCorpus: () => selectedCorpus,
+      setSelectedCorpus: () => {},
+      getFileType: () => selectedDocument.fileType || "",
+      setFileType: () => {},
+      getDocText: () => docText,
+      setDocText: () => {},
+
+      // PDF specific data provided via props
+      getPdfDoc: () => pdfDoc,
+      getPages: () => pages,
+      getPageTextMaps: () => pageTextMaps,
+      getDocumentType: () => documentType,
+      setDocumentType: () => {},
+
+      // Document state
+      getIsLoading: () => isLoading,
+      setIsLoading: () => {},
+      getViewState: () => viewState,
+      setViewState,
+
+      // Permissions
+      getPermissions: () => permissions,
+      getCanUpdateDocument: () =>
+        permissions.includes(PermissionTypes.CAN_UPDATE),
+      getCanDeleteDocument: () =>
+        permissions.includes(PermissionTypes.CAN_REMOVE),
       hasDocumentPermission: (permission: PermissionTypes) =>
         permissions.includes(permission),
-      pageSelectionQueue,
-      scrollContainerRef,
+
+      // Page and scroll management
+      getPageSelectionQueue: () => pageSelectionQueue,
+      setPageSelectionQueue,
+      getScrollContainerRef: () => scrollContainerRef,
       setScrollContainerRef,
-      pdfPageInfoObjs,
+      getPdfPageInfoObjs: () => pdfPageInfoObjs,
       setPdfPageInfoObjs,
     }),
     [
@@ -112,6 +157,7 @@ export function DocumentProvider({
       isLoading,
       viewState,
       permissions,
+      documentType,
       pageSelectionQueue,
       scrollContainerRef,
       pdfPageInfoObjs,
@@ -125,6 +171,10 @@ export function DocumentProvider({
   );
 }
 
+/**
+ * Custom hook to use the DocumentContext.
+ * @returns DocumentContextValue
+ */
 export function useDocumentContext() {
   const context = useContext(DocumentContext);
   if (!context) {

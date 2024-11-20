@@ -1,29 +1,6 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from "react";
-import {
-  CorpusType,
-  AnnotationLabelType,
-  LabelType,
-} from "../../../types/graphql-api";
-import {
-  convertToServerAnnotation,
-  getPermissions,
-} from "../../../utils/transform";
-import {
-  ServerTokenAnnotation,
-  ServerSpanAnnotation,
-  RelationGroup,
-  DocTypeAnnotation,
-} from "../types/annotations";
-import {
-  GetDocumentAnnotationsAndRelationshipsOutput,
-  GetDocumentAnnotationsAndRelationshipsInput,
-} from "../../../graphql/queries";
+import React, { createContext, useContext, useMemo, useState } from "react";
+import { CorpusType, AnnotationLabelType } from "../../../types/graphql-api";
+import { getPermissions } from "../../../utils/transform";
 import { PermissionTypes } from "../../types";
 
 interface CorpusContextValue {
@@ -46,14 +23,14 @@ interface CorpusContextValue {
   // Corpus features
   allowComments: boolean;
 
-  // Document annotations and relationships
-  annotations: (ServerTokenAnnotation | ServerSpanAnnotation)[];
-  relationships: RelationGroup[];
-  structuralAnnotations: ServerTokenAnnotation[];
-  docTypeAnnotations: DocTypeAnnotation[];
-
   // Loading states
   isLoading: boolean;
+
+  // Label management
+  setSpanLabels: (labels: AnnotationLabelType[]) => void;
+  setHumanSpanLabels: (labels: AnnotationLabelType[]) => void;
+  setRelationLabels: (labels: AnnotationLabelType[]) => void;
+  setDocTypeLabels: (labels: AnnotationLabelType[]) => void;
 }
 
 const CorpusContext = createContext<CorpusContextValue | null>(null);
@@ -61,10 +38,6 @@ const CorpusContext = createContext<CorpusContextValue | null>(null);
 interface CorpusProviderProps {
   children: React.ReactNode;
   selectedCorpus: CorpusType | null | undefined;
-  annotations: (ServerTokenAnnotation | ServerSpanAnnotation)[];
-  relationships: RelationGroup[];
-  structuralAnnotations: ServerTokenAnnotation[];
-  docTypeAnnotations: DocTypeAnnotation[];
   spanLabels: AnnotationLabelType[];
   humanSpanLabels: AnnotationLabelType[];
   relationLabels: AnnotationLabelType[];
@@ -75,16 +48,20 @@ interface CorpusProviderProps {
 export function CorpusProvider({
   children,
   selectedCorpus,
-  annotations,
-  relationships,
-  structuralAnnotations,
-  docTypeAnnotations,
-  spanLabels,
-  humanSpanLabels,
-  relationLabels,
-  docTypeLabels,
+  spanLabels: initialSpanLabels,
+  humanSpanLabels: initialHumanSpanLabels,
+  relationLabels: initialRelationLabels,
+  docTypeLabels: initialDocTypeLabels,
   isLoading,
 }: CorpusProviderProps) {
+  // Add state management for labels
+  const [spanLabels, setSpanLabels] = useState(initialSpanLabels);
+  const [humanSpanLabels, setHumanSpanLabels] = useState(
+    initialHumanSpanLabels
+  );
+  const [relationLabels, setRelationLabels] = useState(initialRelationLabels);
+  const [docTypeLabels, setDocTypeLabels] = useState(initialDocTypeLabels);
+
   // Process permissions
   const permissions = useMemo(() => {
     const rawPermissions = selectedCorpus?.myPermissions ?? ["READ"];
@@ -100,24 +77,20 @@ export function CorpusProvider({
       canManageCorpus: permissions.includes(PermissionTypes.CAN_PERMISSION),
       hasCorpusPermission: (permission: PermissionTypes) =>
         permissions.includes(permission),
-      annotations,
-      relationships,
-      structuralAnnotations,
-      docTypeAnnotations,
       spanLabels,
       humanSpanLabels,
       relationLabels,
       docTypeLabels,
+      setSpanLabels,
+      setHumanSpanLabels,
+      setRelationLabels,
+      setDocTypeLabels,
       isLoading,
       allowComments: selectedCorpus?.allowComments ?? true,
     }),
     [
       selectedCorpus,
       permissions,
-      annotations,
-      relationships,
-      structuralAnnotations,
-      docTypeAnnotations,
       spanLabels,
       humanSpanLabels,
       relationLabels,

@@ -16,6 +16,26 @@ interface UseUISettingsProps {
 }
 
 /**
+ * Types for query loading states
+ */
+type QueryLoadingStates = {
+  analyses: boolean;
+  annotations: boolean;
+  relationships: boolean;
+  datacells: boolean;
+};
+
+/**
+ * Types for query errors
+ */
+type QueryErrors = {
+  analyses?: Error;
+  annotations?: Error;
+  relationships?: Error;
+  datacells?: Error;
+};
+
+/**
  * Custom hook for managing UI settings including zoom and sidebar state
  * @param props - Optional external controls for sidebar
  * @returns UI settings and control functions
@@ -31,6 +51,27 @@ export function useUISettings(props?: UseUISettingsProps) {
 
   // Use external visibility if provided, otherwise use internal state
   const isSidebarVisible = props?.sidebarVisible ?? internalSidebarVisible;
+
+  // Progress state
+  const [progress, setProgress] = useState<number>(0);
+
+  // Query loading states
+  /**
+   * State for tracking loading status of different queries
+   */
+  const [queryLoadingStates, setQueryLoadingStates] =
+    useState<QueryLoadingStates>({
+      analyses: false,
+      annotations: false,
+      relationships: false,
+      datacells: false,
+    });
+
+  // Query errors
+  /**
+   * State for tracking errors from different queries
+   */
+  const [queryErrors, setQueryErrors] = useState<QueryErrors>({});
 
   // Zoom controls
   const zoomIn = useCallback(() => {
@@ -82,5 +123,15 @@ export function useUISettings(props?: UseUISettingsProps) {
     setSidebarWidth,
     toggleSidebar,
     setSidebarVisible,
+
+    // Progress state
+    progress,
+    setProgress,
+
+    // Query loading states and errors
+    queryLoadingStates,
+    setQueryLoadingStates,
+    queryErrors,
+    setQueryErrors,
   };
 }

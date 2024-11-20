@@ -34,16 +34,10 @@ import {
 } from "../../../../graphql/mutations";
 import { DocumentViewer } from "../viewer";
 
-import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
-
 import {
   AnalysisType,
-  AnnotationLabelType,
-  AnnotationTypeEnum,
   ColumnType,
-  CorpusType,
   DatacellType,
-  DocumentType,
   ExtractType,
   LabelDisplayBehavior,
   LabelType,
@@ -57,7 +51,6 @@ import {
 import { toast } from "react-toastify";
 import { getPermissions } from "../../../../utils/transform";
 import _ from "lodash";
-import { PDFPageInfo } from "../../types/pdf";
 import {
   DocTypeAnnotation,
   PdfAnnotations,
@@ -65,6 +58,10 @@ import {
   ServerSpanAnnotation,
   ServerTokenAnnotation,
 } from "../../types/annotations";
+import { useCorpusContext } from "../../context/CorpusContext";
+import { useAnnotationManager } from "../../hooks/useAnnotationManager";
+import { useDocumentContext } from "../../context/DocumentContext";
+import { useUISettings } from "../../hooks/useUISettings";
 
 export interface TextSearchResultsProps {
   start: TokenId;
@@ -83,38 +80,22 @@ export interface PageTokenMapBuilderProps {
 
 interface AnnotatorRendererProps {
   open: boolean;
-  doc: PDFDocumentProxy | undefined;
-  rawText: string;
-  pageTextMaps: Record<number, TokenId> | undefined;
   data_loading?: boolean;
   loading_message?: string;
-  pages: PDFPageInfo[];
-  opened_document: DocumentType;
-  opened_corpus?: CorpusType;
   view_document_only: boolean; // If true, won't show topbar or any of the label selectors.
   analyses?: AnalysisType[];
   extracts?: ExtractType[];
   selected_analysis?: AnalysisType | null;
   selected_extract?: ExtractType | null;
-  zoom_level: number;
-  setZoomLevel: (zl: number) => void;
   onSelectAnalysis?: (analysis: AnalysisType | null) => undefined | null | void;
   onSelectExtract?: (extract: ExtractType | null) => undefined | null | void;
   read_only: boolean;
   load_progress: number;
   scrollToAnnotation?: ServerTokenAnnotation | ServerSpanAnnotation;
-  selectedAnnotation?: (ServerTokenAnnotation | ServerSpanAnnotation)[];
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
   show_structural_annotations: boolean;
   show_annotation_labels: LabelDisplayBehavior;
-  span_labels: AnnotationLabelType[];
-  human_span_labels: AnnotationLabelType[];
-  relationship_labels: AnnotationLabelType[];
-  document_labels: AnnotationLabelType[];
-  annotation_objs: (ServerTokenAnnotation | ServerSpanAnnotation)[];
-  doc_type_annotations: DocTypeAnnotation[];
-  relationship_annotations: RelationGroup[];
   data_cells?: DatacellType[];
   columns?: ColumnType[];
   structural_annotations?: ServerTokenAnnotation[];
@@ -128,14 +109,8 @@ interface AnnotatorRendererProps {
 }
 
 export const AnnotatorRenderer = ({
-  doc,
-  rawText,
-  pageTextMaps,
-  pages,
   data_loading,
   loading_message,
-  opened_document: openedDocument,
-  opened_corpus: openedCorpus,
   analyses,
   extracts,
   data_cells,
@@ -145,37 +120,33 @@ export const AnnotatorRenderer = ({
   editMode,
   allowInput,
   view_document_only,
-  zoom_level,
-  setZoomLevel,
   setAllowInput,
   setEditMode,
   onSelectAnalysis,
   onSelectExtract,
   read_only,
   scrollToAnnotation,
-  selectedAnnotation,
   show_selected_annotation_only,
   show_annotation_bounding_boxes,
   show_structural_annotations,
   show_annotation_labels,
-  span_labels: span_label_lookup,
-  human_span_labels: human_span_label_lookup,
-  relationship_labels: relationship_label_lookup,
-  document_labels: document_label_lookup,
-  annotation_objs,
-  structural_annotations,
-  doc_type_annotations,
-  relationship_annotations,
   onError,
 }: AnnotatorRendererProps) => {
-  console.log("AnnotatorRenderer - annotation objs", annotation_objs);
-  console.log("AnnotatorRenderer - analyses", analyses);
+  const {
+    getPdfDoc,
+    pdfDoc: doc,
+    docText: rawText,
+    pageTextMaps,
+    pages,
+    selectedDocument: openedDocument,
+    selectedCorpus: openedCorpus,
+  } = useDocumentContext();
 
-  const [pdfAnnotations, setPdfAnnotations] = useState<PdfAnnotations>(
-    new PdfAnnotations([], [], [])
-  );
+  const { zoomLevel: zoom_level, setZoomLevel } = useUISettings();
 
-  // New state to track if we've scrolled to the annotation
+  const { annotations: pdfAnnotations, setPdfAnnotations } =
+    useAnnotationManager();
+
   const [hasScrolledToAnnotation, setHasScrolledToAnnotation] = useState<
     string | null
   >(null);
@@ -209,9 +180,6 @@ export const AnnotatorRenderer = ({
   // Refs for annotations
   const annotationElementRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  // Refs for search results
-  const textSearchElementRefs = useRef<Record<string, HTMLElement | null>>({});
-
   const handleKeyUpPress = useCallback((event: { keyCode: any }) => {
     const { keyCode } = event;
     if (keyCode === 16) {
@@ -227,23 +195,6 @@ export const AnnotatorRenderer = ({
       setShiftDown(true);
     }
   }, []);
-
-  const memoizedPdfAnnotations = useMemo(() => {
-    return new PdfAnnotations(
-      [...annotation_objs, ...(structural_annotations || [])],
-      relationship_annotations,
-      doc_type_annotations
-    );
-  }, [
-    annotation_objs,
-    structural_annotations,
-    relationship_annotations,
-    doc_type_annotations,
-  ]);
-
-  useEffect(() => {
-    setPdfAnnotations(memoizedPdfAnnotations);
-  }, [memoizedPdfAnnotations]);
 
   useEffect(() => {
     window.addEventListener("keyup", handleKeyUpPress);
@@ -1010,6 +961,13 @@ export const AnnotatorRenderer = ({
       toast.warning("No corpus selected");
     }
   };
+
+  const {
+    spanLabels: span_label_lookup,
+    humanSpanLabels: human_span_label_lookup,
+    relationLabels: relationship_label_lookup,
+    docTypeLabels: document_label_lookup,
+  } = useCorpusContext();
 
   console.log("AnnotatorRenderer...");
   return (

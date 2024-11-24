@@ -6,7 +6,7 @@ import React, {
   useLayoutEffect,
   useCallback,
 } from "react";
-import { useAtom, useSetAtom } from "jotai";
+import { useAtom } from "jotai";
 import { AnnotationLabelType } from "../../../../types/graphql-api";
 import {
   getPageBoundsFromCanvas,
@@ -25,11 +25,6 @@ import { SearchResult } from "../../display/components/SearchResult";
 import { SelectionBoundary } from "../../display/components/SelectionBoundary";
 import { SelectionTokenGroup } from "../../display/components/SelectionTokenGroup";
 import { ServerTokenAnnotation } from "../../types/annotations";
-import {
-  annotationRefsAtom,
-  registerRefAtom,
-  unregisterRefAtom,
-} from "../../context/AnnotationRefsAtoms";
 import { useAnnotationSearch } from "../../hooks/useAnnotationSearch";
 import {
   useCreateAnnotation,
@@ -387,7 +382,7 @@ export const PDFPage = ({
         setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
         approved={annotation.approved}
         rejected={annotation.rejected}
-        allowFeedback={annotationStore.allowComment}
+        allowFeedback={selectedCorpus?.allowComments}
       />
     ));
   }, [

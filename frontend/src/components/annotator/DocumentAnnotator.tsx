@@ -43,7 +43,7 @@ import { AnnotatorRenderer } from "./display/components/AnnotatorRenderer";
 import { ViewSettingsPopup } from "../widgets/popups/ViewSettingsPopup";
 import { useUISettings } from "./hooks/useUISettings";
 import { CorpusProvider } from "./context/CorpusAtom";
-import { useAnalysisManager } from "./hooks/useAnalysisData";
+import { useAnalysisManager } from "./hooks/AnalysisHooks";
 
 // Import Annotation Hooks
 import {
@@ -103,26 +103,24 @@ export const DocumentAnnotator = ({
   // Initialize Annotation Hooks
   const { replaceAnnotations, replaceRelations } = usePdfAnnotations();
 
-  const { structuralAnnotations, setStructuralAnnotations } =
-    useStructuralAnnotations();
+  const { structuralAnnotations } = useStructuralAnnotations();
 
-  const { annotationObjs, setAnnotationObjs } = useAnnotationObjs();
+  const { setAnnotationObjs } = useAnnotationObjs();
 
-  const { docTypeAnnotations, setDocTypeAnnotations } = useDocTypeAnnotations();
+  const { setDocTypeAnnotations } = useDocTypeAnnotations();
 
-  const { zoomLevel, progress, setProgress, queryLoadingStates } =
-    useUISettings({
-      width,
-    });
+  const { progress, queryLoadingStates } = useUISettings({
+    width,
+  });
 
   const {
+    dataCells,
+    columns,
+    analyses,
+    extracts,
     resetStates: analysisResetStates,
     onSelectAnalysis,
     onSelectExtract,
-    dataCells,
-    columns,
-    extracts,
-    analyses,
   } = useAnalysisManager(opened_document, opened_corpus);
 
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";

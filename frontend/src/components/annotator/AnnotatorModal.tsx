@@ -1,4 +1,4 @@
-import { CorpusProvider } from "./context/CorpusContext";
+import { CorpusProvider } from "./context/CorpusAtom";
 import { ViewSettingsPopup } from "../widgets/popups/ViewSettingsPopup";
 import { DocumentAnnotator } from "./DocumentAnnotator";
 import { Modal } from "semantic-ui-react";
@@ -6,31 +6,23 @@ import {
   editMode,
   onlyDisplayTheseAnnotations,
   selectedAnalysis,
-  selectedExtract,
   showAnnotationBoundingBoxes,
   showAnnotationLabels,
   showSelectedAnnotationOnly,
   showStructuralAnnotations,
   viewStateVar,
 } from "../../graphql/cache";
+import { Token, ViewState, label_display_options } from "../types";
 import {
-  PageTokens,
-  Token,
-  TokenId,
-  ViewState,
-  label_display_options,
-} from "../types";
-import {
-  AnnotationLabelType,
   CorpusType,
   DocumentType,
   LabelDisplayBehavior,
   LabelType,
 } from "../../types/graphql-api";
-import { QueryResult, useLazyQuery, useReactiveVar } from "@apollo/client";
-import { useEffect, useState } from "react";
-import { PDFDocumentLoadingTask, PDFDocumentProxy } from "pdfjs-dist";
-import { PDFPageInfo } from "./context/PDFStore";
+import { useLazyQuery, useReactiveVar } from "@apollo/client";
+import { useEffect } from "react";
+import { PDFDocumentLoadingTask } from "pdfjs-dist";
+import { pagesAtom, useInitializeDocumentAtoms } from "./context/DocumentAtom";
 import { useUISettings } from "./hooks/useUISettings";
 import {
   GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS,
@@ -41,11 +33,27 @@ import { getDocumentRawText, getPawlsLayer } from "./api/rest";
 import { toast } from "react-toastify";
 import { createTokenStringSearch } from "./utils";
 import { convertToServerAnnotation } from "../../utils/transform";
-import { useAnnotationManager } from "./hooks/useAnnotationManager";
-import { DocumentContextWrapper } from "./context/DocumentContextWrapper";
-import { UISettingsContextWrapper } from "./context/UISettingsContextWrapper";
 import { PdfAnnotations, RelationGroup } from "./types/annotations";
-import { DocumentProvider } from "./context/DocumentContext";
+import {
+  usePdfDoc,
+  usePages,
+  usePageTextMaps,
+  useDocumentType,
+  useDocText,
+} from "./context/DocumentAtom";
+import {
+  useSpanLabels,
+  useHumanSpanLabels,
+  useRelationLabels,
+  useDocTypeLabels,
+} from "./context/CorpusAtom";
+import { useAtom } from "jotai";
+import {
+  pdfAnnotationsAtom,
+  structuralAnnotationsAtom,
+  docTypeAnnotationsAtom,
+} from "./context/AnnotationAtoms";
+import { PDFPageInfo } from "./types/pdf";
 
 // Loading pdf js libraries without cdn is a right PITA... cobbled together a working
 // approach via these guides:
@@ -56,8 +64,11 @@ const pdfjsLib = require("pdfjs-dist");
 
 // Setting worker path to worker bundle.
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
-// "../../build/webpack/pdf.worker.min.js';";
 
+/**
+ * AnnotatorModal component responsible for rendering the annotation modal.
+ * It uses atoms from CorpusAtom.tsx to manage global state.
+ */
 const AnnotatorModal = ({
   open,
   opened_document,
@@ -78,7 +89,15 @@ const AnnotatorModal = ({
   onClose: () => void;
 }) => {
   const { setProgress, progress, zoomLevel } = useUISettings();
-  const annotationManager = useAnnotationManager();
+
+  // Using Jotai atoms for managing annotations
+  const [pdfAnnotations, setPdfAnnotations] = useAtom(pdfAnnotationsAtom);
+  const [structuralAnnotations, setStructuralAnnotations] = useAtom(
+    structuralAnnotationsAtom
+  );
+  const [docTypeAnnotations, setDocTypeAnnotations] = useAtom(
+    docTypeAnnotationsAtom
+  );
 
   const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
   const label_display_behavior = useReactiveVar(showAnnotationLabels);
@@ -88,22 +107,18 @@ const AnnotatorModal = ({
   );
   const edit_mode = useReactiveVar(editMode);
   const selected_analysis = useReactiveVar(selectedAnalysis);
-  const selected_extract = useReactiveVar(selectedExtract);
 
-  const [doc, setDocument] = useState<PDFDocumentProxy>();
-  const [documentType, setDocumentType] = useState<string>("");
-  const [pages, setPages] = useState<PDFPageInfo[]>([]);
-  const [pageTextMaps, setPageTextMaps] = useState<Record<number, TokenId>>();
-  const [rawText, setRawText] = useState<string>("");
+  const { pdfDoc, setPdfDoc } = usePdfDoc();
+  const { pages, setPages } = usePages();
+  const { pageTextMaps, setPageTextMaps } = usePageTextMaps();
+  const { setDocumentType } = useDocumentType();
+  const { setDocText } = useDocText();
 
-  const [spanLabels, setSpanLabels] = useState<AnnotationLabelType[]>([]);
-  const [humanSpanLabels, setHumanSpanLabels] = useState<AnnotationLabelType[]>(
-    []
-  );
-  const [relationLabels, setRelationLabels] = useState<AnnotationLabelType[]>(
-    []
-  );
-  const [docTypeLabels, setDocTypeLabels] = useState<AnnotationLabelType[]>([]);
+  // Use atoms for labels from CorpusAtom
+  const { spanLabels, setSpanLabels } = useSpanLabels();
+  const { humanSpanLabels, setHumanSpanLabels } = useHumanSpanLabels();
+  const { relationLabels, setRelationLabels } = useRelationLabels();
+  const { docTypeLabels, setDocTypeLabels } = useDocTypeLabels();
 
   const [
     getDocumentAnnotationsAndRelationships,
@@ -113,12 +128,7 @@ const AnnotatorModal = ({
     GetDocumentAnnotationsAndRelationshipsInput
   >(GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS);
 
-  // Calculated control and display variables - in certain situations we want to change behavior based on available data or
-  // selected configurations.
-  // Depending on the edit mode and some state variables, we may want to load all annotations for the document
-  // Particularly of node is when displayOnlyTheseAnnotations is set to something, we don't want to load additional
-  // annotations. We are just rendering and displaying the annotations stored in this state variable.
-  // TODO - load annotations on a page-by-page basis to cut down on server load.
+  // Load annotations when in ANNOTATE mode and necessary conditions are met
   useEffect(() => {
     if (
       edit_mode === "ANNOTATE" &&
@@ -136,63 +146,21 @@ const AnnotatorModal = ({
         },
       });
     }
-  }, [editMode, opened_corpus, opened_document, displayOnlyTheseAnnotations]);
+  }, [edit_mode, opened_corpus, opened_document, displayOnlyTheseAnnotations]);
 
-  // When corpus annotation data is loaded (not analysis or extract data is loaded... react to it)
+  // Process annotations when data is loaded
   useEffect(() => {
     if (humanAnnotationsAndRelationshipsData) {
-      // Process annotations
-      const processedAnnotations =
-        humanAnnotationsAndRelationshipsData.document?.allAnnotations?.map(
-          (annotation) => convertToServerAnnotation(annotation)
-        ) ?? [];
-
-      // Update both local state and annotation manager
-      annotationManager.setPdfAnnotations(
-        (prev) =>
-          new PdfAnnotations(
-            processedAnnotations,
-            prev.relations,
-            prev.docTypes,
-            true
-          )
-      );
-
-      // Process relationships
-      const processedRelationships =
-        humanAnnotationsAndRelationshipsData.document?.allRelationships?.map(
-          (relationship) =>
-            new RelationGroup(
-              relationship.sourceAnnotations?.edges
-                ?.map((edge) => edge?.node?.id)
-                .filter((id): id is string => id != null) ?? [],
-              relationship.targetAnnotations?.edges
-                ?.map((edge) => edge?.node?.id)
-                .filter((id): id is string => id != null) ?? [],
-              relationship.relationshipLabel,
-              relationship.id
-            )
-        ) ?? [];
-
-      // Update annotation manager with relationships
-      annotationManager.setPdfAnnotations(
-        (prev) =>
-          new PdfAnnotations(
-            prev.annotations,
-            processedRelationships,
-            prev.docTypes,
-            true
-          )
-      );
+      processAnnotationsData(humanAnnotationsAndRelationshipsData);
     }
   }, [humanAnnotationsAndRelationshipsData]);
 
-  // store doc type in state
+  // Store document type
   useEffect(() => {
     setDocumentType(opened_document.fileType ? opened_document.fileType : "");
   }, [opened_document]);
 
-  // Using new useAnalysisManager hook
+  // Handle opening of the annotator modal
   useEffect(() => {
     if (open && opened_document) {
       console.log(
@@ -233,49 +201,37 @@ const AnnotatorModal = ({
           getPawlsLayer(opened_document.pawlsParseFile || ""),
           loadAnnotations(),
         ])
-          .then(
-            ([pdfDoc, pawlsData, annotationsData]: [
-              PDFDocumentProxy,
-              PageTokens[],
-              QueryResult<
-                GetDocumentAnnotationsAndRelationshipsOutput,
-                GetDocumentAnnotationsAndRelationshipsInput
-              > | null
-            ]) => {
-              console.log("Retrieved annotations data:", annotationsData);
+          .then(([pdfDocProxy, pawlsData]) => {
+            setPdfDoc(pdfDocProxy);
 
-              setDocument(pdfDoc);
-              processAnnotationsData(annotationsData);
-
-              const loadPages: Promise<PDFPageInfo>[] = [];
-              for (let i = 1; i <= pdfDoc.numPages; i++) {
-                loadPages.push(
-                  pdfDoc.getPage(i).then((p) => {
-                    let pageTokens: Token[] = [];
-                    if (pawlsData.length === 0) {
-                      toast.error(
-                        "Token layer isn't available for this document... annotations can't be displayed."
-                      );
-                    } else {
-                      const pageIndex = p.pageNumber - 1;
-                      pageTokens = pawlsData[pageIndex].tokens;
-                    }
-                    return new PDFPageInfo(p, pageTokens, zoomLevel);
-                  }) as unknown as Promise<PDFPageInfo>
-                );
-              }
-              return Promise.all(loadPages);
+            const loadPages: Promise<PDFPageInfo>[] = [];
+            for (let i = 1; i <= pdfDocProxy.numPages; i++) {
+              loadPages.push(
+                pdfDocProxy.getPage(i).then((p) => {
+                  let pageTokens: Token[] = [];
+                  if (pawlsData.length === 0) {
+                    toast.error(
+                      "Token layer isn't available for this document... annotations can't be displayed."
+                    );
+                  } else {
+                    const pageIndex = p.pageNumber - 1;
+                    pageTokens = pawlsData[pageIndex].tokens;
+                  }
+                  return new PDFPageInfo(p, pageTokens, zoomLevel);
+                }) as unknown as Promise<PDFPageInfo>
+              );
             }
-          )
-          .then((pages) => {
-            setPages(pages);
+            return Promise.all(loadPages);
+          })
+          .then((loadedPages) => {
+            setPages(loadedPages);
             let { doc_text, string_index_token_map } =
-              createTokenStringSearch(pages);
+              createTokenStringSearch(loadedPages);
             setPageTextMaps({
               ...string_index_token_map,
               ...pageTextMaps,
             });
-            setRawText(doc_text);
+            setDocText(doc_text);
             // Loaded state set by useEffect for state change in doc state store.
           })
           .catch((err) => {
@@ -289,21 +245,10 @@ const AnnotatorModal = ({
           getDocumentRawText(opened_document.txtExtractFile || ""),
           loadAnnotations(),
         ])
-          .then(
-            ([txt, annotationsData]: [
-              string,
-              QueryResult<
-                GetDocumentAnnotationsAndRelationshipsOutput,
-                GetDocumentAnnotationsAndRelationshipsInput
-              > | null
-            ]) => {
-              console.log("Retrieved annotations data:", annotationsData);
-
-              setRawText(txt);
-              processAnnotationsData(annotationsData);
-              viewStateVar(ViewState.LOADED);
-            }
-          )
+          .then(([txt]) => {
+            setDocText(txt);
+            viewStateVar(ViewState.LOADED);
+          })
           .catch((err) => {
             console.error("Error loading TXT document:", err);
             viewStateVar(ViewState.ERROR);
@@ -312,23 +257,22 @@ const AnnotatorModal = ({
     }
   }, [open, opened_document, opened_corpus, displayOnlyTheseAnnotations]);
 
+  /**
+   * Processes the annotations data and updates the annotation atoms.
+   * @param data Data containing annotations and relationships.
+   */
   const processAnnotationsData = (
-    data: QueryResult<
-      GetDocumentAnnotationsAndRelationshipsOutput,
-      GetDocumentAnnotationsAndRelationshipsInput
-    > | null
+    data: GetDocumentAnnotationsAndRelationshipsOutput
   ) => {
     console.log("Processing annotations data:", data);
-    if (data?.data?.document) {
+    if (data?.document) {
       const processedAnnotations =
-        data.data.document.allAnnotations?.map((annotation) =>
+        data.document.allAnnotations?.map((annotation) =>
           convertToServerAnnotation(annotation)
         ) ?? [];
 
-      // Update both the local state and annotation manager
-
-      // Update annotation manager's state
-      annotationManager.setPdfAnnotations(
+      // Update pdfAnnotations atom
+      setPdfAnnotations(
         (prev) =>
           new PdfAnnotations(
             processedAnnotations,
@@ -339,15 +283,15 @@ const AnnotatorModal = ({
       );
 
       // Process structural annotations
-      if (data.data.document?.allStructuralAnnotations) {
-        const structuralAnns = data.data.document.allStructuralAnnotations.map(
+      if (data.document.allStructuralAnnotations) {
+        const structuralAnns = data.document.allStructuralAnnotations.map(
           (ann) => convertToServerAnnotation(ann)
         );
-        annotationManager.setStructuralAnnotations(structuralAnns);
+        setStructuralAnnotations(structuralAnns);
       }
 
       // Process relationships
-      const processedRelationships = data.data.document.allRelationships?.map(
+      const processedRelationships = data.document.allRelationships?.map(
         (rel) =>
           new RelationGroup(
             rel.sourceAnnotations.edges
@@ -361,7 +305,7 @@ const AnnotatorModal = ({
           )
       );
 
-      annotationManager.setPdfAnnotations(
+      setPdfAnnotations(
         (prev) =>
           new PdfAnnotations(
             prev.annotations,
@@ -371,36 +315,36 @@ const AnnotatorModal = ({
           )
       );
 
-      // Update labels in both contexts
-      if (data.data.corpus?.labelSet) {
-        const allLabels = data.data.corpus.labelSet.allAnnotationLabels ?? [];
-        const spanLabels = allLabels.filter(
+      // Update label atoms
+      if (data.corpus?.labelSet) {
+        const allLabels = data.corpus.labelSet.allAnnotationLabels ?? [];
+        const filteredSpanLabels = allLabels.filter(
           (label) => label.labelType === LabelType.SpanLabel
         );
-        const relationLabels = allLabels.filter(
+        const filteredRelationLabels = allLabels.filter(
           (label) => label.labelType === LabelType.RelationshipLabel
         );
-        const docTypeLabels = allLabels.filter(
+        const filteredDocTypeLabels = allLabels.filter(
           (label) => label.labelType === LabelType.DocTypeLabel
         );
 
-        setSpanLabels(spanLabels);
-        setHumanSpanLabels(spanLabels);
-        setRelationLabels(relationLabels);
-        setDocTypeLabels(docTypeLabels);
+        setSpanLabels(filteredSpanLabels);
+        setHumanSpanLabels(filteredSpanLabels);
+        setRelationLabels(filteredRelationLabels);
+        setDocTypeLabels(filteredDocTypeLabels);
       }
     }
   };
 
-  // Only trigger state flip to "Loaded" if PDF, pageTextMaps and page info load properly
+  // Update view state when PDF document is loaded
   useEffect(() => {
     if (opened_document.fileType === "application/pdf") {
-      if (doc && pageTextMaps && pages.length > 0) {
-        console.log("React to PDF document loading properly", doc);
+      if (pdfDoc && pageTextMaps && pages.length > 0) {
+        console.log("React to PDF document loading properly", pdfDoc);
         viewStateVar(ViewState.LOADED);
       }
     }
-  }, [pageTextMaps, pages, doc]);
+  }, [pageTextMaps, pages, pdfDoc]);
 
   return (
     <Modal
@@ -414,61 +358,40 @@ const AnnotatorModal = ({
         className="AnnotatorModalContent"
         style={{ padding: "0px", height: "90vh", overflow: "hidden" }}
       >
-        <UISettingsContextWrapper>
-          <ViewSettingsPopup
+        <ViewSettingsPopup
+          show_selected_annotation_only={show_selected_annotation_only}
+          showSelectedAnnotationOnly={showSelectedAnnotationOnly}
+          showStructuralLabels={
+            show_structural_annotations ? show_structural_annotations : false
+          }
+          toggleShowStructuralLabels={() =>
+            showStructuralAnnotations(!show_structural_annotations)
+          }
+          show_annotation_bounding_boxes={show_annotation_bounding_boxes}
+          showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
+          label_display_behavior={label_display_behavior}
+          showAnnotationLabels={showAnnotationLabels}
+          label_display_options={label_display_options}
+        />
+        <CorpusProvider
+          selectedCorpus={opened_corpus}
+          spanLabels={spanLabels}
+          humanSpanLabels={humanSpanLabels}
+          relationLabels={relationLabels}
+          docTypeLabels={docTypeLabels}
+          isLoading={humanDataLoading}
+        >
+          <DocumentAnnotator
+            open={open}
+            opened_document={opened_document}
+            opened_corpus={opened_corpus}
+            read_only={read_only}
             show_selected_annotation_only={show_selected_annotation_only}
-            showSelectedAnnotationOnly={showSelectedAnnotationOnly}
-            showStructuralLabels={
-              show_structural_annotations ? show_structural_annotations : false
-            }
-            toggleShowStructuralLabels={() =>
-              showStructuralAnnotations(!show_structural_annotations)
-            }
             show_annotation_bounding_boxes={show_annotation_bounding_boxes}
-            showAnnotationBoundingBoxes={showAnnotationBoundingBoxes}
-            label_display_behavior={label_display_behavior}
-            showAnnotationLabels={showAnnotationLabels}
-            label_display_options={label_display_options}
+            show_annotation_labels={show_annotation_labels}
+            onClose={onClose}
           />
-          <CorpusProvider
-            selectedCorpus={opened_corpus}
-            spanLabels={spanLabels}
-            humanSpanLabels={humanSpanLabels}
-            relationLabels={relationLabels}
-            docTypeLabels={docTypeLabels}
-            isLoading={humanDataLoading}
-          >
-            <DocumentProvider
-              selectedDocument={opened_document}
-              selectedCorpus={opened_corpus}
-              docText={rawText}
-              pageTextMaps={pageTextMaps}
-              isLoading={humanDataLoading}
-              viewState={viewStateVar()}
-              pdfDoc={doc}
-              pages={pages}
-              documentType={documentType}
-            >
-              <DocumentContextWrapper
-                openedDocument={opened_document}
-                openedCorpus={opened_corpus}
-              >
-                <DocumentAnnotator
-                  open={open}
-                  opened_document={opened_document}
-                  opened_corpus={opened_corpus}
-                  read_only={read_only}
-                  show_selected_annotation_only={show_selected_annotation_only}
-                  show_annotation_bounding_boxes={
-                    show_annotation_bounding_boxes
-                  }
-                  show_annotation_labels={show_annotation_labels}
-                  onClose={onClose}
-                />
-              </DocumentContextWrapper>
-            </DocumentProvider>
-          </CorpusProvider>
-        </UISettingsContextWrapper>
+        </CorpusProvider>
       </Modal.Content>
     </Modal>
   );

@@ -44,7 +44,6 @@ import { PDFActionBar } from "../components/ActionBar";
 import {
   setTopbarVisible,
   showSelectCorpusAnalyzerOrFieldsetModal,
-  showStructuralAnnotations,
 } from "../../../../graphql/cache";
 import { MOBILE_VIEW_BREAKPOINT } from "../../../../assets/configurations/constants";
 import TxtAnnotator from "../../renderers/txt/TxtAnnotator";
@@ -52,12 +51,9 @@ import {
   ServerSpanAnnotation,
   RelationGroup,
   PdfAnnotations,
-  DocTypeAnnotation,
   ServerTokenAnnotation,
 } from "../../types/annotations";
 import { PDFPageInfo } from "../../types/pdf";
-import { AnnotationStore } from "../../context/AnnotationStore";
-import { PDFStore } from "../../context/PDFStore";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -116,11 +112,7 @@ export const DocumentViewer = ({
   createAnnotation,
   updateAnnotation,
   createRelation,
-  createDocTypeAnnotation,
   deleteAnnotation,
-  deleteRelation,
-  deleteDocTypeAnnotation,
-  removeAnnotationFromRelation,
   containerRef,
   containerRefCallback,
   pdfAnnotations,
@@ -150,7 +142,7 @@ export const DocumentViewer = ({
   data_loading?: boolean;
   loading_message?: string;
   selected_corpus?: CorpusType | null;
-  selected_document: DocumentType;
+  selected_document: DocumentType | null;
   editMode: "ANNOTATE" | "ANALYZE";
   allowInput: boolean;
   zoom_level: number;
@@ -169,14 +161,7 @@ export const DocumentViewer = ({
   updateAnnotation: (updated_annotation: ServerTokenAnnotation) => void;
   approveAnnotation: (annot_id: string, comment?: string) => void;
   rejectAnnotation: (annot_id: string, comment?: string) => void;
-  createDocTypeAnnotation: (doc_type_annotation_obj: DocTypeAnnotation) => void;
   deleteAnnotation: (annotation_id: string) => void;
-  deleteRelation: (relation_id: string) => void;
-  deleteDocTypeAnnotation: (doc_type_annotation_id: string) => void;
-  removeAnnotationFromRelation: (
-    annotation_id: string,
-    relation_id: string
-  ) => void;
   createRelation: (relation: RelationGroup) => void;
   containerRefCallback: (containerDivElement: HTMLDivElement | null) => void;
   containerRef: React.MutableRefObject<HTMLDivElement | null>;
@@ -216,9 +201,6 @@ export const DocumentViewer = ({
   const [selectedAnnotations, setSelectedAnnotations] = useState<string[]>(
     scroll_to_annotation_on_open ? [scroll_to_annotation_on_open.id] : []
   );
-  const [selectedRelations, setSelectedRelations] = useState<RelationGroup[]>(
-    []
-  );
   const [pageSelection, setSelection] = useState<{
     pageNumber: number;
     bounds: BoundingBox;
@@ -238,9 +220,6 @@ export const DocumentViewer = ({
   >(null);
   const [activeRelationLabel, setActiveRelationLabel] =
     useState<AnnotationLabelType>(relationLabels[0]);
-  const [useFreeFormAnnotations, toggleUseFreeFormAnnotations] =
-    useState<boolean>(false);
-  const [hideLabels, setHideLabels] = useState<boolean>(false);
   const [relationModalVisible, setRelationModalVisible] =
     useState<boolean>(false);
 
@@ -298,7 +277,7 @@ export const DocumentViewer = ({
     let search_hits = [];
 
     // If there is searchText, search document for matches
-    if (searchText) {
+    if (selected_document && searchText) {
       // Use RegEx search without word boundaries and case insensitive
       let exactMatch = new RegExp(searchText, "gi");
       const matches = [...doc_text.matchAll(exactMatch)];
@@ -636,12 +615,6 @@ export const DocumentViewer = ({
   };
 
   let view_components = <></>;
-
-  console.log(
-    "DocumentViewer adapting to filetype: ",
-    selected_document.fileType
-  );
-
   if (
     !selected_document ||
     (selected_document.fileType === "application/pdf" && !doc)
@@ -649,117 +622,68 @@ export const DocumentViewer = ({
     view_components = <></>;
   }
 
-  switch (selected_document.fileType) {
-    case "application/pdf":
-      view_components = (
-        <PDF
-          read_only={read_only}
-          corpus_permissions={corpus_permissions}
-          doc_permissions={doc_permissions}
-          shiftDown={shiftDown}
-          show_selected_annotation_only={show_selected_annotation_only}
-          show_annotation_bounding_boxes={show_annotation_bounding_boxes}
-          show_annotation_labels={show_annotation_labels}
-          setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
-        />
-      );
-      break;
-    case "application/txt":
-      console.log("Application txt detected!");
-      view_components = (
-        <TxtAnnotator
-          text={doc_text}
-          annotations={
-            pdfAnnotations.annotations.filter(
-              (annot) => annot instanceof ServerSpanAnnotation
-            ) as ServerSpanAnnotation[]
-          }
-          searchResults={
-            textSearchMatches?.filter(
-              (match): match is TextSearchSpanResult => "start_index" in match
-            ) ?? []
-          }
-          getSpan={getSpan}
-          visibleLabels={spanLabelsToView}
-          availableLabels={spanLabels}
-          selectedLabelTypeId={activeSpanLabel?.id ?? null}
-          read_only={read_only}
-          allowInput={allowInput}
-          zoom_level={zoom_level}
-          createAnnotation={createAnnotation}
-          updateAnnotation={updateAnnotation}
-          approveAnnotation={approveAnnotation}
-          rejectAnnotation={rejectAnnotation}
-          deleteAnnotation={deleteAnnotation}
-          maxHeight="100%"
-          maxWidth="100%"
-          selectedAnnotations={selectedAnnotations}
-          setSelectedAnnotations={setSelectedAnnotations}
-          showStructuralAnnotations={show_structural_annotations}
-        />
-      );
-      break;
-    default:
-      view_components = (
-        <div>
-          <p>Unsupported filetype: {selected_document.fileType}</p>
-        </div>
-      );
-      break;
-  }
+  if (selected_document) {
+    switch (selected_document.fileType) {
+      case "application/pdf":
+        view_components = (
+          <PDF
+            read_only={read_only}
+            corpus_permissions={corpus_permissions}
+            doc_permissions={doc_permissions}
+            shiftDown={shiftDown}
+            show_selected_annotation_only={show_selected_annotation_only}
+            show_annotation_bounding_boxes={show_annotation_bounding_boxes}
+            show_annotation_labels={show_annotation_labels}
+            setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
+          />
+        );
+        break;
+      case "application/txt":
+        console.log("Application txt detected!");
+        view_components = (
+          <TxtAnnotator
+            text={doc_text}
+            annotations={
+              pdfAnnotations.annotations.filter(
+                (annot) => annot instanceof ServerSpanAnnotation
+              ) as ServerSpanAnnotation[]
+            }
+            searchResults={
+              textSearchMatches?.filter(
+                (match): match is TextSearchSpanResult => "start_index" in match
+              ) ?? []
+            }
+            getSpan={getSpan}
+            visibleLabels={spanLabelsToView}
+            availableLabels={spanLabels}
+            selectedLabelTypeId={activeSpanLabel?.id ?? null}
+            read_only={read_only}
+            allowInput={allowInput}
+            zoom_level={zoom_level}
+            createAnnotation={createAnnotation}
+            updateAnnotation={updateAnnotation}
+            approveAnnotation={approveAnnotation}
+            rejectAnnotation={rejectAnnotation}
+            deleteAnnotation={deleteAnnotation}
+            maxHeight="100%"
+            maxWidth="100%"
+            selectedAnnotations={selectedAnnotations}
+            setSelectedAnnotations={setSelectedAnnotations}
+            showStructuralAnnotations={show_structural_annotations}
+          />
+        );
+        break;
+      default:
+        view_components = (
+          <div>
+            <p>Unsupported filetype: {selected_document.fileType}</p>
+          </div>
+        );
+        break;
+    }
 
-  return (
-    <PDFStore.Provider
-      key={selected_document.id}
-      value={{
-        doc,
-        pages,
-        onError,
-        zoomLevel: zoom_level,
-        setZoomLevel,
-      }}
-    >
-      <AnnotationStore.Provider
-        value={{
-          allowComment: selected_corpus?.allowComments ?? true,
-          hideSidebar,
-          setHideSidebar,
-          approveAnnotation,
-          rejectAnnotation,
-          setSelection,
-          pageSelection,
-          setMultiSelections,
-          activeSpanLabel,
-          showOnlySpanLabels: spanLabelsToView,
-          clearViewLabels: clearSpanLabelsToView,
-          addLabelsToView: addSpanLabelsToViewSelection,
-          removeLabelsToView: removeSpanLabelsToViewSelection,
-          setActiveLabel: setActiveSpanLabel,
-          showStructuralLabels: show_structural_annotations,
-          setViewLabels: (ls: AnnotationLabelType[]) => setSpanLabelsToView(ls),
-          toggleShowStructuralLabels: () =>
-            showStructuralAnnotations(!show_structural_annotations),
-          activeRelationLabel,
-          setActiveRelationLabel,
-          createAnnotation,
-          deleteAnnotation,
-          updateAnnotation,
-          createDocTypeAnnotation,
-          deleteDocTypeAnnotation,
-          createMultiPageAnnotation,
-          createRelation,
-          deleteRelation,
-          removeAnnotationFromRelation,
-          selectedAnnotations,
-          setSelectedAnnotations,
-          selectedRelations,
-          setSelectedRelations,
-          freeFormAnnotations: useFreeFormAnnotations,
-          toggleFreeFormAnnotations: toggleUseFreeFormAnnotations,
-          hideLabels,
-          setHideLabels,
-        }}
-      >
+    return (
+      <div>
         <listeners.UndoAnnotation />
         <listeners.HandleAnnotationSelection
           setModalVisible={setRelationModalVisible}
@@ -859,7 +783,7 @@ export const DocumentViewer = ({
             </AnnotatorTopbar>
           </div>
         </div>
-      </AnnotationStore.Provider>
-    </PDFStore.Provider>
-  );
+      </div>
+    );
+  }
 };

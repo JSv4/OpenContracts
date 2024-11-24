@@ -1,59 +1,44 @@
-import { useCallback, useRef } from "react";
+import { useAtom, useSetAtom } from "jotai";
+import {
+  annotationRefsAtom,
+  registerRefAtom,
+  unregisterRefAtom,
+} from "../context/AnnotationRefsAtoms";
 
 type RefType = "selection" | "search" | "page";
 
 /**
- * Hook to manage annotation references for selections, search results, and pages
+ * Hook for managing annotation references
+ * @returns Object containing ref collections and methods to register/unregister refs
  */
-export function useAnnotationRefs() {
-  const selectionElementRefs = useRef<Record<string, HTMLElement | null>>({});
-  const searchResultElementRefs = useRef<Record<string, HTMLElement | null>>(
-    {}
-  );
-  const pageElementRefs = useRef<
-    Record<number, React.MutableRefObject<HTMLElement | null>>
-  >({});
+export const useAnnotationRefs = () => {
+  const [refs] = useAtom(annotationRefsAtom);
+  const registerAtom = useSetAtom(registerRefAtom);
+  const unregisterAtom = useSetAtom(unregisterRefAtom);
 
-  const registerRef = useCallback(
-    (
-      type: RefType,
-      id: string | number,
-      ref: React.MutableRefObject<HTMLElement | null>
-    ) => {
-      switch (type) {
-        case "selection":
-          selectionElementRefs.current[id.toString()] = ref.current;
-          break;
-        case "search":
-          searchResultElementRefs.current[id.toString()] = ref.current;
-          break;
-        case "page":
-          pageElementRefs.current[id as number] = ref;
-          break;
-      }
-    },
-    []
-  );
+  const registerRef = (
+    type: RefType,
+    id: string | number,
+    ref: React.MutableRefObject<HTMLElement | null>
+  ) => {
+    registerAtom({ type, id, ref });
+  };
 
-  const unregisterRef = useCallback((type: RefType, id: string | number) => {
-    switch (type) {
-      case "selection":
-        delete selectionElementRefs.current[id.toString()];
-        break;
-      case "search":
-        delete searchResultElementRefs.current[id.toString()];
-        break;
-      case "page":
-        delete pageElementRefs.current[id as number];
-        break;
-    }
-  }, []);
+  const unregisterRef = (type: RefType, id: string | number) => {
+    unregisterAtom({ type, id });
+  };
 
   return {
-    selectionElementRefs,
-    searchResultElementRefs,
-    pageElementRefs,
+    selectionElementRefs: {
+      current: refs.selectionElementRefs,
+    },
+    searchResultElementRefs: {
+      current: refs.searchResultElementRefs,
+    },
+    pageElementRefs: {
+      current: refs.pageElementRefs,
+    },
     registerRef,
     unregisterRef,
   };
-}
+};

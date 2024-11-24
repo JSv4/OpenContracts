@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
-import { useQuery, useLazyQuery, useReactiveVar } from "@apollo/client";
+import { useEffect } from "react";
+import { useQuery, useLazyQuery } from "@apollo/client";
+import { toast } from "react-toastify";
+import _ from "lodash";
+import { useAtom } from "jotai";
+
 import {
-  AnalysisRowType,
   AnalysisType,
-  DatacellType,
-  ColumnType,
   ExtractType,
   DocumentType,
   CorpusType,
-  AnnotationLabelType,
-  LabelType as AnnotationLabelTypeEnum,
+  LabelType,
   LabelDisplayBehavior,
 } from "../../../types/graphql-api";
 import {
@@ -24,14 +24,24 @@ import {
   GetDatacellsForExtractInput,
 } from "../../../graphql/queries";
 import {
-  selectedAnalysis,
-  selectedExtract,
-  allowUserInput,
-  showAnnotationBoundingBoxes,
-  showAnnotationLabels,
-  showSelectedAnnotationOnly,
-} from "../../../graphql/cache";
-import { useAnnotationManager } from "./useAnnotationManager";
+  analysisRowsAtom,
+  dataCellsAtom,
+  columnsAtom,
+  analysesAtom,
+  extractsAtom,
+  selectedAnalysisAtom,
+  selectedExtractAtom,
+  allowUserInputAtom,
+  showAnnotationBoundingBoxesAtom,
+  showAnnotationLabelsAtom,
+  showSelectedAnnotationOnlyAtom,
+} from "../context/AnalysisAtoms";
+import { usePdfAnnotations } from "./AnnotationHooks";
+import { useSpanLabels, useDocTypeLabels } from "../context/CorpusAtom";
+import {
+  useQueryLoadingStates,
+  useQueryErrors,
+} from "../context/UISettingsAtom";
 import {
   convertToServerAnnotation,
   convertToDocTypeAnnotation,
@@ -40,41 +50,45 @@ import {
   ServerTokenAnnotation,
   ServerSpanAnnotation,
 } from "../types/annotations";
-import { toast } from "react-toastify";
-import { useCorpusContext } from "../context/CorpusContext";
-import { useUISettings } from "./useUISettings";
-import _ from "lodash";
 
 /**
- * Custom hook to manage analysis and extract data.
+ * Custom hook to manage analysis and extract data using Jotai atoms.
  *
  * @param opened_document The currently opened document.
  * @param opened_corpus   The currently opened corpus.
  * @returns An object containing analysis and extract data and related functions.
  */
 export const useAnalysisManager = (
-  opened_document: DocumentType,
-  opened_corpus?: CorpusType
+  opened_document: DocumentType | null,
+  opened_corpus?: CorpusType | null
 ) => {
-  const [analysisRows, setAnalysisRows] = useState<AnalysisRowType[]>([]);
-  const [dataCells, setDataCells] = useState<DatacellType[]>([]);
-  const [columns, setColumns] = useState<ColumnType[]>([]);
-  const [analyses, setAnalyses] = useState<AnalysisType[]>([]);
-  const [extracts, setExtracts] = useState<ExtractType[]>([]);
+  // Use atoms for state management
+  const [analysisRows, setAnalysisRows] = useAtom(analysisRowsAtom);
+  const [dataCells, setDataCells] = useAtom(dataCellsAtom);
+  const [columns, setColumns] = useAtom(columnsAtom);
+  const [analyses, setAnalyses] = useAtom(analysesAtom);
+  const [extracts, setExtracts] = useAtom(extractsAtom);
 
-  const selected_analysis = useReactiveVar(selectedAnalysis);
-  const selected_extract = useReactiveVar(selectedExtract);
+  const [selected_analysis, setSelectedAnalysis] =
+    useAtom(selectedAnalysisAtom);
+  const [selected_extract, setSelectedExtract] = useAtom(selectedExtractAtom);
 
-  const { addMultipleAnnotations, setDocTypeAnnotations } =
-    useAnnotationManager();
-  const { setSpanLabels, setDocTypeLabels } = useCorpusContext();
+  const [, setAllowUserInput] = useAtom(allowUserInputAtom);
+  const [, setShowAnnotationBoundingBoxes] = useAtom(
+    showAnnotationBoundingBoxesAtom
+  );
+  const [, setShowAnnotationLabels] = useAtom(showAnnotationLabelsAtom);
+  const [, setShowSelectedAnnotationOnly] = useAtom(
+    showSelectedAnnotationOnlyAtom
+  );
 
-  const {
-    queryLoadingStates,
-    setQueryLoadingStates,
-    queryErrors,
-    setQueryErrors,
-  } = useUISettings();
+  const { addMultipleAnnotations, replaceDocTypeAnnotations } =
+    usePdfAnnotations();
+  const { setSpanLabels } = useSpanLabels();
+  const { setDocTypeLabels } = useDocTypeLabels();
+
+  const { queryLoadingStates, setQueryLoadingStates } = useQueryLoadingStates();
+  const { queryErrors, setQueryErrors } = useQueryErrors();
 
   const {
     data: analysesData,
@@ -86,9 +100,10 @@ export const useAnalysisManager = (
     GetDocumentAnalysesAndExtractsInput
   >(GET_DOCUMENT_ANALYSES_AND_EXTRACTS, {
     variables: {
-      documentId: opened_document.id,
+      documentId: opened_document?.id ?? "",
       ...(opened_corpus?.id ? { corpusId: opened_corpus.id } : {}),
     },
+    skip: !opened_document?.id,
     fetchPolicy: "network-only",
   });
 
@@ -172,19 +187,19 @@ export const useAnalysisManager = (
   // Fetch annotations for the selected analysis.
   useEffect(() => {
     if (selected_analysis) {
-      allowUserInput(false);
-      selectedExtract(null);
+      setAllowUserInput(false);
+      setSelectedExtract(null);
 
       fetchAnnotationsForAnalysis({
         variables: {
           analysisId: selected_analysis.id,
-          documentId: opened_document.id,
+          documentId: opened_document?.id ?? "",
         },
       });
     } else {
-      allowUserInput(true);
+      setAllowUserInput(true);
     }
-  }, [selected_analysis, opened_document.id, opened_corpus?.id]);
+  }, [selected_analysis, opened_document?.id, opened_corpus?.id]);
 
   // Update query loading states and errors for annotations
   useEffect(() => {
@@ -216,10 +231,8 @@ export const useAnalysisManager = (
       const rawSpanAnnotations =
         annotationsData.analysis.fullAnnotationList.filter(
           (annot) =>
-            annot.annotationLabel.labelType ===
-              AnnotationLabelTypeEnum.TokenLabel ||
-            annot.annotationLabel.labelType ===
-              AnnotationLabelTypeEnum.SpanLabel
+            annot.annotationLabel.labelType === LabelType.TokenLabel ||
+            annot.annotationLabel.labelType === LabelType.SpanLabel
         );
 
       // Process span annotations
@@ -240,9 +253,7 @@ export const useAnalysisManager = (
       // Filter for doc type annotations
       const rawDocAnnotations =
         annotationsData.analysis.fullAnnotationList.filter(
-          (annot) =>
-            annot.annotationLabel.labelType ===
-            AnnotationLabelTypeEnum.DocTypeLabel
+          (annot) => annot.annotationLabel.labelType === LabelType.DocTypeLabel
         );
 
       // Process doc type annotations
@@ -251,7 +262,7 @@ export const useAnalysisManager = (
       );
 
       // Use the annotation manager to set doc type annotations
-      setDocTypeAnnotations(processedDocAnnotations);
+      replaceDocTypeAnnotations(processedDocAnnotations);
 
       // Extract unique doc type labels and update via context
       const uniqueDocLabels = _.uniqBy(
@@ -265,8 +276,8 @@ export const useAnalysisManager = (
   // Fetch data cells for the selected extract.
   useEffect(() => {
     if (selected_extract) {
-      allowUserInput(false);
-      selectedAnalysis(null);
+      setAllowUserInput(false);
+      setSelectedAnalysis(null);
 
       fetchDataCellsForExtract({
         variables: {
@@ -274,9 +285,9 @@ export const useAnalysisManager = (
         },
       });
     } else {
-      allowUserInput(true);
+      setAllowUserInput(true);
     }
-  }, [selected_extract, opened_document.id, opened_corpus?.id]);
+  }, [selected_extract, opened_document?.id, opened_corpus?.id]);
 
   // Update query loading states and errors for datacells
   useEffect(() => {
@@ -320,14 +331,12 @@ export const useAnalysisManager = (
    * @param analysis The analysis to select.
    */
   const onSelectAnalysis = (analysis: AnalysisType | null) => {
-    // When a new analysis is loaded, we want to reset the view
-    // behavior as, otherwise, particularly on mobile, it can get
-    // take a lot of clicks to enable.
-    showAnnotationBoundingBoxes(true);
-    showAnnotationLabels(LabelDisplayBehavior.ON_HOVER);
-    showSelectedAnnotationOnly(false);
-    selectedAnalysis(analysis);
-    selectedExtract(null);
+    // When a new analysis is loaded, reset the view behaviors
+    setShowAnnotationBoundingBoxes(true);
+    setShowAnnotationLabels(LabelDisplayBehavior.ON_HOVER);
+    setShowSelectedAnnotationOnly(false);
+    setSelectedAnalysis(analysis);
+    setSelectedExtract(null);
   };
 
   /**
@@ -336,8 +345,8 @@ export const useAnalysisManager = (
    * @param extract The extract to select.
    */
   const onSelectExtract = (extract: ExtractType | null) => {
-    selectedExtract(extract);
-    selectedAnalysis(null);
+    setSelectedExtract(extract);
+    setSelectedAnalysis(null);
   };
 
   return {

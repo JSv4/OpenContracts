@@ -41,12 +41,21 @@ import { CenterOnPage } from "./CenterOnPage";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { AnnotatorRenderer } from "./display/components/AnnotatorRenderer";
 import { ViewSettingsPopup } from "../widgets/popups/ViewSettingsPopup";
-import { PdfAnnotations } from "./types/annotations";
 import { useUISettings } from "./hooks/useUISettings";
-import { CorpusProvider } from "./context/CorpusContext";
-import { useAnnotationManager } from "./hooks/useAnnotationManager";
+import { CorpusProvider } from "./context/CorpusAtom";
 import { useAnalysisManager } from "./hooks/useAnalysisData";
 
+// Import Annotation Hooks
+import {
+  usePdfAnnotations,
+  useStructuralAnnotations,
+  useAnnotationObjs,
+  useDocTypeAnnotations,
+} from "./hooks/AnnotationHooks";
+
+/**
+ * Props for the DocumentAnnotator component.
+ */
 export interface TextSearchResultsProps {
   start: TokenId;
   end: TokenId;
@@ -73,6 +82,12 @@ interface DocumentAnnotatorProps {
   onClose: (args?: any) => void | any;
 }
 
+/**
+ * DocumentAnnotator Component
+ *
+ * @param props - Props adhering to DocumentAnnotatorProps interface.
+ * @returns JSX Element representing the Document Annotator.
+ */
 export const DocumentAnnotator = ({
   open,
   opened_document,
@@ -85,8 +100,15 @@ export const DocumentAnnotator = ({
 }: DocumentAnnotatorProps) => {
   const { width } = useWindowDimensions();
 
-  // Effect to load document and pawls layer
-  const annotationManager = useAnnotationManager();
+  // Initialize Annotation Hooks
+  const { replaceAnnotations, replaceRelations } = usePdfAnnotations();
+
+  const { structuralAnnotations, setStructuralAnnotations } =
+    useStructuralAnnotations();
+
+  const { annotationObjs, setAnnotationObjs } = useAnnotationObjs();
+
+  const { docTypeAnnotations, setDocTypeAnnotations } = useDocTypeAnnotations();
 
   const { zoomLevel, progress, setProgress, queryLoadingStates } =
     useUISettings({
@@ -214,7 +236,7 @@ export const DocumentAnnotator = ({
     };
   }, []);
 
-  // When annotations are provided to display only, update annotation manager's state
+  // When annotations are provided to display only, update annotation states
   useEffect(() => {
     console.log(
       "React to displayOnlyTheseAnnotations",
@@ -224,15 +246,26 @@ export const DocumentAnnotator = ({
       const annotations = convertToServerAnnotations(
         displayOnlyTheseAnnotations
       );
-      annotationManager.setAnnotationObjs(annotations);
+      setAnnotationObjs(annotations);
 
       // Clear other annotation types as they're not specified in onlyDisplayTheseAnnotations
-      annotationManager.setDocTypeAnnotations([]);
-      annotationManager.setPdfAnnotations(
-        new PdfAnnotations(annotations, [], [], true)
-      );
+      replaceAnnotations([
+        ...annotations.filter(
+          (a) => !annotations.some((ann) => ann.id === a.id)
+        ),
+        ...annotations,
+      ]);
+      // Assuming there are methods to clear docTypeAnnotations and setPdfAnnotations appropriately
+      setDocTypeAnnotations([]);
+      replaceRelations([], []); // Adjust based on actual hook implementation
     }
-  }, [displayOnlyTheseAnnotations]);
+  }, [
+    displayOnlyTheseAnnotations,
+    setAnnotationObjs,
+    replaceAnnotations,
+    setDocTypeAnnotations,
+    replaceRelations,
+  ]);
 
   let rendered_component = <></>;
   switch (view_state) {
@@ -304,7 +337,7 @@ export const DocumentAnnotator = ({
           loading_message="Loading Annotator Data"
           data_loading={false}
           load_progress={progress}
-          structural_annotations={annotationManager.structuralAnnotations}
+          structural_annotations={structuralAnnotations}
           scrollToAnnotation={
             scrollToAnnotation && convertToServerAnnotation(scrollToAnnotation)
           }

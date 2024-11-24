@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 
 import { TextSearchSpanResult, TextSearchTokenResult } from "../../types";
 import _ from "lodash";
-import { useDocumentContext } from "../context/DocumentContext";
+import { useDocumentContext } from "../context/DocumentAtom";
 
 export type TextSearchResult = TextSearchSpanResult | TextSearchTokenResult;
 

@@ -8,7 +8,7 @@ import {
   spanningBound,
   Optional,
   undefined_bounding_box,
-} from "../context/PDFStore";
+} from "../context/PDFStore__DELETE";
 import { convertAnnotationTokensToText } from "../utils";
 import { RenderedSpanAnnotation, TokenId } from "./annotations";
 

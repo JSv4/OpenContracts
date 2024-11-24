@@ -1,40 +1,45 @@
-import { useState, useCallback } from "react";
-import { useReactiveVar } from "@apollo/client";
+import { useAtom } from "jotai";
 import {
-  showAnnotationBoundingBoxes,
-  showAnnotationLabels,
-  showStructuralAnnotations,
-  showSelectedAnnotationOnly,
-} from "../../../graphql/cache";
+  showAnnotationBoundingBoxesAtom,
+  showAnnotationLabelsAtom,
+  showStructuralAnnotationsAtom,
+  showSelectedAnnotationOnlyAtom,
+  hideLabelsAtom,
+} from "../context/UISettingsAtom";
 import { LabelDisplayBehavior } from "../../../types/graphql-api";
 
 export function useAnnotationDisplay() {
-  const boundingBoxes = useReactiveVar(showAnnotationBoundingBoxes);
-  const labelDisplay = useReactiveVar(showAnnotationLabels);
-  const structuralAnnotations = useReactiveVar(showStructuralAnnotations);
-  const selectedOnly = useReactiveVar(showSelectedAnnotationOnly);
+  const [boundingBoxes, setBoundingBoxes] = useAtom(
+    showAnnotationBoundingBoxesAtom
+  );
+  const [labelDisplay, setLabelDisplay] = useAtom(showAnnotationLabelsAtom);
+  const [structuralAnnotations, setStructuralAnnotations] = useAtom(
+    showStructuralAnnotationsAtom
+  );
+  const [selectedOnly, setSelectedOnly] = useAtom(
+    showSelectedAnnotationOnlyAtom
+  );
+  const [hideLabels, setHideLabels] = useAtom(hideLabelsAtom);
 
-  const [hideLabels, setHideLabels] = useState(false);
+  const toggleBoundingBoxes = () => {
+    setBoundingBoxes(!boundingBoxes);
+  };
 
-  const toggleBoundingBoxes = useCallback(() => {
-    showAnnotationBoundingBoxes(!boundingBoxes);
-  }, [boundingBoxes]);
+  const toggleLabelDisplay = (behavior: LabelDisplayBehavior) => {
+    setLabelDisplay(behavior);
+  };
 
-  const toggleLabelDisplay = useCallback((behavior: LabelDisplayBehavior) => {
-    showAnnotationLabels(behavior);
-  }, []);
+  const toggleStructuralAnnotations = () => {
+    setStructuralAnnotations(!structuralAnnotations);
+  };
 
-  const toggleStructuralAnnotations = useCallback(() => {
-    showStructuralAnnotations(!structuralAnnotations);
-  }, [structuralAnnotations]);
+  const toggleSelectedOnly = () => {
+    setSelectedOnly(!selectedOnly);
+  };
 
-  const toggleSelectedOnly = useCallback(() => {
-    showSelectedAnnotationOnly(!selectedOnly);
-  }, [selectedOnly]);
-
-  const toggleHideLabels = useCallback(() => {
+  const toggleHideLabels = () => {
     setHideLabels((prev) => !prev);
-  }, []);
+  };
 
   return {
     displaySettings: {

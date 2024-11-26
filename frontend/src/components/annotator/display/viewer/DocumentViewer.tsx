@@ -34,7 +34,7 @@ import { AnnotatorTopbar } from "../../topbar/AnnotatorTopbar";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 
 import "./DocumentViewer.css";
-import { RelationModal } from "../../../widgets/modals/RelationModal";
+import { RelationModal } from "../../components/modals/RelationModal";
 import { PDF } from "../../renderers/pdf/PDF";
 import { DocTypeLabelDisplay } from "../../labels/doc_types/DocTypeLabelDisplay";
 import { LabelSelector } from "../../labels/label_selector/LabelSelector";
@@ -91,6 +91,7 @@ export const DocumentViewer = ({
   doc_permissions,
   corpus_permissions,
   read_only,
+  view_document_only: boolean,
   data_loading,
   loading_message,
   selected_corpus,
@@ -786,4 +787,7 @@ export const DocumentViewer = ({
       </div>
     );
   }
+
+  // Add an explicit return for when selected_document is falsy
+  return null; // or return a loading/empty state component
 };

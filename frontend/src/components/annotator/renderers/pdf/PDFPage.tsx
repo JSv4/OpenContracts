@@ -33,7 +33,6 @@ import {
 import {
   scrollContainerRefAtom,
   pdfPageInfoObjsAtom,
-  pageSelectionAtom,
   useSelectedDocument,
   useSelectedCorpus,
   usePageSelectionQueue,
@@ -44,10 +43,6 @@ import {
   useZoomLevel,
   useAnnotationSelection,
 } from "../../context/UISettingsAtom";
-import {
-  useRelationLabels,
-  useHumanSpanLabels,
-} from "../../context/CorpusAtom";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 
 /**
@@ -89,8 +84,7 @@ export const PDFPage = ({
     [key: number]: BoundingBox[];
   }>({});
 
-  const { humanSpanLabels } = useHumanSpanLabels();
-  const { showSelectedOnly, showStructural } = useAnnotationDisplay();
+  const { showStructural } = useAnnotationDisplay();
   const { zoomLevel } = useZoomLevel();
   const { selectedAnnotations } = useAnnotationSelection();
 
@@ -99,16 +93,11 @@ export const PDFPage = ({
 
   const [scrollContainerRef] = useAtom(scrollContainerRefAtom);
   const [pdfPageInfoObjs, setPdfPageInfoObjs] = useAtom(pdfPageInfoObjsAtom);
-  const [pageSelection, setPageSelection] = useAtom(pageSelectionAtom);
 
   const { selectedSearchResultIndex, searchResults } = textSearch;
   const { selectedCorpus } = useSelectedCorpus();
-  const { relationLabels } = useRelationLabels();
 
-  const annotationControls = useAnnotationControls({
-    humanSpanLabelChoices: humanSpanLabels,
-    relationLabels,
-  });
+  const annotationControls = useAnnotationControls();
 
   const { spanLabelsToView, activeSpanLabel } = annotationControls;
 

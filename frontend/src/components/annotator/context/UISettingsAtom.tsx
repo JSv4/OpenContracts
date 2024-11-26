@@ -6,10 +6,15 @@
 import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect } from "react";
 import { RelationGroup } from "../types/annotations";
+import { LabelDisplayBehavior } from "../../../types/graphql-api";
 import {
-  AnnotationLabelType,
-  LabelDisplayBehavior,
-} from "../../../types/graphql-api";
+  activeSpanLabelAtom,
+  spanLabelsToViewAtom,
+  activeRelationLabelAtom,
+  useFreeFormAnnotationsAtom,
+  relationModalVisibleAtom,
+} from "./AnnotationControlAtoms";
+import { useHumanSpanLabels, useRelationLabels } from "./CorpusAtom";
 
 /**
  * Types for query loading states and errors.
@@ -64,19 +69,6 @@ export const showAnnotationLabelsAtom = atom<LabelDisplayBehavior>(
 export const showStructuralAnnotationsAtom = atom<boolean>(true);
 export const showSelectedAnnotationOnlyAtom = atom<boolean>(false);
 export const hideLabelsAtom = atom<boolean>(false);
-
-/**
- * Annotation Control Atoms
- */
-export const activeSpanLabelAtom = atom<AnnotationLabelType | undefined>(
-  undefined
-);
-export const spanLabelsToViewAtom = atom<AnnotationLabelType[] | null>(null);
-export const activeRelationLabelAtom = atom<AnnotationLabelType | undefined>(
-  undefined
-);
-export const useFreeFormAnnotationsAtom = atom<boolean>(false);
-export const relationModalVisibleAtom = atom<boolean>(false);
 
 /**
  * Atom for onSidebarToggle callback.
@@ -205,13 +197,11 @@ export function useQueryErrors() {
 
 /**
  * Custom hook for managing annotation label controls
- * @param params Configuration parameters for annotation labels
+ * @returns Object containing annotation control states and their setters
  */
-export function useAnnotationControls(params: {
-  humanSpanLabelChoices: AnnotationLabelType[];
-  relationLabels: AnnotationLabelType[];
-}) {
-  const { humanSpanLabelChoices, relationLabels } = params;
+export function useAnnotationControls() {
+  const { humanSpanLabels: humanSpanLabelChoices } = useHumanSpanLabels();
+  const { relationLabels } = useRelationLabels();
 
   const [activeSpanLabel, setActiveSpanLabel] = useAtom(activeSpanLabelAtom);
   const [spanLabelsToView, setSpanLabelsToView] = useAtom(spanLabelsToViewAtom);

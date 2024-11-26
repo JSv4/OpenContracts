@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Tab,
   Card,
@@ -14,7 +14,6 @@ import {
 } from "semantic-ui-react";
 
 import _, { isNumber } from "lodash";
-import { AnnotationStore } from "../context/AnnotationStore";
 import { HighlightItem } from "./HighlightItem";
 import { RelationItem } from "./RelationItem";
 
@@ -44,7 +43,17 @@ import { RelationGroup } from "../types/annotations";
 import { useAnnotationSearch } from "../hooks/useAnnotationSearch";
 import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
 import { useUISettings } from "../hooks/useUISettings";
-import { useAnnotationManager } from "../hooks/useAnnotationManager";
+import {
+  useAnnotationControls,
+  useAnnotationSelection,
+} from "../context/UISettingsAtom";
+import { useAnalysisManager } from "../hooks/AnalysisHooks";
+import {
+  useDeleteAnnotation,
+  usePdfAnnotations,
+  useRemoveAnnotationFromRelationship,
+  useRemoveRelationship,
+} from "../hooks/AnnotationHooks";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;
@@ -210,7 +219,16 @@ export const AnnotatorSidebar = ({
   setAllowInput: (v: boolean) => void | undefined | null;
   fetchMore?: () => void;
 }) => {
-  const annotationStore = useContext(AnnotationStore);
+  const handleRemoveRelationship = useRemoveRelationship();
+  const handleDeleteAnnotation = useDeleteAnnotation();
+  const removeAnnotationFromRelation = useRemoveAnnotationFromRelationship();
+
+  const {
+    selectedAnnotations,
+    selectedRelations,
+    setSelectedAnnotations,
+    setSelectedRelations,
+  } = useAnnotationSelection();
   const { isSidebarVisible, setSidebarVisible } = useUISettings();
   const opened_corpus = useReactiveVar(openedCorpus);
   const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
@@ -247,10 +265,11 @@ export const AnnotatorSidebar = ({
     }
   };
 
+  const {} = useAnalysisManager();
+  const { spanLabelsToView } = useAnnotationControls();
   const { searchResults } = useAnnotationSearch();
   const { selectionElementRefs } = useAnnotationRefs();
-  const { selectedRelations } = annotationStore;
-  const { annotations: pdfAnnotations } = useAnnotationManager();
+  const { pdfAnnotations } = usePdfAnnotations();
   const annotations = pdfAnnotations.annotations;
   const relations = pdfAnnotations.relations;
 
@@ -262,22 +281,15 @@ export const AnnotatorSidebar = ({
       );
     }
 
-    if (
-      !annotationStore.showOnlySpanLabels ||
-      annotationStore.showOnlySpanLabels.length === 0
-    ) {
+    if (!spanLabelsToView || spanLabelsToView.length === 0) {
       return return_annotations;
     }
     return return_annotations.filter((annotation) =>
-      annotationStore.showOnlySpanLabels?.some(
+      spanLabelsToView?.some(
         (label) => label.id === annotation.annotationLabel.id
       )
     );
-  }, [
-    annotations,
-    annotationStore.showOnlySpanLabels,
-    show_structural_annotations,
-  ]);
+  }, [annotations, spanLabelsToView, show_structural_annotations]);
 
   useEffect(() => {
     try {
@@ -549,28 +561,25 @@ export const AnnotatorSidebar = ({
   }, [panes, activeIndex]);
 
   // If we have search results pane open... set index to last index
-
   const onRemoveAnnotationFromRelation = (
     annotationId: string,
     relationId: string
   ) => {
-    annotationStore.removeAnnotationFromRelation(annotationId, relationId);
+    removeAnnotationFromRelation(annotationId, relationId);
   };
 
   const onDeleteAnnotation = (annotationId: string) => {
-    annotationStore.deleteAnnotation(annotationId);
+    handleDeleteAnnotation(annotationId);
   };
 
   const onDeleteRelation = (relationId: string) => {
-    annotationStore.deleteRelation(relationId);
+    handleRemoveRelationship(relationId);
   };
 
   const toggleSelectedAnnotation = (toggledId: string) => {
-    if (annotationStore.selectedAnnotations.includes(toggledId)) {
-      annotationStore.setSelectedAnnotations(
-        annotationStore.selectedAnnotations.filter(
-          (annotationId) => annotationId !== toggledId
-        )
+    if (selectedAnnotations.includes(toggledId)) {
+      setSelectedAnnotations(
+        selectedAnnotations.filter((annotationId) => annotationId !== toggledId)
       );
     }
     // If the toggle is flipping us over to SELECTED
@@ -586,7 +595,7 @@ export const AnnotatorSidebar = ({
           selectionElementRefs?.current[annotation.id]?.scrollIntoView();
         }
       }
-      annotationStore.setSelectedAnnotations([toggledId]);
+      setSelectedAnnotations([toggledId]);
     }
   };
 
@@ -594,18 +603,16 @@ export const AnnotatorSidebar = ({
     toggled_relation: RelationGroup,
     implicated_annotations: string[]
   ) => {
-    if (
-      _.find(annotationStore.selectedRelations, { id: toggled_relation.id })
-    ) {
-      annotationStore.setSelectedRelations(
-        annotationStore.selectedRelations.filter(
+    if (_.find(selectedRelations, { id: toggled_relation.id })) {
+      setSelectedRelations(
+        selectedRelations.filter(
           (relation) => relation.id !== toggled_relation.id
         )
       );
-      annotationStore.setSelectedAnnotations([]);
+      setSelectedAnnotations([]);
     } else {
-      annotationStore.setSelectedRelations([toggled_relation]);
-      annotationStore.setSelectedAnnotations(implicated_annotations);
+      setSelectedRelations([toggled_relation]);
+      setSelectedAnnotations(implicated_annotations);
     }
   };
 

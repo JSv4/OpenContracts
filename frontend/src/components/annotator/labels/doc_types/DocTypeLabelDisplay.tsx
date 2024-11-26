@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useState } from "react";
 import {
   Divider,
   Header,
@@ -16,20 +16,28 @@ import { DocTypePopup } from "./DocTypePopup";
 import _ from "lodash";
 
 import "./DocTypeLabelDisplayStyles.css";
-import { AnnotationStore } from "../../context";
 import { AnnotationLabelType } from "../../../../types/graphql-api";
 import { PermissionTypes } from "../../../types";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 import { HideableHasWidth } from "../../common";
 import { DocTypeAnnotation } from "../../types/annotations";
+import {
+  useAddDocTypeAnnotation,
+  useDeleteDocTypeAnnotation,
+  usePdfAnnotations,
+} from "../../hooks/AnnotationHooks";
+import { useDocTypeLabels } from "../../context/CorpusAtom";
 
 export const DocTypeLabelDisplay = ({ read_only }: { read_only: boolean }) => {
   const { width } = useWindowDimensions();
 
-  const annotationStore = useContext(AnnotationStore);
+  const { pdfAnnotations } = usePdfAnnotations();
+  const { docTypeLabels } = useDocTypeLabels();
+  const deleteDocTypeAnnotation = useDeleteDocTypeAnnotation();
+  const createDocTypeAnnotation = useAddDocTypeAnnotation();
 
-  const doc_label_choices = annotationStore.docTypeLabels;
-  const doc_annotations = annotationStore.pdfAnnotations.docTypes;
+  const doc_label_choices = docTypeLabels;
+  const doc_annotations = pdfAnnotations.docTypes;
 
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -45,15 +53,13 @@ export const DocTypeLabelDisplay = ({ read_only }: { read_only: boolean }) => {
   const onAdd = (label: AnnotationLabelType) => {
     // console.log("onAddDocToLabel", label);
 
-    annotationStore.createDocTypeAnnotation(
-      new DocTypeAnnotation(label, [PermissionTypes.CAN_REMOVE])
-    );
+    createDocTypeAnnotation(label);
     setHover(false);
   };
 
   const onDelete = (doc_type_annotation: DocTypeAnnotation) => {
     // console.log("Delete annotation_id", doc_type_annotation.id);
-    annotationStore.deleteDocTypeAnnotation(doc_type_annotation.id);
+    deleteDocTypeAnnotation(doc_type_annotation.id);
   };
 
   let annotation_elements: any[] = [];

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 
 import { TextSearchSpanResult, TextSearchTokenResult } from "../../types";
 import _ from "lodash";
-import { useDocumentContext } from "../context/DocumentAtom";
+import { useDocText, usePages, usePageTextMaps } from "../context/DocumentAtom";
 
 export type TextSearchResult = TextSearchSpanResult | TextSearchTokenResult;
 
@@ -10,7 +10,10 @@ export type TextSearchResult = TextSearchSpanResult | TextSearchTokenResult;
  * Hook for managing document text search functionality
  */
 export function useAnnotationSearch() {
-  const { docText, pageTextMaps, pages } = useDocumentContext();
+  const { pageTextMaps } = usePageTextMaps();
+  const { pages } = usePages();
+  const { docText } = useDocText();
+
   const [searchText, setSearchText] = useState<string>();
   const [searchResults, setSearchResults] = useState<TextSearchResult[]>([]);
   const [selectedSearchResultIndex, setSelectedSearchResultIndex] = useState(0);

@@ -121,7 +121,7 @@ export const DocumentAnnotator = ({
     resetStates: analysisResetStates,
     onSelectAnalysis,
     onSelectExtract,
-  } = useAnalysisManager(opened_document, opened_corpus);
+  } = useAnalysisManager();
 
   const responsive_sidebar_width = width <= 1000 ? "0px" : "400px";
 

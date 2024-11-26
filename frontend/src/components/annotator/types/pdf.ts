@@ -6,11 +6,21 @@ import {
   normalizeBounds,
   doOverlap,
   spanningBound,
-  Optional,
-  undefined_bounding_box,
-} from "../context/PDFStore__DELETE";
+} from "../../../utils/transform";
 import { convertAnnotationTokensToText } from "../utils";
 import { RenderedSpanAnnotation, TokenId } from "./annotations";
+
+export type Optional<T> = T | undefined;
+
+// Somehow (still trying to figure this one out), undefined tokens are getting
+// passed to getScaledTokenBounds and this is blowing up the entire app. For now,
+// test for undefined token and just return this dummy token json.
+export const undefined_bounding_box = {
+  top: 0,
+  bottom: 0,
+  left: 0,
+  right: 0,
+};
 
 export class PDFPageInfo {
   constructor(

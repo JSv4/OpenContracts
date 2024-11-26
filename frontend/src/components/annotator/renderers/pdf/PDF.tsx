@@ -2,10 +2,14 @@ import { useContext } from "react";
 import styled from "styled-components";
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import _ from "lodash";
-import { PDFStore } from "../../context";
 import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { PermissionTypes } from "../../../types";
 import { PDFPage } from "./PDFPage";
+import {
+  usePages,
+  usePdfDoc,
+  useSetViewStateError,
+} from "../../context/DocumentAtom";
 
 export class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
@@ -78,15 +82,17 @@ export const PDF = ({
   show_annotation_labels: LabelDisplayBehavior;
   setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
 }) => {
-  const pdfStore = useContext(PDFStore);
+  const { pdfDoc: doc } = usePdfDoc();
+  const { pages } = usePages();
+  const setViewStateError = useSetViewStateError();
 
-  if (!pdfStore.doc) {
+  if (!doc) {
     // Instead of throwing an error, render nothing or a fallback UI
     console.warn("PDF component rendered without a valid document.");
     return null; // Or return a fallback UI
   }
 
-  if (!pdfStore.pages) {
+  if (!pages) {
     // Similarly, handle missing pages gracefully
     console.warn("PDF component rendered without pages.");
     return <div>No pages available.</div>;
@@ -94,7 +100,7 @@ export const PDF = ({
 
   return (
     <>
-      {pdfStore.pages.map((p) => {
+      {pages.map((p) => {
         return (
           <PDFPage
             key={p.page.pageNumber}
@@ -102,7 +108,7 @@ export const PDF = ({
             doc_permissions={doc_permissions}
             corpus_permissions={corpus_permissions}
             pageInfo={p}
-            onError={pdfStore.onError}
+            onError={setViewStateError}
             show_selected_annotation_only={show_selected_annotation_only}
             show_annotation_bounding_boxes={show_annotation_bounding_boxes}
             show_annotation_labels={show_annotation_labels}

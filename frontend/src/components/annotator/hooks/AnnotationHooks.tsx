@@ -858,6 +858,184 @@ export function useUpdateRelations() {
   return handleUpdateRelations;
 }
 
+/**
+ * Hook to remove an annotation from a relationship while preserving the relationship
+ * if it remains valid (has sufficient source/target annotations).
+ */
+export function useRemoveAnnotationFromRelationship() {
+  const { pdfAnnotations, setPdfAnnotations } = usePdfAnnotations();
+  const selectedCorpus = useAtomValue(selectedCorpusAtom);
+  const selectedDocument = useAtomValue(selectedDocumentAtom);
+
+  const [deleteRelationMutation] = useMutation<
+    RemoveRelationshipOutputType,
+    RemoveRelationshipInputType
+  >(REQUEST_REMOVE_RELATIONSHIP);
+
+  const [updateRelationMutation] = useMutation<
+    UpdateRelationOutputType,
+    UpdateRelationInputType
+  >(REQUEST_UPDATE_RELATIONS);
+
+  const calcRelationUpdatesForAnnotationRemoval = useCallback(
+    (annotationId: string, relationId: string) => {
+      const relation = pdfAnnotations.relations.find(
+        (r) => r.id === relationId
+      );
+      if (!relation) return { relation: null, action: null };
+
+      const newSourceIds = relation.sourceIds.filter(
+        (id) => id !== annotationId
+      );
+      const newTargetIds = relation.targetIds.filter(
+        (id) => id !== annotationId
+      );
+
+      // If either sources or targets would be empty, delete the relation
+      if (newSourceIds.length === 0 || newTargetIds.length === 0) {
+        return { relation, action: "DELETE" as const };
+      }
+
+      // Otherwise update the relation with the remaining annotations
+      const updatedRelation = new RelationGroup(
+        newSourceIds,
+        newTargetIds,
+        relation.label,
+        relation.id
+      );
+      return { relation: updatedRelation, action: "UPDATE" as const };
+    },
+    [pdfAnnotations.relations]
+  );
+
+  const handleRemoveAnnotationFromRelationship = useCallback(
+    async (annotationId: string, relationId: string) => {
+      if (!selectedCorpus || !selectedDocument) {
+        toast.warning("No corpus or document selected");
+        return;
+      }
+
+      const { relation, action } = calcRelationUpdatesForAnnotationRemoval(
+        annotationId,
+        relationId
+      );
+
+      if (!relation) {
+        toast.error("Relation not found");
+        return;
+      }
+
+      try {
+        if (action === "DELETE") {
+          await deleteRelationMutation({
+            variables: { relationshipId: relation.id },
+          });
+
+          setPdfAnnotations((prev) => {
+            const updatedRelations = prev.relations.filter(
+              (r) => r.id !== relation.id
+            );
+            return new PdfAnnotations(
+              prev.annotations,
+              updatedRelations,
+              prev.docTypes,
+              true
+            );
+          });
+
+          toast.success(
+            "Removed annotation from relationship. Relationship was deleted as it became invalid."
+          );
+        } else {
+          await updateRelationMutation({
+            variables: {
+              relationships: [
+                {
+                  id: relation.id,
+                  sourceIds: relation.sourceIds,
+                  targetIds: relation.targetIds,
+                  relationshipLabelId: relation.label.id,
+                  corpusId: selectedCorpus.id,
+                  documentId: selectedDocument.id,
+                },
+              ],
+            },
+          });
+
+          setPdfAnnotations((prev) => {
+            const updatedRelations = prev.relations.map((r) =>
+              r.id === relation.id ? relation : r
+            );
+            return new PdfAnnotations(
+              prev.annotations,
+              updatedRelations,
+              prev.docTypes,
+              true
+            );
+          });
+
+          toast.success("Removed annotation from relationship successfully.");
+        }
+      } catch (error) {
+        toast.error("Failed to remove annotation from relationship");
+        console.error(error);
+      }
+    },
+    [
+      selectedCorpus,
+      selectedDocument,
+      calcRelationUpdatesForAnnotationRemoval,
+      deleteRelationMutation,
+      updateRelationMutation,
+      setPdfAnnotations,
+    ]
+  );
+
+  return handleRemoveAnnotationFromRelationship;
+}
+
+/**
+ * Hook to delete a document type annotation.
+ */
+export function useDeleteDocTypeAnnotation() {
+  const { setPdfAnnotations } = usePdfAnnotations();
+
+  const [deleteAnnotationMutation] = useMutation<
+    RemoveAnnotationOutputType,
+    RemoveAnnotationInputType
+  >(REQUEST_DELETE_ANNOTATION);
+
+  const handleDeleteDocTypeAnnotation = useCallback(
+    async (annotationId: string) => {
+      try {
+        await deleteAnnotationMutation({
+          variables: { annotationId },
+        });
+
+        setPdfAnnotations((prev) => {
+          const updatedDocTypes = prev.docTypes.filter(
+            (docType) => docType.id !== annotationId
+          );
+          return new PdfAnnotations(
+            prev.annotations,
+            prev.relations,
+            updatedDocTypes,
+            true
+          );
+        });
+
+        toast.success("Document type label removed successfully.");
+      } catch (error) {
+        toast.error("Failed to remove document type label");
+        console.error(error);
+      }
+    },
+    [deleteAnnotationMutation, setPdfAnnotations]
+  );
+
+  return handleDeleteDocTypeAnnotation;
+}
+
 // Now all required mutations are implemented using the original logic,
 // and state updates are handled via Jotai atoms.
 // References to `useCorpusContext` and `useDocumentContext` have been

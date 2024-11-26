@@ -1,7 +1,6 @@
-import React, { useContext, useState } from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
 import _ from "lodash";
-import { AnnotationStore } from "../../context";
 import { VerticallyJustifiedEndDiv } from "../../sidebar/common";
 
 import { ResultBoundary } from "./ResultBoundary";
@@ -11,6 +10,7 @@ import { getBorderWidthFromBounds } from "../../../../utils/transform";
 import { SearchSelectionTokens } from "./SelectionTokens";
 import { LabelTagContainer } from "./Containers";
 import { PDFPageInfo } from "../../types/pdf";
+import { useAnnotationDisplay } from "../../context/UISettingsAtom";
 
 interface SearchResultProps {
   total_results: number;
@@ -35,10 +35,10 @@ export const SearchResult = ({
   match,
   showInfo = true,
 }: SearchResultProps) => {
+  const { hideLabels } = useAnnotationDisplay();
+
   const color = "#ffff00";
   const [hovered, setHovered] = useState(false);
-
-  const annotationStore = useContext(AnnotationStore);
 
   console.log("Get scaled result for search result - scale", pageInfo.scale);
   const bounds = pageInfo.getScaledBounds(
@@ -60,7 +60,7 @@ export const SearchResult = ({
         selected={false}
         onHover={setHovered}
       >
-        {showInfo && !annotationStore.hideLabels ? (
+        {showInfo && !hideLabels ? (
           <SelectionInfo
             bounds={bounds}
             border={border}

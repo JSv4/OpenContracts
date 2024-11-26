@@ -1,9 +1,7 @@
-import React, { useContext, useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import _ from "lodash";
 
 import { Image, Icon } from "semantic-ui-react";
-
-import { AnnotationStore } from "../../context";
 
 import {
   HorizontallyJustifiedStartDiv,
@@ -28,11 +26,21 @@ import RadialButtonCloud, {
   CloudButtonItem,
 } from "../../../widgets/buttons/RadialButtonCloud";
 import { SelectionTokenGroup } from "./SelectionTokenGroup";
-import { EditLabelModal } from "../../../widgets/modals/EditLabelModal";
+import { EditLabelModal } from "../../components/modals/EditLabelModal";
 import { useReactiveVar } from "@apollo/client";
 import { authToken } from "../../../../graphql/cache";
 import { PDFPageInfo } from "../../types/pdf";
 import { ServerTokenAnnotation } from "../../types/annotations";
+import {
+  useApproveAnnotation,
+  useDeleteAnnotation,
+  usePdfAnnotations,
+  useRejectAnnotation,
+} from "../../hooks/AnnotationHooks";
+import {
+  useAnnotationDisplay,
+  useAnnotationSelection,
+} from "../../context/UISettingsAtom";
 
 interface SelectionProps {
   selectionRef:
@@ -74,7 +82,14 @@ export const Selection: React.FC<SelectionProps> = ({
   const [cloudVisible, setCloudVisible] = useState(false);
   const cloudRef = useRef<HTMLDivElement | null>(null);
 
-  const annotationStore = useContext(AnnotationStore);
+  const { hideLabels } = useAnnotationDisplay();
+  const { pdfAnnotations } = usePdfAnnotations();
+  const { selectedAnnotations, setSelectedAnnotations, selectedRelations } =
+    useAnnotationSelection();
+  const approveAnnotation = useApproveAnnotation();
+  const rejectAnnotation = useRejectAnnotation();
+  const deleteAnnotation = useDeleteAnnotation();
+
   const label = annotation.annotationLabel;
   const color = label?.color || "#616a6b"; // grey as the default
 
@@ -88,7 +103,7 @@ export const Selection: React.FC<SelectionProps> = ({
           color: "green",
           tooltip: "Upvote Annotation",
           onClick: () => {
-            annotationStore.approveAnnotation(annotation.id);
+            approveAnnotation(annotation.id);
           },
         });
       }
@@ -98,7 +113,7 @@ export const Selection: React.FC<SelectionProps> = ({
           color: "red",
           tooltip: "Downvote Annotation",
           onClick: () => {
-            annotationStore.rejectAnnotation(annotation.id);
+            rejectAnnotation(annotation.id);
           },
         });
       }
@@ -149,17 +164,17 @@ export const Selection: React.FC<SelectionProps> = ({
   const border = getBorderWidthFromBounds(bounds);
 
   const removeAnnotation = () => {
-    annotationStore.deleteAnnotation(annotation.id);
+    deleteAnnotation(annotation.id);
   };
 
   const onShiftClick = () => {
-    const current = annotationStore.selectedAnnotations.slice(0);
+    const current = selectedAnnotations.slice(0);
     if (current.some((other) => other === annotation.id)) {
       const next = current.filter((other) => other !== annotation.id);
-      annotationStore.setSelectedAnnotations(next);
+      setSelectedAnnotations(next);
     } else {
       current.push(annotation.id);
-      annotationStore.setSelectedAnnotations(current);
+      setSelectedAnnotations(current);
     }
   };
 
@@ -187,14 +202,14 @@ export const Selection: React.FC<SelectionProps> = ({
     };
   }, [cloudVisible]);
 
-  const selected = annotationStore.selectedAnnotations.includes(annotation.id);
+  const selected = selectedAnnotations.includes(annotation.id);
 
   let relationship_type = "";
-  if (selected && annotationStore.selectedRelations.length > 0) {
+  if (selected && selectedRelations.length > 0) {
     relationship_type = annotationSelectedViaRelationship(
       annotation,
-      annotationStore.pdfAnnotations.annotations,
-      annotationStore.selectedRelations[0]
+      pdfAnnotations.annotations,
+      selectedRelations[0]
     );
   }
 
@@ -215,7 +230,7 @@ export const Selection: React.FC<SelectionProps> = ({
         setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
         selected={selected}
       >
-        {showInfo && !annotationStore.hideLabels && (
+        {showInfo && !hideLabels && (
           <SelectionInfo
             id="SelectionInfo"
             bounds={bounds}

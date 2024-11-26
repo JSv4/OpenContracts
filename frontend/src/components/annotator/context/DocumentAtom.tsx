@@ -31,6 +31,12 @@ export const documentTypeAtom = atom<string>("");
  */
 export const isLoadingAtom = atom<boolean>(false);
 export const viewStateAtom = atom<ViewState>(ViewState.LOADING);
+export const setViewStateErrorAtom = atom(
+  null, // read
+  (get, set) => {
+    set(viewStateAtom, ViewState.ERROR);
+  }
+);
 
 /**
  * Permissions atoms.
@@ -241,4 +247,13 @@ export function useScrollContainerRef() {
 export function usePdfPageInfoObjs() {
   const [pdfPageInfoObjs, setPdfPageInfoObjs] = useAtom(pdfPageInfoObjsAtom);
   return { pdfPageInfoObjs, setPdfPageInfoObjs };
+}
+
+/**
+ * Hook to handle PDF error state
+ * @returns Function to set view state to error
+ */
+export function useSetViewStateError() {
+  const setViewStateError = useSetAtom(setViewStateErrorAtom);
+  return setViewStateError;
 }

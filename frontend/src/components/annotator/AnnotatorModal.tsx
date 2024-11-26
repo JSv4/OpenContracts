@@ -22,7 +22,6 @@ import {
 import { useLazyQuery, useReactiveVar } from "@apollo/client";
 import { useEffect } from "react";
 import { PDFDocumentLoadingTask } from "pdfjs-dist";
-import { pagesAtom, useInitializeDocumentAtoms } from "./context/DocumentAtom";
 import { useUISettings } from "./hooks/useUISettings";
 import {
   GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS,

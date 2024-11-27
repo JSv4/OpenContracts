@@ -80,12 +80,59 @@ const PDFContainer = styled.div<{ width?: number }>(
   ({ width }) => `
     overflow-y: scroll;
     overflow-x: scroll;
-    height: 100%;
+    height: calc(100vh - 120px);
     background: #f7f9f9;
     padding: 1rem;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
   `
 );
+
+const ViewerLayout = styled.div`
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+`;
+
+const ContentLayout = styled.div<{
+  sidebarVisible: boolean;
+  sidebarWidth: string;
+}>`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  position: relative;
+  margin-left: ${(props) => (props.sidebarVisible ? props.sidebarWidth : "0")};
+  overflow: hidden;
+`;
+
+const MainContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+`;
+
+const FixedSidebar = styled(SidebarContainer)<{ width: string }>`
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: ${(props) => props.width};
+  height: 100%;
+  z-index: 10;
+`;
+
+const PDFActionBarWrapper = styled.div`
+  position: sticky;
+  top: 0;
+  z-index: 1; /* Below AnnotatorTopbar */
+`;
 
 export const DocumentViewer = ({
   doc_permissions,
@@ -684,57 +731,10 @@ export const DocumentViewer = ({
     }
 
     return (
-      <div>
-        <listeners.UndoAnnotation />
-        <listeners.HandleAnnotationSelection
-          setModalVisible={setRelationModalVisible}
-        />
-        <listeners.HideAnnotationLabels />
-        <div
-          className="PDFViewContainer"
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: "flex-start",
-          }}
-        >
-          {!read_only &&
-          allowInput &&
-          !selected_analysis &&
-          corpus_permissions.includes(PermissionTypes.CAN_UPDATE) ? (
-            <LabelSelector
-              sidebarWidth={responsive_sidebar_width}
-              humanSpanLabelChoices={humanSpanLabelChoices}
-              activeSpanLabel={activeSpanLabel ? activeSpanLabel : null}
-              setActiveLabel={setActiveSpanLabel}
-            />
-          ) : (
-            <></>
-          )}
-          {(!selected_extract ||
-            pdfAnnotations.annotations.filter(
-              (annot) =>
-                annot.annotationLabel.labelType === LabelType.DocTypeLabel
-            ).length > 0) && (
-            <DocTypeLabelDisplay
-              read_only={
-                Boolean(selected_analysis) ||
-                Boolean(selected_extract) ||
-                read_only ||
-                !corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
-              }
-            />
-          )}
-
-          <Dimmer active={data_loading !== undefined ? data_loading : false}>
-            <Loader content={loading_message ? loading_message : ""} />
-          </Dimmer>
-          <SidebarContainer
-            width={responsive_sidebar_width}
-            {...(banish_sidebar ? { display: "none" } : {})}
-          >
+      <ViewerLayout>
+        {!banish_sidebar && (
+          // <SidebarContainer width={responsive_sidebar_width}>
+          <FixedSidebar width={responsive_sidebar_width}>
             <AnnotatorSidebar
               read_only={read_only}
               selected_analysis={selected_analysis}
@@ -747,44 +747,41 @@ export const DocumentViewer = ({
               allowInput={allowInput}
               setAllowInput={setAllowInput}
             />
-          </SidebarContainer>
-          <div className="PDFViewTopBarWrapper">
-            <AnnotatorTopbar
-              opened_corpus={selected_corpus}
-              opened_document={selected_document}
-              extracts={extracts}
-              analyses={analyses}
-              selected_analysis={selected_analysis}
-              selected_extract={selected_extract}
-              onSelectAnalysis={onSelectAnalysis}
-              onSelectExtract={onSelectExtract}
-            >
+          </FixedSidebar>
+          // </SidebarContainer>
+        )}
+
+        <ContentLayout
+          sidebarVisible={!banish_sidebar}
+          sidebarWidth={responsive_sidebar_width}
+        >
+          <AnnotatorTopbar
+            opened_corpus={selected_corpus}
+            opened_document={selected_document}
+            analyses={analyses}
+            extracts={extracts}
+            selected_analysis={selected_analysis}
+            selected_extract={selected_extract}
+            onSelectAnalysis={onSelectAnalysis}
+            onSelectExtract={onSelectExtract}
+          />
+
+          <MainContent>
+            <PDFActionBarWrapper>
               <PDFActionBar
                 zoom={zoom_level}
                 onZoomIn={handleZoomIn}
                 onZoomOut={handleZoomOut}
                 actionItems={actionBarItems}
               />
-              <PDFContainer
-                className="PDFContainer"
-                ref={containerRefCallback}
-                width={banish_sidebar ? 1200 : undefined}
-              >
-                {activeRelationLabel &&
-                !read_only &&
-                corpus_permissions.includes(PermissionTypes.CAN_UPDATE) ? (
-                  <RelationModal
-                    visible={relationModalVisible}
-                    source={selectedAnnotations}
-                    label={activeRelationLabel}
-                  />
-                ) : null}
-                {view_components}
-              </PDFContainer>
-            </AnnotatorTopbar>
-          </div>
-        </div>
-      </div>
+            </PDFActionBarWrapper>
+
+            <PDFContainer ref={containerRefCallback}>
+              {view_components}
+            </PDFContainer>
+          </MainContent>
+        </ContentLayout>
+      </ViewerLayout>
     );
   }
 

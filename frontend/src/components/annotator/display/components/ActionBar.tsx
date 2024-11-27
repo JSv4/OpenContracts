@@ -7,10 +7,15 @@ import { ZoomButtonGroup } from "../../../widgets/buttons/ZoomButtonGroup";
 import { useAnnotationSearch } from "../../hooks/useAnnotationSearch";
 
 const ActionBarContainer = styled.div`
-  padding: 12px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  padding: 8px 16px;
   background-color: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  height: 60px;
+  display: flex;
+  align-items: center;
 `;
 
 const StyledMenu = styled.div`

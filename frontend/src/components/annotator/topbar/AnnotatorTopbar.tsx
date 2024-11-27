@@ -1,7 +1,8 @@
-import { ReactNode, useLayoutEffect, useRef, useState } from "react";
-import { Icon, Segment, Sidebar } from "semantic-ui-react";
-import { FileChartColumnIncreasing } from "lucide-react";
-
+import React, { useRef, useLayoutEffect, useState } from "react";
+import styled, { keyframes } from "styled-components";
+import { Icon } from "semantic-ui-react";
+import { useReactiveVar } from "@apollo/client";
+import { setTopbarVisible } from "../../../graphql/cache";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import {
   AnalysisType,
@@ -10,8 +11,6 @@ import {
   ExtractType,
 } from "../../../types/graphql-api";
 import { ExtractAndAnalysisHorizontalSelector } from "../../analyses/AnalysisSelectorForCorpus";
-import { useReactiveVar } from "@apollo/client";
-import { setTopbarVisible } from "../../../graphql/cache";
 import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 interface AnnotatorTopbarProps {
@@ -21,15 +20,69 @@ interface AnnotatorTopbarProps {
   extracts: ExtractType[];
   selected_analysis: AnalysisType | null | undefined;
   selected_extract: ExtractType | null | undefined;
-  onSelectAnalysis: (analysis: AnalysisType | null) => undefined | null | void;
-  onSelectExtract: (extract: ExtractType | null) => undefined | null | void;
-  children?: ReactNode;
+  onSelectAnalysis: (analysis: AnalysisType | null) => void;
+  onSelectExtract: (extract: ExtractType | null) => void;
+  children?: React.ReactNode;
 }
 
-let expanded_toolbar_width = 120;
-let icon_toolbar_width = 120;
+// Keyframes for icon animation
+const rotateUp = keyframes`
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(180deg);
+  }
+`;
 
-export const AnnotatorTopbar = ({
+const rotateDown = keyframes`
+  from {
+    transform: rotate(180deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+`;
+
+const TopbarContainer = styled.div<{ visible: boolean; height: number }>`
+  position: absolute;
+  top: ${(props) => (props.visible ? "0" : `-${props.height}px`)};
+  left: 0;
+  right: 0;
+  z-index: 3;
+  background-color: #fff;
+  transition: top 0.5s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+`;
+
+const ToggleButton = styled.div<{ visible: boolean; topbarHeight: number }>`
+  position: absolute;
+  top: ${(props) => (props.visible ? `${props.topbarHeight - 20}px` : "20px")};
+  right: 20px;
+  z-index: 4;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  background-color: #4c4f52;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: top 0.5s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    background-color: #5a5e63;
+  }
+
+  .icon {
+    color: rgba(255, 255, 255, 0.8);
+    animation: ${(props) => (props.visible ? rotateUp : rotateDown)} 0.5s
+      forwards;
+  }
+`;
+
+export const AnnotatorTopbar: React.FC<AnnotatorTopbarProps> = ({
   opened_corpus,
   opened_document,
   analyses,
@@ -39,238 +92,53 @@ export const AnnotatorTopbar = ({
   onSelectAnalysis,
   onSelectExtract,
   children,
-}: AnnotatorTopbarProps) => {
-  console.log("Annotator topbar - extracts", extracts);
-  console.log("Annotator topbar - analyses", analyses);
-
+}) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
-  const banish_sidebar = width <= 1000;
 
-  const container_ref = useRef<HTMLDivElement>(null);
-  const topbar_ref = useRef<HTMLDivElement>(null);
-  const analyticsLabelRef = useRef<HTMLSpanElement>(null);
-
-  const [container_width, setContainerWidth] = useState(0);
-  const [topbar_height, setTopbarHeight] = useState(0);
-  const [analyticsLabelWidth, setAnalyticsLabelWidth] = useState(0);
-
-  if (container_width <= 400) {
-    expanded_toolbar_width = 100;
-    icon_toolbar_width = 100;
-  } else if (container_width <= 1000) {
-    expanded_toolbar_width = 100;
-    icon_toolbar_width = 100;
-  } else {
-    expanded_toolbar_width = 0.1 * container_width;
-    icon_toolbar_width = 0.05 * container_width;
-  }
-
-  // console.log("Expanded toolbar width", expanded_toolbar_width);
-  // console.log("Icon toolbar width", icon_toolbar_width);
-
+  const topbarRef = useRef<HTMLDivElement>(null);
+  const [topbarHeight, setTopbarHeight] = useState(0);
   const topbarVisible = useReactiveVar(setTopbarVisible);
 
   useLayoutEffect(() => {
-    if (container_ref.current) {
-      setContainerWidth(container_ref.current.offsetWidth);
+    if (topbarRef.current) {
+      setTopbarHeight(topbarRef.current.offsetHeight);
     }
-  }, [container_ref.current?.offsetWidth]);
+  }, [topbarVisible]);
 
-  useLayoutEffect(() => {
-    if (topbar_ref.current) {
-      setTopbarHeight(topbar_ref.current.offsetHeight);
-      // console.log("Topbar height is", topbar_ref.current.offsetWidth);
-    }
-  }, [topbar_ref.current?.offsetHeight]);
-
-  useLayoutEffect(() => {
-    // console.log("Pusher offset change", container_ref.current?.offsetLeft);
-  }, [container_ref.current?.offsetLeft]);
-
-  useLayoutEffect(() => {
-    if (analyticsLabelRef.current) {
-      const labelWidth = analyticsLabelRef.current.offsetWidth;
-      console.log("Label width", labelWidth);
-      setAnalyticsLabelWidth(labelWidth);
-    }
-  }, [analyticsLabelRef.current?.clientWidth]);
-
-  const collapseButtonHiddenStyle = {
-    cursor: "pointer",
-    display: use_mobile_layout ? "none" : "flex",
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    alignItems: "center",
-    zIndex: 1000,
-    position: "absolute",
-    right: `calc(30% - ${
-      (expanded_toolbar_width + analyticsLabelWidth) / 2
-    }px)`,
-    borderRadius: "0px 0px 1em 1em",
-    width: `${expanded_toolbar_width + analyticsLabelWidth + 20}px`, // Add 20px for padding
-    height: "6vh",
-    minHeight: "66px",
-    backgroundColor: "#f3f4f5",
-    transition: "all 500ms ease",
-    border: "2px solid #ccc",
-    borderTop: "none",
-    paddingLeft: "10px",
-    paddingRight: "10px",
-  };
-
-  const collapseButtonShownStyle: React.CSSProperties = {
-    cursor: "pointer",
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1001,
-    position: "absolute",
-    right: `calc(50% - ${icon_toolbar_width / 2}px)`,
-    borderRadius: "0px 0px 1em 1em",
-    width: `${icon_toolbar_width}px`,
-    height: "7vh",
-    minHeight: "40px",
-    backgroundColor: "#f3f4f5",
-    transition: "all 500ms ease",
-    transform: `translate3d(0, ${topbar_height}px, 0)`,
+  const toggleTopbar = () => {
+    setTopbarVisible(!topbarVisible);
   };
 
   return (
-    <Sidebar.Pushable
-      as={Segment}
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "flex-start",
-        overflow: "hidden",
-        width: "100%",
-      }}
-    >
-      <div
-        className="SidebarCloser"
-        onClick={() => {
-          const newState = !topbarVisible;
-          console.log("Topbar visibility changing to:", newState);
-          setTopbarVisible(newState);
-        }}
-        style={
-          topbarVisible && !use_mobile_layout
-            ? (collapseButtonShownStyle as React.CSSProperties)
-            : (collapseButtonHiddenStyle as React.CSSProperties)
-        }
-      >
-        <div
-          style={{
-            ...(!topbarVisible ? { width: "100%" } : {}),
-            height: "100%",
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: "flex-start",
-            alignItems: "center",
-            ...(topbarVisible
-              ? {
-                  marginLeft: "auto",
-                  marginRight: "auto",
-                }
-              : {}),
-          }}
-        >
-          <div>
-            {topbarVisible ? (
-              <Icon
-                name={topbarVisible ? "angle double up" : "angle double down"}
-                color={topbarVisible ? "red" : "green"}
-                size="big"
-              />
-            ) : (
-              <FileChartColumnIncreasing size={36} />
-            )}
-          </div>
-          {!topbarVisible && (
-            <span style={{ fontSize: "14px", fontWeight: "bold" }}>
-              Analytics
-            </span>
-          )}
-        </div>
-      </div>
-      <Sidebar
-        as={Segment}
-        animation="overlay"
-        direction="top"
-        icon="labeled"
-        inverted
-        vertical
+    <div style={{ position: "relative" }}>
+      <TopbarContainer
+        ref={topbarRef}
         visible={topbarVisible}
-        width="thin"
-        style={{
-          padding: "0px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          position: "fixed",
-          top: topbarVisible ? 0 : "-100%",
-          left: 0,
-          right: 0,
-          height: "auto",
-          zIndex: 1000,
-          transition: "top 0.5s ease",
-        }}
+        height={topbarHeight}
       >
-        <div
-          className="TopBarDimension_Listener"
-          ref={topbar_ref}
-          style={{ width: "100%", height: "100%" }}
-        >
-          {opened_corpus ? (
-            <ExtractAndAnalysisHorizontalSelector
-              read_only={false}
-              corpus={opened_corpus}
-              analyses={analyses}
-              extracts={extracts}
-              selected_analysis={selected_analysis}
-              selected_extract={selected_extract}
-              onSelectAnalysis={onSelectAnalysis}
-              onSelectExtract={onSelectExtract}
-            />
-          ) : (
-            <></>
-          )}
-        </div>
-      </Sidebar>
+        {/* Topbar Content */}
+        {opened_corpus && (
+          <ExtractAndAnalysisHorizontalSelector
+            read_only={false}
+            corpus={opened_corpus}
+            analyses={analyses}
+            extracts={extracts}
+            selected_analysis={selected_analysis}
+            selected_extract={selected_extract}
+            onSelectAnalysis={onSelectAnalysis}
+            onSelectExtract={onSelectExtract}
+          />
+        )}
+      </TopbarContainer>
 
-      <Sidebar.Pusher
-        style={{
-          ...(banish_sidebar
-            ? {
-                overflowX: "scroll",
-                overflowY: "hidden",
-              }
-            : {
-                overflow: "hidden",
-              }),
-          height: "100%",
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "flex-start",
-          marginTop: topbarVisible ? `${topbar_height}px` : "0",
-          transition: "margin-top 0.5s ease",
-        }}
+      <ToggleButton
+        onClick={toggleTopbar}
+        visible={topbarVisible}
+        topbarHeight={topbarHeight}
       >
-        <div
-          ref={container_ref}
-          style={{
-            width: "100%",
-            position: "absolute",
-            top: "0px",
-            left: "0px",
-          }}
-        ></div>
-
-        {children}
-      </Sidebar.Pusher>
-    </Sidebar.Pushable>
+        <Icon name="chevron up" size="large" className="icon" />
+      </ToggleButton>
+    </div>
   );
 };

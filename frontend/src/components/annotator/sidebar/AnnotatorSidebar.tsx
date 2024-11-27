@@ -116,13 +116,14 @@ const getHeaderInfo = (
   return { header_text, subheader_text, tooltip_text };
 };
 
-const SidebarContainer = styled.div`
-  width: 100%;
+const SidebarContainer = styled.div<{ width: string }>`
+  width: ${(props) => props.width};
   height: 100%;
   display: flex;
   flex-direction: column;
   background-color: #ffffff;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+  z-index: 10;
 `;
 
 const TopSection = styled.div`
@@ -639,6 +640,7 @@ export const AnnotatorSidebar = ({
 
   return (
     <SidebarContainer
+      width={width.toString()}
       id="AnnotatorSidebarContainer"
       style={{
         display: !isSidebarVisible || show_minimal_layout ? "none" : "flex",

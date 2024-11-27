@@ -259,7 +259,7 @@ export const DocTypeLabelDisplay = ({ read_only }: { read_only: boolean }) => {
 const DocTypeWidgetContainer = styled.div<HideableHasWidth>(
   ({ width }) => `
     position: fixed;
-    z-index: 1000;
+    z-index: 1002;
     bottom: ${Number(width) <= 400 ? "10px" : "2vh"};
     right: 0px;
     display: flex;

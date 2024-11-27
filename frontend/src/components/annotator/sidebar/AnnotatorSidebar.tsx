@@ -122,32 +122,132 @@ const SidebarContainer = styled.div<{ width: string }>`
   display: flex;
   flex-direction: column;
   background-color: #ffffff;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.08);
   z-index: 10;
 `;
 
 const TopSection = styled.div`
-  padding: 1rem;
-  padding-left: 3rem;
-  border-bottom: 1px solid #e0e0e0;
+  background: linear-gradient(to right, #f8fafc, #ffffff);
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 `;
 
-const HeaderText = styled(Header)`
-  margin: 0 !important;
+const HeaderWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const TitleRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+`;
 
-  .content {
-    font-size: 1.2em;
-    color: #2c3e50;
+const HeaderText = styled(Header)`
+  &&& {
+    margin: 0;
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1a2027;
+
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .mode-badge {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #64748b;
+        background: #f1f5f9;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        margin-left: 0.5rem;
+      }
+
+      .sub.header {
+        font-size: 0.875rem;
+        color: #64748b;
+        font-weight: normal;
+        line-height: 1.4;
+      }
+    }
+  }
+`;
+
+const StatsButton = styled.button`
+  background: transparent;
+  border: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f1f5f9;
+    color: #1a2027;
   }
 
-  .sub.header {
-    margin-top: 0.25rem;
-    font-size: 0.9em;
-    color: #7f8c8d;
+  i.icon {
+    margin: 0 !important;
+    font-size: 1.25rem !important;
   }
+`;
+
+const TabMenu = styled.div`
+  display: flex;
+  gap: 1rem;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+`;
+
+const TabItem = styled.button<{ active?: boolean }>`
+  background: none;
+  border: none;
+  padding: 1rem 0.5rem;
+  color: ${(props) => (props.active ? "#2563eb" : "#64748b")};
+  font-weight: 500;
+  font-size: 0.875rem;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: ${(props) => (props.active ? "#2563eb" : "transparent")};
+    transition: all 0.2s ease;
+  }
+
+  &:hover {
+    color: #2563eb;
+  }
+`;
+
+const ContentContainer = styled.div`
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
 `;
 
 const StyledTab = styled(Tab)`
@@ -185,14 +285,6 @@ const StyledTab = styled(Tab)`
     margin: 0;
     padding: 1rem;
   }
-`;
-
-const ContentContainer = styled.div`
-  height: 100%;
-  overflow-y: auto;
-  padding-right: 8px;
-  display: flex;
-  flex-direction: column;
 `;
 
 export const AnnotatorSidebar = ({

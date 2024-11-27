@@ -7,8 +7,6 @@ import { useAtom, useAtomValue } from "jotai";
 import {
   AnalysisType,
   ExtractType,
-  DocumentType,
-  CorpusType,
   LabelType,
   LabelDisplayBehavior,
 } from "../../../types/graphql-api";
@@ -173,10 +171,13 @@ export const useAnalysisManager = () => {
     }
   }, [analysesData]);
 
-  // Fetch analyses and extracts when the hook is initialized.
+  // Fetch analyses and extracts only when we have a valid document
   useEffect(() => {
-    fetchDocumentAnalysesAndExtracts();
-  }, []);
+    console.log("selectedDocument", selectedDocument);
+    if (selectedDocument?.id) {
+      fetchDocumentAnalysesAndExtracts();
+    }
+  }, [selectedDocument?.id]);
 
   // Reset states when the selected analysis or extract changes.
   useEffect(() => {

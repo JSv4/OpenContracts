@@ -251,6 +251,27 @@ export const AnnotatorSidebar = ({
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [panes, setPanes] = useState<TabPanelProps[]>([]);
 
+  useEffect(() => {
+    console.log("Sidebar visibility state:", {
+      isSidebarVisible,
+      paneCount: panes.length,
+      containerDimensions: {
+        width: document.getElementById("AnnotatorSidebarContainer")
+          ?.clientWidth,
+        height: document.getElementById("AnnotatorSidebarContainer")
+          ?.clientHeight,
+      },
+      parentDimensions: {
+        width: document.getElementById("AnnotatorSidebarContainer")
+          ?.parentElement?.clientWidth,
+        height: document.getElementById("AnnotatorSidebarContainer")
+          ?.parentElement?.clientHeight,
+      },
+      showMinimalLayout: show_minimal_layout,
+      displayStyle: !isSidebarVisible || show_minimal_layout ? "none" : "flex",
+    });
+  }, [isSidebarVisible, panes, show_minimal_layout]);
+
   const handleTabChange = (
     event: React.MouseEvent<HTMLDivElement>,
     data: TabProps
@@ -531,10 +552,10 @@ export const AnnotatorSidebar = ({
       }
 
       setSidebarVisible(
-        !show_annotation_pane &&
-          !show_relation_pane &&
-          !show_search_results_pane &&
-          !show_data_pane
+        show_annotation_pane ||
+          show_relation_pane ||
+          show_search_results_pane ||
+          show_data_pane
       );
 
       setPanes(panes);

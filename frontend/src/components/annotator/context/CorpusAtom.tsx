@@ -1,5 +1,5 @@
 import { atom, useAtom } from "jotai";
-import React, { useMemo } from "react";
+import { useEffect } from "react";
 import { CorpusType, AnnotationLabelType } from "../../../types/graphql-api";
 import { getPermissions } from "../../../utils/transform";
 import { PermissionTypes } from "../../types";
@@ -35,66 +35,64 @@ export const allowCommentsAtom = atom<boolean>(true);
 // Atom for loading state
 export const isLoadingAtom = atom<boolean>(false);
 
-// Provider component to initialize atoms
-interface CorpusProviderProps {
-  children: React.ReactNode;
+// Custom hook to initialize corpus-related atoms
+export function useInitializeCorpusAtoms(params: {
   selectedCorpus: CorpusType | null | undefined;
   spanLabels: AnnotationLabelType[];
   humanSpanLabels: AnnotationLabelType[];
   relationLabels: AnnotationLabelType[];
   docTypeLabels: AnnotationLabelType[];
   isLoading: boolean;
-}
+}) {
+  const {
+    selectedCorpus,
+    spanLabels,
+    humanSpanLabels,
+    relationLabels,
+    docTypeLabels,
+    isLoading,
+  } = params;
 
-export function CorpusProvider({
-  children,
-  selectedCorpus,
-  spanLabels,
-  humanSpanLabels,
-  relationLabels,
-  docTypeLabels,
-  isLoading,
-}: CorpusProviderProps) {
   const [, setSelectedCorpus] = useAtom(selectedCorpusAtom);
   const [, setPermissions] = useAtom(permissionsAtom);
-  const [, setSpanLabels] = useAtom(spanLabelsAtom);
-  const [, setHumanSpanLabels] = useAtom(humanSpanLabelsAtom);
-  const [, setRelationLabels] = useAtom(relationLabelsAtom);
-  const [, setDocTypeLabels] = useAtom(docTypeLabelsAtom);
+  const [, setSpanLabelsAtom] = useAtom(spanLabelsAtom);
+  const [, setHumanSpanLabelsAtom] = useAtom(humanSpanLabelsAtom);
+  const [, setRelationLabelsAtom] = useAtom(relationLabelsAtom);
+  const [, setDocTypeLabelsAtom] = useAtom(docTypeLabelsAtom);
   const [, setAllowComments] = useAtom(allowCommentsAtom);
-  const [, setIsLoading] = useAtom(isLoadingAtom);
+  const [, setIsLoadingAtom] = useAtom(isLoadingAtom);
 
-  // Initialize permissions
-  useMemo(() => {
+  useEffect(() => {
+    // Update corpus and permissions
     setSelectedCorpus(selectedCorpus);
     const rawPermissions = selectedCorpus?.myPermissions ?? ["READ"];
     setPermissions(getPermissions(rawPermissions));
     setAllowComments(selectedCorpus?.allowComments ?? true);
-  }, [selectedCorpus]);
 
-  // Initialize label sets
-  useMemo(() => {
-    setSpanLabels(spanLabels);
-  }, [spanLabels]);
+    // Update label sets
+    setSpanLabelsAtom(spanLabels);
+    setHumanSpanLabelsAtom(humanSpanLabels);
+    setRelationLabelsAtom(relationLabels);
+    setDocTypeLabelsAtom(docTypeLabels);
 
-  useMemo(() => {
-    setHumanSpanLabels(humanSpanLabels);
-  }, [humanSpanLabels]);
-
-  useMemo(() => {
-    setRelationLabels(relationLabels);
-  }, [relationLabels]);
-
-  useMemo(() => {
-    setDocTypeLabels(docTypeLabels);
-  }, [docTypeLabels]);
-
-  // Initialize loading state
-  useMemo(() => {
-    setIsLoading(isLoading);
-  }, [isLoading]);
-
-  return <>{children}</>;
+    // Update loading state
+    setIsLoadingAtom(isLoading);
+  }, [
+    selectedCorpus,
+    spanLabels,
+    humanSpanLabels,
+    relationLabels,
+    docTypeLabels,
+    isLoading,
+    setSelectedCorpus,
+    setPermissions,
+    setAllowComments,
+    setSpanLabelsAtom,
+    setHumanSpanLabelsAtom,
+    setRelationLabelsAtom,
+    setDocTypeLabelsAtom,
+    setIsLoadingAtom,
+  ]);
 }
 
 // Custom hooks to use atoms

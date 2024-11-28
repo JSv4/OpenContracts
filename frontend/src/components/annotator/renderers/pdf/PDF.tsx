@@ -68,8 +68,6 @@ export const PDF = ({
   doc_permissions,
   corpus_permissions,
   read_only,
-  show_selected_annotation_only,
-  show_annotation_bounding_boxes,
   show_annotation_labels,
   setJumpedToAnnotationOnLoad,
 }: {
@@ -77,8 +75,6 @@ export const PDF = ({
   doc_permissions: PermissionTypes[];
   corpus_permissions: PermissionTypes[];
   read_only: boolean;
-  show_selected_annotation_only: boolean;
-  show_annotation_bounding_boxes: boolean;
   show_annotation_labels: LabelDisplayBehavior;
   setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
 }) => {
@@ -109,8 +105,6 @@ export const PDF = ({
             corpus_permissions={corpus_permissions}
             pageInfo={p}
             onError={setViewStateError}
-            show_selected_annotation_only={show_selected_annotation_only}
-            show_annotation_bounding_boxes={show_annotation_bounding_boxes}
             show_annotation_labels={show_annotation_labels}
             setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
           />

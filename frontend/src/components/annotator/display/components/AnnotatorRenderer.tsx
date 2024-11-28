@@ -68,8 +68,6 @@ interface AnnotatorRendererProps {
   read_only: boolean;
   load_progress: number;
   scrollToAnnotation?: ServerTokenAnnotation | ServerSpanAnnotation;
-  show_selected_annotation_only: boolean;
-  show_annotation_bounding_boxes: boolean;
   show_structural_annotations: boolean;
   show_annotation_labels: LabelDisplayBehavior;
   data_cells?: DatacellType[];
@@ -102,8 +100,6 @@ export const AnnotatorRenderer = ({
   onSelectExtract,
   read_only,
   scrollToAnnotation,
-  show_selected_annotation_only,
-  show_annotation_bounding_boxes,
   show_structural_annotations,
   show_annotation_labels,
   onError,
@@ -230,8 +226,6 @@ export const AnnotatorRenderer = ({
       containerRefCallback={containerRefCallback}
       pdfAnnotations={pdfAnnotations}
       show_structural_annotations={show_structural_annotations}
-      show_selected_annotation_only={show_selected_annotation_only}
-      show_annotation_bounding_boxes={show_annotation_bounding_boxes}
       show_annotation_labels={show_annotation_labels}
       scroll_to_annotation_on_open={scrollToAnnotation}
       setJumpedToAnnotationOnLoad={setHasScrolledToAnnotation}

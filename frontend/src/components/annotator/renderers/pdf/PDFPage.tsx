@@ -33,7 +33,6 @@ import {
 import {
   scrollContainerRefAtom,
   pdfPageInfoObjsAtom,
-  useSelectedDocument,
   useSelectedCorpus,
   usePageSelectionQueue,
 } from "../../context/DocumentAtom";
@@ -57,15 +56,12 @@ export const PDFPage = ({
   pageInfo,
   corpus_permissions,
   read_only,
-  show_selected_annotation_only,
-  show_annotation_bounding_boxes,
   show_annotation_labels,
   onError,
   setJumpedToAnnotationOnLoad,
 }: PageProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<PDFPageRenderer | null>(null);
-  const { selectedDocument } = useSelectedDocument();
   const textSearch = useAnnotationSearch();
   const { pdfAnnotations } = usePdfAnnotations();
   const createAnnotation = useCreateAnnotation();
@@ -358,11 +354,7 @@ export const PDFPage = ({
     return annots_to_render.map((annotation) => (
       <Selection
         key={annotation.id}
-        hidden={
-          show_selected_annotation_only &&
-          !selectedAnnotations.includes(annotation.id)
-        }
-        showBoundingBox={show_annotation_bounding_boxes}
+        selected={selectedAnnotations.includes(annotation.id)}
         scrollIntoView={selectedAnnotations.includes(annotation.id)}
         labelBehavior={show_annotation_labels}
         selectionRef={annotationRefs.selectionElementRefs}
@@ -379,8 +371,6 @@ export const PDFPage = ({
     pageInfo.bounds,
     annotations,
     annots_to_render,
-    show_selected_annotation_only,
-    show_annotation_bounding_boxes,
     show_annotation_labels,
     selectedAnnotations,
   ]);
@@ -476,10 +466,7 @@ export const PDFPage = ({
               total_results={searchResults.length}
               selectionRef={annotationRefs.searchResultElementRefs}
               showBoundingBox={true}
-              hidden={
-                show_selected_annotation_only &&
-                token_index !== selectedSearchResultIndex
-              }
+              hidden={token_index !== selectedSearchResultIndex}
               pageInfo={pageInfo}
               match={match}
               labelBehavior={show_annotation_labels}

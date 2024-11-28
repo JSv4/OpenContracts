@@ -166,8 +166,6 @@ export const DocumentViewer = ({
   pdfAnnotations,
   scroll_to_annotation_on_open,
   setJumpedToAnnotationOnLoad,
-  show_selected_annotation_only,
-  show_annotation_bounding_boxes,
   show_annotation_labels,
   show_structural_annotations,
   page_token_text_maps,
@@ -216,8 +214,6 @@ export const DocumentViewer = ({
   pdfAnnotations: PdfAnnotations;
   scroll_to_annotation_on_open: ServerTokenAnnotation | null | undefined;
   setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
-  show_selected_annotation_only: boolean;
-  show_annotation_bounding_boxes: boolean;
   show_structural_annotations: boolean;
   show_annotation_labels: LabelDisplayBehavior;
   page_token_text_maps: Record<number, TokenId>;
@@ -679,8 +675,6 @@ export const DocumentViewer = ({
             corpus_permissions={corpus_permissions}
             doc_permissions={doc_permissions}
             shiftDown={shiftDown}
-            show_selected_annotation_only={show_selected_annotation_only}
-            show_annotation_bounding_boxes={show_annotation_bounding_boxes}
             show_annotation_labels={show_annotation_labels}
             setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
           />

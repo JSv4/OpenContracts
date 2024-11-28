@@ -46,8 +46,7 @@ interface SelectionProps {
   selectionRef:
     | React.MutableRefObject<Record<string, HTMLElement | null>>
     | undefined;
-  showBoundingBox: boolean;
-  hidden: boolean;
+  selected: boolean;
   scrollIntoView: boolean;
   pageInfo: PDFPageInfo;
   annotation: ServerTokenAnnotation;
@@ -63,8 +62,7 @@ interface SelectionProps {
 
 export const Selection: React.FC<SelectionProps> = ({
   selectionRef,
-  showBoundingBox,
-  hidden,
+  selected,
   scrollIntoView,
   pageInfo,
   labelBehavior,
@@ -80,8 +78,10 @@ export const Selection: React.FC<SelectionProps> = ({
   const [hovered, setHovered] = useState(false);
   const [isEditLabelModalVisible, setIsEditLabelModalVisible] = useState(false);
   const [cloudVisible, setCloudVisible] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const cloudRef = useRef<HTMLDivElement | null>(null);
 
+  const { showBoundingBoxes, showSelectedOnly } = useAnnotationDisplay();
   const { hideLabels } = useAnnotationDisplay();
   const { pdfAnnotations } = usePdfAnnotations();
   const { selectedAnnotations, setSelectedAnnotations, selectedRelations } =
@@ -89,6 +89,10 @@ export const Selection: React.FC<SelectionProps> = ({
   const approveAnnotation = useApproveAnnotation();
   const rejectAnnotation = useRejectAnnotation();
   const deleteAnnotation = useDeleteAnnotation();
+
+  useEffect(() => {
+    setHidden(!showSelectedOnly || selected);
+  }, [showSelectedOnly, selected]);
 
   const label = annotation.annotationLabel;
   const color = label?.color || "#616a6b"; // grey as the default
@@ -202,8 +206,6 @@ export const Selection: React.FC<SelectionProps> = ({
     };
   }, [cloudVisible]);
 
-  const selected = selectedAnnotations.includes(annotation.id);
-
   let relationship_type = "";
   if (selected && selectedRelations.length > 0) {
     relationship_type = annotationSelectedViaRelationship(
@@ -218,7 +220,7 @@ export const Selection: React.FC<SelectionProps> = ({
       <SelectionBoundary
         id={annotation.id}
         hidden={hidden}
-        showBoundingBox={showBoundingBox}
+        showBoundingBox={showBoundingBoxes}
         selectionRef={selectionRef}
         scrollIntoView={scrollIntoView}
         color={color}
@@ -237,7 +239,7 @@ export const Selection: React.FC<SelectionProps> = ({
             className={`selection_${annotation.id}`}
             border={border}
             color={color}
-            showBoundingBox={showBoundingBox}
+            showBoundingBox={showBoundingBoxes}
             approved={approved}
             rejected={rejected}
           >
@@ -363,7 +365,7 @@ export const Selection: React.FC<SelectionProps> = ({
           <SelectionTokenGroup
             id={`SELECTION_TOKEN_${annotation.id}`}
             color={annotation.annotationLabel.color}
-            highOpacity={!showBoundingBox}
+            highOpacity={!showBoundingBoxes}
             hidden={hidden}
             pageInfo={pageInfo}
             tokens={annotation.json[pageInfo.page.pageNumber - 1].tokensJsons}

@@ -10,7 +10,10 @@ import {
   SemanticShorthandItem,
   TabPaneProps,
   TabProps,
-  SemanticICONS,
+  StatisticGroup,
+  Statistic,
+  StatisticValue,
+  StatisticLabel,
 } from "semantic-ui-react";
 
 import _, { isNumber } from "lodash";
@@ -54,6 +57,8 @@ import {
   useRemoveAnnotationFromRelationship,
   useRemoveRelationship,
 } from "../hooks/AnnotationHooks";
+import { ViewSettingsPopup } from "../../widgets/popups/ViewSettingsPopup";
+import { LabelDisplayBehavior } from "../../../types/graphql-api";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;
@@ -127,127 +132,126 @@ const SidebarContainer = styled.div<{ width: string }>`
 `;
 
 const TopSection = styled.div`
-  background: linear-gradient(to right, #f8fafc, #ffffff);
-  padding: 1.5rem;
+  background: #ffffff;
+  padding: 1.25rem 1.5rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 `;
 
-const HeaderWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-`;
-
-const TitleRow = styled.div`
+const HeaderRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 1rem;
 `;
 
-const HeaderText = styled(Header)`
+const TitleGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const StatsRow = styled(StatisticGroup)`
   &&& {
+    width: 100%;
     margin: 0;
+    display: flex;
+    justify-content: space-between;
+    padding-top: 1rem;
+    border-top: 1px solid #f1f5f9;
 
-    .content {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+    .statistic {
+      margin: 0 !important;
 
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: #1a2027;
-
-      .header {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+      .value {
+        font-size: 0.875rem !important;
+        color: #1a2027 !important;
+        margin-bottom: 0.25rem;
       }
 
-      .mode-badge {
+      .label {
         font-size: 0.75rem;
-        font-weight: 500;
         color: #64748b;
-        background: #f1f5f9;
-        padding: 0.25rem 0.75rem;
-        border-radius: 1rem;
-        margin-left: 0.5rem;
-      }
-
-      .sub.header {
-        font-size: 0.875rem;
-        color: #64748b;
-        font-weight: normal;
-        line-height: 1.4;
+        text-transform: none;
       }
     }
   }
 `;
 
-const StatsButton = styled.button`
-  background: transparent;
-  border: none;
-  width: 2.5rem;
-  height: 2.5rem;
-  display: flex;
+const Title = styled.h3`
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a2027;
+`;
+
+const ModeBadge = styled.span<{ mode: "edit" | "view" | "feedback" }>`
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 0.5rem;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: #f1f5f9;
-    color: #1a2027;
-  }
-
-  i.icon {
-    margin: 0 !important;
-    font-size: 1.25rem !important;
-  }
-`;
-
-const TabMenu = styled.div`
-  display: flex;
-  gap: 1rem;
-  padding: 0 1.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  background: #ffffff;
-`;
-
-const TabItem = styled.button<{ active?: boolean }>`
-  background: none;
-  border: none;
-  padding: 1rem 0.5rem;
-  color: ${(props) => (props.active ? "#2563eb" : "#64748b")};
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  font-size: 0.875rem;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 1rem;
+  gap: 0.375rem;
+  flex: 1;
 
-  &::after {
-    content: "";
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: ${(props) => (props.active ? "#2563eb" : "transparent")};
-    transition: all 0.2s ease;
-  }
-
-  &:hover {
-    color: #2563eb;
-  }
+  ${(props) => {
+    switch (props.mode) {
+      case "edit":
+        return `
+          color: #0d9488;
+          background: #f0fdfa;
+          border: 1px solid #ccfbf1;
+        `;
+      case "feedback":
+        return `
+          color: #9333ea;
+          background: #faf5ff;
+          border: 1px solid #f3e8ff;
+        `;
+      default:
+        return `
+          color: #64748b;
+          background: #f8fafc;
+          border: 1px solid #f1f5f9;
+        `;
+    }
+  }}
 `;
 
-const ContentContainer = styled.div`
-  height: 100%;
-  overflow-y: auto;
-  padding-right: 8px;
+const ActionButtons = styled.div`
   display: flex;
-  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const ActionButton = styled(Popup)`
+  &&& {
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      background: white;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      padding: 0;
+
+      &:hover {
+        background: #f8fafc;
+        color: #2563eb;
+        border-color: #2563eb;
+      }
+
+      &[data-active="true"] {
+        background: #eff6ff;
+        color: #2563eb;
+        border-color: #2563eb;
+      }
+    }
+  }
 `;
 
 const StyledTab = styled(Tab)`
@@ -287,6 +291,14 @@ const StyledTab = styled(Tab)`
   }
 `;
 
+const ContentContainer = styled.div`
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+`;
+
 export const AnnotatorSidebar = ({
   read_only,
   selected_corpus,
@@ -322,7 +334,8 @@ export const AnnotatorSidebar = ({
     setSelectedAnnotations,
     setSelectedRelations,
   } = useAnnotationSelection();
-  const { isSidebarVisible, setSidebarVisible } = useUISettings();
+  const { isSidebarVisible, setSidebarVisible, sidebarWidth, toggleSidebar } =
+    useUISettings();
   const opened_corpus = useReactiveVar(openedCorpus);
   const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
 
@@ -730,6 +743,25 @@ export const AnnotatorSidebar = ({
     }
   };
 
+  // Create the label display options
+  const labelDisplayOptions = [
+    {
+      key: LabelDisplayBehavior.ALWAYS,
+      text: "Always",
+      value: LabelDisplayBehavior.ALWAYS,
+    },
+    {
+      key: LabelDisplayBehavior.ON_HOVER,
+      text: "On Hover",
+      value: LabelDisplayBehavior.ON_HOVER,
+    },
+    {
+      key: LabelDisplayBehavior.HIDE,
+      text: "Never",
+      value: LabelDisplayBehavior.HIDE,
+    },
+  ];
+
   return (
     <SidebarContainer
       width={width.toString()}
@@ -739,41 +771,91 @@ export const AnnotatorSidebar = ({
       }}
     >
       <TopSection>
-        <HeaderText as="h3">
-          <Header.Content>
-            {header_text}
-            <Header.Subheader>{subheader_text}</Header.Subheader>
-          </Header.Content>
-          <Popup
-            on="click"
-            onClose={() => setShowCorpusStats(false)}
-            onOpen={() => setShowCorpusStats(true)}
-            open={showCorpusStats}
-            position="bottom right"
-            trigger={
-              <Icon
-                name={
-                  opened_corpus ? "book" : ("book outline" as SemanticICONS)
-                }
-                size="large"
-              />
-            }
-            flowing
-            hoverable
-          >
-            {opened_corpus ? (
-              <CorpusStats
-                corpus={opened_corpus}
-                onUnselect={() => openedCorpus(null)}
-              />
-            ) : (
-              <Header as="h4" icon textAlign="center">
-                <Icon name="search" circular />
-                <Header.Content>No corpus selected</Header.Content>
-              </Header>
-            )}
-          </Popup>
-        </HeaderText>
+        <HeaderRow>
+          <TitleGroup>
+            <Title>Annotations</Title>
+            <ModeBadge mode={allowInput && !read_only ? "edit" : "view"}>
+              <Icon name={allowInput && !read_only ? "edit" : "eye"} />
+              {header_text.match(/\((.*?)\)/)?.[1] || "View Mode"}
+            </ModeBadge>
+          </TitleGroup>
+
+          <ActionButtons>
+            <ViewSettingsPopup label_display_options={labelDisplayOptions} />
+            <ActionButton
+              trigger={
+                <button
+                  onClick={() => setShowCorpusStats(!showCorpusStats)}
+                  data-active={showCorpusStats}
+                >
+                  <Icon name="chart bar outline" />
+                </button>
+              }
+              content="View Statistics"
+              position="bottom center"
+            />
+            <ActionButton
+              trigger={
+                <button
+                  onClick={() => {
+                    const currentValue = showStructuralAnnotations();
+                    showStructuralAnnotations(!currentValue);
+                  }}
+                  data-active={showStructuralAnnotations()}
+                >
+                  <Icon name="filter" />
+                </button>
+              }
+              content="Toggle Structural Annotations"
+              position="bottom center"
+            />
+            <ActionButton
+              trigger={
+                <button
+                  onClick={() => setShowCorpusStats(true)}
+                  data-active={showCorpusStats}
+                >
+                  <Icon name={opened_corpus ? "book" : "bookmark outline"} />
+                </button>
+              }
+              content={
+                opened_corpus ? (
+                  <CorpusStats
+                    corpus={opened_corpus}
+                    onUnselect={() => openedCorpus(null)}
+                  />
+                ) : (
+                  <Header as="h4" icon textAlign="center">
+                    <Icon name="search" circular />
+                    <Header.Content>No corpus selected</Header.Content>
+                  </Header>
+                )
+              }
+              position="bottom right"
+              flowing
+              hoverable
+            />
+          </ActionButtons>
+        </HeaderRow>
+
+        <StatsRow size="tiny">
+          <Statistic>
+            <StatisticValue>{filteredAnnotations.length}</StatisticValue>
+            <StatisticLabel>Annotations</StatisticLabel>
+          </Statistic>
+          <Statistic>
+            <StatisticValue>
+              {opened_corpus?.creator?.email?.split("@")[0] || "Unknown"}
+            </StatisticValue>
+            <StatisticLabel>Creator</StatisticLabel>
+          </Statistic>
+          <Statistic>
+            <StatisticValue>
+              {new Date(opened_corpus?.modified).toLocaleDateString()}
+            </StatisticValue>
+            <StatisticLabel>Last Updated</StatisticLabel>
+          </Statistic>
+        </StatsRow>
       </TopSection>
       <StyledTab
         menu={{ secondary: true, pointing: true }}

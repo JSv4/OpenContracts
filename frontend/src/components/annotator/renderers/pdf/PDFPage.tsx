@@ -247,8 +247,6 @@ export const PDFPage = ({
     annotationRefs.selectionElementRefs,
   ]);
 
-  console.log("Page show structural", showStructural, pageInfo);
-
   const annots_to_render = useMemo(() => {
     const defined_annotations = annotations
       .filter((annot) => annot instanceof ServerTokenAnnotation)

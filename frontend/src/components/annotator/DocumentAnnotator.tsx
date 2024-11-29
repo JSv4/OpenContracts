@@ -90,6 +90,7 @@ import {
   useDocTypeAnnotations,
 } from "./hooks/AnnotationHooks";
 import { useAnnotationDisplay } from "./context/UISettingsAtom";
+import styled from "styled-components";
 
 // Loading pdf js libraries without cdn is a right PITA... cobbled together a working
 // approach via these guides:
@@ -619,36 +620,22 @@ export const DocumentAnnotator = ({
   switch (view_state) {
     case ViewState.LOADING:
       rendered_component = (
-        <WithSidebar width={responsive_sidebar_width}>
-          <SidebarContainer
-            width={responsive_sidebar_width}
-            {...(responsive_sidebar_width ? { display: "none" } : {})}
-          >
-            <AnnotatorSidebar
-              read_only={true}
-              selected_analysis={selected_analysis}
-              selected_extract={selected_extract}
-              allowInput={false}
-              editMode="ANNOTATE"
-              datacells={dataCells}
-              columns={columns}
-              setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
-              setAllowInput={(v: boolean) => {}}
+        <ModalLoadingContainer>
+          <LoadingContent>
+            <Header as="h2" icon>
+              <Icon size="mini" name="file alternate outline" />
+              Loading Document Data
+              <Header.Subheader>
+                Hang tight while we fetch the required data.
+              </Header.Subheader>
+            </Header>
+            <Progress
+              style={{ width: "300px" }}
+              percent={progress}
+              indicating
             />
-          </SidebarContainer>
-          <CenterOnPage>
-            <div>
-              <Header as="h2" icon>
-                <Icon size="mini" name="file alternate outline" />
-                Loading Document Data
-                <Header.Subheader>
-                  Hang tight while we fetch the required data.
-                </Header.Subheader>
-              </Header>
-            </div>
-            <Progress style={{ width: "50%" }} percent={progress} indicating />
-          </CenterOnPage>
-        </WithSidebar>
+          </LoadingContent>
+        </ModalLoadingContainer>
       );
       break;
     case ViewState.NOT_FOUND:
@@ -761,3 +748,20 @@ export const DocumentAnnotator = ({
     </Modal>
   );
 };
+
+const ModalLoadingContainer = styled.div`
+  display: flex;
+  width: 100%;
+  height: 90vh;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+`;
+
+const LoadingContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  text-align: center;
+`;

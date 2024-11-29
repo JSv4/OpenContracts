@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import { Icon, Popup } from "semantic-ui-react";
-import _ from "lodash";
 import { AnnotationLabelType } from "../../../../types/graphql-api";
 import { SpanLabelCard, BlankLabelElement } from "./LabelElements";
 import { LabelSelectorDialog } from "./LabelSelectorDialog";
@@ -27,14 +26,17 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
 
   const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
 
+  // Compute filtered labels whenever props change
+  const filteredLabelChoices = useMemo(() => {
+    return activeSpanLabel
+      ? humanSpanLabelChoices.filter((obj) => obj.id !== activeSpanLabel.id)
+      : humanSpanLabelChoices;
+  }, [humanSpanLabelChoices, activeSpanLabel]);
+
   const onSelect = (label: AnnotationLabelType): void => {
     setActiveLabel(label);
     setOpen(false);
   };
-
-  const filteredLabelChoices = activeSpanLabel
-    ? humanSpanLabelChoices.filter((obj) => obj.id !== activeSpanLabel.id)
-    : humanSpanLabelChoices;
 
   const handleOpen = () => {
     setOpen(true);
@@ -43,6 +45,10 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
   const handleClose = () => {
     setOpen(false);
   };
+
+  if (!humanSpanLabelChoices || humanSpanLabelChoices.length === 0) {
+    return <div>Loading labels...</div>;
+  }
 
   return (
     <LabelSelectorContainer ref={containerRef}>

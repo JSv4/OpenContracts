@@ -100,49 +100,164 @@ export const PDFPage = ({
 
   const annotationRefs = useAnnotationRefs();
 
-  // Handle multi-page annotation creation
-  const handleCreateMultiPageAnnotation = useCallback(async () => {
-    if (
-      !activeSpanLabel ||
-      !multiSelections ||
-      Object.keys(multiSelections).length === 0
-    ) {
-      return;
-    }
-
-    // Create annotation from multi-selections
-    const pages = Object.keys(multiSelections).map(Number);
-
-    // Convert bounds to proper SinglePageAnnotationJson format
-    const annotations: Record<number, SinglePageAnnotationJson> = {};
-    let combinedRawText = "";
-
-    for (const pageNum of pages) {
-      const pageAnnotation = pageInfo.getPageAnnotationJson(
-        multiSelections[pageNum]
-      );
-      if (pageAnnotation) {
-        annotations[pageNum] = pageAnnotation;
-        combinedRawText += " " + pageAnnotation.rawText;
+  /**
+   * Handles the creation of a multi-page annotation.
+   *
+   * @param selections - The current multi-selections.
+   */
+  const handleCreateMultiPageAnnotation = useCallback(
+    async (selections: { [key: number]: BoundingBox[] }) => {
+      if (
+        !activeSpanLabel ||
+        !selections ||
+        Object.keys(selections).length === 0
+      ) {
+        console.log(
+          "handleCreateMultiPageAnnotation - no active label or multiSelections"
+        );
+        return;
       }
-    }
 
-    // Create annotation object
-    const annotation = new ServerTokenAnnotation(
-      pages[0], // First page as the anchor
-      activeSpanLabel,
-      combinedRawText.trim(),
-      false,
-      annotations,
-      [],
-      false,
-      false,
-      false
-    );
+      // Create annotation from multi-selections
+      const pages = Object.keys(selections).map(Number);
 
-    await createAnnotation(annotation);
-    setMultiSelections({});
-  }, [activeSpanLabel, multiSelections, createAnnotation, pageInfo]);
+      // Convert bounds to proper SinglePageAnnotationJson format
+      const annotations: Record<number, SinglePageAnnotationJson> = {};
+      let combinedRawText = "";
+
+      for (const pageNum of pages) {
+        const pageAnnotation = pageInfo.getPageAnnotationJson(
+          selections[pageNum]
+        );
+        if (pageAnnotation) {
+          annotations[pageNum] = pageAnnotation;
+          combinedRawText += " " + pageAnnotation.rawText;
+        }
+      }
+
+      // Create annotation object
+      const annotation = new ServerTokenAnnotation(
+        pages[0], // First page as the anchor
+        activeSpanLabel,
+        combinedRawText.trim(),
+        false,
+        annotations,
+        [],
+        false,
+        false,
+        false
+      );
+
+      console.log("handleCreateMultiPageAnnotation - annotation", annotation);
+
+      await createAnnotation(annotation);
+      setMultiSelections({});
+    },
+    [activeSpanLabel, createAnnotation, pageInfo]
+  );
+
+  /**
+   * Handles the mouse up event to finalize the selection.
+   */
+  const handleMouseUp = useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      if (localPageSelection) {
+        console.log("onMouseUp - localPageSelection", localPageSelection);
+        const pageNum = pageInfo.page.pageNumber - 1;
+
+        setMultiSelections((prev) => {
+          const updatedSelections = {
+            ...prev,
+            [pageNum]: [...(prev[pageNum] || []), localPageSelection.bounds],
+          };
+          setLocalPageSelection(undefined);
+
+          if (!event.shiftKey) {
+            console.log("onMouseUp - handleCreateMultiPageAnnotation");
+            handleCreateMultiPageAnnotation(updatedSelections);
+          }
+
+          return updatedSelections;
+        });
+      } else {
+        console.log("onMouseUp - localPageSelection", localPageSelection);
+      }
+    },
+    [
+      localPageSelection,
+      pageInfo.page.pageNumber,
+      handleCreateMultiPageAnnotation,
+    ]
+  );
+
+  /**
+   * Handles the mouse down event to start the selection.
+   */
+  const handleMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      if (containerRef.current === null) {
+        throw new Error("No Container");
+      }
+      if (
+        !read_only &&
+        corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
+      ) {
+        if (!localPageSelection && event.buttons === 1) {
+          const { left: containerAbsLeftOffset, top: containerAbsTopOffset } =
+            containerRef.current.getBoundingClientRect();
+          const left = event.pageX - containerAbsLeftOffset;
+          const top = event.pageY - containerAbsTopOffset;
+          setLocalPageSelection({
+            pageNumber: pageInfo.page.pageNumber - 1,
+            bounds: {
+              left,
+              top,
+              right: left,
+              bottom: top,
+            },
+          });
+        }
+      } else {
+        console.log("Not allowed to update");
+        console.log(corpus_permissions);
+        console.log(read_only);
+      }
+    },
+    [
+      containerRef,
+      read_only,
+      corpus_permissions,
+      localPageSelection,
+      pageInfo.page.pageNumber,
+    ]
+  );
+
+  /**
+   * Handles the mouse move event to update the selection.
+   */
+  const handleMouseMove = useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      if (containerRef.current === null) {
+        throw new Error("No Container");
+      }
+      const { left: containerAbsLeftOffset, top: containerAbsTopOffset } =
+        containerRef.current.getBoundingClientRect();
+      if (
+        localPageSelection &&
+        localPageSelection.pageNumber === pageInfo.page.pageNumber - 1
+      ) {
+        setLocalPageSelection({
+          pageNumber: pageInfo.page.pageNumber - 1,
+          bounds: {
+            ...localPageSelection.bounds,
+            right: event.pageX - containerAbsLeftOffset,
+            bottom: event.pageY - containerAbsTopOffset,
+          },
+        });
+      }
+    },
+    [containerRef, localPageSelection, pageInfo.page.pageNumber]
+  );
 
   /**
    * Converts bounding box selections to JSX elements.
@@ -376,76 +491,9 @@ export const PDFPage = ({
     <PageAnnotationsContainer
       className="PageAnnotationsContainer"
       ref={containerRef}
-      onMouseDown={(event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-        if (containerRef.current === null) {
-          throw new Error("No Container");
-        }
-        if (
-          !read_only &&
-          corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
-        ) {
-          if (!localPageSelection && event.buttons === 1) {
-            const { left: containerAbsLeftOffset, top: containerAbsTopOffset } =
-              containerRef.current.getBoundingClientRect();
-            const left = event.pageX - containerAbsLeftOffset;
-            const top = event.pageY - containerAbsTopOffset;
-            setLocalPageSelection({
-              pageNumber: pageInfo.page.pageNumber - 1,
-              bounds: {
-                left,
-                top,
-                right: left,
-                bottom: top,
-              },
-            });
-          }
-        } else {
-          console.log("Not allowed to update");
-          console.log(corpus_permissions);
-          console.log(read_only);
-        }
-      }}
-      onMouseMove={
-        localPageSelection
-          ? (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-              if (containerRef.current === null) {
-                throw new Error("No Container");
-              }
-              const {
-                left: containerAbsLeftOffset,
-                top: containerAbsTopOffset,
-              } = containerRef.current.getBoundingClientRect();
-              if (
-                localPageSelection &&
-                localPageSelection.pageNumber === pageInfo.page.pageNumber - 1
-              ) {
-                setLocalPageSelection({
-                  pageNumber: pageInfo.page.pageNumber - 1,
-                  bounds: {
-                    ...localPageSelection.bounds,
-                    right: event.pageX - containerAbsLeftOffset,
-                    bottom: event.pageY - containerAbsTopOffset,
-                  },
-                });
-              }
-            }
-          : undefined
-      }
-      onMouseUp={(event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-        if (localPageSelection) {
-          const pageNum = pageInfo.page.pageNumber - 1;
-          setMultiSelections((prev) => ({
-            ...prev,
-            [pageNum]: [...(prev[pageNum] || []), localPageSelection.bounds],
-          }));
-
-          setLocalPageSelection(undefined);
-
-          if (!event.shiftKey) {
-            handleCreateMultiPageAnnotation();
-          }
-        }
-      }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={localPageSelection ? handleMouseMove : undefined}
+      onMouseUp={handleMouseUp}
     >
       <PageCanvas
         ref={canvasRef}

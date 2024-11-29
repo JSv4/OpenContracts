@@ -224,76 +224,75 @@ export function useCreateAnnotation() {
     NewAnnotationInputType
   >(REQUEST_ADD_ANNOTATION);
 
-  const handleCreateAnnotation = useCallback(
-    async (annotation: ServerTokenAnnotation | ServerSpanAnnotation) => {
-      if (!selectedCorpus || !selectedDocument) {
-        toast.warning("No corpus or document selected");
-        return;
-      }
+  const handleCreateAnnotation = async (
+    annotation: ServerTokenAnnotation | ServerSpanAnnotation
+  ) => {
+    if (!selectedCorpus || !selectedDocument) {
+      toast.warning("No corpus or document selected");
+      return;
+    }
 
-      // Validation for empty annotations
-      if (!annotation.rawText || annotation.rawText.trim().length === 0) {
-        return;
-      }
+    // Validation for empty annotations
+    if (!annotation.rawText || annotation.rawText.trim().length === 0) {
+      return;
+    }
 
-      try {
-        const { data } = await createAnnotation({
-          variables: {
-            json: annotation.json,
-            documentId: selectedDocument.id,
-            corpusId: selectedCorpus.id,
-            annotationLabelId: annotation.annotationLabel.id,
-            rawText: annotation.rawText,
-            page: annotation.page,
-            annotationType:
-              annotation instanceof ServerSpanAnnotation
-                ? LabelType.SpanLabel
-                : LabelType.TokenLabel,
-          },
-        });
+    try {
+      const { data } = await createAnnotation({
+        variables: {
+          json: annotation.json,
+          documentId: selectedDocument.id,
+          corpusId: selectedCorpus.id,
+          annotationLabelId: annotation.annotationLabel.id,
+          rawText: annotation.rawText,
+          page: annotation.page,
+          annotationType:
+            annotation instanceof ServerSpanAnnotation
+              ? LabelType.SpanLabel
+              : LabelType.TokenLabel,
+        },
+      });
 
-        if (data?.addAnnotation?.annotation) {
-          const createdAnnotationData = data.addAnnotation.annotation;
-          let newAnnotation: ServerTokenAnnotation | ServerSpanAnnotation;
+      if (data?.addAnnotation?.annotation) {
+        const createdAnnotationData = data.addAnnotation.annotation;
+        let newAnnotation: ServerTokenAnnotation | ServerSpanAnnotation;
 
-          if (selectedDocument.fileType === "application/txt") {
-            newAnnotation = new ServerSpanAnnotation(
-              createdAnnotationData.page,
-              createdAnnotationData.annotationLabel,
-              createdAnnotationData.rawText,
-              false,
-              createdAnnotationData.json as SpanAnnotationJson,
-              getPermissions(createdAnnotationData.myPermissions || []),
-              false,
-              false,
-              false,
-              createdAnnotationData.id
-            );
-          } else {
-            newAnnotation = new ServerTokenAnnotation(
-              createdAnnotationData.page,
-              createdAnnotationData.annotationLabel,
-              createdAnnotationData.rawText,
-              false,
-              createdAnnotationData.json,
-              getPermissions(createdAnnotationData.myPermissions || []),
-              false,
-              false,
-              false,
-              createdAnnotationData.id
-            );
-          }
-
-          addMultipleAnnotations([newAnnotation]);
-          toast.success("Added your annotation to the database.");
+        if (selectedDocument.fileType === "application/txt") {
+          newAnnotation = new ServerSpanAnnotation(
+            createdAnnotationData.page,
+            createdAnnotationData.annotationLabel,
+            createdAnnotationData.rawText,
+            false,
+            createdAnnotationData.json as SpanAnnotationJson,
+            getPermissions(createdAnnotationData.myPermissions || []),
+            false,
+            false,
+            false,
+            createdAnnotationData.id
+          );
+        } else {
+          newAnnotation = new ServerTokenAnnotation(
+            createdAnnotationData.page,
+            createdAnnotationData.annotationLabel,
+            createdAnnotationData.rawText,
+            false,
+            createdAnnotationData.json,
+            getPermissions(createdAnnotationData.myPermissions || []),
+            false,
+            false,
+            false,
+            createdAnnotationData.id
+          );
         }
-      } catch (error) {
-        toast.error(`Unable to add annotation: ${error}`);
-        console.error(error);
+
+        addMultipleAnnotations([newAnnotation]);
+        toast.success("Added your annotation to the database.");
       }
-    },
-    [selectedCorpus, selectedDocument, createAnnotation, addMultipleAnnotations]
-  );
+    } catch (error) {
+      toast.error(`Unable to add annotation: ${error}`);
+      console.error(error);
+    }
+  };
 
   return handleCreateAnnotation;
 }

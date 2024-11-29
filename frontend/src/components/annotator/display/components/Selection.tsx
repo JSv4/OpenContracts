@@ -14,7 +14,6 @@ import {
 } from "../../utils";
 
 import { PermissionTypes } from "../../../types";
-import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { SelectionBoundary } from "./SelectionBoundary";
 import {
   LabelTagContainer,
@@ -50,7 +49,6 @@ interface SelectionProps {
   scrollIntoView: boolean;
   pageInfo: PDFPageInfo;
   annotation: ServerTokenAnnotation;
-  labelBehavior: LabelDisplayBehavior;
   showInfo?: boolean;
   children?: React.ReactNode;
   approved?: boolean;
@@ -65,7 +63,6 @@ export const Selection: React.FC<SelectionProps> = ({
   selected,
   scrollIntoView,
   pageInfo,
-  labelBehavior,
   annotation,
   children,
   approved,
@@ -81,7 +78,8 @@ export const Selection: React.FC<SelectionProps> = ({
   const [hidden, setHidden] = useState(false);
   const cloudRef = useRef<HTMLDivElement | null>(null);
 
-  const { showBoundingBoxes, showSelectedOnly } = useAnnotationDisplay();
+  const { showBoundingBoxes, showSelectedOnly, showLabels } =
+    useAnnotationDisplay();
   const { hideLabels } = useAnnotationDisplay();
   const { pdfAnnotations } = usePdfAnnotations();
   const { selectedAnnotations, setSelectedAnnotations, selectedRelations } =
@@ -272,7 +270,7 @@ export const Selection: React.FC<SelectionProps> = ({
                   hidden={hidden}
                   hovered={hovered}
                   color={color}
-                  display_behavior={labelBehavior}
+                  display_behavior={showLabels}
                 >
                   <div
                     style={{

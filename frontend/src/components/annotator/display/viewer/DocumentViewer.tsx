@@ -18,7 +18,6 @@ import {
   DatacellType,
   DocumentType,
   ExtractType,
-  LabelDisplayBehavior,
   LabelType,
 } from "../../../../types/graphql-api";
 
@@ -34,11 +33,7 @@ import { AnnotatorTopbar } from "../../topbar/AnnotatorTopbar";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 
 import "./DocumentViewer.css";
-import { RelationModal } from "../../components/modals/RelationModal";
 import { PDF } from "../../renderers/pdf/PDF";
-import { DocTypeLabelDisplay } from "../../labels/doc_types/DocTypeLabelDisplay";
-import { LabelSelector } from "../../labels/label_selector/LabelSelector";
-import { Dimmer, Loader } from "semantic-ui-react";
 import { Menu } from "semantic-ui-react";
 import { PDFActionBar } from "../components/ActionBar";
 import {
@@ -54,6 +49,15 @@ import {
   ServerTokenAnnotation,
 } from "../../types/annotations";
 import { PDFPageInfo } from "../../types/pdf";
+import { useDocumentType, useSelectedCorpus } from "../../context/DocumentAtom";
+import { useAnnotationControls } from "../../context/UISettingsAtom";
+import { getPermissions } from "../../../../utils/transform";
+import { LabelSelector } from "../../labels/label_selector/LabelSelector";
+import {
+  useHumanSpanLabels,
+  useHumanTokenLabels,
+} from "../../context/CorpusAtom";
+import { DocTypeLabelDisplay } from "../../labels/doc_types/DocTypeLabelDisplay";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -166,7 +170,6 @@ export const DocumentViewer = ({
   pdfAnnotations,
   scroll_to_annotation_on_open,
   setJumpedToAnnotationOnLoad,
-  show_annotation_labels,
   show_structural_annotations,
   page_token_text_maps,
   doc_text,
@@ -215,7 +218,6 @@ export const DocumentViewer = ({
   scroll_to_annotation_on_open: ServerTokenAnnotation | null | undefined;
   setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
   show_structural_annotations: boolean;
-  show_annotation_labels: LabelDisplayBehavior;
   page_token_text_maps: Record<number, TokenId>;
   doc_text: string;
   doc: PDFDocumentProxy | undefined;
@@ -239,6 +241,20 @@ export const DocumentViewer = ({
   const [selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex] =
     useState<number>(0);
 
+  // Access corpus permissions
+  const { selectedCorpus } = useSelectedCorpus();
+  const corpusRawPermissions = selectedCorpus
+    ? selectedCorpus.myPermissions ?? []
+    : ["READ"];
+  const corpusPermissions = getPermissions(corpusRawPermissions);
+
+  // Access annotation controls
+  const annotationControls = useAnnotationControls();
+  const { documentType } = useDocumentType();
+  const { humanSpanLabels } = useHumanSpanLabels();
+  const { humanTokenLabels } = useHumanTokenLabels();
+  const { activeSpanLabel, setActiveSpanLabel } = annotationControls;
+
   const handleZoomIn = () => setZoomLevel(Math.min(zoom_level + 0.1, 4));
   const handleZoomOut = () => setZoomLevel(Math.max(zoom_level - 0.1, 0.5));
 
@@ -256,9 +272,6 @@ export const DocumentViewer = ({
     Record<number, PDFPageInfo>
   >([]);
 
-  const [activeSpanLabel, setActiveSpanLabel] = useState<
-    AnnotationLabelType | undefined
-  >(humanSpanLabelChoices.length > 0 ? humanSpanLabelChoices[0] : undefined);
   const [spanLabelsToView, setSpanLabelsToView] = useState<
     AnnotationLabelType[] | null
   >(null);
@@ -675,7 +688,6 @@ export const DocumentViewer = ({
             corpus_permissions={corpus_permissions}
             doc_permissions={doc_permissions}
             shiftDown={shiftDown}
-            show_annotation_labels={show_annotation_labels}
             setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
           />
         );
@@ -771,6 +783,35 @@ export const DocumentViewer = ({
             </PDFActionBarWrapper>
 
             <PDFContainer ref={containerRefCallback}>
+              {/* {!read_only &&
+              allowInput &&
+              !selected_analysis &&
+              corpusPermissions.includes(PermissionTypes.CAN_UPDATE) && ( */}
+              <LabelSelector
+                sidebarWidth={responsive_sidebar_width}
+                humanSpanLabelChoices={
+                  documentType === "application/pdf"
+                    ? humanSpanLabels
+                    : humanTokenLabels
+                }
+                activeSpanLabel={activeSpanLabel ?? null}
+                setActiveLabel={setActiveSpanLabel}
+              />
+              {/* )} */}
+              {(!selected_extract ||
+                pdfAnnotations.annotations.filter(
+                  (annot) =>
+                    annot.annotationLabel.labelType === LabelType.DocTypeLabel
+                ).length > 0) && (
+                <DocTypeLabelDisplay
+                  read_only={
+                    Boolean(selected_analysis) ||
+                    Boolean(selected_extract) ||
+                    read_only ||
+                    !corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
+                  }
+                />
+              )}
               {view_components}
             </PDFContainer>
           </MainContent>

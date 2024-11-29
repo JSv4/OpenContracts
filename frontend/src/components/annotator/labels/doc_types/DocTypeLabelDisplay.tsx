@@ -257,10 +257,10 @@ export const DocTypeLabelDisplay = ({ read_only }: { read_only: boolean }) => {
 // Need to investigate why right value of 0 is required to get this to look like matching
 // left posiiton on the span label container... not a huge priority atm
 const DocTypeWidgetContainer = styled.div<HideableHasWidth>(
-  ({ width }) => `
+  () => `
     position: fixed;
     z-index: 1002;
-    bottom: ${Number(width) <= 400 ? "10px" : "2vh"};
+    top: 8vh;
     right: 0px;
     display: flex;
     flex-direction: row;

@@ -5,7 +5,6 @@ import { VerticallyJustifiedEndDiv } from "../../sidebar/common";
 
 import { ResultBoundary } from "./ResultBoundary";
 import { BoundingBox, TextSearchTokenResult } from "../../../types";
-import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { getBorderWidthFromBounds } from "../../../../utils/transform";
 import { SearchSelectionTokens } from "./SelectionTokens";
 import { LabelTagContainer } from "./Containers";
@@ -21,7 +20,6 @@ interface SearchResultProps {
   hidden: boolean;
   pageInfo: PDFPageInfo;
   match: TextSearchTokenResult;
-  labelBehavior: LabelDisplayBehavior;
   showInfo?: boolean;
 }
 
@@ -31,11 +29,10 @@ export const SearchResult = ({
   showBoundingBox,
   hidden,
   pageInfo,
-  labelBehavior,
   match,
   showInfo = true,
 }: SearchResultProps) => {
-  const { hideLabels } = useAnnotationDisplay();
+  const { showLabels, hideLabels } = useAnnotationDisplay();
 
   const color = "#ffff00";
   const [hovered, setHovered] = useState(false);
@@ -73,7 +70,7 @@ export const SearchResult = ({
                   hidden={false}
                   hovered={hovered}
                   color={color}
-                  display_behavior={labelBehavior}
+                  display_behavior={showLabels}
                 >
                   <div style={{ whiteSpace: "nowrap", overflowX: "visible" }}>
                     <span>

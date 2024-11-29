@@ -226,7 +226,6 @@ export const AnnotatorRenderer = ({
       containerRefCallback={containerRefCallback}
       pdfAnnotations={pdfAnnotations}
       show_structural_annotations={show_structural_annotations}
-      show_annotation_labels={show_annotation_labels}
       scroll_to_annotation_on_open={scrollToAnnotation}
       setJumpedToAnnotationOnLoad={setHasScrolledToAnnotation}
       doc={pdfDoc}

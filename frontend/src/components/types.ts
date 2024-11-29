@@ -235,7 +235,6 @@ export interface PageProps {
   doc_permissions: PermissionTypes[];
   corpus_permissions: PermissionTypes[];
   read_only: boolean;
-  show_annotation_labels: LabelDisplayBehavior;
   onError: (_err: Error) => void;
   setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
 }

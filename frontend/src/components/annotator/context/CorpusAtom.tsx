@@ -28,6 +28,7 @@ export const spanLabelsAtom = atom<AnnotationLabelType[]>([]);
 export const humanSpanLabelsAtom = atom<AnnotationLabelType[]>([]);
 export const relationLabelsAtom = atom<AnnotationLabelType[]>([]);
 export const docTypeLabelsAtom = atom<AnnotationLabelType[]>([]);
+export const humanTokenLabelsAtom = atom<AnnotationLabelType[]>([]);
 
 // Atoms for corpus features
 export const allowCommentsAtom = atom<boolean>(true);
@@ -40,6 +41,7 @@ export function useInitializeCorpusAtoms(params: {
   selectedCorpus: CorpusType | null | undefined;
   spanLabels: AnnotationLabelType[];
   humanSpanLabels: AnnotationLabelType[];
+  humanTokenLabels: AnnotationLabelType[];
   relationLabels: AnnotationLabelType[];
   docTypeLabels: AnnotationLabelType[];
   isLoading: boolean;
@@ -48,6 +50,7 @@ export function useInitializeCorpusAtoms(params: {
     selectedCorpus,
     spanLabels,
     humanSpanLabels,
+    humanTokenLabels,
     relationLabels,
     docTypeLabels,
     isLoading,
@@ -61,6 +64,7 @@ export function useInitializeCorpusAtoms(params: {
   const [, setDocTypeLabelsAtom] = useAtom(docTypeLabelsAtom);
   const [, setAllowComments] = useAtom(allowCommentsAtom);
   const [, setIsLoadingAtom] = useAtom(isLoadingAtom);
+  const [, setHumanTokenLabelsAtom] = useAtom(humanTokenLabelsAtom);
 
   useEffect(() => {
     // Update corpus and permissions
@@ -74,6 +78,7 @@ export function useInitializeCorpusAtoms(params: {
     setHumanSpanLabelsAtom(humanSpanLabels);
     setRelationLabelsAtom(relationLabels);
     setDocTypeLabelsAtom(docTypeLabels);
+    setHumanTokenLabelsAtom(humanTokenLabels);
 
     // Update loading state
     setIsLoadingAtom(isLoading);
@@ -81,6 +86,7 @@ export function useInitializeCorpusAtoms(params: {
     selectedCorpus,
     spanLabels,
     humanSpanLabels,
+    humanTokenLabels,
     relationLabels,
     docTypeLabels,
     isLoading,
@@ -92,6 +98,7 @@ export function useInitializeCorpusAtoms(params: {
     setRelationLabelsAtom,
     setDocTypeLabelsAtom,
     setIsLoadingAtom,
+    setHumanTokenLabelsAtom,
   ]);
 }
 
@@ -154,4 +161,9 @@ export function useAllowComments() {
 export function useIsLoading() {
   const [isLoading] = useAtom(isLoadingAtom);
   return isLoading;
+}
+
+export function useHumanTokenLabels() {
+  const [humanTokenLabels, setHumanTokenLabels] = useAtom(humanTokenLabelsAtom);
+  return { humanTokenLabels, setHumanTokenLabels };
 }

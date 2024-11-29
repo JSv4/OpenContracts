@@ -99,11 +99,12 @@ const LabelSelectorContainer = styled.div`
   position: relative;
 `;
 
+//  right: calc(${(props) => props.$sidebarWidth} + 2vw);
 const LabelSelectorWidgetContainer = styled.div<{ $sidebarWidth: string }>`
   position: fixed;
   z-index: 1000;
   bottom: 2vh;
-  left: calc(${(props) => props.$sidebarWidth} + 2vw);
+  right: 2vw;
   display: flex;
   flex-direction: row;
   justify-content: center;

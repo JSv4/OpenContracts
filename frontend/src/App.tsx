@@ -29,6 +29,7 @@ import {
   showSelectCorpusAnalyzerOrFieldsetModal,
   showUploadNewDocumentsModal,
   uploadModalPreloadedFiles,
+  showStructuralAnnotations,
 } from "./graphql/cache";
 
 import { NavMenu } from "./components/layout/NavMenu";
@@ -74,6 +75,7 @@ export const App = () => {
   const show_selected_annotation_only = useReactiveVar(
     showSelectedAnnotationOnly
   );
+  const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
   const show_annotation_bounding_boxes = useReactiveVar(
     showAnnotationBoundingBoxes
   );
@@ -221,6 +223,7 @@ export const App = () => {
                 }
                 opened_document={opened_document}
                 read_only={selected_analyes.length > 0 || banish_sidebar}
+                show_structural_annotations={show_structural_annotations}
                 show_selected_annotation_only={show_selected_annotation_only}
                 show_annotation_bounding_boxes={show_annotation_bounding_boxes}
                 show_annotation_labels={show_annotation_labels}

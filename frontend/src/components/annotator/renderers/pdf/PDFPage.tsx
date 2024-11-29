@@ -56,7 +56,6 @@ export const PDFPage = ({
   pageInfo,
   corpus_permissions,
   read_only,
-  show_annotation_labels,
   onError,
   setJumpedToAnnotationOnLoad,
 }: PageProps) => {
@@ -356,7 +355,6 @@ export const PDFPage = ({
         key={annotation.id}
         selected={selectedAnnotations.includes(annotation.id)}
         scrollIntoView={selectedAnnotations.includes(annotation.id)}
-        labelBehavior={show_annotation_labels}
         selectionRef={annotationRefs.selectionElementRefs}
         pageInfo={pageInfo}
         annotation={annotation}
@@ -371,7 +369,6 @@ export const PDFPage = ({
     pageInfo.bounds,
     annotations,
     annots_to_render,
-    show_annotation_labels,
     selectedAnnotations,
   ]);
 
@@ -402,6 +399,10 @@ export const PDFPage = ({
               },
             });
           }
+        } else {
+          console.log("Not allowed to update");
+          console.log(corpus_permissions);
+          console.log(read_only);
         }
       }}
       onMouseMove={
@@ -469,7 +470,6 @@ export const PDFPage = ({
               hidden={token_index !== selectedSearchResultIndex}
               pageInfo={pageInfo}
               match={match}
-              labelBehavior={show_annotation_labels}
             />
           ))}
       {localPageSelection?.pageNumber === pageInfo.page.pageNumber - 1 &&

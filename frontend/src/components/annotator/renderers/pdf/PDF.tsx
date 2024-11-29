@@ -1,4 +1,3 @@
-import { useContext } from "react";
 import styled from "styled-components";
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import _ from "lodash";
@@ -68,14 +67,12 @@ export const PDF = ({
   doc_permissions,
   corpus_permissions,
   read_only,
-  show_annotation_labels,
   setJumpedToAnnotationOnLoad,
 }: {
   shiftDown?: boolean;
   doc_permissions: PermissionTypes[];
   corpus_permissions: PermissionTypes[];
   read_only: boolean;
-  show_annotation_labels: LabelDisplayBehavior;
   setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
 }) => {
   const { pdfDoc: doc } = usePdfDoc();
@@ -105,7 +102,6 @@ export const PDF = ({
             corpus_permissions={corpus_permissions}
             pageInfo={p}
             onError={setViewStateError}
-            show_annotation_labels={show_annotation_labels}
             setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
           />
         );

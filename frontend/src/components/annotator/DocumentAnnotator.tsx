@@ -1,5 +1,5 @@
 import { useLazyQuery, useReactiveVar } from "@apollo/client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useSetAtom, useAtom } from "jotai";
 // import pdfjsLib from "pdfjs-dist";
 import {
@@ -37,7 +37,10 @@ import {
   structuralAnnotationsAtom,
   docTypeAnnotationsAtom,
 } from "./context/AnnotationAtoms";
-import { useInitializeCorpusAtoms } from "./context/CorpusAtom";
+import {
+  useHumanTokenLabels,
+  useInitializeCorpusAtoms,
+} from "./context/CorpusAtom";
 import {
   useSpanLabels,
   useHumanSpanLabels,
@@ -59,9 +62,7 @@ import {
   onlyDisplayTheseAnnotations,
   selectedAnalysis,
   selectedExtract,
-  showAnnotationBoundingBoxes,
   showAnnotationLabels,
-  showSelectedAnnotationOnly,
   showStructuralAnnotations,
   viewStateVar,
 } from "../../graphql/cache";
@@ -88,6 +89,7 @@ import {
   useAnnotationObjs,
   useDocTypeAnnotations,
 } from "./hooks/AnnotationHooks";
+import { useAnnotationDisplay } from "./context/UISettingsAtom";
 
 // Loading pdf js libraries without cdn is a right PITA... cobbled together a working
 // approach via these guides:
@@ -122,6 +124,8 @@ interface DocumentAnnotatorProps {
   opened_document: DocumentType;
   opened_corpus?: CorpusType;
   read_only: boolean;
+  show_structural_annotations: boolean;
+
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
   show_annotation_labels: LabelDisplayBehavior;
@@ -139,6 +143,7 @@ export const DocumentAnnotator = ({
   opened_document,
   opened_corpus,
   read_only,
+  show_structural_annotations,
   show_selected_annotation_only,
   show_annotation_bounding_boxes,
   show_annotation_labels,
@@ -158,9 +163,30 @@ export const DocumentAnnotator = ({
   const [docTypeAnnotations, setDocTypeAnnotations] = useAtom(
     docTypeAnnotationsAtom
   );
+  const {
+    setShowSelectedOnly,
+    setShowLabels,
+    setShowStructural,
+    setShowBoundingBoxes,
+  } = useAnnotationDisplay();
 
-  const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
-  const label_display_behavior = useReactiveVar(showAnnotationLabels);
+  useEffect(() => {
+    setShowSelectedOnly(show_selected_annotation_only);
+  }, [show_selected_annotation_only, setShowSelectedOnly]);
+
+  useEffect(() => {
+    setShowBoundingBoxes(show_annotation_bounding_boxes);
+  }, [show_annotation_bounding_boxes, setShowBoundingBoxes]);
+
+  useEffect(() => {
+    setShowStructural(show_structural_annotations);
+  }, [show_structural_annotations, setShowStructural]);
+
+  useEffect(() => {
+    setShowLabels(show_annotation_labels);
+  }, [show_annotation_labels, setShowLabels]);
+
+  //TODO: refelect these in jotai state
   const displayOnlyTheseAnnotations = useReactiveVar(
     onlyDisplayTheseAnnotations
   );
@@ -176,6 +202,7 @@ export const DocumentAnnotator = ({
   // Use atoms for labels from CorpusAtom
   const { spanLabels, setSpanLabels } = useSpanLabels();
   const { humanSpanLabels, setHumanSpanLabels } = useHumanSpanLabels();
+  const { humanTokenLabels, setHumanTokenLabels } = useHumanTokenLabels();
   const { relationLabels, setRelationLabels } = useRelationLabels();
   const { docTypeLabels, setDocTypeLabels } = useDocTypeLabels();
 
@@ -391,7 +418,11 @@ export const DocumentAnnotator = ({
 
       // Update label atoms
       if (data.corpus?.labelSet) {
+        console.log("React to label set", data.corpus.labelSet);
         const allLabels = data.corpus.labelSet.allAnnotationLabels ?? [];
+        const filteredTokenLabels = allLabels.filter(
+          (label) => label.labelType === LabelType.TokenLabel
+        );
         const filteredSpanLabels = allLabels.filter(
           (label) => label.labelType === LabelType.SpanLabel
         );
@@ -404,6 +435,7 @@ export const DocumentAnnotator = ({
 
         setSpanLabels(filteredSpanLabels);
         setHumanSpanLabels(filteredSpanLabels);
+        setHumanTokenLabels(filteredTokenLabels);
         setRelationLabels(filteredRelationLabels);
         setDocTypeLabels(filteredDocTypeLabels);
       }
@@ -425,6 +457,7 @@ export const DocumentAnnotator = ({
     selectedCorpus: opened_corpus,
     spanLabels: spanLabels,
     humanSpanLabels: humanSpanLabels,
+    humanTokenLabels: humanTokenLabels,
     relationLabels: relationLabels,
     docTypeLabels: docTypeLabels,
     isLoading: humanDataLoading,
@@ -647,7 +680,7 @@ export const DocumentAnnotator = ({
       rendered_component = (
         <AnnotatorRenderer
           open={open}
-          read_only={true}
+          read_only={read_only}
           view_document_only={false}
           loading_message="Loading Annotator Data"
           data_loading={false}

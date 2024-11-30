@@ -10,7 +10,6 @@ import { useCallback } from "react";
 type RefType =
   | "selection"
   | "search"
-  | "page"
   | "annotation"
   | "scrollContainer"
   | "pdfPageCanvas"

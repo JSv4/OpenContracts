@@ -170,7 +170,11 @@ export const PDFPage = ({
               );
             }
 
-            registerRef("page", canvasRef, pageInfo.page.pageNumber - 1);
+            registerRef(
+              "pdfPageContainer",
+              canvasRef,
+              pageInfo.page.pageNumber - 1
+            );
 
             setPdfPageRendered(true);
           }
@@ -181,7 +185,7 @@ export const PDFPage = ({
       initializePage();
 
       return () => {
-        unregisterRef("page", pageInfo.page.pageNumber - 1);
+        unregisterRef("pdfPageContainer", pageInfo.page.pageNumber - 1);
         if (scrollContainerRef && scrollContainerRef.current) {
           scrollContainerRef.current.removeEventListener(
             "resize",

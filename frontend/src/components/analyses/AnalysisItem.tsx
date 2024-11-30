@@ -35,7 +35,9 @@ interface AnalysisItemProps {
   onSelect?: () => any | never;
 }
 
-const StyledCard = styled(Card)`
+const StyledCard = styled(Card).withConfig({
+  shouldForwardProp: (prop) => !["useMobileLayout", "selected"].includes(prop),
+})`
   display: flex !important;
   flex-direction: column !important;
   padding: 0.5em !important;
@@ -135,7 +137,7 @@ export const AnalysisItem = ({
 }: AnalysisItemProps) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
-  const descriptionRef = useRef<HTMLElement>(null);
+  const descriptionRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
@@ -238,18 +240,22 @@ export const AnalysisItem = ({
           </span>
         </CardMeta>
         {!compact && (
-          <CardDescription ref={descriptionRef}>
-            {analysis.analyzer.description}
-            {isOverflowing && !showFullDescription && (
-              <ReadMoreLink
-                onClick={(e: React.MouseEvent<HTMLSpanElement, MouseEvent>) => {
-                  e.stopPropagation();
-                  setShowFullDescription(true);
-                }}
-              >
-                ...more
-              </ReadMoreLink>
-            )}
+          <CardDescription>
+            <div ref={descriptionRef}>
+              {analysis.analyzer.description}
+              {isOverflowing && !showFullDescription && (
+                <ReadMoreLink
+                  onClick={(
+                    e: React.MouseEvent<HTMLSpanElement, MouseEvent>
+                  ) => {
+                    e.stopPropagation();
+                    setShowFullDescription(true);
+                  }}
+                >
+                  ...more
+                </ReadMoreLink>
+              )}
+            </div>
           </CardDescription>
         )}
         {showFullDescription && (

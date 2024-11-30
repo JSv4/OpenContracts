@@ -4,7 +4,6 @@ import { PDFPageRenderer } from "../renderers/pdf/PDF";
 type RefType =
   | "selection"
   | "search"
-  | "page"
   | "annotation"
   | "scrollContainer"
   | "pdfPageCanvas"

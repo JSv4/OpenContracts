@@ -313,6 +313,14 @@ export const PDFPage = ({
         ref={canvasRef}
         {...(canvas_width ? { width: canvas_width } : {})}
       />
+      <SelectionLayer
+        pageInfo={pageInfo}
+        corpus_permissions={corpus_permissions}
+        read_only={read_only}
+        activeSpanLabel={activeSpanLabel ?? null}
+        createAnnotation={createAnnotation}
+        pageNumber={pageInfo.page.pageNumber - 1}
+      />
 
       {page_annotation_components}
 
@@ -333,14 +341,6 @@ export const PDFPage = ({
               match={match}
             />
           ))}
-      <SelectionLayer
-        pageInfo={pageInfo}
-        corpus_permissions={corpus_permissions}
-        read_only={read_only}
-        activeSpanLabel={activeSpanLabel ?? null}
-        createAnnotation={createAnnotation}
-        pageNumber={pageInfo.page.pageNumber - 1}
-      />
     </PageAnnotationsContainer>
   );
 };

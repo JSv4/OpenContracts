@@ -40,6 +40,7 @@ export function getPermissions(
         base_permissions.push(PermissionTypes.CAN_READ);
         base_permissions.push(PermissionTypes.CAN_REMOVE);
         base_permissions.push(PermissionTypes.CAN_PERMISSION);
+        base_permissions.push(PermissionTypes.CAN_COMMENT);
         break;
       } else if (
         (permission.includes("update_") || permission.includes("change_")) &&
@@ -72,6 +73,11 @@ export function getPermissions(
         !base_permissions.includes(PermissionTypes.CAN_PERMISSION)
       ) {
         base_permissions.push(PermissionTypes.CAN_PERMISSION);
+      } else if (
+        permission.includes("comment_") &&
+        !base_permissions.includes(PermissionTypes.CAN_COMMENT)
+      ) {
+        base_permissions.push(PermissionTypes.CAN_COMMENT);
       }
     }
   }
@@ -99,6 +105,9 @@ export function convertToServerAnnotation(
   annotation: ServerAnnotationType,
   allowComments?: boolean
 ): ServerTokenAnnotation | ServerSpanAnnotation {
+  // Process permissions using getPermissions
+  const permissions = getPermissions(annotation.myPermissions);
+
   let approved = false;
   let rejected = false;
   if (annotation.userFeedback?.edges.length === 1) {
@@ -115,7 +124,7 @@ export function convertToServerAnnotation(
       annotation.rawText ?? "",
       annotation.structural ?? false,
       (annotation.json as SpanAnnotationJson) ?? ({} as SpanAnnotationJson),
-      annotation.myPermissions ?? [],
+      permissions,
       approved,
       rejected,
       allowComments !== undefined ? allowComments : false,
@@ -128,7 +137,7 @@ export function convertToServerAnnotation(
     annotation.rawText ?? "",
     annotation.structural ?? false,
     annotation.json ?? {},
-    annotation.myPermissions ?? [],
+    permissions,
     approved,
     rejected,
     allowComments !== undefined ? allowComments : false,

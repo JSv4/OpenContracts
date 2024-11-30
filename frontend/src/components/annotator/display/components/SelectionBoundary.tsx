@@ -47,6 +47,7 @@ const BoundarySpan = styled.span.attrs<{
     height: `${Math.abs(props.$height)}px`,
     transform: `rotateY(${props.$rotateY}deg) rotateX(${props.$rotateX}deg)`,
     backgroundColor: props.$backgroundColor,
+    zIndex: 2,
     border:
       props.$showBoundingBox && !props.$hidden
         ? `${props.$border}px solid ${props.$color}`

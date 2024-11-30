@@ -85,7 +85,7 @@ export const Selection: React.FC<SelectionProps> = ({
   const deleteAnnotation = useDeleteAnnotation();
 
   useEffect(() => {
-    setHidden(!showSelectedOnly || selected);
+    setHidden(showSelectedOnly && !selected);
   }, [showSelectedOnly, selected]);
 
   const label = annotation.annotationLabel;

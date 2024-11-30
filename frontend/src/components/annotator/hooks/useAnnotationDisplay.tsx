@@ -7,7 +7,11 @@ import {
   hideLabelsAtom,
 } from "../context/UISettingsAtom";
 import { LabelDisplayBehavior } from "../../../types/graphql-api";
+import { useCallback } from "react";
 
+/**
+ * Hook to manage annotation display settings.
+ */
 export function useAnnotationDisplay() {
   const [boundingBoxes, setBoundingBoxes] = useAtom(
     showAnnotationBoundingBoxesAtom
@@ -21,29 +25,30 @@ export function useAnnotationDisplay() {
   );
   const [hideLabels, setHideLabels] = useAtom(hideLabelsAtom);
 
-  const toggleBoundingBoxes = () => {
-    setBoundingBoxes(!boundingBoxes);
-  };
+  // Toggles
+  const toggleBoundingBoxes = useCallback(() => {
+    setBoundingBoxes((prev) => !prev);
+  }, [setBoundingBoxes]);
 
-  const toggleLabelDisplay = (behavior: LabelDisplayBehavior) => {
-    setLabelDisplay(behavior);
-  };
+  const toggleLabelDisplay = useCallback(() => {
+    setLabelDisplay((behavior: LabelDisplayBehavior) => behavior);
+  }, [setLabelDisplay]);
 
-  const toggleStructuralAnnotations = () => {
-    setStructuralAnnotations(!structuralAnnotations);
-  };
+  const toggleStructuralAnnotations = useCallback(() => {
+    setStructuralAnnotations((prev) => !prev);
+  }, [setStructuralAnnotations]);
 
-  const toggleSelectedOnly = () => {
-    setSelectedOnly(!selectedOnly);
-  };
+  const toggleSelectedOnly = useCallback(() => {
+    setSelectedOnly((prev) => !prev);
+  }, [setSelectedOnly]);
 
-  const toggleHideLabels = () => {
+  const toggleHideLabels = useCallback(() => {
     setHideLabels((prev) => !prev);
-  };
+  }, [setHideLabels]);
 
   return {
-    displaySettings: {
-      showAnnotationBoundingBoxes: boundingBoxes,
+    states: {
+      showBoundingBoxes: boundingBoxes,
       showAnnotationLabels: labelDisplay,
       showStructuralAnnotations: structuralAnnotations,
       showSelectedAnnotationOnly: selectedOnly,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import styled from "styled-components";
 import _ from "lodash";
 import { VerticallyJustifiedEndDiv } from "../../sidebar/common";
@@ -13,9 +13,6 @@ import { useAnnotationDisplay } from "../../context/UISettingsAtom";
 
 interface SearchResultProps {
   total_results: number;
-  selectionRef:
-    | React.MutableRefObject<Record<string, HTMLElement | null>>
-    | undefined;
   showBoundingBox: boolean;
   hidden: boolean;
   pageInfo: PDFPageInfo;
@@ -25,7 +22,6 @@ interface SearchResultProps {
 
 export const SearchResult = ({
   total_results,
-  selectionRef,
   showBoundingBox,
   hidden,
   pageInfo,
@@ -51,7 +47,6 @@ export const SearchResult = ({
         id={match.id}
         hidden={hidden}
         showBoundingBox={showBoundingBox}
-        selectionRef={selectionRef}
         color={color}
         bounds={bounds}
         selected={false}
@@ -97,9 +92,7 @@ export const SearchResult = ({
             pageInfo={pageInfo}
             tokens={match.tokens[pageInfo.page.pageNumber - 1]}
           />
-        ) : (
-          <></>
-        )
+        ) : null
       }
     </>
   );
@@ -107,13 +100,14 @@ export const SearchResult = ({
 
 // We use transform here because we need to translate the label upward
 // to sit on top of the bounds as a function of *its own* height,
-// not the height of it's parent.
+// not the height of its parent.
 interface SelectionInfoProps {
   border: number;
   bounds: BoundingBox;
   color: string;
   showBoundingBox: boolean;
 }
+
 const SelectionInfo = styled.div<SelectionInfoProps>(
   ({ border, bounds, color, showBoundingBox }) => {
     if (showBoundingBox) {
@@ -121,29 +115,31 @@ const SelectionInfo = styled.div<SelectionInfoProps>(
         position: absolute;
         width: ${bounds.right - bounds.left}px;
         right: -${border}px;
-        transform:translateY(-100%);
-        border: ${border} solid  ${color};
+        transform: translateY(-100%);
+        border: ${border} solid ${color};
         background: ${color};
         font-weight: bold;
         font-size: 12px;
         user-select: none;
         * {
-            vertical-align: middle;
-        }`;
+          vertical-align: middle;
+        }
+      `;
     } else {
       return `
         position: absolute;
         width: ${bounds.right - bounds.left}px;
         right: -${border}px;
-        transform:translateY(-100%);
+        transform: translateY(-100%);
         border: ${border} solid ${color} transparent;
         background: rgba(255, 255, 255, 0.0);
         font-weight: bold;
         font-size: 12px;
         user-select: none;
         * {
-            vertical-align: middle;
-        }`;
+          vertical-align: middle;
+        }
+      `;
     }
   }
 );

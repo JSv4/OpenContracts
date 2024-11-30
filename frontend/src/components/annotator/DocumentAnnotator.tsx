@@ -666,18 +666,11 @@ export const DocumentAnnotator = ({
     case ViewState.LOADED:
       rendered_component = (
         <AnnotatorRenderer
-          open={open}
-          read_only={read_only}
-          view_document_only={false}
-          loading_message="Loading Annotator Data"
-          data_loading={false}
-          load_progress={progress}
           structural_annotations={structuralAnnotations}
           scrollToAnnotation={
             scrollToAnnotation && convertToServerAnnotation(scrollToAnnotation)
           }
           show_structural_annotations={show_structural_annotations}
-          show_annotation_labels={show_annotation_labels}
           data_cells={dataCells}
           columns={columns}
           editMode={edit_mode}

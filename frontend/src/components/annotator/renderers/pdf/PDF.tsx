@@ -1,7 +1,6 @@
 import styled from "styled-components";
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import _ from "lodash";
-import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { PermissionTypes } from "../../../types";
 import { PDFPage } from "./PDFPage";
 import {
@@ -63,13 +62,11 @@ export class PDFPageRenderer {
 }
 
 export const PDF = ({
-  shiftDown,
   doc_permissions,
   corpus_permissions,
   read_only,
   setJumpedToAnnotationOnLoad,
 }: {
-  shiftDown?: boolean;
   doc_permissions: PermissionTypes[];
   corpus_permissions: PermissionTypes[];
   read_only: boolean;

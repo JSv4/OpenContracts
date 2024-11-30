@@ -395,7 +395,7 @@ export const AnnotatorSidebar = ({
   const {} = useAnalysisManager();
   const { spanLabelsToView } = useAnnotationControls();
   const { searchResults } = useAnnotationSearch();
-  const { selectionElementRefs } = useAnnotationRefs();
+  const { annotationElementRefs } = useAnnotationRefs();
   const { pdfAnnotations } = usePdfAnnotations();
   const annotations = pdfAnnotations.annotations;
   const relations = pdfAnnotations.relations;
@@ -717,9 +717,9 @@ export const AnnotatorSidebar = ({
       // Check the proposed id is actually in the annotation store
       if (annotation) {
         // If it is, and we have a reference to it in our annotation reference obj
-        if (selectionElementRefs?.current[annotation.id]) {
+        if (annotationElementRefs?.current[annotation.id]) {
           // Scroll annotation into view.
-          selectionElementRefs?.current[annotation.id]?.scrollIntoView();
+          annotationElementRefs?.current[annotation.id]?.scrollIntoView();
         }
       }
       setSelectedAnnotations([toggledId]);

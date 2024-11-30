@@ -42,9 +42,6 @@ import {
 } from "../../context/UISettingsAtom";
 
 interface SelectionProps {
-  selectionRef:
-    | React.MutableRefObject<Record<string, HTMLElement | null>>
-    | undefined;
   selected: boolean;
   scrollIntoView: boolean;
   pageInfo: PDFPageInfo;
@@ -59,7 +56,6 @@ interface SelectionProps {
 }
 
 export const Selection: React.FC<SelectionProps> = ({
-  selectionRef,
   selected,
   scrollIntoView,
   pageInfo,
@@ -219,7 +215,6 @@ export const Selection: React.FC<SelectionProps> = ({
         id={annotation.id}
         hidden={hidden}
         showBoundingBox={showBoundingBoxes}
-        selectionRef={selectionRef}
         scrollIntoView={scrollIntoView}
         color={color}
         bounds={bounds}

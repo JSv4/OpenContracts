@@ -101,7 +101,7 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
 }) => {
   const { selectedAnnotations, handleAnnotationSelect } =
     useAnnotationSelection();
-  const { selectionElementRefs } = useAnnotationRefs();
+  const { annotationElementRefs } = useAnnotationRefs();
   const selected = selectedAnnotations.includes(annotation.id);
 
   const my_output_relationships = relations.filter((relation) =>
@@ -116,7 +116,7 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
       selected={selected}
       className={`sidebar__annotation ${className || ""}`}
       onClick={() => {
-        selectionElementRefs.current[annotation.id]?.scrollIntoView();
+        annotationElementRefs.current[annotation.id]?.scrollIntoView();
         handleAnnotationSelect(annotation.id);
       }}
     >

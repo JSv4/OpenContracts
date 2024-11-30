@@ -60,7 +60,14 @@ export const PDFPage = ({
   const { zoomLevel } = useZoomLevel();
   const { selectedAnnotations } = useAnnotationSelection();
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const {
+    PDFPageContainerRefs,
+    annotationElementRefs,
+    registerRef,
+    unregisterRef,
+  } = useAnnotationRefs();
+  const pageContainerRef = useRef<HTMLDivElement>(null);
+
   const annotations = pdfAnnotations.annotations;
 
   const [scrollContainerRef] = useAtom(scrollContainerRefAtom);
@@ -71,8 +78,6 @@ export const PDFPage = ({
 
   const annotationControls = useAnnotationControls();
   const { spanLabelsToView, activeSpanLabel } = annotationControls;
-
-  const annotationRefs = useAnnotationRefs();
 
   /**
    * Converts bounding box selections to JSX elements.
@@ -130,11 +135,11 @@ export const PDFPage = ({
       setScale(zoomLevel);
     };
 
-    if (!hasPdfPageRendered && canvasRef.current && containerRef.current) {
+    if (!hasPdfPageRendered && canvasRef.current && pageContainerRef.current) {
       console.log("Try to initialize page", pageInfo);
       const initializePage = async () => {
         try {
-          if (containerRef.current && canvasRef.current) {
+          if (pageContainerRef.current && canvasRef.current) {
             console.log("\tSetup the renderer...");
             canvasRef.current.width = 800;
             pageInfo.bounds = getPageBoundsFromCanvas(canvasRef.current);
@@ -165,11 +170,7 @@ export const PDFPage = ({
               );
             }
 
-            annotationRefs.registerRef(
-              "page",
-              pageInfo.page.pageNumber - 1,
-              canvasRef
-            );
+            registerRef("page", canvasRef, pageInfo.page.pageNumber - 1);
 
             setPdfPageRendered(true);
           }
@@ -180,7 +181,7 @@ export const PDFPage = ({
       initializePage();
 
       return () => {
-        annotationRefs.unregisterRef("page", pageInfo.page.pageNumber - 1);
+        unregisterRef("page", pageInfo.page.pageNumber - 1);
         if (scrollContainerRef && scrollContainerRef.current) {
           scrollContainerRef.current.removeEventListener(
             "resize",
@@ -191,7 +192,7 @@ export const PDFPage = ({
     } else if (
       hasPdfPageRendered &&
       canvasRef.current &&
-      containerRef.current
+      pageContainerRef.current
     ) {
       console.log("Page has rendered and Zoom level changed");
 
@@ -218,12 +219,21 @@ export const PDFPage = ({
     scrollContainerRef,
     pdfPageInfoObjs,
     setPdfPageInfoObjs,
-    annotationRefs,
+    registerRef,
+    unregisterRef,
   ]);
 
   useEffect(() => {
     pageInfo.scale = zoomLevel;
   }, [zoomLevel, pageInfo]);
+
+  // Register and unregister the page container ref
+  useEffect(() => {
+    registerRef("pdfPageContainer", pageContainerRef, pageInfo.page.pageNumber);
+    return () => {
+      unregisterRef("pdfPageContainer", pageInfo.page.pageNumber);
+    };
+  }, [registerRef, unregisterRef, pageInfo.page.pageNumber]);
 
   /**
    * Scrolls to the selected annotation when there is exactly one selected.
@@ -231,21 +241,15 @@ export const PDFPage = ({
   useLayoutEffect(() => {
     if (selectedAnnotations.length === 1) {
       const selectedId = selectedAnnotations[0];
-      annotationRefs.selectionElementRefs.current[selectedId]?.scrollIntoView();
+      annotationElementRefs.current[selectedId]?.scrollIntoView();
     }
-  }, [selectedAnnotations, annotationRefs.selectionElementRefs]);
+  }, [selectedAnnotations, annotationElementRefs]);
 
   useEffect(() => {
     if (hasPdfPageRendered && selectedAnnotations.length === 1) {
-      annotationRefs.selectionElementRefs.current[
-        selectedAnnotations[0]
-      ]?.scrollIntoView();
+      annotationElementRefs.current[selectedAnnotations[0]]?.scrollIntoView();
     }
-  }, [
-    hasPdfPageRendered,
-    selectedAnnotations,
-    annotationRefs.selectionElementRefs,
-  ]);
+  }, [hasPdfPageRendered, selectedAnnotations, annotationElementRefs]);
 
   const annots_to_render = useMemo(() => {
     const defined_annotations = annotations
@@ -279,7 +283,6 @@ export const PDFPage = ({
         key={annotation.id}
         selected={selectedAnnotations.includes(annotation.id)}
         scrollIntoView={selectedAnnotations.includes(annotation.id)}
-        selectionRef={annotationRefs.selectionElementRefs}
         pageInfo={pageInfo}
         annotation={annotation}
         setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
@@ -299,7 +302,7 @@ export const PDFPage = ({
   return (
     <PageAnnotationsContainer
       className="PageAnnotationsContainer"
-      ref={containerRef}
+      ref={pageContainerRef}
       style={{ position: "relative" }}
     >
       <PageCanvas
@@ -320,7 +323,6 @@ export const PDFPage = ({
             <SearchResult
               key={token_index}
               total_results={searchResults.length}
-              selectionRef={annotationRefs.searchResultElementRefs}
               showBoundingBox={true}
               hidden={token_index !== selectedSearchResultIndex}
               pageInfo={pageInfo}

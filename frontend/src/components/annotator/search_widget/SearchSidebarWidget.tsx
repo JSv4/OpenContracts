@@ -106,14 +106,14 @@ export const SearchSidebarWidget: React.FC = () => {
 
   useEffect(() => {
     const currentRef =
-      annotationRefs.searchResultElementRefs.current[selectedSearchResultIndex];
+      annotationRefs.textSearchElementRefs.current[selectedSearchResultIndex];
     if (currentRef) {
       currentRef?.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
     }
-  }, [selectedSearchResultIndex, annotationRefs.searchResultElementRefs]);
+  }, [selectedSearchResultIndex, annotationRefs.textSearchElementRefs]);
 
   const onResultClick = (index: number) => {
     setSelectedSearchResultIndex(index);

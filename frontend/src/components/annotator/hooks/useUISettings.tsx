@@ -5,7 +5,9 @@ import {
   useQueryLoadingStates,
   useQueryErrors,
   useInitializeUISettingsAtoms,
+  useAdditionalUIStates,
 } from "../context/UISettingsAtom";
+import { useCallback, useMemo } from "react";
 
 interface UseUISettingsProps {
   /**
@@ -28,15 +30,15 @@ interface UseUISettingsProps {
  * @returns UI settings and control functions.
  */
 export function useUISettings(props?: UseUISettingsProps) {
-  // Initialize UI settings atoms if needed
-  if (props) {
-    const { sidebarVisible, onSidebarToggle, width } = props;
-    useInitializeUISettingsAtoms({
-      sidebarVisible,
-      onSidebarToggle,
-      initialWidth: width,
-    });
-  }
+  // Destructure props with default values
+  const { sidebarVisible, onSidebarToggle, width } = props ?? {};
+
+  // Initialize UI settings atoms unconditionally
+  useInitializeUISettingsAtoms({
+    sidebarVisible,
+    onSidebarToggle,
+    initialWidth: width,
+  });
 
   // Zoom controls
   const { zoomLevel, setZoomLevel, zoomIn, zoomOut, resetZoom } =
@@ -48,8 +50,13 @@ export function useUISettings(props?: UseUISettingsProps) {
     setSidebarVisible,
     sidebarWidth,
     setSidebarWidth,
-    toggleSidebar,
+    toggleSidebar: originalToggleSidebar,
   } = useSidebar();
+
+  // Memoize toggleSidebar
+  const toggleSidebar = useCallback(() => {
+    originalToggleSidebar();
+  }, [originalToggleSidebar]);
 
   // Progress state
   const { progress, setProgress } = useProgress();
@@ -58,29 +65,88 @@ export function useUISettings(props?: UseUISettingsProps) {
   const { queryLoadingStates, setQueryLoadingStates } = useQueryLoadingStates();
   const { queryErrors, setQueryErrors } = useQueryErrors();
 
-  return {
-    // Zoom controls
-    zoomLevel,
-    setZoomLevel,
-    zoomIn,
-    zoomOut,
-    resetZoom,
+  // Additional UI states
+  const {
+    modalOpen,
+    setModalOpen,
+    readOnly,
+    setReadOnly,
+    loadingMessage,
+    setLoadingMessage,
+    shiftDown,
+    setShiftDown,
+    hasScrolledToAnnotation,
+    setHasScrolledToAnnotation,
+  } = useAdditionalUIStates();
 
-    // Sidebar controls
-    isSidebarVisible,
-    setSidebarVisible,
-    sidebarWidth,
-    setSidebarWidth,
-    toggleSidebar,
+  // Memoize the returned object
+  const uiSettings = useMemo(
+    () => ({
+      // Zoom controls
+      zoomLevel,
+      setZoomLevel,
+      zoomIn,
+      zoomOut,
+      resetZoom,
 
-    // Progress state
-    progress,
-    setProgress,
+      // Sidebar controls
+      isSidebarVisible,
+      setSidebarVisible,
+      sidebarWidth,
+      setSidebarWidth,
+      toggleSidebar,
 
-    // Query loading states and errors
-    queryLoadingStates,
-    setQueryLoadingStates,
-    queryErrors,
-    setQueryErrors,
-  };
+      // Progress state
+      progress,
+      setProgress,
+
+      // Query loading states and errors
+      queryLoadingStates,
+      setQueryLoadingStates,
+      queryErrors,
+      setQueryErrors,
+
+      // Additional UI states
+      modalOpen,
+      setModalOpen,
+      readOnly,
+      setReadOnly,
+      loadingMessage,
+      setLoadingMessage,
+      shiftDown,
+      setShiftDown,
+      hasScrolledToAnnotation,
+      setHasScrolledToAnnotation,
+    }),
+    [
+      zoomLevel,
+      setZoomLevel,
+      zoomIn,
+      zoomOut,
+      resetZoom,
+      isSidebarVisible,
+      setSidebarVisible,
+      sidebarWidth,
+      setSidebarWidth,
+      toggleSidebar,
+      progress,
+      setProgress,
+      queryLoadingStates,
+      setQueryLoadingStates,
+      queryErrors,
+      setQueryErrors,
+      modalOpen,
+      setModalOpen,
+      readOnly,
+      setReadOnly,
+      loadingMessage,
+      setLoadingMessage,
+      shiftDown,
+      setShiftDown,
+      hasScrolledToAnnotation,
+      setHasScrolledToAnnotation,
+    ]
+  );
+
+  return uiSettings;
 }

@@ -40,6 +40,10 @@ export const zoomLevelAtom = atom<number>(1);
 export const isSidebarVisibleAtom = atom<boolean>(true);
 export const sidebarWidthAtom = atom<number>(300);
 export const progressAtom = atom<number>(0);
+export const modalOpenAtom = atom<boolean>(false);
+export const readOnlyAtom = atom<boolean>(false);
+export const loadingMessageAtom = atom<string>("");
+export const shiftDownAtom = atom<boolean>(false);
 
 /**
  * Query State Atoms
@@ -74,6 +78,11 @@ export const hideLabelsAtom = atom<boolean>(false);
  * Atom for onSidebarToggle callback.
  */
 export const onSidebarToggleAtom = atom<(() => void) | undefined>(undefined);
+
+/**
+ * Atom to track if we've scrolled to a specific annotation
+ */
+export const hasScrolledToAnnotationAtom = atom<string | null>(null);
 
 /**
  * Hook to initialize UI settings atoms with initial values.
@@ -303,5 +312,32 @@ export function useAnnotationSelection() {
     setSelectedRelations,
     hoveredAnnotationId,
     setHoveredAnnotationId,
+  };
+}
+
+/**
+ * Custom hook for managing modal, readonly, loading message, and keyboard states
+ * @returns Object containing additional UI states and their setters
+ */
+export function useAdditionalUIStates() {
+  const [modalOpen, setModalOpen] = useAtom(modalOpenAtom);
+  const [readOnly, setReadOnly] = useAtom(readOnlyAtom);
+  const [loadingMessage, setLoadingMessage] = useAtom(loadingMessageAtom);
+  const [shiftDown, setShiftDown] = useAtom(shiftDownAtom);
+  const [hasScrolledToAnnotation, setHasScrolledToAnnotation] = useAtom(
+    hasScrolledToAnnotationAtom
+  );
+
+  return {
+    modalOpen,
+    setModalOpen,
+    readOnly,
+    setReadOnly,
+    loadingMessage,
+    setLoadingMessage,
+    shiftDown,
+    setShiftDown,
+    hasScrolledToAnnotation,
+    setHasScrolledToAnnotation,
   };
 }

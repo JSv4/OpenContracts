@@ -8,7 +8,6 @@ import {
   SinglePageAnnotationJson,
   TextSearchSpanResult,
   TokenId,
-  ViewState,
 } from "../../../types";
 import {
   AnalysisType,
@@ -49,15 +48,24 @@ import {
   ServerTokenAnnotation,
 } from "../../types/annotations";
 import { PDFPageInfo } from "../../types/pdf";
-import { useDocumentType, useSelectedCorpus } from "../../context/DocumentAtom";
+import { useDocumentType } from "../../context/DocumentAtom";
 import { useAnnotationControls } from "../../context/UISettingsAtom";
-import { getPermissions } from "../../../../utils/transform";
 import { LabelSelector } from "../../labels/label_selector/LabelSelector";
 import {
   useHumanSpanLabels,
   useHumanTokenLabels,
 } from "../../context/CorpusAtom";
 import { DocTypeLabelDisplay } from "../../labels/doc_types/DocTypeLabelDisplay";
+import { useUISettings } from "../../hooks/useUISettings";
+import {
+  useApproveAnnotation,
+  useCreateAnnotation,
+  useCreateRelationship,
+  useDeleteAnnotation,
+  useRejectAnnotation,
+  useUpdateAnnotation,
+} from "../../hooks/AnnotationHooks";
+import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -141,10 +149,6 @@ const PDFActionBarWrapper = styled.div`
 export const DocumentViewer = ({
   doc_permissions,
   corpus_permissions,
-  read_only,
-  view_document_only: boolean,
-  data_loading,
-  loading_message,
   selected_corpus,
   selected_document,
   analyses,
@@ -153,49 +157,28 @@ export const DocumentViewer = ({
   columns,
   selected_analysis,
   selected_extract,
+  scrollToAnnotation,
   editMode,
   allowInput,
-  approveAnnotation,
-  rejectAnnotation,
   setAllowInput,
   setEditMode,
   onSelectAnalysis,
   onSelectExtract,
-  createAnnotation,
-  updateAnnotation,
-  createRelation,
-  deleteAnnotation,
-  containerRef,
-  containerRefCallback,
   pdfAnnotations,
   scroll_to_annotation_on_open,
-  setJumpedToAnnotationOnLoad,
   show_structural_annotations,
   page_token_text_maps,
   doc_text,
   doc,
   pages,
-  zoom_level,
-  setZoomLevel,
-  humanSpanLabelChoices,
   spanLabels,
-  relationLabels,
-  docTypeLabels,
-  shiftDown,
-  setViewState,
 }: {
   doc_permissions: PermissionTypes[];
   corpus_permissions: PermissionTypes[];
-  read_only: boolean;
-  view_document_only: boolean;
-  data_loading?: boolean;
-  loading_message?: string;
   selected_corpus?: CorpusType | null;
   selected_document: DocumentType | null;
   editMode: "ANNOTATE" | "ANALYZE";
   allowInput: boolean;
-  zoom_level: number;
-  setZoomLevel: (zl: number) => void;
   setEditMode: (m: "ANNOTATE" | "ANALYZE") => void | undefined | null;
   setAllowInput: (v: boolean) => void | undefined | null;
   analyses: AnalysisType[];
@@ -204,49 +187,27 @@ export const DocumentViewer = ({
   columns: ColumnType[];
   selected_analysis: AnalysisType | null | undefined;
   selected_extract: ExtractType | null | undefined;
+  scrollToAnnotation?: ServerTokenAnnotation | ServerSpanAnnotation;
   onSelectAnalysis: (analysis: AnalysisType | null) => undefined | null | void;
   onSelectExtract: (extract: ExtractType | null) => undefined | null | void;
-  createAnnotation: (added_annotation_obj: ServerTokenAnnotation) => void;
-  updateAnnotation: (updated_annotation: ServerTokenAnnotation) => void;
-  approveAnnotation: (annot_id: string, comment?: string) => void;
-  rejectAnnotation: (annot_id: string, comment?: string) => void;
-  deleteAnnotation: (annotation_id: string) => void;
-  createRelation: (relation: RelationGroup) => void;
-  containerRefCallback: (containerDivElement: HTMLDivElement | null) => void;
-  containerRef: React.MutableRefObject<HTMLDivElement | null>;
   pdfAnnotations: PdfAnnotations;
   scroll_to_annotation_on_open: ServerTokenAnnotation | null | undefined;
-  setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
   show_structural_annotations: boolean;
   page_token_text_maps: Record<number, TokenId>;
   doc_text: string;
   doc: PDFDocumentProxy | undefined;
   pages: PDFPageInfo[];
-  humanSpanLabelChoices: AnnotationLabelType[];
   spanLabels: AnnotationLabelType[];
-  relationLabels: AnnotationLabelType[];
-  docTypeLabels: AnnotationLabelType[];
-  shiftDown: boolean;
-  setViewState: (v: ViewState) => void;
 }) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
-  const [hideSidebar, setHideSidebar] = useState<boolean>(false);
-  const [scrollContainerRef, setScrollContainerRef] =
-    useState<React.RefObject<HTMLDivElement>>();
+  // TODO - replace this with useAnnotationRefs
   const [textSearchMatches, setTextSearchMatches] =
     useState<(TextSearchTokenResult | TextSearchSpanResult)[]>();
   const [searchText, setSearchText] = useState<string>();
   const [selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex] =
     useState<number>(0);
-
-  // Access corpus permissions
-  const { selectedCorpus } = useSelectedCorpus();
-  const corpusRawPermissions = selectedCorpus
-    ? selectedCorpus.myPermissions ?? []
-    : ["READ"];
-  const corpusPermissions = getPermissions(corpusRawPermissions);
 
   // Access annotation controls
   const annotationControls = useAnnotationControls();
@@ -255,8 +216,110 @@ export const DocumentViewer = ({
   const { humanTokenLabels } = useHumanTokenLabels();
   const { activeSpanLabel, setActiveSpanLabel } = annotationControls;
 
-  const handleZoomIn = () => setZoomLevel(Math.min(zoom_level + 0.1, 4));
-  const handleZoomOut = () => setZoomLevel(Math.max(zoom_level - 0.1, 0.5));
+  const {
+    isSidebarVisible,
+    readOnly,
+    shiftDown,
+    zoomLevel,
+    setZoomLevel,
+    setShiftDown,
+    hasScrolledToAnnotation,
+    setHasScrolledToAnnotation,
+  } = useUISettings();
+
+  const handleCreateAnnotation = useCreateAnnotation();
+  const handleDeleteAnnotation = useDeleteAnnotation();
+  const handleUpdateAnnotation = useUpdateAnnotation();
+  const handleApproveAnnotation = useApproveAnnotation();
+  const handleRejectAnnotation = useRejectAnnotation();
+  const handleCreateRelationship = useCreateRelationship();
+
+  const { scrollContainerRef, annotationElementRefs, registerRef } =
+    useAnnotationRefs();
+
+  const containerRefCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      console.log("Started Annotation Renderer");
+      if (node !== null) {
+        scrollContainerRef.current = node;
+        registerRef("scrollContainer", scrollContainerRef);
+      }
+    },
+    [scrollContainerRef, registerRef]
+  );
+
+  const handleKeyUpPress = useCallback(
+    (event: { keyCode: any }) => {
+      const { keyCode } = event;
+      if (keyCode === 16) {
+        //console.log("Shift released");
+        setShiftDown(false);
+      }
+    },
+    [setShiftDown]
+  );
+
+  const handleKeyDownPress = useCallback(
+    (event: { keyCode: any }) => {
+      const { keyCode } = event;
+      if (keyCode === 16) {
+        //console.log("Shift depressed")
+        setShiftDown(true);
+      }
+    },
+    [setShiftDown]
+  );
+
+  // Handle scrolling to annotation
+  useEffect(() => {
+    if (
+      scrollToAnnotation &&
+      !hasScrolledToAnnotation &&
+      annotationElementRefs.current[scrollToAnnotation.id]
+    ) {
+      annotationElementRefs.current[scrollToAnnotation.id]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      setHasScrolledToAnnotation(scrollToAnnotation.id);
+    }
+  }, [scrollToAnnotation, hasScrolledToAnnotation, setHasScrolledToAnnotation]);
+
+  // Reset scroll state when scrollToAnnotation changes
+  useEffect(() => {
+    setHasScrolledToAnnotation(null);
+  }, [scrollToAnnotation]);
+
+  useEffect(() => {
+    window.addEventListener("keyup", handleKeyUpPress);
+    window.addEventListener("keydown", handleKeyDownPress);
+    return () => {
+      window.removeEventListener("keyup", handleKeyUpPress);
+      window.removeEventListener("keydown", handleKeyDownPress);
+    };
+  }, [handleKeyUpPress, handleKeyDownPress]);
+
+  // Update the scroll to annotation effect to use the new refs
+  useEffect(() => {
+    if (
+      scroll_to_annotation_on_open &&
+      !hasScrolledToAnnotation &&
+      annotationElementRefs.current[scroll_to_annotation_on_open.id]
+    ) {
+      annotationElementRefs.current[
+        scroll_to_annotation_on_open.id
+      ]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      setHasScrolledToAnnotation(scroll_to_annotation_on_open.id);
+    }
+  }, [
+    scroll_to_annotation_on_open,
+    hasScrolledToAnnotation,
+    annotationElementRefs.current,
+  ]);
 
   const [selectedAnnotations, setSelectedAnnotations] = useState<string[]>(
     scroll_to_annotation_on_open ? [scroll_to_annotation_on_open.id] : []
@@ -275,14 +338,12 @@ export const DocumentViewer = ({
   const [spanLabelsToView, setSpanLabelsToView] = useState<
     AnnotationLabelType[] | null
   >(null);
-  const [activeRelationLabel, setActiveRelationLabel] =
-    useState<AnnotationLabelType>(relationLabels[0]);
   const [relationModalVisible, setRelationModalVisible] =
     useState<boolean>(false);
 
   // We optionally hidesidebar where width < 1000 px OR we have annotation state hideSidebar flipped to false (which can happen in a number of places, including in sidebar)
-  const banish_sidebar = hideSidebar || width <= 1000;
-  const responsive_sidebar_width = hideSidebar ? "0px" : "400px";
+  const banish_sidebar = !isSidebarVisible || width <= 1000;
+  const responsive_sidebar_width = !isSidebarVisible ? "0px" : "400px";
 
   // TODO - These are dummy placeholders
   let actionBarItems = [
@@ -303,31 +364,6 @@ export const DocumentViewer = ({
       },
     ];
   }
-
-  const addSpanLabelsToViewSelection = (ls: AnnotationLabelType[]) => {
-    if (spanLabelsToView) {
-      setSpanLabelsToView([...spanLabelsToView, ...ls]);
-    } else {
-      setSpanLabelsToView(ls);
-    }
-  };
-
-  const clearSpanLabelsToView = () => {
-    setSpanLabelsToView([]);
-  };
-
-  const removeSpanLabelsToViewSelection = (
-    labelsToRemove: AnnotationLabelType[]
-  ) => {
-    setSpanLabelsToView((prevData) => {
-      if (prevData) {
-        return [...prevData].filter((viewingLabel) =>
-          labelsToRemove.map((l) => l.id).includes(viewingLabel.id)
-        );
-      }
-      return null;
-    });
-  };
 
   // Search for text when search text changes.
   useEffect(() => {
@@ -490,29 +526,6 @@ export const DocumentViewer = ({
     setSelectedTextSearchMatchIndex(0);
   }, [searchText]);
 
-  // React's Error Boundaries don't work for us because a lot of work is done by pdfjs in
-  // a background task (a web worker). We instead setup a top level error handler that's
-  // passed around as needed so we can display a nice error to the user when something
-  // goes wrong.
-  //
-  // We have to use the `useCallback` hook here so that equality checks in child components
-  // don't trigger unintentional rerenders.
-  const onError = useCallback(
-    (err: Error) => {
-      console.error("Unexpected Error rendering PDF", err);
-      setViewState(ViewState.ERROR);
-    },
-    [setViewState]
-  );
-
-  // Set scroll container ref on load
-  useEffect(() => {
-    if (containerRef) {
-      setScrollContainerRef(containerRef);
-    }
-    return () => setScrollContainerRef(undefined);
-  }, [containerRef]);
-
   // Listen for change in shift key and clear selections or triggered annotation creation as needed
   useEffect(() => {
     // If user released the shift key...
@@ -556,14 +569,9 @@ export const DocumentViewer = ({
     }
   };
 
-  // TODO - need to figure out why this should be retained
-  const onUpdatePdfAnnotations = (new_store: PdfAnnotations) => {
-    console.log("onUpdatePdfAnnotations triggered...");
-  };
-
   const onRelationModalOk = (group: RelationGroup) => {
     // TODO - hook into this to sync local relationship changes to server
-    createRelation(group);
+    handleCreateRelationship(group);
     setRelationModalVisible(false);
     setSelectedAnnotations([]);
   };
@@ -633,7 +641,7 @@ export const DocumentViewer = ({
       // when user hits SHIFT + click to select text.
       setSelection(undefined);
       setMultiSelections([]);
-      createAnnotation(
+      handleCreateAnnotation(
         new ServerTokenAnnotation(
           firstPage,
           activeSpanLabel,
@@ -684,11 +692,10 @@ export const DocumentViewer = ({
       case "application/pdf":
         view_components = (
           <PDF
-            read_only={read_only}
+            read_only={readOnly}
             corpus_permissions={corpus_permissions}
             doc_permissions={doc_permissions}
-            shiftDown={shiftDown}
-            setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
+            setJumpedToAnnotationOnLoad={setHasScrolledToAnnotation}
           />
         );
         break;
@@ -711,14 +718,14 @@ export const DocumentViewer = ({
             visibleLabels={spanLabelsToView}
             availableLabels={spanLabels}
             selectedLabelTypeId={activeSpanLabel?.id ?? null}
-            read_only={read_only}
+            read_only={readOnly}
             allowInput={allowInput}
-            zoom_level={zoom_level}
-            createAnnotation={createAnnotation}
-            updateAnnotation={updateAnnotation}
-            approveAnnotation={approveAnnotation}
-            rejectAnnotation={rejectAnnotation}
-            deleteAnnotation={deleteAnnotation}
+            zoom_level={zoomLevel}
+            createAnnotation={handleCreateAnnotation}
+            updateAnnotation={handleUpdateAnnotation}
+            approveAnnotation={handleApproveAnnotation}
+            rejectAnnotation={handleRejectAnnotation}
+            deleteAnnotation={handleDeleteAnnotation}
             maxHeight="100%"
             maxWidth="100%"
             selectedAnnotations={selectedAnnotations}
@@ -739,10 +746,9 @@ export const DocumentViewer = ({
     return (
       <ViewerLayout>
         {!banish_sidebar && (
-          // <SidebarContainer width={responsive_sidebar_width}>
           <FixedSidebar width={responsive_sidebar_width}>
             <AnnotatorSidebar
-              read_only={read_only}
+              read_only={readOnly}
               selected_analysis={selected_analysis}
               selected_extract={selected_extract}
               selected_corpus={selected_corpus}
@@ -754,7 +760,6 @@ export const DocumentViewer = ({
               setAllowInput={setAllowInput}
             />
           </FixedSidebar>
-          // </SidebarContainer>
         )}
 
         <ContentLayout
@@ -775,9 +780,9 @@ export const DocumentViewer = ({
           <MainContent>
             <PDFActionBarWrapper>
               <PDFActionBar
-                zoom={zoom_level}
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
+                zoom={zoomLevel}
+                onZoomIn={() => setZoomLevel(Math.min(zoomLevel + 0.1, 4))}
+                onZoomOut={() => setZoomLevel(Math.min(zoomLevel - 0.1, 4))}
                 actionItems={actionBarItems}
               />
             </PDFActionBarWrapper>
@@ -807,7 +812,7 @@ export const DocumentViewer = ({
                   read_only={
                     Boolean(selected_analysis) ||
                     Boolean(selected_extract) ||
-                    read_only ||
+                    readOnly ||
                     !corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
                   }
                 />

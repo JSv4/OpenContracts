@@ -120,7 +120,7 @@ const SelectionLayer = ({
         console.log("onMouseUp - localPageSelection", localPageSelection);
       }
     },
-    [localPageSelection, pageNumber, handleCreateMultiPageAnnotation]
+    [localPageSelection, pageNumber, handleCreateMultiPageAnnotation, pageInfo]
   );
 
   /**
@@ -162,6 +162,7 @@ const SelectionLayer = ({
       corpus_permissions,
       localPageSelection,
       pageNumber,
+      pageInfo,
     ]
   );
 
@@ -186,7 +187,7 @@ const SelectionLayer = ({
         });
       }
     },
-    [containerRef, localPageSelection, pageNumber]
+    [containerRef, localPageSelection, pageNumber, pageInfo]
   );
 
   /**
@@ -194,6 +195,7 @@ const SelectionLayer = ({
    */
   const convertBoundsToSelections = useCallback(
     (selection: BoundingBox, activeLabel: AnnotationLabelType): JSX.Element => {
+      console.log("PageInfo", pageInfo);
       const annotation = pageInfo.getAnnotationForBounds(
         normalizeBounds(selection),
         activeLabel
@@ -216,7 +218,7 @@ const SelectionLayer = ({
         </>
       );
     },
-    [pageInfo, activeSpanLabel]
+    [pageInfo, activeSpanLabel, pageInfo]
   );
 
   const pageQueuedSelections = multiSelections[pageNumber]

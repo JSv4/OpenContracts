@@ -236,8 +236,8 @@ export interface PageProps {
   corpus_permissions: PermissionTypes[];
   read_only: boolean;
   onError: (_err: Error) => void;
-  setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
 }
+
 export const label_display_options = [
   { key: 1, text: "Always Show", value: LabelDisplayBehavior.ALWAYS },
   { key: 2, text: "Always Hide", value: LabelDisplayBehavior.HIDE },

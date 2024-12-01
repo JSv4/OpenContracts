@@ -65,12 +65,10 @@ export const PDF = ({
   doc_permissions,
   corpus_permissions,
   read_only,
-  setJumpedToAnnotationOnLoad,
 }: {
   doc_permissions: PermissionTypes[];
   corpus_permissions: PermissionTypes[];
   read_only: boolean;
-  setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
 }) => {
   const { pdfDoc: doc } = usePdfDoc();
   const { pages } = usePages();
@@ -99,7 +97,6 @@ export const PDF = ({
             corpus_permissions={corpus_permissions}
             pageInfo={p}
             onError={setViewStateError}
-            setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
           />
         );
       })}

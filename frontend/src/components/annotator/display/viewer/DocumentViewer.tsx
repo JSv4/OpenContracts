@@ -679,9 +679,6 @@ export const DocumentViewer = ({
             read_only={readOnly}
             corpus_permissions={corpus_permissions}
             doc_permissions={doc_permissions}
-            setJumpedToAnnotationOnLoad={() => {
-              hasScrolledToAnnotation.current = true;
-            }}
           />
         );
         break;

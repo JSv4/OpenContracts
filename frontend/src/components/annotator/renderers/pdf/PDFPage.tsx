@@ -23,6 +23,7 @@ import {
 } from "../../context/UISettingsAtom";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 import SelectionLayer from "./SelectionLayer";
+import { PDFPageInfo } from "../../types/pdf";
 
 /**
  * PDFPage Component
@@ -37,7 +38,6 @@ export const PDFPage = ({
   corpus_permissions,
   read_only,
   onError,
-  setJumpedToAnnotationOnLoad,
 }: PageProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<PDFPageRenderer | null>(null);
@@ -45,7 +45,13 @@ export const PDFPage = ({
   const { pdfAnnotations } = usePdfAnnotations();
   const createAnnotation = useCreateAnnotation();
 
-  const [pageBounds, setPageBounds] = useState<BoundingBox | null>(null);
+  const pageViewport = pageInfo.page.getViewport({ scale: 1 });
+  const [pageBounds, setPageBounds] = useState<BoundingBox>({
+    left: 0,
+    top: 0,
+    right: pageViewport.width,
+    bottom: pageViewport.height,
+  });
   const [hasPdfPageRendered, setPdfPageRendered] = useState(false);
 
   const { showStructural } = useAnnotationDisplay();
@@ -68,8 +74,13 @@ export const PDFPage = ({
   const { spanLabelsToView, activeSpanLabel } = annotationControls;
 
   const updatedPageInfo = useMemo(() => {
-    return pageInfo.withScale(zoomLevel);
-  }, [pageInfo, zoomLevel]);
+    return new PDFPageInfo(
+      pageInfo.page,
+      pageInfo.tokens,
+      zoomLevel,
+      pageBounds
+    );
+  }, [pageInfo.page, pageInfo.tokens, zoomLevel, pageBounds]);
 
   /**
    * Handles resizing of the PDF page canvas.
@@ -89,14 +100,6 @@ export const PDFPage = ({
       // Update canvas dimensions
       canvasRef.current.width = viewport.width;
       canvasRef.current.height = viewport.height;
-
-      // Update page bounds
-      setPageBounds({
-        left: 0,
-        top: 0,
-        right: viewport.width,
-        bottom: viewport.height,
-      });
 
       // Re-render the page
       rendererRef.current.rescaleAndRender(zoomLevel);

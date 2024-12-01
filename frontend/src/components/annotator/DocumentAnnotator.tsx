@@ -1,5 +1,5 @@
 import { useLazyQuery, useReactiveVar } from "@apollo/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useLayoutEffect } from "react";
 import { useSetAtom, useAtom } from "jotai";
 // import pdfjsLib from "pdfjs-dist";
 import {
@@ -164,7 +164,7 @@ export const DocumentAnnotator = ({
     setShowBoundingBoxes,
   } = useAnnotationDisplay();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setShowSelectedOnly(show_selected_annotation_only);
   }, [show_selected_annotation_only, setShowSelectedOnly]);
 

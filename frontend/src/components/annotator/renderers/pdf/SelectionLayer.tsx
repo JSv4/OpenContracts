@@ -201,9 +201,11 @@ const SelectionLayer = ({
 
       const tokens = annotation && annotation.tokens ? annotation.tokens : null;
 
+      // TODO - ensure we WANT random UUID
       return (
         <>
           <SelectionBoundary
+            id={crypto.randomUUID()}
             showBoundingBox
             hidden={false}
             color={activeSpanLabel?.color ? activeSpanLabel.color : ""}

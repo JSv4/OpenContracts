@@ -1,11 +1,10 @@
-// Start of Selection
-import React, { useState } from "react";
+import React, { forwardRef } from "react";
 import {
-  Button,
   Form,
   Dropdown,
   Popup,
   InputOnChangeData,
+  Icon,
 } from "semantic-ui-react";
 import styled from "styled-components";
 
@@ -25,7 +24,7 @@ export interface DropdownActionProps {
  */
 interface CreateAndSearchBarProps {
   actions: DropdownActionProps[];
-  filters?: JSX.Element | JSX.Element[];
+  filters?: JSX.Element;
   placeholder?: string;
   value?: string;
   onChange?: (search_string: string) => any | void;
@@ -44,8 +43,6 @@ export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
   value = "",
   onChange,
 }) => {
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-
   const actionItems = actions.map((action) => (
     <Dropdown.Item
       icon={action.icon}
@@ -82,17 +79,12 @@ export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
         {filters && (
           <Popup
             trigger={
-              <StyledButton
-                icon="filter"
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                aria-label="Filter"
-              />
+              <StyledButton aria-label="Filter">
+                <Icon name="filter" />
+              </StyledButton>
             }
             content={<FilterPopoverContent>{filters}</FilterPopoverContent>}
             on="click"
-            open={isFilterOpen}
-            onClose={() => setIsFilterOpen(false)}
-            onOpen={() => setIsFilterOpen(true)}
             position="bottom right"
             pinned
           />
@@ -100,7 +92,15 @@ export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
 
         {actions.length > 0 && (
           <StyledButtonGroup>
-            <Dropdown button className="icon" trigger={<Button icon="plus" />}>
+            <Dropdown
+              button
+              className="icon"
+              trigger={
+                <StyledButton aria-label="Add">
+                  <Icon name="plus" />
+                </StyledButton>
+              }
+            >
               <Dropdown.Menu>{actionItems}</Dropdown.Menu>
             </Dropdown>
           </StyledButtonGroup>
@@ -109,6 +109,80 @@ export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
     </SearchBarContainer>
   );
 };
+
+/**
+ * Styled button that forwards refs properly and uses a native button element.
+ *
+ * @param {React.ButtonHTMLAttributes<HTMLButtonElement>} props - Button properties.
+ * @param {React.Ref<HTMLButtonElement>} ref - Reference to the button element.
+ * @returns {JSX.Element} The styled button component.
+ */
+const StyledButton = styled(
+  forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
+    (props, ref) => (
+      <button {...props} ref={ref}>
+        {props.children}
+      </button>
+    )
+  )
+)`
+  /* Reset button styles */
+  appearance: none;
+  border: none;
+  cursor: pointer;
+
+  /* Base styles */
+  background: var(--primary-color, #2185d0);
+  color: white;
+  padding: 0.8em;
+  min-width: 2.5em;
+  height: 2.5em;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+
+  /* Flexbox for icon alignment */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Smooth transitions */
+  transition: all 0.2s ease-in-out;
+
+  /* Icon styling */
+  i.icon {
+    margin: 0 !important;
+    font-size: 1em;
+    height: auto;
+    width: auto;
+  }
+
+  /* Hover state */
+  &:hover {
+    background: var(--primary-hover, #1678c2);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Active state */
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Focus state */
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(33, 133, 208, 0.2);
+  }
+
+  /* Disabled state */
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #cccccc;
+  }
+`;
 
 /**
  * Container for the search bar, removing the blue tint and applying a neutral background.
@@ -157,35 +231,11 @@ const ActionsWrapper = styled.div`
 `;
 
 /**
- * Styled button for the filter, ensuring a consistent size and appearance.
- */
-const StyledButton = styled(Button)`
-  border-radius: 20px;
-  background: #333;
-  color: white;
-  transition: background 0.3s ease;
-  padding: 0.5rem;
-
-  &:hover {
-    background: #555;
-  }
-`;
-
-/**
  * Styled button group removing unnecessary styling to ensure sane sizing.
  */
-const StyledButtonGroup = styled(Button.Group)`
-  .ui.button {
-    border-radius: 4px;
-    padding: 0.5rem 1rem;
-    background: #28a745;
-    color: white;
-    transition: background 0.3s ease;
-
-    &:hover {
-      background: #218838;
-    }
-  }
+const StyledButtonGroup = styled.div`
+  display: flex;
+  align-items: center;
 `;
 
 /**

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { DocumentViewer } from "../viewer";
 import {
   AnalysisType,
@@ -96,6 +96,10 @@ export const AnnotatorRenderer = ({
 
   const { spanLabels: span_label_lookup } = useSpanLabels();
   const { pdfAnnotations } = usePdfAnnotations();
+
+  useEffect(() => {
+    console.log("scrollToAnnotation", scrollToAnnotation);
+  }, [scrollToAnnotation]);
 
   return (
     <DocumentViewer

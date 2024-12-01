@@ -7,9 +7,10 @@ import {
 } from "../../../../utils/transform";
 import { pulseGreen, pulseMaroon } from "../effects";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
+import { useUISettings } from "../../hooks/useUISettings";
 
 interface SelectionBoundaryProps {
-  id?: string;
+  id: string;
   hidden: boolean;
   showBoundingBox?: boolean;
   scrollIntoView?: boolean;
@@ -89,6 +90,9 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
   const { registerRef, unregisterRef } = useAnnotationRefs();
   const boundaryRef = useRef<HTMLSpanElement | null>(null);
 
+  const { hasScrolledToAnnotation, setHasScrolledToAnnotation } =
+    useUISettings();
+
   useEffect(() => {
     if (id) {
       registerRef("annotation", boundaryRef, id);
@@ -97,18 +101,6 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
       };
     }
   }, [id, registerRef, unregisterRef]);
-
-  useEffect(() => {
-    if (scrollIntoView && boundaryRef.current) {
-      boundaryRef.current.scrollIntoView({
-        behavior: "auto",
-        block: "center",
-      });
-      if (setJumpedToAnnotationOnLoad && id) {
-        setJumpedToAnnotationOnLoad(id);
-      }
-    }
-  }, [scrollIntoView, setJumpedToAnnotationOnLoad, id]);
 
   const width = bounds.right - bounds.left;
   const height = bounds.bottom - bounds.top;

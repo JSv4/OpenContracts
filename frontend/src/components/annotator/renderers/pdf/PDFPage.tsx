@@ -60,12 +60,8 @@ export const PDFPage = ({
   const { zoomLevel } = useZoomLevel();
   const { selectedAnnotations } = useAnnotationSelection();
 
-  const {
-    PDFPageContainerRefs,
-    annotationElementRefs,
-    registerRef,
-    unregisterRef,
-  } = useAnnotationRefs();
+  const { annotationElementRefs, registerRef, unregisterRef } =
+    useAnnotationRefs();
   const pageContainerRef = useRef<HTMLDivElement>(null);
 
   const annotations = pdfAnnotations.annotations;
@@ -78,39 +74,6 @@ export const PDFPage = ({
 
   const annotationControls = useAnnotationControls();
   const { spanLabelsToView, activeSpanLabel } = annotationControls;
-
-  /**
-   * Converts bounding box selections to JSX elements.
-   */
-  const ConvertBoundsToSelections = useMemo(
-    () =>
-      (
-        selection: BoundingBox,
-        activeLabel: AnnotationLabelType
-      ): JSX.Element => {
-        const annotation = pageInfo.getAnnotationForBounds(
-          normalizeBounds(selection),
-          activeLabel
-        );
-
-        const tokens =
-          annotation && annotation.tokens ? annotation.tokens : null;
-
-        return (
-          <>
-            <SelectionBoundary
-              showBoundingBox
-              hidden={false}
-              color={activeSpanLabel?.color ? activeSpanLabel.color : ""}
-              bounds={selection}
-              selected={false}
-            />
-            <SelectionTokenGroup pageInfo={pageInfo} tokens={tokens} />
-          </>
-        );
-      },
-    [pageInfo, activeSpanLabel]
-  );
 
   /**
    * Handles resizing of the PDF page canvas.
@@ -243,9 +206,15 @@ export const PDFPage = ({
    * Scrolls to the selected annotation when there is exactly one selected.
    */
   useLayoutEffect(() => {
-    if (selectedAnnotations.length === 1) {
-      const selectedId = selectedAnnotations[0];
-      annotationElementRefs.current[selectedId]?.scrollIntoView();
+    const selectedId = selectedAnnotations[0];
+    if (
+      selectedAnnotations.length === 1 &&
+      annotationElementRefs.current[selectedId]
+    ) {
+      annotationElementRefs.current[selectedId]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
     }
   }, [selectedAnnotations, annotationElementRefs]);
 

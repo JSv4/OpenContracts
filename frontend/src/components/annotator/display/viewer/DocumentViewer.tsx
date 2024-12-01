@@ -49,7 +49,10 @@ import {
 } from "../../types/annotations";
 import { PDFPageInfo } from "../../types/pdf";
 import { useDocumentType } from "../../context/DocumentAtom";
-import { useAnnotationControls } from "../../context/UISettingsAtom";
+import {
+  useAnnotationControls,
+  useAnnotationSelection,
+} from "../../context/UISettingsAtom";
 import { LabelSelector } from "../../labels/label_selector/LabelSelector";
 import {
   useHumanSpanLabels,
@@ -210,6 +213,8 @@ export const DocumentViewer = ({
     useState<number>(0);
 
   // Access annotation controls
+  const { setSelectedAnnotations, selectedAnnotations } =
+    useAnnotationSelection();
   const annotationControls = useAnnotationControls();
   const { documentType } = useDocumentType();
   const { humanSpanLabels } = useHumanSpanLabels();
@@ -300,30 +305,38 @@ export const DocumentViewer = ({
   }, [handleKeyUpPress, handleKeyDownPress]);
 
   // Update the scroll to annotation effect to use the new refs
-  useEffect(() => {
-    if (
-      scroll_to_annotation_on_open &&
-      !hasScrolledToAnnotation &&
-      annotationElementRefs.current[scroll_to_annotation_on_open.id]
-    ) {
-      annotationElementRefs.current[
-        scroll_to_annotation_on_open.id
-      ]?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
+  // useEffect(() => {
+  //   if (
+  //     scroll_to_annotation_on_open &&
+  //     !hasScrolledToAnnotation &&
+  //     annotationElementRefs.current[scroll_to_annotation_on_open.id]
+  //   ) {
+  //     annotationElementRefs.current[
+  //       scroll_to_annotation_on_open.id
+  //     ]?.scrollIntoView({
+  //       behavior: "smooth",
+  //       block: "center",
+  //     });
 
+  //     setHasScrolledToAnnotation(scroll_to_annotation_on_open.id);
+  //   }
+  // }, [
+  //     scroll_to_annotation_on_open,
+  //     hasScrolledToAnnotation,
+  //     annotationElementRefs.current,
+  //   ]);
+
+  // Update selectedAnnotations when selection changes (e.g., user selection)
+  // This can be managed via props or other state management as per your application.
+
+  // When scroll_to_annotation_on_open is provided and we haven't scrolled yet
+  useEffect(() => {
+    if (scroll_to_annotation_on_open && !hasScrolledToAnnotation) {
+      setSelectedAnnotations([scroll_to_annotation_on_open.id]);
       setHasScrolledToAnnotation(scroll_to_annotation_on_open.id);
     }
-  }, [
-    scroll_to_annotation_on_open,
-    hasScrolledToAnnotation,
-    annotationElementRefs.current,
-  ]);
+  }, [scroll_to_annotation_on_open, hasScrolledToAnnotation]);
 
-  const [selectedAnnotations, setSelectedAnnotations] = useState<string[]>(
-    scroll_to_annotation_on_open ? [scroll_to_annotation_on_open.id] : []
-  );
   const [pageSelection, setSelection] = useState<{
     pageNumber: number;
     bounds: BoundingBox;

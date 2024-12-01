@@ -636,16 +636,35 @@ export const DocumentAnnotator = ({
           <LoadingContent>
             <Header as="h2" icon>
               <Icon size="mini" name="file alternate outline" />
-              Loading Document Data
-              <Header.Subheader>
-                Hang tight while we fetch the required data.
+              {progress === 100 && humanDataLoading
+                ? "Fetching Annotations"
+                : "Loading Document Data"}
+              <Header.Subheader style={{ marginTop: "2rem" }}>
+                {progress === 100 && humanDataLoading ? (
+                  <>
+                    <Icon loading name="spinner" />
+                    Retrieving annotation data from server...
+                  </>
+                ) : (
+                  "Hang tight while we fetch the required data."
+                )}
               </Header.Subheader>
             </Header>
-            <Progress
-              style={{ width: "300px" }}
-              percent={progress}
-              indicating
-            />
+            {progress < 100 && (
+              <Progress
+                style={{ width: "300px" }}
+                percent={progress}
+                indicating
+              />
+            )}
+            {progress === 100 && humanDataLoading && (
+              <Progress
+                style={{ width: "300px" }}
+                active
+                indicating
+                percent={100}
+              />
+            )}
           </LoadingContent>
         </ModalLoadingContainer>
       );

@@ -64,7 +64,10 @@ export const SelectionTokenGroup = ({
     if (scrollTo) {
       if (containerRef.current !== undefined && containerRef.current !== null) {
         console.log("Scroll to", scrollTo);
-        containerRef.current.scrollIntoView();
+        containerRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
       }
     }
   }, [scrollTo]);

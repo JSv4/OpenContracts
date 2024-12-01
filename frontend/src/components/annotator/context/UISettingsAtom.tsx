@@ -324,9 +324,6 @@ export function useAdditionalUIStates() {
   const [readOnly, setReadOnly] = useAtom(readOnlyAtom);
   const [loadingMessage, setLoadingMessage] = useAtom(loadingMessageAtom);
   const [shiftDown, setShiftDown] = useAtom(shiftDownAtom);
-  const [hasScrolledToAnnotation, setHasScrolledToAnnotation] = useAtom(
-    hasScrolledToAnnotationAtom
-  );
 
   return {
     modalOpen,
@@ -337,7 +334,5 @@ export function useAdditionalUIStates() {
     setLoadingMessage,
     shiftDown,
     setShiftDown,
-    hasScrolledToAnnotation,
-    setHasScrolledToAnnotation,
   };
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import styled from "styled-components";
 
@@ -204,6 +204,7 @@ export const DocumentViewer = ({
 }) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
+  const hasScrolledToAnnotation = useRef(false);
 
   // TODO - replace this with useAnnotationRefs
   const [textSearchMatches, setTextSearchMatches] =
@@ -228,8 +229,6 @@ export const DocumentViewer = ({
     zoomLevel,
     setZoomLevel,
     setShiftDown,
-    hasScrolledToAnnotation,
-    setHasScrolledToAnnotation,
   } = useUISettings();
 
   const handleCreateAnnotation = useCreateAnnotation();
@@ -275,25 +274,20 @@ export const DocumentViewer = ({
     [setShiftDown]
   );
 
-  // Handle scrolling to annotation
+  // Handle scrolling to annotation on first mount
   useEffect(() => {
     if (
       scrollToAnnotation &&
-      !hasScrolledToAnnotation &&
+      !hasScrolledToAnnotation.current &&
       annotationElementRefs.current[scrollToAnnotation.id]
     ) {
       annotationElementRefs.current[scrollToAnnotation.id]?.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
-      setHasScrolledToAnnotation(scrollToAnnotation.id);
+      hasScrolledToAnnotation.current = true;
     }
-  }, [scrollToAnnotation, hasScrolledToAnnotation, setHasScrolledToAnnotation]);
-
-  // Reset scroll state when scrollToAnnotation changes
-  useEffect(() => {
-    setHasScrolledToAnnotation(null);
-  }, [scrollToAnnotation]);
+  }, [scrollToAnnotation, annotationElementRefs]);
 
   useEffect(() => {
     window.addEventListener("keyup", handleKeyUpPress);
@@ -304,36 +298,13 @@ export const DocumentViewer = ({
     };
   }, [handleKeyUpPress, handleKeyDownPress]);
 
-  // Update the scroll to annotation effect to use the new refs
-  // useEffect(() => {
-  //   if (
-  //     scroll_to_annotation_on_open &&
-  //     !hasScrolledToAnnotation &&
-  //     annotationElementRefs.current[scroll_to_annotation_on_open.id]
-  //   ) {
-  //     annotationElementRefs.current[
-  //       scroll_to_annotation_on_open.id
-  //     ]?.scrollIntoView({
-  //       behavior: "smooth",
-  //       block: "center",
-  //     });
-
-  //     setHasScrolledToAnnotation(scroll_to_annotation_on_open.id);
-  //   }
-  // }, [
-  //     scroll_to_annotation_on_open,
-  //     hasScrolledToAnnotation,
-  //     annotationElementRefs.current,
-  //   ]);
-
   // Update selectedAnnotations when selection changes (e.g., user selection)
   // This can be managed via props or other state management as per your application.
-
   // When scroll_to_annotation_on_open is provided and we haven't scrolled yet
   useEffect(() => {
-    if (scroll_to_annotation_on_open && !hasScrolledToAnnotation) {
+    if (scroll_to_annotation_on_open && !hasScrolledToAnnotation.current) {
       setSelectedAnnotations([scroll_to_annotation_on_open.id]);
-      setHasScrolledToAnnotation(scroll_to_annotation_on_open.id);
+      hasScrolledToAnnotation.current = true;
     }
   }, [scroll_to_annotation_on_open, hasScrolledToAnnotation]);
 
@@ -708,7 +679,9 @@ export const DocumentViewer = ({
             read_only={readOnly}
             corpus_permissions={corpus_permissions}
             doc_permissions={doc_permissions}
-            setJumpedToAnnotationOnLoad={setHasScrolledToAnnotation}
+            setJumpedToAnnotationOnLoad={() => {
+              hasScrolledToAnnotation.current = true;
+            }}
           />
         );
         break;

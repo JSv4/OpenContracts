@@ -43,7 +43,6 @@ import {
 
 interface SelectionProps {
   selected: boolean;
-  scrollIntoView: boolean;
   pageInfo: PDFPageInfo;
   annotation: ServerTokenAnnotation;
   showInfo?: boolean;
@@ -52,12 +51,10 @@ interface SelectionProps {
   rejected?: boolean;
   actions?: CloudButtonItem[];
   allowFeedback?: boolean;
-  setJumpedToAnnotationOnLoad: (annot: string) => null | void;
 }
 
 export const Selection: React.FC<SelectionProps> = ({
   selected,
-  scrollIntoView,
   pageInfo,
   annotation,
   children,
@@ -65,7 +62,6 @@ export const Selection: React.FC<SelectionProps> = ({
   rejected,
   allowFeedback,
   showInfo = true,
-  setJumpedToAnnotationOnLoad,
 }) => {
   const auth_token = useReactiveVar(authToken);
   const [hovered, setHovered] = useState(false);
@@ -215,14 +211,12 @@ export const Selection: React.FC<SelectionProps> = ({
         id={annotation.id}
         hidden={hidden}
         showBoundingBox={showBoundingBoxes}
-        scrollIntoView={scrollIntoView}
         color={color}
         bounds={bounds}
         onHover={setHovered}
         onClick={onShiftClick}
         approved={approved}
         rejected={rejected}
-        setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
         selected={selected}
       >
         {showInfo && !hideLabels && (

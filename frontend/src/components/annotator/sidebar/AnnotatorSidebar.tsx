@@ -334,8 +334,7 @@ export const AnnotatorSidebar = ({
     setSelectedAnnotations,
     setSelectedRelations,
   } = useAnnotationSelection();
-  const { isSidebarVisible, setSidebarVisible, sidebarWidth, toggleSidebar } =
-    useUISettings();
+  const { isSidebarVisible, setSidebarVisible } = useUISettings();
   const opened_corpus = useReactiveVar(openedCorpus);
   const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
 
@@ -719,7 +718,10 @@ export const AnnotatorSidebar = ({
         // If it is, and we have a reference to it in our annotation reference obj
         if (annotationElementRefs?.current[annotation.id]) {
           // Scroll annotation into view.
-          annotationElementRefs?.current[annotation.id]?.scrollIntoView();
+          annotationElementRefs?.current[annotation.id]?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
         }
       }
       setSelectedAnnotations([toggledId]);

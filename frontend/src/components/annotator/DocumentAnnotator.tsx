@@ -62,8 +62,6 @@ import {
   onlyDisplayTheseAnnotations,
   selectedAnalysis,
   selectedExtract,
-  showAnnotationLabels,
-  showStructuralAnnotations,
   viewStateVar,
 } from "../../graphql/cache";
 
@@ -83,12 +81,7 @@ import { useUISettings } from "./hooks/useUISettings";
 import { useAnalysisManager } from "./hooks/AnalysisHooks";
 
 // Import Annotation Hooks
-import {
-  usePdfAnnotations,
-  useStructuralAnnotations,
-  useAnnotationObjs,
-  useDocTypeAnnotations,
-} from "./hooks/AnnotationHooks";
+import { usePdfAnnotations, useAnnotationObjs } from "./hooks/AnnotationHooks";
 import { useAnnotationDisplay } from "./context/UISettingsAtom";
 import styled from "styled-components";
 

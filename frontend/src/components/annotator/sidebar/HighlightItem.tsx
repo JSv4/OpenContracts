@@ -116,7 +116,10 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
       selected={selected}
       className={`sidebar__annotation ${className || ""}`}
       onClick={() => {
-        annotationElementRefs.current[annotation.id]?.scrollIntoView();
+        annotationElementRefs.current[annotation.id]?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
         handleAnnotationSelect(annotation.id);
       }}
     >

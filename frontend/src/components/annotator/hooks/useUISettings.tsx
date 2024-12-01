@@ -75,8 +75,6 @@ export function useUISettings(props?: UseUISettingsProps) {
     setLoadingMessage,
     shiftDown,
     setShiftDown,
-    hasScrolledToAnnotation,
-    setHasScrolledToAnnotation,
   } = useAdditionalUIStates();
 
   // Memoize the returned object
@@ -115,8 +113,6 @@ export function useUISettings(props?: UseUISettingsProps) {
       setLoadingMessage,
       shiftDown,
       setShiftDown,
-      hasScrolledToAnnotation,
-      setHasScrolledToAnnotation,
     }),
     [
       zoomLevel,
@@ -143,8 +139,6 @@ export function useUISettings(props?: UseUISettingsProps) {
       setLoadingMessage,
       shiftDown,
       setShiftDown,
-      hasScrolledToAnnotation,
-      setHasScrolledToAnnotation,
     ]
   );
 

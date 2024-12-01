@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { DocumentViewer } from "../viewer";
 import {
   AnalysisType,

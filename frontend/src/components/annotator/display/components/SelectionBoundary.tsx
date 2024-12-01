@@ -13,7 +13,6 @@ interface SelectionBoundaryProps {
   id: string;
   hidden: boolean;
   showBoundingBox?: boolean;
-  scrollIntoView?: boolean;
   color: string;
   bounds: BoundingBox;
   selected: boolean;
@@ -21,7 +20,6 @@ interface SelectionBoundaryProps {
   annotationId?: string;
   onHover?: (hovered: boolean) => void;
   onClick?: () => void;
-  setJumpedToAnnotationOnLoad?: (annot_id: string) => null | void;
   approved?: boolean;
   rejected?: boolean;
 }
@@ -76,22 +74,17 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
   id,
   hidden,
   showBoundingBox = false,
-  scrollIntoView = false,
   color,
   bounds,
   children,
   onHover,
   onClick,
-  setJumpedToAnnotationOnLoad,
   selected,
   approved,
   rejected,
 }) => {
   const { registerRef, unregisterRef } = useAnnotationRefs();
   const boundaryRef = useRef<HTMLSpanElement | null>(null);
-
-  const { hasScrolledToAnnotation, setHasScrolledToAnnotation } =
-    useUISettings();
 
   useEffect(() => {
     if (id) {

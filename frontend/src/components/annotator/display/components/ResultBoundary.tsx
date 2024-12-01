@@ -71,7 +71,10 @@ export const ResultBoundary = ({
   // Handle scrolling into view if needed
   useEffect(() => {
     if (scrollIntoView && boundaryRef.current) {
-      boundaryRef.current.scrollIntoView();
+      boundaryRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
     }
   }, [scrollIntoView]);
 

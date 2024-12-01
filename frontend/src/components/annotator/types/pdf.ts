@@ -204,4 +204,9 @@ export class PDFPageInfo {
   getScaledBounds(b: BoundingBox): BoundingBox {
     return scaled(b, this.scale);
   }
+
+  // Method to create a new instance with an updated scale
+  public withScale(newScale: number): PDFPageInfo {
+    return new PDFPageInfo(this.page, this.tokens, newScale, this.bounds);
+  }
 }

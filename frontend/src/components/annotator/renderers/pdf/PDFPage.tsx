@@ -5,15 +5,17 @@ import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
 import { Selection } from "../../display/components/Selection";
 import { SearchResult } from "../../display/components/SearchResult";
 import { BoundingBox, ServerTokenAnnotation } from "../../types/annotations";
-import { useAnnotationSearch } from "../../hooks/useAnnotationSearch";
 import {
   useCreateAnnotation,
   usePdfAnnotations,
 } from "../../hooks/AnnotationHooks";
 import {
   scrollContainerRefAtom,
-  pdfPageInfoObjsAtom,
   useSelectedCorpus,
+  usePages,
+  useTextSearchMatches,
+  useSelectedTextSearchMatchIndex,
+  useSearchText,
 } from "../../context/DocumentAtom";
 import {
   useAnnotationControls,
@@ -41,7 +43,6 @@ export const PDFPage = ({
 }: PageProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<PDFPageRenderer | null>(null);
-  const textSearch = useAnnotationSearch();
   const { pdfAnnotations } = usePdfAnnotations();
   const createAnnotation = useCreateAnnotation();
 
@@ -65,13 +66,21 @@ export const PDFPage = ({
   const annotations = pdfAnnotations.annotations;
 
   const [scrollContainerRef] = useAtom(scrollContainerRefAtom);
-  const [pdfPageInfoObjs, setPdfPageInfoObjs] = useAtom(pdfPageInfoObjsAtom);
+  const { pages, setPages } = usePages();
 
-  const { selectedSearchResultIndex, searchResults } = textSearch;
+  const { searchText } = useSearchText();
+  const { selectedTextSearchMatchIndex: selectedSearchResultIndex } =
+    useSelectedTextSearchMatchIndex();
+  const { textSearchMatches: searchResults } = useTextSearchMatches();
   const { selectedCorpus } = useSelectedCorpus();
 
   const annotationControls = useAnnotationControls();
   const { spanLabelsToView, activeSpanLabel } = annotationControls;
+
+  useEffect(() => {
+    console.log("PDFPage - searchResults", searchResults);
+    console.log("PDFPage - searchText", searchText);
+  }, [searchResults, searchText]);
 
   const updatedPageInfo = useMemo(() => {
     return new PDFPageInfo(
@@ -81,6 +90,13 @@ export const PDFPage = ({
       pageBounds
     );
   }, [pageInfo.page, pageInfo.tokens, zoomLevel, pageBounds]);
+
+  useEffect(() => {
+    setPages((prevPages) => ({
+      ...prevPages,
+      [pageInfo.page.pageNumber - 1]: updatedPageInfo,
+    }));
+  }, [updatedPageInfo]);
 
   /**
    * Handles resizing of the PDF page canvas.
@@ -136,12 +152,12 @@ export const PDFPage = ({
             console.log("\tAwait render...");
             await rendererRef.current.render(zoomLevel);
 
-            if (!(pageInfo.page.pageNumber - 1 in pdfPageInfoObjs)) {
+            if (!(pageInfo.page.pageNumber - 1 in pages)) {
               console.log(`\tAdding pageInfo to ${pageInfo.page.pageNumber}`);
-              setPdfPageInfoObjs({
-                ...pdfPageInfoObjs,
+              setPages((prevPages) => ({
+                ...prevPages,
                 [pageInfo.page.pageNumber - 1]: pageInfo,
-              });
+              }));
             }
 
             if (scrollContainerRef && scrollContainerRef.current) {
@@ -296,7 +312,7 @@ export const PDFPage = ({
               total_results={searchResults.length}
               showBoundingBox={true}
               hidden={token_index !== selectedSearchResultIndex}
-              pageInfo={pageInfo}
+              pageInfo={updatedPageInfo}
               match={match}
             />
           ))}

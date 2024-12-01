@@ -48,16 +48,12 @@ import {
   ServerTokenAnnotation,
 } from "../../types/annotations";
 import { PDFPageInfo } from "../../types/pdf";
-import { useDocumentType } from "../../context/DocumentAtom";
+import { usePages } from "../../context/DocumentAtom";
 import {
   useAnnotationControls,
   useAnnotationSelection,
 } from "../../context/UISettingsAtom";
 import { LabelSelector } from "../../labels/label_selector/LabelSelector";
-import {
-  useHumanSpanLabels,
-  useHumanTokenLabels,
-} from "../../context/CorpusAtom";
 import { DocTypeLabelDisplay } from "../../labels/doc_types/DocTypeLabelDisplay";
 import { useUISettings } from "../../hooks/useUISettings";
 import {
@@ -173,7 +169,6 @@ export const DocumentViewer = ({
   page_token_text_maps,
   doc_text,
   doc,
-  pages,
   spanLabels,
 }: {
   doc_permissions: PermissionTypes[];
@@ -199,7 +194,6 @@ export const DocumentViewer = ({
   page_token_text_maps: Record<number, TokenId>;
   doc_text: string;
   doc: PDFDocumentProxy | undefined;
-  pages: PDFPageInfo[];
   spanLabels: AnnotationLabelType[];
 }) => {
   const { width } = useWindowDimensions();
@@ -209,7 +203,7 @@ export const DocumentViewer = ({
   // TODO - replace this with useAnnotationRefs
   const [textSearchMatches, setTextSearchMatches] =
     useState<(TextSearchTokenResult | TextSearchSpanResult)[]>();
-  const [searchText, setSearchText] = useState<string>();
+  const [searchText] = useState<string>();
   const [selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex] =
     useState<number>(0);
 
@@ -226,6 +220,8 @@ export const DocumentViewer = ({
     setZoomLevel,
     setShiftDown,
   } = useUISettings();
+
+  const { pages } = usePages();
 
   const handleCreateAnnotation = useCreateAnnotation();
   const handleDeleteAnnotation = useDeleteAnnotation();
@@ -347,6 +343,7 @@ export const DocumentViewer = ({
 
   // Search for text when search text changes.
   useEffect(() => {
+    console.log("DocumentViewer - searchText", searchText);
     let search_hits = [];
 
     // If there is searchText, search document for matches
@@ -733,10 +730,7 @@ export const DocumentViewer = ({
               selected_corpus={selected_corpus}
               columns={columns}
               datacells={datacells}
-              editMode={editMode}
-              setEditMode={setEditMode}
               allowInput={allowInput}
-              setAllowInput={setAllowInput}
             />
           </FixedSidebar>
         )}

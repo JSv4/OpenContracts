@@ -6,10 +6,7 @@ import { SpanLabelCard, BlankLabelElement } from "./LabelElements";
 import { LabelSelectorDialog } from "./LabelSelectorDialog";
 import { TruncatedText } from "../../../widgets/data-display/TruncatedText";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
-import {
-  useHumanSpanLabels,
-  useHumanTokenLabels,
-} from "../../context/CorpusAtom";
+import { useCorpusState } from "../../context/CorpusAtom";
 
 interface LabelSelectorProps {
   sidebarWidth: string;
@@ -25,8 +22,7 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
   const { width } = useWindowDimensions();
   const [open, setOpen] = useState(false);
 
-  const { humanSpanLabels } = useHumanSpanLabels();
-  const { humanTokenLabels } = useHumanTokenLabels();
+  const { humanSpanLabels, humanTokenLabels } = useCorpusState();
 
   const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
 

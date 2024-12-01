@@ -5,7 +5,12 @@ import "./SearchWidgetStyles.css";
 import { TextSearchSpanResult, TextSearchTokenResult } from "../../types";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
-import { useAnnotationSearch } from "../hooks/useAnnotationSearch";
+import { useTextSearch } from "../hooks/useTextSearch";
+import {
+  useSearchText,
+  useSelectedTextSearchMatchIndex,
+  useTextSearchMatches,
+} from "../context/DocumentAtom";
 
 const PageHeader: React.FC<{
   result: TextSearchTokenResult | TextSearchSpanResult;
@@ -96,27 +101,26 @@ const SearchResultCard: React.FC<{
 
 export const SearchSidebarWidget: React.FC = () => {
   const annotationRefs = useAnnotationRefs();
-  const {
-    searchText,
-    searchResults,
-    selectedSearchResultIndex,
-    setSearchText,
-    setSelectedSearchResultIndex,
-  } = useAnnotationSearch();
+  const { textSearchMatches: searchResults } = useTextSearchMatches();
+  const { selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex } =
+    useSelectedTextSearchMatchIndex();
+  const { searchText, setSearchText } = useSearchText();
 
   useEffect(() => {
     const currentRef =
-      annotationRefs.textSearchElementRefs.current[selectedSearchResultIndex];
+      annotationRefs.textSearchElementRefs.current[
+        selectedTextSearchMatchIndex
+      ];
     if (currentRef) {
       currentRef?.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
     }
-  }, [selectedSearchResultIndex, annotationRefs.textSearchElementRefs]);
+  }, [selectedTextSearchMatchIndex, annotationRefs.textSearchElementRefs]);
 
   const onResultClick = (index: number) => {
-    setSelectedSearchResultIndex(index);
+    setSelectedTextSearchMatchIndex(index);
   };
 
   return (
@@ -169,15 +173,20 @@ export const SearchSidebarWidget: React.FC = () => {
       >
         <div style={{ overflowY: "auto", height: "100%" }}>
           {searchResults.length > 0 ? (
-            searchResults.map((res, index) => (
-              <SearchResultCard
-                key={`SearchResultCard_${index}`}
-                index={index}
-                totalMatches={searchResults.length}
-                res={res}
-                onResultClick={onResultClick}
-              />
-            ))
+            searchResults.map(
+              (
+                res: TextSearchTokenResult | TextSearchSpanResult,
+                index: number
+              ) => (
+                <SearchResultCard
+                  key={`SearchResultCard_${index}`}
+                  index={index}
+                  totalMatches={searchResults.length}
+                  res={res}
+                  onResultClick={onResultClick}
+                />
+              )
+            )
           ) : (
             <PlaceholderSearchResultCard />
           )}

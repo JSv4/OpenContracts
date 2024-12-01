@@ -4,7 +4,6 @@ import {
   Card,
   Segment,
   Popup,
-  Header,
   Icon,
   Placeholder,
   SemanticShorthandItem,
@@ -40,10 +39,8 @@ import { SingleDocumentExtractResults } from "../../extracts/SingleDocumentExtra
 import { PermissionTypes } from "../../types";
 import { getPermissions } from "../../../utils/transform";
 import { PlaceholderCard } from "../../placeholders/PlaceholderCard";
-import { CorpusStats } from "../../widgets/data-display/CorpusStatus";
 import styled from "styled-components";
 import { RelationGroup } from "../types/annotations";
-import { useAnnotationSearch } from "../hooks/useAnnotationSearch";
 import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
 import { useUISettings } from "../hooks/useUISettings";
 import {
@@ -59,6 +56,8 @@ import {
 } from "../hooks/AnnotationHooks";
 import { ViewSettingsPopup } from "../../widgets/popups/ViewSettingsPopup";
 import { LabelDisplayBehavior } from "../../../types/graphql-api";
+import { useTextSearch } from "../hooks/useTextSearch";
+import { useSearchText, useTextSearchMatches } from "../context/DocumentAtom";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;
@@ -312,23 +311,17 @@ export const AnnotatorSidebar = ({
   selected_analysis,
   selected_extract,
   allowInput,
-  editMode,
   datacells,
   columns,
-  setEditMode,
-  setAllowInput,
   fetchMore,
 }: {
   read_only: boolean;
   selected_corpus?: CorpusType | null | undefined;
   selected_analysis?: AnalysisType | null | undefined;
   selected_extract?: ExtractType | null | undefined;
-  editMode: "ANNOTATE" | "ANALYZE";
   allowInput: boolean;
   datacells: DatacellType[];
   columns: ColumnType[];
-  setEditMode: (m: "ANNOTATE" | "ANALYZE") => void | undefined | null;
-  setAllowInput: (v: boolean) => void | undefined | null;
   fetchMore?: () => void;
 }) => {
   const handleRemoveRelationship = useRemoveRelationship();
@@ -351,7 +344,7 @@ export const AnnotatorSidebar = ({
   const { width } = useWindowDimensions();
   const show_minimal_layout = width <= 1000;
 
-  const { header_text, subheader_text, tooltip_text } = getHeaderInfo(
+  const { header_text } = getHeaderInfo(
     selected_analysis || selected_extract ? "ANALYZE" : "ANNOTATE",
     allowInput,
     read_only ||
@@ -400,7 +393,7 @@ export const AnnotatorSidebar = ({
 
   const {} = useAnalysisManager();
   const { spanLabelsToView } = useAnnotationControls();
-  const { searchResults } = useAnnotationSearch();
+  const { textSearchMatches } = useTextSearchMatches();
   const { annotationElementRefs } = useAnnotationRefs();
   const { pdfAnnotations } = usePdfAnnotations();
   const annotations = pdfAnnotations.annotations;
@@ -611,7 +604,7 @@ export const AnnotatorSidebar = ({
         ];
       }
 
-      const show_search_results_pane = searchResults.length > 0;
+      const show_search_results_pane = textSearchMatches.length > 0;
       if (show_search_results_pane) {
         panes = [
           ...panes,
@@ -675,7 +668,7 @@ export const AnnotatorSidebar = ({
   }, [
     filteredAnnotations,
     relations,
-    searchResults,
+    textSearchMatches,
     selected_corpus,
     isSidebarVisible,
   ]);

@@ -3,10 +3,15 @@ import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import { PDFPageInfo } from "../types/pdf";
 import { BoundingBox } from "../types/annotations";
 import { ViewState } from "../types/enums";
-import { PermissionTypes, TokenId } from "../../types";
+import {
+  PermissionTypes,
+  TextSearchSpanResult,
+  TextSearchTokenResult,
+  TokenId,
+} from "../../types";
 import { CorpusType, DocumentType } from "../../../types/graphql-api";
 import { getPermissions } from "../../../utils/transform";
-import { RefObject, useEffect } from "react";
+import { RefObject, useEffect, useMemo } from "react";
 
 /**
  * Core document data atoms.
@@ -21,9 +26,7 @@ export const docTextAtom = atom<string>("");
  */
 export const pdfDocAtom = atom<PDFDocumentProxy | undefined>(undefined);
 export const pagesAtom = atom<PDFPageInfo[]>([]);
-export const pageTextMapsAtom = atom<Record<number, TokenId> | undefined>(
-  undefined
-);
+export const pageTokenTextMapsAtom = atom<Record<number, TokenId>>({});
 export const documentTypeAtom = atom<string>("");
 
 /**
@@ -76,7 +79,15 @@ export const pageSelectionQueueAtom = atom<Record<number, BoundingBox[]>>({});
 export const scrollContainerRefAtom = atom<
   RefObject<HTMLDivElement> | undefined
 >(undefined);
-export const pdfPageInfoObjsAtom = atom<Record<number, PDFPageInfo>>({});
+
+/**
+ * Text Search Atoms.
+ */
+export const searchTextAtom = atom<string>("");
+export const textSearchMatchesAtom = atom<
+  (TextSearchTokenResult | TextSearchSpanResult)[]
+>([]);
+export const selectedTextSearchMatchIndexAtom = atom<number>(0);
 
 /**
  * Hook to initialize document state atoms with initial values.
@@ -111,7 +122,7 @@ export function useInitializeDocumentAtoms(params: {
   const setDocText = useSetAtom(docTextAtom);
   const setPdfDoc = useSetAtom(pdfDocAtom);
   const setPages = useSetAtom(pagesAtom);
-  const setPageTextMaps = useSetAtom(pageTextMapsAtom);
+  const setPageTextMaps = useSetAtom(pageTokenTextMapsAtom);
   const setDocumentType = useSetAtom(documentTypeAtom);
   const setIsLoading = useSetAtom(isLoadingAtom);
   const setViewState = useSetAtom(viewStateAtom);
@@ -125,7 +136,7 @@ export function useInitializeDocumentAtoms(params: {
     setDocText(docText);
     setPdfDoc(pdfDoc);
     setPages(pages);
-    setPageTextMaps(pageTextMaps);
+    setPageTextMaps(pageTextMaps || {});
     setDocumentType(documentType);
     setIsLoading(isLoading);
     setViewState(viewState);
@@ -162,52 +173,72 @@ export function useInitializeDocumentAtoms(params: {
 
 export function useSelectedDocument() {
   const [selectedDocument, setSelectedDocument] = useAtom(selectedDocumentAtom);
-  return { selectedDocument, setSelectedDocument };
+  return useMemo(
+    () => ({ selectedDocument, setSelectedDocument }),
+    [selectedDocument, setSelectedDocument]
+  );
 }
 
 export function useSelectedCorpus() {
   const [selectedCorpus, setSelectedCorpus] = useAtom(selectedCorpusAtom);
-  return { selectedCorpus, setSelectedCorpus };
+  return useMemo(
+    () => ({ selectedCorpus, setSelectedCorpus }),
+    [selectedCorpus, setSelectedCorpus]
+  );
 }
 
 export function useFileType() {
   const [fileType, setFileType] = useAtom(fileTypeAtom);
-  return { fileType, setFileType };
+  return useMemo(() => ({ fileType, setFileType }), [fileType, setFileType]);
 }
 
 export function useDocText() {
   const [docText, setDocText] = useAtom(docTextAtom);
-  return { docText, setDocText };
+  return useMemo(() => ({ docText, setDocText }), [docText, setDocText]);
 }
 
 export function usePdfDoc() {
   const [pdfDoc, setPdfDoc] = useAtom(pdfDocAtom);
-  return { pdfDoc, setPdfDoc };
+  return useMemo(() => ({ pdfDoc, setPdfDoc }), [pdfDoc, setPdfDoc]);
+}
+
+export function usePageTokenTextMaps() {
+  const [pageTokenTextMaps, setPageTokenTextMaps] = useAtom(
+    pageTokenTextMapsAtom
+  );
+  return useMemo(
+    () => ({ pageTokenTextMaps, setPageTokenTextMaps }),
+    [pageTokenTextMaps, setPageTokenTextMaps]
+  );
 }
 
 export function usePages() {
   const [pages, setPages] = useAtom(pagesAtom);
-  return { pages, setPages };
-}
-
-export function usePageTextMaps() {
-  const [pageTextMaps, setPageTextMaps] = useAtom(pageTextMapsAtom);
-  return { pageTextMaps, setPageTextMaps };
+  return useMemo(() => ({ pages, setPages }), [pages, setPages]);
 }
 
 export function useDocumentType() {
   const [documentType, setDocumentType] = useAtom(documentTypeAtom);
-  return { documentType, setDocumentType };
+  return useMemo(
+    () => ({ documentType, setDocumentType }),
+    [documentType, setDocumentType]
+  );
 }
 
 export function useIsLoading() {
   const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
-  return { isLoading, setIsLoading };
+  return useMemo(
+    () => ({ isLoading, setIsLoading }),
+    [isLoading, setIsLoading]
+  );
 }
 
 export function useViewState() {
   const [viewState, setViewState] = useAtom(viewStateAtom);
-  return { viewState, setViewState };
+  return useMemo(
+    () => ({ viewState, setViewState }),
+    [viewState, setViewState]
+  );
 }
 
 export function usePermissions() {
@@ -234,19 +265,50 @@ export function usePageSelectionQueue() {
   const [pageSelectionQueue, setPageSelectionQueue] = useAtom(
     pageSelectionQueueAtom
   );
-  return { pageSelectionQueue, setPageSelectionQueue };
+  return useMemo(
+    () => ({ pageSelectionQueue, setPageSelectionQueue }),
+    [pageSelectionQueue, setPageSelectionQueue]
+  );
 }
 
 export function useScrollContainerRef() {
   const [scrollContainerRef, setScrollContainerRef] = useAtom(
     scrollContainerRefAtom
   );
-  return { scrollContainerRef, setScrollContainerRef };
+  return useMemo(
+    () => ({ scrollContainerRef, setScrollContainerRef }),
+    [scrollContainerRef, setScrollContainerRef]
+  );
 }
 
-export function usePdfPageInfoObjs() {
-  const [pdfPageInfoObjs, setPdfPageInfoObjs] = useAtom(pdfPageInfoObjsAtom);
-  return { pdfPageInfoObjs, setPdfPageInfoObjs };
+export function useSearchText() {
+  const [searchText, setSearchText] = useAtom(searchTextAtom);
+  return useMemo(
+    () => ({ searchText, setSearchText }),
+    [searchText, setSearchText]
+  );
+}
+
+export function useTextSearchMatches() {
+  const [textSearchMatches, setTextSearchMatches] = useAtom(
+    textSearchMatchesAtom
+  );
+  return useMemo(
+    () => ({ textSearchMatches, setTextSearchMatches }),
+    [textSearchMatches, setTextSearchMatches]
+  );
+}
+
+export function useSelectedTextSearchMatchIndex() {
+  const [selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex] =
+    useAtom(selectedTextSearchMatchIndexAtom);
+  return useMemo(
+    () => ({
+      selectedTextSearchMatchIndex,
+      setSelectedTextSearchMatchIndex,
+    }),
+    [selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex]
+  );
 }
 
 /**
@@ -254,6 +316,6 @@ export function usePdfPageInfoObjs() {
  * @returns Function to set view state to error
  */
 export function useSetViewStateError() {
-  const setViewStateError = useSetAtom(setViewStateErrorAtom);
+  const [, setViewStateError] = useAtom(setViewStateErrorAtom);
   return setViewStateError;
 }

@@ -35,7 +35,7 @@ import {
   showSelectedAnnotationOnlyAtom,
 } from "../context/AnalysisAtoms";
 import { usePdfAnnotations } from "./AnnotationHooks";
-import { useSpanLabels, useDocTypeLabels } from "../context/CorpusAtom";
+import { useCorpusState } from "../context/CorpusAtom";
 import {
   useQueryLoadingStates,
   useQueryErrors,
@@ -84,11 +84,10 @@ export const useAnalysisManager = () => {
 
   const { addMultipleAnnotations, replaceDocTypeAnnotations } =
     usePdfAnnotations();
-  const { setSpanLabels } = useSpanLabels();
-  const { setDocTypeLabels } = useDocTypeLabels();
+  const { setSpanLabels, setDocTypeLabels } = useCorpusState();
 
-  const { queryLoadingStates, setQueryLoadingStates } = useQueryLoadingStates();
-  const { queryErrors, setQueryErrors } = useQueryErrors();
+  const { setQueryLoadingStates } = useQueryLoadingStates();
+  const { setQueryErrors } = useQueryErrors();
 
   const {
     data: analysesData,

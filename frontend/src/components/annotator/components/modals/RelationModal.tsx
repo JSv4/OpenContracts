@@ -5,7 +5,7 @@ import { RelationGroup } from "../../types/annotations";
 import { AnnotationLabelType } from "../../../../types/graphql-api";
 import styled from "styled-components";
 import { useCreateRelationship } from "../../hooks/AnnotationHooks";
-import { useRelationLabels } from "../../context/CorpusAtom";
+import { useCorpusState } from "../../context/CorpusAtom";
 
 interface RelationModalProps {
   visible: boolean;
@@ -22,7 +22,7 @@ export const RelationModal = ({
 }: RelationModalProps) => {
   const [targetKeys, setTargetKeys] = useState<string[]>([]);
   const createRelationship = useCreateRelationship();
-  const { relationLabels } = useRelationLabels();
+  const { relationLabels } = useCorpusState();
   const transferSource = source.map((a) => ({ key: a, annotation: a }));
 
   const handleOk = async () => {

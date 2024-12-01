@@ -1,5 +1,5 @@
 import { atom, useAtom } from "jotai";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { CorpusType, AnnotationLabelType } from "../../../types/graphql-api";
 import { getPermissions } from "../../../utils/transform";
 import { PermissionTypes } from "../../types";
@@ -9,19 +9,6 @@ export const selectedCorpusAtom = atom<CorpusType | null | undefined>(null);
 
 // Atoms for permissions
 export const permissionsAtom = atom<PermissionTypes[]>([]);
-export const canUpdateCorpusAtom = atom((get) =>
-  get(permissionsAtom).includes(PermissionTypes.CAN_UPDATE)
-);
-export const canDeleteCorpusAtom = atom((get) =>
-  get(permissionsAtom).includes(PermissionTypes.CAN_REMOVE)
-);
-export const canManageCorpusAtom = atom((get) =>
-  get(permissionsAtom).includes(PermissionTypes.CAN_PERMISSION)
-);
-export const hasCorpusPermissionAtom = atom(
-  (get) => (permission: PermissionTypes) =>
-    get(permissionsAtom).includes(permission)
-);
 
 // Atoms for label sets
 export const spanLabelsAtom = atom<AnnotationLabelType[]>([]);
@@ -93,68 +80,72 @@ export function useInitializeCorpusAtoms(params: {
   ]);
 }
 
-// Custom hooks to use atoms
-export function useSelectedCorpus() {
-  const [selectedCorpus] = useAtom(selectedCorpusAtom);
-  return selectedCorpus;
-}
-
-export function usePermissions() {
-  const [permissions] = useAtom(permissionsAtom);
-  return permissions;
-}
-
-export function useCanUpdateCorpus() {
-  const [canUpdate] = useAtom(canUpdateCorpusAtom);
-  return canUpdate;
-}
-
-export function useCanDeleteCorpus() {
-  const [canDelete] = useAtom(canDeleteCorpusAtom);
-  return canDelete;
-}
-
-export function useCanManageCorpus() {
-  const [canManage] = useAtom(canManageCorpusAtom);
-  return canManage;
-}
-
-export function useHasCorpusPermission() {
-  const [hasPermission] = useAtom(hasCorpusPermissionAtom);
-  return hasPermission;
-}
-
-export function useSpanLabels() {
+// Comprehensive hook for corpus state
+export function useCorpusState() {
+  const [selectedCorpus, setSelectedCorpus] = useAtom(selectedCorpusAtom);
+  const [permissions, setPermissions] = useAtom(permissionsAtom);
   const [spanLabels, setSpanLabels] = useAtom(spanLabelsAtom);
-  return { spanLabels, setSpanLabels };
-}
-
-export function useHumanSpanLabels() {
   const [humanSpanLabels, setHumanSpanLabels] = useAtom(humanSpanLabelsAtom);
-  return { humanSpanLabels, setHumanSpanLabels };
-}
-
-export function useRelationLabels() {
   const [relationLabels, setRelationLabels] = useAtom(relationLabelsAtom);
-  return { relationLabels, setRelationLabels };
-}
-
-export function useDocTypeLabels() {
   const [docTypeLabels, setDocTypeLabels] = useAtom(docTypeLabelsAtom);
-  return { docTypeLabels, setDocTypeLabels };
-}
-
-export function useAllowComments() {
-  const [allowComments] = useAtom(allowCommentsAtom);
-  return allowComments;
-}
-
-export function useIsLoading() {
-  const [isLoading] = useAtom(isLoadingAtom);
-  return isLoading;
-}
-
-export function useHumanTokenLabels() {
   const [humanTokenLabels, setHumanTokenLabels] = useAtom(humanTokenLabelsAtom);
-  return { humanTokenLabels, setHumanTokenLabels };
+  const [allowComments, setAllowComments] = useAtom(allowCommentsAtom);
+  const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
+
+  // Permission checks
+  const canUpdateCorpus = permissions.includes(PermissionTypes.CAN_UPDATE);
+  const canDeleteCorpus = permissions.includes(PermissionTypes.CAN_REMOVE);
+  const canManageCorpus = permissions.includes(PermissionTypes.CAN_PERMISSION);
+  const hasCorpusPermission = (permission: PermissionTypes) =>
+    permissions.includes(permission);
+
+  return useMemo(
+    () => ({
+      // Corpus
+      selectedCorpus,
+      setSelectedCorpus,
+
+      // Permissions
+      permissions,
+      setPermissions,
+      canUpdateCorpus,
+      canDeleteCorpus,
+      canManageCorpus,
+      hasCorpusPermission,
+
+      // Labels
+      spanLabels,
+      setSpanLabels,
+      humanSpanLabels,
+      setHumanSpanLabels,
+      relationLabels,
+      setRelationLabels,
+      docTypeLabels,
+      setDocTypeLabels,
+      humanTokenLabels,
+      setHumanTokenLabels,
+
+      // Features
+      allowComments,
+      setAllowComments,
+
+      // Loading state
+      isLoading,
+      setIsLoading,
+    }),
+    [
+      selectedCorpus,
+      permissions,
+      spanLabels,
+      humanSpanLabels,
+      relationLabels,
+      docTypeLabels,
+      humanTokenLabels,
+      allowComments,
+      isLoading,
+      canUpdateCorpus,
+      canDeleteCorpus,
+      canManageCorpus,
+    ]
+  );
 }

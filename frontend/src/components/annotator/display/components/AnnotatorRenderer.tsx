@@ -9,14 +9,13 @@ import {
 import { ViewState, TokenId } from "../../../types";
 import _ from "lodash";
 import { getPermissions } from "../../../../utils/transform";
-import { useSpanLabels } from "../../context/CorpusAtom";
+import { useCorpusState } from "../../context/CorpusAtom";
 import {
   usePdfDoc,
   useSelectedDocument,
   useSelectedCorpus,
   useDocText,
-  usePages,
-  usePageTextMaps,
+  usePageTokenTextMaps,
 } from "../../context/DocumentAtom";
 import { usePdfAnnotations } from "../../hooks/AnnotationHooks";
 import {
@@ -81,8 +80,7 @@ export const AnnotatorRenderer = ({
   const { selectedDocument } = useSelectedDocument();
   const { selectedCorpus } = useSelectedCorpus();
   const { docText } = useDocText();
-  const { pages } = usePages();
-  const { pageTextMaps } = usePageTextMaps();
+  const { pageTokenTextMaps: pageTextMaps } = usePageTokenTextMaps();
   const { pdfDoc } = usePdfDoc();
 
   // Use permissions from DocumentAtom
@@ -94,7 +92,7 @@ export const AnnotatorRenderer = ({
     : ["READ"];
   const corpus_permissions = getPermissions(corpus_raw_permissions);
 
-  const { spanLabels: span_label_lookup } = useSpanLabels();
+  const { spanLabels: span_label_lookup } = useCorpusState();
   const { pdfAnnotations } = usePdfAnnotations();
 
   useEffect(() => {
@@ -111,7 +109,6 @@ export const AnnotatorRenderer = ({
       doc={pdfDoc}
       doc_text={docText}
       page_token_text_maps={pageTextMaps ? pageTextMaps : {}}
-      pages={pages}
       spanLabels={span_label_lookup}
       selected_corpus={selectedCorpus}
       selected_document={selectedDocument}

@@ -2,12 +2,11 @@ import React, { useMemo } from "react";
 import { Dropdown, DropdownProps } from "semantic-ui-react";
 import _ from "lodash";
 import { AnnotationLabelType } from "../../../../types/graphql-api";
-import { useHumanSpanLabels, useSpanLabels } from "../../context/CorpusAtom";
+import { useCorpusState } from "../../context/CorpusAtom";
 import { useAnnotationControls } from "../../context/UISettingsAtom";
 
 export const ViewLabelSelector: React.FC = () => {
-  const { humanSpanLabels } = useHumanSpanLabels();
-  const { spanLabels } = useSpanLabels();
+  const { humanSpanLabels, spanLabels } = useCorpusState();
 
   const allLabelChoices = useMemo(() => {
     // Combine both label types and remove duplicates

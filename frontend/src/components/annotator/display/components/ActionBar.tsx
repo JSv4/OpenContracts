@@ -1,10 +1,10 @@
-import React, { useContext, useCallback, useState } from "react";
+import React, { useState } from "react";
 import { Form, Icon, Popup, Menu, SemanticICONS } from "semantic-ui-react";
 import { Search, X } from "lucide-react";
 import styled from "styled-components";
 import _ from "lodash";
 import { ZoomButtonGroup } from "../../../widgets/buttons/ZoomButtonGroup";
-import { useAnnotationSearch } from "../../hooks/useAnnotationSearch";
+import { useSearchText } from "../../context/DocumentAtom";
 
 const ActionBarContainer = styled.div`
   position: sticky;
@@ -80,7 +80,7 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   actionItems,
   onActionSelect,
 }) => {
-  const { searchText, setSearchText } = useAnnotationSearch();
+  const { searchText, setSearchText } = useSearchText();
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   const handleDocSearchChange = (value: string) => {

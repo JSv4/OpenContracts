@@ -14,7 +14,7 @@ import {
   useFreeFormAnnotationsAtom,
   relationModalVisibleAtom,
 } from "./AnnotationControlAtoms";
-import { useHumanSpanLabels, useRelationLabels } from "./CorpusAtom";
+import { useCorpusState } from "./CorpusAtom";
 
 /**
  * Types for query loading states and errors.
@@ -209,8 +209,8 @@ export function useQueryErrors() {
  * @returns Object containing annotation control states and their setters
  */
 export function useAnnotationControls() {
-  const { humanSpanLabels: humanSpanLabelChoices } = useHumanSpanLabels();
-  const { relationLabels } = useRelationLabels();
+  const { humanSpanLabels: humanSpanLabelChoices, relationLabels } =
+    useCorpusState();
 
   const [activeSpanLabel, setActiveSpanLabel] = useAtom(activeSpanLabelAtom);
   const [spanLabelsToView, setSpanLabelsToView] = useAtom(spanLabelsToViewAtom);

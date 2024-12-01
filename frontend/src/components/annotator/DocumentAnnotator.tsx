@@ -25,28 +25,19 @@ import { createTokenStringSearch } from "./utils";
 import { PdfAnnotations, RelationGroup } from "./types/annotations";
 import {
   usePdfDoc,
-  usePages,
-  usePageTextMaps,
+  usePageTokenTextMaps,
   useDocumentType,
   useDocText,
   selectedDocumentAtom,
   selectedCorpusAtom,
+  usePages,
 } from "./context/DocumentAtom";
 import {
   pdfAnnotationsAtom,
   structuralAnnotationsAtom,
   docTypeAnnotationsAtom,
 } from "./context/AnnotationAtoms";
-import {
-  useHumanTokenLabels,
-  useInitializeCorpusAtoms,
-} from "./context/CorpusAtom";
-import {
-  useSpanLabels,
-  useHumanSpanLabels,
-  useRelationLabels,
-  useDocTypeLabels,
-} from "./context/CorpusAtom";
+import { useCorpusState, useInitializeCorpusAtoms } from "./context/CorpusAtom";
 
 import {
   GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS,
@@ -144,13 +135,12 @@ export const DocumentAnnotator = ({
   onClose,
 }: DocumentAnnotatorProps) => {
   const { width } = useWindowDimensions();
-  const { setProgress, progress, zoomLevel, queryLoadingStates } =
-    useUISettings({
-      width,
-    });
+  const { setProgress, progress, zoomLevel } = useUISettings({
+    width,
+  });
 
   // Using Jotai atoms for managing annotations
-  const [pdfAnnotations, setPdfAnnotations] = useAtom(pdfAnnotationsAtom);
+  const [, setPdfAnnotations] = useAtom(pdfAnnotationsAtom);
   const [structuralAnnotations, setStructuralAnnotations] = useAtom(
     structuralAnnotationsAtom
   );
@@ -189,16 +179,26 @@ export const DocumentAnnotator = ({
 
   const { pdfDoc, setPdfDoc } = usePdfDoc();
   const { pages, setPages } = usePages();
-  const { pageTextMaps, setPageTextMaps } = usePageTextMaps();
+  const {
+    pageTokenTextMaps: pageTextMaps,
+    setPageTokenTextMaps: setPageTextMaps,
+  } = usePageTokenTextMaps();
   const { setDocumentType } = useDocumentType();
   const { setDocText } = useDocText();
 
   // Use atoms for labels from CorpusAtom
-  const { spanLabels, setSpanLabels } = useSpanLabels();
-  const { humanSpanLabels, setHumanSpanLabels } = useHumanSpanLabels();
-  const { humanTokenLabels, setHumanTokenLabels } = useHumanTokenLabels();
-  const { relationLabels, setRelationLabels } = useRelationLabels();
-  const { docTypeLabels, setDocTypeLabels } = useDocTypeLabels();
+  const {
+    spanLabels,
+    setSpanLabels,
+    humanSpanLabels,
+    setHumanSpanLabels,
+    humanTokenLabels,
+    setHumanTokenLabels,
+    relationLabels,
+    setRelationLabels,
+    docTypeLabels,
+    setDocTypeLabels,
+  } = useCorpusState();
 
   const [
     getDocumentAnnotationsAndRelationships,
@@ -455,7 +455,7 @@ export const DocumentAnnotator = ({
   // Update view state when PDF document is loaded
   useEffect(() => {
     if (opened_document.fileType === "application/pdf") {
-      if (pdfDoc && pageTextMaps && pages.length > 0) {
+      if (pdfDoc && pageTextMaps && Object.keys(pages).length > 0) {
         console.log("React to PDF document loading properly", pdfDoc);
         viewStateVar(ViewState.LOADED);
       }
@@ -674,11 +674,8 @@ export const DocumentAnnotator = ({
               selected_analysis={selected_analysis}
               selected_extract={selected_extract}
               allowInput={false}
-              editMode="ANNOTATE"
               datacells={dataCells}
               columns={columns}
-              setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
-              setAllowInput={(v: boolean) => {}}
             />
           </SidebarContainer>
           <CenterOnPage>
@@ -730,11 +727,8 @@ export const DocumentAnnotator = ({
               selected_analysis={selected_analysis}
               selected_extract={selected_extract}
               allowInput={false}
-              editMode="ANNOTATE"
               datacells={dataCells}
               columns={columns}
-              setEditMode={(v: "ANALYZE" | "ANNOTATE") => {}}
-              setAllowInput={(v: boolean) => {}}
             />
           </SidebarContainer>
           <CenterOnPage>

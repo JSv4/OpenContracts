@@ -88,7 +88,7 @@ export const PDF = ({
 
   return (
     <>
-      {pages.map((p) => {
+      {Object.values(pages).map((p) => {
         return (
           <PDFPage
             key={p.page.pageNumber}

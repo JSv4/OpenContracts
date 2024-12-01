@@ -8,7 +8,7 @@ import {
   DropdownProps,
   Button,
 } from "semantic-ui-react";
-import { useSpanLabels } from "../../context/CorpusAtom";
+import { useCorpusState } from "../../context/CorpusAtom";
 import { ServerTokenAnnotation } from "../../types/annotations";
 
 interface EditLabelModalProps {
@@ -22,7 +22,7 @@ export const EditLabelModal = ({
   visible,
   onHide,
 }: EditLabelModalProps) => {
-  const { spanLabels, setSpanLabels } = useSpanLabels();
+  const { spanLabels, setSpanLabels } = useCorpusState();
 
   const [selectedLabel, setSelectedLabel] = useState(
     annotation.annotationLabel

@@ -25,8 +25,9 @@ export const docTextAtom = atom<string>("");
  * PDF-specific data atoms.
  */
 export const pdfDocAtom = atom<PDFDocumentProxy | undefined>(undefined);
-export const pagesAtom = atom<PDFPageInfo[]>([]);
+export const pageTokenTextMaps = atom<PDFPageInfo[]>([]);
 export const pageTokenTextMapsAtom = atom<Record<number, TokenId>>({});
+export const pagesAtom = atom<Record<number, PDFPageInfo>>([]);
 export const documentTypeAtom = atom<string>("");
 
 /**
@@ -101,7 +102,7 @@ export function useInitializeDocumentAtoms(params: {
   isLoading?: boolean;
   viewState?: ViewState;
   pdfDoc: PDFDocumentProxy | undefined;
-  pages: PDFPageInfo[];
+  pages: Record<number, PDFPageInfo>;
   documentType: string;
 }) {
   const {

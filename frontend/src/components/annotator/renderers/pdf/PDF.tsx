@@ -61,15 +61,7 @@ export class PDFPageRenderer {
   }
 }
 
-export const PDF = ({
-  doc_permissions,
-  corpus_permissions,
-  read_only,
-}: {
-  doc_permissions: PermissionTypes[];
-  corpus_permissions: PermissionTypes[];
-  read_only: boolean;
-}) => {
+export const PDF = ({ read_only }: { read_only: boolean }) => {
   const { pdfDoc: doc } = usePdfDoc();
   const { pages } = usePages();
   const setViewStateError = useSetViewStateError();
@@ -93,8 +85,6 @@ export const PDF = ({
           <PDFPage
             key={p.page.pageNumber}
             read_only={read_only}
-            doc_permissions={doc_permissions}
-            corpus_permissions={corpus_permissions}
             pageInfo={p}
             onError={setViewStateError}
           />

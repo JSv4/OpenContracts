@@ -232,8 +232,6 @@ export type MultipageAnnotationJson = Record<number, SinglePageAnnotationJson>;
 
 export interface PageProps {
   pageInfo: PDFPageInfo;
-  doc_permissions: PermissionTypes[];
-  corpus_permissions: PermissionTypes[];
   read_only: boolean;
   onError: (_err: Error) => void;
 }

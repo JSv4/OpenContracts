@@ -16,7 +16,7 @@ import { DocTypePopup } from "./DocTypePopup";
 import _ from "lodash";
 
 import "./DocTypeLabelDisplayStyles.css";
-import { AnnotationLabelType } from "../../../../types/graphql-api";
+import { AnnotationLabelType, LabelType } from "../../../../types/graphql-api";
 import { PermissionTypes } from "../../../types";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 import { HideableHasWidth } from "../../common";
@@ -27,9 +27,19 @@ import {
   usePdfAnnotations,
 } from "../../hooks/AnnotationHooks";
 import { useCorpusState } from "../../context/CorpusAtom";
+import { useReactiveVar } from "@apollo/client";
+import { selectedAnalysis, selectedExtract } from "../../../../graphql/cache";
 
-export const DocTypeLabelDisplay = ({ read_only }: { read_only: boolean }) => {
+export const DocTypeLabelDisplay = () => {
   const { width } = useWindowDimensions();
+
+  const selected_extract = useReactiveVar(selectedExtract);
+  const selected_analysis = useReactiveVar(selectedAnalysis);
+  const { permissions: corpus_permissions } = useCorpusState();
+  const read_only =
+    Boolean(selected_analysis) ||
+    Boolean(selected_extract) ||
+    !corpus_permissions.includes(PermissionTypes.CAN_UPDATE);
 
   const { pdfAnnotations } = usePdfAnnotations();
   const { docTypeLabels } = useCorpusState();
@@ -95,6 +105,16 @@ export const DocTypeLabelDisplay = ({ read_only }: { read_only: boolean }) => {
   let filtered_doc_label_choices = doc_label_choices.filter(
     (obj) => !_.includes(existing_labels, obj.id)
   );
+
+  // Early return if conditions are met
+  if (
+    selected_extract &&
+    pdfAnnotations.annotations.filter(
+      (annot) => annot.annotationLabel.labelType === LabelType.DocTypeLabel
+    ).length === 0
+  ) {
+    return <></>;
+  }
 
   return (
     <>

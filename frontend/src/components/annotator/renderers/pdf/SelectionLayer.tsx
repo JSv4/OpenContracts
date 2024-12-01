@@ -11,10 +11,10 @@ import { AnnotationLabelType } from "../../../../types/graphql-api";
 import { ServerTokenAnnotation } from "../../types/annotations";
 import { SelectionBoundary } from "../../display/components/SelectionBoundary";
 import { SelectionTokenGroup } from "../../display/components/SelectionTokenGroup";
+import { useCorpusState } from "../../context/CorpusAtom";
 
 interface SelectionLayerProps {
   pageInfo: PDFPageInfo;
-  corpus_permissions: PermissionTypes[];
   read_only: boolean;
   activeSpanLabel: AnnotationLabelType | null;
   createAnnotation: (annotation: ServerTokenAnnotation) => void;
@@ -23,13 +23,13 @@ interface SelectionLayerProps {
 
 const SelectionLayer = ({
   pageInfo,
-  corpus_permissions,
   read_only,
   activeSpanLabel,
   createAnnotation,
   pageNumber,
 }: SelectionLayerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { permissions: corpus_permissions } = useCorpusState();
   const [localPageSelection, setLocalPageSelection] = useState<
     { pageNumber: number; bounds: BoundingBox } | undefined
   >();

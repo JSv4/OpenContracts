@@ -671,8 +671,6 @@ export const DocumentAnnotator = ({
           >
             <AnnotatorSidebar
               read_only={true}
-              selected_analysis={selected_analysis}
-              selected_extract={selected_extract}
               allowInput={false}
               datacells={dataCells}
               columns={columns}
@@ -691,26 +689,15 @@ export const DocumentAnnotator = ({
           scrollToAnnotation={
             scrollToAnnotation && convertToServerAnnotation(scrollToAnnotation)
           }
-          show_structural_annotations={show_structural_annotations}
           data_cells={dataCells}
           columns={columns}
-          editMode={edit_mode}
-          setEditMode={(m: "ANALYZE" | "ANNOTATE") => {
-            editMode(m);
-          }}
           allowInput={allow_input}
-          setAllowInput={(v: boolean) => {
-            allowUserInput(v);
-          }}
           analyses={analyses}
           extracts={extracts}
           selected_analysis={selected_analysis}
           selected_extract={selected_extract}
           onSelectAnalysis={onSelectAnalysis}
           onSelectExtract={onSelectExtract}
-          onError={(vs: ViewState) => {
-            viewStateVar(vs);
-          }}
         />
       );
       break;
@@ -724,8 +711,6 @@ export const DocumentAnnotator = ({
           >
             <AnnotatorSidebar
               read_only={true}
-              selected_analysis={selected_analysis}
-              selected_extract={selected_extract}
               allowInput={false}
               datacells={dataCells}
               columns={columns}

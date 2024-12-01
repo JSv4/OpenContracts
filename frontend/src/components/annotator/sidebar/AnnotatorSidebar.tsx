@@ -23,6 +23,8 @@ import "./AnnotatorSidebar.css";
 import { useReactiveVar } from "@apollo/client";
 import {
   openedCorpus,
+  selectedAnalysis,
+  selectedExtract,
   showStructuralAnnotations,
 } from "../../../graphql/cache";
 import {
@@ -307,18 +309,12 @@ const ContentContainer = styled.div`
 
 export const AnnotatorSidebar = ({
   read_only,
-  selected_corpus,
-  selected_analysis,
-  selected_extract,
   allowInput,
   datacells,
   columns,
   fetchMore,
 }: {
   read_only: boolean;
-  selected_corpus?: CorpusType | null | undefined;
-  selected_analysis?: AnalysisType | null | undefined;
-  selected_extract?: ExtractType | null | undefined;
   allowInput: boolean;
   datacells: DatacellType[];
   columns: ColumnType[];
@@ -335,7 +331,9 @@ export const AnnotatorSidebar = ({
     setSelectedRelations,
   } = useAnnotationSelection();
   const { isSidebarVisible, setSidebarVisible } = useUISettings();
-  const opened_corpus = useReactiveVar(openedCorpus);
+  const selected_corpus = useReactiveVar(openedCorpus);
+  const selected_extract = useReactiveVar(selectedExtract);
+  const selected_analysis = useReactiveVar(selectedAnalysis);
   const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
 
   // Slightly kludgy way to handle responsive layout and drop sidebar once it becomes a pain
@@ -348,7 +346,7 @@ export const AnnotatorSidebar = ({
     selected_analysis || selected_extract ? "ANALYZE" : "ANNOTATE",
     allowInput,
     read_only ||
-      (!selected_analysis && !selected_extract && !opened_corpus?.labelSet)
+      (!selected_analysis && !selected_extract && !selected_corpus?.labelSet)
   );
 
   const [showCorpusStats, setShowCorpusStats] = useState(false);
@@ -794,13 +792,13 @@ export const AnnotatorSidebar = ({
           </Statistic>
           <Statistic>
             <StatisticValue>
-              {opened_corpus?.creator?.email?.split("@")[0] || "Unknown"}
+              {selected_corpus?.creator?.email?.split("@")[0] || "Unknown"}
             </StatisticValue>
             <StatisticLabel>Creator</StatisticLabel>
           </Statistic>
           <Statistic>
             <StatisticValue>
-              {new Date(opened_corpus?.modified).toLocaleDateString()}
+              {new Date(selected_corpus?.modified).toLocaleDateString()}
             </StatisticValue>
             <StatisticLabel>Last Updated</StatisticLabel>
           </Statistic>

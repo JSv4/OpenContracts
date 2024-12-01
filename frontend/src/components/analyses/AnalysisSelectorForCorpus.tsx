@@ -12,7 +12,11 @@ import { AnalysisItem } from "./AnalysisItem";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { ExtractItem } from "../extracts/ExtractItem";
-import { setTopbarVisible } from "../../graphql/cache";
+import {
+  selectedAnalysis,
+  selectedExtract,
+  setTopbarVisible,
+} from "../../graphql/cache";
 import { useReactiveVar } from "@apollo/client";
 import { X } from "lucide-react";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
@@ -22,8 +26,6 @@ interface HorizontalSelectorForCorpusProps {
   read_only: boolean;
   analyses: AnalysisType[];
   extracts: ExtractType[];
-  selected_analysis: AnalysisType | null | undefined;
-  selected_extract: ExtractType | null | undefined;
   onSelectAnalysis: (analysis: AnalysisType | null) => void | null | undefined;
   onSelectExtract: (extract: ExtractType | null) => void | null | undefined;
 }
@@ -35,13 +37,14 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
   read_only,
   analyses,
   extracts,
-  selected_analysis,
-  selected_extract,
   onSelectAnalysis,
   onSelectExtract,
 }) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
+
+  const selected_extract = useReactiveVar(selectedExtract);
+  const selected_analysis = useReactiveVar(selectedAnalysis);
 
   const topbarVisible = useReactiveVar(setTopbarVisible);
   const [searchTerm, setSearchTerm] = useState<string>("");

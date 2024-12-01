@@ -35,12 +35,7 @@ import { PDFPageInfo } from "../../types/pdf";
  * @param {PageProps} props - Properties for the PDF page.
  * @returns {JSX.Element} The rendered PDF page component.
  */
-export const PDFPage = ({
-  pageInfo,
-  corpus_permissions,
-  read_only,
-  onError,
-}: PageProps) => {
+export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<PDFPageRenderer | null>(null);
   const { pdfAnnotations } = usePdfAnnotations();
@@ -290,7 +285,6 @@ export const PDFPage = ({
       <PageCanvas ref={canvasRef} />
       <SelectionLayer
         pageInfo={updatedPageInfo}
-        corpus_permissions={corpus_permissions}
         read_only={read_only}
         activeSpanLabel={activeSpanLabel ?? null}
         createAnnotation={createAnnotation}

@@ -18,8 +18,6 @@ interface AnnotatorTopbarProps {
   opened_document: DocumentType | null | undefined;
   analyses: AnalysisType[];
   extracts: ExtractType[];
-  selected_analysis: AnalysisType | null | undefined;
-  selected_extract: ExtractType | null | undefined;
   onSelectAnalysis: (analysis: AnalysisType | null) => void;
   onSelectExtract: (extract: ExtractType | null) => void;
   children?: React.ReactNode;
@@ -87,8 +85,6 @@ export const AnnotatorTopbar: React.FC<AnnotatorTopbarProps> = ({
   opened_document,
   analyses,
   extracts,
-  selected_analysis,
-  selected_extract,
   onSelectAnalysis,
   onSelectExtract,
   children,
@@ -124,8 +120,6 @@ export const AnnotatorTopbar: React.FC<AnnotatorTopbarProps> = ({
             corpus={opened_corpus}
             analyses={analyses}
             extracts={extracts}
-            selected_analysis={selected_analysis}
-            selected_extract={selected_extract}
             onSelectAnalysis={onSelectAnalysis}
             onSelectExtract={onSelectExtract}
           />

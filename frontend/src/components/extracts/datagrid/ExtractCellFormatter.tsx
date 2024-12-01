@@ -275,6 +275,7 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
   useEffect(() => {
     if (viewSourceAnnotations !== null) {
       onlyDisplayTheseAnnotations(viewSourceAnnotations);
+      displayAnnotationOnAnnotatorLoad(viewSourceAnnotations[0]);
       showSelectedAnnotationOnly(false);
       showAnnotationBoundingBoxes(true);
       showStructuralAnnotations(true);

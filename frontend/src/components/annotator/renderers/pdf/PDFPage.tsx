@@ -1,16 +1,10 @@
 import { useRef, useState, useEffect, useMemo, useLayoutEffect } from "react";
 import { useAtom } from "jotai";
-import { AnnotationLabelType } from "../../../../types/graphql-api";
-import {
-  getPageBoundsFromCanvas,
-  normalizeBounds,
-} from "../../../../utils/transform";
-import { PageProps, BoundingBox, TextSearchTokenResult } from "../../../types";
+import { getPageBoundsFromCanvas } from "../../../../utils/transform";
+import { PageProps, TextSearchTokenResult } from "../../../types";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
 import { Selection } from "../../display/components/Selection";
 import { SearchResult } from "../../display/components/SearchResult";
-import { SelectionBoundary } from "../../display/components/SelectionBoundary";
-import { SelectionTokenGroup } from "../../display/components/SelectionTokenGroup";
 import { ServerTokenAnnotation } from "../../types/annotations";
 import { useAnnotationSearch } from "../../hooks/useAnnotationSearch";
 import {

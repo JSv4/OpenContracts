@@ -283,6 +283,18 @@ export const DocumentAnnotator = ({
                 : { analysisId: "__none__" }),
             },
           });
+        } else if (opened_corpus !== undefined && displayOnlyTheseAnnotations) {
+          // Create mock data of type GetDocumentAnnotationsAndRelationshipsOutput
+          const mockData: GetDocumentAnnotationsAndRelationshipsOutput = {
+            document: {
+              ...opened_document,
+              allAnnotations: displayOnlyTheseAnnotations,
+              // Ensure other required fields are included
+            },
+            corpus: opened_corpus,
+          };
+          // Return a Promise that resolves to an object similar to the Apollo QueryResult
+          return Promise.resolve({ data: mockData });
         }
         return Promise.resolve(null);
       };

@@ -242,6 +242,10 @@ export const DocumentAnnotator = ({
   // Process annotations when data is loaded
   useEffect(() => {
     if (humanAnnotationsAndRelationshipsData) {
+      console.log(
+        "React to annotations data",
+        humanAnnotationsAndRelationshipsData
+      );
       processAnnotationsData(humanAnnotationsAndRelationshipsData);
     }
   }, [humanAnnotationsAndRelationshipsData]);
@@ -628,34 +632,30 @@ export const DocumentAnnotator = ({
         <ModalLoadingContainer>
           <LoadingContent>
             <Header as="h2" icon>
-              <Icon size="mini" name="file alternate outline" />
-              {progress === 100 && humanDataLoading
+              {progress < 100 && (
+                <Icon size="mini" name="file alternate outline" />
+              )}
+              {progress === 100
                 ? "Fetching Annotations"
                 : "Loading Document Data"}
               <Header.Subheader style={{ marginTop: "2rem" }}>
-                {progress === 100 && humanDataLoading ? (
-                  <>
-                    <Icon loading name="spinner" />
-                    Retrieving annotation data from server...
-                  </>
-                ) : (
-                  "Hang tight while we fetch the required data."
-                )}
+                {progress === 100
+                  ? "Retrieving annotation data from server..."
+                  : "Fetching document data from server..."}
               </Header.Subheader>
             </Header>
-            {progress < 100 && (
+            {progress < 100 ? (
               <Progress
                 style={{ width: "300px" }}
                 percent={progress}
                 indicating
               />
-            )}
-            {progress === 100 && humanDataLoading && (
-              <Progress
-                style={{ width: "300px" }}
-                active
-                indicating
-                percent={100}
+            ) : (
+              <Icon
+                loading
+                name="spinner"
+                size="large"
+                style={{ marginTop: "1rem" }}
               />
             )}
           </LoadingContent>

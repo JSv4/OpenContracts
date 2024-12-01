@@ -216,11 +216,7 @@ export const DocumentViewer = ({
   // Access annotation controls
   const { setSelectedAnnotations, selectedAnnotations } =
     useAnnotationSelection();
-  const annotationControls = useAnnotationControls();
-  const { documentType } = useDocumentType();
-  const { humanSpanLabels } = useHumanSpanLabels();
-  const { humanTokenLabels } = useHumanTokenLabels();
-  const { activeSpanLabel, setActiveSpanLabel } = annotationControls;
+  const { activeSpanLabel, setActiveSpanLabel } = useAnnotationControls();
 
   const {
     isSidebarVisible,
@@ -777,11 +773,6 @@ export const DocumentViewer = ({
               corpusPermissions.includes(PermissionTypes.CAN_UPDATE) && ( */}
               <LabelSelector
                 sidebarWidth={responsive_sidebar_width}
-                humanSpanLabelChoices={
-                  documentType === "application/pdf"
-                    ? humanSpanLabels
-                    : humanTokenLabels
-                }
                 activeSpanLabel={activeSpanLabel ?? null}
                 setActiveLabel={setActiveSpanLabel}
               />

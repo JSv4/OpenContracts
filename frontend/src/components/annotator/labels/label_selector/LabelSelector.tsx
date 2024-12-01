@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import styled from "styled-components";
 import { Icon, Popup } from "semantic-ui-react";
 import { AnnotationLabelType } from "../../../../types/graphql-api";
@@ -6,32 +6,37 @@ import { SpanLabelCard, BlankLabelElement } from "./LabelElements";
 import { LabelSelectorDialog } from "./LabelSelectorDialog";
 import { TruncatedText } from "../../../widgets/data-display/TruncatedText";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
+import {
+  useHumanSpanLabels,
+  useHumanTokenLabels,
+} from "../../context/CorpusAtom";
 
 interface LabelSelectorProps {
   sidebarWidth: string;
-  humanSpanLabelChoices: AnnotationLabelType[];
   activeSpanLabel: AnnotationLabelType | null;
   setActiveLabel: (label: AnnotationLabelType) => void;
 }
 
 export const LabelSelector: React.FC<LabelSelectorProps> = ({
   sidebarWidth,
-  humanSpanLabelChoices,
   activeSpanLabel,
   setActiveLabel,
 }) => {
   const { width } = useWindowDimensions();
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+
+  const { humanSpanLabels } = useHumanSpanLabels();
+  const { humanTokenLabels } = useHumanTokenLabels();
 
   const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
 
-  // Compute filtered labels whenever props change
   const filteredLabelChoices = useMemo(() => {
     return activeSpanLabel
-      ? humanSpanLabelChoices.filter((obj) => obj.id !== activeSpanLabel.id)
-      : humanSpanLabelChoices;
-  }, [humanSpanLabelChoices, activeSpanLabel]);
+      ? [...humanSpanLabels, ...humanTokenLabels].filter(
+          (obj) => obj.id !== activeSpanLabel.id
+        )
+      : [...humanSpanLabels, ...humanTokenLabels];
+  }, [humanSpanLabels, humanTokenLabels, activeSpanLabel]);
 
   const onSelect = (label: AnnotationLabelType): void => {
     setActiveLabel(label);
@@ -46,12 +51,8 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
     setOpen(false);
   };
 
-  if (!humanSpanLabelChoices || humanSpanLabelChoices.length === 0) {
-    return <div>Loading labels...</div>;
-  }
-
   return (
-    <LabelSelectorContainer ref={containerRef}>
+    <LabelSelectorContainer id="LabelSelectorContainer">
       <StyledPopup
         trigger={
           <LabelSelectorWidgetContainer $sidebarWidth={sidebarWidth}>
@@ -105,7 +106,19 @@ const LabelSelectorContainer = styled.div`
   position: relative;
 `;
 
-//  right: calc(${(props) => props.$sidebarWidth} + 2vw);
+const LoadingContainer = styled.div`
+  position: fixed;
+  z-index: 1000;
+  bottom: 2vh;
+  right: 2vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 10px;
+`;
+
 const LabelSelectorWidgetContainer = styled.div<{ $sidebarWidth: string }>`
   position: fixed;
   z-index: 1000;

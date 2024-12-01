@@ -90,15 +90,6 @@ export function useInitializeCorpusAtoms(params: {
     relationLabels,
     docTypeLabels,
     isLoading,
-    setSelectedCorpus,
-    setPermissions,
-    setAllowComments,
-    setSpanLabelsAtom,
-    setHumanSpanLabelsAtom,
-    setRelationLabelsAtom,
-    setDocTypeLabelsAtom,
-    setIsLoadingAtom,
-    setHumanTokenLabelsAtom,
   ]);
 }
 

@@ -21,6 +21,8 @@ import {
   openedDocument,
   selectedAnalysesIds,
   selectedAnalyses,
+  selectedExtract,
+  selectedExtractIds,
   onlyDisplayTheseAnnotations,
   openedCorpus,
   showSelectedAnnotationOnly,
@@ -214,7 +216,9 @@ export const App = () => {
                 open={Boolean(opened_document)}
                 onClose={() => {
                   openedDocument(null);
+                  selectedExtract(null);
                   selectedAnalysesIds([]);
+                  selectedExtractIds([]);
                   selectedAnalyses([]);
                   onlyDisplayTheseAnnotations(undefined);
                 }}

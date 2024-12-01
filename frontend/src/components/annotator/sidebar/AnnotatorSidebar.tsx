@@ -135,6 +135,10 @@ const TopSection = styled.div`
   background: #ffffff;
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-direction: column;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const HeaderRow = styled.div`
@@ -142,6 +146,8 @@ const HeaderRow = styled.div`
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1rem;
+  flex-direction: row;
+  flex: 1;
 `;
 
 const TitleGroup = styled.div`
@@ -154,8 +160,9 @@ const StatsRow = styled(StatisticGroup)`
   &&& {
     width: 100%;
     margin: 0;
+    padding: 0;
     display: flex;
-    justify-content: space-between;
+    justify-content: space-evenly;
     padding-top: 1rem;
     border-top: 1px solid #f1f5f9;
 
@@ -784,59 +791,6 @@ export const AnnotatorSidebar = ({
 
           <ActionButtons>
             <ViewSettingsPopup label_display_options={labelDisplayOptions} />
-            <ActionButton
-              trigger={
-                <button
-                  onClick={() => setShowCorpusStats(!showCorpusStats)}
-                  data-active={showCorpusStats}
-                >
-                  <Icon name="chart bar outline" />
-                </button>
-              }
-              content="View Statistics"
-              position="bottom center"
-            />
-            <ActionButton
-              trigger={
-                <button
-                  onClick={() => {
-                    const currentValue = showStructuralAnnotations();
-                    showStructuralAnnotations(!currentValue);
-                  }}
-                  data-active={showStructuralAnnotations()}
-                >
-                  <Icon name="filter" />
-                </button>
-              }
-              content="Toggle Structural Annotations"
-              position="bottom center"
-            />
-            <ActionButton
-              trigger={
-                <button
-                  onClick={() => setShowCorpusStats(true)}
-                  data-active={showCorpusStats}
-                >
-                  <Icon name={opened_corpus ? "book" : "bookmark outline"} />
-                </button>
-              }
-              content={
-                opened_corpus ? (
-                  <CorpusStats
-                    corpus={opened_corpus}
-                    onUnselect={() => openedCorpus(null)}
-                  />
-                ) : (
-                  <Header as="h4" icon textAlign="center">
-                    <Icon name="search" circular />
-                    <Header.Content>No corpus selected</Header.Content>
-                  </Header>
-                )
-              }
-              position="bottom right"
-              flowing
-              hoverable
-            />
           </ActionButtons>
         </HeaderRow>
 

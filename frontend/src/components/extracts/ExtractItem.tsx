@@ -14,10 +14,10 @@ import { PermissionTypes } from "../types";
 import { getPermissions } from "../../utils/transform";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
+import { useSelectedCorpus } from "../annotator/context/DocumentAtom";
 
 interface ExtractItemProps {
   extract: ExtractType;
-  corpus: CorpusType;
   selected?: boolean;
   read_only?: boolean;
   compact?: boolean;
@@ -26,7 +26,6 @@ interface ExtractItemProps {
 
 export const ExtractItem = ({
   extract,
-  corpus,
   selected,
   read_only,
   onSelect,
@@ -34,6 +33,8 @@ export const ExtractItem = ({
 }: ExtractItemProps) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
+
+  const { selectedCorpus } = useSelectedCorpus();
 
   const [requestDeleteExtract] = useMutation<
     RequestDeleteExtractOutputType,
@@ -49,20 +50,28 @@ export const ExtractItem = ({
       toast.error("Could not delete extract...");
     },
     update: (cache, { data: delete_extract_data }) => {
-      const cache_data: GetExtractsOutput | null = cache.readQuery({
-        query: GET_EXTRACTS,
-        variables: { corpusId: corpus.id },
-      });
-      if (cache_data) {
-        const new_cache_data = _.cloneDeep(cache_data);
-        new_cache_data.extracts.edges = new_cache_data.extracts.edges.filter(
-          (edge) => edge.node.id !== extract.id
-        );
-        cache.writeQuery({
+      if (!selectedCorpus?.id) return;
+
+      try {
+        const cache_data: GetExtractsOutput | null = cache.readQuery({
           query: GET_EXTRACTS,
-          variables: { corpusId: corpus.id },
-          data: new_cache_data,
+          variables: { corpusId: selectedCorpus.id },
         });
+
+        if (cache_data?.extracts?.edges) {
+          const new_cache_data = _.cloneDeep(cache_data);
+          new_cache_data.extracts.edges = new_cache_data.extracts.edges.filter(
+            (edge) => edge.node.id !== extract.id
+          );
+
+          cache.writeQuery({
+            query: GET_EXTRACTS,
+            variables: { corpusId: selectedCorpus.id },
+            data: new_cache_data,
+          });
+        }
+      } catch (error) {
+        console.warn("Failed to update cache after extract deletion:", error);
       }
     },
   });

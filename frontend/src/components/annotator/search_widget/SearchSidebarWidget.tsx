@@ -1,11 +1,10 @@
-import React, { useContext, useEffect, useCallback } from "react";
+import React, { useEffect } from "react";
 import { Header, Segment, Icon, Message, Form } from "semantic-ui-react";
 import _ from "lodash";
 import "./SearchWidgetStyles.css";
 import { TextSearchSpanResult, TextSearchTokenResult } from "../../types";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
-import { useTextSearch } from "../hooks/useTextSearch";
 import {
   useSearchText,
   useSelectedTextSearchMatchIndex,

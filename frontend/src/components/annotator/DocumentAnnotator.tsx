@@ -2,8 +2,10 @@ import { useLazyQuery, useReactiveVar } from "@apollo/client";
 import { useEffect, useState, useLayoutEffect } from "react";
 import { useSetAtom, useAtom } from "jotai";
 import {
+  AnalysisType,
   CorpusType,
   DocumentType,
+  ExtractType,
   LabelDisplayBehavior,
   LabelType,
   ServerAnnotationType,
@@ -27,8 +29,6 @@ import {
   usePageTokenTextMaps,
   useDocumentType,
   useDocText,
-  selectedDocumentAtom,
-  selectedCorpusAtom,
   usePages,
   useSelectedDocument,
   useSelectedCorpus,
@@ -108,9 +108,10 @@ interface DocumentAnnotatorProps {
   open: boolean;
   opened_document: DocumentType;
   opened_corpus?: CorpusType;
+  opened_extract?: ExtractType | null;
+  opened_analysis?: AnalysisType | null;
   read_only: boolean;
   show_structural_annotations: boolean;
-
   show_selected_annotation_only: boolean;
   show_annotation_bounding_boxes: boolean;
   show_annotation_labels: LabelDisplayBehavior;
@@ -127,6 +128,8 @@ export const DocumentAnnotator = ({
   open,
   opened_document,
   opened_corpus,
+  opened_extract,
+  opened_analysis,
   read_only,
   show_structural_annotations,
   show_selected_annotation_only,
@@ -141,12 +144,8 @@ export const DocumentAnnotator = ({
 
   // Using Jotai atoms for managing annotations
   const [, setPdfAnnotations] = useAtom(pdfAnnotationsAtom);
-  const [structuralAnnotations, setStructuralAnnotations] = useAtom(
-    structuralAnnotationsAtom
-  );
-  const [docTypeAnnotations, setDocTypeAnnotations] = useAtom(
-    docTypeAnnotationsAtom
-  );
+  const [, setStructuralAnnotations] = useAtom(structuralAnnotationsAtom);
+  const [, setDocTypeAnnotations] = useAtom(docTypeAnnotationsAtom);
   const {
     setShowSelectedOnly,
     setShowLabels,
@@ -209,10 +208,8 @@ export const DocumentAnnotator = ({
   >(GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS);
 
   // Set document and corpus atoms when component mounts
-  const setSelectedDocument = useSetAtom(selectedDocumentAtom);
-  const setSelectedCorpus = useSetAtom(selectedCorpusAtom);
-  const { selectedDocument } = useSelectedDocument();
-  const { selectedCorpus } = useSelectedCorpus();
+  const { setSelectedDocument } = useSelectedDocument();
+  const { setSelectedCorpus } = useSelectedCorpus();
 
   useEffect(() => {
     setSelectedDocument(opened_document);
@@ -552,6 +549,14 @@ export const DocumentAnnotator = ({
     scrollToAnnotation,
   ]);
 
+  useEffect(() => {
+    onSelectAnalysis(opened_analysis ?? null);
+  }, [opened_analysis]);
+
+  useEffect(() => {
+    onSelectExtract(opened_extract ?? null);
+  }, [opened_extract]);
+
   // When modal is hidden, ensure we reset state and clear provided annotations to display
   useEffect(() => {
     if (!open) {
@@ -661,15 +666,11 @@ export const DocumentAnnotator = ({
             scrollToAnnotation && convertToServerAnnotation(scrollToAnnotation)
           }
           doc={pdfDoc}
-          selected_corpus={selectedCorpus}
-          selected_document={selectedDocument}
           analyses={analyses}
           extracts={extracts}
           datacells={dataCells}
           columns={columns}
           allowInput={allow_input}
-          onSelectAnalysis={onSelectAnalysis}
-          onSelectExtract={onSelectExtract}
         />
       );
       break;

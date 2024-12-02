@@ -5,9 +5,9 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { Segment, Form, Button, Popup, Icon } from "semantic-ui-react";
+import { Segment, Form, Button, Icon } from "semantic-ui-react";
 import Fuse from "fuse.js";
-import { AnalysisType, CorpusType, ExtractType } from "../../types/graphql-api";
+import { AnalysisType, ExtractType } from "../../types/graphql-api";
 import { AnalysisItem } from "./AnalysisItem";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
@@ -20,31 +20,24 @@ import {
 import { useReactiveVar } from "@apollo/client";
 import { X } from "lucide-react";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
+import { useAnalysisManager } from "../annotator/hooks/AnalysisHooks";
 
 interface HorizontalSelectorForCorpusProps {
-  corpus: CorpusType;
   read_only: boolean;
   analyses: AnalysisType[];
   extracts: ExtractType[];
-  onSelectAnalysis: (analysis: AnalysisType | null) => void | null | undefined;
-  onSelectExtract: (extract: ExtractType | null) => void | null | undefined;
 }
 
 export const ExtractAndAnalysisHorizontalSelector: React.FC<
   HorizontalSelectorForCorpusProps
-> = ({
-  corpus,
-  read_only,
-  analyses,
-  extracts,
-  onSelectAnalysis,
-  onSelectExtract,
-}) => {
+> = ({ read_only, analyses, extracts }) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const selected_extract = useReactiveVar(selectedExtract);
   const selected_analysis = useReactiveVar(selectedAnalysis);
+
+  const { onSelectAnalysis, onSelectExtract } = useAnalysisManager();
 
   const topbarVisible = useReactiveVar(setTopbarVisible);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -123,7 +116,6 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
           compact={use_mobile_layout}
           key={item.id}
           analysis={item as AnalysisType}
-          corpus={corpus}
           selected={Boolean(
             selected_analysis && item.id === selected_analysis.id
           )}
@@ -141,7 +133,6 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
           compact={use_mobile_layout}
           key={item.id}
           extract={item as ExtractType}
-          corpus={corpus}
           selected={Boolean(
             selected_extract && item.id === selected_extract.id
           )}

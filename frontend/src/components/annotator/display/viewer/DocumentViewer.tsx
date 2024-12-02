@@ -33,7 +33,6 @@ import { MOBILE_VIEW_BREAKPOINT } from "../../../../assets/configurations/consta
 import {
   ServerSpanAnnotation,
   RelationGroup,
-  PdfAnnotations,
   ServerTokenAnnotation,
 } from "../../types/annotations";
 import {
@@ -46,6 +45,10 @@ import { useUISettings } from "../../hooks/useUISettings";
 import { useCreateRelationship } from "../../hooks/AnnotationHooks";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 import TxtAnnotatorWrapper from "../../components/wrappers/TxtAnnotatorWrapper";
+import {
+  useSelectedCorpus,
+  useSelectedDocument,
+} from "../../context/DocumentAtom";
 
 export const PDFViewContainer = styled.div`
   width: "100%",
@@ -127,35 +130,30 @@ const PDFActionBarWrapper = styled.div`
 `;
 
 export const DocumentViewer = ({
-  selected_corpus,
-  selected_document,
   analyses,
   extracts,
   datacells,
   columns,
   scrollToAnnotation,
   allowInput,
-  onSelectAnalysis,
-  onSelectExtract,
   scroll_to_annotation_on_open,
   doc,
 }: {
-  selected_corpus?: CorpusType | null;
-  selected_document: DocumentType | null;
   allowInput: boolean;
   analyses: AnalysisType[];
   extracts: ExtractType[];
   datacells: DatacellType[];
   columns: ColumnType[];
   scrollToAnnotation?: ServerTokenAnnotation | ServerSpanAnnotation;
-  onSelectAnalysis: (analysis: AnalysisType | null) => undefined | null | void;
-  onSelectExtract: (extract: ExtractType | null) => undefined | null | void;
   scroll_to_annotation_on_open: ServerTokenAnnotation | null | undefined;
   doc: PDFDocumentProxy | undefined;
 }) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
   const hasScrolledToAnnotation = useRef(false);
+
+  const { selectedDocument } = useSelectedDocument();
+  const { selectedCorpus } = useSelectedCorpus();
 
   // Access annotation controls
   const { setSelectedAnnotations } = useAnnotationSelection();
@@ -279,14 +277,14 @@ export const DocumentViewer = ({
 
   let view_components = <></>;
   if (
-    !selected_document ||
-    (selected_document.fileType === "application/pdf" && !doc)
+    !selectedDocument ||
+    (selectedDocument.fileType === "application/pdf" && !doc)
   ) {
     view_components = <></>;
   }
 
-  if (selected_document) {
-    switch (selected_document.fileType) {
+  if (selectedDocument) {
+    switch (selectedDocument.fileType) {
       case "application/pdf":
         view_components = <PDF read_only={readOnly} />;
         break;
@@ -299,7 +297,7 @@ export const DocumentViewer = ({
       default:
         view_components = (
           <div>
-            <p>Unsupported filetype: {selected_document.fileType}</p>
+            <p>Unsupported filetype: {selectedDocument.fileType}</p>
           </div>
         );
         break;
@@ -322,14 +320,7 @@ export const DocumentViewer = ({
           sidebarVisible={!banish_sidebar}
           sidebarWidth={responsive_sidebar_width}
         >
-          <AnnotatorTopbar
-            opened_corpus={selected_corpus}
-            opened_document={selected_document}
-            analyses={analyses}
-            extracts={extracts}
-            onSelectAnalysis={onSelectAnalysis}
-            onSelectExtract={onSelectExtract}
-          />
+          <AnnotatorTopbar analyses={analyses} extracts={extracts} />
 
           <MainContent>
             <PDFActionBarWrapper>

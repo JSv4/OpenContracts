@@ -4,22 +4,13 @@ import { Icon } from "semantic-ui-react";
 import { useReactiveVar } from "@apollo/client";
 import { setTopbarVisible } from "../../../graphql/cache";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
-import {
-  AnalysisType,
-  CorpusType,
-  DocumentType,
-  ExtractType,
-} from "../../../types/graphql-api";
+import { AnalysisType, ExtractType } from "../../../types/graphql-api";
 import { ExtractAndAnalysisHorizontalSelector } from "../../analyses/AnalysisSelectorForCorpus";
 import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
 
 interface AnnotatorTopbarProps {
-  opened_corpus: CorpusType | null | undefined;
-  opened_document: DocumentType | null | undefined;
   analyses: AnalysisType[];
   extracts: ExtractType[];
-  onSelectAnalysis: (analysis: AnalysisType | null) => void;
-  onSelectExtract: (extract: ExtractType | null) => void;
   children?: React.ReactNode;
 }
 
@@ -81,17 +72,10 @@ const ToggleButton = styled.div<{ visible: boolean; topbarHeight: number }>`
 `;
 
 export const AnnotatorTopbar: React.FC<AnnotatorTopbarProps> = ({
-  opened_corpus,
-  opened_document,
   analyses,
   extracts,
-  onSelectAnalysis,
-  onSelectExtract,
   children,
 }) => {
-  const { width } = useWindowDimensions();
-  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
-
   const topbarRef = useRef<HTMLDivElement>(null);
   const [topbarHeight, setTopbarHeight] = useState(0);
   const topbarVisible = useReactiveVar(setTopbarVisible);
@@ -114,16 +98,11 @@ export const AnnotatorTopbar: React.FC<AnnotatorTopbarProps> = ({
         height={topbarHeight}
       >
         {/* Topbar Content */}
-        {opened_corpus && (
-          <ExtractAndAnalysisHorizontalSelector
-            read_only={false}
-            corpus={opened_corpus}
-            analyses={analyses}
-            extracts={extracts}
-            onSelectAnalysis={onSelectAnalysis}
-            onSelectExtract={onSelectExtract}
-          />
-        )}
+        <ExtractAndAnalysisHorizontalSelector
+          read_only={false}
+          analyses={analyses}
+          extracts={extracts}
+        />
       </TopbarContainer>
 
       <ToggleButton

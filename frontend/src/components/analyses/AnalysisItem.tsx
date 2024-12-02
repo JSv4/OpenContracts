@@ -18,7 +18,7 @@ import {
   REQUEST_DELETE_ANALYSIS,
 } from "../../graphql/mutations";
 import { GetAnalysesOutputs, GET_ANALYSES } from "../../graphql/queries";
-import { AnalysisType } from "../../types/graphql-api";
+import { AnalysisType, CorpusType } from "../../types/graphql-api";
 import _ from "lodash";
 import { PermissionTypes } from "../types";
 import { getPermissions } from "../../utils/transform";
@@ -33,6 +33,7 @@ interface AnalysisItemProps {
   read_only?: boolean;
   compact?: boolean;
   onSelect?: () => any | never;
+  corpus?: CorpusType | null | undefined;
 }
 
 const StyledCard = styled(Card).withConfig({
@@ -133,8 +134,8 @@ export const AnalysisItem = ({
   read_only,
   onSelect,
   compact,
+  corpus: selectedCorpus,
 }: AnalysisItemProps) => {
-  const { selectedCorpus } = useSelectedCorpus();
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
   const descriptionRef = useRef<HTMLDivElement>(null);

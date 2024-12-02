@@ -14,12 +14,12 @@ import { PermissionTypes } from "../types";
 import { getPermissions } from "../../utils/transform";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
-import { useSelectedCorpus } from "../annotator/context/DocumentAtom";
 
 interface ExtractItemProps {
   extract: ExtractType;
   selected?: boolean;
   read_only?: boolean;
+  corpus?: CorpusType | null | undefined;
   compact?: boolean;
   onSelect?: () => any | never;
 }
@@ -28,13 +28,12 @@ export const ExtractItem = ({
   extract,
   selected,
   read_only,
+  corpus: selectedCorpus,
   onSelect,
   compact,
 }: ExtractItemProps) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
-
-  const { selectedCorpus } = useSelectedCorpus();
 
   const [requestDeleteExtract] = useMutation<
     RequestDeleteExtractOutputType,

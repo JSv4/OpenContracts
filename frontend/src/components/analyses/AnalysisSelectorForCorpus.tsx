@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { Segment, Form, Button, Icon } from "semantic-ui-react";
 import Fuse from "fuse.js";
-import { AnalysisType, ExtractType } from "../../types/graphql-api";
+import { AnalysisType, CorpusType, ExtractType } from "../../types/graphql-api";
 import { AnalysisItem } from "./AnalysisItem";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
@@ -21,6 +21,7 @@ import { useReactiveVar } from "@apollo/client";
 import { X } from "lucide-react";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 import { useAnalysisManager } from "../annotator/hooks/AnalysisHooks";
+import { useSelectedCorpus } from "../annotator/context/DocumentAtom";
 
 interface HorizontalSelectorForCorpusProps {
   read_only: boolean;
@@ -32,6 +33,7 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
   HorizontalSelectorForCorpusProps
 > = ({ read_only, analyses, extracts }) => {
   const { width } = useWindowDimensions();
+  const { selectedCorpus } = useSelectedCorpus();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const selected_extract = useReactiveVar(selectedExtract);
@@ -113,6 +115,7 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
     return filteredItems.map((item) =>
       activeTab === "analyses" ? (
         <AnalysisItem
+          corpus={selectedCorpus}
           compact={use_mobile_layout}
           key={item.id}
           analysis={item as AnalysisType}
@@ -130,6 +133,7 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
         />
       ) : (
         <ExtractItem
+          corpus={selectedCorpus}
           compact={use_mobile_layout}
           key={item.id}
           extract={item as ExtractType}

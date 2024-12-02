@@ -29,3 +29,10 @@ export const annotationObjsAtom = atom<
  * Atom to manage document type annotations.
  */
 export const docTypeAnnotationsAtom = atom<DocTypeAnnotation[]>([]);
+
+/**
+ * Atom to store the initial annotations when the document is first loaded.
+ */
+export const initialAnnotationsAtom = atom<
+  (ServerTokenAnnotation | ServerSpanAnnotation)[]
+>([]);

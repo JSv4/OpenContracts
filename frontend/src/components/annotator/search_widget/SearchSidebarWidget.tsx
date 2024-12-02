@@ -5,11 +5,7 @@ import "./SearchWidgetStyles.css";
 import { TextSearchSpanResult, TextSearchTokenResult } from "../../types";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
-import {
-  useSearchText,
-  useSelectedTextSearchMatchIndex,
-  useTextSearchMatches,
-} from "../context/DocumentAtom";
+import { useSearchText, useTextSearchState } from "../context/DocumentAtom";
 
 const PageHeader: React.FC<{
   result: TextSearchTokenResult | TextSearchSpanResult;
@@ -100,9 +96,11 @@ const SearchResultCard: React.FC<{
 
 export const SearchSidebarWidget: React.FC = () => {
   const annotationRefs = useAnnotationRefs();
-  const { textSearchMatches: searchResults } = useTextSearchMatches();
-  const { selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex } =
-    useSelectedTextSearchMatchIndex();
+  const {
+    textSearchMatches: searchResults,
+    selectedTextSearchMatchIndex,
+    setSelectedTextSearchMatchIndex,
+  } = useTextSearchState();
   const { searchText, setSearchText } = useSearchText();
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { useQuery, useLazyQuery } from "@apollo/client";
 import { toast } from "react-toastify";
 import _ from "lodash";
@@ -34,7 +34,7 @@ import {
   showAnnotationLabelsAtom,
   showSelectedAnnotationOnlyAtom,
 } from "../context/AnalysisAtoms";
-import { usePdfAnnotations } from "./AnnotationHooks";
+import { useInitialAnnotations, usePdfAnnotations } from "./AnnotationHooks";
 import { useCorpusState } from "../context/CorpusAtom";
 import {
   useQueryLoadingStates,
@@ -128,6 +128,9 @@ export const useAnalysisManager = () => {
     GET_DATACELLS_FOR_EXTRACT
   );
 
+  // Access initial annotations
+  const { initialAnnotations } = useInitialAnnotations();
+
   /**
    * Resets the analysis, data cell, and column states.
    */
@@ -199,6 +202,11 @@ export const useAnalysisManager = () => {
       setAllowUserInput(false);
       setSelectedExtract(null);
 
+      // Clear existing annotations and datacell data
+      replaceAnnotations([]);
+      replaceDocTypeAnnotations([]);
+      setDataCells([]);
+
       fetchAnnotationsForAnalysis({
         variables: {
           analysisId: selected_analysis.id,
@@ -207,8 +215,11 @@ export const useAnalysisManager = () => {
       });
     } else {
       setAllowUserInput(true);
+
+      // Restore initial annotations
+      replaceAnnotations(initialAnnotations);
     }
-  }, [selected_analysis, selectedDocument?.id, selectedCorpus?.id]);
+  }, [selected_analysis?.id, selectedDocument?.id, selectedCorpus?.id]);
 
   // Update query loading states and errors for annotations
   useEffect(() => {
@@ -237,8 +248,9 @@ export const useAnalysisManager = () => {
       annotationsData.analysis.fullAnnotationList
     ) {
       // Clear existing annotations and datacell data
-      replaceAnnotations([]); // Replace annotations with an empty array
-      setDataCells([]); // Clear datacell data
+      replaceAnnotations([]);
+      replaceDocTypeAnnotations([]);
+      setDataCells([]);
 
       // Process span annotations
       const rawSpanAnnotations =
@@ -295,6 +307,11 @@ export const useAnalysisManager = () => {
       setAllowUserInput(false);
       setSelectedAnalysis(null);
 
+      // Clear existing annotations and datacell data
+      replaceAnnotations([]);
+      replaceDocTypeAnnotations([]);
+      setDataCells([]);
+
       fetchDataCellsForExtract({
         variables: {
           extractId: selected_extract.id,
@@ -302,6 +319,9 @@ export const useAnalysisManager = () => {
       });
     } else {
       setAllowUserInput(true);
+
+      // Restore initial annotations
+      replaceAnnotations(initialAnnotations);
     }
   }, [selected_extract, selectedDocument?.id, selectedCorpus?.id]);
 
@@ -327,6 +347,11 @@ export const useAnalysisManager = () => {
     }
 
     if (datacellsData && datacellsData.extract) {
+      // Clear existing datacell data and annotations
+      setDataCells([]); // Clear datacell data
+      replaceAnnotations([]); // Clear annotations
+
+      // Set new datacell data and columns
       setDataCells(datacellsData.extract.fullDatacellList || []);
       setColumns(datacellsData.extract.fieldset.fullColumnList || []);
 
@@ -337,7 +362,8 @@ export const useAnalysisManager = () => {
         .flatMap((datacell) => datacell.fullSourceList || [])
         .map((annotation) => convertToServerAnnotation(annotation));
 
-      addMultipleAnnotations(processedAnnotations);
+      // Replace annotations with processed annotations
+      replaceAnnotations(processedAnnotations);
     }
   }, [datacellsLoading, datacellsError, datacellsData]);
 
@@ -346,14 +372,23 @@ export const useAnalysisManager = () => {
    *
    * @param analysis The analysis to select.
    */
-  const onSelectAnalysis = (analysis: AnalysisType | null) => {
-    // When a new analysis is loaded, reset the view behaviors
-    setShowAnnotationBoundingBoxes(true);
-    setShowAnnotationLabels(LabelDisplayBehavior.ON_HOVER);
-    setShowSelectedAnnotationOnly(false);
-    setSelectedAnalysis(analysis);
-    setSelectedExtract(null);
-  };
+  const onSelectAnalysis = useCallback(
+    (analysis: AnalysisType | null) => {
+      // When a new analysis is loaded, reset the view behaviors
+      setShowAnnotationBoundingBoxes(true);
+      setShowAnnotationLabels(LabelDisplayBehavior.ON_HOVER);
+      setShowSelectedAnnotationOnly(false);
+      setSelectedAnalysis(analysis);
+      setSelectedExtract(null);
+    },
+    [
+      setShowAnnotationBoundingBoxes,
+      setShowAnnotationLabels,
+      setShowSelectedAnnotationOnly,
+      setSelectedAnalysis,
+      setSelectedExtract,
+    ]
+  );
 
   /**
    * Handles selection of an extract.

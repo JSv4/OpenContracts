@@ -13,9 +13,7 @@ import {
   scrollContainerRefAtom,
   useSelectedCorpus,
   usePages,
-  useTextSearchMatches,
-  useSelectedTextSearchMatchIndex,
-  useSearchText,
+  useTextSearchState,
 } from "../../context/DocumentAtom";
 import {
   useAnnotationControls,
@@ -26,6 +24,7 @@ import {
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 import SelectionLayer from "./SelectionLayer";
 import { PDFPageInfo } from "../../types/pdf";
+import _ from "lodash";
 
 /**
  * PDFPage Component
@@ -63,19 +62,14 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
   const [scrollContainerRef] = useAtom(scrollContainerRefAtom);
   const { pages, setPages } = usePages();
 
-  const { searchText } = useSearchText();
-  const { selectedTextSearchMatchIndex: selectedSearchResultIndex } =
-    useSelectedTextSearchMatchIndex();
-  const { textSearchMatches: searchResults } = useTextSearchMatches();
+  const {
+    selectedTextSearchMatchIndex: selectedSearchResultIndex,
+    textSearchMatches: searchResults,
+  } = useTextSearchState();
   const { selectedCorpus } = useSelectedCorpus();
 
   const annotationControls = useAnnotationControls();
   const { spanLabelsToView, activeSpanLabel } = annotationControls;
-
-  useEffect(() => {
-    console.log("PDFPage - searchResults", searchResults);
-    console.log("PDFPage - searchText", searchText);
-  }, [searchResults, searchText]);
 
   const updatedPageInfo = useMemo(() => {
     return new PDFPageInfo(
@@ -98,8 +92,6 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
    */
   useEffect(() => {
     const handleResize = () => {
-      console.log("\t\tHandle Resize!");
-
       if (canvasRef.current === null || rendererRef.current === null) {
         onError(new Error("Canvas or renderer not available."));
         return;
@@ -117,11 +109,11 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
     };
 
     if (!hasPdfPageRendered && canvasRef.current && pageContainerRef.current) {
-      console.log("Try to initialize page", pageInfo);
+      // console.log("Try to initialize page", pageInfo);
       const initializePage = async () => {
         try {
           if (pageContainerRef.current && canvasRef.current) {
-            console.log("\tSetup the renderer...");
+            // console.log("\tSetup the renderer...");
 
             rendererRef.current = new PDFPageRenderer(
               pageInfo.page,
@@ -144,11 +136,11 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
               bottom: viewport.height,
             });
 
-            console.log("\tAwait render...");
+            // console.log("\tAwait render...");
             await rendererRef.current.render(zoomLevel);
 
             if (!(pageInfo.page.pageNumber - 1 in pages)) {
-              console.log(`\tAdding pageInfo to ${pageInfo.page.pageNumber}`);
+              // console.log(`\tAdding pageInfo to ${pageInfo.page.pageNumber}`);
               setPages((prevPages) => ({
                 ...prevPages,
                 [pageInfo.page.pageNumber - 1]: pageInfo,
@@ -156,9 +148,9 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
             }
 
             if (scrollContainerRef && scrollContainerRef.current) {
-              console.log(
-                `\tAdding resize handler to page ${pageInfo.page.pageNumber}`
-              );
+              // console.log(
+              //   `\tAdding resize handler to page ${pageInfo.page.pageNumber}`
+              // );
               scrollContainerRef.current.addEventListener(
                 "resize",
                 handleResize
@@ -231,19 +223,21 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
   }, [hasPdfPageRendered, selectedAnnotations, annotationElementRefs]);
 
   const annots_to_render = useMemo(() => {
-    const defined_annotations = annotations
-      .filter((annot) => annot instanceof ServerTokenAnnotation)
-      .filter(
-        (a) =>
-          (a as ServerTokenAnnotation).json[pageInfo.page.pageNumber - 1] !==
-          undefined
-      );
+    const defined_annotations = _.uniqBy(
+      annotations
+        .filter((annot) => annot instanceof ServerTokenAnnotation)
+        .filter(
+          (a) =>
+            (a as ServerTokenAnnotation).json[pageInfo.page.pageNumber - 1] !==
+            undefined
+        ),
+      "id"
+    );
 
     const filtered_by_structural = !showStructural
       ? defined_annotations.filter((annot) => !annot.structural)
       : defined_annotations;
 
-    // Apply showOnlySpanLabels filter
     return spanLabelsToView && spanLabelsToView.length > 0
       ? filtered_by_structural.filter((annot) =>
           spanLabelsToView!.some(

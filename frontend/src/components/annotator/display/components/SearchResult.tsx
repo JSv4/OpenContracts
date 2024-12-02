@@ -33,11 +33,9 @@ export const SearchResult = ({
   const color = "#ffff00";
   const [hovered, setHovered] = useState(false);
 
-  console.log("Get scaled result for search result - scale", pageInfo.scale);
   const bounds = pageInfo.getScaledBounds(
     match.bounds[pageInfo.page.pageNumber - 1]
   );
-  console.log("Bounds", bounds);
 
   const border = getBorderWidthFromBounds(bounds);
 
@@ -108,41 +106,27 @@ interface SelectionInfoProps {
   showBoundingBox: boolean;
 }
 
-const SelectionInfo = styled.div<SelectionInfoProps>(
-  ({ border, bounds, color, showBoundingBox }) => {
-    if (showBoundingBox) {
-      return `
-        position: absolute;
-        width: ${bounds.right - bounds.left}px;
-        right: -${border}px;
-        transform: translateY(-100%);
-        border: ${border} solid ${color};
-        background: ${color};
-        font-weight: bold;
-        font-size: 12px;
-        user-select: none;
-        * {
-          vertical-align: middle;
-        }
-      `;
-    } else {
-      return `
-        position: absolute;
-        width: ${bounds.right - bounds.left}px;
-        right: -${border}px;
-        transform: translateY(-100%);
-        border: ${border} solid ${color} transparent;
-        background: rgba(255, 255, 255, 0.0);
-        font-weight: bold;
-        font-size: 12px;
-        user-select: none;
-        * {
-          vertical-align: middle;
-        }
-      `;
-    }
+const SelectionInfo = styled.div.attrs<SelectionInfoProps>(
+  ({ border, bounds, color, showBoundingBox }) => ({
+    style: {
+      position: "absolute",
+      width: `${bounds.right - bounds.left}px`,
+      right: `-${border}px`,
+      transform: "translateY(-100%)",
+      border: showBoundingBox
+        ? `${border}px solid ${color}`
+        : `${border}px solid ${color} transparent`,
+      background: showBoundingBox ? color : "rgba(255, 255, 255, 0.0)",
+      fontWeight: "bold",
+      fontSize: "12px",
+      userSelect: "none",
+    },
+  })
+)`
+  * {
+    vertical-align: middle;
   }
-);
+`;
 
 const SelectionInfoContainer = styled.div`
   display: flex;

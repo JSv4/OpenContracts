@@ -5,8 +5,7 @@ import {
   useSelectedDocument,
   usePages,
   usePageTokenTextMaps,
-  useTextSearchMatches,
-  useSelectedTextSearchMatchIndex,
+  useTextSearchState,
 } from "../context/DocumentAtom";
 import {
   TextSearchSpanResult,
@@ -22,8 +21,7 @@ export const useTextSearch = () => {
   const { selectedDocument } = useSelectedDocument();
   const { pages } = usePages();
   const { pageTokenTextMaps } = usePageTokenTextMaps();
-  const { setTextSearchMatches } = useTextSearchMatches();
-  const { setSelectedTextSearchMatchIndex } = useSelectedTextSearchMatchIndex();
+  const { setTextSearchState } = useTextSearchState();
 
   useEffect(() => {
     console.log("useTextSearch - searchText", searchText);
@@ -31,8 +29,7 @@ export const useTextSearch = () => {
 
     // Guard clause to handle all required values
     if (!selectedDocument || !searchText || !pageTokenTextMaps || !pages) {
-      setTextSearchMatches(searchHits);
-      setSelectedTextSearchMatchIndex(0);
+      setTextSearchState({ matches: searchHits, selectedIndex: 0 });
       return;
     }
 
@@ -146,15 +143,13 @@ export const useTextSearch = () => {
       }
     }
 
-    setTextSearchMatches(searchHits);
-    setSelectedTextSearchMatchIndex(0);
+    setTextSearchState({ matches: searchHits, selectedIndex: 0 });
   }, [
     searchText,
     docText,
     selectedDocument,
     pages,
     pageTokenTextMaps,
-    setTextSearchMatches,
-    setSelectedTextSearchMatchIndex,
+    setTextSearchState,
   ]);
 };

@@ -15,7 +15,7 @@ import {
   useUpdateAnnotation,
 } from "../../hooks/AnnotationHooks";
 import { ServerSpanAnnotation } from "../../types/annotations";
-import { useDocText, useTextSearchMatches } from "../../context/DocumentAtom";
+import { useDocText, useTextSearchState } from "../../context/DocumentAtom";
 import TxtAnnotator from "../../renderers/txt/TxtAnnotator";
 import { TextSearchSpanResult } from "../../../types";
 import {
@@ -40,7 +40,7 @@ export const TxtAnnotatorWrapper: React.FC<TxtAnnotatorWrapperProps> = ({
   const [selectedAnnotations, setSelectedAnnotations] = useState<string[]>([]);
   const { spanLabelsToView, activeSpanLabel } = useAnnotationControls();
 
-  const { textSearchMatches } = useTextSearchMatches();
+  const { textSearchMatches } = useTextSearchState();
   const { spanLabels } = useCorpusState();
   const { zoomLevel } = useZoomLevel();
 

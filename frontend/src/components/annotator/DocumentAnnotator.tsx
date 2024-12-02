@@ -37,6 +37,7 @@ import {
   pdfAnnotationsAtom,
   structuralAnnotationsAtom,
   docTypeAnnotationsAtom,
+  initialAnnotationsAtom,
 } from "./context/AnnotationAtoms";
 import { useCorpusState, useInitializeCorpusAtoms } from "./context/CorpusAtom";
 
@@ -59,7 +60,7 @@ import { PDFDocumentLoadingTask } from "pdfjs-dist";
 import { PDFPageInfo } from "./types/pdf";
 
 import { Header, Icon, Modal, Progress } from "semantic-ui-react";
-import AnnotatorSidebar from "./sidebar/AnnotatorSidebar";
+import { AnnotatorSidebar } from "./sidebar/AnnotatorSidebar";
 import { WithSidebar } from "./common";
 import { Result } from "../widgets/data-display/Result";
 import { SidebarContainer } from "../common";
@@ -73,7 +74,11 @@ import {
 } from "./hooks/AnalysisHooks";
 
 // Import Annotation Hooks
-import { usePdfAnnotations, useAnnotationObjs } from "./hooks/AnnotationHooks";
+import {
+  usePdfAnnotations,
+  useAnnotationObjs,
+  useInitialAnnotations,
+} from "./hooks/AnnotationHooks";
 import { useAnnotationDisplay } from "./context/UISettingsAtom";
 import styled from "styled-components";
 import { DocumentViewer } from "./display/viewer/DocumentViewer";
@@ -367,6 +372,9 @@ export const DocumentAnnotator = ({
     }
   }, [open, opened_document, opened_corpus, displayOnlyTheseAnnotations]);
 
+  // Use the initialAnnotationsAtom to store initial annotations
+  const { setInitialAnnotations } = useInitialAnnotations();
+
   /**
    * Processes the annotations data and updates the annotation atoms.
    * @param data Data containing annotations and relationships.
@@ -391,6 +399,9 @@ export const DocumentAnnotator = ({
             true
           )
       );
+
+      // **Store the initial annotations**
+      setInitialAnnotations(processedAnnotations);
 
       // Process structural annotations
       if (data.document.allStructuralAnnotations) {
@@ -549,7 +560,7 @@ export const DocumentAnnotator = ({
 
   useEffect(() => {
     onSelectAnalysis(opened_analysis ?? null);
-  }, [opened_analysis]);
+  }, [opened_analysis?.id]);
 
   useEffect(() => {
     onSelectExtract(opened_extract ?? null);
@@ -715,7 +726,6 @@ export const DocumentAnnotator = ({
     </Modal>
   );
 };
-
 const ModalLoadingContainer = styled.div`
   display: flex;
   width: 100%;

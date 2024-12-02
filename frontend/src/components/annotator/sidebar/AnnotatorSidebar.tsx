@@ -49,10 +49,8 @@ import {
 } from "../hooks/AnnotationHooks";
 import { ViewSettingsPopup } from "../../widgets/popups/ViewSettingsPopup";
 import { LabelDisplayBehavior } from "../../../types/graphql-api";
-import {
-  useSelectedCorpus,
-  useTextSearchMatches,
-} from "../context/DocumentAtom";
+import { useSelectedCorpus, useTextSearchState } from "../context/DocumentAtom";
+import { useCorpusState } from "../context/CorpusAtom";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;
@@ -316,7 +314,7 @@ export const AnnotatorSidebar = ({
   const handleRemoveRelationship = useRemoveRelationship();
   const handleDeleteAnnotation = useDeleteAnnotation();
   const removeAnnotationFromRelation = useRemoveAnnotationFromRelationship();
-
+  const { permissions: corpus_permissions } = useCorpusState();
   const {
     selectedAnnotations,
     selectedRelations,
@@ -345,10 +343,20 @@ export const AnnotatorSidebar = ({
       (!selected_analysis && !selected_extract && !selected_corpus?.labelSet)
   );
 
-  const [showCorpusStats, setShowCorpusStats] = useState(false);
   const [showSearchPane, setShowSearchPane] = useState(true);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [panes, setPanes] = useState<TabPanelProps[]>([]);
+  const [visibleTabs, setVisibleTabs] = useState<{
+    annotations: boolean;
+    relationships: boolean;
+    search: boolean;
+    data: boolean;
+  }>({
+    annotations: false,
+    relationships: false,
+    search: false,
+    data: false,
+  });
 
   useEffect(() => {
     console.log("Sidebar visibility state:", {
@@ -387,7 +395,7 @@ export const AnnotatorSidebar = ({
 
   const {} = useAnalysisManager();
   const { spanLabelsToView } = useAnnotationControls();
-  const { textSearchMatches } = useTextSearchMatches();
+  const { textSearchMatches } = useTextSearchState();
   const { annotationElementRefs } = useAnnotationRefs();
   const { pdfAnnotations } = usePdfAnnotations();
   const annotations = pdfAnnotations.annotations;
@@ -474,48 +482,80 @@ export const AnnotatorSidebar = ({
                 key="AnnotatorSidebar_Spantab"
                 style={{
                   flex: 1,
-                  display: "flex",
                   flexDirection: "column",
                   justifyItems: "flex-start",
                   padding: "1em",
                   flexBasis: "100px",
+                  display: visibleTabs.annotations ? "flex" : "none",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyItems: "flex-start",
-                    flex: 1,
-                    minHeight: 0,
-                    flexBasis: "100px",
-                  }}
-                >
-                  <Segment
-                    attached="top"
+                {visibleTabs.annotations && (
+                  <div
                     style={{
                       display: "flex",
                       flexDirection: "column",
                       justifyItems: "flex-start",
                       flex: 1,
+                      minHeight: 0,
                       flexBasis: "100px",
-                      overflow: "hidden",
-                      paddingBottom: ".5rem",
                     }}
                   >
-                    <div
+                    <Segment
+                      attached="top"
                       style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyItems: "flex-start",
                         flex: 1,
                         flexBasis: "100px",
-                        overflow: "auto",
+                        overflow: "hidden",
+                        paddingBottom: ".5rem",
                       }}
                     >
-                      <ul className="sidebar__annotations">
-                        {text_highlight_elements}
-                      </ul>
-                    </div>
-                  </Segment>
-                </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          flexBasis: "100px",
+                          overflow: "auto",
+                        }}
+                      >
+                        <ul className="sidebar__annotations">
+                          {filteredAnnotations &&
+                          filteredAnnotations.length > 0 ? (
+                            <>
+                              {_.orderBy(
+                                filteredAnnotations,
+                                (a) => a.page
+                              ).map((annotation, index) => (
+                                <HighlightItem
+                                  key={`highlight_item_${annotation.id}`}
+                                  className={annotation.id}
+                                  annotation={annotation}
+                                  read_only={read_only}
+                                  relations={relations}
+                                  onDelete={onDeleteAnnotation}
+                                  onSelect={toggleSelectedAnnotation}
+                                />
+                              ))}
+                              <FetchMoreOnVisible
+                                fetchNextPage={
+                                  fetchMore ? () => fetchMore() : () => {}
+                                }
+                                fetchWithoutMotion
+                              />
+                            </>
+                          ) : (
+                            <PlaceholderCard
+                              style={{ flex: 1 }}
+                              title="No Matching Annotations Found"
+                              description="No annotations match the selected labels, or no annotations have been created yet."
+                            />
+                          )}
+                        </ul>
+                      </div>
+                    </Segment>
+                  </div>
+                )}
               </Tab.Pane>
             ),
           },
@@ -587,11 +627,46 @@ export const AnnotatorSidebar = ({
                   margin: "0px",
                   width: "100%",
                   flex: 1,
+                  display: visibleTabs.relationships ? "block" : "none",
                 }}
               >
-                <Card.Group key="relationship_card_group">
-                  {relation_elements}
-                </Card.Group>
+                {visibleTabs.relationships && (
+                  <Card.Group key="relationship_card_group">
+                    {relations && relations.length > 0 ? (
+                      relations.map((relation, index) => (
+                        <RelationItem
+                          key={`relation_item_${relation.id}`}
+                          relation={relation}
+                          read_only={read_only}
+                          selected={selectedRelations.includes(relation)}
+                          source_annotations={annotations.filter((a) =>
+                            relation.sourceIds.includes(a.id)
+                          )}
+                          target_annotations={annotations.filter((a) =>
+                            relation.targetIds.includes(a.id)
+                          )}
+                          onSelectAnnotation={toggleSelectedAnnotation}
+                          onSelectRelation={() =>
+                            toggleSelectedRelation(relation, [
+                              ...relation.sourceIds,
+                              ...relation.targetIds,
+                            ])
+                          }
+                          onRemoveAnnotationFromRelation={
+                            onRemoveAnnotationFromRelation
+                          }
+                          onDeleteRelation={onDeleteRelation}
+                        />
+                      ))
+                    ) : (
+                      <PlaceholderCard
+                        style={{ flex: 1 }}
+                        title="No Relations Found"
+                        description="Either no matching relations were created or you didn't create them yet."
+                      />
+                    )}
+                  </Card.Group>
+                )}
               </Tab.Pane>
             ),
           },
@@ -614,9 +689,10 @@ export const AnnotatorSidebar = ({
                   height: "100%",
                   padding: "0px",
                   overflow: "hidden",
+                  display: visibleTabs.search ? "block" : "none",
                 }}
               >
-                <SearchSidebarWidget />
+                {visibleTabs.search && <SearchSidebarWidget />}
               </Tab.Pane>
             ),
           },
@@ -634,16 +710,21 @@ export const AnnotatorSidebar = ({
           {
             menuItem: "Data",
             render: () => (
-              <Tab.Pane style={{ flex: 1 }}>
-                {selected_extract ? (
-                  // Render extract data here
-                  <SingleDocumentExtractResults
-                    datacells={datacells}
-                    columns={columns}
-                  />
-                ) : (
-                  <Placeholder fluid />
-                )}
+              <Tab.Pane
+                style={{
+                  flex: 1,
+                  display: visibleTabs.data ? "block" : "none",
+                }}
+              >
+                {visibleTabs.data &&
+                  (selected_extract ? (
+                    <SingleDocumentExtractResults
+                      datacells={datacells}
+                      columns={columns}
+                    />
+                  ) : (
+                    <Placeholder fluid />
+                  ))}
               </Tab.Pane>
             ),
           },
@@ -758,6 +839,223 @@ export const AnnotatorSidebar = ({
     },
   ];
 
+  useEffect(() => {
+    const newVisibleTabs = {
+      annotations: Boolean(
+        !selected_extract &&
+          (annotations.length > 0 ||
+            (selected_corpus?.labelSet &&
+              corpus_permissions.includes(PermissionTypes.CAN_UPDATE)))
+      ),
+      relationships: Boolean(
+        !selected_extract &&
+          (relations.length > 0 ||
+            (selected_corpus?.labelSet &&
+              corpus_permissions.includes(PermissionTypes.CAN_UPDATE)))
+      ),
+      search: Boolean(textSearchMatches.length > 0),
+      data: Boolean(selected_extract),
+    };
+
+    setVisibleTabs(newVisibleTabs);
+    setSidebarVisible(Object.values(newVisibleTabs).some(Boolean));
+
+    // If search tab becomes visible, switch to it
+    if (newVisibleTabs.search && !visibleTabs.search) {
+      const searchTabIndex = staticPanes.findIndex(
+        (pane) => pane.menuItem === "Search"
+      );
+      if (searchTabIndex !== -1) {
+        setActiveIndex(searchTabIndex);
+      }
+    }
+  }, [
+    selected_extract,
+    annotations,
+    relations,
+    textSearchMatches,
+    selected_corpus,
+    corpus_permissions,
+  ]);
+
+  const staticPanes: TabPanelProps[] = [
+    {
+      menuItem: "Annotated Text",
+      render: () => (
+        <Tab.Pane
+          key="AnnotatorSidebar_Spantab"
+          style={{
+            flex: 1,
+            flexDirection: "column",
+            justifyItems: "flex-start",
+            padding: "1em",
+            flexBasis: "100px",
+            display: visibleTabs.annotations ? "flex" : "none",
+          }}
+        >
+          {visibleTabs.annotations && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyItems: "flex-start",
+                flex: 1,
+                minHeight: 0,
+                flexBasis: "100px",
+              }}
+            >
+              <Segment
+                attached="top"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyItems: "flex-start",
+                  flex: 1,
+                  flexBasis: "100px",
+                  overflow: "hidden",
+                  paddingBottom: ".5rem",
+                }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    flexBasis: "100px",
+                    overflow: "auto",
+                  }}
+                >
+                  <ul className="sidebar__annotations">
+                    {filteredAnnotations && filteredAnnotations.length > 0 ? (
+                      <>
+                        {_.orderBy(filteredAnnotations, (a) => a.page).map(
+                          (annotation, index) => (
+                            <HighlightItem
+                              key={`highlight_item_${annotation.id}`}
+                              className={annotation.id}
+                              annotation={annotation}
+                              read_only={read_only}
+                              relations={relations}
+                              onDelete={onDeleteAnnotation}
+                              onSelect={toggleSelectedAnnotation}
+                            />
+                          )
+                        )}
+                        <FetchMoreOnVisible
+                          fetchNextPage={
+                            fetchMore ? () => fetchMore() : () => {}
+                          }
+                          fetchWithoutMotion
+                        />
+                      </>
+                    ) : (
+                      <PlaceholderCard
+                        style={{ flex: 1 }}
+                        title="No Matching Annotations Found"
+                        description="No annotations match the selected labels, or no annotations have been created yet."
+                      />
+                    )}
+                  </ul>
+                </div>
+              </Segment>
+            </div>
+          )}
+        </Tab.Pane>
+      ),
+    },
+    {
+      menuItem: "Relationships",
+      render: () => (
+        <Tab.Pane
+          key="AnnotatorSidebar_Relationshiptab"
+          style={{
+            overflowY: "scroll",
+            margin: "0px",
+            width: "100%",
+            flex: 1,
+            display: visibleTabs.relationships ? "block" : "none",
+          }}
+        >
+          {visibleTabs.relationships && (
+            <Card.Group key="relationship_card_group">
+              {relations && relations.length > 0 ? (
+                relations.map((relation, index) => (
+                  <RelationItem
+                    key={`relation_item_${relation.id}`}
+                    relation={relation}
+                    read_only={read_only}
+                    selected={selectedRelations.includes(relation)}
+                    source_annotations={annotations.filter((a) =>
+                      relation.sourceIds.includes(a.id)
+                    )}
+                    target_annotations={annotations.filter((a) =>
+                      relation.targetIds.includes(a.id)
+                    )}
+                    onSelectAnnotation={toggleSelectedAnnotation}
+                    onSelectRelation={() =>
+                      toggleSelectedRelation(relation, [
+                        ...relation.sourceIds,
+                        ...relation.targetIds,
+                      ])
+                    }
+                    onRemoveAnnotationFromRelation={
+                      onRemoveAnnotationFromRelation
+                    }
+                    onDeleteRelation={onDeleteRelation}
+                  />
+                ))
+              ) : (
+                <PlaceholderCard
+                  style={{ flex: 1 }}
+                  title="No Relations Found"
+                  description="Either no matching relations were created or you didn't create them yet."
+                />
+              )}
+            </Card.Group>
+          )}
+        </Tab.Pane>
+      ),
+    },
+    {
+      menuItem: "Search",
+      render: () => (
+        <Tab.Pane
+          className="AnnotatorSidebar_Searchtab"
+          key="AnnotatorSidebar_Searchtab"
+          style={{
+            margin: "0px",
+            width: "100%",
+            height: "100%",
+            padding: "0px",
+            overflow: "hidden",
+            display: visibleTabs.search ? "block" : "none",
+          }}
+        >
+          {visibleTabs.search && <SearchSidebarWidget />}
+        </Tab.Pane>
+      ),
+    },
+    {
+      menuItem: "Data",
+      render: () => (
+        <Tab.Pane
+          style={{
+            flex: 1,
+            display: visibleTabs.data ? "block" : "none",
+          }}
+        >
+          {visibleTabs.data &&
+            (selected_extract ? (
+              <SingleDocumentExtractResults
+                datacells={datacells}
+                columns={columns}
+              />
+            ) : (
+              <Placeholder fluid />
+            ))}
+        </Tab.Pane>
+      ),
+    },
+  ];
+
   return (
     <SidebarContainer
       width={width.toString()}
@@ -804,14 +1102,16 @@ export const AnnotatorSidebar = ({
         menu={{ secondary: true, pointing: true }}
         activeIndex={activeIndex}
         onTabChange={handleTabChange}
-        panes={panes.map((pane) => ({
-          ...pane,
-          render: () => (
-            <ContentContainer>
-              {pane.render ? pane.render() : null}
-            </ContentContainer>
-          ),
-        }))}
+        panes={staticPanes
+          .filter((_, index) => Object.values(visibleTabs)[index])
+          .map((pane) => ({
+            ...pane,
+            render: () => (
+              <ContentContainer>
+                {pane.render ? pane.render() : null}
+              </ContentContainer>
+            ),
+          }))}
       />
     </SidebarContainer>
   );

@@ -84,11 +84,15 @@ export const scrollContainerRefAtom = atom<
 /**
  * Text Search Atoms.
  */
+export const textSearchStateAtom = atom<{
+  matches: (TextSearchTokenResult | TextSearchSpanResult)[];
+  selectedIndex: number;
+}>({
+  matches: [],
+  selectedIndex: 0,
+});
+
 export const searchTextAtom = atom<string>("");
-export const textSearchMatchesAtom = atom<
-  (TextSearchTokenResult | TextSearchSpanResult)[]
->([]);
-export const selectedTextSearchMatchIndexAtom = atom<number>(0);
 
 /**
  * Hook to initialize document state atoms with initial values.
@@ -282,33 +286,28 @@ export function useScrollContainerRef() {
   );
 }
 
+export function useTextSearchState() {
+  const [textSearchState, setTextSearchState] = useAtom(textSearchStateAtom);
+  return useMemo(
+    () => ({
+      textSearchMatches: textSearchState.matches,
+      selectedTextSearchMatchIndex: textSearchState.selectedIndex,
+      setTextSearchState,
+      setTextSearchMatches: (
+        matches: (TextSearchTokenResult | TextSearchSpanResult)[]
+      ) => setTextSearchState((prev) => ({ ...prev, matches })),
+      setSelectedTextSearchMatchIndex: (selectedIndex: number) =>
+        setTextSearchState((prev) => ({ ...prev, selectedIndex })),
+    }),
+    [textSearchState, setTextSearchState]
+  );
+}
+
 export function useSearchText() {
   const [searchText, setSearchText] = useAtom(searchTextAtom);
   return useMemo(
     () => ({ searchText, setSearchText }),
     [searchText, setSearchText]
-  );
-}
-
-export function useTextSearchMatches() {
-  const [textSearchMatches, setTextSearchMatches] = useAtom(
-    textSearchMatchesAtom
-  );
-  return useMemo(
-    () => ({ textSearchMatches, setTextSearchMatches }),
-    [textSearchMatches, setTextSearchMatches]
-  );
-}
-
-export function useSelectedTextSearchMatchIndex() {
-  const [selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex] =
-    useAtom(selectedTextSearchMatchIndexAtom);
-  return useMemo(
-    () => ({
-      selectedTextSearchMatchIndex,
-      setSelectedTextSearchMatchIndex,
-    }),
-    [selectedTextSearchMatchIndex, setSelectedTextSearchMatchIndex]
   );
 }
 

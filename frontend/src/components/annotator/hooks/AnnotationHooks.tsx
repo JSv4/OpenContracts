@@ -46,6 +46,7 @@ import {
   structuralAnnotationsAtom,
   annotationObjsAtom,
   docTypeAnnotationsAtom,
+  initialAnnotationsAtom,
 } from "../context/AnnotationAtoms";
 import {
   selectedDocumentAtom,
@@ -209,6 +210,16 @@ export function useDocTypeAnnotations() {
     docTypeAnnotationsAtom
   );
   return { docTypeAnnotations, setDocTypeAnnotations };
+}
+
+/**
+ * Hook to manage initial annotations.
+ */
+export function useInitialAnnotations() {
+  const [initialAnnotations, setInitialAnnotations] = useAtom(
+    initialAnnotationsAtom
+  );
+  return { initialAnnotations, setInitialAnnotations };
 }
 
 /**

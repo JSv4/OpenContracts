@@ -1,6 +1,6 @@
 import { useLazyQuery, useReactiveVar } from "@apollo/client";
 import { useEffect, useState, useLayoutEffect } from "react";
-import { useSetAtom, useAtom } from "jotai";
+import { useAtom } from "jotai";
 import {
   AnalysisType,
   CorpusType,
@@ -52,8 +52,6 @@ import {
   displayAnnotationOnAnnotatorLoad,
   editMode,
   onlyDisplayTheseAnnotations,
-  selectedAnalysis,
-  selectedExtract,
   viewStateVar,
 } from "../../graphql/cache";
 
@@ -69,7 +67,10 @@ import { CenterOnPage } from "./CenterOnPage";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { ViewSettingsPopup } from "../widgets/popups/ViewSettingsPopup";
 import { useUISettings } from "./hooks/useUISettings";
-import { useAnalysisManager } from "./hooks/AnalysisHooks";
+import {
+  useAnalysisManager,
+  useAnalysisSelection,
+} from "./hooks/AnalysisHooks";
 
 // Import Annotation Hooks
 import { usePdfAnnotations, useAnnotationObjs } from "./hooks/AnnotationHooks";
@@ -174,7 +175,7 @@ export const DocumentAnnotator = ({
     onlyDisplayTheseAnnotations
   );
   const edit_mode = useReactiveVar(editMode);
-  const selected_analysis = useReactiveVar(selectedAnalysis);
+  const { selectedAnalysis: selected_analysis } = useAnalysisSelection();
 
   const { pdfDoc, setPdfDoc } = usePdfDoc();
   const { pages, setPages } = usePages();
@@ -492,9 +493,6 @@ export const DocumentAnnotator = ({
 
   // Global state variables to jump to and/or load certain annotations on load
   const scrollToAnnotation = useReactiveVar(displayAnnotationOnAnnotatorLoad);
-
-  // New states for analyses and extracts
-  const selected_extract = useReactiveVar(selectedExtract);
 
   const [loaded_page_for_annotation, setLoadedPageForAnnotation] =
     useState<ServerAnnotationType | null>(null);

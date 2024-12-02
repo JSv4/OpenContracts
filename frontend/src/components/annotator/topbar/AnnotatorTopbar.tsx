@@ -1,12 +1,9 @@
 import React, { useRef, useLayoutEffect, useState } from "react";
 import styled, { keyframes } from "styled-components";
 import { Icon } from "semantic-ui-react";
-import { useReactiveVar } from "@apollo/client";
-import { setTopbarVisible } from "../../../graphql/cache";
-import useWindowDimensions from "../../hooks/WindowDimensionHook";
 import { AnalysisType, ExtractType } from "../../../types/graphql-api";
 import { ExtractAndAnalysisHorizontalSelector } from "../../analyses/AnalysisSelectorForCorpus";
-import { MOBILE_VIEW_BREAKPOINT } from "../../../assets/configurations/constants";
+import { useAdditionalUIStates } from "../context/UISettingsAtom";
 
 interface AnnotatorTopbarProps {
   analyses: AnalysisType[];
@@ -78,7 +75,7 @@ export const AnnotatorTopbar: React.FC<AnnotatorTopbarProps> = ({
 }) => {
   const topbarRef = useRef<HTMLDivElement>(null);
   const [topbarHeight, setTopbarHeight] = useState(0);
-  const topbarVisible = useReactiveVar(setTopbarVisible);
+  const { topbarVisible, setTopbarVisible } = useAdditionalUIStates();
 
   useLayoutEffect(() => {
     if (topbarRef.current) {

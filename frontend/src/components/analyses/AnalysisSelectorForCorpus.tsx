@@ -7,21 +7,19 @@ import React, {
 } from "react";
 import { Segment, Form, Button, Icon } from "semantic-ui-react";
 import Fuse from "fuse.js";
-import { AnalysisType, CorpusType, ExtractType } from "../../types/graphql-api";
+import { AnalysisType, ExtractType } from "../../types/graphql-api";
 import { AnalysisItem } from "./AnalysisItem";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { ExtractItem } from "../extracts/ExtractItem";
-import {
-  selectedAnalysis,
-  selectedExtract,
-  setTopbarVisible,
-} from "../../graphql/cache";
-import { useReactiveVar } from "@apollo/client";
 import { X } from "lucide-react";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
-import { useAnalysisManager } from "../annotator/hooks/AnalysisHooks";
+import {
+  useAnalysisManager,
+  useAnalysisSelection,
+} from "../annotator/hooks/AnalysisHooks";
 import { useSelectedCorpus } from "../annotator/context/DocumentAtom";
+import { useAdditionalUIStates } from "../annotator/context/UISettingsAtom";
 
 interface HorizontalSelectorForCorpusProps {
   read_only: boolean;
@@ -34,14 +32,13 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
 > = ({ read_only, analyses, extracts }) => {
   const { width } = useWindowDimensions();
   const { selectedCorpus } = useSelectedCorpus();
-  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
+  const { selectedAnalysis, selectedExtract } = useAnalysisSelection();
+  const { topbarVisible, setTopbarVisible } = useAdditionalUIStates();
 
-  const selected_extract = useReactiveVar(selectedExtract);
-  const selected_analysis = useReactiveVar(selectedAnalysis);
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
 
   const { onSelectAnalysis, onSelectExtract } = useAnalysisManager();
 
-  const topbarVisible = useReactiveVar(setTopbarVisible);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"analyses" | "extracts">(
     "analyses"
@@ -120,12 +117,12 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
           key={item.id}
           analysis={item as AnalysisType}
           selected={Boolean(
-            selected_analysis && item.id === selected_analysis.id
+            selectedAnalysis && item.id === selectedAnalysis.id
           )}
           read_only={read_only}
           onSelect={() =>
             onSelectAnalysis(
-              selected_analysis && item.id === selected_analysis.id
+              selectedAnalysis && item.id === selectedAnalysis.id
                 ? null
                 : (item as AnalysisType)
             )
@@ -137,13 +134,11 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
           compact={use_mobile_layout}
           key={item.id}
           extract={item as ExtractType}
-          selected={Boolean(
-            selected_extract && item.id === selected_extract.id
-          )}
+          selected={Boolean(selectedExtract && item.id === selectedExtract.id)}
           read_only={read_only}
           onSelect={() =>
             onSelectExtract(
-              selected_extract && item.id === selected_extract.id
+              selectedExtract && item.id === selectedExtract.id
                 ? null
                 : (item as ExtractType)
             )
@@ -155,8 +150,8 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
     filteredItems,
     use_mobile_layout,
     read_only,
-    selected_analysis,
-    selected_extract,
+    selectedAnalysis,
+    selectedExtract,
     onSelectAnalysis,
     onSelectExtract,
   ]);

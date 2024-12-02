@@ -75,6 +75,8 @@ export function useUISettings(props?: UseUISettingsProps) {
     setLoadingMessage,
     shiftDown,
     setShiftDown,
+    topbarVisible,
+    setTopbarVisible,
   } = useAdditionalUIStates();
 
   // Memoize the returned object
@@ -113,6 +115,8 @@ export function useUISettings(props?: UseUISettingsProps) {
       setLoadingMessage,
       shiftDown,
       setShiftDown,
+      topbarVisible,
+      setTopbarVisible,
     }),
     [
       zoomLevel,
@@ -139,6 +143,8 @@ export function useUISettings(props?: UseUISettingsProps) {
       setLoadingMessage,
       shiftDown,
       setShiftDown,
+      topbarVisible,
+      setTopbarVisible,
     ]
   );
 

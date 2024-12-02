@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery, useLazyQuery } from "@apollo/client";
 import { toast } from "react-toastify";
 import _ from "lodash";
@@ -189,6 +189,10 @@ export const useAnalysisManager = () => {
   // Fetch annotations for the selected analysis.
   useEffect(() => {
     if (selected_analysis) {
+      console.log(
+        "selected_analysis changed in AnalysisHooks",
+        selected_analysis
+      );
       setAllowUserInput(false);
       setSelectedExtract(null);
 
@@ -278,6 +282,10 @@ export const useAnalysisManager = () => {
   // Fetch data cells for the selected extract.
   useEffect(() => {
     if (selected_extract) {
+      console.log(
+        "selected_extract changed in AnalysisHooks",
+        selected_extract
+      );
       setAllowUserInput(false);
       setSelectedAnalysis(null);
 
@@ -363,3 +371,27 @@ export const useAnalysisManager = () => {
     onSelectExtract,
   };
 };
+
+/**
+ * Hook to manage selection state for analyses and extracts.
+ * @returns Object containing selection states and setter functions
+ */
+export function useAnalysisSelection() {
+  const [selectedAnalysis, setSelectedAnalysis] = useAtom(selectedAnalysisAtom);
+  const [selectedExtract, setSelectedExtract] = useAtom(selectedExtractAtom);
+
+  return useMemo(
+    () => ({
+      selectedAnalysis,
+      setSelectedAnalysis,
+      selectedExtract,
+      setSelectedExtract,
+      // Helper to clear both selections
+      clearSelections: () => {
+        setSelectedAnalysis(null);
+        setSelectedExtract(null);
+      },
+    }),
+    [selectedAnalysis, setSelectedAnalysis, selectedExtract, setSelectedExtract]
+  );
+}

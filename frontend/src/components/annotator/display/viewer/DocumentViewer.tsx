@@ -5,9 +5,7 @@ import styled from "styled-components";
 import {
   AnalysisType,
   ColumnType,
-  CorpusType,
   DatacellType,
-  DocumentType,
   ExtractType,
 } from "../../../../types/graphql-api";
 
@@ -25,10 +23,7 @@ import "./DocumentViewer.css";
 import { PDF } from "../../renderers/pdf/PDF";
 import { Menu } from "semantic-ui-react";
 import { PDFActionBar } from "../components/ActionBar";
-import {
-  setTopbarVisible,
-  showSelectCorpusAnalyzerOrFieldsetModal,
-} from "../../../../graphql/cache";
+import { showSelectCorpusAnalyzerOrFieldsetModal } from "../../../../graphql/cache";
 import { MOBILE_VIEW_BREAKPOINT } from "../../../../assets/configurations/constants";
 import {
   ServerSpanAnnotation,
@@ -36,6 +31,7 @@ import {
   ServerTokenAnnotation,
 } from "../../types/annotations";
 import {
+  useAdditionalUIStates,
   useAnnotationControls,
   useAnnotationSelection,
 } from "../../context/UISettingsAtom";
@@ -153,7 +149,6 @@ export const DocumentViewer = ({
   const hasScrolledToAnnotation = useRef(false);
 
   const { selectedDocument } = useSelectedDocument();
-  const { selectedCorpus } = useSelectedCorpus();
 
   // Access annotation controls
   const { setSelectedAnnotations } = useAnnotationSelection();
@@ -225,6 +220,8 @@ export const DocumentViewer = ({
     };
   }, [handleKeyUpPress, handleKeyDownPress]);
 
+  const { setTopbarVisible } = useAdditionalUIStates();
+
   // Update selectedAnnotations when selection changes (e.g., user selection)
   // This can be managed via props or other state management as per your application.
   // When scroll_to_annotation_on_open is provided and we haven't scrolled yet
@@ -257,7 +254,10 @@ export const DocumentViewer = ({
       {
         key: "action2",
         text: "Show Analytics Topbar",
-        value: () => setTopbarVisible(true),
+        value: () => {
+          setTopbarVisible(true);
+          return true;
+        },
       },
     ];
   }

@@ -38,6 +38,7 @@ export type QueryErrors = {
  */
 export const zoomLevelAtom = atom<number>(1);
 export const isSidebarVisibleAtom = atom<boolean>(true);
+export const topbarVisibleAtom = atom<boolean>(true);
 export const sidebarWidthAtom = atom<number>(300);
 export const progressAtom = atom<number>(0);
 export const modalOpenAtom = atom<boolean>(false);
@@ -324,6 +325,7 @@ export function useAdditionalUIStates() {
   const [readOnly, setReadOnly] = useAtom(readOnlyAtom);
   const [loadingMessage, setLoadingMessage] = useAtom(loadingMessageAtom);
   const [shiftDown, setShiftDown] = useAtom(shiftDownAtom);
+  const [topbarVisible, setTopbarVisible] = useAtom(topbarVisibleAtom);
 
   return {
     modalOpen,
@@ -334,5 +336,7 @@ export function useAdditionalUIStates() {
     setLoadingMessage,
     shiftDown,
     setShiftDown,
+    topbarVisible,
+    setTopbarVisible,
   };
 }

@@ -20,20 +20,7 @@ import { HighlightItem } from "./HighlightItem";
 import { RelationItem } from "./RelationItem";
 
 import "./AnnotatorSidebar.css";
-import { useReactiveVar } from "@apollo/client";
-import {
-  openedCorpus,
-  selectedAnalysis,
-  selectedExtract,
-  showStructuralAnnotations,
-} from "../../../graphql/cache";
-import {
-  AnalysisType,
-  ColumnType,
-  CorpusType,
-  DatacellType,
-  ExtractType,
-} from "../../../types/graphql-api";
+import { ColumnType, DatacellType } from "../../../types/graphql-api";
 import { SearchSidebarWidget } from "../search_widget/SearchSidebarWidget";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
@@ -47,9 +34,13 @@ import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
 import { useUISettings } from "../hooks/useUISettings";
 import {
   useAnnotationControls,
+  useAnnotationDisplay,
   useAnnotationSelection,
 } from "../context/UISettingsAtom";
-import { useAnalysisManager } from "../hooks/AnalysisHooks";
+import {
+  useAnalysisManager,
+  useAnalysisSelection,
+} from "../hooks/AnalysisHooks";
 import {
   useDeleteAnnotation,
   usePdfAnnotations,
@@ -58,8 +49,10 @@ import {
 } from "../hooks/AnnotationHooks";
 import { ViewSettingsPopup } from "../../widgets/popups/ViewSettingsPopup";
 import { LabelDisplayBehavior } from "../../../types/graphql-api";
-import { useTextSearch } from "../hooks/useTextSearch";
-import { useSearchText, useTextSearchMatches } from "../context/DocumentAtom";
+import {
+  useSelectedCorpus,
+  useTextSearchMatches,
+} from "../context/DocumentAtom";
 
 interface TabPanelProps {
   pane?: SemanticShorthandItem<TabPaneProps>;
@@ -331,10 +324,13 @@ export const AnnotatorSidebar = ({
     setSelectedRelations,
   } = useAnnotationSelection();
   const { isSidebarVisible, setSidebarVisible } = useUISettings();
-  const selected_corpus = useReactiveVar(openedCorpus);
-  const selected_extract = useReactiveVar(selectedExtract);
-  const selected_analysis = useReactiveVar(selectedAnalysis);
-  const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
+  const { selectedCorpus: selected_corpus } = useSelectedCorpus();
+  const {
+    selectedAnalysis: selected_analysis,
+    selectedExtract: selected_extract,
+  } = useAnalysisSelection();
+
+  const { showStructural } = useAnnotationDisplay();
 
   // Slightly kludgy way to handle responsive layout and drop sidebar once it becomes a pain
   // If there's enough interest to warrant a refactor, we can put some more thought into how
@@ -399,7 +395,7 @@ export const AnnotatorSidebar = ({
 
   const filteredAnnotations = useMemo(() => {
     let return_annotations = [...annotations];
-    if (!show_structural_annotations) {
+    if (!showStructural) {
       return_annotations = return_annotations.filter(
         (annotation) => !annotation.structural
       );
@@ -413,7 +409,7 @@ export const AnnotatorSidebar = ({
         (label) => label.id === annotation.annotationLabel.id
       )
     );
-  }, [annotations, spanLabelsToView, show_structural_annotations]);
+  }, [annotations, spanLabelsToView, showStructural]);
 
   useEffect(() => {
     try {

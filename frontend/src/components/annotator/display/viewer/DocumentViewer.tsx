@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import styled from "styled-components";
 
-import { PermissionTypes } from "../../../types";
 import {
   AnalysisType,
   ColumnType,
@@ -10,7 +9,6 @@ import {
   DatacellType,
   DocumentType,
   ExtractType,
-  LabelType,
 } from "../../../../types/graphql-api";
 
 import _ from "lodash";
@@ -139,7 +137,6 @@ export const DocumentViewer = ({
   allowInput,
   onSelectAnalysis,
   onSelectExtract,
-  pdfAnnotations,
   scroll_to_annotation_on_open,
   doc,
 }: {
@@ -153,7 +150,6 @@ export const DocumentViewer = ({
   scrollToAnnotation?: ServerTokenAnnotation | ServerSpanAnnotation;
   onSelectAnalysis: (analysis: AnalysisType | null) => undefined | null | void;
   onSelectExtract: (extract: ExtractType | null) => undefined | null | void;
-  pdfAnnotations: PdfAnnotations;
   scroll_to_annotation_on_open: ServerTokenAnnotation | null | undefined;
   doc: PDFDocumentProxy | undefined;
 }) => {

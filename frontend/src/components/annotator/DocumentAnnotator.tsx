@@ -1,7 +1,6 @@
 import { useLazyQuery, useReactiveVar } from "@apollo/client";
 import { useEffect, useState, useLayoutEffect } from "react";
 import { useSetAtom, useAtom } from "jotai";
-// import pdfjsLib from "pdfjs-dist";
 import {
   CorpusType,
   DocumentType,
@@ -31,6 +30,8 @@ import {
   selectedDocumentAtom,
   selectedCorpusAtom,
   usePages,
+  useSelectedDocument,
+  useSelectedCorpus,
 } from "./context/DocumentAtom";
 import {
   pdfAnnotationsAtom,
@@ -66,7 +67,6 @@ import { Result } from "../widgets/data-display/Result";
 import { SidebarContainer } from "../common";
 import { CenterOnPage } from "./CenterOnPage";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
-import { AnnotatorRenderer } from "./display/components/AnnotatorRenderer";
 import { ViewSettingsPopup } from "../widgets/popups/ViewSettingsPopup";
 import { useUISettings } from "./hooks/useUISettings";
 import { useAnalysisManager } from "./hooks/AnalysisHooks";
@@ -75,6 +75,7 @@ import { useAnalysisManager } from "./hooks/AnalysisHooks";
 import { usePdfAnnotations, useAnnotationObjs } from "./hooks/AnnotationHooks";
 import { useAnnotationDisplay } from "./context/UISettingsAtom";
 import styled from "styled-components";
+import { DocumentViewer } from "./display/viewer/DocumentViewer";
 
 // Loading pdf js libraries without cdn is a right PITA... cobbled together a working
 // approach via these guides:
@@ -85,7 +86,6 @@ const pdfjsLib = require("pdfjs-dist");
 
 // Setting worker path to worker bundle.
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
-// "../../build/webpack/pdf.worker.min.js';";
 /**
  * Props for the DocumentAnnotator component.
  */
@@ -211,6 +211,8 @@ export const DocumentAnnotator = ({
   // Set document and corpus atoms when component mounts
   const setSelectedDocument = useSetAtom(selectedDocumentAtom);
   const setSelectedCorpus = useSetAtom(selectedCorpusAtom);
+  const { selectedDocument } = useSelectedDocument();
+  const { selectedCorpus } = useSelectedCorpus();
 
   useEffect(() => {
     setSelectedDocument(opened_document);
@@ -286,7 +288,6 @@ export const DocumentAnnotator = ({
             document: {
               ...opened_document,
               allAnnotations: displayOnlyTheseAnnotations,
-              // Ensure other required fields are included
             },
             corpus: opened_corpus,
           };
@@ -504,14 +505,6 @@ export const DocumentAnnotator = ({
     string | null
   >(null);
 
-  // Set document and corpus atoms when component mounts
-  useEffect(() => {
-    setSelectedDocument(opened_document);
-    if (opened_corpus) {
-      setSelectedCorpus(opened_corpus);
-    }
-  }, [opened_document, opened_corpus]);
-
   // Reset allow inputs when the mode switches
   useEffect(() => {
     allowUserInput(false);
@@ -541,27 +534,6 @@ export const DocumentAnnotator = ({
   // Some artful React workarounds to jump to the annotations we specified to display on load - displayAnnotationOnAnnotatorLoad
   // only ONCE
   useEffect(() => {
-    // If user wanted to nav right to an annotation, problem we have is we don't load
-    // an entire doc's worth of annotations, but we can pass annotation id to the backend
-    // which will determine the page that annotation is one and return annotations for that page
-
-    // I'm sure there is a better way to achieve what's happening here, but I think it will require
-    // (at least for me) a more thorough rethinking of how the Annotator is loading data
-    // and perhaps a move away from the Annotator context the original PAWLs application used which,
-    // while cool, is largely duplicative of my Apollo state store and is causing some caching oddities that
-    // I need to work around.
-    //
-    //    Anyway, this is checking to see if:
-    //
-    //    1) The annotator was told to open to a given annotation (should happen on mount)?
-    //    2) The page for that annotation was loaded (should happen on mount)
-    //    3) The annotation with requested id was loaded and jumped to itself (see the Selection component)
-    //
-    //    IF 1, 2 AND 3 are true, then the state variables that would jump to a specific page
-    //    are all reset.
-    //
-    // Like I said, there is probably a better way to do this with a more substantial redesign of
-    // the <Annotator/> component, but I do want to release this app sometime this century.
     if (scrollToAnnotation) {
       if (
         jumped_to_annotation_on_load &&
@@ -684,18 +656,18 @@ export const DocumentAnnotator = ({
       break;
     case ViewState.LOADED:
       rendered_component = (
-        <AnnotatorRenderer
-          structural_annotations={structuralAnnotations}
-          scrollToAnnotation={
+        <DocumentViewer
+          scroll_to_annotation_on_open={
             scrollToAnnotation && convertToServerAnnotation(scrollToAnnotation)
           }
-          data_cells={dataCells}
-          columns={columns}
-          allowInput={allow_input}
+          doc={pdfDoc}
+          selected_corpus={selectedCorpus}
+          selected_document={selectedDocument}
           analyses={analyses}
           extracts={extracts}
-          selected_analysis={selected_analysis}
-          selected_extract={selected_extract}
+          datacells={dataCells}
+          columns={columns}
+          allowInput={allow_input}
           onSelectAnalysis={onSelectAnalysis}
           onSelectExtract={onSelectExtract}
         />

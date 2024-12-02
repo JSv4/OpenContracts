@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSearchText } from "../context/DocumentAtom";
 import {
   useDocText,
@@ -23,15 +23,25 @@ export const useTextSearch = () => {
   const { pageTokenTextMaps } = usePageTokenTextMaps();
   const { setTextSearchState } = useTextSearchState();
 
-  useEffect(() => {
-    console.log("useTextSearch - searchText", searchText);
-    const searchHits: (TextSearchTokenResult | TextSearchSpanResult)[] = [];
+  // Use refs to store previous values
+  const previousSelectedDocumentRef = useRef(selectedDocument);
 
-    // Guard clause to handle all required values
+  useEffect(() => {
+    // Check if selectedDocument has actually changed
+    const documentChanged =
+      previousSelectedDocumentRef.current !== selectedDocument;
+
+    // Guard clause
     if (!selectedDocument || !searchText || !pageTokenTextMaps || !pages) {
-      setTextSearchState({ matches: searchHits, selectedIndex: 0 });
+      // Only reset if the document changed
+      if (documentChanged) {
+        setTextSearchState({ matches: [], selectedIndex: 0 });
+      }
       return;
     }
+
+    // Proceed with search logic
+    const searchHits: (TextSearchTokenResult | TextSearchSpanResult)[] = [];
 
     // Now TypeScript knows these values are defined for the rest of the function
     const exactMatch = new RegExp(searchText, "gi");
@@ -144,6 +154,7 @@ export const useTextSearch = () => {
     }
 
     setTextSearchState({ matches: searchHits, selectedIndex: 0 });
+    previousSelectedDocumentRef.current = selectedDocument;
   }, [
     searchText,
     docText,

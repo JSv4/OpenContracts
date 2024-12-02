@@ -82,8 +82,11 @@ export const useAnalysisManager = () => {
     showSelectedAnnotationOnlyAtom
   );
 
-  const { addMultipleAnnotations, replaceDocTypeAnnotations } =
-    usePdfAnnotations();
+  const {
+    addMultipleAnnotations,
+    replaceDocTypeAnnotations,
+    replaceAnnotations,
+  } = usePdfAnnotations();
   const { setSpanLabels, setDocTypeLabels } = useCorpusState();
 
   const { setQueryLoadingStates } = useQueryLoadingStates();
@@ -233,7 +236,11 @@ export const useAnalysisManager = () => {
       annotationsData.analysis &&
       annotationsData.analysis.fullAnnotationList
     ) {
-      // Filter for span annotations (TokenLabel and SpanLabel)
+      // Clear existing annotations and datacell data
+      replaceAnnotations([]); // Replace annotations with an empty array
+      setDataCells([]); // Clear datacell data
+
+      // Process span annotations
       const rawSpanAnnotations =
         annotationsData.analysis.fullAnnotationList.filter(
           (annot) =>
@@ -246,31 +253,30 @@ export const useAnalysisManager = () => {
         convertToServerAnnotation(annotation)
       ) as (ServerTokenAnnotation | ServerSpanAnnotation)[];
 
-      // Add processed span annotations via annotation manager
-      addMultipleAnnotations(processedSpanAnnotations);
+      // Replace processed span annotations
+      replaceAnnotations(processedSpanAnnotations);
 
-      // Extract unique span labels and update via context
+      // Update span labels
       const uniqueSpanLabels = _.uniqBy(
         processedSpanAnnotations.map((a) => a.annotationLabel),
         "id"
       );
       setSpanLabels(uniqueSpanLabels);
 
-      // Filter for doc type annotations
+      // Process doc type annotations
       const rawDocAnnotations =
         annotationsData.analysis.fullAnnotationList.filter(
           (annot) => annot.annotationLabel.labelType === LabelType.DocTypeLabel
         );
 
-      // Process doc type annotations
       const processedDocAnnotations = rawDocAnnotations.map((annotation) =>
         convertToDocTypeAnnotation(annotation)
       );
 
-      // Use the annotation manager to set doc type annotations
+      // Replace doc type annotations
       replaceDocTypeAnnotations(processedDocAnnotations);
 
-      // Extract unique doc type labels and update via context
+      // Update doc type labels
       const uniqueDocLabels = _.uniqBy(
         processedDocAnnotations.map((a) => a.annotationLabel),
         "id"

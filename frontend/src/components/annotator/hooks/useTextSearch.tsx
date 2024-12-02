@@ -33,10 +33,12 @@ export const useTextSearch = () => {
 
     // Guard clause
     if (!selectedDocument || !searchText || !pageTokenTextMaps || !pages) {
-      // Only reset if the document changed
-      if (documentChanged) {
-        setTextSearchState({ matches: [], selectedIndex: 0 });
-      }
+      console.log("TextSearch: Missing dependencies", {
+        hasDocument: !!selectedDocument,
+        hasSearchText: !!searchText,
+        hasTokenMaps: !!pageTokenTextMaps,
+        pagesCount: pages ? Object.keys(pages).length : 0,
+      });
       return;
     }
 
@@ -129,8 +131,17 @@ export const useTextSearch = () => {
         const bounds: Record<number, BoundingBox> = {};
         for (const [key, value] of Object.entries(grouped_tokens)) {
           const pageIndex = parseInt(key);
+          console.log(`TextSearch: Processing page ${pageIndex}`, {
+            hasPage: !!pages[pageIndex],
+            tokenCount: value.length,
+          });
+
           if (pages[pageIndex] !== undefined) {
             const page_bounds = pages[pageIndex].getBoundsForTokens(value);
+            console.log(`TextSearch: Bounds for page ${pageIndex}`, {
+              hasBounds: !!page_bounds,
+              bounds: page_bounds,
+            });
             if (page_bounds) {
               bounds[pageIndex] = page_bounds;
             }

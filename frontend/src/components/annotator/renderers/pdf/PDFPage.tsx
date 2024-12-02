@@ -62,10 +62,8 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
   const [scrollContainerRef] = useAtom(scrollContainerRefAtom);
   const { pages, setPages } = usePages();
 
-  const {
-    selectedTextSearchMatchIndex: selectedSearchResultIndex,
-    textSearchMatches: searchResults,
-  } = useTextSearchState();
+  const { textSearchMatches: searchResults, selectedTextSearchMatchIndex } =
+    useTextSearchState();
   const { selectedCorpus } = useSelectedCorpus();
 
   const annotationControls = useAnnotationControls();
@@ -112,6 +110,7 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
       // console.log("Try to initialize page", pageInfo);
       const initializePage = async () => {
         try {
+          console.log(`PDFPage ${pageInfo.page.pageNumber}: Starting render`);
           if (pageContainerRef.current && canvasRef.current) {
             // console.log("\tSetup the renderer...");
 
@@ -294,16 +293,26 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
           .filter(
             (match) => match.tokens[pageInfo.page.pageNumber - 1] !== undefined
           )
-          .map((match, token_index) => (
-            <SearchResult
-              key={token_index}
-              total_results={searchResults.length}
-              showBoundingBox={true}
-              hidden={token_index !== selectedSearchResultIndex}
-              pageInfo={updatedPageInfo}
-              match={match}
-            />
-          ))}
+          .map((match) => {
+            const isHidden = match.id !== selectedTextSearchMatchIndex;
+            console.log("PDFPage: SearchResult visibility", {
+              pageNumber: pageInfo.page.pageNumber,
+              matchId: match.id,
+              selectedIndex: selectedTextSearchMatchIndex,
+              isHidden,
+            });
+
+            return (
+              <SearchResult
+                key={match.id}
+                total_results={searchResults.length}
+                showBoundingBox={true}
+                hidden={isHidden}
+                pageInfo={updatedPageInfo}
+                match={match}
+              />
+            );
+          })}
     </PageAnnotationsContainer>
   );
 };

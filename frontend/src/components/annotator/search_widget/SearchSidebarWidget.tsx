@@ -117,6 +117,10 @@ export const SearchSidebarWidget: React.FC = () => {
   }, [selectedTextSearchMatchIndex, annotationRefs.textSearchElementRefs]);
 
   const onResultClick = (index: number) => {
+    console.log("SearchSidebar: Result clicked", {
+      clickedIndex: index,
+      previousIndex: selectedTextSearchMatchIndex,
+    });
     setSelectedTextSearchMatchIndex(index);
   };
 

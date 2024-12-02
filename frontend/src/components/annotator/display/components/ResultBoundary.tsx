@@ -55,6 +55,12 @@ export const ResultBoundary = ({
 
   const width = bounds.right - bounds.left;
   const height = bounds.bottom - bounds.top;
+  console.log("ResultBoundary: Rendering with bounds", {
+    width,
+    height,
+    bounds,
+    id,
+  });
   const rotateY = width < 0 ? -180 : 0;
   const rotateX = height < 0 ? -180 : 0;
   let rgbColor = hexToRgb(color);

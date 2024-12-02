@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
 import _ from "lodash";
 import { VerticallyJustifiedEndDiv } from "../../sidebar/common";
@@ -38,6 +38,15 @@ export const SearchResult = ({
   );
 
   const border = getBorderWidthFromBounds(bounds);
+
+  useEffect(() => {
+    console.log("SearchResult: Hidden prop changed", {
+      matchId: match.id,
+      pageNumber: pageInfo.page.pageNumber,
+      hidden,
+      timestamp: new Date().toISOString(),
+    });
+  }, [hidden, match.id, pageInfo.page.pageNumber]);
 
   return (
     <>

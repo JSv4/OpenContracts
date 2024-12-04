@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import styled from "styled-components";
 import { FiCode, FiCheck, FiX, FiEye, FiEyeOff } from "react-icons/fi"; // Import icons you need
 import { Dimmer, Loader } from "semantic-ui-react";
 import {
   ColumnType,
   DatacellType,
-  ServerAnnotationType,
   LabelDisplayBehavior,
 } from "../../types/graphql-api";
-import { useMutation, useReactiveVar } from "@apollo/client";
+import { useMutation } from "@apollo/client";
 import {
   REQUEST_APPROVE_DATACELL,
   REQUEST_REJECT_DATACELL,
@@ -259,16 +258,26 @@ export const SingleDocumentExtractResults: React.FC<
                         style={{ position: "relative" }}
                       >
                         {cell ? renderCellValue(cell) : "-"}
+
                         {cell && (
-                          <StatusDot
-                            statusColor={getStatusColor(cell)}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenPopupCellId(
-                                openPopupCellId === cell.id ? null : cell.id
-                              );
-                            }}
-                          />
+                          <>
+                            <StatusDot
+                              statusColor={getStatusColor(cell)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenPopupCellId(
+                                  openPopupCellId === cell.id ? null : cell.id
+                                );
+                              }}
+                            />
+
+                            {/* Conditionally render action buttons */}
+                            {openPopupCellId === cell.id && (
+                              <ActionButtonsWrapper>
+                                {renderActionButtons(cell)}
+                              </ActionButtonsWrapper>
+                            )}
+                          </>
                         )}
                       </CellContainer>
                     </TableCell>
@@ -652,4 +661,16 @@ const AnnotationShield = styled.button`
     width: 14px;
     height: 14px;
   }
+`;
+
+const ActionButtonsWrapper = styled.div`
+  position: absolute;
+  top: -10px;
+  right: 30px;
+  z-index: 100;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
 `;

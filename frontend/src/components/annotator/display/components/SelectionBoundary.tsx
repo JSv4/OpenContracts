@@ -7,12 +7,12 @@ import {
 } from "../../../../utils/transform";
 import { pulseGreen, pulseMaroon } from "../effects";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
-import { useUISettings } from "../../hooks/useUISettings";
 
 interface SelectionBoundaryProps {
   id: string;
   hidden: boolean;
   showBoundingBox?: boolean;
+  scrollIntoView?: boolean;
   color: string;
   bounds: BoundingBox;
   selected: boolean;
@@ -74,6 +74,7 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
   id,
   hidden,
   showBoundingBox = false,
+  scrollIntoView = false,
   color,
   bounds,
   children,
@@ -94,6 +95,15 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
       };
     }
   }, [id, registerRef, unregisterRef]);
+
+  useEffect(() => {
+    if (scrollIntoView && boundaryRef.current) {
+      boundaryRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [scrollIntoView]);
 
   const width = bounds.right - bounds.left;
   const height = bounds.bottom - bounds.top;

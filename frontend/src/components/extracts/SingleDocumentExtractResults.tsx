@@ -39,7 +39,7 @@ export const SingleDocumentExtractResults: React.FC<
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [lastCells, setLastCells] = useState(datacells);
   const { annotationElementRefs } = useAnnotationRefs();
-  const { pdfAnnotations } = usePdfAnnotations();
+  const { replaceAnnotations } = usePdfAnnotations();
 
   const { setShowBoundingBoxes, setShowLabels, setShowSelectedOnly } =
     useAnnotationDisplay();
@@ -51,25 +51,14 @@ export const SingleDocumentExtractResults: React.FC<
 
   const handleRowClick = (cell: DatacellType) => {
     if (cell.fullSourceList && cell.fullSourceList.length > 0) {
+      console.log("Jumping to row", cell);
       const annotationId = cell.fullSourceList[0].id;
-      const annotation = pdfAnnotations.annotations.find(
-        (a) => a.id === annotationId
-      );
-
-      if (annotation) {
-        setSelectedAnnotations([annotationId]);
-
-        setShowBoundingBoxes(true);
-        setShowLabels(LabelDisplayBehavior.ALWAYS);
-        setShowSelectedOnly(false);
-
-        if (annotationElementRefs?.current[annotationId]) {
-          annotationElementRefs.current[annotationId]?.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-        }
-      }
+      setSelectedAnnotations([annotationId]);
+      setShowBoundingBoxes(true);
+      setShowLabels(LabelDisplayBehavior.ALWAYS);
+      setShowSelectedOnly(false);
+    } else {
+      console.log("Could not jump to row");
     }
   };
 

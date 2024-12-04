@@ -51,6 +51,7 @@ interface SelectionProps {
   rejected?: boolean;
   actions?: CloudButtonItem[];
   allowFeedback?: boolean;
+  scrollIntoView?: boolean;
 }
 
 export const Selection: React.FC<SelectionProps> = ({
@@ -61,6 +62,7 @@ export const Selection: React.FC<SelectionProps> = ({
   approved,
   rejected,
   allowFeedback,
+  scrollIntoView,
   showInfo = true,
 }) => {
   const auth_token = useReactiveVar(authToken);
@@ -218,6 +220,7 @@ export const Selection: React.FC<SelectionProps> = ({
         approved={approved}
         rejected={rejected}
         selected={selected}
+        scrollIntoView={scrollIntoView}
       >
         {showInfo && !hideLabels && (
           <SelectionInfo

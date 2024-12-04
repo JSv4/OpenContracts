@@ -18,6 +18,7 @@ interface SearchResultProps {
   pageInfo: PDFPageInfo;
   match: TextSearchTokenResult;
   showInfo?: boolean;
+  scrollIntoView?: boolean;
 }
 
 export const SearchResult = ({
@@ -27,6 +28,7 @@ export const SearchResult = ({
   pageInfo,
   match,
   showInfo = true,
+  scrollIntoView = false,
 }: SearchResultProps) => {
   const { showLabels, hideLabels } = useAnnotationDisplay();
 
@@ -58,6 +60,7 @@ export const SearchResult = ({
         bounds={bounds}
         selected={false}
         onHover={setHovered}
+        scrollIntoView={Boolean(scrollIntoView)}
       >
         {showInfo && !hideLabels ? (
           <SelectionInfo

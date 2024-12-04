@@ -259,6 +259,7 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
         approved={annotation.approved}
         rejected={annotation.rejected}
         allowFeedback={selectedCorpus?.allowComments}
+        scrollIntoView={selectedAnnotations[0] === annotation.id}
       />
     ));
   }, [

@@ -346,26 +346,29 @@ export const useAnalysisManager = () => {
       }));
     }
 
-    if (datacellsData && datacellsData.extract) {
+    if (datacellsData?.extract && selectedDocument?.id) {
       // Clear existing datacell data and annotations
-      setDataCells([]); // Clear datacell data
-      replaceAnnotations([]); // Clear annotations
+      setDataCells([]);
+      replaceAnnotations([]);
+
+      // Filter datacells to only include those matching the selected document
+      const filteredDatacells = (
+        datacellsData.extract.fullDatacellList || []
+      ).filter((datacell) => datacell.document?.id === selectedDocument.id);
 
       // Set new datacell data and columns
-      setDataCells(datacellsData.extract.fullDatacellList || []);
+      setDataCells(filteredDatacells);
       setColumns(datacellsData.extract.fieldset.fullColumnList || []);
 
-      // Process annotations from datacells
-      const processedAnnotations = (
-        datacellsData.extract.fullDatacellList || []
-      )
+      // Process annotations from filtered datacells
+      const processedAnnotations = filteredDatacells
         .flatMap((datacell) => datacell.fullSourceList || [])
         .map((annotation) => convertToServerAnnotation(annotation));
 
       // Replace annotations with processed annotations
       replaceAnnotations(processedAnnotations);
     }
-  }, [datacellsLoading, datacellsError, datacellsData]);
+  }, [datacellsLoading, datacellsError, datacellsData, selectedDocument?.id]);
 
   /**
    * Handles selection of an analysis.

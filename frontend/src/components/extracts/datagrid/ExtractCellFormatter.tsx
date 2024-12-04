@@ -11,7 +11,6 @@ import {
   displayAnnotationOnAnnotatorLoad,
   onlyDisplayTheseAnnotations,
   openedDocument,
-  selectedAnnotation,
   selectedExtract,
   showAnnotationBoundingBoxes,
   showAnnotationLabels,

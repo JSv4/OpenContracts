@@ -110,7 +110,7 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
       // console.log("Try to initialize page", pageInfo);
       const initializePage = async () => {
         try {
-          console.log(`PDFPage ${pageInfo.page.pageNumber}: Starting render`);
+          // console.log(`PDFPage ${pageInfo.page.pageNumber}: Starting render`);
           if (pageContainerRef.current && canvasRef.current) {
             // console.log("\tSetup the renderer...");
 
@@ -295,12 +295,6 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
           )
           .map((match) => {
             const isHidden = match.id !== selectedTextSearchMatchIndex;
-            console.log("PDFPage: SearchResult visibility", {
-              pageNumber: pageInfo.page.pageNumber,
-              matchId: match.id,
-              selectedIndex: selectedTextSearchMatchIndex,
-              isHidden,
-            });
 
             return (
               <SearchResult

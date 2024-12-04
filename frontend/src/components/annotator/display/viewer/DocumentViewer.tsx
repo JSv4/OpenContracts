@@ -165,7 +165,7 @@ export const DocumentViewer = ({
 
   const containerRefCallback = useCallback(
     (node: HTMLDivElement | null) => {
-      console.log("Started Annotation Renderer");
+      // console.log("Started Annotation Renderer");
       if (node !== null) {
         scrollContainerRef.current = node;
         registerRef("scrollContainer", scrollContainerRef);

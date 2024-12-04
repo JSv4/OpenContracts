@@ -358,32 +358,10 @@ export const AnnotatorSidebar = ({
     data: false,
   });
 
-  useEffect(() => {
-    console.log("Sidebar visibility state:", {
-      isSidebarVisible,
-      paneCount: panes.length,
-      containerDimensions: {
-        width: document.getElementById("AnnotatorSidebarContainer")
-          ?.clientWidth,
-        height: document.getElementById("AnnotatorSidebarContainer")
-          ?.clientHeight,
-      },
-      parentDimensions: {
-        width: document.getElementById("AnnotatorSidebarContainer")
-          ?.parentElement?.clientWidth,
-        height: document.getElementById("AnnotatorSidebarContainer")
-          ?.parentElement?.clientHeight,
-      },
-      showMinimalLayout: show_minimal_layout,
-      displayStyle: !isSidebarVisible || show_minimal_layout ? "none" : "flex",
-    });
-  }, [isSidebarVisible, panes, show_minimal_layout]);
-
   const handleTabChange = (
     event: React.MouseEvent<HTMLDivElement>,
     data: TabProps
   ) => {
-    console.log("Should set active index to ", data.activeIndex);
     if (data?.activeIndex !== undefined) {
       if (isNumber(data.activeIndex)) {
         setActiveIndex(data.activeIndex);

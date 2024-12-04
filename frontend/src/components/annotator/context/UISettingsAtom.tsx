@@ -38,7 +38,7 @@ export type QueryErrors = {
  */
 export const zoomLevelAtom = atom<number>(1);
 export const isSidebarVisibleAtom = atom<boolean>(true);
-export const topbarVisibleAtom = atom<boolean>(true);
+export const topbarVisibleAtom = atom<boolean>(false);
 export const sidebarWidthAtom = atom<number>(300);
 export const progressAtom = atom<number>(0);
 export const modalOpenAtom = atom<boolean>(false);

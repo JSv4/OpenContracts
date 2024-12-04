@@ -92,7 +92,8 @@ export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
 
         {actions.length > 0 && (
           <StyledButtonGroup>
-            <Dropdown
+            <StyledDropdown
+              pointing="top right"
               button
               className="icon"
               trigger={
@@ -102,7 +103,7 @@ export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
               }
             >
               <Dropdown.Menu>{actionItems}</Dropdown.Menu>
-            </Dropdown>
+            </StyledDropdown>
           </StyledButtonGroup>
         )}
       </ActionsWrapper>
@@ -132,14 +133,15 @@ const StyledButton = styled(
   cursor: pointer;
 
   /* Base styles */
-  background: var(--primary-color, #2185d0);
-  color: white;
-  padding: 0.8em;
-  min-width: 2.5em;
-  height: 2.5em;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 500;
+  background: var(--background-subtle, #f0f2f5);
+  color: var(--text-primary, #1a2433);
+  padding: 0.65em;
+  min-width: 2.3em;
+  height: 2.3em;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  position: relative;
+  overflow: hidden;
 
   /* Flexbox for icon alignment */
   display: inline-flex;
@@ -147,7 +149,7 @@ const StyledButton = styled(
   justify-content: center;
 
   /* Smooth transitions */
-  transition: all 0.2s ease-in-out;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Icon styling */
   i.icon {
@@ -155,32 +157,56 @@ const StyledButton = styled(
     font-size: 1em;
     height: auto;
     width: auto;
+    opacity: 0.85;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Hover effect with pseudo-element */
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120%;
+    height: 120%;
+    background: var(--background-hover, #e2e8f0);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
   }
 
   /* Hover state */
   &:hover {
-    background: var(--primary-hover, #1678c2);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    background: var(--background-subtle, #f0f2f5);
+    i.icon {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    &::before {
+      transform: translate(-50%, -50%) scale(1);
+    }
   }
 
   /* Active state */
   &:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transform: scale(0.95);
+    &::before {
+      background: var(--background-active, #d1d8e5);
+    }
   }
 
   /* Focus state */
   &:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(33, 133, 208, 0.2);
+    box-shadow: 0 0 0 2px rgba(26, 36, 51, 0.15);
   }
 
   /* Disabled state */
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
-    background: #cccccc;
   }
 `;
 
@@ -269,5 +295,53 @@ const FilterPopoverContent = styled.div`
 
   &::-webkit-scrollbar-thumb:hover {
     background: #555;
+  }
+`;
+
+/**
+ * Styled dropdown component, removing default Semantic UI styling.
+ *
+ * @param {React.ButtonHTMLAttributes<HTMLButtonElement>} props - Button properties.
+ * @param {React.Ref<HTMLButtonElement>} ref - Reference to the button element.
+ * @returns {JSX.Element} The styled button component.
+ */
+const StyledDropdown = styled(Dropdown)`
+  &.ui.dropdown {
+    /* Remove default Semantic UI styling */
+    background: none;
+    border: none;
+    padding: 0;
+    min-height: 0;
+
+    .menu {
+      margin-top: 0.5rem !important;
+      border: none !important;
+      background: #ffffff !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+      border-radius: 12px !important;
+      padding: 0.5rem !important;
+
+      /* Dropdown items */
+      .item {
+        border-radius: 8px !important;
+        margin: 0.2rem 0 !important;
+        padding: 0.6rem 1rem !important;
+        transition: all 0.2s ease !important;
+
+        /* Icon in dropdown items */
+        i.icon {
+          opacity: 0.85 !important;
+          margin-right: 0.75rem !important;
+        }
+
+        &:hover {
+          background: var(--background-subtle, #f0f2f5) !important;
+
+          i.icon {
+            opacity: 1 !important;
+          }
+        }
+      }
+    }
   }
 `;

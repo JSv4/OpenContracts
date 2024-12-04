@@ -9,18 +9,8 @@ import {
   Loader,
 } from "semantic-ui-react";
 import { JSONTree } from "react-json-tree";
-import {
-  ColumnType,
-  DatacellType,
-  ServerAnnotationType,
-} from "../../types/graphql-api";
-import { useReactiveVar, useMutation } from "@apollo/client";
-import {
-  onlyDisplayTheseAnnotations,
-  showSelectedAnnotationOnly,
-  showAnnotationBoundingBoxes,
-  showAnnotationLabels,
-} from "../../graphql/cache";
+import { ColumnType, DatacellType } from "../../types/graphql-api";
+import { useMutation } from "@apollo/client";
 import { LabelDisplayBehavior } from "../../types/graphql-api";
 import { toast } from "react-toastify";
 import {
@@ -31,6 +21,12 @@ import {
   RequestRejectDatacellInputType,
   RequestRejectDatacellOutputType,
 } from "../../graphql/mutations";
+import { useAnnotationRefs } from "../annotator/hooks/useAnnotationRefs";
+import { usePdfAnnotations } from "../annotator/hooks/AnnotationHooks";
+import {
+  useAnnotationDisplay,
+  useAnnotationSelection,
+} from "../annotator/context/UISettingsAtom";
 
 interface SingleDocumentExtractResultsProps {
   datacells: DatacellType[];
@@ -41,33 +37,41 @@ export const SingleDocumentExtractResults: React.FC<
   SingleDocumentExtractResultsProps
 > = ({ datacells, columns }) => {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-  const [viewSourceAnnotations, setViewSourceAnnotations] = useState<
-    ServerAnnotationType[] | null
-  >(null);
   const [lastCells, setLastCells] = useState(datacells);
-  const only_display_these_annotations = useReactiveVar(
-    onlyDisplayTheseAnnotations
-  );
+  const { annotationElementRefs } = useAnnotationRefs();
+  const { pdfAnnotations } = usePdfAnnotations();
+
+  const { setShowBoundingBoxes, setShowLabels, setShowSelectedOnly } =
+    useAnnotationDisplay();
+  const { setSelectedAnnotations } = useAnnotationSelection();
 
   useEffect(() => {
     setLastCells(datacells);
   }, [datacells]);
 
-  useEffect(() => {
-    if (viewSourceAnnotations !== null) {
-      onlyDisplayTheseAnnotations(viewSourceAnnotations);
-      showSelectedAnnotationOnly(false);
-      showAnnotationBoundingBoxes(true);
-      showAnnotationLabels(LabelDisplayBehavior.ALWAYS);
-    }
-  }, [viewSourceAnnotations]);
+  const handleRowClick = (cell: DatacellType) => {
+    if (cell.fullSourceList && cell.fullSourceList.length > 0) {
+      const annotationId = cell.fullSourceList[0].id;
+      const annotation = pdfAnnotations.annotations.find(
+        (a) => a.id === annotationId
+      );
 
-  useEffect(() => {
-    if (only_display_these_annotations) {
-      // openedDocument(only_display_these_annotations[0].document);
-      setViewSourceAnnotations(null);
+      if (annotation) {
+        setSelectedAnnotations([annotationId]);
+
+        setShowBoundingBoxes(true);
+        setShowLabels(LabelDisplayBehavior.ALWAYS);
+        setShowSelectedOnly(false);
+
+        if (annotationElementRefs?.current[annotationId]) {
+          annotationElementRefs.current[annotationId]?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }
     }
-  }, [only_display_these_annotations]);
+  };
 
   const [requestApprove, { loading: trying_approve }] = useMutation<
     RequestApproveDatacellOutputType,
@@ -115,12 +119,6 @@ export const SingleDocumentExtractResults: React.FC<
         wide="very"
       />
     );
-  };
-
-  const handleRowClick = (cell: DatacellType) => {
-    if (cell?.fullSourceList) {
-      setViewSourceAnnotations(cell.fullSourceList as ServerAnnotationType[]);
-    }
   };
 
   const renderActionButtons = (cell: DatacellType) => (

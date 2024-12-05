@@ -19,7 +19,7 @@ import {
   ColumnType,
   CorpusQueryType,
   LabelType,
-} from "./types";
+} from "../types/graphql-api";
 import { ViewState } from "../components/types";
 import { FileUploadPackageProps } from "../components/widgets/modals/DocumentUploadModal";
 
@@ -157,6 +157,12 @@ export const cache = new InMemoryCache({
         columns: relayStylePagination(),
       },
     },
+    DatacellType: {
+      keyFields: ["id"],
+      fields: {
+        // Define field policies if necessary
+      },
+    },
   },
 });
 
@@ -188,8 +194,6 @@ export const showSelectCorpusAnalyzerOrFieldsetModal = makeVar<boolean>(false);
 export const viewStateVar = makeVar<ViewState>(ViewState.LOADING);
 export const editMode = makeVar<"ANNOTATE" | "ANALYZE">("ANNOTATE");
 export const allowUserInput = makeVar<boolean>(false);
-export const pdfZoomFactor = makeVar<number>(1.5);
-export const setTopbarVisible = makeVar<boolean>(false);
 
 /**
  *  Document-related global variables.

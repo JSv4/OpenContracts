@@ -20,7 +20,7 @@ import {
   GetCorpusQueriesOutput,
   GetCorpusQueriesInput,
 } from "../../graphql/queries";
-import { CorpusQueryType } from "../../graphql/types";
+import { CorpusQueryType } from "../../types/graphql-api";
 import { QueryList } from "./QueryList";
 
 export const CorpusQueryList = ({

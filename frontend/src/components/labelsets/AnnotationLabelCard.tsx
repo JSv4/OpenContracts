@@ -19,7 +19,7 @@ import _ from "lodash";
 import { IconDropdown } from "../widgets/icon-picker/index";
 import { VerticallyCenteredDiv } from "../common";
 import { ColorPickerSegment } from "../widgets/color-picker/ColorPickerSegment";
-import { AnnotationLabelType } from "../../graphql/types";
+import { AnnotationLabelType } from "../../types/graphql-api";
 import { UpdateAnnotationLabelInputs } from "../../graphql/mutations";
 import { getPermissions } from "../../utils/transform";
 import { PermissionTypes } from "../types";

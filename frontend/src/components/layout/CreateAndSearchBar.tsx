@@ -1,11 +1,10 @@
-// Start of Selection
-import React, { useState } from "react";
+import React, { forwardRef } from "react";
 import {
-  Button,
   Form,
   Dropdown,
   Popup,
   InputOnChangeData,
+  Icon,
 } from "semantic-ui-react";
 import styled from "styled-components";
 
@@ -25,7 +24,7 @@ export interface DropdownActionProps {
  */
 interface CreateAndSearchBarProps {
   actions: DropdownActionProps[];
-  filters?: JSX.Element | JSX.Element[];
+  filters?: JSX.Element;
   placeholder?: string;
   value?: string;
   onChange?: (search_string: string) => any | void;
@@ -44,8 +43,6 @@ export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
   value = "",
   onChange,
 }) => {
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-
   const actionItems = actions.map((action) => (
     <Dropdown.Item
       icon={action.icon}
@@ -82,17 +79,12 @@ export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
         {filters && (
           <Popup
             trigger={
-              <StyledButton
-                icon="filter"
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                aria-label="Filter"
-              />
+              <StyledButton aria-label="Filter">
+                <Icon name="filter" />
+              </StyledButton>
             }
             content={<FilterPopoverContent>{filters}</FilterPopoverContent>}
             on="click"
-            open={isFilterOpen}
-            onClose={() => setIsFilterOpen(false)}
-            onOpen={() => setIsFilterOpen(true)}
             position="bottom right"
             pinned
           />
@@ -100,15 +92,123 @@ export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
 
         {actions.length > 0 && (
           <StyledButtonGroup>
-            <Dropdown button className="icon" trigger={<Button icon="plus" />}>
+            <StyledDropdown
+              pointing="top right"
+              button
+              className="icon"
+              trigger={
+                <StyledButton aria-label="Add">
+                  <Icon name="plus" />
+                </StyledButton>
+              }
+            >
               <Dropdown.Menu>{actionItems}</Dropdown.Menu>
-            </Dropdown>
+            </StyledDropdown>
           </StyledButtonGroup>
         )}
       </ActionsWrapper>
     </SearchBarContainer>
   );
 };
+
+/**
+ * Styled button that forwards refs properly and uses a native button element.
+ *
+ * @param {React.ButtonHTMLAttributes<HTMLButtonElement>} props - Button properties.
+ * @param {React.Ref<HTMLButtonElement>} ref - Reference to the button element.
+ * @returns {JSX.Element} The styled button component.
+ */
+const StyledButton = styled(
+  forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
+    (props, ref) => (
+      <button {...props} ref={ref}>
+        {props.children}
+      </button>
+    )
+  )
+)`
+  /* Reset button styles */
+  appearance: none;
+  border: none;
+  cursor: pointer;
+
+  /* Base styles */
+  background: var(--background-subtle, #f0f2f5);
+  color: var(--text-primary, #1a2433);
+  padding: 0.65em;
+  min-width: 2.3em;
+  height: 2.3em;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  position: relative;
+  overflow: hidden;
+
+  /* Flexbox for icon alignment */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Smooth transitions */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Icon styling */
+  i.icon {
+    margin: 0 !important;
+    font-size: 1em;
+    height: auto;
+    width: auto;
+    opacity: 0.85;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Hover effect with pseudo-element */
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120%;
+    height: 120%;
+    background: var(--background-hover, #e2e8f0);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+  }
+
+  /* Hover state */
+  &:hover {
+    background: var(--background-subtle, #f0f2f5);
+    i.icon {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    &::before {
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
+  /* Active state */
+  &:active {
+    transform: scale(0.95);
+    &::before {
+      background: var(--background-active, #d1d8e5);
+    }
+  }
+
+  /* Focus state */
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(26, 36, 51, 0.15);
+  }
+
+  /* Disabled state */
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
 
 /**
  * Container for the search bar, removing the blue tint and applying a neutral background.
@@ -157,35 +257,11 @@ const ActionsWrapper = styled.div`
 `;
 
 /**
- * Styled button for the filter, ensuring a consistent size and appearance.
- */
-const StyledButton = styled(Button)`
-  border-radius: 20px;
-  background: #333;
-  color: white;
-  transition: background 0.3s ease;
-  padding: 0.5rem;
-
-  &:hover {
-    background: #555;
-  }
-`;
-
-/**
  * Styled button group removing unnecessary styling to ensure sane sizing.
  */
-const StyledButtonGroup = styled(Button.Group)`
-  .ui.button {
-    border-radius: 4px;
-    padding: 0.5rem 1rem;
-    background: #28a745;
-    color: white;
-    transition: background 0.3s ease;
-
-    &:hover {
-      background: #218838;
-    }
-  }
+const StyledButtonGroup = styled.div`
+  display: flex;
+  align-items: center;
 `;
 
 /**
@@ -219,5 +295,53 @@ const FilterPopoverContent = styled.div`
 
   &::-webkit-scrollbar-thumb:hover {
     background: #555;
+  }
+`;
+
+/**
+ * Styled dropdown component, removing default Semantic UI styling.
+ *
+ * @param {React.ButtonHTMLAttributes<HTMLButtonElement>} props - Button properties.
+ * @param {React.Ref<HTMLButtonElement>} ref - Reference to the button element.
+ * @returns {JSX.Element} The styled button component.
+ */
+const StyledDropdown = styled(Dropdown)`
+  &.ui.dropdown {
+    /* Remove default Semantic UI styling */
+    background: none;
+    border: none;
+    padding: 0;
+    min-height: 0;
+
+    .menu {
+      margin-top: 0.5rem !important;
+      border: none !important;
+      background: #ffffff !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+      border-radius: 12px !important;
+      padding: 0.5rem !important;
+
+      /* Dropdown items */
+      .item {
+        border-radius: 8px !important;
+        margin: 0.2rem 0 !important;
+        padding: 0.6rem 1rem !important;
+        transition: all 0.2s ease !important;
+
+        /* Icon in dropdown items */
+        i.icon {
+          opacity: 0.85 !important;
+          margin-right: 0.75rem !important;
+        }
+
+        &:hover {
+          background: var(--background-subtle, #f0f2f5) !important;
+
+          i.icon {
+            opacity: 1 !important;
+          }
+        }
+      }
+    }
   }
 `;

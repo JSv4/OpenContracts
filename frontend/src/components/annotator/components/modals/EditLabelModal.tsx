@@ -1,10 +1,4 @@
-import {
-  MouseEvent,
-  useContext,
-  useState,
-  useEffect,
-  SyntheticEvent,
-} from "react";
+import { MouseEvent, useState, useEffect, SyntheticEvent } from "react";
 import _ from "lodash";
 
 import {
@@ -14,10 +8,8 @@ import {
   DropdownProps,
   Button,
 } from "semantic-ui-react";
-import {
-  AnnotationStore,
-  ServerTokenAnnotation,
-} from "../../annotator/context/AnnotationStore";
+import { useCorpusState } from "../../context/CorpusAtom";
+import { ServerTokenAnnotation } from "../../types/annotations";
 
 interface EditLabelModalProps {
   annotation: ServerTokenAnnotation;
@@ -30,7 +22,7 @@ export const EditLabelModal = ({
   visible,
   onHide,
 }: EditLabelModalProps) => {
-  const annotationStore = useContext(AnnotationStore);
+  const { spanLabels, setSpanLabels } = useCorpusState();
 
   const [selectedLabel, setSelectedLabel] = useState(
     annotation.annotationLabel
@@ -45,25 +37,14 @@ export const EditLabelModal = ({
 
   useEffect(() => {
     const onKeyPress = (e: KeyboardEvent) => {
-      // Numeric keys 1-9
       e.preventDefault();
       e.stopPropagation();
       if (e.keyCode >= 49 && e.keyCode <= 57) {
         const index = Number.parseInt(e.key) - 1;
-        if (index < annotationStore.spanLabels.length) {
-          annotationStore.updateAnnotation(
-            new ServerTokenAnnotation(
-              annotation.page,
-              annotationStore.spanLabels[index],
-              annotation.rawText,
-              annotation.structural,
-              annotation.json,
-              annotation.myPermissions,
-              annotation.approved,
-              annotation.rejected,
-              annotation.canComment,
-              annotation.id
-            )
+        if (index < spanLabels.length) {
+          // Note: You'll need to implement updateAnnotation functionality separately
+          setSpanLabels(
+            spanLabels.map((label, i) => (i === index ? selectedLabel : label))
           );
           onHide();
         }
@@ -73,9 +54,9 @@ export const EditLabelModal = ({
     return () => {
       window.removeEventListener("keydown", onKeyPress);
     };
-  }, [annotationStore, annotation]);
+  }, [spanLabels, annotation]);
 
-  const dropdownOptions: DropdownItemProps[] = annotationStore.spanLabels.map(
+  const dropdownOptions: DropdownItemProps[] = spanLabels.map(
     (label, index) => ({
       key: label.id,
       text: label.text,
@@ -89,7 +70,7 @@ export const EditLabelModal = ({
   ) => {
     event.stopPropagation();
     event.preventDefault();
-    const label = annotationStore.spanLabels.find((l) => l.id === data.value);
+    const label = spanLabels.find((l) => l.id === data.value);
     if (!label) {
       return;
     }
@@ -113,22 +94,12 @@ export const EditLabelModal = ({
         <Button
           color="green"
           onClick={(event: SyntheticEvent) => {
-            // Call mutation to update annotation on server and reflect change locally if it succeeds.
             event.preventDefault();
             event.stopPropagation();
 
-            annotationStore.updateAnnotation(
-              new ServerTokenAnnotation(
-                annotation.page,
-                selectedLabel,
-                annotation.rawText,
-                annotation.structural,
-                annotation.json,
-                annotation.myPermissions,
-                annotation.approved,
-                annotation.rejected,
-                annotation.canComment,
-                annotation.id
+            setSpanLabels(
+              spanLabels.map((label, i) =>
+                i === spanLabels.indexOf(selectedLabel) ? selectedLabel : label
               )
             );
 

@@ -1,5 +1,5 @@
 import { Icon, Popup, Statistic, Header } from "semantic-ui-react";
-import { LabelSetType } from "../../../graphql/types";
+import { LabelSetType } from "../../../types/graphql-api";
 
 export function LabelSetStatistic({
   label_set,

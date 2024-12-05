@@ -38,7 +38,7 @@ import {
   StartDocumentExtractInput,
   StartDocumentExtractOutput,
 } from "../../../graphql/mutations";
-import { CorpusType, DocumentType } from "../../../graphql/types";
+import { CorpusType, DocumentType } from "../../../types/graphql-api";
 
 interface SelectAnalyzerOrFieldsetModalProps {
   corpus?: CorpusType;

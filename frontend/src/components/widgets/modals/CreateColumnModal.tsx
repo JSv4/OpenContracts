@@ -1,275 +1,173 @@
-import React, { useEffect, useState } from "react";
-import {
-  Modal,
-  Form,
-  Input,
-  TextArea,
-  Grid,
-  Button,
-  Header,
-  Checkbox,
-  Popup,
-  Icon,
-} from "semantic-ui-react";
+import React, { useState, useCallback, useEffect } from "react";
+import { Modal, Form, Grid, Button } from "semantic-ui-react";
+import { BasicConfigSection } from "./sections/BasicConfigSection";
+import { OutputTypeSection } from "./sections/OutputTypeSection";
+import { ExtractionConfigSection } from "./sections/ExtractionConfigSection";
+import { AdvancedOptionsSection } from "./sections/AdvancedOptionsSection";
 import { LooseObject } from "../../types";
-import { ColumnType } from "../../../graphql/types";
-import { ExtractTaskDropdown } from "../selectors/ExtractTaskDropdown";
+import styled from "styled-components";
+import { ColumnType } from "../../../types/graphql-api";
+import { parsePydanticModel } from "../../../utils/parseOutputType";
+import { FieldType } from "../ModelFieldBuilder";
 
 interface CreateColumnModalProps {
   open: boolean;
-  existing_column?: ColumnType;
+  existing_column?: ColumnType | null;
   onClose: () => void;
   onSubmit: (data: any) => void;
 }
 
+interface RequiredFields {
+  query: string;
+  primitiveType?: string;
+  taskName: string;
+  name: string;
+  agentic: boolean;
+}
+
+const ModalContent = styled(Modal.Content)`
+  padding: 2rem !important;
+`;
+
+const StyledGrid = styled(Grid)`
+  margin: 0 !important;
+`;
+
+/**
+ * Modal component for creating or editing a data extract column.
+ *
+ * @param open - Whether the modal is open.
+ * @param existing_column - An existing column to edit.
+ * @param onClose - Function to call when closing the modal.
+ * @param onSubmit - Function to call with the data upon form submission.
+ */
 export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
   open,
   existing_column,
   onClose,
   onSubmit,
 }) => {
-  const [objData, setObjData] = useState<LooseObject>(
-    existing_column ? existing_column : {}
+  const [formData, setFormData] = useState<LooseObject>(
+    existing_column ? { ...existing_column } : {}
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [outputTypeOption, setOutputTypeOption] = useState<string>("primitive");
+  const [primitiveType, setPrimitiveType] = useState<string>("str");
+  const [extractIsList, setExtractIsList] = useState<boolean>(false);
+  const [initialFields, setInitialFields] = useState<FieldType[]>([]);
 
   useEffect(() => {
     if (existing_column) {
-      setObjData(existing_column);
+      setFormData({ ...existing_column });
+      const isPrimitiveType = ["str", "int", "float", "bool"].includes(
+        existing_column.outputType || ""
+      );
+      setOutputTypeOption(isPrimitiveType ? "primitive" : "custom");
+      setPrimitiveType(existing_column.outputType);
+      setExtractIsList(Boolean(existing_column.extractIsList));
+      setInitialFields(parsePydanticModel(existing_column.outputType));
     } else {
-      setObjData({});
+      setFormData({});
+      setOutputTypeOption("primitive");
+      setPrimitiveType("str");
+      setExtractIsList(false);
+      setInitialFields([]);
     }
   }, [existing_column]);
 
-  const {
-    name,
-    query,
-    matchText,
-    outputType,
-    limitToLabel,
-    instructions,
-    agentic,
-    extractIsList,
-    mustContainText,
-    taskName,
-  } = objData;
+  const handleChange = useCallback(
+    (
+      event: React.SyntheticEvent<HTMLElement>,
+      data: any,
+      fieldName: string
+    ) => {
+      const value = data.type === "checkbox" ? data.checked : data.value;
+      setFormData((prev) => ({ ...prev, [fieldName]: value }));
+    },
+    []
+  );
 
-  console.log("existing_column", existing_column);
-
-  const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    data: any,
-    name: string
+  const handleOutputTypeChange = (
+    e: React.FormEvent<HTMLInputElement>,
+    data: any
   ) => {
-    setObjData({ ...objData, [name]: data.value });
+    setOutputTypeOption(data.value);
+    setFormData((prev) => ({
+      ...prev,
+      outputType: data.value === "primitive" ? primitiveType : "",
+    }));
   };
 
-  const handleSubmit = () => {
-    console.log("Submit data", objData);
-    onSubmit(objData);
+  const isFormValid = useCallback((): boolean => {
+    const requiredFields: RequiredFields = {
+      query: formData.query || "",
+      taskName: formData.taskName || "",
+      name: formData.name || "",
+      agentic: formData.agentic ?? false,
+      ...(outputTypeOption === "primitive"
+        ? { primitiveType: formData.primitiveType }
+        : {}),
+    };
+
+    return Object.entries(requiredFields).every(([key, value]) => {
+      if (key === "agentic") return typeof value === "boolean";
+      return Boolean(value);
+    });
+  }, [formData, outputTypeOption]);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Modal style={{ height: "70vh" }} open={open} closeIcon onClose={onClose}>
-      <Modal.Header>Create a New Data Extract Column</Modal.Header>
-      <Modal.Content style={{ overflowY: "scroll" }}>
+    <Modal open={open} closeIcon onClose={onClose} size="large">
+      <Modal.Header>
+        {existing_column ? "Edit Column" : "Create a New Data Extract Column"}
+      </Modal.Header>
+      <ModalContent>
         <Form>
-          <Grid stackable>
-            <Grid.Row>
-              <Grid.Column width={8}>
-                <Form.Field>
-                  <label>Name</label>
-                  <Input
-                    placeholder="Enter column name"
-                    name="name"
-                    value={name}
-                    onChange={(e, { value }) =>
-                      setObjData({ ...objData, name: value })
-                    }
-                    fluid
-                  />
-                </Form.Field>
-              </Grid.Column>
-              <Grid.Column width={8}>
-                <Form.Field>
-                  <label>
-                    Output Type
-                    <Popup
-                      trigger={<Icon name="question circle outline" />}
-                      content="Specify the output type for the column. Currently we support Python primitives (e.g. int, str, boolean, float) or simple (non-nested) Pydantic models. Parser is still a WIP, so please keep it simple."
-                    />
-                  </label>
-                  <Input
-                    placeholder="e.g., str"
-                    name="outputType"
-                    value={outputType}
-                    onChange={(e, { value }) =>
-                      setObjData({ ...objData, outputType: value })
-                    }
-                    fluid
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Form.Field>
-                  <label>Extract Task</label>
-                  <ExtractTaskDropdown
-                    onChange={(taskName: string | null) => {
-                      if (taskName) {
-                        setObjData({ ...objData, taskName });
-                      }
-                    }}
-                    taskName={taskName}
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Header as="h4">Query</Header>
-                <Form.Field>
-                  <TextArea
-                    rows={3}
-                    name="query"
-                    placeholder="What query shall we use to guide the LLM extraction?"
-                    value={query}
-                    onChange={(e, data) => handleChange(e, data, "query")}
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Header as="h4">Must Contain Text</Header>
-                <Form.Field>
-                  <TextArea
-                    rows={3}
-                    name="mustContainText"
-                    placeholder="Only look in annotations that contain this string (case insensitive)?"
-                    value={mustContainText}
-                    onChange={(e, data) =>
-                      handleChange(e, data, "mustContainText")
-                    }
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Header as="h4">
-                  Representative Example
-                  <Popup
-                    trigger={
-                      <Icon
-                        name="question circle outline"
-                        size="tiny"
-                        style={{ fontSize: "1rem" }}
-                      />
-                    }
-                    content="Find text that is semantically similar to this example FIRST if provided. If not provided, query is used for RAG retrieval ('naive RAG' - not recommended)."
-                  />
-                </Header>
-                <Form.Field>
-                  <TextArea
-                    rows={3}
-                    name="matchText"
-                    placeholder="Place example of text containing relevant data here."
-                    value={matchText}
-                    onChange={(e, data) => handleChange(e, data, "matchText")}
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Header as="h4">Parser Instructions</Header>
-                <Form.Field>
-                  <TextArea
-                    rows={3}
-                    name="instructions"
-                    placeholder="Provide detailed instructions for extracting object properties here..."
-                    value={instructions}
-                    onChange={(e, data) =>
-                      handleChange(e, data, "instructions")
-                    }
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={8}>
-                <Form.Field>
-                  <Checkbox
-                    label={
-                      <label>
-                        Agentic (Extra API Calls)
-                        <Popup
-                          trigger={<Icon name="question circle outline" />}
-                          content="Uses a LlamaIndex agent to attempt to find additional, referenced context from the retrieved text."
-                        />
-                      </label>
-                    }
-                    checked={agentic}
-                    onChange={(_, data) =>
-                      setObjData({
-                        ...objData,
-                        agentic: data.checked || false,
-                      })
-                    }
-                  />
-                </Form.Field>
-              </Grid.Column>
-              <Grid.Column width={8}>
-                <Form.Field>
-                  <Checkbox
-                    label={
-                      <label>
-                        List of Values
-                        <Popup
-                          trigger={<Icon name="question circle outline" />}
-                          content="Check if the column should extract a list of values of type output type"
-                        />
-                      </label>
-                    }
-                    checked={extractIsList}
-                    onChange={(_, data) =>
-                      setObjData({
-                        ...objData,
-                        extractIsList: data.checked || false,
-                      })
-                    }
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-            <Grid.Row>
-              <Grid.Column width={16}>
-                <Form.Field>
-                  <label>
-                    Limit Search to Label
-                    <Popup
-                      trigger={<Icon name="question circle outline" />}
-                      content="Specify a label name to limit the search scope"
-                    />
-                  </label>
-                  <Input
-                    placeholder="Enter label name"
-                    name="limitToLabel"
-                    value={limitToLabel}
-                    onChange={(e, { value }) =>
-                      setObjData({ ...objData, limitToLabel: value })
-                    }
-                    fluid
-                  />
-                </Form.Field>
-              </Grid.Column>
-            </Grid.Row>
-          </Grid>
+          <StyledGrid>
+            <BasicConfigSection
+              name={formData.name || ""}
+              taskName={formData.taskName || ""}
+              handleChange={handleChange}
+              setFormData={setFormData}
+            />
+            <OutputTypeSection
+              outputTypeOption={outputTypeOption}
+              extractIsList={extractIsList}
+              primitiveType={primitiveType}
+              handleOutputTypeChange={handleOutputTypeChange}
+              handleChange={handleChange}
+              setFormData={setFormData}
+              initialFields={initialFields}
+            />
+            <ExtractionConfigSection
+              query={formData.query || ""}
+              mustContainText={formData.mustContainText || ""}
+              matchText={formData.matchText || ""}
+              handleChange={handleChange}
+            />
+            <AdvancedOptionsSection
+              instructions={formData.instructions || ""}
+              agentic={formData.agentic || false}
+              limitToLabel={formData.limitToLabel || ""}
+              handleChange={handleChange}
+            />
+          </StyledGrid>
         </Form>
-      </Modal.Content>
+      </ModalContent>
       <Modal.Actions>
-        <Button color="black" onClick={() => onClose()}>
+        <Button color="black" onClick={onClose} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button
@@ -278,6 +176,8 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
           icon="checkmark"
           onClick={handleSubmit}
           positive
+          loading={isSubmitting}
+          disabled={isSubmitting || !isFormValid()}
         />
       </Modal.Actions>
     </Modal>

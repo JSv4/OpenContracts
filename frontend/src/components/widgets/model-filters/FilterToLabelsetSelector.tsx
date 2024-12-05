@@ -10,7 +10,7 @@ import {
   GetLabelsetInputs,
   GET_LABELSETS,
 } from "../../../graphql/queries";
-import { LabelSetType } from "../../../graphql/types";
+import { LabelSetType } from "../../../types/graphql-api";
 import { useEffect } from "react";
 import { LooseObject } from "../../types";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";

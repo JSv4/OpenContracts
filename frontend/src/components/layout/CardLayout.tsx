@@ -8,6 +8,7 @@ interface CardLayoutProps {
   Modals?: React.ReactChild | React.ReactChild[];
   BreadCrumbs?: React.ReactChild | null | undefined;
   SearchBar: React.ReactChild;
+  style?: React.CSSProperties;
 }
 
 const StyledSegment = styled(Segment)`
@@ -54,6 +55,7 @@ export const CardLayout: React.FC<CardLayoutProps> = ({
   Modals,
   BreadCrumbs,
   SearchBar,
+  style,
 }) => {
   const { width } = useWindowDimensions();
   const use_mobile = width <= 400;
@@ -63,7 +65,7 @@ export const CardLayout: React.FC<CardLayoutProps> = ({
     <CardContainer
       width={width}
       className="CardLayoutContainer"
-      style={{ maxHeight: "90vh" }}
+      style={{ maxHeight: "90vh", ...style }}
     >
       {Modals}
       <StyledSegment attached="top" secondary className="SearchBar">

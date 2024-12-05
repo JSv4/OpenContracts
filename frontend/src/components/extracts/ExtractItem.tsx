@@ -7,7 +7,7 @@ import {
   REQUEST_DELETE_EXTRACT,
 } from "../../graphql/mutations";
 import { GetExtractsOutput, GET_EXTRACTS } from "../../graphql/queries";
-import { ExtractType, CorpusType } from "../../graphql/types";
+import { ExtractType, CorpusType } from "../../types/graphql-api";
 
 import _ from "lodash";
 import { PermissionTypes } from "../types";
@@ -17,18 +17,18 @@ import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 
 interface ExtractItemProps {
   extract: ExtractType;
-  corpus: CorpusType;
   selected?: boolean;
   read_only?: boolean;
+  corpus?: CorpusType | null | undefined;
   compact?: boolean;
   onSelect?: () => any | never;
 }
 
 export const ExtractItem = ({
   extract,
-  corpus,
   selected,
   read_only,
+  corpus: selectedCorpus,
   onSelect,
   compact,
 }: ExtractItemProps) => {
@@ -49,20 +49,28 @@ export const ExtractItem = ({
       toast.error("Could not delete extract...");
     },
     update: (cache, { data: delete_extract_data }) => {
-      const cache_data: GetExtractsOutput | null = cache.readQuery({
-        query: GET_EXTRACTS,
-        variables: { corpusId: corpus.id },
-      });
-      if (cache_data) {
-        const new_cache_data = _.cloneDeep(cache_data);
-        new_cache_data.extracts.edges = new_cache_data.extracts.edges.filter(
-          (edge) => edge.node.id !== extract.id
-        );
-        cache.writeQuery({
+      if (!selectedCorpus?.id) return;
+
+      try {
+        const cache_data: GetExtractsOutput | null = cache.readQuery({
           query: GET_EXTRACTS,
-          variables: { corpusId: corpus.id },
-          data: new_cache_data,
+          variables: { corpusId: selectedCorpus.id },
         });
+
+        if (cache_data?.extracts?.edges) {
+          const new_cache_data = _.cloneDeep(cache_data);
+          new_cache_data.extracts.edges = new_cache_data.extracts.edges.filter(
+            (edge) => edge.node.id !== extract.id
+          );
+
+          cache.writeQuery({
+            query: GET_EXTRACTS,
+            variables: { corpusId: selectedCorpus.id },
+            data: new_cache_data,
+          });
+        }
+      } catch (error) {
+        console.warn("Failed to update cache after extract deletion:", error);
       }
     },
   });

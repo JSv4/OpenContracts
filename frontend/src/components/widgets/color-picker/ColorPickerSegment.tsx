@@ -1,9 +1,9 @@
 import { Segment } from "semantic-ui-react";
-import { SliderPicker } from "react-color";
+import { Sketch } from "@uiw/react-color";
 
 interface ColorPickerSegmentProps {
   color: string;
-  setColor: (args: any) => void | any;
+  setColor: (color: { hex: string }) => void;
   style?: Record<string, any>;
 }
 
@@ -14,7 +14,7 @@ export const ColorPickerSegment = ({
 }: ColorPickerSegmentProps) => {
   return (
     <Segment style={style ? style : { width: "20vw" }}>
-      <SliderPicker color={color} onChangeComplete={setColor} />
+      <Sketch color={color} onChange={setColor} />
     </Segment>
   );
 };

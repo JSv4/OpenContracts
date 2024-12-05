@@ -76,7 +76,7 @@ import {
   RequestDocumentsOutputs,
   GET_DOCUMENTS,
 } from "../graphql/queries";
-import { CorpusType, LabelType } from "../graphql/types";
+import { CorpusType, LabelType } from "../types/graphql-api";
 import { LooseObject, PermissionTypes } from "../components/types";
 import { toBase64 } from "../utils/files";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";

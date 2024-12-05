@@ -5,9 +5,8 @@ import _ from "lodash";
 import source_icon from "../../../assets/icons/noun-bow-and-arrow-559923.png";
 import target_icon from "../../../assets/icons/noun-target-746597.png";
 
-import { ServerTokenAnnotation } from "../context";
-
 import "./AnnotatorSidebar.css";
+import { ServerTokenAnnotation } from "../types/annotations";
 
 interface HasColor {
   color: string;

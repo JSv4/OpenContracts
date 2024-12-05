@@ -1,5 +1,5 @@
 import { Table, Icon, Button } from "semantic-ui-react";
-import { ExtractType } from "../../../graphql/types";
+import { ExtractType } from "../../../types/graphql-api";
 import { DateTimeWidget } from "../../widgets/data-display/DateTimeWidget";
 
 interface ExtractItemRowProps {

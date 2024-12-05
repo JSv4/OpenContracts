@@ -5,7 +5,7 @@ import {
   DatacellType,
   LabelDisplayBehavior,
   ServerAnnotationType,
-} from "../../../graphql/types";
+} from "../../../types/graphql-api";
 import { JSONTree } from "react-json-tree";
 import {
   displayAnnotationOnAnnotatorLoad,
@@ -126,15 +126,40 @@ export const ExtractDatacell = ({
   }, [cellData]);
 
   const renderJsonPreview = (data: Record<string, any>) => {
-    const jsonString = JSON.stringify(data?.data ? data.data : {}, null, 2);
-    const preview = jsonString.split("\n").slice(0, 3).join("\n") + "\n...";
-    return (
-      <Popup
-        trigger={<span>{preview}</span>}
-        content={<pre>{jsonString}</pre>}
-        wide="very"
-      />
-    );
+    // Handle empty or invalid data
+    if (!data || !data.data || Object.keys(data.data).length === 0) {
+      return (
+        <Popup
+          trigger={<span>-</span>}
+          content={<pre>{"{}"}</pre>}
+          wide="very"
+        />
+      );
+    }
+
+    try {
+      const jsonString = JSON.stringify(data.data, null, 2);
+      const previewLines = jsonString.split("\n").slice(0, 3);
+      const preview =
+        previewLines.join("\n") +
+        (jsonString.split("\n").length > 3 ? "\n..." : "");
+
+      return (
+        <Popup
+          trigger={<span>{preview || "-"}</span>}
+          content={<pre>{jsonString}</pre>}
+          wide="very"
+        />
+      );
+    } catch (e) {
+      return (
+        <Popup
+          trigger={<span>-</span>}
+          content={<pre>{"{}"}</pre>}
+          wide="very"
+        />
+      );
+    }
   };
 
   return (
@@ -143,54 +168,55 @@ export const ExtractDatacell = ({
         {cellData.started && !cellData.completed && !cellData.failed ? (
           <Loader />
         ) : (
-          <></>
+          <div style={{ position: "relative" }}>
+            {renderJsonPreview(
+              cellData?.data ? { data: cellData.data || {} } : { data: {} }
+            )}
+            {!readOnly && (
+              <div style={{ position: "absolute", top: "5px", right: "5px" }}>
+                <Popup
+                  trigger={<Icon name="ellipsis vertical" />}
+                  content={
+                    <Button.Group vertical>
+                      <Button
+                        icon="eye"
+                        primary
+                        onClick={
+                          cellData?.fullSourceList &&
+                          cellData.fullSourceList !== undefined
+                            ? () => {
+                                selectedExtract(cellData.extract);
+                                setViewSourceAnnotations(
+                                  cellData.fullSourceList as ServerAnnotationType[]
+                                );
+                              }
+                            : () => {}
+                        }
+                      />
+                      <Button
+                        icon="thumbs down"
+                        color="red"
+                        onClick={() => onReject && onReject(cellData.id)}
+                      />
+                      <Button
+                        icon="thumbs up"
+                        color="green"
+                        onClick={() => onApprove && onApprove(cellData.id)}
+                      />
+                      <Button
+                        icon="edit"
+                        color="grey"
+                        onClick={() => setModalOpen(true)}
+                      />
+                    </Button.Group>
+                  }
+                  on="click"
+                  position="top right"
+                />
+              </div>
+            )}
+          </div>
         )}
-        <div style={{ position: "relative" }}>
-          {renderJsonPreview(cellData?.data ?? {})}
-          {!readOnly && (
-            <div style={{ position: "absolute", top: "5px", right: "5px" }}>
-              <Popup
-                trigger={<Icon name="ellipsis vertical" />}
-                content={
-                  <Button.Group vertical>
-                    <Button
-                      icon="eye"
-                      primary
-                      onClick={
-                        cellData?.fullSourceList &&
-                        cellData.fullSourceList !== undefined
-                          ? () => {
-                              selectedExtract(cellData.extract);
-                              setViewSourceAnnotations(
-                                cellData.fullSourceList as ServerAnnotationType[]
-                              );
-                            }
-                          : () => {}
-                      }
-                    />
-                    <Button
-                      icon="thumbs down"
-                      color="red"
-                      onClick={() => onReject && onReject(cellData.id)}
-                    />
-                    <Button
-                      icon="thumbs up"
-                      color="green"
-                      onClick={() => onApprove && onApprove(cellData.id)}
-                    />
-                    <Button
-                      icon="edit"
-                      color="grey"
-                      onClick={() => setModalOpen(true)}
-                    />
-                  </Button.Group>
-                }
-                on="click"
-                position="top right"
-              />
-            </div>
-          )}
-        </div>
       </Table.Cell>
       <Modal open={modalOpen} onClose={handleCancel}>
         <Modal.Header>Edit Data</Modal.Header>

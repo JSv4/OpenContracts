@@ -1,6 +1,6 @@
 import React from "react";
 import styled from "styled-components";
-import { CorpusType } from "../../../graphql/types";
+import { CorpusType } from "../../../types/graphql-api";
 import { FileText, Users, Database, X } from "lucide-react";
 
 const StatsContainer = styled.div`

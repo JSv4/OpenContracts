@@ -32,7 +32,7 @@ import {
   GetLabelsetsWithLabelsOutputs,
   REQUEST_LABELSETS_WITH_ALL_LABELS,
 } from "../graphql/queries";
-import { LabelSetType } from "../graphql/types";
+import { LabelSetType } from "../types/graphql-api";
 import { toast } from "react-toastify";
 
 export const Labelsets = () => {

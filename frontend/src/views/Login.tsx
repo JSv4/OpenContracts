@@ -134,7 +134,9 @@ export const Login = () => {
               type="text"
               placeholder="Username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setUsername(e.target.value)
+              }
             />
           </InputWrapper>
           <InputWrapper>
@@ -145,7 +147,9 @@ export const Login = () => {
               type="password"
               placeholder="Password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setPassword(e.target.value)
+              }
             />
           </InputWrapper>
           <LoginButton type="submit" disabled={login_loading}>

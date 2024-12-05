@@ -1,6 +1,6 @@
 import { Card, Image, Button, List, Header, Dimmer } from "semantic-ui-react";
 import analyzer_icon from "../../assets/icons/noun-epicyclic-gearing-800132.png";
-import { AnalyzerType, CorpusType } from "../../graphql/types";
+import { AnalyzerType, CorpusType } from "../../types/graphql-api";
 
 export interface AnalyzerSummaryCardInputs {
   analyzer: AnalyzerType;

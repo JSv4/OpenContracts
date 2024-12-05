@@ -37,7 +37,7 @@ import { CRUDModal } from "../components/widgets/CRUD/CRUDModal";
 import { ActionDropdownItem, LooseObject } from "../components/types";
 import { CardLayout } from "../components/layout/CardLayout";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
-import { DocumentType, LabelType } from "../graphql/types";
+import { DocumentType, LabelType } from "../types/graphql-api";
 import { AddToCorpusModal } from "../components/widgets/modals/AddToCorpusModal";
 import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";

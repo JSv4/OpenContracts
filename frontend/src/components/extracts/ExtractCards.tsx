@@ -2,7 +2,7 @@ import { Card, Dimmer, Loader } from "semantic-ui-react";
 import { ExtractItem } from "./ExtractItem";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
-import { ExtractType, CorpusType, PageInfo } from "../../graphql/types";
+import { ExtractType, CorpusType, PageInfo } from "../../types/graphql-api";
 import { useReactiveVar } from "@apollo/client";
 import { openedExtract, selectedExtractIds } from "../../graphql/cache";
 import useWindowDimensions from "../hooks/WindowDimensionHook";

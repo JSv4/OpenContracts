@@ -7,7 +7,7 @@ import {
   GetCorpusQueryDetailsInputType,
   GetCorpusQueryDetailsOutputType,
 } from "../../../graphql/queries";
-import { CorpusQueryType } from "../../../graphql/types";
+import { CorpusQueryType } from "../../../types/graphql-api";
 
 interface ViewQueryResultsModalProps {
   query_id: string;

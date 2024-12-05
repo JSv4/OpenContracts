@@ -1,8 +1,41 @@
 import { useEffect, useRef } from "react";
-import { PDFPageInfo, TokenId } from "../../context";
-import { SelectionTokenSpan } from "./Tokens";
 
 import uniqueId from "lodash/uniqueId";
+import styled from "styled-components";
+import { PDFPageInfo } from "../../types/pdf";
+import { TokenId } from "../../types/annotations";
+
+// Add interface for the custom props
+interface SelectionBoxProps {
+  isSelected?: boolean;
+  highOpacity?: boolean;
+  color?: string;
+  left?: number;
+  right?: number;
+  top?: number;
+  bottom?: number;
+  pointerEvents?: string;
+}
+
+// Update the styled component definition to include the custom props
+const SelectionBox = styled.span.attrs<SelectionBoxProps>((props) => ({
+  style: {
+    left: `${props.left}px`,
+    top: `${props.top}px`,
+    width: `${props.right && props.left ? props.right - props.left : 0}px`,
+    height: `${props.bottom && props.top ? props.bottom - props.top : 0}px`,
+    backgroundColor: props.color || "yellow",
+    opacity: props.highOpacity ? 0.5 : 0.3,
+  },
+}))<SelectionBoxProps>`
+  position: absolute;
+  pointer-events: none;
+  ${(props) =>
+    props.isSelected &&
+    `
+    border: 2px solid blue;
+  `}
+`;
 
 export interface SelectionTokenGroupProps {
   id?: string;
@@ -31,7 +64,10 @@ export const SelectionTokenGroup = ({
     if (scrollTo) {
       if (containerRef.current !== undefined && containerRef.current !== null) {
         console.log("Scroll to", scrollTo);
-        containerRef.current.scrollIntoView();
+        containerRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
       }
     }
   }, [scrollTo]);
@@ -44,7 +80,7 @@ export const SelectionTokenGroup = ({
             pageInfo.tokens[t.tokenIndex]
           );
           return (
-            <SelectionTokenSpan
+            <SelectionBox
               id={`${uniqueId()}`}
               hidden={hidden}
               key={i}

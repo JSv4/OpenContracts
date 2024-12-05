@@ -12,9 +12,7 @@ import {
   Popup,
 } from "semantic-ui-react";
 import ReactMarkdown from "react-markdown";
-import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vs } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { CorpusQueryType, ServerAnnotationType } from "../../graphql/types";
+import { CorpusQueryType, ServerAnnotationType } from "../../types/graphql-api";
 import {
   displayAnnotationOnAnnotatorLoad,
   onlyDisplayTheseAnnotations,
@@ -22,6 +20,8 @@ import {
   selectedAnnotation,
 } from "../../graphql/cache";
 import wait_icon from "../../assets/icons/waiting for robo.webp";
+import SyntaxHighlighter from "react-syntax-highlighter/dist/esm/prism-light";
+import { vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 interface QueryResultsViewerProps {
   query_obj: CorpusQueryType;

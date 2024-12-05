@@ -1,5 +1,5 @@
 import { Table, Icon, Button } from "semantic-ui-react";
-import { CorpusQueryType, ExportObject } from "../../graphql/types";
+import { CorpusQueryType, ExportObject } from "../../types/graphql-api";
 import { DateTimeWidget } from "../widgets/data-display/DateTimeWidget";
 import { openedQueryObj } from "../../graphql/cache";
 

@@ -5,7 +5,7 @@ import _ from "lodash";
 import { AnalysisItem } from "./AnalysisItem";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
-import { AnalysisType, CorpusType, PageInfo } from "../../graphql/types";
+import { AnalysisType, CorpusType, PageInfo } from "../../types/graphql-api";
 import { useReactiveVar } from "@apollo/client";
 import { selectedAnalyses, selectedAnalysesIds } from "../../graphql/cache";
 import useWindowDimensions from "../hooks/WindowDimensionHook";

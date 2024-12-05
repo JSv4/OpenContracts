@@ -12,7 +12,7 @@ import {
   Grid,
   Button,
 } from "semantic-ui-react";
-import { ColumnType } from "../../../graphql/types";
+import { ColumnType } from "../../../types/graphql-api";
 import { ExtractTaskDropdown } from "../selectors/ExtractTaskDropdown";
 
 interface EditColumnModalProps {

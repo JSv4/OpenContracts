@@ -44,7 +44,7 @@ import {
   AnnotationLabelType,
   LabelSetType,
   LabelType,
-} from "../../graphql/types";
+} from "../../types/graphql-api";
 import {
   newLabelSetForm_Schema,
   newLabelSetForm_Ui_Schema,

@@ -1606,17 +1606,25 @@
   }
 
   /* Divided Reversed */
-  .ui[class*="computer reversed"].divided.grid:not([class*="vertically divided"])
+  .ui[class*="computer reversed"].divided.grid:not(
+      [class*="vertically divided"]
+    )
     > .column:first-child,
-  .ui[class*="computer reversed"].divided.grid:not([class*="vertically divided"])
+  .ui[class*="computer reversed"].divided.grid:not(
+      [class*="vertically divided"]
+    )
     > .row
     > .column:first-child {
     -webkit-box-shadow: -1px 0px 0px 0px rgba(34, 36, 38, 0.15);
     box-shadow: -1px 0px 0px 0px rgba(34, 36, 38, 0.15);
   }
-  .ui[class*="computer reversed"].divided.grid:not([class*="vertically divided"])
+  .ui[class*="computer reversed"].divided.grid:not(
+      [class*="vertically divided"]
+    )
     > .column:last-child,
-  .ui[class*="computer reversed"].divided.grid:not([class*="vertically divided"])
+  .ui[class*="computer reversed"].divided.grid:not(
+      [class*="vertically divided"]
+    )
     > .row
     > .column:last-child {
     -webkit-box-shadow: none;

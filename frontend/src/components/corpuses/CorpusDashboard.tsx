@@ -23,7 +23,7 @@ import {
   GetCorpusStatsOutputType,
 } from "../../graphql/queries";
 import CountUp from "react-countup";
-import { CorpusType } from "../../graphql/types";
+import { CorpusType } from "../../types/graphql-api";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 

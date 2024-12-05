@@ -1,6 +1,6 @@
 import { Table, Dimmer, Loader } from "semantic-ui-react";
-import { ExportObject } from "../../graphql/types";
-import { PageInfo } from "../../graphql/types";
+import { ExportObject } from "../../types/graphql-api";
+import { PageInfo } from "../../types/graphql-api";
 import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
 import { ExportItemRow } from "./ExportItemRow";
 

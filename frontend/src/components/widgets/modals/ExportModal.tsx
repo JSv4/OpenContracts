@@ -10,7 +10,7 @@ import {
   GetExportsOutputs,
   GET_EXPORTS,
 } from "../../../graphql/queries";
-import { ExportObject } from "../../../graphql/types";
+import { ExportObject } from "../../../types/graphql-api";
 import { exportSearchTerm, showExportModal } from "../../../graphql/cache";
 import { toast } from "react-toastify";
 

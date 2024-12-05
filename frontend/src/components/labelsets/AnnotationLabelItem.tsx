@@ -3,7 +3,7 @@ import _ from "lodash";
 import { Card, Popup, Image, Icon, Statistic, Menu } from "semantic-ui-react";
 
 import default_icon from "../../assets/images/defaults/default_tag.png";
-import { LabelSetType } from "../../graphql/types";
+import { LabelSetType } from "../../types/graphql-api";
 import { getPermissions } from "../../utils/transform";
 import { PermissionTypes } from "../types";
 import { MyPermissionsIndicator } from "../widgets/permissions/MyPermissionsIndicator";
@@ -17,6 +17,13 @@ interface AnnotationLabelItemProps {
   onDelete: (args: any) => void | any;
   contextMenuOpen: string | null;
   setContextMenuOpen: (args: any) => void | any;
+}
+
+interface ContextMenuItem {
+  key: string;
+  content: string;
+  icon: string;
+  onClick: () => void;
 }
 
 const AnnotationLabelItem = ({
@@ -95,10 +102,10 @@ const AnnotationLabelItem = ({
     item.myPermissions ? item.myPermissions : []
   );
 
-  let context_menus: React.ReactNode[] = [];
+  let context_menus: ContextMenuItem[] = [];
   if (my_permissions.includes(PermissionTypes.CAN_REMOVE)) {
     context_menus.push({
-      key: "copy",
+      key: "delete",
       content: "Delete Item",
       icon: "trash",
       onClick: () => onDelete(id),
@@ -174,12 +181,19 @@ const AnnotationLabelItem = ({
         open={contextMenuOpen === id}
         hideOnScroll
       >
-        <Menu
-          items={context_menus}
-          onItemClick={() => setContextMenuOpen(-1)}
-          secondary
-          vertical
-        />
+        <Menu secondary vertical>
+          {context_menus.map((item) => (
+            <Menu.Item
+              key={item.key}
+              icon={item.icon}
+              content={item.content}
+              onClick={() => {
+                item.onClick();
+                setContextMenuOpen(-1);
+              }}
+            />
+          ))}
+        </Menu>
       </Popup>
     </>
   );

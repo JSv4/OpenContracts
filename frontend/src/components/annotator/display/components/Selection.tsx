@@ -1,13 +1,7 @@
-import React, { useContext, useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import _ from "lodash";
 
 import { Image, Icon } from "semantic-ui-react";
-
-import {
-  PDFPageInfo,
-  AnnotationStore,
-  ServerTokenAnnotation,
-} from "../../context";
 
 import {
   HorizontallyJustifiedStartDiv,
@@ -20,7 +14,6 @@ import {
 } from "../../utils";
 
 import { PermissionTypes } from "../../../types";
-import { LabelDisplayBehavior } from "../../../../graphql/types";
 import { SelectionBoundary } from "./SelectionBoundary";
 import {
   LabelTagContainer,
@@ -32,51 +25,67 @@ import RadialButtonCloud, {
   CloudButtonItem,
 } from "../../../widgets/buttons/RadialButtonCloud";
 import { SelectionTokenGroup } from "./SelectionTokenGroup";
-import { EditLabelModal } from "../../../widgets/modals/EditLabelModal";
+import { EditLabelModal } from "../../components/modals/EditLabelModal";
 import { useReactiveVar } from "@apollo/client";
 import { authToken } from "../../../../graphql/cache";
+import { PDFPageInfo } from "../../types/pdf";
+import { ServerTokenAnnotation } from "../../types/annotations";
+import {
+  useApproveAnnotation,
+  useDeleteAnnotation,
+  usePdfAnnotations,
+  useRejectAnnotation,
+} from "../../hooks/AnnotationHooks";
+import {
+  useAnnotationDisplay,
+  useAnnotationSelection,
+} from "../../context/UISettingsAtom";
 
 interface SelectionProps {
-  selectionRef:
-    | React.MutableRefObject<Record<string, HTMLElement | null>>
-    | undefined;
-  showBoundingBox: boolean;
-  hidden: boolean;
-  scrollIntoView: boolean;
+  selected: boolean;
   pageInfo: PDFPageInfo;
   annotation: ServerTokenAnnotation;
-  labelBehavior: LabelDisplayBehavior;
   showInfo?: boolean;
   children?: React.ReactNode;
   approved?: boolean;
   rejected?: boolean;
   actions?: CloudButtonItem[];
   allowFeedback?: boolean;
-  setJumpedToAnnotationOnLoad: (annot: string) => null | void;
+  scrollIntoView?: boolean;
 }
 
 export const Selection: React.FC<SelectionProps> = ({
-  selectionRef,
-  showBoundingBox,
-  hidden,
-  scrollIntoView,
+  selected,
   pageInfo,
-  labelBehavior,
   annotation,
   children,
   approved,
   rejected,
   allowFeedback,
+  scrollIntoView,
   showInfo = true,
-  setJumpedToAnnotationOnLoad,
 }) => {
   const auth_token = useReactiveVar(authToken);
   const [hovered, setHovered] = useState(false);
   const [isEditLabelModalVisible, setIsEditLabelModalVisible] = useState(false);
   const [cloudVisible, setCloudVisible] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const cloudRef = useRef<HTMLDivElement | null>(null);
 
-  const annotationStore = useContext(AnnotationStore);
+  const { showBoundingBoxes, showSelectedOnly, showLabels } =
+    useAnnotationDisplay();
+  const { hideLabels } = useAnnotationDisplay();
+  const { pdfAnnotations } = usePdfAnnotations();
+  const { selectedAnnotations, setSelectedAnnotations, selectedRelations } =
+    useAnnotationSelection();
+  const approveAnnotation = useApproveAnnotation();
+  const rejectAnnotation = useRejectAnnotation();
+  const deleteAnnotation = useDeleteAnnotation();
+
+  useEffect(() => {
+    setHidden(showSelectedOnly && !selected);
+  }, [showSelectedOnly, selected]);
+
   const label = annotation.annotationLabel;
   const color = label?.color || "#616a6b"; // grey as the default
 
@@ -90,7 +99,7 @@ export const Selection: React.FC<SelectionProps> = ({
           color: "green",
           tooltip: "Upvote Annotation",
           onClick: () => {
-            annotationStore.approveAnnotation(annotation.id);
+            approveAnnotation(annotation.id);
           },
         });
       }
@@ -100,7 +109,7 @@ export const Selection: React.FC<SelectionProps> = ({
           color: "red",
           tooltip: "Downvote Annotation",
           onClick: () => {
-            annotationStore.rejectAnnotation(annotation.id);
+            rejectAnnotation(annotation.id);
           },
         });
       }
@@ -151,17 +160,17 @@ export const Selection: React.FC<SelectionProps> = ({
   const border = getBorderWidthFromBounds(bounds);
 
   const removeAnnotation = () => {
-    annotationStore.deleteAnnotation(annotation.id);
+    deleteAnnotation(annotation.id);
   };
 
   const onShiftClick = () => {
-    const current = annotationStore.selectedAnnotations.slice(0);
+    const current = selectedAnnotations.slice(0);
     if (current.some((other) => other === annotation.id)) {
       const next = current.filter((other) => other !== annotation.id);
-      annotationStore.setSelectedAnnotations(next);
+      setSelectedAnnotations(next);
     } else {
       current.push(annotation.id);
-      annotationStore.setSelectedAnnotations(current);
+      setSelectedAnnotations(current);
     }
   };
 
@@ -189,14 +198,12 @@ export const Selection: React.FC<SelectionProps> = ({
     };
   }, [cloudVisible]);
 
-  const selected = annotationStore.selectedAnnotations.includes(annotation.id);
-
   let relationship_type = "";
-  if (selected && annotationStore.selectedRelations.length > 0) {
+  if (selected && selectedRelations.length > 0) {
     relationship_type = annotationSelectedViaRelationship(
       annotation,
-      annotationStore.pdfAnnotations.annotations,
-      annotationStore.selectedRelations[0]
+      pdfAnnotations.annotations,
+      selectedRelations[0]
     );
   }
 
@@ -205,26 +212,24 @@ export const Selection: React.FC<SelectionProps> = ({
       <SelectionBoundary
         id={annotation.id}
         hidden={hidden}
-        showBoundingBox={showBoundingBox}
-        selectionRef={selectionRef}
-        scrollIntoView={scrollIntoView}
+        showBoundingBox={showBoundingBoxes}
         color={color}
         bounds={bounds}
         onHover={setHovered}
         onClick={onShiftClick}
         approved={approved}
         rejected={rejected}
-        setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
         selected={selected}
+        scrollIntoView={scrollIntoView}
       >
-        {showInfo && !annotationStore.hideLabels && (
+        {showInfo && !hideLabels && (
           <SelectionInfo
             id="SelectionInfo"
             bounds={bounds}
             className={`selection_${annotation.id}`}
             border={border}
             color={color}
-            showBoundingBox={showBoundingBox}
+            showBoundingBox={showBoundingBoxes}
             approved={approved}
             rejected={rejected}
           >
@@ -257,7 +262,7 @@ export const Selection: React.FC<SelectionProps> = ({
                   hidden={hidden}
                   hovered={hovered}
                   color={color}
-                  display_behavior={labelBehavior}
+                  display_behavior={showLabels}
                 >
                   <div
                     style={{
@@ -350,7 +355,7 @@ export const Selection: React.FC<SelectionProps> = ({
           <SelectionTokenGroup
             id={`SELECTION_TOKEN_${annotation.id}`}
             color={annotation.annotationLabel.color}
-            highOpacity={!showBoundingBox}
+            highOpacity={!showBoundingBoxes}
             hidden={hidden}
             pageInfo={pageInfo}
             tokens={annotation.json[pageInfo.page.pageNumber - 1].tokensJsons}

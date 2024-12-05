@@ -1,12 +1,17 @@
-import { useEffect, useContext } from "react";
-import { AnnotationStore } from "../context";
+import { useEffect } from "react";
+import { usePdfAnnotations } from "../hooks/AnnotationHooks";
+import {
+  useAnnotationControls,
+  useAnnotationDisplay,
+  useAnnotationSelection,
+} from "../context/UISettingsAtom";
 
 export const UndoAnnotation = () => {
   // Interesting... this is triggered on META+z (Apple logo + z and, on most browsers
   // in windows, windows + z, tho apparently that can't be guaranteed).
 
-  const annotationStore = useContext(AnnotationStore);
-  const { pdfAnnotations, setPdfAnnotations } = annotationStore;
+  const { pdfAnnotations, setPdfAnnotations } = usePdfAnnotations();
+
   useEffect(() => {
     const handleUndo = (e: KeyboardEvent) => {
       if (e.metaKey && e.keyCode === 90) {
@@ -27,8 +32,7 @@ export const HideAnnotationLabels = () => {
   // Shows or hides the labels of annotations on pressing ctrl.
   // This makes it easier to do detailed annotations.
 
-  const annotationStore = useContext(AnnotationStore);
-  const { hideLabels, setHideLabels } = annotationStore;
+  const { hideLabels, setHideLabels } = useAnnotationDisplay();
 
   // Toggle state on key down.
   useEffect(() => {
@@ -52,9 +56,10 @@ interface HandleAnnotationSelectionProps {
 export const HandleAnnotationSelection = ({
   setModalVisible,
 }: HandleAnnotationSelectionProps) => {
-  const annotationStore = useContext(AnnotationStore);
-  const { selectedAnnotations, setSelectedAnnotations, activeRelationLabel } =
-    annotationStore;
+  const { selectedAnnotations, setSelectedAnnotations } =
+    useAnnotationSelection();
+  const { activeRelationLabel } = useAnnotationControls();
+
   useEffect(() => {
     const onShiftUp = (e: KeyboardEvent) => {
       const shift = e.keyCode === 16;
@@ -81,12 +86,3 @@ export const HandleAnnotationSelection = ({
 
   return null;
 };
-
-interface WithSha {
-  sha: string;
-}
-
-interface WithOCContext {
-  documentId: string;
-  corpusId: string;
-}

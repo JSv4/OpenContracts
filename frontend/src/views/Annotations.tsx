@@ -32,7 +32,7 @@ import {
   AnnotationLabelType,
   ServerAnnotationType,
   LabelType,
-} from "../graphql/types";
+} from "../types/graphql-api";
 import { AnnotationCards } from "../components/annotations/AnnotationCards";
 import { FilterToCorpusSelector } from "../components/widgets/model-filters/FilterToCorpusSelector";
 import { FilterToStructuralAnnotationsSelector } from "../components/widgets/model-filters/FilterStructuralAnnotations";

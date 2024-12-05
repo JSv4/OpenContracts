@@ -1,8 +1,6 @@
-import {
-  DocTypeAnnotation,
-  ServerTokenAnnotation,
-  ServerSpanAnnotation,
-} from "../components/annotator/context/AnnotationStore";
+import { DocTypeAnnotation } from "../components/annotator/types/annotations";
+import { ServerTokenAnnotation } from "../components/annotator/types/annotations";
+import { ServerSpanAnnotation } from "../components/annotator/types/annotations";
 import {
   BoundingBox,
   PermissionTypes,
@@ -12,7 +10,7 @@ import {
   AnalyzerManifestType,
   LabelType,
   ServerAnnotationType,
-} from "../graphql/types";
+} from "../types/graphql-api";
 import default_analyzer_icon from "../assets/icons/noun-quill-31093.png";
 
 // https://gist.github.com/JamieMason/0566f8412af9fe6a1d470aa1e089a752
@@ -42,6 +40,7 @@ export function getPermissions(
         base_permissions.push(PermissionTypes.CAN_READ);
         base_permissions.push(PermissionTypes.CAN_REMOVE);
         base_permissions.push(PermissionTypes.CAN_PERMISSION);
+        base_permissions.push(PermissionTypes.CAN_COMMENT);
         break;
       } else if (
         (permission.includes("update_") || permission.includes("change_")) &&
@@ -74,6 +73,11 @@ export function getPermissions(
         !base_permissions.includes(PermissionTypes.CAN_PERMISSION)
       ) {
         base_permissions.push(PermissionTypes.CAN_PERMISSION);
+      } else if (
+        permission.includes("comment_") &&
+        !base_permissions.includes(PermissionTypes.CAN_COMMENT)
+      ) {
+        base_permissions.push(PermissionTypes.CAN_COMMENT);
       }
     }
   }
@@ -101,6 +105,9 @@ export function convertToServerAnnotation(
   annotation: ServerAnnotationType,
   allowComments?: boolean
 ): ServerTokenAnnotation | ServerSpanAnnotation {
+  // Process permissions using getPermissions
+  const permissions = getPermissions(annotation.myPermissions);
+
   let approved = false;
   let rejected = false;
   if (annotation.userFeedback?.edges.length === 1) {
@@ -117,7 +124,7 @@ export function convertToServerAnnotation(
       annotation.rawText ?? "",
       annotation.structural ?? false,
       (annotation.json as SpanAnnotationJson) ?? ({} as SpanAnnotationJson),
-      annotation.myPermissions ?? [],
+      permissions,
       approved,
       rejected,
       allowComments !== undefined ? allowComments : false,
@@ -130,7 +137,7 @@ export function convertToServerAnnotation(
     annotation.rawText ?? "",
     annotation.structural ?? false,
     annotation.json ?? {},
-    annotation.myPermissions ?? [],
+    permissions,
     approved,
     rejected,
     allowComments !== undefined ? allowComments : false,
@@ -242,3 +249,85 @@ export const getContrastColor = (hexColor: string) => {
   // Return black or white depending on luminance
   return luminance > 0.5 ? "#000000" : "#FFFFFF";
 };
+
+/**
+ * Returns the provided bounds scaled by the provided factor.
+ */
+export function scaled(bounds: BoundingBox, scale: number): BoundingBox {
+  return {
+    left: bounds.left * scale,
+    top: bounds.top * scale,
+    right: bounds.right * scale,
+    bottom: bounds.bottom * scale,
+  };
+}
+
+/**
+ * Computes a bound which contains all of the bounds passed as arguments.
+ */
+export function spanningBound(
+  bounds: BoundingBox[],
+  padding: number = 3
+): BoundingBox {
+  // Start with a bounding box for which any bound would be
+  // contained within, meaning we immediately update maxBound.
+  const maxBound: BoundingBox = {
+    left: Number.MAX_VALUE,
+    top: Number.MAX_VALUE,
+    right: 0,
+    bottom: 0,
+  };
+
+  bounds.forEach((bound) => {
+    maxBound.bottom = Math.max(bound.bottom, maxBound.bottom);
+    maxBound.top = Math.min(bound.top, maxBound.top);
+    maxBound.left = Math.min(bound.left, maxBound.left);
+    maxBound.right = Math.max(bound.right, maxBound.right);
+  });
+
+  maxBound.top = maxBound.top - padding;
+  maxBound.left = maxBound.left - padding;
+  maxBound.right = maxBound.right + padding;
+  maxBound.bottom = maxBound.bottom + padding;
+
+  return maxBound;
+}
+
+/**
+ * Returns the provided bounds in their normalized form. Normalized means that the left
+ * coordinate is always less than the right coordinate, and that the top coordinate is always
+ * left than the bottom coordinate.
+ *
+ * This is required because objects in the DOM are positioned and sized by setting their top-left
+ * corner, width and height. This means that when a user composes a selection and moves to the left,
+ * or up, from where they started might result in a negative width and/or height. We don't normalize
+ * these values as we're tracking the mouse as it'd result in the wrong visual effect. Instead we
+ * rotate the bounds we render on the appropriate axis. This means we need to account for this
+ * later when calculating what tokens the bounds intersect with.
+ */
+export function normalizeBounds(b: BoundingBox): BoundingBox {
+  const normalized = Object.assign({}, b);
+  if (b.right < b.left) {
+    const l = b.left;
+    normalized.left = b.right;
+    normalized.right = l;
+  }
+  if (b.bottom < b.top) {
+    const t = b.top;
+    normalized.top = b.bottom;
+    normalized.bottom = t;
+  }
+  return normalized;
+}
+
+/**
+ * Returns true if the provided bounds overlap.
+ */
+export function doOverlap(a: BoundingBox, b: BoundingBox): boolean {
+  if (a.left >= b.right || a.right <= b.left) {
+    return false;
+  } else if (a.bottom <= b.top || a.top >= b.bottom) {
+    return false;
+  }
+  return true;
+}

@@ -4,7 +4,7 @@ import { Dropdown, DropdownProps } from "semantic-ui-react";
 import { GET_FIELDSETS, GetFieldsetsOutputs } from "../../../graphql/queries";
 import { selectedFieldset } from "../../../graphql/cache";
 import _ from "lodash";
-import { FieldsetType } from "../../../graphql/types";
+import { FieldsetType } from "../../../types/graphql-api";
 
 interface FieldsetOption {
   key: string;

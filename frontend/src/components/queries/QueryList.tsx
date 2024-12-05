@@ -1,6 +1,10 @@
 import { Table, Dimmer, Loader } from "semantic-ui-react";
 import { FetchMoreOnVisible } from "../../components/widgets/infinite_scroll/FetchMoreOnVisible";
-import { CorpusQueryType, ExtractType, PageInfo } from "../../graphql/types";
+import {
+  CorpusQueryType,
+  ExtractType,
+  PageInfo,
+} from "../../types/graphql-api";
 import { CorpusQueryListItem } from "./CorpusQueryListItem";
 
 interface QueryListProps {

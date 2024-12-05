@@ -1,16 +1,23 @@
-import React, { useContext, useRef, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { Form, Icon, Popup, Menu, SemanticICONS } from "semantic-ui-react";
 import { Search, X } from "lucide-react";
 import styled from "styled-components";
 import _ from "lodash";
-import { AnnotationStore } from "../../context"; // Adjust the import path as needed
 import { ZoomButtonGroup } from "../../../widgets/buttons/ZoomButtonGroup";
+import { useSearchText } from "../../context/DocumentAtom";
+import { useTextSearch } from "../../hooks/useTextSearch";
+import { ChangeEvent } from "react";
 
-const ActionBar = styled.div`
-  padding: 12px 16px;
+const ActionBarContainer = styled.div`
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  padding: 8px 16px;
   background-color: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  height: 60px;
+  display: flex;
+  align-items: center;
 `;
 
 const StyledMenu = styled.div`
@@ -65,6 +72,14 @@ interface PDFActionBarProps {
   onActionSelect?: (value: string) => void;
 }
 
+/**
+ * Debounce delay in milliseconds for search input
+ */
+const DEBOUNCE_DELAY = 600;
+
+/**
+ * Action bar for the PDF viewer, including zoom controls and a search bar.
+ */
 export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   zoom,
   onZoomIn,
@@ -72,27 +87,36 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   actionItems,
   onActionSelect,
 }) => {
-  const annotationStore = useContext(AnnotationStore);
+  const { searchText, setSearchText } = useSearchText();
+  const [localSearchText, setLocalSearchText] = useState(searchText);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  useTextSearch();
 
-  const { searchForText, searchText } = annotationStore;
-
-  const debouncedDocSearch = useCallback(
-    _.debounce((searchTerm: string) => {
-      console.log("Searching for", searchTerm);
-      searchForText(searchTerm);
-    }, 300),
-    [searchForText]
+  // Create a memoized debounced function with proper typing
+  const debouncedSetSearchText = useCallback(
+    _.debounce((value: string) => {
+      setSearchText(value);
+    }, DEBOUNCE_DELAY),
+    [] // Empty dependency array since setSearchText is stable
   );
 
-  const handleDocSearchChange = (value: string) => {
-    searchForText(value);
-    debouncedDocSearch(value);
+  const handleDocSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Update local state immediately for UI responsiveness
+    setLocalSearchText(value);
+    // Debounce the actual search operation
+    debouncedSetSearchText(value);
   };
 
+  // Clean up the debounced function on component unmount
+  React.useEffect(() => {
+    return () => {
+      debouncedSetSearchText.cancel();
+    };
+  }, [debouncedSetSearchText]);
+
   const clearSearch = () => {
-    searchForText("");
-    searchForText("");
+    setSearchText("");
   };
 
   const handleActionClick = () => {
@@ -119,7 +143,7 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   );
 
   return (
-    <ActionBar>
+    <ActionBarContainer>
       <StyledMenu>
         <Popup
           trigger={
@@ -130,7 +154,7 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
               onActionClick={handleActionClick}
             />
           }
-          style={{ zIndex: 9999999 }}
+          style={{ zIndex: 9999 }}
           content={actionMenu}
           on="click"
           position="bottom right"
@@ -140,7 +164,7 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
         />
         <StyledSearchInput
           icon={
-            searchText ? (
+            localSearchText ? (
               <div
                 style={{
                   display: "flex",
@@ -164,12 +188,10 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
           }
           iconPosition="left"
           placeholder="Search document..."
-          value={searchText}
-          onChange={(e: any, data: { value: string }) =>
-            handleDocSearchChange(data.value)
-          }
+          value={localSearchText}
+          onChange={handleDocSearchChange}
         />
       </StyledMenu>
-    </ActionBar>
+    </ActionBarContainer>
   );
 };

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Card, Dimmer, Loader } from "semantic-ui-react";
 import { useDropzone } from "react-dropzone";
 
@@ -6,7 +6,7 @@ import _ from "lodash";
 
 import { DocumentItem } from "./DocumentItem";
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
-import { DocumentType, PageInfo } from "../../graphql/types";
+import { DocumentType, PageInfo } from "../../types/graphql-api";
 import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { determineCardColCount } from "../../utils/layout";
@@ -14,6 +14,7 @@ import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
 
 interface DocumentCardProps {
   style?: Record<string, any>;
+  containerStyle?: React.CSSProperties; // New prop for outer container
   items: DocumentType[];
   pageInfo: PageInfo | undefined;
   loading: boolean;
@@ -27,6 +28,7 @@ interface DocumentCardProps {
 }
 
 export const DocumentCards = ({
+  containerStyle,
   style,
   items,
   pageInfo,
@@ -117,7 +119,10 @@ export const DocumentCards = ({
   });
 
   return (
-    <div {...getRootProps()}>
+    <div
+      {...getRootProps()}
+      style={{ position: "relative", ...containerStyle }}
+    >
       <input {...getInputProps()} />
       {isDragActive && (
         <div
@@ -151,9 +156,8 @@ export const DocumentCards = ({
       <div
         className="DocumentCards"
         style={{
-          flex: 1,
           width: "100%",
-          overflowY: "scroll",
+          overflowY: "auto",
           ...style,
         }}
       >

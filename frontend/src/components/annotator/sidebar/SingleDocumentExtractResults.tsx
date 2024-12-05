@@ -53,7 +53,6 @@ export const SingleDocumentExtractResults: React.FC<
   const [tryingReject, setTryingReject] = useState(false);
   const [activeCellId, setActiveCellId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [openPopupCellId, setOpenPopupCellId] = useState<string | null>(null);
   const [annotationVisibility, setAnnotationVisibility] = useState<{
     [key: string]: boolean;
   }>({});
@@ -121,10 +120,10 @@ export const SingleDocumentExtractResults: React.FC<
    * @returns The color representing the cell's status.
    */
   const getStatusColor = (cell: DatacellType): string => {
-    if (cell.approvedBy) return "rgba(76, 175, 80, 1)"; // Green
-    if (cell.rejectedBy) return "rgba(244, 67, 54, 1)"; // Red
-    if (cell.correctedData) return "rgba(33, 150, 243, 1)"; // Blue
-    return "rgba(128, 128, 128, 1)"; // Grey
+    if (cell.approvedBy) return "rgba(76, 175, 80, 0.05)"; // Light Green
+    if (cell.rejectedBy) return "rgba(244, 67, 54, 0.05)"; // Light Red
+    if (cell.correctedData) return "rgba(33, 150, 243, 0.05)"; // Light Blue
+    return "transparent"; // Default
   };
 
   /**
@@ -192,7 +191,7 @@ export const SingleDocumentExtractResults: React.FC<
     const cellWidth = ref?.offsetWidth ?? 0;
 
     return (
-      <DataCell>
+      <DataCell statusColor={getStatusColor(cell)}>
         <div style={{ flex: 1 }}>
           {typeof value === "object" && value !== null ? (
             <JsonViewButton
@@ -211,7 +210,13 @@ export const SingleDocumentExtractResults: React.FC<
           )}
         </div>
 
-        <ActionButtons>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-start",
+            marginTop: "8px",
+          }}
+        >
           <ActionButton
             className="edit"
             onClick={(e) => {
@@ -229,6 +234,7 @@ export const SingleDocumentExtractResults: React.FC<
               e.stopPropagation();
               handleApprove(cell);
             }}
+            disabled={Boolean(cell.approvedBy)}
           >
             <FiCheck />
           </ActionButton>
@@ -238,79 +244,14 @@ export const SingleDocumentExtractResults: React.FC<
               e.stopPropagation();
               handleReject(cell);
             }}
+            disabled={Boolean(cell.rejectedBy)}
           >
             <FiX />
           </ActionButton>
-        </ActionButtons>
+        </div>
       </DataCell>
     );
   };
-
-  /**
-   * Renders the action buttons (approve/reject) in the popup.
-   * @param cell - The datacell to render the action buttons for.
-   * @returns The action buttons as JSX.
-   */
-  const renderActionButtons = (cell: DatacellType) => (
-    <ButtonContainer>
-      <div className="buttons">
-        <StyledButton
-          color="#22c55e" // Green
-          hoverColor="#16a34a"
-          onClick={(e) => {
-            e.stopPropagation();
-            setTryingApprove(true);
-            requestApprove({ variables: { datacellId: cell.id } })
-              .then(() => {
-                toast.success("Cell approved successfully.");
-              })
-              .catch(() => {
-                toast.error("Failed to approve cell.");
-              })
-              .finally(() => {
-                setTryingApprove(false);
-              });
-            setOpenPopupCellId(null);
-          }}
-          disabled={Boolean(cell.approvedBy)}
-          title="Approve"
-        >
-          <FiCheck />
-          Approve
-        </StyledButton>
-        <StyledButton
-          color="#ef4444" // Red
-          hoverColor="#dc2626"
-          onClick={(e) => {
-            e.stopPropagation();
-            setTryingReject(true);
-            requestReject({ variables: { datacellId: cell.id } })
-              .then(() => {
-                toast.success("Cell rejected successfully.");
-              })
-              .catch(() => {
-                toast.error("Failed to reject cell.");
-              })
-              .finally(() => {
-                setTryingReject(false);
-              });
-            setOpenPopupCellId(null);
-          }}
-          disabled={Boolean(cell.rejectedBy)}
-          title="Reject"
-        >
-          <FiX />
-          Reject
-        </StyledButton>
-      </div>
-      {cell.approvedBy && (
-        <div className="status-message">Cell is currently approved</div>
-      )}
-      {cell.rejectedBy && (
-        <div className="status-message">Cell is currently rejected</div>
-      )}
-    </ButtonContainer>
-  );
 
   const handleSave = (newValue: any) => {
     console.log("Handle save with newValue:", newValue);
@@ -425,38 +366,6 @@ export const SingleDocumentExtractResults: React.FC<
                         style={{ position: "relative" }}
                       >
                         {cell ? renderCellValue(cell) : "-"}
-
-                        {cell && (
-                          <>
-                            <StatusDot
-                              statusColor={getStatusColor(cell)}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenPopupCellId(
-                                  openPopupCellId === cell.id ? null : cell.id
-                                );
-                              }}
-                            />
-
-                            <EditIcon
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingCell(cell);
-                                setIsEditing(true);
-                                setActiveCellId(cell.id);
-                              }}
-                            >
-                              <FiEdit />
-                            </EditIcon>
-
-                            {/* Conditionally render action buttons */}
-                            {openPopupCellId === cell.id && (
-                              <ActionButtonsWrapper>
-                                {renderActionButtons(cell)}
-                              </ActionButtonsWrapper>
-                            )}
-                          </>
-                        )}
                       </CellContainer>
                     </TableCell>
                   </TableRow>
@@ -607,11 +516,21 @@ const CellContent = styled.div`
   min-height: 48px;
 `;
 
-const DataCell = styled(CellContent)`
+interface DataCellProps {
+  statusColor?: string;
+}
+
+// Update the DataCell styled component
+const DataCell = styled(CellContent)<DataCellProps>`
   display: flex;
-  align-items: center;
-  padding-right: 32px;
-  position: relative;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 16px;
+  gap: 8px;
+  min-height: 48px;
+  background-color: ${(props) => props.statusColor || "transparent"};
+  transition: background-color 0.2s ease;
 `;
 
 const JsonViewButton = styled.div`
@@ -636,15 +555,6 @@ const JsonViewButton = styled.div`
   }
 `;
 
-const AnnotationCount = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: #64748b;
-  font-size: 0.85rem;
-  white-space: nowrap;
-`;
-
 const CellContainer = styled.div`
   position: relative;
   width: 100%;
@@ -667,42 +577,10 @@ const AnnotationsContainer = styled.div`
   background-color: #f9fafb;
 `;
 
-const AnnotationToggle = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  position: absolute;
-  top: 8px;
-  right: 32px;
-  color: #4b5563;
-
-  &:hover {
-    color: #1f2937;
-  }
-`;
-
 const CellStatus = styled.div`
   display: flex;
   align-items: center;
   gap: 4px;
-`;
-
-const StatusDot = styled.div<{ statusColor: string }>`
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: ${({ statusColor }) => statusColor};
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  cursor: pointer;
-  z-index: 5;
-  transition: transform 0.2s ease;
-
-  &:hover {
-    transform: scale(1.2);
-  }
 `;
 
 const ButtonContainer = styled.div`
@@ -895,38 +773,39 @@ const EditIcon = styled.button`
   }
 `;
 
-const ActionButtons = styled.div`
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  gap: 8px;
-`;
-
 const ActionButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #64748b;
   transition: all 0.2s ease;
+  margin-right: 4px;
 
-  &:hover {
-    background-color: rgba(59, 130, 246, 0.1);
+  &:hover:not(:disabled) {
+    background-color: #fff;
     color: #3b82f6;
   }
 
-  &.approve:hover {
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.approve:hover:not(:disabled) {
     color: #22c55e;
   }
 
-  &.reject:hover {
+  &.reject:hover:not(:disabled) {
     color: #ef4444;
+  }
+
+  &.edit:hover:not(:disabled) {
+    color: #3b82f6;
   }
 
   svg {

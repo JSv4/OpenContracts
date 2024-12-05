@@ -413,6 +413,7 @@ export const useAnalysisManager = () => {
     resetStates,
     onSelectAnalysis,
     onSelectExtract,
+    setDataCells,
   };
 };
 

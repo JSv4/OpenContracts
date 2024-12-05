@@ -1,13 +1,14 @@
 import React, { useState, useRef } from "react";
 import styled from "styled-components";
-import { FiCode, FiCheck, FiX, FiEye, FiEyeOff } from "react-icons/fi"; // Import icons you need
+import { FiCode, FiCheck, FiX, FiEye, FiEdit, FiEyeOff } from "react-icons/fi"; // Import icons you need
 import { Dimmer, Loader } from "semantic-ui-react";
+import { CellEditor } from "./CellEditor";
 import {
   ColumnType,
   DatacellType,
   LabelDisplayBehavior,
-} from "../../types/graphql-api";
-import { useMutation } from "@apollo/client";
+} from "../../../types/graphql-api";
+import { useMutation, gql } from "@apollo/client";
 import {
   REQUEST_APPROVE_DATACELL,
   REQUEST_REJECT_DATACELL,
@@ -15,9 +16,12 @@ import {
   RequestApproveDatacellOutputType,
   RequestRejectDatacellInputType,
   RequestRejectDatacellOutputType,
-} from "../../graphql/mutations";
-import { TruncatedText } from "../widgets/data-display/TruncatedText";
-import { HighlightItem } from "../annotator/sidebar/HighlightItem";
+  REQUEST_EDIT_DATACELL,
+  RequestEditDatacellOutputType,
+  RequestEditDatacellInputType,
+} from "../../../graphql/mutations";
+import { TruncatedText } from "../../widgets/data-display/TruncatedText";
+import { HighlightItem } from "./HighlightItem";
 import {
   displayAnnotationOnAnnotatorLoad,
   onlyDisplayTheseAnnotations,
@@ -25,10 +29,11 @@ import {
   showAnnotationBoundingBoxes,
   showStructuralAnnotations,
   showAnnotationLabels,
-} from "../../graphql/cache";
+} from "../../../graphql/cache";
 import { toast } from "react-toastify";
-import { convertToServerAnnotation } from "../../utils/transform";
+import { convertToServerAnnotation } from "../../../utils/transform";
 import ReactJson from "react-json-view";
+import { useAnalysisManager } from "../hooks/AnalysisHooks";
 
 interface SingleDocumentExtractResultsProps {
   datacells: DatacellType[];
@@ -46,13 +51,15 @@ export const SingleDocumentExtractResults: React.FC<
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [tryingApprove, setTryingApprove] = useState(false);
   const [tryingReject, setTryingReject] = useState(false);
-  const [activeCell, setActiveCell] = useState<DatacellType | null>(null);
+  const [activeCellId, setActiveCellId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [openPopupCellId, setOpenPopupCellId] = useState<string | null>(null);
   const [annotationVisibility, setAnnotationVisibility] = useState<{
     [key: string]: boolean;
   }>({});
   const cellRefs = useRef<{ [key: string]: HTMLDivElement }>({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingCell, setEditingCell] = useState<DatacellType | null>(null);
 
   const [requestApprove] = useMutation<
     { requestApproveDatacell: RequestApproveDatacellOutputType },
@@ -64,7 +71,38 @@ export const SingleDocumentExtractResults: React.FC<
     RequestRejectDatacellInputType
   >(REQUEST_REJECT_DATACELL);
 
-  const lastCells = datacells;
+  const [updateDatacell, { loading: updatingDatacell }] = useMutation<
+    RequestEditDatacellOutputType,
+    RequestEditDatacellInputType
+  >(REQUEST_EDIT_DATACELL, {
+    update(cache, { data }) {
+      if (data?.editDatacell?.obj) {
+        const updatedCell = data.editDatacell.obj;
+
+        cache.writeFragment({
+          id: `DatacellType:${updatedCell.id}`,
+          fragment: gql`
+            fragment UpdatedDatacell on DatacellType {
+              id
+              data
+              correctedData
+              # Include other fields if necessary
+            }
+          `,
+          data: updatedCell,
+        });
+      }
+    },
+  });
+
+  const { dataCells, setDataCells } = useAnalysisManager();
+
+  const lastCells = dataCells.length ? dataCells : datacells;
+
+  // Compute activeCell dynamically
+  const activeCell = activeCellId
+    ? dataCells.find((cell) => cell.id === activeCellId)
+    : null;
 
   /**
    * Toggles the visibility of annotations under a cell.
@@ -90,6 +128,60 @@ export const SingleDocumentExtractResults: React.FC<
   };
 
   /**
+   * Handles approving a datacell.
+   * @param cell - The datacell to approve.
+   */
+  const handleApprove = (cell: DatacellType) => {
+    setTryingApprove(true);
+    requestApprove({ variables: { datacellId: cell.id } })
+      .then((response) => {
+        const updatedCell =
+          response.data?.requestApproveDatacell.approveDatacell.obj;
+        if (updatedCell) {
+          setDataCells((prevCells) =>
+            prevCells.map((c) => (c.id === updatedCell.id ? updatedCell : c))
+          );
+          toast.success("Cell approved successfully.");
+        } else {
+          toast.error("Failed to approve cell.");
+        }
+      })
+      .catch(() => {
+        toast.error("Failed to approve cell.");
+      })
+      .finally(() => {
+        setTryingApprove(false);
+      });
+  };
+
+  /**
+   * Handles rejecting a datacell.
+   * @param cell - The datacell to reject.
+   */
+  const handleReject = (cell: DatacellType) => {
+    setTryingReject(true);
+    requestReject({ variables: { datacellId: cell.id } })
+      .then((response) => {
+        const updatedCell =
+          response.data?.requestRejectDatacell.rejectDatacell.obj;
+        if (updatedCell) {
+          setDataCells((prevCells) =>
+            prevCells.map((c) => (c.id === updatedCell.id ? updatedCell : c))
+          );
+          toast.success("Cell rejected successfully.");
+        } else {
+          toast.error("Failed to reject cell.");
+        }
+      })
+      .catch(() => {
+        toast.error("Failed to reject cell.");
+      })
+      .finally(() => {
+        setTryingReject(false);
+      });
+  };
+
+  /**
    * Renders the value of a datacell.
    * @param cell - The datacell to render the value for.
    * @returns The rendered value as JSX.
@@ -107,7 +199,7 @@ export const SingleDocumentExtractResults: React.FC<
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setActiveCell(cell);
+                setActiveCellId(cell.id);
                 setIsModalOpen(true);
               }}
             >
@@ -118,6 +210,38 @@ export const SingleDocumentExtractResults: React.FC<
             <TruncatedText text={String(value)} limit={cellWidth - 100} />
           )}
         </div>
+
+        <ActionButtons>
+          <ActionButton
+            className="edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingCell(cell);
+              setIsEditing(true);
+              setActiveCellId(cell.id);
+            }}
+          >
+            <FiEdit />
+          </ActionButton>
+          <ActionButton
+            className="approve"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleApprove(cell);
+            }}
+          >
+            <FiCheck />
+          </ActionButton>
+          <ActionButton
+            className="reject"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleReject(cell);
+            }}
+          >
+            <FiX />
+          </ActionButton>
+        </ActionButtons>
       </DataCell>
     );
   };
@@ -188,6 +312,47 @@ export const SingleDocumentExtractResults: React.FC<
     </ButtonContainer>
   );
 
+  const handleSave = (newValue: any) => {
+    console.log("Handle save with newValue:", newValue);
+    if (editingCell) {
+      updateDatacell({
+        variables: {
+          datacellId: editingCell.id,
+          editedData: { data: newValue },
+        },
+      })
+        .then((response) => {
+          const updatedCell = response.data?.editDatacell?.obj;
+          if (updatedCell) {
+            // Log the updated cell for debugging
+            console.log("Updated Cell:", updatedCell);
+
+            // Update the dataCells state
+            setDataCells((prevCells) =>
+              prevCells.map((cell) =>
+                cell.id === updatedCell.id ? { ...cell, ...updatedCell } : cell
+              )
+            );
+            toast.success("Cell updated successfully.");
+            console.log("Updated Cell:", updatedCell);
+            console.log("Updated dataCells:", dataCells);
+          } else {
+            toast.error("Failed to update cell.");
+          }
+        })
+        .catch((error) => {
+          toast.error("Error updating cell.");
+          console.error(error);
+        })
+        .finally(() => {
+          setIsEditing(false);
+          setEditingCell(null);
+        });
+    }
+  };
+
+  console.log("Sample datacell:", dataCells[0]);
+
   return (
     <Container>
       <Dimmer.Dimmable
@@ -210,7 +375,9 @@ export const SingleDocumentExtractResults: React.FC<
           </thead>
           <tbody>
             {columns.map((column: ColumnType) => {
-              const cell = lastCells.find((c) => c.column.id === column.id);
+              const cell = lastCells.find(
+                (c) => c && c.column && c.column.id === column.id
+              );
               return (
                 <React.Fragment key={column.id}>
                   <TableRow
@@ -271,6 +438,17 @@ export const SingleDocumentExtractResults: React.FC<
                               }}
                             />
 
+                            <EditIcon
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingCell(cell);
+                                setIsEditing(true);
+                                setActiveCellId(cell.id);
+                              }}
+                            >
+                              <FiEdit />
+                            </EditIcon>
+
                             {/* Conditionally render action buttons */}
                             {openPopupCellId === cell.id && (
                               <ActionButtonsWrapper>
@@ -320,24 +498,39 @@ export const SingleDocumentExtractResults: React.FC<
         </Table>
       </Dimmer.Dimmable>
 
-      {isModalOpen && (
+      {isModalOpen && activeCell && (
         <ModalOverlay onClick={() => setIsModalOpen(false)}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <CloseModalButton onClick={() => setIsModalOpen(false)}>
               &times;
             </CloseModalButton>
-            {activeCell && (
-              <ReactJson
-                src={activeCell.correctedData?.data || activeCell.data?.data}
-                theme="rjv-default"
-                style={{ padding: "20px" }}
-                enableClipboard={false}
-                displayDataTypes={false}
-                collapsed={2}
-              />
-            )}
+            <ModalHeader>JSON View</ModalHeader>
+            <ReactJson
+              src={
+                activeCell.correctedData?.data || activeCell.data?.data || {}
+              }
+              theme="rjv-default"
+              style={{ padding: "20px" }}
+              enableClipboard={false}
+              displayDataTypes={false}
+              collapsed={2}
+            />
           </ModalContent>
         </ModalOverlay>
+      )}
+
+      {isEditing && editingCell && (
+        <CellEditor
+          value={
+            editingCell.correctedData?.data || editingCell.data?.data || ""
+          }
+          onSave={handleSave}
+          onClose={() => {
+            setIsEditing(false);
+            setEditingCell(null);
+          }}
+          loading={updatingDatacell}
+        />
       )}
     </Container>
   );
@@ -673,4 +866,71 @@ const ActionButtonsWrapper = styled.div`
   border-radius: 4px;
   padding: 8px;
   box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+`;
+
+const ModalHeader = styled.h2`
+  color: black;
+`;
+
+// Styled component for Edit Icon
+const EditIcon = styled.button`
+  position: absolute;
+  top: 8px;
+  left: 20px;
+  background: none;
+  border: none;
+  color: #3b82f6;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const ActionButtons = styled.div`
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 8px;
+`;
+
+const ActionButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+  }
+
+  &.approve:hover {
+    color: #22c55e;
+  }
+
+  &.reject:hover {
+    color: #ef4444;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `;

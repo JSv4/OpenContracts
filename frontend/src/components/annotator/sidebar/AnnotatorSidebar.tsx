@@ -24,7 +24,7 @@ import { ColumnType, DatacellType } from "../../../types/graphql-api";
 import { SearchSidebarWidget } from "../search_widget/SearchSidebarWidget";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
-import { SingleDocumentExtractResults } from "../../extracts/SingleDocumentExtractResults";
+import { SingleDocumentExtractResults } from "./SingleDocumentExtractResults";
 import { PermissionTypes } from "../../types";
 import { getPermissions } from "../../../utils/transform";
 import { PlaceholderCard } from "../../placeholders/PlaceholderCard";

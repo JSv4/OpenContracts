@@ -157,6 +157,12 @@ export const cache = new InMemoryCache({
         columns: relayStylePagination(),
       },
     },
+    DatacellType: {
+      keyFields: ["id"],
+      fields: {
+        // Define field policies if necessary
+      },
+    },
   },
 });
 

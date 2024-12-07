@@ -7,6 +7,15 @@ from django.utils.translation import gettext_lazy as _
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from pgvector.django import VectorField
 
+# Switching from Django-tree-queries to django-cte
+# Appears that django-tree-query has performance issues for large tables.
+# See https://github.com/feincms/django-tree-queries/issues/77
+# This will become an issue for annotations in particular. Since annotations will
+# have a simple structure and query anyway, using django-cte here. Can migrate models 
+# using django-tree-queries down the road but shouldn't affect each other on 
+# separate models. 
+from django_cte import CTEManager
+
 from opencontractserver.shared.defaults import (
     empty_bounding_box,
     jsonfield_default_value,
@@ -219,6 +228,9 @@ class RelationshipGroupObjectPermission(GroupObjectPermissionBase):
 
 
 class Annotation(BaseOCModel):
+    
+    objects = CTEManager()
+    
     page = django.db.models.IntegerField(default=1, blank=False)
     raw_text = django.db.models.TextField(null=True, blank=True)
     tokens_jsons = NullableJSONField(
@@ -226,6 +238,15 @@ class Annotation(BaseOCModel):
     )
     bounding_box = NullableJSONField(default=empty_bounding_box, null=True)
     json = NullableJSONField(default=jsonfield_default_value, null=False)
+
+    # New parent field for hierarchical relationships
+    parent = django.db.models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        related_name='children',
+        on_delete=django.db.models.CASCADE
+    )
 
     # This is kind of duplicative of the AnnotationLabel label_type, BUT,
     # it makes mores sense here. Slowly going to transition to this

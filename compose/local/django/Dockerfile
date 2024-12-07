@@ -33,14 +33,14 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # psycopg2 dependencies
   libpq-dev
 
-# Requirements are installed here to ensure they will be cached.
-COPY ./requirements .
+# Copy the entire requirements directory
+COPY ./requirements ./requirements
 
 RUN pip install --upgrade pip
 
-# Create Python Dependency and Sub-Dependency Wheels.
-RUN pip wheel --wheel-dir /usr/src/app/wheels  \
-  -r ${BUILD_ENVIRONMENT}.txt
+# Build wheels for all requirements files found in the requirements directory and subdirectories
+RUN find ./requirements -type f -name "*.txt" -exec echo "-r" {} \; | \
+  xargs pip wheel --wheel-dir /usr/src/app/wheels
 
 # Python 'run' stage
 FROM python as python-run-stage
@@ -92,17 +92,21 @@ COPY ./setup_codecov.sh .
 RUN if [ "$GITHUB_ACTIONS" ] ; then echo "GITHUB ACTION MODE" && chmod u+x setup_codecov.sh && ./setup_codecov.sh ; else echo "NOT GITHUB ACTION. DO NOT INSTALL CODECOV" ; fi
 
 # Download sentence transformer binaries
-COPY download_embeddings_model.py .
-RUN mkdir -p /models
-RUN python download_embeddings_model.py
+# COPY download_embeddings_model.py .
+# RUN mkdir -p /models
+# RUN python download_embeddings_model.py
+
+# Download Docling models
+# COPY download_docling_models.py .
+# RUN python download_docling_models.py
 
 # Download spacy models
 RUN python -m spacy download en_core_web_sm
 RUN python -m spacy download en_core_web_lg
 
 # Download GLINER
-COPY download_GLINER.py .
-RUN python download_GLINER.py
+# COPY download_GLINER.py .
+# RUN python download_GLINER.py
 
 COPY ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint

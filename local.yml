@@ -53,22 +53,29 @@ services:
       PORT: 8000
 
   celeryworker:
-    <<: *django
-    image: opencontractserver_local_celeryworker
+    image: opencontractserver_local_django_celery_base
+    container_name: celeryworker
     depends_on:
       - redis
       - postgres
-    ports: []
+    volumes:
+      - .:/app:z
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.postgres
     command: /start-celeryworker
 
   celerybeat:
-    <<: *django
-    image: opencontractserver_local_celerybeat
+    image: opencontractserver_local_django_celery_base
     container_name: celerybeat
     depends_on:
       - redis
       - postgres
-    ports: []
+    volumes:
+      - .:/app:z
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.postgres
     command: /start-celerybeat
 
   flower:
@@ -93,3 +100,11 @@ services:
         - "3000:3000"
       profiles:
         - "fullstack"
+
+  django-celery-base:
+    build:
+      context: .
+      args:
+        - GITHUB_ACTIONS
+      dockerfile: ./compose/local/django/Dockerfile.celery
+    image: opencontractserver_local_django_celery_base

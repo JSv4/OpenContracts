@@ -64,3 +64,8 @@ AUTH0_DOMAIN=dev-7ranai11.auth0.com
 AUTH0_M2M_MANAGEMENT_API_SECRET=
 AUTH0_M2M_MANAGEMENT_API_ID=
 AUTH0_M2M_MANAGEMENT_GRANT_TYPE=client_credentials
+
+# Docling
+# ------------------------------------------------------------------------------
+DOCLING_MODELS_PATH=/models/docling
+SENTENCE_TRANSFORMER_MODELS_PATH=/models/sentence-transformers

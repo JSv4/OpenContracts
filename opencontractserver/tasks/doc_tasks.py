@@ -7,19 +7,15 @@ import logging
 from typing import Any
 
 import numpy as np
-import requests
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile, File
 from django.core.files.storage import default_storage
 from django.utils import timezone
 from pdf2image import convert_from_bytes
 from PIL import Image
-from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
 from pydantic import validate_arguments
 
 from config import celery_app
-from config.graphql.serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import (
     SPAN_LABEL,
     TOKEN_LABEL,
@@ -37,11 +33,11 @@ from opencontractserver.types.dicts import (
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.files import (
-    check_if_pdf_needs_ocr,
     create_text_thumbnail,
     split_pdf_into_images,
 )
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
+from opencontractserver.parsers.base_parser import parse_document
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -118,123 +114,46 @@ def ingest_txt(user_id: int, doc_id: int) -> list[tuple[int, str]]:
         set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
 
 
-@celery_app.task(
-    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
-)
-def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
-    # TODO - seeing persistent failure of Thomas Foster Appelant vs ... and Caster Hinckley et all. vs...
-    #  need to investigate why parser keeps failing on these two.
-    logger.info(f"nlm_ingest_pdf() - split doc {doc_id} for user {user_id}")
+@celery_app.task(bind=True)
+def ingest_doc(self, user_id: int, doc_id: int, parser_task_name: str) -> None:
+    """
+    Ingests a document using the specified parser.
 
-    doc = Document.objects.get(pk=doc_id)
-    doc_path = doc.pdf_file.name
-    doc_file = default_storage.open(doc_path, mode="rb")
+    Args:
+        user_id (int): The ID of the user.
+        doc_id (int): The ID of the document to ingest.
+        parser_task_name (str): The name of the parser to use ('nlm_ingest' or 'docling').
 
-    # Check if OCR is needed
-    needs_ocr = check_if_pdf_needs_ocr(doc_file)
-    logger.debug(f"Document {doc_id} needs OCR: {needs_ocr}")
-
-    if settings.NLM_INGEST_API_KEY is not None:
-        headers = {"API_KEY": settings.NLM_INGEST_API_KEY}
-    else:
-        headers = {}
-
-    files = {"file": doc_file}
-    params = {
-        "calculate_opencontracts_data": "yes",
-        "applyOcr": "yes" if needs_ocr and settings.NLM_INGEST_USE_OCR else "no",
-    }  # Ensures calculate_opencontracts_data is set to True
-
-    response = requests.post(
-        settings.NLM_INGEST_HOSTNAME + "/api/parseDocument",
-        headers=headers,
-        files=files,
-        params=params,
+    Raises:
+        ValueError: If an invalid parser_task_name is provided.
+        Exception: If parsing fails.
+    """
+    logger.info(
+        f"ingest_doc() - Ingesting doc {doc_id} for user {user_id} using parser '{parser_task_name}'"
     )
 
-    if not response.status_code == 200:
-        response.raise_for_status()
+    # Map parser names to functions
+    parser_functions = {
+        "nlm_ingest": "opencontractserver.parsers.nlm_ingest.parse_with_nlm",
+        "docling": "opencontractserver.parsers.docling.parse_with_docling",
+    }
 
-    response_data = response.json()
-    open_contracts_data: OpenContractDocExport | None = response_data.get(
-        "return_dict", {}
-    ).get("opencontracts_data", None)
-
-    document = Document.objects.get(pk=doc_id)
-
-    # Create new labels if needed
-    if open_contracts_data is not None:
-
-        # Get PAWLS layer and text contents
-        pawls_string = json.dumps(open_contracts_data["pawls_file_content"])
-        pawls_file = ContentFile(pawls_string.encode("utf-8"))
-
-        # We want to use our own algorithm to create text layer from pawls tokens
-        span_translation_layer = makePdfTranslationLayerFromPawlsTokens(
-            json.loads(pawls_string.encode("utf-8"))
+    if parser_task_name not in parser_functions:
+        raise ValueError(
+            f"Invalid parser_task_name '{parser_task_name}'. Must be one of {list(parser_functions.keys())}"
         )
 
-        # We need to use the same translation algorithm from x,y tokens to spans EVERYWHERE... so when we first
-        # parse the document,we want to use the same translation algorithm we'll later use when we try to map spans
-        # BACK to the tokens.
-        txt_file = ContentFile(span_translation_layer.doc_text.encode("utf-8"))
+    # Dynamically import the parser function
+    module_path, function_name = parser_functions[parser_task_name].rsplit(".", 1)
+    module = __import__(module_path, fromlist=[function_name])
+    parse_function = getattr(module, function_name)
 
-        document.txt_extract_file.save(f"doc_{doc_id}.txt", txt_file)
-        document.pawls_parse_file.save(f"doc_{doc_id}.pawls", pawls_file)
-        document.page_count = len(open_contracts_data["pawls_file_content"])
+    # Call the base parser function
+    parse_document(user_id, doc_id, parse_function)
 
-        existing_text_labels: dict[str, AnnotationLabel] = {}
-
-        # Now, annotate the document with any annotations that bubbled up from parser.
-        for label_data in open_contracts_data["labelled_text"]:
-
-            label_name = label_data["annotationLabel"]
-
-            if label_name not in existing_text_labels:
-                label_obj = AnnotationLabel.objects.filter(
-                    text=label_name,
-                    creator_id=user_id,
-                    label_type=TOKEN_LABEL,
-                    read_only=True,
-                )
-                if label_obj.count() > 0:
-                    label_obj = label_obj[0]
-                    existing_text_labels[label_name] = label_obj
-                else:
-                    label_serializer = AnnotationLabelSerializer(
-                        data={
-                            "label_type": "TOKEN_LABEL",
-                            "color": "grey",
-                            "description": "NLM Structural Label",
-                            "icon": "expand",
-                            "text": label_name,
-                            "creator_id": user_id,
-                            "read_only": True,
-                        }
-                    )
-                    label_serializer.is_valid(raise_exception=True)
-                    label_obj = label_serializer.save()
-                    set_permissions_for_obj_to_user(
-                        user_id, label_obj, [PermissionTypes.ALL]
-                    )
-                    existing_text_labels[label_name] = label_obj
-            else:
-                label_obj = existing_text_labels[label_name]
-
-            annot_obj = Annotation.objects.create(
-                raw_text=label_data["rawText"],
-                page=label_data["page"],
-                json=label_data["annotation_json"],
-                annotation_label=label_obj,
-                document=doc,
-                creator_id=user_id,
-                annotation_type=TOKEN_LABEL,
-                structural=True,  # Mark these explicitly as structural annotations.
-            )
-            annot_obj.save()
-            set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
-
-    document.save()
+    logger.info(
+        f"Document {doc_id} ingested successfully using parser '{parser_task_name}'"
+    )
 
 
 @celery_app.task()

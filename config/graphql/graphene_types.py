@@ -34,32 +34,41 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-def build_tree(nodes: list, parent_id: int = None) -> list:
+def build_flat_tree(nodes: list) -> list:
     """
-    Builds a nested tree representation from a list of annotation nodes.
+    Builds a flat list of node representations from a list of annotation nodes.
+    Each node includes only its immediate children's global IDs.
 
     Args:
         nodes (list): List of annotation dictionaries with keys 'id', 'parent_id', and 'raw_text'.
-        parent_id (int, optional): The parent ID to build the tree from.
 
     Returns:
-        list: A list of dictionaries representing the tree structure.
+        list: A list of dictionaries representing the nodes.
     """
-    tree = []
+    # Map node IDs to their immediate children IDs
+    id_to_children = {}
     for node in nodes:
-        node_parent_id = node['parent_id']
-        if node_parent_id == parent_id:
-            # Convert IDs to global IDs
-            node_id_global = to_global_id('AnnotationType', node['id'])
-            # Recursively build the tree
-            children = build_tree(nodes, parent_id=node['id'])
-            node_dict = {
-                'id': node_id_global,
-                'raw_text': node['raw_text'],
-                'children': children
-            }
-            tree.append(node_dict)
-    return tree
+        node_id = node['id']
+        parent_id = node['parent_id']
+        if parent_id:
+            id_to_children.setdefault(parent_id, []).append(node_id)
+
+    # Build the flat list of nodes
+    node_list = []
+    for node in nodes:
+        node_id = node['id']
+        node_id_global = to_global_id('AnnotationType', node_id)
+        # Get immediate children IDs and convert to global IDs
+        children_ids = id_to_children.get(node_id, [])
+        children_global_ids = [to_global_id('AnnotationType', cid) for cid in children_ids]
+        node_dict = {
+            'id': node_id_global,
+            'raw_text': node['raw_text'],
+            'children': children_global_ids
+        }
+        node_list.append(node_dict)
+
+    return node_list
 
 
 class UserType(AnnotatePermissionsForReadMixin, DjangoObjectType):
@@ -115,27 +124,25 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         return self.target_node_in_relationships.all()
 
     # Updated fields for tree representations
-    descendants_tree = graphene.Field(
+    descendants_tree = graphene.List(
         GenericScalar,
-        description="Descendants of the annotation in a tree structure."
+        description="List of descendant annotations, each with immediate children's IDs."
     )
-    full_tree = graphene.Field(
+    full_tree = graphene.List(
         GenericScalar,
-        description="Entire tree from the root ancestor of the annotation."
+        description="List of annotations from the root ancestor, each with immediate children's IDs."
     )
 
     # Resolver for descendants_tree
     def resolve_descendants_tree(self, info):
         """
-        Resolver for the descendants_tree field.
-        Returns a JSON string representing the subtree starting from this annotation.
+        Returns a flat list of descendant annotations,
+        each including only the IDs of its immediate children.
         """
         from django_cte import With
 
         def get_descendants(cte):
-            # Base case: direct children of the current annotation
             base_qs = Annotation.objects.filter(parent_id=self.id).values('id', 'parent_id', 'raw_text')
-            # Recursive case: descendants of the children
             recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values('id', 'parent_id', 'raw_text')
             return base_qs.union(recursive_qs, all=True)
 
@@ -143,14 +150,14 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         descendants_qs = cte.queryset().with_cte(cte).order_by('id')
 
         descendants_list = list(descendants_qs)
-        descendants_tree = build_tree(descendants_list, parent_id=self.id)
+        descendants_tree = build_flat_tree(descendants_list)
         return descendants_tree
 
     # Resolver for full_tree
     def resolve_full_tree(self, info):
         """
-        Resolver for the full_tree field.
-        Returns a JSON string representing the entire tree from the root ancestor of the annotation.
+        Returns a flat list of annotations from the root ancestor,
+        each including only the IDs of its immediate children.
         """
         from django_cte import With
 
@@ -160,16 +167,14 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
             root = root.parent
 
         def get_full_tree(cte):
-            # Base case: root node
             base_qs = Annotation.objects.filter(id=root.id).values('id', 'parent_id', 'raw_text')
-            # Recursive case: descendants
             recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values('id', 'parent_id', 'raw_text')
             return base_qs.union(recursive_qs, all=True)
 
         cte = With.recursive(get_full_tree)
         full_tree_qs = cte.queryset().with_cte(cte).order_by('id')
         nodes = list(full_tree_qs)
-        full_tree = build_tree(nodes, parent_id=None)
+        full_tree = build_flat_tree(nodes)
         return full_tree
 
     class Meta:

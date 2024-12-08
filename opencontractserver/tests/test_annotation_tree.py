@@ -107,22 +107,23 @@ class AnnotationTreeTestCase(TestCase):
         # Access the returned tree directly
         descendants_tree = result['data']['annotation']['descendantsTree']
 
-        # Expected tree structure with global IDs
-        expected_tree = [
+        # Expected flat list of descendants with immediate children's IDs
+        expected_descendants_tree = [
             {
                 'id': to_global_id('AnnotationType', self.child_annotation_1.id),
                 'raw_text': 'Child Annotation 1',
                 'children': [
-                    {
-                        'id': to_global_id('AnnotationType', self.grandchild_annotation.id),
-                        'raw_text': 'Grandchild Annotation',
-                        'children': []
-                    }
+                    to_global_id('AnnotationType', self.grandchild_annotation.id)
                 ]
             },
             {
                 'id': to_global_id('AnnotationType', self.child_annotation_2.id),
                 'raw_text': 'Child Annotation 2',
+                'children': []
+            },
+            {
+                'id': to_global_id('AnnotationType', self.grandchild_annotation.id),
+                'raw_text': 'Grandchild Annotation',
                 'children': []
             }
         ]
@@ -131,10 +132,10 @@ class AnnotationTreeTestCase(TestCase):
         print("\nDescendants Tree Test:")
         print("Actual (descendants_tree):")
         print(json.dumps(descendants_tree, indent=2))
-        print("\nExpected (expected_tree):")
-        print(json.dumps(expected_tree, indent=2))
-        
-        self.assertEqual(descendants_tree, expected_tree)
+        print("\nExpected (expected_descendants_tree):")
+        print(json.dumps(expected_descendants_tree, indent=2))
+
+        self.assertEqual(descendants_tree, expected_descendants_tree)
     
     def test_full_tree(self):
         # Test with grandchild annotation
@@ -157,29 +158,32 @@ class AnnotationTreeTestCase(TestCase):
         # Access the returned tree directly
         full_tree = result['data']['annotation']['fullTree']
 
-        # Expected tree structure with global IDs
-        expected_tree = [
+        # Expected flat list of full tree with immediate children's IDs
+        expected_full_tree = [
             {
                 'id': to_global_id('AnnotationType', self.root_annotation.id),
                 'raw_text': 'Root Annotation',
                 'children': [
-                    {
-                        'id': to_global_id('AnnotationType', self.child_annotation_1.id),
-                        'raw_text': 'Child Annotation 1',
-                        'children': [
-                            {
-                                'id': to_global_id('AnnotationType', self.grandchild_annotation.id),
-                                'raw_text': 'Grandchild Annotation',
-                                'children': []
-                            }
-                        ]
-                    },
-                    {
-                        'id': to_global_id('AnnotationType', self.child_annotation_2.id),
-                        'raw_text': 'Child Annotation 2',
-                        'children': []
-                    }
+                    to_global_id('AnnotationType', self.child_annotation_1.id),
+                    to_global_id('AnnotationType', self.child_annotation_2.id)
                 ]
+            },
+            {
+                'id': to_global_id('AnnotationType', self.child_annotation_1.id),
+                'raw_text': 'Child Annotation 1',
+                'children': [
+                    to_global_id('AnnotationType', self.grandchild_annotation.id)
+                ]
+            },
+            {
+                'id': to_global_id('AnnotationType', self.child_annotation_2.id),
+                'raw_text': 'Child Annotation 2',
+                'children': []
+            },
+            {
+                'id': to_global_id('AnnotationType', self.grandchild_annotation.id),
+                'raw_text': 'Grandchild Annotation',
+                'children': []
             }
         ]
 
@@ -187,7 +191,7 @@ class AnnotationTreeTestCase(TestCase):
         print("\nFull Tree Test:")
         print("Actual (full_tree):")
         print(json.dumps(full_tree, indent=2))
-        print("\nExpected (expected_tree):")
-        print(json.dumps(expected_tree, indent=2))
-        
-        self.assertEqual(full_tree, expected_tree)
+        print("\nExpected (expected_full_tree):")
+        print(json.dumps(expected_full_tree, indent=2))
+
+        self.assertEqual(full_tree, expected_full_tree)

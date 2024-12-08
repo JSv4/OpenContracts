@@ -3,7 +3,7 @@ import logging
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from graphql_relay import to_global_id
+from graphql_relay import to_global_id, from_global_id
 from graphene.test import Client
 
 from config.graphql.schema import schema
@@ -195,3 +195,115 @@ class AnnotationTreeTestCase(TestCase):
         print(json.dumps(expected_full_tree, indent=2))
 
         self.assertEqual(full_tree, expected_full_tree)
+    
+    def test_stress_test(self):
+        # Programmatically create a large tree with at least 1000 annotations
+        total_nodes = 0
+        max_nodes = 1000
+
+        # Create the root annotation
+        root_annotation = Annotation.objects.create(
+            document=self.document,
+            corpus=self.corpus,
+            annotation_label=self.annotation_label,
+            raw_text="Root Annotation",
+            creator=self.user,
+            parent=None
+        )
+        total_nodes += 1
+
+        # Level order traversal to build a balanced binary tree
+        current_level = [root_annotation]
+
+        while total_nodes < max_nodes:
+            next_level = []
+            for parent_annotation in current_level:
+                # Create left child
+                left_child = Annotation.objects.create(
+                    document=self.document,
+                    corpus=self.corpus,
+                    annotation_label=self.annotation_label,
+                    raw_text=f"Annotation {total_nodes + 1}",
+                    creator=self.user,
+                    parent=parent_annotation
+                )
+                total_nodes += 1
+                next_level.append(left_child)
+
+                if total_nodes >= max_nodes:
+                    break
+
+                # Create right child
+                right_child = Annotation.objects.create(
+                    document=self.document,
+                    corpus=self.corpus,
+                    annotation_label=self.annotation_label,
+                    raw_text=f"Annotation {total_nodes + 1}",
+                    creator=self.user,
+                    parent=parent_annotation
+                )
+                total_nodes += 1
+                next_level.append(right_child)
+
+                if total_nodes >= max_nodes:
+                    break
+            current_level = next_level
+
+        # Test the descendants_tree resolver
+        query = '''
+        query($id: ID!) {
+            annotation(id: $id) {
+                id
+                descendantsTree
+            }
+        }
+        '''
+        variables = {
+            'id': to_global_id('AnnotationType', root_annotation.id)
+        }
+
+        # Execute the query
+        result = self.client.execute(query, variables=variables)
+        self.assertIsNone(result.get("errors"))
+
+        # Access the returned tree directly
+        descendants_tree = result['data']['annotation']['descendantsTree']
+
+        # Since we can't manually create the expected output for 1000 nodes,
+        # we'll test that the number of returned nodes matches the total nodes minus 1 (excluding root)
+        self.assertEqual(len(descendants_tree), total_nodes - 1)
+
+        # Optionally, test a few known nodes
+        # For example, check that the first child of the root is correct
+        first_child_id = descendants_tree[0]['id']
+        first_child_annotation = Annotation.objects.get(id=from_global_id(first_child_id)[1])
+        self.assertEqual(first_child_annotation.parent_id, root_annotation.id)
+
+        # Test the full_tree resolver
+        query = '''
+        query($id: ID!) {
+            annotation(id: $id) {
+                id
+                fullTree
+            }
+        }
+        '''
+        variables = {
+            'id': to_global_id('AnnotationType', root_annotation.id)
+        }
+
+        # Execute the query
+        result = self.client.execute(query, variables=variables)
+        self.assertIsNone(result.get("errors"))
+
+        # Access the returned tree directly
+        full_tree = result['data']['annotation']['fullTree']
+
+        # Test that the number of nodes in full_tree matches total_nodes
+        self.assertEqual(len(full_tree), total_nodes)
+
+        # Assert that the root is correctly included
+        root_node = next((node for node in full_tree if node['id'] == to_global_id('AnnotationType', root_annotation.id)), None)
+        self.assertIsNotNone(root_node)
+        self.assertEqual(root_node['raw_text'], "Root Annotation")
+        self.assertEqual(len(root_node['children']), 2)  # Root should have two children in a balanced binary tree

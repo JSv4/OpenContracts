@@ -12,7 +12,6 @@ class AnnotationLabelPythonType(TypedDict):
     icon: str
     text: str
     label_type: LabelType
-    parent_id: Optional[str]
 
 
 class LabelLookupPythonType(TypedDict):
@@ -54,6 +53,7 @@ class FunsdAnnotationType(TypedDict):
     words: list[FunsdTokenType]
     linking: list[int]
     id: str | int
+    parent_id: Optional[str | int]
 
 
 class FunsdAnnotationLoaderOutputType(TypedDict):

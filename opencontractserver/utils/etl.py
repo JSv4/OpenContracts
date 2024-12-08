@@ -187,6 +187,7 @@ def build_document_export(
                         "rawText": annot.raw_text,
                         "page": annot.page,
                         "annotation_json": annot.json,
+                        "parent_id": annot.parent.id if annot.parent else None,
                     }
                 )
 

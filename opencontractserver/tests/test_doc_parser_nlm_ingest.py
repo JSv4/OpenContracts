@@ -77,4 +77,4 @@ class ParseWithNLMTestCase(TestCase):
         self.assertIn("pawls_file_content", open_contracts_data)
         self.assertIn("labelled_text", open_contracts_data)
         self.assertEqual(len(open_contracts_data["labelled_text"]), 27)
-        self.assertEqual(open_contracts_data["title"], "Sample Document Title")
+        self.assertEqual(open_contracts_data["title"], "Grab title from parser")

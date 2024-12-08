@@ -13,7 +13,6 @@ from opencontractserver.documents.models import Document
 from opencontractserver.tests.fixtures import (
     NLM_INGESTOR_EXPECTED_JSON,
     NLM_INGESTOR_SAMPLE_PDF,
-    SAMPLE_PDF_FILE_ONE_PATH,
 )
 
 User = get_user_model()
@@ -62,6 +61,8 @@ class ParseDocumentTestCase(TestCase):
         doc.refresh_from_db()
         self.assertIsNotNone(doc.txt_extract_file)
         self.assertIsNotNone(doc.pawls_parse_file)
+        
+    # TODO test dynamic loading in ingest_doc task...
         
     def tearDown(self):
         """

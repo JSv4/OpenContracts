@@ -12,6 +12,7 @@ class AnnotationLabelPythonType(TypedDict):
     icon: str
     text: str
     label_type: LabelType
+    parent_id: Optional[str]
 
 
 class LabelLookupPythonType(TypedDict):

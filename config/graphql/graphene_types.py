@@ -114,18 +114,18 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     def resolve_all_target_node_in_relationship(self, info):
         return self.target_node_in_relationships.all()
 
-    # New fields for tree representations
+    # Updated fields for tree representations
     descendants_tree = graphene.Field(
-        graphene.types.json.JSONString,
+        GenericScalar,
         description="Descendants of the annotation in a tree structure."
     )
     full_tree = graphene.Field(
-        graphene.types.json.JSONString,
+        GenericScalar,
         description="Entire tree from the root ancestor of the annotation."
     )
 
     # Resolver for descendants_tree
-    def resolve_descendants_tree(self, info) -> str:
+    def resolve_descendants_tree(self, info):
         """
         Resolver for the descendants_tree field.
         Returns a JSON string representing the subtree starting from this annotation.
@@ -140,13 +140,14 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
             return base_qs.union(recursive_qs, all=True)
 
         cte = With.recursive(get_descendants)
-        descendants_qs = cte.with_cte(cte).order_by('id')
+        descendants_qs = cte.queryset().with_cte(cte).order_by('id')
+
         descendants_list = list(descendants_qs)
         descendants_tree = build_tree(descendants_list, parent_id=self.id)
-        return json.dumps(descendants_tree)
+        return descendants_tree
 
     # Resolver for full_tree
-    def resolve_full_tree(self, info) -> str:
+    def resolve_full_tree(self, info):
         """
         Resolver for the full_tree field.
         Returns a JSON string representing the entire tree from the root ancestor of the annotation.
@@ -166,10 +167,10 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
             return base_qs.union(recursive_qs, all=True)
 
         cte = With.recursive(get_full_tree)
-        full_tree_qs = cte.with_cte(cte).order_by('id')
+        full_tree_qs = cte.queryset().with_cte(cte).order_by('id')
         nodes = list(full_tree_qs)
         full_tree = build_tree(nodes, parent_id=None)
-        return json.dumps(full_tree)
+        return full_tree
 
     class Meta:
         model = Annotation

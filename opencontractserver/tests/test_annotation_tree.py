@@ -1,21 +1,41 @@
 import json
+import logging
+from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from graphene_django.utils.testing import GraphQLTestCase
 from graphql_relay import to_global_id
+from graphene.test import Client
 
+from config.graphql.schema import schema
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 
 User = get_user_model()
 
-class AnnotationTreeTestCase(GraphQLTestCase):
+logger = logging.getLogger(__name__)
+
+class TestContext:
+    def __init__(self, user):
+        self.user = user
+
+class AnnotationTreeTestCase(TestCase):
+    
+    maxDiff = None  # Add this line at the class level
     
     def setUp(self):
         # Create a test user
-        self.user = User.objects.create_user(username='testuser', password='testpassword')
-        self.client.authenticate(self.user)
+        # Setup a test user
+        with transaction.atomic():
+            self.user = User.objects.create_user(username="bob", password="12345678")
+        logger.info(f"Created test user: {self.user}")
+
+        self.user = User.objects.create_user(
+            username="testuser", password="testpassword"
+        )
+        self.client = Client(schema, context_value=TestContext(self.user))
+
+        logger.info("Created test clients")
 
         # Create test data
         self.corpus = Corpus.objects.create(title="Test Corpus", creator=self.user)
@@ -81,12 +101,11 @@ class AnnotationTreeTestCase(GraphQLTestCase):
         }
 
         # Execute the query
-        response = self.query(query, variables=variables)
-        content = json.loads(response.content)
-        self.assertResponseNoErrors(response)
+        result = self.client.execute(query, variables=variables)
+        self.assertIsNone(result.get("errors"))
 
-        # Parse the returned JSON tree
-        descendants_tree = json.loads(content['data']['annotation']['descendantsTree'])
+        # Access the returned tree directly
+        descendants_tree = result['data']['annotation']['descendantsTree']
 
         # Expected tree structure with global IDs
         expected_tree = [
@@ -108,7 +127,13 @@ class AnnotationTreeTestCase(GraphQLTestCase):
             }
         ]
 
-        # Assert that the returned tree matches the expected structure
+        # Debug print
+        print("\nDescendants Tree Test:")
+        print("Actual (descendants_tree):")
+        print(json.dumps(descendants_tree, indent=2))
+        print("\nExpected (expected_tree):")
+        print(json.dumps(expected_tree, indent=2))
+        
         self.assertEqual(descendants_tree, expected_tree)
     
     def test_full_tree(self):
@@ -126,12 +151,11 @@ class AnnotationTreeTestCase(GraphQLTestCase):
         }
 
         # Execute the query
-        response = self.query(query, variables=variables)
-        content = json.loads(response.content)
-        self.assertResponseNoErrors(response)
+        result = self.client.execute(query, variables=variables)
+        self.assertIsNone(result.get("errors"))
 
-        # Parse the returned JSON tree
-        full_tree = json.loads(content['data']['annotation']['fullTree'])
+        # Access the returned tree directly
+        full_tree = result['data']['annotation']['fullTree']
 
         # Expected tree structure with global IDs
         expected_tree = [
@@ -159,5 +183,11 @@ class AnnotationTreeTestCase(GraphQLTestCase):
             }
         ]
 
-        # Assert that the returned tree matches the expected structure
+        # Debug print
+        print("\nFull Tree Test:")
+        print("Actual (full_tree):")
+        print(json.dumps(full_tree, indent=2))
+        print("\nExpected (expected_tree):")
+        print(json.dumps(expected_tree, indent=2))
+        
         self.assertEqual(full_tree, expected_tree)

@@ -133,6 +133,11 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         description="List of annotations from the root ancestor, each with immediate children's IDs."
     )
 
+    subtree = graphene.List(
+        GenericScalar,
+        description="List representing the path from the root ancestor to this annotation and its descendants."
+    )
+
     # Resolver for descendants_tree
     def resolve_descendants_tree(self, info):
         """
@@ -176,6 +181,42 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         nodes = list(full_tree_qs)
         full_tree = build_flat_tree(nodes)
         return full_tree
+
+    # Resolver for subtree
+    def resolve_subtree(self, info):
+        """
+        Returns a combined tree that includes:
+        - The path from the root ancestor to this annotation (ancestors).
+        - This annotation and all its descendants.
+        """
+        from django_cte import With
+
+        # Find all ancestors up to the root
+        ancestors = []
+        node = self
+        while node.parent_id is not None:
+            ancestors.append(node)
+            node = node.parent
+        ancestors.append(node)  # Include the root ancestor
+        ancestor_ids = [ancestor.id for ancestor in ancestors]
+
+        # Get all descendants of the current node
+        def get_descendants(cte):
+            base_qs = Annotation.objects.filter(parent_id=self.id).values('id', 'parent_id', 'raw_text')
+            recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values('id', 'parent_id', 'raw_text')
+            return base_qs.union(recursive_qs, all=True)
+
+        descendants_cte = With.recursive(get_descendants)
+        descendants_qs = descendants_cte.queryset().with_cte(descendants_cte).values('id', 'parent_id', 'raw_text')
+
+        # Combine ancestors and descendants
+        combined_qs = Annotation.objects.filter(id__in=ancestor_ids).values('id', 'parent_id', 'raw_text').union(
+            descendants_qs, all=True
+        )
+
+        subtree_nodes = list(combined_qs)
+        subtree = build_flat_tree(subtree_nodes)
+        return subtree
 
     class Meta:
         model = Annotation

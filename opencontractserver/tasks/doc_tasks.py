@@ -8,6 +8,8 @@ from typing import Any, Optional
 from django.contrib.auth import get_user_model
 from django.core.files.base import File
 from django.core.files.storage import default_storage
+from opencontractserver.utils.importing import import_function_from_string
+
 from django.utils import timezone
 from pydantic import validate_arguments
 
@@ -72,7 +74,6 @@ def ingest_doc(self, user_id: int, doc_id: int) -> None:
     import logging
     from django.conf import settings
     from django.core.exceptions import ObjectDoesNotExist
-    from opencontractserver.utils.importing import import_function_from_string
     from opencontractserver.documents.models import Document
 
     logger = logging.getLogger(__name__)
@@ -276,9 +277,7 @@ def extract_thumbnail(doc_id: int) -> None:
     import logging
     from django.conf import settings
     from django.core.exceptions import ObjectDoesNotExist
-    from django.core.files.base import ContentFile, File
     from opencontractserver.documents.models import Document
-    from opencontractserver.utils.importing import import_function_from_string
 
     logger = logging.getLogger(__name__)
     logger.info(f"Extracting thumbnail for doc {doc_id}")

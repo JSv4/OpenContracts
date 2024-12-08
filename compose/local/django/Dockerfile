@@ -91,14 +91,15 @@ RUN echo "RUN STAGE GITHUB_ACTIONS: $GITHUB_ACTIONS"
 COPY ./setup_codecov.sh .
 RUN if [ "$GITHUB_ACTIONS" ] ; then echo "GITHUB ACTION MODE" && chmod u+x setup_codecov.sh && ./setup_codecov.sh ; else echo "NOT GITHUB ACTION. DO NOT INSTALL CODECOV" ; fi
 
-# Download sentence transformer binaries
-# COPY download_embeddings_model.py .
-# RUN mkdir -p /models
-# RUN python download_embeddings_model.py
+# Run all Python scripts in the model_preloaders directory
+# Copy the model_preloaders directory
+COPY ./model_preloaders ./model_preloaders
 
-# Download Docling models
-# COPY download_docling_models.py .
-# RUN python download_docling_models.py
+# Run all Python scripts in the model_preloaders directory
+RUN for script in ./model_preloaders/*.py; do \
+      echo "Running $script"; \
+      python "$script"; \
+    done
 
 # Download spacy models
 RUN python -m spacy download en_core_web_sm

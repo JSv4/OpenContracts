@@ -1,26 +1,20 @@
 from __future__ import annotations
 
 import enum
-import io
 import json
 import logging
-from typing import Any
+from typing import Any, Optional
 
-import numpy as np
 from django.contrib.auth import get_user_model
-from django.core.files.base import ContentFile, File
+from django.core.files.base import File
 from django.core.files.storage import default_storage
 from django.utils import timezone
-from pdf2image import convert_from_bytes
-from PIL import Image
 from pydantic import validate_arguments
 
 from config import celery_app
 from opencontractserver.annotations.models import (
-    SPAN_LABEL,
     TOKEN_LABEL,
     Annotation,
-    AnnotationLabel,
 )
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
@@ -30,13 +24,10 @@ from opencontractserver.types.dicts import (
     OpenContractDocExport,
     PawlsTokenPythonType,
 )
-from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.files import (
-    create_text_thumbnail,
     split_pdf_into_images,
 )
-from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 from opencontractserver.parsers.base_parser import parse_document
 
 logger = logging.getLogger(__name__)
@@ -63,97 +54,65 @@ def set_doc_lock_state(*args, locked: bool, doc_id: int):
     document.save()
 
 
-@celery_app.task(
-    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
-)
-def ingest_txt(user_id: int, doc_id: int) -> list[tuple[int, str]]:
-    import spacy
-
-    logger.info(f"ingest_txt() - split doc {doc_id} for user {user_id}")
-
-    label_obj = AnnotationLabel.objects.filter(
-        text="SENTENCE",
-        creator_id=user_id,
-        label_type=SPAN_LABEL,
-        read_only=True,
-    )
-    if label_obj.count() > 0:
-        label_obj = label_obj[0]
-    else:
-        label_obj = AnnotationLabel(
-            label_type=SPAN_LABEL,
-            color="grey",
-            description="Sentence",
-            icon="expand",
-            text="SENTENCE",
-            creator_id=user_id,
-            read_only=True,
-        )
-        label_obj.save()
-
-    set_permissions_for_obj_to_user(user_id, label_obj, [PermissionTypes.ALL])
-
-    doc = Document.objects.get(pk=doc_id)
-    doc_path = doc.txt_extract_file.name
-    txt_file = default_storage.open(doc_path, mode="r")
-
-    nlp = spacy.load("en_core_web_lg")
-
-    for sentence in nlp(txt_file.read()).sents:
-        annot_obj = Annotation.objects.create(
-            raw_text=sentence.text,
-            page=1,
-            json={"start": sentence.start_char, "end": sentence.end_char},
-            annotation_label=label_obj,
-            document=doc,
-            creator_id=user_id,
-            annotation_type=SPAN_LABEL,
-            structural=True,  # Mark these explicitly as structural annotations.
-        )
-        annot_obj.save()
-        set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
-
 
 @celery_app.task(bind=True)
-def ingest_doc(self, user_id: int, doc_id: int, parser_task_name: str) -> None:
+def ingest_doc(self, user_id: int, doc_id: int) -> None:
     """
-    Ingests a document using the specified parser.
+    Ingests a document using the appropriate parser based on the document's file type.
+    The parser function is determined from the PREFERRED_PARSERS mapping in settings.
 
     Args:
         user_id (int): The ID of the user.
         doc_id (int): The ID of the document to ingest.
-        parser_task_name (str): The name of the parser to use ('nlm_ingest' or 'docling').
 
     Raises:
-        ValueError: If an invalid parser_task_name is provided.
+        ValueError: If no parser is defined for the document's file type.
         Exception: If parsing fails.
     """
-    logger.info(
-        f"ingest_doc() - Ingesting doc {doc_id} for user {user_id} using parser '{parser_task_name}'"
-    )
+    import logging
+    from django.conf import settings
+    from django.core.exceptions import ObjectDoesNotExist
+    from opencontractserver.utils.importing import import_function_from_string
+    from opencontractserver.documents.models import Document
 
-    # Map parser names to functions
-    parser_functions = {
-        "nlm_ingest": "opencontractserver.parsers.nlm_ingest.parse_with_nlm",
-        "docling": "opencontractserver.parsers.docling.parse_with_docling",
-    }
+    logger = logging.getLogger(__name__)
+    logger.info(f"ingest_doc() - Ingesting doc {doc_id} for user {user_id}")
 
-    if parser_task_name not in parser_functions:
+    # Fetch the document
+    try:
+        document = Document.objects.get(pk=doc_id)
+    except ObjectDoesNotExist:
+        logger.error(f"Document with id {doc_id} does not exist.")
+        return
+
+    file_type = document.file_type
+
+    # Get the preferred parser function path from settings
+    parser_function_path = settings.PREFERRED_PARSERS.get(file_type)
+
+    if not parser_function_path:
         raise ValueError(
-            f"Invalid parser_task_name '{parser_task_name}'. Must be one of {list(parser_functions.keys())}"
+            f"No parser defined for file type '{file_type}'. Please check PREFERRED_PARSERS in settings."
         )
 
+    logger.info(
+        f"Using parser function '{parser_function_path}' for doc {doc_id} with file type '{file_type}'"
+    )
+
     # Dynamically import the parser function
-    module_path, function_name = parser_functions[parser_task_name].rsplit(".", 1)
-    module = __import__(module_path, fromlist=[function_name])
-    parse_function = getattr(module, function_name)
+    try:
+        parse_function = import_function_from_string(parser_function_path)
+    except ImportError as e:
+        logger.error(f"Failed to import parser function '{parser_function_path}': {e}")
+        return
 
     # Call the base parser function
-    parse_document(user_id, doc_id, parse_function)
-
-    logger.info(
-        f"Document {doc_id} ingested successfully using parser '{parser_task_name}'"
-    )
+    try:
+        parse_document(user_id, doc_id, parse_function)
+        logger.info(f"Document {doc_id} ingested successfully using parser '{parser_function_path}'")
+    except Exception as e:
+        logger.error(f"Failed to ingest document {doc_id}: {e}")
+        raise
 
 
 @celery_app.task()
@@ -306,151 +265,70 @@ def convert_doc_to_funsd(
 
 
 @celery_app.task()
-def extract_pdf_thumbnail(*args, doc_id=-1, **kwargs):
-
-    logger.info(f"Extract thumbnail for doc #{doc_id}")
-
-    # Based on this: https://note.nkmk.me/en/python-pillow-add-margin-expand-canvas/
-    def add_margin(pil_img, top, right, bottom, left, color):
-        width, height = pil_img.size
-        new_width = width + right + left
-        new_height = height + top + bottom
-        result = Image.new(pil_img.mode, (new_width, new_height), color)
-        result.paste(pil_img, (left, top))
-        return result
-
-    # Based on this: https://note.nkmk.me/en/python-pillow-add-margin-expand-canvas/
-    def expand2square(pil_img, background_color):
-        width, height = pil_img.size
-        if width == height:
-            return pil_img
-        elif width > height:
-            result = Image.new(pil_img.mode, (width, width), background_color)
-            result.paste(pil_img, (0, (width - height) // 2))
-            return result
-        else:
-            result = Image.new(pil_img.mode, (height, height), background_color)
-            result.paste(pil_img, ((height - width) // 2, 0))
-            return result
-
-    try:
-
-        import cv2
-        from django.core.files.storage import default_storage
-
-        document = Document.objects.get(pk=doc_id)
-
-        # logger.info("Doc opened")
-
-        # Load the file object from Django storage backend
-        file_object = default_storage.open(document.pdf_file.name, mode="rb")
-        file_data = file_object.read()
-
-        # Try to use Pdf2Image / Pillow to get a screenshot of the first page of the do
-        # Use pdf2image to grab the image of the first page... we'll create a custom icon for the doc.
-        page_one_image = convert_from_bytes(
-            file_data, dpi=100, first_page=1, last_page=1, fmt="jpeg", size=(600, None)
-        )[0]
-        # logger.info(f"page_one_image: {page_one_image}")
-
-        # Use OpenCV to find the bounding box
-        # Based in part on answer from @rayryeng here:
-        # https://stackoverflow.com/questions/49907382/how-to-remove-whitespace-from-an-image-in-opencv
-        opencvImage = cv2.cvtColor(np.array(page_one_image), cv2.COLOR_BGR2GRAY)
-
-        # logger.info(f"opencvImage created: {opencvImage}")
-        gray = 255 * (opencvImage < 128).astype(np.uint8)  # To invert the text to white
-        gray = cv2.morphologyEx(
-            gray, cv2.MORPH_OPEN, np.ones((2, 2), dtype=np.uint8)
-        )  # Perform noise filtering
-        coords = cv2.findNonZero(gray)  # Find all non-zero points (text)
-        x, y, w, h = cv2.boundingRect(coords)  # Find minimum spanning bounding box
-        # logger.info(f"Bounding rect determined with x {x} y {y} w {w} and h {h}")
-
-        # Crop to bounding box...
-        page_one_image_cropped = page_one_image.crop((x, y, x + w, y + h))
-        # logger.info("Cropped...")
-
-        # Add 5% padding to image before resize...
-        width, height = page_one_image_cropped.size
-        page_one_image_cropped_padded = add_margin(
-            page_one_image_cropped,
-            int(height * 0.05 / 2),
-            int(width * 0.05 / 2),
-            int(height * 0.05 / 2),
-            int(width * 0.05 / 2),
-            (255, 255, 255),
-        )
-        # logger.info("Padding added to image")
-
-        # Give the image a square aspect ratio
-        page_one_image_cropped_square = expand2square(
-            page_one_image_cropped_padded, (255, 255, 255)
-        )
-        # logger.info(f"Expanded to square: {page_one_image_cropped_square}")
-
-        # Resize to 400 X 200 px
-        page_one_image_cropped_square.thumbnail((400, 400))
-        # logger.info(f"Resized to 400px: {page_one_image_cropped_square}")
-
-        # Crop to 400 X 200 px
-        page_one_image_cropped_square = page_one_image_cropped_square.crop(
-            (0, 0, 400, 200)
-        )
-
-        b = io.BytesIO()
-        page_one_image_cropped_square.save(b, "JPEG")
-
-        pdf_snapshot_file = File(b)
-        document.icon.save(f"./{doc_id}_icon.jpg", pdf_snapshot_file)
-        # logger.info(f"Snapshot saved...")
-
-    except Exception as e:
-        logger.error(
-            f"Unable to create a screenshot for doc_id {doc_id} due to error: {e}"
-        )
-
-
-@celery_app.task()
-def extract_txt_thumbnail(doc_id: int) -> None:
+def extract_thumbnail(doc_id: int) -> None:
     """
-    Create a thumbnail image from the text content of a document.
+    Extracts a thumbnail for a document using the appropriate thumbnail function based on the document's file type.
+    Saves the returned thumbnail File instance to the document's icon field.
 
     Args:
-        doc_id (int): The ID of the document to process.
-
-    Raises:
-        Exception: If there's an error during the thumbnail creation process.
+        doc_id (int): The ID of the document.
     """
+    import logging
+    from django.conf import settings
+    from django.core.exceptions import ObjectDoesNotExist
+    from django.core.files.base import ContentFile, File
+    from opencontractserver.documents.models import Document
+    from opencontractserver.utils.importing import import_function_from_string
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"Extracting thumbnail for doc {doc_id}")
+
+    # Fetch the document
     try:
         document = Document.objects.get(pk=doc_id)
+    except ObjectDoesNotExist:
+        logger.error(f"Document with id {doc_id} does not exist.")
+        return
 
-        # Read the text content
-        with default_storage.open(document.txt_extract_file.name, "r") as file_object:
-            text = file_object.read()
+    file_type = document.file_type
 
-        logger.debug(f"Text content length: {len(text)}")
+    # Get the thumbnail function path from settings
+    thumbnail_function_path = settings.THUMBNAIL_TASKS.get(file_type)
 
-        # Create the thumbnail image
-        img = create_text_thumbnail(text)
+    if not thumbnail_function_path:
+        logger.error(f"No thumbnail function defined for file type '{file_type}'.")
+        return
 
-        if img is None or not isinstance(img, Image.Image):
-            logger.error(
-                f"create_text_thumbnail returned invalid image for doc_id {doc_id}"
-            )
-            return
+    logger.info(f"Using thumbnail function '{thumbnail_function_path}' for doc {doc_id}")
 
-        logger.debug(f"Thumbnail image size: {img.size}")
+    # Dynamically import the thumbnail function
+    thumbnail_function = import_function_from_string(thumbnail_function_path)
 
-        # Save the image
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format="PNG")
-        img_byte_arr.seek(0)
+    # Determine the correct file field based on file_type
+    if file_type == 'application/pdf' and document.pdf_file:
+        file_field = document.pdf_file
+    elif file_type == 'application/txt' and document.txt_extract_file:
+        file_field = document.txt_extract_file
+    else:
+        logger.error(f"No valid file found for document {doc_id} with file type '{file_type}'.")
+        return
 
-        icon_file = ContentFile(img_byte_arr.getvalue())
-        document.icon.save(f"{doc_id}_icon.png", icon_file)
-
-        logger.info(f"Thumbnail created successfully for doc_id {doc_id}")
-
+    # Read the file bytes
+    try:
+        with file_field.open('rb') as f:
+            file_bytes = f.read()
     except Exception as e:
-        logger.exception(f"Error creating thumbnail for doc_id {doc_id}: {str(e)}")
+        logger.error(f"Failed to read file for doc {doc_id}: {e}")
+        return
+
+    # Call the thumbnail function
+    try:
+        thumbnail_file: Optional[File] = thumbnail_function(file_bytes)
+        if thumbnail_file:
+            # Save the thumbnail to the document's icon field
+            document.icon.save(f"{doc_id}_icon.png", thumbnail_file)
+            logger.info(f"Thumbnail extracted and saved successfully for doc {doc_id}")
+        else:
+            logger.error(f"Thumbnail function returned None for doc {doc_id}")
+    except Exception as e:
+        logger.error(f"Failed to extract thumbnail for doc {doc_id}: {e}")

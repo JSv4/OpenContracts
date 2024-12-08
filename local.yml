@@ -53,7 +53,7 @@ services:
       PORT: 8000
 
   celeryworker:
-    image: opencontractserver_local_django_celery_base
+    image: opencontractserver_local_django
     container_name: celeryworker
     depends_on:
       - redis
@@ -66,7 +66,7 @@ services:
     command: /start-celeryworker
 
   celerybeat:
-    image: opencontractserver_local_django_celery_base
+    image: opencontractserver_local_django
     container_name: celerybeat
     depends_on:
       - redis
@@ -100,11 +100,3 @@ services:
         - "3000:3000"
       profiles:
         - "fullstack"
-
-  django-celery-base:
-    build:
-      context: .
-      args:
-        - GITHUB_ACTIONS
-      dockerfile: ./compose/local/django/Dockerfile.celery
-    image: opencontractserver_local_django_celery_base

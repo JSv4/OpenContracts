@@ -55,7 +55,7 @@ class ParseDocumentTestCase(TestCase):
         mock_parse = Mock(return_value=expected_response)
 
         # Call parse_document directly
-        parse_document(self.user.id, doc.id, mock_parse)
+        parse_document(self.user.id, doc.id, mock_parse, "TOKEN_LABEL")
 
         # Assertions
         doc.refresh_from_db()

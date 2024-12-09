@@ -100,16 +100,23 @@ def ingest_doc(self, user_id: int, doc_id: int) -> None:
         f"Using parser function '{parser_function_path}' for doc {doc_id} with file type '{file_type}'"
     )
 
+    # Get the annotation label type based on the file type
+    print(f"settings.ANNOTATION_LABELS: {settings.ANNOTATION_LABELS}")
+    print(f"file_type: {file_type}")
+    annotation_label = settings.ANNOTATION_LABELS.get(file_type, TOKEN_LABEL)
+    print(f"annotation_label: {annotation_label}")
     # Dynamically import the parser function
     try:
         parse_function = import_function_from_string(parser_function_path)
+        print(f"parse_function: {parse_function}")
     except ImportError as e:
         logger.error(f"Failed to import parser function '{parser_function_path}': {e}")
         return
 
-    # Call the base parser function
+    # Call the base parser function with the annotation label
     try:
-        parse_document(user_id, doc_id, parse_function)
+        print(f"ingest_doc() - User is: {user_id}")
+        parse_document(user_id, doc_id, parse_function, annotation_label)
         logger.info(f"Document {doc_id} ingested successfully using parser '{parser_function_path}'")
     except Exception as e:
         logger.error(f"Failed to ingest document {doc_id}: {e}")

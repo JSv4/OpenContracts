@@ -87,6 +87,8 @@ class LabelsetSerializer(serializers.ModelSerializer):
 
 
 class AnnotationLabelSerializer(serializers.ModelSerializer):
+    creator_id = serializers.IntegerField(write_only=True)
+
     class Meta:
         model = AnnotationLabel
         fields = [
@@ -100,7 +102,16 @@ class AnnotationLabelSerializer(serializers.ModelSerializer):
             "creator_id",
             "read_only",
         ]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "creator"]
+
+    def create(self, validated_data):
+        creator_id = validated_data.pop('creator_id', None)
+        if creator_id:
+            try:
+                validated_data['creator'] = get_user_model().objects.get(pk=creator_id)
+            except get_user_model().DoesNotExist:
+                raise serializers.ValidationError({"creator_id": "Invalid creator ID"})
+        return super().create(validated_data)
 
 
 class AnnotationSerializer(serializers.ModelSerializer):
@@ -127,5 +138,27 @@ class AnnotationSerializer(serializers.ModelSerializer):
             "is_public",
             "creator",
             "creator_id",
+            "parent",
+            "parent_id",
         ]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "creator", "parent"]
+
+    def create(self, validated_data):
+        creator_id = validated_data.pop('creator_id', None)
+        parent_id = validated_data.pop('parent_id', None)
+
+        if creator_id:
+            try:
+                validated_data['creator'] = get_user_model().objects.get(pk=creator_id)
+            except get_user_model().DoesNotExist:
+                raise serializers.ValidationError({"creator_id": "Invalid creator ID"})
+        else:
+            raise serializers.ValidationError({"creator_id": "This field is required."})
+
+        if parent_id:
+            try:
+                validated_data['parent'] = Annotation.objects.get(pk=parent_id)
+            except Annotation.DoesNotExist:
+                raise serializers.ValidationError({"parent_id": "Invalid parent ID"})
+
+        return super().create(validated_data)

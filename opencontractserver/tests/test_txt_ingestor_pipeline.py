@@ -9,7 +9,7 @@ from django.test.utils import override_settings
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.documents.models import Document
-from opencontractserver.tasks.doc_tasks import ingest_txt
+from opencontractserver.tasks.doc_tasks import ingest_doc
 from opencontractserver.tests.fixtures import SAMPLE_TXT_FILE_ONE_PATH
 
 User = get_user_model()
@@ -43,9 +43,10 @@ class TxtIngestorTestCase(TestCase):
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     def test_ingest_txt(self):
         # Run ingest pipeline synchronously
-        ingest_txt.si(user_id=self.user.id, doc_id=self.doc.id).apply()
+        ingest_doc.si(user_id=self.user.id, doc_id=self.doc.id).apply()
 
         # Check if the SENTENCE label was created
+        label = AnnotationLabel.objects.all()[0]
         sentence_label = AnnotationLabel.objects.filter(
             text="SENTENCE", creator=self.user, label_type="SPAN_LABEL", read_only=True
         ).first()

@@ -11,7 +11,6 @@ from opencontractserver.types.dicts import OpenContractDocExport
 from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
 from config.graphql.serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import (
-    TOKEN_LABEL,
     Annotation,
     AnnotationLabel,
 )
@@ -25,14 +24,16 @@ def parse_document(
     user_id: int,
     doc_id: int,
     parse_function: Callable[[int, int], Optional[OpenContractDocExport]],
+    label_type: str,
 ) -> None:
     """
-    Parses and processes a document using the provided parse_function.
+    Parses a document and creates annotations using the specified parser function and annotation label.
 
     Args:
-        user_id (int): The ID of the user.
-        doc_id (int): The ID of the document to parse.
-        parse_function (Callable[[int, int], Optional[OpenContractDocExport]]): The parser function to use.
+        user_id (int): ID of the user.
+        doc_id (int): ID of the document to parse.
+        parse_function (Callable): The function to use for parsing.
+        annotation_label (str): The annotation label type to use (e.g., TOKEN_LABEL or SPAN_LABEL).
 
     Raises:
         Exception: If parsing fails.
@@ -72,15 +73,16 @@ def parse_document(
             label_obj = AnnotationLabel.objects.filter(
                 text=label_name,
                 creator_id=user_id,
-                label_type=TOKEN_LABEL,
+                label_type=label_type,
                 read_only=True,
             ).first()
+            print(f"label_obj: {label_obj}")
             if label_obj:
                 existing_text_labels[label_name] = label_obj
             else:
                 label_serializer = AnnotationLabelSerializer(
                     data={
-                        "label_type": "TOKEN_LABEL",
+                        "label_type": label_type,
                         "color": "grey",
                         "description": "Parser Structural Label",
                         "icon": "expand",
@@ -91,6 +93,8 @@ def parse_document(
                 )
                 label_serializer.is_valid(raise_exception=True)
                 label_obj = label_serializer.save()
+                print(f"label_obj: {label_obj}")
+                print(f"label_obj.id: {label_obj.creator}")
                 set_permissions_for_obj_to_user(
                     user_id, label_obj, [PermissionTypes.ALL]
                 )
@@ -100,13 +104,13 @@ def parse_document(
 
         annot_obj = Annotation.objects.create(
             raw_text=label_data["rawText"],
-            page=label_data["page"],
-            json=label_data["annotation_json"],
-            annotation_label=label_obj,
-            document=document,
-            creator_id=user_id,
-            annotation_type=TOKEN_LABEL,
-            structural=True,  # Mark these explicitly as structural annotations.
+                page=label_data["page"],
+                json=label_data["annotation_json"],
+                annotation_label=label_obj,
+                document=document,
+                creator_id=user_id,
+                annotation_type=label_type,
+                structural=True,
         )
         annot_obj.save()
         set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])

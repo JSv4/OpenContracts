@@ -14,10 +14,8 @@ from opencontractserver.types.dicts import (
     AnnotationLabelPythonType,
     OpenContractDocExport,
     OpenContractsAnnotationPythonType,
-    OpenContractsSinglePageAnnotationType,
     PawlsPagePythonType,
     PawlsTokenPythonType,
-    TokenIdPythonType,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,34 +56,12 @@ def parse_txt_document(user_id: int, doc_id: int) -> Optional[OpenContractDocExp
     nlp = spacy.load("en_core_web_lg")
     doc = nlp(text_content)
 
-    # Prepare PAWLS tokens
-    pawls_tokens: list[PawlsTokenPythonType] = []
-    for token in doc:
-        token_dict: PawlsTokenPythonType = {
-            "x": 0.0,
-            "y": 0.0,
-            "width": 0.0,
-            "height": 0.0,
-            "text": token.text,
-        }
-        pawls_tokens.append(token_dict)
-
-    # Create PAWLS page
-    pawls_page: PawlsPagePythonType = {
-        "page": {
-            "width": 0.0,
-            "height": 0.0,
-            "index": 0,
-        },
-        "tokens": pawls_tokens,
-    }
-
     # Prepare the OpenContractDocExport
     open_contracts_data: OpenContractDocExport = {
         "title": document.title,
         "content": text_content,
         "description": document.description or "",
-        "pawls_file_content": [pawls_page],  # Single page
+        "pawls_file_content": [],  # No PAWLs data
         "page_count": 1,  # Single page
         "doc_labels": [],
         "labelled_text": [],
@@ -111,28 +87,12 @@ def parse_txt_document(user_id: int, doc_id: int) -> Optional[OpenContractDocExp
     labelled_text: list[OpenContractsAnnotationPythonType] = []
 
     for sentence in doc.sents:
-        tokens_jsons: list[TokenIdPythonType] = []
-        for token in sentence:
-            token_id: TokenIdPythonType = {
-                "pageIndex": 0,
-                "tokenIndex": token.i,  # Index of the token in the document
-            }
-            tokens_jsons.append(token_id)
-
-        annotation_json: OpenContractsSinglePageAnnotationType = {
-            "bounds": {},
-            "tokensJsons": tokens_jsons,
-            "rawText": sentence.text,
-        }
-
         annotation_entry: OpenContractsAnnotationPythonType = {
             "id": None,
             "annotationLabel": sentence_label_name,
             "rawText": sentence.text,
             "page": 1,
-            "annotation_json": {
-                "0": annotation_json  # Page index as string
-            },
+            "annotation_json":{"start": sentence.start_char, "end": sentence.end_char},
             "parent_id": None,
         }
         labelled_text.append(annotation_entry)

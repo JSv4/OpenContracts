@@ -35,9 +35,6 @@ NLM_INGESTOR_EXPECTED_JSON = (
 
 SAMPLE_PDF_FILE_TWO_PATH = pathlib.Path(__file__).parent / "USC Title 1 - CHAPTER 1.pdf"
 
-PUBLIC_PDF_URL_LIST = pathlib.Path(__file__).parent / "test_pdf_file_urls.txt"
-
-
 def create_mock_submission_response(analyzer_id: int):
     return {
         "id": 0,
@@ -49,10 +46,3 @@ def create_mock_submission_response(analyzer_id: int):
         "callback_url": "no url provided for test",
         "callback_success": True,
     }
-
-
-def get_valid_pdf_urls():
-    with PUBLIC_PDF_URL_LIST.open() as f:
-        file_str = f.read()
-    file_list = [x for x in file_str.split("\n") if x]
-    return file_list

@@ -1,7 +1,9 @@
 import io
 import os
 import tempfile
+from unittest import mock
 
+from django.conf import settings
 from django.test import TestCase
 
 from opencontractserver.tests.fixtures import (
@@ -18,8 +20,8 @@ from opencontractserver.utils.files import (
 
 
 class PDFUtilsTestCase(TestCase):
-    def setUp(self):
-        # Create a sample PDF file for testing
+    def setUp(self) -> None:
+        # Create sample PDF contents for testing
         self.sample_pdf_content = NLM_INGESTOR_SAMPLE_PDF.read_bytes()
         self.need_ocr_pdf_content = NLM_INGESTOR_SAMPLE_PDF_NEEDS_OCR.read_bytes()
 
@@ -59,12 +61,53 @@ class PDFUtilsTestCase(TestCase):
     def test_split_pdf_into_images(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             # Call the function
-            result = split_pdf_into_images(self.need_ocr_pdf_content, temp_dir)
-
+            print("Temp dir: ", temp_dir)
+            result = split_pdf_into_images(self.need_ocr_pdf_content, temp_dir, force_local=True)
+            print("Result: ", result)
+            
             # Check the results
             self.assertEqual(len(result), 1)
             self.assertTrue(all(path.endswith(".png") for path in result))
 
             # Verify that files were actually created
             for path in result:
+                print("Check path: ", path)
                 self.assertTrue(os.path.exists(path))
+
+    def test_split_pdf_into_images_s3(self) -> None:
+        """
+        Test split_pdf_into_images function when using AWS S3 storage.
+        This test mocks the S3 client to avoid actual network calls.
+        """
+        with mock.patch("boto3.client") as mock_boto_client:
+            mock_s3_client = mock.Mock()
+            mock_boto_client.return_value = mock_s3_client
+
+            # Mock settings.USE_AWS to be True
+            with mock.patch("opencontractserver.utils.files.settings.USE_AWS", True):
+                # Prepare the mock for s3.put_object
+                mock_s3_client.put_object.return_value = {
+                    "ResponseMetadata": {"HTTPStatusCode": 200}
+                }
+
+                # Call the function without force_local
+                result = split_pdf_into_images(
+                    self.need_ocr_pdf_content, "some/s3/path"
+                )
+
+                # Check the results
+                self.assertEqual(len(result), 1)
+                self.assertTrue(all(path.endswith(".png") for path in result))
+
+                # Verify that put_object was called
+                self.assertTrue(mock_s3_client.put_object.called)
+                self.assertEqual(mock_s3_client.put_object.call_count, len(result))
+
+                # Verify that the correct parameters were used in put_object
+                for call_args in mock_s3_client.put_object.call_args_list:
+                    args, kwargs = call_args
+                    self.assertIn("Key", kwargs)
+                    self.assertIn("Bucket", kwargs)
+                    self.assertIn("Body", kwargs)
+                    self.assertIn("ContentType", kwargs)
+                    self.assertEqual(kwargs["Bucket"], settings.AWS_STORAGE_BUCKET_NAME)

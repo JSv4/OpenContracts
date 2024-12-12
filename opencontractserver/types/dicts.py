@@ -142,7 +142,7 @@ class OpenContractsAnnotationPythonType(TypedDict):
     rawText: str
     page: int
     annotation_json: dict[Union[int, str], OpenContractsSinglePageAnnotationType]
-
+    parent_id: Optional[Union[str, int]]
 
 class TextSpan(TypedDict):
     """

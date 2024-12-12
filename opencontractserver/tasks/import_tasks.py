@@ -293,12 +293,15 @@ def import_document_to_corpus(
 
     try:
         logger.info(f"import_document_to_corpus() - for user_id: {user_id}")
+        logger.info(f"import_document_to_corpus() - target_corpus_id: {target_corpus_id}")
 
         # Load target corpus
         corpus_obj = Corpus.objects.get(id=target_corpus_id)
+        logger.info(f"import_document_to_corpus() - loaded corpus: {corpus_obj.title}")
 
         # Load labelsets
         labelset_obj = corpus_obj.label_set
+        logger.info(f"import_document_to_corpus() - loaded labelset: {labelset_obj.title}")
 
         # Load existing labels
         existing_text_labels = {
@@ -317,10 +320,12 @@ def import_document_to_corpus(
                 label_type=METADATA_LABEL
             )
         }
+        logger.info(f"import_document_to_corpus() - loaded existing labels - text: {len(existing_text_labels)}, doc: {len(existing_doc_labels)}, metadata: {len(existing_metadata_labels)}")
 
         # Create new labels if needed
         for label_name, label_data in document_import_data["text_labels"].items():
             if label_name not in existing_text_labels:
+                logger.info(f"import_document_to_corpus() - creating new text label: {label_name}")
                 label_data = document_import_data["text_labels"][label_name]
                 label_data.pop("id")  # noqa
                 label_data["creator"] = user_id  # noqa
@@ -336,6 +341,7 @@ def import_document_to_corpus(
 
         for label_name, label_data in document_import_data["doc_labels"].items():
             if label_name not in existing_doc_labels:
+                logger.info(f"import_document_to_corpus() - creating new doc label: {label_name}")
                 label_data = document_import_data["doc_labels"][label_name]
                 label_data.pop("id")  # noqa
                 label_data["creator"] = user_id  # noqa
@@ -352,6 +358,7 @@ def import_document_to_corpus(
 
         for label_name, label_data in document_import_data["metadata_labels"].items():
             if label_name not in existing_metadata_labels:
+                logger.info(f"import_document_to_corpus() - creating new metadata label: {label_name}")
                 label_data = document_import_data["doc_labels"][label_name]
                 label_data.pop("id")  # noqa
                 label_data["creator"] = user_id  # noqa
@@ -367,7 +374,7 @@ def import_document_to_corpus(
                 existing_metadata_labels[label_name] = label_obj
 
         # Import the document
-
+        logger.info("import_document_to_corpus() - starting document import")
         pdf_base64 = document_import_data["pdf_base64"]
         pdf_data = base64.b64decode(pdf_base64)
 
@@ -389,14 +396,17 @@ def import_document_to_corpus(
             creator_id=user_id,
             page_count=document_import_data["doc_data"]["page_count"],
         )
+        logger.info(f"import_document_to_corpus() - created document: {doc_obj.title}")
         set_permissions_for_obj_to_user(user_id, doc_obj, [PermissionTypes.ALL])
 
         # Link to corpus
         corpus_obj.documents.add(doc_obj)
         corpus_obj.save()
+        logger.info(f"import_document_to_corpus() - linked document to corpus: {corpus_obj.title}")
 
         # Import the annotations for the document
         doc_annotations_data = document_import_data["doc_data"]["labelled_text"]
+        logger.info(f"import_document_to_corpus() - importing {len(doc_annotations_data)} text annotations")
         for annotation in doc_annotations_data:
             label_obj = existing_text_labels[annotation["annotationLabel"]]
             annot_obj = Annotation.objects.create(
@@ -407,11 +417,14 @@ def import_document_to_corpus(
                 document=doc_obj,
                 corpus=corpus_obj,
                 creator_id=user_id,
+                parent_id=annotation.get("parent_id", None),
             )
             annot_obj.save()
             set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
 
-        for doc_label in document_import_data["doc_data"]["doc_labels"]:
+        doc_labels = document_import_data["doc_data"]["doc_labels"]
+        logger.info(f"import_document_to_corpus() - importing {len(doc_labels)} doc labels")
+        for doc_label in doc_labels:
             label_obj = existing_doc_labels[doc_label]
             annot_obj = Annotation(
                 annotation_label=label_obj,
@@ -422,6 +435,7 @@ def import_document_to_corpus(
             annot_obj.save()
             set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
 
+        logger.info("import_document_to_corpus() - import completed successfully")
         return doc_obj.id
 
     except Exception as e:

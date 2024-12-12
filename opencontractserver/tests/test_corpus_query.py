@@ -11,7 +11,7 @@ from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.corpuses.signals import run_query_on_create
 from opencontractserver.documents.models import Document
 from opencontractserver.documents.signals import process_doc_on_create_atomic
-from opencontractserver.tasks.doc_tasks import nlm_ingest_pdf
+from opencontractserver.tasks.doc_tasks import ingest_doc
 from opencontractserver.tasks.embeddings_task import (
     calculate_embedding_for_annotation_text,
 )
@@ -51,7 +51,7 @@ class QueryTasksTestCase(TestCase):
 
         # Run ingest pipeline SYNCHRONOUS and, with @responses.activate decorator, no API call ought to go out to
         # nlm-ingestor host
-        nlm_ingest_pdf.delay(user_id=self.user.id, doc_id=self.doc.id)
+        ingest_doc.delay(user_id=self.user.id, doc_id=self.doc.id)
 
         # Manually run the calcs for the embeddings as post_save hook is hard
         # to await for in test

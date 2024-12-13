@@ -139,6 +139,7 @@ class GraphQLTestCase(TestCase):
                         "rawText": "Test Text",
                     }
                 },
+                "parent_id": None,
             }
         ]
 

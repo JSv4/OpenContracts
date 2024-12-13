@@ -290,7 +290,6 @@ def import_document_to_corpus(
     user_id: int,
     document_import_data: OpenContractsAnnotatedDocumentImportType,
 ) -> Optional[str]:
-
     try:
         logger.info(f"import_document_to_corpus() - for user_id: {user_id}")
         logger.info(f"import_document_to_corpus() - target_corpus_id: {target_corpus_id}")
@@ -299,7 +298,7 @@ def import_document_to_corpus(
         corpus_obj = Corpus.objects.get(id=target_corpus_id)
         logger.info(f"import_document_to_corpus() - loaded corpus: {corpus_obj.title}")
 
-        # Load labelsets
+        # Load labelset
         labelset_obj = corpus_obj.label_set
         logger.info(f"import_document_to_corpus() - loaded labelset: {labelset_obj.title}")
 
@@ -310,17 +309,15 @@ def import_document_to_corpus(
         }
         existing_doc_labels = {
             label.text: label
-            for label in labelset_obj.annotation_labels.filter(
-                label_type=DOC_TYPE_LABEL
-            )
+            for label in labelset_obj.annotation_labels.filter(label_type=DOC_TYPE_LABEL)
         }
         existing_metadata_labels = {
             label.text: label
-            for label in labelset_obj.annotation_labels.filter(
-                label_type=METADATA_LABEL
-            )
+            for label in labelset_obj.annotation_labels.filter(label_type=METADATA_LABEL)
         }
-        logger.info(f"import_document_to_corpus() - loaded existing labels - text: {len(existing_text_labels)}, doc: {len(existing_doc_labels)}, metadata: {len(existing_metadata_labels)}")
+        logger.info(
+            f"import_document_to_corpus() - loaded existing labels - text: {len(existing_text_labels)}, doc: {len(existing_doc_labels)}, metadata: {len(existing_metadata_labels)}"
+        )
 
         # Create new labels if needed
         for label_name, label_data in document_import_data["text_labels"].items():
@@ -328,14 +325,12 @@ def import_document_to_corpus(
                 logger.info(f"import_document_to_corpus() - creating new text label: {label_name}")
                 label_data = document_import_data["text_labels"][label_name]
                 label_data.pop("id")  # noqa
-                label_data["creator"] = user_id  # noqa
+                label_data["creator_id"] = user_id  # noqa
 
                 label_serializer = AnnotationLabelSerializer(data=label_data)
                 label_serializer.is_valid(raise_exception=True)
                 label_obj = label_serializer.save()
-                set_permissions_for_obj_to_user(
-                    user_id, label_obj, [PermissionTypes.ALL]
-                )
+                set_permissions_for_obj_to_user(user_id, label_obj, [PermissionTypes.ALL])
                 labelset_obj.annotation_labels.add(label_obj)
                 existing_text_labels[label_name] = label_obj
 
@@ -344,14 +339,12 @@ def import_document_to_corpus(
                 logger.info(f"import_document_to_corpus() - creating new doc label: {label_name}")
                 label_data = document_import_data["doc_labels"][label_name]
                 label_data.pop("id")  # noqa
-                label_data["creator"] = user_id  # noqa
+                label_data["creator_id"] = user_id  # noqa
 
                 label_serializer = AnnotationLabelSerializer(data=label_data)
                 label_serializer.is_valid(raise_exception=True)
                 label_obj = label_serializer.save()
-                set_permissions_for_obj_to_user(
-                    user_id, label_obj, [PermissionTypes.ALL]
-                )
+                set_permissions_for_obj_to_user(user_id, label_obj, [PermissionTypes.ALL])
 
                 labelset_obj.annotation_labels.add(label_obj)
                 existing_doc_labels[label_name] = label_obj
@@ -361,14 +354,12 @@ def import_document_to_corpus(
                 logger.info(f"import_document_to_corpus() - creating new metadata label: {label_name}")
                 label_data = document_import_data["doc_labels"][label_name]
                 label_data.pop("id")  # noqa
-                label_data["creator"] = user_id  # noqa
+                label_data["creator_id"] = user_id  # noqa
 
                 label_serializer = AnnotationLabelSerializer(data=label_data)
                 label_serializer.is_valid(raise_exception=True)
                 label_obj = label_serializer.save()
-                set_permissions_for_obj_to_user(
-                    user_id, label_obj, [PermissionTypes.ALL]
-                )
+                set_permissions_for_obj_to_user(user_id, label_obj, [PermissionTypes.ALL])
 
                 labelset_obj.annotation_labels.add(label_obj)
                 existing_metadata_labels[label_name] = label_obj
@@ -380,17 +371,13 @@ def import_document_to_corpus(
 
         pdf_file = ContentFile(pdf_data, name=f"{document_import_data['pdf_name']}.pdf")
         pawls_parse_file = ContentFile(
-            json.dumps(document_import_data["doc_data"]["pawls_file_content"]).encode(
-                "utf-8"
-            ),
+            json.dumps(document_import_data["doc_data"]["pawls_file_content"]).encode("utf-8"),
             name="pawls_tokens.json",
         )
 
         doc_obj = Document.objects.create(
             title=document_import_data["doc_data"]["title"],
-            description=document_import_data["doc_data"]["description"]
-            if document_import_data["doc_data"]["description"]
-            else "No Description",
+            description=document_import_data["doc_data"].get("description", "No Description"),
             pdf_file=pdf_file,
             pawls_parse_file=pawls_parse_file,
             creator_id=user_id,
@@ -407,8 +394,12 @@ def import_document_to_corpus(
         # Import the annotations for the document
         doc_annotations_data = document_import_data["doc_data"]["labelled_text"]
         logger.info(f"import_document_to_corpus() - importing {len(doc_annotations_data)} text annotations")
+
+        # First pass: Create annotations without parents, store mapping of old IDs to new annotations
+        old_id_to_new_annotation = {}
         for annotation in doc_annotations_data:
             label_obj = existing_text_labels[annotation["annotationLabel"]]
+            old_id = annotation.get("id")
             annot_obj = Annotation.objects.create(
                 raw_text=annotation["rawText"],
                 page=annotation["page"],
@@ -417,29 +408,38 @@ def import_document_to_corpus(
                 document=doc_obj,
                 corpus=corpus_obj,
                 creator_id=user_id,
-                parent_id=annotation.get("parent_id", None),
+                # Do not set 'parent' yet
             )
-            annot_obj.save()
             set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
+            if old_id is not None:
+                old_id_to_new_annotation[old_id] = annot_obj
+
+        # Second pass: Set parent relationships
+        for annotation in doc_annotations_data:
+            old_id = annotation.get("id")
+            parent_old_id = annotation.get("parent_id")
+            if parent_old_id is not None:
+                annot_obj = old_id_to_new_annotation.get(old_id)
+                parent_annot_obj = old_id_to_new_annotation.get(parent_old_id)
+                if annot_obj and parent_annot_obj:
+                    annot_obj.parent = parent_annot_obj
+                    annot_obj.save()
 
         doc_labels = document_import_data["doc_data"]["doc_labels"]
         logger.info(f"import_document_to_corpus() - importing {len(doc_labels)} doc labels")
         for doc_label in doc_labels:
             label_obj = existing_doc_labels[doc_label]
-            annot_obj = Annotation(
+            annot_obj = Annotation.objects.create(
                 annotation_label=label_obj,
                 document=doc_obj,
                 corpus=corpus_obj,
                 creator_id=user_id,
             )
-            annot_obj.save()
             set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
 
         logger.info("import_document_to_corpus() - import completed successfully")
         return doc_obj.id
 
     except Exception as e:
-        logger.error(
-            f"import_document_to_corpus() - Exception encountered in document import: {e}"
-        )
+        logger.error(f"import_document_to_corpus() - Exception encountered in document import: {e}")
         return None

@@ -1,14 +1,18 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
 from django.core.files.base import File
+from opencontractserver.pipeline.base.file_types import FileTypeEnum
 
 class BaseThumbnailGenerator(ABC):
     """
     Abstract base class for thumbnail generators. Thumbnail generators should inherit from this class.
     """
 
-    # Class property to register supported file types
-    supported_file_types: List[str] = []
+    title: str = ""
+    description: str = ""
+    author: str = ""
+    dependencies: List[str] = []
+    supported_file_types: List[FileTypeEnum] = []  # Now using an enum for file types.
 
     @abstractmethod
     def generate_thumbnail(self, file_bytes: bytes) -> Optional[File]:

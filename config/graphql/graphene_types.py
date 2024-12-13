@@ -29,6 +29,7 @@ from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.feedback.models import UserFeedback
 from opencontractserver.users.models import Assignment, UserExport, UserImport
+from opencontractserver.pipeline.base.file_types import FileTypeEnum as FileTypeEnumModel
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -658,3 +659,42 @@ class UserFeedbackType(AnnotatePermissionsForReadMixin, DjangoObjectType):
             return queryset.all().visible_to_user(info.context.user)
         else:
             return queryset
+
+
+class FileTypeEnum(graphene.Enum):
+    """Graphene enum for FileTypeEnum."""
+    PDF = FileTypeEnumModel.PDF.value
+    TXT = FileTypeEnumModel.TXT.value
+    DOCX = FileTypeEnumModel.DOCX.value
+    # Add more file types as needed
+
+
+class PipelineComponentType(graphene.ObjectType):
+    """Graphene type for pipeline components."""
+    name = graphene.String(description="Name of the component class.")
+    title = graphene.String(description="Title of the component.")
+    description = graphene.String(description="Description of the component.")
+    author = graphene.String(description="Author of the component.")
+    dependencies = graphene.List(
+        graphene.String, description="List of dependencies required by the component."
+    )
+    vector_size = graphene.Int(
+        description="Vector size for embedders.", required=False
+    )
+    supported_file_types = graphene.List(
+        FileTypeEnum, description="List of supported file types."
+    )
+    component_type = graphene.String(description="Type of the component (parser, embedder, or thumbnailer).")
+
+
+class PipelineComponentsType(graphene.ObjectType):
+    """Graphene type for grouping pipeline components."""
+    parsers = graphene.List(
+        PipelineComponentType, description="List of available parsers."
+    )
+    embedders = graphene.List(
+        PipelineComponentType, description="List of available embedders."
+    )
+    thumbnailers = graphene.List(
+        PipelineComponentType, description="List of available thumbnail generators."
+    )

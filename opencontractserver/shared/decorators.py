@@ -108,7 +108,7 @@ def doc_analyzer_task(max_retries=None):
                     **kwargs,
                 )
 
-                logger.info(f"Function result: {result}")
+                # logger.debug(f"Function result: {result}")
 
                 if not isinstance(result, tuple) or len(result) != 4:
                     raise ValueError(

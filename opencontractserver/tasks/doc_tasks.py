@@ -9,7 +9,9 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import File
 from django.core.files.storage import default_storage
 from django.utils import timezone
+from django.conf import settings
 from pydantic import validate_arguments
+from django.utils.module_loading import import_string
 
 from config import celery_app
 from opencontractserver.annotations.models import TOKEN_LABEL, Annotation
@@ -25,6 +27,7 @@ from opencontractserver.types.dicts import (
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.files import split_pdf_into_images
 from opencontractserver.utils.importing import import_function_from_string
+from opencontractserver.pipeline.utils import get_component_by_name
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -53,67 +56,44 @@ def set_doc_lock_state(*args, locked: bool, doc_id: int):
 @celery_app.task(bind=True)
 def ingest_doc(self, user_id: int, doc_id: int) -> None:
     """
-    Ingests a document using the appropriate parser based on the document's file type.
-    The parser function is determined from the PREFERRED_PARSERS mapping in settings.
+    Ingests a document using the appropriate parser based on the document's MIME type.
+    The parser class is determined using get_component_by_name.
 
     Args:
         user_id (int): The ID of the user.
         doc_id (int): The ID of the document to ingest.
 
     Raises:
-        ValueError: If no parser is defined for the document's file type.
+        ValueError: If no parser is defined for the document's MIME type.
         Exception: If parsing fails.
     """
-    import logging
-
-    from django.conf import settings
-    from django.core.exceptions import ObjectDoesNotExist
-
-    from opencontractserver.documents.models import Document
-
-    logger = logging.getLogger(__name__)
     logger.info(f"ingest_doc() - Ingesting doc {doc_id} for user {user_id}")
 
     # Fetch the document
     try:
         document = Document.objects.get(pk=doc_id)
-    except ObjectDoesNotExist:
+    except Document.DoesNotExist:
         logger.error(f"Document with id {doc_id} does not exist.")
         return
 
-    file_type = document.file_type
+    # Get the parser class name from settings based on MIME type
+    parser_name = settings.PREFERRED_PARSERS.get(document.file_type)
+    if not parser_name:
+        raise ValueError(f"No parser defined for MIME type '{document.file_type}'")
 
-    # Get the preferred parser function path from settings
-    parser_function_path = settings.PREFERRED_PARSERS.get(file_type)
-
-    if not parser_function_path:
-        raise ValueError(
-            f"No parser defined for file type '{file_type}'. Please check PREFERRED_PARSERS in settings."
-        )
-
-    logger.info(
-        f"Using parser function '{parser_function_path}' for doc {doc_id} with file type '{file_type}'"
-    )
-
-    # Get the annotation label type based on the file type
-    print(f"settings.ANNOTATION_LABELS: {settings.ANNOTATION_LABELS}")
-    print(f"file_type: {file_type}")
-    annotation_label = settings.ANNOTATION_LABELS.get(file_type, TOKEN_LABEL)
-    print(f"annotation_label: {annotation_label}")
-    # Dynamically import the parser function
+    # Get the parser class using get_component_by_name
     try:
-        parse_function = import_function_from_string(parser_function_path)
-        print(f"parse_function: {parse_function}")
-    except ImportError as e:
-        logger.error(f"Failed to import parser function '{parser_function_path}': {e}")
-        return
+        parser_class = get_component_by_name(parser_name)
+        parser_instance = parser_class()
+    except ValueError as e:
+        logger.error(f"Failed to load parser '{parser_name}': {e}")
+        raise
 
-    # Call the base parser function with the annotation label
+    # Call the parser's parse_document method
     try:
-        print(f"ingest_doc() - User is: {user_id}")
-        parse_document(user_id, doc_id, parse_function, annotation_label)
+        parser_instance.process_document(user_id, doc_id)
         logger.info(
-            f"Document {doc_id} ingested successfully using parser '{parser_function_path}'"
+            f"Document {doc_id} ingested successfully using parser '{parser_name}'"
         )
     except Exception as e:
         logger.error(f"Failed to ingest document {doc_id}: {e}")

@@ -177,45 +177,45 @@ def get_metadata_by_component_name(component_name: str) -> dict[str, Any]:
 
 def get_component_by_name(component_name: str) -> type:
     """
-    Given the script name of a pipeline component, return the class itself.
+    Given the script name or full path of a pipeline component, return the class itself.
 
     Args:
-        component_name (str): The name of the component script.
+        component_name (str): The name or full path of the component script.
 
     Returns:
         Type: The component class.
     """
-    try:
-        module = importlib.import_module(
-            f"opencontractserver.pipeline.parsers.{component_name}"
-        )
-        for name, obj in inspect.getmembers(module, inspect.isclass):
-            if issubclass(obj, BaseParser) and obj != BaseParser:
-                return obj
-    except ModuleNotFoundError:
-        pass
-
-    try:
-        module = importlib.import_module(
-            f"opencontractserver.pipeline.embedders.{component_name}"
-        )
-        for name, obj in inspect.getmembers(module, inspect.isclass):
-            if issubclass(obj, BaseEmbedder) and obj != BaseEmbedder:
-                return obj
-    except ModuleNotFoundError:
-        pass
-
-    try:
-        module = importlib.import_module(
-            f"opencontractserver.pipeline.thumbnailers.{component_name}"
-        )
-        for name, obj in inspect.getmembers(module, inspect.isclass):
-            if (
-                issubclass(obj, BaseThumbnailGenerator)
-                and obj != BaseThumbnailGenerator
-            ):
-                return obj
-    except ModuleNotFoundError:
-        pass
+    # Handle full path case by extracting the module and class names
+    if '.' in component_name:
+        try:
+            module_path, class_name = component_name.rsplit('.', 1)
+            module = importlib.import_module(module_path)
+            for name, obj in inspect.getmembers(module, inspect.isclass):
+                if name == class_name and (
+                    issubclass(obj, BaseParser) or 
+                    issubclass(obj, BaseEmbedder) or 
+                    issubclass(obj, BaseThumbnailGenerator)
+                ):
+                    return obj
+        except (ModuleNotFoundError, AttributeError):
+            pass
+    
+    # Original implementation for script name only
+    base_paths = [
+        "opencontractserver.pipeline.parsers",
+        "opencontractserver.pipeline.embedders",
+        "opencontractserver.pipeline.thumbnailers"
+    ]
+    
+    for base_path in base_paths:
+        try:
+            module = importlib.import_module(f"{base_path}.{component_name}")
+            for name, obj in inspect.getmembers(module, inspect.isclass):
+                if (issubclass(obj, BaseParser) and obj != BaseParser) or \
+                   (issubclass(obj, BaseEmbedder) and obj != BaseEmbedder) or \
+                   (issubclass(obj, BaseThumbnailGenerator) and obj != BaseThumbnailGenerator):
+                    return obj
+        except ModuleNotFoundError:
+            continue
 
     raise ValueError(f"Component '{component_name}' not found.")

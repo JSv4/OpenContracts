@@ -567,3 +567,14 @@ ANNOTATION_LABELS = {
     "text/html": "SPAN_LABEL",
     # Add other MIME types as needed
 }
+
+# Preferred embedders for each MIME type
+PREFERRED_EMBEDDERS = {
+    "application/pdf": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+    "text/plain": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+    # Add more MIME types as needed
+}
+
+# Default embedder
+DEFAULT_EMBEDDER = "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"

@@ -1,12 +1,16 @@
 import importlib
 import inspect
 import pkgutil
-from typing import Any
+from typing import Any, Optional, Type
+import logging
 
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.base.parser import BaseParser
 from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 def get_all_subclasses(module_name: str, base_class: type) -> list[type]:
@@ -219,3 +223,50 @@ def get_component_by_name(component_name: str) -> type:
             continue
 
     raise ValueError(f"Component '{component_name}' not found.")
+
+
+def get_preferred_embedder(mimetype: str) -> Optional[Type[BaseEmbedder]]:
+    """
+    Get the preferred embedder class for a given mimetype.
+
+    Args:
+        mimetype (str): The mimetype of the file.
+
+    Returns:
+        Optional[Type[BaseEmbedder]]: The preferred embedder class, or None if not found.
+    """
+    embedder_path = settings.PREFERRED_EMBEDDERS.get(mimetype)
+    if embedder_path:
+        try:
+            module_path, class_name = embedder_path.rsplit('.', 1)
+            module = importlib.import_module(module_path)
+            embedder_class = getattr(module, class_name)
+            return embedder_class
+        except (ModuleNotFoundError, AttributeError) as e:
+            logger.error(f"Error loading embedder '{embedder_path}': {e}")
+            return None
+    else:
+        logger.warning(f"No preferred embedder set for mimetype: {mimetype}")
+        return None
+
+
+def get_default_embedder() -> Optional[Type[BaseEmbedder]]:
+    """
+    Get the default embedder class.
+
+    Returns:
+        Optional[Type[BaseEmbedder]]: The default embedder class, or None if not found.
+    """
+    embedder_path = settings.DEFAULT_EMBEDDER
+    if embedder_path:
+        try:
+            module_path, class_name = embedder_path.rsplit('.', 1)
+            module = importlib.import_module(module_path)
+            embedder_class = getattr(module, class_name)
+            return embedder_class
+        except (ModuleNotFoundError, AttributeError) as e:
+            logger.error(f"Error loading default embedder '{embedder_path}': {e}")
+            return None
+    else:
+        logger.error("No default embedder specified in settings")
+        return None

@@ -1,26 +1,22 @@
-from typing import Optional
 import uuid
+from typing import Optional
 
 import django
-from django.db.models import Q
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
-from pgvector.django import VectorField
-
-User = get_user_model()
-
 
 # Switching from Django-tree-queries to django-cte
 # Appears that django-tree-query has performance issues for large tables.
 # See https://github.com/feincms/django-tree-queries/issues/77
 # This will become an issue for annotations in particular. Since annotations will
-# have a simple structure and query anyway, using django-cte here. Can migrate models 
-# using django-tree-queries down the road but shouldn't affect each other on 
-# separate models. 
-from django_cte import CTEQuerySet, CTEManager
-
+# have a simple structure and query anyway, using django-cte here. Can migrate models
+# using django-tree-queries down the road but shouldn't affect each other on
+# separate models.
+from django_cte import CTEManager, CTEQuerySet
+from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
+from pgvector.django import VectorField
 
 from opencontractserver.shared.defaults import (
     empty_bounding_box,
@@ -28,9 +24,11 @@ from opencontractserver.shared.defaults import (
     jsonfield_empty_array,
 )
 from opencontractserver.shared.fields import NullableJSONField
-from opencontractserver.shared.QuerySets import PermissionQuerySet
 from opencontractserver.shared.Models import BaseOCModel
+from opencontractserver.shared.QuerySets import PermissionQuerySet
 from opencontractserver.shared.utils import calc_oc_file_path
+
+User = get_user_model()
 
 # TODO - can we use the Python enum in data_types.py to drive choices
 RELATIONSHIP_LABEL = "RELATIONSHIP_LABEL"
@@ -238,6 +236,7 @@ class AnnotationQuerySet(CTEQuerySet, PermissionQuerySet):
     """
     Custom QuerySet for the Annotation model combining CTEQuerySet and PermissionQuerySet functionalities.
     """
+
     pass
 
 
@@ -277,7 +276,7 @@ class Annotation(BaseOCModel):
 
     # Use the custom manager that combines permissioning and CTE capabilities
     objects = AnnotationManager()
-    
+
     page = django.db.models.IntegerField(default=1, blank=False)
     raw_text = django.db.models.TextField(null=True, blank=True)
     tokens_jsons = NullableJSONField(
@@ -288,11 +287,11 @@ class Annotation(BaseOCModel):
 
     # New parent field for hierarchical relationships
     parent = django.db.models.ForeignKey(
-        'self',
+        "self",
         null=True,
         blank=True,
-        related_name='children',
-        on_delete=django.db.models.CASCADE
+        related_name="children",
+        on_delete=django.db.models.CASCADE,
     )
 
     # This is kind of duplicative of the AnnotationLabel label_type, BUT,

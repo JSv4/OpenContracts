@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List
+from typing import Optional
+
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.types.dicts import OpenContractDocExport
+
 
 class BaseParser(ABC):
     """
@@ -11,11 +13,13 @@ class BaseParser(ABC):
     title: str = ""
     description: str = ""
     author: str = ""
-    dependencies: List[str] = []
-    supported_file_types: List[FileTypeEnum] = []
+    dependencies: list[str] = []
+    supported_file_types: list[FileTypeEnum] = []
 
     @abstractmethod
-    def parse_document(self, user_id: int, doc_id: int) -> Optional[OpenContractDocExport]:
+    def parse_document(
+        self, user_id: int, doc_id: int
+    ) -> Optional[OpenContractDocExport]:
         """
         Abstract method to parse a document.
 
@@ -29,10 +33,7 @@ class BaseParser(ABC):
         pass
 
     def save_parsed_data(
-        self,
-        user_id: int,
-        doc_id: int,
-        open_contracts_data: OpenContractDocExport
+        self, user_id: int, doc_id: int, open_contracts_data: OpenContractDocExport
     ) -> None:
         """
         Saves the parsed data to the Document model.
@@ -44,13 +45,17 @@ class BaseParser(ABC):
         """
         import json
         import logging
+
         from django.core.files.base import ContentFile
-        from opencontractserver.documents.models import Document
-        from opencontractserver.annotations.models import Annotation, AnnotationLabel
-        from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
-        from config.graphql.serializers import AnnotationLabelSerializer
-        from opencontractserver.types.enums import PermissionTypes
         from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
+
+        from config.graphql.serializers import AnnotationLabelSerializer
+        from opencontractserver.annotations.models import Annotation, AnnotationLabel
+        from opencontractserver.documents.models import Document
+        from opencontractserver.types.enums import PermissionTypes
+        from opencontractserver.utils.permissioning import (
+            set_permissions_for_obj_to_user,
+        )
 
         logger = logging.getLogger(__name__)
 

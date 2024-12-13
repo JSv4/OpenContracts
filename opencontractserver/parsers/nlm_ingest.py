@@ -12,6 +12,7 @@ from opencontractserver.utils.files import check_if_pdf_needs_ocr
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 def parse_with_nlm(user_id: int, doc_id: int) -> Optional[OpenContractDocExport]:
     """
     Parses a document using the NLM ingest service.
@@ -35,7 +36,9 @@ def parse_with_nlm(user_id: int, doc_id: int) -> Optional[OpenContractDocExport]
     logger.debug(f"Document {doc_id} needs OCR: {needs_ocr}")
 
     # Prepare request headers
-    headers = {"API_KEY": settings.NLM_INGEST_API_KEY} if settings.NLM_INGEST_API_KEY else {}
+    headers = (
+        {"API_KEY": settings.NLM_INGEST_API_KEY} if settings.NLM_INGEST_API_KEY else {}
+    )
 
     # Prepare request files and parameters
     files = {"file": doc_file}
@@ -57,7 +60,9 @@ def parse_with_nlm(user_id: int, doc_id: int) -> Optional[OpenContractDocExport]
         response.raise_for_status()
 
     response_data = response.json()
-    open_contracts_data: Optional[OpenContractDocExport] = response_data.get("return_dict", {}).get("opencontracts_data")
+    open_contracts_data: Optional[OpenContractDocExport] = response_data.get(
+        "return_dict", {}
+    ).get("opencontracts_data")
 
     if open_contracts_data is None:
         logger.error("No 'opencontracts_data' found in NLM ingest service response")

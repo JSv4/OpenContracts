@@ -1,12 +1,13 @@
 import logging
 from typing import Optional
+
 from django.core.files.base import File
-from opencontractserver.utils.files import (
-    create_text_thumbnail,
-)
+
+from opencontractserver.utils.files import create_text_thumbnail
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 
 def text_thumbnail_from_bytes(text_bytes: bytes) -> Optional[File]:
     """
@@ -20,6 +21,7 @@ def text_thumbnail_from_bytes(text_bytes: bytes) -> Optional[File]:
     """
     import io
     import logging
+
     from PIL import Image
 
     logger = logging.getLogger(__name__)
@@ -27,7 +29,7 @@ def text_thumbnail_from_bytes(text_bytes: bytes) -> Optional[File]:
 
     try:
         # Decode the text bytes to a string
-        text = text_bytes.decode('utf-8')
+        text = text_bytes.decode("utf-8")
 
         logger.debug(f"Text content length: {len(text)}")
 

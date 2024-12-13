@@ -10,8 +10,8 @@ from django.test import TestCase
 from opencontractserver.documents.models import Document
 from opencontractserver.parsers.docling import parse_with_docling
 from opencontractserver.tests.fixtures import (
-    SAMPLE_PDF_FILE_ONE_PATH,
     SAMPLE_PAWLS_FILE_ONE_PATH,
+    SAMPLE_PDF_FILE_ONE_PATH,
     SAMPLE_TXT_FILE_ONE_PATH,
 )
 from opencontractserver.types.dicts import OpenContractDocExport
@@ -29,7 +29,9 @@ class ParseWithDoclingTestCase(TestCase):
             self.expected_text = f.read()
 
         with transaction.atomic():
-            self.user = User.objects.create_user(username="testuser", password="testpass")
+            self.user = User.objects.create_user(
+                username="testuser", password="testpass"
+            )
 
         # Use the sample PDF file from fixtures
         with SAMPLE_PDF_FILE_ONE_PATH.open("rb") as f:
@@ -44,7 +46,9 @@ class ParseWithDoclingTestCase(TestCase):
                 backend_lock=False,
             )
 
-    @patch("opencontractserver.parsers.docling.DoclingToOpenContractsConverter.convert_pdf")
+    @patch(
+        "opencontractserver.parsers.docling.DoclingToOpenContractsConverter.convert_pdf"
+    )
     def test_parse_with_docling(self, mock_convert_pdf):
         # Mock the converter's convert_pdf method
         mock_convert_pdf.return_value = {

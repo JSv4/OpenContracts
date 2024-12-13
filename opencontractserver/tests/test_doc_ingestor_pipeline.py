@@ -8,8 +8,8 @@ from django.db import transaction
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from opencontractserver.parsers.base_parser import parse_document
 from opencontractserver.documents.models import Document
+from opencontractserver.parsers.base_parser import parse_document
 from opencontractserver.tests.fixtures import (
     NLM_INGESTOR_EXPECTED_JSON,
     NLM_INGESTOR_SAMPLE_PDF,
@@ -51,7 +51,9 @@ class ParseDocumentTestCase(TestCase):
             )
 
         # Mock the NLM parser function
-        expected_response = json.loads(NLM_INGESTOR_EXPECTED_JSON.read_text())['return_dict']['opencontracts_data']
+        expected_response = json.loads(NLM_INGESTOR_EXPECTED_JSON.read_text())[
+            "return_dict"
+        ]["opencontracts_data"]
         mock_parse = Mock(return_value=expected_response)
 
         # Call parse_document directly
@@ -61,9 +63,9 @@ class ParseDocumentTestCase(TestCase):
         doc.refresh_from_db()
         self.assertIsNotNone(doc.txt_extract_file)
         self.assertIsNotNone(doc.pawls_parse_file)
-        
+
     # TODO test dynamic loading in ingest_doc task...
-        
+
     def tearDown(self):
         """
         Clean up after each test.

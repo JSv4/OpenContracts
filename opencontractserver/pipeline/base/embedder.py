@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List
+from typing import Optional
+
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
+
 
 class BaseEmbedder(ABC):
     """
@@ -10,12 +12,12 @@ class BaseEmbedder(ABC):
     title: str = ""
     description: str = ""
     author: str = ""
-    dependencies: List[str] = []
+    dependencies: list[str] = []
     vector_size: int = 0  # Provide the data shape of the returned embeddings.
-    supported_file_types: List[FileTypeEnum] = []
+    supported_file_types: list[FileTypeEnum] = []
 
     @abstractmethod
-    def embed_text(self, text: str) -> Optional[List[float]]:
+    def embed_text(self, text: str) -> Optional[list[float]]:
         """
         Abstract method to generate embeddings from text.
 

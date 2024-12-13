@@ -141,7 +141,9 @@ def split_pdf_into_images(
             raise ValueError(f"Unsupported target format: {target_format}")
 
         # Log notice about PAWLS compatibility
-        logger.debug("Ensuring target image resolution is compatible with PAWLS x,y coordinate system")
+        logger.debug(
+            "Ensuring target image resolution is compatible with PAWLS x,y coordinate system"
+        )
         # TODO: make sure target image resolution is compatible with PAWLS x,y coord system
 
         logger.debug("Converting PDF bytes to images")
@@ -158,8 +160,11 @@ def split_pdf_into_images(
         logger.debug(f"Using AWS S3 storage: {use_aws}")
 
         if use_aws:
-            logger.debug("AWS settings detected and force_local is False, initializing S3 client")
+            logger.debug(
+                "AWS settings detected and force_local is False, initializing S3 client"
+            )
             import boto3
+
             s3 = boto3.client("s3")
             logger.debug("S3 client initialized")
         else:
@@ -170,7 +175,9 @@ def split_pdf_into_images(
 
             # images is a list of Pillow Image objs.
             img_bytes_stream = BytesIO()
-            logger.debug(f"Saving image {index + 1} to bytes stream in format {target_format}")
+            logger.debug(
+                f"Saving image {index + 1} to bytes stream in format {target_format}"
+            )
             img.save(img_bytes_stream, target_format)
             img_bytes = img_bytes_stream.getvalue()
             logger.debug(f"Image {index + 1} bytes size: {len(img_bytes)} bytes")
@@ -189,9 +196,13 @@ def split_pdf_into_images(
             else:
                 logger.debug("Saving image locally")
                 pdf_fragment_folder_path = pathlib.Path(storage_path)
-                logger.debug(f"Ensuring local directory exists at: {pdf_fragment_folder_path}")
+                logger.debug(
+                    f"Ensuring local directory exists at: {pdf_fragment_folder_path}"
+                )
                 pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
-                pdf_fragment_path = pdf_fragment_folder_path / f"{uuid.uuid4()}{file_extension}"
+                pdf_fragment_path = (
+                    pdf_fragment_folder_path / f"{uuid.uuid4()}{file_extension}"
+                )
                 logger.debug(f"Generated local page path: {pdf_fragment_path}")
                 with pdf_fragment_path.open("wb") as f:
                     logger.debug(f"Writing image {index + 1} bytes to file")
@@ -206,7 +217,9 @@ def split_pdf_into_images(
         logger.error(f"split_pdf_into_images() failed due to unexpected error: {e}")
         raise
 
-    logger.debug(f"split_pdf_into_images() completed successfully with {len(page_paths)} page(s)")
+    logger.debug(
+        f"split_pdf_into_images() completed successfully with {len(page_paths)} page(s)"
+    )
     return page_paths
 
 

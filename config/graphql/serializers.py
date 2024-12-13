@@ -105,10 +105,10 @@ class AnnotationLabelSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "creator"]
 
     def create(self, validated_data):
-        creator_id = validated_data.pop('creator_id', None)
+        creator_id = validated_data.pop("creator_id", None)
         if creator_id:
             try:
-                validated_data['creator'] = get_user_model().objects.get(pk=creator_id)
+                validated_data["creator"] = get_user_model().objects.get(pk=creator_id)
             except get_user_model().DoesNotExist:
                 raise serializers.ValidationError({"creator_id": "Invalid creator ID"})
         return super().create(validated_data)
@@ -144,12 +144,12 @@ class AnnotationSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "creator", "parent"]
 
     def create(self, validated_data):
-        creator_id = validated_data.pop('creator_id', None)
-        parent_id = validated_data.pop('parent_id', None)
+        creator_id = validated_data.pop("creator_id", None)
+        parent_id = validated_data.pop("parent_id", None)
 
         if creator_id:
             try:
-                validated_data['creator'] = get_user_model().objects.get(pk=creator_id)
+                validated_data["creator"] = get_user_model().objects.get(pk=creator_id)
             except get_user_model().DoesNotExist:
                 raise serializers.ValidationError({"creator_id": "Invalid creator ID"})
         else:
@@ -157,7 +157,7 @@ class AnnotationSerializer(serializers.ModelSerializer):
 
         if parent_id:
             try:
-                validated_data['parent'] = Annotation.objects.get(pk=parent_id)
+                validated_data["parent"] = Annotation.objects.get(pk=parent_id)
             except Annotation.DoesNotExist:
                 raise serializers.ValidationError({"parent_id": "Invalid parent ID"})
 

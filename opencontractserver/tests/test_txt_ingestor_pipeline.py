@@ -46,7 +46,6 @@ class TxtIngestorTestCase(TestCase):
         ingest_doc.si(user_id=self.user.id, doc_id=self.doc.id).apply()
 
         # Check if the SENTENCE label was created
-        label = AnnotationLabel.objects.all()[0]
         sentence_label = AnnotationLabel.objects.filter(
             text="SENTENCE", creator=self.user, label_type="SPAN_LABEL", read_only=True
         ).first()

@@ -1,15 +1,15 @@
 import logging
+
 from celery import chain
 from django.db import transaction
 from django.utils import timezone
 
 from opencontractserver.tasks.doc_tasks import (
+    extract_thumbnail,
     ingest_doc,
     set_doc_lock_state,
-    extract_thumbnail,
 )
 from opencontractserver.tasks.embeddings_task import calculate_embedding_for_doc_text
-
 
 logger = logging.getLogger(__name__)
 

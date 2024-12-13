@@ -1,8 +1,9 @@
+import importlib
+import os
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from graphene.test import Client
-import importlib
-import os
 
 from config.graphql.schema import schema
 
@@ -24,9 +25,7 @@ class PipelineComponentQueriesTestCase(TestCase):
 
         # Reload the importlib caches and modules
         importlib.invalidate_caches()
-        importlib.reload(
-            importlib.import_module("opencontractserver.pipeline.parsers")
-        )
+        importlib.reload(importlib.import_module("opencontractserver.pipeline.parsers"))
         importlib.reload(
             importlib.import_module("opencontractserver.pipeline.embedders")
         )
@@ -106,50 +105,44 @@ class TestThumbnailer(BaseThumbnailGenerator):
 
         # Define the file paths for the components
         cls.parser_path = os.path.join(
-            os.path.dirname(__file__),
-            '..',
-            'pipeline',
-            'parsers',
-            'test_parser.py'
+            os.path.dirname(__file__), "..", "pipeline", "parsers", "test_parser.py"
         )
         cls.embedder_path = os.path.join(
-            os.path.dirname(__file__),
-            '..',
-            'pipeline',
-            'embedders',
-            'test_embedder.py'
+            os.path.dirname(__file__), "..", "pipeline", "embedders", "test_embedder.py"
         )
         cls.thumbnailer_path = os.path.join(
             os.path.dirname(__file__),
-            '..',
-            'pipeline',
-            'thumbnailers',
-            'test_thumbnailer.py'
+            "..",
+            "pipeline",
+            "thumbnailers",
+            "test_thumbnailer.py",
         )
 
         # Ensure package __init__.py files exist
-        parser_init = os.path.join(os.path.dirname(cls.parser_path), '__init__.py')
-        embedder_init = os.path.join(os.path.dirname(cls.embedder_path), '__init__.py')
-        thumbnailer_init = os.path.join(os.path.dirname(cls.thumbnailer_path), '__init__.py')
+        parser_init = os.path.join(os.path.dirname(cls.parser_path), "__init__.py")
+        embedder_init = os.path.join(os.path.dirname(cls.embedder_path), "__init__.py")
+        thumbnailer_init = os.path.join(
+            os.path.dirname(cls.thumbnailer_path), "__init__.py"
+        )
 
         for init_file in [parser_init, embedder_init, thumbnailer_init]:
             if not os.path.exists(init_file):
-                with open(init_file, 'w'):
+                with open(init_file, "w"):
                     pass  # Create empty __init__.py
 
         # Create the test component files
         os.makedirs(os.path.dirname(cls.parser_path), exist_ok=True)
-        with open(cls.parser_path, 'w') as f:
+        with open(cls.parser_path, "w") as f:
             f.write(cls.parser_code)
         cls.test_files.append(cls.parser_path)
 
         os.makedirs(os.path.dirname(cls.embedder_path), exist_ok=True)
-        with open(cls.embedder_path, 'w') as f:
+        with open(cls.embedder_path, "w") as f:
             f.write(cls.embedder_code)
         cls.test_files.append(cls.embedder_path)
 
         os.makedirs(os.path.dirname(cls.thumbnailer_path), exist_ok=True)
-        with open(cls.thumbnailer_path, 'w') as f:
+        with open(cls.thumbnailer_path, "w") as f:
             f.write(cls.thumbnailer_code)
         cls.test_files.append(cls.thumbnailer_path)
 
@@ -169,7 +162,7 @@ class TestThumbnailer(BaseThumbnailGenerator):
 
     def test_pipeline_components_query(self):
         """Test querying all pipeline components without any filters."""
-        query = '''
+        query = """
         query {
             pipelineComponents {
                 parsers {
@@ -199,7 +192,7 @@ class TestThumbnailer(BaseThumbnailGenerator):
                 }
             }
         }
-        '''
+        """
 
         result = self.client.execute(query)
         self.assertIsNone(result.get("errors"))
@@ -209,9 +202,9 @@ class TestThumbnailer(BaseThumbnailGenerator):
         embedders = data["embedders"]
         thumbnailers = data["thumbnailers"]
 
-        parser_names = [parser['name'] for parser in parsers]
-        embedder_names = [embedder['name'] for embedder in embedders]
-        thumbnailer_names = [thumbnailer['name'] for thumbnailer in thumbnailers]
+        parser_names = [parser["name"] for parser in parsers]
+        embedder_names = [embedder["name"] for embedder in embedders]
+        thumbnailer_names = [thumbnailer["name"] for thumbnailer in thumbnailers]
 
         self.assertIn("TestParser", parser_names)
         self.assertIn("TestEmbedder", embedder_names)
@@ -219,7 +212,7 @@ class TestThumbnailer(BaseThumbnailGenerator):
 
     def test_pipeline_components_query_with_mimetype(self):
         """Test querying pipeline components filtered by mimetype."""
-        query = '''
+        query = """
         query($mimetype: FileTypeEnum) {
             pipelineComponents(mimetype: $mimetype) {
                 parsers {
@@ -242,11 +235,9 @@ class TestThumbnailer(BaseThumbnailGenerator):
                 }
             }
         }
-        '''
+        """
 
-        variables = {
-            'mimetype': 'PDF'
-        }
+        variables = {"mimetype": "PDF"}
 
         result = self.client.execute(query, variables=variables)
         self.assertIsNone(result.get("errors"))
@@ -257,21 +248,21 @@ class TestThumbnailer(BaseThumbnailGenerator):
         thumbnailers = data["thumbnailers"]
 
         # Since our test components support PDF, they should be included
-        parser_titles = [parser['title'] for parser in parsers]
-        thumbnailer_titles = [thumbnailer['title'] for thumbnailer in thumbnailers]
+        parser_titles = [parser["title"] for parser in parsers]
+        thumbnailer_titles = [thumbnailer["title"] for thumbnailer in thumbnailers]
 
         self.assertIn("Test Parser", parser_titles)
         self.assertIn("Test Thumbnailer", thumbnailer_titles)
 
         # Embedders are not filtered by mimetype in our implementation
-        embedder_titles = [embedder['title'] for embedder in embedders]
+        embedder_titles = [embedder["title"] for embedder in embedders]
         self.assertIn("Test Embedder", embedder_titles)
 
     def test_pipeline_components_query_with_mimetype_no_components(self):
         """Test querying pipeline components with a mimetype that has no components."""
 
         # Assuming "DOCX" is not a supported file type for our test components
-        query = '''
+        query = """
         query($mimetype: FileTypeEnum) {
             pipelineComponents(mimetype: $mimetype) {
                 parsers {
@@ -288,11 +279,9 @@ class TestThumbnailer(BaseThumbnailGenerator):
                 }
             }
         }
-        '''
+        """
 
-        variables = {
-            'mimetype': 'DOCX'  # Our test components do not support DOCX
-        }
+        variables = {"mimetype": "DOCX"}  # Our test components do not support DOCX
 
         result = self.client.execute(query, variables=variables)
         self.assertIsNone(result.get("errors"))
@@ -304,5 +293,5 @@ class TestThumbnailer(BaseThumbnailGenerator):
         # Embedders are included regardless of mimetype in our utils
         embedders = data["embedders"]
         # Our test embedder should be included
-        embedder_titles = [embedder['title'] for embedder in embedders]
+        embedder_titles = [embedder["title"] for embedder in embedders]
         self.assertIn("Test Embedder", embedder_titles)

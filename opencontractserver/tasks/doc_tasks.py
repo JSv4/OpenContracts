@@ -3,22 +3,18 @@ from __future__ import annotations
 import enum
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import File
 from django.core.files.storage import default_storage
-from opencontractserver.utils.importing import import_function_from_string
-
 from django.utils import timezone
 from pydantic import validate_arguments
 
 from config import celery_app
-from opencontractserver.annotations.models import (
-    TOKEN_LABEL,
-    Annotation,
-)
+from opencontractserver.annotations.models import TOKEN_LABEL, Annotation
 from opencontractserver.documents.models import Document
+from opencontractserver.parsers.base_parser import parse_document
 from opencontractserver.types.dicts import (
     FunsdAnnotationType,
     FunsdTokenType,
@@ -27,10 +23,8 @@ from opencontractserver.types.dicts import (
     PawlsTokenPythonType,
 )
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
-from opencontractserver.utils.files import (
-    split_pdf_into_images,
-)
-from opencontractserver.parsers.base_parser import parse_document
+from opencontractserver.utils.files import split_pdf_into_images
+from opencontractserver.utils.importing import import_function_from_string
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -56,7 +50,6 @@ def set_doc_lock_state(*args, locked: bool, doc_id: int):
     document.save()
 
 
-
 @celery_app.task(bind=True)
 def ingest_doc(self, user_id: int, doc_id: int) -> None:
     """
@@ -72,8 +65,10 @@ def ingest_doc(self, user_id: int, doc_id: int) -> None:
         Exception: If parsing fails.
     """
     import logging
+
     from django.conf import settings
     from django.core.exceptions import ObjectDoesNotExist
+
     from opencontractserver.documents.models import Document
 
     logger = logging.getLogger(__name__)
@@ -117,7 +112,9 @@ def ingest_doc(self, user_id: int, doc_id: int) -> None:
     try:
         print(f"ingest_doc() - User is: {user_id}")
         parse_document(user_id, doc_id, parse_function, annotation_label)
-        logger.info(f"Document {doc_id} ingested successfully using parser '{parser_function_path}'")
+        logger.info(
+            f"Document {doc_id} ingested successfully using parser '{parser_function_path}'"
+        )
     except Exception as e:
         logger.error(f"Failed to ingest document {doc_id}: {e}")
         raise
@@ -282,8 +279,10 @@ def extract_thumbnail(doc_id: int) -> None:
         doc_id (int): The ID of the document.
     """
     import logging
+
     from django.conf import settings
     from django.core.exceptions import ObjectDoesNotExist
+
     from opencontractserver.documents.models import Document
 
     logger = logging.getLogger(__name__)
@@ -305,23 +304,27 @@ def extract_thumbnail(doc_id: int) -> None:
         logger.error(f"No thumbnail function defined for file type '{file_type}'.")
         return
 
-    logger.info(f"Using thumbnail function '{thumbnail_function_path}' for doc {doc_id}")
+    logger.info(
+        f"Using thumbnail function '{thumbnail_function_path}' for doc {doc_id}"
+    )
 
     # Dynamically import the thumbnail function
     thumbnail_function = import_function_from_string(thumbnail_function_path)
 
     # Determine the correct file field based on file_type
-    if file_type == 'application/pdf' and document.pdf_file:
+    if file_type == "application/pdf" and document.pdf_file:
         file_field = document.pdf_file
-    elif file_type == 'application/txt' and document.txt_extract_file:
+    elif file_type == "application/txt" and document.txt_extract_file:
         file_field = document.txt_extract_file
     else:
-        logger.error(f"No valid file found for document {doc_id} with file type '{file_type}'.")
+        logger.error(
+            f"No valid file found for document {doc_id} with file type '{file_type}'."
+        )
         return
 
     # Read the file bytes
     try:
-        with file_field.open('rb') as f:
+        with file_field.open("rb") as f:
             file_bytes = f.read()
     except Exception as e:
         logger.error(f"Failed to read file for doc {doc_id}: {e}")
@@ -329,7 +332,7 @@ def extract_thumbnail(doc_id: int) -> None:
 
     # Call the thumbnail function
     try:
-        thumbnail_file: Optional[File] = thumbnail_function(file_bytes)
+        thumbnail_file: File | None = thumbnail_function(file_bytes)
         if thumbnail_file:
             # Save the thumbnail to the document's icon field
             document.icon.save(f"{doc_id}_icon.png", thumbnail_file)

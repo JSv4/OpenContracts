@@ -5,16 +5,16 @@ from typing import Optional
 
 from django.conf import settings
 from django.core.files.storage import default_storage
-
-from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling.datamodel.base_models import InputFormat, ConversionStatus
+from docling.datamodel.base_models import ConversionStatus, InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.document_converter import DocumentConverter, PdfFormatOption
 
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import OpenContractDocExport, PawlsTokenPythonType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 
 class DoclingToOpenContractsConverter:
     """
@@ -27,7 +27,7 @@ class DoclingToOpenContractsConverter:
         pipeline_options = PdfPipelineOptions(
             artifacts_path=settings.DOCLING_MODELS_PATH,
             do_ocr=True,
-            do_table_structure=True
+            do_table_structure=True,
         )
         self.doc_converter = DocumentConverter(
             format_options={
@@ -70,7 +70,7 @@ class DoclingToOpenContractsConverter:
             "pawls_file_content": pawls_pages,
             "page_count": len(pawls_pages),
             "doc_labels": [],  # From OpenContractsDocAnnotations
-            "labelled_text": []  # From OpenContractsDocAnnotations
+            "labelled_text": [],  # From OpenContractsDocAnnotations
         }
 
     def _extract_title(self, doc, filename: str) -> str:
@@ -126,7 +126,7 @@ class DoclingToOpenContractsConverter:
                 "y": float(text.bbox.y1),
                 "width": float(text.bbox.x2 - text.bbox.x1),
                 "height": float(text.bbox.y2 - text.bbox.y1),
-                "text": text.text
+                "text": text.text,
             }
             pages[page_num].append(token)
 
@@ -138,15 +138,20 @@ class DoclingToOpenContractsConverter:
 
             page_content = {
                 "page": {
-                    "width": page_size.width if page_size else 612.0,  # Default letter width in points
-                    "height": page_size.height if page_size else 792.0,  # Default letter height in points
-                    "index": page_num
+                    "width": page_size.width
+                    if page_size
+                    else 612.0,  # Default letter width in points
+                    "height": page_size.height
+                    if page_size
+                    else 792.0,  # Default letter height in points
+                    "index": page_num,
                 },
-                "tokens": pages[page_num]
+                "tokens": pages[page_num],
             }
             pawls_pages.append(page_content)
 
         return pawls_pages
+
 
 def parse_with_docling(user_id: int, doc_id: int) -> Optional[OpenContractDocExport]:
     """
@@ -166,12 +171,12 @@ def parse_with_docling(user_id: int, doc_id: int) -> Optional[OpenContractDocExp
     doc_path = document.pdf_file.name
 
     # Create a temporary file path
-    temp_dir = settings.TEMP_DIR if hasattr(settings, 'TEMP_DIR') else '/tmp'
-    temp_pdf_path = os.path.join(temp_dir, f'doc_{doc_id}.pdf')
+    temp_dir = settings.TEMP_DIR if hasattr(settings, "TEMP_DIR") else "/tmp"
+    temp_pdf_path = os.path.join(temp_dir, f"doc_{doc_id}.pdf")
 
     # Write the file to a temporary location
-    with default_storage.open(doc_path, 'rb') as pdf_file:
-        with open(temp_pdf_path, 'wb') as temp_pdf_file:
+    with default_storage.open(doc_path, "rb") as pdf_file:
+        with open(temp_pdf_path, "wb") as temp_pdf_file:
             temp_pdf_file.write(pdf_file.read())
 
     converter = DoclingToOpenContractsConverter()

@@ -3,7 +3,6 @@ import json
 import logging
 
 import factory.django
-import requests
 import responses
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -28,10 +27,10 @@ from opencontractserver.tasks.analyzer_tasks import (
 from opencontractserver.tests.fixtures import (
     SAMPLE_GREMLIN_ENGINE_MANIFEST_PATH,
     SAMPLE_GREMLIN_OUTPUT_FOR_PUBLIC_DOCS,
-    create_mock_submission_response,
-    generate_random_analyzer_return_values,
     SAMPLE_PDF_FILE_ONE_PATH,
     SAMPLE_PDF_FILE_TWO_PATH,
+    create_mock_submission_response,
+    generate_random_analyzer_return_values,
 )
 
 logger = logging.getLogger(__name__)
@@ -71,7 +70,7 @@ class TestOpenContractsAnalyzers(TransactionTestCase):
         sample_pdfs = [SAMPLE_PDF_FILE_ONE_PATH, SAMPLE_PDF_FILE_TWO_PATH]
 
         for index, pdf_path in enumerate(sample_pdfs):
-            with pdf_path.open('rb') as pdf_file:
+            with pdf_path.open("rb") as pdf_file:
                 pdf_contents = ContentFile(pdf_file.read())
                 Document.objects.create(
                     title=f"TestDoc{index}",

@@ -1,9 +1,10 @@
 import logging
-from django.core.files.base import File
 
+from django.core.files.base import File
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 
 def pdf_thumbnail_from_bytes(pdf_bytes: bytes) -> File:
     """
@@ -17,11 +18,12 @@ def pdf_thumbnail_from_bytes(pdf_bytes: bytes) -> File:
     """
     import io
     import logging
-    import numpy as np
+
     import cv2
+    import numpy as np
+    from django.core.files.base import File
     from pdf2image import convert_from_bytes
     from PIL import Image
-    from django.core.files.base import File
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)

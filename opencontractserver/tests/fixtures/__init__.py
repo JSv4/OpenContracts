@@ -35,6 +35,7 @@ NLM_INGESTOR_EXPECTED_JSON = (
 
 SAMPLE_PDF_FILE_TWO_PATH = pathlib.Path(__file__).parent / "USC Title 1 - CHAPTER 1.pdf"
 
+
 def create_mock_submission_response(analyzer_id: int):
     return {
         "id": 0,

@@ -1,16 +1,14 @@
 import logging
-import json
-import graphene.types.json
-from graphql_relay import from_global_id, to_global_id
 
 import graphene
+import graphene.types.json
 from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 from graphene import relay
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
-from graphql_relay import from_global_id
+from graphql_relay import from_global_id, to_global_id
 
 from config.graphql.base import CountableConnection
 from config.graphql.filters import AnnotationFilter, LabelFilter
@@ -28,8 +26,10 @@ from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.feedback.models import UserFeedback
+from opencontractserver.pipeline.base.file_types import (
+    FileTypeEnum as FileTypeEnumModel,
+)
 from opencontractserver.users.models import Assignment, UserExport, UserImport
-from opencontractserver.pipeline.base.file_types import FileTypeEnum as FileTypeEnumModel
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -49,23 +49,25 @@ def build_flat_tree(nodes: list) -> list:
     # Map node IDs to their immediate children IDs
     id_to_children = {}
     for node in nodes:
-        node_id = node['id']
-        parent_id = node['parent_id']
+        node_id = node["id"]
+        parent_id = node["parent_id"]
         if parent_id:
             id_to_children.setdefault(parent_id, []).append(node_id)
 
     # Build the flat list of nodes
     node_list = []
     for node in nodes:
-        node_id = node['id']
-        node_id_global = to_global_id('AnnotationType', node_id)
+        node_id = node["id"]
+        node_id_global = to_global_id("AnnotationType", node_id)
         # Get immediate children IDs and convert to global IDs
         children_ids = id_to_children.get(node_id, [])
-        children_global_ids = [to_global_id('AnnotationType', cid) for cid in children_ids]
+        children_global_ids = [
+            to_global_id("AnnotationType", cid) for cid in children_ids
+        ]
         node_dict = {
-            'id': node_id_global,
-            'raw_text': node['raw_text'],
-            'children': children_global_ids
+            "id": node_id_global,
+            "raw_text": node["raw_text"],
+            "children": children_global_ids,
         }
         node_list.append(node_dict)
 
@@ -106,13 +108,13 @@ class AnnotationInputType(AnnotatePermissionsForReadMixin, graphene.InputObjectT
     id = graphene.String(required=True)
     page = graphene.Int()
     raw_text = graphene.String()
-    json = GenericScalar()
+    json = GenericScalar()  # noqa
     annotation_label = graphene.String()
     is_public = graphene.Boolean()
 
 
 class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-    json = GenericScalar()
+    json = GenericScalar()  # noqa
 
     all_source_node_in_relationship = graphene.List(lambda: RelationshipType)
 
@@ -127,16 +129,16 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     # Updated fields for tree representations
     descendants_tree = graphene.List(
         GenericScalar,
-        description="List of descendant annotations, each with immediate children's IDs."
+        description="List of descendant annotations, each with immediate children's IDs.",
     )
     full_tree = graphene.List(
         GenericScalar,
-        description="List of annotations from the root ancestor, each with immediate children's IDs."
+        description="List of annotations from the root ancestor, each with immediate children's IDs.",
     )
 
     subtree = graphene.List(
         GenericScalar,
-        description="List representing the path from the root ancestor to this annotation and its descendants."
+        description="List representing the path from the root ancestor to this annotation and its descendants.",
     )
 
     # Resolver for descendants_tree
@@ -148,12 +150,16 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         from django_cte import With
 
         def get_descendants(cte):
-            base_qs = Annotation.objects.filter(parent_id=self.id).values('id', 'parent_id', 'raw_text')
-            recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values('id', 'parent_id', 'raw_text')
+            base_qs = Annotation.objects.filter(parent_id=self.id).values(
+                "id", "parent_id", "raw_text"
+            )
+            recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values(
+                "id", "parent_id", "raw_text"
+            )
             return base_qs.union(recursive_qs, all=True)
 
         cte = With.recursive(get_descendants)
-        descendants_qs = cte.queryset().with_cte(cte).order_by('id')
+        descendants_qs = cte.queryset().with_cte(cte).order_by("id")
 
         descendants_list = list(descendants_qs)
         descendants_tree = build_flat_tree(descendants_list)
@@ -173,12 +179,16 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
             root = root.parent
 
         def get_full_tree(cte):
-            base_qs = Annotation.objects.filter(id=root.id).values('id', 'parent_id', 'raw_text')
-            recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values('id', 'parent_id', 'raw_text')
+            base_qs = Annotation.objects.filter(id=root.id).values(
+                "id", "parent_id", "raw_text"
+            )
+            recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values(
+                "id", "parent_id", "raw_text"
+            )
             return base_qs.union(recursive_qs, all=True)
 
         cte = With.recursive(get_full_tree)
-        full_tree_qs = cte.queryset().with_cte(cte).order_by('id')
+        full_tree_qs = cte.queryset().with_cte(cte).order_by("id")
         nodes = list(full_tree_qs)
         full_tree = build_flat_tree(nodes)
         return full_tree
@@ -203,16 +213,26 @@ class AnnotationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
         # Get all descendants of the current node
         def get_descendants(cte):
-            base_qs = Annotation.objects.filter(parent_id=self.id).values('id', 'parent_id', 'raw_text')
-            recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values('id', 'parent_id', 'raw_text')
+            base_qs = Annotation.objects.filter(parent_id=self.id).values(
+                "id", "parent_id", "raw_text"
+            )
+            recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values(
+                "id", "parent_id", "raw_text"
+            )
             return base_qs.union(recursive_qs, all=True)
 
         descendants_cte = With.recursive(get_descendants)
-        descendants_qs = descendants_cte.queryset().with_cte(descendants_cte).values('id', 'parent_id', 'raw_text')
+        descendants_qs = (
+            descendants_cte.queryset()
+            .with_cte(descendants_cte)
+            .values("id", "parent_id", "raw_text")
+        )
 
         # Combine ancestors and descendants
-        combined_qs = Annotation.objects.filter(id__in=ancestor_ids).values('id', 'parent_id', 'raw_text').union(
-            descendants_qs, all=True
+        combined_qs = (
+            Annotation.objects.filter(id__in=ancestor_ids)
+            .values("id", "parent_id", "raw_text")
+            .union(descendants_qs, all=True)
         )
 
         subtree_nodes = list(combined_qs)
@@ -663,6 +683,7 @@ class UserFeedbackType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
 class FileTypeEnum(graphene.Enum):
     """Graphene enum for FileTypeEnum."""
+
     PDF = FileTypeEnumModel.PDF.value
     TXT = FileTypeEnumModel.TXT.value
     DOCX = FileTypeEnumModel.DOCX.value
@@ -671,6 +692,7 @@ class FileTypeEnum(graphene.Enum):
 
 class PipelineComponentType(graphene.ObjectType):
     """Graphene type for pipeline components."""
+
     name = graphene.String(description="Name of the component class.")
     title = graphene.String(description="Title of the component.")
     description = graphene.String(description="Description of the component.")
@@ -678,17 +700,18 @@ class PipelineComponentType(graphene.ObjectType):
     dependencies = graphene.List(
         graphene.String, description="List of dependencies required by the component."
     )
-    vector_size = graphene.Int(
-        description="Vector size for embedders.", required=False
-    )
+    vector_size = graphene.Int(description="Vector size for embedders.", required=False)
     supported_file_types = graphene.List(
         FileTypeEnum, description="List of supported file types."
     )
-    component_type = graphene.String(description="Type of the component (parser, embedder, or thumbnailer).")
+    component_type = graphene.String(
+        description="Type of the component (parser, embedder, or thumbnailer)."
+    )
 
 
 class PipelineComponentsType(graphene.ObjectType):
     """Graphene type for grouping pipeline components."""
+
     parsers = graphene.List(
         PipelineComponentType, description="List of available parsers."
     )

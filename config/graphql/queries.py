@@ -46,16 +46,16 @@ from config.graphql.graphene_types import (
     DocumentType,
     ExtractType,
     FieldsetType,
+    FileTypeEnum,
     GremlinEngineType_READ,
     LabelSetType,
     PageAwareAnnotationType,
     PdfPageInfoType,
+    PipelineComponentsType,
+    PipelineComponentType,
     RelationshipType,
     UserExportType,
     UserImportType,
-    PipelineComponentsType,
-    PipelineComponentType,
-    FileTypeEnum,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -69,8 +69,8 @@ from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.feedback.models import UserFeedback
 from opencontractserver.pipeline.utils import (
-    get_all_parsers,
     get_all_embedders,
+    get_all_parsers,
     get_all_thumbnailers,
     get_components_by_mimetype,
     get_metadata_for_component,
@@ -1048,7 +1048,6 @@ class Query(graphene.ObjectType):
             analysis_rows=analysis_rows,
         )
 
-
     pipeline_components = graphene.Field(
         PipelineComponentsType,
         mimetype=graphene.Argument(FileTypeEnum, required=False),
@@ -1056,7 +1055,9 @@ class Query(graphene.ObjectType):
     )
 
     @login_required
-    def resolve_pipeline_components(self, info, mimetype: Optional[FileTypeEnum] = None) -> PipelineComponentsType:
+    def resolve_pipeline_components(
+        self, info, mimetype: Optional[FileTypeEnum] = None
+    ) -> PipelineComponentsType:
         """
         Resolver for the pipeline_components query.
 
@@ -1067,7 +1068,9 @@ class Query(graphene.ObjectType):
         Returns:
             PipelineComponentsType: The pipeline components grouped by type.
         """
-        from opencontractserver.pipeline.base.file_types import FileTypeEnum as FileTypeEnumModel
+        from opencontractserver.pipeline.base.file_types import (
+            FileTypeEnum as FileTypeEnumModel,
+        )
 
         if mimetype:
             # If mimetype is provided, get compatible components
@@ -1075,44 +1078,45 @@ class Query(graphene.ObjectType):
         else:
             # Get all components
             components_data = {
-                'parsers': get_all_parsers(),
-                'embedders': get_all_embedders(),
-                'thumbnailers': get_all_thumbnailers(),
+                "parsers": get_all_parsers(),
+                "embedders": get_all_embedders(),
+                "thumbnailers": get_all_thumbnailers(),
             }
 
         components = {
-            'parsers': [],
-            'embedders': [],
-            'thumbnailers': [],
+            "parsers": [],
+            "embedders": [],
+            "thumbnailers": [],
         }
 
-        for component_type in ['parsers', 'embedders', 'thumbnailers']:
+        for component_type in ["parsers", "embedders", "thumbnailers"]:
             for component in components_data.get(component_type, []):
                 if isinstance(component, dict):
                     # If detailed=True, component is a dict with metadata
                     metadata = component
-                    component_cls = metadata.get('class')
+                    component_cls = metadata.get("class")
                 else:
                     component_cls = component
                     metadata = get_metadata_for_component(component_cls)
                 if component_cls:
                     component_info = PipelineComponentType(
                         name=component_cls.__name__,
-                        title=metadata.get('title', ''),
-                        description=metadata.get('description', ''),
-                        author=metadata.get('author', ''),
-                        dependencies=metadata.get('dependencies', []),
+                        title=metadata.get("title", ""),
+                        description=metadata.get("description", ""),
+                        author=metadata.get("author", ""),
+                        dependencies=metadata.get("dependencies", []),
                         supported_file_types=[
-                            FileTypeEnumModel(ft).value for ft in metadata.get('supported_file_types', [])
+                            FileTypeEnumModel(ft).value
+                            for ft in metadata.get("supported_file_types", [])
                         ],
                         component_type=component_type[:-1],  # Remove trailing 's'
                     )
-                    if component_type == 'embedders':
-                        component_info.vector_size = metadata.get('vector_size', 0)
+                    if component_type == "embedders":
+                        component_info.vector_size = metadata.get("vector_size", 0)
                     components[component_type].append(component_info)
 
         return PipelineComponentsType(
-            parsers=components['parsers'],
-            embedders=components['embedders'],
-            thumbnailers=components['thumbnailers'],
+            parsers=components["parsers"],
+            embedders=components["embedders"],
+            thumbnailers=components["thumbnailers"],
         )

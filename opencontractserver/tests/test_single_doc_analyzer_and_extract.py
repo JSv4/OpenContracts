@@ -4,7 +4,6 @@ import json
 import logging
 
 import factory
-import requests
 import responses
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -29,10 +28,10 @@ from opencontractserver.tasks.analyzer_tasks import (
 )
 from opencontractserver.tests.fixtures import (
     SAMPLE_GREMLIN_ENGINE_MANIFEST_PATH,
-    create_mock_submission_response,
-    generate_random_analyzer_return_values,
     SAMPLE_PDF_FILE_ONE_PATH,
     SAMPLE_PDF_FILE_TWO_PATH,
+    create_mock_submission_response,
+    generate_random_analyzer_return_values,
 )
 
 User = get_user_model()
@@ -97,7 +96,7 @@ class GraphQLAnalyzerTestCase(TestCase):
         sample_pdfs = [SAMPLE_PDF_FILE_ONE_PATH, SAMPLE_PDF_FILE_TWO_PATH]
 
         for index, pdf_path in enumerate(sample_pdfs):
-            with pdf_path.open('rb') as pdf_file:
+            with pdf_path.open("rb") as pdf_file:
                 pdf_contents = ContentFile(pdf_file.read())
                 with transaction.atomic():
                     document = Document.objects.create(

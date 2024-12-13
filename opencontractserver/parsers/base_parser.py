@@ -1,21 +1,16 @@
 import json
 import logging
-from typing import Callable, Dict, Optional
+from typing import Callable, Optional
 
 from django.core.files.base import ContentFile
+from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
 
+from config.graphql.serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.documents.models import Document
-from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 from opencontractserver.types.dicts import OpenContractDocExport
-from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
-from config.graphql.serializers import AnnotationLabelSerializer
-from opencontractserver.annotations.models import (
-    Annotation,
-    AnnotationLabel,
-)
 from opencontractserver.types.enums import PermissionTypes
-
+from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +58,7 @@ def parse_document(
     document.page_count = len(open_contracts_data["pawls_file_content"])
     document.save()
 
-    existing_text_labels: Dict[str, AnnotationLabel] = {}
+    existing_text_labels: dict[str, AnnotationLabel] = {}
 
     # Annotate the document with any annotations from the parser
     for label_data in open_contracts_data["labelled_text"]:
@@ -104,13 +99,13 @@ def parse_document(
 
         annot_obj = Annotation.objects.create(
             raw_text=label_data["rawText"],
-                page=label_data["page"],
-                json=label_data["annotation_json"],
-                annotation_label=label_obj,
-                document=document,
-                creator_id=user_id,
-                annotation_type=label_type,
-                structural=True,
+            page=label_data["page"],
+            json=label_data["annotation_json"],
+            annotation_label=label_obj,
+            document=document,
+            creator_id=user_id,
+            annotation_type=label_type,
+            structural=True,
         )
         annot_obj.save()
         set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])

@@ -1,21 +1,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
 
-from opencontractserver.annotations.models import (
-    SPAN_LABEL
-)
+from opencontractserver.annotations.models import SPAN_LABEL
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
     AnnotationLabelPythonType,
     OpenContractDocExport,
     OpenContractsAnnotationPythonType,
-    PawlsPagePythonType,
-    PawlsTokenPythonType,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,7 +18,8 @@ logger.setLevel(logging.DEBUG)
 
 User = get_user_model()
 
-def parse_txt_document(user_id: int, doc_id: int) -> Optional[OpenContractDocExport]:
+
+def parse_txt_document(user_id: int, doc_id: int) -> OpenContractDocExport | None:
     """
     Parses a text document and returns an OpenContractDocExport object.
 
@@ -79,9 +75,7 @@ def parse_txt_document(user_id: int, doc_id: int) -> Optional[OpenContractDocExp
         "parent_id": None,
     }
 
-    open_contracts_data["text_labels"] = {
-        sentence_label_name: sentence_label
-    }
+    open_contracts_data["text_labels"] = {sentence_label_name: sentence_label}
 
     # Create the labelled_text annotations
     labelled_text: list[OpenContractsAnnotationPythonType] = []
@@ -92,7 +86,7 @@ def parse_txt_document(user_id: int, doc_id: int) -> Optional[OpenContractDocExp
             "annotationLabel": sentence_label_name,
             "rawText": sentence.text,
             "page": 1,
-            "annotation_json":{"start": sentence.start_char, "end": sentence.end_char},
+            "annotation_json": {"start": sentence.start_char, "end": sentence.end_char},
             "parent_id": None,
         }
         labelled_text.append(annotation_entry)
@@ -100,4 +94,3 @@ def parse_txt_document(user_id: int, doc_id: int) -> Optional[OpenContractDocExp
     open_contracts_data["labelled_text"] = labelled_text
 
     return open_contracts_data
-

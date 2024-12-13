@@ -64,9 +64,7 @@ class ThumbnailTestCase(TestCase):
         return Image.new("RGB", (width, height), color="red")
 
     @patch("opencontractserver.tasks.doc_tasks.import_function_from_string")
-    def test_pdf_thumbnail_extraction(
-        self, mock_import_function_from_string
-    ) -> None:
+    def test_pdf_thumbnail_extraction(self, mock_import_function_from_string) -> None:
         """
         Test PDF thumbnail extraction with various image sizes and orientations.
 
@@ -89,7 +87,9 @@ class ThumbnailTestCase(TestCase):
                     img_bytes.seek(0)
                     return img_bytes
 
-                mock_import_function_from_string.return_value = mock_pdf_thumbnail_function
+                mock_import_function_from_string.return_value = (
+                    mock_pdf_thumbnail_function
+                )
 
                 # Call the task
                 extract_thumbnail(doc_id=self.doc.id)
@@ -115,9 +115,7 @@ class ThumbnailTestCase(TestCase):
                 self.doc.icon.delete()
 
     @patch("opencontractserver.tasks.doc_tasks.import_function_from_string")
-    def test_txt_thumbnail_extraction(
-        self, mock_import_function_from_string
-    ) -> None:
+    def test_txt_thumbnail_extraction(self, mock_import_function_from_string) -> None:
         """
         Test text thumbnail extraction.
 

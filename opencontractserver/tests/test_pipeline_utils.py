@@ -1,26 +1,25 @@
-import os
-import sys
-import unittest
 import importlib
+import os
+import unittest
 from unittest import TestCase
 
-from opencontractserver.pipeline.utils import (
-    get_all_subclasses,
-    get_all_parsers,
-    get_all_embedders,
-    get_all_thumbnailers,
-    get_components_by_mimetype,
-    get_metadata_for_component,
-    get_metadata_by_component_name,
-    get_component_by_name,
-)
-from opencontractserver.pipeline.base.parser import BaseParser
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
-from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
+from opencontractserver.pipeline.base.parser import BaseParser
+from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
+from opencontractserver.pipeline.utils import (
+    get_all_embedders,
+    get_all_parsers,
+    get_all_subclasses,
+    get_all_thumbnailers,
+    get_component_by_name,
+    get_components_by_mimetype,
+    get_metadata_by_component_name,
+    get_metadata_for_component,
+)
+
 
 class TestPipelineUtils(TestCase):
-
     @classmethod
     def setUpClass(cls):
         """
@@ -95,48 +94,44 @@ class TestThumbnailer(BaseThumbnailGenerator):
 
         # Define the file paths for the components
         cls.parser_path = os.path.join(
-            os.path.dirname(__file__),
-            '..',
-            'pipeline',
-            'parsers',
-            'test_parser.py'
+            os.path.dirname(__file__), "..", "pipeline", "parsers", "test_parser.py"
         )
         cls.embedder_path = os.path.join(
-            os.path.dirname(__file__),
-            '..',
-            'pipeline',
-            'embedders',
-            'test_embedder.py'
+            os.path.dirname(__file__), "..", "pipeline", "embedders", "test_embedder.py"
         )
         cls.thumbnailer_path = os.path.join(
             os.path.dirname(__file__),
-            '..',
-            'pipeline',
-            'thumbnailers',
-            'test_thumbnailer.py'
+            "..",
+            "pipeline",
+            "thumbnailers",
+            "test_thumbnailer.py",
         )
 
         # Create the test component files
         os.makedirs(os.path.dirname(cls.parser_path), exist_ok=True)
-        with open(cls.parser_path, 'w') as f:
+        with open(cls.parser_path, "w") as f:
             f.write(cls.parser_code)
         cls.test_files.append(cls.parser_path)
 
         os.makedirs(os.path.dirname(cls.embedder_path), exist_ok=True)
-        with open(cls.embedder_path, 'w') as f:
+        with open(cls.embedder_path, "w") as f:
             f.write(cls.embedder_code)
         cls.test_files.append(cls.embedder_path)
 
         os.makedirs(os.path.dirname(cls.thumbnailer_path), exist_ok=True)
-        with open(cls.thumbnailer_path, 'w') as f:
+        with open(cls.thumbnailer_path, "w") as f:
             f.write(cls.thumbnailer_code)
         cls.test_files.append(cls.thumbnailer_path)
 
         # Reload the importlib caches and modules
         importlib.invalidate_caches()
-        importlib.reload(importlib.import_module('opencontractserver.pipeline.parsers'))
-        importlib.reload(importlib.import_module('opencontractserver.pipeline.embedders'))
-        importlib.reload(importlib.import_module('opencontractserver.pipeline.thumbnailers'))
+        importlib.reload(importlib.import_module("opencontractserver.pipeline.parsers"))
+        importlib.reload(
+            importlib.import_module("opencontractserver.pipeline.embedders")
+        )
+        importlib.reload(
+            importlib.import_module("opencontractserver.pipeline.thumbnailers")
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -154,17 +149,21 @@ class TestThumbnailer(BaseThumbnailGenerator):
         Test get_all_subclasses function to ensure it returns all subclasses of a base class within a module.
         """
         # Test parsers
-        parsers = get_all_subclasses('opencontractserver.pipeline.parsers', BaseParser)
+        parsers = get_all_subclasses("opencontractserver.pipeline.parsers", BaseParser)
         parser_titles = [parser.title for parser in parsers]
         self.assertIn("Test Parser", parser_titles)
 
         # Test embedders
-        embedders = get_all_subclasses('opencontractserver.pipeline.embedders', BaseEmbedder)
+        embedders = get_all_subclasses(
+            "opencontractserver.pipeline.embedders", BaseEmbedder
+        )
         embedder_titles = [embedder.title for embedder in embedders]
         self.assertIn("Test Embedder", embedder_titles)
 
         # Test thumbnailers
-        thumbnailers = get_all_subclasses('opencontractserver.pipeline.thumbnailers', BaseThumbnailGenerator)
+        thumbnailers = get_all_subclasses(
+            "opencontractserver.pipeline.thumbnailers", BaseThumbnailGenerator
+        )
         thumbnailer_titles = [thumbnailer.title for thumbnailer in thumbnailers]
         self.assertIn("Test Thumbnailer", thumbnailer_titles)
 
@@ -198,9 +197,9 @@ class TestThumbnailer(BaseThumbnailGenerator):
         """
         # Test with detailed=False
         components = get_components_by_mimetype("application/pdf", detailed=False)
-        parsers = components.get('parsers', [])
-        embedders = components.get('embedders', [])
-        thumbnailers = components.get('thumbnailers', [])
+        parsers = components.get("parsers", [])
+        embedders = components.get("embedders", [])
+        thumbnailers = components.get("thumbnailers", [])
 
         parser_titles = [parser.title for parser in parsers]
         embedder_titles = [embedder.title for embedder in embedders]
@@ -211,10 +210,18 @@ class TestThumbnailer(BaseThumbnailGenerator):
         self.assertIn("Test Thumbnailer", thumbnailer_titles)
 
         # Test with detailed=True
-        components_detailed = get_components_by_mimetype("application/pdf", detailed=True)
-        parser_titles_detailed = [comp['title'] for comp in components_detailed['parsers']]
-        embedder_titles_detailed = [comp['title'] for comp in components_detailed['embedders']]
-        thumbnailer_titles_detailed = [comp['title'] for comp in components_detailed['thumbnailers']]
+        components_detailed = get_components_by_mimetype(
+            "application/pdf", detailed=True
+        )
+        parser_titles_detailed = [
+            comp["title"] for comp in components_detailed["parsers"]
+        ]
+        embedder_titles_detailed = [
+            comp["title"] for comp in components_detailed["embedders"]
+        ]
+        thumbnailer_titles_detailed = [
+            comp["title"] for comp in components_detailed["thumbnailers"]
+        ]
 
         self.assertIn("Test Parser", parser_titles_detailed)
         self.assertIn("Test Embedder", embedder_titles_detailed)
@@ -251,22 +258,30 @@ class TestThumbnailer(BaseThumbnailGenerator):
         # Test parser component
         component = get_component_by_name("test_parser")
         from opencontractserver.pipeline.parsers.test_parser import TestParser
+
         self.assertEqual(component, TestParser)
 
         # Test embedder component
         component = get_component_by_name("test_embedder")
         from opencontractserver.pipeline.embedders.test_embedder import TestEmbedder
+
         self.assertEqual(component, TestEmbedder)
 
         # Test thumbnailer component
         component = get_component_by_name("test_thumbnailer")
-        from opencontractserver.pipeline.thumbnailers.test_thumbnailer import TestThumbnailer
+        from opencontractserver.pipeline.thumbnailers.test_thumbnailer import (
+            TestThumbnailer,
+        )
+
         self.assertEqual(component, TestThumbnailer)
 
         # Test non-existing component
         with self.assertRaises(ValueError) as context:
             get_component_by_name("non_existing_component")
-        self.assertTrue("Component 'non_existing_component' not found." in str(context.exception))
+        self.assertTrue(
+            "Component 'non_existing_component' not found." in str(context.exception)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

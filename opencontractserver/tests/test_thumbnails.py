@@ -128,7 +128,7 @@ class ThumbnailTestCase(TestCase):
 
         # Update the document with the text extract file and set file type
         self.doc.txt_extract_file = text_file
-        self.doc.file_type = "application/txt"
+        self.doc.file_type = "text/plain"
         self.doc.save()
 
         # Mock the thumbnail extraction function

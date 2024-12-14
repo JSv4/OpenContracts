@@ -92,7 +92,7 @@ class DocAnalyzerTaskTestCase(TestCase):
         self.txt_document = Document.objects.create(
             title="Test TXT Document",
             creator=self.user,
-            file_type="application/txt",
+            file_type="text/plain",
             txt_extract_file=SimpleUploadedFile("test3.txt", txt_content),
         )
 

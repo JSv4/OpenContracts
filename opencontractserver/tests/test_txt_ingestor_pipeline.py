@@ -36,7 +36,7 @@ class TxtIngestorTestCase(TestCase):
                 description="Sample Text File",
                 custom_meta={},
                 txt_extract_file=txt_file,
-                file_type="application/txt",
+                file_type="text/plain",
                 backend_lock=True,
             )
 
@@ -53,6 +53,9 @@ class TxtIngestorTestCase(TestCase):
 
         # Check if annotations were created
         annotations = Annotation.objects.filter(document=self.doc)
+        # for annotation in annotations:
+        #     logger.info(f"Annotation: {annotation}")
+        # logger.info(f"Total annotations: {annotations}")
         self.assertGreater(annotations.count(), 0)
 
         # Check properties of the first annotation

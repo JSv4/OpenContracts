@@ -211,7 +211,7 @@ def doc_analyzer_task(max_retries=None):
                                 resulting_annotations.append(annot)
 
                             # FOR application/txt... we want span-based annotations
-                            elif doc.file_type in ["application/txt"]:
+                            elif doc.file_type in ["application/txt", "text/plain"]:
                                 logger.info(f"Create Annotation Linked to {corpus_id}")
                                 span, label = span_label_pair
                                 label, _ = AnnotationLabel.objects.get_or_create(

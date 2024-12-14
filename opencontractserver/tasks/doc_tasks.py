@@ -296,6 +296,8 @@ def extract_thumbnail(doc_id: int) -> None:
         file_field = document.pdf_file
     elif file_type == "application/txt" and document.txt_extract_file:
         file_field = document.txt_extract_file
+    elif file_type == "text/plain" and document.txt_extract_file:
+        file_field = document.txt_extract_file
     else:
         logger.error(
             f"No valid file found for document {doc_id} with file type '{file_type}'."

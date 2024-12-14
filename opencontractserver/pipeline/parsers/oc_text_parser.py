@@ -99,6 +99,8 @@ class TxtParser(BaseParser):
                     "end": sentence.end_char,
                 },
                 "parent_id": None,
+                "annotation_type": "SPAN_LABEL",
+                "structural": True
             }
             labelled_text.append(annotation_entry)
 

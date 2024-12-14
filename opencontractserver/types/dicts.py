@@ -1,7 +1,8 @@
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 from typing_extensions import NotRequired, TypedDict
 
+from opencontractserver.annotations.models import METADATA_LABEL, SPAN_LABEL, TOKEN_LABEL
 from opencontractserver.types.enums import LabelType
 
 
@@ -143,6 +144,8 @@ class OpenContractsAnnotationPythonType(TypedDict):
     page: int
     annotation_json: dict[Union[int, str], OpenContractsSinglePageAnnotationType]
     parent_id: Optional[Union[str, int]]
+    annotation_type: Optional[str]
+    structural: bool
 
 
 class TextSpan(TypedDict):

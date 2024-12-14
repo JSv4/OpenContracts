@@ -10,6 +10,7 @@ from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.base.parser import BaseParser
 from opencontractserver.types.dicts import OpenContractDocExport
 from opencontractserver.utils.files import check_if_pdf_needs_ocr
+from opencontractserver.annotations.models import TOKEN_LABEL
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,8 @@ class NLMIngestParser(BaseParser):
         self, user_id: int, doc_id: int
     ) -> Optional[OpenContractDocExport]:
         """
-        Parses a document using the NLM ingest service.
+        Parses a document using the NLM ingest service and ensures that all annotations
+        have 'structural' set to True and 'annotation_type' set to SPAN_LABEL.
 
         Args:
             user_id (int): ID of the user.
@@ -88,6 +90,12 @@ class NLMIngestParser(BaseParser):
             logger.error("No 'opencontracts_data' found in NLM ingest service response")
             return None
 
+        # Ensure all annotations have 'structural' set to True and 'annotation_type' set to SPAN_LABEL
+        if 'labelled_text' in open_contracts_data:
+            for annotation in open_contracts_data['labelled_text']:
+                annotation['structural'] = True
+                annotation['annotation_type'] = TOKEN_LABEL
+
         # Save parsed data
-        self.save_parsed_data(user_id, doc_id, open_contracts_data)
+        self.save_parsed_data(user_id, doc_id, open_contracts_data, annotation_type="TOKEN_LABEL")
         return open_contracts_data

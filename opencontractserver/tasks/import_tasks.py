@@ -324,21 +324,18 @@ def import_document_to_corpus(
             user_id,
             labelset_obj,
             document_import_data.get("text_labels", {}),
-            TOKEN_LABEL,
             existing_text_labels
         )
         existing_doc_labels = load_or_create_labels(
             user_id,
             labelset_obj,
             document_import_data.get("doc_labels", {}),
-            DOC_TYPE_LABEL,
             existing_doc_labels
         )
         existing_metadata_labels = load_or_create_labels(
             user_id,
             labelset_obj,
             document_import_data.get("metadata_labels", {}),
-            METADATA_LABEL,
             existing_metadata_labels
         )
         

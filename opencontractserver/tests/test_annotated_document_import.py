@@ -89,6 +89,9 @@ class TestImportDocumentToCorpus(TestCase):
                         "rawText": "Test Text",
                     }
                 },
+                "structural": False,
+                "parent_id": None,
+                "annotation_type": "TOKEN_LABEL",
             }
         ]
 

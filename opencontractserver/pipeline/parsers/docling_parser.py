@@ -95,8 +95,7 @@ class DoclingParser(BaseParser):
                 "labelled_text": [],
             }
 
-            # Save parsed data
-            self.save_parsed_data(user_id, doc_id, open_contracts_data)
+            # Return parsed data
             return open_contracts_data
 
         except Exception as e:

@@ -106,6 +106,4 @@ class TxtParser(BaseParser):
 
         open_contracts_data["labelled_text"] = labelled_text
 
-        # Save parsed data
-        self.save_parsed_data(user_id, doc_id, open_contracts_data)
         return open_contracts_data

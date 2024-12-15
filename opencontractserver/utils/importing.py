@@ -57,7 +57,7 @@ def import_annotations(
     doc_obj,
     corpus_obj,
     annotations_data: List[Dict],
-    existing_labels: Dict[str, AnnotationLabel],
+    label_lookup: Dict[str, AnnotationLabel],
     label_type: str = TOKEN_LABEL
 ):
     """
@@ -68,7 +68,7 @@ def import_annotations(
         doc_obj: The Document object to which annotations belong.
         corpus_obj: The Corpus object, if any.
         annotations_data (List[Dict]): List of annotation data.
-        existing_labels (Dict[str, AnnotationLabel]): Mapping of label names to AnnotationLabel objects.
+        label_lookup (Dict[str, AnnotationLabel]): Mapping of label names to AnnotationLabel objects.
         label_type (str): The type of the annotations.
     """
     
@@ -80,7 +80,7 @@ def import_annotations(
         label_name = annotation_data["annotationLabel"]
         logger.info(f"Label name: {label_name}")
         logger.info(f"Annotation data: {annotation_data}")
-        label_obj = existing_labels[label_name]
+        label_obj = label_lookup[label_name]
         old_id = annotation_data.get("id")
         annot_obj = Annotation.objects.create(
             raw_text=annotation_data["rawText"],

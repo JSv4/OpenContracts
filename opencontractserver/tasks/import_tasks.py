@@ -341,6 +341,13 @@ def import_document_to_corpus(
             METADATA_LABEL,
             existing_metadata_labels
         )
+        
+        label_lookup = {
+            **existing_text_labels,
+            **existing_doc_labels,
+            **existing_metadata_labels
+        }
+        logger.info(f"Label lookup: {label_lookup}")
 
         # Import the document
         logger.info("Starting document import")
@@ -383,7 +390,7 @@ def import_document_to_corpus(
             doc_obj,
             corpus_obj,
             doc_annotations_data,
-            existing_text_labels,
+            label_lookup,
             label_type=TOKEN_LABEL
         )
 

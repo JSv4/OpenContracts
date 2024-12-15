@@ -113,16 +113,18 @@ class BaseParser(ABC):
         logger.info(f"Target label type: {target_label_type}")
         existing_text_labels = {}
         label_data_dict = {
-            label_name: {
+            label_data["annotationLabel"]: {
                 "label_type": target_label_type,
                 "color": "grey", 
                 "description": "Parser Structural Label",
                 "icon": "expand",
-                "text": label_name,
+                "text": label_data["annotationLabel"],
                 "creator_id": user_id,
                 "read_only": True
-            } for label_name in open_contracts_data.get("text_labels", [])
+            } for label_data in open_contracts_data.get("labelled_text", [])
         }
+        
+        logger.info(f"Label data dict: {label_data_dict}")
        
         existing_text_labels = load_or_create_labels(
             user_id,
@@ -130,6 +132,8 @@ class BaseParser(ABC):
             label_data_dict,
             existing_text_labels
         )
+        
+        logger.info(f"Existing text label lookup: {existing_text_labels}")
 
         # Import annotations
         import_annotations(

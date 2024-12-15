@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 import requests
+import json
 from django.conf import settings
 from django.core.files.storage import default_storage
 
@@ -95,7 +96,8 @@ class NLMIngestParser(BaseParser):
             for annotation in open_contracts_data['labelled_text']:
                 annotation['structural'] = True
                 annotation['annotation_type'] = TOKEN_LABEL
+        
+        logger.info(f"Open contracts data labelled text: {open_contracts_data['labelled_text']}")
 
         # Save parsed data
-        self.save_parsed_data(user_id, doc_id, open_contracts_data, annotation_type="TOKEN_LABEL")
         return open_contracts_data

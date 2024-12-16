@@ -81,7 +81,7 @@ def createHighlight(
 
 def add_highlight_to_new_page(highlight: DictionaryObject, page, output):
     # TODO - finish typing
-    highlight_ref = output._addObject(highlight)
+    highlight_ref = output._add_object(highlight)
 
     if "/Annots" in page:
         page[NameObject("/Annots")].append(highlight_ref)

@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.contrib.auth import get_user_model
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
@@ -116,13 +118,19 @@ class AnnotationLabelSerializer(serializers.ModelSerializer):
 
 class AnnotationSerializer(serializers.ModelSerializer):
     """
-    Due to pydantic being a pain about having a 'json' field, this should ONLY
-    be used to deserialize data into a django obj (where we can have a json field).
-    The various export formats rename json to "annotation_json"
+    Serializer for the `Annotation` model. Maps the model's `json` field to `annotation_json`
+    in the serialized representation to avoid issues with pydantic handling a field named 'json'.
     """
+
+    annotation_json = serializers.JSONField(source="json")
+    tokens_json = serializers.JSONField()
 
     annotation_label = serializers.PrimaryKeyRelatedField(
         many=False, queryset=AnnotationLabel.objects.all()
+    )
+    creator_id = serializers.IntegerField(write_only=True)
+    parent_id = serializers.IntegerField(
+        write_only=True, required=False, allow_null=True
     )
 
     class Meta:
@@ -133,7 +141,7 @@ class AnnotationSerializer(serializers.ModelSerializer):
             "raw_text",
             "tokens_json",
             "bounding_box",
-            "json",
+            "annotation_json",
             "annotation_label",
             "is_public",
             "creator",
@@ -143,7 +151,11 @@ class AnnotationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "creator", "parent"]
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Annotation:
+        """
+        Create a new `Annotation` instance, mapping `creator_id` and `parent_id` to their respective
+        related objects.
+        """
         creator_id = validated_data.pop("creator_id", None)
         parent_id = validated_data.pop("parent_id", None)
 
@@ -160,5 +172,63 @@ class AnnotationSerializer(serializers.ModelSerializer):
                 validated_data["parent"] = Annotation.objects.get(pk=parent_id)
             except Annotation.DoesNotExist:
                 raise serializers.ValidationError({"parent_id": "Invalid parent ID"})
+        else:
+            validated_data["parent"] = None
 
         return super().create(validated_data)
+
+    def validate_annotation_json(self, value: Any) -> Any:
+        """
+        Validate the 'annotation_json' field. If the data appears to conform to
+        `dict[Union[int, str], OpenContractsSinglePageAnnotationType]`, ensure that
+        any `BoundingBoxPythonType` values with floats are converted to ints.
+        """
+        if isinstance(value, dict):
+            # Check if value conforms to OpenContractsSinglePageAnnotationType
+            is_single_page_annotation = True
+            for key, page_annotation in value.items():
+                if (
+                    not isinstance(page_annotation, dict)
+                    or "bounds" not in page_annotation
+                ):
+                    is_single_page_annotation = False
+                    break
+
+            if is_single_page_annotation:
+                # Convert bounds values to integers
+                for key, page_annotation in value.items():
+                    bounds = page_annotation["bounds"]
+                    for coord in ["top", "bottom", "left", "right"]:
+                        if coord in bounds and isinstance(bounds[coord], (int, float)):
+                            bounds[coord] = int(bounds[coord])
+
+        return value
+
+    def to_representation(self, instance):
+        """
+        Override to_representation to ensure that bounds values are integers when serializing.
+        """
+        representation = super().to_representation(instance)
+        annotation_json = representation.get("annotation_json")
+
+        if isinstance(annotation_json, dict):
+            # Check if annotation_json conforms to OpenContractsSinglePageAnnotationType
+            is_single_page_annotation = True
+            for key, page_annotation in annotation_json.items():
+                if (
+                    not isinstance(page_annotation, dict)
+                    or "bounds" not in page_annotation
+                ):
+                    is_single_page_annotation = False
+                    break
+
+            if is_single_page_annotation:
+                # Convert bounds values to integers
+                for key, page_annotation in annotation_json.items():
+                    bounds = page_annotation["bounds"]
+                    for coord in ["top", "bottom", "left", "right"]:
+                        if coord in bounds and isinstance(bounds[coord], (int, float)):
+                            bounds[coord] = int(bounds[coord])
+
+        representation["annotation_json"] = annotation_json
+        return representation

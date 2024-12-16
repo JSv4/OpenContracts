@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List
+from typing import Optional
 
 import numpy as np
 import requests
@@ -10,6 +10,7 @@ from opencontractserver.pipeline.base.file_types import FileTypeEnum
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 
 class MicroserviceEmbedder(BaseEmbedder):
     """
@@ -28,7 +29,7 @@ class MicroserviceEmbedder(BaseEmbedder):
         # Add more as needed
     ]
 
-    def embed_text(self, text: str) -> Optional[List[float]]:
+    def embed_text(self, text: str) -> Optional[list[float]]:
         """
         Generates embeddings from text using the microservice.
 
@@ -54,7 +55,9 @@ class MicroserviceEmbedder(BaseEmbedder):
                 else:
                     return embeddings_array[0].tolist()
             else:
-                logger.error(f"Microservice returned status code {response.status_code}")
+                logger.error(
+                    f"Microservice returned status code {response.status_code}"
+                )
                 return None
         except Exception as e:
             logger.error(

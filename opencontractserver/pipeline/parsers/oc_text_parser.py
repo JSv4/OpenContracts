@@ -100,7 +100,7 @@ class TxtParser(BaseParser):
                 },
                 "parent_id": None,
                 "annotation_type": "SPAN_LABEL",
-                "structural": True
+                "structural": True,
             }
             labelled_text.append(annotation_entry)
 

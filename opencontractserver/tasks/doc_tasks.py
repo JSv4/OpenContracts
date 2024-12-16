@@ -5,18 +5,17 @@ import json
 import logging
 from typing import Any
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import File
 from django.core.files.storage import default_storage
 from django.utils import timezone
-from django.conf import settings
 from pydantic import validate_arguments
-from django.utils.module_loading import import_string
 
 from config import celery_app
 from opencontractserver.annotations.models import TOKEN_LABEL, Annotation
 from opencontractserver.documents.models import Document
-from opencontractserver.parsers.base_parser import parse_document
+from opencontractserver.pipeline.utils import get_component_by_name
 from opencontractserver.types.dicts import (
     FunsdAnnotationType,
     FunsdTokenType,
@@ -27,7 +26,6 @@ from opencontractserver.types.dicts import (
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.files import split_pdf_into_images
 from opencontractserver.utils.importing import import_function_from_string
-from opencontractserver.pipeline.utils import get_component_by_name
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

@@ -2,16 +2,15 @@ import logging
 from typing import Optional
 
 import requests
-import json
 from django.conf import settings
 from django.core.files.storage import default_storage
 
+from opencontractserver.annotations.models import TOKEN_LABEL
 from opencontractserver.documents.models import Document
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.base.parser import BaseParser
 from opencontractserver.types.dicts import OpenContractDocExport
 from opencontractserver.utils.files import check_if_pdf_needs_ocr
-from opencontractserver.annotations.models import TOKEN_LABEL
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +66,9 @@ class NLMIngestParser(BaseParser):
             files = {"file": doc_file}
             params = {
                 "calculate_opencontracts_data": "yes",
-                "applyOcr": "yes" if needs_ocr and settings.NLM_INGEST_USE_OCR else "no",
+                "applyOcr": "yes"
+                if needs_ocr and settings.NLM_INGEST_USE_OCR
+                else "no",
             }
 
             # Make the POST request to the NLM ingest service
@@ -79,7 +80,9 @@ class NLMIngestParser(BaseParser):
             )
 
         if response.status_code != 200:
-            logger.error(f"NLM ingest service returned status code {response.status_code}")
+            logger.error(
+                f"NLM ingest service returned status code {response.status_code}"
+            )
             response.raise_for_status()
 
         response_data = response.json()
@@ -92,12 +95,14 @@ class NLMIngestParser(BaseParser):
             return None
 
         # Ensure all annotations have 'structural' set to True and 'annotation_type' set to SPAN_LABEL
-        if 'labelled_text' in open_contracts_data:
-            for annotation in open_contracts_data['labelled_text']:
-                annotation['structural'] = True
-                annotation['annotation_type'] = TOKEN_LABEL
-        
-        logger.info(f"Open contracts data labelled text: {open_contracts_data['labelled_text']}")
+        if "labelled_text" in open_contracts_data:
+            for annotation in open_contracts_data["labelled_text"]:
+                annotation["structural"] = True
+                annotation["annotation_type"] = TOKEN_LABEL
+
+        logger.info(
+            f"Open contracts data labelled text: {open_contracts_data['labelled_text']}"
+        )
 
         # Save parsed data
         return open_contracts_data

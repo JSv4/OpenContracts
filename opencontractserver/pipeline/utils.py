@@ -1,14 +1,15 @@
 import importlib
 import inspect
-import pkgutil
-from typing import Any, Optional, Type
 import logging
+import pkgutil
+from typing import Any, Optional
+
+from django.conf import settings
 
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.base.parser import BaseParser
 from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -190,34 +191,39 @@ def get_component_by_name(component_name: str) -> type:
         Type: The component class.
     """
     # Handle full path case by extracting the module and class names
-    if '.' in component_name:
+    if "." in component_name:
         try:
-            module_path, class_name = component_name.rsplit('.', 1)
+            module_path, class_name = component_name.rsplit(".", 1)
             module = importlib.import_module(module_path)
             for name, obj in inspect.getmembers(module, inspect.isclass):
                 if name == class_name and (
-                    issubclass(obj, BaseParser) or 
-                    issubclass(obj, BaseEmbedder) or 
-                    issubclass(obj, BaseThumbnailGenerator)
+                    issubclass(obj, BaseParser)
+                    or issubclass(obj, BaseEmbedder)
+                    or issubclass(obj, BaseThumbnailGenerator)
                 ):
                     return obj
         except (ModuleNotFoundError, AttributeError):
             pass
-    
+
     # Original implementation for script name only
     base_paths = [
         "opencontractserver.pipeline.parsers",
         "opencontractserver.pipeline.embedders",
-        "opencontractserver.pipeline.thumbnailers"
+        "opencontractserver.pipeline.thumbnailers",
     ]
-    
+
     for base_path in base_paths:
         try:
             module = importlib.import_module(f"{base_path}.{component_name}")
             for name, obj in inspect.getmembers(module, inspect.isclass):
-                if (issubclass(obj, BaseParser) and obj != BaseParser) or \
-                   (issubclass(obj, BaseEmbedder) and obj != BaseEmbedder) or \
-                   (issubclass(obj, BaseThumbnailGenerator) and obj != BaseThumbnailGenerator):
+                if (
+                    (issubclass(obj, BaseParser) and obj != BaseParser)
+                    or (issubclass(obj, BaseEmbedder) and obj != BaseEmbedder)
+                    or (
+                        issubclass(obj, BaseThumbnailGenerator)
+                        and obj != BaseThumbnailGenerator
+                    )
+                ):
                     return obj
         except ModuleNotFoundError:
             continue
@@ -225,7 +231,7 @@ def get_component_by_name(component_name: str) -> type:
     raise ValueError(f"Component '{component_name}' not found.")
 
 
-def get_preferred_embedder(mimetype: str) -> Optional[Type[BaseEmbedder]]:
+def get_preferred_embedder(mimetype: str) -> Optional[type[BaseEmbedder]]:
     """
     Get the preferred embedder class for a given mimetype.
 
@@ -238,7 +244,7 @@ def get_preferred_embedder(mimetype: str) -> Optional[Type[BaseEmbedder]]:
     embedder_path = settings.PREFERRED_EMBEDDERS.get(mimetype)
     if embedder_path:
         try:
-            module_path, class_name = embedder_path.rsplit('.', 1)
+            module_path, class_name = embedder_path.rsplit(".", 1)
             module = importlib.import_module(module_path)
             embedder_class = getattr(module, class_name)
             return embedder_class
@@ -250,7 +256,7 @@ def get_preferred_embedder(mimetype: str) -> Optional[Type[BaseEmbedder]]:
         return None
 
 
-def get_default_embedder() -> Optional[Type[BaseEmbedder]]:
+def get_default_embedder() -> Optional[type[BaseEmbedder]]:
     """
     Get the default embedder class.
 
@@ -260,7 +266,7 @@ def get_default_embedder() -> Optional[Type[BaseEmbedder]]:
     embedder_path = settings.DEFAULT_EMBEDDER
     if embedder_path:
         try:
-            module_path, class_name = embedder_path.rsplit('.', 1)
+            module_path, class_name = embedder_path.rsplit(".", 1)
             module = importlib.import_module(module_path)
             embedder_class = getattr(module, class_name)
             return embedder_class

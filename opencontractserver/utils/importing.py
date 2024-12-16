@@ -1,27 +1,23 @@
-from typing import Dict, Tuple, List
 import logging
-
-from django.db.models import QuerySet
 
 from config.graphql.serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import (
-    AnnotationLabel,
-    Annotation,
-    DOC_TYPE_LABEL,
     TOKEN_LABEL,
-    METADATA_LABEL,
+    Annotation,
+    AnnotationLabel,
 )
-from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)
+
 
 def load_or_create_labels(
     user_id: int,
     labelset_obj,
-    label_data_dict: Dict[str, Dict],
-    existing_labels: Dict[str, AnnotationLabel] = {}
-) -> Dict[str, AnnotationLabel]:
+    label_data_dict: dict[str, dict],
+    existing_labels: dict[str, AnnotationLabel] = {},
+) -> dict[str, AnnotationLabel]:
     """
     Load existing labels or create new ones if they don't exist.
 
@@ -52,13 +48,14 @@ def load_or_create_labels(
             existing_labels[label_name] = label_obj
     return existing_labels
 
+
 def import_annotations(
     user_id: int,
     doc_obj,
     corpus_obj,
-    annotations_data: List[Dict],
-    label_lookup: Dict[str, AnnotationLabel],
-    label_type: str = TOKEN_LABEL
+    annotations_data: list[dict],
+    label_lookup: dict[str, AnnotationLabel],
+    label_type: str = TOKEN_LABEL,
 ):
     """
     Import annotations, handling parent relationships.
@@ -71,9 +68,9 @@ def import_annotations(
         label_lookup (Dict[str, AnnotationLabel]): Mapping of label names to AnnotationLabel objects.
         label_type (str): The type of the annotations.
     """
-    
+
     logger.info(f"Importing annotations with label type: {label_type}")
-    
+
     # First pass: Create annotations without parents
     old_id_to_new_annotation = {}
     for annotation_data in annotations_data:
@@ -108,6 +105,7 @@ def import_annotations(
             if annot_obj and parent_annot_obj:
                 annot_obj.parent = parent_annot_obj
                 annot_obj.save()
+
 
 def import_function_from_string(dotted_path):
     """

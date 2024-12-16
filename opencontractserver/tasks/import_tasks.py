@@ -2,13 +2,12 @@ import base64
 import json
 import logging
 import zipfile
-from typing import Any, Optional
+from typing import Optional
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile, File
 
 from config import celery_app
-from config.graphql.serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import (
     DOC_TYPE_LABEL,
     METADATA_LABEL,
@@ -22,12 +21,12 @@ from opencontractserver.types.dicts import (
     OpenContractsExportDataJsonPythonType,
 )
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.importing import import_annotations, load_or_create_labels
 from opencontractserver.utils.packaging import (
     unpack_corpus_from_export,
     unpack_label_set_from_export,
 )
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
-from opencontractserver.utils.importing import load_or_create_labels, import_annotations
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -39,246 +38,167 @@ User = get_user_model()
 def import_corpus(
     temporary_file_handle_id: str | int, user_id: int, seed_corpus_id: Optional[int]
 ) -> Optional[str]:
-
     try:
-
         logger.info(f"import_corpus() - for user_id: {user_id}")
 
         temporary_file_handle = TemporaryFileHandle.objects.get(
             id=temporary_file_handle_id
         )
+        user_obj = User.objects.get(id=user_id)
 
-        with temporary_file_handle.file.open("rb") as import_file:
-
+        with temporary_file_handle.file.open("rb") as import_file, zipfile.ZipFile(
+            import_file, mode="r"
+        ) as import_zip:
             logger.info("import_corpus() - Data decoded successfully")
-            user_obj = User.objects.get(id=user_id)
+            files = import_zip.namelist()
+            logger.info(f"import_corpus() - Raw files: {files}")
 
-            with zipfile.ZipFile(import_file, mode="r") as importZip:
+            if "data.json" in files:
+                files.remove("data.json")
+                with import_zip.open("data.json") as corpus_data:
+                    data_json: OpenContractsExportDataJsonPythonType = json.loads(
+                        corpus_data.read().decode("UTF-8")
+                    )
 
-                logger.info("import_corpus() - Job... loaded import data.")
+                    text_labels = data_json["text_labels"]
+                    doc_labels = data_json["doc_labels"]
+                    label_set_data = {**data_json["label_set"]}
+                    label_set_data.pop("id", None)
+                    corpus_data_json = {**data_json["corpus"]}
+                    corpus_data_json.pop("id", None)
 
-                text_label_inst_lookup: dict[str, Any] = {}
-                doc_label_inst_lookup: dict[str, Any] = {}
-                doc_isnt_lookup: dict[str, Any] = {}
+                    # Create LabelSet
+                    labelset_obj = unpack_label_set_from_export(
+                        label_set_data, user_obj
+                    )
+                    logger.info(f"LabelSet created: {labelset_obj}")
 
-                files = importZip.namelist()
-                logger.info(f"import_corpus() - Raw files: {files}")
+                    # Create Corpus
+                    corpus_kwargs = {
+                        "data": corpus_data_json,
+                        "user": user_obj,
+                        "label_set_id": labelset_obj.id,
+                        "corpus_id": seed_corpus_id if seed_corpus_id else None,
+                    }
+                    corpus_obj = unpack_corpus_from_export(**corpus_kwargs)
+                    logger.info(f"Created corpus_obj: {corpus_obj}")
 
-                if "data.json" in files:
+                    # Prepare label data
+                    existing_text_labels = {}
+                    existing_doc_labels = {}
+                    text_label_data_dict = {
+                        label_name: label_info
+                        for label_name, label_info in text_labels.items()
+                    }
+                    doc_label_data_dict = {
+                        label_name: label_info
+                        for label_name, label_info in doc_labels.items()
+                    }
 
-                    files.remove("data.json")
-                    with importZip.open("data.json") as corpus_data:
+                    # Load or create labels
+                    existing_text_labels = load_or_create_labels(
+                        user_id=user_id,
+                        labelset_obj=labelset_obj,
+                        label_data_dict=text_label_data_dict,
+                        existing_labels=existing_text_labels,
+                    )
+                    existing_doc_labels = load_or_create_labels(
+                        user_id=user_id,
+                        labelset_obj=labelset_obj,
+                        label_data_dict=doc_label_data_dict,
+                        existing_labels=existing_doc_labels,
+                    )
+                    label_lookup = {**existing_text_labels, **existing_doc_labels}
 
-                        data_json: OpenContractsExportDataJsonPythonType = json.loads(
-                            corpus_data.read().decode("UTF-8")
-                        )
-                        text_labels = data_json["text_labels"]
-                        doc_labels = data_json["doc_labels"]
+                    # Iterate over documents
+                    for doc_filename in data_json["annotated_docs"]:
+                        logger.info(f"Start load for doc: {doc_filename}")
+                        doc_data = data_json["annotated_docs"][doc_filename]
+                        txt_content = doc_data["content"]
+                        pawls_layers = doc_data["pawls_file_content"]
 
-                        label_set_data = {**data_json["label_set"]}  # noqa
-                        label_set_data.pop("id")  # noqa
+                        try:
+                            with import_zip.open(doc_filename) as pdf_file_handle:
+                                pdf_file = File(pdf_file_handle, doc_filename)
+                                logger.info("pdf_file obj created in memory")
 
-                        corpus_data = {**data_json["corpus"]}
-                        corpus_data.pop("id")
+                                pawls_parse_file = ContentFile(
+                                    json.dumps(pawls_layers).encode("utf-8"),
+                                    name="pawls_tokens.json",
+                                )
+                                logger.info("Pawls parse file obj created in memory")
 
-                        # Create labelset by loading JSON and converting to Django with DRF serializer
-                        labelset_obj = unpack_label_set_from_export(
-                            data=label_set_data, user=user_obj  # noqa
-                        )
-                        logger.info(f"LabelSet created: {labelset_obj}")
+                                txt_extract_file = ContentFile(
+                                    txt_content.encode("utf-8"),
+                                    name="extracted_text.txt",
+                                )
+                                logger.info("Text extract file obj created in memory")
 
-                        # If a seed_corpus_id was passed in (so the mutation could return a corpus id for lookups
-                        # immediately), this gets mixed in and passed to the serializer
-                        if seed_corpus_id:
-                            corpus_obj = unpack_corpus_from_export(
-                                data=corpus_data,  # noqa
-                                user=user_obj,
-                                label_set_id=labelset_obj.id,
-                                corpus_id=seed_corpus_id,
-                            )
-                        else:
-                            corpus_obj = unpack_corpus_from_export(
-                                data=corpus_data,  # noqa
-                                user=user_obj,
-                                label_set_id=labelset_obj.id,
-                                corpus_id=None,
-                            )
-                        logger.info(f"Created corpus_obj: {corpus_obj}")
+                                # Create Document instance
+                                doc_obj = Document.objects.create(
+                                    title=doc_data["title"],
+                                    description=f"Imported document with filename {doc_filename}",
+                                    pdf_file=pdf_file,
+                                    pawls_parse_file=pawls_parse_file,
+                                    txt_extract_file=txt_extract_file,
+                                    backend_lock=True,  # Prevent immediate processing
+                                    creator=user_obj,
+                                    page_count=len(pawls_layers),
+                                )
+                                logger.info(f"Doc created: {doc_obj}")
 
-                        logger.info("Create text-level annotations")
-                        for label in text_labels:
+                                set_permissions_for_obj_to_user(
+                                    user_obj, doc_obj, [PermissionTypes.ALL]
+                                )
+                                logger.info("Doc permissioned")
 
-                            logger.info(
-                                f"Create text-level annotations for: {label} / User: {user_id}"
-                            )
+                                # Link Document to Corpus
+                                corpus_obj.documents.add(doc_obj)
+                                corpus_obj.save()
 
-                            # Convert the label JSON to an AnnotationLabel obj using a
-                            # DRF serializer and django API
-                            label_data = {**text_labels[label]}
-                            label_data.pop("id")
-                            label_data["creator"] = user_id
+                                # Import Document-level annotations
+                                doc_labels_list = doc_data.get("doc_labels", [])
+                                for doc_label_name in doc_labels_list:
+                                    label_obj = existing_doc_labels.get(doc_label_name)
+                                    if label_obj:
+                                        annot_obj = Annotation.objects.create(
+                                            annotation_label=label_obj,
+                                            document=doc_obj,
+                                            corpus=corpus_obj,
+                                            creator=user_obj,
+                                        )
+                                        set_permissions_for_obj_to_user(
+                                            user_obj, annot_obj, [PermissionTypes.ALL]
+                                        )
 
-                            label_serializer = AnnotationLabelSerializer(
-                                data=label_data
-                            )
-                            label_serializer.is_valid(raise_exception=True)
-                            label_obj = label_serializer.save()
-                            set_permissions_for_obj_to_user(
-                                user_obj, label_obj, [PermissionTypes.ALL]
-                            )
-
-                            # Add the resulting label to labelset
-                            labelset_obj.annotation_labels.add(label_obj)
-
-                            # Add the label name (text) to name / id lookup
-                            text_label_inst_lookup[label] = label_obj
-
-                            logger.info(f"Loaded text label: {label_obj}")
-
-                        for label in doc_labels:
-
-                            # Convert the label JSON to an AnnotationLabel obj using a
-                            # DRF serializer and django API
-                            doc_label_data = {**doc_labels[label]}
-                            doc_label_data.pop("id")
-                            doc_label_data["creator"] = user_id
-
-                            label_serializer = AnnotationLabelSerializer(
-                                data=doc_label_data
-                            )
-                            label_serializer.is_valid(raise_exception=True)
-                            label_obj = label_serializer.save()
-                            set_permissions_for_obj_to_user(
-                                user_obj, label_obj, [PermissionTypes.ALL]
-                            )
-
-                            # Add the resulting label to labelset
-                            labelset_obj.annotation_labels.add(label_obj)
-
-                            # Add the label name (text) to name / id lookup
-                            doc_label_inst_lookup[label] = label_obj
-
-                            logger.info(f"Loaded text label: {label_obj}")
-
-                        for doc in data_json["annotated_docs"]:
-
-                            logger.info(f"Start load for doc: {doc}")
-                            doc_data = data_json["annotated_docs"][doc]
-                            pawls_layers = doc_data["pawls_file_content"]
-                            # logger.info(f"Pawls layer: {doc_data['pawls_file_content']}")
-
-                            try:
-                                with importZip.open(doc) as pdfFile:
-
-                                    pdf_file = File(pdfFile, doc)
-                                    logger.info("pdf_file obj created in memory")
-
-                                    pawls_parse_file = ContentFile(
-                                        json.dumps(pawls_layers).encode("utf-8"),
-                                        name="pawls_tokens.json",
-                                    )
-                                    logger.info(
-                                        "Pawls parse file obj created in memory"
-                                    )
-
-                                    logger.info(
-                                        f"Create doc instance with creator: {user_obj}"
-                                    )
-                                    doc_obj = Document.objects.create(
-                                        title=data_json["annotated_docs"][doc]["title"],
-                                        description=f"Imported document with filename {doc}",
-                                        pdf_file=pdf_file,
-                                        pawls_parse_file=pawls_parse_file,
-                                        backend_lock=True,  # Lock doc so pawls parser doesn't pick it up (already done)
-                                        creator=user_obj,
-                                        page_count=len(pawls_layers),
-                                    )
-                                    logger.info(f"Doc created: {doc_obj}")
-
-                                    set_permissions_for_obj_to_user(
-                                        user_obj, doc_obj, [PermissionTypes.ALL]
-                                    )
-                                    logger.info("Doc permissioned")
-
-                                    doc_isnt_lookup[doc] = doc_obj
-
-                                    # Link to corpus
-                                    corpus_obj.documents.add(doc_obj)
-                                    corpus_obj.save()
-
-                            except Exception as e:
-                                logger.error(
-                                    f"import_corpus() - Error trying to load contract file: {e}"
+                                # Import Text annotations
+                                text_annotations_data = doc_data.get(
+                                    "labelled_text", []
+                                )
+                                import_annotations(
+                                    user_id=user_id,
+                                    doc_obj=doc_obj,
+                                    corpus_obj=corpus_obj,
+                                    annotations_data=text_annotations_data,
+                                    label_lookup=label_lookup,
+                                    label_type=TOKEN_LABEL,
                                 )
 
-                            # Create the doc labels...
-                            logger.info(f"Label lookup: {doc_label_inst_lookup}")
-                            for doc_label in data_json["annotated_docs"][doc][
-                                "doc_labels"
-                            ]:
-                                logger.info(f"Add doc label: {doc_label}")
-                                try:
-                                    annot_obj = Annotation(
-                                        annotation_label=doc_label_inst_lookup[
-                                            doc_label
-                                        ],
-                                        document=doc_isnt_lookup[doc],
-                                        corpus=corpus_obj,
-                                        creator=user_obj,
-                                    )
-                                    annot_obj.save()
+                                # Unlock the document
+                                doc_obj.backend_lock = False
+                                doc_obj.save()
+                                logger.info("Doc load complete.")
 
-                                    set_permissions_for_obj_to_user(
-                                        user_obj, annot_obj, [PermissionTypes.ALL]
-                                    )
+                        except Exception as e:
+                            logger.error(
+                                f"import_corpus() - Error loading document {doc_filename}: {e}"
+                            )
 
-                                except Exception as e:
-                                    logger.error(
-                                        f"import_corpus() - Error creating annotation: {e}"
-                                    )
+                    return corpus_obj.id
 
-                            # Create the text labels
-                            logger.info(f"Doc inst lookup: {doc_isnt_lookup}")
-                            for annotation in data_json["annotated_docs"][doc][
-                                "labelled_text"
-                            ]:
-                                logger.info(
-                                    f"Add text label: {text_label_inst_lookup[annotation['annotationLabel']]}"
-                                )
-                                try:
-                                    logger.info(f"doc obj: {doc_isnt_lookup[doc]}")
-                                    annot_obj = Annotation.objects.create(
-                                        raw_text=annotation["rawText"],
-                                        page=annotation["page"],
-                                        json=annotation["annotation_json"],
-                                        annotation_label=text_label_inst_lookup[
-                                            annotation["annotationLabel"]
-                                        ],
-                                        document=doc_isnt_lookup[doc],
-                                        corpus=corpus_obj,
-                                        creator=user_obj,
-                                    )
-                                    annot_obj.save()
-
-                                    set_permissions_for_obj_to_user(
-                                        user_obj, annot_obj, [PermissionTypes.ALL]
-                                    )
-
-                                except Exception as e:
-                                    logger.error(
-                                        f"import_corpus() - Error creating txt annotation: {e} with input: {annotation}"
-                                    )
-
-                            # Unlock the document
-                            doc_obj.backend_lock = False
-                            doc_obj.save()
-
-                            logger.info("\tDoc load complete.")
-
-                        return corpus_obj.id
-
-        # If we didn't successfully complete import
-        return None
+            # If data.json is not found
+            logger.error("import_corpus() - data.json not found in import zip.")
+            return None
 
     except Exception as e:
         logger.error(f"import_corpus() - Exception encountered in corpus import: {e}")
@@ -312,11 +232,15 @@ def import_document_to_corpus(
         }
         existing_doc_labels = {
             label.text: label
-            for label in labelset_obj.annotation_labels.filter(label_type=DOC_TYPE_LABEL)
+            for label in labelset_obj.annotation_labels.filter(
+                label_type=DOC_TYPE_LABEL
+            )
         }
         existing_metadata_labels = {
             label.text: label
-            for label in labelset_obj.annotation_labels.filter(label_type=METADATA_LABEL)
+            for label in labelset_obj.annotation_labels.filter(
+                label_type=METADATA_LABEL
+            )
         }
 
         # Create new labels if needed
@@ -324,25 +248,25 @@ def import_document_to_corpus(
             user_id,
             labelset_obj,
             document_import_data.get("text_labels", {}),
-            existing_text_labels
+            existing_text_labels,
         )
         existing_doc_labels = load_or_create_labels(
             user_id,
             labelset_obj,
             document_import_data.get("doc_labels", {}),
-            existing_doc_labels
+            existing_doc_labels,
         )
         existing_metadata_labels = load_or_create_labels(
             user_id,
             labelset_obj,
             document_import_data.get("metadata_labels", {}),
-            existing_metadata_labels
+            existing_metadata_labels,
         )
-        
+
         label_lookup = {
             **existing_text_labels,
             **existing_doc_labels,
-            **existing_metadata_labels
+            **existing_metadata_labels,
         }
         logger.info(f"Label lookup: {label_lookup}")
 
@@ -379,23 +303,19 @@ def import_document_to_corpus(
 
         # Import text annotations
         doc_annotations_data = document_import_data["doc_data"]["labelled_text"]
-        logger.info(
-            f"Importing {len(doc_annotations_data)} text annotations"
-        )
+        logger.info(f"Importing {len(doc_annotations_data)} text annotations")
         import_annotations(
             user_id,
             doc_obj,
             corpus_obj,
             doc_annotations_data,
             label_lookup,
-            label_type=TOKEN_LABEL
+            label_type=TOKEN_LABEL,
         )
 
         # Import document-level annotations
         doc_labels = document_import_data["doc_data"]["doc_labels"]
-        logger.info(
-            f"Importing {len(doc_labels)} doc labels"
-        )
+        logger.info(f"Importing {len(doc_labels)} doc labels")
         for doc_label in doc_labels:
             label_obj = existing_doc_labels[doc_label]
             annot_obj = Annotation.objects.create(
@@ -410,7 +330,5 @@ def import_document_to_corpus(
         return doc_obj.id
 
     except Exception as e:
-        logger.error(
-            f"Exception encountered in document import: {e}"
-        )
+        logger.error(f"Exception encountered in document import: {e}")
         return None

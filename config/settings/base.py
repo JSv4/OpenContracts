@@ -526,9 +526,9 @@ PREFERRED_PARSERS = {
     "application/pdf": "opencontractserver.pipeline.parsers.nlm_ingest_parser.NLMIngestParser",
     "text/plain": "opencontractserver.pipeline.parsers.oc_text_parser.TxtParser",
     "application/txt": "opencontractserver.pipeline.parsers.oc_text_parser.TxtParser",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",  # noqa
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",  # noqa
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",  # noqa
 }
 
 # Thumbnail extraction tasks
@@ -547,7 +547,7 @@ ANNOTATION_LABELS = {
     "text/plain": "SPAN_LABEL",
     "text/markdown": "SPAN_LABEL",
     "text/x-python": "SPAN_LABEL",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "SPAN_LABEL",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "SPAN_LABEL",  # noqa
     "text/html": "SPAN_LABEL",
     # Add other MIME types as needed
 }
@@ -556,7 +556,7 @@ ANNOTATION_LABELS = {
 PREFERRED_EMBEDDERS = {
     "application/pdf": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
     "text/plain": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # noqa
     # Add more MIME types as needed
 }
 

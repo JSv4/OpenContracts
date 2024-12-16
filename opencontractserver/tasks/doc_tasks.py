@@ -7,7 +7,6 @@ from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.files.base import File
 from django.core.files.storage import default_storage
 from django.utils import timezone
 from pydantic import validate_arguments
@@ -15,7 +14,11 @@ from pydantic import validate_arguments
 from config import celery_app
 from opencontractserver.annotations.models import TOKEN_LABEL, Annotation
 from opencontractserver.documents.models import Document
-from opencontractserver.pipeline.utils import get_component_by_name, get_components_by_mimetype
+from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
+from opencontractserver.pipeline.utils import (
+    get_component_by_name,
+    get_components_by_mimetype,
+)
 from opencontractserver.types.dicts import (
     FunsdAnnotationType,
     FunsdTokenType,
@@ -25,8 +28,6 @@ from opencontractserver.types.dicts import (
 )
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.files import split_pdf_into_images
-from opencontractserver.utils.importing import import_function_from_string
-from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -273,7 +274,7 @@ def extract_thumbnail(doc_id: int) -> None:
 
     # Get compatible thumbnailers for the document's MIME type
     components = get_components_by_mimetype(file_type)
-    thumbnailers = components.get('thumbnailers', [])
+    thumbnailers = components.get("thumbnailers", [])
 
     if not thumbnailers:
         logger.error(f"No thumbnailer found for file type '{file_type}'.")

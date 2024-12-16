@@ -1,13 +1,11 @@
 import logging
-from typing import Optional, Tuple
-
-from django.core.files.base import File
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def pdf_thumbnail_from_bytes(pdf_bytes: bytes) -> Optional[Tuple[bytes, str]]:
+def pdf_thumbnail_from_bytes(pdf_bytes: bytes) -> Optional[tuple[bytes, str]]:
     """
     Generates a thumbnail image from the first page of a PDF file given as bytes.
 
@@ -22,7 +20,6 @@ def pdf_thumbnail_from_bytes(pdf_bytes: bytes) -> Optional[Tuple[bytes, str]]:
 
     import cv2
     import numpy as np
-    from django.core.files.base import File
     from pdf2image import convert_from_bytes
     from PIL import Image
 

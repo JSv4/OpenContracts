@@ -1,9 +1,9 @@
-from typing import Optional, Tuple
 from io import BytesIO
+from typing import Optional
 
+from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
 from opencontractserver.utils.files import create_text_thumbnail
-from opencontractserver.pipeline.base.file_types import FileTypeEnum
 
 
 class TextThumbnailGenerator(BaseThumbnailGenerator):
@@ -21,7 +21,7 @@ class TextThumbnailGenerator(BaseThumbnailGenerator):
         self,
         txt_content: Optional[str],
         pdf_bytes: Optional[bytes],
-    ) -> Optional[Tuple[bytes, str]]:
+    ) -> Optional[tuple[bytes, str]]:
         """
         Generate a thumbnail from text content and pdf bytes.
 
@@ -39,9 +39,9 @@ class TextThumbnailGenerator(BaseThumbnailGenerator):
             if image:
                 # Save the image to bytes
                 image_bytes_io = BytesIO()
-                image.save(image_bytes_io, format='PNG')
+                image.save(image_bytes_io, format="PNG")
                 image_bytes = image_bytes_io.getvalue()
-                return image_bytes, 'png'
+                return image_bytes, "png"
 
         # Optionally, handle pdf_bytes if txt_content is not available
         if pdf_bytes:

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Optional
 
 from django.core.files.base import File
 
@@ -28,6 +28,7 @@ class BaseThumbnailGenerator(ABC):
             Optional[File]: A Django File instance containing the thumbnail image, or None if an error occurs.
         """
         from django.core.files.base import ContentFile
+
         from opencontractserver.documents.models import Document
 
         try:
@@ -40,12 +41,12 @@ class BaseThumbnailGenerator(ABC):
 
             # Load the txt file content if available
             if document.txt_extract_file:
-                with document.txt_extract_file.open('r') as txt_file:
+                with document.txt_extract_file.open("r") as txt_file:
                     txt_content = txt_file.read()
 
             # Load the pdf file bytes if available
             if document.pdf_file:
-                with document.pdf_file.open('rb') as pdf_file:
+                with document.pdf_file.open("rb") as pdf_file:
                     pdf_bytes = pdf_file.read()
 
             # Pass both txt content and pdf bytes to the abstract method
@@ -71,7 +72,7 @@ class BaseThumbnailGenerator(ABC):
         self,
         txt_content: Optional[str],
         pdf_bytes: Optional[bytes],
-    ) -> Optional[Tuple[bytes, str]]:
+    ) -> Optional[tuple[bytes, str]]:
         """
         Abstract method to generate a thumbnail from txt content and pdf bytes.
 

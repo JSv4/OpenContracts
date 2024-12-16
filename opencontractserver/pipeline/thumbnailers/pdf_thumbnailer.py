@@ -1,12 +1,12 @@
 import logging
-from typing import Optional, Tuple
-from io import BytesIO
+from typing import Optional
 
+from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
 from opencontractserver.thumbnails.pdfs import pdf_thumbnail_from_bytes
-from opencontractserver.pipeline.base.file_types import FileTypeEnum
 
 logger = logging.getLogger(__name__)
+
 
 class PdfThumbnailGenerator(BaseThumbnailGenerator):
     """
@@ -23,7 +23,7 @@ class PdfThumbnailGenerator(BaseThumbnailGenerator):
         self,
         txt_content: Optional[str],
         pdf_bytes: Optional[bytes],
-    ) -> Optional[Tuple[bytes, str]]:
+    ) -> Optional[tuple[bytes, str]]:
         """
         Generate a thumbnail from bytes.
 
@@ -35,7 +35,7 @@ class PdfThumbnailGenerator(BaseThumbnailGenerator):
             Optional[Tuple[bytes, str]]: A tuple containing the thumbnail image bytes and file extension,
                                          or None if an error occurs.
         """
-        
+
         try:
             return pdf_thumbnail_from_bytes(pdf_bytes)
 

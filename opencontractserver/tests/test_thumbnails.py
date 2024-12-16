@@ -1,5 +1,5 @@
 import logging
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -63,13 +63,13 @@ class ThumbnailTestCase(TestCase):
         """
         return Image.new("RGB", (width, height), color="red")
 
-    @patch("opencontractserver.tasks.doc_tasks.import_function_from_string")
-    def test_pdf_thumbnail_extraction(self, mock_import_function_from_string) -> None:
+    @patch("opencontractserver.pipeline.utils.get_components_by_mimetype")
+    def test_pdf_thumbnail_extraction(self, mock_get_components_by_mimetype) -> None:
         """
         Test PDF thumbnail extraction with various image sizes and orientations.
 
         Args:
-            mock_import_function_from_string (MagicMock): Mocked import_function_from_string function.
+            mock_get_components_by_mimetype (MagicMock): Mocked get_components_by_mimetype function.
         """
         test_cases = [
             (400, 400, "square"),
@@ -79,17 +79,30 @@ class ThumbnailTestCase(TestCase):
 
         for width, height, orientation in test_cases:
             with self.subTest(orientation=orientation):
-                # Mock the thumbnail extraction function
-                def mock_pdf_thumbnail_function(file_bytes):
-                    img = self.create_mock_image(width, height)
-                    img_bytes = ContentFile(b"", name="icon.png")
-                    img.save(img_bytes, format="PNG")
-                    img_bytes.seek(0)
-                    return img_bytes
+                # Mock the thumbnailer class
+                mock_thumbnailer_class = MagicMock()
+                mock_thumbnailer_instance = MagicMock()
 
-                mock_import_function_from_string.return_value = (
-                    mock_pdf_thumbnail_function
+                # Create a mock __generate_thumbnail method
+                def mock_generate_thumbnail(txt_content, pdf_bytes):
+                    img = self.create_mock_image(width, height)
+                    img_bytes_io = ContentFile(b"", name="icon.png")
+                    img.save(img_bytes_io, format="PNG")
+                    img_bytes_io.seek(0)
+                    return img_bytes_io.read(), "png"
+
+                # Configure the mock thumbnailer
+                mock_thumbnailer_instance._BaseThumbnailGenerator__generate_thumbnail.side_effect = (
+                    mock_generate_thumbnail  # Private method mangling
                 )
+                mock_thumbnailer_class.return_value = mock_thumbnailer_instance
+
+                # Mock get_components_by_mimetype to return our mock thumbnailer
+                mock_get_components_by_mimetype.return_value = {
+                    "parsers": [],
+                    "embedders": [],
+                    "thumbnailers": [mock_thumbnailer_class],
+                }
 
                 # Call the task
                 extract_thumbnail(doc_id=self.doc.id)
@@ -114,13 +127,13 @@ class ThumbnailTestCase(TestCase):
                 # Clean up
                 self.doc.icon.delete()
 
-    @patch("opencontractserver.tasks.doc_tasks.import_function_from_string")
-    def test_txt_thumbnail_extraction(self, mock_import_function_from_string) -> None:
+    @patch("opencontractserver.pipeline.utils.get_components_by_mimetype")
+    def test_txt_thumbnail_extraction(self, mock_get_components_by_mimetype) -> None:
         """
         Test text thumbnail extraction.
 
         Args:
-            mock_import_function_from_string (MagicMock): Mocked import_function_from_string function.
+            mock_get_components_by_mimetype (MagicMock): Mocked get_components_by_mimetype function.
         """
         # Create a sample text content
         sample_text = "This is a sample text for thumbnail extraction."
@@ -131,15 +144,29 @@ class ThumbnailTestCase(TestCase):
         self.doc.file_type = "text/plain"
         self.doc.save()
 
-        # Mock the thumbnail extraction function
-        def mock_txt_thumbnail_function(file_bytes):
-            img = self.create_mock_image(100, 100)
-            img_bytes = ContentFile(b"", name="icon.png")
-            img.save(img_bytes, format="PNG")
-            img_bytes.seek(0)
-            return img_bytes
+        # Mock the thumbnailer class
+        mock_thumbnailer_class = MagicMock()
+        mock_thumbnailer_instance = MagicMock()
 
-        mock_import_function_from_string.return_value = mock_txt_thumbnail_function
+        def mock_generate_thumbnail(txt_content, pdf_bytes):
+            img = self.create_mock_image(100, 100)
+            img_bytes_io = ContentFile(b"", name="icon.png")
+            img.save(img_bytes_io, format="PNG")
+            img_bytes_io.seek(0)
+            return img_bytes_io.read(), "png"
+
+        # Configure the mock thumbnailer
+        mock_thumbnailer_instance._BaseThumbnailGenerator__generate_thumbnail.side_effect = (
+            mock_generate_thumbnail  # Private method mangling
+        )
+        mock_thumbnailer_class.return_value = mock_thumbnailer_instance
+
+        # Mock get_components_by_mimetype to return our mock thumbnailer
+        mock_get_components_by_mimetype.return_value = {
+            "parsers": [],
+            "embedders": [],
+            "thumbnailers": [mock_thumbnailer_class],
+        }
 
         # Call the task
         extract_thumbnail(doc_id=self.doc.id)
@@ -149,7 +176,7 @@ class ThumbnailTestCase(TestCase):
 
         # Assert that the icon field is not empty
         self.assertTrue(self.doc.icon)
-        self.assertIn("_icon.png", self.doc.icon.name)
+        self.assertIn("thumbnail_", self.doc.icon.name)
 
         # Verify the content of the saved image
         with self.doc.icon.open("rb") as icon_file:

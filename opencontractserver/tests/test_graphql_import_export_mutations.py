@@ -139,6 +139,8 @@ class GraphQLTestCase(TestCase):
                         "rawText": "Test Text",
                     }
                 },
+                "structural": False,
+                "annotation_type": LabelType.TOKEN_LABEL.value,
                 "parent_id": None,
             }
         ]

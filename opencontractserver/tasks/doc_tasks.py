@@ -15,7 +15,7 @@ from pydantic import validate_arguments
 from config import celery_app
 from opencontractserver.annotations.models import TOKEN_LABEL, Annotation
 from opencontractserver.documents.models import Document
-from opencontractserver.pipeline.utils import get_component_by_name
+from opencontractserver.pipeline.utils import get_component_by_name, get_components_by_mimetype
 from opencontractserver.types.dicts import (
     FunsdAnnotationType,
     FunsdTokenType,
@@ -26,6 +26,7 @@ from opencontractserver.types.dicts import (
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.files import split_pdf_into_images
 from opencontractserver.utils.importing import import_function_from_string
+from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -250,74 +251,45 @@ def convert_doc_to_funsd(
 @celery_app.task()
 def extract_thumbnail(doc_id: int) -> None:
     """
-    Extracts a thumbnail for a document using the appropriate thumbnail function based on the document's file type.
-    Saves the returned thumbnail File instance to the document's icon field.
+    Extracts a thumbnail for a document using the appropriate thumbnail generator based on the document's file type.
+    The thumbnail generator is selected from the pipeline thumbnailers that support the document's MIME type.
 
     Args:
-        doc_id (int): The ID of the document.
+        doc_id (int): The ID of the document to process.
+
+    Returns:
+        None
     """
-    import logging
-
-    from django.conf import settings
-    from django.core.exceptions import ObjectDoesNotExist
-
-    from opencontractserver.documents.models import Document
-
-    logger = logging.getLogger(__name__)
     logger.info(f"Extracting thumbnail for doc {doc_id}")
 
     # Fetch the document
     try:
-        document = Document.objects.get(pk=doc_id)
-    except ObjectDoesNotExist:
+        document: Document = Document.objects.get(pk=doc_id)
+    except Document.DoesNotExist:
         logger.error(f"Document with id {doc_id} does not exist.")
         return
 
-    file_type = document.file_type
+    file_type: str = document.file_type
 
-    # Get the thumbnail function path from settings
-    thumbnail_function_path = settings.THUMBNAIL_TASKS.get(file_type)
+    # Get compatible thumbnailers for the document's MIME type
+    components = get_components_by_mimetype(file_type)
+    thumbnailers = components.get('thumbnailers', [])
 
-    if not thumbnail_function_path:
-        logger.error(f"No thumbnail function defined for file type '{file_type}'.")
+    if not thumbnailers:
+        logger.error(f"No thumbnailer found for file type '{file_type}'.")
         return
 
-    logger.info(
-        f"Using thumbnail function '{thumbnail_function_path}' for doc {doc_id}"
-    )
+    # Use the first available thumbnailer
+    thumbnailer_class = thumbnailers[0]
+    logger.info(f"Using thumbnailer '{thumbnailer_class.__name__}' for doc {doc_id}")
 
-    # Dynamically import the thumbnail function
-    thumbnail_function = import_function_from_string(thumbnail_function_path)
-
-    # Determine the correct file field based on file_type
-    if file_type == "application/pdf" and document.pdf_file:
-        file_field = document.pdf_file
-    elif file_type == "application/txt" and document.txt_extract_file:
-        file_field = document.txt_extract_file
-    elif file_type == "text/plain" and document.txt_extract_file:
-        file_field = document.txt_extract_file
-    else:
-        logger.error(
-            f"No valid file found for document {doc_id} with file type '{file_type}'."
-        )
-        return
-
-    # Read the file bytes
+    # Instantiate the thumbnailer and generate the thumbnail
     try:
-        with file_field.open("rb") as f:
-            file_bytes = f.read()
-    except Exception as e:
-        logger.error(f"Failed to read file for doc {doc_id}: {e}")
-        return
-
-    # Call the thumbnail function
-    try:
-        thumbnail_file: File | None = thumbnail_function(file_bytes)
+        thumbnailer: BaseThumbnailGenerator = thumbnailer_class()
+        thumbnail_file = thumbnailer.generate_thumbnail(doc_id)
         if thumbnail_file:
-            # Save the thumbnail to the document's icon field
-            document.icon.save(f"{doc_id}_icon.png", thumbnail_file)
             logger.info(f"Thumbnail extracted and saved successfully for doc {doc_id}")
         else:
-            logger.error(f"Thumbnail function returned None for doc {doc_id}")
+            logger.error(f"Thumbnail generation failed for doc {doc_id}")
     except Exception as e:
         logger.error(f"Failed to extract thumbnail for doc {doc_id}: {e}")

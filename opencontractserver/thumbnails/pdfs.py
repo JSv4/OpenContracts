@@ -1,4 +1,5 @@
 import logging
+from typing import Optional, Tuple
 
 from django.core.files.base import File
 
@@ -6,7 +7,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def pdf_thumbnail_from_bytes(pdf_bytes: bytes) -> File:
+def pdf_thumbnail_from_bytes(pdf_bytes: bytes) -> Optional[Tuple[bytes, str]]:
     """
     Generates a thumbnail image from the first page of a PDF file given as bytes.
 
@@ -102,9 +103,7 @@ def pdf_thumbnail_from_bytes(pdf_bytes: bytes) -> File:
         page_one_image_final.save(image_io, format="JPEG")
         image_io.seek(0)
 
-        # Create and return a Django File instance
-        pdf_thumbnail_file = File(image_io, name="thumbnail.jpg")
-        return pdf_thumbnail_file
+        return image_io.getvalue(), "jpg"
 
     except Exception as e:
         logger.error(f"Unable to create a thumbnail due to error: {e}")

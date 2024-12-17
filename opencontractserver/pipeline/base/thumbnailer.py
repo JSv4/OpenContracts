@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Tuple
 
 from django.core.files.base import File
 
@@ -50,7 +50,7 @@ class BaseThumbnailGenerator(ABC):
                     pdf_bytes = pdf_file.read()
 
             # Pass both txt content and pdf bytes to the abstract method
-            result = self.__generate_thumbnail(txt_content, pdf_bytes)
+            result = self._generate_thumbnail(txt_content, pdf_bytes)
             if result:
                 thumbnail_bytes, extension = result
                 thumbnail_file = ContentFile(thumbnail_bytes)
@@ -68,11 +68,13 @@ class BaseThumbnailGenerator(ABC):
             return None
 
     @abstractmethod
-    def __generate_thumbnail(
+    def _generate_thumbnail(
         self,
         txt_content: Optional[str],
         pdf_bytes: Optional[bytes],
-    ) -> Optional[tuple[bytes, str]]:
+        height: int = 300,
+        width: int = 300,
+    ) -> Optional[Tuple[bytes, str]]:
         """
         Abstract method to generate a thumbnail from txt content and pdf bytes.
 

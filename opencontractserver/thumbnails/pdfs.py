@@ -5,15 +5,22 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def pdf_thumbnail_from_bytes(pdf_bytes: bytes) -> Optional[tuple[bytes, str]]:
+def pdf_thumbnail_from_bytes(
+    pdf_bytes: bytes,
+    thumbnail_size: tuple[int, int] = (400, 400),
+    crop_size: tuple[int, int] = (400, 200),
+) -> Optional[tuple[bytes, str]]:
     """
-    Generates a thumbnail image from the first page of a PDF file given as bytes.
+    Generates a thumbnail image from the first page of a PDF file given as bytes,
+    with specified thumbnail and crop sizes.
 
     Args:
         pdf_bytes (bytes): The raw bytes of the PDF file.
+        thumbnail_size (tuple[int, int]): The size to which the image is resized.
+        crop_size (tuple[int, int]): The size to which the image is cropped.
 
     Returns:
-        File: A Django File instance containing the thumbnail image.
+        Optional[tuple[bytes, str]]: A tuple containing the thumbnail image bytes and extension.
     """
     import io
     import logging
@@ -91,9 +98,13 @@ def pdf_thumbnail_from_bytes(pdf_bytes: bytes) -> Optional[tuple[bytes, str]]:
             page_one_image_cropped_padded, (255, 255, 255)
         )
 
-        # Resize and crop to 400x200 pixels
-        page_one_image_square.thumbnail((400, 400))
-        page_one_image_final = page_one_image_square.crop((0, 0, 400, 200))
+        # Resize image to thumbnail_size
+        page_one_image_square.thumbnail(thumbnail_size)
+
+        # Crop the image to crop_size
+        page_one_image_final = page_one_image_square.crop(
+            (0, 0, crop_size[0], crop_size[1])
+        )
 
         # Save the image to a BytesIO stream
         image_io = io.BytesIO()

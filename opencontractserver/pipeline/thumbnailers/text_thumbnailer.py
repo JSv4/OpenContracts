@@ -17,10 +17,12 @@ class TextThumbnailGenerator(BaseThumbnailGenerator):
     dependencies = []
     supported_file_types = [FileTypeEnum.TXT]
 
-    def __generate_thumbnail(
+    def _generate_thumbnail(
         self,
         txt_content: Optional[str],
         pdf_bytes: Optional[bytes],
+        height: int = 300,
+        width: int = 300,
     ) -> Optional[tuple[bytes, str]]:
         """
         Generate a thumbnail from text content and pdf bytes.
@@ -35,7 +37,11 @@ class TextThumbnailGenerator(BaseThumbnailGenerator):
         """
         if txt_content:
             # Use the create_text_thumbnail function to generate an image from text
-            image = create_text_thumbnail(text=txt_content)
+            image = create_text_thumbnail(
+                text=txt_content,
+                width=width,
+                height=height
+            )
             if image:
                 # Save the image to bytes
                 image_bytes_io = BytesIO()

@@ -68,6 +68,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   ffmpeg \
   libsm6 \
   libxext6 \
+  tesseract-ocr-eng \
   # cleaning up unused files
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*
@@ -91,11 +92,13 @@ RUN echo "RUN STAGE GITHUB_ACTIONS: $GITHUB_ACTIONS"
 COPY ./setup_codecov.sh .
 RUN if [ "$GITHUB_ACTIONS" ] ; then echo "GITHUB ACTION MODE" && chmod u+x setup_codecov.sh && ./setup_codecov.sh ; else echo "NOT GITHUB ACTION. DO NOT INSTALL CODECOV" ; fi
 
-# Run all Python scripts in the model_preloaders directory
+# Create the /models directory and set permissions
+RUN mkdir -p /models && chmod -R 755 /models
+
 # Copy the model_preloaders directory
 COPY ./model_preloaders ./model_preloaders
 
-# Run all Python scripts in the model_preloaders directory
+# Run all Python scripts in the model_preloaders directory to download models to /models
 RUN for script in ./model_preloaders/*.py; do \
       echo "Running $script"; \
       python "$script"; \

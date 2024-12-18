@@ -1,14 +1,17 @@
 from collections import defaultdict
+import io
 import logging
 import os
 import cv2
 import json
+import pdf2image
 from pathlib import Path
 import pytesseract
 from shapely.geometry import box
 from shapely.strtree import STRtree
 from typing import Optional, List, Dict, Any, Tuple
 import numpy as np
+from PIL import Image
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -30,8 +33,10 @@ from opencontractserver.types.dicts import (
     PawlsPagePythonType,
     PawlsTokenPythonType
 )
+from opencontractserver.utils.files import check_if_pdf_needs_ocr
 
 logger = logging.getLogger(__name__)
+
 
 def adjust_params_for_word_count(binary_image: np.ndarray, target_word_count: int, 
                                max_attempts: int = 10) -> List[np.ndarray]:
@@ -155,10 +160,21 @@ class DoclingParser(BaseParser):
 
             doc: DoclingDocument = result.document
             
+            pdf_bytes = pdf_file.read()
+            needs_ocr = check_if_pdf_needs_ocr(io.BytesIO(pdf_bytes))
+            logger.info(f"PDF needs OCR: {needs_ocr}")
+            
+            # cv2_results = self.process_document_text_boxes(doc, pdf_bytes)
+            # with open("cv2_results.json", "w") as f:    
+            #     json.dump(cv2_results, f, indent=4)
+            # cv2_results_two = self.process_document_tokens(doc, pdf_bytes)
+            # with open("cv2_results_two.json", "w") as f:    
+            #     json.dump(cv2_results_two, f, indent=4)
+            
             # Actual processing pipeline
             #########################################################
              # Convert document structure to PAWLS format and get spatial indices and mappings
-            pawls_pages, spatial_indices_by_page, tokens_by_page, token_indices_by_page, content = self._generate_pawls_content(doc)
+            pawls_pages, spatial_indices_by_page, tokens_by_page, token_indices_by_page, content = self._generate_pawls_content(doc, pdf_bytes)
 
             # Convert chunks to annotations using the spatial indices and token indices
             annotations = self.convert_chunks_to_annotations(
@@ -182,132 +198,6 @@ class DoclingParser(BaseParser):
             with open("open_contracts_data.json", "w") as f:
                 json.dump(open_contracts_data, f, indent=4)
             #########################################################
-            
-            
-
-            # # Log the basic properties of the DoclingDocument
-            # logger.info(f"DoclingDocument version: {doc.version}")
-            # logger.info(f"Number of pages: {len(doc.pages)}")
-            # logger.info(f"Number of texts: {len(doc.texts)}")
-            # logger.info(f"Number of tables: {len(doc.tables)}")
-            # logger.info(f"Number of pictures: {len(doc.pictures)}")
-            # logger.info(f"Number of groups: {len(doc.groups)}")
-            # logger.info(f"Metadata: {doc.key_value_items}")
-
-            # # Unpack and log detailed structures
-            # for i, page in doc.pages.items():
-            #     logger.info(f"Page {i}: size=({page.size.width}, {page.size.height}, {page.image.pil_image})")
-                
-            #     # print(pytesseract.image_to_boxes(page.image.pil_image))
-            #     word_data = pytesseract.image_to_data(page.image.pil_image, output_type=pytesseract.Output.DICT)
-    
-            #     # Create a list to store word boxes
-            #     word_boxes = []
-                
-            #     # Process each word
-            #     n_boxes = len(word_data['text'])
-            #     for i in range(n_boxes):
-            #         # Skip empty text
-            #         if int(word_data['conf'][i]) > 0:
-            #             word_info = {
-            #                 'text': word_data['text'][i],
-            #                 'confidence': word_data['conf'][i],
-            #                 'box': {
-            #                     'x': word_data['left'][i],
-            #                     'y': word_data['top'][i],
-            #                     'width': word_data['width'][i],
-            #                     'height': word_data['height'][i]
-            #                 },
-            #                 'block_num': word_data['block_num'][i],
-            #                 'line_num': word_data['line_num'][i],
-            #                 'word_num': word_data['word_num'][i]
-            #             }
-            #             word_boxes.append(word_info)
-            
-            #     logger.info(f"Word boxes: {word_boxes}")
-                
-            # """
-            # a 208 607 211 611 0
-            # i 211 607 215 611 0
-            # v 215 607 216 611 0
-            # e 218 607 222 611 0
-            # r 222 607 227 611 0
-            # """
-
-            # for i, text_item in enumerate(doc.texts):
-            #     logger.info(
-            #         f"Text[{i}]: text={text_item.text[:50]}, children={text_item.children}, "
-            #         f"label={text_item.label}, model_config={text_item.model_config}, "
-            #         f"orig={text_item.orig}, parent={text_item.parent}, "
-            #         f"prov={text_item.prov}, self_ref={text_item.self_ref}"
-            #     )
-
-            # for i, table_item in enumerate(doc.tables):
-            #     logger.info(f"Table[{i}]: rows={len(table_item.rows)}")
-
-            # for i, picture_item in enumerate(doc.pictures):
-            #     logger.info(f"Picture[{i}]: bbox={picture_item.bbox}")
-
-            # # Log groups and their properties
-            # for i, group in enumerate(doc.groups):
-            #     logger.info(
-            #         f"Group[{i}]: children={group.children}, label={group.label}, "
-            #         f"model_config={group.model_config}, name={group.name}, "
-            #         f"parent={group.parent}, self_ref={group.self_ref}"
-            #     )
-
-            # # Log furniture (headers/footers)
-            # if doc.furniture:
-            #     logger.info("Document has furniture (headers/footers).")
-            #     logger.info(
-            #         f"Furniture: children={doc.furniture.children}, label={doc.furniture.label}, "
-            #         f"model_config={doc.furniture.model_config}, name={doc.furniture.name}, "
-            #         f"parent={doc.furniture.parent}, self_ref={doc.furniture.self_ref}"
-            #     )
-            # else:
-            #     logger.info("No furniture in document.")
-
-            # # Log body hierarchy
-            # if doc.body:
-            #     logger.info("Logging document body hierarchy.")
-            #     logger.info(
-            #         f"Body: children={doc.body.children}, label={doc.body.label}, "
-            #         f"model_config={doc.body.model_config}, name={doc.body.name}, "
-            #         f"parent={doc.body.parent}, self_ref={doc.body.self_ref}"
-            #     )
-            # else:
-            #     logger.info("No body in document.")
-
-            # annotations = self.convert_chunks_to_annotations(doc)
-            # logger.info(f"Annotations: {annotations}")
-
-            # # Extract plain text content without formatting
-            # content = doc.export_to_markdown(strict_text=True)
-            # with open("content.txt", "w") as f:
-            #     f.write(content)
-
-            # # Log the extracted content length
-            # logger.info(f"Extracted content length: {len(content)} characters")
-
-            # # Convert document structure to PAWLS format and get spatial indices
-            # pawls_pages, spatial_indices_by_page, tokens_by_page = self._generate_pawls_content(doc)
-
-            # # Convert chunks to annotations using the spatial indices
-            # annotations = self.convert_chunks_to_annotations(doc, spatial_indices_by_page, tokens_by_page)
-
-            # # Create OpenContracts document structure
-            # open_contracts_data: OpenContractDocExport = {
-            #     "title": self._extract_title(doc, Path(doc_path).stem),
-            #     "content": content,
-            #     "description": self._extract_description(doc, self._extract_title(doc, Path(doc_path).stem)),
-            #     "pawls_file_content": pawls_pages,
-            #     "page_count": len(pawls_pages),
-            #     "doc_labels": [],
-            #     "labelled_text": annotations,
-            # }
-
-            # # Log the final OpenContracts data structure
-            # logger.info(f"OpenContracts data: {open_contracts_data}")
 
             # # Return parsed data
             return open_contracts_data
@@ -365,7 +255,8 @@ class DoclingParser(BaseParser):
 
     def _generate_pawls_content(
         self, 
-        doc: DoclingDocument
+        doc: DoclingDocument,
+        doc_bytes: bytes
     ) -> Tuple[
         List[PawlsPagePythonType], 
         Dict[int, STRtree], 
@@ -397,8 +288,7 @@ class DoclingParser(BaseParser):
         token_indices_by_page: Dict[int, np.ndarray] = {}
         content_parts: List[str] = []
         
-        tokens = self.process_document_text_boxes(doc)
-        logger.info(f"Tokens: {tokens}")
+        images = pdf2image.convert_from_bytes(doc_bytes)
 
         for page_num, page in doc.pages.items():
             logger.info(f"Processing page number {page_num}")
@@ -414,22 +304,13 @@ class DoclingParser(BaseParser):
                 height = 792.0
                 logger.warning(f"Page size not found for page {page_num}, using defaults")
 
-            # Convert PIL image to OpenCV image
-            image_array = np.array(page.image.pil_image)
-            image_cv = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
-
-            # Convert the image to grayscale
-            gray = cv2.cvtColor(image_cv, cv2.COLOR_BGR2GRAY)
-
-            # Apply thresholding (if needed)
-            thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-            inverted_image = 255 - thresh
-
-            # Use pytesseract to extract words
+            # Use pytesseract to extract words with improved configurations
+            custom_config = r'--oem 3 --psm 3'  # LSTM engine with automatic page segmentation
             word_data = pytesseract.image_to_data(
-                inverted_image,
+                # page.image.pil_image,
+                images[page_num-1],
                 output_type=pytesseract.Output.DICT,
-                config='--psm 6'
+                config=custom_config
             )
 
             tokens: List[PawlsTokenPythonType] = []
@@ -496,6 +377,52 @@ class DoclingParser(BaseParser):
         content = '\n'.join(content_parts)
 
         return pawls_pages, spatial_indices_by_page, tokens_by_page, token_indices_by_page, content
+
+    def _preprocess_image_for_ocr(self, image: np.ndarray) -> np.ndarray:
+        """
+        Preprocess the image to enhance OCR accuracy.
+
+        Args:
+            image (np.ndarray): The input image in OpenCV format.
+
+        Returns:
+            np.ndarray: The preprocessed image ready for OCR.
+        """
+        # Convert to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Resize image to improve OCR accuracy
+        scaling_factor = 2
+        width = int(gray.shape[1] * scaling_factor)
+        height = int(gray.shape[0] * scaling_factor)
+        gray = cv2.resize(gray, (width, height), interpolation=cv2.INTER_LINEAR)
+
+        # Apply bilateral filtering to reduce noise while keeping edges sharp
+        gray = cv2.bilateralFilter(gray, 9, 75, 75)
+
+        # Apply adaptive thresholding
+        thresh = cv2.adaptiveThreshold(
+            gray,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY,
+            blockSize=31,
+            C=2
+        )
+
+        # Deskew the image
+        coords = np.column_stack(np.where(thresh > 0))
+        angle = cv2.minAreaRect(coords)[-1]
+        if angle < -45:
+            angle = -(90 + angle)
+        else:
+            angle = -angle
+        (h, w) = thresh.shape[:2]
+        center = (w // 2, h // 2)
+        M = cv2.getRotationMatrix2D(center, angle, 1.0)
+        thresh = cv2.warpAffine(thresh, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+
+        return thresh
 
     def convert_chunks_to_annotations(
         self, 
@@ -616,8 +543,16 @@ class DoclingParser(BaseParser):
 
         return annotations
 
-    def process_document_text_boxes(self, doc: DoclingDocument) -> Dict[int, List[PawlsTokenPythonType]]:
-        """Process all text items in a DoclingDocument to extract word-level bounding boxes."""
+    def process_document_text_boxes(self, doc: DoclingDocument, doc_bytes: bytes) -> Dict[int, List[PawlsTokenPythonType]]:
+        """Process all text items in a DoclingDocument to extract word-level bounding boxes.
+
+        Args:
+            doc (DoclingDocument): The Docling document instance.
+            doc_bytes (bytes): The PDF document as bytes.
+
+        Returns:
+            Dict[int, List[PawlsTokenPythonType]]: A dictionary mapping page numbers to lists of tokens.
+        """
         from collections import defaultdict
         result: Dict[int, List[PawlsTokenPythonType]] = {}
         
@@ -627,21 +562,38 @@ class DoclingParser(BaseParser):
                 expected_tokens_per_page[prov.page_no] += len(text_item.text.split())
 
         # Process each page
+        images = pdf2image.convert_from_bytes(doc_bytes)
+         
         for page_no, page_item in doc.pages.items():
+            
             if not page_item.image:
                 continue
+            
+            # Get page size
+            if page_item.size:
+                width = page_item.size.width
+                height = page_item.size.height
+                logger.info(f"Page {page_no} dimensions: width={width}, height={height}")
+            else:
+                # Get dimensions from the Pillow image
+                width, height = images[page_no - 1].size
+                logger.warning(f"Page size not found in doc, using image dimensions: width={width}, height={height}")
             
             expected_tokens = expected_tokens_per_page[page_no]
             if expected_tokens == 0:
                 continue
             
             # Get page image
-            page_image = page_item.image.pil_image
+            page_image = images[page_no - 1]
             if not page_image:
                 continue
             
             # Convert PIL to OpenCV format for this page
             cv_image = cv2.cvtColor(np.array(page_image), cv2.COLOR_RGB2BGR)
+            
+            # Calculate scaling factors to convert coordinates from cv_image to page coordinate system
+            scale_x = width / cv_image.shape[1]
+            scale_y = height / cv_image.shape[0]
             
             page_word_boxes: List[PawlsTokenPythonType] = []
             
@@ -696,12 +648,23 @@ class DoclingParser(BaseParser):
                     for contour in contours:
                         x_rel, y_rel, w_rel, h_rel = cv2.boundingRect(contour)
                         
-                        # Convert to absolute page coordinates
+                        # Convert to absolute coordinates in cv_image coordinate system
+                        x_abs = x_min + x_rel
+                        y_abs = y_min + y_rel
+                        width_abs = w_rel
+                        height_abs = h_rel
+                        
+                        # Scale coordinates to match page coordinate system
+                        x_scaled = x_abs * scale_x
+                        y_scaled = y_abs * scale_y
+                        width_scaled = width_abs * scale_x
+                        height_scaled = height_abs * scale_y
+                        
                         word_box = {
-                            "x": float(x_min + x_rel),
-                            "y": float(y_min + y_rel),
-                            "width": float(w_rel),
-                            "height": float(h_rel)
+                            "x": float(x_scaled),
+                            "y": float(y_scaled),
+                            "width": float(width_scaled),
+                            "height": float(height_scaled)
                         }
                         word_boxes.append(word_box)
                     
@@ -729,4 +692,122 @@ class DoclingParser(BaseParser):
             result[page_no] = page_word_boxes
             logger.info(f"Processed {len(page_word_boxes)} tokens on page {page_no}")
         
+        return result
+
+    def process_document_tokens(
+        self, 
+        doc: DoclingDocument, 
+        doc_bytes: bytes
+    ) -> Dict[int, List[PawlsTokenPythonType]]:
+        """
+        Process all pages in a DoclingDocument to extract word-level bounding boxes using OpenCV.
+
+        This method processes each page of the document as a whole, utilizing OpenCV techniques to
+        detect word bounding boxes across the entire page, rather than processing per text item.
+
+        Args:
+            doc (DoclingDocument): The Docling document instance.
+            doc_bytes (bytes): The PDF document as bytes.
+
+        Returns:
+            Dict[int, List[PawlsTokenPythonType]]: A dictionary mapping page numbers to lists of tokens.
+        """
+        result: Dict[int, List[PawlsTokenPythonType]] = {}
+
+        # Convert PDF pages to images
+        images = pdf2image.convert_from_bytes(doc_bytes)
+
+        for page_no, page_item in doc.pages.items():
+            logger.info(f"Processing page {page_no}")
+
+            # Get page image
+            page_index = page_no - 1  # Adjust for zero-based index
+            if page_index >= len(images):
+                logger.warning(f"No image found for page {page_no}")
+                continue
+            page_image = images[page_index]
+
+            # Convert PIL image to OpenCV format
+            cv_image = cv2.cvtColor(np.array(page_image), cv2.COLOR_RGB2BGR)
+
+            # Get page size for scaling
+            if page_item.size:
+                width = page_item.size.width
+                height = page_item.size.height
+                logger.info(f"Page dimensions from Docling: width={width}, height={height}")
+            else:
+                width, height = page_image.size
+                logger.warning(f"Page size not found in Docling document, using image size: width={width}, height={height}")
+
+            # Calculate scaling factors to match page coordinate system
+            scale_x = width / cv_image.shape[1]
+            scale_y = height / cv_image.shape[0]
+
+            # Preprocess the image to enhance word detection
+            gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+
+            # Apply adaptive thresholding to get binary image
+            binary = cv2.adaptiveThreshold(
+                gray,
+                255,
+                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY_INV,
+                blockSize=15,
+                C=15
+            )
+
+            # Define structuring element and dilate to connect text contours
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+            dilated = cv2.dilate(binary, kernel, iterations=1)
+
+            # Find contours
+            contours, _ = cv2.findContours(
+                dilated, 
+                cv2.RETR_EXTERNAL, 
+                cv2.CHAIN_APPROX_SIMPLE
+            )
+
+            # Collect word bounding boxes
+            word_boxes: List[PawlsTokenPythonType] = []
+
+            for contour in contours:
+                x, y, w, h = cv2.boundingRect(contour)
+                # Filter out small regions that are unlikely to be words
+                if w < 10 or h < 10:
+                    continue
+
+                # Scale coordinates to match the page coordinate system
+                x_scaled = x * scale_x
+                y_scaled = y * scale_y
+                w_scaled = w * scale_x
+                h_scaled = h * scale_y
+
+                # Extract the ROI for OCR
+                roi = cv_image[y:y + h, x:x + w]
+
+                # Perform OCR on the ROI
+                text = pytesseract.image_to_string(
+                    roi, 
+                    config='--psm 7',  # Treat the image as a single text line
+                    lang='eng'
+                ).strip()
+
+                if text:
+                    token: PawlsTokenPythonType = {
+                        'x': float(x_scaled),
+                        'y': float(y_scaled),
+                        'width': float(w_scaled),
+                        'height': float(h_scaled),
+                        'text': text,
+                    }
+                    word_boxes.append(token)
+                    logger.info(f"Detected token: {token}")
+
+            # Optionally sort tokens top-to-bottom, left-to-right
+            word_boxes = sorted(word_boxes, key=lambda b: (b['y'], b['x']))
+
+            # Store tokens for this page
+            result[page_no] = word_boxes
+            logger.info(f"Extracted {len(word_boxes)} tokens from page {page_no}")
+
         return result

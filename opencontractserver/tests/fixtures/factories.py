@@ -21,7 +21,7 @@ def generate_random_analyzer_return_values(
     static_output: OpenContractsGeneratedCorpusPythonType = json.loads(
         (
             pathlib.Path(__file__).parent
-            / "sample_gremlin_engine_output_for_public_docs.json"
+            / "short_sample_gramlin_engine_output_for_public_docs.json"
         )
         .open("r")
         .read()

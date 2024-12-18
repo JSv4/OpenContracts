@@ -3,7 +3,6 @@ import json
 import logging
 
 import factory.django
-import requests
 import responses
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -28,9 +27,10 @@ from opencontractserver.tasks.analyzer_tasks import (
 from opencontractserver.tests.fixtures import (
     SAMPLE_GREMLIN_ENGINE_MANIFEST_PATH,
     SAMPLE_GREMLIN_OUTPUT_FOR_PUBLIC_DOCS,
+    SAMPLE_PDF_FILE_ONE_PATH,
+    SAMPLE_PDF_FILE_TWO_PATH,
     create_mock_submission_response,
     generate_random_analyzer_return_values,
-    get_valid_pdf_urls,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,19 +67,19 @@ class TestOpenContractsAnalyzers(TransactionTestCase):
             title="Test Analysis Corpus", creator=self.user, backend_lock=False
         )
 
-        for index, url in enumerate(get_valid_pdf_urls()):
-            response = requests.get(url)
-            self.assertEqual(response.status_code, 200)
+        sample_pdfs = [SAMPLE_PDF_FILE_ONE_PATH, SAMPLE_PDF_FILE_TWO_PATH]
 
-            pdf_contents = ContentFile(response.content)
-            Document.objects.create(
-                title=f"TestDoc{index}",
-                description="Manually created",
-                pdf_file=pdf_contents,
-                creator=self.user,
-                page_count=1,
-            )
-        logger.info(f"{len(get_valid_pdf_urls())} pdfs loaded for analysis")
+        for index, pdf_path in enumerate(sample_pdfs):
+            with pdf_path.open("rb") as pdf_file:
+                pdf_contents = ContentFile(pdf_file.read())
+                Document.objects.create(
+                    title=f"TestDoc{index}",
+                    description="Sample PDF Document",
+                    pdf_file=pdf_contents,
+                    creator=self.user,
+                    page_count=1,
+                )
+        logger.info(f"{len(sample_pdfs)} pdfs loaded for analysis")
 
     @factory.django.mute_signals(post_save)
     def test_analyzer_constraints(self):

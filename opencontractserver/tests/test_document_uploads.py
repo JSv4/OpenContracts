@@ -89,7 +89,7 @@ class UploadDocumentMutationTestCase(TestCase):
             "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
             "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "txt": "application/txt",
+            "txt": "text/plain",
         }
 
         for file_type, mime_type in file_types.items():

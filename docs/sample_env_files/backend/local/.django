@@ -45,3 +45,8 @@ NLM_INGESTOR_ACTIVE=True
 # ------------------------------------------------------------------------------
 OPENAI_API_KEY=<YourKeyHere>
 OPENAI_MODEL=gpt-4o
+
+# Docling
+# ------------------------------------------------------------------------------
+DOCLING_MODELS_PATH=/models/docling
+SENTENCE_TRANSFORMER_MODELS_PATH=/models/sentence-transformers

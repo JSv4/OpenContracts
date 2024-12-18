@@ -4,7 +4,6 @@ import json
 import logging
 
 import factory
-import requests
 import responses
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -29,9 +28,10 @@ from opencontractserver.tasks.analyzer_tasks import (
 )
 from opencontractserver.tests.fixtures import (
     SAMPLE_GREMLIN_ENGINE_MANIFEST_PATH,
+    SAMPLE_PDF_FILE_ONE_PATH,
+    SAMPLE_PDF_FILE_TWO_PATH,
     create_mock_submission_response,
     generate_random_analyzer_return_values,
-    get_valid_pdf_urls,
 )
 
 User = get_user_model()
@@ -93,23 +93,23 @@ class GraphQLAnalyzerTestCase(TestCase):
         logger.info(f"Created test corpus: {self.corpus}")
 
         self.doc_ids = []
-        for index, url in enumerate(get_valid_pdf_urls()):
-            response = requests.get(url)
-            self.assertEqual(response.status_code, 200)
+        sample_pdfs = [SAMPLE_PDF_FILE_ONE_PATH, SAMPLE_PDF_FILE_TWO_PATH]
 
-            pdf_contents = ContentFile(response.content)
-            with transaction.atomic():
-                document = Document.objects.create(
-                    title=f"TestDoc{index}",
-                    description="Manually created",
-                    creator=self.user,
-                )
-                document.pdf_file.save("dummy_file.pdf", pdf_contents)
+        for index, pdf_path in enumerate(sample_pdfs):
+            with pdf_path.open("rb") as pdf_file:
+                pdf_contents = ContentFile(pdf_file.read())
+                with transaction.atomic():
+                    document = Document.objects.create(
+                        title=f"TestDoc{index}",
+                        description="Sample PDF Document",
+                        creator=self.user,
+                    )
+                    document.pdf_file.save(f"dummy_file_{index}.pdf", pdf_contents)
 
-                self.doc_ids.append(document.id)
-                logger.info(f"Created document with id: {document.id}")
+                    self.doc_ids.append(document.id)
+                    logger.info(f"Created document with id: {document.id}")
 
-        logger.info(f"{len(get_valid_pdf_urls())} pdfs loaded for analysis")
+        logger.info(f"{len(self.doc_ids)} pdfs loaded for analysis")
 
         # Link docs to corpus
         self.corpus.documents.add(*self.doc_ids)
@@ -332,8 +332,7 @@ class GraphQLAnalyzerTestCase(TestCase):
             received_analysis["analyzer"]["analyzerId"] == "OC.SPACY.ANALYZER.V1"
         )
         self.assertTrue(
-            len(received_analysis["analyzedDocuments"]["edges"])
-            == len(get_valid_pdf_urls())
+            len(received_analysis["analyzedDocuments"]["edges"]) == len(self.doc_ids)
         )
         logger.info("SUCCESS!")
 

@@ -161,8 +161,6 @@ class DoclingParser(BaseParser):
             doc: DoclingDocument = result.document
             
             pdf_bytes = pdf_file.read()
-            needs_ocr = check_if_pdf_needs_ocr(io.BytesIO(pdf_bytes))
-            logger.info(f"PDF needs OCR: {needs_ocr}")
             
             # cv2_results = self.process_document_text_boxes(doc, pdf_bytes)
             # with open("cv2_results.json", "w") as f:    
@@ -254,13 +252,13 @@ class DoclingParser(BaseParser):
         return description
 
     def _generate_pawls_content(
-        self, 
+        self,
         doc: DoclingDocument,
         doc_bytes: bytes
     ) -> Tuple[
-        List[PawlsPagePythonType], 
-        Dict[int, STRtree], 
-        Dict[int, List[PawlsTokenPythonType]], 
+        List[PawlsPagePythonType],
+        Dict[int, STRtree],
+        Dict[int, List[PawlsTokenPythonType]],
         Dict[int, np.ndarray],
         str
     ]:
@@ -268,8 +266,13 @@ class DoclingParser(BaseParser):
         Convert Docling document content to PAWLS format, build spatial index for tokens,
         and accumulate the document content.
 
+        This method checks if the PDF requires OCR. If not, it uses pdfplumber to extract text and token bounding boxes.
+        If OCR is required, it uses pdf2image and pytesseract to extract text and tokens from images.
+        In both cases, it constructs the necessary data structures for PAWLS and adjusts coordinates to match the source document.
+
         Args:
-            doc (DoclingDocument): Docling document object.
+            doc (DoclingDocument): The Docling document instance.
+            doc_bytes (bytes): Bytes of the PDF document.
 
         Returns:
             Tuple containing:
@@ -279,7 +282,6 @@ class DoclingParser(BaseParser):
                 - Dict[int, np.ndarray]: Mapping from page indices to arrays of token indices.
                 - str: The full content of the document, constructed from the tokens.
         """
-        logger = logging.getLogger(__name__)
         logger.info("Generating PAWLS content")
 
         pawls_pages: List[PawlsPagePythonType] = []
@@ -287,91 +289,199 @@ class DoclingParser(BaseParser):
         tokens_by_page: Dict[int, List[PawlsTokenPythonType]] = {}
         token_indices_by_page: Dict[int, np.ndarray] = {}
         content_parts: List[str] = []
-        
-        images = pdf2image.convert_from_bytes(doc_bytes)
 
-        for page_num, page in doc.pages.items():
-            logger.info(f"Processing page number {page_num}")
+        # Check if PDF requires OCR
+        pdf_file_stream = io.BytesIO(doc_bytes)
+        needs_ocr = check_if_pdf_needs_ocr(pdf_file_stream)
+        logger.info(f"PDF needs OCR: {needs_ocr}")
 
-            # Get page size
-            if page.size:
-                width = page.size.width
-                height = page.size.height
-                logger.info(f"Page {page_num} dimensions: width={width}, height={height}")
-            else:
-                # Default dimensions if page size is not available
-                width = 612.0
-                height = 792.0
-                logger.warning(f"Page size not found for page {page_num}, using defaults")
+        if not needs_ocr:
+            # Use pdfplumber to extract tokens and text
+            logger.info("Using pdfplumber to extract text and tokens")
+            import pdfplumber
 
-            # Use pytesseract to extract words with improved configurations
-            custom_config = r'--oem 3 --psm 3'  # LSTM engine with automatic page segmentation
-            word_data = pytesseract.image_to_data(
-                # page.image.pil_image,
-                images[page_num-1],
-                output_type=pytesseract.Output.DICT,
-                config=custom_config
-            )
+            with pdfplumber.open(pdf_file_stream) as pdf:
+                for page_num, page in enumerate(pdf.pages, start=1):
+                    logger.info(f"Processing page number {page_num}")
 
-            tokens: List[PawlsTokenPythonType] = []
-            geometries: List[Any] = []
-            token_indices: List[int] = []
-            page_content_parts: List[str] = []
+                    # Get page size from Docling document if available
+                    docling_page = doc.pages.get(page_num)
+                    if docling_page and docling_page.size:
+                        width = docling_page.size.width
+                        height = docling_page.size.height
+                        logger.info(f"Page dimensions from Docling: width={width}, height={height}")
+                    else:
+                        # Use page size from pdfplumber
+                        width = page.width
+                        height = page.height
+                        logger.warning(f"No page size in Docling document; using pdfplumber page size: width={width}, height={height}")
 
-            n_boxes = len(word_data['text'])
-            for i in range(n_boxes):
-                word_text = word_data['text'][i]
-                conf = int(word_data['conf'][i])
+                    # Calculate scaling factors to adjust pdfplumber coordinates
+                    plumber_width = page.width
+                    plumber_height = page.height
+                    if plumber_width != width or plumber_height != height:
+                        scale_x = width / plumber_width
+                        scale_y = height / plumber_height
+                        logger.info(f"Scaling pdfplumber coordinates by factors scale_x={scale_x}, scale_y={scale_y}")
+                    else:
+                        scale_x = 1.0
+                        scale_y = 1.0
 
-                # Skip empty or low-confidence words
-                if conf > 0 and word_text.strip():
-                    x = float(word_data['left'][i])
-                    y = float(word_data['top'][i])
-                    w = float(word_data['width'][i])
-                    h = float(word_data['height'][i])
+                    tokens: List[PawlsTokenPythonType] = []
+                    geometries: List[box] = []
+                    token_indices: List[int] = []
+                    page_content_parts: List[str] = []
 
-                    token: PawlsTokenPythonType = {
-                        'x': x,
-                        'y': y,
-                        'width': w,
-                        'height': h,
-                        'text': word_text,
+                    # Extract words with bounding boxes
+                    words = page.extract_words()
+                    for word in words:
+                        x0 = float(word['x0']) * scale_x
+                        y0 = float(word['top']) * scale_y
+                        x1 = float(word['x1']) * scale_x
+                        y1 = float(word['bottom']) * scale_y
+                        text = word['text']
+
+                        w = x1 - x0
+                        h = y1 - y0
+                        y = height - y1  # Flip y-coordinate to match the coordinate system
+
+                        token: PawlsTokenPythonType = {
+                            'x': x0,
+                            'y': y,
+                            'width': w,
+                            'height': h,
+                            'text': text,
+                        }
+
+                        tokens.append(token)
+                        page_content_parts.append(text)
+                        logger.debug(f"Added token on page {page_num}: {token}")
+
+                        # Create geometry for spatial index
+                        token_bbox = box(x0, y, x0 + w, y + h)
+                        geometries.append(token_bbox)
+                        token_indices.append(len(tokens) - 1)
+
+                    # Append page content to the overall content
+                    content_parts.append(' '.join(page_content_parts))
+
+                    # Build spatial index for the page
+                    geometries_array = np.array(geometries, dtype=object)
+                    token_indices_array = np.array(token_indices)
+
+                    spatial_index = STRtree(geometries_array)
+                    spatial_indices_by_page[page_num] = spatial_index
+                    tokens_by_page[page_num] = tokens
+                    token_indices_by_page[page_num] = token_indices_array
+
+                    # Create PawlsPagePythonType
+                    pawls_page: PawlsPagePythonType = {
+                        'page': {
+                            'width': width,
+                            'height': height,
+                            'index': page_num,
+                        },
+                        'tokens': tokens,
                     }
 
-                    tokens.append(token)
-                    page_content_parts.append(word_text)
-                    logger.debug(f"Added token on page {page_num}: {token}")
+                    pawls_pages.append(pawls_page)
+                    logger.info(f"PAWLS content for page {page_num} added")
 
-                    # Create geometry for spatial index
-                    token_bbox = box(x, y, x + w, y + h)
-                    geometries.append(token_bbox)
-                    token_indices.append(len(tokens) - 1)
+        else:
+            # Use pdf2image and pytesseract to extract tokens and text
+            logger.info("Using OCR to extract text and tokens")
+            images = pdf2image.convert_from_bytes(doc_bytes)
+            for page_num, page_image in enumerate(images, start=1):
+                logger.info(f"Processing page number {page_num}")
 
-            # Append page content to the overall content
-            content_parts.append(' '.join(page_content_parts))
+                # Get page size from Docling document if available
+                page = doc.pages.get(page_num)
+                if page and page.size:
+                    width = page.size.width
+                    height = page.size.height
+                    logger.info(f"Page dimensions from Docling: width={width}, height={height}")
+                else:
+                    # Use image size as fallback
+                    width, height = page_image.size
+                    logger.warning(f"No page size in Docling document; using image size: width={width}, height={height}")
 
-            # Convert lists to numpy arrays
-            geometries_array = np.array(geometries, dtype=object)
-            token_indices_array = np.array(token_indices)
+                custom_config = r'--oem 3 --psm 3'
+                word_data = pytesseract.image_to_data(
+                    page_image,
+                    output_type=pytesseract.Output.DICT,
+                    config=custom_config
+                )
 
-            # Build spatial index for the page
-            spatial_index = STRtree(geometries_array)
-            spatial_indices_by_page[page_num] = spatial_index
-            tokens_by_page[page_num] = tokens
-            token_indices_by_page[page_num] = token_indices_array
+                tokens: List[PawlsTokenPythonType] = []
+                geometries: List[box] = []
+                token_indices: List[int] = []
+                page_content_parts: List[str] = []
 
-            # Create PawlsPagePythonType
-            pawls_page: PawlsPagePythonType = {
-                'page': {
-                    'width': width,
-                    'height': height,
-                    'index': page_num,
-                },
-                'tokens': tokens,
-            }
+                n_boxes = len(word_data['text'])
+                for i in range(n_boxes):
+                    word_text = word_data['text'][i]
+                    conf = int(word_data['conf'][i])
 
-            pawls_pages.append(pawls_page)
-            logger.info(f"PAWLS content for page {page_num} added")
+                    # Skip empty or low-confidence words
+                    if conf > 0 and word_text.strip():
+                        x = float(word_data['left'][i])
+                        y = float(word_data['top'][i])
+                        w = float(word_data['width'][i])
+                        h = float(word_data['height'][i])
+
+                        # Adjust coordinates to match the page size
+                        img_width, img_height = page_image.size
+                        scale_x = width / img_width
+                        scale_y = height / img_height
+
+                        x *= scale_x
+                        y *= scale_y
+                        w *= scale_x
+                        h *= scale_y
+
+                        y = height - y - h  # Flip y-coordinate
+
+                        token: PawlsTokenPythonType = {
+                            'x': x,
+                            'y': y,
+                            'width': w,
+                            'height': h,
+                            'text': word_text,
+                        }
+
+                        tokens.append(token)
+                        page_content_parts.append(word_text)
+                        logger.debug(f"Added token on page {page_num}: {token}")
+
+                        # Create geometry for spatial index
+                        token_bbox = box(x, y, x + w, y + h)
+                        geometries.append(token_bbox)
+                        token_indices.append(len(tokens) - 1)
+
+                # Append page content to the overall content
+                content_parts.append(' '.join(page_content_parts))
+
+                # Build spatial index for the page
+                geometries_array = np.array(geometries, dtype=object)
+                token_indices_array = np.array(token_indices)
+
+                spatial_index = STRtree(geometries_array)
+                spatial_indices_by_page[page_num] = spatial_index
+                tokens_by_page[page_num] = tokens
+                token_indices_by_page[page_num] = token_indices_array
+
+                # Create PawlsPagePythonType
+                pawls_page: PawlsPagePythonType = {
+                    'page': {
+                        'width': width,
+                        'height': height,
+                        'index': page_num,
+                    },
+                    'tokens': tokens,
+                }
+
+                pawls_pages.append(pawls_page)
+                logger.info(f"PAWLS content for page {page_num} added")
 
         # Combine content parts into full content
         content = '\n'.join(content_parts)

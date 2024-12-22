@@ -1185,11 +1185,11 @@ class DoclingParser(BaseParser):
            indentation logic (treated as top-level).
 
         2) Once all indent levels are assigned for the relevant items, we traverse the
-           complete set (including page_header/page_footer) in sorted order (by page,
-           then by bounding box top) to establish parent-child relationships. The parent
-           is decided by the usual indentation stack approach. Any annotation with
-           page_header/page_footer keeps parent_id=None and is excluded from indentation
-           stack usage.
+           complete set (including page_header/page_footer) in the order they appear
+           (assuming the input is already in proper reading order) and set parent-child
+           relationships. The parent is decided by the usual indentation stack approach.
+           Any annotation with page_header/page_footer keeps parent_id=None and is excluded
+           from indentation stack usage.
 
         Args:
             annotations (list[OpenContractsAnnotationPythonType]): The list of annotations.
@@ -1201,21 +1201,18 @@ class DoclingParser(BaseParser):
         logger.info("=== Starting Hierarchy Assignment ===")
         logger.info(f"Processing {len(annotations)} annotations")
 
-        # ------------------------------------------------------------------------------
-        # STEP A: Build an enriched list with basic page/coords info. We will set
-        #         indent_level to None for all initially, and only fill an integer level
-        #         for non-header/footer items in a later step.
-        # ------------------------------------------------------------------------------
+        # -------------------------------------------------------------------------
+        # STEP A: Build an enriched list with basic page/coords info.
+        #         We'll set indent_level to None initially.
+        # -------------------------------------------------------------------------
         annotations_enriched: list[dict[str, Any]] = []
         for ann in annotations:
             page_no = ann["page"]
             label = ann.get("annotationLabel") or "UNLABELED"
 
-            # We'll store top/left for sorting and potential indentation calculation
             top_coord = 0.0
             left_coord = 0.0
 
-            # We handle the annotation_json structure to grab bounding box top/left
             ann_json = ann["annotation_json"]
             if isinstance(ann_json, dict) and len(ann_json) > 0:
                 first_page_key = list(ann_json.keys())[0]
@@ -1233,36 +1230,28 @@ class DoclingParser(BaseParser):
                 "left": left_coord,
                 "text_snip": text_snip,
                 "label": label,
-                # Start everyone as None, so page_header/page_footer remain None
-                # and do not influence or partake in indentation logic.
-                "indent_level": None,
+                "indent_level": None,  # will be set for non-header/footer items
             })
 
-        # Sort the enriched items by (page, top) ascending
-        annotations_enriched.sort(key=lambda x: (x["page"], x["top"]))
+        logger.info("Not sorting by page/top; assuming reading order is already correct.")
 
-        # ------------------------------------------------------------------------------
-        # STEP B: Create "hierarchy_candidates" for GPT-based indent calculations.
-        #         This excludes page_header/page_footer items, which stay None / top-level.
-        # ------------------------------------------------------------------------------
+        # -------------------------------------------------------------------------
+        # STEP B: Identify items that should get an indent_level (non-header/footer).
+        # -------------------------------------------------------------------------
         hierarchy_candidates = [
             itm for itm in annotations_enriched
             if itm["label"].lower() not in ["page_header", "pagefooter", "page_footer"]
         ]
-        
-        # Set indent level to 0 for FIRST hierarchy_candidate
         if hierarchy_candidates:
             hierarchy_candidates[0]["indent_level"] = 0
 
-        # Now determine indent levels for these items using GPT,
-        # passing along the previous 10 items as "stack" context.
+        # We'll guess indent level for each item based on context of previous ~10
         for i, data in enumerate(hierarchy_candidates):
             text_snip = data["text_snip"]
             label = data["label"]
             x_indent = data["left"]
 
-            previous_items = hierarchy_candidates[max(0, i - 10) : i]
-            # GPT stack is a minimal structure: (indent_level, text_snip, label, x_indent).
+            previous_items = hierarchy_candidates[max(0, i - 10): i]
             gpt_stack = []
             for prev_it in previous_items:
                 gpt_stack.append({
@@ -1276,14 +1265,14 @@ class DoclingParser(BaseParser):
                 stack=gpt_stack,
                 text_snip=text_snip,
                 label=label,
-                x_indent=x_indent
+                x_indent=x_indent,
             )
             data["indent_level"] = indent_level
 
-        # ------------------------------------------------------------------------------
-        # STEP C: Use the assigned indent_level values to establish parent-child
-        #         relationships. Skip page_header / page_footer items in the stack logic.
-        # ------------------------------------------------------------------------------
+        # -------------------------------------------------------------------------
+        # STEP C: Assign parent-child relationships using an indentation stack.
+        #         Skip page_header/page_footer items in the stack logic.
+        # -------------------------------------------------------------------------
         updated_annotations_map: dict[int, OpenContractsAnnotationPythonType] = {}
         indent_stack: list[int] = []
 
@@ -1293,16 +1282,14 @@ class DoclingParser(BaseParser):
             indent_level = data["indent_level"]
 
             if label_lower in ["page_header", "pagefooter", "page_footer"]:
-                # These remain top-level, excluded from hierarchy logic.
                 ann["parent_id"] = None
                 updated_annotations_map[idx] = ann
                 continue
 
-            # If for any reason it's still None here, set to 0 so it doesn't break.
+            # If for any reason it's still None here, set to 0.
             if indent_level is None:
                 indent_level = 0
 
-            # Adjust the stack to match the target indent_level
             while len(indent_stack) > indent_level:
                 indent_stack.pop()
 
@@ -1310,11 +1297,9 @@ class DoclingParser(BaseParser):
                 if indent_stack:
                     indent_stack.append(idx)
                 else:
-                    # If no entries in stack and we want indent > 0, degrade to 0
                     indent_level = 0
                     break
 
-            # Determine parent
             if indent_level == 0:
                 parent_id = None
             else:
@@ -1323,7 +1308,6 @@ class DoclingParser(BaseParser):
 
             ann["parent_id"] = parent_id
 
-            # Now place ourselves on the stack
             if len(indent_stack) == indent_level:
                 indent_stack.append(idx)
             else:
@@ -1331,7 +1315,6 @@ class DoclingParser(BaseParser):
 
             updated_annotations_map[idx] = ann
 
-        # Finally, build a list in the original sorted order
         updated_annotations: list[OpenContractsAnnotationPythonType] = [
             updated_annotations_map[i]
             for i in sorted(updated_annotations_map.keys())

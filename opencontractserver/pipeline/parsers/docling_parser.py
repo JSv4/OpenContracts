@@ -1,6 +1,4 @@
-from collections import defaultdict
 import io
-import marvin
 import logging
 import os
 import cv2
@@ -12,7 +10,6 @@ from shapely.geometry import box
 from shapely.strtree import STRtree
 from typing import Optional, List, Dict, Any, Tuple
 import numpy as np
-from PIL import Image
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -24,7 +21,7 @@ from docling_core.transforms.chunker import BaseChunk
 from docling.datamodel.base_models import ConversionStatus, InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling_core.types.doc import DoclingDocument, DocItemLabel, GroupItem
+from docling_core.types.doc import DoclingDocument, DocItemLabel
 
 from opencontractserver.documents.models import Document
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
@@ -115,57 +112,6 @@ def print_hierarchy_to_file(
 
 ####
 
-
-def adjust_params_for_word_count(binary_image: np.ndarray, target_word_count: int, 
-                               max_attempts: int = 10) -> List[np.ndarray]:
-    """Attempt to find CV2 parameters that yield the target number of word boxes.
-    
-    Uses a series of increasingly aggressive morphological operations to try to
-    match the target word count.
-    """
-    # Parameters to try, from conservative to aggressive
-    kernel_size_factors = [80, 60, 40, 100, 120]  # divide image width by these
-    dilation_iterations = [3, 2, 4, 1, 5]
-    erosion_iterations = [2, 1, 3, 4, 2]
-    
-    best_contours = None
-    best_diff = float('inf')
-    
-    for attempt in range(max_attempts):
-        # Get parameters for this attempt
-        kernel_factor = kernel_size_factors[attempt % len(kernel_size_factors)]
-        dil_iter = dilation_iterations[attempt % len(dilation_iterations)]
-        ero_iter = erosion_iterations[attempt % len(erosion_iterations)]
-        
-        # Calculate kernel size
-        kernel_len = max(np.array(binary_image).shape[1]//kernel_factor, 3)
-        hori_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_len, 1))
-        
-        # Apply morphological operations
-        dilated = cv2.dilate(binary_image, hori_kernel, iterations=dil_iter)
-        eroded = cv2.erode(dilated, hori_kernel, iterations=ero_iter)
-        
-        # Find contours
-        contours, _ = cv2.findContours(eroded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # Filter small contours
-        valid_contours = [c for c in contours if cv2.boundingRect(c)[2] >= 10]
-        
-        # Check how close we are to target
-        diff = abs(len(valid_contours) - target_word_count)
-        
-        if diff == 0:  # Perfect match
-            return valid_contours
-        
-        if diff < best_diff:
-            best_diff = diff
-            best_contours = valid_contours
-            
-        if diff <= 1:  # Close enough
-            break
-            
-    return best_contours or []
-
 class DoclingParser(BaseParser):
     """
     Parser that uses Docling to convert PDF documents into OpenContracts format.
@@ -200,7 +146,7 @@ class DoclingParser(BaseParser):
         )
 
     def parse_document(
-        self, user_id: int, doc_id: int
+        self, user_id: int, doc_id: int, **kwargs
     ) -> Optional[OpenContractDocExport]:
         """
         Parses the document and converts it into the OpenContractDocExport format.
@@ -208,6 +154,7 @@ class DoclingParser(BaseParser):
         Args:
             user_id (int): The ID of the user.
             doc_id (int): The ID of the document.
+            **kwargs: Additional keyword arguments.
 
         Returns:
             Optional[OpenContractDocExport]: The parsed document data or None if parsing fails.
@@ -238,13 +185,6 @@ class DoclingParser(BaseParser):
             
             pdf_bytes = pdf_file.read()
             
-            # cv2_results = self.process_document_text_boxes(doc, pdf_bytes)
-            # with open("cv2_results.json", "w") as f:    
-            #     json.dump(cv2_results, f, indent=4)
-            # cv2_results_two = self.process_document_tokens(doc, pdf_bytes)
-            # with open("cv2_results_two.json", "w") as f:    
-            #     json.dump(cv2_results_two, f, indent=4)
-            
             # Actual processing pipeline
             #########################################################
              # Convert document structure to PAWLS format and get spatial indices and mappings
@@ -268,15 +208,17 @@ class DoclingParser(BaseParser):
                 "doc_labels": [],
                 "labelled_text": annotations,
             } 
-            # logger.info(f"OpenContracts data: {open_contracts_data}")
-            # with open("open_contracts_data.json", "w") as f:
-            #     json.dump(open_contracts_data, f, indent=4)
             #########################################################
 
-            # # Return parsed data
-            enriched_data = self._assign_hierarchy(open_contracts_data['labelled_text'])
-            print_hierarchy_to_file(enriched_data, "hierarchy_output.txt")
-            return enriched_data
+            # IF LLM_ENHANCED_HIERARCHY is True, traverse the structure produced by Docling (which is clean and has nicely separated sections BUT very poor
+            # in terms of complex doc hierarchy) and use LLM to infer relationships between sections. EXPERIMENTAL
+            if kwargs.get('llm_enhanced_hierarchy', False):
+                logger.info("LLM-enhanced hierarchy is enabled - this will add additional processing time but improve hierarchy quality")
+                enriched_data = self._assign_hierarchy(open_contracts_data['labelled_text'])
+                print_hierarchy_to_file(enriched_data, "hierarchy_output.txt")
+                open_contracts_data['labelled_text'] = enriched_data
+                
+            return open_contracts_data
 
         except Exception as e:
             logger.error(f"Docling parser failed: {e}")
@@ -775,7 +717,6 @@ class DoclingParser(BaseParser):
         #     a) If parent is "#/body" => None
         #     b) If parent is "#/groups/X", we want the group's *first item* to have None,
         #        and all subsequent items in that group to have that first item as parent.
-        #        We'll decide that by checking if doc_item is the first child in that group.
         #
         # ---------------------------------------------------------------------------
         annotations: List[OpenContractsAnnotationPythonType] = []
@@ -798,8 +739,11 @@ class DoclingParser(BaseParser):
                    => else => parent is self_ref of that first child
               3) Else, fallback to parent's self_ref (or None).
             """
+            logger.info(f"Getting parent ID for item {type(item)}: {item}")
             candidate_parent = getattr(item, "parent_ref", None) or getattr(item, "parent", None)
+            logger.info(f"\tCandidate parent: {candidate_parent}")
             this_self_ref = getattr(item, "self_ref", None)
+            logger.info(f"\tThis self_ref: {this_self_ref}")
 
             def parent_ref_str_or_none(parent):
                 if isinstance(parent, str):
@@ -809,6 +753,7 @@ class DoclingParser(BaseParser):
                 return None
 
             parent_str = parent_ref_str_or_none(candidate_parent)
+            logger.info(f"\tParent str ({type(parent_str)}): {parent_str}")
             if parent_str == "#/body":
                 return None
 
@@ -816,89 +761,108 @@ class DoclingParser(BaseParser):
             if parent_str and parent_str.startswith("#/groups/"):
                 # look up all children of that group
                 group_children = children_map.get(parent_str, [])
+                logger.info(f"\tGroup children: {group_children}")
                 if not group_children:
                     # if no children, nothing we can do
+                    logger.info("\tNo children, returning None")
                     return None
+                
 
                 # The first child
                 first_child = group_children[0]
                 # If this item is the first child, parent is None
                 if this_self_ref == first_child:
+                    logger.info("\tThis item is the first child, returning None")
                     return None
                 # Otherwise, the parent is that first_child
+                logger.info(f"\tOtherwise, the parent is that first_child: {first_child}")
                 return first_child
+
+            logger.info(f"\tFallback to whatever we found: {parent_str}")
 
             # Else fallback to whatever we found
             return parent_str if parent_str else None
 
         for chunk in all_chunks:
+            # Skip chunk if no doc_items
             if not chunk.meta or not chunk.meta.doc_items:
                 logger.warning("Chunk meta does not have doc_items; skipping chunk")
                 continue
 
-            doc_item = chunk.meta.doc_items[0]
-            if not doc_item.prov or len(doc_item.prov) == 0:
-                logger.warning("DocItem does not have provenance data; skipping chunk")
-                continue
+            # Instead of just doc_item = chunk.meta.doc_items[0],
+            # process all doc_items in this chunk:
+            for doc_item in chunk.meta.doc_items:
 
-            prov = doc_item.prov[0]
-            page_no = prov.page_no
-            bbox = prov.bbox
-            logger.debug(f"Chunk is on page {page_no} with bbox {bbox}")
+                # Skip doc_item if it has no provenance data
+                if not doc_item.prov or len(doc_item.prov) == 0:
+                    logger.warning("DocItem does not have provenance data; skipping item")
+                    continue
 
-            labels = [di.label for di in chunk.meta.doc_items if hasattr(di, "label")]
-            label = max(set(labels), key=labels.count) if labels else "UNKNOWN"
+                # Use the first provenance if multiple
+                prov = doc_item.prov[0]
+                page_no = prov.page_no
+                bbox = prov.bbox
 
-            chunk_bbox = box(bbox.l, bbox.t, bbox.r, bbox.b)
-            spatial_index = spatial_indices_by_page.get(page_no)
-            tokens = tokens_by_page.get(page_no)
-            token_indices_array = token_indices_by_page.get(page_no)
+                logger.debug(f"Processing doc_item = {doc_item.self_ref} on page {page_no} with bbox={bbox}")
 
-            if spatial_index is None or tokens is None or token_indices_array is None:
-                logger.warning(f"No spatial index or tokens found for page {page_no}; skipping chunk")
-                continue
+                # Decide on label by majority vote among doc_items in chunk (or fallback)
+                labels = [di.label for di in chunk.meta.doc_items if hasattr(di, "label")]
+                label = max(set(labels), key=labels.count) if labels else "UNKNOWN"
 
-            candidate_indices = spatial_index.query(chunk_bbox)
-            candidate_geometries = spatial_index.geometries.take(candidate_indices)
-            actual_indices = candidate_indices[
-                [geom.intersects(chunk_bbox) for geom in candidate_geometries]
-            ]
-            token_indices = token_indices_array[actual_indices]
+                # Build bounding box geometry
+                chunk_bbox = box(bbox.l, bbox.t, bbox.r, bbox.b)
+                spatial_index = spatial_indices_by_page.get(page_no)
+                tokens = tokens_by_page.get(page_no)
+                token_indices_array = token_indices_by_page.get(page_no)
 
-            token_ids = [
-                {"pageIndex": page_no, "tokenIndex": int(idx)}
-                for idx in sorted(token_indices)
-            ]
+                if spatial_index is None or tokens is None or token_indices_array is None:
+                    logger.warning(f"No spatial index or tokens found for page {page_no}; skipping doc_item")
+                    continue
 
-            annotation_json: Dict[int, OpenContractsSinglePageAnnotationType] = {
-                page_no: {
-                    "bounds": {
-                        "left": bbox.l,
-                        "top": bbox.t,
-                        "right": bbox.r,
-                        "bottom": bbox.b,
-                    },
-                    "tokensJsons": token_ids,
-                    "rawText": chunk.text,
+                candidate_indices = spatial_index.query(chunk_bbox)
+                candidate_geometries = spatial_index.geometries.take(candidate_indices)
+                actual_indices = candidate_indices[
+                    [geom.intersects(chunk_bbox) for geom in candidate_geometries]
+                ]
+                token_indices = token_indices_array[actual_indices]
+
+                token_ids = [
+                    {"pageIndex": page_no, "tokenIndex": int(idx)}
+                    for idx in sorted(token_indices)
+                ]
+
+                annotation_json: Dict[int, OpenContractsSinglePageAnnotationType] = {
+                    page_no: {
+                        "bounds": {
+                            "left": bbox.l,
+                            "top": bbox.t,
+                            "right": bbox.r,
+                            "bottom": bbox.b,
+                        },
+                        "tokensJsons": token_ids,
+                        "rawText": chunk.text,
+                    }
                 }
-            }
 
-            annotation: OpenContractsAnnotationPythonType = {
-                "id": getattr(doc_item, "self_ref", None),
-                "annotationLabel": label,
-                "rawText": chunk.text,
-                "page": page_no,
-                "annotation_json": annotation_json,
-                "parent_id": get_annotation_parent_id(doc_item),
-                "annotation_type": getattr(doc_item, "label", None),
-                "structural": True,
-            }
+                # Calculate parent_id using the existing logic
+                parent_id = get_annotation_parent_id(doc_item)
 
-            annotations.append(annotation)
-            logger.info(
-                f"Annotation created for chunk on page {page_no} "
-                f"with id={annotation['id']} parent_id={annotation['parent_id']}"
-            )
+                annotation: OpenContractsAnnotationPythonType = {
+                    "id": getattr(doc_item, "self_ref", None),
+                    "annotationLabel": label,
+                    "rawText": chunk.text,
+                    "page": page_no,
+                    "annotation_json": annotation_json,
+                    "parent_id": parent_id,
+                    "annotation_type": getattr(doc_item, "label", None),
+                    "structural": True,
+                }
+
+                annotations.append(annotation)
+                logger.info(
+                    f"Annotation created for doc_item={annotation['id']} on page {page_no} "
+                    f"with parent_id={annotation['parent_id']}"
+                )
 
         return annotations
 
@@ -1174,6 +1138,7 @@ class DoclingParser(BaseParser):
     def _assign_hierarchy(
         self,
         annotations: list[OpenContractsAnnotationPythonType],
+        look_behind: int = 16
     ) -> list[OpenContractsAnnotationPythonType]:
         """
         Assigns a hierarchical structure to annotations in two main steps:
@@ -1251,7 +1216,7 @@ class DoclingParser(BaseParser):
             label = data["label"]
             x_indent = data["left"]
 
-            previous_items = hierarchy_candidates[max(0, i - 10): i]
+            previous_items = hierarchy_candidates[max(0, i - look_behind): i]
             gpt_stack = []
             for prev_it in previous_items:
                 gpt_stack.append({

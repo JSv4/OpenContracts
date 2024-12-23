@@ -2,8 +2,8 @@
 Tests for functions in opencontractserver.utils.layout
 """
 import vcr
-
 from django.test import TestCase
+
 from opencontractserver.types.dicts import OpenContractsAnnotationPythonType
 from opencontractserver.utils.layout import reassign_annotation_hierarchy
 
@@ -89,7 +89,10 @@ class LayoutUtilsTestCase(TestCase):
             },
         ]
 
-    @vcr.use_cassette("fixtures/vcr_cassettes/test_reassign_annotation_hierarchy.yaml", filter_headers=['authorization'])
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/test_reassign_annotation_hierarchy.yaml",
+        filter_headers=["authorization"],
+    )
     def test_reassign_annotation_hierarchy(self) -> None:
         """
         Verify that reassign_annotation_hierarchy correctly assigns parent-child
@@ -115,6 +118,8 @@ class LayoutUtilsTestCase(TestCase):
         self.assertIsNotNone(heading_1)
         self.assertIsNone(heading_1["parent_id"])
 
-        footer_item = next((x for x in results if x["annotationLabel"].lower() == "page_footer"), None)
+        footer_item = next(
+            (x for x in results if x["annotationLabel"].lower() == "page_footer"), None
+        )
         self.assertIsNotNone(footer_item)
         self.assertIsNone(footer_item["parent_id"])

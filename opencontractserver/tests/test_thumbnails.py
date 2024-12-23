@@ -155,9 +155,7 @@ class ThumbnailTestCase(TestCase):
         mock_thumbnailer_class = MagicMock()
         mock_thumbnailer_instance = MagicMock()
 
-        def mock_generate_thumbnail(
-            txt_content, pdf_bytes, height=300, width=300
-        ):
+        def mock_generate_thumbnail(txt_content, pdf_bytes, height=300, width=300):
             img = self.create_mock_image(width, height)
             img_bytes_io = ContentFile(b"", name="icon.png")
             img.save(img_bytes_io, format="PNG")

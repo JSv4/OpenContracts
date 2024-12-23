@@ -44,9 +44,7 @@ class PdfThumbnailGenerator(BaseThumbnailGenerator):
             crop_size = (width, height)
 
             return pdf_thumbnail_from_bytes(
-                pdf_bytes,
-                thumbnail_size=thumbnail_size,
-                crop_size=crop_size
+                pdf_bytes, thumbnail_size=thumbnail_size, crop_size=crop_size
             )
 
         except Exception as e:

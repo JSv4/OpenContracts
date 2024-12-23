@@ -37,11 +37,7 @@ class TextThumbnailGenerator(BaseThumbnailGenerator):
         """
         if txt_content:
             # Use the create_text_thumbnail function to generate an image from text
-            image = create_text_thumbnail(
-                text=txt_content,
-                width=width,
-                height=height
-            )
+            image = create_text_thumbnail(text=txt_content, width=width, height=height)
             if image:
                 # Save the image to bytes
                 image_bytes_io = BytesIO()

@@ -25,7 +25,6 @@ SAMPLE_PDF_FILE_ONE_PATH = (
     / "EtonPharmaceuticalsInc_20191114_10-Q_EX-10.1_11893941_EX-10.1_Development_"
     "Agreement_ZrZJLLv.pdf"
 )
-SAMPLE_DOCLING_RESULTS_PDF_FILE_ONE_PATH = pathlib.Path(__file__).parent / "docling_parser_results_eton_pharma.json"
 
 # files for nlm ingestor pipeline test
 NLM_INGESTOR_SAMPLE_PDF = pathlib.Path(__file__).parent / "sample.pdf"

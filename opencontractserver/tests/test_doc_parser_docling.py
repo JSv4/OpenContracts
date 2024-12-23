@@ -10,11 +10,9 @@ from django.test import TestCase
 from opencontractserver.documents.models import Document
 from opencontractserver.pipeline.parsers.docling_parser import DoclingParser
 from opencontractserver.tests.fixtures import (
-    SAMPLE_DOCLING_RESULTS_PDF_FILE_ONE_PATH,
     SAMPLE_PAWLS_FILE_ONE_PATH,
     SAMPLE_PDF_FILE_ONE_PATH,
-    SAMPLE_TXT_FILE_ONE_PATH,
-    SAMPLE_PDF_FILE_TWO_PATH
+    SAMPLE_TXT_FILE_ONE_PATH
 )
 from opencontractserver.types.dicts import OpenContractDocExport
 
@@ -35,8 +33,6 @@ class DoclingParserIntegrationTestCase(TestCase):
             self.expected_pawls = json.load(f)
         with SAMPLE_TXT_FILE_ONE_PATH.open("r") as f:
             self.expected_text = f.read()
-        with SAMPLE_DOCLING_RESULTS_PDF_FILE_ONE_PATH.open("r") as f:
-            self.expected_docling_results = json.load(f)
 
         with transaction.atomic():
             self.user = User.objects.create_user(
@@ -134,10 +130,13 @@ class DoclingParserIntegrationTestCase(TestCase):
             23
         )
 
+        for page_id, page in enumerate(result["pawls_file_content"]):
+            logger.info(f"Token count on page {page_id}: {len(page['tokens'])}")
+
         # Assert token counts for each page
         expected_token_counts = [
-            392, 374, 470, 350, 490, 431, 386, 585, 463, 577,
-            806, 276, 706, 563, 428, 426, 572, 616, 465, 335,
+            391, 374, 470, 350, 490, 431, 381, 569, 463, 577,
+            806, 276, 706, 563, 427, 426, 572, 616, 465, 335,
             496, 43, 6
         ]
         

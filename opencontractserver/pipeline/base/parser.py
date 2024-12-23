@@ -29,7 +29,7 @@ class BaseParser(ABC):
 
     @abstractmethod
     def parse_document(
-        self, user_id: int, doc_id: int
+        self, user_id: int, doc_id: int, **kwargs
     ) -> Optional[OpenContractDocExport]:
         """
         Abstract method to parse a document.

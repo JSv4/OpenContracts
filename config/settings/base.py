@@ -259,11 +259,11 @@ else:
     # https://django-storages.readthedocs.io/en/latest/#installation
     INSTALLED_APPS += ["storages"]  # noqa F405
     # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html#settings
-    AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
+    AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="dummy-key")
     # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html#settings
-    AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
+    AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="dummy-secret")
     # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html#settings
-    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
+    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="dummy-bucket")
     # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html#settings
     AWS_QUERYSTRING_AUTH = True
     # DO NOT change these unless you know what you're doing.

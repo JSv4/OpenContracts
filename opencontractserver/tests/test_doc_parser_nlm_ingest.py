@@ -11,7 +11,7 @@ from django.test import TestCase
 
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.parsers.nlm_ingest import parse_with_nlm
+from opencontractserver.pipeline.parsers.nlm_ingest_parser import NLMIngestParser
 from opencontractserver.tests.fixtures import (
     NLM_INGESTOR_EXPECTED_JSON,
     NLM_INGESTOR_SAMPLE_PDF,
@@ -64,7 +64,8 @@ class ParseWithNLMTestCase(TestCase):
         responses.add(nlm_parse_response)
 
         # Call the parse_with_nlm function
-        open_contracts_data: OpenContractDocExport = parse_with_nlm(
+        parser = NLMIngestParser()
+        open_contracts_data: OpenContractDocExport = parser.parse_document(
             user_id=self.user.id, doc_id=self.doc.id
         )
 

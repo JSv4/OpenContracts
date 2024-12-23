@@ -91,7 +91,6 @@ jobs:
         run: |
           docker builder prune -f
           docker network prune -f
-          docker system prune -f --filter "until=24h"
           df -h
 
       - name: Clean Docker volumes

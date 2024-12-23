@@ -26,6 +26,8 @@ concurrency:
 jobs:
   linter:
     runs-on: ubuntu-latest
+    with:
+      storage: local
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main

@@ -26,8 +26,6 @@ concurrency:
 jobs:
   linter:
     runs-on: ubuntu-latest
-    with:
-      storage: local
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -88,6 +86,11 @@ jobs:
 
       - name: Build the Stack
         run:  docker compose -f test.yml build
+      
+      - name: Clean up after build
+        run: |
+          rm -rf ./* # Remove source
+          df -h # Check space
 
       - name: Run DB Migrations
         run:  docker compose -f test.yml run --rm django python manage.py migrate

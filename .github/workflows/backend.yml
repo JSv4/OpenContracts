@@ -92,7 +92,7 @@ jobs:
           rm -rf ./* # Remove source
           df -h # Check space
 
-            - name: Clean Docker without removing images
+      - name: Clean Docker without removing images
         run: |
           docker builder prune -f  # Remove build cache
           docker system prune -f --filter "until=24h" --volumes  # Remove unused volumes/networks

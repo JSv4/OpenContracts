@@ -3,6 +3,7 @@ import logging
 import os
 from pathlib import Path
 from typing import Optional, Union
+from io import BytesIO
 
 import numpy as np
 import pdf2image
@@ -19,6 +20,7 @@ from docling_core.types.doc import (
     SectionHeaderItem,
     TextItem,
 )
+from docling.datamodel.base_models import DocumentStream
 from docling_core.types.doc.document import ListItem
 from shapely.geometry import box
 from shapely.strtree import STRtree
@@ -101,7 +103,7 @@ logger = logging.getLogger(__name__)
 #     # -------------------------------------------------------------------------
 #     # STEP 3: Write the indented text to the output file.
 #     #         We'll iterate through by_id in the order we just assigned indent levels.
-#     #         If we want a strictly “reading” order, we might need a more structured
+#     #         If we want a strictly "reading" order, we might need a more structured
 #     #         approach, but for simplicity, we'll just group by top-level first, then
 #     #         sub-hierarchies.
 #     # -------------------------------------------------------------------------
@@ -282,40 +284,31 @@ class DoclingParser(BaseParser):
         """
         logger.info(f"DoclingParser - Parsing doc {doc_id} for user {user_id}")
 
-        # Retrieve the document
         document = Document.objects.get(pk=doc_id)
         doc_path = document.pdf_file.name
-
-        # Create a temporary file path
-        temp_dir = settings.TEMP_DIR if hasattr(settings, "TEMP_DIR") else "/tmp"
-        temp_pdf_path = os.path.join(temp_dir, f"doc_{doc_id}.pdf")
 
         force_ocr = kwargs.get("force_ocr", False)
         if force_ocr:
             logger.info(
-                "Force OCR is enabled - this will add additional processing time and may not be necessary. "
-                "We try to intelligently determine if OCR is needed."
+                "Force OCR is enabled - this adds extra processing time and may not be necessary. "
+                "We normally try to intelligently determine if OCR is needed."
             )
 
-        # Write the file to a temporary location
+        # Read pdf bytes and create DocumentStream
         with default_storage.open(doc_path, "rb") as pdf_file:
-            with open(temp_pdf_path, "wb") as temp_pdf_file:
-                temp_pdf_file.write(pdf_file.read())
+            pdf_bytes = pdf_file.read()
+            buf = BytesIO(pdf_bytes)
+            doc_stream = DocumentStream(name=f"doc_{doc_id}.pdf", stream=buf)
 
         try:
-            # Process document through Docling
-            result = self.doc_converter.convert(temp_pdf_path)
-
+            # Convert file via Docling using DocumentStream
+            result = self.doc_converter.convert(doc_stream)
             if result.status != ConversionStatus.SUCCESS:
                 raise Exception(f"Conversion failed: {result.errors}")
 
             doc: DoclingDocument = result.document
 
-            pdf_bytes = pdf_file.read()
-
-            # Actual processing pipeline
-            #########################################################
-            # Convert document structure to PAWLS format and get spatial indices and mappings
+            # Pass pdf_bytes into the next steps for pawls content extraction, OCR checks, etc.
             (
                 pawls_pages,
                 spatial_indices_by_page,
@@ -405,9 +398,8 @@ class DoclingParser(BaseParser):
             return None
 
         finally:
-            # Clean up the temporary file
-            if os.path.exists(temp_pdf_path):
-                os.remove(temp_pdf_path)
+            if os.path.exists(doc_path):
+                os.remove(doc_path)
 
     def _extract_title(self, doc: DoclingDocument, default_title: str) -> str:
         """

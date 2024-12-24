@@ -523,7 +523,7 @@ SENTENCE_TRANSFORMER_MODELS_PATH = env.str(
 
 # Preferred parsers for each MIME type
 PREFERRED_PARSERS = {
-    "application/pdf": "opencontractserver.pipeline.parsers.nlm_ingest_parser.NLMIngestParser",
+    "application/pdf": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",
     "text/plain": "opencontractserver.pipeline.parsers.oc_text_parser.TxtParser",
     "application/txt": "opencontractserver.pipeline.parsers.oc_text_parser.TxtParser",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",  # noqa

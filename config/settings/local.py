@@ -3,8 +3,8 @@ from .base import env
 
 # GENERAL
 # ------------------------------------------------------------------------------
-# https://docs.djangoproject.com/en/dev/ref/settings/#debug
-DEBUG = True
+USE_SILK = False
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 SECRET_KEY = env(
     "DJANGO_SECRET_KEY",
@@ -39,7 +39,7 @@ if env("USE_DOCKER") == "yes":
 # django-extensions
 # ------------------------------------------------------------------------------
 # https://django-extensions.readthedocs.io/en/latest/installation_instructions.html#configuration
-INSTALLED_APPS += ["django_extensions", "silk"]  # noqa F405
+INSTALLED_APPS += ["django_extensions"]  # noqa F405
 
 # Celery
 # ------------------------------------------------------------------------------
@@ -63,8 +63,11 @@ CSRF_COOKIE_HTTPONLY = False
 
 # Your stuff...
 # ------------------------------------------------------------------------------
-MIDDLEWARE += [
-    "django_cprofile_middleware.middleware.ProfilerMiddleware",
-    "silk.middleware.SilkyMiddleware",
-]
-SILKY_PYTHON_PROFILER = True
+if DEBUG and USE_SILK:
+    MIDDLEWARE += [
+        "django_cprofile_middleware.middleware.ProfilerMiddleware",
+        "silk.middleware.SilkyMiddleware",
+    ]
+    SILKY_PYTHON_PROFILER = True
+
+DEBUG = True

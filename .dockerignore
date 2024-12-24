@@ -6,7 +6,11 @@ site/
 .github/
 .ipython/
 .pytest_cache/
+__pycache__/
 docs/
 .coverage
 frontend/node_modules
 opencontractserver/media
+site/
+static/
+user_*/

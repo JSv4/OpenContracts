@@ -873,7 +873,7 @@ class UploadDocument(graphene.Mutation):
             if kind is None:
 
                 if is_plaintext_content(file_bytes):
-                    kind = "application/txt"
+                    kind = "text/plain"
                 else:
                     return UploadDocument(
                         message="Unable to determine file type", ok=False, document=None
@@ -906,7 +906,7 @@ class UploadDocument(graphene.Mutation):
                     file_type=kind,  # Store filetype
                 )
                 document.save()
-            elif kind in ["application/txt"]:
+            elif kind in ["text/plain", "application/txt"]:
                 txt_extract_file = ContentFile(file_bytes, name=filename)
                 document = Document(
                     creator=user,

@@ -1,32 +1,24 @@
 from __future__ import annotations
 
 import enum
-import io
 import json
 import logging
 from typing import Any
 
-import numpy as np
-import requests
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.files.base import ContentFile, File
 from django.core.files.storage import default_storage
 from django.utils import timezone
-from pdf2image import convert_from_bytes
-from PIL import Image
-from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
 from pydantic import validate_arguments
 
 from config import celery_app
-from config.graphql.serializers import AnnotationLabelSerializer
-from opencontractserver.annotations.models import (
-    SPAN_LABEL,
-    TOKEN_LABEL,
-    Annotation,
-    AnnotationLabel,
-)
+from opencontractserver.annotations.models import TOKEN_LABEL, Annotation
 from opencontractserver.documents.models import Document
+from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
+from opencontractserver.pipeline.utils import (
+    get_component_by_name,
+    get_components_by_mimetype,
+)
 from opencontractserver.types.dicts import (
     FunsdAnnotationType,
     FunsdTokenType,
@@ -34,14 +26,8 @@ from opencontractserver.types.dicts import (
     OpenContractDocExport,
     PawlsTokenPythonType,
 )
-from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
-from opencontractserver.utils.files import (
-    check_if_pdf_needs_ocr,
-    create_text_thumbnail,
-    split_pdf_into_images,
-)
-from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
+from opencontractserver.utils.files import split_pdf_into_images
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -67,174 +53,51 @@ def set_doc_lock_state(*args, locked: bool, doc_id: int):
     document.save()
 
 
-@celery_app.task(
-    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
-)
-def ingest_txt(user_id: int, doc_id: int) -> list[tuple[int, str]]:
-    import spacy
+@celery_app.task(bind=True)
+def ingest_doc(self, user_id: int, doc_id: int) -> None:
+    """
+    Ingests a document using the appropriate parser based on the document's MIME type.
+    The parser class is determined using get_component_by_name.
 
-    logger.info(f"ingest_txt() - split doc {doc_id} for user {user_id}")
+    Args:
+        user_id (int): The ID of the user.
+        doc_id (int): The ID of the document to ingest.
 
-    label_obj = AnnotationLabel.objects.filter(
-        text="SENTENCE",
-        creator_id=user_id,
-        label_type=SPAN_LABEL,
-        read_only=True,
-    )
-    if label_obj.count() > 0:
-        label_obj = label_obj[0]
-    else:
-        label_obj = AnnotationLabel(
-            label_type=SPAN_LABEL,
-            color="grey",
-            description="Sentence",
-            icon="expand",
-            text="SENTENCE",
-            creator_id=user_id,
-            read_only=True,
+    Raises:
+        ValueError: If no parser is defined for the document's MIME type.
+        Exception: If parsing fails.
+    """
+    logger.info(f"ingest_doc() - Ingesting doc {doc_id} for user {user_id}")
+
+    # Fetch the document
+    try:
+        document = Document.objects.get(pk=doc_id)
+    except Document.DoesNotExist:
+        logger.error(f"Document with id {doc_id} does not exist.")
+        return
+
+    # Get the parser class name from settings based on MIME type
+    parser_name = settings.PREFERRED_PARSERS.get(document.file_type)
+    if not parser_name:
+        raise ValueError(f"No parser defined for MIME type '{document.file_type}'")
+
+    # Get the parser class using get_component_by_name
+    try:
+        parser_class = get_component_by_name(parser_name)
+        parser_instance = parser_class()
+    except ValueError as e:
+        logger.error(f"Failed to load parser '{parser_name}': {e}")
+        raise
+
+    # Call the parser's parse_document method
+    try:
+        parser_instance.process_document(user_id, doc_id)
+        logger.info(
+            f"Document {doc_id} ingested successfully using parser '{parser_name}'"
         )
-        label_obj.save()
-
-    set_permissions_for_obj_to_user(user_id, label_obj, [PermissionTypes.ALL])
-
-    doc = Document.objects.get(pk=doc_id)
-    doc_path = doc.txt_extract_file.name
-    txt_file = default_storage.open(doc_path, mode="r")
-
-    nlp = spacy.load("en_core_web_lg")
-
-    for sentence in nlp(txt_file.read()).sents:
-        annot_obj = Annotation.objects.create(
-            raw_text=sentence.text,
-            page=1,
-            json={"start": sentence.start_char, "end": sentence.end_char},
-            annotation_label=label_obj,
-            document=doc,
-            creator_id=user_id,
-            annotation_type=SPAN_LABEL,
-            structural=True,  # Mark these explicitly as structural annotations.
-        )
-        annot_obj.save()
-        set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
-
-
-@celery_app.task(
-    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
-)
-def nlm_ingest_pdf(user_id: int, doc_id: int) -> list[tuple[int, str]]:
-    # TODO - seeing persistent failure of Thomas Foster Appelant vs ... and Caster Hinckley et all. vs...
-    #  need to investigate why parser keeps failing on these two.
-    logger.info(f"nlm_ingest_pdf() - split doc {doc_id} for user {user_id}")
-
-    doc = Document.objects.get(pk=doc_id)
-    doc_path = doc.pdf_file.name
-    doc_file = default_storage.open(doc_path, mode="rb")
-
-    # Check if OCR is needed
-    needs_ocr = check_if_pdf_needs_ocr(doc_file)
-    logger.debug(f"Document {doc_id} needs OCR: {needs_ocr}")
-
-    if settings.NLM_INGEST_API_KEY is not None:
-        headers = {"API_KEY": settings.NLM_INGEST_API_KEY}
-    else:
-        headers = {}
-
-    files = {"file": doc_file}
-    params = {
-        "calculate_opencontracts_data": "yes",
-        "applyOcr": "yes" if needs_ocr and settings.NLM_INGEST_USE_OCR else "no",
-    }  # Ensures calculate_opencontracts_data is set to True
-
-    response = requests.post(
-        settings.NLM_INGEST_HOSTNAME + "/api/parseDocument",
-        headers=headers,
-        files=files,
-        params=params,
-    )
-
-    if not response.status_code == 200:
-        response.raise_for_status()
-
-    response_data = response.json()
-    open_contracts_data: OpenContractDocExport | None = response_data.get(
-        "return_dict", {}
-    ).get("opencontracts_data", None)
-
-    document = Document.objects.get(pk=doc_id)
-
-    # Create new labels if needed
-    if open_contracts_data is not None:
-
-        # Get PAWLS layer and text contents
-        pawls_string = json.dumps(open_contracts_data["pawls_file_content"])
-        pawls_file = ContentFile(pawls_string.encode("utf-8"))
-
-        # We want to use our own algorithm to create text layer from pawls tokens
-        span_translation_layer = makePdfTranslationLayerFromPawlsTokens(
-            json.loads(pawls_string.encode("utf-8"))
-        )
-
-        # We need to use the same translation algorithm from x,y tokens to spans EVERYWHERE... so when we first
-        # parse the document,we want to use the same translation algorithm we'll later use when we try to map spans
-        # BACK to the tokens.
-        txt_file = ContentFile(span_translation_layer.doc_text.encode("utf-8"))
-
-        document.txt_extract_file.save(f"doc_{doc_id}.txt", txt_file)
-        document.pawls_parse_file.save(f"doc_{doc_id}.pawls", pawls_file)
-        document.page_count = len(open_contracts_data["pawls_file_content"])
-
-        existing_text_labels: dict[str, AnnotationLabel] = {}
-
-        # Now, annotate the document with any annotations that bubbled up from parser.
-        for label_data in open_contracts_data["labelled_text"]:
-
-            label_name = label_data["annotationLabel"]
-
-            if label_name not in existing_text_labels:
-                label_obj = AnnotationLabel.objects.filter(
-                    text=label_name,
-                    creator_id=user_id,
-                    label_type=TOKEN_LABEL,
-                    read_only=True,
-                )
-                if label_obj.count() > 0:
-                    label_obj = label_obj[0]
-                    existing_text_labels[label_name] = label_obj
-                else:
-                    label_serializer = AnnotationLabelSerializer(
-                        data={
-                            "label_type": "TOKEN_LABEL",
-                            "color": "grey",
-                            "description": "NLM Structural Label",
-                            "icon": "expand",
-                            "text": label_name,
-                            "creator_id": user_id,
-                            "read_only": True,
-                        }
-                    )
-                    label_serializer.is_valid(raise_exception=True)
-                    label_obj = label_serializer.save()
-                    set_permissions_for_obj_to_user(
-                        user_id, label_obj, [PermissionTypes.ALL]
-                    )
-                    existing_text_labels[label_name] = label_obj
-            else:
-                label_obj = existing_text_labels[label_name]
-
-            annot_obj = Annotation.objects.create(
-                raw_text=label_data["rawText"],
-                page=label_data["page"],
-                json=label_data["annotation_json"],
-                annotation_label=label_obj,
-                document=doc,
-                creator_id=user_id,
-                annotation_type=TOKEN_LABEL,
-                structural=True,  # Mark these explicitly as structural annotations.
-            )
-            annot_obj.save()
-            set_permissions_for_obj_to_user(user_id, annot_obj, [PermissionTypes.ALL])
-
-    document.save()
+    except Exception as e:
+        logger.error(f"Failed to ingest document {doc_id}: {e}")
+        raise
 
 
 @celery_app.task()
@@ -387,151 +250,47 @@ def convert_doc_to_funsd(
 
 
 @celery_app.task()
-def extract_pdf_thumbnail(*args, doc_id=-1, **kwargs):
-
-    logger.info(f"Extract thumbnail for doc #{doc_id}")
-
-    # Based on this: https://note.nkmk.me/en/python-pillow-add-margin-expand-canvas/
-    def add_margin(pil_img, top, right, bottom, left, color):
-        width, height = pil_img.size
-        new_width = width + right + left
-        new_height = height + top + bottom
-        result = Image.new(pil_img.mode, (new_width, new_height), color)
-        result.paste(pil_img, (left, top))
-        return result
-
-    # Based on this: https://note.nkmk.me/en/python-pillow-add-margin-expand-canvas/
-    def expand2square(pil_img, background_color):
-        width, height = pil_img.size
-        if width == height:
-            return pil_img
-        elif width > height:
-            result = Image.new(pil_img.mode, (width, width), background_color)
-            result.paste(pil_img, (0, (width - height) // 2))
-            return result
-        else:
-            result = Image.new(pil_img.mode, (height, height), background_color)
-            result.paste(pil_img, ((height - width) // 2, 0))
-            return result
-
-    try:
-
-        import cv2
-        from django.core.files.storage import default_storage
-
-        document = Document.objects.get(pk=doc_id)
-
-        # logger.info("Doc opened")
-
-        # Load the file object from Django storage backend
-        file_object = default_storage.open(document.pdf_file.name, mode="rb")
-        file_data = file_object.read()
-
-        # Try to use Pdf2Image / Pillow to get a screenshot of the first page of the do
-        # Use pdf2image to grab the image of the first page... we'll create a custom icon for the doc.
-        page_one_image = convert_from_bytes(
-            file_data, dpi=100, first_page=1, last_page=1, fmt="jpeg", size=(600, None)
-        )[0]
-        # logger.info(f"page_one_image: {page_one_image}")
-
-        # Use OpenCV to find the bounding box
-        # Based in part on answer from @rayryeng here:
-        # https://stackoverflow.com/questions/49907382/how-to-remove-whitespace-from-an-image-in-opencv
-        opencvImage = cv2.cvtColor(np.array(page_one_image), cv2.COLOR_BGR2GRAY)
-
-        # logger.info(f"opencvImage created: {opencvImage}")
-        gray = 255 * (opencvImage < 128).astype(np.uint8)  # To invert the text to white
-        gray = cv2.morphologyEx(
-            gray, cv2.MORPH_OPEN, np.ones((2, 2), dtype=np.uint8)
-        )  # Perform noise filtering
-        coords = cv2.findNonZero(gray)  # Find all non-zero points (text)
-        x, y, w, h = cv2.boundingRect(coords)  # Find minimum spanning bounding box
-        # logger.info(f"Bounding rect determined with x {x} y {y} w {w} and h {h}")
-
-        # Crop to bounding box...
-        page_one_image_cropped = page_one_image.crop((x, y, x + w, y + h))
-        # logger.info("Cropped...")
-
-        # Add 5% padding to image before resize...
-        width, height = page_one_image_cropped.size
-        page_one_image_cropped_padded = add_margin(
-            page_one_image_cropped,
-            int(height * 0.05 / 2),
-            int(width * 0.05 / 2),
-            int(height * 0.05 / 2),
-            int(width * 0.05 / 2),
-            (255, 255, 255),
-        )
-        # logger.info("Padding added to image")
-
-        # Give the image a square aspect ratio
-        page_one_image_cropped_square = expand2square(
-            page_one_image_cropped_padded, (255, 255, 255)
-        )
-        # logger.info(f"Expanded to square: {page_one_image_cropped_square}")
-
-        # Resize to 400 X 200 px
-        page_one_image_cropped_square.thumbnail((400, 400))
-        # logger.info(f"Resized to 400px: {page_one_image_cropped_square}")
-
-        # Crop to 400 X 200 px
-        page_one_image_cropped_square = page_one_image_cropped_square.crop(
-            (0, 0, 400, 200)
-        )
-
-        b = io.BytesIO()
-        page_one_image_cropped_square.save(b, "JPEG")
-
-        pdf_snapshot_file = File(b)
-        document.icon.save(f"./{doc_id}_icon.jpg", pdf_snapshot_file)
-        # logger.info(f"Snapshot saved...")
-
-    except Exception as e:
-        logger.error(
-            f"Unable to create a screenshot for doc_id {doc_id} due to error: {e}"
-        )
-
-
-@celery_app.task()
-def extract_txt_thumbnail(doc_id: int) -> None:
+def extract_thumbnail(doc_id: int) -> None:
     """
-    Create a thumbnail image from the text content of a document.
+    Extracts a thumbnail for a document using the appropriate thumbnail generator based on the document's file type.
+    The thumbnail generator is selected from the pipeline thumbnailers that support the document's MIME type.
 
     Args:
         doc_id (int): The ID of the document to process.
 
-    Raises:
-        Exception: If there's an error during the thumbnail creation process.
+    Returns:
+        None
     """
+    logger.info(f"Extracting thumbnail for doc {doc_id}")
+
+    # Fetch the document
     try:
-        document = Document.objects.get(pk=doc_id)
+        document: Document = Document.objects.get(pk=doc_id)
+    except Document.DoesNotExist:
+        logger.error(f"Document with id {doc_id} does not exist.")
+        return
 
-        # Read the text content
-        with default_storage.open(document.txt_extract_file.name, "r") as file_object:
-            text = file_object.read()
+    file_type: str = document.file_type
 
-        logger.debug(f"Text content length: {len(text)}")
+    # Get compatible thumbnailers for the document's MIME type
+    components = get_components_by_mimetype(file_type)
+    thumbnailers = components.get("thumbnailers", [])
 
-        # Create the thumbnail image
-        img = create_text_thumbnail(text)
+    if not thumbnailers:
+        logger.error(f"No thumbnailer found for file type '{file_type}'.")
+        return
 
-        if img is None or not isinstance(img, Image.Image):
-            logger.error(
-                f"create_text_thumbnail returned invalid image for doc_id {doc_id}"
-            )
-            return
+    # Use the first available thumbnailer
+    thumbnailer_class = thumbnailers[0]
+    logger.info(f"Using thumbnailer '{thumbnailer_class.__name__}' for doc {doc_id}")
 
-        logger.debug(f"Thumbnail image size: {img.size}")
-
-        # Save the image
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format="PNG")
-        img_byte_arr.seek(0)
-
-        icon_file = ContentFile(img_byte_arr.getvalue())
-        document.icon.save(f"{doc_id}_icon.png", icon_file)
-
-        logger.info(f"Thumbnail created successfully for doc_id {doc_id}")
-
+    # Instantiate the thumbnailer and generate the thumbnail
+    try:
+        thumbnailer: BaseThumbnailGenerator = thumbnailer_class()
+        thumbnail_file = thumbnailer.generate_thumbnail(doc_id)
+        if thumbnail_file:
+            logger.info(f"Thumbnail extracted and saved successfully for doc {doc_id}")
+        else:
+            logger.error(f"Thumbnail generation failed for doc {doc_id}")
     except Exception as e:
-        logger.exception(f"Error creating thumbnail for doc_id {doc_id}: {str(e)}")
+        logger.error(f"Failed to extract thumbnail for doc {doc_id}: {e}")

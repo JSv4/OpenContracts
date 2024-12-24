@@ -53,22 +53,29 @@ services:
       PORT: 8000
 
   celeryworker:
-    <<: *django
-    image: opencontractserver_local_celeryworker
+    image: opencontractserver_local_django
+    container_name: celeryworker
     depends_on:
       - redis
       - postgres
-    ports: []
+    volumes:
+      - .:/app:z
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.postgres
     command: /start-celeryworker
 
   celerybeat:
-    <<: *django
-    image: opencontractserver_local_celerybeat
+    image: opencontractserver_local_django
     container_name: celerybeat
     depends_on:
       - redis
       - postgres
-    ports: []
+    volumes:
+      - .:/app:z
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.postgres
     command: /start-celerybeat
 
   flower:

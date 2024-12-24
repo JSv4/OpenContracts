@@ -1,0 +1,404 @@
+interactions:
+- request:
+    body: '{"messages":[{"content":[{"type":"text","text":"# Expert Entity Extractor\n\nYou
+      are an expert entity extractor that always maintains as much semantic\nmeaning
+      as possible. You use inference or deduction whenever necessary to\nsupply missing
+      or omitted data. Examine the provided data, text, or\ninformation and generate
+      a list of any entities or objects that match the\nrequested format."}],"role":"system"},{"content":[{"type":"text","text":"##
+      Data to extract\n\nWe are traversing a document with nested sections, section-by-section,
+      and are trying to guess indent levels of text blocks.\nBased on preceding sections.
+      For new blocks, We''re using the first 256 characters, plus its x coordinate
+      visual indent on page (not\ndispositive, btw), its label, and preceding blocks''
+      content and resolvedindent levels to guess new block''s indentation \nlevel.
+      The following annotations have already been assigned indent levels:\n\n[]\n\nNow,based
+      on previous blocks, please make your best guess appropriate indent level of
+      block with\nCharacteristics below. Text snippet of new block and preceding blocks
+      should be most valuable for this\nand use clues like numbering, context, references
+      to previous sections (numbered or otherwose) to make your decision,\n but please
+      use other information like x position on page, preceding blocks'' indent levels,
+      etc.\n\n===NEW BLOCK===\nPartial text snippet:IntroductionAnnotation label:
+      Heading 1\nx_indent value: 10.0\n===END NEW BLOCK===\n\nProvide an indent level
+      (integer) in the range [0, 12] that best represents the hierarchy depth of new
+      block, with 0 being the parent (top-level) and 12 being the leaf (lowest level).\n\n##
+      Additional instructions\n\nReturn only an integer in the range [0, 12] that
+      indicates the indent depth for the new annotation based on the depths that have
+      already been assigned to preceding text blocks. \n\n## Response format\n\nCall
+      the `FormatResponse` tool to validate your response, and use the\nfollowing
+      schema: {''description'': ''Format the response with valid JSON.'', ''properties'':
+      {''value'': {''description'': ''The formatted response'', ''items'': {''type'':
+      ''integer''}, ''title'': ''Value'', ''type'': ''array''}}, ''required'': [''value''],
+      ''type'': ''object''}\n\n- When providing integers, do not write out any decimals
+      at all\n- Use deduction where appropriate e.g. \"3 dollars fifty cents\" is
+      a single\n  value [3.5] not two values [3, 50] unless the user specifically
+      asks for\n  each part."}],"role":"user"}],"model":"gpt-4o","frequency_penalty":0.0,"n":1,"presence_penalty":0.0,"stream":false,"temperature":0.0,"tool_choice":{"type":"function","function":{"name":"FormatResponse"}},"tools":[{"type":"function","function":{"name":"FormatResponse","description":"Format
+      the response with valid JSON.","parameters":{"description":"Format the response
+      with valid JSON.","properties":{"value":{"description":"The formatted response","items":{"type":"integer"},"title":"Value","type":"array"}},"required":["value"],"type":"object"}}}],"top_p":1.0}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3001'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.10.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNRb5swEH7nV1j3HCZGA0l4qzpNy6KtU1+6ra2QYw5wZmzLNlmiKP+9
+        AlIgaSaNB8u6777v7j4fB48Q4BkkBFhJHau08G/Lx7vF6ttKu+/L5e7T/bT+xbHkYhnfPfyEScNQ
+        6w0y98b6wFSlBTquZAczg9Rho/pxdjNd3ERhGLVApTIUDa3Qzp8qPwzCqR/M/SA+EUvFGVpIyJNH
+        CCGH9mxalBnuICHB5C1SobW0QEj6JELAKNFEgFrLraPSwWQAmZIOZdO1rIUYAU4pkTIqxFC4+w6j
+        ++ATFSIN9+XX1d8v9+uNetzvfsSMb6JtvP09qtdJ73XbUF5L1vszwvt4clGMEJC0armflamoe0Cr
+        lbR4oUAIUFPUFUrXdA+HZ9hSUeMzJE/ByxHOko/etfvLyAqDeW2pOHl0ih9704UqtFFre+Eh5Fxy
+        W6YGqW1nAeuU7mo3ddoKUJ+9F2ijKu1Sp/6gbASjeNHpwbBOAxqfMKccFSPSLJpckUszdJS379mv
+        EKOsxGygDqtE64yrEeCNhn7fzDXtbnAui/+RHwDGUDvMUm0w4+x84CHNYPOz/SutN7ltGOzeOqzS
+        nMsCjTa83XfIdZqF8zWjOJuH4B29VwAAAP//AwARPk43+AMAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8f6648a4abd61396-ATL
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 23 Dec 2024 06:27:05 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=0W2xcLDnF2bVfnhB.CSQ1ddC9uKHm2KwFaT0AGiyDpI-1734935225-1.0.1.1-ywI049zZeYBRndVNCU141WwFlebz3O1TeqJ_D2DSJDCIK3MrzPcB75TUliX87xwfyFb58fhCTbesIqbAQjrXiA;
+        path=/; expires=Mon, 23-Dec-24 06:57:05 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=SG0zXpGcEBXLezgvvAXzzw8ZwrGd6kgL0CcWkqw34w4-1734935225387-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '272'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '799405'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 44ms
+      x-request-id:
+      - req_38b5c5ed6f25a5bfefb7db4f928ffe82
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":[{"type":"text","text":"# Expert Entity Extractor\n\nYou
+      are an expert entity extractor that always maintains as much semantic\nmeaning
+      as possible. You use inference or deduction whenever necessary to\nsupply missing
+      or omitted data. Examine the provided data, text, or\ninformation and generate
+      a list of any entities or objects that match the\nrequested format."}],"role":"system"},{"content":[{"type":"text","text":"##
+      Data to extract\n\nWe are traversing a document with nested sections, section-by-section,
+      and are trying to guess indent levels of text blocks.\nBased on preceding sections.
+      For new blocks, We''re using the first 256 characters, plus its x coordinate
+      visual indent on page (not\ndispositive, btw), its label, and preceding blocks''
+      content and resolvedindent levels to guess new block''s indentation \nlevel.
+      The following annotations have already been assigned indent levels:\n\n[{\"indent_level\":
+      0, \"text_snip\": \"Introduction\", \"label\": \"Heading 1\", \"x_indent\":
+      10.0}]\n\nNow,based on previous blocks, please make your best guess appropriate
+      indent level of block with\nCharacteristics below. Text snippet of new block
+      and preceding blocks should be most valuable for this\nand use clues like numbering,
+      context, references to previous sections (numbered or otherwose) to make your
+      decision,\n but please use other information like x position on page, preceding
+      blocks'' indent levels, etc.\n\n===NEW BLOCK===\nPartial text snippet:BackgroundAnnotation
+      label: Heading 2\nx_indent value: 30.0\n===END NEW BLOCK===\n\nProvide an indent
+      level (integer) in the range [0, 12] that best represents the hierarchy depth
+      of new block, with 0 being the parent (top-level) and 12 being the leaf (lowest
+      level).\n\n## Additional instructions\n\nReturn only an integer in the range
+      [0, 12] that indicates the indent depth for the new annotation based on the
+      depths that have already been assigned to preceding text blocks. \n\n## Response
+      format\n\nCall the `FormatResponse` tool to validate your response, and use
+      the\nfollowing schema: {''description'': ''Format the response with valid JSON.'',
+      ''properties'': {''value'': {''description'': ''The formatted response'', ''items'':
+      {''type'': ''integer''}, ''title'': ''Value'', ''type'': ''array''}}, ''required'':
+      [''value''], ''type'': ''object''}\n\n- When providing integers, do not write
+      out any decimals at all\n- Use deduction where appropriate e.g. \"3 dollars
+      fifty cents\" is a single\n  value [3.5] not two values [3, 50] unless the user
+      specifically asks for\n  each part."}],"role":"user"}],"model":"gpt-4o","frequency_penalty":0.0,"n":1,"presence_penalty":0.0,"stream":false,"temperature":0.0,"tool_choice":{"type":"function","function":{"name":"FormatResponse"}},"tools":[{"type":"function","function":{"name":"FormatResponse","description":"Format
+      the response with valid JSON.","parameters":{"description":"Format the response
+      with valid JSON.","properties":{"value":{"description":"The formatted response","items":{"type":"integer"},"title":"Value","type":"array"}},"required":["value"],"type":"object"}}}],"top_p":1.0}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3099'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.10.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNRT9swEH7Pr7DuuZnStEDJG0Kb0IbY2NAmDVDk2pfEnWMb20GFqv99
+        clKStHTS8mBZ99333d3nyyYiBASHjACrqGe1kfFF9evy/LXh/Hr9dfr5eVElr1cXH9NE/VyxW5gE
+        hl6ukPk31gemayPRC606mFmkHoPq9Gw2P5+dpOlJC9Saowy00vh4ruM0SedxsoiT0x2x0oKhg4zc
+        R4QQsmnP0KLiuIaMJJO3SI3O0RIh65MIAatliAB1TjhPlYfJADKtPKrQtWqkHAFea5kzKuVQuPs2
+        o/vgE5UyX365m31Lf1c2WcsfV083TzfXK3VX3o7qddIvpm2oaBTr/RnhfTw7KEYIKFq33E/a1tR/
+        R2e0cnigQAhQWzY1Kh+6h80DPFPZ4ANk99PHLewlb6Nj98eRFRaLxlG582gX3/amS10aq5fuwEMo
+        hBKuyi1S184CzmvT1Q512grQ7L0XGKtr43Ov/6AKgqdJ2unBsE4jdId57akckxaTI3I5R09F+579
+        CjHKKuQDdVgl2nChR0A0Gvp9M8e0u8GFKv9HfgAYQ+OR58YiF2x/4CHNYvjZ/pXWm9w2DO7Feazz
+        QqgSrbGi3XcoTM7TxZJRPFukEG2jvwAAAP//AwBkYeBY+AMAAA==
+    headers:
+      CF-RAY:
+      - 8f6648a7ab15134f-ATL
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 23 Dec 2024 06:27:06 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=NCyAs1aZd5qQIZVRodOOc1ePWS1XVab8cWpoFirrp2M-1734935226-1.0.1.1-eQ3fbiyBvm2Zjqk5S8OyGwLqSufAcOabPKxkPGzlnAachle0HI6_QPEF_yvK9rqyGFRzhwHBkqbe06mMK9nkBw;
+        path=/; expires=Mon, 23-Dec-24 06:57:06 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=538eCQu7tbyfaq.gtPlpPtp08JyHxNcq_Xbg0mC6lkw-1734935226013-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '396'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '799384'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 46ms
+      x-request-id:
+      - req_e81efa57bd6cf2be817d8cb8357e8ec1
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":[{"type":"text","text":"# Expert Entity Extractor\n\nYou
+      are an expert entity extractor that always maintains as much semantic\nmeaning
+      as possible. You use inference or deduction whenever necessary to\nsupply missing
+      or omitted data. Examine the provided data, text, or\ninformation and generate
+      a list of any entities or objects that match the\nrequested format."}],"role":"system"},{"content":[{"type":"text","text":"##
+      Data to extract\n\nWe are traversing a document with nested sections, section-by-section,
+      and are trying to guess indent levels of text blocks.\nBased on preceding sections.
+      For new blocks, We''re using the first 256 characters, plus its x coordinate
+      visual indent on page (not\ndispositive, btw), its label, and preceding blocks''
+      content and resolvedindent levels to guess new block''s indentation \nlevel.
+      The following annotations have already been assigned indent levels:\n\n[{\"indent_level\":
+      0, \"text_snip\": \"Introduction\", \"label\": \"Heading 1\", \"x_indent\":
+      10.0}, {\"indent_level\": 1, \"text_snip\": \"Background\", \"label\": \"Heading
+      2\", \"x_indent\": 30.0}]\n\nNow,based on previous blocks, please make your
+      best guess appropriate indent level of block with\nCharacteristics below. Text
+      snippet of new block and preceding blocks should be most valuable for this\nand
+      use clues like numbering, context, references to previous sections (numbered
+      or otherwose) to make your decision,\n but please use other information like
+      x position on page, preceding blocks'' indent levels, etc.\n\n===NEW BLOCK===\nPartial
+      text snippet:DetailsAnnotation label: Heading 3\nx_indent value: 50.0\n===END
+      NEW BLOCK===\n\nProvide an indent level (integer) in the range [0, 12] that
+      best represents the hierarchy depth of new block, with 0 being the parent (top-level)
+      and 12 being the leaf (lowest level).\n\n## Additional instructions\n\nReturn
+      only an integer in the range [0, 12] that indicates the indent depth for the
+      new annotation based on the depths that have already been assigned to preceding
+      text blocks. \n\n## Response format\n\nCall the `FormatResponse` tool to validate
+      your response, and use the\nfollowing schema: {''description'': ''Format the
+      response with valid JSON.'', ''properties'': {''value'': {''description'': ''The
+      formatted response'', ''items'': {''type'': ''integer''}, ''title'': ''Value'',
+      ''type'': ''array''}}, ''required'': [''value''], ''type'': ''object''}\n\n-
+      When providing integers, do not write out any decimals at all\n- Use deduction
+      where appropriate e.g. \"3 dollars fifty cents\" is a single\n  value [3.5]
+      not two values [3, 50] unless the user specifically asks for\n  each part."}],"role":"user"}],"model":"gpt-4o","frequency_penalty":0.0,"n":1,"presence_penalty":0.0,"stream":false,"temperature":0.0,"tool_choice":{"type":"function","function":{"name":"FormatResponse"}},"tools":[{"type":"function","function":{"name":"FormatResponse","description":"Format
+      the response with valid JSON.","parameters":{"description":"Format the response
+      with valid JSON.","properties":{"value":{"description":"The formatted response","items":{"type":"integer"},"title":"Value","type":"array"}},"required":["value"],"type":"object"}}}],"top_p":1.0}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3196'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.10.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNRb9MwEH7Pr7DuuUElDW3J29QKisQAMU172KbItS+JN8c2tjMYVf87
+        cpIlaRkSebCs++6+7+7z5RARAoJDRoBV1LPayPiiutlcuM03/F1TjvOt/FheXW2+rD4navsAs1Ch
+        9w/I/EvVG6ZrI9ELrTqYWaQeA+vb1SJ9v3iXJMsWqDVHGcpK4+NUx8k8SeP5Op4v+8JKC4YOMnIb
+        EULIoT1Di4rjL8jIfPYSqdE5WiJkQxIhYLUMEaDOCeep8jAbQaaVRxW6Vo2UE8BrLXNGpRyFu+8w
+        uY8+USnz7adLZXS5uORm9/iU7H7e/LhOd/TrRK+jfjZtQ0Wj2ODPBB/i2ZkYIaBo3dZ+0Lam/js6
+        o5XDMwZCgNqyqVH50D0c7uCJygbvILtN7o9wknyMXrvfT6ywWDSOyt6jPn4cTJe6NFbv3ZmHUAgl
+        XJVbpK6dBZzXptMOOq0CNCfvBcbq2vjc60dUgXC5SDs+GNdpgvaY157KSTjtN+KULufoqWjfc1gh
+        RlmFfCwdV4k2XOgJEE2G/ruZ17i7wYUq/4d+BBhD45HnxiIX7HTgMc1i+Nn+lTaY3DYM7tl5rPNC
+        qBKtsaLddyhMzpP1nlFcrROIjtEfAAAA//8DAF8DjJD4AwAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8f6648ab8d0fed86-ATL
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 23 Dec 2024 06:27:06 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=Mr3zEuznPtnFQQuf_Qmwamn_yqMqQg8TDxjYWM6rBNA-1734935226-1.0.1.1-ocF8R4TlF19z.PDB0np.AkQPbqTHzkLU6cEFnYh78dpJYwuYcz.RYU7PLKrbhiul8WmUqXciXvGEjROETn0gzw;
+        path=/; expires=Mon, 23-Dec-24 06:57:06 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=iaJiRjKoAiJ9UY6TCQnGpa.Yz4768tNqZnSwhbAP8dA-1734935226503-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '278'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '799363'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 47ms
+      x-request-id:
+      - req_77558fcd718056b8418ce80b24c98392
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -81,7 +81,7 @@ def createHighlight(
 
 def add_highlight_to_new_page(highlight: DictionaryObject, page, output):
     # TODO - finish typing
-    highlight_ref = output._addObject(highlight)
+    highlight_ref = output._add_object(highlight)
 
     if "/Annots" in page:
         page[NameObject("/Annots")].append(highlight_ref)
@@ -103,75 +103,123 @@ def split_pdf_into_images(
     pdf_bytes: bytes,
     storage_path: str,
     target_format: typing.Literal["PNG", "JPEG"] = "PNG",
+    force_local: bool = False,
 ) -> list[str]:
     """
-    Given pytes of a pdf file, split into image of specified format, store them in appropriate temporary
-    file storage location and then return list filepaths to the images, in page order.
+    Given bytes of a PDF file, split into images of specified format, store them in appropriate temporary
+    file storage location, and then return a list of file paths to the images, in page order.
 
-    Storage path should be like this user_{user_id}/fragments for s3 or f"/tmp/user_{user_id}/pdf_fragments" for
-    local storage
+    Storage path should be like this user_{user_id}/fragments for S3 or f"/tmp/user_{user_id}/pdf_fragments" for
+    local storage.
 
+    Args:
+        pdf_bytes (bytes): The bytes of the PDF file to split.
+        storage_path (str): The path to store the image fragments.
+        target_format (Literal["PNG", "JPEG"]): The image format to save the pages as.
+        force_local (bool): If True, forces the use of local filesystem even if settings.USE_AWS is True.
+
+    Returns:
+        list[str]: A list of file paths to the stored images in page order.
     """
 
     from pdf2image import convert_from_bytes
 
-    page_paths = []
+    page_paths: list[str] = []
 
     try:
+        logger.debug("Starting split_pdf_into_images()")
+        logger.debug(f"Received pdf_bytes of length: {len(pdf_bytes)}")
+        logger.debug(f"Storage path: {storage_path}")
+        logger.debug(f"Target format before uppercase conversion: {target_format}")
+        logger.debug(f"Force local storage: {force_local}")
 
         # Ensure target_format is uppercase
         target_format = target_format.upper()
+        logger.debug(f"Target format after uppercase conversion: {target_format}")
         if target_format not in ["PNG", "JPEG"]:
+            logger.error(f"Unsupported target format: {target_format}")
             raise ValueError(f"Unsupported target format: {target_format}")
 
-        # TODO - make sure target image resolution is compatible with PAWLS x,y coord system
+        # Log notice about PAWLS compatibility
+        logger.debug(
+            "Ensuring target image resolution is compatible with PAWLS x,y coordinate system"
+        )
+        # TODO: make sure target image resolution is compatible with PAWLS x,y coord system
+
+        logger.debug("Converting PDF bytes to images")
         images = convert_from_bytes(pdf_bytes, size=(754, 1000))
-        print(f"PDF images: {len(images)}")
+        logger.debug(f"Number of images extracted: {len(images)}")
 
         # Determine file extension and content type
         file_extension = ".png" if target_format == "PNG" else ".jpg"
         content_type = f"image/{target_format.lower()}"
+        logger.debug(f"File extension set to: {file_extension}")
+        logger.debug(f"Content type set to: {content_type}")
 
-        if settings.USE_AWS:
+        use_aws = settings.USE_AWS and not force_local
+        logger.debug(f"Using AWS S3 storage: {use_aws}")
+
+        if use_aws:
+            logger.debug(
+                "AWS settings detected and force_local is False, initializing S3 client"
+            )
             import boto3
 
             s3 = boto3.client("s3")
+            logger.debug("S3 client initialized")
+        else:
+            logger.debug("Proceeding with local storage")
 
-        for img in images:
+        for index, img in enumerate(images):
+            logger.debug(f"Processing image {index + 1} of {len(images)}")
 
-            # images is a list of a Pillow Image objs.
-            # See here for ways to save (attempting to save bytes to memory):
-            # https://github.com/python-pillow/Pillow/blob/cdf5fd439cbe381e6c796acc3ab3150242d8e861/src/PIL/Image.py#L497
-
+            # images is a list of Pillow Image objs.
             img_bytes_stream = BytesIO()
+            logger.debug(
+                f"Saving image {index + 1} to bytes stream in format {target_format}"
+            )
             img.save(img_bytes_stream, target_format)
+            img_bytes = img_bytes_stream.getvalue()
+            logger.debug(f"Image {index + 1} bytes size: {len(img_bytes)} bytes")
 
-            if settings.USE_AWS:
-                import boto3
-
-                s3 = boto3.client("s3")
+            if use_aws:
+                logger.debug("Uploading image to AWS S3")
                 page_path = f"{storage_path}/{uuid.uuid4()}{file_extension}"
+                logger.debug(f"Generated S3 page path: {page_path}")
                 s3.put_object(
                     Key=page_path,
                     Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-                    Body=img_bytes_stream.getvalue(),
+                    Body=img_bytes,
                     ContentType=content_type,
                 )
+                logger.debug(f"Image {index + 1} uploaded to S3 with key: {page_path}")
             else:
+                logger.debug("Saving image locally")
                 pdf_fragment_folder_path = pathlib.Path(storage_path)
+                logger.debug(
+                    f"Ensuring local directory exists at: {pdf_fragment_folder_path}"
+                )
                 pdf_fragment_folder_path.mkdir(parents=True, exist_ok=True)
                 pdf_fragment_path = (
                     pdf_fragment_folder_path / f"{uuid.uuid4()}{file_extension}"
                 )
+                logger.debug(f"Generated local page path: {pdf_fragment_path}")
                 with pdf_fragment_path.open("wb") as f:
-                    f.write(img_bytes_stream.getvalue())
+                    logger.debug(f"Writing image {index + 1} bytes to file")
+                    f.write(img_bytes)
                 page_path = str(pdf_fragment_path.resolve())
+                logger.debug(f"Image {index + 1} saved locally at: {page_path}")
 
             page_paths.append(page_path)
+            logger.debug(f"Page path added to list: {page_path}")
 
     except Exception as e:
-        logger.error(f"split_pdf_into_images() - failed due to unexpected error: {e}")
+        logger.error(f"split_pdf_into_images() failed due to unexpected error: {e}")
+        raise
 
+    logger.debug(
+        f"split_pdf_into_images() completed successfully with {len(page_paths)} page(s)"
+    )
     return page_paths
 
 

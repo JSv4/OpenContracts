@@ -40,3 +40,7 @@ USE_AUTH0=false
 # ------------------------------------------------------------------------------
 OPENAI_API_KEY=fake
 OPENAI_MODEL=gpt-4o
+
+# Set Proper Settings Module
+# ------------------------------------------------------------------------------
+DJANGO_SETTINGS_MODULE=config.settings.test

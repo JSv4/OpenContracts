@@ -53,6 +53,7 @@ class FunsdAnnotationType(TypedDict):
     words: list[FunsdTokenType]
     linking: list[int]
     id: str | int
+    parent_id: Optional[str | int]
 
 
 class FunsdAnnotationLoaderOutputType(TypedDict):
@@ -99,10 +100,10 @@ class BoundingBoxPythonType(TypedDict):
     Bounding box for pdf box on a pdf page
     """
 
-    top: int
-    bottom: int
-    left: int
-    right: int
+    top: int | float
+    bottom: int | float
+    left: int | float
+    right: int | float
 
 
 class TokenIdPythonType(TypedDict):
@@ -129,6 +130,24 @@ class OpenContractsSinglePageAnnotationType(TypedDict):
     rawText: str
 
 
+class TextSpanData(TypedDict):
+    """
+    Stores start and end indices of a span
+    """
+
+    start: int
+    end: int
+    text: str
+
+
+class TextSpan(TextSpanData):
+    """
+    Stores start and end indices of a span
+    """
+
+    id: str
+
+
 class OpenContractsAnnotationPythonType(TypedDict):
     """
     Data type for individual Open Contract annotation data type converted
@@ -140,18 +159,12 @@ class OpenContractsAnnotationPythonType(TypedDict):
     annotationLabel: str
     rawText: str
     page: int
-    annotation_json: dict[Union[int, str], OpenContractsSinglePageAnnotationType]
-
-
-class TextSpan(TypedDict):
-    """
-    Stores start and end indices of a span
-    """
-
-    id: str
-    start: int
-    end: int
-    text: str
+    annotation_json: Union[
+        dict[Union[int, str], OpenContractsSinglePageAnnotationType], TextSpanData
+    ]
+    parent_id: Optional[Union[str, int]]
+    annotation_type: Optional[str]
+    structural: bool
 
 
 class SpanAnnotation(TypedDict):

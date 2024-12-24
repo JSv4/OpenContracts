@@ -1,31 +1,48 @@
-import { useState, useContext } from "react";
-import { Transfer as SemanticTransfer } from "../../../components/widgets/data-display/Transfer";
+import { useState } from "react";
+import { Transfer as SemanticTransfer } from "../../../widgets/data-display/Transfer";
 import { Modal, Button, Label, Icon } from "semantic-ui-react";
-import {
-  RelationGroup,
-  AnnotationStore,
-} from "../../annotator/context/AnnotationStore";
-import { AnnotationLabelType } from "../../../graphql/types";
+import { RelationGroup } from "../../types/annotations";
+import { AnnotationLabelType } from "../../../../types/graphql-api";
 import styled from "styled-components";
+import { useCreateRelationship } from "../../hooks/AnnotationHooks";
+import { useCorpusState } from "../../context/CorpusAtom";
 
 interface RelationModalProps {
   visible: boolean;
-  onClick: (group: RelationGroup) => void;
-  onCancel: () => void;
   source: string[];
   label: AnnotationLabelType;
+  onClose?: () => void;
 }
 
 export const RelationModal = ({
   visible,
-  onClick,
-  onCancel,
   source,
   label,
+  onClose,
 }: RelationModalProps) => {
-  const annotationStore = useContext(AnnotationStore);
   const [targetKeys, setTargetKeys] = useState<string[]>([]);
+  const createRelationship = useCreateRelationship();
+  const { relationLabels } = useCorpusState();
   const transferSource = source.map((a) => ({ key: a, annotation: a }));
+
+  const handleOk = async () => {
+    const sourceIds = source
+      .filter((s) => !targetKeys.some((k) => k === s))
+      .map((s) => s);
+
+    // Create the relation using the hook
+    await createRelationship(new RelationGroup(sourceIds, targetKeys, label));
+
+    // Reset state
+    setTargetKeys([]);
+    onClose?.();
+  };
+
+  const handleCancel = () => {
+    // Reset state
+    setTargetKeys([]);
+    onClose?.();
+  };
 
   return (
     <Modal
@@ -37,18 +54,17 @@ export const RelationModal = ({
         <h5>Choose a Relation</h5>
       </Modal.Header>
       <Modal.Content>
-        {annotationStore.relationLabels.map((relation) => (
+        {relationLabels.map((relation) => (
           <Label
             as="a"
             key={relation.text}
             onClick={() => {
-              annotationStore.setActiveRelationLabel(relation);
+              // TODO: Handle relation label selection
+              // This functionality needs to be lifted up to the parent component
+              // or handled through a separate atom for active relation label
             }}
             style={{
-              backgroundColor:
-                relation.id === annotationStore.activeRelationLabel?.id
-                  ? "green"
-                  : "gray",
+              backgroundColor: relation.id === label.id ? "green" : "gray",
             }}
           >
             <Icon name={relation.icon ? relation.icon : "tag"} />
@@ -66,25 +82,10 @@ export const RelationModal = ({
         </TransferContainer>
       </Modal.Content>
       <Modal.Actions>
-        <Button
-          color="green"
-          onClick={() => {
-            const sourceIds = source
-              .filter((s) => !targetKeys.some((k) => k === s))
-              .map((s) => s);
-            onClick(new RelationGroup(sourceIds, targetKeys, label));
-            setTargetKeys([]);
-          }}
-        >
+        <Button color="green" onClick={handleOk}>
           Save Change
         </Button>
-        <Button
-          color="black"
-          onClick={() => {
-            setTargetKeys([]);
-            onCancel();
-          }}
-        >
+        <Button color="black" onClick={handleCancel}>
           Cancel
         </Button>
       </Modal.Actions>

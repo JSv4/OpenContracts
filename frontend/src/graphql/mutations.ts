@@ -16,7 +16,7 @@ import {
   LabelType,
   Maybe,
   UserExportType,
-} from "./types";
+} from "../types/graphql-api";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
@@ -572,6 +572,7 @@ export const UPLOAD_DOCUMENT = gql`
     $title: String!
     $makePublic: Boolean!
     $addToCorpusId: ID
+    $addToExtractId: ID
   ) {
     uploadDocument(
       base64FileString: $base64FileString
@@ -581,6 +582,7 @@ export const UPLOAD_DOCUMENT = gql`
       title: $title
       makePublic: $makePublic
       addToCorpusId: $addToCorpusId
+      addToExtractId: $addToExtractId
     ) {
       document {
         id
@@ -1075,7 +1077,7 @@ export const REQUEST_CREATE_FIELDSET = gql`
   mutation CreateFieldset($name: String!, $description: String!) {
     createFieldset(name: $name, description: $description) {
       ok
-      msg
+      message
       obj {
         id
         name
@@ -1659,6 +1661,34 @@ export const REJECT_ANNOTATION = gql`
         commentedAnnotation {
           id
         }
+      }
+    }
+  }
+`;
+
+export interface RequestUpdateExtractInputType {
+  id: string;
+  title?: string;
+  fieldsetId?: string;
+}
+
+export interface RequestUpdateExtractOutputType {
+  updateExtract: {
+    ok: boolean;
+    message: string;
+    obj: {
+      id: string;
+    };
+  };
+}
+
+export const REQUEST_UPDATE_EXTRACT = gql`
+  mutation UpdateExtract($id: ID!, $title: String, $fieldsetId: ID) {
+    updateExtract(id: $id, title: $title, fieldsetId: $fieldsetId) {
+      ok
+      message
+      obj {
+        id
       }
     }
   }

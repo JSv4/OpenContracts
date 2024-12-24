@@ -11,13 +11,13 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Label, LabelContainer, PaperContainer } from "./StyledComponents";
 import RadialButtonCloud, { CloudButtonItem } from "./RadialButtonCloud";
 import { Modal, Button, Dropdown } from "semantic-ui-react";
-import { AnnotationLabelType } from "../../../../graphql/types";
-import { ServerSpanAnnotation } from "../../context";
+import { AnnotationLabelType } from "../../../../types/graphql-api";
 import { TextSearchSpanResult } from "../../../types";
 import { PermissionTypes } from "../../../types";
 import styled, { keyframes, css } from "styled-components";
 import * as d3 from "d3";
 import { hexToRgba } from "./utils";
+import { ServerSpanAnnotation } from "../../types/annotations";
 
 interface TxtAnnotatorProps {
   text: string;
@@ -487,6 +487,32 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     );
   };
 
+  const handleMouseUp = (event: any) => {
+    const selection = document.getSelection();
+    if (selection && selection.toString().length > 0) {
+      const start = selection.anchorOffset;
+      const end = selection.focusOffset;
+      const selectedText = selection.toString();
+
+      // Ensure that start is less than end
+      const adjustedStart = Math.min(start, end);
+      const adjustedEnd = Math.max(start, end);
+
+      // Create the span object
+      const span = {
+        start: adjustedStart,
+        end: adjustedEnd,
+        text: selectedText,
+      };
+
+      // Convert span to ServerSpanAnnotation
+      const annotation = getSpan(span);
+
+      // Call createAnnotation with the correct type
+      createAnnotation(annotation);
+    }
+  };
+
   return (
     <>
       <PaperContainer
@@ -498,6 +524,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         onClick={() => {
           setSelectedAnnotations([]);
         }}
+        onMouseUp={handleMouseUp}
       >
         {spans.map((span, index) => {
           const {
@@ -715,7 +742,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
                   id={`label-${annotation.id}-${labelIndex}`}
                   color={annotation.annotationLabel.color || "#cccccc"}
                   $index={labelIndex}
-                  onClick={(e) => {
+                  onClick={(e: React.MouseEvent<HTMLElement>) => {
                     e.stopPropagation();
                     handleLabelClick(annotation);
                   }}

@@ -26,9 +26,11 @@ OpenContracts is an **Apache-2 Licensed** enterprise document analytics tool. It
    Our sample implementation uses LlamaIndex + Marvin.
 8. **Custom Data Extract** - Custom data extract pipelines can be used on the frontend to query documents in bulk.
 
-![Grid Review And Sources.gif](docs/assets/images/gifs/Grid_Review_And_Sources.gif)
+![Data Grid](docs/assets/images/screenshots/data_grid_image.png)
 
-![Manual Annotations](docs/assets/images/screenshots/Jumped_To_Annotation.png)
+![Corpus Dashboard](docs/assets/images/screenshots/corpus_dashboard.png)
+
+![Analyzer Annotations](docs/assets/images/screenshots/Analyzer_Annotations.png)
 
 ## Key Docs
 

@@ -1,29 +1,29 @@
 import {
-  ModalHeader,
   ModalContent,
-  ModalActions,
   Button,
   Modal,
   Icon,
   Dimmer,
   Loader,
-  Statistic,
-  Segment,
-  Message,
 } from "semantic-ui-react";
 import {
   ColumnType,
   DatacellType,
   DocumentType,
   ExtractType,
-} from "../../../graphql/types";
-import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
+} from "../../../types/graphql-api";
+import {
+  useMutation,
+  useQuery,
+  useReactiveVar,
+  NetworkStatus,
+} from "@apollo/client";
 import {
   RequestGetExtractOutput,
   REQUEST_GET_EXTRACT,
   RequestGetExtractInput,
 } from "../../../graphql/queries";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   REQUEST_ADD_DOC_TO_EXTRACT,
   REQUEST_CREATE_COLUMN,
@@ -43,6 +43,12 @@ import {
   RequestStartExtractOutputType,
   RequestUpdateColumnInputType,
   RequestUpdateColumnOutputType,
+  REQUEST_CREATE_FIELDSET,
+  RequestCreateFieldsetInputType,
+  RequestCreateFieldsetOutputType,
+  REQUEST_UPDATE_EXTRACT,
+  RequestUpdateExtractInputType,
+  RequestUpdateExtractOutputType,
 } from "../../../graphql/mutations";
 import { toast } from "react-toastify";
 import { CreateColumnModal } from "./CreateColumnModal";
@@ -50,7 +56,11 @@ import {
   addingColumnToExtract,
   editingColumnForExtract,
 } from "../../../graphql/cache";
-import { DataGrid } from "../../extracts/datagrid/DataGrid";
+import {
+  ExtractDataGrid,
+  ExtractDataGridHandle,
+} from "../../extracts/datagrid/DataGrid";
+import { CSSProperties } from "react";
 
 interface EditExtractModalProps {
   ext: ExtractType | null;
@@ -58,11 +68,197 @@ interface EditExtractModalProps {
   toggleModal: () => void;
 }
 
+// Add new styled components at the top
+const styles = {
+  modalWrapper: {
+    height: "90vh",
+    display: "flex !important",
+    flexDirection: "column" as const,
+    background: "linear-gradient(to bottom, #f8fafc, #ffffff)",
+  },
+  modalContent: {
+    flex: "1 1 auto",
+    display: "flex",
+    flexDirection: "column" as const,
+    padding: 0,
+    overflow: "auto",
+  },
+  modalHeader: {
+    background: "white",
+    padding: "1.5rem 2rem",
+    borderBottom: "1px solid #e2e8f0",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+  },
+  headerTitle: {
+    display: "flex",
+    alignItems: "center",
+    gap: "1rem",
+  },
+  extractName: {
+    fontSize: "1.5rem",
+    fontWeight: 600,
+    color: "#1e293b",
+    margin: 0,
+  },
+  extractMeta: {
+    fontSize: "0.875rem",
+    color: "#475569",
+  },
+  statsContainer: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gap: "1rem",
+    padding: "1.5rem 2rem",
+    background: "white",
+    borderRadius: "0.5rem",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+    margin: "1rem 2rem",
+  },
+  statCard: {
+    padding: "1.25rem",
+    background: "#ffffff",
+    borderRadius: "0.5rem",
+    border: "1px solid #cbd5e1",
+    transition: "transform 0.2s ease",
+    "&:hover": {
+      transform: "translateY(-2px)",
+    },
+  },
+  statLabel: {
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    color: "#475569",
+    marginBottom: "0.5rem",
+  },
+  statValue: {
+    fontSize: "1.25rem",
+    fontWeight: 600,
+    color: "#1e293b",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+  },
+  actionButtons: {
+    padding: "0.75rem 2rem",
+    display: "flex",
+    gap: "1rem",
+    justifyContent: "flex-end",
+    background: "white",
+    borderTop: "1px solid #e2e8f0",
+  },
+  errorMessage: {
+    margin: "1rem 2rem",
+    padding: "1rem",
+    borderRadius: "0.5rem",
+    background: "#fee2e2",
+    border: "1px solid #fecaca",
+    color: "#991b1b",
+  },
+  dataGridContainer: {
+    padding: "0 2rem",
+    marginBottom: "1rem",
+  },
+  modalActions: {
+    minHeight: "auto !important", // Override Semantic UI's default
+    padding: "0.5rem 2rem !important", // Smaller padding, using !important to override Semantic UI
+    background: "white",
+    borderTop: "1px solid #e2e8f0",
+  },
+  startButton: {
+    width: "40px",
+    height: "40px",
+    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+    transition: "all 0.3s ease",
+    border: "none",
+    padding: "0",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    "&:hover": {
+      transform: "translateY(-2px)",
+      boxShadow: "0 8px 20px -2px rgba(37, 99, 235, 0.35)",
+      background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+      "& .play-icon": {
+        transform: "scale(0)",
+        opacity: 0,
+      },
+      "& .rocket-icon": {
+        transform: "scale(1)",
+        opacity: 1,
+      },
+    },
+  } as CSSProperties,
+  iconBase: {
+    position: "absolute",
+    fontSize: "16px",
+    margin: "0",
+    transition: "all 0.3s ease",
+  } as CSSProperties,
+  playIcon: {
+    transform: "scale(1)",
+    opacity: 1,
+  } as CSSProperties,
+  rocketIcon: {
+    transform: "scale(0)",
+    opacity: 0,
+  } as CSSProperties,
+  statusWithButton: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+  },
+  downloadButton: {
+    background: "transparent",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    padding: "8px 16px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    color: "#64748b",
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    transition: "all 0.2s ease",
+    "&:hover:not(:disabled)": {
+      background: "#f8fafc",
+      borderColor: "#94a3b8",
+      transform: "translateY(-1px)",
+      color: "#334155",
+      boxShadow: "0 2px 4px rgba(148, 163, 184, 0.1)",
+    },
+    "&:active:not(:disabled)": {
+      transform: "translateY(0)",
+    },
+    "&:disabled": {
+      opacity: 0.5,
+      cursor: "not-allowed",
+    },
+  } as CSSProperties,
+  downloadIcon: {
+    fontSize: "16px",
+    transition: "transform 0.2s ease",
+  } as CSSProperties,
+  controlsContainer: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "12px",
+    padding: "0 2rem 1rem",
+    alignItems: "center",
+  } as CSSProperties,
+};
+
 export const EditExtractModal = ({
   open,
   ext,
   toggleModal,
 }: EditExtractModalProps) => {
+  const dataGridRef = useRef<ExtractDataGridHandle>(null);
+
   const [extract, setExtract] = useState<ExtractType | null>(ext);
   const [cells, setCells] = useState<DatacellType[]>([]);
   const [rows, setRows] = useState<DocumentType[]>([]);
@@ -154,12 +350,111 @@ export const EditExtractModal = ({
     },
   });
 
-  const handleDeleteColumnIdFromExtract = (columnId: string) => {
-    deleteColumn({
-      variables: {
-        id: columnId,
-      },
-    });
+  const [createFieldset] = useMutation<
+    RequestCreateFieldsetOutputType,
+    RequestCreateFieldsetInputType
+  >(REQUEST_CREATE_FIELDSET);
+
+  const [updateExtract] = useMutation<
+    RequestUpdateExtractOutputType,
+    RequestUpdateExtractInputType
+  >(REQUEST_UPDATE_EXTRACT, {
+    onCompleted: () => {
+      toast.success("Extract updated with new fieldset.");
+      refetch();
+    },
+    onError: () => {
+      toast.error("Failed to update extract with new fieldset.");
+    },
+  });
+
+  /**
+   * Handles the deletion of a column from the extract.
+   * If the fieldset is not in use, deletes the column directly.
+   * If the fieldset is in use, creates a new fieldset without the column and updates the extract.
+   *
+   * @param {string} columnId - The ID of the column to delete.
+   */
+  const handleDeleteColumnIdFromExtract = async (columnId: string) => {
+    if (!extract?.fieldset?.id) return;
+
+    if (!extract.fieldset.inUse) {
+      // Fieldset is not in use; delete the column directly
+      try {
+        await deleteColumn({
+          variables: {
+            id: columnId,
+          },
+        });
+        // Remove the column from local state
+        setColumns((prevColumns) =>
+          prevColumns.filter((column) => column.id !== columnId)
+        );
+        // Refetch data to get updated columns
+        refetch();
+        toast.success("SUCCESS! Removed column from Extract.");
+      } catch (error) {
+        console.error(error);
+        toast.error("Error while deleting column from extract.");
+      }
+    } else {
+      // Fieldset is in use; proceed with existing logic
+      try {
+        // Step 1: Create a new fieldset
+        const { data: fieldsetData } = await createFieldset({
+          variables: {
+            name: `${extract.fieldset.name} (edited)`,
+            description: extract.fieldset.description || "",
+          },
+        });
+
+        const newFieldsetId = fieldsetData?.createFieldset.obj.id;
+
+        if (!newFieldsetId) throw new Error("Fieldset creation failed.");
+
+        // Step 2: Copy existing columns except the deleted one
+        const columnsToCopy = columns.filter((col) => col.id !== columnId);
+        await Promise.all(
+          columnsToCopy.map((column) =>
+            createColumn({
+              variables: {
+                fieldsetId: newFieldsetId,
+                name: column.name,
+                query: column.query || "",
+                matchText: column.matchText,
+                outputType: column.outputType,
+                limitToLabel: column.limitToLabel,
+                instructions: column.instructions,
+                taskName: column.taskName,
+                agentic: Boolean(column.agentic),
+              },
+            })
+          )
+        );
+
+        // Step 3: Update the extract to use the new fieldset
+        console.log("Updating extract to use new fieldset", newFieldsetId);
+        await updateExtract({
+          variables: {
+            id: extract.id,
+            fieldsetId: newFieldsetId,
+          },
+        });
+
+        // Update local state
+        setExtract((prevExtract) =>
+          prevExtract
+            ? { ...prevExtract, fieldset: fieldsetData.createFieldset.obj }
+            : prevExtract
+        );
+
+        // Refetch data to get updated columns
+        refetch();
+      } catch (error) {
+        console.error(error);
+        toast.error("Error while deleting column from extract.");
+      }
+    }
   };
 
   const [createColumn, { loading: create_column_loading }] = useMutation<
@@ -177,20 +472,31 @@ export const EditExtractModal = ({
     },
   });
 
-  const handleCreateColumn = (data: any, fieldsetId: string) => {
-    createColumn({
-      variables: {
-        fieldsetId,
-        ...data,
-      },
-    });
-  };
+  const handleCreateColumn = useCallback(
+    (data: any) => {
+      if (!extract?.fieldset?.id) return;
+      createColumn({
+        variables: {
+          fieldsetId: extract.fieldset.id,
+          ...data,
+        },
+      });
+    },
+    [createColumn, extract?.fieldset?.id]
+  );
+
+  // Define the handler for adding a column
+  const handleAddColumn = useCallback(() => {
+    if (!extract?.fieldset) return;
+    addingColumnToExtract(extract);
+  }, [extract?.fieldset]);
 
   const {
     loading,
     error,
     data: extract_data,
     refetch,
+    networkStatus,
   } = useQuery<RequestGetExtractOutput, RequestGetExtractInput>(
     REQUEST_GET_EXTRACT,
     {
@@ -206,27 +512,14 @@ export const EditExtractModal = ({
     RequestUpdateColumnOutputType,
     RequestUpdateColumnInputType
   >(REQUEST_UPDATE_COLUMN, {
-    onCompleted: (data) => {
+    refetchQueries: [
+      {
+        query: REQUEST_GET_EXTRACT,
+        variables: { id: extract ? extract.id : "" },
+      },
+    ],
+    onCompleted: () => {
       toast.success("SUCCESS! Updated column.");
-      setColumns((oldCols) => {
-        // Find the index of the object to be updated
-        const index = oldCols.findIndex(
-          (item) => item.id === data.updateColumn.obj.id
-        );
-
-        // If the object exists, replace it with the new object
-        if (index !== -1) {
-          // Create a new array with the updated object
-          return [
-            ...oldCols.slice(0, index),
-            data.updateColumn.obj,
-            ...oldCols.slice(index + 1),
-          ];
-        } else {
-          // If the object doesn't exist, just add it to the end of the list
-          return [...oldCols, data.updateColumn.obj];
-        }
-      });
       editingColumnForExtract(null);
     },
     onError: (err) => {
@@ -267,12 +560,19 @@ export const EditExtractModal = ({
   }, [open]);
 
   useEffect(() => {
+    console.log("XOXO - Extract Data", extract_data);
     if (extract_data) {
       const { fullDatacellList, fullDocumentList, fieldset } =
         extract_data.extract;
+      console.log("XOXO - Full Datacell List", fullDatacellList);
+      console.log("XOXO - Full Document List", fullDocumentList);
+      console.log("XOXO - Fieldset", fieldset);
       setCells(fullDatacellList ? fullDatacellList : []);
       setRows(fullDocumentList ? fullDocumentList : []);
+      // Add debug logging here
+      console.log("Setting columns to:", fieldset?.fullColumnList);
       setColumns(fieldset?.fullColumnList ? fieldset.fullColumnList : []);
+      // Update the extract state with the latest data
       setExtract(extract_data.extract);
     }
   }, [extract_data]);
@@ -292,18 +592,36 @@ export const EditExtractModal = ({
     },
   });
 
+  // Add handler for row updates
+  const handleRowUpdate = useCallback((updatedRow: DocumentType) => {
+    setRows((prevRows) =>
+      prevRows.map((row) => (row.id === updatedRow.id ? updatedRow : row))
+    );
+  }, []);
+
+  // Adjust isLoading to show loading indicator when data is first loading
+  const isLoading =
+    loading ||
+    create_column_loading ||
+    update_column_loading ||
+    add_docs_loading ||
+    remove_docs_loading;
+
+  // Determine if the grid should show loading
+  const isGridLoading = extract?.started && !extract.finished && !extract.error;
+
   if (!extract || !extract.id) {
-    return <></>;
+    return null;
   }
 
   return (
     <>
       <CreateColumnModal
         open={adding_column_to_extract !== null}
+        existing_column={null}
         onSubmit={
           adding_column_to_extract
-            ? (data) =>
-                handleCreateColumn(data, adding_column_to_extract.fieldset.id)
+            ? (data) => handleCreateColumn(data)
             : () => {}
         }
         onClose={() => addingColumnToExtract(null)}
@@ -322,132 +640,148 @@ export const EditExtractModal = ({
         closeIcon
         size="fullscreen"
         open={open}
-        onClose={() => toggleModal()}
-        style={{
-          height: "90vh",
-          display: "flex !important",
-          flexDirection: "column",
-          alignContent: "flex-start",
-          justifyContent: "center",
-        }}
+        onClose={toggleModal}
+        style={styles.modalWrapper}
       >
-        {loading ||
-        adding_column_to_extract ||
-        update_column_loading ||
-        add_docs_loading ||
-        remove_docs_loading ? (
-          <Dimmer>
-            <Loader>Loading...</Loader>
-          </Dimmer>
-        ) : (
-          <></>
-        )}
-        <ModalHeader>Editing Extract {extract.name}</ModalHeader>
-        <ModalContent style={{ flex: 1 }}>
-          <Segment.Group horizontal>
-            <Segment textAlign="center">
-              <Statistic size="mini">
-                <Statistic.Label>Status</Statistic.Label>
-                <Statistic.Value>
-                  {extract.started && !extract.finished && !extract.error ? (
-                    <Icon name="spinner" loading />
-                  ) : extract.finished ? (
-                    <Icon name="check circle" color="green" />
-                  ) : extract.error ? (
-                    <Icon name="exclamation circle" color="red" />
-                  ) : (
-                    <Icon name="pause circle" color="grey" />
-                  )}
-                </Statistic.Value>
-              </Statistic>
-            </Segment>
-            {extract.started && (
-              <Segment textAlign="center">
-                <Statistic size="mini">
-                  <Statistic.Label>Started</Statistic.Label>
-                  <Statistic.Value>
-                    {new Date(extract.started).toLocaleString()}
-                  </Statistic.Value>
-                </Statistic>
-              </Segment>
-            )}
-            {extract.finished && (
-              <Segment textAlign="center">
-                <Statistic size="mini">
-                  <Statistic.Label>Completed</Statistic.Label>
-                  <Statistic.Value>
-                    {new Date(extract.finished).toLocaleString()}
-                  </Statistic.Value>
-                </Statistic>
-              </Segment>
-            )}
-            {extract.error && extract.finished && (
-              <Segment textAlign="center" color="red">
-                <Statistic size="mini">
-                  <Statistic.Label>Failed</Statistic.Label>
-                  <Statistic.Value>
-                    {new Date(extract.finished).toLocaleString()}
-                  </Statistic.Value>
-                </Statistic>
-              </Segment>
-            )}
-          </Segment.Group>
-          {extract.error && (
-            <Message negative>
-              <Message.Header>Error</Message.Header>
-              <pre>{extract.error}</pre>
-            </Message>
-          )}
-          <div
-            style={{
-              width: "100%",
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "flex-end",
-              padding: "1rem",
-            }}
-          >
-            <div>
-              {extract.started ? (
-                <Button
-                  positive
-                  icon
-                  {...(!extract.finished
-                    ? { disabled: true, loading: true }
-                    : {})}
-                  labelPosition="right"
-                  onClick={() => window.alert("Not implemented yet")}
-                >
-                  Download
-                  <Icon name="download" />
-                </Button>
-              ) : (
-                <Button
-                  icon
-                  labelPosition="left"
-                  onClick={() =>
-                    startExtract({ variables: { extractId: extract.id } })
-                  }
-                >
-                  <Icon name="play" />
-                  Run
-                </Button>
-              )}
-            </div>
+        <div style={styles.modalHeader}>
+          <div style={styles.headerTitle}>
+            <h2 style={styles.extractName}>{extract.name}</h2>
+            <span style={styles.extractMeta}>
+              Created by {extract.creator?.email} on{" "}
+              {new Date(extract.created).toLocaleDateString()}
+            </span>
           </div>
-          <DataGrid
-            onAddDocIds={handleAddDocIdsToExtract}
-            onRemoveDocIds={handleRemoveDocIdsFromExtract}
-            onRemoveColumnId={handleDeleteColumnIdFromExtract}
-            extract={extract}
-            cells={cells}
-            rows={rows}
-            columns={columns}
-          />
+        </div>
+
+        <ModalContent style={styles.modalContent}>
+          <div style={styles.statsContainer}>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>Status</div>
+              <div style={styles.statValue}>
+                {extract.started && !extract.finished && !extract.error ? (
+                  <>
+                    <Icon name="spinner" loading color="blue" />
+                    <span>Processing</span>
+                  </>
+                ) : extract.finished ? (
+                  <>
+                    <Icon name="check circle" color="green" />
+                    <span>Completed</span>
+                  </>
+                ) : extract.error ? (
+                  <>
+                    <Icon name="exclamation circle" color="red" />
+                    <span>Failed</span>
+                  </>
+                ) : (
+                  <div style={styles.statusWithButton}>
+                    <div>
+                      <Icon name="clock outline" color="grey" />
+                      <span>Not Started</span>
+                    </div>
+                    <Button
+                      circular
+                      icon
+                      primary
+                      style={styles.startButton}
+                      onClick={() =>
+                        startExtract({ variables: { extractId: extract.id } })
+                      }
+                    >
+                      <i
+                        className="play icon play-icon"
+                        style={{ ...styles.iconBase, ...styles.playIcon }}
+                      />
+                      <i
+                        className="rocket icon rocket-icon"
+                        style={{ ...styles.iconBase, ...styles.rocketIcon }}
+                      />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>Documents</div>
+              <div style={styles.statValue}>
+                <Icon name="file outline" />
+                {rows.length}
+              </div>
+            </div>
+
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>Columns</div>
+              <div style={styles.statValue}>
+                <Icon name="columns" />
+                {columns.length}
+              </div>
+            </div>
+
+            {extract.corpus && (
+              <div style={styles.statCard}>
+                <div style={styles.statLabel}>Corpus</div>
+                <div style={styles.statValue}>
+                  <Icon name="database" />
+                  {extract.corpus.title}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={styles.controlsContainer}>
+            <Button
+              basic
+              style={styles.downloadButton}
+              onClick={() => dataGridRef.current?.exportToCsv()}
+              disabled={
+                loading ||
+                isGridLoading ||
+                networkStatus === NetworkStatus.refetch
+              }
+            >
+              <Icon name="download" style={styles.downloadIcon} />
+              Export CSV
+            </Button>
+          </div>
+
+          <div style={{ ...styles.dataGridContainer, position: "relative" }}>
+            {loading && (
+              <Dimmer
+                active
+                inverted
+                style={{
+                  position: "absolute",
+                  margin: 0,
+                  borderRadius: "12px",
+                }}
+              >
+                <Loader>
+                  {extract.started && !extract.finished
+                    ? "Processing..."
+                    : "Loading..."}
+                </Loader>
+              </Dimmer>
+            )}
+            <ExtractDataGrid
+              ref={dataGridRef}
+              onAddDocIds={handleAddDocIdsToExtract}
+              onRemoveDocIds={handleRemoveDocIdsFromExtract}
+              onRemoveColumnId={handleDeleteColumnIdFromExtract}
+              onUpdateRow={handleRowUpdate}
+              onAddColumn={handleAddColumn}
+              extract={extract}
+              cells={cells}
+              rows={rows}
+              columns={columns}
+              loading={Boolean(isGridLoading)}
+            />
+          </div>
         </ModalContent>
-        <ModalActions>
-          <Button onClick={() => toggleModal()}>Close</Button>
-        </ModalActions>
+
+        <div className="actions" style={styles.modalActions}>
+          <Button onClick={toggleModal}>Close</Button>
+        </div>
       </Modal>
     </>
   );

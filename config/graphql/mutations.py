@@ -42,7 +42,6 @@ from config.graphql.serializers import (
     AnnotationSerializer,
     CorpusSerializer,
     DocumentSerializer,
-    ExtractSerializer,
     LabelsetSerializer,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer
@@ -815,6 +814,10 @@ class UploadDocument(graphene.Mutation):
             description="If provided, successfully uploaded document will "
             "be uploaded to corpus with specified id",
         )
+        add_to_extract_id = graphene.ID(
+            required=False,
+            description="If provided, successfully uploaded document will be added to extract with specified id",
+        )
         make_public = graphene.Boolean(
             required=True,
             description="If True, document is immediately public. "
@@ -836,7 +839,14 @@ class UploadDocument(graphene.Mutation):
         custom_meta,
         make_public,
         add_to_corpus_id=None,
+        add_to_extract_id=None,
     ):
+        if add_to_corpus_id is not None and add_to_extract_id is not None:
+            return UploadDocument(
+                message="Cannot simultaneously add document to both corpus and extract",
+                ok=False,
+                document=None,
+            )
 
         ok = False
         document = None
@@ -912,13 +922,24 @@ class UploadDocument(graphene.Mutation):
 
             set_permissions_for_obj_to_user(user, document, [PermissionTypes.CRUD])
 
-            # If add_to_corpus_id is not None, link uploaded document to corpus
+            # Handle linking to corpus or extract
             if add_to_corpus_id is not None:
                 try:
                     corpus = Corpus.objects.get(id=from_global_id(add_to_corpus_id)[1])
                     transaction.on_commit(lambda: corpus.documents.add(document))
                 except Exception as e:
                     message = f"Adding to corpus failed due to error: {e}"
+            elif add_to_extract_id is not None:
+                try:
+                    extract = Extract.objects.get(
+                        Q(pk=from_global_id(add_to_extract_id)[1])
+                        & (Q(creator=user) | Q(is_public=True))
+                    )
+                    if extract.finished is not None:
+                        raise ValueError("Cannot add document to a finished extract")
+                    transaction.on_commit(lambda: extract.documents.add(document))
+                except Exception as e:
+                    message = f"Adding to extract failed due to error: {e}"
 
             ok = True
 
@@ -1965,20 +1986,131 @@ class CreateExtract(graphene.Mutation):
         return CreateExtract(ok=True, msg="SUCCESS!", obj=extract)
 
 
-class UpdateExtractMutation(DRFMutation):
-    class IOSettings:
-        lookup_field = "id"
-        pk_fields = ["corpus", "fieldset", "creator"]
-        serializer = ExtractSerializer
-        model = Extract
-        graphene_model = ExtractType
+class UpdateExtractMutation(graphene.Mutation):
+    """
+    Mutation to update an existing Extract object.
+
+    Supports updating the name (title), corpus, fieldset, and error fields.
+    Ensures proper permission checks are applied.
+    """
 
     class Arguments:
-        id = graphene.String(required=True)
-        title = graphene.String(required=False)
-        description = graphene.String(required=False)
-        icon = graphene.String(required=False)
-        label_set = graphene.String(required=False)
+        id = graphene.ID(required=True, description="ID of the Extract to update.")
+        title = graphene.String(
+            required=False, description="New title for the Extract."
+        )
+        corpus_id = graphene.ID(
+            required=False,
+            description="ID of the Corpus to associate with the Extract.",
+        )
+        fieldset_id = graphene.ID(
+            required=False,
+            description="ID of the Fieldset to associate with the Extract.",
+        )
+        error = graphene.String(
+            required=False, description="Error message to update on the Extract."
+        )
+        # The Extract model does not have 'description', 'icon', or 'label_set' fields.
+        # If these fields are added to the model, they can be included here.
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(ExtractType)
+
+    @staticmethod
+    @login_required
+    def mutate(
+        root, info, id, title=None, corpus_id=None, fieldset_id=None, error=None
+    ):
+        user = info.context.user
+
+        try:
+            extract_pk = from_global_id(id)[1]
+            extract = Extract.objects.get(pk=extract_pk)
+        except Extract.DoesNotExist:
+            return UpdateExtractMutation(
+                ok=False, message="Extract not found.", obj=None
+            )
+
+        # Check if the user has permission to update the Extract object
+        if not user_has_permission_for_obj(
+            user_val=user,
+            instance=extract,
+            permission=PermissionTypes.UPDATE,
+            include_group_permissions=True,
+        ):
+            return UpdateExtractMutation(
+                ok=False,
+                message="You don't have permission to update this extract.",
+                obj=None,
+            )
+
+        # Update fields
+        if title is not None:
+            extract.name = title
+
+        if error is not None:
+            extract.error = error
+
+        if corpus_id is not None:
+            corpus_pk = from_global_id(corpus_id)[1]
+            try:
+                corpus = Corpus.objects.get(pk=corpus_pk)
+                # Check permission
+                if not user_has_permission_for_obj(
+                    user_val=user,
+                    instance=corpus,
+                    permission=PermissionTypes.READ,
+                    include_group_permissions=True,
+                ):
+                    return UpdateExtractMutation(
+                        ok=False,
+                        message="You don't have permission to use this corpus.",
+                        obj=None,
+                    )
+                extract.corpus = corpus
+            except Corpus.DoesNotExist:
+                return UpdateExtractMutation(
+                    ok=False, message="Corpus not found.", obj=None
+                )
+
+        if fieldset_id is not None:
+            fieldset_pk = from_global_id(fieldset_id)[1]
+            print(
+                f"Attempting to update extract {extract.id} with fieldset_id {fieldset_id} (pk: {fieldset_pk})"
+            )
+            try:
+                fieldset = Fieldset.objects.get(pk=fieldset_pk)
+                print(f"Found fieldset {fieldset.id} for update")
+                # Check permission
+                if not user_has_permission_for_obj(
+                    user_val=user,
+                    instance=fieldset,
+                    permission=PermissionTypes.READ,
+                    include_group_permissions=True,
+                ):
+                    print(
+                        f"User {user.id} denied permission to use fieldset {fieldset.id}"
+                    )
+                    return UpdateExtractMutation(
+                        ok=False,
+                        message="You don't have permission to use this fieldset.",
+                        obj=None,
+                    )
+                print(f"Updating extract {extract.id} fieldset to {fieldset.id}")
+                extract.fieldset = fieldset
+            except Fieldset.DoesNotExist:
+                print(f"Fieldset with pk {fieldset_pk} not found")
+                return UpdateExtractMutation(
+                    ok=False, message="Fieldset not found.", obj=None
+                )
+
+        extract.save()
+        extract.refresh_from_db()
+
+        return UpdateExtractMutation(
+            ok=True, message="Extract updated successfully.", obj=extract
+        )
 
 
 class AddDocumentsToExtract(DRFMutation):

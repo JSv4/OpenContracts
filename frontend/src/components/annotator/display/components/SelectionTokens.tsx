@@ -2,8 +2,9 @@ import { useEffect, useRef } from "react";
 import _ from "lodash";
 import uniqueId from "lodash/uniqueId";
 
-import { TokenId, PDFPageInfo } from "../../context";
 import { TokenSpan } from "./Tokens";
+import { PDFPageInfo } from "../../types/pdf";
+import { TokenId } from "../../types/annotations";
 
 interface SearchSelectionTokenProps {
   color?: string;
@@ -30,7 +31,10 @@ export const SearchSelectionTokens = ({
     if (scrollTo) {
       if (containerRef.current !== undefined && containerRef.current !== null) {
         // console.log("Scroll to", scrollTo);
-        containerRef.current.scrollIntoView();
+        containerRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
       }
     }
   }, [scrollTo]);

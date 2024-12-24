@@ -18,8 +18,8 @@ import {
   CorpusActionType,
   DocumentType,
   AnalysisRowType,
-} from "./types";
-import { ExportObject } from "./types";
+} from "../types/graphql-api";
+import { ExportObject } from "../types/graphql-api";
 
 export interface RequestDocumentsInputs {
   textSearch?: string;
@@ -458,6 +458,7 @@ export const GET_CORPUSES = gql`
             edges {
               node {
                 id
+                fileType
                 backendLock
                 description
               }
@@ -1057,6 +1058,7 @@ export const GET_EXPORT = gql`
         isPublic
       }
       fieldset {
+        inUse
         fullColumnList {
           id
           instructions
@@ -1098,6 +1100,7 @@ export const GET_FIELDSETS = gql`
           }
           name
           description
+          inUse
           columns {
             edges {
               node {
@@ -1133,6 +1136,7 @@ export const GET_FIELDSET = gql`
       }
       name
       description
+      inUse
       columns {
         id
         query
@@ -1168,6 +1172,7 @@ export const REQUEST_GET_EXTRACT = gql`
       fieldset {
         id
         name
+        inUse
         fullColumnList {
           id
           name
@@ -1193,6 +1198,7 @@ export const REQUEST_GET_EXTRACT = gql`
         title
         description
         pageCount
+        fileType
       }
       fullDatacellList {
         id
@@ -1203,6 +1209,7 @@ export const REQUEST_GET_EXTRACT = gql`
         document {
           id
           title
+          fileType
         }
         fullSourceList {
           id
@@ -1218,6 +1225,7 @@ export const REQUEST_GET_EXTRACT = gql`
           }
           document {
             id
+            fileType
             pdfFile
             txtExtractFile
             pawlsParseFile
@@ -1304,6 +1312,7 @@ export const GET_EXTRACTS = gql`
           fieldset {
             id
             name
+            inUse
             columns {
               edges {
                 node {
@@ -1479,6 +1488,7 @@ export const GET_DATACELLS_FOR_EXTRACT = gql`
       fieldset {
         id
         name
+        inUse
         fullColumnList {
           id
           name

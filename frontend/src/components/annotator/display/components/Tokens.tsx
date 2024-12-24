@@ -8,58 +8,49 @@ interface TokenSpanProps {
   highOpacity?: boolean;
 }
 
-export const TokenSpan = styled.span<TokenSpanProps>(
-  ({ theme, hidden, color, isSelected, highOpacity }) => `
-    position: absolute;
-    background: ${
-      isSelected ? (color ? color.toUpperCase() : theme.color.B3) : "none"
-    };
-    opacity: ${hidden ? 0.0 : highOpacity ? 0.4 : 0.2};
-    border-radius: 3px;
-`
-);
+export const TokenSpan = styled.span.attrs<TokenSpanProps>((props) => ({
+  style: {
+    background: props.isSelected
+      ? props.color
+        ? props.color.toUpperCase()
+        : props.theme.color.B3
+      : "none",
+    opacity: props.hidden ? 0.0 : props.highOpacity ? 0.4 : 0.2,
+  },
+}))`
+  position: absolute;
+  border-radius: 3px;
+`;
 
-interface SelectionTokenSpanProps {
-  id?: string;
+interface SelectionTokenSpanProps
+  extends React.HTMLAttributes<HTMLSpanElement> {
+  theme?: any;
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+  pointerEvents?: React.CSSProperties["pointerEvents"]; // Update this line
   hidden?: boolean;
   color?: string;
   isSelected?: boolean;
   highOpacity?: boolean;
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-  pointerEvents: string;
-  theme?: any;
 }
 
-export const SelectionTokenSpan = styled.span.attrs(
-  ({
-    id,
-    theme,
-    top,
-    bottom,
-    left,
-    right,
-    pointerEvents,
-    hidden,
-    color,
-    isSelected,
-    highOpacity,
-  }: SelectionTokenSpanProps) => ({
-    id,
+export const SelectionTokenSpan = styled.span.attrs<SelectionTokenSpanProps>(
+  (props) => ({
+    id: props.id,
     style: {
-      background: isSelected
-        ? color
-          ? color.toUpperCase()
-          : theme.color.B3
+      background: props.isSelected
+        ? props.color
+          ? props.color.toUpperCase()
+          : props.theme.color.B3
         : "none",
-      opacity: hidden ? 0.0 : highOpacity ? 0.4 : 0.2,
-      left: `${left}px`,
-      top: `${top}px`,
-      width: `${right - left}px`,
-      height: `${bottom - top}px`,
-      pointerEvents: pointerEvents,
+      opacity: props.hidden ? 0.0 : props.highOpacity ? 0.4 : 0.2,
+      left: `${props.left}px`,
+      top: `${props.top}px`,
+      width: `${props.right - props.left}px`,
+      height: `${props.bottom - props.top}px`,
+      pointerEvents: props.pointerEvents,
     },
   })
 )`

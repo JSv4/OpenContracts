@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { AnnotationLabelType } from "../../../../graphql/types";
+import { AnnotationLabelType } from "../../../../types/graphql-api";
 
 export interface MultipageAnnotationJson {
   start: number;

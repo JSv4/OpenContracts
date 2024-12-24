@@ -181,9 +181,7 @@ class Datacell(BaseOCModel):
         blank=True,
         related_name="rejected_cells",
     )
-    corrected_data = NullableJSONField(
-        default=jsonfield_default_value, null=True, blank=True
-    )
+    corrected_data = NullableJSONField(default=None, null=True, blank=True)
 
     class Meta:
         permissions = (

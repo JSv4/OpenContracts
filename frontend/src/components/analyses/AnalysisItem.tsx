@@ -18,24 +18,27 @@ import {
   REQUEST_DELETE_ANALYSIS,
 } from "../../graphql/mutations";
 import { GetAnalysesOutputs, GET_ANALYSES } from "../../graphql/queries";
-import { AnalysisType, CorpusType } from "../../graphql/types";
+import { AnalysisType, CorpusType } from "../../types/graphql-api";
 import _ from "lodash";
 import { PermissionTypes } from "../types";
 import { getPermissions } from "../../utils/transform";
 import { selectedAnalyses, selectedAnalysesIds } from "../../graphql/cache";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
+import { useSelectedCorpus } from "../annotator/context/DocumentAtom";
 
 interface AnalysisItemProps {
   analysis: AnalysisType;
-  corpus: CorpusType;
   selected?: boolean;
   read_only?: boolean;
   compact?: boolean;
   onSelect?: () => any | never;
+  corpus?: CorpusType | null | undefined;
 }
 
-const StyledCard = styled(Card)`
+const StyledCard = styled(Card).withConfig({
+  shouldForwardProp: (prop) => !["useMobileLayout", "selected"].includes(prop),
+})`
   display: flex !important;
   flex-direction: column !important;
   padding: 0.5em !important;
@@ -127,15 +130,15 @@ const ReadMoreLink = styled.span`
 
 export const AnalysisItem = ({
   analysis,
-  corpus,
   selected,
   read_only,
   onSelect,
   compact,
+  corpus: selectedCorpus,
 }: AnalysisItemProps) => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
-  const descriptionRef = useRef<HTMLElement>(null);
+  const descriptionRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
@@ -166,10 +169,13 @@ export const AnalysisItem = ({
       toast.error("Could not delete analysis...");
     },
     update: (cache, { data: delete_analysis_data }) => {
+      if (!selectedCorpus) return;
+
       const cache_data: GetAnalysesOutputs | null = cache.readQuery({
         query: GET_ANALYSES,
-        variables: { corpusId: corpus.id },
+        variables: { corpusId: selectedCorpus.id },
       });
+
       if (cache_data) {
         const new_cache_data = _.cloneDeep(cache_data);
         new_cache_data.analyses.edges = new_cache_data.analyses.edges.filter(
@@ -177,12 +183,23 @@ export const AnalysisItem = ({
         );
         cache.writeQuery({
           query: GET_ANALYSES,
-          variables: { corpusId: corpus.id },
+          variables: { corpusId: selectedCorpus.id },
           data: new_cache_data,
         });
       }
     },
   });
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selectedCorpus) {
+      toast.error("No corpus selected");
+      return;
+    }
+    selectedAnalyses([]);
+    selectedAnalysesIds([]);
+    requestDeleteAnalysis();
+  };
 
   const my_permissions = getPermissions(
     analysis.myPermissions ? analysis.myPermissions : []
@@ -210,12 +227,9 @@ export const AnalysisItem = ({
             icon="trash"
             color="red"
             size="tiny"
-            onClick={(e: { stopPropagation: () => void }) => {
-              e.stopPropagation();
-              selectedAnalyses([]);
-              selectedAnalysesIds([]);
-              requestDeleteAnalysis();
-            }}
+            onClick={handleDelete}
+            disabled={!selectedCorpus}
+            title={!selectedCorpus ? "No corpus selected" : "Delete analysis"}
           />
         )}
         {!analysis.analysisCompleted && (
@@ -238,18 +252,22 @@ export const AnalysisItem = ({
           </span>
         </CardMeta>
         {!compact && (
-          <CardDescription ref={descriptionRef}>
-            {analysis.analyzer.description}
-            {isOverflowing && !showFullDescription && (
-              <ReadMoreLink
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowFullDescription(true);
-                }}
-              >
-                ...more
-              </ReadMoreLink>
-            )}
+          <CardDescription>
+            <div ref={descriptionRef}>
+              {analysis.analyzer.description}
+              {isOverflowing && !showFullDescription && (
+                <ReadMoreLink
+                  onClick={(
+                    e: React.MouseEvent<HTMLSpanElement, MouseEvent>
+                  ) => {
+                    e.stopPropagation();
+                    setShowFullDescription(true);
+                  }}
+                >
+                  ...more
+                </ReadMoreLink>
+              )}
+            </div>
           </CardDescription>
         )}
         {showFullDescription && (

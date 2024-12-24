@@ -1,6 +1,7 @@
 import ReactDOM from "react-dom";
 import { App } from "./App";
 import { BrowserRouter } from "react-router-dom";
+import { createRoot } from "react-dom/client";
 import { Auth0Provider } from "@auth0/auth0-react";
 import {
   ApolloClient,
@@ -69,6 +70,9 @@ const client = new ApolloClient({
   cache,
 });
 
+const container = document.getElementById("root");
+const root = createRoot(container!);
+
 if (REACT_APP_USE_AUTH0) {
   console.log("Rendering with USE_AUTH0");
 
@@ -81,26 +85,24 @@ if (REACT_APP_USE_AUTH0) {
     onRedirectCallback,
   };
 
-  ReactDOM.render(
+  root.render(
     <Auth0Provider {...providerConfig}>
       <ApolloProvider client={client}>
         <BrowserRouter>
           <App />
         </BrowserRouter>
       </ApolloProvider>
-    </Auth0Provider>,
-    document.getElementById("root")
+    </Auth0Provider>
   );
 } else {
   console.log("Rendering with NO AUTH0");
 
-  ReactDOM.render(
+  root.render(
     <ApolloProvider client={client}>
       <BrowserRouter>
         <App />
       </BrowserRouter>
-    </ApolloProvider>,
-    document.getElementById("root")
+    </ApolloProvider>
   );
 }
 

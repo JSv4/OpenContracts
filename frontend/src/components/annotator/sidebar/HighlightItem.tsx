@@ -1,9 +1,11 @@
-import React, { useContext } from "react";
-import { Label, Button, Popup, Icon, SemanticICONS } from "semantic-ui-react";
+import React from "react";
+import { Label, Button, Popup, Icon } from "semantic-ui-react";
 import styled from "styled-components";
 import { Trash2, ArrowRight, ArrowLeft } from "lucide-react";
 import { HorizontallyJustifiedDiv } from "./common";
-import { AnnotationStore, ServerTokenAnnotation } from "../context";
+import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
+import { useAnnotationSelection } from "../hooks/useAnnotationSelection";
+import { ServerTokenAnnotation } from "../types/annotations";
 import { PermissionTypes } from "../../types";
 
 interface HighlightContainerProps {
@@ -97,10 +99,10 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
   onDelete,
   onSelect,
 }) => {
-  const annotationStore = useContext(AnnotationStore);
-  const selected = annotationStore.selectedAnnotations.includes(annotation.id);
-
-  console.log("Selection element refs: ", annotationStore.selectionElementRefs);
+  const { selectedAnnotations, handleAnnotationSelect } =
+    useAnnotationSelection();
+  const { annotationElementRefs } = useAnnotationRefs();
+  const selected = selectedAnnotations.includes(annotation.id);
 
   const my_output_relationships = relations.filter((relation) =>
     relation.sourceIds.includes(annotation.id)
@@ -114,10 +116,11 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
       selected={selected}
       className={`sidebar__annotation ${className || ""}`}
       onClick={() => {
-        annotationStore.selectionElementRefs?.current[
-          annotation.id
-        ]?.scrollIntoView();
-        onSelect(annotation.id);
+        annotationElementRefs.current[annotation.id]?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+        handleAnnotationSelect(annotation.id);
       }}
     >
       <div>

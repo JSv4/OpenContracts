@@ -9,73 +9,59 @@ import {
   DropdownItemProps,
 } from "semantic-ui-react";
 import { ViewLabelSelector } from "../../annotator/labels/view_labels_selector/ViewLabelSelector";
-import { LabelDisplayBehavior } from "../../../graphql/types";
+import { LabelDisplayBehavior } from "../../../types/graphql-api";
+import { useAnnotationDisplay } from "../../annotator/context/UISettingsAtom";
 
 interface ViewSettingsPopupProps {
-  show_selected_annotation_only: boolean;
-  showSelectedAnnotationOnly: (checked: boolean) => void;
-  showStructuralLabels: boolean;
-  toggleShowStructuralLabels: () => void;
-  show_annotation_bounding_boxes: boolean;
-  showAnnotationBoundingBoxes: (checked: boolean) => void;
-  label_display_behavior: LabelDisplayBehavior;
-  showAnnotationLabels: (value: LabelDisplayBehavior) => void;
   label_display_options: DropdownItemProps[];
 }
 
 export const ViewSettingsPopup: React.FC<ViewSettingsPopupProps> = ({
-  show_selected_annotation_only,
-  showSelectedAnnotationOnly,
-  showStructuralLabels,
-  toggleShowStructuralLabels,
-  show_annotation_bounding_boxes,
-  showAnnotationBoundingBoxes,
-  label_display_behavior,
-  showAnnotationLabels,
   label_display_options,
 }) => {
-  const [localShowSelected, setLocalShowSelected] = useState(
-    show_selected_annotation_only
-  );
+  const {
+    showLabels,
+    setShowLabels,
+    showStructural,
+    setShowStructural,
+    showSelectedOnly,
+    setShowSelectedOnly,
+    showBoundingBoxes,
+    setShowBoundingBoxes,
+  } = useAnnotationDisplay();
+
+  const [localShowSelected, setLocalShowSelected] = useState(showSelectedOnly);
   const [localShowStructural, setLocalShowStructural] =
-    useState(showStructuralLabels);
-  const [localShowBoundingBoxes, setLocalShowBoundingBoxes] = useState(
-    show_annotation_bounding_boxes
-  );
-  const [localLabelBehavior, setLocalLabelBehavior] = useState(
-    label_display_behavior
-  );
+    useState(showStructural);
+  const [localShowBoundingBoxes, setLocalShowBoundingBoxes] =
+    useState(showBoundingBoxes);
+  const [localLabelBehavior, setLocalLabelBehavior] = useState(showLabels);
 
   useEffect(() => {
-    setLocalShowSelected(show_selected_annotation_only);
-    setLocalShowStructural(showStructuralLabels);
-    setLocalShowBoundingBoxes(show_annotation_bounding_boxes);
-    setLocalLabelBehavior(label_display_behavior);
-  }, [
-    show_selected_annotation_only,
-    showStructuralLabels,
-    show_annotation_bounding_boxes,
-    label_display_behavior,
-  ]);
+    setShowSelectedOnly(showSelectedOnly);
+    setShowStructural(showStructural);
+    setShowBoundingBoxes(showBoundingBoxes);
+    setShowLabels(showLabels);
+  }, [showLabels, showStructural, showBoundingBoxes, showSelectedOnly]);
 
   const handleShowSelectedChange = (checked: boolean) => {
     setLocalShowSelected(checked);
-    showSelectedAnnotationOnly(checked);
+    setShowSelectedOnly(checked);
   };
 
   const handleShowStructuralChange = () => {
     setLocalShowStructural(!localShowStructural);
-    toggleShowStructuralLabels();
+    setShowStructural(!localShowStructural);
   };
 
   const handleShowBoundingBoxesChange = (checked: boolean) => {
     setLocalShowBoundingBoxes(checked);
-    showAnnotationBoundingBoxes(checked);
+    setShowBoundingBoxes(checked);
   };
 
   const handleLabelBehaviorChange = (value: LabelDisplayBehavior) => {
     setLocalLabelBehavior(value);
-    showAnnotationLabels(value);
+    setShowLabels(value);
   };
 
   return (

@@ -20,7 +20,7 @@ import {
   showDeleteDocumentsModal,
   viewingDocument,
 } from "../../graphql/cache";
-import { AnnotationLabelType, DocumentType } from "../../graphql/types";
+import { AnnotationLabelType, DocumentType } from "../../types/graphql-api";
 import { downloadFile } from "../../utils/files";
 import fallback_doc_icon from "../../assets/images/defaults/default_doc_icon.jpg";
 import { getPermissions } from "../../utils/transform";
@@ -101,27 +101,13 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
   removeFromCorpus,
   setContextMenuOpen,
 }) => {
-  const contextRef = React.useRef<HTMLElement | null>(null);
-
-  const createContextFromEvent = (
-    e: React.MouseEvent<HTMLElement>
-  ): HTMLElement => {
-    const left = e.clientX;
-    const top = e.clientY;
-    const right = left + 1;
-    const bottom = top + 1;
-
-    return {
-      getBoundingClientRect: () => ({
-        left,
-        top,
-        right,
-        bottom,
-        height: 0,
-        width: 0,
-      }),
-    } as HTMLElement;
-  };
+  const contextRef = React.useRef<HTMLDivElement>(null);
+  const [contextMenuState, setContextMenuState] = React.useState<{
+    open: boolean;
+    x: number;
+    y: number;
+    id: string | number;
+  }>({ open: false, x: 0, y: 0, id: "" });
 
   const onDownload = (file_url: string | void | null) => {
     if (file_url) {
@@ -180,7 +166,7 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
     item.myPermissions ? item.myPermissions : []
   );
 
-  let context_menus: React.ReactNode[] = [];
+  let context_menus: ContextMenuItem[] = [];
   if (my_permissions.includes(PermissionTypes.CAN_REMOVE)) {
     context_menus.push({
       key: "delete",
@@ -250,6 +236,17 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
     </StyledLabel>
   ));
 
+  const onContextMenuHandler = (e: React.MouseEvent<HTMLElement>) => {
+    e.preventDefault();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (contextMenuState.open && contextMenuState.id === id) {
+      setContextMenuState({ open: false, x: 0, y: 0, id: "" });
+    } else {
+      setContextMenuState({ open: true, x, y, id });
+    }
+  };
+
   return (
     <>
       <StyledCard
@@ -262,15 +259,7 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
           MsUserSelect: "none",
           MozUserSelect: "none",
         }}
-        onContextMenu={(e: React.MouseEvent<HTMLElement>) => {
-          e.preventDefault();
-          contextRef.current = createContextFromEvent(e);
-          if (contextMenuOpen === id) {
-            setContextMenuOpen(-1);
-          } else {
-            setContextMenuOpen(id);
-          }
-        }}
+        onContextMenu={onContextMenuHandler}
         onClick={backendLock ? () => {} : cardClickHandler}
       >
         {backendLock ? (
@@ -314,21 +303,52 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
           </Statistic.Group>
         </Card.Content>
       </StyledCard>
-      <Popup
-        basic
-        context={contextRef}
-        onClose={() => setContextMenuOpen(-1)}
-        open={contextMenuOpen === id}
-        hideOnScroll
-      >
-        <Menu
-          className="Corpus_Context_Menu"
-          items={context_menus}
-          onItemClick={() => setContextMenuOpen(-1)}
-          secondary
-          vertical
-        />
-      </Popup>
+
+      {contextMenuState.open && contextMenuState.id === id && (
+        <>
+          <div
+            ref={contextRef}
+            style={{
+              position: "absolute",
+              top: contextMenuState.y,
+              left: contextMenuState.x,
+              height: "1px",
+              width: "1px",
+              zIndex: 1000,
+            }}
+          />
+          <Popup
+            basic
+            context={contextRef}
+            onClose={() =>
+              setContextMenuState({ ...contextMenuState, open: false })
+            }
+            open={true}
+            hideOnScroll
+          >
+            <Menu className="Corpus_Context_Menu" secondary vertical>
+              {context_menus.map((menuItem) => (
+                <Menu.Item
+                  key={menuItem.key}
+                  icon={menuItem.icon}
+                  content={menuItem.content}
+                  onClick={() => {
+                    menuItem.onClick();
+                    setContextMenuState({ ...contextMenuState, open: false });
+                  }}
+                />
+              ))}
+            </Menu>
+          </Popup>
+        </>
+      )}
     </>
   );
 };
+
+interface ContextMenuItem {
+  key: string;
+  icon: string;
+  content: string;
+  onClick: () => void;
+}

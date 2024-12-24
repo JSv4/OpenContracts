@@ -1,11 +1,13 @@
-import { useContext } from "react";
 import styled from "styled-components";
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import _ from "lodash";
-import { PDFStore } from "../../context";
-import { LabelDisplayBehavior } from "../../../../graphql/types";
 import { PermissionTypes } from "../../../types";
 import { PDFPage } from "./PDFPage";
+import {
+  usePages,
+  usePdfDoc,
+  useSetViewStateError,
+} from "../../context/DocumentAtom";
 
 export class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
@@ -59,34 +61,18 @@ export class PDFPageRenderer {
   }
 }
 
-export const PDF = ({
-  shiftDown,
-  doc_permissions,
-  corpus_permissions,
-  read_only,
-  show_selected_annotation_only,
-  show_annotation_bounding_boxes,
-  show_annotation_labels,
-  setJumpedToAnnotationOnLoad,
-}: {
-  shiftDown?: boolean;
-  doc_permissions: PermissionTypes[];
-  corpus_permissions: PermissionTypes[];
-  read_only: boolean;
-  show_selected_annotation_only: boolean;
-  show_annotation_bounding_boxes: boolean;
-  show_annotation_labels: LabelDisplayBehavior;
-  setJumpedToAnnotationOnLoad: (annot_id: string) => null | void;
-}) => {
-  const pdfStore = useContext(PDFStore);
+export const PDF = ({ read_only }: { read_only: boolean }) => {
+  const { pdfDoc: doc } = usePdfDoc();
+  const { pages } = usePages();
+  const setViewStateError = useSetViewStateError();
 
-  if (!pdfStore.doc) {
+  if (!doc) {
     // Instead of throwing an error, render nothing or a fallback UI
     console.warn("PDF component rendered without a valid document.");
     return null; // Or return a fallback UI
   }
 
-  if (!pdfStore.pages) {
+  if (!pages) {
     // Similarly, handle missing pages gracefully
     console.warn("PDF component rendered without pages.");
     return <div>No pages available.</div>;
@@ -94,19 +80,13 @@ export const PDF = ({
 
   return (
     <>
-      {pdfStore.pages.map((p) => {
+      {Object.values(pages).map((p) => {
         return (
           <PDFPage
             key={p.page.pageNumber}
             read_only={read_only}
-            doc_permissions={doc_permissions}
-            corpus_permissions={corpus_permissions}
             pageInfo={p}
-            onError={pdfStore.onError}
-            show_selected_annotation_only={show_selected_annotation_only}
-            show_annotation_bounding_boxes={show_annotation_bounding_boxes}
-            show_annotation_labels={show_annotation_labels}
-            setJumpedToAnnotationOnLoad={setJumpedToAnnotationOnLoad}
+            onError={setViewStateError}
           />
         );
       })}
@@ -129,10 +109,12 @@ export const PageAnnotationsContainer = styled.div(
 `
 );
 
-export const PageCanvas = styled.canvas(
-  ({ width }: { width?: number }) => `
+interface PageCanvasProps {
+  width?: number;
+}
+
+export const PageCanvas = styled.canvas<PageCanvasProps>`
   display: block;
-  ${width ? "width: " + width + "px;" : ""}
+  ${(props) => (props.width ? `width: ${props.width}px;` : "")}
   height: auto;
-`
-);
+`;

@@ -1,16 +1,11 @@
-import React, {
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-} from "react";
+import React, { useEffect } from "react";
 import { Header, Segment, Icon, Message, Form } from "semantic-ui-react";
 import _ from "lodash";
-import { AnnotationStore } from "../context";
 import "./SearchWidgetStyles.css";
 import { TextSearchSpanResult, TextSearchTokenResult } from "../../types";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
+import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
+import { useSearchText, useTextSearchState } from "../context/DocumentAtom";
 
 const PageHeader: React.FC<{
   result: TextSearchTokenResult | TextSearchSpanResult;
@@ -100,62 +95,33 @@ const SearchResultCard: React.FC<{
 };
 
 export const SearchSidebarWidget: React.FC = () => {
-  const annotationStore = useContext(AnnotationStore);
+  const annotationRefs = useAnnotationRefs();
   const {
-    textSearchMatches,
-    searchForText,
-    searchText,
+    textSearchMatches: searchResults,
     selectedTextSearchMatchIndex,
-  } = annotationStore;
-
-  const debouncedExportSearch = useCallback(
-    _.debounce((searchTerm: string) => {
-      searchForText(searchTerm);
-    }, 300),
-    [searchForText]
-  );
-
-  const handleDocSearchChange = (value: string) => {
-    searchForText(value);
-    debouncedExportSearch(value);
-  };
-
-  const clearSearch = () => {
-    searchForText("");
-  };
+    setSelectedTextSearchMatchIndex,
+  } = useTextSearchState();
+  const { searchText, setSearchText } = useSearchText();
 
   useEffect(() => {
-    console.log(
-      "Selected text search match index",
-      selectedTextSearchMatchIndex
-    );
-    console.log(
-      "Search result element refs",
-      annotationStore?.searchResultElementRefs?.current
-    );
-    if (
-      annotationStore.searchResultElementRefs?.current[
+    const currentRef =
+      annotationRefs.textSearchElementRefs.current[
         selectedTextSearchMatchIndex
-      ]
-    ) {
-      console.log(
-        "Scrolling to result",
-        selectedTextSearchMatchIndex,
-        annotationStore.searchResultElementRefs.current[
-          selectedTextSearchMatchIndex
-        ]
-      );
-      annotationStore.searchResultElementRefs.current[
-        selectedTextSearchMatchIndex
-      ]?.scrollIntoView({
+      ];
+    if (currentRef) {
+      currentRef?.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
     }
-  }, [selectedTextSearchMatchIndex, annotationStore.searchResultElementRefs]);
+  }, [selectedTextSearchMatchIndex, annotationRefs.textSearchElementRefs]);
 
   const onResultClick = (index: number) => {
-    annotationStore.setSelectedTextSearchMatchIndex(index);
+    console.log("SearchSidebar: Result clicked", {
+      clickedIndex: index,
+      previousIndex: selectedTextSearchMatchIndex,
+    });
+    setSelectedTextSearchMatchIndex(index);
   };
 
   return (
@@ -185,12 +151,12 @@ export const SearchSidebarWidget: React.FC = () => {
               <Icon
                 name={searchText ? "cancel" : "search"}
                 link
-                onClick={searchText ? clearSearch : undefined}
+                onClick={searchText ? setSearchText("") : undefined}
                 style={{ color: searchText ? "#db2828" : "#2185d0" }}
               />
             }
             placeholder="Search document..."
-            onChange={(e) => handleDocSearchChange(e.target.value)}
+            onChange={(e) => setSearchText(e.target.value)}
             value={searchText}
             style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
           />
@@ -207,16 +173,21 @@ export const SearchSidebarWidget: React.FC = () => {
         attached="bottom"
       >
         <div style={{ overflowY: "auto", height: "100%" }}>
-          {textSearchMatches.length > 0 ? (
-            textSearchMatches.map((res, index) => (
-              <SearchResultCard
-                key={`SearchResultCard_${index}`}
-                index={index}
-                totalMatches={textSearchMatches.length}
-                res={res}
-                onResultClick={onResultClick}
-              />
-            ))
+          {searchResults.length > 0 ? (
+            searchResults.map(
+              (
+                res: TextSearchTokenResult | TextSearchSpanResult,
+                index: number
+              ) => (
+                <SearchResultCard
+                  key={`SearchResultCard_${index}`}
+                  index={index}
+                  totalMatches={searchResults.length}
+                  res={res}
+                  onResultClick={onResultClick}
+                />
+              )
+            )
           ) : (
             <PlaceholderSearchResultCard />
           )}

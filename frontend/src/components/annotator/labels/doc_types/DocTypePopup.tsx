@@ -6,7 +6,7 @@ import {
 } from "../../sidebar/LabelListItems";
 import Fuse from "fuse.js";
 import _ from "lodash";
-import { AnnotationLabelType } from "../../../../graphql/types";
+import { AnnotationLabelType } from "../../../../types/graphql-api";
 
 interface DocTypePopupProps {
   labels: AnnotationLabelType[];

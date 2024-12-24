@@ -1,21 +1,20 @@
-import React, { useContext, useMemo } from "react";
+import React, { useMemo } from "react";
 import { Dropdown, DropdownProps } from "semantic-ui-react";
 import _ from "lodash";
-import { AnnotationStore } from "../../context";
-import { AnnotationLabelType } from "../../../../graphql/types";
+import { AnnotationLabelType } from "../../../../types/graphql-api";
+import { useCorpusState } from "../../context/CorpusAtom";
+import { useAnnotationControls } from "../../context/UISettingsAtom";
 
 export const ViewLabelSelector: React.FC = () => {
-  const annotationStore = useContext(AnnotationStore);
+  const { humanSpanLabels, spanLabels } = useCorpusState();
 
   const allLabelChoices = useMemo(() => {
-    const humanLabels = annotationStore.humanSpanLabelChoices;
-    const spanLabels = annotationStore.spanLabels;
-
     // Combine both label types and remove duplicates
-    return _.uniqBy([...humanLabels, ...spanLabels], "id");
-  }, [annotationStore.humanSpanLabelChoices, annotationStore.spanLabels]);
+    return _.uniqBy([...humanSpanLabels, ...spanLabels], "id");
+  }, [humanSpanLabels, spanLabels]);
 
-  const { showOnlySpanLabels, setViewLabels } = annotationStore;
+  const annotationControls = useAnnotationControls();
+  const { spanLabelsToView, setSpanLabelsToView } = annotationControls;
 
   const handleChange = (
     event: React.SyntheticEvent<HTMLElement, Event>,
@@ -24,7 +23,7 @@ export const ViewLabelSelector: React.FC = () => {
     const selectedLabels = allLabelChoices.filter((l) =>
       data?.value && Array.isArray(data.value) ? data.value.includes(l.id) : []
     );
-    setViewLabels(selectedLabels);
+    setSpanLabelsToView(selectedLabels);
   };
 
   const labelOptions = useMemo(() => {
@@ -38,7 +37,7 @@ export const ViewLabelSelector: React.FC = () => {
   return (
     <Dropdown
       onChange={handleChange}
-      value={showOnlySpanLabels ? showOnlySpanLabels.map((l) => l.id) : []}
+      value={spanLabelsToView ? spanLabelsToView.map((l) => l.id) : []}
       placeholder="Only Show Labels"
       fluid
       multiple

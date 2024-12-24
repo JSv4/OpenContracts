@@ -25,7 +25,7 @@ import {
 
 import { ActionDropdownItem, LooseObject } from "../components/types";
 import { CardLayout } from "../components/layout/CardLayout";
-import { ExtractType } from "../graphql/types";
+import { ExtractType } from "../types/graphql-api";
 import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { ExtractList } from "../components/extracts/list/ExtractList";
 import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";

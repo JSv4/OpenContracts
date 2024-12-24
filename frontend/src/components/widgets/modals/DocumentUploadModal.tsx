@@ -28,7 +28,7 @@ import {
 } from "../../../graphql/mutations";
 import { toBase64 } from "../../../utils/files";
 import { toast } from "react-toastify";
-import { CorpusType, DocumentType } from "../../../graphql/types";
+import { CorpusType, DocumentType } from "../../../types/graphql-api";
 import {
   GET_CORPUSES,
   GetCorpusesInputs,

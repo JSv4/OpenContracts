@@ -8,7 +8,7 @@ import {
 } from "../../../graphql/queries";
 import { selectedCorpus } from "../../../graphql/cache";
 import _ from "lodash";
-import { CorpusType } from "../../../graphql/types";
+import { CorpusType } from "../../../types/graphql-api";
 
 interface CorpusOption {
   key: string;

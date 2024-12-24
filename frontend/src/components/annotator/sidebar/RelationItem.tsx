@@ -1,10 +1,10 @@
 import { Label, Card, Divider, List } from "semantic-ui-react";
 
 import _ from "lodash";
-import { RelationGroup, ServerTokenAnnotation } from "../context";
 
 import "./AnnotatorSidebar.css";
 import { RelationHighlightItem } from "./RelationHighlightItem";
+import { RelationGroup, ServerTokenAnnotation } from "../types/annotations";
 
 export function RelationItem({
   relation,

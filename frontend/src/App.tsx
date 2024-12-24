@@ -21,6 +21,8 @@ import {
   openedDocument,
   selectedAnalysesIds,
   selectedAnalyses,
+  selectedExtract,
+  selectedExtractIds,
   onlyDisplayTheseAnnotations,
   openedCorpus,
   showSelectedAnnotationOnly,
@@ -29,6 +31,7 @@ import {
   showSelectCorpusAnalyzerOrFieldsetModal,
   showUploadNewDocumentsModal,
   uploadModalPreloadedFiles,
+  showStructuralAnnotations,
 } from "./graphql/cache";
 
 import { NavMenu } from "./components/layout/NavMenu";
@@ -50,7 +53,7 @@ import "./App.css";
 import "react-toastify/dist/ReactToastify.css";
 import useWindowDimensions from "./components/hooks/WindowDimensionHook";
 import { MobileNavMenu } from "./components/layout/MobileNavMenu";
-import { LabelDisplayBehavior } from "./graphql/types";
+import { LabelDisplayBehavior } from "./types/graphql-api";
 import { CookieConsentDialog } from "./components/cookies/CookieConsent";
 import { Extracts } from "./views/Extracts";
 import { useEnv } from "./components/hooks/UseEnv";
@@ -74,6 +77,7 @@ export const App = () => {
   const show_selected_annotation_only = useReactiveVar(
     showSelectedAnnotationOnly
   );
+  const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
   const show_annotation_bounding_boxes = useReactiveVar(
     showAnnotationBoundingBoxes
   );
@@ -207,27 +211,27 @@ export const App = () => {
                 toggleModal={() => openedExtract(null)}
               />
             )}
-            {opened_document ? (
-              <DocumentAnnotator
-                open={Boolean(opened_document)}
-                onClose={() => {
+            <DocumentAnnotator
+              open={Boolean(opened_document)}
+              onClose={() => {
+                const resetStates = () => {
                   openedDocument(null);
+                  selectedExtract(null);
                   selectedAnalysesIds([]);
+                  selectedExtractIds([]);
                   selectedAnalyses([]);
                   onlyDisplayTheseAnnotations(undefined);
-                }}
-                opened_corpus={
-                  opened_corpus === null ? undefined : opened_corpus
-                }
-                opened_document={opened_document}
-                read_only={selected_analyes.length > 0 || banish_sidebar}
-                show_selected_annotation_only={show_selected_annotation_only}
-                show_annotation_bounding_boxes={show_annotation_bounding_boxes}
-                show_annotation_labels={show_annotation_labels}
-              />
-            ) : (
-              <></>
-            )}
+                };
+                resetStates();
+              }}
+              opened_corpus={opened_corpus === null ? undefined : opened_corpus}
+              opened_document={opened_document}
+              read_only={selected_analyes.length > 0 || banish_sidebar}
+              show_structural_annotations={show_structural_annotations}
+              show_selected_annotation_only={show_selected_annotation_only}
+              show_annotation_bounding_boxes={show_annotation_bounding_boxes}
+              show_annotation_labels={show_annotation_labels}
+            />
             <DocumentUploadModal
               refetch={() => {
                 showUploadNewDocumentsModal(false);

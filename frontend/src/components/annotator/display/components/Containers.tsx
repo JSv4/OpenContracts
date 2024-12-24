@@ -1,18 +1,7 @@
-import React, { useState, useContext } from "react";
+import React from "react";
 import styled, { css } from "styled-components";
-import { Icon, Image } from "semantic-ui-react";
-import {
-  AnnotationStore,
-  ServerTokenAnnotation,
-  PDFPageInfo,
-} from "../../context";
-import { BoundingBox, PermissionTypes } from "../../../types";
-import { LabelDisplayBehavior } from "../../../../graphql/types";
-import { SelectionBoundary } from "./SelectionBoundary";
-import {
-  annotationSelectedViaRelationship,
-  getRelationImageHref,
-} from "../../utils";
+import { Icon } from "semantic-ui-react";
+import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { getContrastColor } from "../../../../utils/transform";
 import { pulseGreen, pulseMaroon } from "../effects";
 

@@ -9,10 +9,13 @@ const GroupContainer = styled.div`
   overflow: hidden;
 `;
 
-const ButtonStyled = styled.button<{ isMiddle?: boolean; isAction?: boolean }>`
-  background-color: ${(props) => (props.isAction ? "#2185d0" : "#f8f9fa")};
-  border: 1px solid ${(props) => (props.isAction ? "#2185d0" : "#ced4da")};
-  color: ${(props) => (props.isAction ? "#ffffff" : "#495057")};
+const ButtonStyled = styled.button<{
+  $isMiddle?: boolean;
+  $isAction?: boolean;
+}>`
+  background-color: ${(props) => (props.$isAction ? "#2185d0" : "#f8f9fa")};
+  border: 1px solid ${(props) => (props.$isAction ? "#2185d0" : "#ced4da")};
+  color: ${(props) => (props.$isAction ? "#ffffff" : "#495057")};
   padding: 0.375rem 0.75rem;
   font-size: 1rem;
   line-height: 1.5;
@@ -21,7 +24,7 @@ const ButtonStyled = styled.button<{ isMiddle?: boolean; isAction?: boolean }>`
   transition: all 0.15s ease-in-out;
 
   &:hover {
-    background-color: ${(props) => (props.isAction ? "#1678c2" : "#e9ecef")};
+    background-color: ${(props) => (props.$isAction ? "#1678c2" : "#e9ecef")};
   }
 
   &:focus {
@@ -30,7 +33,7 @@ const ButtonStyled = styled.button<{ isMiddle?: boolean; isAction?: boolean }>`
   }
 
   ${(props) =>
-    props.isMiddle &&
+    props.$isMiddle &&
     `
     border-left: none;
     border-right: none;
@@ -65,6 +68,9 @@ interface CustomButtonGroupProps {
   onActionClick: () => void;
 }
 
+/**
+ * A group of buttons for zooming in, zooming out, and accessing additional actions.
+ */
 export const ZoomButtonGroup: React.FC<CustomButtonGroupProps> = ({
   onZoomOut,
   onZoomIn,
@@ -74,9 +80,9 @@ export const ZoomButtonGroup: React.FC<CustomButtonGroupProps> = ({
   return (
     <GroupContainer>
       <ButtonStyled onClick={onZoomOut}>-</ButtonStyled>
-      <TextDisplay isMiddle>{`${(zoomLevel * 100).toFixed(0)}%`}</TextDisplay>
+      <TextDisplay $isMiddle>{`${(zoomLevel * 100).toFixed(0)}%`}</TextDisplay>
       <ButtonStyled onClick={onZoomIn}>+</ButtonStyled>
-      <ButtonStyled isAction onClick={onActionClick}>
+      <ButtonStyled $isAction onClick={onActionClick}>
         ⋯
       </ButtonStyled>
     </GroupContainer>

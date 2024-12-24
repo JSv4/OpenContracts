@@ -18,7 +18,7 @@ import {
   CorpusType,
   FieldsetType,
   DocumentType,
-} from "../../graphql/types";
+} from "../../types/graphql-api";
 
 export function generateMockUser(): UserType {
   return {

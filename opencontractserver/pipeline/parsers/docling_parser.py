@@ -1,16 +1,16 @@
 import io
 import logging
 import os
+from io import BytesIO
 from pathlib import Path
 from typing import Optional, Union
-from io import BytesIO
 
 import numpy as np
 import pdf2image
 import pytesseract
 from django.conf import settings
 from django.core.files.storage import default_storage
-from docling.datamodel.base_models import ConversionStatus, InputFormat
+from docling.datamodel.base_models import ConversionStatus, DocumentStream, InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
@@ -20,7 +20,6 @@ from docling_core.types.doc import (
     SectionHeaderItem,
     TextItem,
 )
-from docling.datamodel.base_models import DocumentStream
 from docling_core.types.doc.document import ListItem
 from shapely.geometry import box
 from shapely.strtree import STRtree

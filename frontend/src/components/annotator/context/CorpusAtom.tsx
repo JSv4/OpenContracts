@@ -92,6 +92,21 @@ export function useCorpusState() {
   const [allowComments, setAllowComments] = useAtom(allowCommentsAtom);
   const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
 
+  // Initialize labels from corpus if available
+  useEffect(() => {
+    if (selectedCorpus?.labelSet?.allAnnotationLabels) {
+      const allLabels = selectedCorpus.labelSet.allAnnotationLabels;
+      const filteredTokenLabels = allLabels.filter(
+        (label) => label.labelType === "TOKEN_LABEL"
+      );
+      const filteredSpanLabels = allLabels.filter(
+        (label) => label.labelType === "SPAN_LABEL"
+      );
+      setHumanSpanLabels(filteredSpanLabels);
+      setHumanTokenLabels(filteredTokenLabels);
+    }
+  }, [selectedCorpus?.labelSet?.allAnnotationLabels]);
+
   // Permission checks
   const canUpdateCorpus = permissions.includes(PermissionTypes.CAN_UPDATE);
   const canDeleteCorpus = permissions.includes(PermissionTypes.CAN_REMOVE);

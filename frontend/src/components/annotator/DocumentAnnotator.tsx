@@ -463,6 +463,11 @@ export const DocumentAnnotator = ({
           (label) => label.labelType === LabelType.DocTypeLabel
         );
 
+        console.log("Setting filtered labels:", {
+          spanLabels: filteredSpanLabels,
+          tokenLabels: filteredTokenLabels,
+        });
+
         setSpanLabels(filteredSpanLabels);
         setHumanSpanLabels(filteredSpanLabels);
         setHumanTokenLabels(filteredTokenLabels);

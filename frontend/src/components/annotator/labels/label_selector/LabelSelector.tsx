@@ -24,6 +24,13 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
 
   const { humanSpanLabels, humanTokenLabels } = useCorpusState();
 
+  // Add debug logging
+  console.log("LabelSelector state:", {
+    humanSpanLabels,
+    humanTokenLabels,
+    activeSpanLabel,
+  });
+
   const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
 
   const filteredLabelChoices = useMemo(() => {

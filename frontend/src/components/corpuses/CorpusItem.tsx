@@ -150,7 +150,11 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
   setContextMenuOpen,
 }) => {
   const analyzers_available = process.env.REACT_APP_USE_ANALYZERS;
-  const contextRef = React.useRef<HTMLElement | null>(null);
+  const contextRef = React.useRef<HTMLDivElement | null>(null);
+  const [contextPosition, setContextPosition] = React.useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   // ADDED: These two lines
   const [isPopupOpen, setIsPopupOpen] = React.useState(false);
   const labelRef = React.useRef<HTMLDivElement>(null);
@@ -169,24 +173,9 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
     myPermissions,
   } = item;
 
-  const createContextFromEvent = (
-    e: React.MouseEvent<HTMLElement>
-  ): HTMLElement => {
-    const left = e.clientX;
-    const top = e.clientY;
-    const right = left + 1;
-    const bottom = top + 1;
-
-    return {
-      getBoundingClientRect: () => ({
-        left,
-        top,
-        right,
-        bottom,
-        height: 0,
-        width: 0,
-      }),
-    } as HTMLElement;
+  const createContextFromEvent = (e: React.MouseEvent<HTMLElement>) => {
+    e.preventDefault();
+    setContextPosition({ x: e.clientX, y: e.clientY });
   };
 
   const cardClickHandler = (
@@ -270,7 +259,7 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
         onClick={backendLock ? () => {} : cardClickHandler}
         onContextMenu={(e: React.MouseEvent<HTMLElement>) => {
           e.preventDefault();
-          contextRef.current = createContextFromEvent(e);
+          createContextFromEvent(e);
           if (contextMenuOpen === id) {
             setContextMenuOpen(-1);
           } else {
@@ -385,20 +374,40 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
           </Statistic.Group>
         </StyledCardExtra>
       </StyledCard>
-      <Popup
-        basic
-        context={contextRef}
-        onClose={() => setContextMenuOpen(-1)}
-        open={contextMenuOpen === id}
-        hideOnScroll
-      >
-        <Menu
-          items={context_menus}
-          onItemClick={() => setContextMenuOpen(-1)}
-          secondary
-          vertical
-        />
-      </Popup>
+      {contextPosition && (
+        <Portal open={contextMenuOpen === id}>
+          <div
+            ref={contextRef}
+            style={{
+              position: "fixed",
+              top: contextPosition.y,
+              left: contextPosition.x,
+              zIndex: 1000,
+              background: "white",
+              borderRadius: "4px",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+              border: "1px solid rgba(34,36,38,.15)",
+            }}
+          >
+            <Menu
+              items={context_menus}
+              onItemClick={() => {
+                setContextMenuOpen(-1);
+                setContextPosition(null);
+              }}
+              secondary
+              vertical
+              style={{
+                minWidth: "200px",
+                margin: 0,
+                border: "none",
+                boxShadow: "none",
+                background: "transparent",
+              }}
+            />
+          </div>
+        </Portal>
+      )}
     </>
   );
 };

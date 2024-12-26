@@ -17,6 +17,8 @@ import {
   PermissionTypes,
 } from "../types";
 import {
+  convertToDocTypeAnnotation,
+  convertToDocTypeAnnotations,
   convertToServerAnnotation,
   convertToServerAnnotations,
   getPermissions,
@@ -433,13 +435,19 @@ export const DocumentAnnotator = ({
           convertToServerAnnotation(annotation)
         ) ?? [];
 
+      const processedDocTypeAnnotations = convertToDocTypeAnnotations(
+        data.document.allAnnotations?.filter(
+          (ann) => ann.annotationLabel.labelType === LabelType.DocTypeLabel
+        ) ?? []
+      );
+
       // Update pdfAnnotations atom
       setPdfAnnotations(
         (prev) =>
           new PdfAnnotations(
             processedAnnotations,
             prev.relations,
-            prev.docTypes,
+            processedDocTypeAnnotations,
             true
           )
       );

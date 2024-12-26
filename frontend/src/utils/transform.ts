@@ -101,6 +101,14 @@ export function convertToDocTypeAnnotation(
   );
 }
 
+export function convertToDocTypeAnnotations(
+  annotations: ServerAnnotationType[]
+): DocTypeAnnotation[] {
+  return annotations
+    .filter((ann) => ann.annotationLabel.labelType === LabelType.DocTypeLabel)
+    .map((ann) => convertToDocTypeAnnotation(ann));
+}
+
 export function convertToServerAnnotation(
   annotation: ServerAnnotationType,
   allowComments?: boolean

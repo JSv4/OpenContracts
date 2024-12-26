@@ -48,7 +48,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  margin-right: 0.5rem;
+  margin-right: 1rem;
   transform: translateX(100%);
 }
 
@@ -66,7 +66,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  margin-right: 0.5rem;
+  margin-right: 1rem;
   transform: translateX(0);
 }
 
@@ -104,7 +104,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  margin-top: 10px;
 }
 
 .DocTypeWidget_BodySegment {
@@ -119,6 +120,7 @@
   background: white;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
   padding: 12px;
+  margin: 0 !important;
 }
 
 .DocTypeWidget_BodySegment_hovered {
@@ -133,12 +135,13 @@
   background: white;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
   padding: 12px;
+  margin: 0 !important;
 }
 
 .DocTypeWidget_HeaderSegment {
   width: 150px !important;
-  margin-bottom: 0px;
-  padding: 12px;
+  margin: 0 !important;
+  padding: 10px !important;
   text-align: center;
   border-radius: 12px 12px 0 0;
   border: none;
@@ -146,11 +149,34 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
+.DocTypeWidget_HeaderSegment .ui.horizontal.divider {
+  margin: 0;
+  opacity: 0.8;
+}
+
 .DocTypeWidget_HeaderSegment h5 {
   margin: 0;
   color: #495057;
   font-weight: 600;
   font-size: 0.9rem;
+}
+
+.DocTypeWidget_Container {
+  background: transparent;
+  border-radius: 12px;
+  overflow: visible;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-right: 16px;
+}
+
+.DocTypeWidget_Container:hover {
+  box-shadow: none;
+}
+
+.DocTypeWidget_ContentFlexContainer {
+  background: transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 10px;
 }
 
 @media (max-width: 400px) {

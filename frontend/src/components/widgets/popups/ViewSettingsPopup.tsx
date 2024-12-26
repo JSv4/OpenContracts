@@ -83,14 +83,7 @@ export const ViewSettingsPopup: React.FC<ViewSettingsPopupProps> = ({
               checked={localShowSelected}
             />
           </Grid.Column>
-          <Grid.Column textAlign="center" verticalAlign="middle">
-            <Header size="tiny">Show Layout Blocks</Header>
-            <Checkbox
-              toggle
-              onChange={handleShowStructuralChange}
-              checked={localShowStructural}
-            />
-          </Grid.Column>
+
           <Grid.Column textAlign="center" verticalAlign="middle">
             <Header size="tiny">Show Bounding Boxes</Header>
             <Checkbox

@@ -370,6 +370,11 @@ export const DocumentAnnotator = ({
           convertToServerAnnotation(annotation)
         ) ?? [];
 
+      const structuralAnnotations =
+        data.document.allStructuralAnnotations?.map((annotation) =>
+          convertToServerAnnotation(annotation)
+        ) ?? [];
+
       const processedDocTypeAnnotations = convertToDocTypeAnnotations(
         data.document.allAnnotations?.filter(
           (ann) => ann.annotationLabel.labelType === LabelType.DocTypeLabel
@@ -380,7 +385,7 @@ export const DocumentAnnotator = ({
       setPdfAnnotations(
         (prev) =>
           new PdfAnnotations(
-            processedAnnotations,
+            [...processedAnnotations, ...structuralAnnotations],
             prev.relations,
             processedDocTypeAnnotations,
             true
@@ -684,7 +689,7 @@ export const DocumentAnnotator = ({
   useEffect(() => {
     if (!open) {
       // Reset only annotation-specific state
-      setPdfAnnotations(new PdfAnnotations([], [], []));
+      setPdfAnnotations(new PdfAnnotations([], [], [], false));
       setStructuralAnnotations([]);
       setDocTypeAnnotations([]);
       setAnnotationObjs([]);

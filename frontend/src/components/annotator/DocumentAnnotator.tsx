@@ -232,9 +232,59 @@ export const DocumentAnnotator = ({
       hasData: !!humanAnnotationsAndRelationshipsData,
       displayOnlyTheseAnnotations,
       isLoading: humanDataLoading,
+      data: humanAnnotationsAndRelationshipsData,
+      corpus: humanAnnotationsAndRelationshipsData?.corpus,
+      labelSet: humanAnnotationsAndRelationshipsData?.corpus?.labelSet,
+      allLabels:
+        humanAnnotationsAndRelationshipsData?.corpus?.labelSet
+          ?.allAnnotationLabels,
     });
 
     if (humanAnnotationsAndRelationshipsData && !displayOnlyTheseAnnotations) {
+      // First, ensure we have the labelSet data
+      if (
+        humanAnnotationsAndRelationshipsData.corpus?.labelSet
+          ?.allAnnotationLabels
+      ) {
+        console.log("Processing labelSet from GraphQL response:", {
+          labelSet: humanAnnotationsAndRelationshipsData.corpus.labelSet,
+          allLabels:
+            humanAnnotationsAndRelationshipsData.corpus.labelSet
+              .allAnnotationLabels,
+        });
+
+        // Set the labels first
+        const allLabels =
+          humanAnnotationsAndRelationshipsData.corpus.labelSet
+            .allAnnotationLabels;
+        const filteredTokenLabels = allLabels.filter(
+          (label) => label.labelType === LabelType.TokenLabel
+        );
+        const filteredSpanLabels = allLabels.filter(
+          (label) => label.labelType === LabelType.SpanLabel
+        );
+        const filteredRelationLabels = allLabels.filter(
+          (label) => label.labelType === LabelType.RelationshipLabel
+        );
+        const filteredDocTypeLabels = allLabels.filter(
+          (label) => label.labelType === LabelType.DocTypeLabel
+        );
+
+        console.log("Setting filtered labels from GraphQL response:", {
+          spanLabels: filteredSpanLabels,
+          tokenLabels: filteredTokenLabels,
+          relationLabels: filteredRelationLabels,
+          docTypeLabels: filteredDocTypeLabels,
+        });
+
+        setSpanLabels(filteredSpanLabels);
+        setHumanSpanLabels(filteredSpanLabels);
+        setHumanTokenLabels(filteredTokenLabels);
+        setRelationLabels(filteredRelationLabels);
+        setDocTypeLabels(filteredDocTypeLabels);
+      }
+
+      // Then process the annotations
       processAnnotationsData(humanAnnotationsAndRelationshipsData);
     }
   }, [humanAnnotationsAndRelationshipsData, displayOnlyTheseAnnotations]);
@@ -269,6 +319,7 @@ export const DocumentAnnotator = ({
         documentId: opened_document?.id,
         corpusId: opened_corpus?.id,
         analysisId: selected_analysis?.id || "__none__",
+        labelSet: opened_corpus?.labelSet,
       });
       if (opened_document) {
         if (opened_corpus?.labelSet && !displayOnlyTheseAnnotations) {
@@ -457,7 +508,6 @@ export const DocumentAnnotator = ({
 
       // Update label atoms
       if (data.corpus?.labelSet) {
-        console.log("React to label set", data.corpus.labelSet);
         const allLabels = data.corpus.labelSet.allAnnotationLabels ?? [];
         const filteredTokenLabels = allLabels.filter(
           (label) => label.labelType === LabelType.TokenLabel
@@ -471,11 +521,6 @@ export const DocumentAnnotator = ({
         const filteredDocTypeLabels = allLabels.filter(
           (label) => label.labelType === LabelType.DocTypeLabel
         );
-
-        console.log("Setting filtered labels:", {
-          spanLabels: filteredSpanLabels,
-          tokenLabels: filteredTokenLabels,
-        });
 
         setSpanLabels(filteredSpanLabels);
         setHumanSpanLabels(filteredSpanLabels);
@@ -756,29 +801,12 @@ export const DocumentAnnotator = ({
     }
   }, [open]);
 
-  // Add a separate effect to handle label initialization
+  // Remove the label initialization from the open/opened_corpus useEffect since we'll handle it in the query response
   useEffect(() => {
     if (open && opened_corpus?.labelSet) {
-      console.log("Initializing labels from corpus", opened_corpus.labelSet);
-      const allLabels = opened_corpus.labelSet.allAnnotationLabels ?? [];
-      const filteredTokenLabels = allLabels.filter(
-        (label) => label.labelType === LabelType.TokenLabel
+      console.log(
+        "Skipping label initialization in open effect - will be handled by query response"
       );
-      const filteredSpanLabels = allLabels.filter(
-        (label) => label.labelType === LabelType.SpanLabel
-      );
-      const filteredRelationLabels = allLabels.filter(
-        (label) => label.labelType === LabelType.RelationshipLabel
-      );
-      const filteredDocTypeLabels = allLabels.filter(
-        (label) => label.labelType === LabelType.DocTypeLabel
-      );
-
-      setSpanLabels(filteredSpanLabels);
-      setHumanSpanLabels(filteredSpanLabels);
-      setHumanTokenLabels(filteredTokenLabels);
-      setRelationLabels(filteredRelationLabels);
-      setDocTypeLabels(filteredDocTypeLabels);
     }
   }, [open, opened_corpus?.labelSet]);
 

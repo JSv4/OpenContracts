@@ -92,9 +92,13 @@ export function useCorpusState() {
   const [allowComments, setAllowComments] = useAtom(allowCommentsAtom);
   const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
 
-  // Initialize labels from corpus if available
+  // Initialize labels from corpus if available and labels are empty
   useEffect(() => {
-    if (selectedCorpus?.labelSet?.allAnnotationLabels) {
+    if (
+      selectedCorpus?.labelSet?.allAnnotationLabels &&
+      humanSpanLabels.length === 0 &&
+      humanTokenLabels.length === 0
+    ) {
       const allLabels = selectedCorpus.labelSet.allAnnotationLabels;
       const filteredTokenLabels = allLabels.filter(
         (label) => label.labelType === "TOKEN_LABEL"
@@ -105,7 +109,11 @@ export function useCorpusState() {
       setHumanSpanLabels(filteredSpanLabels);
       setHumanTokenLabels(filteredTokenLabels);
     }
-  }, [selectedCorpus?.labelSet?.allAnnotationLabels]);
+  }, [
+    selectedCorpus?.labelSet?.allAnnotationLabels,
+    humanSpanLabels.length,
+    humanTokenLabels.length,
+  ]);
 
   // Permission checks
   const canUpdateCorpus = permissions.includes(PermissionTypes.CAN_UPDATE);

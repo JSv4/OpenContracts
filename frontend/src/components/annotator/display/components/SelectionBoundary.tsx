@@ -7,6 +7,8 @@ import {
 } from "../../../../utils/transform";
 import { pulseGreen, pulseMaroon } from "../effects";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
+import { useAtomValue } from "jotai";
+import { isCreatingAnnotationAtom } from "../../context/UISettingsAtom";
 
 interface SelectionBoundaryProps {
   id: string;
@@ -86,6 +88,7 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
 }) => {
   const { registerRef, unregisterRef } = useAnnotationRefs();
   const boundaryRef = useRef<HTMLSpanElement | null>(null);
+  const isCreatingAnnotation = useAtomValue(isCreatingAnnotationAtom);
 
   useEffect(() => {
     if (id) {
@@ -115,6 +118,7 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
   const backgroundColor = `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, ${opacity})`;
 
   const handleClick = (e: React.MouseEvent) => {
+    if (isCreatingAnnotation) return;
     if (e.shiftKey && onClick) {
       e.stopPropagation();
       onClick();
@@ -122,6 +126,7 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isCreatingAnnotation) return;
     if (e.shiftKey && onClick) {
       e.stopPropagation();
     }
@@ -133,8 +138,16 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
       ref={boundaryRef}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
-      onMouseEnter={onHover && !hidden ? () => onHover(true) : undefined}
-      onMouseLeave={onHover && !hidden ? () => onHover(false) : undefined}
+      onMouseEnter={
+        onHover && !hidden && !isCreatingAnnotation
+          ? () => onHover(true)
+          : undefined
+      }
+      onMouseLeave={
+        onHover && !hidden && !isCreatingAnnotation
+          ? () => onHover(false)
+          : undefined
+      }
       $width={width}
       $height={height}
       $rotateX={rotateX}
@@ -147,6 +160,7 @@ export const SelectionBoundary: React.FC<SelectionBoundaryProps> = ({
       $bounds={bounds}
       $approved={approved}
       $rejected={rejected}
+      style={{ pointerEvents: isCreatingAnnotation ? "none" : "auto" }}
     >
       {children || null}
     </BoundarySpan>

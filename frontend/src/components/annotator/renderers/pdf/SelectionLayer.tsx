@@ -13,6 +13,8 @@ import { SelectionBoundary } from "../../display/components/SelectionBoundary";
 import { SelectionTokenGroup } from "../../display/components/SelectionTokenGroup";
 import { useCorpusState } from "../../context/CorpusAtom";
 import { useAnnotationSelection } from "../../hooks/useAnnotationSelection";
+import { useAtom } from "jotai";
+import { isCreatingAnnotationAtom } from "../../context/UISettingsAtom";
 
 interface SelectionLayerProps {
   pageInfo: PDFPageInfo;
@@ -32,6 +34,7 @@ const SelectionLayer = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const { permissions: corpus_permissions } = useCorpusState();
   const { setSelectedAnnotations } = useAnnotationSelection();
+  const [, setIsCreatingAnnotation] = useAtom(isCreatingAnnotationAtom);
   const [localPageSelection, setLocalPageSelection] = useState<
     { pageNumber: number; bounds: BoundingBox } | undefined
   >();
@@ -110,6 +113,7 @@ const SelectionLayer = ({
             [pageNum]: [...(prev[pageNum] || []), localPageSelection.bounds],
           };
           setLocalPageSelection(undefined);
+          setIsCreatingAnnotation(false); // Reset creating annotation state
 
           if (!event.shiftKey) {
             console.log("onMouseUp - handleCreateMultiPageAnnotation");
@@ -122,7 +126,13 @@ const SelectionLayer = ({
         console.log("onMouseUp - localPageSelection", localPageSelection);
       }
     },
-    [localPageSelection, pageNumber, handleCreateMultiPageAnnotation, pageInfo]
+    [
+      localPageSelection,
+      pageNumber,
+      handleCreateMultiPageAnnotation,
+      pageInfo,
+      setIsCreatingAnnotation,
+    ]
   );
 
   /**
@@ -139,6 +149,7 @@ const SelectionLayer = ({
       ) {
         if (!localPageSelection && event.buttons === 1) {
           setSelectedAnnotations([]); // Clear any selected annotations
+          setIsCreatingAnnotation(true); // Set creating annotation state
           const { left: containerAbsLeftOffset, top: containerAbsTopOffset } =
             containerRef.current.getBoundingClientRect();
           const left = event.pageX - containerAbsLeftOffset;
@@ -167,6 +178,7 @@ const SelectionLayer = ({
       pageNumber,
       pageInfo,
       setSelectedAnnotations,
+      setIsCreatingAnnotation,
     ]
   );
 

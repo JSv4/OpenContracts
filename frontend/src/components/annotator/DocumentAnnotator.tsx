@@ -248,6 +248,8 @@ export const DocumentAnnotator = ({
     }
   }, [opened_document]);
 
+  const [loadTrigger, setLoadTrigger] = useState(0);
+
   // Handle opening of the annotator
   useEffect(() => {
     console.log("DocumentAnnotator open effect triggered with:", {
@@ -256,6 +258,7 @@ export const DocumentAnnotator = ({
       opened_corpus,
       displayOnlyTheseAnnotations,
       selected_analysis,
+      loadTrigger,
     });
 
     const loadAnnotations = () => {
@@ -380,7 +383,13 @@ export const DocumentAnnotator = ({
         displayOnlyTheseAnnotations,
       });
     }
-  }, [open, opened_document, opened_corpus, displayOnlyTheseAnnotations]);
+  }, [
+    open,
+    opened_document,
+    opened_corpus,
+    displayOnlyTheseAnnotations,
+    loadTrigger,
+  ]);
 
   // Use the initialAnnotationsAtom to store initial annotations
   const { setInitialAnnotations } = useInitialAnnotations();
@@ -741,6 +750,7 @@ export const DocumentAnnotator = ({
         matches: [],
         selectedIndex: 0,
       });
+      setLoadTrigger((prev) => prev + 1);
     }
   }, [open]);
 

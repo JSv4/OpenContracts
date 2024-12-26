@@ -367,6 +367,10 @@ export type LabelSetType = Node & {
   icon?: Scalars["String"];
   annotationLabels?: AnnotationLabelTypeConnection;
   allAnnotationLabels?: AnnotationLabelType[];
+  docLabelCount?: Scalars["Int"];
+  spanLabelCount?: Scalars["Int"];
+  tokenLabelCount?: Scalars["Int"];
+  metadataLabelCount?: Scalars["Int"];
   creator?: UserType;
   created?: Scalars["DateTime"];
   modified?: Scalars["DateTime"];

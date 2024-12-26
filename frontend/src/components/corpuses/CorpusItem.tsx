@@ -416,9 +416,7 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
                   <span>
                     Text Labels:{" "}
                     <span className="count">
-                      {labelSet.allAnnotationLabels?.filter(
-                        (l) => l?.labelType === LabelType.TokenLabel
-                      ).length || 0}
+                      {labelSet.tokenLabelCount || 0}
                     </span>
                   </span>
                 </StatItem>
@@ -426,11 +424,7 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
                   <FileText />
                   <span>
                     Doc Types:{" "}
-                    <span className="count">
-                      {labelSet.allAnnotationLabels?.filter(
-                        (l) => l?.labelType === LabelType.DocTypeLabel
-                      ).length || 0}
-                    </span>
+                    <span className="count">{labelSet.docLabelCount || 0}</span>
                   </span>
                 </StatItem>
                 <StatItem>
@@ -438,9 +432,7 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
                   <span>
                     Relations:{" "}
                     <span className="count">
-                      {labelSet.allAnnotationLabels?.filter(
-                        (l) => l?.labelType === LabelType.RelationshipLabel
-                      ).length || 0}
+                      {labelSet.spanLabelCount || 0}
                     </span>
                   </span>
                 </StatItem>
@@ -449,9 +441,7 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
                   <span>
                     Metadata:{" "}
                     <span className="count">
-                      {labelSet.allAnnotationLabels?.filter(
-                        (l) => l?.labelType === LabelType.MetadataLabel
-                      ).length || 0}
+                      {labelSet.metadataLabelCount || 0}
                     </span>
                   </span>
                 </StatItem>

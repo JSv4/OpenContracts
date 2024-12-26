@@ -468,6 +468,10 @@ export const GET_CORPUSES = gql`
             id
             title
             description
+            docLabelCount
+            spanLabelCount
+            tokenLabelCount
+            metadataLabelCount
           }
         }
       }

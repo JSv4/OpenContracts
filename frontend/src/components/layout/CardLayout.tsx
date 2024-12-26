@@ -35,6 +35,7 @@ const ScrollableSegment = styled(StyledSegment)`
     scrollbar-width: thin;
     scrollbar-color: #888 #f1f1f1;
     color: red;
+    border-radius: 12px !important;
 
     &::-webkit-scrollbar {
       width: 8px;
@@ -42,6 +43,7 @@ const ScrollableSegment = styled(StyledSegment)`
 
     &::-webkit-scrollbar-track {
       background: #f1f1f1;
+      border-radius: 4px;
     }
 
     &::-webkit-scrollbar-thumb {

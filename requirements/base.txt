@@ -23,7 +23,7 @@ django-crispy-forms==2.3  # https://github.com/django-crispy-forms/django-crispy
 crispy-bootstrap5==2024.2  # https://github.com/django-crispy-forms/crispy-bootstrap5
 django-redis==5.2.0  # https://github.com/jazzband/django-redis
 django-filter==22.1  # https://github.com/carltongibson/django-filter
-django-storages[boto3]==1.13.1  # https://github.com/jschneier/django-storages
+django-storages[boto3]==1.14.4  # https://github.com/jschneier/django-storages
 django-extensions==3.2.3  # https://github.com/django-extensions/django-extensions
 whitenoise==6.7.0
 django-tree-queries

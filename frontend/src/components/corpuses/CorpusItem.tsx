@@ -1,17 +1,23 @@
 import React from "react";
 import {
   Card,
-  Popup,
   Image,
   Dimmer,
   Loader,
   Statistic,
   Menu,
   Icon,
-  Label,
   Header,
-  Portal, // ADDED
+  Popup,
+  Label,
 } from "semantic-ui-react";
+import {
+  Tags,
+  FileText,
+  HandshakeIcon,
+  Database,
+  GitForkIcon,
+} from "lucide-react";
 import _ from "lodash";
 import styled from "styled-components";
 
@@ -19,16 +25,17 @@ import default_corpus_icon from "../../assets/images/defaults/default_corpus.png
 import { getPermissions } from "../../utils/transform";
 import { PermissionTypes } from "../types";
 import { MyPermissionsIndicator } from "../widgets/permissions/MyPermissionsIndicator";
-import { CorpusType } from "../../types/graphql-api";
+import { CorpusType, LabelType } from "../../types/graphql-api";
 
 const StyledCard = styled(Card)`
   &.ui.card {
     display: flex !important;
     flex-direction: column !important;
-    overflow: hidden;
+    overflow: visible;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
     transition: all 0.3s ease;
+    position: relative;
 
     &:hover {
       box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
@@ -103,7 +110,8 @@ const StyledCardContent = styled(Card.Content)`
     flex: 1 0 auto !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: hidden !important;
+    overflow: visible !important;
+    position: relative;
   }
 `;
 
@@ -113,6 +121,127 @@ const StyledCardExtra = styled(Card.Content)`
     min-height: 80px !important;
     padding: 0.8em 1.2em;
   }
+`;
+
+const LabelsetCorner = styled.div<{ hasLabelset: boolean }>`
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  overflow: visible;
+  cursor: pointer;
+  z-index: 5;
+
+  &:before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 100px 100px 0;
+    border-color: transparent
+      ${(props) => (props.hasLabelset ? "#22c55e" : "#ef4444")} transparent
+      transparent;
+    transition: all 0.3s ease;
+    z-index: 1;
+  }
+
+  &:hover:before {
+    border-width: 0 120px 120px 0;
+  }
+`;
+
+const CornerIcon = styled.div`
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: white;
+  z-index: 2;
+  transition: all 0.3s ease;
+`;
+
+const LabelsetTooltip = styled.div<{ visible: boolean }>`
+  position: absolute;
+  top: 0;
+  right: 45px;
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  min-width: 260px;
+  width: max-content;
+  max-width: 340px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  opacity: ${(props) => (props.visible ? 1 : 0)};
+  visibility: ${(props) => (props.visible ? "visible" : "hidden")};
+  transform: ${(props) =>
+    props.visible ? "translateY(0)" : "translateY(-10px)"};
+  transition: all 0.2s ease;
+  z-index: 1000;
+  pointer-events: ${(props) => (props.visible ? "auto" : "none")};
+
+  @media (max-width: 768px) {
+    right: 40px;
+    max-width: 280px;
+  }
+
+  &:after {
+    content: "";
+    position: absolute;
+    right: -8px;
+    top: 20px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 8px 0 8px 8px;
+    border-color: transparent transparent transparent white;
+  }
+`;
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+`;
+
+const StatItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  padding: 0.25rem 0;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+    flex-shrink: 0;
+  }
+
+  span {
+    white-space: nowrap;
+    font-size: 0.8rem;
+    .count {
+      font-weight: 600;
+      color: #0f172a;
+      margin-left: 0.25rem;
+    }
+  }
+`;
+
+const HeaderImage = styled.img`
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  border-radius: 4px;
+  object-fit: contain;
+  background: #f8fafc;
 `;
 
 interface CorpusItemProps {
@@ -129,13 +258,6 @@ interface CorpusItemProps {
   setContextMenuOpen: (args?: any) => any | void;
 }
 
-interface ContextMenuItem {
-  key: string;
-  content: string;
-  icon: string;
-  onClick: () => void;
-}
-
 export const CorpusItem: React.FC<CorpusItemProps> = ({
   item,
   contextMenuOpen,
@@ -149,15 +271,12 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
   onAnalyze,
   setContextMenuOpen,
 }) => {
-  const analyzers_available = process.env.REACT_APP_USE_ANALYZERS;
-  const contextRef = React.useRef<HTMLDivElement | null>(null);
   const [contextPosition, setContextPosition] = React.useState<{
     x: number;
     y: number;
   } | null>(null);
-  // ADDED: These two lines
-  const [isPopupOpen, setIsPopupOpen] = React.useState(false);
-  const labelRef = React.useRef<HTMLDivElement>(null);
+  const [showTooltip, setShowTooltip] = React.useState(false);
+  const cornerRef = React.useRef<HTMLDivElement>(null);
 
   const {
     id,
@@ -198,216 +317,193 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
     item.myPermissions ? item.myPermissions : []
   );
 
-  let context_menus: ContextMenuItem[] = [];
+  let context_menus = [];
 
-  if (analyzers_available) {
+  if (my_permissions.includes(PermissionTypes.CAN_UPDATE)) {
     context_menus.push({
-      key: "analyze",
-      content: "Analyze Corpus",
-      icon: "chart area",
-      onClick: () => onAnalyze(),
+      key: "code",
+      content: "Edit Details",
+      icon: "edit outline",
+      onClick: () => onEdit(),
     });
   }
 
-  if (my_permissions.includes(PermissionTypes.CAN_REMOVE)) {
-    context_menus.push({
-      key: "copy",
-      content: "Delete Item",
-      icon: "trash",
-      onClick: () => onDelete(),
-    });
-  }
-
-  if (!backendLock) {
-    if (my_permissions.includes(PermissionTypes.CAN_UPDATE)) {
-      context_menus.push({
-        key: "code",
-        content: "Edit Details",
-        icon: "edit outline",
-        onClick: () => onEdit(),
-      });
-    }
-    context_menus = [
-      ...context_menus,
-      {
-        key: "view",
-        content: "View Details",
-        icon: "eye",
-        onClick: () => onView(),
-      },
-      {
-        key: "export",
-        content: "Export Corpus",
-        icon: "cloud download",
-        onClick: () => onExport(),
-      },
-      {
-        key: "fork",
-        content: "Fork Corpus",
-        icon: "fork",
-        onClick: () => onFork(),
-      },
-    ];
-  }
+  context_menus = [
+    ...context_menus,
+    {
+      key: "view",
+      content: "View Details",
+      icon: "eye",
+      onClick: () => onView(),
+    },
+    {
+      key: "export",
+      content: "Export Corpus",
+      icon: "cloud download",
+      onClick: () => onExport(),
+    },
+    {
+      key: "fork",
+      content: "Fork Corpus",
+      icon: "fork",
+      onClick: () => onFork(),
+    },
+  ];
 
   return (
-    <>
-      <StyledCard
-        id={id}
-        key={id}
-        style={is_selected ? { backgroundColor: "#e2ffdb" } : {}}
-        onClick={backendLock ? () => {} : cardClickHandler}
-        onContextMenu={(e: React.MouseEvent<HTMLElement>) => {
-          e.preventDefault();
-          createContextFromEvent(e);
-          if (contextMenuOpen === id) {
-            setContextMenuOpen(-1);
-          } else {
-            setContextMenuOpen(id);
-          }
-        }}
-        onMouseEnter={() => {
-          if (contextMenuOpen !== id) {
-            setContextMenuOpen(-1);
-          }
-        }}
+    <StyledCard
+      id={id}
+      key={id}
+      style={is_selected ? { backgroundColor: "#e2ffdb" } : {}}
+      onClick={backendLock ? () => {} : cardClickHandler}
+      onContextMenu={(e: React.MouseEvent<HTMLElement>) => {
+        e.preventDefault();
+        createContextFromEvent(e);
+        if (contextMenuOpen === id) {
+          setContextMenuOpen(-1);
+        } else {
+          setContextMenuOpen(id);
+        }
+      }}
+      onMouseEnter={() => {
+        if (contextMenuOpen !== id) {
+          setContextMenuOpen(-1);
+        }
+      }}
+    >
+      {backendLock ? (
+        <Dimmer active>
+          <Loader>Preparing...</Loader>
+        </Dimmer>
+      ) : null}
+      <LabelsetCorner
+        ref={cornerRef}
+        hasLabelset={Boolean(labelSet)}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
       >
-        {backendLock ? (
-          <Dimmer active>
-            <Loader>Preparing...</Loader>
-          </Dimmer>
-        ) : null}
-        <StyledImage
-          src={icon ? icon : default_corpus_icon}
-          wrapped
-          ui={false}
-        />
-        <StyledCardContent>
-          <div
-            ref={labelRef}
-            style={{ position: "absolute", top: 0, right: 0 }}
-          >
-            <StyledLabel
-              style={{ cursor: "pointer" }}
-              color={labelSet ? "green" : "red"}
-              corner="right"
-              icon={labelSet ? "tags" : "cancel"}
-              onMouseEnter={() => setIsPopupOpen(true)}
-              onMouseLeave={() => setIsPopupOpen(false)}
-            />
-          </div>
-
-          {labelRef.current && (
-            <Portal open={isPopupOpen}>
-              <Popup
-                open={isPopupOpen}
-                position="top right"
-                context={labelRef.current}
-                onClose={() => setIsPopupOpen(false)}
-                style={{
-                  zIndex: 1000,
-                  position: "fixed",
-                  marginTop: "10px",
-                }}
-              >
-                {labelSet ? (
-                  <div>
-                    <Header
-                      as="h3"
-                      image={labelSet?.icon}
-                      content={labelSet?.title}
-                      subheader={labelSet?.description}
-                    />
-                  </div>
+        <CornerIcon>
+          <Tags size={24} />
+        </CornerIcon>
+        <LabelsetTooltip visible={showTooltip}>
+          {labelSet ? (
+            <>
+              <Header as="h3" size="small">
+                {labelSet.icon ? (
+                  <HeaderImage src={labelSet.icon} alt={labelSet.title} />
                 ) : (
-                  <Header
-                    as="h3"
-                    content="No labelset selected for this corpus."
-                    subheader="Please right click this corpus and select edit (if you have edit rights) to select a labelset."
+                  <Tags
+                    size={24}
+                    style={{ marginRight: 8, color: "#64748b" }}
                   />
                 )}
-              </Popup>
-            </Portal>
+                <Header.Content>
+                  {labelSet.title}
+                  <Header.Subheader
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#64748b",
+                      marginTop: 4,
+                    }}
+                  >
+                    {labelSet.description}
+                  </Header.Subheader>
+                </Header.Content>
+              </Header>
+              <StatsGrid>
+                <StatItem>
+                  <FileText />
+                  <span>
+                    Text Labels:{" "}
+                    <span className="count">
+                      {labelSet.allAnnotationLabels?.filter(
+                        (l) => l?.labelType === LabelType.TokenLabel
+                      ).length || 0}
+                    </span>
+                  </span>
+                </StatItem>
+                <StatItem>
+                  <FileText />
+                  <span>
+                    Doc Types:{" "}
+                    <span className="count">
+                      {labelSet.allAnnotationLabels?.filter(
+                        (l) => l?.labelType === LabelType.DocTypeLabel
+                      ).length || 0}
+                    </span>
+                  </span>
+                </StatItem>
+                <StatItem>
+                  <HandshakeIcon />
+                  <span>
+                    Relations:{" "}
+                    <span className="count">
+                      {labelSet.allAnnotationLabels?.filter(
+                        (l) => l?.labelType === LabelType.RelationshipLabel
+                      ).length || 0}
+                    </span>
+                  </span>
+                </StatItem>
+                <StatItem>
+                  <Database />
+                  <span>
+                    Metadata:{" "}
+                    <span className="count">
+                      {labelSet.allAnnotationLabels?.filter(
+                        (l) => l?.labelType === LabelType.MetadataLabel
+                      ).length || 0}
+                    </span>
+                  </span>
+                </StatItem>
+              </StatsGrid>
+            </>
+          ) : (
+            <div style={{ textAlign: "center", color: "#64748b" }}>
+              <p style={{ fontWeight: 600, color: "#ef4444", marginBottom: 8 }}>
+                No Labelset Selected
+              </p>
+              <small>Right click to edit and select a labelset</small>
+            </div>
           )}
-          <Card.Header>{title}</Card.Header>
-          <Card.Meta>{`Created by: `}</Card.Meta>
-          <Card.Description>
-            <span>
-              <b>Description:</b> {description}
-            </span>
-          </Card.Description>
-        </StyledCardContent>
-        <StyledCardExtra>
-          <Statistic.Group size="mini" widths={3}>
-            <Statistic>
+        </LabelsetTooltip>
+      </LabelsetCorner>
+      <StyledImage src={icon ? icon : default_corpus_icon} wrapped ui={false} />
+      <StyledCardContent>
+        <Card.Header>{title}</Card.Header>
+        <Card.Meta>{`Created by: `}</Card.Meta>
+        <Card.Description>
+          <span>
+            <b>Description:</b> {description}
+          </span>
+        </Card.Description>
+      </StyledCardContent>
+      <StyledCardExtra>
+        <Statistic.Group size="mini" widths={3}>
+          <Statistic>
+            <Statistic.Value>
+              {documents?.edges?.length ? documents.edges.length : 0}
+            </Statistic.Value>
+            <Statistic.Label>Docs</Statistic.Label>
+          </Statistic>
+          <MyPermissionsIndicator
+            myPermissions={myPermissions}
+            isPublic={isPublic}
+          />
+          {item.parent ? (
+            <Statistic color="green">
               <Statistic.Value>
-                {documents?.edges?.length ? documents.edges.length : 0}
+                <GitForkIcon size={16} />
               </Statistic.Value>
-              <Statistic.Label>Docs</Statistic.Label>
-            </Statistic>
-            <MyPermissionsIndicator
-              myPermissions={myPermissions}
-              isPublic={isPublic}
-            />
-            {item.parent ? (
-              <Popup
-                trigger={
-                  <Statistic color="green">
-                    <Statistic.Value>
-                      <Icon name="code branch" />
-                    </Statistic.Value>
-                    <Statistic.Label>FORK</Statistic.Label>
-                  </Statistic>
-                }
+              <Statistic.Label>FORK</Statistic.Label>
+              <div
+                style={{ fontSize: "0.7rem", color: "#64748b", marginTop: 4 }}
               >
-                <Popup.Header>
-                  <u>Forked From</u>: {item.parent.title}
-                </Popup.Header>
-                <Popup.Content>
-                  <p>
-                    <Image src={item.parent.icon} size="mini" spaced="right" />
-                    {item.parent.description}
-                  </p>
-                </Popup.Content>
-              </Popup>
-            ) : null}
-          </Statistic.Group>
-        </StyledCardExtra>
-      </StyledCard>
-      {contextPosition && (
-        <Portal open={contextMenuOpen === id}>
-          <div
-            ref={contextRef}
-            style={{
-              position: "fixed",
-              top: contextPosition.y,
-              left: contextPosition.x,
-              zIndex: 1000,
-              background: "white",
-              borderRadius: "4px",
-              boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-              border: "1px solid rgba(34,36,38,.15)",
-            }}
-          >
-            <Menu
-              items={context_menus}
-              onItemClick={() => {
-                setContextMenuOpen(-1);
-                setContextPosition(null);
-              }}
-              secondary
-              vertical
-              style={{
-                minWidth: "200px",
-                margin: 0,
-                border: "none",
-                boxShadow: "none",
-                background: "transparent",
-              }}
-            />
-          </div>
-        </Portal>
-      )}
-    </>
+                from {item.parent.title}
+              </div>
+            </Statistic>
+          ) : null}
+        </Statistic.Group>
+      </StyledCardExtra>
+    </StyledCard>
   );
 };

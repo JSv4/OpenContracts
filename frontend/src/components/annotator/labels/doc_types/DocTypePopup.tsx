@@ -49,6 +49,7 @@ export const DocTypePopup = ({ labels, onAdd }: DocTypePopupProps) => {
 
   return (
     <div
+      id="doc-type-popup"
       style={{
         display: "flex",
         flexDirection: "column",

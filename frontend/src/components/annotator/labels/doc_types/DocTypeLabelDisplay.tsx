@@ -30,6 +30,12 @@ import { useCorpusState } from "../../context/CorpusAtom";
 import { useReactiveVar } from "@apollo/client";
 import { selectedAnalysis, selectedExtract } from "../../../../graphql/cache";
 
+const StyledPopup = styled(Popup)`
+  &.ui.popup {
+    z-index: 100000 !important;
+  }
+`;
+
 export const DocTypeLabelDisplay = () => {
   const { width } = useWindowDimensions();
 
@@ -140,13 +146,13 @@ export const DocTypeLabelDisplay = () => {
                 }}
               >
                 <div>
-                  <Popup
+                  <StyledPopup
                     open={open}
                     onClose={() => setOpen(false)}
                     onOpen={() => setOpen(true)}
                     on="click"
                     position="top right"
-                    offset={[-30, -10]}
+                    style={{ padding: "0px", zIndex: "2100 !important" }}
                     trigger={
                       <Button
                         style={{
@@ -167,7 +173,7 @@ export const DocTypeLabelDisplay = () => {
                       labels={filtered_doc_label_choices}
                       onAdd={onAdd}
                     />
-                  </Popup>
+                  </StyledPopup>
                 </div>
               </div>
             </div>

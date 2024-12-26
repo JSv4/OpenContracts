@@ -25,24 +25,59 @@ export const useTextSearch = () => {
 
   // Use refs to store previous values
   const previousSelectedDocumentRef = useRef(selectedDocument);
+  const previousSearchTextRef = useRef(searchText);
+  const updateCountRef = useRef(0);
 
   useEffect(() => {
+    updateCountRef.current += 1;
+    const updateId = updateCountRef.current;
+
+    console.log(`useTextSearch effect #${updateId} triggered`, {
+      searchText,
+      previousSearch: previousSearchTextRef.current,
+      stack: new Error().stack,
+    });
+
+    // Clear search results if search text is empty
+    if (!searchText) {
+      if (previousSearchTextRef.current !== searchText) {
+        console.log(
+          `[${updateId}] Clearing search results due to empty search`
+        );
+        setTextSearchState({ matches: [], selectedIndex: 0 });
+        previousSearchTextRef.current = searchText;
+      } else {
+        console.log(`[${updateId}] Skipping duplicate empty search clear`);
+      }
+      return;
+    }
+
     // Check if selectedDocument has actually changed
     const documentChanged =
       previousSelectedDocumentRef.current !== selectedDocument;
 
-    // Guard clause
-    if (!selectedDocument || !searchText || !pageTokenTextMaps || !pages) {
-      console.log("TextSearch: Missing dependencies", {
+    // Guard clause for required dependencies
+    if (!selectedDocument || !pageTokenTextMaps || !pages) {
+      console.log(`[${updateId}] TextSearch: Missing dependencies`, {
         hasDocument: !!selectedDocument,
-        hasSearchText: !!searchText,
         hasTokenMaps: !!pageTokenTextMaps,
         pagesCount: pages ? Object.keys(pages).length : 0,
       });
       return;
     }
 
+    // Skip if the search text hasn't actually changed
+    if (previousSearchTextRef.current === searchText && !documentChanged) {
+      console.log(`[${updateId}] Skipping search - no changes`);
+      return;
+    }
+
+    // Update refs
+    previousSearchTextRef.current = searchText;
+    previousSelectedDocumentRef.current = selectedDocument;
+
     // Proceed with search logic
+    console.log(`[${updateId}] Starting search for:`, searchText);
     const searchHits: (TextSearchTokenResult | TextSearchSpanResult)[] = [];
 
     // Now TypeScript knows these values are defined for the rest of the function
@@ -164,8 +199,8 @@ export const useTextSearch = () => {
       }
     }
 
+    console.log(`[${updateId}] Setting search results`, searchHits);
     setTextSearchState({ matches: searchHits, selectedIndex: 0 });
-    previousSelectedDocumentRef.current = selectedDocument;
   }, [
     searchText,
     docText,

@@ -150,14 +150,14 @@ export const SearchSidebarWidget: React.FC = () => {
             icon={
               <Icon
                 name={searchText ? "cancel" : "search"}
-                link
-                onClick={searchText ? setSearchText("") : undefined}
+                link={!!searchText}
+                onClick={() => (searchText ? setSearchText("") : undefined)}
                 style={{ color: searchText ? "#db2828" : "#2185d0" }}
               />
             }
             placeholder="Search document..."
             onChange={(e) => setSearchText(e.target.value)}
-            value={searchText}
+            value={searchText || ""}
             style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
           />
         </Form>

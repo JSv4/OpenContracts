@@ -16,6 +16,38 @@ const StyledSegment = styled(Segment)`
     border: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-bottom: 1rem;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #ffffff !important;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Style for breadcrumb links */
+    .breadcrumb {
+      a {
+        color: var(--text-primary, #1a2433);
+        opacity: 0.85;
+        transition: all 0.2s ease;
+
+        &:hover {
+          opacity: 1;
+          transform: translateY(-1px);
+        }
+      }
+
+      .active {
+        color: var(--text-primary, #1a2433);
+        font-weight: 500;
+      }
+
+      .divider {
+        opacity: 0.5;
+        margin: 0 0.5em;
+      }
+    }
   }
 `;
 
@@ -36,6 +68,11 @@ const ScrollableSegment = styled(StyledSegment)`
     scrollbar-color: #888 #f1f1f1;
     color: red;
     border-radius: 12px !important;
+    background: #ffffff !important;
+
+    &:hover {
+      background: #ffffff !important;
+    }
 
     &::-webkit-scrollbar {
       width: 8px;

@@ -411,11 +411,14 @@ export const Corpuses = () => {
   // TODO - Improve typing.
   const handleUpdateCorpus = (corpus_obj: any) => {
     console.log("handleUpdateCorpus", corpus_obj);
-    let variables = {
-      variables: corpus_obj,
+
+    // Extract just the labelSet ID if it exists
+    const variables = {
+      ...corpus_obj,
+      labelSet: corpus_obj.labelSet?.id || null,
     };
-    // console.log("handleUpdateCorpus variables", variables);
-    tryMutateCorpus(variables);
+
+    tryMutateCorpus({ variables });
   };
 
   // TODO - Improve typing.

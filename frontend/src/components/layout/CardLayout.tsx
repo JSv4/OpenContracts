@@ -19,6 +19,11 @@ const StyledSegment = styled(Segment)`
   }
 `;
 
+const SearchBarWrapper = styled.div`
+  width: 100%;
+  margin-bottom: 1rem;
+`;
+
 const ScrollableSegment = styled(StyledSegment)`
   &.ui.segment {
     flex: 1;
@@ -68,9 +73,7 @@ export const CardLayout: React.FC<CardLayoutProps> = ({
       style={{ maxHeight: "90vh", ...style }}
     >
       {Modals}
-      <StyledSegment attached="top" secondary className="SearchBar">
-        {SearchBar}
-      </StyledSegment>
+      <SearchBarWrapper>{SearchBar}</SearchBarWrapper>
       {BreadCrumbs && (
         <StyledSegment attached secondary>
           {BreadCrumbs}

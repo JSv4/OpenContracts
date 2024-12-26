@@ -33,6 +33,11 @@ import { selectedAnalysis, selectedExtract } from "../../../../graphql/cache";
 const StyledPopup = styled(Popup)`
   &.ui.popup {
     z-index: 100000 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
   }
 `;
 
@@ -152,7 +157,7 @@ export const DocTypeLabelDisplay = () => {
                     onOpen={() => setOpen(true)}
                     on="click"
                     position="top right"
-                    style={{ padding: "0px", zIndex: "2100 !important" }}
+                    style={{ padding: "0px" }}
                     trigger={
                       <Button
                         style={{
@@ -160,12 +165,26 @@ export const DocTypeLabelDisplay = () => {
                           height: "2.25vw",
                           minWidth: "40px",
                           minHeight: "40px",
+                          padding: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: "transparent",
+                          border: "none",
+                          boxShadow: "none",
                         }}
-                        floated="right"
-                        icon="plus"
+                        className="add-doc-type-button"
+                        icon={
+                          <Icon
+                            name="plus"
+                            style={{
+                              margin: 0,
+                              fontSize: "1.2em",
+                              color: "white",
+                            }}
+                          />
+                        }
                         circular
-                        positive
-                        color="green"
                       />
                     }
                   >
@@ -263,7 +282,11 @@ export const DocTypeLabelDisplay = () => {
                 <Icon
                   link
                   name={expanded ? "compress" : "expand"}
-                  color={expanded ? "orange" : "blue"}
+                  style={{
+                    transition: "all 0.2s ease",
+                    transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+                    color: expanded ? "#00b09b" : "#495057",
+                  }}
                   onClick={() => setExpanded(!expanded)}
                 />
               </div>

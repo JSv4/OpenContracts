@@ -41,10 +41,7 @@ import { useUISettings } from "../../hooks/useUISettings";
 import { useCreateRelationship } from "../../hooks/AnnotationHooks";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 import TxtAnnotatorWrapper from "../../components/wrappers/TxtAnnotatorWrapper";
-import {
-  useSelectedCorpus,
-  useSelectedDocument,
-} from "../../context/DocumentAtom";
+import { useSelectedDocument } from "../../context/DocumentAtom";
 
 export const PDFViewContainer = styled.div`
   width: "100%",

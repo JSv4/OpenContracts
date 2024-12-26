@@ -17,7 +17,6 @@ import {
   PermissionTypes,
 } from "../types";
 import {
-  convertToDocTypeAnnotation,
   convertToDocTypeAnnotations,
   convertToServerAnnotation,
   convertToServerAnnotations,
@@ -33,7 +32,6 @@ import {
   useDocText,
   usePages,
   useSelectedDocument,
-  useSelectedCorpus,
   useSearchText,
   useTextSearchState,
 } from "./context/DocumentAtom";
@@ -42,7 +40,7 @@ import {
   structuralAnnotationsAtom,
   docTypeAnnotationsAtom,
 } from "./context/AnnotationAtoms";
-import { useCorpusState, useInitializeCorpusAtoms } from "./context/CorpusAtom";
+import { useCorpusState } from "./context/CorpusAtom";
 
 import {
   GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS,
@@ -194,19 +192,8 @@ export const DocumentAnnotator = ({
   const { setDocumentType } = useDocumentType();
   const { setDocText } = useDocText();
 
-  // Use atoms for labels from CorpusAtom
-  const {
-    spanLabels,
-    setSpanLabels,
-    humanSpanLabels,
-    setHumanSpanLabels,
-    humanTokenLabels,
-    setHumanTokenLabels,
-    relationLabels,
-    setRelationLabels,
-    docTypeLabels,
-    setDocTypeLabels,
-  } = useCorpusState();
+  // Instead of multiple useAtoms, just call useCorpusState once:
+  const { setCorpus } = useCorpusState();
 
   const [
     getDocumentAnnotationsAndRelationships,
@@ -218,74 +205,22 @@ export const DocumentAnnotator = ({
 
   // Set document and corpus atoms when component mounts
   const { setSelectedDocument } = useSelectedDocument();
-  const { setSelectedCorpus } = useSelectedCorpus();
   const { setSearchText } = useSearchText();
 
   useEffect(() => {
     setSelectedDocument(opened_document ?? null);
     if (opened_corpus) {
-      setSelectedCorpus(opened_corpus);
+      const corpus_permissions = getPermissions(opened_corpus.myPermissions);
+      setCorpus({
+        selectedCorpus: opened_corpus,
+        permissions: corpus_permissions,
+      });
     }
   }, [opened_document, opened_corpus]);
 
   // Process annotations when data is loaded
   useEffect(() => {
-    console.log("Annotations data effect triggered:", {
-      hasData: !!humanAnnotationsAndRelationshipsData,
-      displayOnlyTheseAnnotations,
-      isLoading: humanDataLoading,
-      data: humanAnnotationsAndRelationshipsData,
-      corpus: humanAnnotationsAndRelationshipsData?.corpus,
-      labelSet: humanAnnotationsAndRelationshipsData?.corpus?.labelSet,
-      allLabels:
-        humanAnnotationsAndRelationshipsData?.corpus?.labelSet
-          ?.allAnnotationLabels,
-    });
-
     if (humanAnnotationsAndRelationshipsData && !displayOnlyTheseAnnotations) {
-      // First, ensure we have the labelSet data
-      if (
-        humanAnnotationsAndRelationshipsData.corpus?.labelSet
-          ?.allAnnotationLabels
-      ) {
-        console.log("Processing labelSet from GraphQL response:", {
-          labelSet: humanAnnotationsAndRelationshipsData.corpus.labelSet,
-          allLabels:
-            humanAnnotationsAndRelationshipsData.corpus.labelSet
-              .allAnnotationLabels,
-        });
-
-        // Set the labels first
-        const allLabels =
-          humanAnnotationsAndRelationshipsData.corpus.labelSet
-            .allAnnotationLabels;
-        const filteredTokenLabels = allLabels.filter(
-          (label) => label.labelType === LabelType.TokenLabel
-        );
-        const filteredSpanLabels = allLabels.filter(
-          (label) => label.labelType === LabelType.SpanLabel
-        );
-        const filteredRelationLabels = allLabels.filter(
-          (label) => label.labelType === LabelType.RelationshipLabel
-        );
-        const filteredDocTypeLabels = allLabels.filter(
-          (label) => label.labelType === LabelType.DocTypeLabel
-        );
-
-        console.log("Setting filtered labels from GraphQL response:", {
-          spanLabels: filteredSpanLabels,
-          tokenLabels: filteredTokenLabels,
-          relationLabels: filteredRelationLabels,
-          docTypeLabels: filteredDocTypeLabels,
-        });
-
-        setSpanLabels(filteredSpanLabels);
-        setHumanSpanLabels(filteredSpanLabels);
-        setHumanTokenLabels(filteredTokenLabels);
-        setRelationLabels(filteredRelationLabels);
-        setDocTypeLabels(filteredDocTypeLabels);
-      }
-
       // Then process the annotations
       processAnnotationsData(humanAnnotationsAndRelationshipsData);
     }
@@ -504,11 +439,13 @@ export const DocumentAnnotator = ({
           (label) => label.labelType === LabelType.DocTypeLabel
         );
 
-        setSpanLabels(filteredSpanLabels);
-        setHumanSpanLabels(filteredSpanLabels);
-        setHumanTokenLabels(filteredTokenLabels);
-        setRelationLabels(filteredRelationLabels);
-        setDocTypeLabels(filteredDocTypeLabels);
+        setCorpus({
+          spanLabels: filteredSpanLabels,
+          humanSpanLabels: filteredSpanLabels,
+          relationLabels: filteredRelationLabels,
+          docTypeLabels: filteredDocTypeLabels,
+          humanTokenLabels: filteredTokenLabels,
+        });
       }
     }
   };
@@ -521,17 +458,6 @@ export const DocumentAnnotator = ({
       }
     }
   }, [pageTextMaps, pages, pdfDoc]);
-
-  // Initialize corpus atoms
-  useInitializeCorpusAtoms({
-    selectedCorpus: opened_corpus,
-    spanLabels: spanLabels,
-    humanSpanLabels: humanSpanLabels,
-    humanTokenLabels: humanTokenLabels,
-    relationLabels: relationLabels,
-    docTypeLabels: docTypeLabels,
-    isLoading: humanDataLoading,
-  });
 
   // Initialize Annotation Hooks
   const { replaceAnnotations, replaceRelations } = usePdfAnnotations();

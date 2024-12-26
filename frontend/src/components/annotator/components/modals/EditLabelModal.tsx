@@ -22,7 +22,7 @@ export const EditLabelModal = ({
   visible,
   onHide,
 }: EditLabelModalProps) => {
-  const { spanLabels, setSpanLabels } = useCorpusState();
+  const { setCorpus, humanSpanLabels: spanLabels } = useCorpusState();
 
   const [selectedLabel, setSelectedLabel] = useState(
     annotation.annotationLabel
@@ -43,9 +43,11 @@ export const EditLabelModal = ({
         const index = Number.parseInt(e.key) - 1;
         if (index < spanLabels.length) {
           // Note: You'll need to implement updateAnnotation functionality separately
-          setSpanLabels(
-            spanLabels.map((label, i) => (i === index ? selectedLabel : label))
-          );
+          setCorpus({
+            humanSpanLabels: spanLabels.map((label, i) =>
+              i === index ? selectedLabel : label
+            ),
+          });
           onHide();
         }
       }
@@ -97,11 +99,11 @@ export const EditLabelModal = ({
             event.preventDefault();
             event.stopPropagation();
 
-            setSpanLabels(
-              spanLabels.map((label, i) =>
+            setCorpus({
+              humanSpanLabels: spanLabels.map((label, i) =>
                 i === spanLabels.indexOf(selectedLabel) ? selectedLabel : label
-              )
-            );
+              ),
+            });
 
             onHide();
           }}

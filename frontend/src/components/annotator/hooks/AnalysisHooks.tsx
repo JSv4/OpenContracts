@@ -48,10 +48,7 @@ import {
   ServerTokenAnnotation,
   ServerSpanAnnotation,
 } from "../types/annotations";
-import {
-  selectedDocumentAtom,
-  selectedCorpusAtom,
-} from "../context/DocumentAtom";
+import { selectedDocumentAtom } from "../context/DocumentAtom";
 
 /**
  * Custom hook to manage analysis and extract data using Jotai atoms.
@@ -60,7 +57,7 @@ import {
 export const useAnalysisManager = () => {
   // Get document and corpus from atoms instead of props
   const selectedDocument = useAtomValue(selectedDocumentAtom);
-  const selectedCorpus = useAtomValue(selectedCorpusAtom);
+  const { selectedCorpus } = useCorpusState();
 
   // Use atoms for state management
   const [analysisRows, setAnalysisRows] = useAtom(analysisRowsAtom);
@@ -82,12 +79,8 @@ export const useAnalysisManager = () => {
     showSelectedAnnotationOnlyAtom
   );
 
-  const {
-    addMultipleAnnotations,
-    replaceDocTypeAnnotations,
-    replaceAnnotations,
-  } = usePdfAnnotations();
-  const { setSpanLabels, setDocTypeLabels } = useCorpusState();
+  const { replaceDocTypeAnnotations, replaceAnnotations } = usePdfAnnotations();
+  const { setCorpus } = useCorpusState();
 
   const { setQueryLoadingStates } = useQueryLoadingStates();
   const { setQueryErrors } = useQueryErrors();
@@ -273,7 +266,7 @@ export const useAnalysisManager = () => {
         processedSpanAnnotations.map((a) => a.annotationLabel),
         "id"
       );
-      setSpanLabels(uniqueSpanLabels);
+      setCorpus({ spanLabels: uniqueSpanLabels });
 
       // Process doc type annotations
       const rawDocAnnotations =
@@ -293,7 +286,7 @@ export const useAnalysisManager = () => {
         processedDocAnnotations.map((a) => a.annotationLabel),
         "id"
       );
-      setDocTypeLabels(uniqueDocLabels);
+      setCorpus({ docTypeLabels: uniqueDocLabels });
     }
   }, [annotationsLoading, annotationsError, annotationsData]);
 

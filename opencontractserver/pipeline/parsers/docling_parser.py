@@ -541,9 +541,7 @@ class DoclingParser(BaseParser):
 
                         w = x1 - x0
                         h = y1 - y0
-                        y = (
-                            height - y1
-                        )  # Flip y-coordinate to match the coordinate system
+                        y = y0  # Use y0 directly without flipping
 
                         token: PawlsTokenPythonType = {
                             "x": x0,
@@ -577,8 +575,8 @@ class DoclingParser(BaseParser):
                     # Create PawlsPagePythonType
                     pawls_page: PawlsPagePythonType = {
                         "page": {
-                            "width": width,
-                            "height": height,
+                            "width": width * scale_x,
+                            "height": height * scale_y,
                             "index": page_num,
                         },
                         "tokens": tokens,
@@ -643,7 +641,7 @@ class DoclingParser(BaseParser):
                         w *= scale_x
                         h *= scale_y
 
-                        y = height - y - h  # Flip y-coordinate
+                        y = y  # Use y directly without flipping
 
                         token: PawlsTokenPythonType = {
                             "x": x,

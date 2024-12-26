@@ -112,6 +112,7 @@ export type AnnotationLabelTypeEdge = {
 export type ServerAnnotationType = Node & {
   __typename?: "AnnotationType";
   id: Scalars["ID"];
+  parent?: Maybe<ServerAnnotationType>;
   page: Scalars["Int"];
   annotationType?: LabelType;
   userFeedback?: FeedbackTypeConnection;

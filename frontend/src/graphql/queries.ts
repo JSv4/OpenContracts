@@ -1665,6 +1665,9 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
       allStructuralAnnotations {
         id
         page
+        parent {
+          id
+        }
         annotationLabel {
           id
           text

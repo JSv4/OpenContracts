@@ -39,8 +39,7 @@ const StyledSearchInput = styled(Form.Input)`
 
   input {
     border: none !important;
-    padding-left: 40px !important;
-    padding-right: 40px !important;
+    padding-left: 2.67142857em !important;
   }
 
   i.icon {
@@ -48,14 +47,8 @@ const StyledSearchInput = styled(Form.Input)`
     display: flex !important;
     align-items: center;
     justify-content: center;
-  }
-
-  i.icon:first-child {
+    cursor: pointer;
     left: 10px !important;
-  }
-
-  i.icon:last-child {
-    right: 10px !important;
   }
 `;
 
@@ -212,27 +205,12 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
         />
         <StyledSearchInput
           icon={
-            localSearchText ? (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <Icon as={X} link onClick={clearSearch} />
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <Icon as={Search} />
-              </div>
-            )
+            <Icon
+              name={localSearchText ? "cancel" : "search"}
+              link={!!localSearchText}
+              onClick={() => (localSearchText ? clearSearch() : undefined)}
+              style={{ color: localSearchText ? "#db2828" : "#2185d0" }}
+            />
           }
           iconPosition="left"
           placeholder="Search document..."

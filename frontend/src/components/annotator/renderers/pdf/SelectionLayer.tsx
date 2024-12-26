@@ -12,6 +12,7 @@ import { ServerTokenAnnotation } from "../../types/annotations";
 import { SelectionBoundary } from "../../display/components/SelectionBoundary";
 import { SelectionTokenGroup } from "../../display/components/SelectionTokenGroup";
 import { useCorpusState } from "../../context/CorpusAtom";
+import { useAnnotationSelection } from "../../hooks/useAnnotationSelection";
 
 interface SelectionLayerProps {
   pageInfo: PDFPageInfo;
@@ -30,6 +31,7 @@ const SelectionLayer = ({
 }: SelectionLayerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { permissions: corpus_permissions } = useCorpusState();
+  const { setSelectedAnnotations } = useAnnotationSelection();
   const [localPageSelection, setLocalPageSelection] = useState<
     { pageNumber: number; bounds: BoundingBox } | undefined
   >();
@@ -136,6 +138,7 @@ const SelectionLayer = ({
         corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
       ) {
         if (!localPageSelection && event.buttons === 1) {
+          setSelectedAnnotations([]); // Clear any selected annotations
           const { left: containerAbsLeftOffset, top: containerAbsTopOffset } =
             containerRef.current.getBoundingClientRect();
           const left = event.pageX - containerAbsLeftOffset;
@@ -163,6 +166,7 @@ const SelectionLayer = ({
       localPageSelection,
       pageNumber,
       pageInfo,
+      setSelectedAnnotations,
     ]
   );
 

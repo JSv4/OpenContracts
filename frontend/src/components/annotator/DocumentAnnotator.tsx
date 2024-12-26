@@ -733,7 +733,7 @@ export const DocumentAnnotator = ({
     if (!open) {
       console.log("React to close");
 
-      // Reset annotations when the annotator closes
+      // Reset only annotation-specific state
       setPdfAnnotations(new PdfAnnotations([], [], []));
       setStructuralAnnotations([]);
       setDocTypeAnnotations([]);
@@ -750,9 +750,37 @@ export const DocumentAnnotator = ({
         matches: [],
         selectedIndex: 0,
       });
+
+      // Increment load trigger to force reload of annotations
       setLoadTrigger((prev) => prev + 1);
     }
   }, [open]);
+
+  // Add a separate effect to handle label initialization
+  useEffect(() => {
+    if (open && opened_corpus?.labelSet) {
+      console.log("Initializing labels from corpus", opened_corpus.labelSet);
+      const allLabels = opened_corpus.labelSet.allAnnotationLabels ?? [];
+      const filteredTokenLabels = allLabels.filter(
+        (label) => label.labelType === LabelType.TokenLabel
+      );
+      const filteredSpanLabels = allLabels.filter(
+        (label) => label.labelType === LabelType.SpanLabel
+      );
+      const filteredRelationLabels = allLabels.filter(
+        (label) => label.labelType === LabelType.RelationshipLabel
+      );
+      const filteredDocTypeLabels = allLabels.filter(
+        (label) => label.labelType === LabelType.DocTypeLabel
+      );
+
+      setSpanLabels(filteredSpanLabels);
+      setHumanSpanLabels(filteredSpanLabels);
+      setHumanTokenLabels(filteredTokenLabels);
+      setRelationLabels(filteredRelationLabels);
+      setDocTypeLabels(filteredDocTypeLabels);
+    }
+  }, [open, opened_corpus?.labelSet]);
 
   // Return early if no document is provided
   if (!opened_document) {

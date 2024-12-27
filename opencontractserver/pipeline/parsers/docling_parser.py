@@ -313,7 +313,9 @@ class DoclingParser(BaseParser):
             if result.status != ConversionStatus.SUCCESS:
                 raise Exception(f"Conversion failed: {result.errors}")
 
-            heading_annot_id_to_children: dict[Union[str, int], list[Union[str, int]]] = {}   
+            heading_annot_id_to_children: dict[
+                Union[str, int], list[Union[str, int]]
+            ] = {}
             doc: DoclingDocument = result.document
 
             # 2) Possibly generate pawls/tokens/etc. if not done
@@ -324,16 +326,12 @@ class DoclingParser(BaseParser):
                 tokens_by_page,
                 token_indices_by_page,
                 content,
-            ) = self._generate_pawls_content(
-                doc,
-                pdf_bytes,
-                force_ocr
-            )
+            ) = self._generate_pawls_content(doc, pdf_bytes, force_ocr)
 
             # Run the hierarchical chunker
             chunker = HierarchicalChunker()
             chunks = list(chunker.chunk(dl_doc=doc))
-            
+
             # 3) Build annotation JSON from doc items
             base_annotation_lookup = {}
             text_lookup = {}
@@ -362,11 +360,11 @@ class DoclingParser(BaseParser):
                     logger.info(f"Find heading: {heading}")
                     parent_ref = text_lookup.get(heading.strip())
                     logger.info(f"Found parent ref: {parent_ref}")
-                    
+
                     # Add parent_ref to heading_annot_id_to_children if it doesn't exist
                     if parent_ref not in heading_annot_id_to_children:
                         heading_annot_id_to_children[parent_ref] = []
-                        
+
                 else:
                     parent_ref = None
 
@@ -381,7 +379,9 @@ class DoclingParser(BaseParser):
                             annotation["parent_id"] = parent_ref
                             # Add the annotation id to the parent's children list
                             if parent_ref is not None:
-                                heading_annot_id_to_children[parent_ref].append(annotation["id"])
+                                heading_annot_id_to_children[parent_ref].append(
+                                    annotation["id"]
+                                )
                         else:
                             logger.error(
                                 f"No annotation found in base_annotation_lookup for text item with ref {item.self_ref}"

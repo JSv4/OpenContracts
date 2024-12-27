@@ -110,7 +110,9 @@ class DoclingParserIntegrationTestCase(TestCase):
             )
 
         # Assert relationships
-        self.assertEqual(len(result["relationships"]), 24, "Expected 24 Relationships!:")
+        self.assertEqual(
+            len(result["relationships"]), 24, "Expected 24 Relationships!:"
+        )
 
         # Assert labelled text length
         self.assertEqual(
@@ -178,9 +180,10 @@ class DoclingParserIntegrationTestCase(TestCase):
         self.assertEqual(
             len(result["labelled_text"]), 272, "Labelled text length mismatch"
         )
-        
-        self.assertEqual(len(result["relationships"]), 24, "Expected 24 Relationships!:")
 
+        self.assertEqual(
+            len(result["relationships"]), 24, "Expected 24 Relationships!:"
+        )
 
     def tearDown(self) -> None:
         """

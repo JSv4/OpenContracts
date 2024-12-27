@@ -12,7 +12,11 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.types.dicts import OpenContractDocExport
-from opencontractserver.utils.importing import import_annotations, load_or_create_labels, import_relationships
+from opencontractserver.utils.importing import (
+    import_annotations,
+    import_relationships,
+    load_or_create_labels,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +69,7 @@ class BaseParser(ABC):
                   Relationship list to be imported.
                 - page_count, pawls_file_content, content, etc.
             corpus_id (Optional[int]): ID of the corpus, if the document should be associated with one.
-            annotation_type (Optional[str]): The fallback annotation_type (e.g., SPAN_LABEL or TOKEN_LABEL). 
+            annotation_type (Optional[str]): The fallback annotation_type (e.g., SPAN_LABEL or TOKEN_LABEL).
                 If the annotation data doesn't specify an annotation_type, this one is used.
         """
         logger = logging.getLogger(__name__)
@@ -95,7 +99,9 @@ class BaseParser(ABC):
             document.pawls_parse_file.save(f"doc_{doc_id}.pawls", pawls_file)
 
             # Create text layer from PAWLS tokens
-            span_translation_layer = makePdfTranslationLayerFromPawlsTokens(json.loads(pawls_string))
+            span_translation_layer = makePdfTranslationLayerFromPawlsTokens(
+                json.loads(pawls_string)
+            )
             # Optionally overwrite txt_extract_file with text from PAWLS
             txt_file = ContentFile(span_translation_layer.doc_text.encode("utf-8"))
             document.txt_extract_file.save(f"doc_{doc_id}.txt", txt_file)
@@ -114,7 +120,9 @@ class BaseParser(ABC):
         if annotation_type is not None:
             target_label_type = annotation_type
         else:
-            target_label_type = settings.ANNOTATION_LABELS.get(document.file_type, "SPAN_LABEL")
+            target_label_type = settings.ANNOTATION_LABELS.get(
+                document.file_type, "SPAN_LABEL"
+            )
 
         logger.info(f"Target label type for textual annotations: {target_label_type}")
 
@@ -158,7 +166,9 @@ class BaseParser(ABC):
         relationship_data = open_contracts_data.get("relationships", [])
         if relationship_data:
             # Build label data dict for relationship labels
-            relationship_label_texts = {rel["relationshipLabel"] for rel in relationship_data}
+            relationship_label_texts = {
+                rel["relationshipLabel"] for rel in relationship_data
+            }
             relationship_label_data_dict = {
                 label_text: {
                     "label_type": RELATIONSHIP_LABEL,  # Distinct from text annotation type

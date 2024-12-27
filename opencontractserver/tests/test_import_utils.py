@@ -1,8 +1,13 @@
 import unittest
-from django.test import TestCase
-from django.contrib.auth import get_user_model
 
-from opencontractserver.annotations.models import AnnotationLabel, Annotation, Relationship
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+
+from opencontractserver.annotations.models import (
+    Annotation,
+    AnnotationLabel,
+    Relationship,
+)
 from opencontractserver.types.dicts import (
     OpenContractsAnnotationPythonType,
     OpenContractsRelationshipPythonType,
@@ -19,13 +24,12 @@ class TestImportUtils(TestCase):
     def setUpTestData(cls):
         # Create user
         cls.user = get_user_model().objects.create(
-            username="testuser",
-            password="testpass"
+            username="testuser", password="testpass"
         )
 
         # Optionally create a doc and corpus if needed
-        from opencontractserver.documents.models import Document
         from opencontractserver.corpuses.models import Corpus
+        from opencontractserver.documents.models import Document
 
         cls.doc = Document.objects.create(title="Test Document", creator=cls.user)
         cls.corpus = Corpus.objects.create(title="Test Corpus", creator=cls.user)
@@ -101,7 +105,9 @@ class TestImportUtils(TestCase):
 
         # Check parent relationship
         self.assertIsNone(ann1.parent, "First annotation should have no parent.")
-        self.assertEqual(ann2.parent, ann1, "Second annotation should have the first as its parent.")
+        self.assertEqual(
+            ann2.parent, ann1, "Second annotation should have the first as its parent."
+        )
         self.assertTrue(ann2.structural, "Second annotation should be structural.")
 
     def test_import_relationships(self):
@@ -158,13 +164,13 @@ class TestImportUtils(TestCase):
                 "id": "old-rel-1",
                 "relationshipLabel": "RelationshipLabel",
                 "source_annotation_ids": ["old-a1"],
-                "target_annotation_ids": ["old-a2", "old-a3"]
+                "target_annotation_ids": ["old-a2", "old-a3"],
             },
             {
                 "id": "old-rel-2",
                 "relationshipLabel": "RelationshipLabel",
                 "source_annotation_ids": ["old-a2"],
-                "target_annotation_ids": ["old-a3"]
+                "target_annotation_ids": ["old-a3"],
             },
         ]
 
@@ -187,10 +193,14 @@ class TestImportUtils(TestCase):
         self.assertEqual(rel2.target_annotations.count(), 1)
 
         ann_ids_rel1_source = list(rel1.source_annotations.values_list("id", flat=True))
-        ann_ids_rel1_targets = list(rel1.target_annotations.values_list("id", flat=True))
+        ann_ids_rel1_targets = list(
+            rel1.target_annotations.values_list("id", flat=True)
+        )
 
         ann_ids_rel2_source = list(rel2.source_annotations.values_list("id", flat=True))
-        ann_ids_rel2_targets = list(rel2.target_annotations.values_list("id", flat=True))
+        ann_ids_rel2_targets = list(
+            rel2.target_annotations.values_list("id", flat=True)
+        )
 
         # Validate that the correct DB IDs are in place
         self.assertIn(annotation_id_map["old-a1"], ann_ids_rel1_source)

@@ -8,9 +8,12 @@ from opencontractserver.annotations.models import (
     AnnotationLabel,
     Relationship,
 )
+from opencontractserver.types.dicts import (
+    OpenContractsAnnotationPythonType,
+    OpenContractsRelationshipPythonType,
+)
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
-from opencontractserver.types.dicts import OpenContractsAnnotationPythonType, OpenContractsRelationshipPythonType
 
 logger = logging.getLogger(__name__)
 
@@ -162,18 +165,24 @@ def import_relationships(
             corpus=corpus_obj,
             creator_id=user_id,
         )
-        set_permissions_for_obj_to_user(user_id, new_relationship, [PermissionTypes.ALL])
+        set_permissions_for_obj_to_user(
+            user_id, new_relationship, [PermissionTypes.ALL]
+        )
 
         # Map source annotations
         for old_source_id in relationship_data.get("source_annotation_ids", []):
             if old_source_id in annotation_id_map:
-                source_annot_obj = Annotation.objects.get(id=annotation_id_map[old_source_id])
+                source_annot_obj = Annotation.objects.get(
+                    id=annotation_id_map[old_source_id]
+                )
                 new_relationship.source_annotations.add(source_annot_obj)
 
         # Map target annotations
         for old_target_id in relationship_data.get("target_annotation_ids", []):
             if old_target_id in annotation_id_map:
-                target_annot_obj = Annotation.objects.get(id=annotation_id_map[old_target_id])
+                target_annot_obj = Annotation.objects.get(
+                    id=annotation_id_map[old_target_id]
+                )
                 new_relationship.target_annotations.add(target_annot_obj)
 
         old_rel_id = relationship_data.get("id")

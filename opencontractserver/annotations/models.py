@@ -144,13 +144,22 @@ class AnnotationLabelGroupObjectPermission(GroupObjectPermissionBase):
 
 class Relationship(BaseOCModel):
     relationship_label = django.db.models.ForeignKey(
-        "AnnotationLabel", null=True, on_delete=django.db.models.CASCADE
+        "AnnotationLabel",
+        null=True,
+        on_delete=django.db.models.CASCADE,
+        related_name="relationships",
     )
     corpus = django.db.models.ForeignKey(
-        "corpuses.Corpus", null=True, on_delete=django.db.models.CASCADE
+        "corpuses.Corpus",
+        null=True,
+        on_delete=django.db.models.CASCADE,
+        related_name="relationships",
     )
     document = django.db.models.ForeignKey(
-        "documents.Document", null=False, on_delete=django.db.models.CASCADE
+        "documents.Document",
+        related_name="relationships",
+        null=False,
+        on_delete=django.db.models.CASCADE,
     )
     source_annotations = django.db.models.ManyToManyField(
         "annotations.Annotation",
@@ -169,6 +178,16 @@ class Relationship(BaseOCModel):
     # this.
     analyzer = django.db.models.ForeignKey(
         "analyzer.Analyzer", on_delete=django.db.models.SET_NULL, null=True, blank=True
+    )
+
+    # If this annotation was created as part of an analysis... track that.
+    # TODO - ensure we actually import relationships (and this attribute) from analyzers
+    analysis = django.db.models.ForeignKey(
+        "analyzer.Analysis",
+        null=True,
+        blank=True,
+        on_delete=django.db.models.CASCADE,
+        related_name="relationships",
     )
 
     # Some relationships are structural and not corpus-specific

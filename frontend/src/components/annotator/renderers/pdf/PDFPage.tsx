@@ -11,7 +11,6 @@ import {
 } from "../../hooks/AnnotationHooks";
 import {
   scrollContainerRefAtom,
-  useSelectedCorpus,
   usePages,
   useTextSearchState,
 } from "../../context/DocumentAtom";
@@ -25,6 +24,7 @@ import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 import SelectionLayer from "./SelectionLayer";
 import { PDFPageInfo } from "../../types/pdf";
 import _ from "lodash";
+import { useCorpusState } from "../../context/CorpusAtom";
 
 /**
  * PDFPage Component
@@ -64,7 +64,7 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
 
   const { textSearchMatches: searchResults, selectedTextSearchMatchIndex } =
     useTextSearchState();
-  const { selectedCorpus } = useSelectedCorpus();
+  const { selectedCorpus } = useCorpusState();
 
   const annotationControls = useAnnotationControls();
   const { spanLabelsToView, activeSpanLabel } = annotationControls;

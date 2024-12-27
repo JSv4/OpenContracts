@@ -25,7 +25,6 @@ import { getPermissions } from "../../utils/transform";
 import { selectedAnalyses, selectedAnalysesIds } from "../../graphql/cache";
 import useWindowDimensions from "../hooks/WindowDimensionHook";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
-import { useSelectedCorpus } from "../annotator/context/DocumentAtom";
 
 interface AnalysisItemProps {
   analysis: AnalysisType;

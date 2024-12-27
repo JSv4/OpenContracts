@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Form, Icon, Popup, Menu, SemanticICONS } from "semantic-ui-react";
 import { Search, X } from "lucide-react";
 import styled from "styled-components";
@@ -39,8 +39,7 @@ const StyledSearchInput = styled(Form.Input)`
 
   input {
     border: none !important;
-    padding-left: 40px !important;
-    padding-right: 40px !important;
+    padding-left: 2.67142857em !important;
   }
 
   i.icon {
@@ -48,14 +47,8 @@ const StyledSearchInput = styled(Form.Input)`
     display: flex !important;
     align-items: center;
     justify-content: center;
-  }
-
-  i.icon:first-child {
+    cursor: pointer;
     left: 10px !important;
-  }
-
-  i.icon:last-child {
-    right: 10px !important;
   }
 `;
 
@@ -90,33 +83,81 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
   const { searchText, setSearchText } = useSearchText();
   const [localSearchText, setLocalSearchText] = useState(searchText);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const lastSearchRef = useRef<string>("");
+  const isUserInitiatedRef = useRef<boolean>(false);
+  const debouncedFnRef = useRef<_.DebouncedFunc<(value: string) => void>>();
   useTextSearch();
 
+  // Keep localSearchText in sync with global searchText
+  useEffect(() => {
+    setLocalSearchText(searchText || "");
+  }, [searchText]);
+
   // Create a memoized debounced function with proper typing
-  const debouncedSetSearchText = useCallback(
-    _.debounce((value: string) => {
-      setSearchText(value);
-    }, DEBOUNCE_DELAY),
-    [] // Empty dependency array since setSearchText is stable
-  );
+  useEffect(() => {
+    debouncedFnRef.current = _.debounce((value: string) => {
+      console.log(
+        "Debounced search triggered with:",
+        value,
+        "isUserInitiated:",
+        isUserInitiatedRef.current
+      );
+      if (!isUserInitiatedRef.current) {
+        console.log("Skipping non-user-initiated search update");
+        return;
+      }
+      // Only trigger search for strings of length 2 or more
+      if (value.length >= 2) {
+        // Only update if the value has actually changed
+        if (lastSearchRef.current !== value) {
+          console.log("Setting search text to:", value);
+          lastSearchRef.current = value;
+          setSearchText(value);
+        }
+      } else if (lastSearchRef.current !== "") {
+        // Clear results for empty or single character strings
+        console.log("Clearing search results");
+        lastSearchRef.current = "";
+        setSearchText("");
+      }
+      isUserInitiatedRef.current = false;
+    }, DEBOUNCE_DELAY);
+
+    return () => {
+      debouncedFnRef.current?.cancel();
+    };
+  }, [setSearchText]);
+
+  // Track search text changes
+  useEffect(() => {
+    console.log(
+      "Search text changed to:",
+      searchText,
+      "local:",
+      localSearchText
+    );
+  }, [searchText, localSearchText]);
 
   const handleDocSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    console.log("Doc search change:", value);
+    isUserInitiatedRef.current = true;
     // Update local state immediately for UI responsiveness
     setLocalSearchText(value);
     // Debounce the actual search operation
-    debouncedSetSearchText(value);
+    debouncedFnRef.current?.(value);
   };
 
-  // Clean up the debounced function on component unmount
-  React.useEffect(() => {
-    return () => {
-      debouncedSetSearchText.cancel();
-    };
-  }, [debouncedSetSearchText]);
-
   const clearSearch = () => {
+    console.log("Clear search triggered");
+    isUserInitiatedRef.current = true;
+    // Update local state immediately for UI responsiveness
+    setLocalSearchText("");
+    lastSearchRef.current = "";
+    // Clear results immediately for explicit clear action
     setSearchText("");
+    // Cancel any pending debounced operations
+    debouncedFnRef.current?.cancel();
   };
 
   const handleActionClick = () => {
@@ -164,27 +205,12 @@ export const PDFActionBar: React.FC<PDFActionBarProps> = ({
         />
         <StyledSearchInput
           icon={
-            localSearchText ? (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <Icon as={X} link onClick={clearSearch} />
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <Icon as={Search} />
-              </div>
-            )
+            <Icon
+              name={localSearchText ? "cancel" : "search"}
+              link={!!localSearchText}
+              onClick={() => (localSearchText ? clearSearch() : undefined)}
+              style={{ color: localSearchText ? "#db2828" : "#2185d0" }}
+            />
           }
           iconPosition="left"
           placeholder="Search document..."

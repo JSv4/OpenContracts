@@ -26,7 +26,11 @@ urlpatterns = [
         []
         if not settings.DEBUG
         else [
-            path("silk/", include("silk.urls", namespace="silk")),
+            *(
+                []
+                if not settings.USE_SILK
+                else [path("silk/", include("silk.urls", namespace="silk"))]
+            ),
             path(
                 "400/",
                 default_views.bad_request,

@@ -12,12 +12,12 @@ import {
 import { CorpusType, DocumentType } from "../../../types/graphql-api";
 import { getPermissions } from "../../../utils/transform";
 import { RefObject, useEffect, useMemo } from "react";
+import { useCorpusState } from "./CorpusAtom";
 
 /**
  * Core document data atoms.
  */
 export const selectedDocumentAtom = atom<DocumentType | null>(null);
-export const selectedCorpusAtom = atom<CorpusType | null | undefined>(null);
 export const fileTypeAtom = atom<string>("");
 export const docTextAtom = atom<string>("");
 
@@ -122,7 +122,7 @@ export function useInitializeDocumentAtoms(params: {
   } = params;
 
   const setSelectedDocument = useSetAtom(selectedDocumentAtom);
-  const setSelectedCorpus = useSetAtom(selectedCorpusAtom);
+  const { setCorpus } = useCorpusState();
   const setFileType = useSetAtom(fileTypeAtom);
   const setDocText = useSetAtom(docTextAtom);
   const setPdfDoc = useSetAtom(pdfDocAtom);
@@ -136,7 +136,7 @@ export function useInitializeDocumentAtoms(params: {
 
   useEffect(() => {
     setSelectedDocument(selectedDocument);
-    setSelectedCorpus(selectedCorpus);
+    setCorpus({ selectedCorpus });
     setFileType(selectedDocument.fileType || "");
     setDocText(docText);
     setPdfDoc(pdfDoc);
@@ -158,7 +158,7 @@ export function useInitializeDocumentAtoms(params: {
     isLoading,
     viewState,
     setSelectedDocument,
-    setSelectedCorpus,
+    setCorpus,
     setFileType,
     setDocText,
     setPdfDoc,
@@ -181,14 +181,6 @@ export function useSelectedDocument() {
   return useMemo(
     () => ({ selectedDocument, setSelectedDocument }),
     [selectedDocument, setSelectedDocument]
-  );
-}
-
-export function useSelectedCorpus() {
-  const [selectedCorpus, setSelectedCorpus] = useAtom(selectedCorpusAtom);
-  return useMemo(
-    () => ({ selectedCorpus, setSelectedCorpus }),
-    [selectedCorpus, setSelectedCorpus]
   );
 }
 

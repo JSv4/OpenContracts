@@ -30,6 +30,17 @@ import { useCorpusState } from "../../context/CorpusAtom";
 import { useReactiveVar } from "@apollo/client";
 import { selectedAnalysis, selectedExtract } from "../../../../graphql/cache";
 
+const StyledPopup = styled(Popup)`
+  &.ui.popup {
+    z-index: 100000 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+  }
+`;
+
 export const DocTypeLabelDisplay = () => {
   const { width } = useWindowDimensions();
 
@@ -117,133 +128,143 @@ export const DocTypeLabelDisplay = () => {
   }
 
   return (
-    <>
-      <DocTypeWidgetContainer
-        id="DocTypeWidget_Container"
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        width={width}
-      >
-        {!read_only ? (
-          <div className="DocTypeWidget_ButtonFlexContainer">
-            <div
-              id="DocTypeWidget_ButtonContainer"
-              className={
-                hovered ? "hovered_plus_button" : "not_hovered_plus_button"
-              }
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "center",
-                }}
-              >
-                <div>
-                  <Popup
-                    open={open}
-                    onClose={() => setOpen(false)}
-                    onOpen={() => setOpen(true)}
-                    on="click"
-                    position="top right"
-                    offset={[-30, -10]}
-                    trigger={
-                      <Button
-                        style={{
-                          width: "2.25vw",
-                          height: "2.25vw",
-                          minWidth: "40px",
-                          minHeight: "40px",
-                        }}
-                        floated="right"
-                        icon="plus"
-                        circular
-                        positive
-                        color="green"
-                      />
-                    }
-                  >
-                    <DocTypePopup
-                      labels={filtered_doc_label_choices}
-                      onAdd={onAdd}
-                    />
-                  </Popup>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <></>
-        )}
-        <div
-          id="DocTypeWidget_ContentFlexContainer"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-start",
-          }}
-        >
-          <Segment
-            secondary
-            inverted
-            className="DocTypeWidget_HeaderSegment"
-            attached="top"
-          >
-            <Divider horizontal style={{ margin: "0px" }}>
-              <Header as="h5">
-                ({annotation_elements.length}) Doc Type
-                {annotation_elements.length > 1 ? "(s)" : ""}
-              </Header>
-            </Divider>
-          </Segment>
-          <Segment
-            inverted
-            secondary
-            className={`${
-              expanded ? " expanded_labels" : " collapsed_labels"
-            } ${
-              hovered
-                ? " DocTypeWidget_BodySegment_hovered"
-                : " DocTypeWidget_BodySegment"
-            }`}
-            attached="bottom"
+    <DocTypeWidgetContainer
+      id="DocTypeWidget_Container"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      width={width}
+      className="DocTypeWidget_Container"
+    >
+      {!read_only ? (
+        <div className="DocTypeWidget_ButtonFlexContainer">
+          <div
+            id="DocTypeWidget_ButtonContainer"
+            className={
+              hovered ? "hovered_plus_button" : "not_hovered_plus_button"
+            }
           >
             <div
               style={{
                 display: "flex",
-                flexDirection: "column",
+                flexDirection: "row",
                 justifyContent: "center",
-                flex: 1,
               }}
             >
-              <CardGroupScrollContainer>
-                <div
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "flex-start",
-                  }}
+              <div>
+                <StyledPopup
+                  open={open}
+                  onClose={() => setOpen(false)}
+                  onOpen={() => setOpen(true)}
+                  on="click"
+                  position="top right"
+                  style={{ padding: "0px" }}
+                  trigger={
+                    <Button
+                      style={{
+                        width: "2.25vw",
+                        height: "2.25vw",
+                        minWidth: "40px",
+                        minHeight: "40px",
+                        padding: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "transparent",
+                        border: "none",
+                        boxShadow: "none",
+                      }}
+                      className="add-doc-type-button"
+                      icon={
+                        <Icon
+                          name="plus"
+                          style={{
+                            margin: 0,
+                            fontSize: "1.2em",
+                            color: "white",
+                          }}
+                        />
+                      }
+                      circular
+                    />
+                  }
                 >
-                  {annotation_elements}
-                </div>
-              </CardGroupScrollContainer>
+                  <DocTypePopup
+                    labels={filtered_doc_label_choices}
+                    onAdd={onAdd}
+                  />
+                </StyledPopup>
+              </div>
             </div>
-          </Segment>
+          </div>
         </div>
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
-          }}
+      ) : null}
+      <div
+        id="DocTypeWidget_ContentFlexContainer"
+        className="DocTypeWidget_ContentFlexContainer"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-start",
+        }}
+      >
+        <Segment
+          secondary
+          inverted
+          className="DocTypeWidget_HeaderSegment"
+          attached="top"
+        >
+          <Divider horizontal>
+            <Header as="h5">
+              ({annotation_elements.length}) Doc Type
+              {annotation_elements.length > 1 ? "(s)" : ""}
+            </Header>
+          </Divider>
+        </Segment>
+        <Segment
+          inverted
+          secondary
+          className={`${expanded ? " expanded_labels" : " collapsed_labels"} ${
+            hovered
+              ? " DocTypeWidget_BodySegment_hovered"
+              : " DocTypeWidget_BodySegment"
+          }`}
+          attached="bottom"
         >
           <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              flex: 1,
+            }}
+          >
+            <CardGroupScrollContainer>
+              <div
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-start",
+                }}
+              >
+                {annotation_elements}
+              </div>
+            </CardGroupScrollContainer>
+          </div>
+        </Segment>
+      </div>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-end",
+        }}
+      >
+        {annotation_elements.length > 1 && (
+          <div
             className={
-              hovered && annotation_elements.length > 1
-                ? "hovered_expand_button"
-                : "not_hovered_expand_button"
+              hovered ? "hovered_expand_button" : "not_hovered_expand_button"
             }
           >
             <div
@@ -257,31 +278,38 @@ export const DocTypeLabelDisplay = () => {
                 <Icon
                   link
                   name={expanded ? "compress" : "expand"}
-                  color={expanded ? "orange" : "blue"}
+                  style={{
+                    transition: "all 0.2s ease",
+                    transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+                    color: expanded ? "#00b09b" : "#495057",
+                  }}
                   onClick={() => setExpanded(!expanded)}
                 />
               </div>
             </div>
           </div>
-        </div>
-      </DocTypeWidgetContainer>
-    </>
+        )}
+      </div>
+    </DocTypeWidgetContainer>
   );
 };
 
-// Need to investigate why right value of 0 is required to get this to look like matching
-// left posiiton on the span label container... not a huge priority atm
-const DocTypeWidgetContainer = styled.div<HideableHasWidth>(
-  () => `
-    position: fixed;
-    z-index: 1002;
-    top: 8vh;
-    right: 0px;
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-  `
-);
+const DocTypeWidgetContainer = styled.div<HideableHasWidth>`
+  position: fixed;
+  z-index: 1002;
+  top: 8vh;
+  right: 16px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  transform: translateZ(0);
+  -webkit-font-smoothing: antialiased;
+  pointer-events: none;
+
+  & > * {
+    pointer-events: auto;
+  }
+`;
 
 const CardGroupScrollContainer = styled.div`
   display: flex;
@@ -291,4 +319,22 @@ const CardGroupScrollContainer = styled.div`
   overflow-y: auto;
   overflow-x: hidden;
   height: 100% !important;
+  padding: 4px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(155, 155, 155, 0.5);
+    border-radius: 20px;
+    border: transparent;
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
 `;

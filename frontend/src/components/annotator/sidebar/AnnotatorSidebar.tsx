@@ -49,7 +49,7 @@ import {
 } from "../hooks/AnnotationHooks";
 import { ViewSettingsPopup } from "../../widgets/popups/ViewSettingsPopup";
 import { LabelDisplayBehavior } from "../../../types/graphql-api";
-import { useSelectedCorpus, useTextSearchState } from "../context/DocumentAtom";
+import { useTextSearchState } from "../context/DocumentAtom";
 import { useCorpusState } from "../context/CorpusAtom";
 
 interface TabPanelProps {
@@ -322,7 +322,7 @@ export const AnnotatorSidebar = ({
     setSelectedRelations,
   } = useAnnotationSelection();
   const { isSidebarVisible, setSidebarVisible } = useUISettings();
-  const { selectedCorpus: selected_corpus } = useSelectedCorpus();
+  const { selectedCorpus: selected_corpus } = useCorpusState();
   const {
     selectedAnalysis: selected_analysis,
     selectedExtract: selected_extract,

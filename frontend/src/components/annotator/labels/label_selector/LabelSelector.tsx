@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import styled from "styled-components";
 import { Icon, Popup } from "semantic-ui-react";
 import { AnnotationLabelType } from "../../../../types/graphql-api";
@@ -24,14 +24,25 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
 
   const { humanSpanLabels, humanTokenLabels } = useCorpusState();
 
+  // Add detailed debug logging
+
+  useEffect(() => {
+    console.log("LabelSelector labels changed:", {
+      humanSpanLabels,
+      humanTokenLabels,
+    });
+  }, [humanSpanLabels, humanTokenLabels]);
+
   const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
 
   const filteredLabelChoices = useMemo(() => {
-    return activeSpanLabel
+    const choices = activeSpanLabel
       ? [...humanSpanLabels, ...humanTokenLabels].filter(
           (obj) => obj.id !== activeSpanLabel.id
         )
       : [...humanSpanLabels, ...humanTokenLabels];
+
+    return choices;
   }, [humanSpanLabels, humanTokenLabels, activeSpanLabel]);
 
   const onSelect = (label: AnnotationLabelType): void => {

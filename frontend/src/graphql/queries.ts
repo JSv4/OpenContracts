@@ -468,6 +468,10 @@ export const GET_CORPUSES = gql`
             id
             title
             description
+            docLabelCount
+            spanLabelCount
+            tokenLabelCount
+            metadataLabelCount
           }
         }
       }
@@ -1661,6 +1665,9 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
       allStructuralAnnotations {
         id
         page
+        parent {
+          id
+        }
         annotationLabel {
           id
           text

@@ -303,6 +303,24 @@ class LabelSetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         AnnotationLabelType, filterset_class=LabelFilter
     )
 
+    # Count fields for different label types
+    doc_label_count = graphene.Int(description="Count of document-level type labels")
+    span_label_count = graphene.Int(description="Count of span-based labels")
+    token_label_count = graphene.Int(description="Count of token-level labels")
+    metadata_label_count = graphene.Int(description="Count of metadata labels")
+
+    def resolve_doc_label_count(self, info):
+        return self.annotation_labels.filter(label_type="DOC_TYPE_LABEL").count()
+
+    def resolve_span_label_count(self, info):
+        return self.annotation_labels.filter(label_type="SPAN_LABEL").count()
+
+    def resolve_token_label_count(self, info):
+        return self.annotation_labels.filter(label_type="TOKEN_LABEL").count()
+
+    def resolve_metadata_label_count(self, info):
+        return self.annotation_labels.filter(label_type="METADATA_LABEL").count()
+
     # To get ALL labels for a given labelset
     all_annotation_labels = graphene.Field(graphene.List(AnnotationLabelType))
 

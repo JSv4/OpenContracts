@@ -18,8 +18,8 @@ import {
   useAnalysisManager,
   useAnalysisSelection,
 } from "../annotator/hooks/AnalysisHooks";
-import { useSelectedCorpus } from "../annotator/context/DocumentAtom";
 import { useAdditionalUIStates } from "../annotator/context/UISettingsAtom";
+import { useCorpusState } from "../annotator/context/CorpusAtom";
 
 interface HorizontalSelectorForCorpusProps {
   read_only: boolean;
@@ -31,7 +31,7 @@ export const ExtractAndAnalysisHorizontalSelector: React.FC<
   HorizontalSelectorForCorpusProps
 > = ({ read_only, analyses, extracts }) => {
   const { width } = useWindowDimensions();
-  const { selectedCorpus } = useSelectedCorpus();
+  const { selectedCorpus } = useCorpusState();
   const { selectedAnalysis, selectedExtract } = useAnalysisSelection();
   const { topbarVisible, setTopbarVisible } = useAdditionalUIStates();
 

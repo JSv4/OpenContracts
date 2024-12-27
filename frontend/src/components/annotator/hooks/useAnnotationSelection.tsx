@@ -40,7 +40,14 @@ export function useAnnotationSelection({
   // Event handlers
   const handleAnnotationSelect = useCallback(
     (annotationId: string) => {
-      setSelectedAnnotations([annotationId]);
+      setSelectedAnnotations((prev) => {
+        // If the annotation is already selected, deselect it
+        if (prev.includes(annotationId)) {
+          return [];
+        }
+        // Otherwise, select it
+        return [annotationId];
+      });
     },
     [setSelectedAnnotations]
   );

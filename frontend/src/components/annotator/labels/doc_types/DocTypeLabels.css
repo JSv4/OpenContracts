@@ -1,5 +1,6 @@
 .DocTypeLabelHeader {
   font-size: 1rem;
+  color: #495057;
 }
 
 .DocTypeLabelCard {
@@ -13,12 +14,20 @@
   min-width: 100px;
   min-height: 34px !important;
   height: 3vh !important;
-  margin: 0.25vw;
-  margin-top: 1rem !important;
-  margin-bottom: 1rem !important;
+  margin: 0.5rem 0.25rem !important;
   user-select: none;
   -ms-user-select: none;
   -moz-user-select: none;
+  background: white !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.DocTypeLabelCard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
 .DocTypeLabelContent {
@@ -26,19 +35,20 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding: 8px !important;
 }
 
 @media (max-width: 400px) {
   .DocTypeLabelHeader {
-    font-size: 0.65rem !important;
+    font-size: 0.75rem !important;
     padding-left: 5px !important;
   }
   .DocTypeLabelContent {
-    padding: 0px !important;
+    padding: 6px !important;
   }
   .DocTypeLabelCard {
-    padding: 5px !important;
-    margin: 2px !important;
+    padding: 4px !important;
+    margin: 4px !important;
     margin-left: auto !important;
     margin-right: auto !important;
     width: 95% !important;
@@ -50,19 +60,19 @@
 
 @media (min-width: 401px) {
   .DocTypeLabelHeader {
-    font-size: 0.75rem !important;
+    font-size: 0.8rem !important;
     padding-left: 5px !important;
   }
   .DocTypeLabelIcon {
-    font-size: 1.1rem !important;
+    font-size: 1.2rem !important;
   }
   .DocTypeLabelContent {
-    padding: 0px !important;
+    padding: 8px !important;
   }
   .DocTypeLabelCard {
     min-height: 34px !important;
-    padding: 5px !important;
-    margin: 5px !important;
+    padding: 6px !important;
+    margin: 6px !important;
     margin-left: auto !important;
     margin-right: auto !important;
     width: 95% !important;
@@ -71,19 +81,18 @@
 
 @media (min-width: 768px) {
   .DocTypeLabelHeader {
-    font-size: 0.9rem;
-    padding-left: 10px !important;
+    font-size: 0.9rem !important;
+    padding-left: 8px !important;
   }
   .DocTypeLabelIcon {
-    font-size: 1.4rem !important;
+    font-size: 1.3rem !important;
   }
   .DocTypeLabelContent {
-    padding: 3px !important;
+    padding: 10px !important;
   }
   .DocTypeLabelCard {
-    padding: 10px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
+    padding: 8px !important;
+    margin: 8px auto !important;
     width: 98% !important;
   }
 }

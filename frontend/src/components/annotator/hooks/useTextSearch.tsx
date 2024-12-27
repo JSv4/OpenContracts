@@ -25,22 +25,39 @@ export const useTextSearch = () => {
 
   // Use refs to store previous values
   const previousSelectedDocumentRef = useRef(selectedDocument);
+  const previousSearchTextRef = useRef(searchText);
+  const updateCountRef = useRef(0);
 
   useEffect(() => {
+    updateCountRef.current += 1;
+    const updateId = updateCountRef.current;
+
+    // Clear search results if search text is empty
+    if (!searchText) {
+      if (previousSearchTextRef.current !== searchText) {
+        setTextSearchState({ matches: [], selectedIndex: 0 });
+        previousSearchTextRef.current = searchText;
+      }
+      return;
+    }
+
     // Check if selectedDocument has actually changed
     const documentChanged =
       previousSelectedDocumentRef.current !== selectedDocument;
 
-    // Guard clause
-    if (!selectedDocument || !searchText || !pageTokenTextMaps || !pages) {
-      console.log("TextSearch: Missing dependencies", {
-        hasDocument: !!selectedDocument,
-        hasSearchText: !!searchText,
-        hasTokenMaps: !!pageTokenTextMaps,
-        pagesCount: pages ? Object.keys(pages).length : 0,
-      });
+    // Guard clause for required dependencies
+    if (!selectedDocument || !pageTokenTextMaps || !pages) {
       return;
     }
+
+    // Skip if the search text hasn't actually changed
+    if (previousSearchTextRef.current === searchText && !documentChanged) {
+      return;
+    }
+
+    // Update refs
+    previousSearchTextRef.current = searchText;
+    previousSelectedDocumentRef.current = selectedDocument;
 
     // Proceed with search logic
     const searchHits: (TextSearchTokenResult | TextSearchSpanResult)[] = [];
@@ -131,17 +148,9 @@ export const useTextSearch = () => {
         const bounds: Record<number, BoundingBox> = {};
         for (const [key, value] of Object.entries(grouped_tokens)) {
           const pageIndex = parseInt(key);
-          console.log(`TextSearch: Processing page ${pageIndex}`, {
-            hasPage: !!pages[pageIndex],
-            tokenCount: value.length,
-          });
 
           if (pages[pageIndex] !== undefined) {
             const page_bounds = pages[pageIndex].getBoundsForTokens(value);
-            console.log(`TextSearch: Bounds for page ${pageIndex}`, {
-              hasBounds: !!page_bounds,
-              bounds: page_bounds,
-            });
             if (page_bounds) {
               bounds[pageIndex] = page_bounds;
             }
@@ -165,7 +174,6 @@ export const useTextSearch = () => {
     }
 
     setTextSearchState({ matches: searchHits, selectedIndex: 0 });
-    previousSelectedDocumentRef.current = selectedDocument;
   }, [
     searchText,
     docText,

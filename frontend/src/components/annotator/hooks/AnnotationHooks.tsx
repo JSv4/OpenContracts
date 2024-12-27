@@ -48,14 +48,12 @@ import {
   docTypeAnnotationsAtom,
   initialAnnotationsAtom,
 } from "../context/AnnotationAtoms";
-import {
-  selectedDocumentAtom,
-  selectedCorpusAtom,
-} from "../context/DocumentAtom";
+import { selectedDocumentAtom } from "../context/DocumentAtom";
 import { LabelType } from "../types/enums";
 import { getPermissions } from "../../../utils/transform";
 import { SpanAnnotationJson } from "../../types";
 import { AnnotationLabelType } from "../../../types/graphql-api";
+import { useCorpusState } from "../context/CorpusAtom";
 
 /**
  * Hook to manage PdfAnnotations state.
@@ -228,7 +226,7 @@ export function useInitialAnnotations() {
 export function useCreateAnnotation() {
   const { addMultipleAnnotations } = usePdfAnnotations();
   const selectedDocument = useAtomValue(selectedDocumentAtom);
-  const selectedCorpus = useAtomValue(selectedCorpusAtom);
+  const { selectedCorpus } = useCorpusState();
 
   const [createAnnotation] = useMutation<
     NewAnnotationOutputType,
@@ -389,7 +387,7 @@ export function useUpdateAnnotation() {
 export function useDeleteAnnotation() {
   const { pdfAnnotations, setPdfAnnotations } = usePdfAnnotations();
   const selectedDocument = useAtomValue(selectedDocumentAtom);
-  const selectedCorpus = useAtomValue(selectedCorpusAtom);
+  const { selectedCorpus } = useCorpusState();
 
   const [deleteAnnotationMutation] = useMutation<
     RemoveAnnotationOutputType,
@@ -663,7 +661,7 @@ export function useRejectAnnotation() {
 export function useAddDocTypeAnnotation() {
   const { addDocTypeAnnotations } = usePdfAnnotations();
   const selectedDocument = useAtomValue(selectedDocumentAtom);
-  const selectedCorpus = useAtomValue(selectedCorpusAtom);
+  const { selectedCorpus } = useCorpusState();
 
   const [addDocTypeAnnotationMutation] = useMutation<
     NewDocTypeAnnotationOutputType,
@@ -720,7 +718,7 @@ export function useAddDocTypeAnnotation() {
 export function useCreateRelationship() {
   const { replaceRelations } = usePdfAnnotations();
   const selectedDocument = useAtomValue(selectedDocumentAtom);
-  const selectedCorpus = useAtomValue(selectedCorpusAtom);
+  const { selectedCorpus } = useCorpusState();
 
   const [createRelationshipMutation] = useMutation<
     NewRelationshipOutputType,
@@ -822,7 +820,7 @@ export function useRemoveRelationship() {
 export function useUpdateRelations() {
   const { replaceRelations } = usePdfAnnotations();
   const selectedDocument = useAtomValue(selectedDocumentAtom);
-  const selectedCorpus = useAtomValue(selectedCorpusAtom);
+  const { selectedCorpus } = useCorpusState();
 
   const [updateRelationsMutation] = useMutation<
     UpdateRelationOutputType,
@@ -874,7 +872,7 @@ export function useUpdateRelations() {
  */
 export function useRemoveAnnotationFromRelationship() {
   const { pdfAnnotations, setPdfAnnotations } = usePdfAnnotations();
-  const selectedCorpus = useAtomValue(selectedCorpusAtom);
+  const { selectedCorpus } = useCorpusState();
   const selectedDocument = useAtomValue(selectedDocumentAtom);
 
   const [deleteRelationMutation] = useMutation<

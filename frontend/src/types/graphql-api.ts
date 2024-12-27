@@ -112,6 +112,7 @@ export type AnnotationLabelTypeEdge = {
 export type ServerAnnotationType = Node & {
   __typename?: "AnnotationType";
   id: Scalars["ID"];
+  parent?: Maybe<ServerAnnotationType>;
   page: Scalars["Int"];
   annotationType?: LabelType;
   userFeedback?: FeedbackTypeConnection;
@@ -367,6 +368,10 @@ export type LabelSetType = Node & {
   icon?: Scalars["String"];
   annotationLabels?: AnnotationLabelTypeConnection;
   allAnnotationLabels?: AnnotationLabelType[];
+  docLabelCount?: Scalars["Int"];
+  spanLabelCount?: Scalars["Int"];
+  tokenLabelCount?: Scalars["Int"];
+  metadataLabelCount?: Scalars["Int"];
   creator?: UserType;
   created?: Scalars["DateTime"];
   modified?: Scalars["DateTime"];

@@ -226,7 +226,7 @@ def convert_docling_item_to_annotation(
         "page": page_no,
         "annotation_json": annotation_json,
         "parent_id": None,  # As specified
-        "annotation_type": getattr(item, "label", None),
+        "annotation_type": "TOKEN_LABEL",  # We are ONLY processing PDFs so this must be TOKEN_LABEL type
         "structural": True,
     }
 

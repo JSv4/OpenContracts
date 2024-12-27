@@ -1,5 +1,3 @@
-import unittest
-
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -209,7 +207,3 @@ class TestImportUtils(TestCase):
 
         self.assertIn(annotation_id_map["old-a2"], ann_ids_rel2_source)
         self.assertIn(annotation_id_map["old-a3"], ann_ids_rel2_targets)
-
-
-if __name__ == "__main__":
-    unittest.main()

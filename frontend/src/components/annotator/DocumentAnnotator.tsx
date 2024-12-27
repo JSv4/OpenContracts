@@ -414,7 +414,8 @@ export const DocumentAnnotator = ({
               .map((edge) => edge?.node?.id)
               .filter((id): id is string => id !== undefined),
             rel.relationshipLabel,
-            rel.id
+            rel.id,
+            rel.structural
           )
       );
 

@@ -1,4 +1,4 @@
-import { List, Icon, Label, Button, Popup, Image } from "semantic-ui-react";
+import { List, Icon, Label, Button, Image } from "semantic-ui-react";
 import styled from "styled-components";
 import _ from "lodash";
 
@@ -7,6 +7,7 @@ import target_icon from "../../../assets/icons/noun-target-746597.png";
 
 import "./AnnotatorSidebar.css";
 import { ServerTokenAnnotation } from "../types/annotations";
+import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 
 interface HasColor {
   color: string;
@@ -82,13 +83,10 @@ export const RelationHighlightItem = ({
       <List.Content>
         <List.Header></List.Header>
         {annotation?.rawText ? (
-          <Popup
-            content={annotation.rawText}
-            trigger={
-              <blockquote style={{ marginTop: "0.5rem" }}>
-                {`${annotation.rawText.slice(0, 24).trim()}…`}
-              </blockquote>
-            }
+          <TruncatedText
+            text={annotation.rawText}
+            limit={100}
+            style={{ marginTop: "0.5rem" }}
           />
         ) : null}
       </List.Content>

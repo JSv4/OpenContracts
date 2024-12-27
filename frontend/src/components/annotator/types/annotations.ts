@@ -23,7 +23,8 @@ export class RelationGroup {
     public sourceIds: string[],
     public targetIds: string[],
     public label: AnnotationLabelType,
-    public id: string | string = uuidv4()
+    public id: string | string = uuidv4(),
+    public structural: boolean = false
   ) {
     this.id = id;
   }
@@ -64,7 +65,13 @@ export class RelationGroup {
   }
 
   static fromObject(obj: RelationGroup) {
-    return new RelationGroup(obj.sourceIds, obj.targetIds, obj.label);
+    return new RelationGroup(
+      obj.sourceIds,
+      obj.targetIds,
+      obj.label,
+      obj.id,
+      obj.structural
+    );
   }
 }
 

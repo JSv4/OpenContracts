@@ -393,7 +393,7 @@ class DoclingParser(BaseParser):
             for heading_id, child_ids in heading_annot_id_to_children.items():
                 relationship_entry = {
                     "id": f"group-rel-{rel_counter}",
-                    "relationshipLabel": "DoclingGroupRelation",
+                    "relationshipLabel": "Docling Group Relationship",
                     "source_annotation_ids": [heading_id],
                     "target_annotation_ids": list(child_ids),
                     "structural": True,  # related to doc not corpus (underlying structure of document)

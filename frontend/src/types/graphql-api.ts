@@ -690,6 +690,7 @@ export type RelationshipType = Node & {
   assignmentSet: AssignmentTypeConnection;
   isPublic?: Scalars["Boolean"];
   myPermissions?: PermissionTypes[];
+  structural?: Scalars["Boolean"];
 };
 
 export type RelationshipTypeSourceAnnotationsArgs = {

@@ -39,7 +39,7 @@ export function RelationItem({
       onRemoveAnnotationFromRelation={() =>
         onRemoveAnnotationFromRelation(source_annotation.id, relation.id)
       }
-      read_only={read_only}
+      read_only={read_only || relation.structural}
     />
   ));
 
@@ -52,7 +52,7 @@ export function RelationItem({
       onRemoveAnnotationFromRelation={() =>
         onRemoveAnnotationFromRelation(target_annotation.id, relation.id)
       }
-      read_only={read_only}
+      read_only={read_only || relation.structural}
     />
   ));
 
@@ -68,12 +68,15 @@ export function RelationItem({
       raised
       onClick={onSelectRelation}
     >
-      <Label
-        corner="right"
-        icon="trash"
-        color="red"
-        onClick={() => onDeleteRelation(relation.id)}
-      />
+      {!relation.structural && (
+        <Label
+          corner="right"
+          icon="trash"
+          color="red"
+          onClick={() => onDeleteRelation(relation.id)}
+        />
+      )}
+
       <List
         style={{ marginTop: "0px", marginBottom: "0px" }}
         celled

@@ -339,3 +339,18 @@ class AnalyzerManifest(TypedDict):
     doc_labels: list[AnnotationLabelPythonType]
     text_labels: list[AnnotationLabelPythonType]
     label_set: OpenContractsLabelSetType
+
+
+class OpenContractsRelationshipPythonType(TypedDict):
+    """
+    Data type for individual Open Contract relationship data type converted
+    into JSON for import/export.
+
+    Note that typically any 'old' ID is not the actual DB ID, so you'll need a map
+    from these old ids to the new database IDs for any related objects (i.e. Annotations).
+    """
+
+    id: Optional[Union[str, int]] 
+    relationshipLabel: str
+    source_annotation_ids: list[Union[str, int]]
+    target_annotation_ids: list[Union[str, int]]

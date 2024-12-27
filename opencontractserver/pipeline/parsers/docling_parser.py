@@ -30,6 +30,7 @@ from opencontractserver.pipeline.base.parser import BaseParser
 from opencontractserver.types.dicts import (
     OpenContractDocExport,
     OpenContractsAnnotationPythonType,
+    OpenContractsRelationshipPythonType,
     OpenContractsSinglePageAnnotationType,
     PawlsPagePythonType,
     PawlsTokenPythonType,
@@ -234,7 +235,8 @@ def convert_docling_item_to_annotation(
 
 class DoclingParser(BaseParser):
     """
-    Parser that uses Docling to convert PDF documents into OpenContracts format.
+    A parser that uses DoclingDocument objects (and optional OCR or PDF parsing)
+    to produce annotations and relationships.
     """
 
     title = "Docling Parser"
@@ -271,15 +273,21 @@ class DoclingParser(BaseParser):
         self, user_id: int, doc_id: int, **kwargs
     ) -> Optional[OpenContractDocExport]:
         """
-        Parses the document and converts it into the OpenContractDocExport format.
+        Reads a DoclingDocument, constructs annotation JSON for each chunk,
+        assigns parent-child relationships (via parent_id), and also creates
+        group relationships. Specifically, if multiple Docling chunks share the
+        same heading, all the items in those chunks will be combined into a single
+        relationship (with shared heading as the source, and all collected items
+        as targets).
 
         Args:
-            user_id (int): The ID of the user.
-            doc_id (int): The ID of the document.
-            **kwargs: Additional keyword arguments.
+            user_id (int): The ID of the user parsing the document.
+            doc_id (int): The ID of the target Document in the database.
+            **kwargs: Additional optional arguments (e.g. "force_ocr", "llm_enhanced_hierarchy", etc.)
 
         Returns:
-            Optional[OpenContractDocExport]: The parsed document data or None if parsing fails.
+            Optional[OpenContractDocExport]: A dictionary containing the doc metadata,
+            annotations ("labelled_text"), and relationships (including grouped relationships).
         """
         logger.info(f"DoclingParser - Parsing doc {doc_id} for user {user_id}")
 
@@ -305,20 +313,30 @@ class DoclingParser(BaseParser):
             if result.status != ConversionStatus.SUCCESS:
                 raise Exception(f"Conversion failed: {result.errors}")
 
+            heading_annot_id_to_children: dict[Union[str, int], list[Union[str, int]]] = {}   
             doc: DoclingDocument = result.document
 
-            # Pass pdf_bytes into the next steps for pawls content extraction, OCR checks, etc.
+            # 2) Possibly generate pawls/tokens/etc. if not done
+            #    (Your code for _generate_pawls_content is presumably called here)
             (
                 pawls_pages,
                 spatial_indices_by_page,
                 tokens_by_page,
                 token_indices_by_page,
                 content,
-            ) = self._generate_pawls_content(doc, pdf_bytes, force_ocr)
+            ) = self._generate_pawls_content(
+                doc,
+                pdf_bytes,
+                force_ocr
+            )
 
             # Run the hierarchical chunker
             chunker = HierarchicalChunker()
             chunks = list(chunker.chunk(dl_doc=doc))
+            
+            # 3) Build annotation JSON from doc items
+            base_annotation_lookup = {}
+            text_lookup = {}
 
             text_lookup = build_text_lookup(doc)
             logger.info(f"Text lookup: {text_lookup}")
@@ -344,6 +362,11 @@ class DoclingParser(BaseParser):
                     logger.info(f"Find heading: {heading}")
                     parent_ref = text_lookup.get(heading.strip())
                     logger.info(f"Found parent ref: {parent_ref}")
+                    
+                    # Add parent_ref to heading_annot_id_to_children if it doesn't exist
+                    if parent_ref not in heading_annot_id_to_children:
+                        heading_annot_id_to_children[parent_ref] = []
+                        
                 else:
                     parent_ref = None
 
@@ -356,10 +379,26 @@ class DoclingParser(BaseParser):
                         annotation = base_annotation_lookup.get(item.self_ref)
                         if annotation:
                             annotation["parent_id"] = parent_ref
+                            # Add the annotation id to the parent's children list
+                            if parent_ref is not None:
+                                heading_annot_id_to_children[parent_ref].append(annotation["id"])
                         else:
                             logger.error(
                                 f"No annotation found in base_annotation_lookup for text item with ref {item.self_ref}"
                             )
+
+            # 2) Build relationships from heading_annot_id_to_children
+            relationships: list[OpenContractsRelationshipPythonType] = []
+            rel_counter = 0
+            for heading_id, child_ids in heading_annot_id_to_children.items():
+                relationship_entry = {
+                    "id": f"group-rel-{rel_counter}",
+                    "relationshipLabel": "DoclingGroupRelation",
+                    "source_annotation_ids": [heading_id],
+                    "target_annotation_ids": list(child_ids),
+                }
+                relationships.append(relationship_entry)
+                rel_counter += 1
 
             # Create OpenContracts document structure
             open_contracts_data: OpenContractDocExport = {
@@ -372,13 +411,14 @@ class DoclingParser(BaseParser):
                 "page_count": len(pawls_pages),
                 "doc_labels": [],
                 "labelled_text": list(base_annotation_lookup.values()),
+                "relationships": relationships,
             }
             #########################################################
 
             # IF LLM_ENHANCED_HIERARCHY is True, traverse the structure produced by Docling (which is
             # clean and has nicely separated sections BUT very poor
             # in terms of complex doc hierarchy) and use LLM to infer relationships between sections.
-            # EXPERIMENTAL
+            # EXPERIMENTAL - NOT UPDATED TO PRODUCE GROUP RELATIONSHIPS
             if kwargs.get("llm_enhanced_hierarchy", False):
                 logger.info(
                     "LLM-enhanced hierarchy enabled - adds processing time but improves hierarchy quality"

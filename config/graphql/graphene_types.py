@@ -3,7 +3,7 @@ import logging
 import graphene
 import graphene.types.json
 from django.contrib.auth import get_user_model
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from graphene import relay
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType
@@ -409,8 +409,11 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
     def resolve_all_relationships(self, info, corpus_id, analysis_id=None):
         try:
+            # Want to limit to strucutural relationships or corpus relationships
             corpus_pk = from_global_id(corpus_id)[1]
-            relationships = self.relationships.filter(corpus_id=corpus_pk)
+            relationships = self.relationships.filter(
+                Q(corpus_id=corpus_pk) | Q(structural=True)
+            )
 
             if analysis_id == "__none__":
                 relationships = relationships.filter(analysis__isnull=True)

@@ -250,6 +250,7 @@ class OpenContractsRelationshipPythonType(TypedDict):
     relationshipLabel: str
     source_annotation_ids: list[Union[str, int]]
     target_annotation_ids: list[Union[str, int]]
+    structural: bool
 
 
 class OpenContractsDocAnnotations(TypedDict):

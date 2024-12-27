@@ -396,6 +396,7 @@ class DoclingParser(BaseParser):
                     "relationshipLabel": "DoclingGroupRelation",
                     "source_annotation_ids": [heading_id],
                     "target_annotation_ids": list(child_ids),
+                    "structural": True,  # related to doc not corpus (underlying structure of document)
                 }
                 relationships.append(relationship_entry)
                 rel_counter += 1

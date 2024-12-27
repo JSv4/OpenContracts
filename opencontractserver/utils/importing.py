@@ -157,6 +157,7 @@ def import_relationships(
 
     for relationship_data in relationships_data:
         label_name = relationship_data["relationshipLabel"]
+        structural = relationship_data.get("structural", False)
         label_obj = label_lookup[label_name]
 
         new_relationship = Relationship.objects.create(
@@ -164,6 +165,7 @@ def import_relationships(
             document=doc_obj,
             corpus=corpus_obj,
             creator_id=user_id,
+            structural=structural,
         )
         set_permissions_for_obj_to_user(
             user_id, new_relationship, [PermissionTypes.ALL]

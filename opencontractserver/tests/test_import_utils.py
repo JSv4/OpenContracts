@@ -123,7 +123,7 @@ class TestImportUtils(TestCase):
                 "annotation_json": {"bounds": [0, 0, 10, 10]},
                 "parent_id": None,
                 "annotation_type": None,
-                "structural": False,
+                "structural": True,
             },
             {
                 "id": "old-a2",
@@ -133,7 +133,7 @@ class TestImportUtils(TestCase):
                 "annotation_json": {"bounds": [10, 10, 20, 20]},
                 "parent_id": None,
                 "annotation_type": None,
-                "structural": False,
+                "structural": True,
             },
             {
                 "id": "old-a3",
@@ -143,7 +143,7 @@ class TestImportUtils(TestCase):
                 "annotation_json": {"bounds": [20, 20, 30, 30]},
                 "parent_id": None,
                 "annotation_type": None,
-                "structural": False,
+                "structural": True,
             },
         ]
 
@@ -163,12 +163,14 @@ class TestImportUtils(TestCase):
                 "relationshipLabel": "RelationshipLabel",
                 "source_annotation_ids": ["old-a1"],
                 "target_annotation_ids": ["old-a2", "old-a3"],
+                "structural": True,
             },
             {
                 "id": "old-rel-2",
                 "relationshipLabel": "RelationshipLabel",
                 "source_annotation_ids": ["old-a2"],
                 "target_annotation_ids": ["old-a3"],
+                "structural": True,
             },
         ]
 

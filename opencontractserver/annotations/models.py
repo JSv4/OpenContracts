@@ -171,6 +171,9 @@ class Relationship(BaseOCModel):
         "analyzer.Analyzer", on_delete=django.db.models.SET_NULL, null=True, blank=True
     )
 
+    # Some relationships are structural and not corpus-specific
+    structural = django.db.models.BooleanField(default=False)
+
     # Sharing
     is_public = django.db.models.BooleanField(default=False)
     creator = django.db.models.ForeignKey(

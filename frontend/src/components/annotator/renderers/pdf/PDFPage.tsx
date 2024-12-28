@@ -51,7 +51,7 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
 
   const { showStructural } = useAnnotationDisplay();
   const { zoomLevel } = useZoomLevel();
-  const { selectedAnnotations } = useAnnotationSelection();
+  const { selectedAnnotations, selectedRelations } = useAnnotationSelection();
 
   const { annotationElementRefs, registerRef, unregisterRef } =
     useAnnotationRefs();
@@ -221,7 +221,12 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
     }
   }, [hasPdfPageRendered, selectedAnnotations, annotationElementRefs]);
 
+  /**
+   * Determines the annotations to render, including ensuring that any annotation
+   * involved in a currently selected relation is visible, regardless of other filters.
+   */
   const annots_to_render = useMemo(() => {
+    // Gather all annotations for current page
     const defined_annotations = _.uniqBy(
       annotations
         .filter((annot) => annot instanceof ServerTokenAnnotation)
@@ -233,18 +238,35 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
       "id"
     );
 
+    // Collect IDs for annotations involved in the selectedRelations to ensure they're forced visible
+    const forcedRelationIds = new Set(
+      selectedRelations.flatMap((rel) => [...rel.sourceIds, ...rel.targetIds])
+    );
+
+    // If not showing structural, hide structural unless the annotation is forced
     const filtered_by_structural = !showStructural
-      ? defined_annotations.filter((annot) => !annot.structural)
+      ? defined_annotations.filter(
+          (annot) => !annot.structural || forcedRelationIds.has(annot.id)
+        )
       : defined_annotations;
 
+    // Filter by specified labels unless the annotation is forced
     return spanLabelsToView && spanLabelsToView.length > 0
-      ? filtered_by_structural.filter((annot) =>
-          spanLabelsToView!.some(
-            (label) => label.id === annot.annotationLabel.id
-          )
+      ? filtered_by_structural.filter(
+          (annot) =>
+            forcedRelationIds.has(annot.id) ||
+            spanLabelsToView!.some(
+              (label) => label.id === annot.annotationLabel.id
+            )
         )
       : filtered_by_structural;
-  }, [annotations, pageInfo.page.pageNumber, showStructural, spanLabelsToView]);
+  }, [
+    annotations,
+    pageInfo.page.pageNumber,
+    showStructural,
+    spanLabelsToView,
+    selectedRelations,
+  ]);
 
   const page_annotation_components = useMemo(() => {
     if (!hasPdfPageRendered || !zoomLevel || !pageBounds || !annotations)

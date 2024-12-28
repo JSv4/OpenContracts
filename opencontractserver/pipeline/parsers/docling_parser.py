@@ -157,20 +157,21 @@ def convert_docling_item_to_annotation(
     spatial_indices_by_page: dict[int, STRtree],
     tokens_by_page: dict[int, list[PawlsTokenPythonType]],
     token_indices_by_page: dict[int, np.ndarray],
+    page_dimensions: dict[int, tuple[float, float]],  # Map of page_no to (width, height)
 ) -> Optional[OpenContractsAnnotationPythonType]:
     """Convert a document item to an annotation dictionary format.
 
-    Creates a structured annotation dictionary containing bounding box information,
-    text content, and metadata for the given document item.
-
     Args:
         item: A document item (TextItem, SectionHeaderItem, or ListItem)
+        spatial_indices_by_page: Dictionary mapping page numbers to spatial indices
+        tokens_by_page: Dictionary mapping page numbers to token lists
+        token_indices_by_page: Dictionary mapping page numbers to token indices arrays
+        page_dimensions: Dictionary mapping page numbers to (width, height) tuples
 
     Returns:
         An AnnotationType dictionary containing the item's information, or None if
         the item lacks required provenance data
     """
-    # Check for required attributes
     if not (hasattr(item, "prov") and item.prov):
         return None
 
@@ -178,12 +179,23 @@ def convert_docling_item_to_annotation(
     if not first_prov.bbox:
         return None
 
-    # Extract basic information
     bbox = first_prov.bbox
-    page_no = first_prov.page_no
+    page_no = first_prov.page_no - 1  # Convert 1-indexed to 0-indexed
     item_text = getattr(item, "text", "")
 
-    chunk_bbox = box(bbox.l, bbox.t, bbox.r, bbox.b)
+    logger.info(f"Page dimensions: {page_dimensions}")
+
+    # Get page height for coordinate transformation
+    _, page_height = page_dimensions.get(page_no, (0, 0))
+    if page_height == 0:
+        logger.warning(f"No page dimensions found for page {page_no}")
+        return None
+
+    # Transform Y coordinates from PDF (bottom-left) to screen (top-left) coordinate system
+    screen_top = page_height - bbox.b
+    screen_bottom = page_height - bbox.t
+
+    chunk_bbox = box(bbox.l, screen_top, bbox.r, screen_bottom)
     spatial_index = spatial_indices_by_page.get(page_no)
     tokens = tokens_by_page.get(page_no)
     token_indices_array = token_indices_by_page.get(page_no)
@@ -209,9 +221,9 @@ def convert_docling_item_to_annotation(
         page_no: {
             "bounds": {
                 "left": bbox.l,
-                "top": bbox.t,
+                "top": screen_top,
                 "right": bbox.r,
-                "bottom": bbox.b,
+                "bottom": screen_bottom,
             },
             "tokensJsons": token_ids,  # Empty list as per requirements
             "rawText": item_text,
@@ -318,13 +330,13 @@ class DoclingParser(BaseParser):
             ] = {}
             doc: DoclingDocument = result.document
 
-            # 2) Possibly generate pawls/tokens/etc. if not done
-            #    (Your code for _generate_pawls_content is presumably called here)
+            # 2) generate pawls/tokens/etc.
             (
                 pawls_pages,
                 spatial_indices_by_page,
                 tokens_by_page,
                 token_indices_by_page,
+                page_dimensions,
                 content,
             ) = self._generate_pawls_content(doc, pdf_bytes, force_ocr)
 
@@ -340,7 +352,7 @@ class DoclingParser(BaseParser):
             logger.info(f"Text lookup: {text_lookup}")
             base_annotation_lookup = {
                 text.self_ref: convert_docling_item_to_annotation(
-                    text, spatial_indices_by_page, tokens_by_page, token_indices_by_page
+                    text, spatial_indices_by_page, tokens_by_page, token_indices_by_page, page_dimensions
                 )
                 for text in doc.texts
             }
@@ -488,6 +500,7 @@ class DoclingParser(BaseParser):
         dict[int, STRtree],
         dict[int, list[PawlsTokenPythonType]],
         dict[int, np.ndarray],
+        dict[int, tuple[float, float]],  # Add page_dimensions to return tuple
         str,
     ]:
         """
@@ -520,6 +533,7 @@ class DoclingParser(BaseParser):
         spatial_indices_by_page: dict[int, STRtree] = {}
         tokens_by_page: dict[int, list[PawlsTokenPythonType]] = {}
         token_indices_by_page: dict[int, np.ndarray] = {}
+        page_dimensions: dict[int, tuple[float, float]] = {}
         content_parts: list[str] = []
 
         # Check if PDF requires OCR
@@ -552,6 +566,8 @@ class DoclingParser(BaseParser):
                             "No page size in Docling document; using pdfplumber page "
                             f"size: width={width}, height={height}"
                         )
+
+                    page_dimensions[page_num-1] = (width, height)  # Store dimensions
 
                     # Calculate scaling factors to adjust pdfplumber coordinates
                     plumber_width = page.width
@@ -609,9 +625,9 @@ class DoclingParser(BaseParser):
                     token_indices_array = np.array(token_indices)
 
                     spatial_index = STRtree(geometries_array)
-                    spatial_indices_by_page[page_num] = spatial_index
-                    tokens_by_page[page_num] = tokens
-                    token_indices_by_page[page_num] = token_indices_array
+                    spatial_indices_by_page[page_num - 1] = spatial_index
+                    tokens_by_page[page_num - 1] = tokens
+                    token_indices_by_page[page_num - 1] = token_indices_array
 
                     # Create PawlsPagePythonType
                     pawls_page: PawlsPagePythonType = {
@@ -647,6 +663,8 @@ class DoclingParser(BaseParser):
                     logger.warning(
                         f"No page size in Docling document; using image size: width={width}, height={height}"
                     )
+                
+                page_dimensions[page_num-1] = (width, height)  # Store dimensions
 
                 custom_config = r"--oem 3 --psm 3"
                 word_data = pytesseract.image_to_data(
@@ -734,5 +752,6 @@ class DoclingParser(BaseParser):
             spatial_indices_by_page,
             tokens_by_page,
             token_indices_by_page,
+            page_dimensions,
             content,
         )

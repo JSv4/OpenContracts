@@ -40,93 +40,6 @@ from opencontractserver.utils.layout import reassign_annotation_hierarchy
 
 logger = logging.getLogger(__name__)
 
-# def print_labelled_text_hierarchy(
-#     labelled_text: list[OpenContractsAnnotationPythonType],
-#     output_file_path: str
-# ) -> None:
-#     """
-#     Traverse a list of OpenContractsAnnotationPythonType items (labelled_text), compute
-#     and record an indent level for each entry, then write an indented, hierarchical
-#     view of their rawText fields to a specified file.
-
-#     Indentation logic:
-#       • Items with no parent_id are considered top-level and have indent_level = 0.
-#       • Items with a valid parent_id have indent_level = parent_indent_level + 1.
-
-#     The hierarchy is assumed to be acyclic. If an item references a parent_id that isn't
-#     in the labelled_text's IDs, it will be ignored.
-
-#     Args:
-#         labelled_text (list[OpenContractsAnnotationPythonType]): The annotated text elements
-#             to traverse.
-#         output_file_path (str): The path of the file where the indented structure will
-#             be written.
-#     """
-#     # -------------------------------------------------------------------------
-#     # STEP 1: Build a map of an item's "id" to the item object and adjacency lists.
-#     # -------------------------------------------------------------------------
-#     by_id = {}
-#     children_map = {}
-
-#     for item in labelled_text:
-#         item_id = item.get("id")
-#         if item_id is not None:
-#             by_id[item_id] = item
-
-#     # Prepare adjacency lists: parent_id -> list of child items
-#     for item in labelled_text:
-#         parent_id = item.get("parent_id")
-#         child_id = item.get("id")
-#         if child_id is None:
-#             continue
-
-#         if parent_id not in children_map:
-#             children_map[parent_id] = []
-#         children_map[parent_id].append(child_id)
-
-#     # -------------------------------------------------------------------------
-#     # STEP 2: Assign indent levels. We'll do this via a DFS from each top-level node.
-#     # -------------------------------------------------------------------------
-#     indent_levels = {}
-
-#     def dfs_assign_indent(node_id: str | int, indent: int) -> None:
-#         indent_levels[node_id] = indent
-#         for cid in children_map.get(node_id, []):
-#             dfs_assign_indent(cid, indent + 1)
-
-#     # Find top-level items (those with no valid parent_id or parent_id=None)
-#     top_level_nodes = [it.get("id") for it in labelled_text if it.get("parent_id") is None]
-#     for root_id in top_level_nodes:
-#         if root_id is not None:
-#             dfs_assign_indent(root_id, 0)
-
-#     # -------------------------------------------------------------------------
-#     # STEP 3: Write the indented text to the output file.
-#     #         We'll iterate through by_id in the order we just assigned indent levels.
-#     #         If we want a strictly "reading" order, we might need a more structured
-#     #         approach, but for simplicity, we'll just group by top-level first, then
-#     #         sub-hierarchies.
-#     # -------------------------------------------------------------------------
-#     visited = set()
-
-#     def dfs_write_indented(node_id: str | int, file_obj, indent: int) -> None:
-#         visited.add(node_id)
-#         item = by_id.get(node_id)
-#         if not item:
-#             return
-#         # Craft the indented text
-#         text_to_write = ("    " * indent) + f"- {item['rawText']}\n"
-#         file_obj.write(text_to_write)
-
-#         for cid in children_map.get(node_id, []):
-#             if cid not in visited:
-#                 dfs_write_indented(cid, file_obj, indent + 1)
-
-#     with open(output_file_path, "w", encoding="utf-8") as f:
-#         for root_id in top_level_nodes:
-#             if root_id is not None and root_id not in visited:
-#                 dfs_write_indented(root_id, f, 0)
-
 
 def build_text_lookup(docling_document: DoclingDocument) -> dict[str, str]:
     """
@@ -157,7 +70,9 @@ def convert_docling_item_to_annotation(
     spatial_indices_by_page: dict[int, STRtree],
     tokens_by_page: dict[int, list[PawlsTokenPythonType]],
     token_indices_by_page: dict[int, np.ndarray],
-    page_dimensions: dict[int, tuple[float, float]],  # Map of page_no to (width, height)
+    page_dimensions: dict[
+        int, tuple[float, float]
+    ],  # Map of page_no to (width, height),
 ) -> Optional[OpenContractsAnnotationPythonType]:
     """Convert a document item to an annotation dictionary format.
 
@@ -192,8 +107,8 @@ def convert_docling_item_to_annotation(
         return None
 
     # Transform Y coordinates from PDF (bottom-left) to screen (top-left) coordinate system
-    screen_top = page_height - bbox.b
-    screen_bottom = page_height - bbox.t
+    screen_bottom = page_height - bbox.b
+    screen_top = page_height - bbox.t
 
     chunk_bbox = box(bbox.l, screen_top, bbox.r, screen_bottom)
     spatial_index = spatial_indices_by_page.get(page_no)
@@ -313,6 +228,13 @@ class DoclingParser(BaseParser):
                 "We normally try to intelligently determine if OCR is needed."
             )
 
+        roll_up_groups = kwargs.get("roll_up_groups", False)
+        if roll_up_groups:
+            logger.info(
+                "Roll up groups is enabled - this will roll up groups of items that have the same "
+                "parent_id into a single group. If you'd prefer smaller groups, set this to False."
+            )
+
         # Read pdf bytes and create DocumentStream
         with default_storage.open(doc_path, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
@@ -325,9 +247,12 @@ class DoclingParser(BaseParser):
             if result.status != ConversionStatus.SUCCESS:
                 raise Exception(f"Conversion failed: {result.errors}")
 
-            heading_annot_id_to_children: dict[
+            flattened_heading_annot_id_to_children: dict[
                 Union[str, int], list[Union[str, int]]
             ] = {}
+            heading_annot_id_to_children: list[
+                tuple[Union[str, int], list[Union[str, int]]]
+            ] = []
             doc: DoclingDocument = result.document
 
             # 2) generate pawls/tokens/etc.
@@ -352,7 +277,11 @@ class DoclingParser(BaseParser):
             logger.info(f"Text lookup: {text_lookup}")
             base_annotation_lookup = {
                 text.self_ref: convert_docling_item_to_annotation(
-                    text, spatial_indices_by_page, tokens_by_page, token_indices_by_page, page_dimensions
+                    text,
+                    spatial_indices_by_page,
+                    tokens_by_page,
+                    token_indices_by_page,
+                    page_dimensions,
                 )
                 for text in doc.texts
             }
@@ -374,8 +303,11 @@ class DoclingParser(BaseParser):
                     logger.info(f"Found parent ref: {parent_ref}")
 
                     # Add parent_ref to heading_annot_id_to_children if it doesn't exist
-                    if parent_ref not in heading_annot_id_to_children:
-                        heading_annot_id_to_children[parent_ref] = []
+                    if roll_up_groups:
+                        if parent_ref not in flattened_heading_annot_id_to_children:
+                            flattened_heading_annot_id_to_children[parent_ref] = []
+                    else:
+                        heading_annot_id_to_children.append((parent_ref, []))
 
                 else:
                     parent_ref = None
@@ -384,16 +316,31 @@ class DoclingParser(BaseParser):
                     logger.info(f"Number of doc_items: {len(chunk.meta.doc_items)}")
 
                     # Inspect each doc_item
+                    accumulator = []
+                    prev_parent_ref = parent_ref
+
                     for j, item in enumerate(chunk.meta.doc_items):
 
                         annotation = base_annotation_lookup.get(item.self_ref)
                         if annotation:
+
+                            if prev_parent_ref != parent_ref:
+                                if not roll_up_groups and len(accumulator) > 0:
+                                    heading_annot_id_to_children.append(
+                                        (prev_parent_ref, accumulator)
+                                    )
+                                accumulator = []
+                                prev_parent_ref = parent_ref
+
                             annotation["parent_id"] = parent_ref
+
                             # Add the annotation id to the parent's children list
-                            if parent_ref is not None:
-                                heading_annot_id_to_children[parent_ref].append(
-                                    annotation["id"]
-                                )
+                            if roll_up_groups:
+                                if parent_ref is not None:
+                                    flattened_heading_annot_id_to_children[
+                                        parent_ref
+                                    ].append(annotation["id"])
+
                         else:
                             logger.error(
                                 f"No annotation found in base_annotation_lookup for text item with ref {item.self_ref}"
@@ -402,16 +349,33 @@ class DoclingParser(BaseParser):
             # 2) Build relationships from heading_annot_id_to_children
             relationships: list[OpenContractsRelationshipPythonType] = []
             rel_counter = 0
-            for heading_id, child_ids in heading_annot_id_to_children.items():
-                relationship_entry = {
-                    "id": f"group-rel-{rel_counter}",
-                    "relationshipLabel": "Docling Group Relationship",
-                    "source_annotation_ids": [heading_id],
-                    "target_annotation_ids": list(child_ids),
-                    "structural": True,  # related to doc not corpus (underlying structure of document)
-                }
-                relationships.append(relationship_entry)
-                rel_counter += 1
+            # If we're rolling up the groups...
+            if roll_up_groups:
+                for (
+                    heading_id,
+                    child_ids,
+                ) in flattened_heading_annot_id_to_children.items():
+                    relationship_entry = {
+                        "id": f"group-rel-{rel_counter}",
+                        "relationshipLabel": "Docling Group Relationship",
+                        "source_annotation_ids": [heading_id],
+                        "target_annotation_ids": list(child_ids),
+                        "structural": True,  # related to doc not corpus (underlying structure of document)
+                    }
+                    relationships.append(relationship_entry)
+                    rel_counter += 1
+            # Otherwise...
+            else:
+                for heading_id, child_ids in heading_annot_id_to_children:
+                    relationship_entry = {
+                        "id": f"group-rel-{rel_counter}",
+                        "relationshipLabel": "Docling Group Relationship",
+                        "source_annotation_ids": [heading_id],
+                        "target_annotation_ids": list(child_ids),
+                        "structural": True,  # related to doc not corpus (underlying structure of document)
+                    }
+                    relationships.append(relationship_entry)
+                    rel_counter += 1
 
             # Create OpenContracts document structure
             open_contracts_data: OpenContractDocExport = {
@@ -567,7 +531,7 @@ class DoclingParser(BaseParser):
                             f"size: width={width}, height={height}"
                         )
 
-                    page_dimensions[page_num-1] = (width, height)  # Store dimensions
+                    page_dimensions[page_num - 1] = (width, height)  # Store dimensions
 
                     # Calculate scaling factors to adjust pdfplumber coordinates
                     plumber_width = page.width
@@ -663,8 +627,8 @@ class DoclingParser(BaseParser):
                     logger.warning(
                         f"No page size in Docling document; using image size: width={width}, height={height}"
                     )
-                
-                page_dimensions[page_num-1] = (width, height)  # Store dimensions
+
+                page_dimensions[page_num - 1] = (width, height)  # Store dimensions
 
                 custom_config = r"--oem 3 --psm 3"
                 word_data = pytesseract.image_to_data(

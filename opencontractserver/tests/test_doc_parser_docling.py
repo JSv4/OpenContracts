@@ -44,9 +44,6 @@ class DoclingParserIntegrationTestCase(TestCase):
         with SAMPLE_PDF_FILE_ONE_PATH.open("rb") as f:
             self.test_pdf = ContentFile(f.read(), name=SAMPLE_PDF_FILE_ONE_PATH.name)
 
-        # with SAMPLE_PDF_FILE_TWO_PATH.open("rb") as f:
-        #     self.test_pdf = ContentFile(f.read(), name=SAMPLE_PDF_FILE_TWO_PATH.name)
-
         with transaction.atomic():
             self.doc = Document.objects.create(
                 creator=self.user,
@@ -64,7 +61,7 @@ class DoclingParserIntegrationTestCase(TestCase):
 
         # Call the parse_document method
         result: Optional[OpenContractDocExport] = parser.parse_document(
-            user_id=self.user.id, doc_id=self.doc.id
+            user_id=self.user.id, doc_id=self.doc.id, roll_up_groups=True
         )
 
         # Assertions
@@ -121,14 +118,17 @@ class DoclingParserIntegrationTestCase(TestCase):
 
     def test_docling_parser_force_ocr(self) -> None:
         """
-        Test the DoclingParser by parsing a sample PDF document and comparing the result with expected outputs.
+        Test the DoclingParser by parsing a sample PDF document with OCR forced.
         """
         # Create an instance of the DoclingParser
         parser = DoclingParser()
 
         # Call the parse_document method
         result: Optional[OpenContractDocExport] = parser.parse_document(
-            user_id=self.user.id, doc_id=self.doc.id, force_ocr=True
+            user_id=self.user.id,
+            doc_id=self.doc.id,
+            force_ocr=True,
+            roll_up_groups=True,
         )
 
         # Assertions
@@ -136,13 +136,8 @@ class DoclingParserIntegrationTestCase(TestCase):
         assert result is not None  # For type checker
 
         self.assertEqual(result["title"], "Exhibit 10.1")
-
         self.assertEqual(result["page_count"], 23)
 
-        for page_id, page in enumerate(result["pawls_file_content"]):
-            logger.info(f"Token count on page {page_id}: {len(page['tokens'])}")
-
-        # Assert token counts for each page
         expected_token_counts = [
             391,
             374,
@@ -176,13 +171,43 @@ class DoclingParserIntegrationTestCase(TestCase):
                 f"Token count mismatch on page {page_idx + 1}",
             )
 
-        # Assert labelled text length
         self.assertEqual(
             len(result["labelled_text"]), 272, "Labelled text length mismatch"
         )
 
         self.assertEqual(
             len(result["relationships"]), 24, "Expected 24 Relationships!:"
+        )
+
+    def test_docling_parser_omit_roll_up_groups(self) -> None:
+        """
+        Test the DoclingParser by parsing the sample PDF document with roll_up_groups=False (unset).
+        Ensures that relationships are not "rolled up" into group relationships.
+        """
+        parser = DoclingParser()
+        result: Optional[OpenContractDocExport] = parser.parse_document(
+            user_id=self.user.id, doc_id=self.doc.id
+        )
+
+        self.assertIsNotNone(result, "Parser returned None")
+        assert result is not None  # For type checker
+
+        self.assertEqual(result["title"], "Exhibit 10.1")
+        self.assertEqual(result["page_count"], 23)
+
+        # Even though the total token counts or labelled_text might remain identical,
+        # the relationships count is expected to differ because of group roll-up.
+        # We can check that we still have some relationships, but the count may differ
+        # from the non-rolled-up scenario.
+        self.assertEqual(
+            len(result["relationships"]),
+            200,
+            "With roll_up_groups=False, we expect a vastly large number of relationships than roll_up_groups=True.",
+        )
+
+        # Labelled text is generally unaffected by grouping
+        self.assertEqual(
+            len(result["labelled_text"]), 272, "Labelled text length mismatch"
         )
 
     def tearDown(self) -> None:

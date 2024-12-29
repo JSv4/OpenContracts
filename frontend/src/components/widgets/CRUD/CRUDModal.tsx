@@ -55,33 +55,31 @@ export function CRUDModal({
 
   useEffect(() => {
     setInstanceObj(oldInstance || {});
-    if (
-      Array.isArray(oldInstance) &&
-      oldInstance.length > 0 &&
-      typeof oldInstance[0] === "object" &&
-      "id" in oldInstance[0]
-    ) {
-      setUpdatedFields({ id: oldInstance[0].id });
-    } else if (
-      typeof oldInstance === "object" &&
-      oldInstance !== null &&
-      "id" in oldInstance
-    ) {
+    if (typeof oldInstance === "object" && oldInstance !== null) {
       setUpdatedFields({ id: oldInstance.id });
     }
   }, [oldInstance]);
 
   /**
-   * Handles changes in the model and updates the state accordingly.
-   *
-   * @param {LooseObject} updatedFields - The updated fields from the form.
+   * Only keep truly changed fields in updatedFieldsObj
    */
   const handleModelChange = (updatedFields: LooseObject): void => {
-    console.log("HandleModelChange: ", updatedFields);
+    // Merge any new fields into instanceObj
     setInstanceObj((prevObj) => ({ ...prevObj, ...updatedFields }));
+
+    // Figure out which fields have actually changed from oldInstance
+    const changedFields = Object.entries(updatedFields).reduce(
+      (acc, [key, value]) => {
+        // If no difference, skip it
+        if (_.isEqual(oldInstance[key], value)) return acc;
+        return { ...acc, [key]: value };
+      },
+      {} as LooseObject
+    );
+
     setUpdatedFields((prevFields) => ({
       ...prevFields,
-      ...updatedFields,
+      ...changedFields,
     }));
   };
 
@@ -89,6 +87,7 @@ export function CRUDModal({
     return canWrite ? { ...uiSchema } : { ...uiSchema, "ui:readonly": true };
   }, [uiSchema, canWrite]);
 
+  // Clone each widget so it can notify handleModelChange
   const listeningChildren: JSX.Element[] = useMemo(() => {
     if (!propertyWidgets) return [];
     return Object.keys(propertyWidgets)
@@ -97,6 +96,7 @@ export function CRUDModal({
         if (React.isValidElement(widget)) {
           return React.cloneElement(widget, {
             [key]: instanceObj[key] || "",
+            // Let the widget pass only changed fields to handleModelChange
             onChange: handleModelChange,
             key: index,
           });
@@ -114,7 +114,7 @@ export function CRUDModal({
   const headerText = useMemo(() => {
     switch (mode) {
       case "EDIT":
-        return `Edit ${descriptiveName}: ${instanceObj.title}`;
+        return `Edit ${descriptiveName}: ${instanceObj.title ?? ""}`;
       case "VIEW":
         return `View ${descriptiveName}`;
       default:
@@ -166,7 +166,7 @@ export function CRUDModal({
               inverted
               onClick={() => {
                 console.log(
-                  "Submitting",
+                  "Submitting changes: ",
                   mode === "EDIT" ? updatedFieldsObj : instanceObj
                 );
                 onSubmit(mode === "EDIT" ? updatedFieldsObj : instanceObj);

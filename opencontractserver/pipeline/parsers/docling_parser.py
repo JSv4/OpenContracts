@@ -119,6 +119,7 @@ def convert_docling_item_to_annotation(
         logger.warning(
             f"No spatial index or tokens found for page {page_no}; skipping doc_item"
         )
+        return None
 
     candidate_indices = spatial_index.query(chunk_bbox)
     candidate_geometries = spatial_index.geometries.take(candidate_indices)

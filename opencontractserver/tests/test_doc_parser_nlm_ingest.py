@@ -62,7 +62,7 @@ class ParseWithNLMTestCase(TestCase):
             method="POST",
             url=f"{endpoint}/api/parseDocument",
             json=json.loads(NLM_INGESTOR_EXPECTED_JSON.read_text()),
-            status=200,
+            status=402,
         )
         responses.add(nlm_parse_response)
 

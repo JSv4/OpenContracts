@@ -55,9 +55,12 @@ class ParseWithNLMTestCase(TestCase):
     @responses.activate
     def test_parse_with_nlm(self):
         # Mock the NLM ingest service response
+        endpoint = settings.PARSER_KWARGS[
+            "opencontractserver.pipeline.parsers.nlm_ingest_parser.NLMIngestParser"
+        ]["endpoint"]
         nlm_parse_response = responses.Response(
             method="POST",
-            url=f"{settings.NLM_INGEST_HOSTNAME}/api/parseDocument",
+            url=f"{endpoint}/api/parseDocument",
             json=json.loads(NLM_INGESTOR_EXPECTED_JSON.read_text()),
             status=200,
         )

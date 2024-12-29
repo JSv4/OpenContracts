@@ -326,7 +326,10 @@ export const DocumentAnnotator = ({
             console.error("Error loading PDF document:", err);
             viewStateVar(ViewState.ERROR);
           });
-      } else if (opened_document.fileType === "application/txt") {
+      } else if (
+        opened_document.fileType === "application/txt" ||
+        opened_document.fileType === "text/plain"
+      ) {
         console.debug("React to TXT document");
 
         Promise.all([

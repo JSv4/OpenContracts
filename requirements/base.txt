@@ -42,6 +42,8 @@ PyPDF2==3.0.1  # https://github.com/mstamy2/PyPDF2
 pandas
 plasmapdf
 pdf2image
+tiktoken==0.8.0  # https://github.com/openai/tiktoken
+
 
 # Data Processing Tools
 # -------------------------------------------------------------------------------

@@ -18,8 +18,9 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
 from pgvector.django import CosineDistance
 from pydantic import BaseModel
+from django.db.models import Q
 
-from opencontractserver.annotations.models import Annotation
+from opencontractserver.annotations.models import Annotation, Relationship
 from opencontractserver.extracts.models import Datacell
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
 from opencontractserver.utils.embeddings import calculate_embedding_for_text
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
-def oc_llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int = 512):
+def oc_llama_index_doc_query(cell_id, similarity_top_k=8, max_token_length: int = 64000):
     """
     OpenContracts' default LlamaIndex and Marvin-based data extract pipeline to run queries specified for a
     particular cell. We use sentence transformer embeddings + sentence transformer re-ranking.
@@ -50,6 +51,20 @@ def oc_llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int
 
         llm = OpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY)
         Settings.llm = llm
+
+        # First get structural annotations from first page for document context
+        structural_annotations = Annotation.objects.filter(
+            document_id=document.id,
+            structural=True,
+            page=0
+        )
+        
+        structural_context = "\n".join([
+            f"{annot.annotation_label.text if annot.annotation_label else 'Unlabeled'}: {annot.raw_text}\n"
+            for annot in structural_annotations
+        ]) if structural_annotations else ""
+
+        structural_context = f"========Contents of First Page (for context)========\n\n{structural_context}\n\n========End of First Page========\n"
 
         vector_store = DjangoAnnotationVectorStore.from_params(
             document_id=document.id, must_have_text=datacell.column.must_contain_text
@@ -120,11 +135,11 @@ def oc_llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int
             )
             retrieved_nodes = sbert_rerank.postprocess_nodes(nodes, QueryBundle(query))
 
-            annotation_ids = [
+            retrieved_annotation_ids = [
                 n.node.extra_info["annotation_id"] for n in retrieved_nodes
             ]
 
-            datacell.sources.add(*annotation_ids)
+            datacell.sources.add(*retrieved_annotation_ids)
 
             retrieved_text = "\n".join(
                 [
@@ -154,8 +169,142 @@ def oc_llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int
                 [f"```Relevant Section:\n\n{n.text}\n```" for n in results]
             )
 
-        logger.info(f"Retrieved text: {retrieved_text}")
+        # Get all relationships where these annotations are source or target
+        relationships = Relationship.objects.filter(
+            Q(source_annotations__id__in=retrieved_annotation_ids) |
+            Q(target_annotations__id__in=retrieved_annotation_ids)
+        ).select_related('relationship_label').prefetch_related(
+            'source_annotations__annotation_label',
+            'target_annotations__annotation_label'
+        )
 
+        relationship_sections = []
+        if relationships:
+            relationship_sections.append("\n========== Sections Related to Nodes Most Semantically Similar to Query ==========")
+            relationship_sections.append(
+                "The following sections show how the retrieved relevant text is connected to other parts of the document. "
+                "This context is crucial because it shows how the text sections that matched your query are semantically "
+                "connected to other document sections through explicit relationships. Sections marked with [↑] are the ones "
+                "that were retrieved as relevant to your query. Understanding these relationships can help you:\n"
+                "1. See how the retrieved sections fit into the broader document context\n"
+                "2. Identify related clauses or definitions that might affect interpretation\n"
+                "3. Follow reference chains between different parts of the document\n"
+            )
+
+            # Mermaid diagram explanation
+            relationship_sections.append(
+                "\nFirst, here's a visual graph showing these relationships. "
+                "Each node represents a section of text, with arrows showing how they're connected. "
+                "The text is truncated for readability, but full text is provided below."
+            )
+            relationship_sections.append("\n```mermaid")
+            relationship_sections.append("graph TD")
+            
+            # Track nodes we've added to avoid duplicates
+            added_nodes = set()
+            
+            for rel in relationships:
+                rel_type = rel.relationship_label.text if rel.relationship_label else "relates_to"
+                
+                for source in rel.source_annotations.all():
+                    for target in rel.target_annotations.all():
+                        # Add node definitions if not already added
+                        if source.id not in added_nodes:
+                            retrieved_marker = " [↑]" if source.id in retrieved_annotation_ids else ""
+                            source_text = source.raw_text[:64] + "..." if len(source.raw_text) > 64 else source.raw_text
+                            relationship_sections.append(
+                                f'Node{source.id}[label: {source.annotation_label.text if source.annotation_label else "unlabeled"}, '
+                                f'text: "{source_text}"{retrieved_marker}]'
+                            )
+                            added_nodes.add(source.id)
+                            
+                        if target.id not in added_nodes:
+                            retrieved_marker = " [↑]" if target.id in retrieved_annotation_ids else ""
+                            target_text = target.raw_text[:64] + "..." if len(target.raw_text) > 64 else target.raw_text
+                            relationship_sections.append(
+                                f'Node{target.id}[label: {target.annotation_label.text if target.annotation_label else "unlabeled"}, '
+                                f'text: "{target_text}"{retrieved_marker}]'
+                            )
+                            added_nodes.add(target.id)
+                        
+                        # Add relationship
+                        relationship_sections.append(f'Node{source.id} -->|{rel_type}| Node{target.id}')
+            
+            relationship_sections.append("```\n")
+            
+            # Textual description explanation
+            relationship_sections.append(
+                "\nBelow is a detailed textual description of these same relationships, "
+                "including the complete text of each section. This provides the full context "
+                "that might be needed to understand the relationships between document parts:"
+            )
+            relationship_sections.append("Textual Description of Relationships:")
+            for rel in relationships:
+                rel_type = rel.relationship_label.text if rel.relationship_label else "relates_to"
+                relationship_sections.append(f"\nRelationship Type: {rel_type}")
+                
+                for source in rel.source_annotations.all():
+                    for target in rel.target_annotations.all():
+                        retrieved_source = "[↑ Retrieved]" if source.id in retrieved_annotation_ids else ""
+                        retrieved_target = "[↑ Retrieved]" if target.id in retrieved_annotation_ids else ""
+                        
+                        relationship_sections.append(
+                            f"• Node{source.id}[label: {source.annotation_label.text if source.annotation_label else 'unlabeled'}, "
+                            f'text: "{source.raw_text}"] {retrieved_source}\n  {rel_type}\n  '
+                            f"Node{target.id}[label: {target.annotation_label.text if target.annotation_label else 'unlabeled'}, "
+                            f'text: "{target.raw_text}"] {retrieved_target}'
+                        )
+            
+            relationship_sections.append("\n==========End of Document Relationship Context==========\n")
+        
+        relationship_context = "\n".join(relationship_sections)
+
+        # Build full context with structural info first
+        full_context = []
+        if structural_context:
+            full_context.append(structural_context)
+            
+        # Add retrieved text with clear demarcation
+        retrieved_text = "\n========== Retrieved Relevant Sections ==========\n"
+        retrieved_text += "The following sections were identified as most relevant to your query:\n\n"
+        retrieved_text += "\n".join(
+            [f"```Relevant Section:\n\n{n.text}\n```" for n in retrieved_nodes]
+        )
+        retrieved_text += "\n==========End of Retrieved Sections==========\n"
+        full_context.append(retrieved_text)
+        
+        # Add relationship context
+        if relationship_context:
+            full_context.append(relationship_context)
+
+        # Combine all context
+        combined_text = "\n\n".join(full_context)
+
+        # Check token length and trim if needed
+        import tiktoken
+        enc = tiktoken.encoding_for_model(settings.OPENAI_MODEL)
+        tokens = enc.encode(combined_text)
+        
+        if len(tokens) > max_token_length:
+            logger.warning(f"Context exceeds token limit ({len(tokens)} > {max_token_length}). Trimming...")
+            # Keep structural and relationship context, trim retrieved text
+            sections = retrieved_text.split("```Relevant Section:\n\n")
+            while len(tokens) > max_token_length and len(sections) > 1:
+                sections.pop(0)  # Remove earliest section
+                new_retrieved_text = "```Relevant Section:\n\n".join(sections)
+                full_context = [structural_context, new_retrieved_text, relationship_context]
+                combined_text = "\n\n".join(filter(None, full_context))
+                tokens = enc.encode(combined_text)
+            
+            if len(tokens) > max_token_length:
+                logger.error(f"Context still exceeds token limit ({len(tokens)} > {max_token_length}). Skipping extraction.")
+                datacell.data = {"data": "Context Exceeded Token Limit of {max_token_length} Tokens"}
+                datacell.completed = timezone.now()
+                datacell.save()
+                return
+
+        logger.info(f"Final context length: {len(tokens)} tokens")
+        
         output_type = parse_model_or_primitive(datacell.column.output_type)
         logger.info(f"Output type: {output_type}")
 
@@ -189,9 +338,6 @@ def oc_llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int
                 worker, tools=query_engine_tools, verbose=True
             )
 
-            # TODO - eventually capture section hierarchy as nlm-sherpa does so we can query up a retrieved chunk to
-            #  its parent section
-
             response = agent.query(
                 f"""Please identify all of the defined terms - capitalized terms that are not well-known proper nouns,
                 terms that in quotation marks or terms that are clearly definitions in the context of a given sentence,
@@ -219,10 +365,12 @@ def oc_llama_index_doc_query(cell_id, similarity_top_k=15, max_token_length: int
             definitions = str(response)
 
         retrieved_text = (
-            f"Related Document:\n```\n{retrieved_text}\n```\n\n" + definitions
+            f"In response to this query:\n\n```\n{search_text}\n```\n\n We found the following most "
+            "semantically relevant parts of a document, along with related and referenced sections "
+            f"highlighted: \n{combined_text}\n\n" + definitions
         )
 
-        print(f"Resulting data for marvin: {retrieved_text}")
+        logger.info(f"Resulting data for marvin: {retrieved_text}")
 
         if datacell.column.extract_is_list:
             print("Extract as list!")

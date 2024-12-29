@@ -694,19 +694,18 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
               }}
             >
               <Button
-                icon="file outline"
+                icon="plus"
                 circular
-                onClick={() => setOpenSelectDocumentsModal(true)}
+                onClick={() => setIsCreateColumnModalOpen(true)}
                 style={{
                   position: "absolute",
-                  bottom: "16px",
-                  left: "16px",
+                  right: "16px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
                   zIndex: 1000,
                 }}
                 disabled={loading}
-              >
-                <Icon name="plus" corner="top right" />
-              </Button>
+              />
             </div>
           ),
           renderCell: () => null,

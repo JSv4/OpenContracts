@@ -16,7 +16,15 @@ import DataGrid, {
 } from "react-data-grid";
 import { useMutation } from "@apollo/client";
 import { toast } from "react-toastify";
-import { Button, Icon, Popup, Dimmer, Loader } from "semantic-ui-react";
+import {
+  Button,
+  Icon,
+  Popup,
+  Dimmer,
+  Loader,
+  Modal,
+  Message,
+} from "semantic-ui-react";
 import {
   REQUEST_APPROVE_DATACELL,
   REQUEST_EDIT_DATACELL,
@@ -30,9 +38,6 @@ import {
   REQUEST_UPDATE_COLUMN,
   RequestUpdateColumnInputType,
   RequestUpdateColumnOutputType,
-  REQUEST_DELETE_COLUMN,
-  RequestDeleteColumnInputType,
-  RequestDeleteColumnOutputType,
   REQUEST_CREATE_COLUMN,
   RequestCreateColumnInputType,
   RequestCreateColumnOutputType,
@@ -203,6 +208,12 @@ interface FilterState {
 // Add an interface for the exposed methods
 export interface ExtractDataGridHandle {
   exportToCsv: () => void;
+}
+
+// Add new interface for the delete modal state
+interface DeleteColumnModalState {
+  isOpen: boolean;
+  columnToDelete: ColumnType | null;
 }
 
 export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
@@ -644,6 +655,31 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       return schemas;
     }, [columns]);
 
+    // Add state for delete modal
+    const [deleteModalState, setDeleteModalState] =
+      useState<DeleteColumnModalState>({
+        isOpen: false,
+        columnToDelete: null,
+      });
+
+    // Update the column deletion handler
+    const handleDeleteColumn = (column: ColumnType) => {
+      setDeleteModalState({
+        isOpen: true,
+        columnToDelete: column,
+      });
+    };
+
+    // Simplify to a regular async function
+    const confirmDeleteColumn = async () => {
+      if (!deleteModalState.columnToDelete) return;
+      onRemoveColumnId(deleteModalState.columnToDelete.id);
+      setDeleteModalState({
+        isOpen: false,
+        columnToDelete: null,
+      });
+    };
+
     const gridColumns = useMemo(() => {
       const columnsArray = [
         {
@@ -722,7 +758,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
                       icon="trash"
                       size="mini"
                       color="red"
-                      onClick={() => onRemoveColumnId(col.id)}
+                      onClick={() => handleDeleteColumn(col)}
                       disabled={Boolean(extract.started)}
                     />
                   </div>
@@ -800,6 +836,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       extract.started,
       columns,
       handleEditColumn,
+      handleDeleteColumn,
       onRemoveColumnId,
       onAddColumn,
       cellStatusMap,
@@ -1003,25 +1040,6 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       onError: (error) => {
         console.error("Update column error:", error);
         toast.error("An error occurred while updating the column.");
-      },
-    });
-
-    // TODO - re-activate
-    const [deleteColumnMutation] = useMutation<
-      RequestDeleteColumnOutputType,
-      RequestDeleteColumnInputType
-    >(REQUEST_DELETE_COLUMN, {
-      onCompleted: (data) => {
-        if (data.deleteColumn.ok) {
-          toast.success("Column deleted successfully!");
-          // Update your state or refetch queries as needed
-        } else {
-          toast.error(`Failed to delete column: ${data.deleteColumn.message}`);
-        }
-      },
-      onError: (error) => {
-        console.error("Delete column error:", error);
-        toast.error("An error occurred while deleting the column.");
       },
     });
 
@@ -1397,6 +1415,65 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
           }}
           onSubmit={handleColumnSubmit}
         />
+
+        {/* Add Delete Confirmation Modal */}
+        <Modal
+          size="tiny"
+          open={deleteModalState.isOpen}
+          onClose={() =>
+            setDeleteModalState({ isOpen: false, columnToDelete: null })
+          }
+          style={{ borderRadius: "12px", padding: "1.5rem" }}
+        >
+          <Modal.Header
+            style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "1rem" }}
+          >
+            Confirm Delete
+          </Modal.Header>
+          <Modal.Content>
+            <p style={{ color: "#475569" }}>
+              Are you sure you want to delete the column "
+              {deleteModalState.columnToDelete?.name}"?
+            </p>
+            {extract.fieldset?.inUse && (
+              <Message warning>
+                <Message.Header>Note:</Message.Header>
+                <p>
+                  This fieldset is used in multiple places. Deleting this column
+                  will create a new copy of the fieldset for this extract only.
+                </p>
+              </Message>
+            )}
+          </Modal.Content>
+          <Modal.Actions
+            style={{ borderTop: "1px solid #f1f5f9", paddingTop: "1rem" }}
+          >
+            <Button
+              basic
+              onClick={() =>
+                setDeleteModalState({ isOpen: false, columnToDelete: null })
+              }
+              style={{
+                borderRadius: "6px",
+                boxShadow: "none",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              negative
+              onClick={confirmDeleteColumn}
+              style={{
+                borderRadius: "6px",
+                backgroundColor: "#ef4444",
+                marginLeft: "0.75rem",
+              }}
+            >
+              Delete
+            </Button>
+          </Modal.Actions>
+        </Modal>
 
         <style>{`
           @keyframes gradientMove {

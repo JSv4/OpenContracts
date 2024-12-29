@@ -33,6 +33,9 @@ import {
   REQUEST_DELETE_COLUMN,
   RequestDeleteColumnInputType,
   RequestDeleteColumnOutputType,
+  REQUEST_CREATE_COLUMN,
+  RequestCreateColumnInputType,
+  RequestCreateColumnOutputType,
 } from "../../../graphql/mutations";
 import { ExtractCellFormatter } from "./ExtractCellFormatter";
 import {
@@ -54,6 +57,7 @@ import { JSONSchema7 } from "json-schema";
 import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 import { CreateColumnModal } from "../../widgets/modals/CreateColumnModal";
 import { SelectDocumentsModal } from "../../widgets/modals/SelectDocumentsModal";
+import { REQUEST_GET_EXTRACT } from "../../../graphql/queries";
 
 interface DragState {
   isDragging: boolean;
@@ -178,12 +182,18 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
     // console.log("ExtractDataGrid received columns:", columns);
     // console.log("ExtractDataGrid received extract:", extract);
     // console.log("ExtractDataGrid received rows:", rows);
-
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
     const [isDeleting, setIsDeleting] = useState(false);
     const [sortColumns, setSortColumns] = useState<readonly SortColumn[]>([]);
 
-    // console.log("Cells", initialCells);
+    // Add state and handlers for editing columns
+    const [isCreateColumnModalOpen, setIsCreateColumnModalOpen] =
+      useState(false);
+    const [editingColumn, setEditingColumn] = useState<ColumnType | null>(null);
+
+    useEffect(() => {
+      console.log("Editing column:", columns);
+    }, [columns]);
 
     const [dragState, setDragState] = useState<DragState>({
       isDragging: false,
@@ -281,7 +291,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       });
     }, [rows, initialCells, columns, extract]);
 
-    // Column Actions Component
+    // TODO - re-enable(?) Column Actions Component
     const ColumnActions: React.FC<{ column: ExtractGridColumn }> = ({
       column,
     }) => {
@@ -526,23 +536,57 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       return map;
     }, [localCells, deriveCellStatus]);
 
-    // Add state and handlers for editing columns
-    const [isCreateColumnModalOpen, setIsCreateColumnModalOpen] =
-      useState(false);
-    const [editingColumn, setEditingColumn] = useState<ColumnType | null>(null);
-
     const handleEditColumn = (column: ColumnType) => {
       setEditingColumn(column);
       setIsCreateColumnModalOpen(true);
     };
 
-    const handleColumnSubmit = async (data: any) => {
-      // Implement the logic to update the column
-      // For example, you might have:
-      await updateColumnMutation({ variables: { ...data } });
-      // Refresh the columns data or refetch queries as needed
-      setIsCreateColumnModalOpen(false);
+    const handleAddColumn = () => {
+      setIsCreateColumnModalOpen(true);
+      setEditingColumn(null);
     };
+
+    const handleColumnSubmit = async (data: any) => {
+      if (editingColumn) {
+        // Handle edit case
+        await updateColumnMutation({ variables: { ...data } });
+      } else {
+        // Handle create case
+        await createColumn({
+          variables: {
+            fieldsetId: extract.fieldset?.id,
+            ...data,
+          },
+        });
+      }
+      setIsCreateColumnModalOpen(false);
+      setEditingColumn(null);
+    };
+
+    // Add createColumn mutation
+    const [createColumn] = useMutation<
+      RequestCreateColumnOutputType,
+      RequestCreateColumnInputType
+    >(REQUEST_CREATE_COLUMN, {
+      refetchQueries: [
+        {
+          query: REQUEST_GET_EXTRACT,
+          variables: { id: extract ? extract.id : "" },
+        },
+      ],
+      onCompleted: (data) => {
+        if (data.createColumn.ok) {
+          toast.success("Column created successfully!");
+          // Update your state or refetch queries as needed
+        } else {
+          toast.error(`Failed to create column: ${data.createColumn.message}`);
+        }
+      },
+      onError: (error) => {
+        console.error("Create column error:", error);
+        toast.error("An error occurred while creating the column.");
+      },
+    });
 
     // Add this near the top of the component, with other memoized values
     const columnSchemas = useMemo(() => {
@@ -696,7 +740,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
               <Button
                 icon="plus"
                 circular
-                onClick={() => setIsCreateColumnModalOpen(true)}
+                onClick={handleAddColumn}
                 style={{
                   position: "absolute",
                   right: "16px",
@@ -903,6 +947,12 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       RequestUpdateColumnOutputType,
       RequestUpdateColumnInputType
     >(REQUEST_UPDATE_COLUMN, {
+      refetchQueries: [
+        {
+          query: REQUEST_GET_EXTRACT,
+          variables: { id: extract ? extract.id : "" },
+        },
+      ],
       onCompleted: (data) => {
         if (data.updateColumn.ok) {
           toast.success("Column updated successfully!");
@@ -917,6 +967,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       },
     });
 
+    // TODO - re-activate
     const [deleteColumnMutation] = useMutation<
       RequestDeleteColumnOutputType,
       RequestDeleteColumnInputType
@@ -1010,12 +1061,12 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       []
     );
 
-    // Clear filters
+    // TODO - re-enable Clear filters
     const clearFilters = useCallback(() => {
       setFilters({});
     }, []);
 
-    // Toggle filters
+    // TODO - re-enable Toggle filters
     const toggleFilters = useCallback(() => {
       setFiltersEnabled((prev) => !prev);
     }, []);
@@ -1036,7 +1087,6 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       });
     }, [gridRows, filters, filtersEnabled]);
 
-    // Update gridColumns to include filter headers
     const gridColumnsWithFilters = useMemo(() => {
       return gridColumns.map((col) => {
         const isPrimitive = isPrimitiveColumn(col.key);
@@ -1080,7 +1130,6 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       handleFilterChange,
     ]);
 
-    // Add this function inside your component
     const getComparator = useCallback((sortColumn: string) => {
       return (a: ExtractGridRow, b: ExtractGridRow) => {
         const aValue = a[sortColumn];
@@ -1106,7 +1155,6 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       };
     }, []);
 
-    // Replace your existing filteredGridRows with sortedGridRows
     const sortedGridRows = useMemo(() => {
       if (sortColumns.length === 0) return filteredGridRows;
 
@@ -1177,7 +1225,6 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       exportToCsv,
     }));
 
-    // Add this function near your other utility functions
     const getRowHeight = useCallback((row: ExtractGridRow) => {
       if (row.id === "placeholder") {
         return 40;
@@ -1303,7 +1350,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
         </div>
 
         <CreateColumnModal
-          open={isCreateColumnModalOpen}
+          open={isCreateColumnModalOpen || editingColumn !== null}
           existing_column={editingColumn}
           onClose={() => {
             setIsCreateColumnModalOpen(false);

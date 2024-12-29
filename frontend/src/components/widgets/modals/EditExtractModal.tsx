@@ -30,7 +30,6 @@ import {
   REQUEST_DELETE_COLUMN,
   REQUEST_REMOVE_DOC_FROM_EXTRACT,
   REQUEST_START_EXTRACT,
-  REQUEST_UPDATE_COLUMN,
   RequestAddDocToExtractInputType,
   RequestAddDocToExtractOutputType,
   RequestCreateColumnInputType,
@@ -41,8 +40,6 @@ import {
   RequestRemoveDocFromExtractOutputType,
   RequestStartExtractInputType,
   RequestStartExtractOutputType,
-  RequestUpdateColumnInputType,
-  RequestUpdateColumnOutputType,
   REQUEST_CREATE_FIELDSET,
   RequestCreateFieldsetInputType,
   RequestCreateFieldsetOutputType,
@@ -51,7 +48,6 @@ import {
   RequestUpdateExtractOutputType,
 } from "../../../graphql/mutations";
 import { toast } from "react-toastify";
-import { CreateColumnModal } from "./CreateColumnModal";
 import {
   addingColumnToExtract,
   editingColumnForExtract,
@@ -472,19 +468,6 @@ export const EditExtractModal = ({
     },
   });
 
-  const handleCreateColumn = useCallback(
-    (data: any) => {
-      if (!extract?.fieldset?.id) return;
-      createColumn({
-        variables: {
-          fieldsetId: extract.fieldset.id,
-          ...data,
-        },
-      });
-    },
-    [createColumn, extract?.fieldset?.id]
-  );
-
   // Define the handler for adding a column
   const handleAddColumn = useCallback(() => {
     if (!extract?.fieldset) return;
@@ -507,26 +490,6 @@ export const EditExtractModal = ({
       notifyOnNetworkStatusChange: true,
     }
   );
-
-  const [updateColumn, { loading: update_column_loading }] = useMutation<
-    RequestUpdateColumnOutputType,
-    RequestUpdateColumnInputType
-  >(REQUEST_UPDATE_COLUMN, {
-    refetchQueries: [
-      {
-        query: REQUEST_GET_EXTRACT,
-        variables: { id: extract ? extract.id : "" },
-      },
-    ],
-    onCompleted: () => {
-      toast.success("SUCCESS! Updated column.");
-      editingColumnForExtract(null);
-    },
-    onError: (err) => {
-      toast.error("ERROR! Could not update column.");
-      editingColumnForExtract(null);
-    },
-  });
 
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
@@ -601,11 +564,7 @@ export const EditExtractModal = ({
 
   // Adjust isLoading to show loading indicator when data is first loading
   const isLoading =
-    loading ||
-    create_column_loading ||
-    update_column_loading ||
-    add_docs_loading ||
-    remove_docs_loading;
+    loading || create_column_loading || add_docs_loading || remove_docs_loading;
 
   // Determine if the grid should show loading
   const isGridLoading = extract?.started && !extract.finished && !extract.error;
@@ -616,26 +575,6 @@ export const EditExtractModal = ({
 
   return (
     <>
-      <CreateColumnModal
-        open={adding_column_to_extract !== null}
-        existing_column={null}
-        onSubmit={
-          adding_column_to_extract
-            ? (data) => handleCreateColumn(data)
-            : () => {}
-        }
-        onClose={() => addingColumnToExtract(null)}
-      />
-      {editing_column_for_extract === null ? (
-        <></>
-      ) : (
-        <CreateColumnModal
-          open={editing_column_for_extract !== null}
-          existing_column={editing_column_for_extract}
-          onSubmit={(data: ColumnType) => updateColumn({ variables: data })}
-          onClose={() => editingColumnForExtract(null)}
-        />
-      )}
       <Modal
         closeIcon
         size="fullscreen"

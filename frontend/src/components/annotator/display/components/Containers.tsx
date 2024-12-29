@@ -55,23 +55,24 @@ export const SelectionInfo = styled.div<SelectionInfoProps>`
   font-size: 12px;
   user-select: none;
   box-sizing: border-box;
+  transition: all 0.2s ease-in-out;
 
   ${(props) =>
     props.approved &&
     css`
-      border-top: 2px solid green;
-      border-left: 2px solid green;
-      border-right: 2px solid green;
-      animation: ${pulseGreen} 2s infinite;
+      border-top: 2px solid #2ecc71;
+      border-left: 2px solid #2ecc71;
+      border-right: 2px solid #2ecc71;
+      box-shadow: 0 0 8px rgba(46, 204, 113, 0.2);
     `}
 
   ${(props) =>
     props.rejected &&
     css`
-      border-top: 2px solid maroon;
-      border-left: 2px solid maroon;
-      border-right: 2px solid maroon;
-      animation: ${pulseMaroon} 2s infinite;
+      border-top: 2px solid #e74c3c;
+      border-left: 2px solid #e74c3c;
+      border-right: 2px solid #e74c3c;
+      box-shadow: 0 0 8px rgba(231, 76, 60, 0.2);
     `}
   
   * {
@@ -80,10 +81,17 @@ export const SelectionInfo = styled.div<SelectionInfoProps>`
 `;
 
 export const SelectionInfoContainer = styled.div`
+  position: relative;
   display: flex;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+  pointer-events: none; // Let hover events pass through to children
+
+  /* Enable pointer events only on interactive elements */
+  > * {
+    pointer-events: auto;
+  }
 `;
 
 export const LabelTagContainer = styled.div<{

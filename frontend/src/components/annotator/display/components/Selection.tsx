@@ -1,17 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import _ from "lodash";
+import styled from "styled-components";
 
-import { Image, Icon } from "semantic-ui-react";
+import { Icon } from "semantic-ui-react";
 
-import {
-  HorizontallyJustifiedStartDiv,
-  VerticallyJustifiedEndDiv,
-} from "../../sidebar/common";
+import { VerticallyJustifiedEndDiv } from "../../sidebar/common";
 
-import {
-  annotationSelectedViaRelationship,
-  getRelationImageHref,
-} from "../../utils";
+import { annotationSelectedViaRelationship } from "../../utils";
 
 import { PermissionTypes } from "../../../types";
 import { SelectionBoundary } from "./SelectionBoundary";
@@ -20,7 +15,10 @@ import {
   SelectionInfo,
   SelectionInfoContainer,
 } from "./Containers";
-import { getBorderWidthFromBounds } from "../../../../utils/transform";
+import {
+  getBorderWidthFromBounds,
+  getContrastColor,
+} from "../../../../utils/transform";
 import RadialButtonCloud, {
   CloudButtonItem,
 } from "../../../widgets/buttons/RadialButtonCloud";
@@ -53,6 +51,63 @@ interface SelectionProps {
   allowFeedback?: boolean;
   scrollIntoView?: boolean;
 }
+
+const RelationshipIndicator = styled.div<{ type: string; color: string }>`
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: ${
+    (props) =>
+      props.type === "SOURCE"
+        ? "rgba(25, 118, 210, 0.95)" // Blue for source
+        : "rgba(230, 74, 25, 0.95)" // Orange-red for target
+  };
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: help;
+  z-index: 1; // Ensure it's above other elements
+
+  /* Create tooltip */
+  &::before {
+    content: "${(props) => props.type}";
+    position: absolute;
+    left: -8px;
+    transform: translateX(-100%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none; // Prevent tooltip from interfering with hover
+    transition: opacity 0.2s ease;
+  }
+
+  &::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: white;
+    animation: ${(props) =>
+      props.type === "SOURCE"
+        ? "sourcePulse 2s infinite"
+        : "targetPulse 2s infinite"};
+    pointer-events: none;
+  }
+
+  /* Show tooltip on hover */
+  &:hover::before {
+    opacity: 1;
+  }
+`;
 
 export const Selection: React.FC<SelectionProps> = ({
   selected,
@@ -207,6 +262,14 @@ export const Selection: React.FC<SelectionProps> = ({
     );
   }
 
+  const handleMouseEnter = () => {
+    setHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setHovered(false);
+  };
+
   return (
     <>
       <SelectionBoundary
@@ -232,31 +295,13 @@ export const Selection: React.FC<SelectionProps> = ({
             showBoundingBox={showBoundingBoxes}
             approved={approved}
             rejected={rejected}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
           >
             <SelectionInfoContainer id="SelectionInfoContainer">
-              <HorizontallyJustifiedStartDiv>
-                <VerticallyJustifiedEndDiv>
-                  <div style={{ position: "absolute", top: "1rem" }}>
-                    <Image
-                      size="mini"
-                      src={getRelationImageHref(relationship_type)}
-                    />
-                  </div>
-                </VerticallyJustifiedEndDiv>
-                <VerticallyJustifiedEndDiv>
-                  <div>
-                    <span
-                      className={
-                        ["SOURCE", "TARGET"].includes(relationship_type)
-                          ? "blinking-text"
-                          : ""
-                      }
-                    >
-                      {relationship_type}
-                    </span>
-                  </div>
-                </VerticallyJustifiedEndDiv>
-              </HorizontallyJustifiedStartDiv>
+              {relationship_type && (
+                <RelationshipIndicator type={relationship_type} color={color} />
+              )}
               <VerticallyJustifiedEndDiv>
                 <LabelTagContainer
                   hidden={hidden}

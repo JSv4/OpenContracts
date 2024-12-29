@@ -50,8 +50,15 @@ export const ViewSettingsPopup: React.FC<ViewSettingsPopupProps> = ({
   };
 
   const handleShowStructuralChange = () => {
-    setLocalShowStructural(!localShowStructural);
-    setShowStructural(!localShowStructural);
+    const newStructuralValue = !localShowStructural;
+    setLocalShowStructural(newStructuralValue);
+    setShowStructural(newStructuralValue);
+
+    // If enabling structural view, force "show selected only" to be true
+    if (newStructuralValue) {
+      setLocalShowSelected(true);
+      setShowSelectedOnly(true);
+    }
   };
 
   const handleShowBoundingBoxesChange = (checked: boolean) => {
@@ -68,36 +75,70 @@ export const ViewSettingsPopup: React.FC<ViewSettingsPopupProps> = ({
     <Popup
       className="SettingsPopup"
       on="click"
-      trigger={<Label as="a" corner="left" icon="eye" color="violet" />}
-      style={{ padding: "0px", zIndex: "2100 !important" }}
+      trigger={
+        <Label as="a" corner="left" icon="sliders horizontal" color="violet" />
+      }
+      style={{ padding: "1em", zIndex: "2100 !important" }}
     >
-      <Grid celled="internally" columns="equal" style={{ width: `400px` }}>
+      <Grid
+        celled="internally"
+        columns="equal"
+        style={{
+          width: `420px`,
+          background: "#f9f9f9",
+          borderRadius: "8px",
+        }}
+      >
         <Grid.Row>
           <Grid.Column textAlign="center" verticalAlign="middle">
-            <Header size="tiny">Show Only Selected</Header>
+            <Header size="tiny" style={{ marginBottom: "0.8em" }}>
+              <i className="icon user outline" />
+              Show Only Selected
+            </Header>
             <Checkbox
               toggle
               onChange={(e, data) =>
                 handleShowSelectedChange(data?.checked ?? false)
               }
               checked={localShowSelected}
+              disabled={localShowStructural}
+              style={{ transform: "scale(1.1)" }}
             />
           </Grid.Column>
 
           <Grid.Column textAlign="center" verticalAlign="middle">
-            <Header size="tiny">Show Bounding Boxes</Header>
+            <Header size="tiny" style={{ marginBottom: "0.8em" }}>
+              <i className="icon square outline" />
+              Show Bounding Boxes
+            </Header>
             <Checkbox
               toggle
               onChange={(e, data) =>
                 handleShowBoundingBoxesChange(data?.checked ?? false)
               }
               checked={localShowBoundingBoxes}
+              style={{ transform: "scale(1.1)" }}
             />
           </Grid.Column>
         </Grid.Row>
         <Grid.Row>
           <Grid.Column textAlign="center" verticalAlign="middle">
-            <Header size="tiny">Label Display Behavior</Header>
+            <Header size="tiny" style={{ marginBottom: "0.8em" }}>
+              <i className="icon sitemap" />
+              Show Structural
+            </Header>
+            <Checkbox
+              toggle
+              onChange={handleShowStructuralChange}
+              checked={localShowStructural}
+              style={{ transform: "scale(1.1)" }}
+            />
+          </Grid.Column>
+          <Grid.Column textAlign="center" verticalAlign="middle">
+            <Header size="tiny" style={{ marginBottom: "0.8em" }}>
+              <i className="icon tags" />
+              Label Display
+            </Header>
             <Dropdown
               onChange={(e, { value }) =>
                 handleLabelBehaviorChange(value as LabelDisplayBehavior)
@@ -108,8 +149,13 @@ export const ViewSettingsPopup: React.FC<ViewSettingsPopupProps> = ({
               style={{ minWidth: "12em" }}
             />
           </Grid.Column>
-          <Grid.Column textAlign="center" verticalAlign="middle">
-            <Header size="tiny">These Labels Only</Header>
+        </Grid.Row>
+        <Grid.Row>
+          <Grid.Column textAlign="center" verticalAlign="middle" width={16}>
+            <Header size="tiny" style={{ marginBottom: "0.8em" }}>
+              <i className="icon filter" />
+              Label Filter
+            </Header>
             <ViewLabelSelector />
           </Grid.Column>
         </Grid.Row>

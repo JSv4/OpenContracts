@@ -25,7 +25,6 @@ ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS", default=["localhost", "0.0.0.0", "127.0.0.1"]
 )
 
-
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
 DEBUG = env.bool("DJANGO_DEBUG", False)
 
@@ -466,20 +465,7 @@ GRAPHQL_JWT = {
 # Constants for Permissioning
 DEFAULT_PERMISSIONS_GROUP = "Public Objects Access"
 
-# Nlm-ingestor settings
-# -----------------------------------------------------------------------------
-NLM_INGESTOR_ACTIVE = env.bool(
-    "NLM_INGESTOR_ACTIVE", False
-)  # Use nlm-ingestor where this is True... otherwise PAWLs
-NLM_INGEST_USE_OCR = (
-    True  # IF True, allow ingestor to use OCR when no text found in pdf.
-)
-NLM_INGEST_HOSTNAME = (
-    "http://nlm-ingestor:5001"  # Hostname to send nlm-ingestor REST requests to
-)
-NLM_INGEST_API_KEY = None  # If the endpoint is secured with an API_KEY, specify it here, otherwise use None
-
-# Embeddings / Semantic Search
+# Embeddings / Semantic Search - TODO move to EMBEDDER_KWARGS and use like PARSER_KWARGS
 EMBEDDINGS_MICROSERVICE_URL = "http://vector-embedder:8000"
 VECTOR_EMBEDDER_API_KEY = "abc123"
 
@@ -558,6 +544,19 @@ PREFERRED_EMBEDDERS = {
     "text/plain": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # noqa
     # Add more MIME types as needed
+}
+
+PARSER_KWARGS = {
+    "opencontractserver.pipeline.parsers.docling_parser.DoclingParser": {
+        "force_ocr": False,
+        "roll_up_groups": False,
+        "llm_enhanced_hierarchy": False,
+    },
+    "opencontractserver.pipeline.parsers.nlm_ingest_parser.NLMIngestParser": {
+        "endpoint": "http://nlm-ingestor:5001",
+        "api_key": "",
+        "use_ocr": True,
+    },
 }
 
 # Default embedder

@@ -58,6 +58,8 @@ def ingest_doc(self, user_id: int, doc_id: int) -> None:
     """
     Ingests a document using the appropriate parser based on the document's MIME type.
     The parser class is determined using get_component_by_name.
+    If there is a dict in settings named <parser_name>_kwargs, it is passed to the parser
+    as keyword arguments.
 
     Args:
         user_id (int): The ID of the user.
@@ -81,6 +83,13 @@ def ingest_doc(self, user_id: int, doc_id: int) -> None:
     if not parser_name:
         raise ValueError(f"No parser defined for MIME type '{document.file_type}'")
 
+    # Attempt to load parser kwargs
+    parser_kwargs = {}
+    if hasattr(settings, "PARSER_KWARGS"):
+        kwargs = getattr(settings, "PARSER_KWARGS", {})
+        parser_kwargs = kwargs.get(parser_name, {})
+        logger.debug(f"Resolved parser kwargs for '{parser_name}': {parser_kwargs}")
+
     # Get the parser class using get_component_by_name
     try:
         parser_class = get_component_by_name(parser_name)
@@ -89,9 +98,9 @@ def ingest_doc(self, user_id: int, doc_id: int) -> None:
         logger.error(f"Failed to load parser '{parser_name}': {e}")
         raise
 
-    # Call the parser's parse_document method
+    # Call the parser's process_document method
     try:
-        parser_instance.process_document(user_id, doc_id)
+        parser_instance.process_document(user_id, doc_id, **parser_kwargs)
         logger.info(
             f"Document {doc_id} ingested successfully using parser '{parser_name}'"
         )

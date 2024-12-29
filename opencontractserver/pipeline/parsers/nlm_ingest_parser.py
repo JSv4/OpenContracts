@@ -27,20 +27,29 @@ class NLMIngestParser(BaseParser):
     supported_file_types = [FileTypeEnum.PDF]
 
     def parse_document(
-        self, user_id: int, doc_id: int
+        self, user_id: int, doc_id: int, **kwargs
     ) -> Optional[OpenContractDocExport]:
         """
         Parses a document using the NLM ingest service and ensures that all annotations
         have 'structural' set to True and 'annotation_type' set to SPAN_LABEL.
 
+        Now, we load configuration from **kwargs, falling back to Django settings if not provided.
+
         Args:
             user_id (int): ID of the user.
             doc_id (int): ID of the document to parse.
+            **kwargs: Parser configuration arguments such as 'endpoint', 'api_key', and 'use_ocr'.
 
         Returns:
-            Optional[OpenContractDocExport]: The parsed document data, or None if parsing failed.
+            Optional[OpenContractDocExport]: The parsed document data,
+            or None if parsing failed.
         """
         logger.info(f"NLMIngestParser - Parsing doc {doc_id} for user {user_id}")
+
+        # Retrieve config from kwargs or fallback to settings
+        endpoint = kwargs.get("endpoint", "http://nlm-ingestor:5001")
+        api_key = kwargs.get("api_key", "")
+        use_ocr_config = kwargs.get("use_ocr", False)
 
         # Retrieve the document
         document = Document.objects.get(pk=doc_id)
@@ -53,11 +62,7 @@ class NLMIngestParser(BaseParser):
             logger.debug(f"Document {doc_id} needs OCR: {needs_ocr}")
 
             # Prepare request headers
-            headers = (
-                {"API_KEY": settings.NLM_INGEST_API_KEY}
-                if settings.NLM_INGEST_API_KEY
-                else {}
-            )
+            headers = {"API_KEY": api_key} if api_key else {}
 
             # Reset file pointer
             doc_file.seek(0)
@@ -66,14 +71,12 @@ class NLMIngestParser(BaseParser):
             files = {"file": doc_file}
             params = {
                 "calculate_opencontracts_data": "yes",
-                "applyOcr": "yes"
-                if needs_ocr and settings.NLM_INGEST_USE_OCR
-                else "no",
+                "applyOcr": "yes" if (needs_ocr and use_ocr_config) else "no",
             }
 
             # Make the POST request to the NLM ingest service
             response = requests.post(
-                f"{settings.NLM_INGEST_HOSTNAME}/api/parseDocument",
+                f"{endpoint}/api/parseDocument",
                 headers=headers,
                 files=files,
                 params=params,
@@ -101,8 +104,7 @@ class NLMIngestParser(BaseParser):
                 annotation["annotation_type"] = TOKEN_LABEL
 
         logger.info(
-            f"Open contracts data labelled text: {open_contracts_data['labelled_text']}"
+            f"Open contracts data labelled text: {open_contracts_data.get('labelled_text', [])}"
         )
 
-        # Save parsed data
         return open_contracts_data

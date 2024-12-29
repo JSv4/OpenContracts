@@ -131,6 +131,7 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
           {annotation.annotationLabel.text}
         </AnnotationLabel>
         {!read_only &&
+          !annotation.structural &&
           annotation.myPermissions.includes(PermissionTypes.CAN_REMOVE) &&
           onDelete && (
             <DeleteButton

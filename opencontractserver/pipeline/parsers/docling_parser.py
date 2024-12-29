@@ -30,6 +30,7 @@ from opencontractserver.pipeline.base.parser import BaseParser
 from opencontractserver.types.dicts import (
     OpenContractDocExport,
     OpenContractsAnnotationPythonType,
+    OpenContractsRelationshipPythonType,
     OpenContractsSinglePageAnnotationType,
     PawlsPagePythonType,
     PawlsTokenPythonType,
@@ -38,93 +39,6 @@ from opencontractserver.utils.files import check_if_pdf_needs_ocr
 from opencontractserver.utils.layout import reassign_annotation_hierarchy
 
 logger = logging.getLogger(__name__)
-
-# def print_labelled_text_hierarchy(
-#     labelled_text: list[OpenContractsAnnotationPythonType],
-#     output_file_path: str
-# ) -> None:
-#     """
-#     Traverse a list of OpenContractsAnnotationPythonType items (labelled_text), compute
-#     and record an indent level for each entry, then write an indented, hierarchical
-#     view of their rawText fields to a specified file.
-
-#     Indentation logic:
-#       • Items with no parent_id are considered top-level and have indent_level = 0.
-#       • Items with a valid parent_id have indent_level = parent_indent_level + 1.
-
-#     The hierarchy is assumed to be acyclic. If an item references a parent_id that isn't
-#     in the labelled_text's IDs, it will be ignored.
-
-#     Args:
-#         labelled_text (list[OpenContractsAnnotationPythonType]): The annotated text elements
-#             to traverse.
-#         output_file_path (str): The path of the file where the indented structure will
-#             be written.
-#     """
-#     # -------------------------------------------------------------------------
-#     # STEP 1: Build a map of an item's "id" to the item object and adjacency lists.
-#     # -------------------------------------------------------------------------
-#     by_id = {}
-#     children_map = {}
-
-#     for item in labelled_text:
-#         item_id = item.get("id")
-#         if item_id is not None:
-#             by_id[item_id] = item
-
-#     # Prepare adjacency lists: parent_id -> list of child items
-#     for item in labelled_text:
-#         parent_id = item.get("parent_id")
-#         child_id = item.get("id")
-#         if child_id is None:
-#             continue
-
-#         if parent_id not in children_map:
-#             children_map[parent_id] = []
-#         children_map[parent_id].append(child_id)
-
-#     # -------------------------------------------------------------------------
-#     # STEP 2: Assign indent levels. We'll do this via a DFS from each top-level node.
-#     # -------------------------------------------------------------------------
-#     indent_levels = {}
-
-#     def dfs_assign_indent(node_id: str | int, indent: int) -> None:
-#         indent_levels[node_id] = indent
-#         for cid in children_map.get(node_id, []):
-#             dfs_assign_indent(cid, indent + 1)
-
-#     # Find top-level items (those with no valid parent_id or parent_id=None)
-#     top_level_nodes = [it.get("id") for it in labelled_text if it.get("parent_id") is None]
-#     for root_id in top_level_nodes:
-#         if root_id is not None:
-#             dfs_assign_indent(root_id, 0)
-
-#     # -------------------------------------------------------------------------
-#     # STEP 3: Write the indented text to the output file.
-#     #         We'll iterate through by_id in the order we just assigned indent levels.
-#     #         If we want a strictly "reading" order, we might need a more structured
-#     #         approach, but for simplicity, we'll just group by top-level first, then
-#     #         sub-hierarchies.
-#     # -------------------------------------------------------------------------
-#     visited = set()
-
-#     def dfs_write_indented(node_id: str | int, file_obj, indent: int) -> None:
-#         visited.add(node_id)
-#         item = by_id.get(node_id)
-#         if not item:
-#             return
-#         # Craft the indented text
-#         text_to_write = ("    " * indent) + f"- {item['rawText']}\n"
-#         file_obj.write(text_to_write)
-
-#         for cid in children_map.get(node_id, []):
-#             if cid not in visited:
-#                 dfs_write_indented(cid, file_obj, indent + 1)
-
-#     with open(output_file_path, "w", encoding="utf-8") as f:
-#         for root_id in top_level_nodes:
-#             if root_id is not None and root_id not in visited:
-#                 dfs_write_indented(root_id, f, 0)
 
 
 def build_text_lookup(docling_document: DoclingDocument) -> dict[str, str]:
@@ -156,20 +70,23 @@ def convert_docling_item_to_annotation(
     spatial_indices_by_page: dict[int, STRtree],
     tokens_by_page: dict[int, list[PawlsTokenPythonType]],
     token_indices_by_page: dict[int, np.ndarray],
+    page_dimensions: dict[
+        int, tuple[float, float]
+    ],  # Map of page_no to (width, height),
 ) -> Optional[OpenContractsAnnotationPythonType]:
     """Convert a document item to an annotation dictionary format.
 
-    Creates a structured annotation dictionary containing bounding box information,
-    text content, and metadata for the given document item.
-
     Args:
         item: A document item (TextItem, SectionHeaderItem, or ListItem)
+        spatial_indices_by_page: Dictionary mapping page numbers to spatial indices
+        tokens_by_page: Dictionary mapping page numbers to token lists
+        token_indices_by_page: Dictionary mapping page numbers to token indices arrays
+        page_dimensions: Dictionary mapping page numbers to (width, height) tuples
 
     Returns:
         An AnnotationType dictionary containing the item's information, or None if
         the item lacks required provenance data
     """
-    # Check for required attributes
     if not (hasattr(item, "prov") and item.prov):
         return None
 
@@ -177,12 +94,23 @@ def convert_docling_item_to_annotation(
     if not first_prov.bbox:
         return None
 
-    # Extract basic information
     bbox = first_prov.bbox
-    page_no = first_prov.page_no
+    page_no = first_prov.page_no - 1  # Convert 1-indexed to 0-indexed
     item_text = getattr(item, "text", "")
 
-    chunk_bbox = box(bbox.l, bbox.t, bbox.r, bbox.b)
+    logger.info(f"Page dimensions: {page_dimensions}")
+
+    # Get page height for coordinate transformation
+    _, page_height = page_dimensions.get(page_no, (0, 0))
+    if page_height == 0:
+        logger.warning(f"No page dimensions found for page {page_no}")
+        return None
+
+    # Transform Y coordinates from PDF (bottom-left) to screen (top-left) coordinate system
+    screen_bottom = page_height - bbox.b
+    screen_top = page_height - bbox.t
+
+    chunk_bbox = box(bbox.l, screen_top, bbox.r, screen_bottom)
     spatial_index = spatial_indices_by_page.get(page_no)
     tokens = tokens_by_page.get(page_no)
     token_indices_array = token_indices_by_page.get(page_no)
@@ -191,6 +119,7 @@ def convert_docling_item_to_annotation(
         logger.warning(
             f"No spatial index or tokens found for page {page_no}; skipping doc_item"
         )
+        return None
 
     candidate_indices = spatial_index.query(chunk_bbox)
     candidate_geometries = spatial_index.geometries.take(candidate_indices)
@@ -208,9 +137,9 @@ def convert_docling_item_to_annotation(
         page_no: {
             "bounds": {
                 "left": bbox.l,
-                "top": bbox.t,
+                "top": screen_top,
                 "right": bbox.r,
-                "bottom": bbox.b,
+                "bottom": screen_bottom,
             },
             "tokensJsons": token_ids,  # Empty list as per requirements
             "rawText": item_text,
@@ -225,7 +154,7 @@ def convert_docling_item_to_annotation(
         "page": page_no,
         "annotation_json": annotation_json,
         "parent_id": None,  # As specified
-        "annotation_type": getattr(item, "label", None),
+        "annotation_type": "TOKEN_LABEL",  # We are ONLY processing PDFs so this must be TOKEN_LABEL type
         "structural": True,
     }
 
@@ -234,7 +163,8 @@ def convert_docling_item_to_annotation(
 
 class DoclingParser(BaseParser):
     """
-    Parser that uses Docling to convert PDF documents into OpenContracts format.
+    A parser that uses DoclingDocument objects (and optional OCR or PDF parsing)
+    to produce annotations and relationships.
     """
 
     title = "Docling Parser"
@@ -271,15 +201,21 @@ class DoclingParser(BaseParser):
         self, user_id: int, doc_id: int, **kwargs
     ) -> Optional[OpenContractDocExport]:
         """
-        Parses the document and converts it into the OpenContractDocExport format.
+        Reads a DoclingDocument, constructs annotation JSON for each chunk,
+        assigns parent-child relationships (via parent_id), and also creates
+        group relationships. Specifically, if multiple Docling chunks share the
+        same heading, all the items in those chunks will be combined into a single
+        relationship (with shared heading as the source, and all collected items
+        as targets).
 
         Args:
-            user_id (int): The ID of the user.
-            doc_id (int): The ID of the document.
-            **kwargs: Additional keyword arguments.
+            user_id (int): The ID of the user parsing the document.
+            doc_id (int): The ID of the target Document in the database.
+            **kwargs: Additional optional arguments (e.g. "force_ocr", "llm_enhanced_hierarchy", etc.)
 
         Returns:
-            Optional[OpenContractDocExport]: The parsed document data or None if parsing fails.
+            Optional[OpenContractDocExport]: A dictionary containing the doc metadata,
+            annotations ("labelled_text"), and relationships (including grouped relationships).
         """
         logger.info(f"DoclingParser - Parsing doc {doc_id} for user {user_id}")
 
@@ -291,6 +227,13 @@ class DoclingParser(BaseParser):
             logger.info(
                 "Force OCR is enabled - this adds extra processing time and may not be necessary. "
                 "We normally try to intelligently determine if OCR is needed."
+            )
+
+        roll_up_groups = kwargs.get("roll_up_groups", False)
+        if roll_up_groups:
+            logger.info(
+                "Roll up groups is enabled - this will roll up groups of items that have the same "
+                "parent_id into a single group. If you'd prefer smaller groups, set this to False."
             )
 
         # Read pdf bytes and create DocumentStream
@@ -305,14 +248,21 @@ class DoclingParser(BaseParser):
             if result.status != ConversionStatus.SUCCESS:
                 raise Exception(f"Conversion failed: {result.errors}")
 
+            flattened_heading_annot_id_to_children: dict[
+                Union[str, int], list[Union[str, int]]
+            ] = {}
+            heading_annot_id_to_children: list[
+                tuple[Union[str, int], list[Union[str, int]]]
+            ] = []
             doc: DoclingDocument = result.document
 
-            # Pass pdf_bytes into the next steps for pawls content extraction, OCR checks, etc.
+            # 2) generate pawls/tokens/etc.
             (
                 pawls_pages,
                 spatial_indices_by_page,
                 tokens_by_page,
                 token_indices_by_page,
+                page_dimensions,
                 content,
             ) = self._generate_pawls_content(doc, pdf_bytes, force_ocr)
 
@@ -320,11 +270,19 @@ class DoclingParser(BaseParser):
             chunker = HierarchicalChunker()
             chunks = list(chunker.chunk(dl_doc=doc))
 
+            # 3) Build annotation JSON from doc items
+            base_annotation_lookup = {}
+            text_lookup = {}
+
             text_lookup = build_text_lookup(doc)
             logger.info(f"Text lookup: {text_lookup}")
             base_annotation_lookup = {
                 text.self_ref: convert_docling_item_to_annotation(
-                    text, spatial_indices_by_page, tokens_by_page, token_indices_by_page
+                    text,
+                    spatial_indices_by_page,
+                    tokens_by_page,
+                    token_indices_by_page,
+                    page_dimensions,
                 )
                 for text in doc.texts
             }
@@ -344,6 +302,14 @@ class DoclingParser(BaseParser):
                     logger.info(f"Find heading: {heading}")
                     parent_ref = text_lookup.get(heading.strip())
                     logger.info(f"Found parent ref: {parent_ref}")
+
+                    # Add parent_ref to heading_annot_id_to_children if it doesn't exist
+                    if roll_up_groups:
+                        if parent_ref not in flattened_heading_annot_id_to_children:
+                            flattened_heading_annot_id_to_children[parent_ref] = []
+                    else:
+                        heading_annot_id_to_children.append((parent_ref, []))
+
                 else:
                     parent_ref = None
 
@@ -351,15 +317,66 @@ class DoclingParser(BaseParser):
                     logger.info(f"Number of doc_items: {len(chunk.meta.doc_items)}")
 
                     # Inspect each doc_item
+                    accumulator = []
+                    prev_parent_ref = parent_ref
+
                     for j, item in enumerate(chunk.meta.doc_items):
 
                         annotation = base_annotation_lookup.get(item.self_ref)
                         if annotation:
+
+                            if prev_parent_ref != parent_ref:
+                                if not roll_up_groups and len(accumulator) > 0:
+                                    heading_annot_id_to_children.append(
+                                        (prev_parent_ref, accumulator)
+                                    )
+                                accumulator = []
+                                prev_parent_ref = parent_ref
+
                             annotation["parent_id"] = parent_ref
+
+                            # Add the annotation id to the parent's children list
+                            if roll_up_groups:
+                                if parent_ref is not None:
+                                    flattened_heading_annot_id_to_children[
+                                        parent_ref
+                                    ].append(annotation["id"])
+
                         else:
                             logger.error(
                                 f"No annotation found in base_annotation_lookup for text item with ref {item.self_ref}"
                             )
+
+            # 2) Build relationships from heading_annot_id_to_children
+            relationships: list[OpenContractsRelationshipPythonType] = []
+            rel_counter = 0
+            # If we're rolling up the groups...
+            if roll_up_groups:
+                for (
+                    heading_id,
+                    child_ids,
+                ) in flattened_heading_annot_id_to_children.items():
+                    relationship_entry = {
+                        "id": f"group-rel-{rel_counter}",
+                        "relationshipLabel": "Docling Group Relationship",
+                        "source_annotation_ids": [heading_id],
+                        "target_annotation_ids": list(child_ids),
+                        "structural": True,  # related to doc not corpus (underlying structure of document)
+                    }
+                    relationships.append(relationship_entry)
+                    rel_counter += 1
+            # Otherwise...
+            else:
+                for heading_id, child_ids in heading_annot_id_to_children:
+                    relationship_entry = {
+                        "id": f"group-rel-{rel_counter}",
+                        "relationshipLabel": "Docling Group Relationship",
+                        "source_annotation_ids": [heading_id],
+                        "target_annotation_ids": list(child_ids),
+                        "structural": True,  # related to doc not corpus (underlying structure of document)
+                    }
+                    relationships.append(relationship_entry)
+                    rel_counter += 1
 
             # Create OpenContracts document structure
             open_contracts_data: OpenContractDocExport = {
@@ -372,13 +389,14 @@ class DoclingParser(BaseParser):
                 "page_count": len(pawls_pages),
                 "doc_labels": [],
                 "labelled_text": list(base_annotation_lookup.values()),
+                "relationships": relationships,
             }
             #########################################################
 
             # IF LLM_ENHANCED_HIERARCHY is True, traverse the structure produced by Docling (which is
             # clean and has nicely separated sections BUT very poor
             # in terms of complex doc hierarchy) and use LLM to infer relationships between sections.
-            # EXPERIMENTAL
+            # EXPERIMENTAL - NOT UPDATED TO PRODUCE GROUP RELATIONSHIPS
             if kwargs.get("llm_enhanced_hierarchy", False):
                 logger.info(
                     "LLM-enhanced hierarchy enabled - adds processing time but improves hierarchy quality"
@@ -447,6 +465,7 @@ class DoclingParser(BaseParser):
         dict[int, STRtree],
         dict[int, list[PawlsTokenPythonType]],
         dict[int, np.ndarray],
+        dict[int, tuple[float, float]],  # Add page_dimensions to return tuple
         str,
     ]:
         """
@@ -479,6 +498,7 @@ class DoclingParser(BaseParser):
         spatial_indices_by_page: dict[int, STRtree] = {}
         tokens_by_page: dict[int, list[PawlsTokenPythonType]] = {}
         token_indices_by_page: dict[int, np.ndarray] = {}
+        page_dimensions: dict[int, tuple[float, float]] = {}
         content_parts: list[str] = []
 
         # Check if PDF requires OCR
@@ -511,6 +531,8 @@ class DoclingParser(BaseParser):
                             "No page size in Docling document; using pdfplumber page "
                             f"size: width={width}, height={height}"
                         )
+
+                    page_dimensions[page_num - 1] = (width, height)  # Store dimensions
 
                     # Calculate scaling factors to adjust pdfplumber coordinates
                     plumber_width = page.width
@@ -568,9 +590,9 @@ class DoclingParser(BaseParser):
                     token_indices_array = np.array(token_indices)
 
                     spatial_index = STRtree(geometries_array)
-                    spatial_indices_by_page[page_num] = spatial_index
-                    tokens_by_page[page_num] = tokens
-                    token_indices_by_page[page_num] = token_indices_array
+                    spatial_indices_by_page[page_num - 1] = spatial_index
+                    tokens_by_page[page_num - 1] = tokens
+                    token_indices_by_page[page_num - 1] = token_indices_array
 
                     # Create PawlsPagePythonType
                     pawls_page: PawlsPagePythonType = {
@@ -606,6 +628,8 @@ class DoclingParser(BaseParser):
                     logger.warning(
                         f"No page size in Docling document; using image size: width={width}, height={height}"
                     )
+
+                page_dimensions[page_num - 1] = (width, height)  # Store dimensions
 
                 custom_config = r"--oem 3 --psm 3"
                 word_data = pytesseract.image_to_data(
@@ -693,5 +717,6 @@ class DoclingParser(BaseParser):
             spatial_indices_by_page,
             tokens_by_page,
             token_indices_by_page,
+            page_dimensions,
             content,
         )

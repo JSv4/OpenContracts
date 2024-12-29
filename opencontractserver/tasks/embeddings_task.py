@@ -27,7 +27,7 @@ def calculate_embedding_for_doc_text(doc_id: str | int):
             text = ""
 
         # Get the preferred embedder for the document's mimetype
-        mimetype = doc.mime_type
+        mimetype = doc.file_type
 
         # Get the preferred embedder based on mimetype
         embedder_class = get_preferred_embedder(mimetype)

@@ -286,6 +286,7 @@ export const DocumentViewer = ({
         view_components = <PDF read_only={readOnly} />;
         break;
       case "application/txt":
+      case "text/plain":
         console.log("Application txt detected!");
         view_components = (
           <TxtAnnotatorWrapper readOnly={readOnly} allowInput={allowInput} />

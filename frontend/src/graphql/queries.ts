@@ -1710,6 +1710,7 @@ export const GET_DOCUMENT_ANNOTATIONS_AND_RELATIONSHIPS = gql`
       }
       allRelationships(corpusId: $corpusId, analysisId: $analysisId) {
         id
+        structural
         relationshipLabel {
           id
           text

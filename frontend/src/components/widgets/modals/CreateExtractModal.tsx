@@ -26,6 +26,113 @@ import {
 } from "../../../graphql/mutations";
 import { toast } from "react-toastify";
 
+const styles = {
+  modal: {
+    height: "90vh",
+    display: "flex",
+    flexDirection: "column",
+    background: "#ffffff",
+    overflow: "hidden",
+    borderRadius: "16px",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15)",
+  } as React.CSSProperties,
+  header: {
+    background: "white",
+    padding: "24px 32px",
+    fontSize: "1.25rem",
+    color: "#1a202c",
+    fontWeight: 600,
+    borderBottom: "1px solid #e2e8f0",
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+    flex: "0 0 auto",
+  } as React.CSSProperties,
+  content: {
+    flex: "1 1 auto",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    minHeight: 0,
+  } as React.CSSProperties,
+  scrollableContent: {
+    flex: "1 1 auto",
+    overflow: "auto",
+    padding: "32px",
+    minHeight: 0,
+  } as React.CSSProperties,
+  form: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "24px",
+    height: "100%",
+  } as React.CSSProperties,
+  field: {
+    marginBottom: "24px",
+  },
+  label: {
+    display: "block",
+    marginBottom: "8px",
+    color: "#4a5568",
+    fontSize: "0.9rem",
+    fontWeight: 500,
+  },
+  input: {
+    width: "100%",
+    padding: "12px 16px",
+    borderRadius: "12px",
+    border: "1px solid #e2e8f0",
+    transition: "all 0.2s ease",
+    fontSize: "0.95rem",
+    "&:focus": {
+      borderColor: "#3b82f6",
+      boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+    },
+  },
+  submitButton: {
+    marginTop: "auto",
+    padding: "12px 24px",
+    borderRadius: "12px",
+    backgroundColor: "#3b82f6",
+    color: "white",
+    border: "none",
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    position: "sticky" as const,
+    bottom: 0,
+    zIndex: 10,
+    boxShadow: "0 -4px 12px rgba(0,0,0,0.05)",
+    background: "linear-gradient(to bottom, #3b82f6, #2563eb)",
+    "&:hover": {
+      backgroundColor: "#2563eb",
+      transform: "translateY(-1px)",
+    },
+    "&:disabled": {
+      backgroundColor: "#94a3b8",
+      cursor: "not-allowed",
+      transform: "none",
+    },
+  } as React.CSSProperties,
+  helperText: {
+    fontSize: "0.85rem",
+    color: "#64748b",
+    marginTop: "6px",
+  },
+  dimmer: {
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    backdropFilter: "blur(4px)",
+  },
+  loader: {
+    "&:before": {
+      borderColor: "rgba(59, 130, 246, 0.2)",
+    },
+    "&:after": {
+      borderColor: "#3b82f6 transparent transparent",
+    },
+  },
+};
+
 interface ExtractModalProps {
   open: boolean;
   onClose: () => void;
@@ -105,60 +212,63 @@ export const CreateExtractModal: React.FC<ExtractModalProps> = ({
   }
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <Modal.Header>
-        {extractId ? "Edit Extract" : "Create Extract"}
+    <Modal open={open} onClose={onClose} style={styles.modal}>
+      <Modal.Header style={styles.header}>
+        {extractId ? "Edit Extract" : "Create New Extract"}
       </Modal.Header>
-      <Modal.Content>
-        <Form onSubmit={handleSubmit}>
-          <FormGroup>
-            <FormField required>
-              <label>Name</label>
-              <FormInput
-                placeholder="Enter the extract name"
-                name="name"
-                value={name}
-                onChange={(e, { value }) => setName(value)}
-              />
-            </FormField>
-          </FormGroup>
-          {!corpusId && (
+      <Modal.Content style={styles.content}>
+        <div style={styles.scrollableContent}>
+          <Form onSubmit={handleSubmit} style={styles.form}>
             <FormGroup>
-              <FormField>
-                <label>Corpus</label>
-                <CorpusDropdown />
-                <small>
-                  <b>(Optional)</b> If provided, load documents from this corpus
-                  for the extract
-                </small>
+              <FormField required style={styles.field}>
+                <label style={styles.label}>Extract Name</label>
+                <FormInput
+                  placeholder="Enter a descriptive name for your extract"
+                  name="name"
+                  value={name}
+                  onChange={(e, { value }) => setName(value)}
+                  style={styles.input}
+                />
               </FormField>
             </FormGroup>
-          )}
-          {!fieldsetId && (
-            <FormGroup>
-              <FormField>
-                <label>Fieldset</label>
-                <FieldsetDropdown />
-                <small>
-                  <b>(Optional)</b> Re-use an existing fieldset (search by
-                  name). If not provided, a new fieldset is created for the
-                  extract.
-                </small>
-              </FormField>
-            </FormGroup>
-          )}
-          <FormButton
-            primary
-            content="Submit"
-            style={{ marginTop: "1vh" }}
-            disabled={isSubmitting || createExtractLoading}
-            loading={isSubmitting || createExtractLoading}
-          />
-        </Form>
+            {!corpusId && (
+              <FormGroup>
+                <FormField style={styles.field}>
+                  <label style={styles.label}>Select Corpus</label>
+                  <CorpusDropdown />
+                  <div style={styles.helperText}>
+                    <b>Optional:</b> Choose a corpus to load documents from
+                  </div>
+                </FormField>
+              </FormGroup>
+            )}
+            {!fieldsetId && (
+              <FormGroup>
+                <FormField style={styles.field}>
+                  <label style={styles.label}>Select Fieldset</label>
+                  <FieldsetDropdown />
+                  <div style={styles.helperText}>
+                    <b>Optional:</b> Use an existing fieldset or create a new
+                    one
+                  </div>
+                </FormField>
+              </FormGroup>
+            )}
+            <FormButton
+              primary
+              content={isSubmitting ? "Creating..." : "Create Extract"}
+              style={styles.submitButton}
+              disabled={isSubmitting || createExtractLoading || !name.trim()}
+              loading={isSubmitting || createExtractLoading}
+            />
+          </Form>
+        </div>
       </Modal.Content>
       {(isSubmitting || createExtractLoading) && (
-        <Dimmer active inverted>
-          <Loader inverted>Submitting...</Loader>
+        <Dimmer active inverted style={styles.dimmer}>
+          <Loader inverted style={styles.loader}>
+            Creating your extract...
+          </Loader>
         </Dimmer>
       )}
     </Modal>

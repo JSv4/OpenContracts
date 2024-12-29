@@ -82,44 +82,86 @@ const styles = {
   gridWrapper: {
     height: "100%",
     width: "100%",
-    position: "relative" as const,
+    position: "relative",
     backgroundColor: "#fff",
-    borderRadius: "12px",
+    borderRadius: "16px",
     boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
-    minHeight: "400px",
     display: "flex",
-    flexDirection: "column" as const,
+    flexDirection: "column",
     border: "1px solid rgba(0,0,0,0.08)",
     overflow: "hidden",
-  },
+    minHeight: 0,
+  } as React.CSSProperties,
   headerCell: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     padding: "12px 16px",
     backgroundColor: "#f8fafc",
-    borderBottom: "2px solid #e2e8f0",
-    fontWeight: 600,
+    borderBottom: "1px solid #e2e8f0",
+    fontWeight: 500,
     fontSize: "0.9rem",
     color: "#334155",
+    height: "100%",
+  },
+  headerControls: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    marginLeft: "8px",
+    position: "relative",
+    zIndex: 3,
+  },
+  headerButton: {
+    padding: "4px",
+    background: "none",
+    border: "none",
+    color: "#94a3b8",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "color 0.2s ease",
+    "&:hover": {
+      color: "#64748b",
+    },
   },
   phantomColumn: {
     position: "absolute" as const,
     right: 0,
     top: 0,
     bottom: 0,
-    width: "60px",
+    width: "48px",
     cursor: "pointer",
-    border: "2px dashed #cbd5e1",
-    borderLeft: "none",
-    background: "linear-gradient(to right, rgba(255,255,255,0), #fff)",
+    background:
+      "linear-gradient(to right, rgba(248,250,252,0), rgba(248,250,252,0.8))",
     transition: "all 0.2s ease",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     "&:hover": {
-      background: "linear-gradient(to right, rgba(248,250,252,0), #f8fafc)",
-      borderColor: "#0ea5e9",
+      background:
+        "linear-gradient(to right, rgba(248,250,252,0), rgba(248,250,252,1))",
+    },
+  },
+  addColumnButton: {
+    width: "28px",
+    height: "28px",
+    padding: 0,
+    borderRadius: "8px",
+    border: "1.5px dashed #cbd5e1",
+    background: "transparent",
+    color: "#94a3b8",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      borderColor: "#10b981",
+      color: "#10b981",
+      transform: "translateY(-1px)",
+      background: "rgba(16, 185, 129, 0.05)",
     },
   },
   dropOverlay: {
@@ -139,7 +181,7 @@ const styles = {
   dropMessage: {
     padding: "24px 36px",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: "12px",
+    borderRadius: "16px",
     boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
     border: "2px dashed #3b82f6",
     fontSize: "1.1em",
@@ -616,6 +658,8 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
           frozen: true,
           width: 300,
           minWidth: 200,
+          headerCellClass: "rdg-header-cell-frozen",
+          cellClass: "rdg-cell-frozen",
           renderCell: (props: any) => {
             if (props.row.id === "placeholder") {
               return (
@@ -725,9 +769,9 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
         columnsArray.push({
           key: "addColumn",
           name: "",
-          width: 60,
-          minWidth: 60,
-          maxWidth: 60,
+          width: 48,
+          minWidth: 48,
+          maxWidth: 48,
           resizable: false,
           renderHeaderCell: () => (
             <div
@@ -737,19 +781,14 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
                 width: "100%",
               }}
             >
-              <Button
-                icon="plus"
-                circular
+              <button
                 onClick={handleAddColumn}
-                style={{
-                  position: "absolute",
-                  right: "16px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  zIndex: 1000,
-                }}
+                style={styles.addColumnButton}
+                title="Add new column"
                 disabled={loading}
-              />
+              >
+                <Icon name="plus" style={{ margin: 0, fontSize: "12px" }} />
+              </button>
             </div>
           ),
           renderCell: () => null,
@@ -1380,10 +1419,28 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
           }
 
           .rdg {
-            border: none !important;
-            flex: 1;
-            --rdg-selection-color: #eff6ff;
-            --rdg-border-color: #e2e8f0;
+            overflow-y: scroll;
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            height: 100% !important;
+            --rdg-header-row-height: 56px;
+          }
+
+          .rdg-header-row {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 3 !important;
+            background-color: #f8fafc !important;
+          }
+
+          .rdg-cell-frozen {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 2 !important;
+          }
+
+          .rdg-cell-frozen.rdg-cell-frozen-last {
+            box-shadow: 2px 0 4px rgba(0,0,0,0.1) !important;
           }
 
           .rdg-cell {
@@ -1395,126 +1452,223 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
             line-height: 1.5;
           }
 
+          .rdg-row:hover .rdg-cell {
+            background-color: #f8fafc;
+          }
+
+          .rdg-row.rdg-row-selected .rdg-cell {
+            background-color: #eff6ff !important;
+          }
+
           .rdg-header-row {
             background-color: #f8fafc !important;
-            font-weight: 600 !important;
-            border-bottom: 2px solid #e2e8f0 !important;
+            font-weight: 500 !important;
+            border-bottom: 1px solid #e2e8f0 !important;
             color: #334155;
           }
 
-          .rdg-cell-frozen {
-            box-shadow: 2px 0 4px rgba(0,0,0,0.04) !important;
-          }
-
-          .rdg-cell-frozen-last {
-            box-shadow: 2px 0 4px rgba(0,0,0,0.04) !important;
-          }
-
-          /* Only the essential header controls styling */
-          .header-controls {
+          .rdg-header-row .rdg-cell {
             display: flex !important;
-            gap: 6px !important;
-            margin-left: 12px !important;
-            flex-shrink: 0 !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 12px 16px !important;
+            height: 48px !important;
           }
 
           .rdg-header-row .rdg-cell > div {
             display: flex !important;
             align-items: center !important;
-            justify-content: space-between !important;
             width: 100% !important;
-            white-space: nowrap !important;
-          }
-
-          .header-controls {
-            display: flex !important;
-            gap: 6px !important;
-            margin-left: 12px !important;
-            flex-shrink: 0 !important;
           }
 
           .rdg-header-row .rdg-cell span {
             flex: 1 !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
-            min-width: 0 !important;
-          }
-
-          /* Target the specific nested structure */
-          .rdg-cell[role="columnheader"] > div {
-            display: flex !important;
-            flex-direction: column !important;
-          }
-
-          .rdg-cell[role="columnheader"] > div > div {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: space-between !important;
-            width: 100% !important;
             white-space: nowrap !important;
-            min-height: 32px !important;
-          }
-
-          .rdg-cell[role="columnheader"] span {
-            flex: 1 !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            min-width: 0 !important;
-          }
-
-          /* Ensure resize handle doesn't interfere with buttons and is visible */
-          .rdg-cell-resizer {
-            position: absolute !important;
-            right: 0 !important;
-            width: 8px !important;
-            z-index: 1 !important;
-            background-color: black !important;
-            cursor: col-resize !important;
-          }
-
-          .rdg-cell-resizer:hover {
-            background-color: black !important;
-          }
-
-          /* Make the resize cursor black */
-          .rdg-cell-resizer.rdg-cell-resizer-hover {
-            cursor: col-resize !important;
-            color: black !important;
-          }
-
-          /* Make resize cursor black throughout header */
-          .rdg-header-row .rdg-cell-resizable {
-            cursor: col-resize !important;
-            color: black !important;
-          }
-
-          /* Ensure resize handle doesn't interfere with buttons */
-          .rdg-cell-resizer {
-            position: absolute !important;
-            right: 0 !important;
-            width: 8px !important;
-            z-index: 1 !important;
           }
 
           .header-controls {
+            display: flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            margin-left: 8px !important;
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
             position: relative !important;
-            z-index: 2 !important;
+            z-index: 3 !important;
           }
 
-          /* Center align checkboxes in both header and content cells */
-          .rdg-row > .rdg-cell:first-child,
-          .rdg-header-row > .rdg-cell:first-child {
+          .rdg-header-row .rdg-cell:hover .header-controls {
+            opacity: 1;
+          }
+
+          .header-controls .ui.button {
+            position: relative !important;
+            z-index: 3 !important;
+            padding: 4px !important;
+            min-width: 24px !important;
+            height: 24px !important;
+            background: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #64748b !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
           }
 
-          /* If needed, also ensure the checkbox container itself is centered */
-          .rdg-checkbox-label {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
+          .header-controls .ui.button:hover {
+            color: #334155 !important;
+            background: none !important;
+            transform: none !important;
+          }
+
+          .header-controls .ui.button.red {
+            color: #ef4444 !important;
+          }
+
+          .header-controls .ui.button.red:hover {
+            color: #dc2626 !important;
+          }
+
+          .header-controls .ui.button i.icon {
+            margin: 0 !important;
+            font-size: 14px !important;
+            height: auto !important;
+            width: auto !important;
+          }
+
+          .rdg-checkbox {
+            width: 18px !important;
+            height: 18px !important;
+            border: 2px solid #cbd5e1 !important;
+            border-radius: 4px !important;
+            transition: all 0.2s ease !important;
+          }
+
+          .rdg-checkbox:checked {
+            background-color: #3b82f6 !important;
+            border-color: #3b82f6 !important;
+          }
+
+          .rdg-checkbox:hover:not(:checked) {
+            border-color: #94a3b8 !important;
+          }
+
+          .rdg-cell-resizer {
+            width: 4px !important;
+            background-color: #e2e8f0 !important;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 1 !important;
+          }
+
+          .rdg-cell:hover .rdg-cell-resizer {
+            opacity: 1;
+          }
+
+          .rdg-cell-resizer:hover,
+          .rdg-cell-resizer.rdg-cell-resizer-hover {
+            background-color: #3b82f6 !important;
+            opacity: 1;
+          }
+
+          .filter-cell input {
             width: 100% !important;
+            padding: 8px 12px !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            font-size: 0.9rem !important;
+            transition: all 0.2s ease !important;
+          }
+
+          .filter-cell input:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+            outline: none !important;
+          }
+
+          .ui.button {
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+          }
+
+          .ui.button:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+          }
+
+          .ui.button.circular {
+            width: 40px !important;
+            height: 40px !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+          }
+
+          .ui.button.circular:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08) !important;
+          }
+
+          .ui.loader {
+            color: #3b82f6 !important;
+          }
+
+          .ui.dimmer {
+            background-color: rgba(255, 255, 255, 0.8) !important;
+            backdrop-filter: blur(4px) !important;
+          }
+
+          .rdg-header-row .rdg-cell:last-child {
+            background: linear-gradient(to right, rgba(248,250,252,0), rgba(248,250,252,0.8)) !important;
+            transition: background 0.2s ease;
+          }
+
+          .rdg-header-row .rdg-cell:last-child:hover {
+            background: linear-gradient(to right, rgba(248,250,252,0), rgba(248,250,252,1)) !important;
+          }
+
+          .rdg-row {
+            border-top: none !important;
+          }
+
+          .rdg-cell {
+            border-right: 1px solid #e2e8f0 !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 12px 16px !important;
+            color: #334155;
+            font-size: 0.9rem;
+            line-height: 1.5;
+          }
+
+          .rdg-header-row .rdg-cell {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 12px 16px !important;
+            height: 48px !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+          }
+
+          .rdg-header-cell-frozen {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 4 !important; // Higher z-index to stay above other cells
+            background-color: #f8fafc !important;
+          }
+
+          .rdg-header-row .rdg-cell.rdg-header-cell-frozen {
+            box-shadow: 2px 0 4px rgba(0,0,0,0.1) !important;
+            background-color: #f8fafc !important; // Ensure header background is consistent
+          }
+
+          .rdg-header-row {
+            z-index: 3 !important;
           }
         `}</style>
       </>

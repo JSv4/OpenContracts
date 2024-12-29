@@ -12,31 +12,60 @@ export const spiralOut = keyframes`
   }
 `;
 
+const fadeInSlide = keyframes`
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+`;
+
 // Label Components
 export const LabelContainer = styled.div`
   position: absolute;
   display: flex;
   align-items: center;
   z-index: 10000;
+  transform-origin: left center;
+  transition: all 0.2s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 2px;
+    background-color: ${(props) => props.color || "#cccccc"};
+    opacity: 0.8;
+  }
 `;
 
 // Adjusted to handle spiral movement
 export const Label = styled.span<{ color: string; $index: number }>`
-  padding: 0.125em 0.5em;
-  border-radius: 0.25em;
+  padding: 4px 8px;
+  border-radius: 4px;
   background-color: ${(props) => props.color};
   color: white;
   font-size: 0.85em;
-  margin-right: 0.5em; // Adjusted margin
-  position: relative;
   white-space: nowrap;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  ${({ $index }) => css`
-    animation: ${spiralOut} 0.5s forwards;
-    animation-delay: ${$index * 0.05}s;
-  `}
+  opacity: 0;
+  transform: translateX(-10px);
+  animation: ${fadeInSlide} 0.3s forwards;
+  animation-delay: ${(props) => props.$index * 0.05}s;
   pointer-events: auto;
   cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
 `;
 
 // Styled container for the text

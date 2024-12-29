@@ -380,107 +380,26 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         const scrollLeft = containerElement.scrollLeft;
         const scrollTop = containerElement.scrollTop;
 
-        const spanX = spanRect.left - containerRect.left + scrollLeft;
-        const spanY = spanRect.top - containerRect.top + scrollTop;
+        // Calculate base position to the right of the span
+        const baseX = spanRect.right - containerRect.left + scrollLeft + 8; // 8px gap
+        const baseY = spanRect.top - containerRect.top + scrollTop;
 
-        const baseX = spanX + spanRect.width / 2;
-        const baseY = spanY + spanRect.height / 2;
+        // Stack labels vertically with a small gap
+        const labelGap = 4;
+        const labelHeight = 28; // Approximate height of label
 
-        // Sort annotations by length
-        const sortedAnnotations = selectedAnnotationsForSpan.sort(
-          (a, b) => a.json.end - a.json.start - (b.json.end - b.json.start)
-        );
-
-        // Assign layers based on nesting levels
-        const layers = sortedAnnotations.map((ann) => {
-          return sortedAnnotations.filter(
-            (otherAnn) =>
-              otherAnn.json.start <= ann.json.start &&
-              otherAnn.json.end >= ann.json.end
-          ).length;
+        selectedAnnotationsForSpan.forEach((annotation, index) => {
+          newLabelsToRender.push({
+            annotation,
+            x: baseX,
+            y: baseY + (labelHeight + labelGap) * index,
+            width: 100, // Approximate width
+            height: labelHeight,
+            labelIndex: index,
+          });
         });
 
-        const maxLayer = Math.max(...layers);
-
-        const labelWidth = 100; // Approximate label width
-        const labelHeight = 30; // Approximate label height
-
-        // Initialize label positions with layered radii
-        const initialPositions: LabelRenderData[] = sortedAnnotations.map(
-          (annotation, index) => {
-            const angle =
-              (index / selectedAnnotationsForSpan.length) * Math.PI * 2;
-
-            const layerIndex = layers[index];
-            const radius = 80 + layerIndex * 40;
-
-            const x = baseX + radius * Math.cos(angle) - labelWidth / 2;
-            const y = baseY + radius * Math.sin(angle) - labelHeight / 2;
-
-            return {
-              annotation,
-              x,
-              y,
-              width: labelWidth,
-              height: labelHeight,
-              labelIndex: index,
-            };
-          }
-        );
-
-        // Run force simulation to adjust label positions
-        const simulation = d3
-          .forceSimulation<LabelRenderData>(initialPositions)
-          .force(
-            "collide",
-            d3.forceCollide<LabelRenderData>((d) => d.width / 2 + 10)
-          )
-          .force(
-            "x",
-            d3
-              .forceX<LabelRenderData>(baseX)
-              .strength(0.1)
-              .x((d) => d.x + d.width / 2)
-          )
-          .force(
-            "y",
-            d3
-              .forceY<LabelRenderData>(baseY)
-              .strength(0.1)
-              .y((d) => d.y + d.height / 2)
-          )
-          .force("avoidance", (alpha) => {
-            initialPositions.forEach((d, i) => {
-              const annRect = spanElement.getBoundingClientRect();
-              const dx = d.x + d.width / 2 - (spanX + annRect.width / 2);
-              const dy = d.y + d.height / 2 - (spanY + annRect.height / 2);
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              const minDist = annRect.width / 2 + d.width / 2 + 20;
-              if (dist < minDist) {
-                const force = (minDist - dist) * alpha;
-                d.x += (dx / dist) * force;
-                d.y += (dy / dist) * force;
-              }
-            });
-          })
-          .alphaDecay(0.1)
-          .stop();
-
-        simulation.tick(100);
-
-        // Ensure labels stay within the container bounds
-        initialPositions.forEach((d) => {
-          d.x = Math.max(
-            0,
-            Math.min(d.x, containerElement.scrollWidth - d.width)
-          );
-          d.y = Math.max(
-            0,
-            Math.min(d.y, containerElement.scrollHeight - d.height)
-          );
-        });
-
-        setLabelsToRender(initialPositions);
+        setLabelsToRender(newLabelsToRender);
       }
     };
 
@@ -671,76 +590,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             </AnnotatedSpan>
           );
         })}
-        {/* Render connector lines */}
-        {labelsToRender.length > 0 && (
-          <ConnectorLine>
-            <svg width="100%" height="100%">
-              <defs>
-                {labelsToRender.map(({ annotation }) => (
-                  <marker
-                    key={`arrowhead-${annotation.id}`}
-                    id={`arrowhead-${annotation.id}`}
-                    viewBox="0 0 10 10"
-                    refX="5"
-                    refY="5"
-                    markerWidth="6"
-                    markerHeight="6"
-                    orient="auto"
-                  >
-                    <path
-                      d="M 0 0 L 10 5 L 0 10 z"
-                      fill={annotation.annotationLabel.color || "#000"}
-                    />
-                  </marker>
-                ))}
-              </defs>
-              {labelsToRender.map(
-                ({ annotation, x, y, width, height, labelIndex }) => {
-                  const containerElement = containerRef.current;
-                  const spanElement = containerElement?.querySelector(
-                    `span[data-span-index="${hoveredSpanIndex}"]`
-                  ) as HTMLElement;
-
-                  if (!spanElement) return null;
-                  const containerRect =
-                    containerElement?.getBoundingClientRect() ?? new DOMRect();
-                  const spanRect = spanElement.getBoundingClientRect();
-
-                  const scrollLeft = containerElement?.scrollLeft ?? 0;
-                  const scrollTop = containerElement?.scrollTop ?? 0;
-
-                  const { x: endX, y: endY } = getClosestCorner(
-                    x + width / 2,
-                    y + height / 2,
-                    spanRect,
-                    containerRect,
-                    scrollLeft,
-                    scrollTop
-                  );
-
-                  const labelCenterX = x + width / 2;
-                  const labelCenterY = y + height / 2;
-
-                  const pathData = `M${labelCenterX},${labelCenterY} 
-                    C${(labelCenterX + endX) / 2},${labelCenterY} 
-                    ${(labelCenterX + endX) / 2},${endY} 
-                    ${endX},${endY}`;
-
-                  return (
-                    <path
-                      key={`connector-${annotation.id}-${labelIndex}`}
-                      d={pathData}
-                      stroke={annotation.annotationLabel.color || "#000"}
-                      strokeWidth="2"
-                      fill="none"
-                      markerEnd={`url(#arrowhead-${annotation.id})`}
-                    />
-                  );
-                }
-              )}
-            </svg>
-          </ConnectorLine>
-        )}
         {/* Render labels */}
         {labelsToRender.map(
           ({ annotation, x, y, width, height, labelIndex }) => {
@@ -810,6 +659,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
                 }}
                 onMouseEnter={handleLabelMouseEnter}
                 onMouseLeave={handleLabelMouseLeave}
+                color={annotation.annotationLabel.color || "#cccccc"}
               >
                 <Label
                   id={`label-${annotation.id}-${labelIndex}`}

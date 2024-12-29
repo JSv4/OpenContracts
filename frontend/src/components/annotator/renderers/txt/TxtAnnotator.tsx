@@ -380,9 +380,30 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         const scrollLeft = containerElement.scrollLeft;
         const scrollTop = containerElement.scrollTop;
 
-        // Calculate base position to the right of the span
-        const baseX = spanRect.right - containerRect.left + scrollLeft + 8; // 8px gap
-        const baseY = spanRect.top - containerRect.top + scrollTop;
+        // Get all text nodes within the span to find line breaks
+        const range = document.createRange();
+        range.selectNodeContents(spanElement);
+        const rects = range.getClientRects();
+
+        // Find the rect (line) closest to the vertical mouse position
+        const mouseY = spanRect.top + spanRect.height / 2;
+        let nearestLineRect = rects[0];
+        let minDistance = Infinity;
+
+        for (let i = 0; i < rects.length; i++) {
+          const rect = rects[i];
+          const rectMiddleY = rect.top + rect.height / 2;
+          const distance = Math.abs(mouseY - rectMiddleY);
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestLineRect = rect;
+          }
+        }
+
+        // Calculate base position using the nearest line's right edge
+        const baseX =
+          nearestLineRect.right - containerRect.left + scrollLeft + 8; // 8px gap
+        const baseY = nearestLineRect.top - containerRect.top + scrollTop;
 
         // Stack labels vertically with a small gap
         const labelGap = 4;

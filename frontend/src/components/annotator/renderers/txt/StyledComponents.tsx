@@ -24,7 +24,7 @@ const fadeInSlide = keyframes`
 `;
 
 // Label Components
-export const LabelContainer = styled.div`
+export const LabelContainer = styled.div<{ color: string }>`
   position: absolute;
   display: flex;
   align-items: center;
@@ -40,8 +40,20 @@ export const LabelContainer = styled.div`
     transform: translateY(-50%);
     width: 8px;
     height: 2px;
-    background-color: ${(props) => props.color || "#cccccc"};
+    background-color: ${(props) => props.color};
     opacity: 0.8;
+  }
+
+  /* Target RadialButtonCloud directly */
+  & > div:last-child {
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: all 0.2s ease;
+  }
+
+  &:hover > div:last-child {
+    opacity: 1;
+    transform: translateX(0);
   }
 `;
 
@@ -61,10 +73,28 @@ export const Label = styled.span<{ color: string; $index: number }>`
   pointer-events: auto;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 4px; /* Add space for the action buttons */
 
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Add a subtle indicator for actions */
+  &::after {
+    content: "⋮";
+    opacity: 0.7;
+    font-size: 1.2em;
+    font-weight: bold;
+    padding-left: 4px;
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover::after {
+    opacity: 1;
   }
 `;
 

@@ -17,18 +17,18 @@ graph TD
     A[Document Upload] --> B[Parser]
     B --> C[Thumbnailer]
     B --> D[Embedder]
-    
+
     subgraph "Pipeline Components"
         B --> B1[DoclingParser]
         B --> B2[NlmIngestParser]
         B --> B3[TxtParser]
-        
+
         C --> C1[PdfThumbnailer]
         C --> C2[TextThumbnailer]
-        
+
         D --> D1[MicroserviceEmbedder]
     end
-    
+
     C1 --> E[Document Preview]
     C2 --> E
     D1 --> F[Vector Database]
@@ -223,4 +223,4 @@ When contributing new pipeline components:
 3. Update this documentation
 4. Submit a pull request with a clear description
 
-For questions or support, please open an issue on the GitHub repository. 
+For questions or support, please open an issue on the GitHub repository.

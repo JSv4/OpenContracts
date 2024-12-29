@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useRef, useState, useEffect, FC, MouseEvent } from "react";
+import ReactDOM from "react-dom";
 import {
   Icon,
   Card,
@@ -26,6 +27,13 @@ import fallback_doc_icon from "../../assets/images/defaults/default_doc_icon.jpg
 import { getPermissions } from "../../utils/transform";
 import { PermissionTypes } from "../types";
 import { MyPermissionsIndicator } from "../widgets/permissions/MyPermissionsIndicator";
+
+interface ContextMenuItem {
+  key: string;
+  icon: string;
+  content: string;
+  onClick: () => void;
+}
 
 const StyledCard = styled(Card)`
   &.ui.card {
@@ -89,6 +97,66 @@ interface DocumentItemProps {
   setContextMenuOpen: (args: any) => any | void;
 }
 
+/**
+ * Props for the enlarged portal component
+ */
+interface ImageEnlargePortalProps {
+  /** The thumbnail image URL. */
+  src: string;
+  /** Whether to show the enlarged image or not. */
+  isVisible: boolean;
+  /** Where on the screen (in viewport coords) to anchor the enlarged image. */
+  position: { top: number; left: number } | null;
+  /** Title for the alt attribute. */
+  altText?: string;
+}
+
+/**
+ * A portal component that renders an enlarged version
+ * of the thumbnail, on top of everything else, anchored
+ * near the thumbnail center rather than screen center.
+ */
+const ImageEnlargePortal: FC<ImageEnlargePortalProps> = ({
+  src,
+  isVisible,
+  position,
+  altText,
+}) => {
+  // If not visible or no position, don't render the portal at all
+  if (!isVisible || !position) return null;
+
+  const { top, left } = position;
+
+  return ReactDOM.createPortal(
+    <div
+      style={{
+        position: "fixed",
+        top,
+        left,
+        transform: "translate(-50%, -50%) scale(1.5)",
+        transition: "opacity 0.3s ease",
+        opacity: isVisible ? 1 : 0,
+        pointerEvents: "none",
+        zIndex: 9999,
+        boxShadow: "0 20px 40px rgba(0,0,0,0.3), 0 15px 15px rgba(0,0,0,0.22)",
+        borderRadius: 8,
+        background: "#fff",
+      }}
+    >
+      <img
+        src={src}
+        alt={altText}
+        style={{
+          maxWidth: 600,
+          maxHeight: 600,
+          borderRadius: 8,
+        }}
+      />
+    </div>,
+    document.body
+  );
+};
+
 export const DocumentItem: React.FC<DocumentItemProps> = ({
   item,
   add_caption = "Add Doc To Corpus",
@@ -101,13 +169,56 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
   removeFromCorpus,
   setContextMenuOpen,
 }) => {
-  const contextRef = React.useRef<HTMLDivElement>(null);
-  const [contextMenuState, setContextMenuState] = React.useState<{
+  const contextRef = useRef<HTMLDivElement>(null);
+  const [contextMenuState, setContextMenuState] = useState<{
     open: boolean;
     x: number;
     y: number;
     id: string | number;
   }>({ open: false, x: 0, y: 0, id: "" });
+
+  const [showEnlarge, setShowEnlarge] = useState(false);
+  /**
+   * We'll store the exact center of the thumbnail in viewport coordinates,
+   * so we can anchor the enlarged copy right above the thumbnail.
+   */
+  const [previewPosition, setPreviewPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+
+  const hoverTimer = useRef<NodeJS.Timeout | null>(null);
+
+  /**
+   * Adds a mild delay so the user must hover
+   * over the thumbnail for 1 second to enlarge.
+   */
+  const handleMouseEnterThumbnail = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    // We'll anchor the enlarged image to the center of the thumbnail
+    const top = rect.top + rect.height / 2;
+    const left = rect.left + rect.width / 2;
+    setPreviewPosition({ top, left });
+
+    hoverTimer.current = setTimeout(() => {
+      setShowEnlarge(true);
+    }, 1000);
+  };
+
+  const handleMouseLeaveThumbnail = () => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+    }
+    setShowEnlarge(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimer.current) {
+        clearTimeout(hoverTimer.current);
+      }
+    };
+  }, []);
 
   const onDownload = (file_url: string | void | null) => {
     if (file_url) {
@@ -192,6 +303,7 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
         icon: "download",
         onClick: () => onDownload(pdfFile),
       });
+      // Overwrite existing context menu with "view" only
       context_menus = [
         {
           key: "view",
@@ -223,7 +335,7 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
         .map((edge) =>
           edge?.node?.annotationLabel ? edge.node.annotationLabel : undefined
         )
-        .filter((item): item is AnnotationLabelType => !!item)
+        .filter((lbl): lbl is AnnotationLabelType => !!lbl)
     : [];
 
   let doc_labels = doc_label_objs.map((label, index) => (
@@ -267,7 +379,23 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
             <Loader inverted>Processing...</Loader>
           </Dimmer>
         ) : null}
-        <Image src={icon ? icon : fallback_doc_icon} wrapped ui={false} />
+
+        <div
+          onMouseEnter={handleMouseEnterThumbnail}
+          onMouseLeave={handleMouseLeaveThumbnail}
+          style={{ cursor: "pointer" }}
+        >
+          <Image src={icon || fallback_doc_icon} wrapped ui={false} />
+        </div>
+
+        {/* Portal for enlarged thumbnail anchored near thumbnail center */}
+        <ImageEnlargePortal
+          src={icon || fallback_doc_icon}
+          altText={title || "Document preview"}
+          position={previewPosition}
+          isVisible={showEnlarge}
+        />
+
         <Card.Content style={{ wordWrap: "break-word" }}>
           <Card.Header>
             <Popup
@@ -345,10 +473,3 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
     </>
   );
 };
-
-interface ContextMenuItem {
-  key: string;
-  icon: string;
-  content: string;
-  onClick: () => void;
-}

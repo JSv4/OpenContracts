@@ -410,15 +410,7 @@ export const Corpuses = () => {
 
   // TODO - Improve typing.
   const handleUpdateCorpus = (corpus_obj: any) => {
-    console.log("handleUpdateCorpus", corpus_obj);
-
-    // Extract just the labelSet ID if it exists
-    const variables = {
-      ...corpus_obj,
-      labelSet: corpus_obj.labelSet?.id || null,
-    };
-
-    tryMutateCorpus({ variables });
+    tryMutateCorpus({ variables: corpus_obj });
   };
 
   // TODO - Improve typing.

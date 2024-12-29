@@ -17,6 +17,10 @@ interface LabelSetSelectorProps {
   onChange?: (values: any) => void;
 }
 
+/**
+ * If the user picks the same labelSet or hasn't changed it, we won't fire onChange.
+ * If the user clears the dropdown, we explicitly set labelSet: null.
+ */
 export const LabelSetSelector = ({
   onChange,
   read_only,
@@ -31,33 +35,39 @@ export const LabelSetSelector = ({
     variables: {
       description: search_term,
     },
-    notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
+    notifyOnNetworkStatusChange: true,
   });
-
-  // console.log("GET_LABELSETS", data);
 
   useEffect(() => {
     refetch();
-  }, [search_term]);
+  }, [search_term, refetch]);
 
-  const handleChange = (e: any, { value }: any) => {
-    if (onChange) onChange({ labelSet: value });
+  const handleChange = (_e: any, { value }: any) => {
+    // If user has not actually changed the labelSet, do nothing:
+    if (value === labelSet?.id) return;
+
+    // If user explicitly clears, value === undefined => labelSet null
+    // Otherwise labelSet is new value (the new labelSet.id).
+    onChange?.({ labelSet: value ?? null });
   };
 
   let items = data?.labelsets?.edges ? data.labelsets.edges : [];
-  let options = items.map((labelset, index) => ({
-    key: labelset.node.id,
-    text: labelset.node.title,
-    value: labelset.node.id,
-    content: (
-      <Header
-        key={index}
-        image={labelset.node.icon}
-        content={labelset.node.title}
-        subheader={labelset.node.description}
-      />
-    ),
-  }));
+  let options = items.map((labelsetEdge, index) => {
+    const node = labelsetEdge.node;
+    return {
+      key: node.id,
+      text: node.title,
+      value: node.id,
+      content: (
+        <Header
+          key={index}
+          image={node.icon}
+          content={node.title}
+          subheader={node.description}
+        />
+      ),
+    };
+  });
 
   return (
     <div style={{ width: "100%" }}>

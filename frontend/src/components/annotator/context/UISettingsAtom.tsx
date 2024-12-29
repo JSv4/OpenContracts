@@ -4,7 +4,7 @@
  */
 
 import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { RelationGroup } from "../types/annotations";
 import { LabelDisplayBehavior } from "../../../types/graphql-api";
 import {
@@ -15,6 +15,7 @@ import {
   relationModalVisibleAtom,
 } from "./AnnotationControlAtoms";
 import { useCorpusState } from "./CorpusAtom";
+import { useSelectedDocument } from "./DocumentAtom";
 
 /**
  * Types for query loading states and errors.
@@ -211,8 +212,12 @@ export function useQueryErrors() {
  * @returns Object containing annotation control states and their setters
  */
 export function useAnnotationControls() {
-  const { humanSpanLabels: humanSpanLabelChoices, relationLabels } =
-    useCorpusState();
+  const {
+    humanSpanLabels: humanSpanLabelChoices,
+    relationLabels,
+    humanTokenLabels,
+  } = useCorpusState();
+  const { selectedDocument } = useSelectedDocument();
 
   const [activeSpanLabel, setActiveSpanLabel] = useAtom(activeSpanLabelAtom);
   const [spanLabelsToView, setSpanLabelsToView] = useAtom(spanLabelsToViewAtom);
@@ -226,21 +231,38 @@ export function useAnnotationControls() {
     relationModalVisibleAtom
   );
 
-  // Initialize default values
+  const initialized = useRef(false);
+
+  // Initialize default values only once
   useEffect(() => {
-    if (humanSpanLabelChoices.length > 0 && !activeSpanLabel) {
-      setActiveSpanLabel(humanSpanLabelChoices[0]);
-    }
-    if (relationLabels.length > 0 && !activeRelationLabel) {
-      setActiveRelationLabel(relationLabels[0]);
+    if (!initialized.current && selectedDocument) {
+      const isTextFile =
+        selectedDocument.fileType?.startsWith("text/") ?? false;
+      const isPdfFile =
+        selectedDocument.fileType === "application/pdf" ?? false;
+
+      if (isTextFile && humanSpanLabelChoices.length > 0 && !activeSpanLabel) {
+        setActiveSpanLabel(humanSpanLabelChoices[0]);
+        initialized.current = true;
+      } else if (isPdfFile && humanTokenLabels.length > 0 && !activeSpanLabel) {
+        setActiveSpanLabel(humanTokenLabels[0]);
+        initialized.current = true;
+      }
+
+      if (relationLabels.length > 0 && !activeRelationLabel) {
+        setActiveRelationLabel(relationLabels[0]);
+        initialized.current = true;
+      }
     }
   }, [
     humanSpanLabelChoices,
+    humanTokenLabels,
     relationLabels,
     activeSpanLabel,
     activeRelationLabel,
     setActiveSpanLabel,
     setActiveRelationLabel,
+    selectedDocument,
   ]);
 
   const toggleUseFreeFormAnnotations = useCallback(() => {

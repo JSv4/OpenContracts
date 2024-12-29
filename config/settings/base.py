@@ -549,7 +549,7 @@ PREFERRED_EMBEDDERS = {
 PARSER_KWARGS = {
     "opencontractserver.pipeline.parsers.docling_parser.DoclingParser": {
         "force_ocr": False,
-        "roll_up_groups": False,
+        "roll_up_groups": True,
         "llm_enhanced_hierarchy": False,
     },
     "opencontractserver.pipeline.parsers.nlm_ingest_parser.NLMIngestParser": {

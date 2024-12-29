@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Icon as SemanticIcon, Loader } from "semantic-ui-react";
+import { Icon as SemanticIcon, Loader, Modal, Button } from "semantic-ui-react";
 import {
   Eye,
   Trash2,
@@ -177,6 +177,8 @@ export function ExtractList({
 }: ExtractListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const handleUpdate = () => {
     if (!loading && pageInfo?.hasNextPage) {
@@ -252,112 +254,173 @@ export function ExtractList({
     </button>
   );
 
+  const handleDeleteClick = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPendingDeleteId(id);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (pendingDeleteId) {
+      onDelete(pendingDeleteId);
+      setDeleteModalOpen(false);
+      setPendingDeleteId(null);
+    }
+  };
+
   return (
-    <div ref={containerRef} style={{ ...styles.container, ...(style || {}) }}>
-      <table style={styles.table}>
-        <thead>
-          <tr style={styles.headerRow}>
-            <th style={{ ...styles.headerCell, width: "30%" }}>Name</th>
-            <th style={styles.headerCell}>Status</th>
-            <th style={styles.headerCell}>Created</th>
-            <th style={styles.headerCell}>Started</th>
-            <th style={styles.headerCell}>Completed</th>
-            <th
-              style={{
-                ...styles.headerCell,
-                width: "100px",
-                textAlign: "right" as const,
-              }}
-            >
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {items?.map((item) => {
-            const status = getStatusConfig(item);
-            const isSelected = selectedId === item.id;
-            const isHovered = hoveredId === item.id;
-
-            return (
-              <tr
-                key={item.id}
+    <>
+      <div ref={containerRef} style={{ ...styles.container, ...(style || {}) }}>
+        <table style={styles.table}>
+          <thead>
+            <tr style={styles.headerRow}>
+              <th style={{ ...styles.headerCell, width: "30%" }}>Name</th>
+              <th style={styles.headerCell}>Status</th>
+              <th style={styles.headerCell}>Created</th>
+              <th style={styles.headerCell}>Started</th>
+              <th style={styles.headerCell}>Completed</th>
+              <th
                 style={{
-                  ...styles.row,
-                  ...(isHovered ? styles.rowHovered : {}),
-                  ...(isSelected ? styles.selectedRow : {}),
+                  ...styles.headerCell,
+                  width: "100px",
+                  textAlign: "right" as const,
                 }}
-                onMouseEnter={() => setHoveredId(item.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                onClick={() => onSelectRow?.(item)}
               >
-                <td style={{ ...styles.cell, ...styles.nameCell }}>
-                  <FileText style={styles.icon} />
-                  {item.name || "Untitled Extract"}
-                </td>
-                <td style={styles.cell}>
-                  <span
-                    style={
-                      {
-                        ...styles.status,
-                        color: status.color,
-                        backgroundColor: status.bgColor,
-                      } as React.CSSProperties
-                    }
-                  >
-                    {status.icon}
-                    {status.text}
-                  </span>
-                </td>
-                <td style={styles.cell}>
-                  {formatDateTime(item.created || undefined)}
-                </td>
-                <td style={styles.cell}>
-                  {formatDateTime(item.started || undefined)}
-                </td>
-                <td style={styles.cell}>
-                  {formatDateTime(item.finished || undefined)}
-                </td>
-                <td style={{ ...styles.cell, textAlign: "right" }}>
-                  <div style={styles.actions}>
-                    <ActionButton
-                      icon={Eye}
-                      className="view"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectRow?.(item);
-                      }}
-                    />
-                    <ActionButton
-                      icon={Trash2}
-                      className="delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(item.id);
-                      }}
-                    />
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {items?.map((item) => {
+              const status = getStatusConfig(item);
+              const isSelected = selectedId === item.id;
+              const isHovered = hoveredId === item.id;
 
-      {loading && items?.length === 0 && (
-        <div style={styles.loadingOverlay}>
-          <Loader active inline="centered" content="Loading Extracts..." />
-        </div>
-      )}
+              return (
+                <tr
+                  key={item.id}
+                  style={{
+                    ...styles.row,
+                    ...(isHovered ? styles.rowHovered : {}),
+                    ...(isSelected ? styles.selectedRow : {}),
+                  }}
+                  onMouseEnter={() => setHoveredId(item.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  onClick={() => onSelectRow?.(item)}
+                >
+                  <td style={{ ...styles.cell, ...styles.nameCell }}>
+                    <FileText style={styles.icon} />
+                    {item.name || "Untitled Extract"}
+                  </td>
+                  <td style={styles.cell}>
+                    <span
+                      style={
+                        {
+                          ...styles.status,
+                          color: status.color,
+                          backgroundColor: status.bgColor,
+                        } as React.CSSProperties
+                      }
+                    >
+                      {status.icon}
+                      {status.text}
+                    </span>
+                  </td>
+                  <td style={styles.cell}>
+                    {formatDateTime(item.created || undefined)}
+                  </td>
+                  <td style={styles.cell}>
+                    {formatDateTime(item.started || undefined)}
+                  </td>
+                  <td style={styles.cell}>
+                    {formatDateTime(item.finished || undefined)}
+                  </td>
+                  <td style={{ ...styles.cell, textAlign: "right" }}>
+                    <div style={styles.actions}>
+                      <ActionButton
+                        icon={Eye}
+                        className="view"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectRow?.(item);
+                        }}
+                      />
+                      <ActionButton
+                        icon={Trash2}
+                        className="delete"
+                        onClick={(e) => handleDeleteClick(item.id, e)}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
 
-      {!loading && items?.length === 0 && (
-        <div style={styles.emptyState}>
-          <FileText size={24} style={{ marginBottom: "1rem", opacity: 0.5 }} />
-          <p>No extracts found</p>
-        </div>
-      )}
+        {loading && items?.length === 0 && (
+          <div style={styles.loadingOverlay}>
+            <Loader active inline="centered" content="Loading Extracts..." />
+          </div>
+        )}
 
-      <FetchMoreOnVisible fetchNextPage={handleUpdate} />
-    </div>
+        {!loading && items?.length === 0 && (
+          <div style={styles.emptyState}>
+            <FileText
+              size={24}
+              style={{ marginBottom: "1rem", opacity: 0.5 }}
+            />
+            <p>No extracts found</p>
+          </div>
+        )}
+
+        <FetchMoreOnVisible fetchNextPage={handleUpdate} />
+      </div>
+
+      <Modal
+        size="tiny"
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        style={{ borderRadius: "12px", padding: "1.5rem" }}
+      >
+        <Modal.Header
+          style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "1rem" }}
+        >
+          Confirm Delete
+        </Modal.Header>
+        <Modal.Content>
+          <p style={{ color: "#475569" }}>
+            Are you sure you want to delete this extract? This action cannot be
+            undone.
+          </p>
+        </Modal.Content>
+        <Modal.Actions
+          style={{ borderTop: "1px solid #f1f5f9", paddingTop: "1rem" }}
+        >
+          <Button
+            basic
+            onClick={() => setDeleteModalOpen(false)}
+            style={{
+              borderRadius: "6px",
+              boxShadow: "none",
+              border: "1px solid #e2e8f0",
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            negative
+            onClick={handleConfirmDelete}
+            style={{
+              borderRadius: "6px",
+              backgroundColor: "#ef4444",
+              marginLeft: "0.75rem",
+            }}
+          >
+            Delete
+          </Button>
+        </Modal.Actions>
+      </Modal>
+    </>
   );
 }

@@ -336,8 +336,12 @@ export const DocumentAnnotator = ({
           getDocumentRawText(opened_document.txtExtractFile || ""),
           loadAnnotations(),
         ])
-          .then(([txt]) => {
+          .then(([txt, annotationsResult]) => {
             setDocText(txt);
+            console.log("annotationsResult", annotationsResult);
+            if (annotationsResult?.data) {
+              processAnnotationsData(annotationsResult.data);
+            }
             viewStateVar(ViewState.LOADED);
           })
           .catch((err) => {

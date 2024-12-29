@@ -129,6 +129,52 @@ const AnnotatedSpan = styled.span<{
   z-index: ${(props) => props.zIndex || 1};
 `;
 
+/**
+ * Convert a local selection offset to the global offset based on
+ * the spans array. This assumes each <span> in the "spans" array
+ * has a data attribute "data-span-index" that references the same
+ * index in the 'spans' state variable.
+ *
+ * @param node - The DOM node where the selection offset is anchored/focused.
+ * @param localOffset - The node-local offset (anchorOffset/focusOffset).
+ * @param spans - The array of text chunks used when rendering multiple <span>.
+ * @returns The global offset in the overall text, or null if the node wasn't found.
+ */
+function getGlobalOffsetFromNode(
+  node: Node | null,
+  localOffset: number,
+  spans: {
+    start: number;
+    end: number;
+    text: string;
+    annotations: any[];
+  }[]
+): number | null {
+  if (!node) return null;
+
+  // Traverse upward to find the annotated <span> that holds data-span-index
+  let element: HTMLElement | null =
+    node instanceof HTMLElement ? node : node.parentElement;
+  while (element && !element.hasAttribute("data-span-index")) {
+    element = element.parentElement;
+  }
+  if (!element) return null;
+
+  const spanIndexAttr = element.getAttribute("data-span-index");
+  if (!spanIndexAttr) return null;
+
+  const spanIndex = parseInt(spanIndexAttr, 10);
+  if (isNaN(spanIndex) || !spans[spanIndex]) return null;
+
+  const spanInfo = spans[spanIndex];
+
+  // The global offset for the start of this chunk
+  const globalOffsetForSpan = spanInfo.start;
+
+  // The final global offset = the chunk’s starting offset + local offset
+  return globalOffsetForSpan + localOffset;
+}
+
 const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   text,
   annotations,
@@ -487,18 +533,45 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     );
   };
 
-  const handleMouseUp = (event: any) => {
+  const handleMouseUp = (event: React.MouseEvent<HTMLDivElement>) => {
     const selection = document.getSelection();
-    if (selection && selection.toString().length > 0) {
-      const start = selection.anchorOffset;
-      const end = selection.focusOffset;
-      const selectedText = selection.toString();
+    if (!selection || selection.toString().length === 0) {
+      return;
+    }
 
-      // Ensure that start is less than end
-      const adjustedStart = Math.min(start, end);
-      const adjustedEnd = Math.max(start, end);
+    // Attempt to find the anchor/focus offsets in global terms
+    const anchorNode = selection.anchorNode;
+    const focusNode = selection.focusNode;
 
-      // Create the span object
+    const anchorLocalOffset = selection.anchorOffset;
+    const focusLocalOffset = selection.focusOffset;
+
+    // Convert anchor/focus local offsets to global offsets
+    const anchorGlobalOffset = getGlobalOffsetFromNode(
+      anchorNode,
+      anchorLocalOffset,
+      spans
+    );
+    const focusGlobalOffset = getGlobalOffsetFromNode(
+      focusNode,
+      focusLocalOffset,
+      spans
+    );
+
+    if (anchorGlobalOffset === null || focusGlobalOffset === null) {
+      // We couldn’t map the local offset to a global offset
+      return;
+    }
+
+    // Ensure we have proper ascending indices
+    const adjustedStart = Math.min(anchorGlobalOffset, focusGlobalOffset);
+    const adjustedEnd = Math.max(anchorGlobalOffset, focusGlobalOffset);
+
+    // Get the actual selected text from these global indices
+    const selectedText = text.slice(adjustedStart, adjustedEnd);
+
+    // If there is valid text selected, form the annotation
+    if (selectedText.length > 0) {
       const span = {
         start: adjustedStart,
         end: adjustedEnd,
@@ -508,7 +581,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       // Convert span to ServerSpanAnnotation
       const annotation = getSpan(span);
 
-      // Call createAnnotation with the correct type
+      // Create the annotation
       createAnnotation(annotation);
     }
   };

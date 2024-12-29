@@ -7,6 +7,7 @@ import { LabelSelectorDialog } from "./LabelSelectorDialog";
 import { TruncatedText } from "../../../widgets/data-display/TruncatedText";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 import { useCorpusState } from "../../context/CorpusAtom";
+import { useFileType } from "../../context/DocumentAtom";
 
 interface LabelSelectorProps {
   sidebarWidth: string;
@@ -21,29 +22,38 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
 }) => {
   const { width } = useWindowDimensions();
   const [open, setOpen] = useState(false);
+  const { fileType } = useFileType();
 
   const { humanSpanLabels, humanTokenLabels } = useCorpusState();
 
   // Add detailed debug logging
-
   useEffect(() => {
     console.log("LabelSelector labels changed:", {
       humanSpanLabels,
       humanTokenLabels,
+      fileType,
     });
-  }, [humanSpanLabels, humanTokenLabels]);
+  }, [humanSpanLabels, humanTokenLabels, fileType]);
 
   const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
 
   const filteredLabelChoices = useMemo(() => {
-    const choices = activeSpanLabel
-      ? [...humanSpanLabels, ...humanTokenLabels].filter(
-          (obj) => obj.id !== activeSpanLabel.id
-        )
-      : [...humanSpanLabels, ...humanTokenLabels];
+    // Filter labels based on file type
+    const isTextFile = fileType.startsWith("text/");
+    const isPdfFile = fileType === "application/pdf";
 
-    return choices;
-  }, [humanSpanLabels, humanTokenLabels, activeSpanLabel]);
+    let availableLabels: AnnotationLabelType[] = [];
+    if (isTextFile) {
+      availableLabels = [...humanSpanLabels];
+    } else if (isPdfFile) {
+      availableLabels = [...humanTokenLabels];
+    }
+
+    // Filter out the active label if it exists
+    return activeSpanLabel
+      ? availableLabels.filter((obj) => obj.id !== activeSpanLabel.id)
+      : availableLabels;
+  }, [humanSpanLabels, humanTokenLabels, activeSpanLabel, fileType]);
 
   const onSelect = (label: AnnotationLabelType): void => {
     setActiveLabel(label);

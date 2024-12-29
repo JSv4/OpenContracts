@@ -11,6 +11,7 @@ interface OutputTypeSectionProps {
     e: React.FormEvent<HTMLInputElement>,
     data: any
   ) => void;
+  handlePrimitiveTypeChange: (value: string) => void;
   handleChange: (
     e: React.SyntheticEvent<HTMLElement>,
     data: any,
@@ -46,6 +47,7 @@ export const OutputTypeSection: React.FC<OutputTypeSectionProps> = ({
   extractIsList,
   primitiveType,
   handleOutputTypeChange,
+  handlePrimitiveTypeChange,
   handleChange,
   setFormData,
   initialFields = [],
@@ -115,7 +117,11 @@ export const OutputTypeSection: React.FC<OutputTypeSectionProps> = ({
                     { key: "bool", text: "Boolean", value: "bool" },
                   ]}
                   value={primitiveType}
-                  onChange={(e, data) => handleChange(e, data, "primitiveType")}
+                  onChange={(e, data) => {
+                    if (data.value) {
+                      handlePrimitiveTypeChange(String(data.value));
+                    }
+                  }}
                   placeholder="Select primitive type"
                 />
               </StyledFormField>

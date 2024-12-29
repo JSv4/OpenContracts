@@ -388,7 +388,10 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
           : hoveredSpan.annotations;
 
       const selectedAnnotationsForSpan = annotationsToRender.filter(
-        (ann) => showStructuralAnnotations || !ann.structural
+        (ann) =>
+          showStructuralAnnotations ||
+          !ann.structural ||
+          selectedAnnotations.includes(ann.id)
       );
 
       if (selectedAnnotationsForSpan.length === 0) {
@@ -594,7 +597,10 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               : spanAnnotations;
 
           const selectedAnnotationsForSpan = annotationsToRender.filter(
-            (ann) => showStructuralAnnotations || !ann.structural
+            (ann) =>
+              showStructuralAnnotations ||
+              !ann.structural ||
+              selectedAnnotations.includes(ann.id)
           );
 
           let approved = false;

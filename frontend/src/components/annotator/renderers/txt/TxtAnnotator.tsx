@@ -5,6 +5,10 @@
  * 1. Enhanced label positioning for nested annotations by assigning layers and adjusting radii.
  * 2. Improved collision detection and boundary avoidance in force simulation.
  * 3. Connector lines accurately connect labels to annotations with clarity.
+ *
+ * Additional Feature:
+ * - When selectedAnnotations changes and has one or more entries, scroll smoothly to the
+ *   earliest (by text offset) selected annotation and center it in view.
  */
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
@@ -201,48 +205,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   const [annotationToEdit, setAnnotationToEdit] =
     useState<ServerSpanAnnotation | null>(null);
   const [labelsToRender, setLabelsToRender] = useState<LabelRenderData[]>([]);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const hideLabelsTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  const handleMouseEnter = useCallback((index: number) => {
-    if (hideLabelsTimeout.current) {
-      clearTimeout(hideLabelsTimeout.current);
-      hideLabelsTimeout.current = null;
-    }
-    setHoveredSpanIndex(index);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    hideLabelsTimeout.current = setTimeout(() => {
-      setHoveredSpanIndex(null);
-    }, 1000); // Adjust delay as needed
-  }, []);
-
-  const handleLabelMouseEnter = useCallback(() => {
-    if (hideLabelsTimeout.current) {
-      clearTimeout(hideLabelsTimeout.current);
-      hideLabelsTimeout.current = null;
-    }
-  }, []);
-
-  const handleLabelMouseLeave = useCallback(() => {
-    hideLabelsTimeout.current = setTimeout(() => {
-      setHoveredSpanIndex(null);
-    }, 2000); // Adjust delay as needed
-  }, []);
-
-  const handleLabelClick = useCallback(
-    (annotation: ServerSpanAnnotation) => {
-      if (selectedAnnotations.includes(annotation.id)) {
-        setSelectedAnnotations([]);
-      } else {
-        setSelectedAnnotations([annotation.id]);
-      }
-    },
-    [selectedAnnotations, setSelectedAnnotations]
-  );
-
   const [spans, setSpans] = useState<
     {
       start: number;
@@ -254,6 +216,65 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     }[]
   >([]);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hideLabelsTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  /**
+   * Handles mouse entering on a span to show associated labels.
+   */
+  const handleMouseEnter = useCallback((index: number) => {
+    if (hideLabelsTimeout.current) {
+      clearTimeout(hideLabelsTimeout.current);
+      hideLabelsTimeout.current = null;
+    }
+    setHoveredSpanIndex(index);
+  }, []);
+
+  /**
+   * Handles mouse leaving from a span, triggering a delayed hide of labels.
+   */
+  const handleMouseLeave = useCallback(() => {
+    hideLabelsTimeout.current = setTimeout(() => {
+      setHoveredSpanIndex(null);
+    }, 1000); // Adjust delay as needed
+  }, []);
+
+  /**
+   * Cancels label hiding when hovering over a label element.
+   */
+  const handleLabelMouseEnter = useCallback(() => {
+    if (hideLabelsTimeout.current) {
+      clearTimeout(hideLabelsTimeout.current);
+      hideLabelsTimeout.current = null;
+    }
+  }, []);
+
+  /**
+   * Triggers label hiding when leaving the label area.
+   */
+  const handleLabelMouseLeave = useCallback(() => {
+    hideLabelsTimeout.current = setTimeout(() => {
+      setHoveredSpanIndex(null);
+    }, 2000); // Adjust delay as needed
+  }, []);
+
+  /**
+   * Handles clicking on a label, toggling selection or clearing selections.
+   */
+  const handleLabelClick = useCallback(
+    (annotation: ServerSpanAnnotation) => {
+      if (selectedAnnotations.includes(annotation.id)) {
+        setSelectedAnnotations([]);
+      } else {
+        setSelectedAnnotations([annotation.id]);
+      }
+    },
+    [selectedAnnotations, setSelectedAnnotations]
+  );
+
+  /**
+   * Builds spans from the text and annotation boundaries, including search highlights.
+   */
   useEffect(() => {
     const isLabelVisible = (labelText: string) => {
       if (visibleLabels === null) return true;
@@ -279,7 +300,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     const addSpan = (
       start: number,
       end: number,
-      annotations: ServerSpanAnnotation[],
+      annList: ServerSpanAnnotation[],
       isSearchResult = false,
       isSelectedSearchResult = false
     ) => {
@@ -288,7 +309,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         start,
         end,
         text: text.slice(start, end),
-        annotations,
+        annotations: annList,
         isSearchResult,
         isSelectedSearchResult,
       });
@@ -311,18 +332,22 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     for (let i = 0; i < boundaries.length - 1; i++) {
       const spanStart = boundaries[i];
       const spanEnd = boundaries[i + 1];
+
       const spanAnnotations = sortedAnnotations.filter(
         (ann) => ann.json.start < spanEnd && ann.json.end > spanStart
       );
+
       const isSearchResult = searchResults.some(
         (result) =>
           result.start_index <= spanStart && result.end_index >= spanEnd
       );
+
       const isSelectedSearchResult =
         isSearchResult &&
         selectedSearchResultIndex !== undefined &&
         searchResults[selectedSearchResultIndex].start_index <= spanStart &&
         searchResults[selectedSearchResultIndex].end_index >= spanEnd;
+
       addSpan(
         spanStart,
         spanEnd,
@@ -340,6 +365,9 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     selectedSearchResultIndex,
   ]);
 
+  /**
+   * Dynamically calculates label positions for any hovered or selected annotations.
+   */
   useEffect(() => {
     const calculateLabelPositions = () => {
       const newLabelsToRender: LabelRenderData[] = [];
@@ -385,7 +413,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         range.selectNodeContents(spanElement);
         const rects = range.getClientRects();
 
-        // Find the rect (line) closest to the vertical mouse position
+        // Find the rect (line) closest to the vertical middle of the span
         const mouseY = spanRect.top + spanRect.height / 2;
         let nearestLineRect = rects[0];
         let minDistance = Infinity;
@@ -427,52 +455,61 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     calculateLabelPositions();
   }, [hoveredSpanIndex, spans, showStructuralAnnotations, selectedAnnotations]);
 
-  interface Corner {
-    x: number;
-    y: number;
-    distance?: number;
-  }
+  /**
+   * Scrolls smoothly to the earliest selected annotation (by .json.start) when selectedAnnotations changes.
+   */
+  useEffect(() => {
+    if (selectedAnnotations.length === 0) return;
 
-  const getClosestCorner = (
-    labelX: number,
-    labelY: number,
-    spanRect: DOMRect,
-    containerRect: DOMRect,
-    scrollLeft: number,
-    scrollTop: number
-  ): Corner => {
-    const corners: Corner[] = [
-      {
-        x: spanRect.left - containerRect.left + scrollLeft,
-        y: spanRect.top - containerRect.top + scrollTop,
-      },
-      {
-        x: spanRect.right - containerRect.left + scrollLeft,
-        y: spanRect.top - containerRect.top + scrollTop,
-      },
-      {
-        x: spanRect.left - containerRect.left + scrollLeft,
-        y: spanRect.bottom - containerRect.top + scrollTop,
-      },
-      {
-        x: spanRect.right - containerRect.left + scrollLeft,
-        y: spanRect.bottom - containerRect.top + scrollTop,
-      },
-    ];
-
-    return corners.reduce(
-      (closest, corner) => {
-        const distance = Math.sqrt(
-          Math.pow(labelX - corner.x, 2) + Math.pow(labelY - corner.y, 2)
-        );
-        return distance < (closest.distance ?? Infinity)
-          ? { ...corner, distance }
-          : closest;
-      },
-      { x: 0, y: 0, distance: Infinity } as Corner
+    // Find the earliest selected annotation in reading order.
+    const selectedAnns = annotations.filter((ann) =>
+      selectedAnnotations.includes(ann.id)
     );
-  };
+    if (selectedAnns.length === 0) return;
+    const earliestAnn = selectedAnns.reduce((acc, ann) =>
+      ann.json.start < acc.json.start ? ann : acc
+    );
 
+    // Find the span index that includes the earliest annotation's start.
+    const scrollToSpanIndex = spans.findIndex(
+      (span) =>
+        earliestAnn.json.start >= span.start &&
+        earliestAnn.json.start < span.end
+    );
+    if (scrollToSpanIndex < 0) return;
+
+    // Get the target element in DOM
+    const containerElement = containerRef.current;
+    if (!containerElement) return;
+
+    const targetElement = containerElement.querySelector(
+      `span[data-span-index="${scrollToSpanIndex}"]`
+    ) as HTMLElement | null;
+
+    if (!targetElement) return;
+
+    /**
+     * Smoothly scrolls the container so that the target is centered.
+     */
+    const containerRect = containerElement.getBoundingClientRect();
+    const targetRect = targetElement.getBoundingClientRect();
+
+    const offsetTop =
+      targetRect.top - containerRect.top + containerElement.scrollTop;
+    const offsetLeft =
+      targetRect.left - containerRect.left + containerElement.scrollLeft;
+
+    containerElement.scrollTo({
+      top: offsetTop - containerRect.height / 2 + targetRect.height / 2,
+      left: offsetLeft - containerRect.width / 2 + targetRect.width / 2,
+      behavior: "smooth",
+    });
+  }, [selectedAnnotations, annotations, spans]);
+
+  /**
+   * Creates annotation when user finishes a text selection (mouseup).
+   * @param event - The mouse event.
+   */
   const handleMouseUp = (event: React.MouseEvent<HTMLDivElement>) => {
     const selection = document.getSelection();
     if (!selection || selection.toString().length === 0) {

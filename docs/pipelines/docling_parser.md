@@ -1,6 +1,12 @@
 # Docling Parser
 
-The Docling Parser is an advanced PDF document parser that uses machine learning to extract structured information from PDF documents. It's the primary parser for PDF documents in OpenContracts.
+## Intro
+
+The Docling Parser is an advanced PDF document parser based on IBM's [docling](https://github.com/DS4SD/docling) document processing pipeline. As of `3.0.0-alpha1`, it is the primary parser for PDF documents in OpenContracts.
+
+Perhaps its coolest feature, besides its ability to support multiple cutting-edge OCR engines and numerous formats, is its ability to group document features into groups. We've found this to be particularly useful for contract layouts and setup our Docling integration to import these groups as OpenContract "relationships" - which, if you're not familiar, map N source annotations to N target annotations. In the case of the Docling parser, these look like this (AWESOME):
+
+![Docling Group Relationships](../assets/images/screenshots/Docling%20Group%20(Roll%20Up).png)
 
 ## Overview
 
@@ -43,6 +49,8 @@ The Docling Parser requires model files to be present in the path specified by `
 ```python
 DOCLING_MODELS_PATH = env.str("DOCLING_MODELS_PATH", default="/models/docling")
 ```
+
+_NOTE_ This should be moved to settings.PARSER_KWARGS in near future.
 
 ## Usage
 

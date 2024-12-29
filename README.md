@@ -11,26 +11,46 @@
 | CI/CD | [![codecov](https://codecov.io/gh/JSv4/OpenContracts/branch/main/graph/badge.svg?token=RdVsiuaTVz)](https://codecov.io/gh/JSv4/OpenContracts)                                                                                                                                                                                                                                                                                                                  |
 | Meta | [![code style - black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) [![types - Mypy](https://img.shields.io/badge/types-Mypy-blue.svg)](https://github.com/python/mypy) [![imports - isort](https://img.shields.io/badge/imports-isort-ef8336.svg)](https://github.com/pycqa/isort) [![License - Apache2](https://img.shields.io/badge/license-Apache%202-blue.svg)](https://spdx.org/licenses/) |
 
-## What Does it Do?
+## TLDR: What Does it Do?
 
-OpenContracts is an **Apache-2 Licensed** enterprise document analytics tool. It provides several key features:
+OpenContracts is an **Apache-2 Licensed** enterprise document analytics tool. It supports multiple formats - including PDF and txt-based formats (with more on the way). It also supports multiple document ingestion pipelines with a [pluggable architecture](docs/pipelines/pipeline_overview.md) designed to make supporting new formats and ingestion engines easy - see our [Docling Integration](docs/pipelines/docling_parser.md) for an example. Writing your own custom document analytics tools where the results get displayed beautifully over the original document [is easy](docs/walkthrough/advanced/register-doc-analyzer.md). We also support mass document [data extraction](docs/extract_and_retrieval/intro_to_django_annotation_vector_store.md) with a [LlamaIndex](https://www.llamaindex.ai/) wrapper.
+
+### PDF-Annotation and Analysis:
+
+![PDF Processing](/docs/assets/images/gifs/PDF%20Annotation%20Flow.gif)
+
+### TXT-Based Format Annotation and Analysis:
+
+![Txt Processing](/docs/assets/images/gifs/Txt%20Annotation%20Flow.gif)
+
+### Data Extract:
+
+![Data Grid](docs/assets/images/screenshots/data_grid_image.png)
+
+### Rapidly Deployable Bespoke Analytics
+
+![Analyzer Annotations](docs/assets/images/screenshots/Analyzer_Annotations.png)
+
+### [DEVELOPING] Document Management
+
+![Corpus Dashboard](docs/assets/images/screenshots/corpus_dashboard.png)
+
+
+## Ok, now tell me more. What Does it Do?
+
+OpenContracts provides several key features:
 
 1. **Manage Documents** - Manage document collections (`Corpuses`)
 2. **Layout Parser** - Automatically extracts layout features from PDFs
 3. **Automatic Vector Embeddings** - generated for uploaded PDFs and extracted layout blocks
 4. **Pluggable microservice analyzer architecture** - to let you analyze documents and automatically annotate them
-5. **Human Annotation Interface** - to manually annotated documents, including multi-page annotations.
-6. **LlamaIndex Integration** - Use our vector stores (powered by pgvector) and any manual or automatically annotated features
+5. **Pluggable Parsing Pipelines** - to let you support new document formats and ingestion engines. 
+6. **Human Annotation Interface** - to manually annotated documents, including multi-page annotations.
+7. **LlamaIndex Integration** - Use our vector stores (powered by pgvector) and any manual or automatically annotated features
    to let an LLM intelligently answer questions.
-7. **Data Extract** - ask multiple questions across hundreds of documents using complex LLM-powered querying behavior.
+8. **Data Extract** - ask multiple questions across hundreds of documents using complex LLM-powered querying behavior.
    Our sample implementation uses LlamaIndex + Marvin.
-8. **Custom Data Extract** - Custom data extract pipelines can be used on the frontend to query documents in bulk.
-
-![Data Grid](docs/assets/images/screenshots/data_grid_image.png)
-
-![Corpus Dashboard](docs/assets/images/screenshots/corpus_dashboard.png)
-
-![Analyzer Annotations](docs/assets/images/screenshots/Analyzer_Annotations.png)
+9. **Custom Data Extract** - Custom data extract pipelines can be used on the frontend to query documents in bulk.
 
 ## Key Docs
 
@@ -86,3 +106,5 @@ use to generate a text and x-y coordinate layer from scratch.
 Special thanks to AllenAI's [PAWLS project](https://github.com/allenai/pawls) and Nlmatics
 [nlm-ingestor](https://github.com/nlmatics/nlm-ingestor). They've pioneered a number of features and flows, and we are
 using their code in some parts of the application.
+
+NLmatics was also the inspiration for our data extract grid and parsing pipeline. The company was ahead of its time, and, while the product is no longer available, OpenContracts aims to take some of its best and most innovative features and make them open source!

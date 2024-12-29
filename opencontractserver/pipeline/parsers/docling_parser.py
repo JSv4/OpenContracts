@@ -341,11 +341,18 @@ class DoclingParser(BaseParser):
                                     flattened_heading_annot_id_to_children[
                                         parent_ref
                                     ].append(annotation["id"])
+                            else:
+                                accumulator.append(annotation["id"])
 
                         else:
                             logger.error(
                                 f"No annotation found in base_annotation_lookup for text item with ref {item.self_ref}"
                             )
+
+                    if len(accumulator) > 0:
+                        heading_annot_id_to_children.append(
+                            (prev_parent_ref, accumulator)
+                        )
 
             # 2) Build relationships from heading_annot_id_to_children
             relationships: list[OpenContractsRelationshipPythonType] = []
@@ -360,7 +367,7 @@ class DoclingParser(BaseParser):
                         "id": f"group-rel-{rel_counter}",
                         "relationshipLabel": "Docling Group Relationship",
                         "source_annotation_ids": [heading_id],
-                        "target_annotation_ids": list(child_ids),
+                        "target_annotation_ids": child_ids,
                         "structural": True,  # related to doc not corpus (underlying structure of document)
                     }
                     relationships.append(relationship_entry)
@@ -372,7 +379,7 @@ class DoclingParser(BaseParser):
                         "id": f"group-rel-{rel_counter}",
                         "relationshipLabel": "Docling Group Relationship",
                         "source_annotation_ids": [heading_id],
-                        "target_annotation_ids": list(child_ids),
+                        "target_annotation_ids": child_ids,
                         "structural": True,  # related to doc not corpus (underlying structure of document)
                     }
                     relationships.append(relationship_entry)

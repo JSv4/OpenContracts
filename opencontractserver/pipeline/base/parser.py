@@ -37,11 +37,13 @@ class BaseParser(ABC):
         self, user_id: int, doc_id: int, **kwargs
     ) -> Optional[OpenContractDocExport]:
         """
-        Abstract method to parse a document.
+        Abstract method to parse a document with optional kwargs.
 
         Args:
             user_id (int): ID of the user.
             doc_id (int): ID of the document to parse.
+            **kwargs: Arbitrary keyword arguments that may be provided
+                      for specific parser functionalities.
 
         Returns:
             Optional[OpenContractDocExport]: The parsed document data, or None if parsing failed.
@@ -204,27 +206,30 @@ class BaseParser(ABC):
         )
 
     def process_document(
-        self, user_id: int, doc_id: int
+        self, user_id: int, doc_id: int, **kwargs
     ) -> Optional[OpenContractDocExport]:
         """
-        Process a document by parsing it and saving the parsed data.
-        This method combines parse_document and save_parsed_data into a single operation.
+        Process a document by parsing it and then saving the parsed data.
+        This method calls parse_document(...) and then save_parsed_data(...).
 
         Args:
             user_id (int): ID of the user.
             doc_id (int): ID of the document to process.
+            **kwargs: Arbitrary keyword arguments that may be provided
+                      for specific parser functionalities.
 
         Returns:
             Optional[OpenContractDocExport]: The parsed document data, or None if parsing failed.
         """
-        logger.info(f"Processing document {doc_id}")
+        logger.info(
+            f"Processing document {doc_id} with possible parser kwargs: {kwargs}"
+        )
 
-        parsed_data = self.parse_document(user_id, doc_id)
-
+        parsed_data = self.parse_document(user_id, doc_id, **kwargs)
         if parsed_data is not None:
             self.save_parsed_data(user_id, doc_id, parsed_data)
-            logger.info(f"Document {doc_id} processed successfully")
+            logger.info(f"Document {doc_id} processed successfully.")
         else:
-            logger.warning(f"Document {doc_id} parsing failed")
+            logger.warning(f"Document {doc_id} parsing failed.")
 
         return parsed_data

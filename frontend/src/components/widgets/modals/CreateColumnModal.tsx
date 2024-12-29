@@ -84,6 +84,9 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
     ) => {
       const value = data.type === "checkbox" ? data.checked : data.value;
       setFormData((prev) => ({ ...prev, [fieldName]: value }));
+      if (fieldName === "extractIsList") {
+        setExtractIsList(value);
+      }
     },
     []
   );

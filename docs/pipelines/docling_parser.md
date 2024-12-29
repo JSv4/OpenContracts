@@ -15,12 +15,12 @@ sequenceDiagram
     U->>D: parse_document(user_id, doc_id)
     D->>DB: Load document
     D->>DC: Convert PDF
-    
+
     alt PDF needs OCR
         DC->>OCR: Process PDF
         OCR-->>DC: OCR results
     end
-    
+
     DC-->>D: DoclingDocument
     D->>D: Process structure
     D->>D: Generate PAWLS tokens
@@ -208,4 +208,4 @@ Common issues and solutions:
    ```
    - Reduce concurrent processing
    - Increase system memory
-   - Process smaller batches 
+   - Process smaller batches

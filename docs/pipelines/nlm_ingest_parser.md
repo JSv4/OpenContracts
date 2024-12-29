@@ -1,6 +1,6 @@
 # NLM Ingest Parser
 
-The NLM Ingest Parser is a lightweight alternative to the Docling Parser that uses an NLM-Ingest REST parser for PDF document processing. Like Docling, it provides structural labels and relationships. Unlike Docling, it uses heuristics and a rules-based approach to determine the structure of the document. *Note*: The relationships _between_ annotations are not yet implemented in our conversion. 
+The NLM Ingest Parser is a lightweight alternative to the Docling Parser that uses an NLM-Ingest REST parser for PDF document processing. Like Docling, it provides structural labels and relationships. Unlike Docling, it uses heuristics and a rules-based approach to determine the structure of the document. *Note*: The relationships _between_ annotations are not yet implemented in our conversion.
 
 ## Overview
 
@@ -15,7 +15,7 @@ sequenceDiagram
     U->>N: parse_document(user_id, doc_id)
     N->>DB: Load document
     N->>N: Check OCR needs
-    
+
     alt PDF needs OCR
         N->>NLM: Request with OCR
         NLM->>OCR: Process PDF
@@ -23,7 +23,7 @@ sequenceDiagram
     else PDF has text
         N->>NLM: Request without OCR
     end
-    
+
     NLM-->>N: OpenContracts data
     N->>N: Process annotations
     N-->>U: OpenContractDocExport
@@ -249,4 +249,4 @@ Consider alternatives when:
 - You need offline processing
 - You require custom processing logic
 - You have network restrictions
-- You need full control over the pipeline 
+- You need full control over the pipeline

@@ -1,18 +1,18 @@
 import React, { useState, useMemo, useEffect } from "react";
 import styled from "styled-components";
-import { Icon, Popup } from "semantic-ui-react";
+import { Icon, Popup, Button } from "semantic-ui-react";
 import { AnnotationLabelType } from "../../../../types/graphql-api";
 import { SpanLabelCard, BlankLabelElement } from "./LabelElements";
 import { LabelSelectorDialog } from "./LabelSelectorDialog";
 import { TruncatedText } from "../../../widgets/data-display/TruncatedText";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 import { useCorpusState } from "../../context/CorpusAtom";
-import { useFileType } from "../../context/DocumentAtom";
+import { useSelectedDocument } from "../../context/DocumentAtom";
 
 interface LabelSelectorProps {
   sidebarWidth: string;
   activeSpanLabel: AnnotationLabelType | null;
-  setActiveLabel: (label: AnnotationLabelType) => void;
+  setActiveLabel: (label: AnnotationLabelType | undefined) => void;
 }
 
 export const LabelSelector: React.FC<LabelSelectorProps> = ({
@@ -22,25 +22,16 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
 }) => {
   const { width } = useWindowDimensions();
   const [open, setOpen] = useState(false);
-  const { fileType } = useFileType();
 
+  const { selectedDocument } = useSelectedDocument();
   const { humanSpanLabels, humanTokenLabels } = useCorpusState();
-
-  // Add detailed debug logging
-  useEffect(() => {
-    console.log("LabelSelector labels changed:", {
-      humanSpanLabels,
-      humanTokenLabels,
-      fileType,
-    });
-  }, [humanSpanLabels, humanTokenLabels, fileType]);
 
   const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
 
   const filteredLabelChoices = useMemo(() => {
     // Filter labels based on file type
-    const isTextFile = fileType.startsWith("text/");
-    const isPdfFile = fileType === "application/pdf";
+    const isTextFile = selectedDocument?.fileType?.startsWith("text/") ?? false;
+    const isPdfFile = selectedDocument?.fileType === "application/pdf" ?? false;
 
     let availableLabels: AnnotationLabelType[] = [];
     if (isTextFile) {
@@ -48,12 +39,19 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
     } else if (isPdfFile) {
       availableLabels = [...humanTokenLabels];
     }
+    console.log("filtered for filetype", selectedDocument?.fileType);
+    console.log("availableLabels", availableLabels);
 
     // Filter out the active label if it exists
     return activeSpanLabel
       ? availableLabels.filter((obj) => obj.id !== activeSpanLabel.id)
       : availableLabels;
-  }, [humanSpanLabels, humanTokenLabels, activeSpanLabel, fileType]);
+  }, [
+    humanSpanLabels,
+    humanTokenLabels,
+    activeSpanLabel,
+    selectedDocument?.id,
+  ]);
 
   const onSelect = (label: AnnotationLabelType): void => {
     setActiveLabel(label);
@@ -67,6 +65,19 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
   const handleClose = () => {
     setOpen(false);
   };
+
+  useEffect(() => {
+    console.log("LabelSelector - activeSpanLabel changed:", activeSpanLabel);
+  }, [activeSpanLabel]);
+
+  useEffect(() => {
+    console.log("LabelSelector - selectedDocument changed:", selectedDocument);
+  }, [selectedDocument]);
+
+  useEffect(() => {
+    console.log("LabelSelector - humanSpanLabels changed:", humanSpanLabels);
+    console.log("LabelSelector - humanTokenLabels changed:", humanTokenLabels);
+  }, [humanSpanLabels, humanTokenLabels]);
 
   return (
     <LabelSelectorContainer id="LabelSelectorContainer">
@@ -89,10 +100,23 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
               </HeaderSection>
               <BodySection>
                 {activeSpanLabel ? (
-                  <SpanLabelCard
-                    key={activeSpanLabel.id}
-                    label={activeSpanLabel}
-                  />
+                  <>
+                    <SpanLabelCard
+                      key={activeSpanLabel.id}
+                      label={activeSpanLabel}
+                    />
+                    <ClearButton
+                      icon
+                      circular
+                      size="tiny"
+                      onClick={(e: { stopPropagation: () => void }) => {
+                        e.stopPropagation();
+                        setActiveLabel(undefined);
+                      }}
+                    >
+                      <Icon name="x" />
+                    </ClearButton>
+                  </>
                 ) : (
                   <BlankLabelElement key="Blank_LABEL" />
                 )}
@@ -185,6 +209,21 @@ const StyledIcon = styled(Icon)`
 
 const BodySection = styled.div`
   padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const ClearButton = styled(Button)`
+  &.ui.button {
+    padding: 8px;
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+  }
 `;
 
 const PopupContent = styled.div`

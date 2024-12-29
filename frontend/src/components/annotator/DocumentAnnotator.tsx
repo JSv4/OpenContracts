@@ -80,7 +80,10 @@ import {
   useAnnotationObjs,
   useInitialAnnotations,
 } from "./hooks/AnnotationHooks";
-import { useAnnotationDisplay } from "./context/UISettingsAtom";
+import {
+  useAnnotationControls,
+  useAnnotationDisplay,
+} from "./context/UISettingsAtom";
 import styled from "styled-components";
 import { DocumentViewer } from "./display/viewer/DocumentViewer";
 
@@ -182,6 +185,7 @@ export const DocumentAnnotator = ({
   );
   const edit_mode = useReactiveVar(editMode);
   const { selectedAnalysis: selected_analysis } = useAnalysisSelection();
+  const { setActiveSpanLabel } = useAnnotationControls();
 
   const { pdfDoc, setPdfDoc } = usePdfDoc();
   const { pages, setPages } = usePages();
@@ -702,6 +706,7 @@ export const DocumentAnnotator = ({
       setDocTypeAnnotations([]);
       setAnnotationObjs([]);
       setInitialAnnotations([]);
+      setActiveSpanLabel(undefined);
 
       // Reset selected analysis and extract
       onSelectAnalysis(null);

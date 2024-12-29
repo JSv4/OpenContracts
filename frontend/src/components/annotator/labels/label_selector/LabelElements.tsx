@@ -14,7 +14,7 @@ export const SpanLabelCard = ({ label }: LabelCardProps) => {
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "flex-start",
-        margin: ".25vw",
+        margin: "0",
         flex: 1,
         maxWidth: "200px",
         minWidth: "100px",

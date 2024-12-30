@@ -4,9 +4,7 @@ from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
 from llama_index.core import Settings, VectorStoreIndex
-from llama_index.core.agent import (
-    ReActAgent,
-)
+from llama_index.core.agent import ReActAgent
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
@@ -16,11 +14,10 @@ from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
 
 logger = logging.getLogger(__name__)
 
+
 @shared_task
 def oc_llama_index_doc_query(
-    cell_id: int,
-    similarity_top_k: int = 8,
-    max_token_length: int = 64000
+    cell_id: int, similarity_top_k: int = 8, max_token_length: int = 64000
 ) -> None:
     """
     OpenContracts' default LlamaIndex and Marvin-based data-extraction pipeline.
@@ -49,17 +46,22 @@ def oc_llama_index_doc_query(
     """
 
     import logging
+
+    import marvin
     import numpy as np
+    import tiktoken
+    from django.conf import settings
     from django.db.models import Q
     from django.utils import timezone
     from llama_index.core import QueryBundle, Settings, VectorStoreIndex
     from llama_index.core.agent import (
         FunctionCallingAgentWorker,
-        StructuredPlannerAgent
+        StructuredPlannerAgent,
     )
     from llama_index.core.postprocessor import SentenceTransformerRerank
     from llama_index.core.schema import Node, NodeWithScore
     from llama_index.core.tools import QueryEngineTool
+    from pgvector.django import CosineDistance
     from pydantic import BaseModel
 
     from opencontractserver.annotations.models import Annotation, Relationship
@@ -67,10 +69,6 @@ def oc_llama_index_doc_query(
     from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
     from opencontractserver.utils.embeddings import calculate_embedding_for_text
     from opencontractserver.utils.etl import parse_model_or_primitive
-    from pgvector.django import CosineDistance
-    from django.conf import settings
-    import marvin
-    import tiktoken
 
     logger = logging.getLogger(__name__)
 
@@ -99,22 +97,28 @@ def oc_llama_index_doc_query(
             document_id=document.id, must_have_text=datacell.column.must_contain_text
         )
         index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
-        
+
         # =====================
         # Structural context
         # =====================
         structural_annotations = Annotation.objects.filter(
-            document_id=document.id,
-            structural=True,
-            page=0
+            document_id=document.id, structural=True, page=0
         )
-        logger.info(f"oc_llama_index_doc_query - Retrieved {len(structural_annotations)} structural annotations on page 0")
-        
-        logger.info(f"oc_llama_index_doc_query - Retrieved {len(structural_annotations)} structural annotations on page 0")
-        structural_context = "\n".join(
-            f"{annot.annotation_label.text if annot.annotation_label else 'Unlabeled'}: {annot.raw_text}"
-            for annot in structural_annotations
-        ) if structural_annotations else ""
+        logger.info(
+            f"oc_llama_index_doc_query - Retrieved {len(structural_annotations)} structural annotations on page 0"
+        )
+
+        logger.info(
+            f"oc_llama_index_doc_query - Retrieved {len(structural_annotations)} structural annotations on page 0"
+        )
+        structural_context = (
+            "\n".join(
+                f"{annot.annotation_label.text if annot.annotation_label else 'Unlabeled'}: {annot.raw_text}"
+                for annot in structural_annotations
+            )
+            if structural_annotations
+            else ""
+        )
 
         if structural_context:
             structural_context = (
@@ -122,7 +126,6 @@ def oc_llama_index_doc_query(
                 f"{structural_context}\n\n"
                 "========End of First Page========\n"
             )
-
 
         # =====================
         # Searching logic
@@ -146,7 +149,8 @@ def oc_llama_index_doc_query(
         # If search_text has a special break char, we average embeddings
         if isinstance(search_text, str) and "|||" in search_text:
             logger.info(
-                "oc_llama_index_doc_query - Detected special break character in examples `|||` - splitting and averaging embeddings."
+                "oc_llama_index_doc_query - Detected special break character in "
+                "examples `|||` - splitting and averaging embeddings."
             )
             examples = [ex for ex in search_text.split("|||") if ex.strip()]
             embeddings: list[list[float | int]] = []
@@ -167,7 +171,9 @@ def oc_llama_index_doc_query(
                 queryset = (
                     Annotation.objects.filter(document_id=document.id)
                     .order_by(CosineDistance("embedding", avg_embedding.tolist()))
-                    .annotate(similarity=CosineDistance("embedding", avg_embedding.tolist()))
+                    .annotate(
+                        similarity=CosineDistance("embedding", avg_embedding.tolist())
+                    )
                 )[:similarity_top_k]
 
                 nodes = [
@@ -175,13 +181,19 @@ def oc_llama_index_doc_query(
                         node=Node(
                             doc_id=str(row.id),
                             text=row.raw_text,
-                            embedding=row.embedding.tolist() if getattr(row, "embedding", None) else [],
+                            embedding=row.embedding.tolist()
+                            if getattr(row, "embedding", None)
+                            else [],
                             extra_info={
                                 "page": row.page,
                                 "bounding_box": row.bounding_box,
                                 "annotation_id": row.id,
-                                "label": row.annotation_label.text if row.annotation_label else None,
-                                "label_id": row.annotation_label.id if row.annotation_label else None,
+                                "label": row.annotation_label.text
+                                if row.annotation_label
+                                else None,
+                                "label_id": row.annotation_label.id
+                                if row.annotation_label
+                                else None,
                             },
                         ),
                         score=row.similarity,
@@ -190,8 +202,7 @@ def oc_llama_index_doc_query(
                 ]
 
             sbert_rerank = SentenceTransformerRerank(
-                model="cross-encoder/ms-marco-MiniLM-L-2-v2",
-                top_n=5
+                model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=5
             )
             retrieved_nodes = sbert_rerank.postprocess_nodes(nodes, QueryBundle(query))
         else:
@@ -199,14 +210,12 @@ def oc_llama_index_doc_query(
             retriever = index.as_retriever(similarity_top_k=similarity_top_k)
             results = retriever.retrieve(search_text if search_text else query)
             sbert_rerank = SentenceTransformerRerank(
-                model="cross-encoder/ms-marco-MiniLM-L-2-v2",
-                top_n=5
+                model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=5
             )
             retrieved_nodes = sbert_rerank.postprocess_nodes(
-                results,
-                QueryBundle(query)
+                results, QueryBundle(query)
             )
-        
+
         logger.info(f"Retrieved {len(retrieved_nodes)} nodes")
 
         retrieved_annotation_ids = [
@@ -222,15 +231,18 @@ def oc_llama_index_doc_query(
         # =====================
         # Retrieve relationship where these annotations are source or target
         # =====================
-        from django.db.models import Q
-        relationships = Relationship.objects.filter(
-            Q(source_annotations__id__in=retrieved_annotation_ids)
-            | Q(target_annotations__id__in=retrieved_annotation_ids)
-        ).select_related('relationship_label').prefetch_related(
-            'source_annotations__annotation_label',
-            'target_annotations__annotation_label'
+        relationships = (
+            Relationship.objects.filter(
+                Q(source_annotations__id__in=retrieved_annotation_ids)
+                | Q(target_annotations__id__in=retrieved_annotation_ids)
+            )
+            .select_related("relationship_label")
+            .prefetch_related(
+                "source_annotations__annotation_label",
+                "target_annotations__annotation_label",
+            )
         )
-        
+
         logger.info(f"Retrieved {len(relationships)} relationships")
 
         relationship_sections = []
@@ -261,31 +273,41 @@ def oc_llama_index_doc_query(
             added_nodes = set()
 
             for rel in relationships:
-                rel_type = rel.relationship_label.text if rel.relationship_label else "relates_to"
+                rel_type = (
+                    rel.relationship_label.text
+                    if rel.relationship_label
+                    else "relates_to"
+                )
                 for source in rel.source_annotations.all():
                     for target in rel.target_annotations.all():
                         # Add node definitions if not already added
                         if source.id not in added_nodes:
-                            retrieved_marker = " [↑]" if source.id in retrieved_annotation_ids else ""
+                            retrieved_marker = (
+                                " [↑]" if source.id in retrieved_annotation_ids else ""
+                            )
                             source_text = (
                                 source.raw_text[:64] + "..."
-                                if len(source.raw_text) > 64 else source.raw_text
+                                if len(source.raw_text) > 64
+                                else source.raw_text
                             )
                             relationship_sections.append(
-                                f'Node{source.id}[label: '
+                                f"Node{source.id}[label: "
                                 f'{source.annotation_label.text if source.annotation_label else "unlabeled"}, '
                                 f'text: "{source_text}"{retrieved_marker}]'
                             )
                             added_nodes.add(source.id)
 
                         if target.id not in added_nodes:
-                            retrieved_marker = " [↑]" if target.id in retrieved_annotation_ids else ""
+                            retrieved_marker = (
+                                " [↑]" if target.id in retrieved_annotation_ids else ""
+                            )
                             target_text = (
                                 target.raw_text[:64] + "..."
-                                if len(target.raw_text) > 64 else target.raw_text
+                                if len(target.raw_text) > 64
+                                else target.raw_text
                             )
                             relationship_sections.append(
-                                f'Node{target.id}[label: '
+                                f"Node{target.id}[label: "
                                 f'{target.annotation_label.text if target.annotation_label else "unlabeled"}, '
                                 f'text: "{target_text}"{retrieved_marker}]'
                             )
@@ -293,7 +315,7 @@ def oc_llama_index_doc_query(
 
                         # Add relationship
                         relationship_sections.append(
-                            f'Node{source.id} -->|{rel_type}| Node{target.id}'
+                            f"Node{source.id} -->|{rel_type}| Node{target.id}"
                         )
 
             relationship_sections.append("```\n")
@@ -306,17 +328,31 @@ def oc_llama_index_doc_query(
             )
             relationship_sections.append("Textual Description of Relationships:")
             for rel in relationships:
-                rel_type = rel.relationship_label.text if rel.relationship_label else "relates_to"
+                rel_type = (
+                    rel.relationship_label.text
+                    if rel.relationship_label
+                    else "relates_to"
+                )
                 relationship_sections.append(f"\nRelationship Type: {rel_type}")
 
                 for source in rel.source_annotations.all():
                     for target in rel.target_annotations.all():
-                        retrieved_source = "[↑ Retrieved]" if source.id in retrieved_annotation_ids else ""
-                        retrieved_target = "[↑ Retrieved]" if target.id in retrieved_annotation_ids else ""
+                        retrieved_source = (
+                            "[↑ Retrieved]"
+                            if source.id in retrieved_annotation_ids
+                            else ""
+                        )
+                        retrieved_target = (
+                            "[↑ Retrieved]"
+                            if target.id in retrieved_annotation_ids
+                            else ""
+                        )
                         relationship_sections.append(
-                            f"• Node{source.id}[label: {source.annotation_label.text if source.annotation_label else 'unlabeled'}, "
+                            f"• Node{source.id}[label: "
+                            f"{source.annotation_label.text if source.annotation_label else 'unlabeled'}, "
                             f'text: "{source.raw_text}"] {retrieved_source}\n  {rel_type}\n  '
-                            f"Node{target.id}[label: {target.annotation_label.text if target.annotation_label else 'unlabeled'}, "
+                            f"Node{target.id}"
+                            f"[label: {target.annotation_label.text if target.annotation_label else 'unlabeled'}, "
                             f'text: "{target.raw_text}"] {retrieved_target}'
                         )
 
@@ -352,7 +388,7 @@ def oc_llama_index_doc_query(
         # Trim logic if tokens exceed limit
         if len(tokens) > max_token_length:
             logger.warning(
-                f"Context exceeds token limit ({len(tokens)} > {max_token_length}). Attempting to trim retrieved sections..."
+                f"Context exceeds token limit ({len(tokens)} > {max_token_length}). Attempting to trim sections."
             )
 
             # 1) Attempt to trim retrieved sections
@@ -360,7 +396,9 @@ def oc_llama_index_doc_query(
                 # Use a safer delimiter so we handle variants
                 splitted = raw_retrieved_text.split("```Relevant Section:")
                 # splitted[0] is text before the first '```Relevant Section:', if any
-                while len(splitted) > 1 and token_length(combined_text) > max_token_length:
+                while (
+                    len(splitted) > 1 and token_length(combined_text) > max_token_length
+                ):
                     splitted.pop(0)  # remove earliest "Relevant Section"
                     new_retrieved_text = "```Relevant Section:".join(splitted)
                     sections_text = (
@@ -369,13 +407,17 @@ def oc_llama_index_doc_query(
                         f"{new_retrieved_text}\n"
                         "==========End of Retrieved Sections==========\n"
                     )
-                    full_context_parts = [structural_context, sections_text, relationship_context]
+                    full_context_parts = [
+                        structural_context,
+                        sections_text,
+                        relationship_context,
+                    ]
                     combined_text = "\n\n".join(filter(None, full_context_parts))
 
             # Re-check after trimming sections
             if token_length(combined_text) > max_token_length:
                 logger.warning(
-                    f"Context still exceeds token limit after trimming retrieved sections. Trimming relationship context..."
+                    "Context still exceeds token limit after trimming retrieved sects. Trimming rels. context."
                 )
                 # 2) Attempt to remove relationship context entirely if needed
                 full_context_parts = [structural_context, sections_text]
@@ -384,7 +426,10 @@ def oc_llama_index_doc_query(
                 if token_length(combined_text) > max_token_length:
                     # 3) Attempt to partially trim structural context
                     splitted_structural = structural_context.split("\n")
-                    while len(splitted_structural) > 1 and token_length(combined_text) > max_token_length:
+                    while (
+                        len(splitted_structural) > 1
+                        and token_length(combined_text) > max_token_length
+                    ):
                         splitted_structural.pop()
                         new_structural_content = "\n".join(splitted_structural)
                         full_context_parts = [new_structural_content, sections_text]
@@ -417,6 +462,7 @@ def oc_llama_index_doc_query(
         definitions = ""
         if datacell.column.agentic:
             import nest_asyncio
+
             nest_asyncio.apply()
 
             engine = index.as_query_engine(similarity_top_k=similarity_top_k)
@@ -430,8 +476,6 @@ def oc_llama_index_doc_query(
                     ),
                 )
             ]
-
-            from llama_index.core.agent import FunctionCallingAgentWorker, StructuredPlannerAgent
 
             worker = FunctionCallingAgentWorker.from_tools(
                 query_engine_tools, verbose=True
@@ -464,8 +508,7 @@ def oc_llama_index_doc_query(
             f"In response to this query:\n\n```\n{search_text if search_text else query}\n```\n\n"
             "We found the following most semantically relevant parts of a document, "
             "along with related and referenced sections highlighted:\n"
-            f"```\n{combined_text}\n```\n\n"
-            + definitions
+            f"```\n{combined_text}\n```\n\n" + definitions
         )
 
         logger.info(f"Resulting data for marvin: {final_text_for_marvin}")

@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { ExtractType, PageInfo } from "../../../types/graphql-api";
 import { FetchMoreOnVisible } from "../../widgets/infinite_scroll/FetchMoreOnVisible";
+import { useMutation } from "@apollo/client";
+import { REQUEST_START_EXTRACT } from "../../../graphql/mutations";
 
 interface ExtractListProps {
   items: ExtractType[] | undefined;
@@ -135,6 +137,11 @@ const styles = {
         color: "#ef4444",
       },
     },
+    "&.play": {
+      "&:hover": {
+        color: "#059669",
+      },
+    },
   } as React.CSSProperties,
   loadingOverlay: {
     position: "absolute" as const,
@@ -179,6 +186,26 @@ export function ExtractList({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const [startExtract] = useMutation(REQUEST_START_EXTRACT, {
+    onCompleted: (data) => {
+      // Update the local instance with the new status
+      if (items) {
+        const updatedItems = items.map((item) =>
+          item.id === data.startExtract.obj.id
+            ? { ...item, ...data.startExtract.obj }
+            : item
+        );
+        // This will trigger a re-render with the updated status
+        items.splice(0, items.length, ...updatedItems);
+      }
+    },
+  });
+
+  const handleStartExtract = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    startExtract({ variables: { extractId: id } });
+  };
 
   const handleUpdate = () => {
     if (!loading && pageInfo?.hasNextPage) {
@@ -295,6 +322,7 @@ export function ExtractList({
               const status = getStatusConfig(item);
               const isSelected = selectedId === item.id;
               const isHovered = hoveredId === item.id;
+              const canStart = !item.started && !item.finished && !item.error;
 
               return (
                 <tr
@@ -337,6 +365,13 @@ export function ExtractList({
                   </td>
                   <td style={{ ...styles.cell, textAlign: "right" }}>
                     <div style={styles.actions}>
+                      {canStart && (
+                        <ActionButton
+                          icon={Play}
+                          className="play"
+                          onClick={(e) => handleStartExtract(item.id, e)}
+                        />
+                      )}
                       <ActionButton
                         icon={Eye}
                         className="view"

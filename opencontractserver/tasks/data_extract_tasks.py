@@ -4,12 +4,14 @@ from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
 from llama_index.core import Settings, VectorStoreIndex
-from llama_index.core.agent import ReActAgent
-from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from llama_index.core.agent import (
+    FunctionCallingAgentWorker,
+    ReActAgent,
+    StructuredPlannerAgent,
+)
+from llama_index.core.tools import FunctionTool, QueryEngineTool, ToolMetadata
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
-from llama_index.core.agent import FunctionCallingAgentWorker, StructuredPlannerAgent
-from llama_index.core.tools import FunctionTool
 
 from opencontractserver.extracts.models import Datacell
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
@@ -42,7 +44,7 @@ def oc_llama_index_doc_query(
         cell_id (int): Primary key of the relevant Datacell to process.
         similarity_top_k (int): Number of top-k relevant nodes to retrieve.
         max_token_length (int): Maximum context token length allowed.
-    
+
     Returns:
         None
     """
@@ -56,7 +58,6 @@ def oc_llama_index_doc_query(
     from django.db.models import Q
     from django.utils import timezone
     from llama_index.core import QueryBundle, Settings, VectorStoreIndex
-    
     from llama_index.core.postprocessor import SentenceTransformerRerank
     from llama_index.core.schema import Node, NodeWithScore
     from llama_index.core.tools import QueryEngineTool
@@ -460,7 +461,7 @@ def oc_llama_index_doc_query(
         # Optional: definitions from agentic approach
         agent_response_str = None
         if datacell.column.agentic:
-            
+
             import nest_asyncio
 
             nest_asyncio.apply()
@@ -481,20 +482,24 @@ def oc_llama_index_doc_query(
             text_search_tool = FunctionTool.from_defaults(
                 fn=lambda q: text_search(document.id, q),
                 name="text_search",
-                description="Searches for text blocks containing provided raw_text in the current document."
+                description="Searches for text blocks containing provided raw_text in the current document.",
             )
-            
+
             page_retriever_tool = FunctionTool.from_defaults(
                 fn=lambda aid, ws: annotation_window(document.id, aid, ws),
                 name="annotation_window",
-                description="Retrieves contextual text around a specified Annotation."
+                description="Retrieves contextual text around a specified Annotation.",
             )
 
             worker = FunctionCallingAgentWorker.from_tools(
                 [*query_engine_tools, text_search_tool, page_retriever_tool],
                 verbose=True,
             )
-            agent = StructuredPlannerAgent(worker, tools=[*query_engine_tools, text_search_tool, page_retriever_tool], verbose=True)
+            agent = StructuredPlannerAgent(
+                worker,
+                tools=[*query_engine_tools, text_search_tool, page_retriever_tool],
+                verbose=True,
+            )
 
             # -------------------------------------------------------------------
             # 3) Revised mission for the agent
@@ -508,7 +513,7 @@ You are an expert agent analyzing information in a legal or contractual document
    - document_parts (for semantic/hybrid retrieval)
    - text_search (for substring matches in the doc's structural annotations)
    - page_retriever (to get full text from a 0-indexed page).
-5. Once your exploration is sufficient, craft a final short answer in plain text with 
+5. Once your exploration is sufficient, craft a final short answer in plain text with
    no exposition, explanation, or other prose.
 
 User's question:
@@ -525,10 +530,14 @@ Context provided (combined_text):
         # The rest of the pipeline merges the agentic_response with the final text
         # for Marvin-based casting or extraction, shown here as an example.
         # -------------------------------------------------------------------
-        final_text_for_marvin = agent_response_str if agent_response_str else (
-            f"In response to this query:\n\n```\n{search_text if search_text else query}\n```\n\n"
-            "We found the following most semantically relevant parts of a document:\n"
-            f"```\n{combined_text}\n```"
+        final_text_for_marvin = (
+            agent_response_str
+            if agent_response_str
+            else (
+                f"In response to this query:\n\n```\n{search_text if search_text else query}\n```\n\n"
+                "We found the following most semantically relevant parts of a document:\n"
+                f"```\n{combined_text}\n```"
+            )
         )
 
         if datacell.column.extract_is_list:
@@ -637,14 +646,11 @@ def text_search(document_id: int, query_str: str) -> str:
     """
     from opencontractserver.annotations.models import Annotation
 
-    matches = (
-        Annotation.objects.filter(
-            document_id=document_id,
-            structural=True,
-            raw_text__icontains=query_str,
-        )
-        .order_by("id")[0:3]
-    )
+    matches = Annotation.objects.filter(
+        document_id=document_id,
+        structural=True,
+        raw_text__icontains=query_str,
+    ).order_by("id")[0:3]
 
     if not matches.exists():
         return "No structural annotations matched your text_search."
@@ -673,9 +679,9 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
     """
     import json
     import os
+
     from opencontractserver.annotations.models import Annotation
-    from opencontractserver.documents.models import Document
-    from opencontractserver.types.dicts import TextSpanData, PawlsPagePythonType
+    from opencontractserver.types.dicts import PawlsPagePythonType, TextSpanData
 
     # Step 1: Parse the window_size argument
     try:
@@ -687,7 +693,9 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
 
     # Step 2: Fetch the annotation and its document
     try:
-        annotation = Annotation.objects.get(id=int(annotation_id), document_id=document_id)
+        annotation = Annotation.objects.get(
+            id=int(annotation_id), document_id=document_id
+        )
     except (Annotation.DoesNotExist, ValueError):
         return f"Error: Annotation [{annotation_id}] not found."
 
@@ -721,7 +729,9 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
             # -------------------------
             # Handle text/* annotation
             # -------------------------
-            if not doc.txt_extract_file or not os.path.exists(doc.txt_extract_file.path):
+            if not doc.txt_extract_file or not os.path.exists(
+                doc.txt_extract_file.path
+            ):
                 return "Error: Document has no txt_extract_file or path is invalid."
 
             # Read the entire doc text
@@ -737,9 +747,7 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
             try:
                 span_data: TextSpanData = TextSpanData(**anno_json)
             except Exception:
-                return (
-                    "Error: Annotation.json could not be parsed as TextSpanData for text/* document."
-                )
+                return "Error: Annotation.json could not be parsed as TextSpanData for text/* document."
 
             start_idx = span_data["start"]
             end_idx = span_data["end"]
@@ -762,12 +770,16 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
                     end_word_index = i
 
             # Expand by 'window_words' on each side, but total no more than 1000 words
-            total_window = min(window_words * 2 + (end_word_index - start_word_index + 1), 1000)
+            total_window = min(
+                window_words * 2 + (end_word_index - start_word_index + 1), 1000
+            )
             left_expand = min(window_words, start_word_index)
             right_expand = min(window_words, len(words_with_idx) - end_word_index - 1)
 
             # Recompute if the combined is too large (simple approach)
-            def clamp_to_total_window(left: int, right: int, center_count: int, total_max: int):
+            def clamp_to_total_window(
+                left: int, right: int, center_count: int, total_max: int
+            ):
                 current_count = left + right + center_count
                 if current_count <= total_max:
                     return left, right
@@ -782,7 +794,7 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
                     new_right = right
                 return new_left, new_right
 
-            center_chunk = (end_word_index - start_word_index + 1)
+            center_chunk = end_word_index - start_word_index + 1
             left_expand, right_expand = clamp_to_total_window(
                 left_expand, right_expand, center_chunk, 1000
             )
@@ -803,7 +815,9 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
             # -------------------------
             # Handle PDF annotation
             # -------------------------
-            if not doc.pawls_parse_file or not os.path.exists(doc.pawls_parse_file.path):
+            if not doc.pawls_parse_file or not os.path.exists(
+                doc.pawls_parse_file.path
+            ):
                 return "Error: Document has no pawls_parse_file or path is invalid."
 
             with open(doc.pawls_parse_file.path, encoding="utf-8") as f:
@@ -816,7 +830,9 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
             if not isinstance(anno_json, dict):
                 return "Error: Annotation.json is not a dictionary for PDF."
 
-            from opencontractserver.types.dicts import OpenContractsSinglePageAnnotationType
+            from opencontractserver.types.dicts import (
+                OpenContractsSinglePageAnnotationType,
+            )
 
             def is_single_page_annotation(data: dict) -> bool:
                 return all(k in data for k in ["bounds", "tokensJsons", "rawText"])
@@ -825,11 +841,15 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
             try:
                 if is_single_page_annotation(anno_json):
                     page_index = annotation.page
-                    pages_dict[page_index] = OpenContractsSinglePageAnnotationType(**anno_json)
+                    pages_dict[page_index] = OpenContractsSinglePageAnnotationType(
+                        **anno_json
+                    )
                 else:
                     for k, v in anno_json.items():
                         page_index = int(k)
-                        pages_dict[page_index] = OpenContractsSinglePageAnnotationType(**v)
+                        pages_dict[page_index] = OpenContractsSinglePageAnnotationType(
+                            **v
+                        )
             except Exception:
                 return (
                     "Error: Annotation.json could not be parsed as single or multi-page "
@@ -838,7 +858,6 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
 
             result_texts: list[str] = []
 
-            from opencontractserver.types.dicts import PawlsPagePythonType
             pawls_by_index: dict[int, PawlsPagePythonType] = {}
             for page_obj in pawls_pages:
                 try:
@@ -858,8 +877,6 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
                 all_tokens = tokens_as_words(pg_ind)
                 if not all_tokens:
                     continue
-
-                from itertools import chain
 
                 raw_text = anno_data["rawText"].strip() if anno_data["rawText"] else ""
                 # We'll find a contiguous chunk in the token list that matches raw_text, or fallback to partial
@@ -914,7 +931,9 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
 
             # Combine page-level context
             if not result_texts:
-                return "No tokens found or no matching text for the specified annotation."
+                return (
+                    "No tokens found or no matching text for the specified annotation."
+                )
 
             return "\n\n".join(result_texts)
 

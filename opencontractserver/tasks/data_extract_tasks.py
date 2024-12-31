@@ -541,12 +541,14 @@ Context provided (combined_text):
         )
 
         if datacell.column.extract_is_list:
+            logger.info("Extracting list")
             result = marvin.extract(
                 final_text_for_marvin,
                 target=output_type,
                 instructions=parse_instructions if parse_instructions else query,
             )
         else:
+            logger.info("Casting to single instance")
             result = marvin.cast(
                 final_text_for_marvin,
                 target=output_type,

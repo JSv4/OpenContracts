@@ -1698,7 +1698,7 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
 
           .ui.dimmer {
             background-color: rgba(255, 255, 255, 0.8) !important;
-            backdrop-filter: blur(4px) !important;
+            backdrop-filter: blur(1px) !important;
           }
 
           .rdg-header-row .rdg-cell:last-child {

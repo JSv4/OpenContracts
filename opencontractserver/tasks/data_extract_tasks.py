@@ -8,6 +8,8 @@ from llama_index.core.agent import ReActAgent
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
+from llama_index.core.agent import FunctionCallingAgentWorker, StructuredPlannerAgent
+from llama_index.core.tools import FunctionTool
 
 from opencontractserver.extracts.models import Datacell
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
@@ -40,7 +42,7 @@ def oc_llama_index_doc_query(
         cell_id (int): Primary key of the relevant Datacell to process.
         similarity_top_k (int): Number of top-k relevant nodes to retrieve.
         max_token_length (int): Maximum context token length allowed.
-
+    
     Returns:
         None
     """
@@ -54,10 +56,7 @@ def oc_llama_index_doc_query(
     from django.db.models import Q
     from django.utils import timezone
     from llama_index.core import QueryBundle, Settings, VectorStoreIndex
-    from llama_index.core.agent import (
-        FunctionCallingAgentWorker,
-        StructuredPlannerAgent,
-    )
+    
     from llama_index.core.postprocessor import SentenceTransformerRerank
     from llama_index.core.schema import Node, NodeWithScore
     from llama_index.core.tools import QueryEngineTool
@@ -459,69 +458,86 @@ def oc_llama_index_doc_query(
         parse_instructions = datacell.column.instructions
 
         # Optional: definitions from agentic approach
-        definitions = ""
+        agent_response_str = None
         if datacell.column.agentic:
+            
             import nest_asyncio
 
             nest_asyncio.apply()
 
+            # Now build the doc_engine query and incorporate these new tools
             engine = index.as_query_engine(similarity_top_k=similarity_top_k)
             query_engine_tools = [
                 QueryEngineTool.from_defaults(
                     query_engine=engine,
                     name="document_parts",
                     description=(
-                        "Let's you use hybrid or vector search over this document to search for specific text "
-                        "semantically or using text search."
+                        "Provides semantic/hybrid search over this document to find relevant text."
                     ),
                 )
             ]
 
+            # Create function tools
+            text_search_tool = FunctionTool.from_defaults(
+                fn=lambda q: text_search(document.id, q),
+                name="text_search",
+                description="Searches for text blocks containing provided raw_text in the current document."
+            )
+            
+            page_retriever_tool = FunctionTool.from_defaults(
+                fn=lambda aid, ws: annotation_window(document.id, aid, ws),
+                name="annotation_window",
+                description="Retrieves contextual text around a specified Annotation."
+            )
+
             worker = FunctionCallingAgentWorker.from_tools(
-                query_engine_tools, verbose=True
+                [*query_engine_tools, text_search_tool, page_retriever_tool],
+                verbose=True,
             )
-            agent = StructuredPlannerAgent(
-                worker, tools=query_engine_tools, verbose=True
-            )
-            response = agent.query(
-                f"""Please identify all of the defined terms - capitalized terms that are not well-known
-                proper nouns, terms in quotation marks, or terms that are clearly definitions in context.
-                Likewise, if you see a section reference, retrieve the original text. Output format:
-                ```
-                ### Related sections and definitions ##########
+            agent = StructuredPlannerAgent(worker, tools=[*query_engine_tools, text_search_tool, page_retriever_tool], verbose=True)
 
-                [defined term name]: definition
-                ...
+            # -------------------------------------------------------------------
+            # 3) Revised mission for the agent
+            # -------------------------------------------------------------------
+            agent_instructions = f"""
+You are an expert agent analyzing information in a legal or contractual document.
+1. Read the user's question below.
+2. Read the relevant extracted and combined context from the document below.
+3. Determine whether you have enough information to provide a succinct, accurate answer.
+4. IF more context is needed, use the following tools:
+   - document_parts (for semantic/hybrid retrieval)
+   - text_search (for substring matches in the doc's structural annotations)
+   - page_retriever (to get full text from a 0-indexed page).
+5. Once your exploration is sufficient, craft a final short answer in plain text with 
+   no exposition, explanation, or other prose.
 
-                [section name]: text
-                ...
-                ```
-                Now, given the text below, perform the analysis:
-                ```
-                {sections_text}
-                ```
-                """
-            )
-            definitions = str(response)
+User's question:
+{query if query else search_text}
 
-        final_text_for_marvin = (
+Context provided (combined_text):
+{combined_text}
+"""
+
+            agentic_response = agent.query(agent_instructions)
+            agent_response_str = str(agentic_response)
+
+        # -------------------------------------------------------------------
+        # The rest of the pipeline merges the agentic_response with the final text
+        # for Marvin-based casting or extraction, shown here as an example.
+        # -------------------------------------------------------------------
+        final_text_for_marvin = agent_response_str if agent_response_str else (
             f"In response to this query:\n\n```\n{search_text if search_text else query}\n```\n\n"
-            "We found the following most semantically relevant parts of a document, "
-            "along with related and referenced sections highlighted:\n"
-            f"```\n{combined_text}\n```\n\n" + definitions
+            "We found the following most semantically relevant parts of a document:\n"
+            f"```\n{combined_text}\n```"
         )
 
-        logger.info(f"Resulting data for marvin: {final_text_for_marvin}")
-
         if datacell.column.extract_is_list:
-            logger.debug("Extract as list!")
             result = marvin.extract(
                 final_text_for_marvin,
                 target=output_type,
                 instructions=parse_instructions if parse_instructions else query,
             )
         else:
-            logger.debug("Extract single instance")
             result = marvin.cast(
                 final_text_for_marvin,
                 target=output_type,
@@ -605,3 +621,305 @@ def llama_index_react_agent_query(cell_id):
         datacell.stacktrace = f"Error processing: {e}"
         datacell.failed = timezone.now()
         datacell.save()
+
+
+def text_search(document_id: int, query_str: str) -> str:
+    """
+    Performs case-insensitive substring search in structural annotations.
+    Returns the first 3 results that match.
+
+    Args:
+        document_id (int): The ID of the document to query structural Annotations from.
+        query_str (str): The search text to look for in structural Annotations.
+
+    Returns:
+        str: A string describing up to 3 matched annotation segments.
+    """
+    from opencontractserver.annotations.models import Annotation
+
+    matches = (
+        Annotation.objects.filter(
+            document_id=document_id,
+            structural=True,
+            raw_text__icontains=query_str,
+        )
+        .order_by("id")[0:3]
+    )
+
+    if not matches.exists():
+        return "No structural annotations matched your text_search."
+
+    results = []
+    for ann in matches:
+        snippet = f"Annotation ID: {ann.id}, Page: {ann.page}, Text: {ann.raw_text}"
+        results.append(snippet)
+
+    return "\n".join(results)
+
+
+def annotation_window(document_id: int, annotation_id: str, window_size: str) -> str:
+    """
+    Retrieves contextual text around the specified Annotation. Returns up to
+    'window_size' words (on each side) of the Annotation text, with a global
+    maximum of 1000 words in total.
+
+    Args:
+        document_id (int): The ID of the document containing the annotation.
+        annotation_id (str): The ID of the Annotation to retrieve context for.
+        window_size (str): The number of words to expand on each side (passed as string).
+
+    Returns:
+        str: The textual window around the Annotation or an error message.
+    """
+    import json
+    import os
+    from opencontractserver.annotations.models import Annotation
+    from opencontractserver.documents.models import Document
+    from opencontractserver.types.dicts import TextSpanData, PawlsPagePythonType
+
+    # Step 1: Parse the window_size argument
+    try:
+        window_words = int(window_size)
+        # Enforce a reasonable upper bound
+        window_words = min(window_words, 500)  # 500 on each side => 1000 total
+    except ValueError:
+        return "Error: Could not parse window_size as an integer."
+
+    # Step 2: Fetch the annotation and its document
+    try:
+        annotation = Annotation.objects.get(id=int(annotation_id), document_id=document_id)
+    except (Annotation.DoesNotExist, ValueError):
+        return f"Error: Annotation [{annotation_id}] not found."
+
+    doc = annotation.document
+
+    # Step 3: Distinguish text/* vs application/pdf
+    file_type = doc.file_type
+    if not file_type:
+        return "Error: Document file_type not specified."
+
+    # Utility for splitting text into words safely
+    def split_words_preserve_idx(text_str: str) -> list[tuple[str, int]]:
+        """
+        Splits text_str into words. Returns a list of (word, starting_char_index)
+        pairs so we can rebuild substrings by word count if needed.
+        """
+        words_and_idxs: list[tuple[str, int]] = []
+        idx = 0
+        for word in text_str.split():
+            # find the occurrence of this word in text_str starting at idx
+            pos = text_str.find(word, idx)
+            if pos == -1:
+                # fallback if something is off
+                pos = idx
+            words_and_idxs.append((word, pos))
+            idx = pos + len(word)
+        return words_and_idxs
+
+    try:
+        if file_type.startswith("text/"):
+            # -------------------------
+            # Handle text/* annotation
+            # -------------------------
+            if not doc.txt_extract_file or not os.path.exists(doc.txt_extract_file.path):
+                return "Error: Document has no txt_extract_file or path is invalid."
+
+            # Read the entire doc text
+            with open(doc.txt_extract_file.path, encoding="utf-8") as f:
+                doc_text = f.read()
+
+            # The Annotation.json is presumably a TextSpanData
+            anno_json = annotation.json
+            if not isinstance(anno_json, dict):
+                return "Error: Annotation.json is not a dictionary for text/*."
+
+            # Attempt to parse it as a TextSpanData
+            try:
+                span_data: TextSpanData = TextSpanData(**anno_json)
+            except Exception:
+                return (
+                    "Error: Annotation.json could not be parsed as TextSpanData for text/* document."
+                )
+
+            start_idx = span_data["start"]
+            end_idx = span_data["end"]
+
+            # Safeguard: clamp indices
+            start_idx = max(start_idx, 0)
+            end_idx = min(end_idx, len(doc_text))
+
+            # If user wants a word-based window, we can find the nearest word boundaries
+            words_with_idx = split_words_preserve_idx(doc_text)
+
+            # Locate word that encloses start_idx, end_idx
+            start_word_index = 0
+            end_word_index = len(words_with_idx) - 1
+
+            for i, (_, wstart) in enumerate(words_with_idx):
+                if wstart <= start_idx:
+                    start_word_index = i
+                if wstart <= end_idx:
+                    end_word_index = i
+
+            # Expand by 'window_words' on each side, but total no more than 1000 words
+            total_window = min(window_words * 2 + (end_word_index - start_word_index + 1), 1000)
+            left_expand = min(window_words, start_word_index)
+            right_expand = min(window_words, len(words_with_idx) - end_word_index - 1)
+
+            # Recompute if the combined is too large (simple approach)
+            def clamp_to_total_window(left: int, right: int, center_count: int, total_max: int):
+                current_count = left + right + center_count
+                if current_count <= total_max:
+                    return left, right
+                overshoot = current_count - total_max
+                left_reduced = min(left, overshoot)
+                new_left = left - left_reduced
+                overshoot -= left_reduced
+                if overshoot > 0:
+                    right_reduced = min(right, overshoot)
+                    new_right = right - right_reduced
+                else:
+                    new_right = right
+                return new_left, new_right
+
+            center_chunk = (end_word_index - start_word_index + 1)
+            left_expand, right_expand = clamp_to_total_window(
+                left_expand, right_expand, center_chunk, 1000
+            )
+
+            final_start_word = start_word_index - left_expand
+            final_end_word = end_word_index + right_expand
+
+            final_text_start_char = words_with_idx[final_start_word][1]
+            final_text_end_char = (
+                len(doc_text)
+                if final_end_word >= len(words_with_idx) - 1
+                else words_with_idx[final_end_word + 1][1]
+            )
+
+            return doc_text[final_text_start_char:final_text_end_char].strip()
+
+        elif file_type == "application/pdf":
+            # -------------------------
+            # Handle PDF annotation
+            # -------------------------
+            if not doc.pawls_parse_file or not os.path.exists(doc.pawls_parse_file.path):
+                return "Error: Document has no pawls_parse_file or path is invalid."
+
+            with open(doc.pawls_parse_file.path, encoding="utf-8") as f:
+                pawls_pages = json.load(f)
+
+            if not isinstance(pawls_pages, list):
+                return "Error: pawls_parse_file is not a list of PawlsPagePythonType."
+
+            anno_json = annotation.json
+            if not isinstance(anno_json, dict):
+                return "Error: Annotation.json is not a dictionary for PDF."
+
+            from opencontractserver.types.dicts import OpenContractsSinglePageAnnotationType
+
+            def is_single_page_annotation(data: dict) -> bool:
+                return all(k in data for k in ["bounds", "tokensJsons", "rawText"])
+
+            pages_dict: dict[int, OpenContractsSinglePageAnnotationType] = {}
+            try:
+                if is_single_page_annotation(anno_json):
+                    page_index = annotation.page
+                    pages_dict[page_index] = OpenContractsSinglePageAnnotationType(**anno_json)
+                else:
+                    for k, v in anno_json.items():
+                        page_index = int(k)
+                        pages_dict[page_index] = OpenContractsSinglePageAnnotationType(**v)
+            except Exception:
+                return (
+                    "Error: Annotation.json could not be parsed as single or multi-page "
+                    "PDF annotation data."
+                )
+
+            result_texts: list[str] = []
+
+            from opencontractserver.types.dicts import PawlsPagePythonType
+            pawls_by_index: dict[int, PawlsPagePythonType] = {}
+            for page_obj in pawls_pages:
+                try:
+                    pg_ind = page_obj["page"]["index"]
+                    pawls_by_index[pg_ind] = PawlsPagePythonType(**page_obj)
+                except Exception:
+                    continue
+
+            def tokens_as_words(page_index: int) -> list[str]:
+                page_data = pawls_by_index.get(page_index)
+                if not page_data:
+                    return []
+                tokens_list = page_data["tokens"]
+                return [t["text"] for t in tokens_list]
+
+            for pg_ind, anno_data in pages_dict.items():
+                all_tokens = tokens_as_words(pg_ind)
+                if not all_tokens:
+                    continue
+
+                from itertools import chain
+
+                raw_text = anno_data["rawText"].strip() if anno_data["rawText"] else ""
+                # We'll find a contiguous chunk in the token list that matches raw_text, or fallback to partial
+
+                # Join tokens with spaces for searching. Then we find raw_text in there.
+                joined_tokens_str = " ".join(all_tokens)
+
+                if raw_text and raw_text in joined_tokens_str:
+                    start_idx = joined_tokens_str.index(raw_text)
+                    # we can reconstruct the word boundaries
+                    # but let's do a simpler approach:
+                    # skip words up to that position
+                    prefix_part = joined_tokens_str[:start_idx]
+                    prefix_count = len(prefix_part.strip().split())
+                    anno_word_count = len(raw_text.strip().split())
+                    start_word_index = prefix_count
+                    end_word_index = prefix_count + anno_word_count - 1
+                else:
+                    # fallback: we will collect tokens from tokensJsons
+                    # each "tokensJsons" entry might have an "id" if each token is identified
+                    # or we rely on raw_text if we can't match
+                    # we'll do a naive approach: assume the annotation covers some subset in tokens
+                    # The user might store token indices in tokensJson.
+                    # This is out of scope for a short example. We'll just expand all tokens as fallback.
+                    start_word_index = 0
+                    end_word_index = len(all_tokens) - 1
+
+                left_expand = window_words
+                right_expand = window_words
+                total_possible = len(all_tokens)
+
+                final_start_word = max(0, start_word_index - left_expand)
+                final_end_word = min(total_possible - 1, end_word_index + right_expand)
+
+                # then clamp total to 1000
+                # total words = final_end_word - final_start_word + 1
+                total_window = final_end_word - final_start_word + 1
+                if total_window > 1000:
+                    # reduce from both sides if needed (some naive approach)
+                    overshoot = total_window - 1000
+                    # reduce from left side first
+                    reduce_left = min(overshoot, left_expand)
+                    final_start_word += reduce_left
+                    overshoot -= reduce_left
+                    if overshoot > 0:
+                        reduce_right = min(overshoot, right_expand)
+                        final_end_word -= reduce_right
+
+                snippet = " ".join(all_tokens[final_start_word : final_end_word + 1])
+                if snippet.strip():
+                    result_texts.append(f"Page {pg_ind} context:\n{snippet}")
+
+            # Combine page-level context
+            if not result_texts:
+                return "No tokens found or no matching text for the specified annotation."
+
+            return "\n\n".join(result_texts)
+
+        else:
+            return f"Error: Unsupported document file_type: {file_type}"
+
+    except Exception as e:
+        return f"Error: Exception encountered while retrieving annotation window: {e}"

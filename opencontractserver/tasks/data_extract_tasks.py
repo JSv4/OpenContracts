@@ -1,4 +1,6 @@
+import json
 import logging
+import os
 
 from celery import shared_task
 from django.conf import settings
@@ -679,9 +681,6 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
     Returns:
         str: The textual window around the Annotation or an error message.
     """
-    import json
-    import os
-
     from opencontractserver.annotations.models import Annotation
     from opencontractserver.types.dicts import PawlsPagePythonType, TextSpanData
 
@@ -822,9 +821,11 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
             ):
                 return "Error: Document has no pawls_parse_file or path is invalid."
 
+            logger.info(f"Opening pawls parse file for document {doc.id}")
             with open(doc.pawls_parse_file.path, encoding="utf-8") as f:
                 pawls_pages = json.load(f)
 
+            logger.info(f"Loaded {len(pawls_pages)} pages from pawls parse file")
             if not isinstance(pawls_pages, list):
                 return "Error: pawls_parse_file is not a list of PawlsPagePythonType."
 
@@ -840,11 +841,15 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
                 return all(k in data for k in ["bounds", "tokensJsons", "rawText"])
 
             pages_dict: dict[int, OpenContractsSinglePageAnnotationType] = {}
+            logger.info(f"Processing annotation JSON for annotation {annotation.id}")
             try:
                 if is_single_page_annotation(anno_json):
                     page_index = annotation.page
                     pages_dict[page_index] = OpenContractsSinglePageAnnotationType(
                         **anno_json
+                    )
+                    logger.info(
+                        f"Processed single page annotation on page {page_index}"
                     )
                 else:
                     for k, v in anno_json.items():
@@ -852,6 +857,9 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
                         pages_dict[page_index] = OpenContractsSinglePageAnnotationType(
                             **v
                         )
+                    logger.info(
+                        f"Processed multi-page annotation with {len(pages_dict)} pages"
+                    )
             except Exception:
                 return (
                     "Error: Annotation.json could not be parsed as single or multi-page "
@@ -861,12 +869,14 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
             result_texts: list[str] = []
 
             pawls_by_index: dict[int, PawlsPagePythonType] = {}
+            logger.info("Indexing PAWLS pages by page number")
             for page_obj in pawls_pages:
                 try:
                     pg_ind = page_obj["page"]["index"]
                     pawls_by_index[pg_ind] = PawlsPagePythonType(**page_obj)
                 except Exception:
                     continue
+            logger.info(f"Indexed {len(pawls_by_index)} PAWLS pages")
 
             def tokens_as_words(page_index: int) -> list[str]:
                 page_data = pawls_by_index.get(page_index)
@@ -875,11 +885,13 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
                 tokens_list = page_data["tokens"]
                 return [t["text"] for t in tokens_list]
 
+            logger.info("Processing annotation pages to extract context windows")
             for pg_ind, anno_data in pages_dict.items():
                 all_tokens = tokens_as_words(pg_ind)
                 if not all_tokens:
                     continue
 
+                logger.info(f"Processing page {pg_ind} with {len(all_tokens)} tokens")
                 raw_text = anno_data["rawText"].strip() if anno_data["rawText"] else ""
                 # We'll find a contiguous chunk in the token list that matches raw_text, or fallback to partial
 
@@ -896,6 +908,9 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
                     anno_word_count = len(raw_text.strip().split())
                     start_word_index = prefix_count
                     end_word_index = prefix_count + anno_word_count - 1
+                    logger.info(
+                        f"Found exact text match at word indices {start_word_index} to {end_word_index}"
+                    )
                 else:
                     # fallback: we will collect tokens from tokensJsons
                     # each "tokensJsons" entry might have an "id" if each token is identified
@@ -905,6 +920,7 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
                     # This is out of scope for a short example. We'll just expand all tokens as fallback.
                     start_word_index = 0
                     end_word_index = len(all_tokens) - 1
+                    logger.info("Using fallback approach with full token range")
 
                 left_expand = window_words
                 right_expand = window_words
@@ -912,6 +928,10 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
 
                 final_start_word = max(0, start_word_index - left_expand)
                 final_end_word = min(total_possible - 1, end_word_index + right_expand)
+
+                logger.info(
+                    f"Initial window bounds: {final_start_word} to {final_end_word}"
+                )
 
                 # then clamp total to 1000
                 # total words = final_end_word - final_start_word + 1
@@ -926,10 +946,14 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
                     if overshoot > 0:
                         reduce_right = min(overshoot, right_expand)
                         final_end_word -= reduce_right
+                    logger.info(
+                        f"Clamped window bounds to {final_start_word} to {final_end_word}"
+                    )
 
                 snippet = " ".join(all_tokens[final_start_word : final_end_word + 1])
                 if snippet.strip():
                     result_texts.append(f"Page {pg_ind} context:\n{snippet}")
+                    logger.info(f"Added context snippet for page {pg_ind}")
 
             # Combine page-level context
             if not result_texts:
@@ -937,6 +961,7 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
                     "No tokens found or no matching text for the specified annotation."
                 )
 
+            logger.info(f"Returning combined context from {len(result_texts)} pages")
             return "\n\n".join(result_texts)
 
         else:

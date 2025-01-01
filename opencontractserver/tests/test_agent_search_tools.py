@@ -8,7 +8,6 @@ from opencontractserver.documents.models import Document
 from opencontractserver.tasks.data_extract_tasks import annotation_window, text_search
 from opencontractserver.tests.fixtures import (
     SAMPLE_PDF_FILE_ONE_PATH,
-    SAMPLE_PDF_FILE_TWO_PATH,
     SAMPLE_TXT_FILE_ONE_PATH,
 )
 
@@ -32,7 +31,7 @@ class TestDataExtractTasks(TestCase):
                 file_type="application/pdf",
             )
 
-        with open(SAMPLE_TXT_FILE_ONE_PATH, "r", encoding="utf-8") as txt_file:
+        with open(SAMPLE_TXT_FILE_ONE_PATH, encoding="utf-8") as txt_file:
             self.txt_doc = Document.objects.create(
                 title="Test Text Document",
                 creator=self.user,
@@ -135,7 +134,9 @@ class TestDataExtractTasks(TestCase):
 
     def test_annotation_window_invalid_window_size(self):
         """Test annotation_window with invalid window size."""
-        result = annotation_window(self.pdf_doc.id, str(self.pdf_annotation.id), "invalid")
+        result = annotation_window(
+            self.pdf_doc.id, str(self.pdf_annotation.id), "invalid"
+        )
         self.assertEqual(result, "Error: Could not parse window_size as an integer.")
 
     def test_annotation_window_nonexistent_annotation(self):
@@ -156,4 +157,4 @@ class TestDataExtractTasks(TestCase):
         Annotation.objects.all().delete()
         Document.objects.all().delete()
         AnnotationLabel.objects.all().delete()
-        User.objects.all().delete() 
+        User.objects.all().delete()

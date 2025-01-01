@@ -61,7 +61,9 @@ class NLMIngestParser(BaseParser):
             logger.debug(f"Document {doc_id} needs OCR: {needs_ocr}")
 
             # Prepare request headers
+            logger.info(f"Using NLM API key: {api_key}")
             headers = {"API_KEY": api_key} if api_key else {}
+            logger.info(f"Using NLM headers: {headers}")
 
             # Reset file pointer
             doc_file.seek(0)

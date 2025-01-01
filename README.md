@@ -39,12 +39,12 @@ OpenContracts is an **Apache-2 Licensed** enterprise document analytics tool. It
 
 | Timeline | Milestone | Description |
 |----------|-----------|-------------|
-| 🌟 January 2025 | **Document Format Expansion** | <ul><li>LlamaParse integration for enhanced document processing</li><li>Native Markdown viewing and highlighting support</li><li>Expanded format support beyond PDFs</li></ul> |
-| 📊 February 2025 | **Benchmarking Suite** | <ul><li>Comprehensive benchmarks for extract features</li><li>Performance metrics dashboard</li><li>Comparative analysis tools</li></ul> |
-| 🚀 March 2025 | **Extract Enhancement** | <ul><li>Improved default extraction algorithms</li><li>Enhanced accuracy and speed</li><li>More intelligent data recognition</li></ul> |
-| 🌊 April 2025 | **Streaming & Filtering** | <ul><li>Real-time document streaming capabilities</li><li>Advanced corpus-wide filtering</li><li>Improved search functionality</li></ul> |
-| 📚 May 2025 | **Government Data Integration** | <ul><li>Code of Federal Regulations (CFR) integration</li><li>Additional government data sources</li><li>Regulatory compliance tools</li></ul> |
-| 🏗️ Summer 2025 | **Enterprise DMS Features** | <ul><li>Document versioning system</li><li>Intelligent check-in/check-out</li><li>Advanced change tracking</li><li>Collaboration tools</li></ul> |
+| 🌟 January 2025 | **Document Format Expansion** | <ul><li>LlamaParse integration for enhanced document processing</li><li>Native Markdown viewing and highlighting support</li></ul> |
+| 📊 February 2025 | **Benchmarking Suite** | <ul><li>Comprehensive benchmarks for extract features</li><li>Benchmark Tools</li></ul> |
+| 🚀 March 2025 | **Extract Enhancement** | <ul><li>Improved default data extract algorithms</li><li>Enhanced accuracy and speed</li></ul> |
+| 🌊 April 2025 | **Streaming & Filtering** | <ul><li>Real-time response streaming for chats and queries</li><li>Better UX for asking questions of entier corpus</li><li>Improved search functionality</li></ul> |
+| 📚 May 2025 | **Government Data Integration** | <ul><li>Code of Federal Regulations (CFR) integration</li><li>Additional government data sources</li></ul> |
+| 🏗️ Summer 2025 | **Enterprise DMS Features** | <ul><li>Document versioning</li><li>Intelligent file matching</li></ul> |
 
 > 💡 This roadmap represents our current plans and is subject to change based on community feedback and evolving requirements.
 

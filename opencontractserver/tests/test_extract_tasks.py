@@ -109,8 +109,7 @@ class ExtractsTaskTestCase(TestCase):
             backend_lock=True,
         )
 
-        # Run ingest pipeline SYNCHRONOUS and, with @responses.activate decorator, no API call ought to go out to
-        # nlm-ingestor host
+        # Run ingest pipeline SYNCHRONOUS
         ingest_doc.delay(user_id=self.user.id, doc_id=self.doc2.id)
 
         # Manually run the calcs for the embeddings as post_save hook is hard
@@ -161,6 +160,9 @@ class ExtractsTaskTestCase(TestCase):
 
         rows = DocumentAnalysisRow.objects.filter(extract=self.extract)
         self.assertEqual(3, rows.count())
+
+        # TODO - this is not actually testing the extract WORKED.
+        # looking at the codecov, seems tests keep failing when setting up embedder:
 
         for cell in Datacell.objects.all():
             print(f"Cell data: {cell.data}")

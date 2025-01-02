@@ -83,7 +83,7 @@ def oc_llama_index_doc_query(
         document = datacell.document
 
         embed_model = HuggingFaceEmbedding(
-            model_name="multi-qa-MiniLM-L6-cos-v1", cache_folder="/models"
+            "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
         )  # Using our pre-load cache path where the model was stored on container build
         Settings.embed_model = embed_model
 
@@ -223,7 +223,7 @@ def oc_llama_index_doc_query(
         retrieved_annotation_ids = [
             n.node.extra_info["annotation_id"] for n in retrieved_nodes
         ]
-        if retrieved_annotation_ids:
+        if len(retrieved_annotation_ids) > 0:
             datacell.sources.add(*retrieved_annotation_ids)
 
         raw_retrieved_text = "\n".join(
@@ -248,7 +248,7 @@ def oc_llama_index_doc_query(
         logger.info(f"Retrieved {len(relationships)} relationships")
 
         relationship_sections = []
-        if relationships:
+        if relationships.count() > 0:
             relationship_sections.append(
                 "\n========== Sections Related to Nodes Most Semantically Similar to Query =========="
             )
@@ -592,7 +592,7 @@ def llama_index_react_agent_query(cell_id):
 
         document = datacell.document
         embed_model = HuggingFaceEmbedding(
-            model_name="multi-qa-MiniLM-L6-cos-v1", cache_folder="/models"
+            "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
         )  # Using our pre-load cache path where the model was stored on container build
         Settings.embed_model = embed_model
 

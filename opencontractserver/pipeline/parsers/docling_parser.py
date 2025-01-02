@@ -11,7 +11,7 @@ import pytesseract
 from django.conf import settings
 from django.core.files.storage import default_storage
 from docling.datamodel.base_models import ConversionStatus, DocumentStream, InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.pipeline_options import EasyOcrOptions, PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
 from docling_core.types.doc import (
@@ -185,11 +185,17 @@ class DoclingParser(BaseParser):
         # Log the contents of the models directory
         logger.info(f"Docling models directory contents: {os.listdir(artifacts_path)}")
 
+        # TODO - expose some settings from here - like GPU acceleration
+        ocr_options = EasyOcrOptions(
+            model_storage_directory=artifacts_path  # We want to preload this to avoid SLOW download at runtime
+        )
+
         pipeline_options = PdfPipelineOptions(
             artifacts_path=artifacts_path,
             do_ocr=True,
             do_table_structure=True,
             generate_page_images=True,
+            ocr_options=ocr_options,
         )
         self.doc_converter = DocumentConverter(
             format_options={

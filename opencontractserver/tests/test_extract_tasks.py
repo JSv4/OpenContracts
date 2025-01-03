@@ -1,22 +1,12 @@
 import vcr
 from django.contrib.auth import get_user_model
-from django.core.files.base import ContentFile
-from django.db.models.signals import post_save
-from django.test import TestCase
 from django.test.utils import override_settings
 
-from opencontractserver.annotations.models import Annotation
-from opencontractserver.annotations.signals import process_annot_on_create_atomic
-from opencontractserver.documents.models import Document, DocumentAnalysisRow
-from opencontractserver.documents.signals import process_doc_on_create_atomic
+from opencontractserver.documents.models import DocumentAnalysisRow
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.tasks import oc_llama_index_doc_query
-from opencontractserver.tasks.doc_tasks import ingest_doc
-from opencontractserver.tasks.embeddings_task import (
-    calculate_embedding_for_annotation_text,
-)
 from opencontractserver.tasks.extract_orchestrator_tasks import run_extract
-from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_TWO_PATH
+from opencontractserver.tests.base import BaseFixtureTestCase
 
 User = get_user_model()
 
@@ -25,17 +15,12 @@ class TestContext:
     def __init__(self, user):
         self.user = user
 
-
-class ExtractsTaskTestCase(TestCase):
+# Using new base test that reloads preprocessed annotations and docs to *massively* reduce test time
+class ExtractsTaskTestCase(BaseFixtureTestCase):
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     def setUp(self):
+        super().setUp()
 
-        post_save.disconnect(process_annot_on_create_atomic, sender=Annotation)
-        post_save.disconnect(process_doc_on_create_atomic, sender=Document)
-
-        self.user = User.objects.create_user(
-            username="testuser", password="testpassword"
-        )
         self.fieldset = Fieldset.objects.create(
             name="TestFieldset",
             description="Test description",
@@ -64,77 +49,6 @@ class ExtractsTaskTestCase(TestCase):
             creator=self.user,
         )
 
-        pdf_file = ContentFile(
-            SAMPLE_PDF_FILE_TWO_PATH.open("rb").read(), name="test.pdf"
-        )
-
-        self.doc = Document.objects.create(
-            creator=self.user,
-            title="Test Doc",
-            description="USC Title 1 - Chapter 1",
-            custom_meta={},
-            pdf_file=pdf_file,
-            backend_lock=True,
-        )
-
-        pdf_file = ContentFile(
-            SAMPLE_PDF_FILE_TWO_PATH.open("rb").read(), name="test.pdf"
-        )
-
-        # We're going to manually process three docs
-        self.doc = Document.objects.create(
-            creator=self.user,
-            title="Rando Doc",
-            description="RANDO DOC!",
-            custom_meta={},
-            pdf_file=pdf_file,
-            backend_lock=True,
-        )
-
-        # Run ingest pipeline SYNCHRONOUS and, with @responses.activate decorator, no API call ought to go out to
-        # nlm-ingestor host
-        ingest_doc.delay(user_id=self.user.id, doc_id=self.doc.id)
-
-        # Manually run the calcs for the embeddings as post_save hook is hard
-        # to await for in test
-        for annot in Annotation.objects.all():
-            calculate_embedding_for_annotation_text.delay(annotation_id=annot.id)
-
-        self.doc2 = Document.objects.create(
-            creator=self.user,
-            title="Rando Doc 2",
-            description="RANDO DOC! 2",
-            custom_meta={},
-            pdf_file=pdf_file,
-            backend_lock=True,
-        )
-
-        # Run ingest pipeline SYNCHRONOUS
-        ingest_doc.delay(user_id=self.user.id, doc_id=self.doc2.id)
-
-        # Manually run the calcs for the embeddings as post_save hook is hard
-        # to await for in test
-        for annot in Annotation.objects.filter(document_id=self.doc2.id):
-            calculate_embedding_for_annotation_text.delay(annotation_id=annot.id)
-
-        self.doc3 = Document.objects.create(
-            creator=self.user,
-            title="Rando Doc 2",
-            description="RANDO DOC! 2",
-            custom_meta={},
-            pdf_file=pdf_file,
-            backend_lock=True,
-        )
-
-        # Run ingest pipeline SYNCHRONOUS and, with @responses.activate decorator, no API call ought to go out to
-        # nlm-ingestor host
-        ingest_doc.delay(user_id=self.user.id, doc_id=self.doc3.id)
-
-        # Manually run the calcs for the embeddings as post_save hook is hard
-        # to await for in test
-        for annot in Annotation.objects.filter(document_id=self.doc3.id):
-            calculate_embedding_for_annotation_text.delay(annotation_id=annot.id)
-
         self.extract.documents.add(self.doc, self.doc2, self.doc3)
         self.extract.save()
 
@@ -142,9 +56,16 @@ class ExtractsTaskTestCase(TestCase):
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/test_run_extract_task.yaml",
         filter_headers=["authorization"],
+        before_record_response=lambda response: None 
+            if "huggingface.co" in response.get("url", "") or "hf.co" in response.get("url", "")
+            else response,
+        # Simplify the matcher to only look at the method and base path
+        match_on=['method'],
+        # Add both possible CDN domains so we can run this locally without preloading model and make requets to hf cdn without storing in casette. 
+        ignore_hosts=['huggingface.co', 'hf.co', 'cdn-lfs.huggingface.co', 'cdn-lfs.hf.co'],
+        ignore_query_params=True  # Ignore all query parameters in URL matching
     )
     def test_run_extract_task(self):
-
         # Run this SYNCHRONOUSLY for TESTIN' purposes
         run_extract.delay(self.extract.id, self.user.id)
         print(Datacell.objects.all().count())

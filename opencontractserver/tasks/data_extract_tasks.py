@@ -87,7 +87,11 @@ def oc_llama_index_doc_query(
         )  # Using our pre-load cache path where the model was stored on container build
         Settings.embed_model = embed_model
 
-        llm = OpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY)
+        llm = OpenAI(
+            model=settings.OPENAI_MODEL,
+            api_key=settings.OPENAI_API_KEY,
+            streaming=False,
+        )
         Settings.llm = llm
 
         # Potentially extremely large structural context -> we can trim if needed later
@@ -177,7 +181,9 @@ def oc_llama_index_doc_query(
                         node=Node(
                             doc_id=str(row.id),
                             text=row.raw_text,
-                            embedding=row.embedding.tolist() if hasattr(row, "embedding") and row.embedding is not None else [],
+                            embedding=row.embedding.tolist()
+                            if hasattr(row, "embedding") and row.embedding is not None
+                            else [],
                             extra_info={
                                 "page": row.page,
                                 "bounding_box": row.bounding_box,
@@ -198,26 +204,24 @@ def oc_llama_index_doc_query(
             try:
                 sbert_rerank = SentenceTransformerRerank(
                     model="/models/sentence-transformers/cross-encoder/ms-marco-MiniLM-L-2-v2",
-                    top_n=5
+                    top_n=5,
                 )
             except (OSError, ValueError) as e:
                 logger.info(
-                    "Local model not found, falling back to downloading from HuggingFace Hub: %s", 
-                    str(e)
+                    "Local model not found, falling back to downloading from HuggingFace Hub: %s",
+                    str(e),
                 )
                 sbert_rerank = SentenceTransformerRerank(
-                    model="cross-encoder/ms-marco-MiniLM-L-2-v2",
-                    top_n=5
+                    model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=5
                 )
-            
+
             retrieved_nodes = sbert_rerank.postprocess_nodes(nodes, QueryBundle(query))
         else:
             # Default retrieval if special char is absent
             retriever = index.as_retriever(similarity_top_k=similarity_top_k)
             results = retriever.retrieve(search_text if search_text else query)
             sbert_rerank = SentenceTransformerRerank(
-                model="cross-encoder/ms-marco-MiniLM-L-2-v2",
-                top_n=5
+                model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=5
             )
             retrieved_nodes = sbert_rerank.postprocess_nodes(
                 results, QueryBundle(query)
@@ -569,9 +573,12 @@ Context provided (combined_text):
 
     except Exception as e:
         import traceback
+
         logger.error(f"run_extract() - Ran into error: {e}")
         logger.error(f"Full traceback:\n{traceback.format_exc()}")
-        datacell.stacktrace = f"Error processing: {e}\n\nFull traceback:\n{traceback.format_exc()}"
+        datacell.stacktrace = (
+            f"Error processing: {e}\n\nFull traceback:\n{traceback.format_exc()}"
+        )
         datacell.failed = timezone.now()
         datacell.save()
 
@@ -596,7 +603,11 @@ def llama_index_react_agent_query(cell_id):
         )  # Using our pre-load cache path where the model was stored on container build
         Settings.embed_model = embed_model
 
-        llm = OpenAI(model=settings.OPENAI_MODEL, api_key=settings.OPENAI_API_KEY)
+        llm = OpenAI(
+            model=settings.OPENAI_MODEL,
+            api_key=settings.OPENAI_API_KEY,
+            streaming=False,
+        )
         Settings.llm = llm
 
         vector_store = DjangoAnnotationVectorStore.from_params(
@@ -896,7 +907,7 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
                     anno_word_count = len(raw_text.strip().split())
                     start_word_index = prefix_count
                     end_word_index = prefix_count + anno_word_count - 1
-                    
+
                 else:
                     # fallback: we will collect tokens from tokensJsons
                     # each "tokensJsons" entry might have an "id" if each token is identified

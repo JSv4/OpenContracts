@@ -1,26 +1,31 @@
-from typing import Any
 import json
-import os
-import shutil
 from pathlib import Path
-from django.core.management.base import BaseCommand
-from django.core.management import call_command
+from typing import Any
+
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
-from django.db.models.signals import post_save
-from django.test.utils import override_settings, setup_test_environment, teardown_test_environment
+from django.core.management import call_command
+from django.core.management.base import BaseCommand
 from django.db import connection
-from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db.models.signals import post_save
+from django.test.utils import (
+    override_settings,
+    setup_test_environment,
+    teardown_test_environment,
+)
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.annotations.signals import process_annot_on_create_atomic
 from opencontractserver.documents.models import Document
 from opencontractserver.documents.signals import process_doc_on_create_atomic
 from opencontractserver.tasks.doc_tasks import ingest_doc
-from opencontractserver.tasks.embeddings_task import calculate_embedding_for_annotation_text
+from opencontractserver.tasks.embeddings_task import (
+    calculate_embedding_for_annotation_text,
+)
 from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_TWO_PATH
 
 User = get_user_model()
+
 
 # Use this command to generate realistic text fixtures
 class Command(BaseCommand):
@@ -47,34 +52,34 @@ class Command(BaseCommand):
     def save_file_to_fixtures(self, file_obj, filename: str) -> str:
         """
         Save a file to the fixtures directory and return its relative path.
-        
+
         Args:
             file_obj: The file field object
             filename: The desired filename in fixtures
-            
+
         Returns:
             str: The new relative path for the fixture
         """
         fixtures_dir = Path("opencontractserver/tests/fixtures/files")
         fixtures_dir.mkdir(exist_ok=True)
-        
+
         dest_path = fixtures_dir / filename
-        
+
         # Read the file contents
         file_obj.seek(0)
         file_contents = file_obj.read()
-        
+
         # Write to fixtures directory
-        with open(dest_path, 'wb') as f:
+        with open(dest_path, "wb") as f:
             f.write(file_contents)
-        
+
         # Return a path relative to the fixtures directory - use files/ not fixtures/files/
         return f"files/{filename}"
 
     def process_fixtures(self, fixture_path: str) -> None:
         """
         Process the generated fixtures to update file paths and save files.
-        
+
         Args:
             fixture_path: Path to the fixture file
         """
@@ -84,9 +89,14 @@ class Command(BaseCommand):
         for item in data:
             if item["model"] == "documents.document":
                 fields = item["fields"]
-                
+
                 # For each file field, if it exists, copy the file and update the path
-                file_fields = ["pdf_file", "txt_extract_file", "pawls_parse_file", "icon"]
+                file_fields = [
+                    "pdf_file",
+                    "txt_extract_file",
+                    "pawls_parse_file",
+                    "icon",
+                ]
                 for field in file_fields:
                     if fields.get(field):
                         # Get the actual file from the database
@@ -94,9 +104,13 @@ class Command(BaseCommand):
                         file_obj = getattr(doc, field)
                         if file_obj:
                             # Generate a unique filename
-                            filename = f"doc_{item['pk']}_{field}{Path(file_obj.name).suffix}"
+                            filename = (
+                                f"doc_{item['pk']}_{field}{Path(file_obj.name).suffix}"
+                            )
                             # Save the file and update the path
-                            new_path = self.save_file_to_fixtures(file_obj.file, filename)
+                            new_path = self.save_file_to_fixtures(
+                                file_obj.file, filename
+                            )
                             fields[field] = new_path
 
         # Write the updated fixture data back
@@ -184,23 +198,18 @@ class Command(BaseCommand):
 
             # Dump ALL data to fixtures
             self.stdout.write("Dumping test data to fixture files...")
-            
+
             fixture_path = "opencontractserver/tests/fixtures/test_data.json"
-            
+
             # First dump the main data
             apps_to_dump = [
                 "users.user",
-                "documents.document", 
+                "documents.document",
                 "annotations.annotationlabel",
-                "annotations.annotation"
+                "annotations.annotation",
             ]
-            
-            call_command(
-                "dumpdata",
-                *apps_to_dump,
-                indent=2,
-                output=fixture_path
-            )
+
+            call_command("dumpdata", *apps_to_dump, indent=2, output=fixture_path)
 
             # Process the fixtures to handle file fields
             self.process_fixtures(fixture_path)
@@ -213,4 +222,4 @@ class Command(BaseCommand):
 
         finally:
             # Always clean up the test database
-            self.teardown_test_db() 
+            self.teardown_test_db()

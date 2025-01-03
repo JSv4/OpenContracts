@@ -2,8 +2,8 @@ import json
 from unittest.mock import patch
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.tests.base import BaseFixtureTestCase
 from opencontractserver.tasks.data_extract_tasks import annotation_window, text_search
+from opencontractserver.tests.base import BaseFixtureTestCase
 from opencontractserver.types.dicts import PawlsTokenPythonType
 
 
@@ -149,4 +149,4 @@ class TestDataExtractTasks(BaseFixtureTestCase):
             self.assertIsNotNone(result)
             # Count words in result
             word_count = len(result.split())
-            self.assertLessEqual(word_count, 1000) 
+            self.assertLessEqual(word_count, 1000)

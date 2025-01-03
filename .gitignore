@@ -172,3 +172,4 @@ GitHub.sublime-settings
 /staticfiles/
 /uploadfiles/
 /user_*/
+/test_media/

@@ -30,7 +30,6 @@ import {
   REQUEST_DELETE_COLUMN,
   REQUEST_REMOVE_DOC_FROM_EXTRACT,
   REQUEST_START_EXTRACT,
-  REQUEST_UPDATE_COLUMN,
   RequestAddDocToExtractInputType,
   RequestAddDocToExtractOutputType,
   RequestCreateColumnInputType,
@@ -41,8 +40,6 @@ import {
   RequestRemoveDocFromExtractOutputType,
   RequestStartExtractInputType,
   RequestStartExtractOutputType,
-  RequestUpdateColumnInputType,
-  RequestUpdateColumnOutputType,
   REQUEST_CREATE_FIELDSET,
   RequestCreateFieldsetInputType,
   RequestCreateFieldsetOutputType,
@@ -51,7 +48,6 @@ import {
   RequestUpdateExtractOutputType,
 } from "../../../graphql/mutations";
 import { toast } from "react-toastify";
-import { CreateColumnModal } from "./CreateColumnModal";
 import {
   addingColumnToExtract,
   editingColumnForExtract,
@@ -73,16 +69,12 @@ const styles = {
   modalWrapper: {
     height: "90vh",
     display: "flex !important",
-    flexDirection: "column" as const,
-    background: "linear-gradient(to bottom, #f8fafc, #ffffff)",
-  },
-  modalContent: {
-    flex: "1 1 auto",
-    display: "flex",
-    flexDirection: "column" as const,
-    padding: 0,
-    overflow: "auto",
-  },
+    flexDirection: "column",
+    background: "#ffffff",
+    overflow: "hidden",
+    margin: "5vh auto !important",
+    maxHeight: "90vh !important",
+  } as React.CSSProperties,
   modalHeader: {
     background: "white",
     padding: "1.5rem 2rem",
@@ -91,7 +83,27 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
-  },
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+    flex: "0 0 auto",
+  } as React.CSSProperties,
+  modalContent: {
+    flex: "1 1 auto",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    minHeight: 0,
+    maxHeight: "calc(90vh - 130px) !important",
+  } as React.CSSProperties,
+  scrollableContent: {
+    flex: "1 1 auto",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "auto",
+    minHeight: 0,
+    padding: "0 2rem",
+  } as React.CSSProperties,
   headerTitle: {
     display: "flex",
     alignItems: "center",
@@ -108,14 +120,15 @@ const styles = {
     color: "#475569",
   },
   statsContainer: {
+    flex: "0 0 auto",
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
     gap: "1rem",
-    padding: "1.5rem 2rem",
+    padding: "1.5rem 0",
     background: "white",
     borderRadius: "0.5rem",
     boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-    margin: "1rem 2rem",
+    margin: "1rem 0",
   },
   statCard: {
     padding: "1.25rem",
@@ -158,15 +171,23 @@ const styles = {
     color: "#991b1b",
   },
   dataGridContainer: {
-    padding: "0 2rem",
-    marginBottom: "1rem",
-  },
+    flex: "1 1 auto",
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    position: "relative",
+    margin: "0 0 1rem",
+  } as React.CSSProperties,
   modalActions: {
-    minHeight: "auto !important", // Override Semantic UI's default
-    padding: "0.5rem 2rem !important", // Smaller padding, using !important to override Semantic UI
+    flex: "0 0 auto",
+    padding: "1rem 2rem !important",
     background: "white",
     borderTop: "1px solid #e2e8f0",
-  },
+    position: "sticky",
+    bottom: 0,
+    zIndex: 10,
+    boxShadow: "0 -4px 12px rgba(0,0,0,0.05)",
+  } as React.CSSProperties,
   startButton: {
     width: "40px",
     height: "40px",
@@ -244,12 +265,13 @@ const styles = {
     transition: "transform 0.2s ease",
   } as CSSProperties,
   controlsContainer: {
+    flex: "0 0 auto",
     display: "flex",
     justifyContent: "flex-end",
     gap: "12px",
-    padding: "0 2rem 1rem",
+    padding: "0 0 1rem",
     alignItems: "center",
-  } as CSSProperties,
+  } as React.CSSProperties,
 };
 
 export const EditExtractModal = ({
@@ -472,19 +494,6 @@ export const EditExtractModal = ({
     },
   });
 
-  const handleCreateColumn = useCallback(
-    (data: any) => {
-      if (!extract?.fieldset?.id) return;
-      createColumn({
-        variables: {
-          fieldsetId: extract.fieldset.id,
-          ...data,
-        },
-      });
-    },
-    [createColumn, extract?.fieldset?.id]
-  );
-
   // Define the handler for adding a column
   const handleAddColumn = useCallback(() => {
     if (!extract?.fieldset) return;
@@ -507,26 +516,6 @@ export const EditExtractModal = ({
       notifyOnNetworkStatusChange: true,
     }
   );
-
-  const [updateColumn, { loading: update_column_loading }] = useMutation<
-    RequestUpdateColumnOutputType,
-    RequestUpdateColumnInputType
-  >(REQUEST_UPDATE_COLUMN, {
-    refetchQueries: [
-      {
-        query: REQUEST_GET_EXTRACT,
-        variables: { id: extract ? extract.id : "" },
-      },
-    ],
-    onCompleted: () => {
-      toast.success("SUCCESS! Updated column.");
-      editingColumnForExtract(null);
-    },
-    onError: (err) => {
-      toast.error("ERROR! Could not update column.");
-      editingColumnForExtract(null);
-    },
-  });
 
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
@@ -601,11 +590,7 @@ export const EditExtractModal = ({
 
   // Adjust isLoading to show loading indicator when data is first loading
   const isLoading =
-    loading ||
-    create_column_loading ||
-    update_column_loading ||
-    add_docs_loading ||
-    remove_docs_loading;
+    loading || create_column_loading || add_docs_loading || remove_docs_loading;
 
   // Determine if the grid should show loading
   const isGridLoading = extract?.started && !extract.finished && !extract.error;
@@ -616,27 +601,8 @@ export const EditExtractModal = ({
 
   return (
     <>
-      <CreateColumnModal
-        open={adding_column_to_extract !== null}
-        existing_column={null}
-        onSubmit={
-          adding_column_to_extract
-            ? (data) => handleCreateColumn(data)
-            : () => {}
-        }
-        onClose={() => addingColumnToExtract(null)}
-      />
-      {editing_column_for_extract === null ? (
-        <></>
-      ) : (
-        <CreateColumnModal
-          open={editing_column_for_extract !== null}
-          existing_column={editing_column_for_extract}
-          onSubmit={(data: ColumnType) => updateColumn({ variables: data })}
-          onClose={() => editingColumnForExtract(null)}
-        />
-      )}
       <Modal
+        id="edit-extract-modal"
         closeIcon
         size="fullscreen"
         open={open}
@@ -654,128 +620,130 @@ export const EditExtractModal = ({
         </div>
 
         <ModalContent style={styles.modalContent}>
-          <div style={styles.statsContainer}>
-            <div style={styles.statCard}>
-              <div style={styles.statLabel}>Status</div>
-              <div style={styles.statValue}>
-                {extract.started && !extract.finished && !extract.error ? (
-                  <>
-                    <Icon name="spinner" loading color="blue" />
-                    <span>Processing</span>
-                  </>
-                ) : extract.finished ? (
-                  <>
-                    <Icon name="check circle" color="green" />
-                    <span>Completed</span>
-                  </>
-                ) : extract.error ? (
-                  <>
-                    <Icon name="exclamation circle" color="red" />
-                    <span>Failed</span>
-                  </>
-                ) : (
-                  <div style={styles.statusWithButton}>
-                    <div>
-                      <Icon name="clock outline" color="grey" />
-                      <span>Not Started</span>
-                    </div>
-                    <Button
-                      circular
-                      icon
-                      primary
-                      style={styles.startButton}
-                      onClick={() =>
-                        startExtract({ variables: { extractId: extract.id } })
-                      }
-                    >
-                      <i
-                        className="play icon play-icon"
-                        style={{ ...styles.iconBase, ...styles.playIcon }}
-                      />
-                      <i
-                        className="rocket icon rocket-icon"
-                        style={{ ...styles.iconBase, ...styles.rocketIcon }}
-                      />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div style={styles.statCard}>
-              <div style={styles.statLabel}>Documents</div>
-              <div style={styles.statValue}>
-                <Icon name="file outline" />
-                {rows.length}
-              </div>
-            </div>
-
-            <div style={styles.statCard}>
-              <div style={styles.statLabel}>Columns</div>
-              <div style={styles.statValue}>
-                <Icon name="columns" />
-                {columns.length}
-              </div>
-            </div>
-
-            {extract.corpus && (
+          <div style={styles.scrollableContent}>
+            <div style={styles.statsContainer}>
               <div style={styles.statCard}>
-                <div style={styles.statLabel}>Corpus</div>
+                <div style={styles.statLabel}>Status</div>
                 <div style={styles.statValue}>
-                  <Icon name="database" />
-                  {extract.corpus.title}
+                  {extract.started && !extract.finished && !extract.error ? (
+                    <>
+                      <Icon name="spinner" loading color="blue" />
+                      <span>Processing</span>
+                    </>
+                  ) : extract.finished ? (
+                    <>
+                      <Icon name="check circle" color="green" />
+                      <span>Completed</span>
+                    </>
+                  ) : extract.error ? (
+                    <>
+                      <Icon name="exclamation circle" color="red" />
+                      <span>Failed</span>
+                    </>
+                  ) : (
+                    <div style={styles.statusWithButton}>
+                      <div>
+                        <Icon name="clock outline" color="grey" />
+                        <span>Not Started</span>
+                      </div>
+                      <Button
+                        circular
+                        icon
+                        primary
+                        style={styles.startButton}
+                        onClick={() =>
+                          startExtract({ variables: { extractId: extract.id } })
+                        }
+                      >
+                        <i
+                          className="play icon play-icon"
+                          style={{ ...styles.iconBase, ...styles.playIcon }}
+                        />
+                        <i
+                          className="rocket icon rocket-icon"
+                          style={{ ...styles.iconBase, ...styles.rocketIcon }}
+                        />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
 
-          <div style={styles.controlsContainer}>
-            <Button
-              basic
-              style={styles.downloadButton}
-              onClick={() => dataGridRef.current?.exportToCsv()}
-              disabled={
-                loading ||
-                isGridLoading ||
-                networkStatus === NetworkStatus.refetch
-              }
-            >
-              <Icon name="download" style={styles.downloadIcon} />
-              Export CSV
-            </Button>
-          </div>
+              <div style={styles.statCard}>
+                <div style={styles.statLabel}>Documents</div>
+                <div style={styles.statValue}>
+                  <Icon name="file outline" />
+                  {rows.length}
+                </div>
+              </div>
 
-          <div style={{ ...styles.dataGridContainer, position: "relative" }}>
-            {loading && (
-              <Dimmer
-                active
-                inverted
-                style={{
-                  position: "absolute",
-                  margin: 0,
-                  borderRadius: "12px",
-                }}
+              <div style={styles.statCard}>
+                <div style={styles.statLabel}>Columns</div>
+                <div style={styles.statValue}>
+                  <Icon name="columns" />
+                  {columns.length}
+                </div>
+              </div>
+
+              {extract.corpus && (
+                <div style={styles.statCard}>
+                  <div style={styles.statLabel}>Corpus</div>
+                  <div style={styles.statValue}>
+                    <Icon name="database" />
+                    {extract.corpus.title}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={styles.controlsContainer}>
+              <Button
+                basic
+                style={styles.downloadButton}
+                onClick={() => dataGridRef.current?.exportToCsv()}
+                disabled={
+                  loading ||
+                  isGridLoading ||
+                  networkStatus === NetworkStatus.refetch
+                }
               >
-                <Loader>
-                  {extract.started && !extract.finished
-                    ? "Processing..."
-                    : "Loading..."}
-                </Loader>
-              </Dimmer>
-            )}
-            <ExtractDataGrid
-              ref={dataGridRef}
-              onAddDocIds={handleAddDocIdsToExtract}
-              onRemoveDocIds={handleRemoveDocIdsFromExtract}
-              onRemoveColumnId={handleDeleteColumnIdFromExtract}
-              onUpdateRow={handleRowUpdate}
-              onAddColumn={handleAddColumn}
-              extract={extract}
-              cells={cells}
-              rows={rows}
-              columns={columns}
-              loading={Boolean(isGridLoading)}
-            />
+                <Icon name="download" style={styles.downloadIcon} />
+                Export CSV
+              </Button>
+            </div>
+
+            <div style={{ ...styles.dataGridContainer, position: "relative" }}>
+              {loading && (
+                <Dimmer
+                  active
+                  inverted
+                  style={{
+                    position: "absolute",
+                    margin: 0,
+                    borderRadius: "12px",
+                  }}
+                >
+                  <Loader>
+                    {extract.started && !extract.finished
+                      ? "Processing..."
+                      : "Loading..."}
+                  </Loader>
+                </Dimmer>
+              )}
+              <ExtractDataGrid
+                ref={dataGridRef}
+                onAddDocIds={handleAddDocIdsToExtract}
+                onRemoveDocIds={handleRemoveDocIdsFromExtract}
+                onRemoveColumnId={handleDeleteColumnIdFromExtract}
+                onUpdateRow={handleRowUpdate}
+                onAddColumn={handleAddColumn}
+                extract={extract}
+                cells={cells}
+                rows={rows}
+                columns={columns}
+                loading={Boolean(isGridLoading)}
+              />
+            </div>
           </div>
         </ModalContent>
 

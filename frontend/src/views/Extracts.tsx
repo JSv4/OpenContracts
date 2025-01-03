@@ -23,13 +23,43 @@ import {
   extractSearchTerm,
 } from "../graphql/cache";
 
-import { ActionDropdownItem, LooseObject } from "../components/types";
+import { ActionDropdownItem } from "../components/types";
 import { CardLayout } from "../components/layout/CardLayout";
 import { ExtractType } from "../types/graphql-api";
 import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { ExtractList } from "../components/extracts/list/ExtractList";
 import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";
 import { CreateExtractModal } from "../components/widgets/modals/CreateExtractModal";
+
+const styles = {
+  container: {
+    display: "flex",
+    flexDirection: "column" as const,
+    height: "100%",
+    gap: "1rem",
+    padding: "1rem",
+    backgroundColor: "#f8fafc",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "0.5rem 0",
+  },
+  title: {
+    fontSize: "1.5rem",
+    fontWeight: 600,
+    color: "#1a202c",
+  },
+  content: {
+    flex: 1,
+    borderRadius: "12px",
+    backgroundColor: "#ffffff",
+    boxShadow:
+      "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+    overflow: "hidden",
+  },
+};
 
 export const Extracts = () => {
   const auth_token = useReactiveVar(authToken);
@@ -54,14 +84,6 @@ export const Extracts = () => {
     debouncedExportSearch.current(value);
   };
 
-  const shouldPoll = (extracts: GetExtractsOutput) => {
-    return extracts?.extracts?.edges.reduce(
-      (accum, edge) =>
-        (edge.node.started && !edge.node.finished && !edge.node.error) || accum,
-      false
-    );
-  };
-
   const {
     refetch: refetchExtracts,
     loading: extracts_loading,
@@ -80,42 +102,18 @@ export const Extracts = () => {
     refetchExtracts({ searchText: extract_search_term });
   }, [extract_search_term]);
 
-  useEffect(() => {
-    if (extracts_data && shouldPoll(extracts_data)) {
-      const pollInterval = setInterval(() => {
-        refetchExtracts();
-      }, 30000);
-
-      return () => {
-        clearInterval(pollInterval);
-      };
-    }
-  }, [extracts_data, refetchExtracts]);
-
-  const extract_nodes = extracts_data?.extracts?.edges
-    ? extracts_data.extracts.edges
-    : [];
-  const extract_items = extract_nodes
-    .map((edge) => (edge?.node ? edge.node : undefined))
-    .filter((item): item is ExtractType => !!item);
-
   // If we just logged in, refetch extracts in case there are extracts that are not public and are only visible to current user
   useEffect(() => {
     if (auth_token) {
-      console.log("DocumentItem - refetchExtracts due to auth_token");
       refetchExtracts();
     }
   }, [auth_token]);
 
   // If we navigated here, refetch documents to ensure we have fresh docs
   useEffect(() => {
-    console.log("DocumentItem - refetchExtracts due to location change");
     refetchExtracts();
   }, [location]);
 
-  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Implementing various resolvers / mutations to create action methods
-  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   const [tryDeleteExtract] = useMutation<
     RequestDeleteExtractOutputType,
     RequestDeleteExtractInputType
@@ -131,14 +129,14 @@ export const Extracts = () => {
     callback?: (args?: any) => void | any
   ) => {
     tryDeleteExtract({ variables: { id } })
-      .then((data) => {
-        toast.success("SUCCESS - Deleted Extract");
+      .then(() => {
+        toast.success("Extract deleted successfully");
         if (callback) {
           callback();
         }
       })
       .catch((err) => {
-        toast.error("ERROR - Could Not Delete Extract");
+        toast.error("Failed to delete extract");
         if (callback) {
           callback();
         }
@@ -151,11 +149,22 @@ export const Extracts = () => {
   if (auth_token) {
     extract_actions.push({
       key: "extracts_action_dropdown_0",
-      title: "Create",
+      title: "Create Extract",
       icon: "plus",
       color: "blue",
       action_function: () => showCreateExtractModal(!show_create_extract_modal),
     });
+  }
+
+  const extract_nodes = extracts_data?.extracts?.edges
+    ? extracts_data.extracts.edges
+    : [];
+  const extract_items = extract_nodes
+    .map((edge) => (edge?.node ? edge.node : undefined))
+    .filter((item): item is ExtractType => !!item);
+
+  if (extracts_error) {
+    toast.error("Failed to load extracts");
   }
 
   return (
@@ -200,6 +209,7 @@ export const Extracts = () => {
       }
     >
       <ExtractList
+        selectedId={selected_extract_ids[0]}
         items={extract_items}
         pageInfo={extracts_data?.extracts?.pageInfo}
         loading={extracts_loading}

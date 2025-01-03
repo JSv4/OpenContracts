@@ -351,149 +351,184 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
   ];
 
   return (
-    <StyledCard
-      id={id}
-      key={id}
-      style={is_selected ? { backgroundColor: "#e2ffdb" } : {}}
-      onClick={backendLock ? () => {} : cardClickHandler}
-      onContextMenu={(e: React.MouseEvent<HTMLElement>) => {
-        e.preventDefault();
-        createContextFromEvent(e);
-        if (contextMenuOpen === id) {
-          setContextMenuOpen(-1);
-        } else {
-          setContextMenuOpen(id);
-        }
-      }}
-      onMouseEnter={() => {
-        if (contextMenuOpen !== id) {
-          setContextMenuOpen(-1);
-        }
-      }}
-    >
-      {backendLock ? (
-        <Dimmer active>
-          <Loader>Preparing...</Loader>
-        </Dimmer>
-      ) : null}
-      <LabelsetCorner
-        ref={cornerRef}
-        hasLabelset={Boolean(labelSet)}
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
+    <>
+      <StyledCard
+        id={id}
+        key={id}
+        style={is_selected ? { backgroundColor: "#e2ffdb" } : {}}
+        onClick={backendLock ? () => {} : cardClickHandler}
+        onContextMenu={(e: React.MouseEvent<HTMLElement>) => {
+          e.preventDefault();
+          createContextFromEvent(e);
+          if (contextMenuOpen === id) {
+            setContextMenuOpen(-1);
+          } else {
+            setContextMenuOpen(id);
+          }
+        }}
+        onMouseEnter={() => {
+          if (contextMenuOpen !== id) {
+            setContextMenuOpen(-1);
+          }
+        }}
       >
-        <CornerIcon>
-          <Tags size={24} />
-        </CornerIcon>
-        <LabelsetTooltip visible={showTooltip}>
-          {labelSet ? (
-            <>
-              <Header as="h3" size="small">
-                {labelSet.icon ? (
-                  <HeaderImage src={labelSet.icon} alt={labelSet.title} />
-                ) : (
-                  <Tags
-                    size={24}
-                    style={{ marginRight: 8, color: "#64748b" }}
-                  />
-                )}
-                <Header.Content>
-                  {labelSet.title}
-                  <Header.Subheader
-                    style={{
-                      fontSize: "0.8rem",
-                      color: "#64748b",
-                      marginTop: 4,
-                    }}
-                  >
-                    {labelSet.description}
-                  </Header.Subheader>
-                </Header.Content>
-              </Header>
-              <StatsGrid>
-                <StatItem>
-                  <FileText />
-                  <span>
-                    Text Labels:{" "}
-                    <span className="count">
-                      {labelSet.tokenLabelCount || 0}
+        {backendLock ? (
+          <Dimmer active>
+            <Loader>Preparing...</Loader>
+          </Dimmer>
+        ) : null}
+        <LabelsetCorner
+          ref={cornerRef}
+          hasLabelset={Boolean(labelSet)}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+        >
+          <CornerIcon>
+            <Tags size={24} />
+          </CornerIcon>
+          <LabelsetTooltip visible={showTooltip}>
+            {labelSet ? (
+              <>
+                <Header as="h3" size="small">
+                  {labelSet.icon ? (
+                    <HeaderImage src={labelSet.icon} alt={labelSet.title} />
+                  ) : (
+                    <Tags
+                      size={24}
+                      style={{ marginRight: 8, color: "#64748b" }}
+                    />
+                  )}
+                  <Header.Content>
+                    {labelSet.title}
+                    <Header.Subheader
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "#64748b",
+                        marginTop: 4,
+                      }}
+                    >
+                      {labelSet.description}
+                    </Header.Subheader>
+                  </Header.Content>
+                </Header>
+                <StatsGrid>
+                  <StatItem>
+                    <FileText />
+                    <span>
+                      Text Labels:{" "}
+                      <span className="count">
+                        {labelSet.tokenLabelCount || 0}
+                      </span>
                     </span>
-                  </span>
-                </StatItem>
-                <StatItem>
-                  <FileText />
-                  <span>
-                    Doc Types:{" "}
-                    <span className="count">{labelSet.docLabelCount || 0}</span>
-                  </span>
-                </StatItem>
-                <StatItem>
-                  <HandshakeIcon />
-                  <span>
-                    Relations:{" "}
-                    <span className="count">
-                      {labelSet.spanLabelCount || 0}
+                  </StatItem>
+                  <StatItem>
+                    <FileText />
+                    <span>
+                      Doc Types:{" "}
+                      <span className="count">
+                        {labelSet.docLabelCount || 0}
+                      </span>
                     </span>
-                  </span>
-                </StatItem>
-                <StatItem>
-                  <Database />
-                  <span>
-                    Metadata:{" "}
-                    <span className="count">
-                      {labelSet.metadataLabelCount || 0}
+                  </StatItem>
+                  <StatItem>
+                    <HandshakeIcon />
+                    <span>
+                      Relations:{" "}
+                      <span className="count">
+                        {labelSet.spanLabelCount || 0}
+                      </span>
                     </span>
-                  </span>
-                </StatItem>
-              </StatsGrid>
-            </>
-          ) : (
-            <div style={{ textAlign: "center", color: "#64748b" }}>
-              <p style={{ fontWeight: 600, color: "#ef4444", marginBottom: 8 }}>
-                No Labelset Selected
-              </p>
-              <small>Right click to edit and select a labelset</small>
-            </div>
-          )}
-        </LabelsetTooltip>
-      </LabelsetCorner>
-      <StyledImage src={icon ? icon : default_corpus_icon} wrapped ui={false} />
-      <StyledCardContent>
-        <Card.Header>{title}</Card.Header>
-        <Card.Meta>{`Created by: `}</Card.Meta>
-        <Card.Description>
-          <span>
-            <b>Description:</b> {description}
-          </span>
-        </Card.Description>
-      </StyledCardContent>
-      <StyledCardExtra>
-        <Statistic.Group size="mini" widths={3}>
-          <Statistic>
-            <Statistic.Value>
-              {documents?.edges?.length ? documents.edges.length : 0}
-            </Statistic.Value>
-            <Statistic.Label>Docs</Statistic.Label>
-          </Statistic>
-          <MyPermissionsIndicator
-            myPermissions={myPermissions}
-            isPublic={isPublic}
-          />
-          {item.parent ? (
-            <Statistic color="green">
-              <Statistic.Value>
-                <GitForkIcon size={16} />
-              </Statistic.Value>
-              <Statistic.Label>FORK</Statistic.Label>
-              <div
-                style={{ fontSize: "0.7rem", color: "#64748b", marginTop: 4 }}
-              >
-                from {item.parent.title}
+                  </StatItem>
+                  <StatItem>
+                    <Database />
+                    <span>
+                      Metadata:{" "}
+                      <span className="count">
+                        {labelSet.metadataLabelCount || 0}
+                      </span>
+                    </span>
+                  </StatItem>
+                </StatsGrid>
+              </>
+            ) : (
+              <div style={{ textAlign: "center", color: "#64748b" }}>
+                <p
+                  style={{ fontWeight: 600, color: "#ef4444", marginBottom: 8 }}
+                >
+                  No Labelset Selected
+                </p>
+                <small>Right click to edit and select a labelset</small>
               </div>
+            )}
+          </LabelsetTooltip>
+        </LabelsetCorner>
+        <StyledImage
+          src={icon ? icon : default_corpus_icon}
+          wrapped
+          ui={false}
+        />
+        <StyledCardContent>
+          <Card.Header>{title}</Card.Header>
+          <Card.Meta>{`Created by: `}</Card.Meta>
+          <Card.Description>
+            <span>
+              <b>Description:</b> {description}
+            </span>
+          </Card.Description>
+        </StyledCardContent>
+        <StyledCardExtra>
+          <Statistic.Group size="mini" widths={3}>
+            <Statistic>
+              <Statistic.Value>
+                {documents?.edges?.length ? documents.edges.length : 0}
+              </Statistic.Value>
+              <Statistic.Label>Docs</Statistic.Label>
             </Statistic>
-          ) : null}
-        </Statistic.Group>
-      </StyledCardExtra>
-    </StyledCard>
+            <MyPermissionsIndicator
+              myPermissions={myPermissions}
+              isPublic={isPublic}
+            />
+            {item.parent ? (
+              <Statistic color="green">
+                <Statistic.Value>
+                  <GitForkIcon size={16} />
+                </Statistic.Value>
+                <Statistic.Label>FORK</Statistic.Label>
+                <div
+                  style={{ fontSize: "0.7rem", color: "#64748b", marginTop: 4 }}
+                >
+                  from {item.parent.title}
+                </div>
+              </Statistic>
+            ) : null}
+          </Statistic.Group>
+        </StyledCardExtra>
+      </StyledCard>
+
+      {contextMenuOpen === id && contextPosition && (
+        <Menu
+          vertical
+          style={{
+            position: "fixed",
+            left: contextPosition.x,
+            top: contextPosition.y,
+            zIndex: 9999,
+          }}
+        >
+          {context_menus.map((menuItem) => (
+            <Menu.Item
+              key={menuItem.key}
+              icon={menuItem.icon}
+              content={menuItem.content}
+              onClick={(e) => {
+                e.stopPropagation();
+                menuItem.onClick();
+                setContextMenuOpen(-1);
+              }}
+            />
+          ))}
+        </Menu>
+      )}
+    </>
   );
 };

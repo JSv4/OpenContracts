@@ -266,7 +266,7 @@ export function useCreateAnnotation() {
         const createdAnnotationData = data.addAnnotation.annotation;
         let newAnnotation: ServerTokenAnnotation | ServerSpanAnnotation;
 
-        if (selectedDocument.fileType === "application/txt") {
+        if (selectedDocument.fileType?.startsWith("text/")) {
           newAnnotation = new ServerSpanAnnotation(
             createdAnnotationData.page,
             createdAnnotationData.annotationLabel,

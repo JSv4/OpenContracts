@@ -84,6 +84,9 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
     ) => {
       const value = data.type === "checkbox" ? data.checked : data.value;
       setFormData((prev) => ({ ...prev, [fieldName]: value }));
+      if (fieldName === "extractIsList") {
+        setExtractIsList(value);
+      }
     },
     []
   );
@@ -99,22 +102,27 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
     }));
   };
 
+  const handlePrimitiveTypeChange = (value: string) => {
+    setPrimitiveType(value);
+    setFormData((prev) => ({
+      ...prev,
+      outputType: value,
+    }));
+  };
+
   const isFormValid = useCallback((): boolean => {
     const requiredFields: RequiredFields = {
       query: formData.query || "",
       taskName: formData.taskName || "",
       name: formData.name || "",
       agentic: formData.agentic ?? false,
-      ...(outputTypeOption === "primitive"
-        ? { primitiveType: formData.primitiveType }
-        : {}),
     };
 
     return Object.entries(requiredFields).every(([key, value]) => {
       if (key === "agentic") return typeof value === "boolean";
       return Boolean(value);
     });
-  }, [formData, outputTypeOption]);
+  }, [formData]);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -147,6 +155,7 @@ export const CreateColumnModal: React.FC<CreateColumnModalProps> = ({
               extractIsList={extractIsList}
               primitiveType={primitiveType}
               handleOutputTypeChange={handleOutputTypeChange}
+              handlePrimitiveTypeChange={handlePrimitiveTypeChange}
               handleChange={handleChange}
               setFormData={setFormData}
               initialFields={initialFields}

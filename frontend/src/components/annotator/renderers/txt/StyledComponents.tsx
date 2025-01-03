@@ -12,31 +12,90 @@ export const spiralOut = keyframes`
   }
 `;
 
+const fadeInSlide = keyframes`
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+`;
+
 // Label Components
-export const LabelContainer = styled.div`
+export const LabelContainer = styled.div<{ color: string }>`
   position: absolute;
   display: flex;
   align-items: center;
   z-index: 10000;
+  transform-origin: left center;
+  transition: all 0.2s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 2px;
+    background-color: ${(props) => props.color};
+    opacity: 0.8;
+  }
+
+  /* Target RadialButtonCloud directly */
+  & > div:last-child {
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: all 0.2s ease;
+  }
+
+  &:hover > div:last-child {
+    opacity: 1;
+    transform: translateX(0);
+  }
 `;
 
 // Adjusted to handle spiral movement
 export const Label = styled.span<{ color: string; $index: number }>`
-  padding: 0.125em 0.5em;
-  border-radius: 0.25em;
+  padding: 4px 8px;
+  border-radius: 4px;
   background-color: ${(props) => props.color};
   color: white;
   font-size: 0.85em;
-  margin-right: 0.5em; // Adjusted margin
-  position: relative;
   white-space: nowrap;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  ${({ $index }) => css`
-    animation: ${spiralOut} 0.5s forwards;
-    animation-delay: ${$index * 0.05}s;
-  `}
+  opacity: 0;
+  transform: translateX(-10px);
+  animation: ${fadeInSlide} 0.3s forwards;
+  animation-delay: ${(props) => props.$index * 0.05}s;
   pointer-events: auto;
   cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 4px; /* Add space for the action buttons */
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Add a subtle indicator for actions */
+  &::after {
+    content: "⋮";
+    opacity: 0.7;
+    font-size: 1.2em;
+    font-weight: bold;
+    padding-left: 4px;
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
 `;
 
 // Styled container for the text

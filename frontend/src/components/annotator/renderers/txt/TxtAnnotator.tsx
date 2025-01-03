@@ -5,6 +5,10 @@
  * 1. Enhanced label positioning for nested annotations by assigning layers and adjusting radii.
  * 2. Improved collision detection and boundary avoidance in force simulation.
  * 3. Connector lines accurately connect labels to annotations with clarity.
+ *
+ * Additional Feature:
+ * - When selectedAnnotations changes and has one or more entries, scroll smoothly to the
+ *   earliest (by text offset) selected annotation and center it in view.
  */
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
@@ -129,6 +133,52 @@ const AnnotatedSpan = styled.span<{
   z-index: ${(props) => props.zIndex || 1};
 `;
 
+/**
+ * Convert a local selection offset to the global offset based on
+ * the spans array. This assumes each <span> in the "spans" array
+ * has a data attribute "data-span-index" that references the same
+ * index in the 'spans' state variable.
+ *
+ * @param node - The DOM node where the selection offset is anchored/focused.
+ * @param localOffset - The node-local offset (anchorOffset/focusOffset).
+ * @param spans - The array of text chunks used when rendering multiple <span>.
+ * @returns The global offset in the overall text, or null if the node wasn't found.
+ */
+function getGlobalOffsetFromNode(
+  node: Node | null,
+  localOffset: number,
+  spans: {
+    start: number;
+    end: number;
+    text: string;
+    annotations: any[];
+  }[]
+): number | null {
+  if (!node) return null;
+
+  // Traverse upward to find the annotated <span> that holds data-span-index
+  let element: HTMLElement | null =
+    node instanceof HTMLElement ? node : node.parentElement;
+  while (element && !element.hasAttribute("data-span-index")) {
+    element = element.parentElement;
+  }
+  if (!element) return null;
+
+  const spanIndexAttr = element.getAttribute("data-span-index");
+  if (!spanIndexAttr) return null;
+
+  const spanIndex = parseInt(spanIndexAttr, 10);
+  if (isNaN(spanIndex) || !spans[spanIndex]) return null;
+
+  const spanInfo = spans[spanIndex];
+
+  // The global offset for the start of this chunk
+  const globalOffsetForSpan = spanInfo.start;
+
+  // The final global offset = the chunk’s starting offset + local offset
+  return globalOffsetForSpan + localOffset;
+}
+
 const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   text,
   annotations,
@@ -155,48 +205,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
   const [annotationToEdit, setAnnotationToEdit] =
     useState<ServerSpanAnnotation | null>(null);
   const [labelsToRender, setLabelsToRender] = useState<LabelRenderData[]>([]);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const hideLabelsTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  const handleMouseEnter = useCallback((index: number) => {
-    if (hideLabelsTimeout.current) {
-      clearTimeout(hideLabelsTimeout.current);
-      hideLabelsTimeout.current = null;
-    }
-    setHoveredSpanIndex(index);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    hideLabelsTimeout.current = setTimeout(() => {
-      setHoveredSpanIndex(null);
-    }, 1000); // Adjust delay as needed
-  }, []);
-
-  const handleLabelMouseEnter = useCallback(() => {
-    if (hideLabelsTimeout.current) {
-      clearTimeout(hideLabelsTimeout.current);
-      hideLabelsTimeout.current = null;
-    }
-  }, []);
-
-  const handleLabelMouseLeave = useCallback(() => {
-    hideLabelsTimeout.current = setTimeout(() => {
-      setHoveredSpanIndex(null);
-    }, 2000); // Adjust delay as needed
-  }, []);
-
-  const handleLabelClick = useCallback(
-    (annotation: ServerSpanAnnotation) => {
-      if (selectedAnnotations.includes(annotation.id)) {
-        setSelectedAnnotations([]);
-      } else {
-        setSelectedAnnotations([annotation.id]);
-      }
-    },
-    [selectedAnnotations, setSelectedAnnotations]
-  );
-
   const [spans, setSpans] = useState<
     {
       start: number;
@@ -208,6 +216,65 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     }[]
   >([]);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hideLabelsTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  /**
+   * Handles mouse entering on a span to show associated labels.
+   */
+  const handleMouseEnter = useCallback((index: number) => {
+    if (hideLabelsTimeout.current) {
+      clearTimeout(hideLabelsTimeout.current);
+      hideLabelsTimeout.current = null;
+    }
+    setHoveredSpanIndex(index);
+  }, []);
+
+  /**
+   * Handles mouse leaving from a span, triggering a delayed hide of labels.
+   */
+  const handleMouseLeave = useCallback(() => {
+    hideLabelsTimeout.current = setTimeout(() => {
+      setHoveredSpanIndex(null);
+    }, 1000); // Adjust delay as needed
+  }, []);
+
+  /**
+   * Cancels label hiding when hovering over a label element.
+   */
+  const handleLabelMouseEnter = useCallback(() => {
+    if (hideLabelsTimeout.current) {
+      clearTimeout(hideLabelsTimeout.current);
+      hideLabelsTimeout.current = null;
+    }
+  }, []);
+
+  /**
+   * Triggers label hiding when leaving the label area.
+   */
+  const handleLabelMouseLeave = useCallback(() => {
+    hideLabelsTimeout.current = setTimeout(() => {
+      setHoveredSpanIndex(null);
+    }, 2000); // Adjust delay as needed
+  }, []);
+
+  /**
+   * Handles clicking on a label, toggling selection or clearing selections.
+   */
+  const handleLabelClick = useCallback(
+    (annotation: ServerSpanAnnotation) => {
+      if (selectedAnnotations.includes(annotation.id)) {
+        setSelectedAnnotations([]);
+      } else {
+        setSelectedAnnotations([annotation.id]);
+      }
+    },
+    [selectedAnnotations, setSelectedAnnotations]
+  );
+
+  /**
+   * Builds spans from the text and annotation boundaries, including search highlights.
+   */
   useEffect(() => {
     const isLabelVisible = (labelText: string) => {
       if (visibleLabels === null) return true;
@@ -233,7 +300,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     const addSpan = (
       start: number,
       end: number,
-      annotations: ServerSpanAnnotation[],
+      annList: ServerSpanAnnotation[],
       isSearchResult = false,
       isSelectedSearchResult = false
     ) => {
@@ -242,7 +309,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         start,
         end,
         text: text.slice(start, end),
-        annotations,
+        annotations: annList,
         isSearchResult,
         isSelectedSearchResult,
       });
@@ -265,18 +332,22 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     for (let i = 0; i < boundaries.length - 1; i++) {
       const spanStart = boundaries[i];
       const spanEnd = boundaries[i + 1];
+
       const spanAnnotations = sortedAnnotations.filter(
         (ann) => ann.json.start < spanEnd && ann.json.end > spanStart
       );
+
       const isSearchResult = searchResults.some(
         (result) =>
           result.start_index <= spanStart && result.end_index >= spanEnd
       );
+
       const isSelectedSearchResult =
         isSearchResult &&
         selectedSearchResultIndex !== undefined &&
         searchResults[selectedSearchResultIndex].start_index <= spanStart &&
         searchResults[selectedSearchResultIndex].end_index >= spanEnd;
+
       addSpan(
         spanStart,
         spanEnd,
@@ -294,6 +365,9 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     selectedSearchResultIndex,
   ]);
 
+  /**
+   * Dynamically calculates label positions for any hovered or selected annotations.
+   */
   useEffect(() => {
     const calculateLabelPositions = () => {
       const newLabelsToRender: LabelRenderData[] = [];
@@ -314,7 +388,10 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
           : hoveredSpan.annotations;
 
       const selectedAnnotationsForSpan = annotationsToRender.filter(
-        (ann) => showStructuralAnnotations || !ann.structural
+        (ann) =>
+          showStructuralAnnotations ||
+          !ann.structural ||
+          selectedAnnotations.includes(ann.id)
       );
 
       if (selectedAnnotationsForSpan.length === 0) {
@@ -334,171 +411,147 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
         const scrollLeft = containerElement.scrollLeft;
         const scrollTop = containerElement.scrollTop;
 
-        const spanX = spanRect.left - containerRect.left + scrollLeft;
-        const spanY = spanRect.top - containerRect.top + scrollTop;
+        // Get all text nodes within the span to find line breaks
+        const range = document.createRange();
+        range.selectNodeContents(spanElement);
+        const rects = range.getClientRects();
 
-        const baseX = spanX + spanRect.width / 2;
-        const baseY = spanY + spanRect.height / 2;
+        // Find the rect (line) closest to the vertical middle of the span
+        const mouseY = spanRect.top + spanRect.height / 2;
+        let nearestLineRect = rects[0];
+        let minDistance = Infinity;
 
-        // Sort annotations by length
-        const sortedAnnotations = selectedAnnotationsForSpan.sort(
-          (a, b) => a.json.end - a.json.start - (b.json.end - b.json.start)
-        );
-
-        // Assign layers based on nesting levels
-        const layers = sortedAnnotations.map((ann) => {
-          return sortedAnnotations.filter(
-            (otherAnn) =>
-              otherAnn.json.start <= ann.json.start &&
-              otherAnn.json.end >= ann.json.end
-          ).length;
-        });
-
-        const maxLayer = Math.max(...layers);
-
-        const labelWidth = 100; // Approximate label width
-        const labelHeight = 30; // Approximate label height
-
-        // Initialize label positions with layered radii
-        const initialPositions: LabelRenderData[] = sortedAnnotations.map(
-          (annotation, index) => {
-            const angle =
-              (index / selectedAnnotationsForSpan.length) * Math.PI * 2;
-
-            const layerIndex = layers[index];
-            const radius = 80 + layerIndex * 40;
-
-            const x = baseX + radius * Math.cos(angle) - labelWidth / 2;
-            const y = baseY + radius * Math.sin(angle) - labelHeight / 2;
-
-            return {
-              annotation,
-              x,
-              y,
-              width: labelWidth,
-              height: labelHeight,
-              labelIndex: index,
-            };
+        for (let i = 0; i < rects.length; i++) {
+          const rect = rects[i];
+          const rectMiddleY = rect.top + rect.height / 2;
+          const distance = Math.abs(mouseY - rectMiddleY);
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestLineRect = rect;
           }
-        );
+        }
 
-        // Run force simulation to adjust label positions
-        const simulation = d3
-          .forceSimulation<LabelRenderData>(initialPositions)
-          .force(
-            "collide",
-            d3.forceCollide<LabelRenderData>((d) => d.width / 2 + 10)
-          )
-          .force(
-            "x",
-            d3
-              .forceX<LabelRenderData>(baseX)
-              .strength(0.1)
-              .x((d) => d.x + d.width / 2)
-          )
-          .force(
-            "y",
-            d3
-              .forceY<LabelRenderData>(baseY)
-              .strength(0.1)
-              .y((d) => d.y + d.height / 2)
-          )
-          .force("avoidance", (alpha) => {
-            initialPositions.forEach((d, i) => {
-              const annRect = spanElement.getBoundingClientRect();
-              const dx = d.x + d.width / 2 - (spanX + annRect.width / 2);
-              const dy = d.y + d.height / 2 - (spanY + annRect.height / 2);
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              const minDist = annRect.width / 2 + d.width / 2 + 20;
-              if (dist < minDist) {
-                const force = (minDist - dist) * alpha;
-                d.x += (dx / dist) * force;
-                d.y += (dy / dist) * force;
-              }
-            });
-          })
-          .alphaDecay(0.1)
-          .stop();
+        // Calculate base position using the nearest line's right edge
+        const baseX =
+          nearestLineRect.right - containerRect.left + scrollLeft + 8; // 8px gap
+        const baseY = nearestLineRect.top - containerRect.top + scrollTop;
 
-        simulation.tick(100);
+        // Stack labels vertically with a small gap
+        const labelGap = 4;
+        const labelHeight = 28; // Approximate height of label
 
-        // Ensure labels stay within the container bounds
-        initialPositions.forEach((d) => {
-          d.x = Math.max(
-            0,
-            Math.min(d.x, containerElement.scrollWidth - d.width)
-          );
-          d.y = Math.max(
-            0,
-            Math.min(d.y, containerElement.scrollHeight - d.height)
-          );
+        selectedAnnotationsForSpan.forEach((annotation, index) => {
+          newLabelsToRender.push({
+            annotation,
+            x: baseX,
+            y: baseY + (labelHeight + labelGap) * index,
+            width: 100, // Approximate width
+            height: labelHeight,
+            labelIndex: index,
+          });
         });
 
-        setLabelsToRender(initialPositions);
+        setLabelsToRender(newLabelsToRender);
       }
     };
 
     calculateLabelPositions();
   }, [hoveredSpanIndex, spans, showStructuralAnnotations, selectedAnnotations]);
 
-  interface Corner {
-    x: number;
-    y: number;
-    distance?: number;
-  }
+  /**
+   * Scrolls smoothly to the earliest selected annotation (by .json.start) when selectedAnnotations changes.
+   */
+  useEffect(() => {
+    if (selectedAnnotations.length === 0) return;
 
-  const getClosestCorner = (
-    labelX: number,
-    labelY: number,
-    spanRect: DOMRect,
-    containerRect: DOMRect,
-    scrollLeft: number,
-    scrollTop: number
-  ): Corner => {
-    const corners: Corner[] = [
-      {
-        x: spanRect.left - containerRect.left + scrollLeft,
-        y: spanRect.top - containerRect.top + scrollTop,
-      },
-      {
-        x: spanRect.right - containerRect.left + scrollLeft,
-        y: spanRect.top - containerRect.top + scrollTop,
-      },
-      {
-        x: spanRect.left - containerRect.left + scrollLeft,
-        y: spanRect.bottom - containerRect.top + scrollTop,
-      },
-      {
-        x: spanRect.right - containerRect.left + scrollLeft,
-        y: spanRect.bottom - containerRect.top + scrollTop,
-      },
-    ];
-
-    return corners.reduce(
-      (closest, corner) => {
-        const distance = Math.sqrt(
-          Math.pow(labelX - corner.x, 2) + Math.pow(labelY - corner.y, 2)
-        );
-        return distance < (closest.distance ?? Infinity)
-          ? { ...corner, distance }
-          : closest;
-      },
-      { x: 0, y: 0, distance: Infinity } as Corner
+    // Find the earliest selected annotation in reading order.
+    const selectedAnns = annotations.filter((ann) =>
+      selectedAnnotations.includes(ann.id)
     );
-  };
+    if (selectedAnns.length === 0) return;
+    const earliestAnn = selectedAnns.reduce((acc, ann) =>
+      ann.json.start < acc.json.start ? ann : acc
+    );
 
-  const handleMouseUp = (event: any) => {
+    // Find the span index that includes the earliest annotation's start.
+    const scrollToSpanIndex = spans.findIndex(
+      (span) =>
+        earliestAnn.json.start >= span.start &&
+        earliestAnn.json.start < span.end
+    );
+    if (scrollToSpanIndex < 0) return;
+
+    // Get the target element in DOM
+    const containerElement = containerRef.current;
+    if (!containerElement) return;
+
+    const targetElement = containerElement.querySelector(
+      `span[data-span-index="${scrollToSpanIndex}"]`
+    ) as HTMLElement | null;
+
+    if (!targetElement) return;
+
+    /**
+     * Smoothly scrolls the container so that the target is centered.
+     */
+    const containerRect = containerElement.getBoundingClientRect();
+    const targetRect = targetElement.getBoundingClientRect();
+
+    const offsetTop =
+      targetRect.top - containerRect.top + containerElement.scrollTop;
+    const offsetLeft =
+      targetRect.left - containerRect.left + containerElement.scrollLeft;
+
+    containerElement.scrollTo({
+      top: offsetTop - containerRect.height / 2 + targetRect.height / 2,
+      left: offsetLeft - containerRect.width / 2 + targetRect.width / 2,
+      behavior: "smooth",
+    });
+  }, [selectedAnnotations, annotations, spans]);
+
+  /**
+   * Creates annotation when user finishes a text selection (mouseup).
+   * @param event - The mouse event.
+   */
+  const handleMouseUp = (event: React.MouseEvent<HTMLDivElement>) => {
     const selection = document.getSelection();
-    if (selection && selection.toString().length > 0) {
-      const start = selection.anchorOffset;
-      const end = selection.focusOffset;
-      const selectedText = selection.toString();
+    if (!selection || selection.toString().length === 0) {
+      return;
+    }
 
-      // Ensure that start is less than end
-      const adjustedStart = Math.min(start, end);
-      const adjustedEnd = Math.max(start, end);
+    // Attempt to find the anchor/focus offsets in global terms
+    const anchorNode = selection.anchorNode;
+    const focusNode = selection.focusNode;
 
-      // Create the span object
+    const anchorLocalOffset = selection.anchorOffset;
+    const focusLocalOffset = selection.focusOffset;
+
+    // Convert anchor/focus local offsets to global offsets
+    const anchorGlobalOffset = getGlobalOffsetFromNode(
+      anchorNode,
+      anchorLocalOffset,
+      spans
+    );
+    const focusGlobalOffset = getGlobalOffsetFromNode(
+      focusNode,
+      focusLocalOffset,
+      spans
+    );
+
+    if (anchorGlobalOffset === null || focusGlobalOffset === null) {
+      // We couldn’t map the local offset to a global offset
+      return;
+    }
+
+    // Ensure we have proper ascending indices
+    const adjustedStart = Math.min(anchorGlobalOffset, focusGlobalOffset);
+    const adjustedEnd = Math.max(anchorGlobalOffset, focusGlobalOffset);
+
+    // Get the actual selected text from these global indices
+    const selectedText = text.slice(adjustedStart, adjustedEnd);
+
+    // If there is valid text selected, form the annotation
+    if (selectedText.length > 0) {
       const span = {
         start: adjustedStart,
         end: adjustedEnd,
@@ -508,7 +561,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
       // Convert span to ServerSpanAnnotation
       const annotation = getSpan(span);
 
-      // Call createAnnotation with the correct type
+      // Create the annotation
       createAnnotation(annotation);
     }
   };
@@ -544,7 +597,10 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
               : spanAnnotations;
 
           const selectedAnnotationsForSpan = annotationsToRender.filter(
-            (ann) => showStructuralAnnotations || !ann.structural
+            (ann) =>
+              showStructuralAnnotations ||
+              !ann.structural ||
+              selectedAnnotations.includes(ann.id)
           );
 
           let approved = false;
@@ -598,76 +654,6 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
             </AnnotatedSpan>
           );
         })}
-        {/* Render connector lines */}
-        {labelsToRender.length > 0 && (
-          <ConnectorLine>
-            <svg width="100%" height="100%">
-              <defs>
-                {labelsToRender.map(({ annotation }) => (
-                  <marker
-                    key={`arrowhead-${annotation.id}`}
-                    id={`arrowhead-${annotation.id}`}
-                    viewBox="0 0 10 10"
-                    refX="5"
-                    refY="5"
-                    markerWidth="6"
-                    markerHeight="6"
-                    orient="auto"
-                  >
-                    <path
-                      d="M 0 0 L 10 5 L 0 10 z"
-                      fill={annotation.annotationLabel.color || "#000"}
-                    />
-                  </marker>
-                ))}
-              </defs>
-              {labelsToRender.map(
-                ({ annotation, x, y, width, height, labelIndex }) => {
-                  const containerElement = containerRef.current;
-                  const spanElement = containerElement?.querySelector(
-                    `span[data-span-index="${hoveredSpanIndex}"]`
-                  ) as HTMLElement;
-
-                  if (!spanElement) return null;
-                  const containerRect =
-                    containerElement?.getBoundingClientRect() ?? new DOMRect();
-                  const spanRect = spanElement.getBoundingClientRect();
-
-                  const scrollLeft = containerElement?.scrollLeft ?? 0;
-                  const scrollTop = containerElement?.scrollTop ?? 0;
-
-                  const { x: endX, y: endY } = getClosestCorner(
-                    x + width / 2,
-                    y + height / 2,
-                    spanRect,
-                    containerRect,
-                    scrollLeft,
-                    scrollTop
-                  );
-
-                  const labelCenterX = x + width / 2;
-                  const labelCenterY = y + height / 2;
-
-                  const pathData = `M${labelCenterX},${labelCenterY} 
-                    C${(labelCenterX + endX) / 2},${labelCenterY} 
-                    ${(labelCenterX + endX) / 2},${endY} 
-                    ${endX},${endY}`;
-
-                  return (
-                    <path
-                      key={`connector-${annotation.id}-${labelIndex}`}
-                      d={pathData}
-                      stroke={annotation.annotationLabel.color || "#000"}
-                      strokeWidth="2"
-                      fill="none"
-                      markerEnd={`url(#arrowhead-${annotation.id})`}
-                    />
-                  );
-                }
-              )}
-            </svg>
-          </ConnectorLine>
-        )}
         {/* Render labels */}
         {labelsToRender.map(
           ({ annotation, x, y, width, height, labelIndex }) => {
@@ -737,6 +723,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
                 }}
                 onMouseEnter={handleLabelMouseEnter}
                 onMouseLeave={handleLabelMouseLeave}
+                color={annotation.annotationLabel.color || "#cccccc"}
               >
                 <Label
                   id={`label-${annotation.id}-${labelIndex}`}

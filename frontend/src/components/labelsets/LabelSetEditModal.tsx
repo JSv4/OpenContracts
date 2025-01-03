@@ -1,14 +1,13 @@
 import React, { useState } from "react";
+import styled from "styled-components";
 import {
   Button,
   Modal,
   Header,
   Icon,
   Card,
-  Tab,
   Dimmer,
   Loader,
-  TabProps,
   Message,
 } from "semantic-ui-react";
 import _ from "lodash";
@@ -52,7 +51,6 @@ import {
 import { toast } from "react-toastify";
 import { getPermissions } from "../../utils/transform";
 import { PermissionTypes } from "../types";
-import styled from "styled-components";
 
 const fuse_options = {
   includeScore: false,
@@ -65,65 +63,216 @@ interface LabelSetEditModalProps {
   toggleModal: () => any;
 }
 
-const StyledModal = styled(Modal)`
+interface StyledModalProps {
+  className?: string;
+}
+
+const StyledModal = styled(Modal)<StyledModalProps>`
   &&& {
     max-width: 90vw;
     width: 1200px;
-    border-radius: 12px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-  }
-`;
-
-const ModalContent = styled(Modal.Content)`
-  &&& {
-    padding: 2rem;
-  }
-`;
-
-const TabContainer = styled(Tab)`
-  &&& {
-    height: 60vh;
-    overflow: hidden;
-    display: flex;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    margin: 2rem auto;
+    height: calc(100vh - 4rem) !important;
+    display: flex !important;
     flex-direction: column;
+
+    > .header {
+      flex: 0 0 auto;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #e9ecef;
+      margin: 0 !important;
+
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 1.1rem;
+        color: #2d3748;
+
+        i.icon {
+          font-size: 1.1em;
+          margin: 0;
+          color: #4a5568;
+        }
+      }
+    }
+
+    > .content {
+      flex: 1 1 auto;
+      margin: 0 !important;
+      padding: 0 !important;
+      min-height: 0;
+      display: flex !important;
+      flex-direction: column;
+    }
+
+    > .actions {
+      flex: 0 0 auto;
+      border-top: 1px solid #e9ecef;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin: 0 !important;
+      background: #fff;
+    }
   }
 `;
 
-const TabPane = styled(Tab.Pane)`
-  &&& {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1rem;
-    max-width: 100%;
-  }
+const ContentLayout = styled.div`
+  display: flex;
+  flex: 1;
+  min-height: 0;
+`;
+
+const SidebarList = styled.div`
+  width: 240px;
+  border-right: 1px solid #e9ecef;
+  background: #f8f9fa;
+  overflow-y: auto;
+  flex: 0 0 auto;
+`;
+
+const MainContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #fff;
 `;
 
 const SearchBarContainer = styled.div`
-  margin-bottom: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  flex: 0 0 auto;
+  background: #fff;
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  min-height: 0;
+
+  .crud-container {
+    > div {
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+    }
+  }
+`;
+
+interface ListItemProps {
+  active?: boolean;
+}
+
+const ListItem = styled.div<ListItemProps>`
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+  user-select: none;
+
+  ${(props) =>
+    props.active &&
+    `
+    background: #fff;
+    border-left-color: #3182ce;
+    font-weight: 500;
+  `}
+
+  &:hover:not([active]) {
+    background: #edf2f7;
+  }
+
+  i.icon {
+    width: 16px;
+    color: #4a5568;
+    font-size: 1rem;
+  }
+
+  .label-count {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: #718096;
+    background: ${(props) => (props.active ? "#ebf8ff" : "#edf2f7")};
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+  }
 `;
 
 const CardGroup = styled(Card.Group)`
-  &&& {
-    margin-top: 1rem;
-    width: 100%;
-  }
+  margin: 0.5rem 0 0 0;
+  width: 100%;
+  gap: 0.75rem;
 `;
 
 const EmptyStateMessage = styled(Message)`
-  &&& {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 200px;
-    text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  text-align: center;
+  background: #f8fafc;
+  border: 1px dashed #e2e8f0;
+  border-radius: 8px;
+  box-shadow: none;
+  margin: 1rem 0;
+
+  i.icon {
+    color: #a0aec0;
+    margin-bottom: 0.75rem;
+  }
+
+  .content {
+    .header {
+      color: #4a5568;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: #718096;
+      font-size: 0.9rem;
+      margin: 0;
+    }
   }
 `;
 
-const ScrollableTabPane = styled(TabPane)`
-  &&& {
-    overflow-y: auto;
-    max-height: calc(60vh - 2rem); // Adjust this value as needed
+const ActionButton = styled(Button)`
+  transition: all 0.2s ease;
+  padding: 0.6rem 1rem !important;
+
+  &.basic {
+    box-shadow: 0 0 0 1px #cbd5e0 inset;
+
+    &:hover {
+      box-shadow: 0 0 0 1px #a0aec0 inset;
+      background: #f7fafc !important;
+    }
+  }
+
+  &.green {
+    background: #38a169;
+
+    &:hover {
+      background: #2f855a;
+    }
+  }
+
+  i.icon {
+    margin-right: 6px !important;
+    font-size: 0.9em !important;
   }
 `;
 
@@ -133,7 +282,7 @@ export const LabelSetEditModal = ({
 }: LabelSetEditModalProps) => {
   const opened_labelset = useReactiveVar(openedLabelset);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [activeIndex, setActiveIndex] = useState<number | string>(0);
+  const [activeIndex, setActiveIndex] = useState<number>(0);
   const [updatedObject, setUpdatedObject] = useState<LabelSetType | {}>({});
   const [changedValues, setChangedValues] = useState<LabelSetType | {}>({});
   const [canSave, setCanSave] = useState<boolean>(false);
@@ -183,13 +332,13 @@ export const LabelSetEditModal = ({
   if (label_set_fetch_error || label_set_loading) {
     return (
       <StyledModal closeIcon open={open} onClose={() => toggleModal()}>
-        <ModalContent>
+        <Modal.Content>
           <Dimmer active={true}>
             <Loader
               content={create_loading ? "Updating..." : "Loading labels..."}
             />
           </Dimmer>
-        </ModalContent>
+        </Modal.Content>
       </StyledModal>
     );
   }
@@ -330,11 +479,6 @@ export const LabelSetEditModal = ({
     setCanSave(true);
   };
 
-  const handleTabChange = (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    data: TabProps
-  ) => setActiveIndex(data?.activeIndex ? data.activeIndex : 0);
-
   const handleSave = () => {
     updateLabelSet({
       id: opened_labelset?.id ? opened_labelset.id : "",
@@ -444,130 +588,133 @@ export const LabelSetEditModal = ({
     );
   };
 
-  const panes = [
+  const renderContent = () => {
+    switch (activeIndex) {
+      case 0:
+        return (
+          <div className="crud-container">
+            <CRUDWidget
+              hasFile
+              mode={
+                my_permissions.includes(PermissionTypes.CAN_UPDATE)
+                  ? "EDIT"
+                  : "VIEW"
+              }
+              modelName="Label Set"
+              dataSchema={newLabelSetForm_Schema}
+              uiSchema={newLabelSetForm_Ui_Schema}
+              instance={
+                _.isEmpty(updatedObject) ? opened_labelset || {} : updatedObject
+              }
+              showHeader
+              acceptedFileTypes=".png,.jpg"
+              handleInstanceChange={onCRUDChange}
+              fileIsImage
+              fileField="icon"
+              fileLabel="Labelset Icon"
+            />
+          </div>
+        );
+      case 1:
+        return renderLabelCards(metadata_label_results);
+      case 2:
+        return renderLabelCards(text_label_results);
+      case 3:
+        return renderLabelCards(doc_label_results);
+      case 4:
+        return renderLabelCards(relationship_label_results);
+      case 5:
+        return renderLabelCards(span_label_results);
+      default:
+        return null;
+    }
+  };
+
+  const menuItems = [
+    { key: 0, icon: "bars", label: "Details" },
     {
-      menuItem: {
-        key: "description",
-        icon: "bars",
-        content: "Details",
-      },
-      render: () => (
-        <ScrollableTabPane>
-          <CRUDWidget
-            hasFile
-            mode={
-              my_permissions.includes(PermissionTypes.CAN_UPDATE)
-                ? "EDIT"
-                : "VIEW"
-            }
-            modelName="Label Set"
-            dataSchema={newLabelSetForm_Schema}
-            uiSchema={newLabelSetForm_Ui_Schema}
-            instance={
-              _.isEmpty(updatedObject)
-                ? opened_labelset
-                  ? opened_labelset
-                  : {}
-                : updatedObject
-            }
-            showHeader
-            acceptedFileTypes=".png,.jpg"
-            handleInstanceChange={onCRUDChange}
-            fileIsImage
-            fileField="icon"
-            fileLabel="Labelset Icon"
-          />
-        </ScrollableTabPane>
-      ),
+      key: 1,
+      icon: "braille",
+      label: "Metadata",
+      count: metadata_label_results.length,
     },
     {
-      menuItem: {
-        key: "metadata",
-        icon: "braille",
-        content: `Metadata (${metadata_label_results.length})`,
-      },
-      render: () => (
-        <TabPane>{renderLabelCards(metadata_label_results)}</TabPane>
-      ),
+      key: 2,
+      icon: "language",
+      label: "Text",
+      count: text_label_results.length,
     },
     {
-      menuItem: {
-        key: "text",
-        icon: "language",
-        content: `Text (${text_label_results.length})`,
-      },
-      render: () => <TabPane>{renderLabelCards(text_label_results)}</TabPane>,
+      key: 3,
+      icon: "file pdf outline",
+      label: "Document Types",
+      count: doc_label_results.length,
     },
     {
-      menuItem: {
-        key: "doc",
-        icon: "file pdf outline",
-        content: `Doc Types (${doc_label_results.length})`,
-      },
-      render: () => <TabPane>{renderLabelCards(doc_label_results)}</TabPane>,
+      key: 4,
+      icon: "handshake outline",
+      label: "Relations",
+      count: relationship_label_results.length,
     },
     {
-      menuItem: {
-        key: "relation",
-        icon: "handshake outline",
-        content: `Relations (${relationship_label_results.length})`,
-      },
-      render: () => (
-        <TabPane>{renderLabelCards(relationship_label_results)}</TabPane>
-      ),
-    },
-    {
-      menuItem: {
-        key: "span",
-        icon: "i cursor",
-        content: `Spans (${span_label_results.length})`,
-      },
-      render: () => <TabPane>{renderLabelCards(span_label_results)}</TabPane>,
+      key: 5,
+      icon: "i cursor",
+      label: "Spans",
+      count: span_label_results.length,
     },
   ];
 
-  let button_actions: DropdownActionProps[] = [];
+  const button_actions: DropdownActionProps[] = [];
 
   if (
-    [1, 2, 3, 4, 5].includes(parseInt(`${activeIndex}`)) &&
+    activeIndex !== 0 &&
     my_permissions.includes(PermissionTypes.CAN_UPDATE)
   ) {
     button_actions.push({
-      key: `label_edit_modal_action_0`,
+      key: "create_new_label",
       color: "gray",
-      title:
-        activeIndex === 1
-          ? "Create Metadata Field"
-          : activeIndex === 2
-          ? "Create Text Label"
-          : activeIndex === 3
-          ? "Create Document Type Label"
-          : activeIndex === 4
-          ? "Create Relationship Label"
-          : activeIndex === 5
-          ? "Create Span Label"
-          : "",
+      title: (() => {
+        switch (activeIndex) {
+          case 1:
+            return "Create Metadata Field";
+          case 2:
+            return "Create Text Label";
+          case 3:
+            return "Create Document Type Label";
+          case 4:
+            return "Create Relationship Label";
+          case 5:
+            return "Create Span Label";
+          default:
+            return "";
+        }
+      })(),
       icon: "plus",
-      action_function:
-        activeIndex === 1
-          ? () => handleCreateMetadataLabel()
-          : activeIndex === 2
-          ? () => handleCreateTextLabel()
-          : activeIndex === 3
-          ? () => handleCreateDocumentLabel()
-          : activeIndex === 4
-          ? () => handleCreateRelationshipLabel()
-          : activeIndex === 5
-          ? () => handleCreateSpanLabel()
-          : () => {},
+      action_function: (() => {
+        switch (activeIndex) {
+          case 1:
+            return handleCreateMetadataLabel;
+          case 2:
+            return handleCreateTextLabel;
+          case 3:
+            return handleCreateDocumentLabel;
+          case 4:
+            return handleCreateRelationshipLabel;
+          case 5:
+            return handleCreateSpanLabel;
+          default:
+            return () => {};
+        }
+      })(),
     });
   }
+
   if (
     selectedLabels?.length > 0 &&
     my_permissions.includes(PermissionTypes.CAN_UPDATE)
   ) {
     button_actions.push({
-      key: `label_edit_modal_action_${button_actions.length}`,
+      key: "delete_selected",
       color: "red",
       title: "Delete Selected Label(s)",
       icon: "remove circle",
@@ -580,6 +727,7 @@ export const LabelSetEditModal = ({
       {(label_set_loading || create_loading) && (
         <Dimmer active={true}>
           <Loader
+            size="large"
             content={create_loading ? "Updating..." : "Loading labels..."}
           />
         </Dimmer>
@@ -593,35 +741,44 @@ export const LabelSetEditModal = ({
           </Header.Content>
         </Header>
       </Modal.Header>
-      <ModalContent>
-        <SearchBarContainer>
-          <CreateAndSearchBar
-            onChange={(value) => setSearchTerm(value)}
-            actions={button_actions}
-            placeholder="Search for label by description or name..."
-            value={searchTerm}
-          />
-        </SearchBarContainer>
-        <TabContainer
-          menu={{
-            pointing: true,
-            secondary: true,
-            fluid: true,
-            vertical: true,
-          }}
-          panes={panes}
-          activeIndex={activeIndex}
-          onTabChange={handleTabChange}
-        />
-      </ModalContent>
+      <Modal.Content>
+        <ContentLayout>
+          <SidebarList>
+            {menuItems.map((item) => (
+              <ListItem
+                key={item.key}
+                active={activeIndex === item.key}
+                onClick={() => setActiveIndex(item.key)}
+              >
+                <Icon name={item.icon as any} />
+                {item.label}
+                {item.count !== undefined && (
+                  <span className="label-count">{item.count}</span>
+                )}
+              </ListItem>
+            ))}
+          </SidebarList>
+          <MainContent>
+            <SearchBarContainer>
+              <CreateAndSearchBar
+                onChange={(value) => setSearchTerm(value)}
+                actions={button_actions}
+                placeholder="Search for label by description or name..."
+                value={searchTerm}
+              />
+            </SearchBarContainer>
+            <ContentArea>{renderContent()}</ContentArea>
+          </MainContent>
+        </ContentLayout>
+      </Modal.Content>
       <Modal.Actions>
-        <Button basic color="grey" onClick={() => toggleModal()}>
+        <ActionButton basic onClick={() => toggleModal()}>
           <Icon name="remove" /> Close
-        </Button>
+        </ActionButton>
         {canSave && (
-          <Button color="green" onClick={() => handleSave()}>
+          <ActionButton color="green" onClick={() => handleSave()}>
             <Icon name="checkmark" /> Save
-          </Button>
+          </ActionButton>
         )}
       </Modal.Actions>
     </StyledModal>

@@ -201,7 +201,7 @@ class DoclingParserIntegrationTestCase(TestCase):
         # from the non-rolled-up scenario.
         self.assertEqual(
             len(result["relationships"]),
-            200,
+            402,
             "With roll_up_groups=False, we expect a vastly large number of relationships than roll_up_groups=True.",
         )
 

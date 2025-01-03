@@ -35,7 +35,7 @@ logger.setLevel(logging.DEBUG)
 User = get_user_model()
 
 
-# CONSTANTS
+# CONSTANT
 class TaskStates(str, enum.Enum):
     COMPLETE = "COMPLETE"
     ERROR = "ERROR"

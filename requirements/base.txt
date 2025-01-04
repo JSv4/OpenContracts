@@ -43,7 +43,7 @@ pandas
 plasmapdf
 pdf2image
 tiktoken==0.8.0  # https://github.com/openai/tiktoken
-
+openai==1.58.1  # https://github.com/openai/openai-python
 
 # Data Processing Tools
 # -------------------------------------------------------------------------------

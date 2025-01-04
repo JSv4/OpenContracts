@@ -1,3 +1,4 @@
+# opencontractserver/tasks/data_extract_tasks.py
 import json
 import logging
 import os
@@ -17,12 +18,13 @@ from llama_index.llms.openai import OpenAI
 
 from opencontractserver.extracts.models import Datacell
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
+from opencontractserver.shared.decorators import async_celery_task
 
 logger = logging.getLogger(__name__)
 
 
-@shared_task
-def oc_llama_index_doc_query(
+@async_celery_task()
+async def oc_llama_index_doc_query(
     cell_id: int, similarity_top_k: int = 8, max_token_length: int = 64000
 ) -> None:
     """
@@ -56,29 +58,233 @@ def oc_llama_index_doc_query(
     import marvin
     import numpy as np
     import tiktoken
+    from asgiref.sync import sync_to_async
     from django.conf import settings
-    from django.db.models import Q
     from django.utils import timezone
     from llama_index.core import QueryBundle, Settings, VectorStoreIndex
     from llama_index.core.postprocessor import SentenceTransformerRerank
     from llama_index.core.schema import Node, NodeWithScore
     from llama_index.core.tools import QueryEngineTool
-    from pgvector.django import CosineDistance
     from pydantic import BaseModel
 
-    from opencontractserver.annotations.models import Annotation, Relationship
-    from opencontractserver.extracts.models import Datacell
-    from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
     from opencontractserver.utils.embeddings import calculate_embedding_for_text
     from opencontractserver.utils.etl import parse_model_or_primitive
 
     logger = logging.getLogger(__name__)
 
-    datacell = Datacell.objects.get(id=cell_id)
+    # -------------------------------------------------------------------------
+    # 1) Wrap all ORM calls in sync_to_async or do them outside the async code
+    # -------------------------------------------------------------------------
+
+    @sync_to_async
+    def sync_get_datacell(pk: int):
+        """
+        Retrieves the Datacell object (preloading related Document and Column)
+        with the given primary key.
+
+        Args:
+            pk (int): ID of the Datacell.
+
+        Returns:
+            Datacell: The Datacell instance, with Document and Column already loaded.
+        """
+        from opencontractserver.extracts.models import Datacell
+
+        return Datacell.objects.select_related(
+            "document", "column"
+        ).get(  # preload foreign keys
+            id=pk
+        )
+
+    @sync_to_async
+    def sync_mark_started(dc):
+        """
+        Marks a Datacell as 'started' and saves it.
+
+        Args:
+            dc (Datacell): The Datacell to mark as started.
+        """
+        dc.started = timezone.now()
+        dc.save()
+
+    @sync_to_async
+    def sync_mark_completed(dc, data_dict):
+        """
+        Marks a Datacell as 'completed' storing data_dict and setting a completion timestamp.
+
+        Args:
+            dc (Datacell): The Datacell to mark as completed.
+            data_dict (dict): Arbitrary dictionary to store in dc.data.
+        """
+        dc.data = data_dict
+        dc.completed = timezone.now()
+        dc.save()
+
+    @sync_to_async
+    def sync_mark_failed(dc, exc, tb):
+        """
+        Marks a Datacell as 'failed', storing stacktrace details.
+
+        Args:
+            dc (Datacell): The Datacell to mark as failed.
+            exc (Exception): The encountered exception.
+            tb (str): The traceback string.
+        """
+        dc.stacktrace = f"Error processing: {exc}\n\nFull traceback:\n{tb}"
+        dc.failed = timezone.now()
+        dc.save()
+
+    @sync_to_async
+    def sync_get_document_id(dc):
+        """
+        Retrieves the 'document.id' from a Datacell in a sync-to-async wrapper,
+        since accessing related fields may cause DB hits.
+
+        Args:
+            dc (Datacell): The Datacell instance.
+
+        Returns:
+            int: The related Document's primary key.
+        """
+        return dc.document.id
+
+    @sync_to_async
+    def sync_get_do_must_contain_text(dc):
+        """
+        Retrieves 'dc.column.must_contain_text' which may involve a DB call.
+
+        Args:
+            dc (Datacell): The Datacell instance.
+
+        Returns:
+            bool: The must_contain_text field for the associated Column.
+        """
+        return dc.column.must_contain_text
+
+    @sync_to_async
+    def sync_get_doc_title(dc):
+        """
+        Retrieves 'dc.document.title' which may involve a DB call.
+
+        Args:
+            dc (Datacell): The Datacell instance.
+
+        Returns:
+            str: The document title.
+        """
+        return dc.document.title
+
+    @sync_to_async
+    def sync_get_query(dc):
+        """
+        Retrieves 'dc.column.query', possibly needing a DB call.
+
+        Args:
+            dc (Datacell): The Datacell instance.
+
+        Returns:
+            str: The column query string.
+        """
+        return dc.column.query
+
+    @sync_to_async
+    def get_filtered_annotations_with_similarity(
+        document_id: int, avg_embedding: list[float], similarity_top_k: int
+    ):
+        """
+        Synchronously fetch annotations ordered by cosine distance and return them as a list.
+        This way, the DB interaction is purely in sync code.
+        """
+        from pgvector.django import CosineDistance
+
+        from opencontractserver.annotations.models import Annotation
+
+        queryset = (
+            Annotation.objects.filter(document_id=document_id)
+            .order_by(CosineDistance("embedding", avg_embedding))
+            .annotate(similarity=CosineDistance("embedding", avg_embedding))
+            .select_related("annotation_label")
+        )[:similarity_top_k]
+
+        # Force evaluation by converting to list if you need the actual rows now:
+        return list(queryset)
+
+    @sync_to_async
+    def fetch_relationships_for_annotations(retrieved_annotation_ids: list[int]):
+        """
+        Fetches Relationship objects matching the given annotation IDs
+        in a purely synchronous context, returning them as a list.
+        """
+        from django.db.models import Q
+
+        from opencontractserver.annotations.models import Relationship
+
+        queryset = (
+            Relationship.objects.filter(
+                Q(source_annotations__id__in=retrieved_annotation_ids)
+                | Q(target_annotations__id__in=retrieved_annotation_ids)
+            )
+            .select_related("relationship_label")
+            .prefetch_related(
+                "source_annotations__annotation_label",
+                "target_annotations__annotation_label",
+            )
+        )
+
+        # Force the database evaluation and return a list
+        return list(queryset)
+
+    @sync_to_async
+    def get_structural_annotations(document_id: int, page_number: int):
+        """
+        Fetch annotations that match document_id, structural=True, page=page_number.
+        Also select_related('annotation_label') so that we avoid lazy-loading in async.
+        Returns annotations as a list.
+        """
+        from opencontractserver.annotations.models import Annotation
+
+        return list(
+            Annotation.objects.filter(
+                document_id=document_id, structural=True, page=page_number
+            ).select_related(
+                "annotation_label"
+            )  # preloads annotation_label
+        )
+
+    @sync_to_async
+    def add_sources_to_datacell(datacell, annotation_ids: list[int]) -> None:
+        """
+        Given a Datacell object and a list of annotation IDs,
+        perform the M2M .add(...) operation on datacell.sources
+        in a fully synchronous context.
+        """
+        if annotation_ids:
+            datacell.sources.add(*annotation_ids)
+
+    """
+    Actual asynchronous logic for doc querying. This is where
+    you can keep your existing LlamaIndex + Marvin code.
+    """
+    # --------------------------------------------------------------------------------
+    # Example: (most of your existing code can be copied in here, minus the old wrapping)
+    # --------------------------------------------------------------------------------
+
+    from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+    from llama_index.llms.openai import OpenAI
+
+    from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
+
+    # Retrieve Datacell
+    datacell = await sync_get_datacell(cell_id)
+    # datacell = Datacell.objects.get(id=cell_id)
 
     try:
-        datacell.started = timezone.now()
-        datacell.save()
+
+        # Mark as started
+        await sync_mark_started(datacell)
+
+        # datacell.started = timezone.now()
+        # datacell.save()
 
         document = datacell.document
 
@@ -102,14 +308,25 @@ def oc_llama_index_doc_query(
         vector_store = DjangoAnnotationVectorStore.from_params(
             document_id=document.id, must_have_text=datacell.column.must_contain_text
         )
-        index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
+
+        # async_index = await VectorStoreIndex.from_vector_store(vector_store=vector_store, use_async=True)
+        base_index = VectorStoreIndex.from_vector_store(
+            vector_store=vector_store,
+            embed_model=embed_model,
+            use_async=False,  # Important: create sync first
+        )
+
+        engine = base_index.as_query_engine(
+            similarity_top_k=similarity_top_k, streaming=False
+        )
 
         # =====================
         # Structural context
         # =====================
-        structural_annotations = Annotation.objects.filter(
-            document_id=document.id, structural=True, page=0
-        )
+        # structural_annotations = await sync_to_async(Annotation.objects.filter)(
+        #     document_id=document.id, structural=True, page=0
+        # )
+        structural_annotations = await get_structural_annotations(document.id, 0)
 
         structural_context = (
             "\n".join(
@@ -137,11 +354,15 @@ def oc_llama_index_doc_query(
             logger.warning(
                 "No search_text or query provided. Skipping retrieval or using fallback."
             )
-            datacell.data = {
-                "data": f"Context Exceeded Token Limit of {max_token_length} Tokens"
-            }
-            datacell.completed = timezone.now()
-            datacell.save()
+            # datacell.data = {
+            #     "data": f"Context Exceeded Token Limit of {max_token_length} Tokens"
+            # }
+            # datacell.completed = timezone.now()
+            # datacell.save()
+            sync_mark_completed(
+                datacell,
+                {"data": f"Context Exceeded Token Limit of {max_token_length} Tokens"},
+            )
 
         # We store relevant sections in raw_retrieved_text
         raw_retrieved_text = ""
@@ -168,13 +389,16 @@ def oc_llama_index_doc_query(
                 nodes = []
             else:
                 avg_embedding: np.ndarray = np.mean(embeddings, axis=0)
-                queryset = (
-                    Annotation.objects.filter(document_id=document.id)
-                    .order_by(CosineDistance("embedding", avg_embedding.tolist()))
-                    .annotate(
-                        similarity=CosineDistance("embedding", avg_embedding.tolist())
-                    )
-                )[:similarity_top_k]
+                # queryset = (
+                #     Annotation.objects.filter(document_id=document.id)
+                #     .order_by(CosineDistance("embedding", avg_embedding.tolist()))
+                #     .annotate(
+                #         similarity=CosineDistance("embedding", avg_embedding.tolist())
+                #     )
+                # )[:similarity_top_k]
+                queryset = await get_filtered_annotations_with_similarity(
+                    document.id, avg_embedding.tolist(), similarity_top_k
+                )
 
                 nodes = [
                     NodeWithScore(
@@ -218,8 +442,8 @@ def oc_llama_index_doc_query(
             retrieved_nodes = sbert_rerank.postprocess_nodes(nodes, QueryBundle(query))
         else:
             # Default retrieval if special char is absent
-            retriever = index.as_retriever(similarity_top_k=similarity_top_k)
-            results = retriever.retrieve(search_text if search_text else query)
+            retriever = base_index.as_retriever(similarity_top_k=similarity_top_k)
+            results = await retriever.aretrieve(search_text if search_text else query)
             sbert_rerank = SentenceTransformerRerank(
                 model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=5
             )
@@ -228,32 +452,27 @@ def oc_llama_index_doc_query(
             )
 
         retrieved_annotation_ids = [
-            n.node.extra_info["annotation_id"] for n in retrieved_nodes
+            n.node.metadata["annotation_id"] for n in retrieved_nodes
         ]
         if len(retrieved_annotation_ids) > 0:
-            datacell.sources.add(*retrieved_annotation_ids)
+            await add_sources_to_datacell(datacell, retrieved_annotation_ids)
+            # datacell.sources.add(*retrieved_annotation_ids)
 
         raw_retrieved_text = "\n".join(
-            f"```Relevant Section:\n\n{rn.node.text}\n```" for rn in retrieved_nodes
+            f"```Relevant Section:\n\n{rn.node.get_content()}\n```"
+            for rn in retrieved_nodes
         )
 
-        # =====================
-        # Retrieve relationship where these annotations are source or target
-        # =====================
-        relationships = (
-            Relationship.objects.filter(
-                Q(source_annotations__id__in=retrieved_annotation_ids)
-                | Q(target_annotations__id__in=retrieved_annotation_ids)
-            )
-            .select_related("relationship_label")
-            .prefetch_related(
-                "source_annotations__annotation_label",
-                "target_annotations__annotation_label",
-            )
+        logger.info(f"Retrieved annotation ids: {retrieved_annotation_ids}")
+        logger.info(f"Raw retrieved text: {raw_retrieved_text}")
+
+        relationships = await fetch_relationships_for_annotations(
+            retrieved_annotation_ids
         )
 
         relationship_sections = []
-        if relationships.count() > 0:
+        # Check if relationships exists and is not empty
+        if relationships and len(relationships) > 0:
             relationship_sections.append(
                 "\n========== Sections Related to Nodes Most Semantically Similar to Query =========="
             )
@@ -285,7 +504,9 @@ def oc_llama_index_doc_query(
                     if rel.relationship_label
                     else "relates_to"
                 )
-                for source in rel.source_annotations.all():
+
+                # TODO - this may need to be wrapped.
+                for source in await sync_to_async(rel.source_annotations.all)():
                     for target in rel.target_annotations.all():
                         # Add node definitions if not already added
                         if source.id not in added_nodes:
@@ -342,8 +563,8 @@ def oc_llama_index_doc_query(
                 )
                 relationship_sections.append(f"\nRelationship Type: {rel_type}")
 
-                for source in rel.source_annotations.all():
-                    for target in rel.target_annotations.all():
+                for source in await sync_to_async(rel.source_annotations.all)():
+                    for target in await sync_to_async(rel.target_annotations.all)():
                         retrieved_source = (
                             "[↑ Retrieved]"
                             if source.id in retrieved_annotation_ids
@@ -365,6 +586,10 @@ def oc_llama_index_doc_query(
 
             relationship_sections.append(
                 "\n==========End of Document Relationship Context==========\n"
+            )
+        else:
+            logger.info(
+                f"Relationships is {type(relationships)} with length {len(relationships) if relationships else 0}"
             )
 
         relationship_context = "\n".join(relationship_sections)
@@ -466,12 +691,12 @@ def oc_llama_index_doc_query(
         agent_response_str = None
         if datacell.column.agentic:
 
-            import nest_asyncio
-
-            nest_asyncio.apply()
+            logger.info(f"Datacell {datacell.id} is agentic")
 
             # Now build the doc_engine query and incorporate these new tools
-            engine = index.as_query_engine(similarity_top_k=similarity_top_k)
+            engine = base_index.as_query_engine(
+                similarity_top_k=similarity_top_k, streaming=False
+            )
             query_engine_tools = [
                 QueryEngineTool.from_defaults(
                     query_engine=engine,
@@ -489,8 +714,11 @@ def oc_llama_index_doc_query(
                 description="Searches for text blocks containing provided raw_text in the current document.",
             )
 
+            def page_retriever_wrapper(Aid: int = 0, ws: int = 50):
+                return annotation_window(document.id, Aid, ws)
+
             page_retriever_tool = FunctionTool.from_defaults(
-                fn=lambda aid, ws: annotation_window(document.id, aid, ws),
+                fn=page_retriever_wrapper,
                 name="annotation_window",
                 description="Retrieves contextual text around a specified Annotation.",
             )
@@ -514,11 +742,11 @@ You are an expert agent analyzing information in a legal or contractual document
 2. Read the relevant extracted and combined context from the document below.
 3. Determine whether you have enough information to provide a succinct, accurate answer.
 4. IF more context is needed, use the following tools:
-   - document_parts (for semantic/hybrid retrieval)
-   - text_search (for substring matches in the doc's structural annotations)
-   - page_retriever (to get full text from a 0-indexed page).
+- document_parts (for semantic/hybrid retrieval)
+- text_search (for substring matches in the doc's structural annotations)
+- page_retriever (to get full text from a 0-indexed page).
 5. Once your exploration is sufficient, craft a final short answer in plain text with
-   no exposition, explanation, or other prose.
+no exposition, explanation, or other prose.
 
 User's question:
 {query if query else search_text}
@@ -527,8 +755,11 @@ Context provided (combined_text):
 {combined_text}
 """
 
-            agentic_response = agent.query(agent_instructions)
+            agentic_response = await agent.aquery(agent_instructions)
+            logger.info(f"Agentic response: {agentic_response}")
+
             agent_response_str = str(agentic_response)
+            logger.info(f"Agentic response str: {agent_response_str}")
 
         # -------------------------------------------------------------------
         # The rest of the pipeline merges the agentic_response with the final text
@@ -544,16 +775,18 @@ Context provided (combined_text):
             )
         )
 
+        logger.info(f"Final text for Marvin: {final_text_for_marvin}")
+
         if datacell.column.extract_is_list:
             logger.info("Extracting list")
-            result = marvin.extract(
+            result = await marvin.extract_async(
                 final_text_for_marvin,
                 target=output_type,
                 instructions=parse_instructions if parse_instructions else query,
             )
         else:
             logger.info("Casting to single instance")
-            result = marvin.cast(
+            result = await marvin.cast_async(
                 final_text_for_marvin,
                 target=output_type,
                 instructions=parse_instructions if parse_instructions else query,
@@ -562,25 +795,33 @@ Context provided (combined_text):
         logger.debug(f"Result processed from marvin: {result}")
 
         if issubclass(output_type, BaseModel) or isinstance(result, BaseModel):
-            datacell.data = {"data": result.model_dump()}
+            # datacell.data = {"data": result.model_dump()}
+            data = {"data": result.model_dump()}
         elif output_type in [str, int, bool, float]:
-            datacell.data = {"data": result}
+            # datacell.data = {"data": result}
+            data = {"data": result}
         else:
             raise ValueError(f"Unsupported output type: {output_type}")
 
-        datacell.completed = timezone.now()
-        datacell.save()
+        await sync_mark_completed(datacell, data)
+        # datacell.completed = timezone.now()
+        # datacell.save()
 
     except Exception as e:
         import traceback
 
         logger.error(f"run_extract() - Ran into error: {e}")
         logger.error(f"Full traceback:\n{traceback.format_exc()}")
-        datacell.stacktrace = (
-            f"Error processing: {e}\n\nFull traceback:\n{traceback.format_exc()}"
+        await sync_mark_failed(
+            datacell,
+            e,
+            f"Error processing: {e}\n\nFull traceback:\n{traceback.format_exc()}",
         )
-        datacell.failed = timezone.now()
-        datacell.save()
+        # datacell.stacktrace = (
+        #     f"Error processing: {e}\n\nFull traceback:\n{traceback.format_exc()}"
+        # )
+        # datacell.failed = timezone.now()
+        # datacell.save()
 
 
 @shared_task
@@ -613,9 +854,11 @@ def llama_index_react_agent_query(cell_id):
         vector_store = DjangoAnnotationVectorStore.from_params(
             document_id=document.id, must_have_text=datacell.column.must_contain_text
         )
-        index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
+        index = VectorStoreIndex.from_vector_store(
+            vector_store=vector_store, use_async=True
+        )
 
-        doc_engine = index.as_query_engine(similarity_top_k=10)
+        doc_engine = index.as_query_engine(similarity_top_k=10, streaming=False)
 
         query_engine_tools = [
             QueryEngineTool(

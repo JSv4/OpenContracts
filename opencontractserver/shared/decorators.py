@@ -1,6 +1,9 @@
+import asyncio
+import functools
 import json
 import logging
 from functools import wraps
+from typing import Any, Callable
 
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
@@ -287,6 +290,40 @@ def doc_analyzer_task(max_retries=None):
 
         # Add a custom attribute to identify doc_analyzer_tasks
         wrapper.is_doc_analyzer_task = True
+        return wrapper
+
+    return decorator
+
+
+def async_celery_task(*task_args, **task_kwargs) -> Callable:
+    """
+    A decorator to convert an async function into a Celery task that runs
+    within its own asyncio event loop.
+
+    Args:
+        *task_args: Positional arguments for Celery's shared_task.
+        **task_kwargs: Keyword arguments for Celery's shared_task.
+
+    Returns:
+        A standard sync Celery task function that internally spins up an
+        event loop to run the originally wrapped async function.
+    """
+
+    def decorator(async_func: Callable[..., Any]) -> Callable[..., Any]:
+        # We create a standard sync function as the actual Celery task
+        @shared_task(*task_args, **task_kwargs)
+        @functools.wraps(async_func)
+        def wrapper(*args, **kwargs) -> Any:
+            # Create a new event loop (or reuse an existing one if needed)
+            loop = asyncio.new_event_loop()
+            try:
+                asyncio.set_event_loop(loop)
+                return loop.run_until_complete(async_func(*args, **kwargs))
+            finally:
+                # Ensure we gracefully shut down async gens/tasks
+                loop.run_until_complete(loop.shutdown_asyncgens())
+                loop.close()
+
         return wrapper
 
     return decorator

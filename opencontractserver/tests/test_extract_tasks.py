@@ -90,15 +90,31 @@ class ExtractsTaskTestCase(BaseFixtureTestCase):
         self.extract.documents.add(self.doc, self.doc2, self.doc3)
         self.extract.save()
 
+    def vcr_response_handler(response):
+        """_summary_
+
+        Args:
+            response (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        # Remove decoder if present
+        # if hasattr(response, "_decoder"):
+        #     delattr(response, "_decoder")
+
+        # Skip recording huggingface responses
+        if any(host in response.get("url", "") for host in ["huggingface.co", "hf.co"]):
+            return None
+
+        return response
+
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/test_run_extract_task.yaml",
         record_mode="all",
         filter_headers=["authorization"],
-        before_record_response=lambda response: None
-        if "huggingface.co" in response.get("url", "")
-        or "hf.co" in response.get("url", "")
-        else response,
+        before_record_response=vcr_response_handler,
         match_on=["method"],
         ignore_hosts=[
             "huggingface.co",

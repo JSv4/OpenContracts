@@ -130,7 +130,9 @@ class Command(BaseCommand):
             post_save.disconnect(process_doc_on_create_atomic, sender=Document)
 
             # Create default group first (or get if it exists)
-            Group.objects.get_or_create(name=settings.DEFAULT_PERMISSIONS_GROUP)
+            group, created = Group.objects.get_or_create(
+                name=settings.DEFAULT_PERMISSIONS_GROUP
+            )
 
             # Create test user
             user = User.objects.create_user(username="testuser", password="testpass")
@@ -206,16 +208,17 @@ class Command(BaseCommand):
 
             fixture_path = "opencontractserver/tests/fixtures/test_data.json"
 
-            # First dump the main data with all required models
+            # First dump the main data with all required models in correct order
             apps_to_dump = [
-                "auth.group",  # For user groups
-                "auth.permission",  # For permissions
-                "users.user",  # User model
+                "contenttypes",  # Must come first as other models depend on content types
+                "auth.permission",  # Depends on contenttypes
+                "auth.group",  # Depends on permissions
+                "users.user",  # Depends on auth
+                "guardian.groupobjectpermission",  # Depends on auth and contenttypes
+                "guardian.userobjectpermission",  # Depends on auth and contenttypes
                 "documents.document",
                 "annotations.annotationlabel",
                 "annotations.annotation",
-                "guardian.groupobjectpermission",  # Guardian permissions
-                "guardian.userobjectpermission",  # Guardian permissions
             ]
 
             call_command("dumpdata", *apps_to_dump, indent=2, output=fixture_path)

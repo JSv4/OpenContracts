@@ -2,7 +2,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.files.base import ContentFile
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
@@ -127,6 +129,9 @@ class Command(BaseCommand):
             post_save.disconnect(process_annot_on_create_atomic, sender=Annotation)
             post_save.disconnect(process_doc_on_create_atomic, sender=Document)
 
+            # Create default group first (or get if it exists)
+            Group.objects.get_or_create(name=settings.DEFAULT_PERMISSIONS_GROUP)
+
             # Create test user
             user = User.objects.create_user(username="testuser", password="testpass")
 
@@ -201,12 +206,16 @@ class Command(BaseCommand):
 
             fixture_path = "opencontractserver/tests/fixtures/test_data.json"
 
-            # First dump the main data
+            # First dump the main data with all required models
             apps_to_dump = [
-                "users.user",
+                "auth.group",  # For user groups
+                "auth.permission",  # For permissions
+                "users.user",  # User model
                 "documents.document",
                 "annotations.annotationlabel",
                 "annotations.annotation",
+                "guardian.groupobjectpermission",  # Guardian permissions
+                "guardian.userobjectpermission",  # Guardian permissions
             ]
 
             call_command("dumpdata", *apps_to_dump, indent=2, output=fixture_path)

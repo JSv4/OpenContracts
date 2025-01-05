@@ -1,7 +1,6 @@
 [
 {
   "model": "contenttypes.contenttype",
-  "pk": 1,
   "fields": {
     "app_label": "auth",
     "model": "permission"
@@ -9,7 +8,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 2,
   "fields": {
     "app_label": "auth",
     "model": "group"
@@ -17,7 +15,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 3,
   "fields": {
     "app_label": "contenttypes",
     "model": "contenttype"
@@ -25,7 +22,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 4,
   "fields": {
     "app_label": "sessions",
     "model": "session"
@@ -33,7 +29,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 5,
   "fields": {
     "app_label": "sites",
     "model": "site"
@@ -41,7 +36,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 6,
   "fields": {
     "app_label": "admin",
     "model": "logentry"
@@ -49,7 +43,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 7,
   "fields": {
     "app_label": "guardian",
     "model": "userobjectpermission"
@@ -57,7 +50,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 8,
   "fields": {
     "app_label": "guardian",
     "model": "groupobjectpermission"
@@ -65,7 +57,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 9,
   "fields": {
     "app_label": "django_celery_beat",
     "model": "solarschedule"
@@ -73,7 +64,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 10,
   "fields": {
     "app_label": "django_celery_beat",
     "model": "intervalschedule"
@@ -81,7 +71,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 11,
   "fields": {
     "app_label": "django_celery_beat",
     "model": "clockedschedule"
@@ -89,7 +78,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 12,
   "fields": {
     "app_label": "django_celery_beat",
     "model": "crontabschedule"
@@ -97,7 +85,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 13,
   "fields": {
     "app_label": "django_celery_beat",
     "model": "periodictasks"
@@ -105,7 +92,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 14,
   "fields": {
     "app_label": "django_celery_beat",
     "model": "periodictask"
@@ -113,7 +99,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 15,
   "fields": {
     "app_label": "authtoken",
     "model": "token"
@@ -121,7 +106,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 16,
   "fields": {
     "app_label": "authtoken",
     "model": "tokenproxy"
@@ -129,7 +113,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 17,
   "fields": {
     "app_label": "users",
     "model": "user"
@@ -137,7 +120,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 18,
   "fields": {
     "app_label": "users",
     "model": "assignment"
@@ -145,7 +127,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 19,
   "fields": {
     "app_label": "users",
     "model": "assignmentuserobjectpermission"
@@ -153,7 +134,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 20,
   "fields": {
     "app_label": "users",
     "model": "assignmentgroupobjectpermission"
@@ -161,7 +141,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 21,
   "fields": {
     "app_label": "users",
     "model": "userexport"
@@ -169,7 +148,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 22,
   "fields": {
     "app_label": "users",
     "model": "userexportuserobjectpermission"
@@ -177,7 +155,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 23,
   "fields": {
     "app_label": "users",
     "model": "userexportgroupobjectpermission"
@@ -185,7 +162,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 24,
   "fields": {
     "app_label": "users",
     "model": "userimport"
@@ -193,7 +169,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 25,
   "fields": {
     "app_label": "users",
     "model": "auth0apitoken"
@@ -201,7 +176,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 26,
   "fields": {
     "app_label": "documents",
     "model": "document"
@@ -209,7 +183,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 27,
   "fields": {
     "app_label": "documents",
     "model": "documentuserobjectpermission"
@@ -217,7 +190,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 28,
   "fields": {
     "app_label": "documents",
     "model": "documentgroupobjectpermission"
@@ -225,7 +197,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 29,
   "fields": {
     "app_label": "documents",
     "model": "documentanalysisrow"
@@ -233,7 +204,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 30,
   "fields": {
     "app_label": "documents",
     "model": "documentanalysisrowuserobjectpermission"
@@ -241,7 +211,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 31,
   "fields": {
     "app_label": "documents",
     "model": "documentanalysisrowgroupobjectpermission"
@@ -249,7 +218,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 32,
   "fields": {
     "app_label": "corpuses",
     "model": "temporaryfilehandle"
@@ -257,7 +225,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 33,
   "fields": {
     "app_label": "corpuses",
     "model": "corpus"
@@ -265,7 +232,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 34,
   "fields": {
     "app_label": "corpuses",
     "model": "corpususerobjectpermission"
@@ -273,7 +239,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 35,
   "fields": {
     "app_label": "corpuses",
     "model": "corpusgroupobjectpermission"
@@ -281,7 +246,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 36,
   "fields": {
     "app_label": "corpuses",
     "model": "corpusquery"
@@ -289,7 +253,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 37,
   "fields": {
     "app_label": "corpuses",
     "model": "corpusqueryuserobjectpermission"
@@ -297,7 +260,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 38,
   "fields": {
     "app_label": "corpuses",
     "model": "corpusquerygroupobjectpermission"
@@ -305,7 +267,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 39,
   "fields": {
     "app_label": "corpuses",
     "model": "corpusaction"
@@ -313,7 +274,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 40,
   "fields": {
     "app_label": "corpuses",
     "model": "corpusactionuserobjectpermission"
@@ -321,7 +281,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 41,
   "fields": {
     "app_label": "corpuses",
     "model": "corpusactiongroupobjectpermission"
@@ -329,7 +288,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 42,
   "fields": {
     "app_label": "annotations",
     "model": "annotationlabel"
@@ -337,7 +295,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 43,
   "fields": {
     "app_label": "annotations",
     "model": "annotationlabeluserobjectpermission"
@@ -345,7 +302,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 44,
   "fields": {
     "app_label": "annotations",
     "model": "annotationlabelgroupobjectpermission"
@@ -353,7 +309,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 45,
   "fields": {
     "app_label": "annotations",
     "model": "relationship"
@@ -361,7 +316,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 46,
   "fields": {
     "app_label": "annotations",
     "model": "relationshipuserobjectpermission"
@@ -369,7 +323,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 47,
   "fields": {
     "app_label": "annotations",
     "model": "relationshipgroupobjectpermission"
@@ -377,7 +330,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 48,
   "fields": {
     "app_label": "annotations",
     "model": "annotation"
@@ -385,7 +337,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 49,
   "fields": {
     "app_label": "annotations",
     "model": "annotationuserobjectpermission"
@@ -393,7 +344,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 50,
   "fields": {
     "app_label": "annotations",
     "model": "annotationgroupobjectpermission"
@@ -401,7 +351,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 51,
   "fields": {
     "app_label": "annotations",
     "model": "labelset"
@@ -409,7 +358,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 52,
   "fields": {
     "app_label": "annotations",
     "model": "labelsetuserobjectpermission"
@@ -417,7 +365,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 53,
   "fields": {
     "app_label": "annotations",
     "model": "labelsetgroupobjectpermission"
@@ -425,7 +372,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 54,
   "fields": {
     "app_label": "analyzer",
     "model": "gremlinengine"
@@ -433,7 +379,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 55,
   "fields": {
     "app_label": "analyzer",
     "model": "gremlinengineuserobjectpermission"
@@ -441,7 +386,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 56,
   "fields": {
     "app_label": "analyzer",
     "model": "gremlinenginegroupobjectpermission"
@@ -449,7 +393,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 57,
   "fields": {
     "app_label": "analyzer",
     "model": "analyzer"
@@ -457,7 +400,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 58,
   "fields": {
     "app_label": "analyzer",
     "model": "analyzeruserobjectpermission"
@@ -465,7 +407,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 59,
   "fields": {
     "app_label": "analyzer",
     "model": "analyzergroupobjectpermission"
@@ -473,7 +414,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 60,
   "fields": {
     "app_label": "analyzer",
     "model": "analysis"
@@ -481,7 +421,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 61,
   "fields": {
     "app_label": "analyzer",
     "model": "analysisuserobjectpermission"
@@ -489,7 +428,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 62,
   "fields": {
     "app_label": "analyzer",
     "model": "analysisgroupobjectpermission"
@@ -497,7 +435,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 63,
   "fields": {
     "app_label": "extracts",
     "model": "fieldset"
@@ -505,7 +442,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 64,
   "fields": {
     "app_label": "extracts",
     "model": "fieldsetuserobjectpermission"
@@ -513,7 +449,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 65,
   "fields": {
     "app_label": "extracts",
     "model": "fieldsetgroupobjectpermission"
@@ -521,7 +456,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 66,
   "fields": {
     "app_label": "extracts",
     "model": "column"
@@ -529,7 +463,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 67,
   "fields": {
     "app_label": "extracts",
     "model": "columnuserobjectpermission"
@@ -537,7 +470,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 68,
   "fields": {
     "app_label": "extracts",
     "model": "columngroupobjectpermission"
@@ -545,7 +477,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 69,
   "fields": {
     "app_label": "extracts",
     "model": "extract"
@@ -553,7 +484,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 70,
   "fields": {
     "app_label": "extracts",
     "model": "extractuserobjectpermission"
@@ -561,7 +491,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 71,
   "fields": {
     "app_label": "extracts",
     "model": "extractgroupobjectpermission"
@@ -569,7 +498,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 72,
   "fields": {
     "app_label": "extracts",
     "model": "datacell"
@@ -577,7 +505,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 73,
   "fields": {
     "app_label": "extracts",
     "model": "datacelluserobjectpermission"
@@ -585,7 +512,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 74,
   "fields": {
     "app_label": "extracts",
     "model": "datacellgroupobjectpermission"
@@ -593,7 +519,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 75,
   "fields": {
     "app_label": "feedback",
     "model": "userfeedback"
@@ -601,7 +526,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 76,
   "fields": {
     "app_label": "feedback",
     "model": "userfeedbackuserobjectpermission"
@@ -609,7 +533,6 @@
 },
 {
   "model": "contenttypes.contenttype",
-  "pk": 77,
   "fields": {
     "app_label": "feedback",
     "model": "userfeedbackgroupobjectpermission"

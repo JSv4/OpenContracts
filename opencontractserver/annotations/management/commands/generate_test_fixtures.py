@@ -224,15 +224,20 @@ class Command(BaseCommand):
             for annot in Annotation.objects.all():
                 calculate_embedding_for_annotation_text.delay(annotation_id=annot.id)
 
-            # Dump contenttypes first
+            # Dump contenttypes *with* natural keys:
             contenttypes_fixture = Path(
                 "opencontractserver/tests/fixtures/contenttypes.json"
             )
             call_command(
-                "dumpdata", "contenttypes", indent=2, output=str(contenttypes_fixture)
+                "dumpdata",
+                "contenttypes",
+                "--natural-foreign",
+                "--natural-primary",
+                indent=2,
+                output=str(contenttypes_fixture),
             )
 
-            # Dump main data
+            # Dump the main data *without* natural keys:
             fixture_path = Path("opencontractserver/tests/fixtures/test_data.json")
             apps_to_dump = [
                 "auth.permission",

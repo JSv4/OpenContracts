@@ -27,7 +27,7 @@ User = get_user_model()
 )
 class BaseFixtureTestCase(TransactionTestCase):
     """
-    Base test case that loads fixtures and disables signals.
+    Base test case that loads fixtures using natural keys and disables signals.
 
     This test case:
     1. Loads the test fixtures automatically (split into contenttypes and test_data).
@@ -37,8 +37,7 @@ class BaseFixtureTestCase(TransactionTestCase):
     """
 
     fixtures: ClassVar[list[str]] = [
-        "opencontractserver/tests/fixtures/contenttypes.json",
-        "opencontractserver/tests/fixtures/test_data.json",
+        "opencontractserver/tests/fixtures/test_data.json",  # Now a single file with all data
     ]
 
     @classmethod

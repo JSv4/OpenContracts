@@ -44,7 +44,7 @@ class Command(BaseCommand):
     of the JSON fixture file, ensuring they do not appear in the final fixture.
     """
 
-    help = "Generate test fixtures by running document processing pipeline and dumping results"
+    help = "Generate test fixtures using an all-natural-keys approach."
 
     def setup_test_db(self) -> None:
         """
@@ -224,22 +224,9 @@ class Command(BaseCommand):
             for annot in Annotation.objects.all():
                 calculate_embedding_for_annotation_text.delay(annotation_id=annot.id)
 
-            # Dump contenttypes *with* natural keys:
-            contenttypes_fixture = Path(
-                "opencontractserver/tests/fixtures/contenttypes.json"
-            )
-            call_command(
-                "dumpdata",
-                "contenttypes",
-                "--natural-foreign",
-                "--natural-primary",
-                indent=2,
-                output=str(contenttypes_fixture),
-            )
-
-            # Dump the main data *without* natural keys:
-            fixture_path = Path("opencontractserver/tests/fixtures/test_data.json")
+            # Dump all apps with natural keys into a single fixture
             apps_to_dump = [
+                "contenttypes",
                 "auth.permission",
                 "auth.group",
                 "users.user",
@@ -249,9 +236,18 @@ class Command(BaseCommand):
                 "annotations.annotationlabel",
                 "annotations.annotation",
             ]
-            call_command("dumpdata", *apps_to_dump, indent=2, output=str(fixture_path))
 
-            # Handle post-processing of the fixture
+            fixture_path = Path("opencontractserver/tests/fixtures/test_data.json")
+            call_command(
+                "dumpdata",
+                *apps_to_dump,
+                "--natural-foreign",
+                "--natural-primary",
+                indent=2,
+                output=str(fixture_path),
+            )
+
+            # Process fixture to remove admin/Anonymous users
             self.process_fixtures(str(fixture_path))
 
             self.stdout.write(

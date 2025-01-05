@@ -135,59 +135,6 @@ async def oc_llama_index_doc_query(
         dc.save()
 
     @sync_to_async
-    def sync_get_document_id(dc):
-        """
-        Retrieves the 'document.id' from a Datacell in a sync-to-async wrapper,
-        since accessing related fields may cause DB hits.
-
-        Args:
-            dc (Datacell): The Datacell instance.
-
-        Returns:
-            int: The related Document's primary key.
-        """
-        return dc.document.id
-
-    @sync_to_async
-    def sync_get_do_must_contain_text(dc):
-        """
-        Retrieves 'dc.column.must_contain_text' which may involve a DB call.
-
-        Args:
-            dc (Datacell): The Datacell instance.
-
-        Returns:
-            bool: The must_contain_text field for the associated Column.
-        """
-        return dc.column.must_contain_text
-
-    @sync_to_async
-    def sync_get_doc_title(dc):
-        """
-        Retrieves 'dc.document.title' which may involve a DB call.
-
-        Args:
-            dc (Datacell): The Datacell instance.
-
-        Returns:
-            str: The document title.
-        """
-        return dc.document.title
-
-    @sync_to_async
-    def sync_get_query(dc):
-        """
-        Retrieves 'dc.column.query', possibly needing a DB call.
-
-        Args:
-            dc (Datacell): The Datacell instance.
-
-        Returns:
-            str: The column query string.
-        """
-        return dc.column.query
-
-    @sync_to_async
     def get_filtered_annotations_with_similarity(
         document_id: int, avg_embedding: list[float], similarity_top_k: int
     ):

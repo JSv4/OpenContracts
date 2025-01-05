@@ -112,7 +112,7 @@ class ExtractsTaskTestCase(BaseFixtureTestCase):
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/test_run_extract_task.yaml",
-        record_mode="none",
+        record_mode="all",
         filter_headers=["authorization"],
         before_record_response=vcr_response_handler,
         match_on=["method"],

@@ -235,6 +235,7 @@ class Command(BaseCommand):
                 "documents.document",
                 "annotations.annotationlabel",
                 "annotations.annotation",
+                "annotations.relationship",
             ]
 
             fixture_path = Path("opencontractserver/tests/fixtures/test_data.json")

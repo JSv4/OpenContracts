@@ -7,8 +7,8 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-# Switching from Django-tree-queries to django-cte
-# Appears that django-tree-query has performance issues for large tables.
+# Switching from Django-tree-queries to django-cte as it
+# appears that django-tree-query has performance issues for large tables.
 # See https://github.com/feincms/django-tree-queries/issues/77
 # This will become an issue for annotations in particular. Since annotations will
 # have a simple structure and query anyway, using django-cte here. Can migrate models

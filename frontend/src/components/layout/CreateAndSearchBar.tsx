@@ -138,10 +138,11 @@ const StyledButton = styled(
   padding: 0.65em;
   min-width: 2.3em;
   height: 2.3em;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 0.95rem;
   position: relative;
   overflow: hidden;
+  backdrop-filter: blur(8px);
 
   /* Flexbox for icon alignment */
   display: inline-flex;
@@ -149,7 +150,8 @@ const StyledButton = styled(
   justify-content: center;
 
   /* Smooth transitions */
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center;
 
   /* Icon styling */
   i.icon {
@@ -160,53 +162,78 @@ const StyledButton = styled(
     opacity: 0.85;
     position: relative;
     z-index: 2;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  /* Hover effect with pseudo-element */
-  &::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 120%;
-    height: 120%;
-    background: var(--background-hover, #e2e8f0);
-    border-radius: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 1;
-  }
+  /* Dynamic background gradient */
+  background: linear-gradient(
+    135deg,
+    var(--background-subtle, #f0f2f5) 0%,
+    var(--background-hover, #e2e8f0) 100%
+  );
+  background-size: 200% 200%;
+  background-position: 0% 0%;
+
+  /* Subtle border */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
 
   /* Hover state */
   &:hover {
-    background: var(--background-subtle, #f0f2f5);
+    transform: translateY(-1px) scale(1.02);
+    background-position: 100% 100%;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+      0 4px 8px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1);
+
     i.icon {
       opacity: 1;
-      transform: scale(1.1);
-    }
-    &::before {
-      transform: translate(-50%, -50%) scale(1);
+      transform: scale(1.1) rotate(8deg);
     }
   }
 
   /* Active state */
   &:active {
-    transform: scale(0.95);
-    &::before {
-      background: var(--background-active, #d1d8e5);
-    }
+    transform: translateY(1px) scale(0.98);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 1px 2px rgba(0, 0, 0, 0.1);
+    background-position: 50% 50%;
   }
 
   /* Focus state */
   &:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(26, 36, 51, 0.15);
+    box-shadow: 0 0 0 2px #4285f4, 0 0 0 4px rgba(66, 133, 244, 0.2);
+  }
+
+  /* Special styling for the add button */
+  &[aria-label="Add"] {
+    background: #4285f4;
+    color: white;
+    box-shadow: 0 2px 4px rgba(66, 133, 244, 0.2),
+      0 4px 8px rgba(66, 133, 244, 0.1);
+
+    i.icon {
+      opacity: 1;
+    }
+
+    &:hover {
+      background: #5c9aff;
+      box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3),
+        0 8px 16px rgba(66, 133, 244, 0.2);
+    }
+
+    &:active {
+      background: #3b78e7;
+      box-shadow: 0 2px 4px rgba(66, 133, 244, 0.2);
+    }
   }
 
   /* Disabled state */
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
@@ -313,32 +340,56 @@ const StyledDropdown = styled(Dropdown)`
     padding: 0;
     min-height: 0;
 
+    /* Hide the dropdown arrow */
+    .dropdown.icon {
+      display: none !important;
+    }
+
     .menu {
-      margin-top: 0.5rem !important;
+      margin-top: 0.75rem !important;
       border: none !important;
-      background: #ffffff !important;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
-      border-radius: 12px !important;
-      padding: 0.5rem !important;
+      background: rgba(255, 255, 255, 0.98) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08) !important;
+      border-radius: 16px !important;
+      padding: 0.75rem !important;
+      backdrop-filter: blur(8px);
+      transform-origin: top right;
+      animation: dropdownAppear 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+      @keyframes dropdownAppear {
+        from {
+          opacity: 0;
+          transform: scale(0.95) translateY(-8px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
 
       /* Dropdown items */
       .item {
-        border-radius: 8px !important;
-        margin: 0.2rem 0 !important;
-        padding: 0.6rem 1rem !important;
-        transition: all 0.2s ease !important;
+        border-radius: 12px !important;
+        margin: 0.3rem 0 !important;
+        padding: 0.8rem 1rem !important;
+        transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        color: var(--text-primary, #1a2433) !important;
 
         /* Icon in dropdown items */
         i.icon {
           opacity: 0.85 !important;
           margin-right: 0.75rem !important;
+          transition: all 0.2s ease !important;
+          color: #4285f4 !important;
         }
 
         &:hover {
-          background: var(--background-subtle, #f0f2f5) !important;
+          background: rgba(66, 133, 244, 0.08) !important;
+          transform: translateX(4px);
 
           i.icon {
             opacity: 1 !important;
+            transform: scale(1.1);
           }
         }
       }

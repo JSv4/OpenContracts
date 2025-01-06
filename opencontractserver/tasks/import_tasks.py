@@ -150,7 +150,6 @@ def import_corpus(
                                 set_permissions_for_obj_to_user(
                                     user_obj, doc_obj, [PermissionTypes.ALL]
                                 )
-                                logger.info("Doc permissioned")
 
                                 # Link Document to Corpus
                                 corpus_obj.documents.add(doc_obj)

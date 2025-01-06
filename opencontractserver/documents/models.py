@@ -11,7 +11,6 @@ from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.utils import calc_oc_file_path
 
 
-# Create your models here.
 class Document(BaseOCModel):
     """
     Document

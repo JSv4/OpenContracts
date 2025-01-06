@@ -21,6 +21,7 @@ import { TextSearchSpanResult } from "../../../types";
 import {
   useAnnotationControls,
   useAnnotationDisplay,
+  useAnnotationSelection,
   useZoomLevel,
 } from "../../context/UISettingsAtom";
 import { useCorpusState } from "../../context/CorpusAtom";
@@ -37,7 +38,10 @@ export const TxtAnnotatorWrapper: React.FC<TxtAnnotatorWrapperProps> = ({
   // Internal state management
   const { docText } = useDocText();
   const { pdfAnnotations } = usePdfAnnotations();
-  const [selectedAnnotations, setSelectedAnnotations] = useState<string[]>([]);
+
+  const { selectedAnnotations, setSelectedAnnotations } =
+    useAnnotationSelection();
+
   const { spanLabelsToView, activeSpanLabel } = useAnnotationControls();
 
   const { textSearchMatches } = useTextSearchState();
@@ -89,11 +93,7 @@ export const TxtAnnotatorWrapper: React.FC<TxtAnnotatorWrapperProps> = ({
   return (
     <TxtAnnotator
       text={docText}
-      annotations={
-        pdfAnnotations.annotations.filter(
-          (annot) => annot instanceof ServerSpanAnnotation
-        ) as ServerSpanAnnotation[]
-      }
+      annotations={filteredAnnotations}
       searchResults={filteredSearchResults}
       getSpan={getSpan}
       visibleLabels={spanLabelsToView}

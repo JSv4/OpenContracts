@@ -1,3 +1,4 @@
+# opencontractserver/llms/vector_stores.py
 import logging
 from typing import Any, Optional
 
@@ -33,8 +34,8 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         >>> vector_store = DjangoAnnotationVectorStore()
     """
 
-    stores_text = True
-    flat_metadata = False
+    stores_text: bool = True
+    flat_metadata: bool = False
 
     corpus_id: str | int | None
     document_id: str | int | None

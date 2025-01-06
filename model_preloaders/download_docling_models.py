@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+import easyocr
 from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
 
 # Configure logging
@@ -37,8 +38,15 @@ def download_docling_models(artifacts_path: str) -> None:
 
     # Explicitly prefetch and download the models
     StandardPdfPipeline.download_models_hf(local_dir=artifacts_path, force=True)
+    logger.info(
+        f"Docling LAYOUT models have been downloaded and saved to '{artifacts_path}'."
+    )
 
-    logger.info(f"Docling models have been downloaded and saved to '{artifacts_path}'.")
+    logger.info("Proceed to attempt to download the EasyOCR models...")
+    # Hoping this works to force download of the EasyOCR models
+    easyocr.Reader(["ch_tra", "en"], model_storage_directory=artifacts_path)
+
+    logger.info(f"EasyOCR models have been downloaded and saved to '{artifacts_path}'.")
 
 
 if __name__ == "__main__":

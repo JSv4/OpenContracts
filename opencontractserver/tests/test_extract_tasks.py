@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 import vcr
 from django.contrib.auth import get_user_model
@@ -29,24 +28,6 @@ User = get_user_model()
 # )
 # vcr_log = logging.getLogger("vcr")
 # vcr_log.setLevel(logging.DEBUG)
-
-
-def ensure_logging_setup() -> None:
-    """
-    Simple function to confirm logger info is being captured.
-    """
-    logging.info("Logging setup has been forced with force=True.")
-
-
-class TestContext:
-    def __init__(self, user: Any) -> None:
-        """
-        Container for user-related test context.
-
-        Args:
-            user: The user instance to associate with this context.
-        """
-        self.user = user
 
 
 class ExtractsTaskTestCase(BaseFixtureTestCase):

@@ -37,7 +37,7 @@ class BaseFixtureTestCase(TransactionTestCase):
     """
 
     fixtures: ClassVar[list[str]] = [
-        "opencontractserver/tests/fixtures/test_data.json",  # Now a single file with all data
+        "opencontractserver/tests/fixtures/test_data.json",
     ]
 
     @classmethod
@@ -45,8 +45,6 @@ class BaseFixtureTestCase(TransactionTestCase):
         """
         Force-terminate any extra sessions connected to the test database so there are
         no lingering connections that block teardown or DB deletion.
-
-        This is especially useful if Celery or other threads opened extra connections.
         """
         db_name = settings.DATABASES["default"]["NAME"]
         with connection.cursor() as cursor:
@@ -116,7 +114,6 @@ class BaseFixtureTestCase(TransactionTestCase):
             try:
                 super().tearDownClass()
             except OperationalError as e:
-                # If the DB can't be deleted because of external connections, warn but do not raise.
                 if "database is being accessed by other users" in str(e):
                     print(
                         "Warning: Could not delete test database (in use by other connections)."
@@ -140,13 +137,14 @@ class BaseFixtureTestCase(TransactionTestCase):
         Copy a file from fixtures to the test media directory.
 
         Args:
-            fixture_path: Path relative to fixtures directory
+            fixture_path: Path relative to the 'files' directory in 'opencontractserver/tests/fixtures'
             dest_path: Destination path in test media directory
         """
-        if fixture_path.startswith("fixtures/"):
-            fixture_path = fixture_path.replace("fixtures/", "", 1)
+        # If the fixture path starts with "files/", remove that portion so we can build the local path
+        if fixture_path.startswith("files/"):
+            fixture_path = fixture_path.replace("files/", "", 1)
 
-        src = Path("opencontractserver/tests/fixtures") / fixture_path
+        src = Path("opencontractserver/tests/fixtures/files") / fixture_path
         dest = Path(settings.MEDIA_ROOT) / dest_path
 
         os.makedirs(os.path.dirname(dest), exist_ok=True)
@@ -167,9 +165,14 @@ class BaseFixtureTestCase(TransactionTestCase):
         self.user = User.objects.get(username="testuser")
 
         self.docs = list(Document.objects.all().order_by("id"))
-        self.doc = self.docs[0]  # First doc
-        self.doc2 = self.docs[1]  # Second doc
-        self.doc3 = self.docs[2]  # Third doc
+        if not self.docs:
+            return
+
+        self.doc = self.docs[0]
+        if len(self.docs) > 1:
+            self.doc2 = self.docs[1]
+        if len(self.docs) > 2:
+            self.doc3 = self.docs[2]
 
         # Copy fixture files from the fixture paths to the test-specific media folder
         for doc in self.docs:
@@ -177,8 +180,10 @@ class BaseFixtureTestCase(TransactionTestCase):
                 file_field = getattr(doc, field)
                 if file_field:
                     file_path = file_field.name
-                    if file_path.startswith("fixtures/"):
-                        media_path = file_path.replace("fixtures/", "", 1)
+                    # Check for the "files/" prefix in case it’s present
+                    if file_path.startswith("files/"):
+                        # Strip off the "files/" portion and copy to MEDIA_ROOT
+                        media_path = file_path.replace("files/", "", 1)
                         self.copy_fixture_file(file_path, media_path)
                         setattr(doc, field, media_path)
             doc.save()

@@ -23,6 +23,216 @@ from opencontractserver.shared.decorators import async_celery_task
 logger = logging.getLogger(__name__)
 
 
+def _assemble_and_trim_for_token_limit(
+    first_page_structural_annots: list[str],
+    raw_node_texts: list[str],
+    relationship_intro: list[str],
+    relationship_mermaid: list[str],
+    relationship_detailed: list[str],
+    max_token_length: int,
+    token_length_func: callable,
+    logger: logging.Logger,
+) -> str:
+    """
+    Take several lists that represent different categories of textual context
+    (structural annotations, retrieved node text, relationship intros, diagrams,
+    and detailed relationships) and iteratively trim them to fit under a specified
+    token limit. If it is impossible to get under the token limit (even after removing
+    all items from all lists), return None.
+
+    This process trims in the following order:
+      1) relationship_detailed
+      2) relationship_mermaid
+      3) relationship_intro
+      4) first_page_structural_annots
+      5) raw_node_texts
+
+    Each list is reduced line-by-line (i.e., item-by-item from the end)
+    until the token limit is met or the list is exhausted, after which the next
+    category is trimmed. If everything must be removed to try to fit, but it still
+    exceeds the token limit, return None. Otherwise, return the final combined string,
+    including some wrapper headings for clarity and additional instructions about
+    each section's purpose, if the section is non-empty.
+
+    Sections that contain IDs or node references (like Node123) are included so
+    that the LLM can map those IDs to context found in the mermaid diagram lines
+    or the references in the 'retrieved relevant sections'. These unique identifiers
+    help cross-reference the relevant relationships and annotation text.
+
+    Args:
+        first_page_structural_annots (list[str]): Lines derived from "first page" structural context.
+        raw_node_texts (list[str]): Lines from the retrieved node text.
+        relationship_intro (list[str]): Introductory lines explaining relationship context.
+        relationship_mermaid (list[str]): The mermaid diagram lines describing relationships visually.
+        relationship_detailed (list[str]): Detailed relationship lines (more verbose text),
+                                           possibly containing unique IDs to track references.
+        max_token_length (int): The maximum allowed token count for the assembled context.
+        token_length_func (callable): A function that calculates the token length for a given string.
+        logger (logging.Logger): Logger used to provide info/warnings/errors about trimming steps.
+
+    Returns:
+        Optional[str]: The fully composed text with partial or full context if we fit
+                      in the limit, or None if trimming everything is insufficient.
+    """
+
+    def build_context_text() -> str:
+        """
+        Re-assemble the final context string from the (possibly) trimmed lists.
+        Only include headings and explanations for sections that remain non-empty.
+        """
+        sections: list[str] = []
+
+        # Relationship Intro
+        if relationship_intro:
+            intro_text = (
+                "========== Relationship Introduction ==========\n"
+                "These lines provide a general introduction to how certain sections or clauses in this "
+                "document interconnect. They help explain why the following relationships or diagrams "
+                "may be relevant for answering the question.\n"
+            )
+            sections.append(intro_text + "\n".join(relationship_intro))
+
+        # Relationship Mermaid
+        if relationship_mermaid:
+            mermaid_text = (
+                "========== Relationship Diagram ==========\n"
+                "This mermaid diagram shows how the retrieved sections connect to other parts of the document. "
+                "Nodes labeled as 'NodeXYZ' reference specific sections of text that might also appear in the "
+                "detailed relationships or the retrieved sections below. If a node is marked [↑], it was deemed "
+                "directly relevant to the overarching query.\n"
+            )
+            sections.append(mermaid_text + "\n".join(relationship_mermaid))
+
+        # Relationship Detailed
+        if relationship_detailed:
+            detailed_text = (
+                "========== Detailed Relationship Descriptions ==========\n"
+                "Below are line-by-line descriptions of the relationships among key sections. "
+                "Identifiers like Node123 link back to the nodes found in the mermaid diagram, "
+                "and may coincide with sections appearing in the 'retrieved relevant sections.' "
+                "This is particularly useful for mapping which parts of the text reference one another.\n"
+            )
+            sections.append(detailed_text + "\n".join(relationship_detailed))
+
+        # Structural context
+        if first_page_structural_annots:
+            structural_heading = (
+                "========== Contents of First Page (for intro/context) ==========\n"
+                "This excerpt is from the first page of the document, which can provide general context "
+                "on the structure or introductory content.\n"
+            )
+            structural_footer = "\n========== End of First Page ==========\n"
+            sections.append(
+                structural_heading
+                + "\n".join(first_page_structural_annots)
+                + structural_footer
+            )
+
+        # Retrieved node text
+        if raw_node_texts:
+            retrieved_heading = (
+                "========== Retrieved Relevant Sections ==========\n"
+                "These sections were identified as highly relevant to your query. If a node ID "
+                "here (e.g., Node123) was also present in the relationship diagram, it indicates "
+                "that these sections are linked to one another, or potentially to other sections "
+                "of the document.\n"
+            )
+            retrieved_footer = "\n========== End of Retrieved Sections ==========\n"
+            sections.append(
+                retrieved_heading + "\n".join(raw_node_texts) + retrieved_footer
+            )
+
+        # Join all
+        return "\n".join(sections)
+
+    def current_length() -> int:
+        """Measure the current token length of our assembled text."""
+        return token_length_func(build_context_text())
+
+    def trim_list_in_reverse(target_list: list[str], label: str) -> bool:
+        """
+        Trim items from the end of 'target_list' one by one until
+        our built text is under the token limit or we exhaust 'target_list'.
+        Returns True if we have reached or fallen under the limit,
+        False if the list is fully cleared and the text remains too long.
+        """
+        while target_list and current_length() > max_token_length:
+            target_list.pop()  # remove last entry
+        if current_length() <= max_token_length:
+            logger.info(f"Trimming {label} succeeded in fitting under the limit.")
+            return True
+        else:
+            if not target_list:
+                logger.warning(f"Entire {label} list removed, still over limit.")
+            return False
+
+    # ---------------------------------------------------------------------------
+    # 1) Check if we already fit without trimming
+    # ---------------------------------------------------------------------------
+    if current_length() <= max_token_length:
+        return build_context_text()
+
+    logger.warning(
+        f"Initial context exceeds token limit ({current_length()} > {max_token_length}). Starting to trim."
+    )
+
+    # ---------------------------------------------------------------------------
+    # 2) Trim relationship_detailed
+    # ---------------------------------------------------------------------------
+    if relationship_detailed:
+        logger.warning("Trimming relationship_detailed lines first...")
+        if trim_list_in_reverse(relationship_detailed, "relationship_detailed"):
+            if current_length() <= max_token_length:
+                return build_context_text()
+
+    # ---------------------------------------------------------------------------
+    # 3) Trim relationship_mermaid
+    # ---------------------------------------------------------------------------
+    if relationship_mermaid:
+        logger.warning("Trimming relationship_mermaid lines next...")
+        if trim_list_in_reverse(relationship_mermaid, "relationship_mermaid"):
+            if current_length() <= max_token_length:
+                return build_context_text()
+
+    # ---------------------------------------------------------------------------
+    # 4) Trim relationship_intro
+    # ---------------------------------------------------------------------------
+    if relationship_intro:
+        logger.warning("Trimming relationship_intro lines next...")
+        if trim_list_in_reverse(relationship_intro, "relationship_intro"):
+            if current_length() <= max_token_length:
+                return build_context_text()
+
+    # ---------------------------------------------------------------------------
+    # 5) Trim first_page_structural_annots
+    # ---------------------------------------------------------------------------
+    if first_page_structural_annots:
+        logger.warning("Trimming first_page_structural_annots lines next...")
+        if trim_list_in_reverse(
+            first_page_structural_annots, "first_page_structural_annots"
+        ):
+            if current_length() <= max_token_length:
+                return build_context_text()
+
+    # ---------------------------------------------------------------------------
+    # 6) Trim raw_node_texts
+    # ---------------------------------------------------------------------------
+    if raw_node_texts:
+        logger.warning("Trimming raw_node_texts lines next...")
+        if trim_list_in_reverse(raw_node_texts, "raw_node_texts"):
+            if current_length() <= max_token_length:
+                return build_context_text()
+
+    # ---------------------------------------------------------------------------
+    # 7) If all are exhausted and still over the limit, return None
+    # ---------------------------------------------------------------------------
+    logger.error(
+        f"Context still exceeds token limit ({current_length()} > {max_token_length}) "
+        "after removing all items. Returning None."
+    )
+    return None
+
+
 @async_celery_task()
 async def oc_llama_index_doc_query(
     cell_id: int, similarity_top_k: int = 8, max_token_length: int = 64000
@@ -33,16 +243,11 @@ async def oc_llama_index_doc_query(
       1. Sentence transformer embeddings
       2. Sentence transformer re-ranking
       3. Additional relationship context
-      4. Trimming logic when tokens exceed allowed length
+      4. Trimming logic when tokens exceed the allowed length
       5. Agentic definition retrieval (optional)
 
-    This refactoring incorporates:
-      - Elimination of redundant embedding calls
-      - Trimming relationship context if total tokens still exceed the limit
-      - More explicit variable naming
-      - Safer string splitting for retrieved sections
-      - Logging and handling for empty search_text or query
-      - Potential trimming of structural annotations if extremely large
+    After preparing all context in a single combined string, handle scenario where it
+    exceeds our maximum token length.
 
     Args:
         cell_id (int): Primary key of the relevant Datacell to process.
@@ -273,16 +478,14 @@ async def oc_llama_index_doc_query(
         # structural_annotations = await sync_to_async(Annotation.objects.filter)(
         #     document_id=document.id, structural=True, page=0
         # )
-        structural_annotations = await get_structural_annotations(document.id, 0)
-
-        structural_context = (
-            "\n".join(
-                f"{annot.annotation_label.text if annot.annotation_label else 'Unlabeled'}: {annot.raw_text}"
-                for annot in structural_annotations
+        first_page_structural_text = await get_structural_annotations(document.id, 0)
+        first_page_structural_annots = [
+            f"{annot.annotation_label.text if annot.annotation_label else 'Unlabeled'}: {annot.raw_text}"
+            for annot in (
+                first_page_structural_text if first_page_structural_text else []
             )
-            if structural_annotations
-            else ""
-        )
+        ]
+        structural_context = "\n".join(first_page_structural_annots)
 
         if structural_context:
             structural_context = (
@@ -336,13 +539,6 @@ async def oc_llama_index_doc_query(
                 nodes = []
             else:
                 avg_embedding: np.ndarray = np.mean(embeddings, axis=0)
-                # queryset = (
-                #     Annotation.objects.filter(document_id=document.id)
-                #     .order_by(CosineDistance("embedding", avg_embedding.tolist()))
-                #     .annotate(
-                #         similarity=CosineDistance("embedding", avg_embedding.tolist())
-                #     )
-                # )[:similarity_top_k]
                 queryset = await get_filtered_annotations_with_similarity(
                     document.id, avg_embedding.tolist(), similarity_top_k
                 )
@@ -405,10 +601,11 @@ async def oc_llama_index_doc_query(
             await add_sources_to_datacell(datacell, retrieved_annotation_ids)
             # datacell.sources.add(*retrieved_annotation_ids)
 
-        raw_retrieved_text = "\n".join(
-            f"```Relevant Section:\n\n{rn.node.get_content()}\n```"
+        raw_node_texts = [
+            f"Relevant Section (NODE ID {rn.node.metadata['annotation_id']}): ```{rn.node.get_content()}```\n"
             for rn in retrieved_nodes
-        )
+        ]
+        raw_retrieved_text = "\n".join(raw_node_texts)
 
         logger.info(f"Retrieved annotation ids: {retrieved_annotation_ids}")
         logger.info(f"Raw retrieved text: {raw_retrieved_text}")
@@ -417,13 +614,17 @@ async def oc_llama_index_doc_query(
             retrieved_annotation_ids
         )
 
-        relationship_sections = []
-        # Check if relationships exists and is not empty
+        # Build separate lists for different categories
+        relationship_intro: list[str] = []
+        relationship_mermaid: list[str] = []
+        relationship_detailed: list[str] = []
+
         if relationships and len(relationships) > 0:
-            relationship_sections.append(
+            # Introductory text
+            relationship_intro.append(
                 "\n========== Sections Related to Nodes Most Semantically Similar to Query =========="
             )
-            relationship_sections.append(
+            relationship_intro.append(
                 "The following sections show how the retrieved relevant text is connected to other parts "
                 "of the document. This context is crucial because it shows how the text sections that matched "
                 "your query are semantically connected to other document sections through explicit relationships. "
@@ -435,29 +636,28 @@ async def oc_llama_index_doc_query(
             )
 
             # Mermaid diagram
-            relationship_sections.append(
+            relationship_mermaid.append(
                 "\nFirst, here's a visual graph showing these relationships. "
                 "Each node represents a section of text, with arrows showing how they're connected. "
                 "The text is truncated for readability, but full text is provided below."
             )
-            relationship_sections.append("\n```mermaid")
-            relationship_sections.append("graph TD")
+            relationship_mermaid.append("\n```mermaid")
+            relationship_mermaid.append("graph TD")
 
             added_nodes = set()
 
+            # Build mermaid diagram
             for rel in relationships:
                 rel_type = (
                     rel.relationship_label.text
                     if rel.relationship_label
                     else "relates_to"
                 )
-
-                # TODO - this may need to be wrapped.
                 for source in await sync_to_async(rel.source_annotations.all)():
                     for target in rel.target_annotations.all():
                         # Add node definitions if not already added
                         if source.id not in added_nodes:
-                            retrieved_marker = (
+                            retrieved_source_marker = (
                                 " [↑]" if source.id in retrieved_annotation_ids else ""
                             )
                             source_text = (
@@ -465,15 +665,15 @@ async def oc_llama_index_doc_query(
                                 if len(source.raw_text) > 64
                                 else source.raw_text
                             )
-                            relationship_sections.append(
+                            relationship_mermaid.append(
                                 f"Node{source.id}[label: "
                                 f'{source.annotation_label.text if source.annotation_label else "unlabeled"}, '
-                                f'text: "{source_text}"{retrieved_marker}]'
+                                f'text: "{source_text}"{retrieved_source_marker}]'
                             )
                             added_nodes.add(source.id)
 
                         if target.id not in added_nodes:
-                            retrieved_marker = (
+                            retrieved_target_marker = (
                                 " [↑]" if target.id in retrieved_annotation_ids else ""
                             )
                             target_text = (
@@ -481,34 +681,35 @@ async def oc_llama_index_doc_query(
                                 if len(target.raw_text) > 64
                                 else target.raw_text
                             )
-                            relationship_sections.append(
+                            relationship_mermaid.append(
                                 f"Node{target.id}[label: "
                                 f'{target.annotation_label.text if target.annotation_label else "unlabeled"}, '
-                                f'text: "{target_text}"{retrieved_marker}]'
+                                f'text: "{target_text}"{retrieved_target_marker}]'
                             )
                             added_nodes.add(target.id)
 
                         # Add relationship
-                        relationship_sections.append(
+                        relationship_mermaid.append(
                             f"Node{source.id} -->|{rel_type}| Node{target.id}"
                         )
 
-            relationship_sections.append("```\n")
+            relationship_mermaid.append("```\n")
 
             # Detailed textual description
-            relationship_sections.append(
+            relationship_detailed.append(
                 "\nBelow is a detailed textual description of these same relationships, "
                 "including the complete text of each section. This provides the full context "
                 "that might be needed to understand the relationships between document parts:"
             )
-            relationship_sections.append("Textual Description of Relationships:")
+            relationship_detailed.append("Textual Description of Relationships:")
+
             for rel in relationships:
                 rel_type = (
                     rel.relationship_label.text
                     if rel.relationship_label
                     else "relates_to"
                 )
-                relationship_sections.append(f"\nRelationship Type: {rel_type}")
+                relationship_detailed.append(f"\nRelationship Type: {rel_type}")
 
                 for source in await sync_to_async(rel.source_annotations.all)():
                     for target in await sync_to_async(rel.target_annotations.all)():
@@ -522,7 +723,7 @@ async def oc_llama_index_doc_query(
                             if target.id in retrieved_annotation_ids
                             else ""
                         )
-                        relationship_sections.append(
+                        relationship_detailed.append(
                             f"• Node{source.id}[label: "
                             f"{source.annotation_label.text if source.annotation_label else 'unlabeled'}, "
                             f'text: "{source.raw_text}"] {retrieved_source}\n  {rel_type}\n  '
@@ -531,15 +732,20 @@ async def oc_llama_index_doc_query(
                             f'text: "{target.raw_text}"] {retrieved_target}'
                         )
 
-            relationship_sections.append(
+            relationship_detailed.append(
                 "\n==========End of Document Relationship Context==========\n"
             )
+
+            # Combine or skip these parts as needed:
+            relationship_sections = (
+                relationship_intro + relationship_mermaid + relationship_detailed
+            )
+            relationship_context = "\n".join(relationship_sections)
         else:
             logger.info(
                 f"Relationships is {type(relationships)} with length {len(relationships) if relationships else 0}"
             )
-
-        relationship_context = "\n".join(relationship_sections)
+            relationship_context = ""
 
         # =====================
         # Build full context
@@ -558,74 +764,30 @@ async def oc_llama_index_doc_query(
         combined_text = "\n\n".join(filter(None, full_context_parts))
 
         enc = tiktoken.encoding_for_model(settings.OPENAI_MODEL)
-        tokens = enc.encode(combined_text)
 
         # Helper function to get token length quickly
         def token_length(text: str) -> int:
             return len(enc.encode(text))
 
-        # Trim logic if tokens exceed limit
-        if len(tokens) > max_token_length:
-            logger.warning(
-                f"Context exceeds token limit ({len(tokens)} > {max_token_length}). Attempting to trim sections."
+        # combine all retrieved context before marvin/llama_index call:
+        combined_text = _assemble_and_trim_for_token_limit(
+            first_page_structural_annots,
+            raw_node_texts,
+            relationship_intro,
+            relationship_mermaid,
+            relationship_detailed,
+            max_token_length=max_token_length,
+            token_length_func=token_length,
+            logger=logger,
+        )
+
+        if combined_text is None:
+            # We skip extraction. Save Datacell with "Exceeded" error message and return
+            await sync_mark_completed(
+                datacell,
+                {"data": f"Context Exceeded Token Limit of {max_token_length} Tokens"},
             )
-
-            # 1) Attempt to trim retrieved sections
-            if raw_retrieved_text:
-                # Use a safer delimiter so we handle variants
-                splitted = raw_retrieved_text.split("```Relevant Section:")
-                # splitted[0] is text before the first '```Relevant Section:', if any
-                while (
-                    len(splitted) > 1 and token_length(combined_text) > max_token_length
-                ):
-                    splitted.pop(0)  # remove earliest "Relevant Section"
-                    new_retrieved_text = "```Relevant Section:".join(splitted)
-                    sections_text = (
-                        "\n========== Retrieved Relevant Sections ==========\n"
-                        f"The following sections were identified as most relevant to your query:\n\n"
-                        f"{new_retrieved_text}\n"
-                        "==========End of Retrieved Sections==========\n"
-                    )
-                    full_context_parts = [
-                        structural_context,
-                        sections_text,
-                        relationship_context,
-                    ]
-                    combined_text = "\n\n".join(filter(None, full_context_parts))
-
-            # Re-check after trimming sections
-            if token_length(combined_text) > max_token_length:
-                logger.warning(
-                    "Context still exceeds token limit after trimming retrieved sects. Trimming rels. context."
-                )
-                # 2) Attempt to remove relationship context entirely if needed
-                full_context_parts = [structural_context, sections_text]
-                combined_text = "\n\n".join(filter(None, full_context_parts))
-
-                if token_length(combined_text) > max_token_length:
-                    # 3) Attempt to partially trim structural context
-                    splitted_structural = structural_context.split("\n")
-                    while (
-                        len(splitted_structural) > 1
-                        and token_length(combined_text) > max_token_length
-                    ):
-                        splitted_structural.pop()
-                        new_structural_content = "\n".join(splitted_structural)
-                        full_context_parts = [new_structural_content, sections_text]
-                        combined_text = "\n\n".join(filter(None, full_context_parts))
-
-                    # If all else fails, skip extraction
-                    if token_length(combined_text) > max_token_length:
-                        logger.error(
-                            f"Context still exceeds token limit ({token_length(combined_text)} > {max_token_length}). "
-                            "Skipping extraction."
-                        )
-                        datacell.data = {
-                            "data": f"Context Exceeded Token Limit of {max_token_length} Tokens"
-                        }
-                        datacell.completed = timezone.now()
-                        datacell.save()
-                        return
+            return
 
         # =====================
         # Marvin casting/extraction

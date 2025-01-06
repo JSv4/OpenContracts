@@ -1,5 +1,4 @@
 import logging
-import os
 from typing import Any
 
 import vcr
@@ -20,16 +19,16 @@ from opencontractserver.tests.base import BaseFixtureTestCase
 
 User = get_user_model()
 
-# Configure logging to a file relative to this test file's location
-LOG_DIR = os.path.dirname(__file__)
-logging.basicConfig(
-    filename=os.path.join(LOG_DIR, "test_extract_tasks.log"),
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
-    force=True,
-)
-vcr_log = logging.getLogger("vcr")
-vcr_log.setLevel(logging.DEBUG)
+# # Configure logging to a file relative to this test file's location
+# LOG_DIR = os.path.dirname(__file__)
+# logging.basicConfig(
+#     filename=os.path.join(LOG_DIR, "test_extract_tasks.log"),
+#     level=logging.DEBUG,
+#     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+#     force=True,
+# )
+# vcr_log = logging.getLogger("vcr")
+# vcr_log.setLevel(logging.DEBUG)
 
 
 def ensure_logging_setup() -> None:

@@ -32,7 +32,7 @@ sphinx-autobuild==2021.3.14 # https://github.com/GaretJax/sphinx-autobuild
 flake8==7.1.1 # https://github.com/PyCQA/flake8
 flake8-isort==6.1.1  # https://github.com/gforcada/flake8-isort
 coverage==7.6.1  # https://github.com/nedbat/coveragepy
-black==22.10.0  # https://github.com/psf/black
+black==24.3.0  # https://github.com/psf/black
 pylint-django==2.6.1  # https://github.com/PyCQA/pylint-django
 pylint-celery==0.3  # https://github.com/PyCQA/pylint-celery
 pre-commit==3.7.1  # https://github.com/pre-commit/pre-commit
@@ -54,3 +54,12 @@ pypdf
 python-docx
 openpyxl
 python-pptx
+django>=4.2.17 # not directly required, pinned by Snyk to avoid a vulnerability
+ipython>=8.10.0 # not directly required, pinned by Snyk to avoid a vulnerability
+pillow>=10.3.0 # not directly required, pinned by Snyk to avoid a vulnerability
+requests>=2.32.2 # not directly required, pinned by Snyk to avoid a vulnerability
+setuptools>=70.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
+sqlparse>=0.5.0 # not directly required, pinned by Snyk to avoid a vulnerability
+tornado>=6.4.2 # not directly required, pinned by Snyk to avoid a vulnerability
+urllib3>=2.2.2 # not directly required, pinned by Snyk to avoid a vulnerability
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability

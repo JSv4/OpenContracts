@@ -6,13 +6,21 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views import defaults as default_views
 from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponseRedirect
 from graphene_django.views import GraphQLView
 
 from opencontractserver.analyzer.views import AnalysisCallbackView
 
 logger = logging.getLogger(__name__)
 
+def home_redirect(request):
+    scheme = "https" if request.is_secure() else "http"
+    host = request.get_host().split(":")[0]
+    new_url = f"{scheme}://{host}:3000"
+    return HttpResponseRedirect(new_url)
+
 urlpatterns = [
+    path("", home_redirect, name="home_redirect"),  # Root URL redirect to port 3000
     path(settings.ADMIN_URL, admin.site.urls),
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=settings.DEBUG))),
     *(

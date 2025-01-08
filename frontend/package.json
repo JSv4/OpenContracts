@@ -22,7 +22,7 @@
     "@types/react-textfit": "^1.1.0",
     "@uiw/react-color": "^2.3.2",
     "@uiw/react-json-view": "^2.0.0-alpha.30",
-    "axios": "^0.24.0",
+    "axios": "^0.28.0",
     "d3": "^7.9.0",
     "framer-motion": "6.*",
     "fuse.js": "^6.5.3",

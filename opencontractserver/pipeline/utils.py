@@ -9,7 +9,9 @@ from django.conf import settings
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.base.parser import BaseParser
+from opencontractserver.pipeline.base.post_processor import BasePostProcessor
 from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
+from opencontractserver.types.dicts import OpenContractsExportDataJsonPythonType
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +69,18 @@ def get_all_thumbnailers() -> list[type[BaseThumbnailGenerator]]:
     """
     return get_all_subclasses(
         "opencontractserver.pipeline.thumbnailers", BaseThumbnailGenerator
+    )
+
+
+def get_all_post_processors() -> list[type[BasePostProcessor]]:
+    """
+    Get all post-processor classes.
+
+    Returns:
+        List[Type[BasePostProcessor]]: List of post-processor classes.
+    """
+    return get_all_subclasses(
+        "opencontractserver.pipeline.post_processors", BasePostProcessor
     )
 
 
@@ -200,6 +214,7 @@ def get_component_by_name(component_name: str) -> type:
                     issubclass(obj, BaseParser)
                     or issubclass(obj, BaseEmbedder)
                     or issubclass(obj, BaseThumbnailGenerator)
+                    or issubclass(obj, BasePostProcessor)
                 ):
                     return obj
         except (ModuleNotFoundError, AttributeError):
@@ -210,6 +225,7 @@ def get_component_by_name(component_name: str) -> type:
         "opencontractserver.pipeline.parsers",
         "opencontractserver.pipeline.embedders",
         "opencontractserver.pipeline.thumbnailers",
+        "opencontractserver.pipeline.post_processors",
     ]
 
     for base_path in base_paths:
@@ -223,6 +239,7 @@ def get_component_by_name(component_name: str) -> type:
                         issubclass(obj, BaseThumbnailGenerator)
                         and obj != BaseThumbnailGenerator
                     )
+                    or (issubclass(obj, BasePostProcessor) and obj != BasePostProcessor)
                 ):
                     return obj
         except ModuleNotFoundError:
@@ -276,3 +293,38 @@ def get_default_embedder() -> Optional[type[BaseEmbedder]]:
     else:
         logger.error("No default embedder specified in settings")
         return None
+
+
+def run_post_processors(
+    processor_paths: list[str],
+    zip_bytes: bytes,
+    export_data: OpenContractsExportDataJsonPythonType,
+) -> tuple[bytes, OpenContractsExportDataJsonPythonType]:
+    """
+    Load and run post-processors in sequence.
+
+    Args:
+        processor_paths: List of fully qualified Python paths to post-processor classes
+        zip_bytes: The raw bytes of the zip file being created
+        export_data: The export data dictionary that will be serialized to data.json
+
+    Returns:
+        Tuple containing:
+            - Modified zip bytes
+            - Modified export data dictionary
+    """
+    current_zip_bytes = zip_bytes
+    current_export_data = export_data
+
+    for path in processor_paths:
+        try:
+            processor_class = get_component_by_name(path)
+            processor = processor_class()
+            current_zip_bytes, current_export_data = processor.process_export(
+                current_zip_bytes, current_export_data
+            )
+        except Exception as e:
+            logger.error(f"Error running post-processor {path}: {str(e)}")
+            raise
+
+    return current_zip_bytes, current_export_data

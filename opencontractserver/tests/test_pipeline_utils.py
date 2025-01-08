@@ -10,13 +10,16 @@ from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
 from opencontractserver.pipeline.utils import (
     get_all_embedders,
     get_all_parsers,
+    get_all_post_processors,
     get_all_subclasses,
     get_all_thumbnailers,
     get_component_by_name,
     get_components_by_mimetype,
     get_metadata_by_component_name,
     get_metadata_for_component,
+    run_post_processors,
 )
+from opencontractserver.types.dicts import OpenContractsExportDataJsonPythonType
 
 
 class TestPipelineUtils(TestCase):
@@ -92,6 +95,31 @@ class TestThumbnailer(BaseThumbnailGenerator):
         return None
 '''
 
+        cls.post_processor_code = '''
+from opencontractserver.pipeline.base.post_processor import BasePostProcessor
+from opencontractserver.types.dicts import OpenContractsExportDataJsonPythonType
+from typing import List, Tuple
+
+class TestPostProcessor(BasePostProcessor):
+    """
+    A test post-processor for unit testing.
+    """
+
+    title: str = "Test Post Processor"
+    description: str = "A test post-processor for unit testing."
+    author: str = "Test Author"
+    dependencies: List[str] = []
+
+    def process_export(
+        self,
+        zip_bytes: bytes,
+        export_data: OpenContractsExportDataJsonPythonType,
+    ) -> Tuple[bytes, OpenContractsExportDataJsonPythonType]:
+        # Add a test field to export data
+        export_data["test_field"] = "test_value"
+        return zip_bytes, export_data
+'''
+
         # Define the file paths for the components
         cls.parser_path = os.path.join(
             os.path.dirname(__file__), "..", "pipeline", "parsers", "test_parser.py"
@@ -105,6 +133,13 @@ class TestThumbnailer(BaseThumbnailGenerator):
             "pipeline",
             "thumbnailers",
             "test_thumbnailer.py",
+        )
+        cls.post_processor_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "pipeline",
+            "post_processors",
+            "test_post_processor.py",
         )
 
         # Create the test component files
@@ -123,6 +158,11 @@ class TestThumbnailer(BaseThumbnailGenerator):
             f.write(cls.thumbnailer_code)
         cls.test_files.append(cls.thumbnailer_path)
 
+        os.makedirs(os.path.dirname(cls.post_processor_path), exist_ok=True)
+        with open(cls.post_processor_path, "w") as f:
+            f.write(cls.post_processor_code)
+        cls.test_files.append(cls.post_processor_path)
+
         # Reload the importlib caches and modules
         importlib.invalidate_caches()
         importlib.reload(importlib.import_module("opencontractserver.pipeline.parsers"))
@@ -131,6 +171,9 @@ class TestThumbnailer(BaseThumbnailGenerator):
         )
         importlib.reload(
             importlib.import_module("opencontractserver.pipeline.thumbnailers")
+        )
+        importlib.reload(
+            importlib.import_module("opencontractserver.pipeline.post_processors")
         )
 
     @classmethod
@@ -275,12 +318,70 @@ class TestThumbnailer(BaseThumbnailGenerator):
 
         self.assertEqual(component, TestThumbnailer)
 
+        # Test post-processor component
+        component = get_component_by_name("test_post_processor")
+        from opencontractserver.pipeline.post_processors.test_post_processor import (
+            TestPostProcessor,
+        )
+
+        self.assertEqual(component, TestPostProcessor)
+
         # Test non-existing component
         with self.assertRaises(ValueError) as context:
             get_component_by_name("non_existing_component")
         self.assertTrue(
             "Component 'non_existing_component' not found." in str(context.exception)
         )
+
+    def test_run_post_processors(self):
+        """
+        Test run_post_processors function to ensure it correctly loads and runs post-processors.
+        """
+        # Create test data
+        test_zip_bytes = b"test zip content"
+        test_export_data: OpenContractsExportDataJsonPythonType = {
+            "annotated_docs": {},
+            "corpus": {
+                "title": "Test Corpus",
+                "description": "Test Description",
+                "icon": None,
+            },
+            "label_set": {
+                "title": "Test Label Set",
+                "description": "Test Description",
+                "icon": None,
+            },
+            "doc_labels": {},
+            "text_labels": {},
+        }
+
+        # Run post-processor
+        processor_paths = [
+            "opencontractserver.pipeline.post_processors.test_post_processor.TestPostProcessor"
+        ]
+        modified_zip_bytes, modified_export_data = run_post_processors(
+            processor_paths, test_zip_bytes, test_export_data
+        )
+
+        # Verify post-processor was applied
+        self.assertEqual(modified_zip_bytes, test_zip_bytes)  # Zip bytes unchanged
+        self.assertEqual(
+            modified_export_data["test_field"], "test_value"
+        )  # New field added
+
+        # Test with invalid processor path
+        with self.assertRaises(ValueError):
+            run_post_processors(
+                ["invalid.processor.path"], test_zip_bytes, test_export_data
+            )
+
+    def test_get_all_post_processors(self):
+        """
+        Test get_all_post_processors function to ensure it returns all post-processor classes.
+        """
+        post_processors = get_all_post_processors()
+        post_processor_titles = [processor.title for processor in post_processors]
+        self.assertIn("Test Post Processor", post_processor_titles)
 
 
 if __name__ == "__main__":

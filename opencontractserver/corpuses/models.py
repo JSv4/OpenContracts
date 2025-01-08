@@ -67,6 +67,13 @@ class Corpus(TreeNode):
         related_query_name="used_by_corpus",
     )
 
+    # Post-processors to run during export
+    post_processors = django.db.models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of fully qualified Python paths to post-processor functions",
+    )
+
     # Sharing
     allow_comments = django.db.models.BooleanField(default=False)
     is_public = django.db.models.BooleanField(default=False)
@@ -126,6 +133,25 @@ class Corpus(TreeNode):
         self.modified = timezone.now()
 
         return super().save(*args, **kwargs)
+
+    def clean(self):
+        """Validate the model before saving."""
+        super().clean()
+
+        # Validate post_processors is a list
+        if not isinstance(self.post_processors, list):
+            raise ValidationError({"post_processors": "Must be a list of Python paths"})
+
+        # Validate each post-processor path
+        for processor in self.post_processors:
+            if not isinstance(processor, str):
+                raise ValidationError(
+                    {"post_processors": "Each processor must be a string"}
+                )
+            if not processor.count(".") >= 1:
+                raise ValidationError(
+                    {"post_processors": f"Invalid Python path: {processor}"}
+                )
 
 
 # Model for Django Guardian permissions... trying to improve performance...

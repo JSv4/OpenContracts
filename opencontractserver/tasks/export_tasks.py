@@ -12,6 +12,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from opencontractserver.corpuses.models import Corpus
+from opencontractserver.pipeline.utils import run_post_processors
 from opencontractserver.types.dicts import (
     AnnotationLabelPythonType,
     FunsdAnnotationType,
@@ -86,10 +87,34 @@ def package_annotated_docs(
         "text_labels": text_labels,
     }
 
+    # Run any configured post-processors
+    if corpus.post_processors:
+        try:
+            # Get the current zip bytes
+            zip_file.close()
+            output_bytes.seek(io.SEEK_SET)
+            current_zip_bytes = output_bytes.getvalue()
+
+            # Run post-processors
+            modified_zip_bytes, modified_export_data = run_post_processors(
+                corpus.post_processors, current_zip_bytes, export_file_data
+            )
+
+            # Create new zip file with modified data
+            output_bytes = io.BytesIO(modified_zip_bytes)
+            zip_file = zipfile.ZipFile(
+                output_bytes, mode="a", compression=zipfile.ZIP_DEFLATED
+            )
+            export_file_data = modified_export_data
+        except Exception as e:
+            logger.error(
+                f"Error running post-processors for corpus {corpus_pk}: {str(e)}"
+            )
+            raise
+
+    # Write the final data.json
     json_str = json.dumps(export_file_data) + "\n"
-
     json_bytes = json_str.encode("utf-8")
-
     zip_file.writestr("data.json", json_bytes)
     zip_file.close()
 

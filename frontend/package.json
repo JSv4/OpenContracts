@@ -32,7 +32,7 @@
     "jotai-apollo": "^0.2.1",
     "lodash": "^4.17.21",
     "lodash.uniqueid": "^4.0.1",
-    "lucide-react": "^0.438.0",
+    "lucide-react": "^0.469.0",
     "pdfjs-dist": "^2.13.216",
     "polished": "^4.3.1",
     "react": "18",

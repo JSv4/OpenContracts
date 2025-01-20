@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Mapping, Optional
 
 from django.core.files.base import File
 
@@ -16,8 +16,11 @@ class BaseThumbnailGenerator(ABC):
     author: str = ""
     dependencies: list[str] = []
     supported_file_types: list[FileTypeEnum] = []
+    input_schema: Mapping = (
+        {}
+    )  # If you want user to provide inputs, define a jsonschema here
 
-    def generate_thumbnail(self, doc_id: str | int) -> Optional[File]:
+    def generate_thumbnail(self, doc_id: str | int, **kwargs) -> Optional[File]:
         """
         Generate a thumbnail for the given document ID by processing its text and PDF files.
 

@@ -558,13 +558,24 @@ class StartCorpusExport(graphene.Mutation):
             description="Graphene id of the corpus you want to package for export",
         )
         export_format = graphene.Argument(graphene.Enum.from_enum(ExportType))
+        post_processors = graphene.List(
+            graphene.String,
+            required=False,
+            description="List of fully qualified Python paths to post-processor functions to run",
+        )
+        input_kwargs = GenericScalar(
+            required=False,
+            description="Additional keyword arguments to pass to post-processors",
+        )
 
     ok = graphene.Boolean()
     message = graphene.String()
     export = graphene.Field(UserExportType)
 
     @login_required
-    def mutate(root, info, corpus_id, export_format):
+    def mutate(
+        root, info, corpus_id, export_format, post_processors=[], input_kwargs={}
+    ):
 
         if (
             info.context.user.is_usage_capped
@@ -585,6 +596,8 @@ class StartCorpusExport(graphene.Mutation):
                 started=started,
                 format=export_format,
                 backend_lock=True,
+                post_processors=post_processors,
+                input_kwargs=input_kwargs,
             )
             set_permissions_for_obj_to_user(
                 info.context.user, export, [PermissionTypes.CRUD]

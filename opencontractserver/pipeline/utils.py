@@ -100,6 +100,7 @@ def get_components_by_mimetype(
     parsers = []
     embedders = []
     thumbnailers = []
+    post_processors = []
     mimetype_enum = FileTypeEnum(mimetype)
 
     # Get compatible parsers
@@ -112,6 +113,7 @@ def get_components_by_mimetype(
                         "title": parser_class.title,
                         "description": parser_class.description,
                         "author": parser_class.author,
+                        "input_schema": parser_class.input_schema,
                     }
                 )
             else:
@@ -127,6 +129,7 @@ def get_components_by_mimetype(
                     "description": embedder_class.description,
                     "author": embedder_class.author,
                     "vector_size": embedder_class.vector_size,
+                    "input_schema": embedder_class.input_schema,
                 }
             )
         else:
@@ -142,15 +145,30 @@ def get_components_by_mimetype(
                         "title": thumbnailer_class.title,
                         "description": thumbnailer_class.description,
                         "author": thumbnailer_class.author,
+                        "input_schema": thumbnailer_class.input_schema,
                     }
                 )
             else:
                 thumbnailers.append(thumbnailer_class)
 
+    # Get compatible post-processors
+    for post_processor_class in get_all_post_processors():
+        if mimetype_enum in post_processor_class.supported_file_types:
+            post_processors.append(
+                {
+                    "class": post_processor_class,
+                    "title": post_processor_class.title,
+                    "description": post_processor_class.description,
+                    "author": post_processor_class.author,
+                    "input_schema": post_processor_class.input_schema,
+                }
+            )
+
     return {
         "parsers": parsers,
         "embedders": embedders,
         "thumbnailers": thumbnailers,
+        "post_processors": post_processors,
     }
 
 
@@ -169,6 +187,7 @@ def get_metadata_for_component(component_class: type) -> dict[str, Any]:
         "description": component_class.description,
         "author": component_class.author,
         "dependencies": component_class.dependencies,
+        "input_schema": component_class.input_schema,
     }
 
     if hasattr(component_class, "vector_size"):
@@ -299,6 +318,7 @@ def run_post_processors(
     processor_paths: list[str],
     zip_bytes: bytes,
     export_data: OpenContractsExportDataJsonPythonType,
+    input_kwargs: dict[str, Any] = {},
 ) -> tuple[bytes, OpenContractsExportDataJsonPythonType]:
     """
     Load and run post-processors in sequence.
@@ -318,11 +338,15 @@ def run_post_processors(
 
     for path in processor_paths:
         try:
+            logger.info(f"Loading post-processor: {path}")
             processor_class = get_component_by_name(path)
+            logger.debug(f"Initializing post-processor {processor_class.__name__}")
             processor = processor_class()
+            logger.info(f"Running post-processor: {processor.title}")
             current_zip_bytes, current_export_data = processor.process_export(
-                current_zip_bytes, current_export_data
+                current_zip_bytes, current_export_data, **input_kwargs
             )
+            logger.debug(f"Completed post-processor: {processor.title}")
         except Exception as e:
             logger.error(f"Error running post-processor {path}: {str(e)}")
             raise

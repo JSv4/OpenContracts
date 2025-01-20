@@ -32,6 +32,31 @@ logger.setLevel(logging.DEBUG)
 User = get_user_model()
 
 
+@shared_task
+def on_demand_post_processors(export_id: str | int):
+    try:
+        export = UserExport.objects.get(pk=export_id)
+
+        # Get the current zip bytes
+        current_zip_bytes = export.file.read()
+
+        # Run post-processors
+        modified_zip_bytes, modified_export_data = run_post_processors(
+            export.post_processors, current_zip_bytes, {}, export.input_kwargs
+        )
+
+        # Create new zip file with modified data
+        output_buffer = io.BytesIO(modified_zip_bytes)
+        export.file.save(f"{export.corpus.title} EXPORT.zip", output_buffer)
+        export.finished = timezone.now()
+        export.backend_lock = False
+        export.save()
+
+    except Exception as e:
+        logger.error(f"Error running post-processors for export {export_id}: {str(e)}")
+        raise
+
+
 # @celery_app.task(bind=True)
 @shared_task
 def package_annotated_docs(

@@ -71,6 +71,7 @@ from opencontractserver.feedback.models import UserFeedback
 from opencontractserver.pipeline.utils import (
     get_all_embedders,
     get_all_parsers,
+    get_all_post_processors,
     get_all_thumbnailers,
     get_components_by_mimetype,
     get_metadata_for_component,
@@ -1081,15 +1082,22 @@ class Query(graphene.ObjectType):
                 "parsers": get_all_parsers(),
                 "embedders": get_all_embedders(),
                 "thumbnailers": get_all_thumbnailers(),
+                "post_processors": get_all_post_processors(),
             }
 
         components = {
             "parsers": [],
             "embedders": [],
             "thumbnailers": [],
+            "post_processors": [],
         }
 
-        for component_type in ["parsers", "embedders", "thumbnailers"]:
+        for component_type in [
+            "parsers",
+            "embedders",
+            "thumbnailers",
+            "post_processors",
+        ]:
             for component in components_data.get(component_type, []):
                 if isinstance(component, dict):
                     # If detailed=True, component is a dict with metadata
@@ -1109,7 +1117,8 @@ class Query(graphene.ObjectType):
                             FileTypeEnumModel(ft).value
                             for ft in metadata.get("supported_file_types", [])
                         ],
-                        component_type=component_type[:-1],  # Remove trailing 's'
+                        component_type=component_type[:-1],
+                        input_schema=metadata.get("input_schema", {}),
                     )
                     if component_type == "embedders":
                         component_info.vector_size = metadata.get("vector_size", 0)
@@ -1119,4 +1128,5 @@ class Query(graphene.ObjectType):
             parsers=components["parsers"],
             embedders=components["embedders"],
             thumbnailers=components["thumbnailers"],
+            post_processors=components["post_processors"],
         )

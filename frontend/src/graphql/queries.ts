@@ -18,6 +18,7 @@ import {
   CorpusActionType,
   DocumentType,
   AnalysisRowType,
+  PipelineComponentType,
 } from "../types/graphql-api";
 import { ExportObject } from "../types/graphql-api";
 
@@ -1790,6 +1791,34 @@ export const listAnnotations = /* GraphQL */ `
         owner
       }
       nextToken
+    }
+  }
+`;
+
+// src/types/graphql-api.ts
+
+/** Input type for the getPostprocessors query. */
+export interface GetPostprocessorsInput {}
+
+/** Output type for the getPostprocessors query. */
+export interface GetPostprocessorsOutput {
+  pipelineComponents: {
+    /** List of available post-processors. */
+    postProcessors: Array<PipelineComponentType>;
+  };
+}
+
+export const getPostprocessors = /* GraphQL */ `
+  query {
+    pipelineComponents {
+      postProcessors {
+        name
+        title
+        description
+        author
+        componentType
+        inputSchema
+      }
     }
   }
 `;

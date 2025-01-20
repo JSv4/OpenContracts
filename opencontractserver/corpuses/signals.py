@@ -1,7 +1,9 @@
+from django.conf import settings
 from django.db import transaction
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 
+from config.telemetry import record_event
 from opencontractserver.tasks.corpus_tasks import process_corpus_action
 from opencontractserver.tasks.query_tasks import run_query
 
@@ -25,3 +27,5 @@ def run_query_on_create(sender, instance, created, **kwargs):
         print("Created... kick off")
         # Send tasks to celery for async execution
         transaction.on_commit(lambda: run_query.si(query_id=instance.id).apply_async())
+
+        record_event("query_created", {"env": settings.MODE})

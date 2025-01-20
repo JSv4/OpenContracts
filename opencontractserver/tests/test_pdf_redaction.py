@@ -1,26 +1,32 @@
 """Tests for PDF redaction functionality."""
 
 import io
-import logging
 import json
+import logging
 import os
 import random
-from typing import List, Tuple
 import zipfile
 from unittest import TestCase
 
 from PyPDF2 import PdfReader
 
 from opencontractserver.pipeline.utils import run_post_processors
-from opencontractserver.tests.fixtures import SAMPLE_PAWLS_FILE_ONE_PATH, SAMPLE_PDF_FILE_ONE_PATH
-from opencontractserver.types.dicts import OpenContractsAnnotationPythonType, OpenContractsExportDataJsonPythonType, OpenContractsSinglePageAnnotationType, PawlsPagePythonType
+from opencontractserver.tests.fixtures import (
+    SAMPLE_PAWLS_FILE_ONE_PATH,
+    SAMPLE_PDF_FILE_ONE_PATH,
+)
+from opencontractserver.types.dicts import (
+    OpenContractsAnnotationPythonType,
+    OpenContractsExportDataJsonPythonType,
+    PawlsPagePythonType,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def _generate_test_annotations_from_strings(
-    redacts: List[Tuple[str, ...]], pawls_data: List[PawlsPagePythonType]
-) -> List[OpenContractsAnnotationPythonType]:
+    redacts: list[tuple[str, ...]], pawls_data: list[PawlsPagePythonType]
+) -> list[OpenContractsAnnotationPythonType]:
     """
     Generate test annotations from a list of strings.
     """
@@ -36,7 +42,8 @@ def _generate_test_annotations_from_strings(
                 for j, expected_text in enumerate(redact_tuple[1:], 1):
                     if (
                         i + j >= len(first_page_tokens)
-                        or expected_text.lower() not in first_page_tokens[i + j]["text"].lower()
+                        or expected_text.lower()
+                        not in first_page_tokens[i + j]["text"].lower()
                     ):
                         match_found = False
                         break
@@ -47,44 +54,56 @@ def _generate_test_annotations_from_strings(
                     annot_json = {
                         "indices": matched_indices,
                         "bounds": {
-                            "left": min(first_page_tokens[idx]["x"] for idx in matched_indices),
+                            "left": min(
+                                first_page_tokens[idx]["x"] for idx in matched_indices
+                            ),
                             "right": max(
-                                first_page_tokens[idx]["x"] + first_page_tokens[idx]["width"]
+                                first_page_tokens[idx]["x"]
+                                + first_page_tokens[idx]["width"]
                                 for idx in matched_indices
                             ),
-                            "top": min(first_page_tokens[idx]["y"] for idx in matched_indices),
+                            "top": min(
+                                first_page_tokens[idx]["y"] for idx in matched_indices
+                            ),
                             "bottom": max(
-                                first_page_tokens[idx]["y"] + first_page_tokens[idx]["height"]
+                                first_page_tokens[idx]["y"]
+                                + first_page_tokens[idx]["height"]
                                 for idx in matched_indices
                             ),
                         },
                         "text": " ".join(redact_tuple),
                     }
-                    all_target_tokens.append({
-                        "id": f"test_annotation_{i}",
-                        "annotationLabel": "Test Annotation",
-                        "page": 0,
-                        "annotation_json": {
-                            0: {
-                                "bounds": annot_json["bounds"],
-                                "tokensJsons": [{"pageIndex": 0, "tokenIndex": idx} for idx in annot_json["indices"]],
-                                "rawText": annot_json["text"],
-                            }
-                        },
-                        "annotation_type": "TOKEN_LABEL",
-                        "structural": False,
-                        "parent_id": None,
-                    })
-                    
+                    all_target_tokens.append(
+                        {
+                            "id": f"test_annotation_{i}",
+                            "annotationLabel": "Test Annotation",
+                            "page": 0,
+                            "annotation_json": {
+                                0: {
+                                    "bounds": annot_json["bounds"],
+                                    "tokensJsons": [
+                                        {"pageIndex": 0, "tokenIndex": idx}
+                                        for idx in annot_json["indices"]
+                                    ],
+                                    "rawText": annot_json["text"],
+                                }
+                            },
+                            "annotation_type": "TOKEN_LABEL",
+                            "structural": False,
+                            "parent_id": None,
+                        }
+                    )
+
             i += 1
 
-    assert all_target_tokens, "Could not find any of the specified token sequences for redaction."
+    assert (
+        all_target_tokens
+    ), "Could not find any of the specified token sequences for redaction."
 
     # We'll wrap our single page annotation list in another list
     # because these are "page_annotations," one list per page
     page_annotations = all_target_tokens
     return page_annotations
-
 
 
 class TestPDFRedaction(TestCase):
@@ -94,7 +113,7 @@ class TestPDFRedaction(TestCase):
         """Set up test case with sample files."""
         # Load PAWLS data
         try:
-            with open(SAMPLE_PAWLS_FILE_ONE_PATH, 'r') as f:
+            with open(SAMPLE_PAWLS_FILE_ONE_PATH) as f:
                 self.pawls_data = json.load(f)
         except Exception as e:
             logger.error(f"Error loading PAWLS data: {str(e)}")
@@ -102,7 +121,7 @@ class TestPDFRedaction(TestCase):
 
         # Load sample PDF
         try:
-            with open(SAMPLE_PDF_FILE_ONE_PATH, 'rb') as f:
+            with open(SAMPLE_PDF_FILE_ONE_PATH, "rb") as f:
                 self.pdf_bytes = f.read()
         except Exception as e:
             logger.error(f"Error loading PDF: {str(e)}")
@@ -124,7 +143,9 @@ class TestPDFRedaction(TestCase):
         ]
 
         # Find all matching token sequences
-        test_annotations = _generate_test_annotations_from_strings(redacts, self.pawls_data)
+        test_annotations = _generate_test_annotations_from_strings(
+            redacts, self.pawls_data
+        )
         # print(f"Test {len(test_annotations)} pages of annotations: {test_annotations}")
 
         # Create test export data
@@ -139,7 +160,7 @@ class TestPDFRedaction(TestCase):
                     "pawls_file_content": self.pawls_data,
                     "labelled_text": test_annotations,
                     "relationships": [],
-                    "doc_labels": []
+                    "doc_labels": [],
                 }
             },
             "corpus": {
@@ -158,21 +179,23 @@ class TestPDFRedaction(TestCase):
 
         # Create a zip file containing the PDF
         zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', compression=zipfile.ZIP_DEFLATED) as zip_file:
+        with zipfile.ZipFile(
+            zip_buffer, "w", compression=zipfile.ZIP_DEFLATED
+        ) as zip_file:
             zip_file.writestr(filename, self.pdf_bytes)
-        
+
         zip_buffer.seek(0)
         zip_bytes = zip_buffer.getvalue()
 
         try:
             # Run the PDFRedactor
-            processor_paths = ["opencontractserver.pipeline.post_processors.pdf_redactor.PDFRedactor"]
+            processor_paths = [
+                "opencontractserver.pipeline.post_processors.pdf_redactor.PDFRedactor"
+            ]
             modified_zip_bytes, modified_export_data = run_post_processors(
-                processor_paths,
-                zip_bytes,
-                export_data
+                processor_paths, zip_bytes, export_data
             )
-            
+
             # Save locally for debugging
             # with open("debug_zip.zip", "wb") as f:
             #     f.write(modified_zip_bytes)
@@ -184,23 +207,23 @@ class TestPDFRedaction(TestCase):
             self.assertGreater(len(modified_zip_bytes), 0)
 
             # Verify we can read the processed PDF
-            with zipfile.ZipFile(io.BytesIO(modified_zip_bytes), 'r') as zip_file:
+            with zipfile.ZipFile(io.BytesIO(modified_zip_bytes), "r") as zip_file:
                 # Check the PDF is still there
                 self.assertIn(filename, zip_file.namelist())
-                
+
                 # Try to read the PDF to verify it's valid
                 processed_pdf_bytes = zip_file.read(filename)
                 self.assertGreater(len(processed_pdf_bytes), 0)
-                
+
                 # Verify it's a valid PDF by trying to read it
                 pdf_io = io.BytesIO(processed_pdf_bytes)
                 reader = PdfReader(pdf_io)
                 self.assertGreater(len(reader.pages), 0)
-                
+
                 extracted_text = reader.pages[0].extract_text()
                 extracted_text = extracted_text.upper()
-                        
-                 # Check each redaction tuple
+
+                # Check each redaction tuple
                 for redact_tuple in redacts:
                     redact_text = " ".join(redact_tuple).upper()
                     self.assertNotIn(
@@ -208,8 +231,7 @@ class TestPDFRedaction(TestCase):
                         extracted_text,
                         f"Redacted text '{redact_text}' was still found in the PDF text layer.",
                     )
-                
-                
+
         except Exception as e:
             logger.error(f"Error in PDF redaction test: {str(e)}")
             raise
@@ -248,31 +270,32 @@ class TestPDFRedaction(TestCase):
 
         # Create a zip file containing the PDF
         zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', compression=zipfile.ZIP_DEFLATED) as zip_file:
+        with zipfile.ZipFile(
+            zip_buffer, "w", compression=zipfile.ZIP_DEFLATED
+        ) as zip_file:
             zip_file.writestr(filename, self.pdf_bytes)
         zip_buffer.seek(0)
         zip_bytes = zip_buffer.getvalue()
 
         try:
             # Run the PDFRedactor
-            processor_paths = ["opencontractserver.pipeline.post_processors.pdf_redactor.PDFRedactor"]
+            processor_paths = [
+                "opencontractserver.pipeline.post_processors.pdf_redactor.PDFRedactor"
+            ]
             modified_zip_bytes, modified_export_data = run_post_processors(
-                processor_paths,
-                zip_bytes,
-                export_data
+                processor_paths, zip_bytes, export_data
             )
 
             # Verify the output
-            with zipfile.ZipFile(io.BytesIO(modified_zip_bytes), 'r') as zip_file:
+            with zipfile.ZipFile(io.BytesIO(modified_zip_bytes), "r") as zip_file:
                 processed_pdf_bytes = zip_file.read(filename)
-                
+
                 # Instead of comparing bytes directly, compare PDF structure
                 original_pdf = PdfReader(io.BytesIO(self.pdf_bytes))
                 processed_pdf = PdfReader(io.BytesIO(processed_pdf_bytes))
-                
+
                 # Check that basic structure is preserved
                 self.assertEqual(len(original_pdf.pages), len(processed_pdf.pages))
-                
 
         except Exception as e:
             logger.error(f"Error in no annotations test: {str(e)}")
@@ -283,11 +306,13 @@ class TestPDFRedaction(TestCase):
         logger.info("Starting test_pdf_redactor_with_non_pdf_files...")
         # Create a zip with both PDF and non-PDF files
         zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', compression=zipfile.ZIP_DEFLATED) as zip_file:
+        with zipfile.ZipFile(
+            zip_buffer, "w", compression=zipfile.ZIP_DEFLATED
+        ) as zip_file:
             # Add the PDF
             pdf_filename = os.path.basename(str(SAMPLE_PDF_FILE_ONE_PATH))
             zip_file.writestr(pdf_filename, self.pdf_bytes)
-            
+
             # Add a text file
             text_content = b"This is a test text file"
             zip_file.writestr("test.txt", text_content)
@@ -314,19 +339,19 @@ class TestPDFRedaction(TestCase):
 
         try:
             # Run the PDFRedactor
-            processor_paths = ["opencontractserver.pipeline.post_processors.pdf_redactor.PDFRedactor"]
+            processor_paths = [
+                "opencontractserver.pipeline.post_processors.pdf_redactor.PDFRedactor"
+            ]
             modified_zip_bytes, modified_export_data = run_post_processors(
-                processor_paths,
-                zip_bytes,
-                export_data
+                processor_paths, zip_bytes, export_data
             )
 
             # Verify the output
-            with zipfile.ZipFile(io.BytesIO(modified_zip_bytes), 'r') as zip_file:
+            with zipfile.ZipFile(io.BytesIO(modified_zip_bytes), "r") as zip_file:
                 # Check both files are present
                 self.assertIn(pdf_filename, zip_file.namelist())
                 self.assertIn("test.txt", zip_file.namelist())
-                
+
                 # Verify text file is unchanged
                 processed_text = zip_file.read("test.txt")
                 self.assertEqual(processed_text, text_content)
@@ -336,14 +361,14 @@ class TestPDFRedaction(TestCase):
 
     def test_pdf_redactor_with_ocr_verification(self) -> None:
         """
-        Revamped test for searching tokens in page 0 for "AUCTA" and "Pharmaceuticals" 
+        Revamped test for searching tokens in page 0 for "AUCTA" and "Pharmaceuticals"
         (ignoring case) and applying redactions. Finally, verifies that "Aucta Pharmaceuticals"
-        does not appear in (1) the image layer extracted via OCR, or (2) the underlying PDF 
+        does not appear in (1) the image layer extracted via OCR, or (2) the underlying PDF
         text layer itself.
         """
         logger.info("Starting test_pdf_redactor_with_ocr_verification...")
-        from pdf2image import convert_from_bytes
         import pytesseract
+        from pdf2image import convert_from_bytes
         from PyPDF2 import PdfReader
 
         # Search FIRST page tokens for consecutive "Aucta" and "Pharmaceuticals" (ignoring case).
@@ -352,12 +377,14 @@ class TestPDFRedaction(TestCase):
 
         for i in range(len(page_tokens) - 1):
             current_text_lower = page_tokens[i]["text"].lower()
-            next_text_lower = page_tokens[i+1]["text"].lower()
+            next_text_lower = page_tokens[i + 1]["text"].lower()
             if "aucta" in current_text_lower and "pharmaceuticals" in next_text_lower:
-                target_token_pairs.append((i, i+1))
+                target_token_pairs.append((i, i + 1))
 
         if not target_token_pairs:
-            self.fail("Could not find consecutive tokens 'Aucta' and 'Pharmaceuticals' in the sample PDF data.")
+            self.fail(
+                "Could not find consecutive tokens 'Aucta' and 'Pharmaceuticals' in the sample PDF data."
+            )
 
         # Build a single annotation for each discovered token pair.
         test_annotations = []
@@ -368,7 +395,9 @@ class TestPDFRedaction(TestCase):
             x_left = min(token1["x"], token2["x"])
             y_top = min(token1["y"], token2["y"])
             x_right = max(token1["x"] + token1["width"], token2["x"] + token2["width"])
-            y_bottom = max(token1["y"] + token1["height"], token2["y"] + token2["height"])
+            y_bottom = max(
+                token1["y"] + token1["height"], token2["y"] + token2["height"]
+            )
 
             annotation_entry = {
                 "id": f"test_annotation_{random.randint(0, 1000000)}",
@@ -386,7 +415,7 @@ class TestPDFRedaction(TestCase):
                             {"pageIndex": 0, "tokenIndex": idx1},
                             {"pageIndex": 0, "tokenIndex": idx2},
                         ],
-                        "rawText": f"{token1['text']} {token2['text']}"
+                        "rawText": f"{token1['text']} {token2['text']}",
                     }
                 },
                 "annotation_type": "TOKEN_LABEL",
@@ -426,17 +455,19 @@ class TestPDFRedaction(TestCase):
 
         # Package our PDF bytes into a zip.
         zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', compression=zipfile.ZIP_DEFLATED) as zip_file:
+        with zipfile.ZipFile(
+            zip_buffer, "w", compression=zipfile.ZIP_DEFLATED
+        ) as zip_file:
             zip_file.writestr(filename, self.pdf_bytes)
         zip_buffer.seek(0)
         zip_bytes = zip_buffer.getvalue()
 
         # Run the PDFRedactor post-processor.
-        processor_paths = ["opencontractserver.pipeline.post_processors.pdf_redactor.PDFRedactor"]
+        processor_paths = [
+            "opencontractserver.pipeline.post_processors.pdf_redactor.PDFRedactor"
+        ]
         modified_zip_bytes, _ = run_post_processors(
-            processor_paths,
-            zip_bytes,
-            export_data
+            processor_paths, zip_bytes, export_data
         )
 
         # Save locally for debugging
@@ -445,10 +476,12 @@ class TestPDFRedaction(TestCase):
         # logger.info(f"Saved locally for debugging: debug_zip_aucta.zip")
 
         self.assertIsNotNone(modified_zip_bytes)
-        self.assertGreater(len(modified_zip_bytes), 0, "Modified zip is unexpectedly empty.")
+        self.assertGreater(
+            len(modified_zip_bytes), 0, "Modified zip is unexpectedly empty."
+        )
 
         # Extract processed PDF from the modified zip.
-        with zipfile.ZipFile(io.BytesIO(modified_zip_bytes), 'r') as zip_file:
+        with zipfile.ZipFile(io.BytesIO(modified_zip_bytes), "r") as zip_file:
             processed_pdf_bytes = zip_file.read(filename)
 
         # -------------------------------------------
@@ -457,7 +490,7 @@ class TestPDFRedaction(TestCase):
         pages = convert_from_bytes(processed_pdf_bytes)
         custom_config = r"--oem 3 --psm 3"
         all_ocr_text = []
-        
+
         page_image = pages[0]
         data = pytesseract.image_to_data(
             page_image,
@@ -471,8 +504,11 @@ class TestPDFRedaction(TestCase):
                 all_ocr_text.append(text_val)
 
         combined_ocr = " ".join(all_ocr_text).upper()
-        self.assertNotIn("AUCTA PHARMACEUTICALS", combined_ocr, 
-                         msg="Redacted text 'Aucta Pharmaceuticals' was still detected by OCR.")
+        self.assertNotIn(
+            "AUCTA PHARMACEUTICALS",
+            combined_ocr,
+            msg="Redacted text 'Aucta Pharmaceuticals' was still detected by OCR.",
+        )
 
         # -------------------------------------------------
         # 2) Check text layer extraction (PDF structure).
@@ -490,9 +526,11 @@ class TestPDFRedaction(TestCase):
         combined_pdf_text_layer = " ".join(extracted_text_pages)
 
         # Confirm that "Aucta" or "Pharmaceuticals" no longer appear in the PDF text layer.
-        self.assertNotIn("AUCTA PHARMACEUTICALS", combined_pdf_text_layer,
-                         msg="Redacted token 'Aucta' still present in PDF text layer.")
-
+        self.assertNotIn(
+            "AUCTA PHARMACEUTICALS",
+            combined_pdf_text_layer,
+            msg="Redacted token 'Aucta' still present in PDF text layer.",
+        )
 
     def test_pdf_redactor_with_specific_tokens(self) -> None:
         """
@@ -504,16 +542,18 @@ class TestPDFRedaction(TestCase):
         Now uses pytesseract (to match docling_parser approach).
         """
         logger.info("Starting test_pdf_redactor_with_specific_tokens...")
-        from pdf2image import convert_from_bytes
         import pytesseract
-        import numpy as np
- 
+        from pdf2image import convert_from_bytes
+
         # Find the tokens for "June 12, 2019" by looking at the coordinates from the image
         target_tokens = []
         for i, token in enumerate(self.pawls_data[0]["tokens"]):
             # Look for tokens around the coordinates we want (484-534, 92-98)
-            if (480 <= token["x"] <= 535 and 90 <= token["y"] <= 100 and 
-                token["text"] in ["June", "12,", "2019"]):
+            if (
+                480 <= token["x"] <= 535
+                and 90 <= token["y"] <= 100
+                and token["text"] in ["June", "12,", "2019"]
+            ):
                 target_tokens.append(i)
                 logger.info(f"Found target token: {token['text']} at index {i}")
 
@@ -532,15 +572,15 @@ class TestPDFRedaction(TestCase):
                             # Use exact coordinates from the tokens
                             "left": 484.13,  # x of "June"
                             "right": 529.49,  # x + width of "2019" (513.65 + 15.84)
-                            "top": 92.16,    # min y of the tokens
-                            "bottom": 98.28  # max y + height (92.52 + 5.76)
+                            "top": 92.16,  # min y of the tokens
+                            "bottom": 98.28,  # max y + height (92.52 + 5.76)
                         },
                         "tokensJsons": [
                             {"pageIndex": 0, "tokenIndex": 53},  # June
                             {"pageIndex": 0, "tokenIndex": 54},  # 12,
-                            {"pageIndex": 0, "tokenIndex": 55}   # 2019
+                            {"pageIndex": 0, "tokenIndex": 55},  # 2019
                         ],
-                        "rawText": "June 12, 2019"
+                        "rawText": "June 12, 2019",
                     }
                 },
                 "annotation_type": "TOKEN_LABEL",
@@ -580,30 +620,34 @@ class TestPDFRedaction(TestCase):
 
         # Create a zip file containing the original PDF bytes
         zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', compression=zipfile.ZIP_DEFLATED) as zip_file:
+        with zipfile.ZipFile(
+            zip_buffer, "w", compression=zipfile.ZIP_DEFLATED
+        ) as zip_file:
             zip_file.writestr(filename, self.pdf_bytes)
         zip_buffer.seek(0)
         zip_bytes = zip_buffer.getvalue()
 
         # Run the PDFRedactor to apply our specified redactions
-        processor_paths = ["opencontractserver.pipeline.post_processors.pdf_redactor.PDFRedactor"]
+        processor_paths = [
+            "opencontractserver.pipeline.post_processors.pdf_redactor.PDFRedactor"
+        ]
         modified_zip_bytes, _ = run_post_processors(
-            processor_paths,
-            zip_bytes,
-            export_data
+            processor_paths, zip_bytes, export_data
         )
         self.assertIsNotNone(modified_zip_bytes)
         self.assertGreater(len(modified_zip_bytes), 0)
-        
-         # Save locally for debugging
+
+        # Save locally for debugging
         # with open("debug_zip_date.zip", "wb") as f:
         #     f.write(modified_zip_bytes)
         # logger.info(f"Saved locally for debugging: debug_zip.zip")
 
         # Extract the processed PDF from the updated zip
-        with zipfile.ZipFile(io.BytesIO(modified_zip_bytes), 'r') as updated_zip:
+        with zipfile.ZipFile(io.BytesIO(modified_zip_bytes), "r") as updated_zip:
             processed_pdf_bytes = updated_zip.read(filename)
-            self.assertGreater(len(processed_pdf_bytes), 0, "Processed PDF is unexpectedly empty.")
+            self.assertGreater(
+                len(processed_pdf_bytes), 0, "Processed PDF is unexpectedly empty."
+            )
 
         # Render the processed PDF to images for OCR
         pages = convert_from_bytes(processed_pdf_bytes)
@@ -613,7 +657,6 @@ class TestPDFRedaction(TestCase):
         all_ocr_text = []
 
         for page_image in pages:
-            np_image = np.array(page_image)
             data = pytesseract.image_to_data(
                 page_image,
                 output_type=pytesseract.Output.DICT,
@@ -629,4 +672,8 @@ class TestPDFRedaction(TestCase):
         combined_text = " ".join(all_ocr_text).upper()
 
         # Verify that the targeted text is no longer present
-        self.assertNotIn("JUNE 12, 2019", combined_text, msg="Redacted text 'June 12, 2019' was detected by OCR.")
+        self.assertNotIn(
+            "JUNE 12, 2019",
+            combined_text,
+            msg="Redacted text 'June 12, 2019' was detected by OCR.",
+        )

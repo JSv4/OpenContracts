@@ -20,12 +20,12 @@ OpenContracts is an **Apache-2 Licensed** enterprise document analytics tool. It
 OpenContracts collects anonymous usage data to help improve the platform. We only collect:
 - Installation events (unique installation ID per first DB initialization)
 - Feature usage statistics (e.g., analyzer activations, post-processor runs)
-- Basic usage patterns (document uploads, queries, extracts)
+- **Aggregate** usage (documents uploaded, total queries, total extracts, users served, etc.)
 
 We **never** collect:
 - Document contents
 - Extracted data
-- User information
+- Identifiable user information
 - Query contents
 
 This data helps us understand which features are most valuable and prioritize development. Telemetry can be disabled by setting `TELEMETRY_ENABLED=False` in your settings.

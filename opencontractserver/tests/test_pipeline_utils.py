@@ -118,8 +118,9 @@ class TestPostProcessor(BasePostProcessor):
         export_data: OpenContractsExportDataJsonPythonType,
     ) -> Tuple[bytes, OpenContractsExportDataJsonPythonType]:
         # Add a test field to export data
-        export_data["test_field"] = "test_value"
-        return zip_bytes, export_data
+        new_export_data = export_data.copy()
+        new_export_data["test_field"] = "test_value"
+        return zip_bytes, new_export_data
 '''
 
         # Define the file paths for the components

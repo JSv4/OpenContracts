@@ -1,3 +1,5 @@
+import uuid
+
 import django
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -297,3 +299,36 @@ class Auth0APIToken(django.db.models.Model):
     expiration_Date = django.db.models.DateTimeField("Token Expiration Date:")
     refreshing = django.db.models.BooleanField("Refreshing Token", default=False)
     auth0_Response = django.db.models.TextField("Last Response from Auth0")
+
+
+class Installation(django.db.models.Model):
+    """
+    Singleton model to track installation-specific information for telemetry.
+    Only one instance of this model should ever exist.
+    """
+
+    id = django.db.models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text="Unique identifier for this installation",
+    )
+    created = django.db.models.DateTimeField(
+        "Installation Date", default=timezone.now, editable=False
+    )
+
+    class Meta:
+        verbose_name = "Installation"
+        verbose_name_plural = "Installation"
+
+    def save(self, *args, **kwargs):
+        """Ensure only one instance exists"""
+        if Installation.objects.exists() and not self.pk:
+            raise ValueError("Cannot create multiple Installation instances")
+        return super().save(*args, **kwargs)
+
+    @classmethod
+    def get(cls) -> "Installation":
+        """Get or create the singleton installation instance"""
+        instance, _ = cls.objects.get_or_create()
+        return instance

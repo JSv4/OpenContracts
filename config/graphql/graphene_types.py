@@ -725,6 +725,7 @@ class PipelineComponentType(graphene.ObjectType):
     """Graphene type for pipeline components."""
 
     name = graphene.String(description="Name of the component class.")
+    module_name = graphene.String(description="Name of the module the component is in.")
     title = graphene.String(description="Title of the component.")
     description = graphene.String(description="Description of the component.")
     author = graphene.String(description="Author of the component.")

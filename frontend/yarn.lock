@@ -2475,6 +2475,27 @@
     semantic-ui-css "^2.4.1"
     semantic-ui-react "^0.87.3"
 
+"@rjsf/utils@^5.24.1":
+  version "5.24.1"
+  resolved "https://registry.yarnpkg.com/@rjsf/utils/-/utils-5.24.1.tgz#4c02eb7a93be78082f328b0224698fa336ff3080"
+  integrity sha512-A25fFj/TNz5bKikCIs20DiedKAalLuAQ7vUX9VQkD2hps5C9YVr0dJgSlsPa5kzl6lQMaRsNouTx8E1ZdLV2fg==
+  dependencies:
+    json-schema-merge-allof "^0.8.1"
+    jsonpointer "^5.0.1"
+    lodash "^4.17.21"
+    lodash-es "^4.17.21"
+    react-is "^18.2.0"
+
+"@rjsf/validator-ajv8@^5.24.1":
+  version "5.24.1"
+  resolved "https://registry.yarnpkg.com/@rjsf/validator-ajv8/-/validator-ajv8-5.24.1.tgz#0c09b7f9bb4395db786cc952cec1199a6c4ff5e0"
+  integrity sha512-p6URehglU9yFUAoQXE1ryqZjLYSjc6qdbiUfCVvEFAzUuMECsIFomz2hH3CPlt10K72sAFdzwVvrKn1iWTnxDw==
+  dependencies:
+    ajv "^8.12.0"
+    ajv-formats "^2.1.1"
+    lodash "^4.17.21"
+    lodash-es "^4.17.21"
+
 "@rollup/plugin-babel@^5.2.0":
   version "5.3.1"
   resolved "https://registry.yarnpkg.com/@rollup/plugin-babel/-/plugin-babel-5.3.1.tgz#04bc0608f4aa4b2e4b1aebf284344d0f68fda283"
@@ -4036,7 +4057,7 @@ ajv@^6.12.2, ajv@^6.12.4, ajv@^6.12.5, ajv@^6.7.0:
     json-schema-traverse "^0.4.1"
     uri-js "^4.2.2"
 
-ajv@^8.0.0, ajv@^8.6.0, ajv@^8.9.0:
+ajv@^8.0.0, ajv@^8.12.0, ajv@^8.6.0, ajv@^8.9.0:
   version "8.17.1"
   resolved "https://registry.yarnpkg.com/ajv/-/ajv-8.17.1.tgz#37d9a5c776af6bc92d7f4f9510eba4c0a60d11a6"
   integrity sha512-B/gBuNg5SiMTrPkC+A2+cW0RszwxYmn6VYxB/inlBStS5nx6xHIt/ehKRhIMhqusl7a8LjQoZnjCs5vhwxOQ1g==
@@ -5185,7 +5206,7 @@ compute-gcd@^1.2.1:
     validate.io-function "^1.0.2"
     validate.io-integer-array "^1.0.0"
 
-compute-lcm@^1.1.0:
+compute-lcm@^1.1.0, compute-lcm@^1.1.2:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/compute-lcm/-/compute-lcm-1.1.2.tgz#9107c66b9dca28cefb22b4ab4545caac4034af23"
   integrity sha512-OFNPdQAXnQhDSKioX8/XYT6sdUlXwpeMjfd6ApxMJfyZ4GxmLR1xvMERctlYhlHwIiz6CSpBc2+qYKjHGZw4TQ==
@@ -9341,6 +9362,15 @@ json-schema-merge-allof@^0.6.0:
     json-schema-compare "^0.2.2"
     lodash "^4.17.4"
 
+json-schema-merge-allof@^0.8.1:
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/json-schema-merge-allof/-/json-schema-merge-allof-0.8.1.tgz#ed2828cdd958616ff74f932830a26291789eaaf2"
+  integrity sha512-CTUKmIlPJbsWfzRRnOXz+0MjIqvnleIXwFTzz+t9T86HnYX/Rozria6ZVGLktAU9e+NygNljveP+yxqtQp/Q4w==
+  dependencies:
+    compute-lcm "^1.1.2"
+    json-schema-compare "^0.2.2"
+    lodash "^4.17.20"
+
 json-schema-traverse@^0.4.1:
   version "0.4.1"
   resolved "https://registry.yarnpkg.com/json-schema-traverse/-/json-schema-traverse-0.4.1.tgz#69f6a87d9513ab8bb8fe63bdb0979c448e684660"
@@ -9399,7 +9429,7 @@ jsonpath@^1.1.1:
     static-eval "2.0.2"
     underscore "1.12.1"
 
-jsonpointer@^5.0.0:
+jsonpointer@^5.0.0, jsonpointer@^5.0.1:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/jsonpointer/-/jsonpointer-5.0.1.tgz#2110e0af0900fd37467b5907ecd13a7884a1b559"
   integrity sha512-p/nXbhSEcu3pZRdkW1OfJhpsVtW1gd4Wa1fnQc9YLiTfAjn0312eMKimbdIQzuZl9aa9xUGaRlP9T/CJE/ditQ==
@@ -11664,7 +11694,7 @@ react-is@^16.13.1, react-is@^16.6.3, react-is@^16.7.0, react-is@^16.9.0:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
 
-"react-is@^16.8.6 || ^17.0.0 || ^18.0.0", react-is@^18.0.0:
+"react-is@^16.8.6 || ^17.0.0 || ^18.0.0", react-is@^18.0.0, react-is@^18.2.0:
   version "18.3.1"
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-18.3.1.tgz#e83557dc12eae63a99e003a46388b1dcbb44db7e"
   integrity sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==

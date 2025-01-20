@@ -106,10 +106,12 @@ def get_components_by_mimetype(
     # Get compatible parsers
     for parser_class in get_all_parsers():
         if mimetype_enum in parser_class.supported_file_types:
+            module_name = parser_class.__module__.split(".")[-1]
             if detailed:
                 parsers.append(
                     {
                         "class": parser_class,
+                        "module_name": module_name,
                         "title": parser_class.title,
                         "description": parser_class.description,
                         "author": parser_class.author,
@@ -121,11 +123,13 @@ def get_components_by_mimetype(
 
     # Get compatible embedders (assuming embedders work on text output)
     for embedder_class in get_all_embedders():
+        module_name = embedder_class.__module__.split(".")[-1]
         if detailed:
             embedders.append(
                 {
                     "class": embedder_class,
                     "title": embedder_class.title,
+                    "module_name": module_name,
                     "description": embedder_class.description,
                     "author": embedder_class.author,
                     "vector_size": embedder_class.vector_size,
@@ -138,10 +142,12 @@ def get_components_by_mimetype(
     # Get compatible thumbnailers
     for thumbnailer_class in get_all_thumbnailers():
         if mimetype_enum in thumbnailer_class.supported_file_types:
+            module_name = thumbnailer_class.__module__.split(".")[-1]
             if detailed:
                 thumbnailers.append(
                     {
                         "class": thumbnailer_class,
+                        "module_name": module_name,
                         "title": thumbnailer_class.title,
                         "description": thumbnailer_class.description,
                         "author": thumbnailer_class.author,
@@ -154,10 +160,14 @@ def get_components_by_mimetype(
     # Get compatible post-processors
     for post_processor_class in get_all_post_processors():
         if mimetype_enum in post_processor_class.supported_file_types:
+            logger.info(post_processor_class)
+            logger.info(dir(post_processor_class))
+            module_name = post_processor_class.__module__.split(".")[-1]
             post_processors.append(
                 {
                     "class": post_processor_class,
                     "title": post_processor_class.title,
+                    "module_name": module_name,
                     "description": post_processor_class.description,
                     "author": post_processor_class.author,
                     "input_schema": post_processor_class.input_schema,
@@ -182,8 +192,11 @@ def get_metadata_for_component(component_class: type) -> dict[str, Any]:
     Returns:
         Dict[str, Any]: Dictionary of metadata.
     """
+
+    module_name = component_class.__module__.split(".")[-1]
     metadata = {
         "title": component_class.title,
+        "module_name": module_name,
         "description": component_class.description,
         "author": component_class.author,
         "dependencies": component_class.dependencies,

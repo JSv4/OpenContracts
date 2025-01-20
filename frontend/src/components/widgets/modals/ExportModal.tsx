@@ -166,6 +166,7 @@ export function ExportModal({ visible, toggleModal }: ExportModalProps) {
             actions={[]}
             placeholder="Search for export by name..."
             value={exportSearchCache}
+            style={{ flex: 1 }}
           />
         </div>
         <ExportList

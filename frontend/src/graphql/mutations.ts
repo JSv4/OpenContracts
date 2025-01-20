@@ -155,6 +155,8 @@ export const CREATE_CORPUS = gql`
 export interface StartExportCorpusInputs {
   corpusId: string;
   exportFormat: ExportTypes;
+  postProcessors?: string[];
+  inputKwargs?: Record<any, any>;
 }
 
 export interface StartExportCorpusOutputs {
@@ -166,8 +168,18 @@ export interface StartExportCorpusOutputs {
 }
 
 export const START_EXPORT_CORPUS = gql`
-  mutation ($corpusId: String!, $exportFormat: ExportType!) {
-    exportCorpus(corpusId: $corpusId, exportFormat: $exportFormat) {
+  mutation (
+    $corpusId: String!
+    $exportFormat: ExportType!
+    $postProcessors: [String]
+    $inputKwargs: GenericScalar
+  ) {
+    exportCorpus(
+      corpusId: $corpusId
+      exportFormat: $exportFormat
+      postProcessors: $postProcessors
+      inputKwargs: $inputKwargs
+    ) {
       ok
       message
       export {

@@ -1110,6 +1110,7 @@ class Query(graphene.ObjectType):
                     component_info = PipelineComponentType(
                         name=component_cls.__name__,
                         title=metadata.get("title", ""),
+                        module_name=metadata.get("module_name", ""),
                         description=metadata.get("description", ""),
                         author=metadata.get("author", ""),
                         dependencies=metadata.get("dependencies", []),

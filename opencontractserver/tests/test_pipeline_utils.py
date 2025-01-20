@@ -98,6 +98,7 @@ class TestThumbnailer(BaseThumbnailGenerator):
         cls.post_processor_code = '''
 from opencontractserver.pipeline.base.post_processor import BasePostProcessor
 from opencontractserver.types.dicts import OpenContractsExportDataJsonPythonType
+from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from typing import List, Tuple
 
 class TestPostProcessor(BasePostProcessor):
@@ -109,6 +110,7 @@ class TestPostProcessor(BasePostProcessor):
     description: str = "A test post-processor for unit testing."
     author: str = "Test Author"
     dependencies: List[str] = []
+    supported_file_types: List[FileTypeEnum] = [FileTypeEnum.PDF]
 
     def process_export(
         self,

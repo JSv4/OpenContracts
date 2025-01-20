@@ -1,4 +1,5 @@
 import importlib
+import logging
 import os
 import unittest
 from unittest import TestCase
@@ -20,6 +21,8 @@ from opencontractserver.pipeline.utils import (
     run_post_processors,
 )
 from opencontractserver.types.dicts import OpenContractsExportDataJsonPythonType
+
+logger = logging.getLogger(__name__)
 
 
 class TestPipelineUtils(TestCase):
@@ -374,6 +377,7 @@ class TestPostProcessor(BasePostProcessor):
 
         # Verify post-processor was applied
         self.assertEqual(modified_zip_bytes, test_zip_bytes)  # Zip bytes unchanged
+        logger.info(f"modified_export_data: {modified_export_data}")
         self.assertEqual(
             modified_export_data["test_field"], "test_value"
         )  # New field added

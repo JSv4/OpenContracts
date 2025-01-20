@@ -280,7 +280,7 @@ class LabelTypeEnum(graphene.Enum):
 
 
 class AnnotationSummaryType(graphene.ObjectType):
-    id: graphene.String()
+    id: graphene.String()  # type: ignore
     label = graphene.String()
     type = LabelTypeEnum()
     raw_text = graphene.String()
@@ -738,6 +738,9 @@ class PipelineComponentType(graphene.ObjectType):
     component_type = graphene.String(
         description="Type of the component (parser, embedder, or thumbnailer)."
     )
+    input_schema = GenericScalar(
+        description="JSONSchema schema for inputs supported from user (experimental - not fully implemented)."
+    )
 
 
 class PipelineComponentsType(graphene.ObjectType):
@@ -751,4 +754,7 @@ class PipelineComponentsType(graphene.ObjectType):
     )
     thumbnailers = graphene.List(
         PipelineComponentType, description="List of available thumbnail generators."
+    )
+    post_processors = graphene.List(
+        PipelineComponentType, description="List of available post-processors."
     )

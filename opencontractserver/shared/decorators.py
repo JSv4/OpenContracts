@@ -8,7 +8,7 @@ from typing import Any, Callable
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from plasmapdf.models.PdfDataLayer import makePdfTranslationLayerFromPawlsTokens
+from plasmapdf.models.PdfDataLayer import build_translation_layer
 
 from opencontractserver.analyzer.models import Analysis
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
@@ -98,7 +98,7 @@ def doc_analyzer_task(max_retries=None):
 
                 # Create PdfDataLayer
                 pdf_data_layer = (
-                    makePdfTranslationLayerFromPawlsTokens(pdf_pawls_extract)
+                    build_translation_layer(pdf_pawls_extract)
                     if pdf_pawls_extract
                     else []
                 )

@@ -106,7 +106,7 @@ class TestPostProcessor(BasePostProcessor):
     A test post-processor for unit testing.
     """
 
-    title: str = "Test Post Processor"
+    title: str = "Test PostProcessor"
     description: str = "A test post-processor for unit testing."
     author: str = "Test Author"
     dependencies: List[str] = []
@@ -277,7 +277,7 @@ class TestPostProcessor(BasePostProcessor):
         Test get_metadata_for_component function to ensure it returns correct metadata for a given component.
         """
         from opencontractserver.pipeline.parsers.test_parser import (
-            TestParser,  # type: ignore
+            TestParser,  # type: ignore; type: ignore
         )
 
         metadata = get_metadata_for_component(TestParser)
@@ -305,7 +305,7 @@ class TestPostProcessor(BasePostProcessor):
         # Test parser component
         component = get_component_by_name("test_parser")
         from opencontractserver.pipeline.parsers.test_parser import (
-            TestParser,  # type: ignore
+            TestParser,  # type: ignore; type: ignore
         )
 
         self.assertEqual(component, TestParser)
@@ -313,7 +313,7 @@ class TestPostProcessor(BasePostProcessor):
         # Test embedder component
         component = get_component_by_name("test_embedder")
         from opencontractserver.pipeline.embedders.test_embedder import (
-            TestEmbedder,  # type: ignore
+            TestEmbedder,  # type: ignore; type: ignore
         )
 
         self.assertEqual(component, TestEmbedder)
@@ -389,7 +389,7 @@ class TestPostProcessor(BasePostProcessor):
         """
         post_processors = get_all_post_processors()
         post_processor_titles = [processor.title for processor in post_processors]
-        self.assertIn("Test Post Processor", post_processor_titles)
+        self.assertIn("Test PostProcessor", post_processor_titles)
 
 
 if __name__ == "__main__":

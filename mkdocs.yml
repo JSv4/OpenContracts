@@ -1,7 +1,7 @@
 site_name: OpenContracts
 site_description: Open, Extensible Document Analytics Platform
 site_author: John Scrudato IV
-site_url: https://hatch.pypa.io/latest/
+site_url: https://jsv4.github.io/OpenContracts/
 repo_name: JSv4/OpenContracts
 repo_url: https://github.com/JSv4/OpenContracts
 edit_uri: blob/master/docs
@@ -156,8 +156,8 @@ markdown_extensions:
       social_url_shorthand: true
       normalize_issue_symbols: true
       provider: github
-      user: pypa
-      repo: hatch
+      user: jsv4
+      repo: OpenContracts
   - pymdownx.mark:
   - pymdownx.progressbar:
   - pymdownx.saneheaders:
@@ -172,15 +172,6 @@ markdown_extensions:
 extra:
   version:
     provider: mike
-  social:
-    - icon: fontawesome/brands/github-alt
-      link: https://github.com/ofek
-    - icon: fontawesome/solid/blog
-      link: https://ofek.dev/words/
-    - icon: fontawesome/brands/twitter
-      link: https://twitter.com/Ofekmeister
-    - icon: fontawesome/brands/linkedin
-      link: https://www.linkedin.com/in/ofeklev/
   consent:
     title: Cookie consent
     description: >-

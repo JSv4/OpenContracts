@@ -117,7 +117,7 @@ class TestPostProcessor(BasePostProcessor):
     A test post-processor for unit testing.
     """
 
-    title: str = "Test PostProcessor"
+    title: str = "Test Post Processor"
     description: str = "A test post-processor for unit testing."
     author: str = "Test Author"
     dependencies: list[str] = []

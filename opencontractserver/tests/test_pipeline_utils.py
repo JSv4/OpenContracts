@@ -371,13 +371,24 @@ class TestPostProcessor(BasePostProcessor):
         processor_paths = [
             "opencontractserver.pipeline.post_processors.test_post_processor.TestPostProcessor"
         ]
+
+        # Add debug logging
+        logger.info("Before running post-processors")
+        logger.info(f"Initial export data: {test_export_data}")
+
         modified_zip_bytes, modified_export_data = run_post_processors(
             processor_paths, test_zip_bytes, test_export_data
         )
 
+        # Add more debug logging
+        logger.info("After running post-processors...")
+        logger.info(f"Modified export data: {modified_export_data}")
+
         # Verify post-processor was applied
         self.assertEqual(modified_zip_bytes, test_zip_bytes)  # Zip bytes unchanged
-        logger.info(f"modified_export_data: {modified_export_data}")
+        self.assertIn(
+            "test_field", modified_export_data, "test_field not found in modified data"
+        )
         self.assertEqual(
             modified_export_data["test_field"], "test_value"
         )  # New field added

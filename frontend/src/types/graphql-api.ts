@@ -762,6 +762,8 @@ export type UserExportType = Node & {
   format?: ExportTypes;
   errors: Scalars["String"];
   creator: UserType;
+  postProcessors?: string[];
+  inputKwargs?: Record<any, any>;
   isPublic?: Scalars["Boolean"];
   myPermissions?: PermissionTypes[];
 };
@@ -1401,23 +1403,25 @@ export interface FeedbackType extends Node {
 /** Graphene type for pipeline components. */
 export type PipelineComponentType = {
   /** Name of the component class. */
-  name?: Maybe<Scalars["String"]>;
+  name?: string;
   /** Title of the component. */
-  title?: Maybe<Scalars["String"]>;
+  title?: string;
   /** Description of the component. */
-  description?: Maybe<Scalars["String"]>;
+  description?: string;
   /** Author of the component. */
-  author?: Maybe<Scalars["String"]>;
+  author?: string;
   /** List of dependencies required by the component. */
-  dependencies?: Maybe<Array<Maybe<Scalars["String"]>>>;
+  dependencies?: string[];
   /** Vector size for embedders. */
-  vector_size?: Maybe<Scalars["Int"]>;
+  vectorSize?: number;
+  /** Module name for the component. */
+  moduleName?: string;
   /** List of supported file types. */
-  supported_file_types?: Maybe<Array<Maybe<FileTypeEnum>>>;
+  supportedFileTypes?: FileTypeEnum[];
   /** Type of the component (parser, embedder, or thumbnailer). */
-  component_type?: Maybe<Scalars["String"]>;
+  componentType?: string;
   /** JSONSchema schema for inputs supported from user (experimental - not fully implemented). */
-  input_schema?: Maybe<Scalars["GenericScalar"]>;
+  inputSchema?: Record<any, any>;
 };
 
 /** Graphene type for grouping pipeline components. */
@@ -1429,7 +1433,7 @@ export type PipelineComponentsType = {
   /** List of available thumbnail generators. */
   thumbnailers?: Maybe<Array<Maybe<PipelineComponentType>>>;
   /** List of available post-processors. */
-  post_processors?: Maybe<Array<Maybe<PipelineComponentType>>>;
+  postProcessors?: Maybe<Array<Maybe<PipelineComponentType>>>;
 };
 
 /** Enum for file types. */

@@ -1771,7 +1771,7 @@ export const getAnnotationsByDocumentId = /* GraphQL */ `
   }
 `;
 
-export const listAnnotations = /* GraphQL */ `
+export const listAnnotations = gql`
   query ListAnnotations(
     $filter: ModelAnnotationFilterInput
     $limit: Int
@@ -1808,11 +1808,12 @@ export interface GetPostprocessorsOutput {
   };
 }
 
-export const getPostprocessors = /* GraphQL */ `
+export const GET_POST_PROCESSORS = gql`
   query {
     pipelineComponents {
       postProcessors {
         name
+        moduleName
         title
         description
         author

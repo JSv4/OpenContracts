@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from functools import reduce
-from typing import NoReturn
 
 import django
 from django.contrib.auth import get_user_model
@@ -22,7 +21,7 @@ def set_permissions_for_obj_to_user(
     user_val: int | str | User,
     instance: type[django.db.models.Model],
     permissions: list[PermissionTypes],
-) -> NoReturn:
+) -> None:
 
     """
     Given an instance of a django Model, a user id or instance, and a list of desired permissions,

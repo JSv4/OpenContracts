@@ -87,10 +87,10 @@ RUN pip install sentence-transformers
 RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
 	&& rm -rf /wheels/
 
-# If this is in GitHub action (env var CI = true), install codecov
+# Update the environment variable check
 RUN echo "RUN STAGE GITHUB_ACTIONS: $GITHUB_ACTIONS"
 COPY ./setup_codecov.sh .
-RUN if [ "$GITHUB_ACTIONS" ] ; then echo "GITHUB ACTION MODE" && chmod u+x setup_codecov.sh && ./setup_codecov.sh ; else echo "NOT GITHUB ACTION. DO NOT INSTALL CODECOV" ; fi
+RUN if [ "$GITHUB_ACTIONS" = "true" ] ; then echo "GITHUB ACTION MODE" && chmod u+x setup_codecov.sh && ./setup_codecov.sh ; else echo "NOT GITHUB ACTION. DO NOT INSTALL CODECOV" ; fi
 
 # Create the /models directory and set permissions
 RUN mkdir -p /models && chmod -R 755 /models

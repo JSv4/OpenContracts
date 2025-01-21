@@ -21,7 +21,7 @@ services:
     build:
       context: .
       args:
-        - GITHUB_ACTIONS
+        - GITHUB_ACTIONS=${GITHUB_ACTIONS:-true}
       dockerfile: ./compose/local/django/Dockerfile
     image: opencontractserver_local_django
     container_name: django

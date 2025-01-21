@@ -58,3 +58,7 @@ django-guardian
 # ------------------------------------------------------------------------------
 graphene-django==3.0.0  # TODO - upgrade at some point. Will require some refactoring.
 django-graphql-jwt
+
+# Telemtetry
+# ----------------------------
+posthog==3.8.3  # https://github.com/posthog/posthog-python

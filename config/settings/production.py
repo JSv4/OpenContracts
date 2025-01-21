@@ -175,3 +175,7 @@ LOGGING = {
 CORS_ORIGIN_WHITELIST = ["https://opencontracts.opensource.legal"]
 CORS_ALLOWED_ORIGINS = ["https://opencontracts.opensource.legal"]
 CORS_ALLOW_CREDENTIALS = True
+
+# Telemetry
+# ------------------------------------------------------------------------------
+MODE = "PRODUCTION"

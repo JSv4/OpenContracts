@@ -561,3 +561,14 @@ PARSER_KWARGS = {
 
 # Default embedder
 DEFAULT_EMBEDDER = "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"
+
+# Telemetry Settings
+# ------------------------------------------------------------------------------
+# Please check out the telemtry package or its usage if you want more details.
+# You absolutely can disable this. We are collecting frequence of high-level action
+# per installation (identified by a UUID with no PII) to help improve the application.
+TELEMETRY_ENABLED = True
+# IF you wanted to use your own telemetry, use your API key and host here.
+POSTHOG_API_KEY = "phc_wsTXvOFv6QLDMOA3yLl16awF4DTgILi4MSVLwhwyDeJ"
+POSTHOG_HOST = "https://us.i.posthog.com"
+MODE = "LOCAL"

@@ -44,6 +44,7 @@ from config.graphql.serializers import (
     DocumentSerializer,
     LabelsetSerializer,
 )
+from config.telemetry import record_event
 from opencontractserver.analyzer.models import Analysis, Analyzer
 from opencontractserver.annotations.models import (
     Annotation,
@@ -503,6 +504,14 @@ class StartCorpusFork(graphene.Mutation):
             message = f"Error trying to fork corpus with id {corpus_id}: {e}"
             logger.error(message)
 
+        record_event(
+            "corpus_forked",
+            {
+                "env": settings.MODE,
+                "user_id": info.context.user.id,
+            },
+        )
+
         return StartCorpusFork(ok=ok, message=message, new_corpus=new_corpus)
 
 
@@ -632,6 +641,7 @@ class StartCorpusExport(graphene.Mutation):
 
                 ok = True
                 message = "SUCCESS"
+
             elif export_format == ExportType.FUNSD:
                 chain(
                     chord(
@@ -645,11 +655,21 @@ class StartCorpusExport(graphene.Mutation):
                     ),
                     on_demand_post_processors.si(export.id, corpus_pk),
                 ).apply_async()
+
                 ok = True
                 message = "SUCCESS"
             else:
                 ok = False
                 message = "Unknown Format"
+
+            record_event(
+                "export_started",
+                {
+                    "env": settings.MODE,
+                    "user_id": info.context.user.id,
+                    "export_format": export_format,
+                },
+            )
 
         except Exception as e:
             message = f"StartCorpusExport() - Unable to create export due to error: {e}"
@@ -1637,6 +1657,14 @@ class StartDocumentAnalysisMutation(graphene.Mutation):
                 corpus_action=None,
             )
 
+            record_event(
+                "analysis_started",
+                {
+                    "env": settings.MODE,
+                    "user_id": info.context.user.id,
+                },
+            )
+
             return StartDocumentAnalysisMutation(
                 ok=True, message="SUCCESS", obj=analysis
             )
@@ -1746,6 +1774,15 @@ class CreateFieldset(graphene.Mutation):
         set_permissions_for_obj_to_user(
             info.context.user, fieldset, [PermissionTypes.CRUD]
         )
+
+        record_event(
+            "fieldset_created",
+            {
+                "env": settings.MODE,
+                "user_id": info.context.user.id,
+            },
+        )
+
         return CreateFieldset(ok=True, message="SUCCESS!", obj=fieldset)
 
 
@@ -1930,6 +1967,14 @@ class StartExtract(graphene.Mutation):
         extract.started = timezone.now()
         extract.save()
         run_extract.s(pk, info.context.user.id).apply_async()
+
+        record_event(
+            "extract_started",
+            {
+                "env": settings.MODE,
+                "user_id": info.context.user.id,
+            },
+        )
 
         return StartExtract(ok=True, message="STARTED!", obj=extract)
 

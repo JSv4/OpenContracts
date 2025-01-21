@@ -13,13 +13,11 @@ from opencontractserver.analyzer.views import AnalysisCallbackView
 
 logger = logging.getLogger(__name__)
 
-
 def home_redirect(request):
     scheme = "https" if request.is_secure() else "http"
     host = request.get_host().split(":")[0]
     new_url = f"{scheme}://{host}:3000"
     return HttpResponseRedirect(new_url)
-
 
 urlpatterns = [
     path("", home_redirect, name="home_redirect"),  # Root URL redirect to port 3000

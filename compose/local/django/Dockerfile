@@ -87,11 +87,6 @@ RUN pip install sentence-transformers
 RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
 	&& rm -rf /wheels/
 
-# Update the environment variable check
-RUN echo "RUN STAGE GITHUB_ACTIONS: $GITHUB_ACTIONS"
-COPY ./setup_codecov.sh .
-RUN if [ "$GITHUB_ACTIONS" = "true" ] ; then echo "GITHUB ACTION MODE" && chmod u+x setup_codecov.sh && ./setup_codecov.sh ; else echo "NOT GITHUB ACTION. DO NOT INSTALL CODECOV" ; fi
-
 # Create the /models directory and set permissions
 RUN mkdir -p /models && chmod -R 755 /models
 
@@ -107,10 +102,6 @@ RUN for script in ./model_preloaders/*.py; do \
 # Download spacy models
 RUN python -m spacy download en_core_web_sm
 RUN python -m spacy download en_core_web_lg
-
-# Download GLINER
-# COPY download_GLINER.py .
-# RUN python download_GLINER.py
 
 COPY ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
@@ -132,6 +123,17 @@ COPY ./compose/local/django/celery/flower/start /start-flower
 RUN sed -i 's/\r$//g' /start-flower
 RUN chmod +x /start-flower
 
+# Update the environment variable check - move this closer to the end, after all stages
+COPY ./setup_codecov.sh .
+RUN echo "RUN STAGE GITHUB_ACTIONS: $GITHUB_ACTIONS" && \
+    if [ "$GITHUB_ACTIONS" = "true" ] ; then \
+        echo "GITHUB ACTION MODE" && \
+        chmod u+x setup_codecov.sh && \
+        ./setup_codecov.sh && \
+        ls -la /bin/codecov ; \
+    else \
+        echo "NOT GITHUB ACTION. DO NOT INSTALL CODECOV" ; \
+    fi
 
 # copy application code to WORKDIR
 COPY . ${APP_HOME}

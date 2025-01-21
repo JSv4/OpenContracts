@@ -128,9 +128,14 @@ COPY ./setup_codecov.sh .
 RUN echo "RUN STAGE GITHUB_ACTIONS: $GITHUB_ACTIONS" && \
     if [ "$GITHUB_ACTIONS" = "true" ] ; then \
         echo "GITHUB ACTION MODE" && \
+        apt-get update && \
+        apt-get install -y curl && \
         chmod u+x setup_codecov.sh && \
         ./setup_codecov.sh && \
-        ls -la /bin/codecov ; \
+        ls -la /bin/codecov && \
+        apt-get remove -y curl && \
+        apt-get autoremove -y && \
+        rm -rf /var/lib/apt/lists/* ; \
     else \
         echo "NOT GITHUB ACTION. DO NOT INSTALL CODECOV" ; \
     fi

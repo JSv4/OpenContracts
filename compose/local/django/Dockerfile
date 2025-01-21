@@ -123,7 +123,7 @@ COPY ./compose/local/django/celery/flower/start /start-flower
 RUN sed -i 's/\r$//g' /start-flower
 RUN chmod +x /start-flower
 
-# Update the environment variable check - move this closer to the end, after all stages
+# Update the environment variable check, after all stages
 COPY ./setup_codecov.sh .
 RUN echo "RUN STAGE GITHUB_ACTIONS: $GITHUB_ACTIONS" && \
     if [ "$GITHUB_ACTIONS" = "true" ] ; then \

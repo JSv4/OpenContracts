@@ -27,6 +27,7 @@ interface CreateAndSearchBarProps {
   filters?: JSX.Element;
   placeholder?: string;
   value?: string;
+  style?: React.CSSProperties;
   onChange?: (search_string: string) => any | void;
 }
 
@@ -41,6 +42,7 @@ export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
   filters,
   placeholder = "Search...",
   value = "",
+  style,
   onChange,
 }) => {
   const actionItems = actions.map((action) => (
@@ -62,7 +64,7 @@ export const CreateAndSearchBar: React.FC<CreateAndSearchBarProps> = ({
   };
 
   return (
-    <SearchBarContainer>
+    <SearchBarContainer style={style}>
       <SearchInputWrapper>
         <Form>
           <StyledFormInput

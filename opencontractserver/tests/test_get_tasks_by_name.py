@@ -50,7 +50,7 @@ class GetTaskByNameTestCase(unittest.TestCase):
         # Test with non-existent task
         self.assertIsNone(get_doc_analyzer_task_by_name("non_existent_task"))
 
-    @patch("config.celery_app.tasks")
+    @patch("config.celery_app.app.tasks")
     def test_new_get_task_by_name_exception(self, mock_tasks):
         # Set up the mock to raise an exception
         mock_tasks.get.side_effect = Exception("Celery task lookup failed")

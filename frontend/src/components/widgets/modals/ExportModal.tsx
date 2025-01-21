@@ -1,3 +1,6 @@
+/**
+ * A modal for viewing and searching exports, with lazy loading and infinite scroll.
+ */
 import { useEffect, useRef, useState } from "react";
 import { Button, Modal, Icon, Header, Dimmer, Loader } from "semantic-ui-react";
 import _ from "lodash";
@@ -6,41 +9,48 @@ import { ExportList } from "../../exports/ExportList";
 import { LooseObject } from "../../types";
 import { useLazyQuery, useReactiveVar } from "@apollo/client";
 import {
-  GetExportsInputs,
-  GetExportsOutputs,
+  GetExportsInputs, // Placeholder - do not guess shape
+  GetExportsOutputs, // Placeholder - do not guess shape
   GET_EXPORTS,
 } from "../../../graphql/queries";
 import { ExportObject } from "../../../types/graphql-api";
 import { exportSearchTerm, showExportModal } from "../../../graphql/cache";
 import { toast } from "react-toastify";
 
-export function ExportModal({
-  visible,
-  toggleModal,
-}: {
+export interface ExportModalProps {
+  /**
+   * Whether the modal is currently visible.
+   */
   visible: boolean;
+  /**
+   * Function to toggle the modal visibility.
+   */
   toggleModal: (args?: any) => void | any;
-}) {
+}
+
+export function ExportModal({ visible, toggleModal }: ExportModalProps) {
   const export_search_term = useReactiveVar(exportSearchTerm);
   const show_export_modal = useReactiveVar(showExportModal);
 
   const [exportSearchCache, setExportSearchCache] =
     useState<string>(export_search_term);
+
+  // Sorting props (placeholders only; implement logic in your queries if needed)
   const [orderByCreated, setOrderByCreated] = useState<
     "created" | "-created" | undefined
-  >(); // TODO - implement input
+  >();
   const [orderByFinished, setOrderByFinished] = useState<
     "finished" | "-finished" | undefined
-  >(); // TODO - implement input
+  >();
   const [orderByStarted, setOrderByStarted] = useState<
     "started" | "-started" | undefined
-  >(); // TODO - implement input
+  >();
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Debounched Search Handler
+  // Debounced Search Handler
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   const debouncedExportSearch = useRef(
-    _.debounce((searchTerm) => {
+    _.debounce((searchTerm: string) => {
       exportSearchTerm(searchTerm);
     }, 1000)
   );
@@ -53,7 +63,7 @@ export function ExportModal({
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Setup query variables based on user inputs
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  let exports_variables: LooseObject = {};
+  const exports_variables: LooseObject = {};
   if (export_search_term) {
     exports_variables["name_Contains"] = export_search_term;
   }
@@ -79,6 +89,7 @@ export function ExportModal({
   ] = useLazyQuery<GetExportsOutputs, GetExportsInputs>(GET_EXPORTS, {
     variables: exports_variables,
     fetchPolicy: "network-only",
+    notifyOnNetworkStatusChange: true, // Mirroring usage in Extracts
   });
 
   if (exports_error) {
@@ -92,35 +103,22 @@ export function ExportModal({
     fetchExports();
   }, []);
 
-  // If visibility is toggled and modal is now visible, load the exports.
+  // If visibility is toggled and modal is now visible, load the exports
   useEffect(() => {
     if (show_export_modal) {
       fetchExports();
     }
   }, [show_export_modal]);
 
+  // Refetch on each filter / search param change
   useEffect(() => {
-    refetchExports();
-  }, [export_search_term]);
-
-  useEffect(() => {
-    refetchExports();
-  }, [orderByCreated]);
-
-  useEffect(() => {
-    refetchExports();
-  }, [orderByStarted]);
-
-  useEffect(() => {
-    refetchExports();
-  }, [orderByFinished]);
+    refetchExports && refetchExports();
+  }, [export_search_term, orderByCreated, orderByStarted, orderByFinished]);
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Shape GraphQL Data
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  const export_data = exports_response?.userexports?.edges
-    ? exports_response.userexports.edges
-    : [];
+  const export_data = exports_response?.userexports?.edges ?? [];
   const export_items = export_data
     .map((edge) => (edge ? edge.node : undefined))
     .filter((item): item is ExportObject => !!item);
@@ -149,12 +147,10 @@ export function ExportModal({
         </div>
       </Modal.Header>
       <Modal.Content>
-        {exports_loading ? (
+        {exports_loading && (
           <Dimmer active inverted>
             <Loader inverted>Loading...</Loader>
           </Dimmer>
-        ) : (
-          <></>
         )}
         <div
           style={{
@@ -166,10 +162,11 @@ export function ExportModal({
           }}
         >
           <CreateAndSearchBar
-            onChange={(value) => handleCorpusSearchChange(value)}
+            onChange={(value: string) => handleCorpusSearchChange(value)}
             actions={[]}
             placeholder="Search for export by name..."
             value={exportSearchCache}
+            style={{ flex: 1 }}
           />
         </div>
         <ExportList
@@ -177,7 +174,7 @@ export function ExportModal({
           pageInfo={exports_response?.userexports?.pageInfo}
           loading={exports_loading}
           fetchMore={fetchMoreExports}
-          onDelete={(id) => console.log("Delete", id)}
+          onDelete={(id: string) => console.log("Delete", id)}
         />
       </Modal.Content>
       <Modal.Actions>

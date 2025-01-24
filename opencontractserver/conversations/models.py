@@ -1,19 +1,17 @@
-import django
-
-from django.db import models
 from typing import Literal
 
+import django
+from django.contrib.auth import get_user_model
+from django.db import models
 from django.forms import ValidationError
+from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.defaults import jsonfield_default_value
 from opencontractserver.shared.fields import NullableJSONField
-
-from django.contrib.auth import get_user_model
-from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
+from opencontractserver.shared.Models import BaseOCModel
 
 User = get_user_model()
 
@@ -34,6 +32,7 @@ class ConversationGroupObjectPermission(GroupObjectPermissionBase):
         "Conversation", on_delete=django.db.models.CASCADE
     )
     # enabled = False
+
 
 class Conversation(BaseOCModel):
     """
@@ -60,7 +59,7 @@ class Conversation(BaseOCModel):
         on_delete=models.SET_NULL,
         related_name="conversations",
         help_text="The corpus to which this conversation belongs",
-        blank=True, 
+        blank=True,
         null=True,
     )
     chat_with_document = models.ForeignKey(
@@ -68,14 +67,15 @@ class Conversation(BaseOCModel):
         on_delete=models.SET_NULL,
         related_name="conversations",
         help_text="The document to which this conversation belongs",
-        blank=True, 
+        blank=True,
         null=True,
     )
 
     class Meta:
         constraints = [
             django.db.models.CheckConstraint(
-                check=django.db.models.Q(chat_with_corpus__isnull=True) | django.db.models.Q(chat_with_document__isnull=True),
+                check=django.db.models.Q(chat_with_corpus__isnull=True)
+                | django.db.models.Q(chat_with_document__isnull=True),
                 name="one_chat_field_null_constraint",
             ),
         ]
@@ -93,7 +93,9 @@ class Conversation(BaseOCModel):
         Ensure that only one of chat_with_corpus or chat_with_document is set.
         """
         if self.chat_with_corpus and self.chat_with_document:
-            raise ValidationError("Only one of chat_with_corpus or chat_with_document can be set.")
+            raise ValidationError(
+                "Only one of chat_with_corpus or chat_with_document can be set."
+            )
 
     def __str__(self) -> str:
         return f"Conversation {self.pk} - {self.title if self.title else 'Untitled'}"
@@ -105,7 +107,7 @@ class Message(BaseOCModel):
     Messages follow a standardized format to indicate their type,
     content, and any additional data.
     """
-    
+
     class Meta:
         permissions = (
             ("permission_message", "permission message"),
@@ -146,13 +148,13 @@ class Message(BaseOCModel):
         auto_now_add=True,
         help_text="Timestamp when the message was created",
     )
-    
+
     source_document = models.ForeignKey(
         Document,
         on_delete=models.SET_NULL,
         related_name="messages",
         help_text="The document that this message is based on",
-        blank=True, 
+        blank=True,
         null=True,
     )
     source_annotations = models.ManyToManyField(

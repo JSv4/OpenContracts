@@ -10,7 +10,9 @@ from django.db import connection, connections
 from django.db.models.signals import post_save
 from django.db.utils import OperationalError
 from django.test import TransactionTestCase, override_settings
+from graphql_jwt.shortcuts import get_token
 
+from config.asgi import application
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.annotations.signals import process_annot_on_create_atomic
 from opencontractserver.documents.models import Document
@@ -187,3 +189,21 @@ class BaseFixtureTestCase(TransactionTestCase):
                         self.copy_fixture_file(file_path, media_path)
                         setattr(doc, field, media_path)
             doc.save()
+
+
+class WebsocketFixtureBaseTestCase(BaseFixtureTestCase):
+    """
+    Inherits from BaseFixtureTestCase to load fixtures (test_data.json) and
+    provide a realistic set of data for WebSocket tests. This ensures that
+    we have a user named 'testuser' and at least one Document from the fixtures.
+    """
+
+    def setUp(self) -> None:
+        """
+        Hooks into the BaseFixtureTestCase setUp, which loads a user (self.user)
+        and any documents (self.doc, self.docs, etc.) from the fixture.
+        We then create a token for the fixture user.
+        """
+        super().setUp()
+        self.token = get_token(user=self.user)
+        self.application = application

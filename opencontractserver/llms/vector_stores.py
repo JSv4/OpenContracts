@@ -2,7 +2,7 @@
 import logging
 from typing import Any, Optional
 
-from asgiref.sync import sync_to_async
+from channels.db import database_sync_to_async
 from django.db import models
 from django.db.models import Q, QuerySet
 from llama_index.core.schema import BaseNode, TextNode
@@ -245,4 +245,4 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         self, query: VectorStoreQuery, **kwargs: Any
     ) -> VectorStoreQueryResult:
         """Query the vector store asynchronously."""
-        return await sync_to_async(self.query)(query, **kwargs)
+        return await database_sync_to_async(self.query)(query, **kwargs)

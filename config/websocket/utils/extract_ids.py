@@ -8,4 +8,3 @@ def extract_document_id(path: str) -> str:
         return match.group("document_id")
     else:
         raise ValueError(f"Invalid path format: {path}")
-

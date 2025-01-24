@@ -8,11 +8,11 @@ from unittest.mock import MagicMock
 
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
-from django.test import TestCase
 from django.db import transaction
-from config.asgi import application
+from django.test import TestCase
 from graphql_jwt.shortcuts import get_token
 
+from config.asgi import application
 from opencontractserver.documents.models import Document
 
 User = get_user_model()
@@ -59,11 +59,23 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(TestCase):
         """
         self.application = application
 
-    @mock.patch("config.websocket.consumers.document_conversation.HuggingFaceEmbedding", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.OpenAIAgent", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.OpenAI", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.VectorStoreIndex", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.Settings", new=MagicMock())
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.HuggingFaceEmbedding",
+        new=MagicMock(),
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.OpenAIAgent", new=MagicMock()
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.OpenAI", new=MagicMock()
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.VectorStoreIndex",
+        new=MagicMock(),
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.Settings", new=MagicMock()
+    )
     async def test_middleware_with_valid_token(self) -> None:
         """
         Verifies that providing a valid token results in successful connection
@@ -77,27 +89,39 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(TestCase):
         connected, _ = await communicator.connect()
         self.assertTrue(
             connected,
-            "WebSocket should connect with a valid token (mocked LlamaIndex)."
+            "WebSocket should connect with a valid token (mocked LlamaIndex).",
         )
 
         scope_user = communicator.scope["user"]
         self.assertEqual(
             scope_user.username,
             self.user.username,
-            "Scope user should match the token user."
+            "Scope user should match the token user.",
         )
         self.assertTrue(
             scope_user.is_authenticated,
-            "Scope user should be authenticated for a valid token."
+            "Scope user should be authenticated for a valid token.",
         )
 
         await communicator.disconnect()
 
-    @mock.patch("config.websocket.consumers.document_conversation.HuggingFaceEmbedding", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.OpenAIAgent", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.OpenAI", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.VectorStoreIndex", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.Settings", new=MagicMock())
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.HuggingFaceEmbedding",
+        new=MagicMock(),
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.OpenAIAgent", new=MagicMock()
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.OpenAI", new=MagicMock()
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.VectorStoreIndex",
+        new=MagicMock(),
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.Settings", new=MagicMock()
+    )
     async def test_middleware_with_invalid_token(self) -> None:
         """
         Verifies behavior when an invalid token is provided.
@@ -112,21 +136,28 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(TestCase):
         logger.info(f"Connected: {connected}, b: {code}")
 
         self.assertFalse(
-            connected,
-            "WebSocket is connected but connection should bounce."
+            connected, "WebSocket is connected but connection should bounce."
         )
 
-        self.assertEqual(
-            code,
-            4000,
-            "WebSocket should bounce with code 4000."
-        )
+        self.assertEqual(code, 4000, "WebSocket should bounce with code 4000.")
 
-    @mock.patch("config.websocket.consumers.document_conversation.HuggingFaceEmbedding", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.OpenAIAgent", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.OpenAI", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.VectorStoreIndex", new=MagicMock())
-    @mock.patch("config.websocket.consumers.document_conversation.Settings", new=MagicMock())
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.HuggingFaceEmbedding",
+        new=MagicMock(),
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.OpenAIAgent", new=MagicMock()
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.OpenAI", new=MagicMock()
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.VectorStoreIndex",
+        new=MagicMock(),
+    )
+    @mock.patch(
+        "config.websocket.consumers.document_conversation.Settings", new=MagicMock()
+    )
     async def test_middleware_without_token(self) -> None:
         """
         Verifies behavior when no token is provided.
@@ -138,17 +169,12 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(TestCase):
         )
         connected, code = await communicator.connect()
 
-        logger.info(f"test_middleware_without_token - Connected: {connected}, b: {code}")
+        logger.info(
+            f"test_middleware_without_token - Connected: {connected}, b: {code}"
+        )
 
         self.assertFalse(
-            connected,
-            "WebSocket is connected but connection should bounce."
+            connected, "WebSocket is connected but connection should bounce."
         )
 
-        self.assertEqual(
-            code,
-            4000,
-            "WebSocket should bounce with code 4000."
-        )
-
-        
+        self.assertEqual(code, 4000, "WebSocket should bounce with code 4000.")

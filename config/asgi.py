@@ -7,8 +7,8 @@ For more information on this file, see
 https://docs.djangoproject.com/en/dev/howto/deployment/asgi/
 
 """
-import os
 import logging
+import os
 
 import django
 
@@ -22,8 +22,10 @@ from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 from django.core.asgi import get_asgi_application  # noqa: E402
 from django.urls import re_path  # noqa: E402
 
+from config.websocket.consumers.document_conversation import (  # noqa: E402
+    DocumentQueryConsumer,
+)
 from config.websocket.middleware import GraphQLJWTTokenAuthMiddleware  # noqa: E402
-from config.websocket.consumers.document_conversation import DocumentQueryConsumer  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -50,10 +52,12 @@ websocket_urlpatterns = [
 for pattern in websocket_urlpatterns:
     logger.info(f"Registered WebSocket URL pattern: {pattern.pattern}")
 
+
 class LoggingMiddleware:
     """
     Simple logging middleware that logs websocket connection attempts.
     """
+
     def __init__(self, app):
         self.app = app
 
@@ -67,6 +71,7 @@ class LoggingMiddleware:
                 logger.warning("No user in scope")
         return await self.app(scope, receive, send)
 
+
 # Create the ASGI application with proper middleware order
 # 1. Protocol routing
 # 2. Authentication middleware
@@ -75,9 +80,7 @@ class LoggingMiddleware:
 application = ProtocolTypeRouter(
     {
         "http": get_asgi_application(),
-        "websocket": GraphQLJWTTokenAuthMiddleware(
-            URLRouter(websocket_urlpatterns)
-        ),
+        "websocket": GraphQLJWTTokenAuthMiddleware(URLRouter(websocket_urlpatterns)),
     }
 )
 

@@ -2,7 +2,7 @@
 from django.contrib import admin
 from guardian.admin import GuardedModelAdmin
 
-from opencontractserver.conversations.models import Conversation, Message
+from opencontractserver.conversations.models import ChatMessage, Conversation
 
 
 @admin.register(Conversation)
@@ -14,13 +14,13 @@ class ConversationAdmin(GuardedModelAdmin):
         "created_at",
     ]
     search_fields = ["id", "title", "creator__username"]
-    list_filter = ("is_public", "created", "modified", "error", "backend_lock")
+    list_filter = ("is_public", "created", "modified")
     raw_id_fields = ("creator", "chat_with_document", "chat_with_corpus")
     date_hierarchy = "created_at"
 
 
-@admin.register(Message)
-class MessageAdmin(GuardedModelAdmin):
+@admin.register(ChatMessage)
+class ChatMessageAdmin(GuardedModelAdmin):
     list_display_links = ["id"]
     list_display = [
         "id",

@@ -20,24 +20,29 @@ MessageType = Literal["ASYNC_START", "ASYNC_CONTENT", "ASYNC_FINISH", "SYNC_CONT
 
 
 class ConversationUserObjectPermission(UserObjectPermissionBase):
+    """
+    Permissions for Conversation objects at the user level.
+    """
+
     content_object = django.db.models.ForeignKey(
         "Conversation", on_delete=django.db.models.CASCADE
     )
-    # enabled = False
 
 
-# Model for Django Guardian permissions.
 class ConversationGroupObjectPermission(GroupObjectPermissionBase):
+    """
+    Permissions for Conversation objects at the group level.
+    """
+
     content_object = django.db.models.ForeignKey(
         "Conversation", on_delete=django.db.models.CASCADE
     )
-    # enabled = False
 
 
 class Conversation(BaseOCModel):
     """
     Stores high-level information about an agent-based conversation.
-    Each conversation can have multiple messages associated with it.
+    Each conversation can have multiple messages (now renamed to ChatMessage) associated with it.
     Only one of chat_with_corpus or chat_with_document can be set.
     """
 
@@ -101,21 +106,21 @@ class Conversation(BaseOCModel):
         return f"Conversation {self.pk} - {self.title if self.title else 'Untitled'}"
 
 
-class Message(BaseOCModel):
+class ChatMessage(BaseOCModel):
     """
-    Represents a single message within an agent conversation.
-    Messages follow a standardized format to indicate their type,
+    Represents a single chat message within an agent conversation.
+    ChatMessages follow a standardized format to indicate their type,
     content, and any additional data.
     """
 
     class Meta:
         permissions = (
-            ("permission_message", "permission message"),
-            ("publish_message", "publish message"),
-            ("create_message", "create message"),
-            ("read_message", "read message"),
-            ("update_message", "update message"),
-            ("remove_message", "delete message"),
+            ("permission_chatmessage", "permission chatmessage"),
+            ("publish_chatmessage", "publish chatmessage"),
+            ("create_chatmessage", "create chatmessage"),
+            ("read_chatmessage", "read chatmessage"),
+            ("update_chatmessage", "update chatmessage"),
+            ("remove_chatmessage", "delete chatmessage"),
         )
 
     TYPE_CHOICES = (
@@ -127,8 +132,8 @@ class Message(BaseOCModel):
     conversation = models.ForeignKey(
         Conversation,
         on_delete=models.CASCADE,
-        related_name="messages",
-        help_text="The conversation to which this message belongs",
+        related_name="chat_messages",
+        help_text="The conversation to which this chat message belongs",
     )
     msg_type = models.CharField(
         max_length=32,
@@ -136,56 +141,62 @@ class Message(BaseOCModel):
         help_text="The type of message (SYSTEM, HUMAN, or LLM)",
     )
     content = models.TextField(
-        help_text="The textual content of the message",
+        help_text="The textual content of the chat message",
     )
     data = NullableJSONField(
         default=jsonfield_default_value,
         null=True,
         blank=True,
-        help_text="Additional data associated with the message (stored as JSON)",
+        help_text="Additional data associated with the chat message (stored as JSON)",
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
-        help_text="Timestamp when the message was created",
+        help_text="Timestamp when the chat message was created",
     )
 
     source_document = models.ForeignKey(
         Document,
         on_delete=models.SET_NULL,
-        related_name="messages",
-        help_text="The document that this message is based on",
+        related_name="chat_messages",
+        help_text="A document that this chat message is based on",
         blank=True,
         null=True,
     )
     source_annotations = models.ManyToManyField(
         Annotation,
-        related_name="messages",
-        help_text="The annotations that this message is based on",
+        related_name="chat_messages",
+        help_text="Annotations that this chat message is based on",
         blank=True,
     )
     created_annotations = models.ManyToManyField(
         Annotation,
-        related_name="created_by_message",
-        help_text="The annotations that this message created",
+        related_name="created_by_chat_message",
+        help_text="Annotations that this chat message created",
         blank=True,
     )
 
     def __str__(self) -> str:
         return (
-            f"Message {self.pk} - {self.msg_type} "
+            f"ChatMessage {self.pk} - {self.msg_type} "
             f"in conversation {self.conversation.pk}"
         )
 
 
-class MessageUserObjectPermission(UserObjectPermissionBase):
+class ChatMessageUserObjectPermission(UserObjectPermissionBase):
+    """
+    Permissions for ChatMessage objects at the user level.
+    """
+
     content_object = django.db.models.ForeignKey(
-        "Message", on_delete=django.db.models.CASCADE
+        "ChatMessage", on_delete=django.db.models.CASCADE
     )
-    # enabled = False
 
 
-# Model for Django Guardian permissions.
-class MessageGroupObjectPermission(GroupObjectPermissionBase):
+class ChatMessageGroupObjectPermission(GroupObjectPermissionBase):
+    """
+    Permissions for ChatMessage objects at the group level.
+    """
+
     content_object = django.db.models.ForeignKey(
-        "Message", on_delete=django.db.models.CASCADE
+        "ChatMessage", on_delete=django.db.models.CASCADE
     )

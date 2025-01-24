@@ -15,11 +15,11 @@ public_group_permissions = {
         "delete_conversation",
         "permission_conversation",
         
-        "create_message",
-        "read_message",
-        "update_message", 
-        "delete_message",
-        "permission_message",
+        "create_chatmessage",
+        "read_chatmessage",
+        "update_chatmessage", 
+        "delete_chatmessage",
+        "permission_chatmessage",
     ]
 }
 

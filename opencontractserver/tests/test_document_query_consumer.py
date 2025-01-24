@@ -6,24 +6,18 @@ test_websocket_auth.py but exercises the actual agent code.
 
 import json
 import logging
-from typing import Any, Dict, List
-from unittest import mock
-from unittest.mock import patch
+from typing import Any
 
 import vcr
 from channels.testing import WebsocketCommunicator
-from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import transaction
-from graphql_jwt.shortcuts import get_token
 
-from config.asgi import application
-from opencontractserver.documents.models import Document
 from opencontractserver.tests.base import WebsocketFixtureBaseTestCase
 
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
+
 
 class DocumentQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
     """
@@ -50,8 +44,7 @@ class DocumentQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
 
         connected, _ = await communicator.connect()
         self.assertTrue(
-            connected,
-            "WebSocket should connect successfully with a valid token."
+            connected, "WebSocket should connect successfully with a valid token."
         )
 
         # Confirm that the scope user is authenticated
@@ -65,11 +58,13 @@ class DocumentQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
         )
 
         # Gather messages until we encounter "ASYNC_FINISH" or "SYNC_CONTENT"
-        messages: List[Dict[str, Any]] = []
+        messages: list[dict[str, Any]] = []
         while True:
             try:
                 raw_message = await communicator.receive_from(timeout=10)
-                print(f"raw_message - test_document_query_consumer_with_valid_token: {raw_message}")
+                print(
+                    f"raw_message - test_document_query_consumer_with_valid_token: {raw_message}"
+                )
                 msg_json = json.loads(raw_message)
                 messages.append(msg_json)
                 if msg_json.get("type") in ("ASYNC_FINISH", "SYNC_CONTENT"):
@@ -79,9 +74,11 @@ class DocumentQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
 
         self.assertTrue(
             len(messages) == 32,
-            "Should receive 32 messages from the LLM query (per VCR cassette)."
+            "Should receive 32 messages from the LLM query (per VCR cassette).",
         )
-        logger.info(f"Received {len(messages)} messages from DocumentQueryConsumer: {messages}")
+        logger.info(
+            f"Received {len(messages)} messages from DocumentQueryConsumer: {messages}"
+        )
 
         await communicator.disconnect()
 
@@ -97,14 +94,11 @@ class DocumentQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
             f"ws/document/{self.doc.id}/query/?token=not_a_real_token",
         )
         connected, close_code = await communicator.connect()
-        self.assertFalse(
-            connected,
-            "Connection should fail with invalid token."
-        )
+        self.assertFalse(connected, "Connection should fail with invalid token.")
         self.assertEqual(
             close_code,
             4000,
-            "WebSocket should reject the connection with code 4000 for an invalid token."
+            "WebSocket should reject the connection with code 4000 for an invalid token.",
         )
 
     async def test_document_query_consumer_without_token(self) -> None:
@@ -118,14 +112,11 @@ class DocumentQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
             f"ws/document/{self.doc.id}/query/",
         )
         connected, close_code = await communicator.connect()
-        self.assertFalse(
-            connected,
-            "Connection should fail with no token."
-        )
+        self.assertFalse(connected, "Connection should fail with no token.")
         self.assertEqual(
             close_code,
             4000,
-            "WebSocket should reject the connection with code 4000 if token is missing."
+            "WebSocket should reject the connection with code 4000 if token is missing.",
         )
 
     async def test_document_query_consumer_with_invalid_document(self) -> None:
@@ -137,13 +128,15 @@ class DocumentQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
             self.application,
             f"ws/document/999999/query/?token={self.token}",
         )
-        
+
         connected, close_code = await communicator.connect()
         print(f"Connection result: {connected}, {close_code}")
-        
+
         raw_message = await communicator.receive_from(timeout=10)
         print(f"raw_message: {raw_message}")
         msg_json = json.loads(raw_message)
-        
-        self.assertTrue(msg_json.get("data", {}).get("error", None), "Requested Document not found.")
+
+        self.assertTrue(
+            msg_json.get("data", {}).get("error", None), "Requested Document not found."
+        )
         await communicator.disconnect()

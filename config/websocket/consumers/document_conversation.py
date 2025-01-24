@@ -21,7 +21,7 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
 
 from config.websocket.utils.extract_ids import extract_document_id
-from opencontractserver.conversations.models import Conversation, Message
+from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
 
@@ -199,7 +199,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             # Store user's query as a HUMAN message, if conversation is present
             if self.conversation is not None:
                 logger.debug("Creating HUMAN message record")
-                await database_sync_to_async(Message.objects.create)(
+                await database_sync_to_async(ChatMessage.objects.create)(
                     creator=self.scope["user"],
                     conversation=self.conversation,
                     msg_type="HUMAN",
@@ -220,7 +220,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             llm_message = None
             if self.conversation is not None:
                 logger.debug("Creating LLM message stub")
-                llm_message = await database_sync_to_async(Message.objects.create)(
+                llm_message = await database_sync_to_async(ChatMessage.objects.create)(
                     creator=self.scope["user"],
                     conversation=self.conversation,
                     msg_type="LLM",

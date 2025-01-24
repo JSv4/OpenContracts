@@ -22,6 +22,7 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
+from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentAnalysisRow
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
@@ -692,6 +693,20 @@ class CorpusStatsType(graphene.ObjectType):
     total_comments = graphene.Int()
     total_analyses = graphene.Int()
     total_extracts = graphene.Int()
+
+
+class ConversationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    class Meta:
+        model = Conversation
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+
+class MessageType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    class Meta:
+        model = ChatMessage
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
 
 
 class UserFeedbackType(AnnotatePermissionsForReadMixin, DjangoObjectType):

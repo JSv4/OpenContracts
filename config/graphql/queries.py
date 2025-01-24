@@ -5,7 +5,7 @@ from typing import Optional
 
 import graphene
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from graphene import relay
 from graphene.types.generic import GenericScalar
 from graphene_django.fields import DjangoConnectionField
@@ -38,6 +38,7 @@ from config.graphql.graphene_types import (
     AnnotationType,
     AssignmentType,
     ColumnType,
+    ConversationType,
     CorpusQueryType,
     CorpusStatsType,
     CorpusType,
@@ -64,6 +65,7 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
+from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
@@ -1120,3 +1122,60 @@ class Query(graphene.ObjectType):
             embedders=components["embedders"],
             thumbnailers=components["thumbnailers"],
         )
+
+    conversation = graphene.Field(
+        ConversationType,
+        document_id=graphene.ID(required=False),
+        corpus_id=graphene.ID(required=False),
+        description=(
+            "Retrieve a conversation based on either a document ID or a corpus ID. "
+            "Provide exactly one of the two."
+        ),
+    )
+
+    def resolve_conversation(
+        self, info, document_id: Optional[str] = None, corpus_id: Optional[str] = None
+    ) -> Optional[ConversationType]:
+        """
+        Resolver to fetch a Conversation along with its Messages based on either document_id or corpus_id.
+        Exactly one of document_id or corpus_id must be provided.
+
+        Args:
+            info: GraphQL execution info.
+            document_id (Optional[str]): The global ID of the Document.
+            corpus_id (Optional[str]): The global ID of the Corpus.
+
+        Returns:
+            Optional[ConversationType]: The requested Conversation with its Messages, or None if not found.
+
+        Raises:
+            ValueError: If neither or both of document_id and corpus_id are provided.
+        """
+        if (document_id is None and corpus_id is None) or (
+            document_id is not None and corpus_id is not None
+        ):
+            raise ValueError(
+                "You must provide exactly one of document_id or corpus_id."
+            )
+
+        try:
+            if document_id:
+                django_doc_pk = from_global_id(document_id)[1]
+                conversation = Conversation.objects.prefetch_related(
+                    Prefetch(
+                        "chat_messages",
+                        queryset=ChatMessage.objects.order_by("created_at"),
+                    )
+                ).get(chat_with_document_id=django_doc_pk)
+            else:
+                django_corpus_pk = from_global_id(corpus_id)[1]
+                conversation = Conversation.objects.prefetch_related(
+                    Prefetch(
+                        "chat_messages",
+                        queryset=ChatMessage.objects.order_by("created_at"),
+                    )
+                ).get(chat_with_corpus_id=django_corpus_pk)
+        except Conversation.DoesNotExist:
+            return None
+
+        return conversation

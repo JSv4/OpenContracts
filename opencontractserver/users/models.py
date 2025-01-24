@@ -1,3 +1,5 @@
+import logging
+
 import django
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -10,6 +12,8 @@ from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from opencontractserver.shared.utils import calc_oc_file_path
 from opencontractserver.types.enums import ExportType
 from opencontractserver.users.validators import UserUnicodeUsernameValidator
+
+logger = logging.getLogger(__name__)
 
 
 class User(AbstractUser):
@@ -71,6 +75,9 @@ class User(AbstractUser):
         # after save user has ID
         # add user to group only after creating
         if created and not self.username == "Anonymous":
+            logger.info(
+                f"Adding user {self.username} to group {settings.DEFAULT_PERMISSIONS_GROUP}"
+            )
             my_group = Group.objects.get(name=settings.DEFAULT_PERMISSIONS_GROUP)
             self.groups.add(my_group)
 

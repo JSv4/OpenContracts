@@ -16,7 +16,7 @@ requests==2.*  # https://requests.readthedocs.io/en/latest/
 
 # Django
 # ------------------------------------------------------------------------------
-django==4.2.16  # pyup: < 4.0  # https://www.djangoproject.com/
+django==4.2.18  # pyup: < 4.0  # https://www.djangoproject.com/
 django-environ==0.9.0  # https://github.com/joke2k/django-environ
 django-model-utils==4.3.1  # https://github.com/jazzband/django-model-utils
 django-crispy-forms==2.3  # https://github.com/django-crispy-forms/django-crispy-forms
@@ -29,8 +29,9 @@ whitenoise==6.7.0
 django-tree-queries
 django-cte==1.3.3  # https://github.com/dimagi/django-cte
 pgvector  # For vector embeddings
-channels==1.1.8  # https://github.com/django/channels
+channels==4.2.0  # https://github.com/django/channels
 daphne==4.1.2  # https://github.com/django/daphne
+channels-redis==4.2.1
 
 
 # Django REST Framework

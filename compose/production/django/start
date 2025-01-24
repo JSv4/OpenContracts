@@ -4,8 +4,6 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-
 python /app/manage.py collectstatic --noinput
 
-
-/usr/local/bin/gunicorn config.wsgi --bind 0.0.0.0:5000 --chdir=/app --timeout $DJANGO_WORKER_TIMEOUT
+daphne -b 0.0.0.0 -p 5000 --websocket-timeout $DJANGO_WORKER_TIMEOUT config.asgi:application

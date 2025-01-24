@@ -71,9 +71,29 @@ ROOT_URLCONF = "config.urls"
 # https://docs.djangoproject.com/en/dev/ref/settings/#wsgi-application
 WSGI_APPLICATION = "config.wsgi.application"
 
+REDIS_URL = env("REDIS_URL", default="redis://127.0.0.1:6379/0")
+host, port = REDIS_URL[:-2].split("://")[1].split(":")
+ASGI_APPLICATION = "config.asgi.application"
+try:
+    from channels_redis.core import RedisChannelLayer  # noqa
+
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [(host, int(port))],
+            },
+        },
+    }
+except ImportError:
+    print(
+        "channels_redis is not installed. Please install it with: pip install channels-redis"
+    )
+
 # APPS
 # ------------------------------------------------------------------------------
 DJANGO_APPS = [
+    "daphne",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -85,6 +105,7 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    "channels",
     "corsheaders",
     "django_filters",
     "graphene_django",
@@ -105,6 +126,7 @@ LOCAL_APPS = [
     "opencontractserver.analyzer",
     "opencontractserver.extracts",
     "opencontractserver.feedback",
+    "opencontractserver.conversations",
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -384,7 +406,8 @@ LOGGING = {
         "verbose": {
             "format": "%(levelname)s %(asctime)s %(module)s "
             "%(process)d %(thread)d %(message)s"
-        }
+        },
+        "simple": {"format": "%(levelname)s %(message)s"},
     },
     "handlers": {
         "console": {
@@ -394,6 +417,28 @@ LOGGING = {
         }
     },
     "root": {"level": "INFO", "handlers": ["console"]},
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "channels": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "config.websocket": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "config.asgi": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+    },
 }
 
 # Celery
@@ -402,7 +447,7 @@ if USE_TZ:
     # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-timezone
     CELERY_TIMEZONE = TIME_ZONE
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-broker_url
-CELERY_BROKER_URL = env("REDIS_URL")
+CELERY_BROKER_URL = REDIS_URL
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-result_backend
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-accept_content

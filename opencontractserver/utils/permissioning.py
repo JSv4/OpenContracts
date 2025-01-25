@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from functools import reduce
-from typing import NoReturn
 
 import django
 from django.contrib.auth import get_user_model

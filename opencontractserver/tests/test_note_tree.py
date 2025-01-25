@@ -1,15 +1,13 @@
 import json
 import logging
-from django.test import TestCase
+
 from django.contrib.auth import get_user_model
-from django.db import transaction
 from graphene.test import Client
-from graphql_relay import to_global_id, from_global_id
+from graphql_relay import from_global_id, to_global_id
 
 from config.graphql.schema import schema
+from opencontractserver.annotations.models import Annotation, AnnotationLabel, Note
 from opencontractserver.corpuses.models import Corpus
-from opencontractserver.documents.models import Document
-from opencontractserver.annotations.models import Note, Annotation, AnnotationLabel
 from opencontractserver.tests.base import BaseFixtureTestCase
 
 User = get_user_model()
@@ -25,7 +23,7 @@ class NoteTreeTestCase(BaseFixtureTestCase):
     maxDiff = None
 
     def setUp(self):
-        
+
         super().setUp()
 
         self.client = Client(schema, context_value=TestContext(self.user))
@@ -35,7 +33,7 @@ class NoteTreeTestCase(BaseFixtureTestCase):
         self.corpus = Corpus.objects.create(title="Test Corpus", creator=self.user)
         self.doc.corpus = self.corpus
         self.doc.save()
-        
+
         # Optional: Create an annotation to test note-to-annotation linking
         self.annotation_label = AnnotationLabel.objects.create(
             text="Test Label", creator=self.user
@@ -101,9 +99,7 @@ class NoteTreeTestCase(BaseFixtureTestCase):
             {
                 "id": to_global_id("NoteType", self.child_note_1.id),
                 "content": "Child Content 1",
-                "children": [
-                    to_global_id("NoteType", self.grandchild_note.id)
-                ],
+                "children": [to_global_id("NoteType", self.grandchild_note.id)],
             },
             {
                 "id": to_global_id("NoteType", self.child_note_2.id),
@@ -153,9 +149,7 @@ class NoteTreeTestCase(BaseFixtureTestCase):
             {
                 "id": to_global_id("NoteType", self.child_note_1.id),
                 "content": "Child Content 1",
-                "children": [
-                    to_global_id("NoteType", self.grandchild_note.id)
-                ],
+                "children": [to_global_id("NoteType", self.grandchild_note.id)],
             },
             {
                 "id": to_global_id("NoteType", self.child_note_2.id),
@@ -265,7 +259,11 @@ class NoteTreeTestCase(BaseFixtureTestCase):
         self.assertEqual(len(full_tree), total_nodes)
 
         root_node = next(
-            (node for node in full_tree if node["id"] == to_global_id("NoteType", root_note.id)),
+            (
+                node
+                for node in full_tree
+                if node["id"] == to_global_id("NoteType", root_note.id)
+            ),
             None,
         )
         self.assertIsNotNone(root_node)
@@ -287,4 +285,4 @@ class NoteTreeTestCase(BaseFixtureTestCase):
         while current:
             ancestors.append(current.id)
             current = current.parent
-        return ancestors 
+        return ancestors

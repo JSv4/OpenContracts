@@ -3,15 +3,14 @@ from django.core.files.base import ContentFile
 from django.test import TestCase
 from graphene.test import Client
 from graphql_relay import to_global_id
-from typing import List
 
 from config.graphql.schema import schema
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.utils.permissioning import (
-    set_permissions_for_obj_to_user,
     PermissionTypes,
+    set_permissions_for_obj_to_user,
 )
 
 User = get_user_model()
@@ -72,7 +71,7 @@ class GraphQLConversationTestCase(TestCase):
         )
 
         # Create messages for the conversation
-        self.messages: List[ChatMessage] = [
+        self.messages: list[ChatMessage] = [
             ChatMessage.objects.create(
                 creator=self.user,
                 conversation=self.conversation,
@@ -106,7 +105,7 @@ class GraphQLConversationTestCase(TestCase):
         )
 
         # Create messages for the document conversation
-        self.doc_messages: List[ChatMessage] = [
+        self.doc_messages: list[ChatMessage] = [
             ChatMessage.objects.create(
                 creator=self.user,
                 conversation=self.doc_conversation,
@@ -284,9 +283,12 @@ class GraphQLConversationTestCase(TestCase):
         edges = data.get("conversations", {}).get("edges", [])
 
         # Titles that belong to our user
-        user_conversation_titles = {"Test Conversation with Corpus", "Test Conversation with Document"}
+        user_conversation_titles = {
+            "Test Conversation with Corpus",
+            "Test Conversation with Document",
+        }
 
-        found_titles = set(conv["node"]["title"] for conv in edges)
+        found_titles = {conv["node"]["title"] for conv in edges}
         # The other user's conversation's title
         other_user_convo_title = "Other User's Private Conversation"
 

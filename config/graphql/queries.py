@@ -19,6 +19,7 @@ from config.graphql.filters import (
     AnalyzerFilter,
     AssignmentFilter,
     ColumnFilter,
+    ConversationFilter,
     CorpusFilter,
     CorpusQueryFilter,
     DatacellFilter,
@@ -31,7 +32,6 @@ from config.graphql.filters import (
     LabelFilter,
     LabelsetFilter,
     RelationshipFilter,
-    ConversationFilter,
 )
 from config.graphql.graphene_types import (
     AnalysisType,
@@ -701,7 +701,6 @@ class Query(graphene.ObjectType):
         def resolve_gremlin_engines(self, info, **kwargs):
             return resolve_oc_model_queryset(GremlinEngine, info.context.user)
 
-
         # ANALYZER RESOLVERS #####################################
         analyzer = relay.Node.Field(AnalyzerType)
 
@@ -1047,26 +1046,27 @@ class Query(graphene.ObjectType):
             embedders=components["embedders"],
             thumbnailers=components["thumbnailers"],
         )
-        
 
     conversations = DjangoFilterConnectionField(
-        ConversationType, 
+        ConversationType,
         filterset_class=ConversationFilter,
-        description="Retrieve conversations, optionally filtered by document_id or corpus_id"
+        description="Retrieve conversations, optionally filtered by document_id or corpus_id",
     )
 
     def resolve_conversations(self, info, **kwargs):
         """
         Resolver to fetch Conversations along with their Messages.
-        
+
         Args:
             info: GraphQL execution info.
             **kwargs: Filter arguments passed through DjangoFilterConnectionField
-            
+
         Returns:
             QuerySet[Conversation]: Filtered queryset of conversations
         """
-        return resolve_oc_model_queryset(Conversation, info.context.user).prefetch_related(
+        return resolve_oc_model_queryset(
+            Conversation, info.context.user
+        ).prefetch_related(
             Prefetch(
                 "chat_messages",
                 queryset=ChatMessage.objects.order_by("created_at"),

@@ -15,11 +15,11 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
+from opencontractserver.conversations.models import Conversation
 from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentRelationship
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport
-from opencontractserver.conversations.models import Conversation
 
 User = get_user_model()
 
@@ -456,8 +456,9 @@ class DocumentRelationshipFilter(django_filters.FilterSet):
 
 class ConversationFilter(django_filters.FilterSet):
     """Filter set for Conversation model."""
-    document_id = filters.CharFilter(method='filter_by_document_id')
-    corpus_id = filters.CharFilter(method='filter_by_corpus_id')
+
+    document_id = filters.CharFilter(method="filter_by_document_id")
+    corpus_id = filters.CharFilter(method="filter_by_corpus_id")
 
     def filter_by_document_id(self, queryset, name, value):
         """Filter conversations by document ID."""
@@ -472,5 +473,5 @@ class ConversationFilter(django_filters.FilterSet):
     class Meta:
         model = Conversation
         fields = {
-            'created_at': ['gte', 'lte'],
+            "created_at": ["gte", "lte"],
         }

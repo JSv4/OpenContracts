@@ -491,3 +491,133 @@ class LabelSetGroupObjectPermission(GroupObjectPermissionBase):
         "LabelSet", on_delete=django.db.models.CASCADE
     )
     # enabled = False
+
+
+class NoteQuerySet(CTEQuerySet, PermissionQuerySet):
+    """
+    Custom QuerySet for the Note model combining CTEQuerySet and PermissionQuerySet functionalities.
+    """
+
+    pass
+
+
+class NoteManager(CTEManager.from_queryset(NoteQuerySet)):
+    """
+    Custom Manager for the Note model that uses the combined NoteQuerySet
+    and includes permissioning methods.
+    """
+
+    def get_queryset(self) -> NoteQuerySet:
+        """
+        Returns the custom NoteQuerySet.
+        """
+        return NoteQuerySet(self.model, using=self._db)
+
+    def for_user(
+        self, user: User, perm: str, extra_conditions: Optional[Q] = None
+    ) -> NoteQuerySet:
+        """
+        Filters the queryset based on user permissions.
+
+        Args:
+            user: The user for whom permissions are checked.
+            perm: The permission string.
+            extra_conditions: Additional conditions for filtering.
+
+        Returns:
+            A filtered NoteQuerySet.
+        """
+        return self.get_queryset().for_user(user, perm, extra_conditions)
+
+
+class Note(BaseOCModel):
+    """
+    Notes model for attaching hierarchical comments/notes to documents.
+    Uses django_cte for hierarchical relationships.
+    """
+
+    objects = NoteManager()
+
+    # Content
+    title = django.db.models.CharField(max_length=1024, db_index=True)
+    content = django.db.models.TextField(default="", blank=True)
+
+    # Hierarchical relationship
+    parent = django.db.models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        related_name="children",
+        on_delete=django.db.models.CASCADE,
+    )
+
+    # Document reference
+    document = django.db.models.ForeignKey(
+        "documents.Document",
+        null=False,
+        on_delete=django.db.models.CASCADE,
+        related_name="notes",
+    )
+
+    # Optional reference to specific annotation
+    annotation = django.db.models.ForeignKey(
+        "annotations.Annotation",
+        null=True,
+        blank=True,
+        on_delete=django.db.models.SET_NULL,
+        related_name="notes",
+    )
+
+    # Sharing
+    is_public = django.db.models.BooleanField(default=False)
+    creator = django.db.models.ForeignKey(
+        get_user_model(),
+        on_delete=django.db.models.CASCADE,
+        null=False,
+        default=1,
+    )
+
+    # Timing variables
+    created = django.db.models.DateTimeField(default=timezone.now)
+    modified = django.db.models.DateTimeField(default=timezone.now, blank=True)
+
+    class Meta:
+        permissions = (
+            ("permission_note", "permission note"),
+            ("publish_note", "publish note"),
+            ("create_note", "create note"),
+            ("read_note", "read note"),
+            ("update_note", "update note"),
+            ("remove_note", "delete note"),
+        )
+        indexes = [
+            django.db.models.Index(fields=["title"]),
+            django.db.models.Index(fields=["document"]),
+            django.db.models.Index(fields=["annotation"]),
+            django.db.models.Index(fields=["creator"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
+            django.db.models.Index(fields=["parent"]),
+        ]
+        ordering = ("created",)
+
+    def save(self, *args, **kwargs):
+        """On save, update timestamps"""
+        if not self.pk:
+            self.created = timezone.now()
+        self.modified = timezone.now()
+        return super().save(*args, **kwargs)
+
+
+# Model for Django Guardian permissions
+class NoteUserObjectPermission(UserObjectPermissionBase):
+    content_object = django.db.models.ForeignKey(
+        "Note", on_delete=django.db.models.CASCADE
+    )
+
+
+# Model for Django Guardian permissions
+class NoteGroupObjectPermission(GroupObjectPermissionBase):
+    content_object = django.db.models.ForeignKey(
+        "Note", on_delete=django.db.models.CASCADE
+    )

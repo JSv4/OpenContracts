@@ -52,6 +52,7 @@ from config.graphql.graphene_types import (
     FileTypeEnum,
     GremlinEngineType_READ,
     LabelSetType,
+    NoteType,
     PageAwareAnnotationType,
     PdfPageInfoType,
     PipelineComponentsType,
@@ -65,6 +66,7 @@ from opencontractserver.annotations.models import (
     Annotation,
     AnnotationLabel,
     LabelSet,
+    Note,
     Relationship,
 )
 from opencontractserver.conversations.models import ChatMessage, Conversation
@@ -1271,3 +1273,79 @@ class Query(graphene.ObjectType):
             queryset = queryset.filter(relationship_type=relationship_type)
 
         return queryset.distinct().order_by("-created")
+
+    # NOTE RESOLVERS #####################################
+    notes = DjangoConnectionField(
+        NoteType,
+        title_contains=graphene.String(),
+        content_contains=graphene.String(),
+        document_id=graphene.ID(),
+        annotation_id=graphene.ID(),
+        order_by=graphene.String(),
+    )
+
+    def resolve_notes(self, info, **kwargs):
+        # Base filtering for user permissions
+        if info.context.user.is_superuser:
+            logger.info("User is superuser, returning all notes")
+            queryset = Note.objects.all()
+        elif info.context.user.is_anonymous:
+            logger.info("User is anonymous, returning public notes")
+            queryset = Note.objects.filter(Q(is_public=True))
+            logger.info(f"{queryset.count()} public notes...")
+        else:
+            logger.info("User is authenticated, returning user's and public notes")
+            queryset = Note.objects.filter(
+                Q(creator=info.context.user) | Q(is_public=True)
+            )
+
+        # Filter by title
+        title_contains = kwargs.get("title_contains")
+        if title_contains:
+            logger.info(f"Filtering by title containing: {title_contains}")
+            queryset = queryset.filter(title__contains=title_contains)
+
+        # Filter by content
+        content_contains = kwargs.get("content_contains")
+        if content_contains:
+            logger.info(f"Filtering by content containing: {content_contains}")
+            queryset = queryset.filter(content__contains=content_contains)
+
+        # Filter by document_id
+        document_id = kwargs.get("document_id")
+        if document_id:
+            logger.info(f"Filtering by document_id: {document_id}")
+            django_pk = from_global_id(document_id)[1]
+            queryset = queryset.filter(document_id=django_pk)
+
+        # Filter by annotation_id
+        annotation_id = kwargs.get("annotation_id")
+        if annotation_id:
+            logger.info(f"Filtering by annotation_id: {annotation_id}")
+            django_pk = from_global_id(annotation_id)[1]
+            queryset = queryset.filter(annotation_id=django_pk)
+
+        # Ordering
+        order_by = kwargs.get("order_by")
+        if order_by:
+            logger.info(f"Ordering by: {order_by}")
+            queryset = queryset.order_by(order_by)
+        else:
+            logger.info("Ordering by default: -modified")
+            queryset = queryset.order_by("-modified")
+
+        logger.info(f"Final queryset: {queryset}")
+        return queryset
+
+    note = relay.Node.Field(NoteType)
+
+    def resolve_note(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return Note.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return Note.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return Note.objects.get(
+                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
+            )

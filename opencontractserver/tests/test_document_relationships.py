@@ -5,9 +5,9 @@ from graphene.test import Client
 from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
+from opencontractserver.annotations.models import AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document, DocumentRelationship
-from opencontractserver.annotations.models import AnnotationLabel
 from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_TWO_PATH
 
 User = get_user_model()
@@ -24,7 +24,7 @@ class DocumentRelationshipsQueryTestCase(TestCase):
             username="testuser", password="testpassword"
         )
         self.client = Client(schema, context_value=TestContext(self.user))
-        
+
         # Create test corpus
         self.corpus = Corpus.objects.create(
             title="TestCorpus",
@@ -35,23 +35,23 @@ class DocumentRelationshipsQueryTestCase(TestCase):
         pdf_file = ContentFile(
             SAMPLE_PDF_FILE_TWO_PATH.open("rb").read(), name="test.pdf"
         )
-        
+
         self.source_doc = Document.objects.create(
             creator=self.user,
             title="Source Doc",
             description="Source document",
             custom_meta={},
             pdf_file=pdf_file,
-            backend_lock=True
+            backend_lock=True,
         )
-        
+
         self.target_doc = Document.objects.create(
             creator=self.user,
             title="Target Doc",
             description="Target document",
             custom_meta={},
             pdf_file=pdf_file,
-            backend_lock=True
+            backend_lock=True,
         )
 
         # Create test annotation label
@@ -102,12 +102,14 @@ class DocumentRelationshipsQueryTestCase(TestCase):
                     }
                 }
             }
-        """ % to_global_id("DocumentRelationshipType", self.relationship.id)
+        """ % to_global_id(
+            "DocumentRelationshipType", self.relationship.id
+        )
 
         result = self.client.execute(query)
         self.assertIsNone(result.get("errors"))
         data = result["data"]["documentRelationship"]
-        
+
         self.assertEqual(
             data["id"],
             to_global_id("DocumentRelationshipType", self.relationship.id),
@@ -143,12 +145,14 @@ class DocumentRelationshipsQueryTestCase(TestCase):
                     data
                 }
             }
-        """ % to_global_id("DocumentRelationshipType", self.note.id)
+        """ % to_global_id(
+            "DocumentRelationshipType", self.note.id
+        )
 
         result = self.client.execute(query)
         self.assertIsNone(result.get("errors"))
         data = result["data"]["documentRelationship"]
-        
+
         self.assertEqual(
             data["id"],
             to_global_id("DocumentRelationshipType", self.note.id),
@@ -158,24 +162,24 @@ class DocumentRelationshipsQueryTestCase(TestCase):
 
     def test_document_all_relationships_query(self):
         query = """
-            query {
-                document(id: "%s") {
+            query {{
+                document(id: "{}") {{
                     id
-                    allDocRelationships(corpusId: "%s") {
+                    allDocRelationships(corpusId: "{}") {{
                         id
                         relationshipType
-                        sourceDocument {
+                        sourceDocument {{
                             id
                             title
-                        }
-                        targetDocument {
+                        }}
+                        targetDocument {{
                             id
                             title
-                        }
-                    }
-                }
-            }
-        """ % (
+                        }}
+                    }}
+                }}
+            }}
+        """.format(
             to_global_id("DocumentType", self.source_doc.id),
             to_global_id("CorpusType", self.corpus.id),
         )
@@ -183,7 +187,9 @@ class DocumentRelationshipsQueryTestCase(TestCase):
         result = self.client.execute(query)
         self.assertIsNone(result.get("errors"))
         relationships = result["data"]["document"]["allDocRelationships"]
-        
-        self.assertEqual(len(relationships), 2)  # Should have both relationship and note
+
+        self.assertEqual(
+            len(relationships), 2
+        )  # Should have both relationship and note
         relationship_types = {r["relationshipType"] for r in relationships}
-        self.assertEqual(relationship_types, {"RELATIONSHIP", "NOTES"}) 
+        self.assertEqual(relationship_types, {"RELATIONSHIP", "NOTES"})

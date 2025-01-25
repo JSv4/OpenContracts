@@ -16,7 +16,7 @@ from opencontractserver.annotations.models import (
     Relationship,
 )
 from opencontractserver.corpuses.models import Corpus, CorpusQuery
-from opencontractserver.documents.models import Document
+from opencontractserver.documents.models import Document, DocumentRelationship
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport
 
@@ -436,3 +436,18 @@ class DatacellFilter(django_filters.FilterSet):
             "completed": ["lte", "gte"],
             "failed": ["lte", "gte"],
         }
+
+
+class DocumentRelationshipFilter(django_filters.FilterSet):
+    """Filter set for DocumentRelationship model."""
+
+    class Meta:
+        model = DocumentRelationship
+        fields = [
+            "relationship_type",
+            "source_document",
+            "target_document",
+            "annotation_label",
+            "creator",
+            "is_public",
+        ]

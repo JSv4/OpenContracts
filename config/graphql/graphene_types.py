@@ -24,7 +24,11 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
-from opencontractserver.documents.models import Document, DocumentAnalysisRow
+from opencontractserver.documents.models import (
+    Document,
+    DocumentAnalysisRow,
+    DocumentRelationship,
+)
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.feedback.models import UserFeedback
 from opencontractserver.pipeline.base.file_types import (
@@ -287,6 +291,26 @@ class AnnotationSummaryType(graphene.ObjectType):
     raw_text = graphene.String()
 
 
+class DocumentRelationshipType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    """GraphQL type for DocumentRelationship model."""
+
+    data = GenericScalar()
+
+    class Meta:
+        model = DocumentRelationship
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if issubclass(type(queryset), QuerySet):
+            return queryset.visible_to_user(info.context.user)
+        elif "RelatedManager" in str(type(queryset)):
+            return queryset.all().visible_to_user(info.context.user)
+        else:
+            return queryset
+
+
 class PageAwareAnnotationType(graphene.ObjectType):
     pdf_page_info = graphene.Field(PdfPageInfoType)
     page_annotations = graphene.List(AnnotationType)
@@ -427,6 +451,30 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
             logger.warning(
                 f"Failed resolving relationships query for document {self.id} with input: corpus_id={corpus_id}, "
                 f"analysis_id={analysis_id}. Error: {e}"
+            )
+            return []
+
+    # New field for document relationships
+    all_doc_relationships = graphene.List(
+        DocumentRelationshipType,
+        corpus_id=graphene.ID(required=True),
+    )
+
+    def resolve_all_doc_relationships(self, info, corpus_id):
+        try:
+            corpus_pk = from_global_id(corpus_id)[1]
+            # Get relationships where this document is either source or target
+            relationships = DocumentRelationship.objects.filter(
+                (Q(source_document=self) | Q(target_document=self))
+                & Q(corpus_id=corpus_pk)
+            ).distinct()
+
+            return relationships
+        except Exception as e:
+            logger.warning(
+                "Failed resolving document relationships query for "
+                f"document {self.id} with input: corpus_id={corpus_id}. "
+                f"Error: {e}"
             )
             return []
 

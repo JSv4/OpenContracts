@@ -132,6 +132,8 @@ export type ServerAnnotationType = Node & {
   assignmentSet: AssignmentTypeConnection;
   sourceNodeInRelationships: RelationshipTypeConnection;
   targetNodeInRelationships: RelationshipTypeConnection;
+  chatMessages: ChatMessageTypeConnection;
+  createdByChatMessage: ChatMessageTypeConnection;
 };
 
 export type AnnotationTypeAssignmentSetArgs = {
@@ -244,6 +246,7 @@ export type CorpusType = Node & {
   analyses: AnalysisTypeConnection;
   isPublic?: Scalars["Boolean"];
   myPermissions?: PermissionTypes[];
+  conversations?: ConversationTypeConnection;
 };
 
 export type CorpusTypeDocumentsArgs = {
@@ -320,6 +323,8 @@ export type DocumentType = Node & {
   allStructuralAnnotations?: ServerAnnotationType[];
   docLabelAnnotations?: Maybe<AnnotationTypeConnection>;
   metadataAnnotations?: Maybe<AnnotationTypeConnection>;
+  conversations?: ConversationTypeConnection;
+  chatMessages?: ChatMessageTypeConnection;
 };
 
 export type DocumentTypeAssignmentSetArgs = {
@@ -1397,3 +1402,63 @@ export interface FeedbackType extends Node {
   metadata: Record<any, any>;
   commented_annotation?: ServerAnnotationType | null;
 }
+
+export type ConversationType = Node & {
+  __typename?: "ConversationType";
+  id: Scalars["ID"];
+  title?: Maybe<Scalars["String"]>;
+  createdAt: Scalars["DateTime"];
+  updatedAt: Scalars["DateTime"];
+  chatWithCorpus?: Maybe<CorpusType>;
+  chatWithDocument?: Maybe<DocumentType>;
+  chatMessages: ChatMessageTypeConnection;
+  creator: UserType;
+  created: Scalars["DateTime"];
+  modified: Scalars["DateTime"];
+  isPublic?: Scalars["Boolean"];
+  myPermissions?: PermissionTypes[];
+};
+
+export type ConversationTypeConnection = {
+  __typename?: "ConversationTypeConnection";
+  pageInfo: PageInfo;
+  edges: Array<Maybe<ConversationTypeEdge>>;
+  totalCount?: Maybe<Scalars["Int"]>;
+};
+
+export type ConversationTypeEdge = {
+  __typename?: "ConversationTypeEdge";
+  node?: Maybe<ConversationType>;
+  cursor: Scalars["String"];
+};
+
+export type ChatMessageType = Node & {
+  __typename?: "ChatMessageType";
+  id: Scalars["ID"];
+  conversation: ConversationType;
+  msgType: Scalars["String"];
+  content: Scalars["String"];
+  data?: Maybe<Scalars["JSONString"]>;
+  createdAt: Scalars["DateTime"];
+  sourceDocument?: Maybe<DocumentType>;
+  sourceAnnotations: AnnotationTypeConnection;
+  createdAnnotations: AnnotationTypeConnection;
+  creator: UserType;
+  created: Scalars["DateTime"];
+  modified: Scalars["DateTime"];
+  isPublic?: Scalars["Boolean"];
+  myPermissions?: PermissionTypes[];
+};
+
+export type ChatMessageTypeConnection = {
+  __typename?: "ChatMessageTypeConnection";
+  pageInfo: PageInfo;
+  edges: Array<Maybe<ChatMessageTypeEdge>>;
+  totalCount?: Maybe<Scalars["Int"]>;
+};
+
+export type ChatMessageTypeEdge = {
+  __typename?: "ChatMessageTypeEdge";
+  node?: Maybe<ChatMessageType>;
+  cursor: Scalars["String"];
+};

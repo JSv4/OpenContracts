@@ -20,6 +20,8 @@ import {
   showAddDocsToCorpusModal,
   showDeleteDocumentsModal,
   viewingDocument,
+  showKnowledgeBaseModal,
+  openedCorpus,
 } from "../../graphql/cache";
 import { AnnotationLabelType, DocumentType } from "../../types/graphql-api";
 import { downloadFile } from "../../utils/files";
@@ -303,8 +305,24 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
         icon: "download",
         onClick: () => onDownload(pdfFile),
       });
-      // Overwrite existing context menu with "view" only
+      // Add knowledge base option
       context_menus = [
+        {
+          key: "knowledge_base",
+          content: "Open Knowledge Base",
+          icon: "book",
+          onClick: () => {
+            const currentCorpus = openedCorpus();
+            if (currentCorpus) {
+              showKnowledgeBaseModal({
+                isOpen: true,
+                documentId: item.id,
+                corpusId: currentCorpus.id,
+              });
+              if (onClick) onClick(item);
+            }
+          },
+        },
         {
           key: "view",
           content: "View Details",

@@ -18,6 +18,7 @@ import {
   CorpusActionType,
   DocumentType,
   AnalysisRowType,
+  ConversationType,
 } from "../types/graphql-api";
 import { ExportObject } from "../types/graphql-api";
 
@@ -1790,6 +1791,91 @@ export const listAnnotations = /* GraphQL */ `
         owner
       }
       nextToken
+    }
+  }
+`;
+
+export interface GetConversationInputs {
+  documentId?: string;
+  corpusId?: string;
+}
+
+export interface GetConversationOutputs {
+  conversation: ConversationType;
+}
+
+export const GET_CONVERSATION = gql`
+  query GetConversation($documentId: ID, $corpusId: ID) {
+    conversation(documentId: $documentId, corpusId: $corpusId) {
+      id
+      title
+      createdAt
+      updatedAt
+      creator {
+        id
+        email
+      }
+      chatWithCorpus {
+        id
+        title
+      }
+      chatWithDocument {
+        id
+        title
+      }
+      chatMessages {
+        edges {
+          node {
+            id
+            msgType
+            content
+            data
+            createdAt
+            creator {
+              id
+              email
+            }
+            sourceDocument {
+              id
+              title
+            }
+            sourceAnnotations {
+              edges {
+                node {
+                  id
+                  rawText
+                  annotationLabel {
+                    id
+                    text
+                    labelType
+                  }
+                }
+              }
+            }
+            createdAnnotations {
+              edges {
+                node {
+                  id
+                  rawText
+                  annotationLabel {
+                    id
+                    text
+                    labelType
+                  }
+                }
+              }
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          hasPreviousPage
+          startCursor
+          endCursor
+        }
+      }
+      isPublic
+      myPermissions
     }
   }
 `;

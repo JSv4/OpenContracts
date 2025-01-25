@@ -23,6 +23,7 @@ from config.graphql.filters import (
     CorpusQueryFilter,
     DatacellFilter,
     DocumentFilter,
+    DocumentRelationshipFilter,
     ExportFilter,
     ExtractFilter,
     FieldsetFilter,
@@ -44,6 +45,7 @@ from config.graphql.graphene_types import (
     CorpusType,
     DatacellType,
     DocumentCorpusActionsType,
+    DocumentRelationshipType,
     DocumentType,
     ExtractType,
     FieldsetType,
@@ -67,7 +69,7 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
-from opencontractserver.documents.models import Document
+from opencontractserver.documents.models import Document, DocumentRelationship
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.feedback.models import UserFeedback
 from opencontractserver.pipeline.utils import (
@@ -1179,3 +1181,93 @@ class Query(graphene.ObjectType):
             return None
 
         return conversation
+
+    # DOCUMENT RELATIONSHIP RESOLVERS #####################################
+    document_relationships = DjangoFilterConnectionField(
+        DocumentRelationshipType,
+        filterset_class=DocumentRelationshipFilter,
+        corpus_id=graphene.ID(required=False),
+        document_id=graphene.ID(required=False),
+    )
+
+    def resolve_document_relationships(self, info, **kwargs):
+        # Start with base queryset based on user permissions
+        if info.context.user.is_superuser:
+            queryset = DocumentRelationship.objects.all()
+        elif info.context.user.is_anonymous:
+            queryset = DocumentRelationship.objects.filter(Q(is_public=True))
+        else:
+            queryset = DocumentRelationship.objects.filter(
+                Q(creator=info.context.user) | Q(is_public=True)
+            )
+
+        # Apply filters if provided
+        corpus_id = kwargs.get("corpus_id")
+        if corpus_id:
+            corpus_pk = from_global_id(corpus_id)[1]
+            queryset = queryset.filter(
+                Q(source_document__corpus=corpus_pk)
+                | Q(target_document__corpus=corpus_pk)
+            )
+
+        document_id = kwargs.get("document_id")
+        if document_id:
+            doc_pk = from_global_id(document_id)[1]
+            queryset = queryset.filter(
+                Q(source_document_id=doc_pk) | Q(target_document_id=doc_pk)
+            )
+
+        return queryset.distinct().order_by("-created")
+
+    document_relationship = relay.Node.Field(DocumentRelationshipType)
+
+    def resolve_document_relationship(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        if info.context.user.is_superuser:
+            return DocumentRelationship.objects.get(id=django_pk)
+        elif info.context.user.is_anonymous:
+            return DocumentRelationship.objects.get(Q(id=django_pk) & Q(is_public=True))
+        else:
+            return DocumentRelationship.objects.get(
+                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
+            )
+
+    # Also add a bulk resolver similar to bulk_doc_relationships_in_corpus
+    bulk_doc_relationships = graphene.Field(
+        graphene.List(DocumentRelationshipType),
+        corpus_id=graphene.ID(required=False),
+        document_id=graphene.ID(required=True),
+        relationship_type=graphene.String(required=False),
+    )
+
+    def resolve_bulk_doc_relationships(self, info, document_id, **kwargs):
+        # Start with base queryset based on user permissions
+        if info.context.user.is_superuser:
+            queryset = DocumentRelationship.objects.all()
+        elif info.context.user.is_anonymous:
+            queryset = DocumentRelationship.objects.filter(Q(is_public=True))
+        else:
+            queryset = DocumentRelationship.objects.filter(
+                Q(creator=info.context.user) | Q(is_public=True)
+            )
+
+        # Always filter by document
+        doc_pk = from_global_id(document_id)[1]
+        queryset = queryset.filter(
+            Q(source_document_id=doc_pk) | Q(target_document_id=doc_pk)
+        )
+
+        # Apply optional filters
+        corpus_id = kwargs.get("corpus_id")
+        if corpus_id:
+            corpus_pk = from_global_id(corpus_id)[1]
+            queryset = queryset.filter(
+                Q(source_document__corpus=corpus_pk)
+                | Q(target_document__corpus=corpus_pk)
+            )
+
+        relationship_type = kwargs.get("relationship_type")
+        if relationship_type:
+            queryset = queryset.filter(relationship_type=relationship_type)
+
+        return queryset.distinct().order_by("-created")

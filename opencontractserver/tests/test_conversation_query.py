@@ -1,17 +1,16 @@
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.test import TestCase
-from graphql_relay import to_global_id
 from graphene.test import Client
+from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
-from opencontractserver.conversations.models import Conversation, ChatMessage
-
+from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 
-
 User = get_user_model()
+
 
 class TestContext:
     def __init__(self, user):
@@ -121,23 +120,27 @@ class GraphQLConversationTestCase(TestCase):
         """
 
         # Encode the corpus ID using the relay global ID format
-        corpus_global_id = to_global_id("CorpusType", self.corpus.id)  # Adjust if necessary
+        corpus_global_id = to_global_id(
+            "CorpusType", self.corpus.id
+        )  # Adjust if necessary
 
         variables = {"corpusId": corpus_global_id}
 
         response = self.client.execute(query, variables=variables)
-        self.assertIsNone(response.get("errors"), f"GraphQL errors: {response.get('errors')}")
+        self.assertIsNone(
+            response.get("errors"), f"GraphQL errors: {response.get('errors')}"
+        )
 
         data = response.get("data")
         self.assertIsNotNone(data, "No data returned in GraphQL response.")
 
         conversation_data = data.get("conversation")
-        self.assertIsNotNone(conversation_data, "Conversation data not found in response.")
-        self.assertEqual(
-            conversation_data["title"], "Test Conversation with Corpus"
+        self.assertIsNotNone(
+            conversation_data, "Conversation data not found in response."
         )
+        self.assertEqual(conversation_data["title"], "Test Conversation with Corpus")
 
-        messages = conversation_data.get("chatMessages",{}).get("edges",[])
+        messages = conversation_data.get("chatMessages", {}).get("edges", [])
         self.assertEqual(len(messages), 3, "Incorrect number of messages returned.")
 
         # Ensure messages are sorted oldest to newest
@@ -146,7 +149,7 @@ class GraphQLConversationTestCase(TestCase):
             "Hello! How can I assist you today?",
             "I have a question about the corpus.",
         ]
-        returned_contents = [msg['node']["content"] for msg in messages]
+        returned_contents = [msg["node"]["content"] for msg in messages]
         self.assertEqual(
             returned_contents,
             expected_contents,
@@ -178,23 +181,27 @@ class GraphQLConversationTestCase(TestCase):
         """
 
         # Encode the document ID using the relay global ID format
-        document_global_id = to_global_id("DocumentType", self.doc.id)  # Adjust if necessary
+        document_global_id = to_global_id(
+            "DocumentType", self.doc.id
+        )  # Adjust if necessary
 
         variables = {"documentId": document_global_id}
 
         response = self.client.execute(query, variables=variables)
-        self.assertIsNone(response.get("errors"), f"GraphQL errors: {response.get('errors')}")
+        self.assertIsNone(
+            response.get("errors"), f"GraphQL errors: {response.get('errors')}"
+        )
 
         data = response.get("data")
         self.assertIsNotNone(data, "No data returned in GraphQL response.")
 
         conversation_data = data.get("conversation")
-        self.assertIsNotNone(conversation_data, "Conversation data not found in response.")
-        self.assertEqual(
-            conversation_data["title"], "Test Conversation with Document"
+        self.assertIsNotNone(
+            conversation_data, "Conversation data not found in response."
         )
+        self.assertEqual(conversation_data["title"], "Test Conversation with Document")
 
-        messages = conversation_data.get("chatMessages",{}).get("edges",[])
+        messages = conversation_data.get("chatMessages", {}).get("edges", [])
         self.assertEqual(len(messages), 2, "Incorrect number of messages returned.")
 
         # Ensure messages are sorted oldest to newest
@@ -202,7 +209,7 @@ class GraphQLConversationTestCase(TestCase):
             "Starting document-specific conversation.",
             "Document-specific assistance at your service.",
         ]
-        returned_contents = [msg['node']["content"] for msg in messages]
+        returned_contents = [msg["node"]["content"] for msg in messages]
         self.assertEqual(
             returned_contents,
             expected_contents,
@@ -223,8 +230,12 @@ class GraphQLConversationTestCase(TestCase):
         """
 
         # Encode the IDs using the relay global ID format
-        corpus_global_id = to_global_id("CorpusType", self.corpus.id)  # Adjust if necessary
-        document_global_id = to_global_id("DocumentType", self.doc.id)  # Adjust if necessary
+        corpus_global_id = to_global_id(
+            "CorpusType", self.corpus.id
+        )  # Adjust if necessary
+        document_global_id = to_global_id(
+            "DocumentType", self.doc.id
+        )  # Adjust if necessary
 
         variables = {
             "documentId": document_global_id,
@@ -232,7 +243,9 @@ class GraphQLConversationTestCase(TestCase):
         }
 
         response = self.client.execute(query, variables=variables)
-        self.assertIsNotNone(response.get("errors"), "Expected errors when providing both IDs.")
+        self.assertIsNotNone(
+            response.get("errors"), "Expected errors when providing both IDs."
+        )
         error_message = response["errors"][0]["message"]
         self.assertIn(
             "You must provide exactly one of document_id or corpus_id", error_message
@@ -252,8 +265,10 @@ class GraphQLConversationTestCase(TestCase):
         """
 
         response = self.client.execute(query)
-        self.assertIsNotNone(response.get("errors"), "Expected errors when providing no IDs.")
+        self.assertIsNotNone(
+            response.get("errors"), "Expected errors when providing no IDs."
+        )
         error_message = response["errors"][0]["message"]
         self.assertIn(
             "You must provide exactly one of document_id or corpus_id", error_message
-        ) 
+        )

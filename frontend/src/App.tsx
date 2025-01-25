@@ -32,11 +32,13 @@ import {
   showUploadNewDocumentsModal,
   uploadModalPreloadedFiles,
   showStructuralAnnotations,
+  showKnowledgeBaseModal,
 } from "./graphql/cache";
 
 import { NavMenu } from "./components/layout/NavMenu";
 import { Footer } from "./components/layout/Footer";
 import { ExportModal } from "./components/widgets/modals/ExportModal";
+import { DocumentKnowledgeBase } from "./components/knowledge_base";
 
 import { PrivacyPolicy } from "./views/PrivacyPolicy";
 import { TermsOfService } from "./views/TermsOfService";
@@ -67,6 +69,7 @@ export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
   const show_export_modal = useReactiveVar(showExportModal);
   const show_cookie_modal = useReactiveVar(showCookieAcceptModal);
+  const knowledge_base_modal = useReactiveVar(showKnowledgeBaseModal);
   const only_display_these_annotations = useReactiveVar(
     onlyDisplayTheseAnnotations
   );
@@ -168,6 +171,19 @@ export const App = () => {
         <></>
       )}
       {show_cookie_modal ? <CookieConsentDialog /> : <></>}
+      {knowledge_base_modal.isOpen ? (
+        <DocumentKnowledgeBase
+          documentId={knowledge_base_modal.documentId!}
+          corpusId={knowledge_base_modal.corpusId!}
+          onClose={() =>
+            showKnowledgeBaseModal({
+              isOpen: false,
+              documentId: null,
+              corpusId: null,
+            })
+          }
+        />
+      ) : null}
       <ThemeProvider>
         <div
           style={{

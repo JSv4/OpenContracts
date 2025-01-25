@@ -3,11 +3,16 @@ from django.core.files.base import ContentFile
 from django.test import TestCase
 from graphene.test import Client
 from graphql_relay import to_global_id
+from typing import List
 
 from config.graphql.schema import schema
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.utils.permissioning import (
+    set_permissions_for_obj_to_user,
+    PermissionTypes,
+)
 
 User = get_user_model()
 
@@ -19,14 +24,24 @@ class TestContext:
 
 class GraphQLConversationTestCase(TestCase):
     """
-    TestCase for testing the Conversation GraphQL resolver.
+    TestCase for testing the 'conversations' GraphQL resolver,
+    which returns multiple conversations (rather than a single conversation).
     """
 
     def setUp(self) -> None:
-        # Create a test user and authenticate
+        """
+        Create test users, corpuses, documents, and conversations.
+        Assign proper permissions so that one user cannot see another's conversations.
+        """
+        # Create two test users
         self.user = User.objects.create_user(
             username="graphql_testuser", password="testpassword"
         )
+        self.other_user = User.objects.create_user(
+            username="other_user", password="testpassword"
+        )
+
+        # Graphene client with context as self.user
         self.client = Client(schema, context_value=TestContext(self.user))
 
         # Create a test corpus and document
@@ -49,9 +64,15 @@ class GraphQLConversationTestCase(TestCase):
             chat_with_corpus=self.corpus,
             creator=self.user,
         )
+        # Grant viewer permissions to self.user
+        set_permissions_for_obj_to_user(
+            user_val=self.user,
+            instance=self.conversation,
+            permissions=[PermissionTypes.ALL],
+        )
 
         # Create messages for the conversation
-        self.messages = [
+        self.messages: List[ChatMessage] = [
             ChatMessage.objects.create(
                 creator=self.user,
                 conversation=self.conversation,
@@ -78,9 +99,14 @@ class GraphQLConversationTestCase(TestCase):
             chat_with_document=self.doc,
             creator=self.user,
         )
+        set_permissions_for_obj_to_user(
+            user_val=self.user,
+            instance=self.doc_conversation,
+            permissions=[PermissionTypes.ALL],
+        )
 
         # Create messages for the document conversation
-        self.doc_messages = [
+        self.doc_messages: List[ChatMessage] = [
             ChatMessage.objects.create(
                 creator=self.user,
                 conversation=self.doc_conversation,
@@ -95,23 +121,40 @@ class GraphQLConversationTestCase(TestCase):
             ),
         ]
 
-    def test_resolve_conversation_with_corpus_id(self):
+        # Create a conversation for the OTHER user (so that self.user cannot see it)
+        self.other_user_conversation = Conversation.objects.create(
+            title="Other User's Private Conversation",
+            creator=self.other_user,
+        )
+        # Grant viewer permissions only to other_user
+        set_permissions_for_obj_to_user(
+            user_val=self.other_user,
+            instance=self.other_user_conversation,
+            permissions=[PermissionTypes.ALL],
+        )
+        # No permission for self.user
+
+    def test_resolve_conversations_with_corpus_id(self):
         """
-        Test the conversation resolver by querying with a corpus_id.
-        Ensures that the correct conversation and its messages are returned in order.
+        Test the conversations resolver by filtering with a corpusId.
+        Ensure that the correct conversation is returned (the one linked to the corpus).
         """
         query = """
-        query GetConversation($corpusId: ID!) {
-            conversation(corpusId: $corpusId) {
-                id
-                title
-                chatMessages {
-                   edges {
-                        node {
-                             id
-                            msgType
-                            content
-                            createdAt
+        query GetConversations($corpusId: String) {
+            conversations(corpusId: $corpusId) {
+                edges {
+                    node {
+                        id
+                        title
+                        chatMessages {
+                            edges {
+                                node {
+                                    id
+                                    msgType
+                                    content
+                                    createdAt
+                                }
+                            }
                         }
                     }
                 }
@@ -119,60 +162,59 @@ class GraphQLConversationTestCase(TestCase):
         }
         """
 
-        # Encode the corpus ID using the relay global ID format
-        corpus_global_id = to_global_id(
-            "CorpusType", self.corpus.id
-        )  # Adjust if necessary
-
+        corpus_global_id = to_global_id("CorpusType", self.corpus.id)
         variables = {"corpusId": corpus_global_id}
 
         response = self.client.execute(query, variables=variables)
         self.assertIsNone(
-            response.get("errors"), f"GraphQL errors: {response.get('errors')}"
+            response.get("errors"),
+            f"GraphQL returned errors: {response.get('errors')}",
         )
 
-        data = response.get("data")
-        self.assertIsNotNone(data, "No data returned in GraphQL response.")
-
-        conversation_data = data.get("conversation")
-        self.assertIsNotNone(
-            conversation_data, "Conversation data not found in response."
+        data = response.get("data", {})
+        edges = data.get("conversations", {}).get("edges", [])
+        self.assertEqual(
+            len(edges), 1, "Expected exactly 1 conversation for this corpus."
         )
-        self.assertEqual(conversation_data["title"], "Test Conversation with Corpus")
 
-        messages = conversation_data.get("chatMessages", {}).get("edges", [])
-        self.assertEqual(len(messages), 3, "Incorrect number of messages returned.")
+        conversation_node = edges[0]["node"]
+        self.assertEqual(
+            conversation_node["title"],
+            "Test Conversation with Corpus",
+            "Conversation title does not match expected value.",
+        )
 
-        # Ensure messages are sorted oldest to newest
+        msg_edges = conversation_node["chatMessages"]["edges"]
+        self.assertEqual(len(msg_edges), 3, "Expected exactly 3 messages.")
         expected_contents = [
             "Hello, this is a test message.",
             "Hello! How can I assist you today?",
             "I have a question about the corpus.",
         ]
-        returned_contents = [msg["node"]["content"] for msg in messages]
-        self.assertEqual(
-            returned_contents,
-            expected_contents,
-            "Messages are not sorted correctly.",
-        )
+        returned_contents = [msg["node"]["content"] for msg in msg_edges]
+        self.assertEqual(returned_contents, expected_contents)
 
-    def test_resolve_conversation_with_document_id(self):
+    def test_resolve_conversations_with_document_id(self):
         """
-        Test the conversation resolver by querying with a document_id.
-        Ensures that the correct conversation and its messages are returned in order.
+        Test the conversations resolver by filtering with a documentId.
+        Ensure that the correct conversation is returned (the one linked to the document).
         """
         query = """
-        query GetConversation($documentId: ID!) {
-            conversation(documentId: $documentId) {
-                id
-                title
-                chatMessages {
-                    edges {
-                        node {
-                             id
-                            msgType
-                            content
-                            createdAt
+        query GetConversations($documentId: String) {
+            conversations(documentId: $documentId) {
+                edges {
+                    node {
+                        id
+                        title
+                        chatMessages {
+                            edges {
+                                node {
+                                    id
+                                    msgType
+                                    content
+                                    createdAt
+                                }
+                            }
                         }
                     }
                 }
@@ -180,95 +222,81 @@ class GraphQLConversationTestCase(TestCase):
         }
         """
 
-        # Encode the document ID using the relay global ID format
-        document_global_id = to_global_id(
-            "DocumentType", self.doc.id
-        )  # Adjust if necessary
-
+        document_global_id = to_global_id("DocumentType", self.doc.id)
         variables = {"documentId": document_global_id}
 
         response = self.client.execute(query, variables=variables)
         self.assertIsNone(
-            response.get("errors"), f"GraphQL errors: {response.get('errors')}"
+            response.get("errors"),
+            f"GraphQL returned errors: {response.get('errors')}",
         )
 
-        data = response.get("data")
-        self.assertIsNotNone(data, "No data returned in GraphQL response.")
-
-        conversation_data = data.get("conversation")
-        self.assertIsNotNone(
-            conversation_data, "Conversation data not found in response."
+        data = response.get("data", {})
+        edges = data.get("conversations", {}).get("edges", [])
+        self.assertEqual(
+            len(edges), 1, "Expected exactly 1 conversation for this document."
         )
-        self.assertEqual(conversation_data["title"], "Test Conversation with Document")
 
-        messages = conversation_data.get("chatMessages", {}).get("edges", [])
-        self.assertEqual(len(messages), 2, "Incorrect number of messages returned.")
+        conversation_node = edges[0]["node"]
+        self.assertEqual(
+            conversation_node["title"],
+            "Test Conversation with Document",
+            "Conversation title does not match expected value.",
+        )
 
-        # Ensure messages are sorted oldest to newest
+        msg_edges = conversation_node["chatMessages"]["edges"]
+        self.assertEqual(len(msg_edges), 2, "Expected exactly 2 messages.")
         expected_contents = [
             "Starting document-specific conversation.",
             "Document-specific assistance at your service.",
         ]
-        returned_contents = [msg["node"]["content"] for msg in messages]
-        self.assertEqual(
-            returned_contents,
-            expected_contents,
-            "Messages are not sorted correctly.",
-        )
+        returned_contents = [msg["node"]["content"] for msg in msg_edges]
+        self.assertEqual(returned_contents, expected_contents)
 
-    def test_resolve_conversation_with_both_ids(self):
+    def test_user_cannot_see_others_conversations(self):
         """
-        Test that providing both document_id and corpus_id raises an error.
+        Ensure that a user cannot see conversations belonging to another user
+        when they have no permissions on those conversations.
         """
         query = """
-        query GetConversation($documentId: ID!, $corpusId: ID!) {
-            conversation(documentId: $documentId, corpusId: $corpusId) {
-                id
-                title
-            }
-        }
-        """
-
-        # Encode the IDs using the relay global ID format
-        corpus_global_id = to_global_id(
-            "CorpusType", self.corpus.id
-        )  # Adjust if necessary
-        document_global_id = to_global_id(
-            "DocumentType", self.doc.id
-        )  # Adjust if necessary
-
-        variables = {
-            "documentId": document_global_id,
-            "corpusId": corpus_global_id,
-        }
-
-        response = self.client.execute(query, variables=variables)
-        self.assertIsNotNone(
-            response.get("errors"), "Expected errors when providing both IDs."
-        )
-        error_message = response["errors"][0]["message"]
-        self.assertIn(
-            "You must provide exactly one of document_id or corpus_id", error_message
-        )
-
-    def test_resolve_conversation_with_no_ids(self):
-        """
-        Test that providing neither document_id nor corpus_id raises an error.
-        """
-        query = """
-        query GetConversation {
-            conversation {
-                id
-                title
+        query GetAllConversations {
+            conversations {
+                edges {
+                    node {
+                        id
+                        title
+                        creator {
+                            username
+                        }
+                    }
+                }
             }
         }
         """
 
         response = self.client.execute(query)
-        self.assertIsNotNone(
-            response.get("errors"), "Expected errors when providing no IDs."
+        self.assertIsNone(
+            response.get("errors"),
+            f"GraphQL returned errors: {response.get('errors')}",
         )
-        error_message = response["errors"][0]["message"]
-        self.assertIn(
-            "You must provide exactly one of document_id or corpus_id", error_message
+
+        data = response.get("data", {})
+        edges = data.get("conversations", {}).get("edges", [])
+
+        # Titles that belong to our user
+        user_conversation_titles = {"Test Conversation with Corpus", "Test Conversation with Document"}
+
+        found_titles = set(conv["node"]["title"] for conv in edges)
+        # The other user's conversation's title
+        other_user_convo_title = "Other User's Private Conversation"
+
+        # Verify user's own conversations are present
+        for title in user_conversation_titles:
+            self.assertIn(title, found_titles, f"{title} not found in the user's query")
+
+        # Verify the other user's conversation is NOT present
+        self.assertNotIn(
+            other_user_convo_title,
+            found_titles,
+            "The other user's conversation was visible without permission!",
         )

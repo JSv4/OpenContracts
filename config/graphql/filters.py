@@ -19,6 +19,7 @@ from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentRelationship
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport
+from opencontractserver.conversations.models import Conversation
 
 User = get_user_model()
 
@@ -451,3 +452,25 @@ class DocumentRelationshipFilter(django_filters.FilterSet):
             "creator",
             "is_public",
         ]
+
+
+class ConversationFilter(django_filters.FilterSet):
+    """Filter set for Conversation model."""
+    document_id = filters.CharFilter(method='filter_by_document_id')
+    corpus_id = filters.CharFilter(method='filter_by_corpus_id')
+
+    def filter_by_document_id(self, queryset, name, value):
+        """Filter conversations by document ID."""
+        django_pk = from_global_id(value)[1]
+        return queryset.filter(chat_with_document_id=django_pk)
+
+    def filter_by_corpus_id(self, queryset, name, value):
+        """Filter conversations by corpus ID."""
+        django_pk = from_global_id(value)[1]
+        return queryset.filter(chat_with_corpus_id=django_pk)
+
+    class Meta:
+        model = Conversation
+        fields = {
+            'created_at': ['gte', 'lte'],
+        }

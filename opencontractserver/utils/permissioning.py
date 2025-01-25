@@ -22,7 +22,7 @@ def set_permissions_for_obj_to_user(
     user_val: int | str | User,
     instance: type[django.db.models.Model],
     permissions: list[PermissionTypes],
-) -> NoReturn:
+) -> None:
 
     """
     Given an instance of a django Model, a user id or instance, and a list of desired permissions,

@@ -52,7 +52,7 @@ import {
 import { ConversationTypeConnection } from "../../../types/graphql-api";
 import { ChatMessage, ChatMessageProps } from "../../widgets/chat/ChatMessage";
 import { authToken, userObj } from "../../../graphql/cache";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 
@@ -204,28 +204,23 @@ const TabButton = styled(Button)<{ collapsed: boolean }>`
   }
 `;
 
-const MainContent = styled.div`
-  padding: 2rem;
+const MainContentArea = styled.div`
+  flex: 1;
   overflow-y: auto;
-  background: white;
-  width: 100%;
-  height: 100%;
+  padding: 2rem;
+  position: relative;
+`;
 
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
+const SummaryContent = styled.div`
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+  transition: all 0.3s ease;
 
-  &::-webkit-scrollbar-track {
-    background: #f1f3f5;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #dee2e6;
-    border-radius: 4px;
-
-    &:hover {
-      background: #ced4da;
-    }
+  &.dimmed {
+    opacity: 0.4;
+    transform: scale(0.98);
+    filter: blur(1px);
   }
 `;
 
@@ -601,6 +596,211 @@ const NewChatButton = styled(motion.button)`
   }
 `;
 
+// Add these styled components for our shimmer effect
+const shimmerAnimation = keyframes`
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+`;
+
+const PlaceholderBase = styled.div`
+  background: linear-gradient(90deg, #f0f0f0 0%, #f7f7f7 50%, #f0f0f0 100%);
+  background-size: 1000px 100%;
+  animation: ${shimmerAnimation} 2s infinite linear;
+  border-radius: 8px;
+`;
+
+const SummaryPlaceholder = styled.div`
+  padding: 3rem;
+  max-width: 800px;
+  margin: 0 auto;
+
+  ${PlaceholderBase} {
+    height: 28px;
+    margin-bottom: 1.5rem;
+
+    &:nth-child(1) {
+      width: 70%;
+    }
+    &:nth-child(2) {
+      width: 90%;
+    }
+    &:nth-child(3) {
+      width: 85%;
+    }
+    &:nth-child(4) {
+      width: 95%;
+    }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+`;
+
+const NotePlaceholder = styled(motion.div)`
+  padding: 2rem;
+  background: white;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(231, 234, 237, 0.7);
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+
+  ${PlaceholderBase} {
+    &.header {
+      height: 24px;
+      width: 40%;
+      margin-bottom: 1.5rem;
+    }
+
+    &.content {
+      height: 20px;
+      margin-bottom: 1rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+      &:nth-child(2) {
+        width: 95%;
+      }
+      &:nth-child(3) {
+        width: 85%;
+      }
+    }
+  }
+`;
+
+const RelationshipPlaceholder = styled(motion.div)`
+  padding: 2rem;
+  background: white;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(231, 234, 237, 0.7);
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+
+  ${PlaceholderBase} {
+    &.type {
+      height: 22px;
+      width: 120px;
+      margin-bottom: 1.5rem;
+    }
+
+    &.title {
+      height: 24px;
+      width: 80%;
+      margin-bottom: 1rem;
+    }
+
+    &.meta {
+      height: 18px;
+      width: 50%;
+    }
+  }
+`;
+
+// Add these components for the placeholder states
+const LoadingPlaceholders: React.FC<{
+  type: "summary" | "notes" | "relationships";
+}> = ({ type }) => {
+  const placeholderCount = 3;
+
+  if (type === "summary") {
+    return (
+      <SummaryPlaceholder>
+        {[...Array(4)].map((_, i) => (
+          <PlaceholderBase key={i} />
+        ))}
+      </SummaryPlaceholder>
+    );
+  }
+
+  return (
+    <>
+      {[...Array(placeholderCount)].map((_, i) => {
+        const Placeholder =
+          type === "notes" ? NotePlaceholder : RelationshipPlaceholder;
+        return (
+          <Placeholder
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: i * 0.1 }}
+          >
+            <PlaceholderBase className={type === "notes" ? "header" : "type"} />
+            {type === "notes" ? (
+              <>
+                <PlaceholderBase className="content" />
+                <PlaceholderBase className="content" />
+              </>
+            ) : (
+              <>
+                <PlaceholderBase className="title" />
+                <PlaceholderBase className="meta" />
+              </>
+            )}
+          </Placeholder>
+        );
+      })}
+    </>
+  );
+};
+
+// Add this styled component for our empty states
+const EmptyStateContainer = styled(motion.div)`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  color: #6c757d;
+
+  svg {
+    color: #adb5bd;
+    margin-bottom: 1.5rem;
+    stroke-width: 1.5;
+  }
+
+  h3 {
+    color: #495057;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: #868e96;
+    font-size: 0.875rem;
+    max-width: 280px;
+    line-height: 1.5;
+  }
+`;
+
+const EmptyState: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}> = ({ icon, title, description }) => (
+  <EmptyStateContainer
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+  >
+    {icon}
+    <h3>{title}</h3>
+    <p>{description}</p>
+  </EmptyStateContainer>
+);
+
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   documentId,
   corpusId,
@@ -609,7 +809,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const auth_token = useReactiveVar(authToken);
   const user_obj = useReactiveVar(userObj);
   const [showGraph, setShowGraph] = useState(false);
-  const [activeTab, setActiveTab] = useState("chat");
+  const [activeTab, setActiveTab] = useState<string>("summary");
   const [newMessage, setNewMessage] = useState("");
   const [showSelector, setShowSelector] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<
@@ -624,8 +824,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   // WebSocket reference
   const socketRef = useRef<WebSocket | null>(null);
 
-  // Fetch everything needed for this knowledge base
-  const { data: knowledgeData } = useQuery<
+  // Update the query to include loading state
+  const { data: knowledgeData, loading: knowledgeLoading } = useQuery<
     GetDocumentKnowledgeBaseOutputs,
     GetDocumentKnowledgeBaseInputs
   >(GET_DOCUMENT_KNOWLEDGE_BASE, {
@@ -637,7 +837,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   });
 
   // Fetch conversations
-  const { data: conversationData } = useQuery<{
+  const { data: conversationData, loading: conversationsLoading } = useQuery<{
     conversations: ConversationTypeConnection;
   }>(GET_CONVERSATIONS, {
     variables: {
@@ -646,6 +846,9 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     },
     skip: !documentId || !corpusId,
   });
+
+  // Combine loading states
+  const loading = knowledgeLoading || conversationsLoading;
 
   // Document metadata
   const metadata = knowledgeData?.document ?? {
@@ -930,20 +1133,26 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           onMouseLeave={() => setSidebarCollapsed(true)}
         >
           <TabButton
+            active={activeTab === "summary"}
+            onClick={() => setActiveTab("summary")}
+            collapsed={sidebarCollapsed}
+            style={{
+              borderBottom: "1px solid rgba(231, 234, 237, 0.7)",
+              marginBottom: "0.5rem",
+              paddingBottom: "1rem",
+            }}
+          >
+            <FileText size={18} />
+            <span>Summary</span>
+          </TabButton>
+
+          <TabButton
             active={activeTab === "chat"}
             onClick={() => setActiveTab("chat")}
             collapsed={sidebarCollapsed}
           >
             <MessageSquare size={18} />
             <span>Chat</span>
-          </TabButton>
-          <TabButton
-            active={activeTab === "summary"}
-            onClick={() => setActiveTab("summary")}
-            collapsed={sidebarCollapsed}
-          >
-            <FileText size={18} />
-            <span>Summary</span>
           </TabButton>
           <TabButton
             active={activeTab === "notes"}
@@ -971,30 +1180,25 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           </TabButton>
         </TabsColumn>
 
-        <MainContent>
-          <DocumentContent>
-            <h1>{metadata.title}</h1>
-
-            {/* Document Annotations */}
-            {knowledgeData?.document?.allAnnotations?.map((annotation: any) => (
-              <div key={annotation.id} className="mb-6">
-                <div className="text-sm text-gray-500 mb-2">
-                  {annotation.annotationLabel.text}
-                </div>
-                <div className="prose">{annotation.rawText}</div>
-              </div>
-            ))}
-
-            {/* Markdown Summary */}
-            {knowledgeData?.document?.mdSummaryFile && (
-              <div className="prose max-w-none mt-8">
+        <MainContentArea>
+          <SummaryContent className={showRightPanel ? "dimmed" : ""}>
+            {loading ? (
+              <LoadingPlaceholders type="summary" />
+            ) : knowledgeData?.document?.mdSummaryFile ? (
+              <div className="prose max-w-none">
                 <ReactMarkdown>
                   {knowledgeData.document.mdSummaryFile}
                 </ReactMarkdown>
               </div>
+            ) : (
+              <EmptyState
+                icon={<FileText size={40} />}
+                title="No summary available"
+                description="This document doesn't have a summary yet"
+              />
             )}
-          </DocumentContent>
-        </MainContent>
+          </SummaryContent>
+        </MainContentArea>
 
         <AnimatePresence>
           {showRightPanel && (
@@ -1008,6 +1212,13 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                 opacity: {
                   duration: 0.2,
                 },
+              }}
+              style={{
+                width: "500px",
+                backgroundColor: "white",
+                borderLeft: "1px solid rgba(231, 234, 237, 0.7)",
+                boxShadow: "-4px 0 15px rgba(0, 0, 0, 0.05)",
+                zIndex: 10,
               }}
             >
               {activeTab === "chat" && (
@@ -1102,25 +1313,39 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
               )}
 
               {activeTab === "notes" && (
-                <div className="p-4 space-y-4 overflow-y-auto h-full">
-                  {notes.map((note) => (
-                    <Card key={note.id} fluid>
-                      <Card.Content>
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="text-sm text-gray-500">
-                            <span className="font-medium text-gray-700">
-                              {note.creator.email}
-                            </span>
-                            <div>{new Date(note.created).toLocaleString()}</div>
-                          </div>
-                        </div>
-                        <div className="prose max-w-none">
-                          {/* If note.title is used, we can display it, e.g. <h4>{note.title}</h4> */}
-                          {note.content}
-                        </div>
-                      </Card.Content>
-                    </Card>
-                  ))}
+                <div className="p-4 flex-1 flex flex-col">
+                  {loading ? (
+                    <LoadingPlaceholders type="notes" />
+                  ) : notes.length === 0 ? (
+                    <EmptyState
+                      icon={<Notebook size={40} />}
+                      title="No notes yet"
+                      description="Start adding notes to this document"
+                    />
+                  ) : (
+                    <div className="space-y-4 overflow-y-auto h-full">
+                      {notes.map((note) => (
+                        <Card key={note.id} fluid>
+                          <Card.Content>
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="text-sm text-gray-500">
+                                <span className="font-medium text-gray-700">
+                                  {note.creator.email}
+                                </span>
+                                <div>
+                                  {new Date(note.created).toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="prose max-w-none">
+                              {/* If note.title is used, we can display it, e.g. <h4>{note.title}</h4> */}
+                              {note.content}
+                            </div>
+                          </Card.Content>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1147,60 +1372,74 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
               )}
 
               {activeTab === "relationships" && (
-                <RelationshipPanel>
-                  <h3>
-                    <ChartNetwork size={20} />
-                    Document Relationships
-                  </h3>
-                  {docRelationships.map((rel) => {
-                    const otherDoc =
-                      rel.sourceDocument.id === documentId
-                        ? rel.targetDocument
-                        : rel.sourceDocument;
+                <div className="p-4 flex-1 flex flex-col">
+                  {loading ? (
+                    <LoadingPlaceholders type="relationships" />
+                  ) : docRelationships.length === 0 ? (
+                    <EmptyState
+                      icon={<ChartNetwork size={40} />}
+                      title="No relationships yet"
+                      description="Connect this document with others to create relationships"
+                    />
+                  ) : (
+                    <RelationshipPanel>
+                      <h3>
+                        <ChartNetwork size={20} />
+                        Document Relationships
+                      </h3>
+                      {docRelationships.map((rel) => {
+                        const otherDoc =
+                          rel.sourceDocument.id === documentId
+                            ? rel.targetDocument
+                            : rel.sourceDocument;
 
-                    return (
-                      <RelationshipCard key={rel.id}>
-                        <Card.Content>
-                          <RelationshipType>
-                            {rel.relationshipType}
-                          </RelationshipType>
-                          <Card.Header style={{ marginBottom: "0.5rem" }}>
-                            {otherDoc.title || "Untitled Document"}
-                          </Card.Header>
-                          <Card.Meta>
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: "1rem",
-                                color: "#6c757d",
-                              }}
-                            >
-                              <span>
-                                <FileType
-                                  size={14}
-                                  style={{ marginRight: "0.25rem" }}
-                                />
-                                {otherDoc.fileType}
-                              </span>
-                              <span>
-                                <User
-                                  size={14}
-                                  style={{ marginRight: "0.25rem" }}
-                                />
-                                {otherDoc.creator?.email}
-                              </span>
-                            </div>
-                          </Card.Meta>
-                          {rel.annotationLabel && (
-                            <Card.Description style={{ marginTop: "0.75rem" }}>
-                              {rel.annotationLabel.text}
-                            </Card.Description>
-                          )}
-                        </Card.Content>
-                      </RelationshipCard>
-                    );
-                  })}
-                </RelationshipPanel>
+                        return (
+                          <RelationshipCard key={rel.id}>
+                            <Card.Content>
+                              <RelationshipType>
+                                {rel.relationshipType}
+                              </RelationshipType>
+                              <Card.Header style={{ marginBottom: "0.5rem" }}>
+                                {otherDoc.title || "Untitled Document"}
+                              </Card.Header>
+                              <Card.Meta>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    gap: "1rem",
+                                    color: "#6c757d",
+                                  }}
+                                >
+                                  <span>
+                                    <FileType
+                                      size={14}
+                                      style={{ marginRight: "0.25rem" }}
+                                    />
+                                    {otherDoc.fileType}
+                                  </span>
+                                  <span>
+                                    <User
+                                      size={14}
+                                      style={{ marginRight: "0.25rem" }}
+                                    />
+                                    {otherDoc.creator?.email}
+                                  </span>
+                                </div>
+                              </Card.Meta>
+                              {rel.annotationLabel && (
+                                <Card.Description
+                                  style={{ marginTop: "0.75rem" }}
+                                >
+                                  {rel.annotationLabel.text}
+                                </Card.Description>
+                              )}
+                            </Card.Content>
+                          </RelationshipCard>
+                        );
+                      })}
+                    </RelationshipPanel>
+                  )}
+                </div>
               )}
             </SlidingPanel>
           )}

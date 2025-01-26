@@ -1813,7 +1813,7 @@ export interface GetConversationsOutputs {
  * The shape is now a connection with edges of ConversationType.
  */
 export const GET_CONVERSATIONS = gql`
-  query GetConversations($documentId: ID, $corpusId: ID) {
+  query GetConversations($documentId: String, $corpusId: String) {
     conversations(documentId: $documentId, corpusId: $corpusId) {
       edges {
         node {
@@ -1916,7 +1916,7 @@ export interface GetDocumentKnowledgeBaseOutputs {
 }
 
 export const GET_DOCUMENT_KNOWLEDGE_BASE = gql`
-  query GetDocumentKnowledgeBase($documentId: ID!, $corpusId: ID!) {
+  query GetDocumentKnowledgeBase($documentId: String, $corpusId: ID!) {
     document(id: $documentId) {
       id
       title
@@ -1942,7 +1942,7 @@ export const GET_DOCUMENT_KNOWLEDGE_BASE = gql`
         json
         myPermissions
       }
-      allDocRelationships {
+      allDocRelationships(corpusId: $corpusId) {
         id
         relationshipType
         sourceDocument {
@@ -1957,7 +1957,7 @@ export const GET_DOCUMENT_KNOWLEDGE_BASE = gql`
         }
         created
       }
-      allNotes {
+      allNotes(corpusId: $corpusId) {
         id
         title
         content

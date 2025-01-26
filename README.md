@@ -13,7 +13,7 @@
 
 ## TLDR: What Does it Do?
 
-OpenContracts is an **Apache-2 Licensed** enterprise document analytics tool. It supports multiple formats - including PDF and txt-based formats (with more on the way). It also supports multiple document ingestion pipelines with a [pluggable architecture](docs/pipelines/pipeline_overview.md) designed to make supporting new formats and ingestion engines easy - see our [Docling Integration](docs/pipelines/docling_parser.md) for an example. Writing your own custom document analytics tools where the results get displayed beautifully over the original document [is easy](docs/walkthrough/advanced/register-doc-analyzer.md). We also support mass document [data extraction](docs/extract_and_retrieval/intro_to_django_annotation_vector_store.md) with a [LlamaIndex](https://www.llamaindex.ai/) wrapper.
+OpenContracts is an **GPL-3** enterprise document analytics tool. It supports multiple formats - including PDF and txt-based formats (with more on the way). It also supports multiple document ingestion pipelines with a [pluggable architecture](docs/pipelines/pipeline_overview.md) designed to make supporting new formats and ingestion engines easy - see our [Docling Integration](docs/pipelines/docling_parser.md) for an example. Writing your own custom document analytics tools where the results get displayed beautifully over the original document [is easy](docs/walkthrough/advanced/register-doc-analyzer.md). We also support mass document [data extraction](docs/extract_and_retrieval/intro_to_django_annotation_vector_store.md) with a [LlamaIndex](https://www.llamaindex.ai/) wrapper.
 
 ### PDF-Annotation and Analysis:
 

@@ -330,110 +330,6 @@ const SendButton = styled(Button)`
   }
 `;
 
-// Update the ConversationSelector component
-const ConversationList = styled.div`
-  max-height: 300px;
-  overflow-y: auto;
-  border-bottom: 1px solid #e9ecef;
-`;
-
-const ConversationItem = styled(Segment)`
-  &&& {
-    cursor: pointer;
-    margin: 0 !important;
-    padding: 1rem !important;
-    border: none !important;
-    border-radius: 0 !important;
-
-    &:hover {
-      background: #f8f9fa !important;
-    }
-
-    &.active {
-      background: #e8f4ff !important;
-    }
-  }
-`;
-
-const ConversationSelector: React.FC<ConversationSelectorProps> = ({
-  conversations = [],
-  selectedId,
-  onSelect,
-  onCreateNew,
-}) => (
-  <div>
-    <div style={{ padding: "1rem", borderBottom: "1px solid #e9ecef" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1rem",
-        }}
-      >
-        <Header as="h3" style={{ margin: 0 }}>
-          Conversations
-        </Header>
-        <Button primary compact icon labelPosition="left" onClick={onCreateNew}>
-          <Plus size={16} />
-          New Chat
-        </Button>
-      </div>
-    </div>
-    <ConversationList>
-      {conversations?.length > 0 ? (
-        conversations.map((conv) => (
-          <ConversationItem
-            key={conv.id}
-            onClick={() => onSelect(conv.id)}
-            className={selectedId === conv.id ? "active" : ""}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-              >
-                <MessageSquare size={16} />
-                {conv.title || "Untitled Conversation"}
-              </span>
-              {conv.messageCount && (
-                <Label circular size="tiny" color="blue">
-                  {conv.messageCount}
-                </Label>
-              )}
-            </div>
-            <div
-              style={{
-                fontSize: "0.8rem",
-                color: "#6c757d",
-                marginTop: "0.5rem",
-              }}
-            >
-              <span style={{ marginRight: "1rem" }}>
-                <Clock size={12} style={{ marginRight: "0.3rem" }} />
-                {new Date(conv.createdAt).toLocaleDateString()}
-              </span>
-              <span>
-                <User size={12} style={{ marginRight: "0.3rem" }} />
-                {conv.creator.email}
-              </span>
-            </div>
-          </ConversationItem>
-        ))
-      ) : (
-        <div style={{ padding: "1rem", textAlign: "center", color: "#6c757d" }}>
-          No conversations yet. Start a new chat!
-        </div>
-      )}
-    </ConversationList>
-  </div>
-);
-
 interface DocumentKnowledgeBaseProps {
   documentId: string;
   corpusId: string;
@@ -570,6 +466,141 @@ const RelationshipType = styled.div`
   margin-bottom: 0.75rem;
 `;
 
+const ConversationIndicator = styled(motion.div)`
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const ConversationCount = styled(motion.div)`
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2185d0 0%, #1678c2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(33, 133, 208, 0.2);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(33, 133, 208, 0.3);
+  }
+`;
+
+const ConversationSelector = styled(motion.div)`
+  position: absolute;
+  top: 0;
+  right: 3.5rem;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  width: 300px;
+  overflow: hidden;
+  border: 1px solid rgba(231, 234, 237, 0.7);
+`;
+
+const ConversationList = styled.div`
+  max-height: 400px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 2px;
+
+    &:hover {
+      background: #ced4da;
+    }
+  }
+`;
+
+const ConversationItem = styled(motion.button)`
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(231, 234, 237, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(33, 133, 208, 0.05);
+  }
+
+  .title {
+    font-weight: 500;
+    color: #212529;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .meta {
+    font-size: 0.75rem;
+    color: #868e96;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .message-count {
+    margin-left: auto;
+    background: rgba(33, 133, 208, 0.1);
+    color: #2185d0;
+    padding: 0.125rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+`;
+
+const NewChatButton = styled(motion.button)`
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: none;
+  border-top: 1px solid rgba(231, 234, 237, 0.7);
+  color: #2185d0;
+  font-weight: 500;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(33, 133, 208, 0.05);
+  }
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+`;
+
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   documentId,
   corpusId,
@@ -580,6 +611,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [showGraph, setShowGraph] = useState(false);
   const [activeTab, setActiveTab] = useState("chat");
   const [newMessage, setNewMessage] = useState("");
+  const [showSelector, setShowSelector] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | undefined
   >();
@@ -623,26 +655,21 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     created: new Date().toISOString(),
   };
 
-  // Build a minimal conversation list for the selector
-  const conversations = conversationData?.conversations?.edges
-    ?.map((edge) => {
-      const node = edge?.node;
-      if (!node) return null;
-      return {
-        id: node.id,
-        title: node.title,
-        createdAt: node.createdAt,
-        creator: node.creator,
-        messageCount: node.chatMessages?.edges?.length || 0,
-      };
-    })
-    .filter(Boolean) as Array<{
-    id: string;
-    title?: string;
-    createdAt: string;
-    creator: { email: string };
-    messageCount?: number;
-  }>;
+  // Safely handle conversations data
+  const conversations =
+    conversationData?.conversations?.edges
+      ?.map((edge) => {
+        const node = edge?.node;
+        if (!node) return null;
+        return {
+          id: node.id,
+          title: node.title,
+          createdAt: node.createdAt,
+          creator: node.creator,
+          messageCount: node.chatMessages?.edges?.length || 0,
+        };
+      })
+      .filter(Boolean) || [];
 
   // Determine which conversation is selected
   const selectedConversation = conversationData?.conversations?.edges?.find(
@@ -674,8 +701,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
   // Automatically pick first conversation if not set
   useEffect(() => {
-    if (!selectedConversationId && conversations?.length) {
-      setSelectedConversationId(conversations[0].id);
+    if (!selectedConversationId && conversations.length > 0) {
+      setSelectedConversationId(conversations[0]?.id || undefined);
     }
   }, [conversations, selectedConversationId]);
 
@@ -985,12 +1012,72 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             >
               {activeTab === "chat" && (
                 <ChatContainer>
-                  <ConversationSelector
-                    conversations={conversations}
-                    selectedId={selectedConversationId}
-                    onSelect={setSelectedConversationId}
-                    onCreateNew={handleCreateNewConversation}
-                  />
+                  <ConversationIndicator>
+                    <AnimatePresence>
+                      {showSelector && (
+                        <ConversationSelector
+                          initial={{ opacity: 0, scale: 0.9, x: 20 }}
+                          animate={{ opacity: 1, scale: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.9, x: 20 }}
+                          transition={{
+                            type: "spring",
+                            damping: 20,
+                            stiffness: 300,
+                          }}
+                        >
+                          <ConversationList>
+                            {conversations.map(
+                              (conv) =>
+                                conv && (
+                                  <ConversationItem
+                                    key={conv.id}
+                                    onClick={() =>
+                                      setSelectedConversationId(conv.id)
+                                    }
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                  >
+                                    <div className="title">
+                                      <MessageSquare size={14} />
+                                      {conv.title || "Untitled Conversation"}
+                                      {conv.messageCount && (
+                                        <span className="message-count">
+                                          {conv.messageCount}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="meta">
+                                      <Clock size={12} />
+                                      {new Date(
+                                        conv.createdAt
+                                      ).toLocaleDateString()}
+                                      <User size={12} />
+                                      {conv.creator.email}
+                                    </div>
+                                  </ConversationItem>
+                                )
+                            )}
+                          </ConversationList>
+                          <NewChatButton
+                            onClick={handleCreateNewConversation}
+                            whileHover={{ y: -1 }}
+                            whileTap={{ y: 1 }}
+                          >
+                            <Plus size={16} />
+                            New Chat
+                          </NewChatButton>
+                        </ConversationSelector>
+                      )}
+                    </AnimatePresence>
+                    <ConversationCount
+                      onClick={() => setShowSelector(!showSelector)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {conversations.length}
+                    </ConversationCount>
+                  </ConversationIndicator>
                   <div style={{ flex: 1, overflow: "auto", padding: "1rem" }}>
                     {chat.map((msg, idx) => (
                       <ChatMessage key={idx} {...msg} />

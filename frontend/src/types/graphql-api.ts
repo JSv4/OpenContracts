@@ -767,6 +767,8 @@ export type UserExportType = Node & {
   format?: ExportTypes;
   errors: Scalars["String"];
   creator: UserType;
+  postProcessors?: string[];
+  inputKwargs?: Record<any, any>;
   isPublic?: Scalars["Boolean"];
   myPermissions?: PermissionTypes[];
 };
@@ -1462,3 +1464,49 @@ export type ChatMessageTypeEdge = {
   node?: Maybe<ChatMessageType>;
   cursor: Scalars["String"];
 };
+
+/** Graphene type for pipeline components. */
+export type PipelineComponentType = {
+  /** Name of the component class. */
+  name?: string;
+  /** Title of the component. */
+  title?: string;
+  /** Description of the component. */
+  description?: string;
+  /** Author of the component. */
+  author?: string;
+  /** List of dependencies required by the component. */
+  dependencies?: string[];
+  /** Vector size for embedders. */
+  vectorSize?: number;
+  /** Module name for the component. */
+  moduleName?: string;
+  /** List of supported file types. */
+  supportedFileTypes?: FileTypeEnum[];
+  /** Type of the component (parser, embedder, or thumbnailer). */
+  componentType?: string;
+  /** JSONSchema schema for inputs supported from user (experimental - not fully implemented). */
+  inputSchema?: Record<any, any>;
+};
+
+/** Graphene type for grouping pipeline components. */
+export type PipelineComponentsType = {
+  /** List of available parsers. */
+  parsers?: Maybe<Array<Maybe<PipelineComponentType>>>;
+  /** List of available embedders. */
+  embedders?: Maybe<Array<Maybe<PipelineComponentType>>>;
+  /** List of available thumbnail generators. */
+  thumbnailers?: Maybe<Array<Maybe<PipelineComponentType>>>;
+  /** List of available post-processors. */
+  postProcessors?: Maybe<Array<Maybe<PipelineComponentType>>>;
+};
+
+/** Enum for file types. */
+export enum FileTypeEnum {
+  /** PDF file type. */
+  PDF = "application/pdf",
+  /** Plain text file type. */
+  TXT = "text/plain",
+  /** DOCX file type. */
+  DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}

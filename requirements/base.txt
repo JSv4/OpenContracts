@@ -1,6 +1,6 @@
 pytz==2024.2  # https://github.com/stub42/pytz
 python-slugify==8.0.4  # https://github.com/un33k/python-slugify
-Pillow==10.4.0  # https://github.com/python-pillow/Pillow
+Pillow>=10.4.0  # https://github.com/python-pillow/Pillow
 argon2-cffi==21.3.0  # https://github.com/hynek/argon2_cffi
 hiredis==3.0.0  # https://github.com/redis/hiredis-py
 redis==5.2.1  # https://github.com/redis/redis-py
@@ -44,7 +44,7 @@ drf-extra-fields==3.7.0  # https://github.com/Hipo/drf-extra-fields
 # ------------------------------------------------------------------------------
 PyPDF2==3.0.1  # https://github.com/mstamy2/PyPDF2
 pandas
-plasmapdf
+plasmapdf==0.1.2  # https://github.com/Jsv4/plasmapdf
 pdf2image
 tiktoken==0.8.0  # https://github.com/openai/tiktoken
 openai==1.58.1  # https://github.com/openai/openai-python

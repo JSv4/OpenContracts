@@ -298,7 +298,7 @@ class LabelTypeEnum(graphene.Enum):
 
 
 class AnnotationSummaryType(graphene.ObjectType):
-    id: graphene.String()
+    id: graphene.String()  # type: ignore
     label = graphene.String()
     type = LabelTypeEnum()
     raw_text = graphene.String()
@@ -801,6 +801,7 @@ class PipelineComponentType(graphene.ObjectType):
     """Graphene type for pipeline components."""
 
     name = graphene.String(description="Name of the component class.")
+    module_name = graphene.String(description="Name of the module the component is in.")
     title = graphene.String(description="Title of the component.")
     description = graphene.String(description="Description of the component.")
     author = graphene.String(description="Author of the component.")
@@ -813,6 +814,9 @@ class PipelineComponentType(graphene.ObjectType):
     )
     component_type = graphene.String(
         description="Type of the component (parser, embedder, or thumbnailer)."
+    )
+    input_schema = GenericScalar(
+        description="JSONSchema schema for inputs supported from user (experimental - not fully implemented)."
     )
 
 
@@ -964,3 +968,7 @@ class NoteType(AnnotatePermissionsForReadMixin, DjangoObjectType):
             return queryset.all().visible_to_user(info.context.user)
         else:
             return queryset
+
+    post_processors = graphene.List(
+        PipelineComponentType, description="List of available post-processors."
+    )

@@ -19,6 +19,7 @@ import {
   DocumentType,
   AnalysisRowType,
   ConversationType,
+  ConversationTypeConnection,
 } from "../types/graphql-api";
 import { ExportObject } from "../types/graphql-api";
 
@@ -1795,87 +1796,176 @@ export const listAnnotations = /* GraphQL */ `
   }
 `;
 
-export interface GetConversationInputs {
+export interface GetConversationsInputs {
   documentId?: string;
   corpusId?: string;
 }
 
-export interface GetConversationOutputs {
-  conversation: ConversationType;
+/**
+ * Returns a connection of conversations.
+ */
+export interface GetConversationsOutputs {
+  conversations: ConversationTypeConnection;
 }
 
-export const GET_CONVERSATION = gql`
-  query GetConversation($documentId: ID, $corpusId: ID) {
-    conversation(documentId: $documentId, corpusId: $corpusId) {
-      id
-      title
-      createdAt
-      updatedAt
-      creator {
-        id
-        email
-      }
-      chatWithCorpus {
-        id
-        title
-      }
-      chatWithDocument {
-        id
-        title
-      }
-      chatMessages {
-        edges {
-          node {
+/**
+ * Updated to query the new "conversations" field instead of "conversation".
+ * The shape is now a connection with edges of ConversationType.
+ */
+export const GET_CONVERSATIONS = gql`
+  query GetConversations($documentId: ID, $corpusId: ID) {
+    conversations(documentId: $documentId, corpusId: $corpusId) {
+      edges {
+        node {
+          id
+          title
+          createdAt
+          updatedAt
+          creator {
             id
-            msgType
-            content
-            data
-            createdAt
-            creator {
-              id
-              email
-            }
-            sourceDocument {
-              id
-              title
-            }
-            sourceAnnotations {
-              edges {
-                node {
+            email
+          }
+          chatWithCorpus {
+            id
+            title
+          }
+          chatWithDocument {
+            id
+            title
+          }
+          chatMessages {
+            edges {
+              node {
+                id
+                msgType
+                content
+                data
+                createdAt
+                creator {
                   id
-                  rawText
-                  annotationLabel {
-                    id
-                    text
-                    labelType
+                  email
+                }
+                sourceDocument {
+                  id
+                  title
+                }
+                sourceAnnotations {
+                  edges {
+                    node {
+                      id
+                      rawText
+                      annotationLabel {
+                        id
+                        text
+                        labelType
+                      }
+                    }
+                  }
+                }
+                createdAnnotations {
+                  edges {
+                    node {
+                      id
+                      rawText
+                      annotationLabel {
+                        id
+                        text
+                        labelType
+                      }
+                    }
                   }
                 }
               }
             }
-            createdAnnotations {
-              edges {
-                node {
-                  id
-                  rawText
-                  annotationLabel {
-                    id
-                    text
-                    labelType
-                  }
-                }
-              }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
             }
           }
-        }
-        pageInfo {
-          hasNextPage
-          hasPreviousPage
-          startCursor
-          endCursor
+          isPublic
+          myPermissions
         }
       }
-      isPublic
-      myPermissions
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+    }
+  }
+`;
+
+/**
+ * Fetches all the data needed for the DocumentKnowledgeBase component:
+ * - Basic document info (title, fileType, creator, created)
+ * - All non-structural annotations for this document in the specified corpus
+ * - All direct document-document relationships (e.g., references, related)
+ * - All notes associated with this document
+ */
+
+export interface GetDocumentKnowledgeBaseInputs {
+  documentId: string;
+  corpusId: string;
+}
+
+export interface GetDocumentKnowledgeBaseOutputs {
+  document: DocumentType;
+}
+
+export const GET_DOCUMENT_KNOWLEDGE_BASE = gql`
+  query GetDocumentKnowledgeBase($documentId: ID!, $corpusId: ID!) {
+    document(id: $documentId) {
+      id
+      title
+      fileType
+      creator {
+        email
+      }
+      created
+      mdSummaryFile
+      allAnnotations(corpusId: $corpusId) {
+        id
+        page
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+        annotationType
+        rawText
+        json
+        myPermissions
+      }
+      allDocRelationships {
+        id
+        relationshipType
+        sourceDocument {
+          id
+          title
+          fileType
+        }
+        targetDocument {
+          id
+          title
+          fileType
+        }
+        created
+      }
+      allNotes {
+        id
+        title
+        content
+        created
+        creator {
+          email
+        }
+      }
     }
   }
 `;

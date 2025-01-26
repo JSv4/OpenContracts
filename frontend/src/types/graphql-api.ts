@@ -302,6 +302,7 @@ export type DocumentType = Node & {
   customMeta?: Maybe<Scalars["JSONString"]>;
   icon?: Scalars["String"];
   pdfFile?: Scalars["String"];
+  mdSummaryFile?: Scalars["String"];
   is_open?: boolean;
   is_selected?: boolean;
   pageCount?: Maybe<Scalars["Int"]>;
@@ -320,11 +321,13 @@ export type DocumentType = Node & {
   myPermissions?: PermissionTypes[];
   allAnnotations?: ServerAnnotationType[];
   allRelationships?: RelationshipType[];
+  allDocRelationships?: DocumentRelationshipType[];
   allStructuralAnnotations?: ServerAnnotationType[];
   docLabelAnnotations?: Maybe<AnnotationTypeConnection>;
   metadataAnnotations?: Maybe<AnnotationTypeConnection>;
   conversations?: ConversationTypeConnection;
   chatMessages?: ChatMessageTypeConnection;
+  allNotes?: NoteType[];
 };
 
 export type DocumentTypeAssignmentSetArgs = {
@@ -1461,4 +1464,90 @@ export type ChatMessageTypeEdge = {
   __typename?: "ChatMessageTypeEdge";
   node?: Maybe<ChatMessageType>;
   cursor: Scalars["String"];
+};
+
+/**
+ * Represents a single Note record in GraphQL.
+ * Includes hierarchical tree fields (descendantsTree, fullTree, subtree).
+ */
+export type NoteType = Node & {
+  __typename?: "NoteType";
+  id: string;
+  title: string;
+  content: string;
+  parent?: Maybe<NoteType>;
+  annotation?: Maybe<ServerAnnotationType>;
+  document: DocumentType;
+  isPublic: boolean;
+  creator: UserType;
+  created: string; // DateTime
+  modified: string; // DateTime
+  myPermissions?: Maybe<Array<Maybe<PermissionTypes>>>;
+  /**
+   * A flat list of descendant notes, each including only
+   * the IDs of its immediate children.
+   * Freeform data structure.
+   */
+  descendantsTree?: Maybe<any>;
+  /**
+   * A flat list of notes from the root ancestor,
+   * each including only the IDs of its immediate children.
+   * Freeform data structure.
+   */
+  fullTree?: Maybe<any>;
+  /**
+   * A combined tree that includes the path
+   * from the root ancestor to this note
+   * and all its descendants.
+   * Freeform data structure.
+   */
+  subtree?: Maybe<any>;
+};
+
+export type NoteTypeEdge = {
+  __typename?: "NoteTypeEdge";
+  node?: Maybe<NoteType>;
+  cursor: string;
+};
+
+export type NoteTypeConnection = {
+  __typename?: "NoteTypeConnection";
+  edges: Array<Maybe<NoteTypeEdge>>;
+  pageInfo: PageInfo;
+  totalCount?: Maybe<number>;
+};
+
+/**
+ * Represents a relationship between two documents in GraphQL.
+ */
+export type DocumentRelationshipType = Node & {
+  __typename?: "DocumentRelationshipType";
+  id: string;
+  /**
+   * Arbitrary JSON data field.
+   */
+  data?: Maybe<any>;
+  relationshipType: string;
+  annotationLabel?: Maybe<AnnotationLabelType>;
+  corpus?: Maybe<CorpusType>;
+  sourceDocument: DocumentType;
+  targetDocument: DocumentType;
+  creator: UserType;
+  created: string; // DateTime
+  modified: string; // DateTime
+  isPublic?: Maybe<boolean>;
+  myPermissions?: Maybe<Array<Maybe<PermissionTypes>>>;
+};
+
+export type DocumentRelationshipTypeEdge = {
+  __typename?: "DocumentRelationshipTypeEdge";
+  node?: Maybe<DocumentRelationshipType>;
+  cursor: string;
+};
+
+export type DocumentRelationshipTypeConnection = {
+  __typename?: "DocumentRelationshipTypeConnection";
+  edges: Array<Maybe<DocumentRelationshipTypeEdge>>;
+  pageInfo: PageInfo;
+  totalCount?: Maybe<number>;
 };

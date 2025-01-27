@@ -9,6 +9,11 @@
  *      (ASYNC_START, ASYNC_CONTENT, ASYNC_FINISH) or synchronous messages (SYNC_CONTENT).
  *   3) Display those messages in real time, appending them to the chat.
  *   4) Allow sending user queries through the socket.
+ *
+ * Responsive Enhancements:
+ *   - The right sidebar uses a clamp-based width for medium screens, then switches
+ *     to full-width on very small screens to prevent overflow.
+ *   - Child content inside the sidebar is scrollable without causing horizontal overflow.
  */
 
 import React, { useState, useEffect, useRef } from "react";
@@ -390,23 +395,29 @@ const DocumentContent = styled.div`
   }
 `;
 
+/**
+ * SlidingPanel
+ *
+ * The right sidebar uses a combination of clamp for width on mid-sized screens
+ * and goes full-width on small screens. Child elements remain scrollable.
+ */
 const SlidingPanel = styled(motion.div)`
   position: absolute;
   top: 0;
   right: 0;
-  width: min(500px, 50%); // Ensure panel never takes more than 50% on desktop
+  /* For larger screens: at least 320px, up to 65% of total width, max 520px */
+  width: clamp(320px, 65%, 520px);
   height: 100%;
   background: white;
   box-shadow: -4px 0 25px rgba(0, 0, 0, 0.05);
   z-index: 80;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 
-  /* Full-screen panel on mobile */
+  /* On screens <= 768px, take the entire width below the tab bar */
   @media (max-width: 768px) {
     width: 100%;
-    height: calc(100% - 56px); /* Account for tab bar */
+    height: calc(100% - 56px);
     top: 56px;
   }
 `;
@@ -416,6 +427,8 @@ const ChatContainer = styled.div`
   flex-direction: column;
   height: 100%;
   background: white;
+  /* Ensure chat messages can scroll without causing horizontal overflows */
+  overflow: hidden;
 `;
 
 const ChatInputContainer = styled.div`
@@ -424,7 +437,6 @@ const ChatInputContainer = styled.div`
   background: white;
   position: relative;
 
-  /* Ensure input is accessible on mobile */
   @media (max-width: 768px) {
     padding: 1rem;
     position: sticky;
@@ -1150,24 +1162,40 @@ const NotesGrid = styled.div`
 
 const NoteModal = styled(Modal)`
   &&& {
-    max-width: 60vw;
+    max-width: 90vw;
     margin: 2rem auto;
     border-radius: 12px;
     overflow: hidden;
 
+    @media (min-width: 768px) {
+      max-width: 80vw;
+    }
+
+    @media (min-width: 1024px) {
+      max-width: 60vw;
+    }
+
     .content {
-      padding: 2rem;
+      padding: 1.5rem;
       font-family: "Kalam", cursive;
       line-height: 1.6;
       color: #2c3e50;
+
+      @media (min-width: 768px) {
+        padding: 2rem;
+      }
     }
 
     .meta {
-      padding: 1rem 2rem;
+      padding: 1rem 1.5rem;
       background: #f8f9fa;
       border-top: 1px solid #eee;
       font-size: 0.875rem;
       color: #666;
+
+      @media (min-width: 768px) {
+        padding: 1rem 2rem;
+      }
     }
   }
 `;
@@ -1229,22 +1257,14 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   >();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
-
-  // Chat messages we display (initially from GET_CONVERSATIONS, plus any new tokens from WebSocket)
   const [chat, setChat] = useState<ChatMessageProps[]>([]);
-
-  // WebSocket reference
   const socketRef = useRef<WebSocket | null>(null);
-
-  // Add these state variables at the top of your component
   const [wsReady, setWsReady] = useState(false);
   const [wsError, setWsError] = useState<string | null>(null);
 
-  // Add this new state for the markdown content
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
   const [markdownError, setMarkdownError] = useState<boolean>(false);
 
-  // Update the query to include loading state
   const { data: knowledgeData, loading: knowledgeLoading } = useQuery<
     GetDocumentKnowledgeBaseOutputs,
     GetDocumentKnowledgeBaseInputs
@@ -1256,7 +1276,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     skip: !documentId || !corpusId,
   });
 
-  // Fetch conversations
   const { data: conversationData, loading: conversationsLoading } = useQuery<{
     conversations: ConversationTypeConnection;
   }>(GET_CONVERSATIONS, {
@@ -1267,10 +1286,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     skip: !documentId || !corpusId,
   });
 
-  // Combine loading states
   const loading = knowledgeLoading || conversationsLoading;
 
-  // Document metadata
   const metadata = knowledgeData?.document ?? {
     title: "Loading...",
     fileType: "",
@@ -1278,7 +1295,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     created: new Date().toISOString(),
   };
 
-  // Safely handle conversations data
   const conversations =
     conversationData?.conversations?.edges
       ?.map((edge) => {
@@ -1294,12 +1310,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       })
       .filter(Boolean) || [];
 
-  // Determine which conversation is selected
   const selectedConversation = conversationData?.conversations?.edges?.find(
     (edge) => edge?.node?.id === selectedConversationId
   )?.node;
 
-  // Helper to transform the GraphQL chat messages to local ChatMessageProps
   const transformGraphQLMessages = React.useCallback((): ChatMessageProps[] => {
     if (!selectedConversation) return [];
     const edges = selectedConversation.chatMessages?.edges || [];
@@ -1316,32 +1330,23 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }));
   }, [selectedConversation]);
 
-  // On initial load or if the user changes conversation, update chat from GraphQL
   useEffect(() => {
     if (!selectedConversation) return;
     setChat(transformGraphQLMessages());
   }, [selectedConversation, transformGraphQLMessages]);
 
-  // Automatically pick first conversation if not set
   useEffect(() => {
     if (!selectedConversationId && conversations.length > 0) {
       setSelectedConversationId(conversations[0]?.id || undefined);
     }
   }, [conversations, selectedConversationId]);
 
-  // Create new conversation (TODO: implement an actual mutation)
   const handleCreateNewConversation = () => {
     console.log("Create new conversation (mutation TBD)");
   };
 
-  /**
-   * --------------------------
-   *  WebSocket Setup & Events
-   * --------------------------
-   */
   useEffect(() => {
     const userIsAuthenticated = !!(auth_token && user_obj);
-
     if (!documentId || !corpusId || !userIsAuthenticated) return;
 
     const wsUrl = getWebSocketUrl(documentId, auth_token);
@@ -1350,14 +1355,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     socketRef.current = new WebSocket(wsUrl);
     const ws = socketRef.current;
 
-    // Listen for open event
     ws.onopen = () => {
       console.log("WebSocket connected");
       setWsReady(true);
       setWsError(null);
     };
 
-    // Listen for message events
     ws.onmessage = (event) => {
       try {
         const messageData = JSON.parse(event.data);
@@ -1367,18 +1370,14 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
         switch (msgType) {
           case "ASYNC_START":
-            // Server signals beginning of a streaming response
             break;
           case "ASYNC_CONTENT":
-            // Intermediate streaming token
             appendStreamingTokenToChat(content);
             break;
           case "ASYNC_FINISH":
-            // Final content of the streaming response
             finalizeStreamingResponse(content, data?.sources || "");
             break;
           case "SYNC_CONTENT":
-            // Single (non-streaming) message from server
             finalizeSyncResponse(content, data?.sources || "");
             break;
           default:
@@ -1390,21 +1389,18 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       }
     };
 
-    // Listen for close event
     ws.onclose = (event) => {
       console.log("WebSocket closed:", event.code, event.reason);
       setWsReady(false);
       setWsError("Connection closed. Please try again.");
     };
 
-    // Listen for error event
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
       setWsReady(false);
       setWsError("Failed to connect. Please try again.");
     };
 
-    // Cleanup on unmount
     return () => {
       if (ws) {
         setWsReady(false);
@@ -1413,11 +1409,9 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     };
   }, [documentId, corpusId, user_obj, auth_token]);
 
-  // Helper: handle partial streaming tokens from server
   const appendStreamingTokenToChat = (token: string) => {
     if (!token) return;
     setChat((prev) => {
-      // If last message is an "assistant" streaming message, append the new token
       if (
         prev.length &&
         prev[prev.length - 1].isAssistant &&
@@ -1429,7 +1423,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         };
         return [...prev.slice(0, -1), updatedLast];
       } else {
-        // Otherwise, add a new message
         return [
           ...prev,
           {
@@ -1443,11 +1436,9 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     });
   };
 
-  // Helper: finalize streaming messages
   const finalizeStreamingResponse = (content: string, sources: string) => {
     setChat((prev) => {
       if (!prev.length) return prev;
-      // Update the last assistant message with final streaming content
       const updatedLast = {
         ...prev[prev.length - 1],
         content: content,
@@ -1456,7 +1447,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     });
   };
 
-  // Helper: handle single (non-streaming) response
   const finalizeSyncResponse = (content: string, sources: string) => {
     setChat((prev) => [
       ...prev,
@@ -1469,7 +1459,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     ]);
   };
 
-  // Update the send message function
   const sendMessageOverSocket = React.useCallback(() => {
     const trimmed = newMessage.trim();
     if (!trimmed || !socketRef.current) return;
@@ -1480,7 +1469,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }
 
     try {
-      // Show user message immediately in the chat
       setChat((prev) => [
         ...prev,
         {
@@ -1491,7 +1479,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         },
       ]);
 
-      // Send JSON with a "query" field
       const payload = {
         query: trimmed,
       };
@@ -1504,22 +1491,15 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }
   }, [newMessage, user_obj?.email, wsReady]);
 
-  // We'll render notes from real data instead of dummyNotes
   const notes = knowledgeData?.document?.allNotes ?? [];
-
-  // We'll render related docs from real data instead of dummyRelatedDocs
-  // For this example, we treat any doc in allDocRelationships where the current doc is "source"
-  // or "target" as "related." You can refine the logic as needed.
   const docRelationships = knowledgeData?.document?.allDocRelationships ?? [];
 
-  // Update useEffect to show/hide right panel based on activeTab
   useEffect(() => {
     setShowRightPanel(
       ["chat", "notes", "metadata", "relationships"].includes(activeTab)
     );
   }, [activeTab]);
 
-  // Add this new useEffect to fetch the markdown content
   useEffect(() => {
     const fetchMarkdownContent = async () => {
       if (!knowledgeData?.document?.mdSummaryFile) {
@@ -1543,7 +1523,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     fetchMarkdownContent();
   }, [knowledgeData?.document?.mdSummaryFile]);
 
-  // Add this state for the modal
   const [selectedNote, setSelectedNote] = useState<(typeof notes)[0] | null>(
     null
   );
@@ -1675,13 +1654,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                 opacity: {
                   duration: 0.2,
                 },
-              }}
-              style={{
-                width: "500px",
-                backgroundColor: "white",
-                borderLeft: "1px solid rgba(231, 234, 237, 0.7)",
-                boxShadow: "-4px 0 15px rgba(0, 0, 0, 0.05)",
-                zIndex: 10,
               }}
             >
               {activeTab === "chat" && (
@@ -1965,14 +1937,15 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         </AnimatePresence>
       </ContentArea>
 
-      {/* Update the Graph Modal to be more minimal */}
       <Modal
         open={showGraph}
         onClose={() => setShowGraph(false)}
         size="large"
         basic
       >
-        <Modal.Content>{/* Your graph visualization content */}</Modal.Content>
+        <Modal.Content>
+          {/* Graph visualization content goes here */}
+        </Modal.Content>
         <Modal.Actions>
           <ControlButton onClick={() => setShowGraph(false)}>
             <X size={16} />

@@ -90,6 +90,8 @@ const MessageContent = styled.div<{ $isAssistant: boolean }>`
   line-height: 1.5;
   position: relative;
   margin-bottom: 0.25rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 
   &::before {
     content: "";

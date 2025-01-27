@@ -247,6 +247,11 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
     event: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
     value: any
   ) => {
+    // Don't trigger if clicking within context menu
+    if ((event.target as HTMLElement).closest(".Corpus_Context_Menu")) {
+      return;
+    }
+
     event.stopPropagation();
     if (event.shiftKey) {
       if (onShiftClick && _.isFunction(onShiftClick)) {
@@ -390,7 +395,7 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
           MozUserSelect: "none",
         }}
         onContextMenu={onContextMenuHandler}
-        onClick={backendLock ? () => {} : cardClickHandler}
+        onClick={backendLock ? undefined : cardClickHandler}
       >
         {backendLock ? (
           <Dimmer active inverted>
@@ -472,7 +477,14 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
             open={true}
             hideOnScroll
           >
-            <Menu className="Corpus_Context_Menu" secondary vertical>
+            <Menu
+              className="Corpus_Context_Menu"
+              secondary
+              vertical
+              onClick={(e: { stopPropagation: () => any }) =>
+                e.stopPropagation()
+              } // Stop click propagation here
+            >
               {context_menus.map((menuItem) => (
                 <Menu.Item
                   key={menuItem.key}

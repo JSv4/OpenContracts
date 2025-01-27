@@ -542,6 +542,9 @@ class Note(BaseOCModel):
     title = django.db.models.CharField(max_length=1024, db_index=True)
     content = django.db.models.TextField(default="", blank=True)
 
+    # Vector for vector search
+    embedding = VectorField(dimensions=384, null=True)
+
     # Hierarchical relationship
     parent = django.db.models.ForeignKey(
         "self",
@@ -549,6 +552,14 @@ class Note(BaseOCModel):
         blank=True,
         related_name="children",
         on_delete=django.db.models.CASCADE,
+    )
+
+    corpus = django.db.models.ForeignKey(
+        "corpuses.Corpus",
+        null=True,
+        blank=True,
+        on_delete=django.db.models.SET_NULL,
+        related_name="notes",
     )
 
     # Document reference
@@ -598,6 +609,7 @@ class Note(BaseOCModel):
             django.db.models.Index(fields=["created"]),
             django.db.models.Index(fields=["modified"]),
             django.db.models.Index(fields=["parent"]),
+            django.db.models.Index(fields=["corpus"]),  
         ]
         ordering = ("created",)
 

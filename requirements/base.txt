@@ -32,7 +32,7 @@ pgvector  # For vector embeddings
 channels==4.2.0  # https://github.com/django/channels
 daphne==4.1.2  # https://github.com/django/daphne
 channels-redis==4.2.1
-
+Twisted[tls,http2]
 
 # Django REST Framework
 # ------------------------------------------------------------------------------

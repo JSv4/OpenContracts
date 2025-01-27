@@ -10,6 +10,8 @@ import json
 import logging
 from typing import Any, Literal, Optional
 
+from graphql_relay import from_global_id
+
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
@@ -50,7 +52,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             ValueError: if the path does not contain a valid document ID.
             Document.DoesNotExist: if no matching Document is found.
         """
-        logger.debug("WebSocket connection attempt received")
+        logger.info("WebSocket connection attempt received")
         logger.debug(f"Connection scope: {self.scope}")
 
         try:
@@ -60,7 +62,8 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 await self.close(code=4000)
                 return
 
-            self.document_id = extract_document_id(self.scope["path"])
+            graphql_doc_id = extract_document_id(self.scope["path"])
+            self.document_id = from_global_id(graphql_doc_id)[1]
             logger.debug(f"Extracted document_id: {self.document_id}")
 
             self.document = await Document.objects.aget(id=self.document_id)
@@ -124,7 +127,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             logger.debug("WebSocket connection accepted")
 
         except ValueError as v_err:
-            logger.error(f"Invalid document path: {v_err}")
+            logger.error(f"Websocket - Invalid document path: {v_err}")
             await self.accept()
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",
@@ -133,7 +136,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             )
             await self.close(code=4000)
         except Document.DoesNotExist:
-            logger.error(f"Document not found: {self.document_id}")
+            logger.error(f"Websocket - Document not found: {self.document_id}")
             await self.accept()
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",
@@ -142,7 +145,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             )
             await self.close(code=4000)
         except Exception as e:
-            logger.error(f"Error during connection: {str(e)}", exc_info=True)
+            logger.error(f"Websocket - Error during connection: {str(e)}", exc_info=True)
             await self.accept()
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",

@@ -52,6 +52,7 @@ def doc_analyzer_task(max_retries=None):
                 try:
                     Corpus.objects.get(id=corpus_id)
                 except ObjectDoesNotExist:
+                    logger.warn(f"Corpus with id {corpus_id} does not exist")
                     raise ValueError(f"Corpus with id {corpus_id} does not exist")
 
             if analysis_id:
@@ -59,12 +60,14 @@ def doc_analyzer_task(max_retries=None):
                     analysis = Analysis.objects.get(id=analysis_id)
                     logger.info(f"Link to analysis: {analysis}")
                 except ObjectDoesNotExist:
+                    logger.warn(f"Analysis with id {analysis_id} does not exist")
                     raise ValueError(f"Analysis with id {analysis_id} does not exist")
             else:
                 analysis = None
 
             logger.info(f"Doc {doc_id} backend lock: {doc.backend_lock}")
             if doc.backend_lock:
+                logger.info(f"Doc {doc_id} backend lock is True")
                 retry_count = self.request.retries
                 logger.info(f"\tRetry count: {retry_count}")
                 delay = min(INITIAL_DELAY + (retry_count * DELAY_INCREMENT), MAX_DELAY)
@@ -90,6 +93,7 @@ def doc_analyzer_task(max_retries=None):
                     if doc.txt_extract_file
                     else None
                 )
+                
                 pdf_pawls_extract = (
                     json.loads(doc.pawls_parse_file.read())
                     if doc.pawls_parse_file
@@ -108,7 +112,7 @@ def doc_analyzer_task(max_retries=None):
                     pdf_text_extract=pdf_text_extract,
                     pdf_pawls_extract=pdf_pawls_extract,
                     *args,
-                    **kwargs,
+                    **kwargs
                 )
 
                 # logger.debug(f"Function result: {result}")

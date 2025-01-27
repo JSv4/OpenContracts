@@ -35,6 +35,7 @@ from opencontractserver.feedback.models import UserFeedback
 from opencontractserver.pipeline.base.file_types import (
     FileTypeEnum as FileTypeEnumModel,
 )
+from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.users.models import Assignment, UserExport, UserImport
 
 User = get_user_model()
@@ -375,6 +376,143 @@ class LabelSetType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         connection_class = CountableConnection
 
 
+class NoteType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    """
+    GraphQL type for the Note model with tree-based functionality.
+    """
+
+    # Updated fields for tree representations
+    descendants_tree = graphene.List(
+        GenericScalar,
+        description="List of descendant notes, each with immediate children's IDs.",
+    )
+    full_tree = graphene.List(
+        GenericScalar,
+        description="List of notes from the root ancestor, each with immediate children's IDs.",
+    )
+    subtree = graphene.List(
+        GenericScalar,
+        description="List representing the path from the root ancestor to this note and its descendants.",
+    )
+
+    # Resolver for descendants_tree
+    def resolve_descendants_tree(self, info):
+        """
+        Returns a flat list of descendant notes,
+        each including only the IDs of its immediate children.
+        """
+        from django_cte import With
+
+        def get_descendants(cte):
+            base_qs = Note.objects.filter(parent_id=self.id).values(
+                "id", "parent_id", "content"
+            )
+            recursive_qs = cte.join(Note, parent_id=cte.col.id).values(
+                "id", "parent_id", "content"
+            )
+            return base_qs.union(recursive_qs, all=True)
+
+        cte = With.recursive(get_descendants)
+        descendants_qs = cte.queryset().with_cte(cte).order_by("id")
+
+        descendants_list = list(descendants_qs)
+        descendants_tree = build_flat_tree(
+            descendants_list, type_name="NoteType", text_key="content"
+        )
+        return descendants_tree
+
+    # Resolver for full_tree
+    def resolve_full_tree(self, info):
+        """
+        Returns a flat list of notes from the root ancestor,
+        each including only the IDs of its immediate children.
+        """
+        from django_cte import With
+
+        # Find the root ancestor
+        root = self
+        while root.parent_id is not None:
+            root = root.parent
+
+        def get_full_tree(cte):
+            base_qs = Note.objects.filter(id=root.id).values(
+                "id", "parent_id", "content"
+            )
+            recursive_qs = cte.join(Note, parent_id=cte.col.id).values(
+                "id", "parent_id", "content"
+            )
+            return base_qs.union(recursive_qs, all=True)
+
+        cte = With.recursive(get_full_tree)
+        full_tree_qs = cte.queryset().with_cte(cte).order_by("id")
+        nodes = list(full_tree_qs)
+        full_tree = build_flat_tree(nodes, type_name="NoteType", text_key="content")
+        return full_tree
+
+    # Resolver for subtree
+    def resolve_subtree(self, info):
+        """
+        Returns a combined tree that includes:
+        - The path from the root ancestor to this note (ancestors).
+        - This note and all its descendants.
+        """
+        from django_cte import With
+
+        # Find all ancestors up to the root
+        ancestors = []
+        node = self
+        while node.parent_id is not None:
+            ancestors.append(node)
+            node = node.parent
+        ancestors.append(node)  # Include the root ancestor
+        ancestor_ids = [ancestor.id for ancestor in ancestors]
+
+        # Get all descendants of the current node
+        def get_descendants(cte):
+            base_qs = Note.objects.filter(parent_id=self.id).values(
+                "id", "parent_id", "content"
+            )
+            recursive_qs = cte.join(Note, parent_id=cte.col.id).values(
+                "id", "parent_id", "content"
+            )
+            return base_qs.union(recursive_qs, all=True)
+
+        descendants_cte = With.recursive(get_descendants)
+        descendants_qs = (
+            descendants_cte.queryset()
+            .with_cte(descendants_cte)
+            .values("id", "parent_id", "content")
+        )
+
+        # Combine ancestors and descendants
+        combined_qs = (
+            Note.objects.filter(id__in=ancestor_ids)
+            .values("id", "parent_id", "content")
+            .union(descendants_qs, all=True)
+        )
+
+        subtree_nodes = list(combined_qs)
+        subtree = build_flat_tree(
+            subtree_nodes, type_name="NoteType", text_key="content"
+        )
+        return subtree
+
+    class Meta:
+        model = Note
+        exclude = ("embedding",)
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if issubclass(type(queryset), QuerySet):
+            return queryset.visible_to_user(info.context.user)
+        elif "RelatedManager" in str(type(queryset)):
+            return queryset.all().visible_to_user(info.context.user)
+        else:
+            return queryset
+
+
 class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     def resolve_pdf_file(self, info):
         return (
@@ -391,6 +529,13 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
             ""
             if not self.txt_extract_file
             else info.context.build_absolute_uri(self.txt_extract_file.url)
+        )
+
+    def resolve_md_summary_file(self, info):
+        return (
+            ""
+            if not self.md_summary_file
+            else info.context.build_absolute_uri(self.md_summary_file.url)
         )
 
     def resolve_pawls_parse_file(self, info):
@@ -490,6 +635,32 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
                 f"Error: {e}"
             )
             return []
+
+    all_notes = graphene.List(
+        NoteType,
+        corpus_id=graphene.ID(required=True),
+    )
+
+    def resolve_all_notes(self, info, corpus_id: str):
+        """
+        Return the set of Note objects related to this Document instance that the user can see,
+        filtered by corpus_id. This approach uses resolve_oc_model_queryset to apply the same
+        permissioning logic applied elsewhere, ensuring consistency and potentially reducing
+        the query overhead by using a well-defined base queryset.
+        """
+        from opencontractserver.annotations.models import Note
+        user = info.context.user
+
+        # Start with a base queryset of all Notes the user can see
+        base_qs = resolve_oc_model_queryset(django_obj_model_type=Note, user=user)
+        corpus_pk = from_global_id(corpus_id)[1]
+        # Then intersect with this Document's related notes, filtering by the given corpus_id
+        # This ensures we only query notes that are both visible to the user and belong to
+        # this specific Document (through the related manager self.notes).
+        return base_qs.filter(
+            id__in=self.notes.values_list("id", flat=True),
+            corpus_id=corpus_pk
+        )
 
     class Meta:
         model = Document
@@ -828,139 +999,3 @@ class PipelineComponentsType(graphene.ObjectType):
     thumbnailers = graphene.List(
         PipelineComponentType, description="List of available thumbnail generators."
     )
-
-
-class NoteType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-    """
-    GraphQL type for the Note model with tree-based functionality.
-    """
-
-    # Updated fields for tree representations
-    descendants_tree = graphene.List(
-        GenericScalar,
-        description="List of descendant notes, each with immediate children's IDs.",
-    )
-    full_tree = graphene.List(
-        GenericScalar,
-        description="List of notes from the root ancestor, each with immediate children's IDs.",
-    )
-    subtree = graphene.List(
-        GenericScalar,
-        description="List representing the path from the root ancestor to this note and its descendants.",
-    )
-
-    # Resolver for descendants_tree
-    def resolve_descendants_tree(self, info):
-        """
-        Returns a flat list of descendant notes,
-        each including only the IDs of its immediate children.
-        """
-        from django_cte import With
-
-        def get_descendants(cte):
-            base_qs = Note.objects.filter(parent_id=self.id).values(
-                "id", "parent_id", "content"
-            )
-            recursive_qs = cte.join(Note, parent_id=cte.col.id).values(
-                "id", "parent_id", "content"
-            )
-            return base_qs.union(recursive_qs, all=True)
-
-        cte = With.recursive(get_descendants)
-        descendants_qs = cte.queryset().with_cte(cte).order_by("id")
-
-        descendants_list = list(descendants_qs)
-        descendants_tree = build_flat_tree(
-            descendants_list, type_name="NoteType", text_key="content"
-        )
-        return descendants_tree
-
-    # Resolver for full_tree
-    def resolve_full_tree(self, info):
-        """
-        Returns a flat list of notes from the root ancestor,
-        each including only the IDs of its immediate children.
-        """
-        from django_cte import With
-
-        # Find the root ancestor
-        root = self
-        while root.parent_id is not None:
-            root = root.parent
-
-        def get_full_tree(cte):
-            base_qs = Note.objects.filter(id=root.id).values(
-                "id", "parent_id", "content"
-            )
-            recursive_qs = cte.join(Note, parent_id=cte.col.id).values(
-                "id", "parent_id", "content"
-            )
-            return base_qs.union(recursive_qs, all=True)
-
-        cte = With.recursive(get_full_tree)
-        full_tree_qs = cte.queryset().with_cte(cte).order_by("id")
-        nodes = list(full_tree_qs)
-        full_tree = build_flat_tree(nodes, type_name="NoteType", text_key="content")
-        return full_tree
-
-    # Resolver for subtree
-    def resolve_subtree(self, info):
-        """
-        Returns a combined tree that includes:
-        - The path from the root ancestor to this note (ancestors).
-        - This note and all its descendants.
-        """
-        from django_cte import With
-
-        # Find all ancestors up to the root
-        ancestors = []
-        node = self
-        while node.parent_id is not None:
-            ancestors.append(node)
-            node = node.parent
-        ancestors.append(node)  # Include the root ancestor
-        ancestor_ids = [ancestor.id for ancestor in ancestors]
-
-        # Get all descendants of the current node
-        def get_descendants(cte):
-            base_qs = Note.objects.filter(parent_id=self.id).values(
-                "id", "parent_id", "content"
-            )
-            recursive_qs = cte.join(Note, parent_id=cte.col.id).values(
-                "id", "parent_id", "content"
-            )
-            return base_qs.union(recursive_qs, all=True)
-
-        descendants_cte = With.recursive(get_descendants)
-        descendants_qs = (
-            descendants_cte.queryset()
-            .with_cte(descendants_cte)
-            .values("id", "parent_id", "content")
-        )
-
-        # Combine ancestors and descendants
-        combined_qs = (
-            Note.objects.filter(id__in=ancestor_ids)
-            .values("id", "parent_id", "content")
-            .union(descendants_qs, all=True)
-        )
-
-        subtree_nodes = list(combined_qs)
-        subtree = build_flat_tree(
-            subtree_nodes, type_name="NoteType", text_key="content"
-        )
-        return subtree
-
-    class Meta:
-        model = Note
-        interfaces = [relay.Node]
-        connection_class = CountableConnection
-
-    @classmethod
-    def get_queryset(cls, queryset, info):
-        if issubclass(type(queryset), QuerySet):
-            return queryset.visible_to_user(info.context.user)
-        elif "RelatedManager" in str(type(queryset)):
-            return queryset.all().visible_to_user(info.context.user)
-        else:
-            return queryset

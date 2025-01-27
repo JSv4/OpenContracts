@@ -13,14 +13,20 @@ class AnnotationsConfig(AppConfig):
     def ready(self):
         try:
             import opencontractserver.annotations.signals  # noqa F401
-            from opencontractserver.annotations.models import Annotation
+            from opencontractserver.annotations.models import Annotation, Note
             from opencontractserver.annotations.signals import (
                 process_annot_on_create_atomic,
+                process_note_on_create_atomic
             )
 
             post_save.connect(
                 process_annot_on_create_atomic,
                 sender=Annotation,
+                dispatch_uid=uuid.uuid4(),
+            )
+            post_save.connect(
+                process_note_on_create_atomic, 
+                sender=Note,
                 dispatch_uid=uuid.uuid4(),
             )
         except ImportError:

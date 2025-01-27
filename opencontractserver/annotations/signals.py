@@ -1,5 +1,6 @@
 from opencontractserver.tasks.embeddings_task import (
     calculate_embedding_for_annotation_text,
+    calculate_embedding_for_note_text,
 )
 
 
@@ -11,3 +12,7 @@ def process_annot_on_create_atomic(sender, instance, created, **kwargs):
         calculate_embedding_for_annotation_text.si(
             annotation_id=instance.id
         ).apply_async()
+
+def process_note_on_create_atomic(sender, instance, created, **kwargs):
+    if created and instance.embedding is None:
+        calculate_embedding_for_note_text.si(note_id=instance.id).apply_async()

@@ -282,45 +282,113 @@ const ChatInput = styled(Input)`
       padding-right: 4rem !important;
       border: 2px solid #e9ecef !important;
       transition: all 0.2s ease !important;
+      background: white !important;
 
       &:focus {
         border-color: #2185d0 !important;
         box-shadow: 0 0 0 2px rgba(33, 133, 208, 0.1) !important;
       }
+
+      &:disabled {
+        background: rgba(247, 248, 249, 0.7) !important;
+        border-color: #e9ecef !important;
+        cursor: not-allowed;
+        color: #adb5bd !important;
+      }
     }
   }
+`;
+
+const ErrorMessage = styled.div`
+  color: #dc3545;
+  font-size: 0.875rem;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: 0.5rem;
 `;
 
 const SendButton = styled(Button)`
   &&& {
     position: absolute;
-    right: 2rem;
-    top: 50%;
-    transform: translateY(-50%);
+    right: 1.75rem;
+    bottom: 1.75rem;
+    padding: 0.5rem;
     width: 2.5rem;
     height: 2.5rem;
-    padding: 0 !important;
-    border-radius: 50% !important;
-    background: #2185d0 !important;
-    color: white !important;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: #2185d0;
+    border: none;
+    color: white;
     transition: all 0.2s ease;
 
-    &:hover {
-      background: #1678c2 !important;
-      transform: translateY(-50%) scale(1.05);
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: #1678c2;
+      box-shadow: 0 4px 8px rgba(33, 133, 208, 0.2);
     }
 
-    &:active {
-      transform: translateY(-50%) scale(0.95);
+    &:disabled {
+      background: #e9ecef;
+      color: #adb5bd;
+      cursor: not-allowed;
+      transform: none;
     }
 
     svg {
-      width: 16px;
-      height: 16px;
-      margin-left: 2px;
+      width: 1.25rem;
+      height: 1.25rem;
+      transition: transform 0.2s ease;
+    }
+
+    &:hover:not(:disabled) svg {
+      transform: translateX(2px);
+    }
+  }
+`;
+
+interface ConnectionStatusProps {
+  connected: boolean;
+}
+
+const ConnectionStatus = styled(motion.div)<ConnectionStatusProps>`
+  position: absolute;
+  right: 4.5rem;
+  bottom: 1.875rem;
+  font-size: 0.875rem;
+  color: #adb5bd;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: ${(props) => (props.connected ? "#12b886" : "#adb5bd")};
+    display: block;
+    animation: ${(props) => (props.connected ? "none" : "pulse 2s infinite")};
+  }
+
+  @keyframes pulse {
+    0% {
+      transform: scale(0.95);
+      opacity: 0.5;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(0.95);
+      opacity: 0.5;
     }
   }
 `;
@@ -707,7 +775,6 @@ const RelationshipPlaceholder = styled(motion.div)`
   }
 `;
 
-// Add these components for the placeholder states
 const LoadingPlaceholders: React.FC<{
   type: "summary" | "notes" | "relationships";
 }> = ({ type }) => {
@@ -754,7 +821,6 @@ const LoadingPlaceholders: React.FC<{
   );
 };
 
-// Add this styled component for our empty states
 const EmptyStateContainer = styled(motion.div)`
   display: flex;
   flex-direction: column;
@@ -801,6 +867,21 @@ const EmptyState: React.FC<{
   </EmptyStateContainer>
 );
 
+// Get WebSocket URL from environment or fallback to window.location for production
+const getWebSocketUrl = (documentId: string, token: string): string => {
+  // Use environment variable if defined (for development)
+  const wsBaseUrl =
+    process.env.REACT_APP_WS_URL ||
+    `${window.location.protocol === "https:" ? "wss" : "ws"}://${
+      window.location.host
+    }`;
+
+  // Remove any trailing slashes from the base URL
+  const normalizedBaseUrl = wsBaseUrl.replace(/\/+$/, "");
+
+  return `${normalizedBaseUrl}/ws/document/${documentId}/query/?token=${token}`;
+};
+
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   documentId,
   corpusId,
@@ -823,6 +904,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
   // WebSocket reference
   const socketRef = useRef<WebSocket | null>(null);
+
+  // Add these state variables at the top of your component
+  const [wsReady, setWsReady] = useState(false);
+  const [wsError, setWsError] = useState<string | null>(null);
 
   // Update the query to include loading state
   const { data: knowledgeData, loading: knowledgeLoading } = useQuery<
@@ -920,25 +1005,21 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
    * --------------------------
    */
   useEffect(() => {
-    // If user is logged in & we have a token, connect to the WS
     const userIsAuthenticated = !!(auth_token && user_obj);
 
-    // If no doc, no corpus, or not authenticated, skip
     if (!documentId || !corpusId || !userIsAuthenticated) return;
 
-    // Socket URL (example)
-    const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const wsUrl = `${wsProtocol}://${window.location.host}/ws/document/${documentId}?token=${auth_token}`;
-
+    const wsUrl = getWebSocketUrl(documentId, auth_token);
     console.log("Connecting to WebSocket at:", wsUrl);
 
     socketRef.current = new WebSocket(wsUrl);
-
     const ws = socketRef.current;
 
     // Listen for open event
     ws.onopen = () => {
       console.log("WebSocket connected");
+      setWsReady(true);
+      setWsError(null);
     };
 
     // Listen for message events
@@ -977,16 +1058,21 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     // Listen for close event
     ws.onclose = (event) => {
       console.log("WebSocket closed:", event.code, event.reason);
+      setWsReady(false);
+      setWsError("Connection closed. Please try again.");
     };
 
     // Listen for error event
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
+      setWsReady(false);
+      setWsError("Failed to connect. Please try again.");
     };
 
     // Cleanup on unmount
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws) {
+        setWsReady(false);
         ws.close();
       }
     };
@@ -1048,29 +1134,40 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     ]);
   };
 
-  // Send a message over the WebSocket
+  // Update the send message function
   const sendMessageOverSocket = React.useCallback(() => {
     const trimmed = newMessage.trim();
     if (!trimmed || !socketRef.current) return;
 
-    // Show user message immediately in the chat
-    setChat((prev) => [
-      ...prev,
-      {
-        user: user_obj?.email || "You",
-        content: trimmed,
-        timestamp: new Date().toLocaleString(),
-        isAssistant: false,
-      },
-    ]);
+    if (!wsReady) {
+      console.warn("WebSocket not ready yet");
+      return;
+    }
 
-    // Send JSON with a "query" field
-    const payload = {
-      query: trimmed,
-    };
-    socketRef.current.send(JSON.stringify(payload));
-    setNewMessage("");
-  }, [newMessage, user_obj?.email]);
+    try {
+      // Show user message immediately in the chat
+      setChat((prev) => [
+        ...prev,
+        {
+          user: user_obj?.email || "You",
+          content: trimmed,
+          timestamp: new Date().toLocaleString(),
+          isAssistant: false,
+        },
+      ]);
+
+      // Send JSON with a "query" field
+      const payload = {
+        query: trimmed,
+      };
+      socketRef.current.send(JSON.stringify(payload));
+      setNewMessage("");
+      setWsError(null);
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      setWsError("Failed to send message. Please try again.");
+    }
+  }, [newMessage, user_obj?.email, wsReady]);
 
   // We'll render notes from real data instead of dummyNotes
   const notes = knowledgeData?.document?.allNotes ?? [];
@@ -1295,19 +1392,56 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                     ))}
                   </div>
                   <ChatInputContainer>
-                    <div style={{ position: "relative" }}>
-                      <ChatInput
-                        value={newMessage}
-                        onChange={(e: {
-                          target: { value: React.SetStateAction<string> };
-                        }) => setNewMessage(e.target.value)}
-                        placeholder="Type a message..."
-                        action
-                      />
-                      <SendButton primary icon onClick={sendMessageOverSocket}>
-                        <Send size={16} />
-                      </SendButton>
-                    </div>
+                    {wsError ? (
+                      <ErrorMessage>
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {wsError}
+                          <Button
+                            size="small"
+                            onClick={() => window.location.reload()}
+                            style={{ marginLeft: "0.75rem" }}
+                          >
+                            Reconnect
+                          </Button>
+                        </motion.div>
+                      </ErrorMessage>
+                    ) : (
+                      <ConnectionStatus
+                        connected={wsReady}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {wsReady ? "Connected" : "Connecting..."}
+                      </ConnectionStatus>
+                    )}
+                    <ChatInput
+                      value={newMessage}
+                      onChange={(e: {
+                        target: { value: React.SetStateAction<string> };
+                      }) => setNewMessage(e.target.value)}
+                      placeholder={
+                        wsReady
+                          ? "Type your message..."
+                          : "Waiting for connection..."
+                      }
+                      disabled={!wsReady}
+                      onKeyPress={(e: { key: string }) =>
+                        e.key === "Enter" && sendMessageOverSocket()
+                      }
+                    />
+                    <SendButton
+                      onClick={sendMessageOverSocket}
+                      disabled={!wsReady || !newMessage.trim()}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Send size={18} />
+                    </SendButton>
                   </ChatInputContainer>
                 </ChatContainer>
               )}

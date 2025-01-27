@@ -46,6 +46,12 @@ class Document(BaseOCModel):
         upload_to=functools.partial(calc_oc_file_path, sub_folder="txt_layers_files"),
         null=True,
     )
+    md_summary_file = django.db.models.FileField(
+        max_length=1024,
+        blank=True,
+        upload_to=functools.partial(calc_oc_file_path, sub_folder="md_summaries"),
+        null=True,
+    )
     page_count = django.db.models.IntegerField(
         default=0,
         null=False,
@@ -62,7 +68,7 @@ class Document(BaseOCModel):
     processing_finished = django.db.models.DateTimeField(null=True)
 
     # Vector for vector search
-    embedding = VectorField(dimensions=384, null=True)
+    embedding = VectorField(dimensions=384, null=True, blank=True)
 
     class Meta:
         permissions = (

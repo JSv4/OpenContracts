@@ -1,4 +1,6 @@
+from typing import List
 import marvin
+import logging
 from django.conf import settings
 
 from opencontractserver.shared.decorators import doc_analyzer_task
@@ -6,6 +8,8 @@ from opencontractserver.types.dicts import TextSpan
 
 # Pass OpenAI API key to marvin for parsing / extract
 marvin.settings.openai.api_key = settings.OPENAI_API_KEY
+
+logger = logging.getLogger(__name__)
 
 
 @doc_analyzer_task()
@@ -147,3 +151,145 @@ def proper_name_tagger(*args, pdf_text_extract, **kawrgs):
     # to annotation functionality, but that should be largely solved with new functionality to render specified annots
     # on annotator load.
     return [], results[:10], [], True
+
+
+# TODO - more robust, more production-grade approach to knowlege base building
+@doc_analyzer_task()
+def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
+    """
+    Build a knowledge base from the document.
+    """
+    
+    from llama_index.llms.openai import OpenAI
+    from llama_index.core.llms import ChatMessage
+    from opencontractserver.annotations.models import Note
+    from opencontractserver.documents.models import Document
+    from django.core.files.base import ContentFile
+    
+    corpus_id = kwargs.get("corpus_id", None)
+    if not corpus_id:
+        logger.error("corpus_id is required for build_knowledge_base task")
+        return [], [], [], False
+
+    llm = OpenAI(
+        model="gpt-4o-mini",  # using the "mini" version as specified
+        api_key=settings.OPENAI_API_KEY,  # optional, pulls from env var by default
+    )
+    
+    doc_id = kwargs.get("doc_id", None)
+    if not doc_id:
+        logger.error("doc_id is required for build_knowledge_base task")
+        return [], [], [], False
+    
+    def get_markdown_response(system_prompt: str, user_prompt: str) -> str | None:
+        """
+        Creates a conversation with given system and user prompts and returns
+        the LLM's response in Markdown format.
+        
+        :param system_prompt: The content for the system role.
+        :param user_prompt: The content for the user role.
+        :return: The assistant's response as a string.
+        """
+        messages: List[ChatMessage] = [
+            ChatMessage(role="system", content=system_prompt),
+            ChatMessage(role="user", content=user_prompt),
+        ]
+        response = llm.chat(messages)
+        return response.message.content
+    
+    def prompt_1_single_pass(pdf_text: str) -> str:
+        system_prompt = (
+            "You are a highly skilled paralegal specializing in contract analysis. "
+            "Your goal is to carefully read the contract and produce a detailed yet "
+            "concise summary. Strictly follow the requested format and level of detail. "
+            "You write in elegant and expressive markdown."
+        )
+        
+        user_prompt = f"""\
+    **Please analyze the following contract** (included below) **and provide the following information:**
+
+    1. **Context and Purpose**  
+    - A brief description (2–3 sentences) explaining the primary purpose of the contract and any relevant background details.
+
+    2. **Knowledge Base Article Summary**  
+    - **Parties Involved**: Identify all parties and their roles or obligations.  
+    - **Key Dates**: Outline important dates (e.g., effective date, milestones, deadlines, renewal dates).  
+    - **Key Definitions**: List or paraphrase any critical definitions that shape the agreement.  
+    - **Termination & Renewal Provisions**: Summarize any clauses that address how and when the contract can end or renew.
+
+    3. **Notes on Referenced Documents & Regulations**  
+    - **Referenced Documents**: List names and any critical details (e.g., date, version, or relevant sections).  
+    - **Referenced Rules/Regulations**: List any laws, statutes, or regulatory bodies referenced, along with a short description of how they apply.
+
+    **Contract Text:**
+    {pdf_text}
+    """
+        return get_markdown_response(system_prompt, user_prompt)
+
+    def prompt_4_references(pdf_text: str) -> str: 
+        system_prompt = (
+            "You are acting as a senior legal assistant. Your primary focus is on ensuring "
+            "all references to external documents, exhibits, regulations, or statutes are "
+            "identified accurately. You write in elegant and expressive markdown."
+        )
+
+        user_prompt = f"""\
+            Given the contract below, please:
+
+            Summarize the contract with attention to main purpose and parties.
+            Enumerate all references to documents, laws, regulations, or external materials:
+            Document/Regulation name
+            Section or clause referencing it
+            Brief note on relevance
+            Identify any key definitions that link to external references or industry-standard terminology.
+            Highlight any deadlines or termination clauses tied to external compliance requirements.
+            Contract Text: {pdf_text} """
+        return get_markdown_response(system_prompt, user_prompt)
+    
+    
+    def prompt_5_bullet_points(pdf_text: str) -> str: 
+        system_prompt = (
+            "You are a paralegal who must produce a bullet-point cheat sheet for "
+            "attorneys seeking a quick reference guide. You write in elegant and expressive markdown."
+        )
+
+        user_prompt = f"""\
+        Read the contract below and produce a bullet-point summary with the following sections:
+
+        1. Purpose & Context
+        2. Parties
+        3. Key Dates
+        4. Key Definitions
+        5. Termination & Renewal
+        6. Referenced Documents & Regulations (including names, dates, versions, relevant sections)
+        Contract Text: {pdf_text} """
+        
+        return get_markdown_response(system_prompt, user_prompt)
+    
+    doc = Document.objects.get(id=doc_id)
+    
+    summary = prompt_1_single_pass(pdf_text_extract)
+    reference_notes = prompt_4_references(pdf_text_extract)
+    cheat_sheet = prompt_5_bullet_points(pdf_text_extract)    
+
+    doc.md_summary_file=ContentFile(summary.encode("utf-8"), name="summary.md")
+    doc.save()
+    
+    Note.objects.create(
+        title="Referenced Documents",
+        document=doc,
+        content=reference_notes,
+        corpus_id=corpus_id,
+    )
+    
+    Note.objects.create(
+        title="Quick Reference",
+        document=doc,
+        content=cheat_sheet,
+        corpus_id=corpus_id,
+    )
+    
+    return [], [], [], True
+
+
+

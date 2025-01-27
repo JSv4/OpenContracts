@@ -18,6 +18,7 @@ import {
   CorpusActionType,
   DocumentType,
   AnalysisRowType,
+  ConversationType,
   ConversationTypeConnection,
   PipelineComponentType,
 } from "../types/graphql-api";
@@ -1772,7 +1773,7 @@ export const getAnnotationsByDocumentId = /* GraphQL */ `
   }
 `;
 
-export const listAnnotations = gql`
+export const listAnnotations = /* GraphQL */ `
   query ListAnnotations(
     $filter: ModelAnnotationFilterInput
     $limit: Int
@@ -1920,6 +1921,7 @@ export const GET_DOCUMENT_KNOWLEDGE_BASE = gql`
     document(id: $documentId) {
       id
       title
+
       fileType
       creator {
         email
@@ -1966,17 +1968,12 @@ export const GET_DOCUMENT_KNOWLEDGE_BASE = gql`
           email
         }
       }
-      isPublic
-      myPermissions
     }
   }
 `;
 
-// src/types/graphql-api.ts
-
 /** Input type for the getPostprocessors query. */
 export interface GetPostprocessorsInput {}
-
 /** Output type for the getPostprocessors query. */
 export interface GetPostprocessorsOutput {
   pipelineComponents: {
@@ -1984,7 +1981,6 @@ export interface GetPostprocessorsOutput {
     postProcessors: Array<PipelineComponentType>;
   };
 }
-
 export const GET_POST_PROCESSORS = gql`
   query {
     pipelineComponents {

@@ -55,6 +55,7 @@ import { authToken, userObj } from "../../../graphql/cache";
 import styled, { keyframes } from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ConversationSelectorProps {
   conversations: Array<{
@@ -882,6 +883,147 @@ const getWebSocketUrl = (documentId: string, token: string): string => {
   return `${normalizedBaseUrl}/ws/document/${documentId}/query/?token=${token}`;
 };
 
+const PostItNote = styled(motion.button)`
+  background: #fff7b1;
+  padding: 1.25rem;
+  border-radius: 2px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05), 0 10px 15px -8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transform-origin: center;
+  transition: all 0.2s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 28px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 2px 2px 0 0;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40%;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 0 0 3px 3px;
+  }
+
+  .content {
+    max-height: 200px;
+    overflow: hidden;
+    position: relative;
+    font-family: "Kalam", cursive;
+    line-height: 1.6;
+    color: #2c3e50;
+
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(transparent, #fff7b1);
+    }
+  }
+
+  .meta {
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    color: #666;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05),
+      0 15px 25px -12px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+const NotesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 1.5rem;
+`;
+
+const NoteModal = styled(Modal)`
+  &&& {
+    max-width: 600px;
+    margin: 2rem auto;
+    border-radius: 12px;
+    overflow: hidden;
+
+    .content {
+      padding: 2rem;
+      font-family: "Kalam", cursive;
+      line-height: 1.6;
+      color: #2c3e50;
+    }
+
+    .meta {
+      padding: 1rem 2rem;
+      background: #f8f9fa;
+      border-top: 1px solid #eee;
+      font-size: 0.875rem;
+      color: #666;
+    }
+  }
+`;
+
+const NotesHeader = styled.div`
+  padding: 1.5rem 2rem 1rem;
+  border-bottom: 1px solid rgba(231, 234, 237, 0.7);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #212529;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .meta {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+  }
+`;
+
+// Create a wrapper component to handle the fallback
+const SafeMarkdown: React.FC<{ children: string }> = ({ children }) => {
+  try {
+    return (
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{children}</ReactMarkdown>
+    );
+  } catch (error) {
+    console.warn(
+      "Failed to render with remarkGfm, falling back to basic markdown:",
+      error
+    );
+    return <ReactMarkdown>{children}</ReactMarkdown>;
+  }
+};
+
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   documentId,
   corpusId,
@@ -1212,6 +1354,11 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     fetchMarkdownContent();
   }, [knowledgeData?.document?.mdSummaryFile]);
 
+  // Add this state for the modal
+  const [selectedNote, setSelectedNote] = useState<(typeof notes)[0] | null>(
+    null
+  );
+
   return (
     <FullScreenModal open={true} onClose={onClose} closeIcon>
       <HeaderContainer>
@@ -1311,7 +1458,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
               <LoadingPlaceholders type="summary" />
             ) : markdownContent ? (
               <div className="prose max-w-none">
-                <ReactMarkdown>{markdownContent}</ReactMarkdown>
+                <SafeMarkdown>{markdownContent}</SafeMarkdown>
               </div>
             ) : (
               <EmptyState
@@ -1477,7 +1624,17 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
               )}
 
               {activeTab === "notes" && (
-                <div className="p-4 flex-1 flex flex-col">
+                <div className="flex-1 overflow-auto">
+                  <NotesHeader>
+                    <h3>
+                      <Notebook size={20} />
+                      Document Notes
+                    </h3>
+                    <div className="meta">
+                      {notes.length} note{notes.length !== 1 ? "s" : ""}
+                    </div>
+                  </NotesHeader>
+
                   {loading ? (
                     <LoadingPlaceholders type="notes" />
                   ) : notes.length === 0 ? (
@@ -1487,28 +1644,41 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                       description="Start adding notes to this document"
                     />
                   ) : (
-                    <div className="space-y-4 overflow-y-auto h-full">
-                      {notes.map((note) => (
-                        <Card key={note.id} fluid>
-                          <Card.Content>
-                            <div className="flex justify-between items-start mb-3">
-                              <div className="text-sm text-gray-500">
-                                <span className="font-medium text-gray-700">
-                                  {note.creator.email}
-                                </span>
-                                <div>
-                                  {new Date(note.created).toLocaleString()}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="prose max-w-none">
-                              {/* If note.title is used, we can display it, e.g. <h4>{note.title}</h4> */}
-                              {note.content}
-                            </div>
-                          </Card.Content>
-                        </Card>
+                    <NotesGrid>
+                      {notes.map((note, index) => (
+                        <PostItNote
+                          key={note.id}
+                          onClick={() => setSelectedNote(note)}
+                          initial={{ opacity: 0, y: 20, rotate: 0 }}
+                          animate={{
+                            opacity: 1,
+                            y: 0,
+                            rotate:
+                              ((index % 3) - 1) * 1.5 +
+                              (Math.random() * 1 - 0.5),
+                            transition: {
+                              opacity: { duration: 0.3 },
+                              y: { duration: 0.3 },
+                              rotate: { duration: 0.4, ease: "easeOut" },
+                            },
+                          }}
+                          whileHover={{
+                            y: -4,
+                            rotate: ((index % 3) - 1) * 0.5,
+                            transition: { duration: 0.2 },
+                          }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <div className="content">
+                            <SafeMarkdown>{note.content}</SafeMarkdown>
+                          </div>
+                          <div className="meta">
+                            {note.creator.email} •{" "}
+                            {new Date(note.created).toLocaleDateString()}
+                          </div>
+                        </PostItNote>
                       ))}
-                    </div>
+                    </NotesGrid>
                   )}
                 </div>
               )}
@@ -1624,6 +1794,24 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           </ControlButton>
         </Modal.Actions>
       </Modal>
+
+      <NoteModal
+        open={!!selectedNote}
+        onClose={() => setSelectedNote(null)}
+        size="small"
+      >
+        {selectedNote && (
+          <>
+            <Modal.Content>
+              <SafeMarkdown>{selectedNote.content}</SafeMarkdown>
+            </Modal.Content>
+            <div className="meta">
+              Added by {selectedNote.creator.email} on{" "}
+              {new Date(selectedNote.created).toLocaleString()}
+            </div>
+          </>
+        )}
+      </NoteModal>
     </FullScreenModal>
   );
 };

@@ -909,6 +909,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [wsReady, setWsReady] = useState(false);
   const [wsError, setWsError] = useState<string | null>(null);
 
+  // Add this new state for the markdown content
+  const [markdownContent, setMarkdownContent] = useState<string | null>(null);
+  const [markdownError, setMarkdownError] = useState<boolean>(false);
+
   // Update the query to include loading state
   const { data: knowledgeData, loading: knowledgeLoading } = useQuery<
     GetDocumentKnowledgeBaseOutputs,
@@ -1184,6 +1188,30 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     );
   }, [activeTab]);
 
+  // Add this new useEffect to fetch the markdown content
+  useEffect(() => {
+    const fetchMarkdownContent = async () => {
+      if (!knowledgeData?.document?.mdSummaryFile) {
+        setMarkdownContent(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(knowledgeData.document.mdSummaryFile);
+        if (!response.ok) throw new Error("Failed to fetch markdown content");
+        const text = await response.text();
+        setMarkdownContent(text);
+        setMarkdownError(false);
+      } catch (error) {
+        console.error("Error fetching markdown content:", error);
+        setMarkdownContent(null);
+        setMarkdownError(true);
+      }
+    };
+
+    fetchMarkdownContent();
+  }, [knowledgeData?.document?.mdSummaryFile]);
+
   return (
     <FullScreenModal open={true} onClose={onClose} closeIcon>
       <HeaderContainer>
@@ -1281,17 +1309,19 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           <SummaryContent className={showRightPanel ? "dimmed" : ""}>
             {loading ? (
               <LoadingPlaceholders type="summary" />
-            ) : knowledgeData?.document?.mdSummaryFile ? (
+            ) : markdownContent ? (
               <div className="prose max-w-none">
-                <ReactMarkdown>
-                  {knowledgeData.document.mdSummaryFile}
-                </ReactMarkdown>
+                <ReactMarkdown>{markdownContent}</ReactMarkdown>
               </div>
             ) : (
               <EmptyState
                 icon={<FileText size={40} />}
                 title="No summary available"
-                description="This document doesn't have a summary yet"
+                description={
+                  markdownError
+                    ? "Failed to load the document summary"
+                    : "This document doesn't have a summary yet"
+                }
               />
             )}
           </SummaryContent>

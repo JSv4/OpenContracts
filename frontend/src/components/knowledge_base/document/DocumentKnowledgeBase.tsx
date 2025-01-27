@@ -13,17 +13,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useReactiveVar } from "@apollo/client";
-import {
-  Card,
-  Button,
-  Input,
-  Icon,
-  Segment,
-  Header,
-  Divider,
-  Label,
-  Modal,
-} from "semantic-ui-react";
+import { Card, Button, Input, Segment, Header, Modal } from "semantic-ui-react";
 import {
   MessageSquare,
   FileText,
@@ -185,16 +175,31 @@ const TabButton = styled(Button)<{ collapsed: boolean }>`
         background: #2185d0;
         border-radius: 0 2px 2px 0;
       }
+
+      svg {
+        color: #2185d0;
+      }
     }
 
     svg {
       margin-right: ${(props) =>
         props.collapsed ? "0" : "0.75rem"} !important;
-      transition: transform 0.2s ease;
+      transition: all 0.2s ease;
+      color: ${(props) => {
+        // Custom colors for each icon type
+        if (props.children[0].type.name === "FileText") return "#4CAF50";
+        if (props.children[0].type.name === "MessageSquare") return "#9C27B0";
+        if (props.children[0].type.name === "Notebook") return "#FF9800";
+        if (props.children[0].type.name === "Database") return "#E91E63";
+        if (props.children[0].type.name === "ChartNetwork") return "#2196F3";
+        return "#495057"; // default color
+      }};
+      opacity: 0.75;
     }
 
     &:hover svg {
       transform: scale(1.1);
+      opacity: 1;
     }
 
     span {
@@ -873,14 +878,26 @@ const getWebSocketUrl = (documentId: string, token: string): string => {
   // Use environment variable if defined (for development)
   const wsBaseUrl =
     process.env.REACT_APP_WS_URL ||
+    process.env.REACT_APP_API_URL ||
     `${window.location.protocol === "https:" ? "wss" : "ws"}://${
       window.location.host
     }`;
+  console.log("process.env.REACT_APP_WS_URL", process.env.REACT_APP_WS_URL);
+  console.log("process.env.REACT_APP_API_URL", process.env.REACT_APP_API_URL);
+  console.log("window.location.protocol", window.location.protocol);
+  console.log("window.location.host", window.location.host);
+  console.log("process.env", process.env);
+  console.log("wsBaseUrl", wsBaseUrl);
 
-  // Remove any trailing slashes from the base URL
-  const normalizedBaseUrl = wsBaseUrl.replace(/\/+$/, "");
+  // Remove any trailing slashes from the base URL and ensure proper protocol
+  const normalizedBaseUrl = wsBaseUrl
+    .replace(/\/+$/, "")
+    .replace(/^http/, "ws")
+    .replace(/^https/, "wss");
 
-  return `${normalizedBaseUrl}/ws/document/${documentId}/query/?token=${token}`;
+  return `${normalizedBaseUrl}/ws/document/${encodeURIComponent(
+    documentId
+  )}/query/?token=${encodeURIComponent(token)}`;
 };
 
 const PostItNote = styled(motion.button)`
@@ -961,7 +978,7 @@ const NotesGrid = styled.div`
 
 const NoteModal = styled(Modal)`
   &&& {
-    max-width: 600px;
+    max-width: 60vw;
     margin: 2rem auto;
     border-radius: 12px;
     overflow: hidden;
@@ -1547,7 +1564,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                           <NewChatButton
                             onClick={handleCreateNewConversation}
                             whileHover={{ y: -1 }}
-                            whileTap={{ y: 1 }}
                           >
                             <Plus size={16} />
                             New Chat
@@ -1558,7 +1574,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                     <ConversationCount
                       onClick={() => setShowSelector(!showSelector)}
                       whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
                     >
                       {conversations.length}
                     </ConversationCount>
@@ -1615,7 +1630,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                       onClick={sendMessageOverSocket}
                       disabled={!wsReady || !newMessage.trim()}
                       whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
                     >
                       <Send size={18} />
                     </SendButton>
@@ -1667,7 +1681,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                             rotate: ((index % 3) - 1) * 0.5,
                             transition: { duration: 0.2 },
                           }}
-                          whileTap={{ scale: 0.98 }}
                         >
                           <div className="content">
                             <SafeMarkdown>{note.content}</SafeMarkdown>
@@ -1796,9 +1809,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       </Modal>
 
       <NoteModal
+        closeIcon
         open={!!selectedNote}
         onClose={() => setSelectedNote(null)}
-        size="small"
+        size="large"
       >
         {selectedNote && (
           <>

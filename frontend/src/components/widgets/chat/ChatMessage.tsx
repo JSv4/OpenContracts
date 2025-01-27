@@ -2,6 +2,8 @@ import React from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { User, Bot, ExternalLink } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export interface ChatMessageProps {
   user: string;
@@ -80,6 +82,47 @@ const MessageContent = styled.div<{ $isAssistant: boolean }>`
     transform: rotate(45deg);
     border-radius: 0.125rem;
   }
+
+  /* Add styles for markdown content */
+  & > div {
+    overflow-x: auto;
+  }
+
+  pre {
+    background: rgba(0, 0, 0, 0.03);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+  }
+
+  code {
+    font-family: ui-monospace, monospace;
+    font-size: 0.9em;
+    padding: 0.2em 0.4em;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 0.25rem;
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+  }
+
+  th,
+  td {
+    border: 1px solid #dee2e6;
+    padding: 0.5rem;
+  }
+
+  th {
+    background: rgba(0, 0, 0, 0.02);
+  }
 `;
 
 const SourcesContainer = styled.div`
@@ -155,7 +198,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     <ContentContainer>
       <UserName>{isAssistant ? "AI Assistant" : user}</UserName>
       <MessageContent $isAssistant={isAssistant}>
-        {content}
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         {sources.length > 0 && (
           <SourcesContainer>
             {sources.map((source, idx) => (

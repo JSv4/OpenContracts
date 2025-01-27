@@ -1,7 +1,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Mapping, Optional
 
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -31,6 +31,9 @@ class BaseParser(ABC):
     author: str = ""
     dependencies: list[str] = []
     supported_file_types: list[FileTypeEnum] = []
+    input_schema: Mapping = (
+        {}
+    )  # If you want user to provide inputs, define a jsonschema here
 
     @abstractmethod
     def parse_document(

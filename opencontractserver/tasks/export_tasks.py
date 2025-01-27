@@ -9,9 +9,11 @@ import zipfile
 from celery import shared_task
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.files.storage import default_storage
 from django.utils import timezone
 
 from opencontractserver.corpuses.models import Corpus
+from opencontractserver.pipeline.utils import run_post_processors
 from opencontractserver.types.dicts import (
     AnnotationLabelPythonType,
     FunsdAnnotationType,
@@ -29,6 +31,42 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 User = get_user_model()
+
+
+@shared_task
+def on_demand_post_processors(export_id: str | int, corpus_pk: str | int):
+    try:
+        export = UserExport.objects.get(pk=export_id)
+        corpus = Corpus.objects.get(pk=corpus_pk)
+
+        if export.post_processors:
+
+            # Get the current zip bytes
+
+            with default_storage.open(export.file.name, "rb") as export_file:
+                current_zip_bytes = export_file.read()
+
+            with zipfile.ZipFile(io.BytesIO(current_zip_bytes), "r") as input_zip:
+                input_data = json.loads(input_zip.read("data.json").decode("utf-8"))
+
+            # Run post-processors
+            modified_zip_bytes, modified_export_data = run_post_processors(
+                export.post_processors,
+                current_zip_bytes,
+                input_data,
+                export.input_kwargs,
+            )
+
+            # Create new zip file with modified data
+            output_buffer = io.BytesIO(modified_zip_bytes)
+            export.file.save(f"{corpus.title} EXPORT.zip", output_buffer)
+            export.finished = timezone.now()
+            export.backend_lock = False
+            export.save()
+
+    except Exception as e:
+        logger.error(f"Error running post-processors for export {export_id}: {str(e)}")
+        raise
 
 
 # @celery_app.task(bind=True)
@@ -86,10 +124,34 @@ def package_annotated_docs(
         "text_labels": text_labels,
     }
 
+    # Run any configured post-processors
+    if corpus.post_processors:
+        try:
+            # Get the current zip bytes
+            zip_file.close()
+            output_bytes.seek(io.SEEK_SET)
+            current_zip_bytes = output_bytes.getvalue()
+
+            # Run post-processors
+            modified_zip_bytes, modified_export_data = run_post_processors(
+                corpus.post_processors, current_zip_bytes, export_file_data
+            )
+
+            # Create new zip file with modified data
+            output_bytes = io.BytesIO(modified_zip_bytes)
+            zip_file = zipfile.ZipFile(
+                output_bytes, mode="a", compression=zipfile.ZIP_DEFLATED
+            )
+            export_file_data = modified_export_data
+        except Exception as e:
+            logger.error(
+                f"Error running post-processors for corpus {corpus_pk}: {str(e)}"
+            )
+            raise
+
+    # Write the final data.json
     json_str = json.dumps(export_file_data) + "\n"
-
     json_bytes = json_str.encode("utf-8")
-
     zip_file.writestr("data.json", json_bytes)
     zip_file.close()
 
@@ -97,8 +159,6 @@ def package_annotated_docs(
 
     export = UserExport.objects.get(pk=export_id)
     export.file.save(f"{corpus.title} EXPORT.zip", output_bytes)
-    export.finished = timezone.now()
-    export.backend_lock = False
     export.save()
 
     logger.info(f"Export {export_id} is completed. Signal should now notify creator.")

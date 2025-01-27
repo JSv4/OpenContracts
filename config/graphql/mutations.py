@@ -66,7 +66,10 @@ from opencontractserver.tasks import (
 )
 from opencontractserver.tasks.corpus_tasks import process_analyzer
 from opencontractserver.tasks.doc_tasks import convert_doc_to_funsd
-from opencontractserver.tasks.export_tasks import package_funsd_exports
+from opencontractserver.tasks.export_tasks import (
+    on_demand_post_processors,
+    package_funsd_exports,
+)
 from opencontractserver.tasks.extract_orchestrator_tasks import run_extract
 from opencontractserver.tasks.permissioning_tasks import (
     make_analysis_public_task,
@@ -558,13 +561,24 @@ class StartCorpusExport(graphene.Mutation):
             description="Graphene id of the corpus you want to package for export",
         )
         export_format = graphene.Argument(graphene.Enum.from_enum(ExportType))
+        post_processors = graphene.List(
+            graphene.String,
+            required=False,
+            description="List of fully qualified Python paths to post-processor functions to run",
+        )
+        input_kwargs = GenericScalar(
+            required=False,
+            description="Additional keyword arguments to pass to post-processors",
+        )
 
     ok = graphene.Boolean()
     message = graphene.String()
     export = graphene.Field(UserExportType)
 
     @login_required
-    def mutate(root, info, corpus_id, export_format):
+    def mutate(
+        root, info, corpus_id, export_format, post_processors=[], input_kwargs={}
+    ):
 
         if (
             info.context.user.is_usage_capped
@@ -585,7 +599,11 @@ class StartCorpusExport(graphene.Mutation):
                 started=started,
                 format=export_format,
                 backend_lock=True,
+                post_processors=post_processors,
+                input_kwargs=input_kwargs,
             )
+            logger.info(f"Export created: {export}")
+
             set_permissions_for_obj_to_user(
                 info.context.user, export, [PermissionTypes.CRUD]
             )
@@ -594,29 +612,38 @@ class StartCorpusExport(graphene.Mutation):
             doc_ids = Document.objects.filter(corpus=corpus_pk).values_list(
                 "id", flat=True
             )
+            logger.info(f"Doc ids: {doc_ids}")
 
             if export_format == ExportType.OPEN_CONTRACTS.value:
                 # Build celery workflow for export and start async task
                 chain(
                     build_label_lookups_task.si(corpus_pk),
-                    chord(
-                        group(
-                            burn_doc_annotations.s(doc_id, corpus_pk)
-                            for doc_id in doc_ids
+                    chain(
+                        chord(
+                            group(
+                                burn_doc_annotations.s(doc_id, corpus_pk)
+                                for doc_id in doc_ids
+                            ),
+                            package_annotated_docs.s(export.id, corpus_pk),
                         ),
-                        package_annotated_docs.s(export.id, corpus_pk),
+                        on_demand_post_processors.si(export.id, corpus_pk),
                     ),
                 ).apply_async()
 
                 ok = True
                 message = "SUCCESS"
             elif export_format == ExportType.FUNSD:
-                chord(
-                    group(
-                        convert_doc_to_funsd.s(info.context.user.id, doc_id, corpus_pk)
-                        for doc_id in doc_ids
+                chain(
+                    chord(
+                        group(
+                            convert_doc_to_funsd.s(
+                                info.context.user.id, doc_id, corpus_pk
+                            )
+                            for doc_id in doc_ids
+                        ),
+                        package_funsd_exports.s(export.id, corpus_pk),
                     ),
-                    package_funsd_exports.s(export.id, corpus_pk),
+                    on_demand_post_processors.si(export.id, corpus_pk),
                 ).apply_async()
                 ok = True
                 message = "SUCCESS"

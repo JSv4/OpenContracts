@@ -32,6 +32,9 @@ class PipelineComponentQueriesTestCase(TestCase):
         importlib.reload(
             importlib.import_module("opencontractserver.pipeline.thumbnailers")
         )
+        importlib.reload(
+            importlib.import_module("opencontractserver.pipeline.post_processors")
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -103,6 +106,31 @@ class TestThumbnailer(BaseThumbnailGenerator):
         return None
 '''
 
+        cls.post_processor_code = '''
+from opencontractserver.pipeline.base.post_processor import BasePostProcessor
+from typing import Tuple, Optional, List
+from opencontractserver.pipeline.base.file_types import FileTypeEnum
+from opencontractserver.types.dicts import OpenContractsExportDataJsonPythonType
+
+class TestPostProcessor(BasePostProcessor):
+    """
+    A test post-processor for unit testing.
+    """
+
+    title: str = "Test PostProcessor"
+    description: str = "A test post-processor for unit testing."
+    author: str = "Test Author"
+    dependencies: list[str] = []
+    supported_file_types: List[FileTypeEnum] = [FileTypeEnum.PDF]
+
+    def process_export(
+        self,
+        zip_bytes: bytes,
+        export_data: OpenContractsExportDataJsonPythonType,
+    ) -> Tuple[bytes, OpenContractsExportDataJsonPythonType]:
+        return zip_bytes, export_data
+'''
+
         # Define the file paths for the components
         cls.parser_path = os.path.join(
             os.path.dirname(__file__), "..", "pipeline", "parsers", "test_parser.py"
@@ -117,6 +145,13 @@ class TestThumbnailer(BaseThumbnailGenerator):
             "thumbnailers",
             "test_thumbnailer.py",
         )
+        cls.post_processor_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "pipeline",
+            "post_processors",
+            "test_post_processor.py",
+        )
 
         # Ensure package __init__.py files exist
         parser_init = os.path.join(os.path.dirname(cls.parser_path), "__init__.py")
@@ -124,8 +159,16 @@ class TestThumbnailer(BaseThumbnailGenerator):
         thumbnailer_init = os.path.join(
             os.path.dirname(cls.thumbnailer_path), "__init__.py"
         )
+        post_processor_init = os.path.join(
+            os.path.dirname(cls.post_processor_path), "__init__.py"
+        )
 
-        for init_file in [parser_init, embedder_init, thumbnailer_init]:
+        for init_file in [
+            parser_init,
+            embedder_init,
+            thumbnailer_init,
+            post_processor_init,
+        ]:
             if not os.path.exists(init_file):
                 with open(init_file, "w"):
                     pass  # Create empty __init__.py
@@ -145,6 +188,12 @@ class TestThumbnailer(BaseThumbnailGenerator):
         with open(cls.thumbnailer_path, "w") as f:
             f.write(cls.thumbnailer_code)
         cls.test_files.append(cls.thumbnailer_path)
+
+        # Create the post processor file
+        os.makedirs(os.path.dirname(cls.post_processor_path), exist_ok=True)
+        with open(cls.post_processor_path, "w") as f:
+            f.write(cls.post_processor_code)
+        cls.test_files.append(cls.post_processor_path)
 
     @classmethod
     def remove_test_components(cls):
@@ -172,6 +221,7 @@ class TestThumbnailer(BaseThumbnailGenerator):
                     author
                     supportedFileTypes
                     componentType
+                    inputSchema
                 }
                 embedders {
                     name
@@ -181,6 +231,7 @@ class TestThumbnailer(BaseThumbnailGenerator):
                     vectorSize
                     supportedFileTypes
                     componentType
+                    inputSchema
                 }
                 thumbnailers {
                     name
@@ -189,6 +240,15 @@ class TestThumbnailer(BaseThumbnailGenerator):
                     author
                     supportedFileTypes
                     componentType
+                    inputSchema
+                }
+                postProcessors {
+                    name
+                    title
+                    description
+                    author
+                    componentType
+                    inputSchema
                 }
             }
         }
@@ -197,18 +257,23 @@ class TestThumbnailer(BaseThumbnailGenerator):
         result = self.client.execute(query)
         self.assertIsNone(result.get("errors"))
 
+        print(f"Query result: {result['data']}")
+
         data = result["data"]["pipelineComponents"]
         parsers = data["parsers"]
         embedders = data["embedders"]
         thumbnailers = data["thumbnailers"]
+        post_processors = data["postProcessors"]
 
         parser_names = [parser["name"] for parser in parsers]
         embedder_names = [embedder["name"] for embedder in embedders]
         thumbnailer_names = [thumbnailer["name"] for thumbnailer in thumbnailers]
+        post_processor_names = [pp["name"] for pp in post_processors]
 
         self.assertIn("TestParser", parser_names)
         self.assertIn("TestEmbedder", embedder_names)
         self.assertIn("TestThumbnailer", thumbnailer_names)
+        self.assertIn("TestPostProcessor", post_processor_names)
 
     def test_pipeline_components_query_with_mimetype(self):
         """Test querying pipeline components filtered by mimetype."""
@@ -220,18 +285,29 @@ class TestThumbnailer(BaseThumbnailGenerator):
                     title
                     supportedFileTypes
                     componentType
+                    inputSchema
                 }
                 embedders {
                     name
                     title
                     supportedFileTypes
                     componentType
+                    inputSchema
                 }
                 thumbnailers {
                     name
                     title
                     supportedFileTypes
                     componentType
+                    inputSchema
+                }
+                postProcessors {
+                    name
+                    title
+                    description
+                    author
+                    componentType
+                    inputSchema
                 }
             }
         }
@@ -243,9 +319,11 @@ class TestThumbnailer(BaseThumbnailGenerator):
         self.assertIsNone(result.get("errors"))
 
         data = result["data"]["pipelineComponents"]
+        print(f"test_pipeline_components_query_with_mimetype - Data: {data}")
         parsers = data["parsers"]
         embedders = data["embedders"]
         thumbnailers = data["thumbnailers"]
+        post_processors = data["postProcessors"]
 
         # Since our test components support PDF, they should be included
         parser_titles = [parser["title"] for parser in parsers]
@@ -257,6 +335,10 @@ class TestThumbnailer(BaseThumbnailGenerator):
         # Embedders are not filtered by mimetype in our implementation
         embedder_titles = [embedder["title"] for embedder in embedders]
         self.assertIn("Test Embedder", embedder_titles)
+
+        post_processor_titles = [pp["title"] for pp in post_processors]
+        print(f"Post processor titles: {post_processor_titles}")
+        self.assertIn("Test PostProcessor", post_processor_titles)
 
     def test_pipeline_components_query_with_mimetype_no_components(self):
         """Test querying pipeline components with a mimetype that has no components."""

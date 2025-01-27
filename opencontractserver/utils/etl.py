@@ -89,6 +89,8 @@ def build_document_export(
     Fairly complex function to burn in the annotations for a given corpus on a given doc. This will alter the PDF
     and add highlight and labels. It's still a bit ugly, but it works.
 
+    TODO - this makes assumptions that only work for PDF files and fails on all others, preventing export.
+
     """
 
     logger.info(f"burn_doc_annotations - label_lookups: {label_lookups}")

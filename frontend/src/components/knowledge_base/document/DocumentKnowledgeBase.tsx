@@ -89,6 +89,15 @@ const HeaderContainer = styled(Segment)`
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     z-index: 100;
     position: relative;
+
+    /* Mobile-friendly header */
+    @media (max-width: 768px) {
+      padding: 1rem !important;
+
+      h2 {
+        font-size: 1.25rem;
+      }
+    }
   }
 `;
 
@@ -113,6 +122,16 @@ const MetadataRow = styled.div`
       opacity: 0.7;
     }
   }
+
+  /* Stack metadata on small screens */
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+
+    span {
+      font-size: 0.8rem;
+    }
+  }
 `;
 
 const ContentArea = styled.div`
@@ -121,6 +140,12 @@ const ContentArea = styled.div`
   height: calc(100vh - 90px);
   background: white;
   position: relative;
+
+  /* Stack layout on mobile */
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
 `;
 
 const TabsColumn = styled(Segment)<{ collapsed: boolean }>`
@@ -136,6 +161,32 @@ const TabsColumn = styled(Segment)<{ collapsed: boolean }>`
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     z-index: 90;
+
+    /* Mobile optimization */
+    @media (max-width: 768px) {
+      width: 100%;
+      height: 56px;
+      display: flex;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      white-space: nowrap;
+      padding: 0.5rem !important;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(231, 234, 237, 0.7) !important;
+
+      /* Hide scrollbar but keep functionality */
+      scrollbar-width: none;
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* Center icons when in mobile mode */
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
   }
 `;
 
@@ -207,8 +258,97 @@ const TabButton = styled(Button)<{ collapsed: boolean }>`
       transition: opacity 0.2s ease;
       ${(props) => props.collapsed && "display: none;"}
     }
+
+    /* Mobile-friendly tabs - icons only */
+    @media (max-width: 768px) {
+      width: 40px !important;
+      height: 40px !important;
+      padding: 0 !important;
+      margin: 0 0.25rem !important;
+      border-radius: 12px !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+
+      span {
+        display: none !important; /* Hide text labels on mobile */
+      }
+
+      svg {
+        margin: 0 !important;
+        width: 20px;
+        height: 20px;
+      }
+
+      &.active {
+        background: ${(props) =>
+          props.theme.colors?.primary || "#2185d0"} !important;
+        color: white !important;
+
+        &:before {
+          display: none; /* Remove side indicator on mobile */
+        }
+
+        svg {
+          color: white;
+        }
+      }
+
+      /* Add subtle hover effect */
+      &:hover:not(.active) {
+        background: rgba(0, 0, 0, 0.03) !important;
+        transform: translateY(-1px);
+      }
+    }
   }
 `;
+
+// Add a tooltip for mobile tabs
+const TabTooltip = styled.div`
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+
+  /* Only show on mobile */
+  @media (min-width: 769px) {
+    display: none;
+  }
+`;
+
+// Update the TabButton component to include tooltips on mobile
+const Tab: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}> = ({ icon, label, active, onClick }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <TabButton
+      collapsed={false}
+      active={active}
+      onClick={onClick}
+      onTouchStart={() => setShowTooltip(true)}
+      onTouchEnd={() => setShowTooltip(false)}
+    >
+      {icon}
+      <span>{label}</span>
+      {showTooltip && <TabTooltip>{label}</TabTooltip>}
+    </TabButton>
+  );
+};
 
 const MainContentArea = styled.div`
   flex: 1;
@@ -254,7 +394,7 @@ const SlidingPanel = styled(motion.div)`
   position: absolute;
   top: 0;
   right: 0;
-  width: 50%;
+  width: min(500px, 50%); // Ensure panel never takes more than 50% on desktop
   height: 100%;
   background: white;
   box-shadow: -4px 0 25px rgba(0, 0, 0, 0.05);
@@ -262,6 +402,13 @@ const SlidingPanel = styled(motion.div)`
   overflow: hidden;
   display: flex;
   flex-direction: column;
+
+  /* Full-screen panel on mobile */
+  @media (max-width: 768px) {
+    width: 100%;
+    height: calc(100% - 56px); /* Account for tab bar */
+    top: 56px;
+  }
 `;
 
 const ChatContainer = styled.div`
@@ -276,6 +423,15 @@ const ChatInputContainer = styled.div`
   border-top: 1px solid rgba(231, 234, 237, 0.7);
   background: white;
   position: relative;
+
+  /* Ensure input is accessible on mobile */
+  @media (max-width: 768px) {
+    padding: 1rem;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  }
 `;
 
 const ChatInput = styled(Input)`
@@ -974,6 +1130,22 @@ const NotesGrid = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
   padding: 1.5rem;
+
+  /* Responsive grid */
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    padding: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0.75rem;
+  }
 `;
 
 const NoteModal = styled(Modal)`

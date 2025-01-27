@@ -1996,3 +1996,148 @@ export const GET_POST_PROCESSORS = gql`
     }
   }
 `;
+
+// First, we'll define a new combined query that gets everything we need:
+export interface GetDocumentKnowledgeAndAnnotationsInput {
+  documentId: string;
+  corpusId: string;
+  analysisId?: string;
+}
+
+export interface GetDocumentKnowledgeAndAnnotationsOutput {
+  document: DocumentType;
+  corpus: CorpusType;
+}
+
+export const GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS = gql`
+  query GetDocumentKnowledgeAndAnnotations(
+    $documentId: String!
+    $corpusId: ID!
+    $analysisId: ID
+  ) {
+    document(id: $documentId) {
+      # Knowledge base fields
+      id
+      title
+      fileType
+      creator {
+        email
+      }
+      created
+      mdSummaryFile
+      pdfFile
+      txtExtractFile
+      allNotes(corpusId: $corpusId) {
+        id
+        title
+        content
+        created
+        creator {
+          email
+        }
+      }
+      allDocRelationships(corpusId: $corpusId) {
+        id
+        relationshipType
+        sourceDocument {
+          id
+          title
+          fileType
+        }
+        targetDocument {
+          id
+          title
+          fileType
+        }
+        created
+      }
+
+      # Annotation fields
+      allStructuralAnnotations {
+        id
+        page
+        parent {
+          id
+        }
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+        annotationType
+        rawText
+        json
+        myPermissions
+        structural
+      }
+      allAnnotations(corpusId: $corpusId, analysisId: $analysisId) {
+        id
+        page
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+        userFeedback {
+          edges {
+            node {
+              id
+              approved
+              rejected
+            }
+          }
+          totalCount
+        }
+        annotationType
+        rawText
+        json
+        myPermissions
+      }
+      allRelationships(corpusId: $corpusId, analysisId: $analysisId) {
+        id
+        structural
+        relationshipLabel {
+          id
+          text
+          color
+          icon
+          description
+        }
+        sourceAnnotations {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+        targetAnnotations {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    }
+    corpus(id: $corpusId) {
+      id
+      labelSet {
+        id
+        allAnnotationLabels {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+      }
+    }
+  }
+`;

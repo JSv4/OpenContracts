@@ -16,7 +16,7 @@
  *   - Child content inside the sidebar is scrollable without causing horizontal overflow.
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useReactiveVar } from "@apollo/client";
 import { Card, Button, Input, Segment, Header, Modal } from "semantic-ui-react";
 import {
@@ -43,29 +43,72 @@ import {
   GET_DOCUMENT_KNOWLEDGE_BASE,
   GetDocumentKnowledgeBaseInputs,
   GetDocumentKnowledgeBaseOutputs,
+  GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
+  GetDocumentKnowledgeAndAnnotationsInput,
+  GetDocumentKnowledgeAndAnnotationsOutput,
 } from "../../../graphql/queries";
-import { ConversationTypeConnection } from "../../../types/graphql-api";
+import { getDocumentRawText, getPawlsLayer } from "../../annotator/api/rest";
+import {
+  ConversationTypeConnection,
+  LabelType,
+} from "../../../types/graphql-api";
 import { ChatMessage, ChatMessageProps } from "../../widgets/chat/ChatMessage";
 import { authToken, userObj } from "../../../graphql/cache";
 import styled, { keyframes } from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
+import {
+  AnalysisType,
+  ExtractType,
+  DatacellType,
+  ColumnType,
+} from "../../../types/graphql-api";
+import {
+  DocumentViewer,
+  PDFContainer,
+} from "../../annotator/display/viewer/DocumentViewer";
+import { PDFDocumentLoadingTask } from "pdfjs-dist";
+import { useUISettings } from "../../annotator/hooks/useUISettings";
+import useWindowDimensions from "../../hooks/WindowDimensionHook";
+import { PDFPageInfo } from "../../annotator/types/pdf";
+import { Token, ViewState } from "../../types";
+import { toast } from "react-toastify";
+import {
+  useDocText,
+  useDocumentType,
+  usePages,
+  usePageTokenTextMaps,
+} from "../../annotator/context/DocumentAtom";
+import { createTokenStringSearch } from "../../annotator/utils";
+import {
+  convertToDocTypeAnnotations,
+  convertToServerAnnotation,
+} from "../../../utils/transform";
+import {
+  PdfAnnotations,
+  RelationGroup,
+} from "../../annotator/types/annotations";
+import {
+  docTypeAnnotationsAtom,
+  pdfAnnotationsAtom,
+  structuralAnnotationsAtom,
+} from "../../annotator/context/AnnotationAtoms";
+import { useCorpusState } from "../../annotator/context/CorpusAtom";
+import { useAtom } from "jotai";
+import { useInitialAnnotations } from "../../annotator/hooks/AnnotationHooks";
+import { LabelSelector } from "../../annotator/labels/label_selector/LabelSelector";
+import { PDF } from "../../annotator/renderers/pdf/PDF";
+import TxtAnnotatorWrapper from "../../annotator/components/wrappers/TxtAnnotatorWrapper";
+import { useAnnotationRefs } from "../../annotator/hooks/useAnnotationRefs";
+import { DocTypeLabelDisplay } from "../../annotator/labels/doc_types/DocTypeLabelDisplay";
+import { useAnnotationControls } from "../../annotator/context/UISettingsAtom";
 
-interface ConversationSelectorProps {
-  conversations: Array<{
-    id: string;
-    title?: string;
-    createdAt: string;
-    creator: {
-      email: string;
-    };
-    messageCount?: number;
-  }>;
-  selectedId?: string;
-  onSelect: (id: string) => void;
-  onCreateNew: () => void;
-}
+const pdfjsLib = require("pdfjs-dist");
+
+// Setting worker path to worker bundle.
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
 // Enhanced styled components
 const FullScreenModal = styled(Modal)`
@@ -1246,12 +1289,26 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   corpusId,
   onClose,
 }) => {
+  const { width } = useWindowDimensions();
+
+  const {
+    setProgress,
+    progress,
+    zoomLevel,
+    readOnly,
+    isSidebarVisible,
+    setSidebarVisible,
+  } = useUISettings({
+    width,
+  });
+  const [viewComponents, setViewComponents] = useState<JSX.Element>(<></>);
   const auth_token = useReactiveVar(authToken);
   const user_obj = useReactiveVar(userObj);
   const [showGraph, setShowGraph] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("summary");
   const [newMessage, setNewMessage] = useState("");
   const [showSelector, setShowSelector] = useState(false);
+  const [viewState, setViewState] = useState<ViewState>(ViewState.LOADING);
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | undefined
   >();
@@ -1262,33 +1319,134 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [wsReady, setWsReady] = useState(false);
   const [wsError, setWsError] = useState<string | null>(null);
 
+  const { setDocumentType } = useDocumentType();
+  const { setDocText } = useDocText();
+  const {
+    pageTokenTextMaps: pageTextMaps,
+    setPageTokenTextMaps: setPageTextMaps,
+  } = usePageTokenTextMaps();
+  const { pages, setPages } = usePages();
+  const [, setPdfAnnotations] = useAtom(pdfAnnotationsAtom);
+  const [, setStructuralAnnotations] = useAtom(structuralAnnotationsAtom);
+  const [, setDocTypeAnnotations] = useAtom(docTypeAnnotationsAtom);
+  const { setCorpus } = useCorpusState();
+  const { setInitialAnnotations } = useInitialAnnotations();
+  const { scrollContainerRef, annotationElementRefs, registerRef } =
+    useAnnotationRefs();
+  const { activeSpanLabel, setActiveSpanLabel } = useAnnotationControls();
+
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
   const [markdownError, setMarkdownError] = useState<boolean>(false);
 
-  const { data: knowledgeData, loading: knowledgeLoading } = useQuery<
-    GetDocumentKnowledgeBaseOutputs,
-    GetDocumentKnowledgeBaseInputs
-  >(GET_DOCUMENT_KNOWLEDGE_BASE, {
+  const containerRefCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      // console.log("Started Annotation Renderer");
+      if (node !== null) {
+        scrollContainerRef.current = node;
+        registerRef("scrollContainer", scrollContainerRef);
+      }
+    },
+    [scrollContainerRef, registerRef]
+  );
+
+  const { data: combinedData, loading } = useQuery<
+    GetDocumentKnowledgeAndAnnotationsOutput,
+    GetDocumentKnowledgeAndAnnotationsInput
+  >(GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS, {
     variables: {
       documentId,
       corpusId,
+      analysisId: undefined, // or pass an analysis ID if needed
+    },
+    onCompleted: (data) => {
+      setDocumentType(data.document.fileType ?? "");
+
+      if (
+        data.document.fileType === "application/pdf" &&
+        data.document.pdfFile
+      ) {
+        console.debug("React to PDF doc load request");
+        setViewComponents(<PDF read_only={true} />);
+        const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
+          data.document.pdfFile
+        );
+        loadingTask.onProgress = (p: { loaded: number; total: number }) => {
+          setProgress(Math.round((p.loaded / p.total) * 100));
+        };
+
+        Promise.all([
+          loadingTask.promise,
+          getPawlsLayer(data.document.pawlsParseFile || ""),
+        ])
+          .then(([pdfDocProxy, pawlsData]) => {
+            setPdfDoc(pdfDocProxy);
+
+            const loadPages: Promise<PDFPageInfo>[] = [];
+            for (let i = 1; i <= pdfDocProxy.numPages; i++) {
+              loadPages.push(
+                pdfDocProxy.getPage(i).then((p) => {
+                  let pageTokens: Token[] = [];
+                  if (pawlsData.length === 0) {
+                    toast.error(
+                      "Token layer isn't available for this document... annotations can't be displayed."
+                    );
+                  } else {
+                    const pageIndex = p.pageNumber - 1;
+                    pageTokens = pawlsData[pageIndex].tokens;
+                  }
+                  return new PDFPageInfo(p, pageTokens, zoomLevel);
+                }) as unknown as Promise<PDFPageInfo>
+              );
+            }
+            return Promise.all(loadPages);
+          })
+          .then((loadedPages) => {
+            setPages(loadedPages);
+            let { doc_text, string_index_token_map } =
+              createTokenStringSearch(loadedPages);
+            setPageTextMaps({
+              ...string_index_token_map,
+              ...pageTextMaps,
+            });
+            setDocText(doc_text);
+            // Loaded state set by useEffect for state change in doc state store.
+          })
+          .catch((err) => {
+            console.error("Error loading PDF document:", err);
+            setViewState(ViewState.ERROR);
+          });
+      } else if (
+        data.document.fileType === "application/txt" ||
+        data.document.fileType === "text/plain"
+      ) {
+        console.debug("React to TXT document");
+
+        setViewComponents(
+          <TxtAnnotatorWrapper readOnly={true} allowInput={false} />
+        );
+
+        Promise.all([getDocumentRawText(data.document.txtExtractFile || "")])
+          .then(([txt]) => {
+            setDocText(txt);
+            setViewState(ViewState.LOADED);
+          })
+          .catch((err) => {
+            console.error("Error loading TXT document:", err);
+            setViewState(ViewState.ERROR);
+          });
+      } else {
+        console.error("Unexpected filetype: ", data.document.fileType);
+        setViewComponents(
+          <div>
+            <p>Unsupported filetype: {data.document.fileType}</p>
+          </div>
+        );
+      }
     },
     skip: !documentId || !corpusId,
   });
 
-  const { data: conversationData, loading: conversationsLoading } = useQuery<{
-    conversations: ConversationTypeConnection;
-  }>(GET_CONVERSATIONS, {
-    variables: {
-      documentId,
-      corpusId,
-    },
-    skip: !documentId || !corpusId,
-  });
-
-  const loading = knowledgeLoading || conversationsLoading;
-
-  const metadata = knowledgeData?.document ?? {
+  const metadata = combinedData?.document ?? {
     title: "Loading...",
     fileType: "",
     creator: { email: "" },
@@ -1296,23 +1454,31 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   };
 
   const conversations =
-    conversationData?.conversations?.edges
-      ?.map((edge) => {
-        const node = edge?.node;
+    combinedData?.document?.allDocRelationships
+      ?.map((rel) => {
+        const node = rel.sourceDocument || rel.targetDocument;
         if (!node) return null;
         return {
           id: node.id,
           title: node.title,
-          createdAt: node.createdAt,
+          createdAt: rel.created,
           creator: node.creator,
           messageCount: node.chatMessages?.edges?.length || 0,
         };
       })
       .filter(Boolean) || [];
 
-  const selectedConversation = conversationData?.conversations?.edges?.find(
-    (edge) => edge?.node?.id === selectedConversationId
-  )?.node;
+  const selectedConversation =
+    combinedData?.document?.allDocRelationships?.find(
+      (rel) =>
+        rel.sourceDocument?.id === selectedConversationId ||
+        rel.targetDocument?.id === selectedConversationId
+    )?.sourceDocument ||
+    combinedData?.document?.allDocRelationships?.find(
+      (rel) =>
+        rel.sourceDocument?.id === selectedConversationId ||
+        rel.targetDocument?.id === selectedConversationId
+    )?.targetDocument;
 
   const transformGraphQLMessages = React.useCallback((): ChatMessageProps[] => {
     if (!selectedConversation) return [];
@@ -1491,8 +1657,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }
   }, [newMessage, user_obj?.email, wsReady]);
 
-  const notes = knowledgeData?.document?.allNotes ?? [];
-  const docRelationships = knowledgeData?.document?.allDocRelationships ?? [];
+  const notes = combinedData?.document?.allNotes ?? [];
+  const docRelationships = combinedData?.document?.allDocRelationships ?? [];
 
   useEffect(() => {
     setShowRightPanel(
@@ -1502,13 +1668,13 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
   useEffect(() => {
     const fetchMarkdownContent = async () => {
-      if (!knowledgeData?.document?.mdSummaryFile) {
+      if (!combinedData?.document?.mdSummaryFile) {
         setMarkdownContent(null);
         return;
       }
 
       try {
-        const response = await fetch(knowledgeData.document.mdSummaryFile);
+        const response = await fetch(combinedData.document.mdSummaryFile);
         if (!response.ok) throw new Error("Failed to fetch markdown content");
         const text = await response.text();
         setMarkdownContent(text);
@@ -1521,11 +1687,18 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     };
 
     fetchMarkdownContent();
-  }, [knowledgeData?.document?.mdSummaryFile]);
+  }, [combinedData?.document?.mdSummaryFile]);
 
   const [selectedNote, setSelectedNote] = useState<(typeof notes)[0] | null>(
     null
   );
+
+  // Add a new tab for document viewing
+  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | undefined>();
+  const [analyses, setAnalyses] = useState<AnalysisType[]>([]);
+  const [extracts, setExtracts] = useState<ExtractType[]>([]);
+  const [datacells, setDatacells] = useState<DatacellType[]>([]);
+  const [columns, setColumns] = useState<ColumnType[]>([]);
 
   return (
     <FullScreenModal open={true} onClose={onClose} closeIcon>
@@ -1618,28 +1791,48 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             <ChartNetwork size={18} />
             <span>Relationships</span>
           </TabButton>
+          <TabButton
+            active={activeTab === "document"}
+            onClick={() => setActiveTab("document")}
+            collapsed={sidebarCollapsed}
+          >
+            <FileText size={18} />
+            <span>Document</span>
+          </TabButton>
         </TabsColumn>
 
         <MainContentArea>
-          <SummaryContent className={showRightPanel ? "dimmed" : ""}>
-            {loading ? (
-              <LoadingPlaceholders type="summary" />
-            ) : markdownContent ? (
-              <div className="prose max-w-none">
-                <SafeMarkdown>{markdownContent}</SafeMarkdown>
-              </div>
-            ) : (
-              <EmptyState
-                icon={<FileText size={40} />}
-                title="No summary available"
-                description={
-                  markdownError
-                    ? "Failed to load the document summary"
-                    : "This document doesn't have a summary yet"
-                }
+          {activeTab === "document" ? (
+            <PDFContainer ref={containerRefCallback}>
+              <LabelSelector
+                sidebarWidth={"0px"}
+                activeSpanLabel={activeSpanLabel ?? null}
+                setActiveLabel={setActiveSpanLabel}
               />
-            )}
-          </SummaryContent>
+              <DocTypeLabelDisplay />
+              {viewComponents}
+            </PDFContainer>
+          ) : (
+            <SummaryContent className={showRightPanel ? "dimmed" : ""}>
+              {loading ? (
+                <LoadingPlaceholders type="summary" />
+              ) : markdownContent ? (
+                <div className="prose max-w-none">
+                  <SafeMarkdown>{markdownContent}</SafeMarkdown>
+                </div>
+              ) : (
+                <EmptyState
+                  icon={<FileText size={40} />}
+                  title="No summary available"
+                  description={
+                    markdownError
+                      ? "Failed to load the document summary"
+                      : "This document doesn't have a summary yet"
+                  }
+                />
+              )}
+            </SummaryContent>
+          )}
         </MainContentArea>
 
         <AnimatePresence>
@@ -1699,7 +1892,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                                         conv.createdAt
                                       ).toLocaleDateString()}
                                       <User size={12} />
-                                      {conv.creator.email}
+                                      {conv.creator?.email}
                                     </div>
                                   </ConversationItem>
                                 )

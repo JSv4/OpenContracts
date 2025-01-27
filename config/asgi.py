@@ -43,7 +43,7 @@ django_application = get_asgi_application()
 # Define websocket URL patterns
 websocket_urlpatterns = [
     re_path(
-        r"ws/document/(?P<document_id>\w+)/query/$",
+        r"ws/document/(?P<document_id>[-a-zA-Z0-9_=]+)/query/$",
         DocumentQueryConsumer.as_asgi(),
     ),
 ]

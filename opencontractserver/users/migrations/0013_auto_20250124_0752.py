@@ -45,7 +45,7 @@ def add_group_permissions(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("users", "0011_setup_document_row_analysis_permissions"),
+        ("users", "0012_userexport_input_kwargs_userexport_post_processors"),
     ]
 
     operations = [

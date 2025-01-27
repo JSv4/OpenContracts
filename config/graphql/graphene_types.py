@@ -1128,6 +1128,7 @@ class NoteType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
     class Meta:
         model = Note
+        exclude = ("embedding",)
         interfaces = [relay.Node]
         connection_class = CountableConnection
 

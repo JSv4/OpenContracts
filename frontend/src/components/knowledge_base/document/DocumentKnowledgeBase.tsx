@@ -164,7 +164,6 @@ const MetadataRow = styled.div`
     align-items: center;
     gap: 0.5rem;
     transition: color 0.2s ease;
-
     &:hover {
       color: #2185d0;
     }
@@ -1034,14 +1033,6 @@ const getWebSocketUrl = (documentId: string, token: string): string => {
     `${window.location.protocol === "https:" ? "wss" : "ws"}://${
       window.location.host
     }`;
-  console.log("process.env.REACT_APP_WS_URL", process.env.REACT_APP_WS_URL);
-  console.log("process.env.REACT_APP_API_URL", process.env.REACT_APP_API_URL);
-  console.log("window.location.protocol", window.location.protocol);
-  console.log("window.location.host", window.location.host);
-  console.log("process.env", process.env);
-  console.log("wsBaseUrl", wsBaseUrl);
-
-  // Remove any trailing slashes from the base URL and ensure proper protocol
   const normalizedBaseUrl = wsBaseUrl
     .replace(/\/+$/, "")
     .replace(/^http/, "ws")
@@ -1075,7 +1066,6 @@ const PostItNote = styled(motion.button)`
     background: rgba(0, 0, 0, 0.02);
     border-radius: 2px 2px 0 0;
   }
-
   &::after {
     content: "";
     position: absolute;
@@ -1087,7 +1077,6 @@ const PostItNote = styled(motion.button)`
     background: rgba(0, 0, 0, 0.03);
     border-radius: 0 0 3px 3px;
   }
-
   .content {
     max-height: 200px;
     overflow: hidden;
@@ -1095,7 +1084,6 @@ const PostItNote = styled(motion.button)`
     font-family: "Kalam", cursive;
     line-height: 1.6;
     color: #2c3e50;
-
     &::after {
       content: "";
       position: absolute;
@@ -1106,14 +1094,12 @@ const PostItNote = styled(motion.button)`
       background: linear-gradient(transparent, #fff7b1);
     }
   }
-
   .meta {
     margin-top: 1rem;
     font-size: 0.75rem;
     color: #666;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   }
-
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05),
@@ -1127,16 +1113,13 @@ const NotesGrid = styled.div`
   gap: 1.5rem;
   padding: 1.5rem;
 
-  /* Responsive grid */
   @media (max-width: 1200px) {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
-
   @media (max-width: 768px) {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     padding: 1rem;
   }
-
   @media (max-width: 480px) {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -1154,29 +1137,24 @@ const NoteModal = styled(Modal)`
     @media (min-width: 768px) {
       max-width: 80vw;
     }
-
     @media (min-width: 1024px) {
       max-width: 60vw;
     }
-
     .content {
       padding: 1.5rem;
       font-family: "Kalam", cursive;
       line-height: 1.6;
       color: #2c3e50;
-
       @media (min-width: 768px) {
         padding: 2rem;
       }
     }
-
     .meta {
       padding: 1rem 1.5rem;
       background: #f8f9fa;
       border-top: 1px solid #eee;
       font-size: 0.875rem;
       color: #666;
-
       @media (min-width: 768px) {
         padding: 1rem 2rem;
       }
@@ -1202,7 +1180,6 @@ const NotesHeader = styled.div`
     align-items: center;
     gap: 0.75rem;
   }
-
   .meta {
     font-size: 0.875rem;
     color: #6c757d;
@@ -1225,11 +1202,7 @@ const SafeMarkdown: React.FC<{ children: string }> = ({ children }) => {
   }
 };
 
-/**
- * Additional "Old AnnotatorSidebar" panels that can appear on the right side
- * when their corresponding left tabs are clicked.
- */
-
+// Panels from the old "AnnotatorSidebar":
 const AnnotationsPanel: React.FC = () => {
   return (
     <div className="sidebar__annotations" style={{ padding: "1rem" }}>
@@ -1250,13 +1223,134 @@ const LabelsPanel: React.FC = () => {
   return <AnnotationList read_only={false} />;
 };
 
+/* Minimal floating layer switcher in bottom right */
+const LayerSwitcher = styled.div`
+  position: absolute;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  z-index: 999;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1);
+  transform: translateZ(0);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+
+  &:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px) translateZ(0);
+  }
+
+  button {
+    border: none;
+    background: transparent;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 160px;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: currentColor;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    &:hover:not(.active) {
+      color: #334155;
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    &.active {
+      background: #2185d0;
+      color: white;
+
+      &::after {
+        content: "";
+        position: absolute;
+        left: 0.5rem;
+        top: 50%;
+        width: 4px;
+        height: 4px;
+        background: currentColor;
+        border-radius: 50%;
+        transform: translateY(-50%);
+        opacity: 0.5;
+      }
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      opacity: 0.7;
+      transition: all 0.2s ease;
+    }
+
+    &:hover svg {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    /* Add icons to the buttons */
+    &:first-child::before {
+      content: "📚";
+      position: absolute;
+      left: 0.75rem;
+      opacity: 0;
+      transition: all 0.2s ease;
+    }
+
+    &:last-child::before {
+      content: "📄";
+      position: absolute;
+      left: 0.75rem;
+      opacity: 0;
+      transition: all 0.2s ease;
+    }
+
+    &:hover::before {
+      opacity: 0.7;
+    }
+  }
+
+  @media (max-width: 768px) {
+    bottom: 1rem;
+    left: 1rem;
+    padding: 0.375rem;
+
+    button {
+      padding: 0.625rem 0.875rem;
+      min-width: 140px;
+      font-size: 0.8125rem;
+    }
+  }
+`;
+
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   documentId,
   corpusId,
   onClose,
 }) => {
   const { width } = useWindowDimensions();
-
   const {
     setProgress,
     progress,
@@ -1273,6 +1367,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const user_obj = useReactiveVar(userObj);
   const [showGraph, setShowGraph] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("summary");
+
+  // NEW: a layer to toggle between "knowledge" (summary) and "document" (PDF/TXT).
+  const [activeLayer, setActiveLayer] = useState<"knowledge" | "document">(
+    "knowledge"
+  );
+
   const [newMessage, setNewMessage] = useState("");
   const [showSelector, setShowSelector] = useState(false);
   const [viewState, setViewState] = useState<ViewState>(ViewState.LOADING);
@@ -1306,7 +1406,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
   const containerRefCallback = useCallback(
     (node: HTMLDivElement | null) => {
-      // console.log("Started Annotation Renderer");
       if (node !== null) {
         scrollContainerRef.current = node;
         registerRef("scrollContainer", scrollContainerRef);
@@ -1335,6 +1434,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     [setShiftDown]
   );
 
+  // Fetch combined knowledge & annotation data
   const { data: combinedData, loading } = useQuery<
     GetDocumentKnowledgeAndAnnotationsOutput,
     GetDocumentKnowledgeAndAnnotationsInput
@@ -1342,16 +1442,14 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     variables: {
       documentId,
       corpusId,
-      analysisId: undefined, // or pass an analysis ID if needed
+      analysisId: undefined,
     },
     onCompleted: (data) => {
       setDocumentType(data.document.fileType ?? "");
-
       if (
         data.document.fileType === "application/pdf" &&
         data.document.pdfFile
       ) {
-        console.debug("React to PDF doc load request");
         setViewComponents(<PDF read_only={true} />);
         const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
           data.document.pdfFile
@@ -1475,9 +1573,9 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       timestamp: new Date(node.createdAt).toLocaleString(),
       isAssistant: node.msgType === "ASSISTANT" || node.msgType === "LLM",
       sources:
-        node.sourceAnnotations?.edges?.map(({ node: annotation }: any) => ({
-          text: annotation.rawText,
-          onClick: () => console.log("Navigate to annotation", annotation.id),
+        node.sourceAnnotations?.edges?.map(({ node: ann }: any) => ({
+          text: ann.rawText,
+          onClick: () => console.log("Navigate to annotation", ann.id),
         })) || [],
     }));
   }, [selectedConversation]);
@@ -1511,13 +1609,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     if (!documentId || !corpusId || !userIsAuthenticated) return;
 
     const wsUrl = getWebSocketUrl(documentId, auth_token);
-    console.log("Connecting to WebSocket at:", wsUrl);
-
     socketRef.current = new WebSocket(wsUrl);
     const ws = socketRef.current;
 
     ws.onopen = () => {
-      console.log("WebSocket connected");
       setWsReady(true);
       setWsError(null);
     };
@@ -1526,9 +1621,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       try {
         const messageData = JSON.parse(event.data);
         if (!messageData) return;
-
         const { type: msgType, content, data } = messageData;
-
         switch (msgType) {
           case "ASYNC_START":
             break;
@@ -1546,18 +1639,16 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             break;
         }
       } catch (err) {
-        console.error("Failed to parse websocket message:", err);
+        console.error("Failed to parse WS message:", err);
       }
     };
 
     ws.onclose = (event) => {
-      console.log("WebSocket closed:", event.code, event.reason);
       setWsReady(false);
       setWsError("Connection closed. Please try again.");
     };
 
     ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
       setWsReady(false);
       setWsError("Failed to connect. Please try again.");
     };
@@ -1623,12 +1714,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const sendMessageOverSocket = React.useCallback(() => {
     const trimmed = newMessage.trim();
     if (!trimmed || !socketRef.current) return;
-
     if (!wsReady) {
       console.warn("WebSocket not ready yet");
       return;
     }
-
     try {
       setChat((prev) => [
         ...prev,
@@ -1639,10 +1728,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           isAssistant: false,
         },
       ]);
-
-      const payload = {
-        query: trimmed,
-      };
+      const payload = { query: trimmed };
       socketRef.current.send(JSON.stringify(payload));
       setNewMessage("");
       setWsError(null);
@@ -1655,26 +1741,13 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const notes = combinedData?.document?.allNotes ?? [];
   const docRelationships = combinedData?.document?.allDocRelationships ?? [];
 
-  // Show or hide the right panel if the active tab is "chat", "notes", "relationships", "document" or any of the newly added "annotations", "relations", "labels"
-  useEffect(() => {
-    const tabsWithRightPanel = [
-      "chat",
-      "notes",
-      "relationships",
-      "annotations",
-      "relations",
-      "labels",
-    ];
-    setShowRightPanel(tabsWithRightPanel.includes(activeTab));
-  }, [activeTab]);
-
+  // Load MD summary if available
   useEffect(() => {
     const fetchMarkdownContent = async () => {
       if (!combinedData?.document?.mdSummaryFile) {
         setMarkdownContent(null);
         return;
       }
-
       try {
         const response = await fetch(combinedData.document.mdSummaryFile);
         if (!response.ok) throw new Error("Failed to fetch markdown content");
@@ -1687,7 +1760,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         setMarkdownError(true);
       }
     };
-
     fetchMarkdownContent();
   }, [combinedData?.document?.mdSummaryFile]);
 
@@ -1695,14 +1767,68 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     null
   );
 
-  // Add a new tab for document viewing
+  /* doc viewer (pdf or text snippet) */
   const { setPdfDoc } = usePdfDoc();
 
-  // Additional arch for new "AnnotatorSidebar" style tabs
-  // These four panel sections appear in our sliding panel on the right when clicked
+  // Minimal arrays of tabs for each layer
+  const knowledgeTabs = [
+    { key: "summary", label: "Summary", icon: <FileText size={18} /> },
+    { key: "chat", label: "Chat", icon: <MessageSquare size={18} /> },
+    { key: "notes", label: "Notes", icon: <Notebook size={18} /> },
+    {
+      key: "relationships",
+      label: "Doc Relationships",
+      icon: <ChartNetwork size={18} />,
+    },
+  ];
+  const documentTabs = [
+    { key: "chat", label: "Chat", icon: <MessageSquare size={18} /> },
+    { key: "notes", label: "Notes", icon: <Notebook size={18} /> },
+    {
+      key: "relationships",
+      label: "Doc Relationships",
+      icon: <ChartNetwork size={18} />,
+    },
+    { key: "annotations", label: "Annotations", icon: <FileText size={18} /> },
+    {
+      key: "relations",
+      label: "Annotation Relationships",
+      icon: <ChartNetwork size={18} />,
+    },
+    { key: "labels", label: "Labels", icon: <Database size={18} /> },
+  ];
+
+  // Decide which tabs to show based on active layer
+  const visibleTabs =
+    activeLayer === "knowledge" ? knowledgeTabs : documentTabs;
+
+  // Decide if we show the right panel
+  // knowledge layer: only "summary" is main content, so right panel if activeTab != "summary"
+  // document layer: doc viewer is always main content, so right panel if the tab is any of the visibleTabs
+  useEffect(() => {
+    if (activeLayer === "knowledge") {
+      setShowRightPanel(activeTab !== "summary");
+    } else {
+      // for the "document" layer, any tab means show the right panel
+      // (because the doc viewer is the main content)
+      // except if user hasn't chosen a tab? We'll just keep it open if they choose something
+      setShowRightPanel(
+        [
+          "chat",
+          "notes",
+          "relationships",
+          "annotations",
+          "relations",
+          "labels",
+        ].includes(activeTab)
+      );
+    }
+  }, [activeLayer, activeTab]);
+
+  // The content for the right panel
   const rightPanelContent = (() => {
     switch (activeTab) {
-      case "chat": {
+      case "chat":
         return (
           <ChatContainer>
             <ConversationIndicator>
@@ -1712,11 +1838,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                     initial={{ opacity: 0, scale: 0.9, x: 20 }}
                     animate={{ opacity: 1, scale: 1, x: 0 }}
                     exit={{ opacity: 0, scale: 0.9, x: 20 }}
-                    transition={{
-                      type: "spring",
-                      damping: 20,
-                      stiffness: 300,
-                    }}
+                    transition={{ type: "spring", damping: 20, stiffness: 300 }}
                   >
                     <ConversationList>
                       {conversations.map(
@@ -1748,20 +1870,14 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                           )
                       )}
                     </ConversationList>
-                    <NewChatButton
-                      onClick={handleCreateNewConversation}
-                      whileHover={{ y: -1 }}
-                    >
+                    <NewChatButton onClick={handleCreateNewConversation}>
                       <Plus size={16} />
                       New Chat
                     </NewChatButton>
                   </ConversationSelector>
                 )}
               </AnimatePresence>
-              <ConversationCount
-                onClick={() => setShowSelector(!showSelector)}
-                whileHover={{ scale: 1.05 }}
-              >
+              <ConversationCount onClick={() => setShowSelector(!showSelector)}>
                 {conversations.length}
               </ConversationCount>
             </ConversationIndicator>
@@ -1821,8 +1937,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             </ChatInputContainer>
           </ChatContainer>
         );
-      }
-      case "notes": {
+      case "notes":
         return (
           <div className="flex-1 overflow-auto">
             <NotesHeader>
@@ -1834,7 +1949,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                 {notes.length} note{notes.length !== 1 ? "s" : ""}
               </div>
             </NotesHeader>
-
             {loading ? (
               <LoadingPlaceholders type="notes" />
             ) : notes.length === 0 ? (
@@ -1880,8 +1994,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             )}
           </div>
         );
-      }
-      case "relationships": {
+      case "relationships":
         return (
           <div className="p-4 flex-1 flex flex-col">
             {loading ? (
@@ -1949,7 +2062,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             )}
           </div>
         );
-      }
       case "annotations":
         return <AnnotationsPanel />;
       case "relations":
@@ -1961,7 +2073,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }
   })();
 
-  // We will store the PDF or text-based viewer in a variable to show on the main area
+  // The main viewer content:
   let viewerContent: JSX.Element = <></>;
   if (metadata.fileType === "application/pdf") {
     viewerContent = (
@@ -1991,7 +2103,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       </PDFContainer>
     );
   } else {
-    // If not recognized or still loading
     viewerContent = (
       <div style={{ padding: "2rem" }}>
         {viewState === ViewState.ERROR ? (
@@ -2051,79 +2162,28 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       </HeaderContainer>
 
       <ContentArea>
+        {/* LEFT SIDEBAR TABS */}
         <TabsColumn
           collapsed={sidebarCollapsed}
           onMouseEnter={() => setSidebarCollapsed(false)}
           onMouseLeave={() => setSidebarCollapsed(true)}
         >
-          <TabButton
-            active={activeTab === "summary"}
-            onClick={() => setActiveTab("summary")}
-            collapsed={sidebarCollapsed}
-            style={{
-              borderBottom: "1px solid rgba(231, 234, 237, 0.7)",
-              marginBottom: "0.5rem",
-              paddingBottom: "1rem",
-            }}
-          >
-            <FileText size={18} />
-            <span>Summary</span>
-          </TabButton>
-
-          <TabButton
-            active={activeTab === "chat"}
-            onClick={() => setActiveTab("chat")}
-            collapsed={sidebarCollapsed}
-          >
-            <MessageSquare size={18} />
-            <span>Chat</span>
-          </TabButton>
-          <TabButton
-            active={activeTab === "notes"}
-            onClick={() => setActiveTab("notes")}
-            collapsed={sidebarCollapsed}
-          >
-            <Notebook size={18} />
-            <span>Notes</span>
-          </TabButton>
-          <TabButton
-            active={activeTab === "relationships"}
-            onClick={() => setActiveTab("relationships")}
-            collapsed={sidebarCollapsed}
-          >
-            <ChartNetwork size={18} />
-            <span>Doc Relationships</span>
-          </TabButton>
-          <TabButton
-            active={activeTab === "annotations"}
-            onClick={() => setActiveTab("annotations")}
-            collapsed={sidebarCollapsed}
-          >
-            <FileText size={18} />
-            <span>Annotations</span>
-          </TabButton>
-
-          <TabButton
-            active={activeTab === "relations"}
-            onClick={() => setActiveTab("relations")}
-            collapsed={sidebarCollapsed}
-          >
-            <ChartNetwork size={18} />
-            <span>Annotation Relationships</span>
-          </TabButton>
-
-          <TabButton
-            active={activeTab === "labels"}
-            onClick={() => setActiveTab("labels")}
-            collapsed={sidebarCollapsed}
-          >
-            <Database size={18} />
-            <span>Labels</span>
-          </TabButton>
+          {visibleTabs.map((t) => (
+            <TabButton
+              key={t.key}
+              active={activeTab === t.key}
+              onClick={() => setActiveTab(t.key)}
+              collapsed={sidebarCollapsed}
+            >
+              {t.icon}
+              <span>{t.label}</span>
+            </TabButton>
+          ))}
         </TabsColumn>
 
         <MainContentArea>
-          {activeTab === "summary" ? (
+          {/* The main content depends on which layer is active */}
+          {activeLayer === "knowledge" ? (
             <SummaryContent className={showRightPanel ? "dimmed" : ""}>
               {loading ? (
                 <LoadingPlaceholders type="summary" />
@@ -2143,32 +2203,64 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                 />
               )}
             </SummaryContent>
-          ) : activeTab === "document" ? (
-            viewerContent
           ) : (
-            // Fallback if a user toggles away from the summary but isn't in the "document" tab.
+            // Document layer
             <div style={{ flex: 1, position: "relative" }}>{viewerContent}</div>
           )}
-        </MainContentArea>
 
-        <AnimatePresence>
-          {showRightPanel && (
-            <SlidingPanel
-              initial={{ transform: "translateX(100%)", opacity: 0 }}
-              animate={{ transform: "translateX(0%)", opacity: 1 }}
-              exit={{ transform: "translateX(100%)", opacity: 0 }}
-              transition={{
-                duration: 0.3,
-                ease: [0.4, 0, 0.2, 1],
-                opacity: {
-                  duration: 0.2,
-                },
+          {/* FLOATING LAYER SWITCHER (bottom-right) */}
+          <LayerSwitcher>
+            <button
+              onClick={() => {
+                setActiveLayer("knowledge");
+                setActiveTab("summary");
               }}
+              className={activeLayer === "knowledge" ? "active" : ""}
             >
-              {rightPanelContent}
-            </SlidingPanel>
-          )}
-        </AnimatePresence>
+              <Database size={16} />
+              Knowledge Base
+            </button>
+            <button
+              onClick={() => {
+                setActiveLayer("document");
+                if (
+                  ![
+                    "chat",
+                    "notes",
+                    "relationships",
+                    "annotations",
+                    "relations",
+                    "labels",
+                  ].includes(activeTab)
+                ) {
+                  setActiveTab("chat");
+                }
+              }}
+              className={activeLayer === "document" ? "active" : ""}
+            >
+              <FileText size={16} />
+              Document
+            </button>
+          </LayerSwitcher>
+
+          {/* Right Panel, if needed */}
+          <AnimatePresence>
+            {showRightPanel && (
+              <SlidingPanel
+                initial={{ transform: "translateX(100%)", opacity: 0 }}
+                animate={{ transform: "translateX(0%)", opacity: 1 }}
+                exit={{ transform: "translateX(100%)", opacity: 0 }}
+                transition={{
+                  duration: 0.3,
+                  ease: [0.4, 0, 0.2, 1],
+                  opacity: { duration: 0.2 },
+                }}
+              >
+                {rightPanelContent}
+              </SlidingPanel>
+            )}
+          </AnimatePresence>
+        </MainContentArea>
       </ContentArea>
 
       <Modal
@@ -2178,7 +2270,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         basic
       >
         <Modal.Content>
-          {/* Graph visualization content goes here */}
+          {/* Graph or relationship visualization */}
         </Modal.Content>
         <Modal.Actions>
           <ControlButton onClick={() => setShowGraph(false)}>

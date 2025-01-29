@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useMemo, useLayoutEffect } from "react";
+import styled from "styled-components";
 import { useAtom } from "jotai";
 import { PageProps, TextSearchTokenResult } from "../../../types";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
@@ -25,6 +26,15 @@ import SelectionLayer from "./SelectionLayer";
 import { PDFPageInfo } from "../../types/pdf";
 import _ from "lodash";
 import { useCorpusState } from "../../context/CorpusAtom";
+
+/**
+ * This wrapper is inline-block (shrink-wrapped) and position:relative
+ * so that absolutely-positioned elements inside it match the canvas.
+ */
+const CanvasWrapper = styled.div`
+  position: relative;
+  display: inline-block;
+`;
 
 /**
  * PDFPage Component
@@ -298,38 +308,42 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
       ref={pageContainerRef}
       style={{ position: "relative" }}
     >
-      <PageCanvas ref={canvasRef} />
-      <SelectionLayer
-        pageInfo={updatedPageInfo}
-        read_only={read_only}
-        activeSpanLabel={activeSpanLabel ?? null}
-        createAnnotation={createAnnotation}
-        pageNumber={pageInfo.page.pageNumber - 1}
-      />
+      <CanvasWrapper>
+        <PageCanvas ref={canvasRef} />
+        <SelectionLayer
+          pageInfo={updatedPageInfo}
+          read_only={read_only}
+          activeSpanLabel={activeSpanLabel ?? null}
+          createAnnotation={createAnnotation}
+          pageNumber={pageInfo.page.pageNumber - 1}
+        />
+        {page_annotation_components}
 
-      {page_annotation_components}
+        {zoomLevel &&
+          pageBounds &&
+          searchResults
+            .filter(
+              (match): match is TextSearchTokenResult => "tokens" in match
+            )
+            .filter(
+              (match) =>
+                match.tokens[pageInfo.page.pageNumber - 1] !== undefined
+            )
+            .map((match) => {
+              const isHidden = match.id !== selectedTextSearchMatchIndex;
 
-      {zoomLevel &&
-        pageBounds &&
-        searchResults
-          .filter((match): match is TextSearchTokenResult => "tokens" in match)
-          .filter(
-            (match) => match.tokens[pageInfo.page.pageNumber - 1] !== undefined
-          )
-          .map((match) => {
-            const isHidden = match.id !== selectedTextSearchMatchIndex;
-
-            return (
-              <SearchResult
-                key={match.id}
-                total_results={searchResults.length}
-                showBoundingBox={true}
-                hidden={isHidden}
-                pageInfo={updatedPageInfo}
-                match={match}
-              />
-            );
-          })}
+              return (
+                <SearchResult
+                  key={match.id}
+                  total_results={searchResults.length}
+                  showBoundingBox={true}
+                  hidden={isHidden}
+                  pageInfo={updatedPageInfo}
+                  match={match}
+                />
+              );
+            })}
+      </CanvasWrapper>
     </PageAnnotationsContainer>
   );
 };

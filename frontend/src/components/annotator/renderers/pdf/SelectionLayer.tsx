@@ -150,10 +150,14 @@ const SelectionLayer = ({
         if (!localPageSelection && event.buttons === 1) {
           setSelectedAnnotations([]); // Clear any selected annotations
           setIsCreatingAnnotation(true); // Set creating annotation state
-          const { left: containerAbsLeftOffset, top: containerAbsTopOffset } =
-            containerRef.current.getBoundingClientRect();
-          const left = event.pageX - containerAbsLeftOffset;
-          const top = event.pageY - containerAbsTopOffset;
+          const canvasElement = containerRef.current
+            .previousSibling as HTMLCanvasElement;
+          if (!canvasElement) return;
+
+          const canvasBounds = canvasElement.getBoundingClientRect();
+          const left = event.clientX - canvasBounds.left;
+          const top = event.clientY - canvasBounds.top;
+
           setLocalPageSelection({
             pageNumber: pageNumber,
             bounds: {
@@ -190,15 +194,21 @@ const SelectionLayer = ({
       if (containerRef.current === null) {
         throw new Error("No Container");
       }
-      const { left: containerAbsLeftOffset, top: containerAbsTopOffset } =
-        containerRef.current.getBoundingClientRect();
+      const canvasElement = containerRef.current
+        .previousSibling as HTMLCanvasElement;
+      if (!canvasElement) return;
+
+      const canvasBounds = canvasElement.getBoundingClientRect();
+      const right = event.clientX - canvasBounds.left;
+      const bottom = event.clientY - canvasBounds.top;
+
       if (localPageSelection && localPageSelection.pageNumber === pageNumber) {
         setLocalPageSelection({
           pageNumber: pageNumber,
           bounds: {
             ...localPageSelection.bounds,
-            right: event.pageX - containerAbsLeftOffset,
-            bottom: event.pageY - containerAbsTopOffset,
+            right,
+            bottom,
           },
         });
       }

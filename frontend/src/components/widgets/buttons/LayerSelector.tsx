@@ -24,13 +24,19 @@ interface StyledLayerSwitcherProps {
   isExpanded: boolean;
 }
 
-const StyledLayerSwitcher = styled.div<StyledLayerSwitcherProps>`
+export const StyledLayerSwitcher = styled.div<StyledLayerSwitcherProps>`
+  /* Default: absolute for desktop, as desired: */
   position: absolute;
   bottom: 2.5rem;
   left: 1.5rem;
-  z-index: 999;
+  z-index: 900;
   transform: translateZ(0);
   transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+
+  @media (max-width: 768px) {
+    /* Mobile: use fixed so it doesn't scroll away */
+    position: fixed;
+  }
 
   .layers-button {
     width: 48px;
@@ -191,7 +197,7 @@ export const LayerSwitcher: React.FC<LayerSwitcherProps> = ({
   const handleMouseLeave = () => {
     timeoutRef.current = setTimeout(() => {
       setIsExpanded(false);
-    }, 300); // 300ms delay before closing
+    }, 300);
   };
 
   React.useEffect(() => {

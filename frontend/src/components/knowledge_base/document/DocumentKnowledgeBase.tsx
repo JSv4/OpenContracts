@@ -37,6 +37,7 @@ import {
   X,
   ChartNetwork,
   FileType,
+  ArrowLeft,
 } from "lucide-react";
 import {
   GET_CONVERSATIONS,
@@ -128,6 +129,7 @@ import {
   ContentArea,
   ControlButton,
   ControlButtonGroup,
+  ControlButtonGroupLeft,
   EmptyState,
   HeaderContainer,
   LoadingPlaceholders,
@@ -1040,13 +1042,13 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   // Modify the tab click handler to support toggling
   const handleTabClick = (tabKey: string) => {
     if (activeTab === tabKey) {
-      // If clicking the active tab, deselect it
+      // If clicking the active tab, deselect it and close panel
       setActiveTab("");
       setShowRightPanel(false);
     } else {
       // Otherwise, select the new tab
       setActiveTab(tabKey);
-      // The existing useEffect will handle showing the right panel
+      setShowRightPanel(true);
     }
   };
 
@@ -1070,23 +1072,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             </span>
           </MetadataRow>
         </div>
-        <ControlButtonGroup>
-          <ControlButton onClick={() => setShowGraph(true)}>
-            <Network size={16} />
-          </ControlButton>
-          <ControlButton>
-            <Eye size={16} />
-          </ControlButton>
-          <ControlButton>
-            <Edit2 size={16} />
-          </ControlButton>
-          <ControlButton>
-            <Download size={16} />
-          </ControlButton>
-          <ControlButton>
-            <History size={16} />
-          </ControlButton>
-        </ControlButtonGroup>
       </HeaderContainer>
 
       <ContentArea>
@@ -1162,6 +1147,16 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   opacity: { duration: 0.2 },
                 }}
               >
+                <ControlButtonGroupLeft>
+                  <ControlButton
+                    onClick={() => {
+                      setShowRightPanel(false);
+                      setActiveTab(""); // Clear the active tab when closing
+                    }}
+                  >
+                    <ArrowLeft color="red" />
+                  </ControlButton>
+                </ControlButtonGroupLeft>
                 {rightPanelContent}
               </SlidingPanel>
             )}

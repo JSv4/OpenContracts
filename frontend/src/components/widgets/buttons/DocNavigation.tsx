@@ -11,15 +11,22 @@ interface DocNavigationProps {
   className?: string;
 }
 
-const StyledNavigation = styled.div<{ isExpanded: boolean }>`
+export const StyledNavigation = styled.div<{ isExpanded: boolean }>`
+  /* Default for desktop: absolute as before */
   position: absolute;
-  top: 1.5rem;
+  top: 80px;
   left: 1.5rem;
-  z-index: 999;
+  z-index: 900;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   transform: translateZ(0);
+
+  @media (max-width: 768px) {
+    /* On mobile, fix to the viewport so it doesn't scroll away */
+    position: fixed;
+    top: 180px; // Offset y by 100px down
+  }
 
   .zoom-group {
     display: flex;
@@ -111,6 +118,18 @@ const StyledNavigation = styled.div<{ isExpanded: boolean }>`
       transform: translateX(-10px);
       pointer-events: none;
       transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+
+      @media (max-width: 768px) {
+        left: 50%;
+        top: calc(100% + 0.75rem);
+        transform: translateX(-50%) translateY(-10px);
+
+        ${({ isExpanded }) =>
+          isExpanded &&
+          `
+          transform: translateX(-50%) translateY(0);
+          `}
+      }
 
       ${({ isExpanded }) =>
         isExpanded &&

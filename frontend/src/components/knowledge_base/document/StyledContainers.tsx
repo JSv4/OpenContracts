@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button, Card, Input, Modal, Segment } from "semantic-ui-react";
 import styled, { keyframes } from "styled-components";
+import { ArrowLeft } from "lucide-react";
 
 export const HeaderContainer = styled(Segment)`
   &&& {
@@ -74,16 +75,17 @@ export const ContentArea = styled.div`
 export const TabsColumn = styled(Segment)<{ collapsed: boolean }>`
   &&& {
     margin: 0 !important;
-    padding: 0.75rem 0 !important;
+    padding: 1rem 0 !important;
     border: none !important;
     border-right: 1px solid rgba(231, 234, 237, 0.7) !important;
     border-radius: 0 !important;
-    background: rgba(248, 249, 250, 0.8);
+    background: rgba(250, 251, 252, 0.95) !important;
     backdrop-filter: blur(10px);
-    width: ${(props) => (props.collapsed ? "64px" : "220px")};
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: ${(props) => (props.collapsed ? "80px" : "280px")};
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
     z-index: 90;
+    box-shadow: 1px 0 2px rgba(0, 0, 0, 0.02);
 
     /* Mobile optimization */
     @media (max-width: 768px) {
@@ -118,26 +120,30 @@ export const TabButton = styled(Button)<{ collapsed: boolean }>`
     width: 100%;
     text-align: ${(props) => (props.collapsed ? "center" : "left")} !important;
     border-radius: 0 !important;
-    margin: 0.25rem 0 !important;
+    margin: 0.5rem 0 !important;
     padding: ${(props) =>
-      props.collapsed ? "1rem" : "0.8rem 1.5rem"} !important;
+      props.collapsed ? "1.25rem" : "1rem 1.75rem"} !important;
     background: transparent;
     border: none !important;
-    color: #495057;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #1a2027;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    font-size: 1.05rem !important;
+    letter-spacing: 0.01em;
+    font-weight: 450;
 
     &:hover {
-      background: rgba(231, 234, 237, 0.4) !important;
+      background: rgba(231, 234, 237, 0.5) !important;
       color: #2185d0;
+      transform: translateX(4px);
     }
 
     &.active {
       background: white !important;
       color: #2185d0;
       font-weight: 500;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
 
       &:before {
         content: "";
@@ -145,85 +151,101 @@ export const TabButton = styled(Button)<{ collapsed: boolean }>`
         left: 0;
         top: 0;
         bottom: 0;
-        width: 3px;
+        width: 4px;
         background: #2185d0;
-        border-radius: 0 2px 2px 0;
+        border-radius: 0 3px 3px 0;
+        box-shadow: 0 0 8px rgba(33, 133, 208, 0.4);
       }
 
       svg {
         color: #2185d0;
+        transform: scale(1.1);
       }
     }
 
     svg {
-      margin-right: ${(props) =>
-        props.collapsed ? "0" : "0.75rem"} !important;
-      transition: all 0.2s ease;
+      width: ${(props) => (props.collapsed ? "24px" : "22px")} !important;
+      height: ${(props) => (props.collapsed ? "24px" : "22px")} !important;
+      margin-right: ${(props) => (props.collapsed ? "0" : "1rem")} !important;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      stroke-width: 1.75px;
       color: ${(props) => {
-        // Custom colors for each icon type
-        if (props.children[0].type.name === "FileText") return "#4CAF50";
-        if (props.children[0].type.name === "MessageSquare") return "#9C27B0";
-        if (props.children[0].type.name === "Notebook") return "#FF9800";
-        if (props.children[0].type.name === "Database") return "#E91E63";
-        if (props.children[0].type.name === "ChartNetwork") return "#2196F3";
-        return "#495057"; // default color
+        if (props.children[0].type.name === "FileText") return "#00796B";
+        if (props.children[0].type.name === "MessageSquare") return "#7B1FA2";
+        if (props.children[0].type.name === "Notebook") return "#E65100";
+        if (props.children[0].type.name === "Database") return "#C2185B";
+        if (props.children[0].type.name === "ChartNetwork") return "#1565C0";
+        return "#455A64";
       }};
-      opacity: 0.75;
+      opacity: 0.85;
+      filter: saturate(1.2);
     }
 
     &:hover svg {
-      transform: scale(1.1);
+      transform: scale(1.15) rotate(-2deg);
       opacity: 1;
+      filter: saturate(1.4) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1));
     }
 
     span {
       opacity: ${(props) => (props.collapsed ? 0 : 1)};
-      transition: opacity 0.2s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       ${(props) => props.collapsed && "display: none;"}
+      margin-top: 1px;
+
+      /* Ensure text stays hidden in mobile view regardless of active state */
+      @media (max-width: 768px) {
+        opacity: 0;
+        display: none;
+      }
     }
 
-    /* Mobile-friendly tabs - icons only */
+    /* Mobile-friendly tabs - enhanced */
     @media (max-width: 768px) {
-      width: 40px !important;
-      height: 40px !important;
+      width: 48px !important;
+      height: 48px !important;
       padding: 0 !important;
-      margin: 0 0.25rem !important;
-      border-radius: 12px !important;
-      display: flex !important;
-      align-items: center;
-      justify-content: center;
-      background: transparent;
-
-      span {
-        display: none !important; /* Hide text labels on mobile */
-      }
+      margin: 0 0.35rem !important;
+      border-radius: 14px !important;
 
       svg {
-        margin: 0 !important;
-        width: 20px;
-        height: 20px;
+        width: 24px !important;
+        height: 24px !important;
       }
 
       &.active {
         background: ${(props) =>
+          // Only show active state if the panel is actually open
           props.theme.colors?.primary || "#2185d0"} !important;
-        color: white !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(33, 133, 208, 0.2);
 
-        &:before {
-          display: none; /* Remove side indicator on mobile */
+        /* Reset active styles when panel is closed */
+        &[aria-expanded="false"] {
+          background: transparent !important;
+          transform: none;
+          box-shadow: none;
+
+          svg {
+            color: inherit;
+            filter: none;
+          }
         }
 
         svg {
           color: white;
+          filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
         }
       }
 
-      /* Add subtle hover effect */
       &:hover:not(.active) {
-        background: rgba(0, 0, 0, 0.03) !important;
+        background: rgba(0, 0, 0, 0.04) !important;
         transform: translateY(-1px);
       }
     }
+
+    /* Prevent shrinking */
+    flex: 0 0 auto;
   }
 `;
 
@@ -270,44 +292,45 @@ export const SummaryContent = styled.div`
 `;
 
 /**
- * SlidingPanel
+ * Below is an updated SlidingPanel that is absolutely positioned on desktop
+ * (so it does not take full screen height) and fixed only on mobile.
+ * We also include a "ControlButtonGroupLeft" and "ControlButton" for a back button
+ * at the top left inside the tray.
  *
- * The right sidebar uses a combination of clamp for width on mid-sized screens
- * and goes full-width on small screens. Child elements remain scrollable.
+ * Example usage:
+ *   <SlidingPanel>
+ *     <ControlButtonGroupLeft>
+ *       <ControlButton onClick={() => closeSideTray()}>
+ *         <ArrowLeft />
+ *       </ControlButton>
+ *     </ControlButtonGroupLeft>
+ *     ... Right tray content ...
+ *   </SlidingPanel>
  */
-export const SlidingPanel = styled(motion.div)`
-  position: absolute;
-  top: 0;
-  right: 0;
-  /* For larger screens: at least 320px, up to 65% of total width, max 520px */
-  width: clamp(320px, 65%, 520px);
-  height: 100%;
-  background: white;
-  box-shadow: -4px 0 25px rgba(0, 0, 0, 0.05);
-  z-index: 80;
-  display: flex;
-  flex-direction: column;
 
-  /* On screens <= 768px, take the entire width below the tab bar */
-  @media (max-width: 768px) {
-    width: 100%;
-    height: calc(100% - 56px);
-    top: 56px;
-  }
-`;
-
-export const ControlButtonGroup = styled.div`
+/**
+ * ControlButtonGroupLeft
+ *
+ * Positions a set of buttons in the top-left corner of the right tray.
+ */
+export const ControlButtonGroupLeft = styled.div`
   position: absolute;
-  top: 1.5rem;
-  right: 2rem;
+  top: 1rem;
+  left: 1rem;
   display: flex;
   gap: 0.75rem;
+  z-index: 1100; /* ensures button stays on top within the tray */
 `;
 
+/**
+ * ControlButton
+ *
+ * A small icon button for our tray, in this example, used to close the tray.
+ */
 export const ControlButton = styled(Button)`
   &&& {
-    width: 2.5rem !important;
-    height: 2.5rem !important;
+    width: 2.25rem !important;
+    height: 2.25rem !important;
     padding: 0 !important;
     border-radius: 50% !important;
     display: flex !important;
@@ -335,6 +358,42 @@ export const ControlButton = styled(Button)`
       height: 16px;
     }
   }
+`;
+
+/**
+ * SlidingPanel
+ *
+ * By default (desktop), it is position:absolute so it does not cover
+ * the entire screen vertically. In mobile, we switch to fixed with full height.
+ */
+export const SlidingPanel = styled(motion.div)`
+  position: absolute;
+  right: 1.5rem;
+  width: clamp(320px, 65%, 520px);
+  top: 0px;
+  height: calc(100vh - 80px);
+  background: white;
+  box-shadow: -4px 0 25px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* let panel scroll internally instead of the entire page */
+
+  @media (max-width: 768px) {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+  }
+`;
+
+export const ControlButtonGroup = styled.div`
+  position: absolute;
+  top: 1.5rem;
+  right: 2rem;
+  display: flex;
+  gap: 0.75rem;
 `;
 
 export const RelationshipPanel = styled.div`

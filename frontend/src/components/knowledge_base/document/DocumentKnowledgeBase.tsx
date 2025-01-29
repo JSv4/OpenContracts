@@ -27,7 +27,6 @@ import {
   History,
   Notebook,
   Database,
-  FileType,
   User,
   Calendar,
   Send,
@@ -37,6 +36,7 @@ import {
   Clock,
   X,
   ChartNetwork,
+  FileType,
 } from "lucide-react";
 import {
   GET_CONVERSATIONS,
@@ -107,6 +107,7 @@ import { DocTypeLabelDisplay } from "../../annotator/labels/doc_types/DocTypeLab
 import { useAnnotationControls } from "../../annotator/context/UISettingsAtom";
 import { RelationshipList } from "../../annotator/display/components/RelationshipList";
 import { AnnotationList } from "../../annotator/display/components/AnnotationList";
+import LayerSwitcher from "../../widgets/buttons/LayerSelector";
 
 const pdfjsLib = require("pdfjs-dist");
 
@@ -1223,128 +1224,6 @@ const LabelsPanel: React.FC = () => {
   return <AnnotationList read_only={false} />;
 };
 
-/* Minimal floating layer switcher in bottom right */
-const LayerSwitcher = styled.div`
-  position: absolute;
-  bottom: 1.5rem;
-  left: 1.5rem;
-  z-index: 999;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  border-radius: 12px;
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1);
-  transform: translateZ(0);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-
-  &:hover {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px) translateZ(0);
-  }
-
-  button {
-    border: none;
-    background: transparent;
-    padding: 0.75rem 1rem;
-    cursor: pointer;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #64748b;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 160px;
-    transition: all 0.2s ease;
-    position: relative;
-    overflow: hidden;
-
-    &::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: currentColor;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    }
-
-    &:hover:not(.active) {
-      color: #334155;
-      background: rgba(0, 0, 0, 0.03);
-    }
-
-    &.active {
-      background: #2185d0;
-      color: white;
-
-      &::after {
-        content: "";
-        position: absolute;
-        left: 0.5rem;
-        top: 50%;
-        width: 4px;
-        height: 4px;
-        background: currentColor;
-        border-radius: 50%;
-        transform: translateY(-50%);
-        opacity: 0.5;
-      }
-    }
-
-    svg {
-      width: 16px;
-      height: 16px;
-      opacity: 0.7;
-      transition: all 0.2s ease;
-    }
-
-    &:hover svg {
-      opacity: 1;
-      transform: scale(1.1);
-    }
-
-    /* Add icons to the buttons */
-    &:first-child::before {
-      content: "📚";
-      position: absolute;
-      left: 0.75rem;
-      opacity: 0;
-      transition: all 0.2s ease;
-    }
-
-    &:last-child::before {
-      content: "📄";
-      position: absolute;
-      left: 0.75rem;
-      opacity: 0;
-      transition: all 0.2s ease;
-    }
-
-    &:hover::before {
-      opacity: 0.7;
-    }
-  }
-
-  @media (max-width: 768px) {
-    bottom: 1rem;
-    left: 1rem;
-    padding: 0.375rem;
-
-    button {
-      padding: 0.625rem 0.875rem;
-      min-width: 140px;
-      font-size: 0.8125rem;
-    }
-  }
-`;
-
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   documentId,
   corpusId,
@@ -2122,6 +2001,40 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     );
   }
 
+  const layers = [
+    {
+      id: "knowledge",
+      label: "Knowledge Base",
+      icon: <Database size={16} />,
+      isActive: activeLayer === "knowledge",
+      onClick: () => {
+        setActiveLayer("knowledge");
+        setActiveTab("summary");
+      },
+    },
+    {
+      id: "document",
+      label: "Document",
+      icon: <FileText size={16} />,
+      isActive: activeLayer === "document",
+      onClick: () => {
+        setActiveLayer("document");
+        if (
+          ![
+            "chat",
+            "notes",
+            "relationships",
+            "annotations",
+            "relations",
+            "labels",
+          ].includes(activeTab)
+        ) {
+          setActiveTab("chat");
+        }
+      },
+    },
+  ];
+
   return (
     <FullScreenModal open={true} onClose={onClose} closeIcon>
       <HeaderContainer>
@@ -2209,39 +2122,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           )}
 
           {/* FLOATING LAYER SWITCHER (bottom-right) */}
-          <LayerSwitcher>
-            <button
-              onClick={() => {
-                setActiveLayer("knowledge");
-                setActiveTab("summary");
-              }}
-              className={activeLayer === "knowledge" ? "active" : ""}
-            >
-              <Database size={16} />
-              Knowledge Base
-            </button>
-            <button
-              onClick={() => {
-                setActiveLayer("document");
-                if (
-                  ![
-                    "chat",
-                    "notes",
-                    "relationships",
-                    "annotations",
-                    "relations",
-                    "labels",
-                  ].includes(activeTab)
-                ) {
-                  setActiveTab("chat");
-                }
-              }}
-              className={activeLayer === "document" ? "active" : ""}
-            >
-              <FileText size={16} />
-              Document
-            </button>
-          </LayerSwitcher>
+          <LayerSwitcher layers={layers} />
 
           {/* Right Panel, if needed */}
           <AnimatePresence>

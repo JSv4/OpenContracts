@@ -80,6 +80,7 @@ import {
   useDocumentType,
   usePages,
   usePageTokenTextMaps,
+  usePdfDoc,
 } from "../../annotator/context/DocumentAtom";
 import { createTokenStringSearch } from "../../annotator/utils";
 import {
@@ -104,6 +105,8 @@ import TxtAnnotatorWrapper from "../../annotator/components/wrappers/TxtAnnotato
 import { useAnnotationRefs } from "../../annotator/hooks/useAnnotationRefs";
 import { DocTypeLabelDisplay } from "../../annotator/labels/doc_types/DocTypeLabelDisplay";
 import { useAnnotationControls } from "../../annotator/context/UISettingsAtom";
+import { RelationshipList } from "../../annotator/display/components/RelationshipList";
+import { AnnotationList } from "../../annotator/display/components/AnnotationList";
 
 const pdfjsLib = require("pdfjs-dist");
 
@@ -418,26 +421,6 @@ const SummaryContent = styled.div`
   }
 `;
 
-const DocumentContent = styled.div`
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
-
-  h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #212529;
-    margin-bottom: 2rem;
-    line-height: 1.2;
-  }
-
-  .prose {
-    font-size: 1.1rem;
-    line-height: 1.7;
-    color: #495057;
-  }
-`;
-
 /**
  * SlidingPanel
  *
@@ -653,48 +636,6 @@ const ControlButton = styled(Button)`
     svg {
       width: 16px;
       height: 16px;
-    }
-  }
-`;
-
-const RelatedDocumentButton = styled(Button)`
-  &&& {
-    width: 100%;
-    text-align: left !important;
-    padding: 1rem !important;
-    background: transparent !important;
-    border: none !important;
-    border-bottom: 1px solid rgba(231, 234, 237, 0.7) !important;
-    color: #495057;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background: rgba(231, 234, 237, 0.4) !important;
-      color: #2185d0;
-    }
-
-    .title {
-      font-weight: 500;
-      margin-bottom: 0.25rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .meta {
-      font-size: 0.8rem;
-      color: #6c757d;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .relationship {
-      font-size: 0.7rem;
-      background: #e9ecef;
-      padding: 0.25rem 0.5rem;
-      border-radius: 1rem;
-      margin-left: auto;
     }
   }
 `;
@@ -1284,6 +1225,31 @@ const SafeMarkdown: React.FC<{ children: string }> = ({ children }) => {
   }
 };
 
+/**
+ * Additional "Old AnnotatorSidebar" panels that can appear on the right side
+ * when their corresponding left tabs are clicked.
+ */
+
+const AnnotationsPanel: React.FC = () => {
+  return (
+    <div className="sidebar__annotations" style={{ padding: "1rem" }}>
+      <AnnotationList read_only={false} />
+    </div>
+  );
+};
+
+const RelationsPanel: React.FC = () => {
+  return (
+    <div className="sidebar__relation__annotation" style={{ padding: "1rem" }}>
+      <RelationshipList read_only={false} />
+    </div>
+  );
+};
+
+const LabelsPanel: React.FC = () => {
+  return <AnnotationList read_only={false} />;
+};
+
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   documentId,
   corpusId,
@@ -1295,6 +1261,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     setProgress,
     progress,
     zoomLevel,
+    setShiftDown,
     readOnly,
     isSidebarVisible,
     setSidebarVisible,
@@ -1331,8 +1298,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [, setDocTypeAnnotations] = useAtom(docTypeAnnotationsAtom);
   const { setCorpus } = useCorpusState();
   const { setInitialAnnotations } = useInitialAnnotations();
-  const { scrollContainerRef, annotationElementRefs, registerRef } =
-    useAnnotationRefs();
+  const { scrollContainerRef, registerRef } = useAnnotationRefs();
   const { activeSpanLabel, setActiveSpanLabel } = useAnnotationControls();
 
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
@@ -1347,6 +1313,26 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       }
     },
     [scrollContainerRef, registerRef]
+  );
+
+  const handleKeyUpPress = useCallback(
+    (event: { keyCode: any }) => {
+      const { keyCode } = event;
+      if (keyCode === 16) {
+        setShiftDown(false);
+      }
+    },
+    [setShiftDown]
+  );
+
+  const handleKeyDownPress = useCallback(
+    (event: { keyCode: any }) => {
+      const { keyCode } = event;
+      if (keyCode === 16) {
+        setShiftDown(true);
+      }
+    },
+    [setShiftDown]
   );
 
   const { data: combinedData, loading } = useQuery<
@@ -1512,6 +1498,15 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   };
 
   useEffect(() => {
+    window.addEventListener("keyup", handleKeyUpPress);
+    window.addEventListener("keydown", handleKeyDownPress);
+    return () => {
+      window.removeEventListener("keyup", handleKeyUpPress);
+      window.removeEventListener("keydown", handleKeyDownPress);
+    };
+  }, [handleKeyUpPress, handleKeyDownPress]);
+
+  useEffect(() => {
     const userIsAuthenticated = !!(auth_token && user_obj);
     if (!documentId || !corpusId || !userIsAuthenticated) return;
 
@@ -1607,7 +1602,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       if (!prev.length) return prev;
       const updatedLast = {
         ...prev[prev.length - 1],
-        content: content,
+        content,
       };
       return [...prev.slice(0, -1), updatedLast];
     });
@@ -1660,10 +1655,17 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const notes = combinedData?.document?.allNotes ?? [];
   const docRelationships = combinedData?.document?.allDocRelationships ?? [];
 
+  // Show or hide the right panel if the active tab is "chat", "notes", "relationships", "document" or any of the newly added "annotations", "relations", "labels"
   useEffect(() => {
-    setShowRightPanel(
-      ["chat", "notes", "metadata", "relationships"].includes(activeTab)
-    );
+    const tabsWithRightPanel = [
+      "chat",
+      "notes",
+      "relationships",
+      "annotations",
+      "relations",
+      "labels",
+    ];
+    setShowRightPanel(tabsWithRightPanel.includes(activeTab));
   }, [activeTab]);
 
   useEffect(() => {
@@ -1694,11 +1696,320 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   );
 
   // Add a new tab for document viewing
-  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | undefined>();
-  const [analyses, setAnalyses] = useState<AnalysisType[]>([]);
-  const [extracts, setExtracts] = useState<ExtractType[]>([]);
-  const [datacells, setDatacells] = useState<DatacellType[]>([]);
-  const [columns, setColumns] = useState<ColumnType[]>([]);
+  const { setPdfDoc } = usePdfDoc();
+
+  // Additional arch for new "AnnotatorSidebar" style tabs
+  // These four panel sections appear in our sliding panel on the right when clicked
+  const rightPanelContent = (() => {
+    switch (activeTab) {
+      case "chat": {
+        return (
+          <ChatContainer>
+            <ConversationIndicator>
+              <AnimatePresence>
+                {showSelector && (
+                  <ConversationSelector
+                    initial={{ opacity: 0, scale: 0.9, x: 20 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, x: 20 }}
+                    transition={{
+                      type: "spring",
+                      damping: 20,
+                      stiffness: 300,
+                    }}
+                  >
+                    <ConversationList>
+                      {conversations.map(
+                        (conv) =>
+                          conv && (
+                            <ConversationItem
+                              key={conv.id}
+                              onClick={() => setSelectedConversationId(conv.id)}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <div className="title">
+                                <MessageSquare size={14} />
+                                {conv.title || "Untitled Conversation"}
+                                {conv.messageCount && (
+                                  <span className="message-count">
+                                    {conv.messageCount}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="meta">
+                                <Clock size={12} />
+                                {new Date(conv.createdAt).toLocaleDateString()}
+                                <User size={12} />
+                                {conv.creator?.email}
+                              </div>
+                            </ConversationItem>
+                          )
+                      )}
+                    </ConversationList>
+                    <NewChatButton
+                      onClick={handleCreateNewConversation}
+                      whileHover={{ y: -1 }}
+                    >
+                      <Plus size={16} />
+                      New Chat
+                    </NewChatButton>
+                  </ConversationSelector>
+                )}
+              </AnimatePresence>
+              <ConversationCount
+                onClick={() => setShowSelector(!showSelector)}
+                whileHover={{ scale: 1.05 }}
+              >
+                {conversations.length}
+              </ConversationCount>
+            </ConversationIndicator>
+            <div style={{ flex: 1, overflow: "auto", padding: "1rem" }}>
+              {chat.map((msg, idx) => (
+                <ChatMessage key={idx} {...msg} />
+              ))}
+            </div>
+            <ChatInputContainer>
+              {wsError ? (
+                <ErrorMessage>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {wsError}
+                    <Button
+                      size="small"
+                      onClick={() => window.location.reload()}
+                      style={{ marginLeft: "0.75rem" }}
+                    >
+                      Reconnect
+                    </Button>
+                  </motion.div>
+                </ErrorMessage>
+              ) : (
+                <ConnectionStatus
+                  connected={wsReady}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {wsReady ? "Connected" : "Connecting..."}
+                </ConnectionStatus>
+              )}
+              <ChatInput
+                value={newMessage}
+                onChange={(e: {
+                  target: { value: React.SetStateAction<string> };
+                }) => setNewMessage(e.target.value)}
+                placeholder={
+                  wsReady ? "Type your message..." : "Waiting for connection..."
+                }
+                disabled={!wsReady}
+                onKeyPress={(e: { key: string }) =>
+                  e.key === "Enter" && sendMessageOverSocket()
+                }
+              />
+              <SendButton
+                onClick={sendMessageOverSocket}
+                disabled={!wsReady || !newMessage.trim()}
+                whileHover={{ scale: 1.05 }}
+              >
+                <Send size={18} />
+              </SendButton>
+            </ChatInputContainer>
+          </ChatContainer>
+        );
+      }
+      case "notes": {
+        return (
+          <div className="flex-1 overflow-auto">
+            <NotesHeader>
+              <h3>
+                <Notebook size={20} />
+                Document Notes
+              </h3>
+              <div className="meta">
+                {notes.length} note{notes.length !== 1 ? "s" : ""}
+              </div>
+            </NotesHeader>
+
+            {loading ? (
+              <LoadingPlaceholders type="notes" />
+            ) : notes.length === 0 ? (
+              <EmptyState
+                icon={<Notebook size={40} />}
+                title="No notes yet"
+                description="Start adding notes to this document"
+              />
+            ) : (
+              <NotesGrid>
+                {notes.map((note, index) => (
+                  <PostItNote
+                    key={note.id}
+                    onClick={() => setSelectedNote(note)}
+                    initial={{ opacity: 0, y: 20, rotate: 0 }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      rotate:
+                        ((index % 3) - 1) * 1.5 + (Math.random() * 1 - 0.5),
+                      transition: {
+                        opacity: { duration: 0.3 },
+                        y: { duration: 0.3 },
+                        rotate: { duration: 0.4, ease: "easeOut" },
+                      },
+                    }}
+                    whileHover={{
+                      y: -4,
+                      rotate: ((index % 3) - 1) * 0.5,
+                      transition: { duration: 0.2 },
+                    }}
+                  >
+                    <div className="content">
+                      <SafeMarkdown>{note.content}</SafeMarkdown>
+                    </div>
+                    <div className="meta">
+                      {note.creator.email} •{" "}
+                      {new Date(note.created).toLocaleDateString()}
+                    </div>
+                  </PostItNote>
+                ))}
+              </NotesGrid>
+            )}
+          </div>
+        );
+      }
+      case "relationships": {
+        return (
+          <div className="p-4 flex-1 flex flex-col">
+            {loading ? (
+              <LoadingPlaceholders type="relationships" />
+            ) : docRelationships.length === 0 ? (
+              <EmptyState
+                icon={<ChartNetwork size={40} />}
+                title="No relationships yet"
+                description="Connect this document with others to create relationships"
+              />
+            ) : (
+              <RelationshipPanel>
+                <h3>
+                  <ChartNetwork size={20} />
+                  Document Relationships
+                </h3>
+                {docRelationships.map((rel) => {
+                  const otherDoc =
+                    rel.sourceDocument.id === documentId
+                      ? rel.targetDocument
+                      : rel.sourceDocument;
+                  return (
+                    <RelationshipCard key={rel.id}>
+                      <Card.Content>
+                        <RelationshipType>
+                          {rel.relationshipType}
+                        </RelationshipType>
+                        <Card.Header style={{ marginBottom: "0.5rem" }}>
+                          {otherDoc.title || "Untitled Document"}
+                        </Card.Header>
+                        <Card.Meta>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "1rem",
+                              color: "#6c757d",
+                            }}
+                          >
+                            <span>
+                              <FileType
+                                size={14}
+                                style={{ marginRight: "0.25rem" }}
+                              />
+                              {otherDoc.fileType}
+                            </span>
+                            <span>
+                              <User
+                                size={14}
+                                style={{ marginRight: "0.25rem" }}
+                              />
+                              {otherDoc.creator?.email}
+                            </span>
+                          </div>
+                        </Card.Meta>
+                        {rel.annotationLabel && (
+                          <Card.Description style={{ marginTop: "0.75rem" }}>
+                            {rel.annotationLabel.text}
+                          </Card.Description>
+                        )}
+                      </Card.Content>
+                    </RelationshipCard>
+                  );
+                })}
+              </RelationshipPanel>
+            )}
+          </div>
+        );
+      }
+      case "annotations":
+        return <AnnotationsPanel />;
+      case "relations":
+        return <RelationsPanel />;
+      case "labels":
+        return <LabelsPanel />;
+      default:
+        return null;
+    }
+  })();
+
+  // We will store the PDF or text-based viewer in a variable to show on the main area
+  let viewerContent: JSX.Element = <></>;
+  if (metadata.fileType === "application/pdf") {
+    viewerContent = (
+      <PDFContainer ref={containerRefCallback}>
+        <LabelSelector
+          sidebarWidth="0px"
+          activeSpanLabel={activeSpanLabel ?? null}
+          setActiveLabel={setActiveSpanLabel}
+        />
+        <DocTypeLabelDisplay />
+        <PDF read_only={true} />
+      </PDFContainer>
+    );
+  } else if (
+    metadata.fileType === "application/txt" ||
+    metadata.fileType === "text/plain"
+  ) {
+    viewerContent = (
+      <PDFContainer ref={containerRefCallback}>
+        <LabelSelector
+          sidebarWidth="0px"
+          activeSpanLabel={activeSpanLabel ?? null}
+          setActiveLabel={setActiveSpanLabel}
+        />
+        <DocTypeLabelDisplay />
+        <TxtAnnotatorWrapper readOnly={true} allowInput={false} />
+      </PDFContainer>
+    );
+  } else {
+    // If not recognized or still loading
+    viewerContent = (
+      <div style={{ padding: "2rem" }}>
+        {viewState === ViewState.ERROR ? (
+          <EmptyState
+            icon={<FileText size={40} />}
+            title="Unsupported File"
+            description="This document type can't be displayed."
+          />
+        ) : (
+          <EmptyState
+            icon={<FileText size={40} />}
+            title="Loading..."
+            description="Please wait for the document to finish loading."
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <FullScreenModal open={true} onClose={onClose} closeIcon>
@@ -1776,43 +2087,43 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             <span>Notes</span>
           </TabButton>
           <TabButton
-            active={activeTab === "metadata"}
-            onClick={() => setActiveTab("metadata")}
-            collapsed={sidebarCollapsed}
-          >
-            <Database size={18} />
-            <span>Metadata</span>
-          </TabButton>
-          <TabButton
             active={activeTab === "relationships"}
             onClick={() => setActiveTab("relationships")}
             collapsed={sidebarCollapsed}
           >
             <ChartNetwork size={18} />
-            <span>Relationships</span>
+            <span>Doc Relationships</span>
           </TabButton>
           <TabButton
-            active={activeTab === "document"}
-            onClick={() => setActiveTab("document")}
+            active={activeTab === "annotations"}
+            onClick={() => setActiveTab("annotations")}
             collapsed={sidebarCollapsed}
           >
             <FileText size={18} />
-            <span>Document</span>
+            <span>Annotations</span>
+          </TabButton>
+
+          <TabButton
+            active={activeTab === "relations"}
+            onClick={() => setActiveTab("relations")}
+            collapsed={sidebarCollapsed}
+          >
+            <ChartNetwork size={18} />
+            <span>Annotation Relationships</span>
+          </TabButton>
+
+          <TabButton
+            active={activeTab === "labels"}
+            onClick={() => setActiveTab("labels")}
+            collapsed={sidebarCollapsed}
+          >
+            <Database size={18} />
+            <span>Labels</span>
           </TabButton>
         </TabsColumn>
 
         <MainContentArea>
-          {activeTab === "document" ? (
-            <PDFContainer ref={containerRefCallback}>
-              <LabelSelector
-                sidebarWidth={"0px"}
-                activeSpanLabel={activeSpanLabel ?? null}
-                setActiveLabel={setActiveSpanLabel}
-              />
-              <DocTypeLabelDisplay />
-              {viewComponents}
-            </PDFContainer>
-          ) : (
+          {activeTab === "summary" ? (
             <SummaryContent className={showRightPanel ? "dimmed" : ""}>
               {loading ? (
                 <LoadingPlaceholders type="summary" />
@@ -1832,6 +2143,11 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                 />
               )}
             </SummaryContent>
+          ) : activeTab === "document" ? (
+            viewerContent
+          ) : (
+            // Fallback if a user toggles away from the summary but isn't in the "document" tab.
+            <div style={{ flex: 1, position: "relative" }}>{viewerContent}</div>
           )}
         </MainContentArea>
 
@@ -1849,282 +2165,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                 },
               }}
             >
-              {activeTab === "chat" && (
-                <ChatContainer>
-                  <ConversationIndicator>
-                    <AnimatePresence>
-                      {showSelector && (
-                        <ConversationSelector
-                          initial={{ opacity: 0, scale: 0.9, x: 20 }}
-                          animate={{ opacity: 1, scale: 1, x: 0 }}
-                          exit={{ opacity: 0, scale: 0.9, x: 20 }}
-                          transition={{
-                            type: "spring",
-                            damping: 20,
-                            stiffness: 300,
-                          }}
-                        >
-                          <ConversationList>
-                            {conversations.map(
-                              (conv) =>
-                                conv && (
-                                  <ConversationItem
-                                    key={conv.id}
-                                    onClick={() =>
-                                      setSelectedConversationId(conv.id)
-                                    }
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.2 }}
-                                  >
-                                    <div className="title">
-                                      <MessageSquare size={14} />
-                                      {conv.title || "Untitled Conversation"}
-                                      {conv.messageCount && (
-                                        <span className="message-count">
-                                          {conv.messageCount}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="meta">
-                                      <Clock size={12} />
-                                      {new Date(
-                                        conv.createdAt
-                                      ).toLocaleDateString()}
-                                      <User size={12} />
-                                      {conv.creator?.email}
-                                    </div>
-                                  </ConversationItem>
-                                )
-                            )}
-                          </ConversationList>
-                          <NewChatButton
-                            onClick={handleCreateNewConversation}
-                            whileHover={{ y: -1 }}
-                          >
-                            <Plus size={16} />
-                            New Chat
-                          </NewChatButton>
-                        </ConversationSelector>
-                      )}
-                    </AnimatePresence>
-                    <ConversationCount
-                      onClick={() => setShowSelector(!showSelector)}
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      {conversations.length}
-                    </ConversationCount>
-                  </ConversationIndicator>
-                  <div style={{ flex: 1, overflow: "auto", padding: "1rem" }}>
-                    {chat.map((msg, idx) => (
-                      <ChatMessage key={idx} {...msg} />
-                    ))}
-                  </div>
-                  <ChatInputContainer>
-                    {wsError ? (
-                      <ErrorMessage>
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          {wsError}
-                          <Button
-                            size="small"
-                            onClick={() => window.location.reload()}
-                            style={{ marginLeft: "0.75rem" }}
-                          >
-                            Reconnect
-                          </Button>
-                        </motion.div>
-                      </ErrorMessage>
-                    ) : (
-                      <ConnectionStatus
-                        connected={wsReady}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {wsReady ? "Connected" : "Connecting..."}
-                      </ConnectionStatus>
-                    )}
-                    <ChatInput
-                      value={newMessage}
-                      onChange={(e: {
-                        target: { value: React.SetStateAction<string> };
-                      }) => setNewMessage(e.target.value)}
-                      placeholder={
-                        wsReady
-                          ? "Type your message..."
-                          : "Waiting for connection..."
-                      }
-                      disabled={!wsReady}
-                      onKeyPress={(e: { key: string }) =>
-                        e.key === "Enter" && sendMessageOverSocket()
-                      }
-                    />
-                    <SendButton
-                      onClick={sendMessageOverSocket}
-                      disabled={!wsReady || !newMessage.trim()}
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      <Send size={18} />
-                    </SendButton>
-                  </ChatInputContainer>
-                </ChatContainer>
-              )}
-
-              {activeTab === "notes" && (
-                <div className="flex-1 overflow-auto">
-                  <NotesHeader>
-                    <h3>
-                      <Notebook size={20} />
-                      Document Notes
-                    </h3>
-                    <div className="meta">
-                      {notes.length} note{notes.length !== 1 ? "s" : ""}
-                    </div>
-                  </NotesHeader>
-
-                  {loading ? (
-                    <LoadingPlaceholders type="notes" />
-                  ) : notes.length === 0 ? (
-                    <EmptyState
-                      icon={<Notebook size={40} />}
-                      title="No notes yet"
-                      description="Start adding notes to this document"
-                    />
-                  ) : (
-                    <NotesGrid>
-                      {notes.map((note, index) => (
-                        <PostItNote
-                          key={note.id}
-                          onClick={() => setSelectedNote(note)}
-                          initial={{ opacity: 0, y: 20, rotate: 0 }}
-                          animate={{
-                            opacity: 1,
-                            y: 0,
-                            rotate:
-                              ((index % 3) - 1) * 1.5 +
-                              (Math.random() * 1 - 0.5),
-                            transition: {
-                              opacity: { duration: 0.3 },
-                              y: { duration: 0.3 },
-                              rotate: { duration: 0.4, ease: "easeOut" },
-                            },
-                          }}
-                          whileHover={{
-                            y: -4,
-                            rotate: ((index % 3) - 1) * 0.5,
-                            transition: { duration: 0.2 },
-                          }}
-                        >
-                          <div className="content">
-                            <SafeMarkdown>{note.content}</SafeMarkdown>
-                          </div>
-                          <div className="meta">
-                            {note.creator.email} •{" "}
-                            {new Date(note.created).toLocaleDateString()}
-                          </div>
-                        </PostItNote>
-                      ))}
-                    </NotesGrid>
-                  )}
-                </div>
-              )}
-
-              {activeTab === "metadata" && (
-                <div className="p-4 space-y-6">
-                  <div>
-                    <h3 className="font-medium mb-2">Document Details</h3>
-                    <div className="space-y-2 text-sm">
-                      <div>
-                        <span className="text-gray-500">File Type:</span>
-                        <p>{metadata.fileType}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Uploader:</span>
-                        <p>{metadata.creator?.email}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Created:</span>
-                        <p>{new Date(metadata.created).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "relationships" && (
-                <div className="p-4 flex-1 flex flex-col">
-                  {loading ? (
-                    <LoadingPlaceholders type="relationships" />
-                  ) : docRelationships.length === 0 ? (
-                    <EmptyState
-                      icon={<ChartNetwork size={40} />}
-                      title="No relationships yet"
-                      description="Connect this document with others to create relationships"
-                    />
-                  ) : (
-                    <RelationshipPanel>
-                      <h3>
-                        <ChartNetwork size={20} />
-                        Document Relationships
-                      </h3>
-                      {docRelationships.map((rel) => {
-                        const otherDoc =
-                          rel.sourceDocument.id === documentId
-                            ? rel.targetDocument
-                            : rel.sourceDocument;
-
-                        return (
-                          <RelationshipCard key={rel.id}>
-                            <Card.Content>
-                              <RelationshipType>
-                                {rel.relationshipType}
-                              </RelationshipType>
-                              <Card.Header style={{ marginBottom: "0.5rem" }}>
-                                {otherDoc.title || "Untitled Document"}
-                              </Card.Header>
-                              <Card.Meta>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    gap: "1rem",
-                                    color: "#6c757d",
-                                  }}
-                                >
-                                  <span>
-                                    <FileType
-                                      size={14}
-                                      style={{ marginRight: "0.25rem" }}
-                                    />
-                                    {otherDoc.fileType}
-                                  </span>
-                                  <span>
-                                    <User
-                                      size={14}
-                                      style={{ marginRight: "0.25rem" }}
-                                    />
-                                    {otherDoc.creator?.email}
-                                  </span>
-                                </div>
-                              </Card.Meta>
-                              {rel.annotationLabel && (
-                                <Card.Description
-                                  style={{ marginTop: "0.75rem" }}
-                                >
-                                  {rel.annotationLabel.text}
-                                </Card.Description>
-                              )}
-                            </Card.Content>
-                          </RelationshipCard>
-                        );
-                      })}
-                    </RelationshipPanel>
-                  )}
-                </div>
-              )}
+              {rightPanelContent}
             </SlidingPanel>
           )}
         </AnimatePresence>

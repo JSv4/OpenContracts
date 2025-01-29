@@ -110,6 +110,38 @@ import { RelationshipList } from "../../annotator/display/components/Relationshi
 import { AnnotationList } from "../../annotator/display/components/AnnotationList";
 import LayerSwitcher from "../../widgets/buttons/LayerSelector";
 import DocNavigation from "../../widgets/buttons/DocNavigation";
+import {
+  ChatContainer,
+  ChatInput,
+  ChatInputContainer,
+  ConnectionStatus,
+  ConversationCount,
+  ConversationIndicator,
+  ConversationItem,
+  ConversationList,
+  ConversationSelector,
+  ErrorMessage,
+  NewChatButton,
+  SendButton,
+} from "./ChatContainers";
+import {
+  ContentArea,
+  ControlButton,
+  ControlButtonGroup,
+  EmptyState,
+  HeaderContainer,
+  LoadingPlaceholders,
+  MainContentArea,
+  MetadataRow,
+  RelationshipCard,
+  RelationshipPanel,
+  RelationshipType,
+  SlidingPanel,
+  SummaryContent,
+  TabButton,
+  TabsColumn,
+} from "./StyledContainers";
+import { NoteModal, NotesGrid, PostItNote, NotesHeader } from "./StickyNotes";
 
 const pdfjsLib = require("pdfjs-dist");
 
@@ -132,900 +164,11 @@ const FullScreenModal = styled(Modal)`
   }
 `;
 
-const HeaderContainer = styled(Segment)`
-  &&& {
-    margin: 0 !important;
-    border-radius: 0 !important;
-    padding: 1.5rem 2rem !important;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(231, 234, 237, 0.7);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-    z-index: 100;
-    position: relative;
-
-    /* Mobile-friendly header */
-    @media (max-width: 768px) {
-      padding: 1rem !important;
-
-      h2 {
-        font-size: 1.25rem;
-      }
-    }
-  }
-`;
-
-const MetadataRow = styled.div`
-  display: flex;
-  gap: 2rem;
-  color: #6c757d;
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-
-  span {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: color 0.2s ease;
-    &:hover {
-      color: #2185d0;
-    }
-
-    svg {
-      opacity: 0.7;
-    }
-  }
-
-  /* Stack metadata on small screens */
-  @media (max-width: 480px) {
-    flex-wrap: wrap;
-    gap: 0.75rem;
-
-    span {
-      font-size: 0.8rem;
-    }
-  }
-`;
-
-const ContentArea = styled.div`
-  display: grid;
-  grid-template-columns: auto 1fr;
-  height: calc(100vh - 90px);
-  background: white;
-  position: relative;
-
-  /* Stack layout on mobile */
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
-`;
-
-const TabsColumn = styled(Segment)<{ collapsed: boolean }>`
-  &&& {
-    margin: 0 !important;
-    padding: 0.75rem 0 !important;
-    border: none !important;
-    border-right: 1px solid rgba(231, 234, 237, 0.7) !important;
-    border-radius: 0 !important;
-    background: rgba(248, 249, 250, 0.8);
-    backdrop-filter: blur(10px);
-    width: ${(props) => (props.collapsed ? "64px" : "220px")};
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
-    z-index: 90;
-
-    /* Mobile optimization */
-    @media (max-width: 768px) {
-      width: 100%;
-      height: 56px;
-      display: flex;
-      overflow-x: auto;
-      overflow-y: hidden;
-      -webkit-overflow-scrolling: touch;
-      white-space: nowrap;
-      padding: 0.5rem !important;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(231, 234, 237, 0.7) !important;
-
-      /* Hide scrollbar but keep functionality */
-      scrollbar-width: none;
-      &::-webkit-scrollbar {
-        display: none;
-      }
-
-      /* Center icons when in mobile mode */
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-    }
-  }
-`;
-
-const TabButton = styled(Button)<{ collapsed: boolean }>`
-  &&& {
-    width: 100%;
-    text-align: ${(props) => (props.collapsed ? "center" : "left")} !important;
-    border-radius: 0 !important;
-    margin: 0.25rem 0 !important;
-    padding: ${(props) =>
-      props.collapsed ? "1rem" : "0.8rem 1.5rem"} !important;
-    background: transparent;
-    border: none !important;
-    color: #495057;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-
-    &:hover {
-      background: rgba(231, 234, 237, 0.4) !important;
-      color: #2185d0;
-    }
-
-    &.active {
-      background: white !important;
-      color: #2185d0;
-      font-weight: 500;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-
-      &:before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 3px;
-        background: #2185d0;
-        border-radius: 0 2px 2px 0;
-      }
-
-      svg {
-        color: #2185d0;
-      }
-    }
-
-    svg {
-      margin-right: ${(props) =>
-        props.collapsed ? "0" : "0.75rem"} !important;
-      transition: all 0.2s ease;
-      color: ${(props) => {
-        // Custom colors for each icon type
-        if (props.children[0].type.name === "FileText") return "#4CAF50";
-        if (props.children[0].type.name === "MessageSquare") return "#9C27B0";
-        if (props.children[0].type.name === "Notebook") return "#FF9800";
-        if (props.children[0].type.name === "Database") return "#E91E63";
-        if (props.children[0].type.name === "ChartNetwork") return "#2196F3";
-        return "#495057"; // default color
-      }};
-      opacity: 0.75;
-    }
-
-    &:hover svg {
-      transform: scale(1.1);
-      opacity: 1;
-    }
-
-    span {
-      opacity: ${(props) => (props.collapsed ? 0 : 1)};
-      transition: opacity 0.2s ease;
-      ${(props) => props.collapsed && "display: none;"}
-    }
-
-    /* Mobile-friendly tabs - icons only */
-    @media (max-width: 768px) {
-      width: 40px !important;
-      height: 40px !important;
-      padding: 0 !important;
-      margin: 0 0.25rem !important;
-      border-radius: 12px !important;
-      display: flex !important;
-      align-items: center;
-      justify-content: center;
-      background: transparent;
-
-      span {
-        display: none !important; /* Hide text labels on mobile */
-      }
-
-      svg {
-        margin: 0 !important;
-        width: 20px;
-        height: 20px;
-      }
-
-      &.active {
-        background: ${(props) =>
-          props.theme.colors?.primary || "#2185d0"} !important;
-        color: white !important;
-
-        &:before {
-          display: none; /* Remove side indicator on mobile */
-        }
-
-        svg {
-          color: white;
-        }
-      }
-
-      /* Add subtle hover effect */
-      &:hover:not(.active) {
-        background: rgba(0, 0, 0, 0.03) !important;
-        transform: translateY(-1px);
-      }
-    }
-  }
-`;
-
-// Add a tooltip for mobile tabs
-const TabTooltip = styled.div`
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-
-  /* Only show on mobile */
-  @media (min-width: 769px) {
-    display: none;
-  }
-`;
-
-// Update the TabButton component to include tooltips on mobile
-const Tab: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}> = ({ icon, label, active, onClick }) => {
-  const [showTooltip, setShowTooltip] = useState(false);
-
-  return (
-    <TabButton
-      collapsed={false}
-      active={active}
-      onClick={onClick}
-      onTouchStart={() => setShowTooltip(true)}
-      onTouchEnd={() => setShowTooltip(false)}
-    >
-      {icon}
-      <span>{label}</span>
-      {showTooltip && <TabTooltip>{label}</TabTooltip>}
-    </TabButton>
-  );
-};
-
-const MainContentArea = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 2rem;
-  position: relative;
-`;
-
-const SummaryContent = styled.div`
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 1rem;
-  transition: all 0.3s ease;
-
-  &.dimmed {
-    opacity: 0.4;
-    transform: scale(0.98);
-    filter: blur(1px);
-  }
-`;
-
-/**
- * SlidingPanel
- *
- * The right sidebar uses a combination of clamp for width on mid-sized screens
- * and goes full-width on small screens. Child elements remain scrollable.
- */
-const SlidingPanel = styled(motion.div)`
-  position: absolute;
-  top: 0;
-  right: 0;
-  /* For larger screens: at least 320px, up to 65% of total width, max 520px */
-  width: clamp(320px, 65%, 520px);
-  height: 100%;
-  background: white;
-  box-shadow: -4px 0 25px rgba(0, 0, 0, 0.05);
-  z-index: 80;
-  display: flex;
-  flex-direction: column;
-
-  /* On screens <= 768px, take the entire width below the tab bar */
-  @media (max-width: 768px) {
-    width: 100%;
-    height: calc(100% - 56px);
-    top: 56px;
-  }
-`;
-
-const ChatContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: white;
-  /* Ensure chat messages can scroll without causing horizontal overflows */
-  overflow: hidden;
-`;
-
-const ChatInputContainer = styled.div`
-  padding: 1.5rem;
-  border-top: 1px solid rgba(231, 234, 237, 0.7);
-  background: white;
-  position: relative;
-
-  @media (max-width: 768px) {
-    padding: 1rem;
-    position: sticky;
-    bottom: 0;
-    background: white;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-  }
-`;
-
-const ChatInput = styled(Input)`
-  &&& {
-    width: 100%;
-
-    input {
-      border-radius: 1.5rem !important;
-      padding: 0.8rem 1.5rem !important;
-      padding-right: 4rem !important;
-      border: 2px solid #e9ecef !important;
-      transition: all 0.2s ease !important;
-      background: white !important;
-
-      &:focus {
-        border-color: #2185d0 !important;
-        box-shadow: 0 0 0 2px rgba(33, 133, 208, 0.1) !important;
-      }
-
-      &:disabled {
-        background: rgba(247, 248, 249, 0.7) !important;
-        border-color: #e9ecef !important;
-        cursor: not-allowed;
-        color: #adb5bd !important;
-      }
-    }
-  }
-`;
-
-const ErrorMessage = styled.div`
-  color: #dc3545;
-  font-size: 0.875rem;
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(220, 53, 69, 0.1);
-  border-radius: 0.5rem;
-`;
-
-const SendButton = styled(Button)`
-  &&& {
-    position: absolute;
-    right: 1.75rem;
-    bottom: 1.75rem;
-    padding: 0.5rem;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #2185d0;
-    border: none;
-    color: white;
-    transition: all 0.2s ease;
-
-    &:hover:not(:disabled) {
-      transform: translateY(-1px);
-      background: #1678c2;
-      box-shadow: 0 4px 8px rgba(33, 133, 208, 0.2);
-    }
-
-    &:disabled {
-      background: #e9ecef;
-      color: #adb5bd;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    svg {
-      width: 1.25rem;
-      height: 1.25rem;
-      transition: transform 0.2s ease;
-    }
-
-    &:hover:not(:disabled) svg {
-      transform: translateX(2px);
-    }
-  }
-`;
-
-interface ConnectionStatusProps {
-  connected: boolean;
-}
-
-const ConnectionStatus = styled(motion.div)<ConnectionStatusProps>`
-  position: absolute;
-  right: 4.5rem;
-  bottom: 1.875rem;
-  font-size: 0.875rem;
-  color: #adb5bd;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  &::before {
-    content: "";
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: ${(props) => (props.connected ? "#12b886" : "#adb5bd")};
-    display: block;
-    animation: ${(props) => (props.connected ? "none" : "pulse 2s infinite")};
-  }
-
-  @keyframes pulse {
-    0% {
-      transform: scale(0.95);
-      opacity: 0.5;
-    }
-    50% {
-      transform: scale(1.05);
-      opacity: 0.8;
-    }
-    100% {
-      transform: scale(0.95);
-      opacity: 0.5;
-    }
-  }
-`;
-
 interface DocumentKnowledgeBaseProps {
   documentId: string;
   corpusId: string;
   onClose?: () => void;
 }
-
-const ControlButtonGroup = styled.div`
-  position: absolute;
-  top: 1.5rem;
-  right: 2rem;
-  display: flex;
-  gap: 0.75rem;
-`;
-
-const ControlButton = styled(Button)`
-  &&& {
-    width: 2.5rem !important;
-    height: 2.5rem !important;
-    padding: 0 !important;
-    border-radius: 50% !important;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    background: white !important;
-    border: 1px solid rgba(231, 234, 237, 0.7) !important;
-    color: #495057 !important;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-      border-color: #2185d0 !important;
-      color: #2185d0 !important;
-    }
-
-    &:active {
-      transform: translateY(1px);
-    }
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
-`;
-
-const RelationshipPanel = styled.div`
-  padding: 1.5rem;
-  height: 100%;
-  overflow-y: auto;
-
-  h3 {
-    font-size: 1.25rem;
-    font-weight: 500;
-    color: #212529;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-`;
-
-const RelationshipCard = styled(Card)`
-  &&& {
-    width: 100%;
-    margin-bottom: 1rem !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) !important;
-    border: 1px solid rgba(231, 234, 237, 0.7) !important;
-    transition: all 0.2s ease;
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05) !important;
-      border-color: #2185d0 !important;
-    }
-
-    .content {
-      padding: 1.25rem !important;
-    }
-  }
-`;
-
-const RelationshipType = styled.div`
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #2185d0;
-  background: rgba(33, 133, 208, 0.1);
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  margin-bottom: 0.75rem;
-`;
-
-const ConversationIndicator = styled(motion.div)`
-  position: absolute;
-  top: 1rem;
-  right: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const ConversationCount = styled(motion.div)`
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #2185d0 0%, #1678c2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(33, 133, 208, 0.2);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(33, 133, 208, 0.3);
-  }
-`;
-
-const ConversationSelector = styled(motion.div)`
-  position: absolute;
-  top: 0;
-  right: 3.5rem;
-  background: white;
-  border-radius: 1rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  width: 300px;
-  overflow: hidden;
-  border: 1px solid rgba(231, 234, 237, 0.7);
-`;
-
-const ConversationList = styled.div`
-  max-height: 400px;
-  overflow-y: auto;
-
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #dee2e6;
-    border-radius: 2px;
-
-    &:hover {
-      background: #ced4da;
-    }
-  }
-`;
-
-const ConversationItem = styled(motion.button)`
-  width: 100%;
-  padding: 0.875rem 1rem;
-  background: none;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  border-bottom: 1px solid rgba(231, 234, 237, 0.7);
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: rgba(33, 133, 208, 0.05);
-  }
-
-  .title {
-    font-weight: 500;
-    color: #212529;
-    font-size: 0.875rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .meta {
-    font-size: 0.75rem;
-    color: #868e96;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .message-count {
-    margin-left: auto;
-    background: rgba(33, 133, 208, 0.1);
-    color: #2185d0;
-    padding: 0.125rem 0.5rem;
-    border-radius: 1rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-  }
-`;
-
-const NewChatButton = styled(motion.button)`
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: white;
-  border: none;
-  border-top: 1px solid rgba(231, 234, 237, 0.7);
-  color: #2185d0;
-  font-weight: 500;
-  font-size: 0.875rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: rgba(33, 133, 208, 0.05);
-  }
-
-  svg {
-    width: 1rem;
-    height: 1rem;
-  }
-`;
-
-// Add these styled components for our shimmer effect
-const shimmerAnimation = keyframes`
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
-`;
-
-const PlaceholderBase = styled.div`
-  background: linear-gradient(90deg, #f0f0f0 0%, #f7f7f7 50%, #f0f0f0 100%);
-  background-size: 1000px 100%;
-  animation: ${shimmerAnimation} 2s infinite linear;
-  border-radius: 8px;
-`;
-
-const SummaryPlaceholder = styled.div`
-  padding: 3rem;
-  max-width: 800px;
-  margin: 0 auto;
-
-  ${PlaceholderBase} {
-    height: 28px;
-    margin-bottom: 1.5rem;
-
-    &:nth-child(1) {
-      width: 70%;
-    }
-    &:nth-child(2) {
-      width: 90%;
-    }
-    &:nth-child(3) {
-      width: 85%;
-    }
-    &:nth-child(4) {
-      width: 95%;
-    }
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-`;
-
-const NotePlaceholder = styled(motion.div)`
-  padding: 2rem;
-  background: white;
-  border-radius: 16px;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(231, 234, 237, 0.7);
-  max-width: 700px;
-  margin-left: auto;
-  margin-right: auto;
-
-  ${PlaceholderBase} {
-    &.header {
-      height: 24px;
-      width: 40%;
-      margin-bottom: 1.5rem;
-    }
-
-    &.content {
-      height: 20px;
-      margin-bottom: 1rem;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-      &:nth-child(2) {
-        width: 95%;
-      }
-      &:nth-child(3) {
-        width: 85%;
-      }
-    }
-  }
-`;
-
-const RelationshipPlaceholder = styled(motion.div)`
-  padding: 2rem;
-  background: white;
-  border-radius: 16px;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(231, 234, 237, 0.7);
-  max-width: 700px;
-  margin-left: auto;
-  margin-right: auto;
-
-  ${PlaceholderBase} {
-    &.type {
-      height: 22px;
-      width: 120px;
-      margin-bottom: 1.5rem;
-    }
-
-    &.title {
-      height: 24px;
-      width: 80%;
-      margin-bottom: 1rem;
-    }
-
-    &.meta {
-      height: 18px;
-      width: 50%;
-    }
-  }
-`;
-
-const LoadingPlaceholders: React.FC<{
-  type: "summary" | "notes" | "relationships";
-}> = ({ type }) => {
-  const placeholderCount = 3;
-
-  if (type === "summary") {
-    return (
-      <SummaryPlaceholder>
-        {[...Array(4)].map((_, i) => (
-          <PlaceholderBase key={i} />
-        ))}
-      </SummaryPlaceholder>
-    );
-  }
-
-  return (
-    <>
-      {[...Array(placeholderCount)].map((_, i) => {
-        const Placeholder =
-          type === "notes" ? NotePlaceholder : RelationshipPlaceholder;
-        return (
-          <Placeholder
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: i * 0.1 }}
-          >
-            <PlaceholderBase className={type === "notes" ? "header" : "type"} />
-            {type === "notes" ? (
-              <>
-                <PlaceholderBase className="content" />
-                <PlaceholderBase className="content" />
-              </>
-            ) : (
-              <>
-                <PlaceholderBase className="title" />
-                <PlaceholderBase className="meta" />
-              </>
-            )}
-          </Placeholder>
-        );
-      })}
-    </>
-  );
-};
-
-const EmptyStateContainer = styled(motion.div)`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 2rem;
-  text-align: center;
-  color: #6c757d;
-
-  svg {
-    color: #adb5bd;
-    margin-bottom: 1.5rem;
-    stroke-width: 1.5;
-  }
-
-  h3 {
-    color: #495057;
-    font-size: 1.25rem;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-  }
-
-  p {
-    color: #868e96;
-    font-size: 0.875rem;
-    max-width: 280px;
-    line-height: 1.5;
-  }
-`;
-
-const EmptyState: React.FC<{
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}> = ({ icon, title, description }) => (
-  <EmptyStateContainer
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-  >
-    {icon}
-    <h3>{title}</h3>
-    <p>{description}</p>
-  </EmptyStateContainer>
-);
 
 // Get WebSocket URL from environment or fallback to window.location for production
 const getWebSocketUrl = (documentId: string, token: string): string => {
@@ -1045,150 +188,6 @@ const getWebSocketUrl = (documentId: string, token: string): string => {
     documentId
   )}/query/?token=${encodeURIComponent(token)}`;
 };
-
-const PostItNote = styled(motion.button)`
-  background: #fff7b1;
-  padding: 1.25rem;
-  border-radius: 2px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05), 0 10px 15px -8px rgba(0, 0, 0, 0.1);
-  position: relative;
-  border: none;
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-  transform-origin: center;
-  transition: all 0.2s ease;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 28px;
-    background: rgba(0, 0, 0, 0.02);
-    border-radius: 2px 2px 0 0;
-  }
-  &::after {
-    content: "";
-    position: absolute;
-    top: -4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 40%;
-    height: 8px;
-    background: rgba(0, 0, 0, 0.03);
-    border-radius: 0 0 3px 3px;
-  }
-  .content {
-    max-height: 200px;
-    overflow: hidden;
-    position: relative;
-    font-family: "Kalam", cursive;
-    line-height: 1.6;
-    color: #2c3e50;
-    &::after {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 40px;
-      background: linear-gradient(transparent, #fff7b1);
-    }
-  }
-  .meta {
-    margin-top: 1rem;
-    font-size: 0.75rem;
-    color: #666;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  }
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05),
-      0 15px 25px -12px rgba(0, 0, 0, 0.15);
-  }
-`;
-
-const NotesGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
-  padding: 1.5rem;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  }
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    padding: 1rem;
-  }
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    padding: 0.75rem;
-  }
-`;
-
-const NoteModal = styled(Modal)`
-  &&& {
-    max-width: 90vw;
-    margin: 2rem auto;
-    border-radius: 12px;
-    overflow: hidden;
-
-    @media (min-width: 768px) {
-      max-width: 80vw;
-    }
-    @media (min-width: 1024px) {
-      max-width: 60vw;
-    }
-    .content {
-      padding: 1.5rem;
-      font-family: "Kalam", cursive;
-      line-height: 1.6;
-      color: #2c3e50;
-      @media (min-width: 768px) {
-        padding: 2rem;
-      }
-    }
-    .meta {
-      padding: 1rem 1.5rem;
-      background: #f8f9fa;
-      border-top: 1px solid #eee;
-      font-size: 0.875rem;
-      color: #666;
-      @media (min-width: 768px) {
-        padding: 1rem 2rem;
-      }
-    }
-  }
-`;
-
-const NotesHeader = styled.div`
-  padding: 1.5rem 2rem 1rem;
-  border-bottom: 1px solid rgba(231, 234, 237, 0.7);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-
-  h3 {
-    font-size: 1.25rem;
-    font-weight: 500;
-    color: #212529;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  .meta {
-    font-size: 0.875rem;
-    color: #6c757d;
-    margin-top: 0.5rem;
-  }
-`;
 
 // Create a wrapper component to handle the fallback
 const SafeMarkdown: React.FC<{ children: string }> = ({ children }) => {
@@ -1686,15 +685,14 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     activeLayer === "knowledge" ? knowledgeTabs : documentTabs;
 
   // Decide if we show the right panel
-  // knowledge layer: only "summary" is main content, so right panel if activeTab != "summary"
-  // document layer: doc viewer is always main content, so right panel if the tab is any of the visibleTabs
   useEffect(() => {
-    if (activeLayer === "knowledge") {
+    if (!activeTab) {
+      // If no tab is selected, always hide the panel
+      setShowRightPanel(false);
+    } else if (activeLayer === "knowledge") {
       setShowRightPanel(activeTab !== "summary");
     } else {
       // for the "document" layer, any tab means show the right panel
-      // (because the doc viewer is the main content)
-      // except if user hasn't chosen a tab? We'll just keep it open if they choose something
       setShowRightPanel(
         [
           "chat",
@@ -2039,6 +1037,19 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     },
   ];
 
+  // Modify the tab click handler to support toggling
+  const handleTabClick = (tabKey: string) => {
+    if (activeTab === tabKey) {
+      // If clicking the active tab, deselect it
+      setActiveTab("");
+      setShowRightPanel(false);
+    } else {
+      // Otherwise, select the new tab
+      setActiveTab(tabKey);
+      // The existing useEffect will handle showing the right panel
+    }
+  };
+
   return (
     <FullScreenModal open={true} onClose={onClose} closeIcon>
       <HeaderContainer>
@@ -2089,7 +1100,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             <TabButton
               key={t.key}
               active={activeTab === t.key}
-              onClick={() => setActiveTab(t.key)}
+              onClick={() => handleTabClick(t.key)}
               collapsed={sidebarCollapsed}
             >
               {t.icon}
@@ -2126,15 +1137,18 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           )}
 
           {/* FLOATING LAYER SWITCHER (bottom-right) */}
+
           <LayerSwitcher layers={layers} />
 
           {/* Floating navigation bar (top-left) */}
-          <DocNavigation
-            zoomLevel={zoomLevel}
-            onZoomIn={() => setZoomLevel(Math.min(zoomLevel + 0.1, 4))}
-            onZoomOut={() => setZoomLevel(Math.min(zoomLevel - 0.1, 4))}
-            onSearch={setSearchText}
-          />
+          {activeLayer === "document" ? (
+            <DocNavigation
+              zoomLevel={zoomLevel}
+              onZoomIn={() => setZoomLevel(Math.min(zoomLevel + 0.1, 4))}
+              onZoomOut={() => setZoomLevel(Math.min(zoomLevel - 0.1, 4))}
+              onSearch={setSearchText}
+            />
+          ) : null}
           {/* Right Panel, if needed */}
           <AnimatePresence>
             {showRightPanel && (

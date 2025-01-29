@@ -81,6 +81,7 @@ import {
   usePages,
   usePageTokenTextMaps,
   usePdfDoc,
+  useSearchText,
 } from "../../annotator/context/DocumentAtom";
 import { createTokenStringSearch } from "../../annotator/utils";
 import {
@@ -108,6 +109,7 @@ import { useAnnotationControls } from "../../annotator/context/UISettingsAtom";
 import { RelationshipList } from "../../annotator/display/components/RelationshipList";
 import { AnnotationList } from "../../annotator/display/components/AnnotationList";
 import LayerSwitcher from "../../widgets/buttons/LayerSelector";
+import DocNavigation from "../../widgets/buttons/DocNavigation";
 
 const pdfjsLib = require("pdfjs-dist");
 
@@ -1236,6 +1238,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     zoomLevel,
     setShiftDown,
     readOnly,
+    setZoomLevel,
     isSidebarVisible,
     setSidebarVisible,
   } = useUISettings({
@@ -1277,6 +1280,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [, setDocTypeAnnotations] = useAtom(docTypeAnnotationsAtom);
   const { setCorpus } = useCorpusState();
   const { setInitialAnnotations } = useInitialAnnotations();
+  const { searchText, setSearchText } = useSearchText();
   const { scrollContainerRef, registerRef } = useAnnotationRefs();
   const { activeSpanLabel, setActiveSpanLabel } = useAnnotationControls();
 
@@ -2124,6 +2128,13 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           {/* FLOATING LAYER SWITCHER (bottom-right) */}
           <LayerSwitcher layers={layers} />
 
+          {/* Floating navigation bar (top-left) */}
+          <DocNavigation
+            zoomLevel={zoomLevel}
+            onZoomIn={() => setZoomLevel(Math.min(zoomLevel + 0.1, 4))}
+            onZoomOut={() => setZoomLevel(Math.min(zoomLevel - 0.1, 4))}
+            onSearch={setSearchText}
+          />
           {/* Right Panel, if needed */}
           <AnimatePresence>
             {showRightPanel && (

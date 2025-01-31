@@ -115,7 +115,24 @@ export const TabsColumn = styled(Segment)<{ collapsed: boolean }>`
   }
 `;
 
-export const TabButton = styled(Button)<{ collapsed: boolean }>`
+// Example mapping from a tab's key to a color
+const iconColorMap: Record<string, string> = {
+  summary: "#00796B",
+  chat: "#7B1FA2",
+  notes: "#E65100",
+  document: "#C2185B",
+  relationships: "#1565C0",
+  // fallback
+  default: "#455A64",
+};
+
+interface TabButtonProps {
+  collapsed: boolean;
+  tabKey: string;
+  active?: boolean;
+}
+
+export const TabButton = styled(Button)<TabButtonProps>`
   &&& {
     width: 100%;
     text-align: ${(props) => (props.collapsed ? "center" : "left")} !important;
@@ -169,14 +186,7 @@ export const TabButton = styled(Button)<{ collapsed: boolean }>`
       margin-right: ${(props) => (props.collapsed ? "0" : "1rem")} !important;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       stroke-width: 1.75px;
-      color: ${(props) => {
-        if (props.children[0].type.name === "FileText") return "#00796B";
-        if (props.children[0].type.name === "MessageSquare") return "#7B1FA2";
-        if (props.children[0].type.name === "Notebook") return "#E65100";
-        if (props.children[0].type.name === "Database") return "#C2185B";
-        if (props.children[0].type.name === "ChartNetwork") return "#1565C0";
-        return "#455A64";
-      }};
+      color: ${({ tabKey }) => iconColorMap[tabKey] ?? iconColorMap.default};
       opacity: 0.85;
       filter: saturate(1.2);
     }

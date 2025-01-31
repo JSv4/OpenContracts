@@ -1084,6 +1084,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           {visibleTabs.map((t) => (
             <TabButton
               key={t.key}
+              tabKey={t.key}
               active={activeTab === t.key}
               onClick={() => handleTabClick(t.key)}
               collapsed={sidebarCollapsed}

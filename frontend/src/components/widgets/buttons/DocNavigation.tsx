@@ -163,6 +163,13 @@ export const StyledNavigation = styled.div<{ isExpanded: boolean }>`
           box-shadow: 0 0 0 2px rgba(26, 117, 188, 0.1);
         }
       }
+
+      .search-status {
+        font-size: 0.75rem;
+        color: #999;
+        margin-top: 4px;
+        text-align: right;
+      }
     }
   }
 `;
@@ -173,6 +180,7 @@ export const StyledNavigation = styled.div<{ isExpanded: boolean }>`
  * Additionally:
  *  - Pressing Enter again without changing the search value moves to the next search result.
  *  - We scroll the current match into view, just like in SearchSidebarWidget.
+ *  - Displays a subtle "Match X of Y" label showing the current result index & total count.
  */
 export const DocNavigation: React.FC<DocNavigationProps> = ({
   onZoomIn,
@@ -292,6 +300,18 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
       }
     }
   };
+  /**
+   * Create the "Match X of Y" indicator if valid results exist.
+   */
+  const matchIndicator = useMemo(() => {
+    if (textSearchMatches.length > 0) {
+      return `Match ${selectedTextSearchMatchIndex + 1} of ${
+        textSearchMatches.length
+      }`;
+    }
+    // If no matches, return empty
+    return "";
+  }, [textSearchMatches, selectedTextSearchMatchIndex]);
 
   return (
     <StyledNavigation isExpanded={isExpanded} className={className}>
@@ -323,6 +343,9 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
             onChange={handleSearchChange}
             onKeyDown={handleSearchKeyDown}
           />
+          {matchIndicator && (
+            <div className="search-status">{matchIndicator}</div>
+          )}
         </div>
       </div>
     </StyledNavigation>

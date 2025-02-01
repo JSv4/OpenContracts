@@ -1,16 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import { Search, ZoomIn, ZoomOut } from "lucide-react";
 import { Form } from "semantic-ui-react";
+import _ from "lodash";
+import { useSearchText } from "../../annotator/context/DocumentAtom";
+import { useTextSearchState } from "../../annotator/context/DocumentAtom";
+import { useAnnotationRefs } from "../../annotator/hooks/useAnnotationRefs";
 
+/**
+ * DocNavigationProps describes the required props for the DocNavigation FC.
+ */
 interface DocNavigationProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
-  onSearch: (text: string) => void;
   zoomLevel: number;
   className?: string;
 }
 
+/**
+ * Styled container for the document navigation components (zoom buttons & search bar).
+ */
 export const StyledNavigation = styled.div<{ isExpanded: boolean }>`
   /* Default for desktop: absolute as before */
   position: absolute;
@@ -25,7 +34,7 @@ export const StyledNavigation = styled.div<{ isExpanded: boolean }>`
   @media (max-width: 768px) {
     /* On mobile, fix to the viewport so it doesn't scroll away */
     position: fixed;
-    top: 180px; // Offset y by 100px down
+    top: 180px; /* Offset y by 100px down */
   }
 
   .zoom-group {
@@ -128,7 +137,7 @@ export const StyledNavigation = styled.div<{ isExpanded: boolean }>`
           isExpanded &&
           `
           transform: translateX(-50%) translateY(0);
-          `}
+        `}
       }
 
       ${({ isExpanded }) =>
@@ -158,16 +167,86 @@ export const StyledNavigation = styled.div<{ isExpanded: boolean }>`
   }
 `;
 
+/**
+ * DocNavigation includes zoom controls and a search input that expands on hover.
+ * The search input is debounced (1 second) and is synced with the global searchText state.
+ * Additionally:
+ *  - Pressing Enter again without changing the search value moves to the next search result.
+ *  - We scroll the current match into view, just like in SearchSidebarWidget.
+ */
 export const DocNavigation: React.FC<DocNavigationProps> = ({
   onZoomIn,
   onZoomOut,
-  onSearch,
   zoomLevel,
   className,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const timeoutRef = React.useRef<NodeJS.Timeout>();
 
+  // We'll also need the annotationRefs so we can scroll matched text into view
+  const annotationRefs = useAnnotationRefs();
+
+  // Use the search text global store (atom) and text search match state
+  const { searchText, setSearchText } = useSearchText();
+  const {
+    textSearchMatches,
+    selectedTextSearchMatchIndex,
+    setSelectedTextSearchMatchIndex,
+  } = useTextSearchState();
+
+  // Local input so user sees immediate typing, while global state is updated through a debounce
+  const [localInput, setLocalInput] = useState<string>(searchText || "");
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
+  /**
+   * Debounce calls to setSearchText by 1 second to avoid excessive updates.
+   */
+  const debouncedSetSearchText = useMemo(
+    () =>
+      _.debounce((value: string) => {
+        setSearchText(value);
+      }, 1000),
+    [setSearchText]
+  );
+
+  /**
+   * Cancel the hover timeout and the debouncedSetSearchText on unmount.
+   */
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      debouncedSetSearchText.cancel();
+    };
+  }, [debouncedSetSearchText]);
+
+  /**
+   * Keep localInput in sync when the global searchText changes.
+   */
+  useEffect(() => {
+    setLocalInput(searchText || "");
+  }, [searchText]);
+
+  /**
+   * Whenever the selectedTextSearchMatchIndex changes, scroll that result into view,
+   * just like we do in SearchSidebarWidget.
+   */
+  useEffect(() => {
+    const currentRef =
+      annotationRefs.textSearchElementRefs.current[
+        selectedTextSearchMatchIndex
+      ];
+    if (currentRef) {
+      currentRef.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [selectedTextSearchMatchIndex, annotationRefs.textSearchElementRefs]);
+
+  /**
+   * Expand on hover, collapse after a delay on mouse leave.
+   */
   const handleMouseEnter = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -181,13 +260,38 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
     }, 300);
   };
 
-  React.useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+  /**
+   * onChange handler for the search input:
+   * - Updates local state immediately.
+   * - Delays (debounces) the global search update by 1 second.
+   */
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalInput(e.target.value);
+    debouncedSetSearchText(e.target.value);
+  };
+
+  /**
+   * onKeyDown handler for the search input:
+   * - If user presses Enter and the current input hasn't changed, move to the next match.
+   * - If user presses Enter with a new query, immediately set the global search text
+   *   (cancel the debounced call).
+   */
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      // If user hasn't changed search, cycle to the next result
+      if (localInput.trim() === searchText.trim()) {
+        if (textSearchMatches.length > 0) {
+          const nextIndex =
+            (selectedTextSearchMatchIndex + 1) % textSearchMatches.length;
+          setSelectedTextSearchMatchIndex(nextIndex);
+        }
+      } else {
+        // Otherwise, initiate a new search
+        debouncedSetSearchText.cancel();
+        setSearchText(localInput);
       }
-    };
-  }, []);
+    }
+  };
 
   return (
     <StyledNavigation isExpanded={isExpanded} className={className}>
@@ -215,7 +319,9 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
           <Form.Input
             className="search-input"
             placeholder="Search document..."
-            onChange={(e) => onSearch(e.target.value)}
+            value={localInput}
+            onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
           />
         </div>
       </div>

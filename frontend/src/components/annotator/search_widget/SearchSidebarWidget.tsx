@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Header, Segment, Icon, Message, Form } from "semantic-ui-react";
 import _ from "lodash";
 import "./SearchWidgetStyles.css";
@@ -7,6 +7,9 @@ import { TruncatedText } from "../../widgets/data-display/TruncatedText";
 import { useAnnotationRefs } from "../hooks/useAnnotationRefs";
 import { useSearchText, useTextSearchState } from "../context/DocumentAtom";
 
+/**
+ * Displays the page header based on the type of search result.
+ */
 const PageHeader: React.FC<{
   result: TextSearchTokenResult | TextSearchSpanResult;
 }> = ({ result }) => {
@@ -25,6 +28,9 @@ const PageHeader: React.FC<{
   }
 };
 
+/**
+ * Placeholder card displayed when there are no search results.
+ */
 const PlaceholderSearchResultCard: React.FC = () => (
   <Message warning>
     <Message.Header>No Matching Results</Message.Header>
@@ -35,6 +41,9 @@ const PlaceholderSearchResultCard: React.FC = () => (
   </Message>
 );
 
+/**
+ * Card that renders a single search result.
+ */
 const SearchResultCard: React.FC<{
   index: number;
   onResultClick: (index: number) => void;
@@ -94,6 +103,13 @@ const SearchResultCard: React.FC<{
   );
 };
 
+/**
+ * SearchSidebarWidget component displays the search input and search
+ * result cards. The search input is debounced to limit the number of state updates.
+ *
+ * We store localInput in a separate state so the text field updates immediately,
+ * while the actual global search text is updated only after a 1-second delay.
+ */
 export const SearchSidebarWidget: React.FC = () => {
   const annotationRefs = useAnnotationRefs();
   const {
@@ -103,13 +119,43 @@ export const SearchSidebarWidget: React.FC = () => {
   } = useTextSearchState();
   const { searchText, setSearchText } = useSearchText();
 
+  /**
+   * Local state to show the user immediate typing feedback.
+   * After 1s the global search text is updated, triggering a search.
+   */
+  const [localInput, setLocalInput] = useState<string>(searchText || "");
+
+  // Sync localInput whenever global searchText changes (e.g. user clears or resets).
+  useEffect(() => {
+    setLocalInput(searchText || "");
+  }, [searchText]);
+
+  /**
+   * Create a debounced version of the setter that calls setSearchText
+   * after a 1s delay.
+   */
+  const debouncedSetSearchText = useMemo(
+    () =>
+      _.debounce((value: string) => {
+        setSearchText(value);
+      }, 1000),
+    [setSearchText]
+  );
+
+  // Cleanup the debounced call when the component unmounts.
+  useEffect(() => {
+    return () => {
+      debouncedSetSearchText.cancel();
+    };
+  }, [debouncedSetSearchText]);
+
   useEffect(() => {
     const currentRef =
       annotationRefs.textSearchElementRefs.current[
         selectedTextSearchMatchIndex
       ];
     if (currentRef) {
-      currentRef?.scrollIntoView({
+      currentRef.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
@@ -151,13 +197,20 @@ export const SearchSidebarWidget: React.FC = () => {
               <Icon
                 name={searchText ? "cancel" : "search"}
                 link={!!searchText}
-                onClick={() => (searchText ? setSearchText("") : undefined)}
+                onClick={() => {
+                  // Cancel any pending debounced updates and clear the search text
+                  debouncedSetSearchText.cancel();
+                  setSearchText("");
+                }}
                 style={{ color: searchText ? "#db2828" : "#2185d0" }}
               />
             }
             placeholder="Search document..."
-            onChange={(e) => setSearchText(e.target.value)}
-            value={searchText || ""}
+            onChange={(e) => {
+              setLocalInput(e.target.value);
+              debouncedSetSearchText(e.target.value);
+            }}
+            value={localInput}
             style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
           />
         </Form>

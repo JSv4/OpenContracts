@@ -18,58 +18,37 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useReactiveVar } from "@apollo/client";
-import { Card, Button, Input, Segment, Header, Modal } from "semantic-ui-react";
+import { Card, Button, Header, Modal } from "semantic-ui-react";
 import {
   MessageSquare,
   FileText,
-  Edit2,
-  Download,
-  History,
   Notebook,
   Database,
   User,
   Calendar,
   Send,
-  Eye,
-  Network,
   Plus,
   Clock,
   X,
   ChartNetwork,
   FileType,
   ArrowLeft,
+  Search,
 } from "lucide-react";
 import {
-  GET_CONVERSATIONS,
-  GET_DOCUMENT_KNOWLEDGE_BASE,
-  GetDocumentKnowledgeBaseInputs,
-  GetDocumentKnowledgeBaseOutputs,
   GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
   GetDocumentKnowledgeAndAnnotationsInput,
   GetDocumentKnowledgeAndAnnotationsOutput,
 } from "../../../graphql/queries";
 import { getDocumentRawText, getPawlsLayer } from "../../annotator/api/rest";
-import {
-  ConversationTypeConnection,
-  LabelType,
-} from "../../../types/graphql-api";
+import { LabelType } from "../../../types/graphql-api";
 import { ChatMessage, ChatMessageProps } from "../../widgets/chat/ChatMessage";
 import { authToken, userObj } from "../../../graphql/cache";
 import styled, { keyframes } from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
-import {
-  AnalysisType,
-  ExtractType,
-  DatacellType,
-  ColumnType,
-} from "../../../types/graphql-api";
-import {
-  DocumentViewer,
-  PDFContainer,
-} from "../../annotator/display/viewer/DocumentViewer";
+import { PDFContainer } from "../../annotator/display/viewer/DocumentViewer";
 import { PDFDocumentLoadingTask } from "pdfjs-dist";
 import { useUISettings } from "../../annotator/hooks/useUISettings";
 import useWindowDimensions from "../../hooks/WindowDimensionHook";
@@ -84,6 +63,7 @@ import {
   usePageTokenTextMaps,
   usePdfDoc,
   useSearchText,
+  useTextSearchState,
 } from "../../annotator/context/DocumentAtom";
 import { createTokenStringSearch } from "../../annotator/utils";
 import {
@@ -129,7 +109,6 @@ import {
 import {
   ContentArea,
   ControlButton,
-  ControlButtonGroup,
   ControlButtonGroupLeft,
   EmptyState,
   HeaderContainer,
@@ -145,6 +124,8 @@ import {
   TabsColumn,
 } from "./StyledContainers";
 import { NoteModal, NotesGrid, PostItNote, NotesHeader } from "./StickyNotes";
+import { SearchSidebarWidget } from "../../annotator/search_widget/SearchSidebarWidget";
+import { useTextSearch } from "../../annotator/hooks/useTextSearch";
 
 const pdfjsLib = require("pdfjs-dist");
 
@@ -311,11 +292,22 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const { setCorpus } = useCorpusState();
   const { setInitialAnnotations } = useInitialAnnotations();
   const { searchText, setSearchText } = useSearchText();
+  const { setTextSearchState } = useTextSearchState();
   const { scrollContainerRef, registerRef } = useAnnotationRefs();
   const { activeSpanLabel, setActiveSpanLabel } = useAnnotationControls();
 
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
   const [markdownError, setMarkdownError] = useState<boolean>(false);
+
+  useTextSearch();
+
+  useEffect(() => {
+    setSearchText("");
+    setTextSearchState({
+      matches: [],
+      selectedIndex: 0,
+    });
+  }, [setTextSearchState]);
 
   /**
    * processAnnotationsData
@@ -524,6 +516,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             setPages(loadedPages);
             let { doc_text, string_index_token_map } =
               createTokenStringSearch(loadedPages);
+            console.log("Doc text:", doc_text);
             setPageTextMaps({
               ...string_index_token_map,
               ...pageTextMaps,
@@ -815,19 +808,19 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   ];
   const documentTabs = [
     { key: "chat", label: "Chat", icon: <MessageSquare size={18} /> },
-    { key: "notes", label: "Notes", icon: <Notebook size={18} /> },
-    {
-      key: "relationships",
-      label: "Doc Relationships",
-      icon: <ChartNetwork size={18} />,
-    },
     { key: "annotations", label: "Annotations", icon: <FileText size={18} /> },
     {
       key: "relations",
       label: "Annotation Relationships",
       icon: <ChartNetwork size={18} />,
     },
-    { key: "labels", label: "Labels", icon: <Database size={18} /> },
+    { key: "search", label: "Search", icon: <Search size={18} /> },
+    { key: "notes", label: "Notes", icon: <Notebook size={18} /> },
+    {
+      key: "relationships",
+      label: "Doc Relationships",
+      icon: <ChartNetwork size={18} />,
+    },
   ];
 
   // Decide which tabs to show based on active layer
@@ -848,6 +841,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           "chat",
           "notes",
           "relationships",
+          "search",
           "annotations",
           "relations",
           "labels",
@@ -1022,6 +1016,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                 ))}
               </NotesGrid>
             )}
+          </div>
+        );
+      case "search":
+        return (
+          <div className="p-4 flex-1 flex flex-col">
+            <SearchSidebarWidget />
           </div>
         );
       case "relationships":
@@ -1301,7 +1301,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
               zoomLevel={zoomLevel}
               onZoomIn={() => setZoomLevel(Math.min(zoomLevel + 0.1, 4))}
               onZoomOut={() => setZoomLevel(Math.min(zoomLevel - 0.1, 4))}
-              onSearch={setSearchText}
             />
           ) : null}
           {/* Right Panel, if needed */}

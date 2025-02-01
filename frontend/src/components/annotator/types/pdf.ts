@@ -149,7 +149,7 @@ export class PDFPageInfo {
       throw new Error("Unknown Page Bounds");
     }
 
-    console.log("Get annotations for bounds", selection);
+    // console.log("Get annotations for bounds", selection);
 
     const ids: TokenId[] = [];
     const tokenBounds: BoundingBox[] = [];

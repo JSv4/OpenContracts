@@ -221,7 +221,6 @@ const SelectionLayer = ({
    */
   const convertBoundsToSelections = useCallback(
     (selection: BoundingBox, activeLabel: AnnotationLabelType): JSX.Element => {
-      console.log("PageInfo", pageInfo);
       const annotation = pageInfo.getAnnotationForBounds(
         normalizeBounds(selection),
         activeLabel

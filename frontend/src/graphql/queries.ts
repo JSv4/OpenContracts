@@ -2027,6 +2027,7 @@ export const GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS = gql`
       mdSummaryFile
       pdfFile
       txtExtractFile
+      pawlsParseFile
       allNotes(corpusId: $corpusId) {
         id
         title

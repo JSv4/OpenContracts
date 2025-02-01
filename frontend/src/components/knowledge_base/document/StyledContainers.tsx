@@ -284,7 +284,6 @@ export const TabTooltip = styled.div`
 export const MainContentArea = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 2rem;
   position: relative;
 `;
 
@@ -370,29 +369,30 @@ export const ControlButton = styled(Button)`
   }
 `;
 
-/**
- * SlidingPanel
- *
- * By default (desktop), it is position:absolute so it does not cover
- * the entire screen vertically. In mobile, we switch to fixed with full height.
- */
-export const SlidingPanel = styled(motion.div)`
+interface SlidingPanelProps {
+  pushContent?: boolean;
+}
+
+export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
+  /* For desktop, position absolutely so it can sit to the right. */
   position: absolute;
-  right: 1.5rem;
+  top: 0;
+  right: 0;
+  /* Ensure the tray is always above the document content. */
+  z-index: 2000;
+
   width: clamp(320px, 65%, 520px);
-  top: 0px;
-  height: calc(100vh - 80px);
+  height: 100%;
+
   background: white;
   box-shadow: -4px 0 25px rgba(0, 0, 0, 0.05);
-  z-index: 1000;
   display: flex;
   flex-direction: column;
-  overflow-y: auto; /* let panel scroll internally instead of the entire page */
+  overflow-y: auto;
 
+  /* On mobile, switch to full-screen overlay (fixed) */
   @media (max-width: 768px) {
     position: fixed;
-    top: 0;
-    right: 0;
     width: 100%;
     height: 100%;
   }

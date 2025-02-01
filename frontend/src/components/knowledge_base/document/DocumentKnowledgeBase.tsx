@@ -78,6 +78,7 @@ import { Token, ViewState } from "../../types";
 import { toast } from "react-toastify";
 import {
   useDocText,
+  useDocumentState,
   useDocumentType,
   usePages,
   usePageTokenTextMaps,
@@ -153,16 +154,37 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.j
 // Enhanced styled components
 const FullScreenModal = styled(Modal)`
   &&& {
-    position: fixed;
-    margin: 0 !important;
+    position: fixed !important;
+    margin: 1rem 1rem 1.5rem 1rem !important;
     top: 0 !important;
     left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-    border-radius: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: calc(100% - 2rem) !important;
+    height: calc(100% - 2.5rem) !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 0.5rem !important;
     background: #f8f9fa;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+
+    /* Ensure the close button remains visible and properly positioned */
+    > .close.icon {
+      top: 1rem !important;
+      right: 1rem !important;
+      color: rgba(0, 0, 0, 0.7) !important;
+      z-index: 1000;
+    }
+
+    /* Ensure modal content fills available space */
+    .content {
+      flex: 1 1 auto !important;
+      overflow: hidden !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
   }
 `;
 
@@ -233,6 +255,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   onClose,
 }) => {
   const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
+  // Helper to compute the panel width following the clamp strategy
+  const getPanelWidth = (windowWidth: number): number =>
+    Math.min(Math.max(windowWidth * 0.65, 320), 520);
+
   const {
     setProgress,
     progress,
@@ -270,13 +298,14 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [wsError, setWsError] = useState<string | null>(null);
 
   const { setDocumentType } = useDocumentType();
+  const { setDocument } = useDocumentState();
   const { setDocText } = useDocText();
   const {
     pageTokenTextMaps: pageTextMaps,
     setPageTokenTextMaps: setPageTextMaps,
   } = usePageTokenTextMaps();
   const { pages, setPages } = usePages();
-  const [, setPdfAnnotations] = useAtom(pdfAnnotationsAtom);
+  const [_, setPdfAnnotations] = useAtom(pdfAnnotationsAtom);
   const [, setStructuralAnnotations] = useAtom(structuralAnnotationsAtom);
   const [, setDocTypeAnnotations] = useAtom(docTypeAnnotationsAtom);
   const { setCorpus } = useCorpusState();
@@ -287,6 +316,118 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
   const [markdownError, setMarkdownError] = useState<boolean>(false);
+
+  /**
+   * processAnnotationsData
+   *
+   * Processes annotation data for the current document, updating state atoms
+   * and corpus label sets. Accepts GetDocumentKnowledgeAndAnnotationsOutput,
+   * which is what's returned from
+   * the updated GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS query.
+   *
+   * @param data - The query result containing document + corpus info
+   */
+  const processAnnotationsData = (
+    data: GetDocumentKnowledgeAndAnnotationsOutput
+  ) => {
+    console.log("Processing annotations data:", data);
+    if (data?.document) {
+      const processedAnnotations =
+        data.document.allAnnotations?.map((annotation) =>
+          convertToServerAnnotation(annotation)
+        ) ?? [];
+
+      const structuralAnnotations =
+        data.document.allStructuralAnnotations?.map((annotation) =>
+          convertToServerAnnotation(annotation)
+        ) ?? [];
+
+      const processedDocTypeAnnotations = convertToDocTypeAnnotations(
+        data.document.allAnnotations?.filter(
+          (ann) => ann.annotationLabel.labelType === LabelType.DocTypeLabel
+        ) ?? []
+      );
+
+      // Update pdfAnnotations atom
+      setPdfAnnotations(
+        (prev) =>
+          new PdfAnnotations(
+            [...processedAnnotations, ...structuralAnnotations],
+            prev.relations,
+            processedDocTypeAnnotations,
+            true
+          )
+      );
+
+      // **Store the initial annotations**
+      setInitialAnnotations(processedAnnotations);
+
+      // Process structural annotations
+      if (data.document.allStructuralAnnotations) {
+        const structuralAnns = data.document.allStructuralAnnotations.map(
+          (ann) => convertToServerAnnotation(ann)
+        );
+        setStructuralAnnotations(structuralAnns);
+      }
+
+      // Process relationships
+      const processedRelationships = data.document.allRelationships?.map(
+        (rel) =>
+          new RelationGroup(
+            rel.sourceAnnotations.edges
+              .map((edge) => edge?.node?.id)
+              .filter((id): id is string => id !== undefined),
+            rel.targetAnnotations.edges
+              .map((edge) => edge?.node?.id)
+              .filter((id): id is string => id !== undefined),
+            rel.relationshipLabel,
+            rel.id,
+            rel.structural
+          )
+      );
+
+      setPdfAnnotations(
+        (prev) =>
+          new PdfAnnotations(
+            prev.annotations,
+            processedRelationships || [],
+            prev.docTypes,
+            true
+          )
+      );
+
+      // Update label atoms
+      if (data.corpus?.labelSet) {
+        const allLabels = data.corpus.labelSet.allAnnotationLabels ?? [];
+        console.log("All labels:", allLabels);
+        const filteredTokenLabels = allLabels.filter(
+          (label) => label.labelType === LabelType.TokenLabel
+        );
+        const filteredSpanLabels = allLabels.filter(
+          (label) => label.labelType === LabelType.SpanLabel
+        );
+        const filteredRelationLabels = allLabels.filter(
+          (label) => label.labelType === LabelType.RelationshipLabel
+        );
+        const filteredDocTypeLabels = allLabels.filter(
+          (label) => label.labelType === LabelType.DocTypeLabel
+        );
+
+        console.log("Filtered span labels:", filteredSpanLabels);
+        console.log("Filtered relation labels:", filteredRelationLabels);
+        console.log("Filtered doc type labels:", filteredDocTypeLabels);
+        console.log("Filtered token labels:", filteredTokenLabels);
+
+        setCorpus({
+          spanLabels: filteredSpanLabels,
+          humanSpanLabels: filteredSpanLabels,
+          relationLabels: filteredRelationLabels,
+          docTypeLabels: filteredDocTypeLabels,
+          humanTokenLabels: filteredTokenLabels,
+        });
+      }
+    }
+  };
 
   const containerRefCallback = useCallback(
     (node: HTMLDivElement | null) => {
@@ -329,7 +470,17 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       analysisId: undefined,
     },
     onCompleted: (data) => {
+      console.log("Combined data:", data);
+
       setDocumentType(data.document.fileType ?? "");
+      setDocument(data.document);
+
+      // --------------------------------------------------
+      // Call our newly inserted processing function here:
+      // --------------------------------------------------
+      processAnnotationsData(data);
+
+      // The rest: load PDF or TXT if relevant, etc.
       if (
         data.document.fileType === "application/pdf" &&
         data.document.pdfFile
@@ -348,6 +499,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         ])
           .then(([pdfDocProxy, pawlsData]) => {
             setPdfDoc(pdfDocProxy);
+            console.log("Loaded pawls data:", pawlsData);
 
             const loadPages: Promise<PDFPageInfo>[] = [];
             for (let i = 1; i <= pdfDocProxy.numPages; i++) {
@@ -377,7 +529,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
               ...pageTextMaps,
             });
             setDocText(doc_text);
-            // Loaded state set by useEffect for state change in doc state store.
           })
           .catch((err) => {
             console.error("Error loading PDF document:", err);
@@ -387,8 +538,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         data.document.fileType === "application/txt" ||
         data.document.fileType === "text/plain"
       ) {
-        console.debug("React to TXT document");
-
         setViewComponents(
           <TxtAnnotatorWrapper readOnly={true} allowInput={false} />
         );
@@ -403,7 +552,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             setViewState(ViewState.ERROR);
           });
       } else {
-        console.error("Unexpected filetype: ", data.document.fileType);
         setViewComponents(
           <div>
             <p>Unsupported filetype: {data.document.fileType}</p>
@@ -799,21 +947,20 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
               )}
               <ChatInput
                 value={newMessage}
-                onChange={(e: {
-                  target: { value: React.SetStateAction<string> };
-                }) => setNewMessage(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setNewMessage(e.target.value)
+                }
                 placeholder={
                   wsReady ? "Type your message..." : "Waiting for connection..."
                 }
                 disabled={!wsReady}
-                onKeyPress={(e: { key: string }) =>
+                onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) =>
                   e.key === "Enter" && sendMessageOverSocket()
                 }
               />
               <SendButton
                 onClick={sendMessageOverSocket}
                 disabled={!wsReady || !newMessage.trim()}
-                whileHover={{ scale: 1.05 }}
               >
                 <Send size={18} />
               </SendButton>
@@ -960,14 +1107,14 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   let viewerContent: JSX.Element = <></>;
   if (metadata.fileType === "application/pdf") {
     viewerContent = (
-      <PDFContainer ref={containerRefCallback}>
+      <PDFContainer id="pdf-container" ref={containerRefCallback}>
         <LabelSelector
           sidebarWidth="0px"
           activeSpanLabel={activeSpanLabel ?? null}
           setActiveLabel={setActiveSpanLabel}
         />
         <DocTypeLabelDisplay />
-        <PDF read_only={true} />
+        <PDF read_only={false} />
       </PDFContainer>
     );
   } else if (
@@ -1053,7 +1200,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   };
 
   return (
-    <FullScreenModal open={true} onClose={onClose} closeIcon>
+    <FullScreenModal
+      id="knowledge-base-modal"
+      open={true}
+      onClose={onClose}
+      closeIcon
+    >
       <HeaderContainer>
         <div>
           <Header as="h2" style={{ margin: 0 }}>
@@ -1074,7 +1226,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         </div>
       </HeaderContainer>
 
-      <ContentArea>
+      <ContentArea id="content-area">
         {/* LEFT SIDEBAR TABS */}
         <TabsColumn
           collapsed={sidebarCollapsed}
@@ -1095,7 +1247,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           ))}
         </TabsColumn>
 
-        <MainContentArea>
+        <MainContentArea id="main-content-area">
           {/* The main content depends on which layer is active */}
           {activeLayer === "knowledge" ? (
             <SummaryContent className={showRightPanel ? "dimmed" : ""}>
@@ -1119,7 +1271,24 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             </SummaryContent>
           ) : (
             // Document layer
-            <div style={{ flex: 1, position: "relative" }}>{viewerContent}</div>
+            <div
+              id="document-layer"
+              style={{
+                flex: 1,
+                position: "relative",
+                /*
+                  Push the document to the left only when:
+                  1) Not mobile
+                  2) Right panel is open
+                */
+                marginRight:
+                  !isMobile && showRightPanel
+                    ? `${getPanelWidth(width)}px`
+                    : undefined,
+              }}
+            >
+              {viewerContent}
+            </div>
           )}
 
           {/* FLOATING LAYER SWITCHER (bottom-right) */}
@@ -1139,9 +1308,9 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           <AnimatePresence>
             {showRightPanel && (
               <SlidingPanel
-                initial={{ transform: "translateX(100%)", opacity: 0 }}
-                animate={{ transform: "translateX(0%)", opacity: 1 }}
-                exit={{ transform: "translateX(100%)", opacity: 0 }}
+                initial={{ x: "100%", opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: "100%", opacity: 0 }}
                 transition={{
                   duration: 0.3,
                   ease: [0.4, 0, 0.2, 1],
@@ -1152,7 +1321,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   <ControlButton
                     onClick={() => {
                       setShowRightPanel(false);
-                      setActiveTab(""); // Clear the active tab when closing
+                      setActiveTab("");
                     }}
                   >
                     <ArrowLeft color="red" />

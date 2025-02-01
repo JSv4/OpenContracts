@@ -7,7 +7,10 @@ import { LabelSelectorDialog } from "./LabelSelectorDialog";
 import { TruncatedText } from "../../../widgets/data-display/TruncatedText";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 import { useCorpusState } from "../../context/CorpusAtom";
-import { useSelectedDocument } from "../../context/DocumentAtom";
+import {
+  useDocumentType,
+  useSelectedDocument,
+} from "../../context/DocumentAtom";
 
 interface LabelSelectorProps {
   sidebarWidth: string;
@@ -24,14 +27,15 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
   const [open, setOpen] = useState(false);
 
   const { selectedDocument } = useSelectedDocument();
+  const { documentType } = useDocumentType();
   const { humanSpanLabels, humanTokenLabels } = useCorpusState();
 
   const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
 
   const filteredLabelChoices = useMemo(() => {
     // Filter labels based on file type
-    const isTextFile = selectedDocument?.fileType?.startsWith("text/") ?? false;
-    const isPdfFile = selectedDocument?.fileType === "application/pdf" ?? false;
+    const isTextFile = documentType.startsWith("text/") ?? false;
+    const isPdfFile = documentType === "application/pdf" ?? false;
 
     let availableLabels: AnnotationLabelType[] = [];
     if (isTextFile) {
@@ -39,8 +43,6 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
     } else if (isPdfFile) {
       availableLabels = [...humanTokenLabels];
     }
-    console.log("filtered for filetype", selectedDocument?.fileType);
-    console.log("availableLabels", availableLabels);
 
     // Filter out the active label if it exists
     return activeSpanLabel
@@ -145,19 +147,6 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
 
 const LabelSelectorContainer = styled.div`
   position: relative;
-`;
-
-const LoadingContainer = styled.div`
-  position: fixed;
-  z-index: 1000;
-  bottom: 2vh;
-  right: 2vw;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  padding: 10px;
 `;
 
 const LabelSelectorWidgetContainer = styled.div<{ $sidebarWidth: string }>`

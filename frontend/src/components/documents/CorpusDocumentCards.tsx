@@ -15,6 +15,7 @@ import {
   openedDocument,
   showUploadNewDocumentsModal,
   uploadModalPreloadedFiles,
+  showKnowledgeBaseModal,
 } from "../../graphql/cache";
 import {
   REMOVE_DOCUMENTS_FROM_CORPUS,
@@ -171,7 +172,12 @@ export const CorpusDocumentCards = ({
   };
 
   const onOpen = (document: DocumentType) => {
-    openedDocument(document);
+    // openedDocument(document);
+    showKnowledgeBaseModal({
+      isOpen: true,
+      documentId: document.id,
+      corpusId: opened_corpus_id,
+    });
   };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {

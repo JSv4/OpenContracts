@@ -48,7 +48,10 @@ import {
   docTypeAnnotationsAtom,
   initialAnnotationsAtom,
 } from "../context/AnnotationAtoms";
-import { selectedDocumentAtom } from "../context/DocumentAtom";
+import {
+  selectedDocumentAtom,
+  useDocumentState,
+} from "../context/DocumentAtom";
 import { LabelType } from "../types/enums";
 import { getPermissions } from "../../../utils/transform";
 import { SpanAnnotationJson } from "../../types";
@@ -873,7 +876,7 @@ export function useUpdateRelations() {
 export function useRemoveAnnotationFromRelationship() {
   const { pdfAnnotations, setPdfAnnotations } = usePdfAnnotations();
   const { selectedCorpus } = useCorpusState();
-  const selectedDocument = useAtomValue(selectedDocumentAtom);
+  const { activeDocument } = useDocumentState();
 
   const [deleteRelationMutation] = useMutation<
     RemoveRelationshipOutputType,
@@ -918,7 +921,7 @@ export function useRemoveAnnotationFromRelationship() {
 
   const handleRemoveAnnotationFromRelationship = useCallback(
     async (annotationId: string, relationId: string) => {
-      if (!selectedCorpus || !selectedDocument) {
+      if (!selectedCorpus || !activeDocument) {
         toast.warning("No corpus or document selected");
         return;
       }
@@ -964,7 +967,7 @@ export function useRemoveAnnotationFromRelationship() {
                   targetIds: relation.targetIds,
                   relationshipLabelId: relation.label.id,
                   corpusId: selectedCorpus.id,
-                  documentId: selectedDocument.id,
+                  documentId: activeDocument.id,
                 },
               ],
             },
@@ -991,7 +994,7 @@ export function useRemoveAnnotationFromRelationship() {
     },
     [
       selectedCorpus,
-      selectedDocument,
+      activeDocument,
       calcRelationUpdatesForAnnotationRemoval,
       deleteRelationMutation,
       updateRelationMutation,

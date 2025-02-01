@@ -311,3 +311,55 @@ export function useSetViewStateError() {
   const [, setViewStateError] = useAtom(setViewStateErrorAtom);
   return setViewStateError;
 }
+
+/**
+ * A hook that returns the entire document state, plus methods to perform
+ * batch updates and derived permission checks.
+ */
+export function useDocumentState() {
+  const [activeDocument, setActiveDocument] = useAtom(selectedDocumentAtom);
+
+  /**
+   * Batch-update the document state to avoid multiple, separate set calls.
+   *
+   * @param partial partial object to merge into the DocumentState
+   */
+  function setDocument(partial: Partial<DocumentType>) {
+    setActiveDocument((prev) => {
+      if (prev === null) {
+        return { ...partial } as DocumentType; // Ensure it returns a DocumentType
+      }
+      return { ...prev, ...partial };
+    });
+  }
+
+  // Compute permission checks as derived state
+  const canUpdateDocument =
+    activeDocument?.myPermissions?.includes(PermissionTypes.CAN_UPDATE) ||
+    false;
+  const canDeleteDocument =
+    activeDocument?.myPermissions?.includes(PermissionTypes.CAN_REMOVE) ||
+    false;
+
+  /**
+   * Helper to check for a given permission type in the document permissions.
+   *
+   * @param permission a specific PermissionTypes value to be checked
+   */
+  function hasDocumentPermission(permission: PermissionTypes): boolean {
+    return activeDocument?.myPermissions?.includes(permission) || false;
+  }
+
+  // Memoize for performance, so consumers don't re-render unnecessarily
+  return useMemo(
+    () => ({
+      // State
+      activeDocument,
+      setDocument,
+      canUpdateDocument,
+      canDeleteDocument,
+      hasDocumentPermission,
+    }),
+    [activeDocument, canUpdateDocument, canDeleteDocument]
+  );
+}

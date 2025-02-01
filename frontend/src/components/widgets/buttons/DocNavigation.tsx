@@ -14,7 +14,7 @@ interface DocNavigationProps {
 export const StyledNavigation = styled.div<{ isExpanded: boolean }>`
   /* Default for desktop: absolute as before */
   position: absolute;
-  top: 80px;
+  top: 1.5rem;
   left: 1.5rem;
   z-index: 900;
   display: flex;

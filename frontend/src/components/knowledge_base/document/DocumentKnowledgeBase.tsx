@@ -34,6 +34,7 @@ import {
   FileType,
   ArrowLeft,
   Search,
+  BarChart3,
 } from "lucide-react";
 import {
   GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
@@ -126,6 +127,13 @@ import {
 import { NoteModal, NotesGrid, PostItNote, NotesHeader } from "./StickyNotes";
 import { SearchSidebarWidget } from "../../annotator/search_widget/SearchSidebarWidget";
 import { useTextSearch } from "../../annotator/hooks/useTextSearch";
+import {
+  useAnalysisManager,
+  useAnalysisSelection,
+} from "../../annotator/hooks/AnalysisHooks";
+import ExtractTraySelector from "../../analyses/ExtractTraySelector";
+import AnalysisTraySelector from "../../analyses/AnalysisTraySelector";
+import { SingleDocumentExtractResults } from "../../annotator/sidebar/SingleDocumentExtractResults";
 
 const pdfjsLib = require("pdfjs-dist");
 
@@ -299,6 +307,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
   const [markdownError, setMarkdownError] = useState<boolean>(false);
 
+  const { analyses, extracts, onSelectAnalysis, onSelectExtract } =
+    useAnalysisManager();
+  const { selectedExtract } = useAnalysisSelection();
+
   useTextSearch();
 
   useEffect(() => {
@@ -308,6 +320,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       selectedIndex: 0,
     });
   }, [setTextSearchState]);
+
+  useEffect(() => {
+    // Reset or set the default selections.
+    onSelectAnalysis(null);
+    onSelectExtract(null);
+  }, []);
 
   /**
    * processAnnotationsData
@@ -491,7 +509,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         ])
           .then(([pdfDocProxy, pawlsData]) => {
             setPdfDoc(pdfDocProxy);
-            console.log("Loaded pawls data:", pawlsData);
 
             const loadPages: Promise<PDFPageInfo>[] = [];
             for (let i = 1; i <= pdfDocProxy.numPages; i++) {
@@ -516,7 +533,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             setPages(loadedPages);
             let { doc_text, string_index_token_map } =
               createTokenStringSearch(loadedPages);
-            console.log("Doc text:", doc_text);
+            // console.log("Doc text:", doc_text);
             setPageTextMaps({
               ...string_index_token_map,
               ...pageTextMaps,
@@ -823,9 +840,14 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     },
   ];
 
-  // Decide which tabs to show based on active layer
-  const visibleTabs =
-    activeLayer === "knowledge" ? knowledgeTabs : documentTabs;
+  // Find your visibleTabs declaration (near line ~XXX) and update it:
+  const baseTabs = activeLayer === "knowledge" ? knowledgeTabs : documentTabs;
+  const extraTabs = [
+    { key: "analyses", label: "Analyses", icon: <BarChart3 size={18} /> },
+    { key: "extracts", label: "Extracts", icon: <FileText size={18} /> },
+  ];
+  // Combine the two arrays (for example, add extraTabs to the left nav):
+  const visibleTabs = [...baseTabs, ...extraTabs];
 
   // Decide if we show the right panel
   useEffect(() => {
@@ -845,6 +867,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           "annotations",
           "relations",
           "labels",
+          "analyses",
+          "extracts",
         ].includes(activeTab)
       );
     }
@@ -1098,6 +1122,75 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         return <RelationsPanel />;
       case "labels":
         return <LabelsPanel />;
+      case "analyses":
+        return (
+          <div style={{ padding: "1rem" }}>
+            <AnalysisTraySelector read_only={false} analyses={analyses} />
+          </div>
+        );
+      case "extracts":
+        return (
+          <div style={{ padding: "1rem" }}>
+            <AnimatePresence exitBeforeEnter>
+              {selectedExtract ? (
+                <motion.div
+                  key="selected-extract"
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      marginBottom: "1rem",
+                      padding: "0.5rem",
+                      background: "#f7f9f9",
+                      borderRadius: "8px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ margin: 0 }}>{selectedExtract.name}</h3>
+                      <p
+                        style={{ margin: 0, fontSize: "0.9rem", color: "#555" }}
+                      >
+                        {"Placeholder for narrative content"}
+                      </p>
+                    </div>
+                    <Button size="small" onClick={() => onSelectExtract(null)}>
+                      Unselect
+                    </Button>
+                  </div>
+                  <motion.div
+                    key="extract-results"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <SingleDocumentExtractResults
+                      datacells={
+                        (selectedExtract.fullDatacellList as any[]) || []
+                      }
+                      columns={
+                        (selectedExtract.fullDatacellList as any[]) || []
+                      }
+                    />
+                  </motion.div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="extract-selector"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <ExtractTraySelector read_only={false} extracts={extracts} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
       default:
         return null;
     }

@@ -177,6 +177,15 @@ const FullScreenModal = styled(Modal)`
   }
 `;
 
+const SourceIndicator = styled.div`
+  padding: 0.5rem;
+  background: #eef2ff;
+  border-left: 3px solid #818cf8;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  color: #4338ca;
+`;
+
 interface DocumentKnowledgeBaseProps {
   documentId: string;
   corpusId: string;
@@ -219,16 +228,42 @@ const SafeMarkdown: React.FC<{ children: string }> = ({ children }) => {
 
 // Panels from the old "AnnotatorSidebar":
 const AnnotationsPanel: React.FC = () => {
+  const { selectedAnalysis } = useAnalysisSelection();
+  const { selectedExtract } = useAnalysisSelection();
+
   return (
     <div className="sidebar__annotations" style={{ padding: "1rem" }}>
+      {selectedAnalysis && (
+        <SourceIndicator>
+          Showing annotations from analysis: {selectedAnalysis.analyzer.id}
+        </SourceIndicator>
+      )}
+      {selectedExtract && (
+        <SourceIndicator>
+          Showing annotations from extract: {selectedExtract.name}
+        </SourceIndicator>
+      )}
       <AnnotationList read_only={false} />
     </div>
   );
 };
 
 const RelationsPanel: React.FC = () => {
+  const { selectedAnalysis } = useAnalysisSelection();
+  const { selectedExtract } = useAnalysisSelection();
+
   return (
     <div className="sidebar__relation__annotation" style={{ padding: "1rem" }}>
+      {selectedAnalysis && (
+        <SourceIndicator>
+          Showing relationships from analysis: {selectedAnalysis.analyzer.id}
+        </SourceIndicator>
+      )}
+      {selectedExtract && (
+        <SourceIndicator>
+          Showing relationships from extract: {selectedExtract.name}
+        </SourceIndicator>
+      )}
       <RelationshipList read_only={false} />
     </div>
   );
@@ -293,13 +328,13 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     pageTokenTextMaps: pageTextMaps,
     setPageTokenTextMaps: setPageTextMaps,
   } = usePageTokenTextMaps();
-  const { pages, setPages } = usePages();
+  const { setPages } = usePages();
   const [_, setPdfAnnotations] = useAtom(pdfAnnotationsAtom);
   const [, setStructuralAnnotations] = useAtom(structuralAnnotationsAtom);
   const [, setDocTypeAnnotations] = useAtom(docTypeAnnotationsAtom);
   const { setCorpus } = useCorpusState();
   const { setInitialAnnotations } = useInitialAnnotations();
-  const { searchText, setSearchText } = useSearchText();
+  const { setSearchText } = useSearchText();
   const { setTextSearchState } = useTextSearchState();
   const { scrollContainerRef, registerRef } = useAnnotationRefs();
   const { activeSpanLabel, setActiveSpanLabel } = useAnnotationControls();
@@ -307,9 +342,20 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
   const [markdownError, setMarkdownError] = useState<boolean>(false);
 
-  const { analyses, extracts, onSelectAnalysis, onSelectExtract } =
-    useAnalysisManager();
-  const { selectedExtract } = useAnalysisSelection();
+  const { selectedAnalysis, selectedExtract } = useAnalysisSelection();
+
+  const {
+    dataCells,
+    columns,
+    analyses,
+    extracts,
+    onSelectAnalysis,
+    onSelectExtract,
+  } = useAnalysisManager();
+
+  useEffect(() => {
+    console.log("Selected extract:", selectedExtract);
+  }, [selectedExtract]);
 
   useTextSearch();
 
@@ -1169,12 +1215,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                     transition={{ delay: 0.2 }}
                   >
                     <SingleDocumentExtractResults
-                      datacells={
-                        (selectedExtract.fullDatacellList as any[]) || []
-                      }
-                      columns={
-                        (selectedExtract.fullDatacellList as any[]) || []
-                      }
+                      datacells={dataCells}
+                      columns={columns}
                     />
                   </motion.div>
                 </motion.div>

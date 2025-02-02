@@ -485,7 +485,6 @@ export const DocumentAnnotator = ({
     columns,
     analyses,
     extracts,
-    resetStates: analysisResetStates,
     onSelectAnalysis,
     onSelectExtract,
   } = useAnalysisManager();

@@ -71,13 +71,8 @@ export const DocumentCards = ({
     <PlaceholderCard
       key="PlaceholderCard"
       title="No Matching Documents..."
-      include_image
       style={{
         height: "40vh",
-      }}
-      image_style={{
-        height: "30vh",
-        width: "auto",
       }}
     />,
   ];

@@ -84,11 +84,17 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
   const { spanLabelsToView } = useAnnotationControls();
   const { annotations, relations } = pdfAnnotations;
 
+  // Add debug logging
+  console.log("AnnotationList received annotations:", annotations.length);
+
   /**
    * Filter out structural annotations (if hidden),
    * and filter by user-selected labels if any.
    */
   const filteredAnnotations = useMemo(() => {
+    // Add debug logging
+    console.log("Filtering annotations, count before:", annotations.length);
+
     const returnAnnotations = annotations.filter(
       (annotation) =>
         (showStructural || !annotation.structural) &&
@@ -97,6 +103,9 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
             (label) => label.id === annotation.annotationLabel.id
           ))
     );
+
+    // Add debug logging
+    console.log("Filtered annotations, count after:", returnAnnotations.length);
     return returnAnnotations;
   }, [annotations, showStructural, spanLabelsToView]);
 

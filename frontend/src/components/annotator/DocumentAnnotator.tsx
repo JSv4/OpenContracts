@@ -590,9 +590,8 @@ export const DocumentAnnotator = ({
         ),
         ...annotations,
       ]);
-      // Assuming there are methods to clear docTypeAnnotations and setPdfAnnotations appropriately
       setDocTypeAnnotations([]);
-      replaceRelations([], []); // Adjust based on actual hook implementation
+      replaceRelations([]);
     }
   }, [
     displayOnlyTheseAnnotations,

@@ -228,8 +228,7 @@ const SafeMarkdown: React.FC<{ children: string }> = ({ children }) => {
 
 // Panels from the old "AnnotatorSidebar":
 const AnnotationsPanel: React.FC = () => {
-  const { selectedAnalysis } = useAnalysisSelection();
-  const { selectedExtract } = useAnalysisSelection();
+  const { selectedAnalysis, selectedExtract } = useAnalysisSelection();
 
   return (
     <div className="sidebar__annotations" style={{ padding: "1rem" }}>
@@ -352,10 +351,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     onSelectAnalysis,
     onSelectExtract,
   } = useAnalysisManager();
-
-  useEffect(() => {
-    console.log("Selected extract:", selectedExtract);
-  }, [selectedExtract]);
 
   useTextSearch();
 
@@ -516,7 +511,11 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   );
 
   // Fetch combined knowledge & annotation data
-  const { data: combinedData, loading } = useQuery<
+  const {
+    data: combinedData,
+    loading,
+    refetch,
+  } = useQuery<
     GetDocumentKnowledgeAndAnnotationsOutput,
     GetDocumentKnowledgeAndAnnotationsInput
   >(GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS, {
@@ -617,6 +616,26 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     },
     skip: !documentId || !corpusId,
   });
+
+  useEffect(() => {
+    if (!loading) {
+      refetch({
+        documentId,
+        corpusId,
+        analysisId: selectedAnalysis?.id,
+      });
+    }
+  }, [selectedAnalysis, corpusId, refetch]);
+
+  useEffect(() => {
+    if (!loading) {
+      refetch({
+        documentId,
+        corpusId,
+        analysisId: selectedExtract?.id,
+      });
+    }
+  }, [selectedExtract, corpusId, refetch]);
 
   const metadata = combinedData?.document ?? {
     title: "Loading...",

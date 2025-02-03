@@ -93,12 +93,8 @@ export function usePdfAnnotations() {
       replacementAnnotations: (ServerTokenAnnotation | ServerSpanAnnotation)[]
     ) => {
       setPdfAnnotations((prev) => {
-        const updatedIds = replacementAnnotations.map((a) => a.id);
-        const unchangedAnnotations = prev.annotations.filter(
-          (a) => !updatedIds.includes(a.id)
-        );
         return new PdfAnnotations(
-          [...unchangedAnnotations, ...replacementAnnotations],
+          replacementAnnotations,
           prev.relations,
           prev.docTypes,
           true
@@ -112,22 +108,13 @@ export function usePdfAnnotations() {
    * Replaces relations in the current PdfAnnotations state.
    *
    * @param replacementRelations An array of relations to replace.
-   * @param relationsToRemove    An array of relations to remove.
    */
   const replaceRelations = useCallback(
-    (
-      replacementRelations: RelationGroup[],
-      relationsToRemove: RelationGroup[] = []
-    ) => {
+    (replacementRelations: RelationGroup[]) => {
       setPdfAnnotations((prev) => {
-        const updatedIds = replacementRelations.map((r) => r.id);
-        const removedIds = relationsToRemove.map((r) => r.id);
-        const relations = prev.relations.filter(
-          (r) => !updatedIds.includes(r.id) && !removedIds.includes(r.id)
-        );
         return new PdfAnnotations(
           prev.annotations,
-          [...relations, ...replacementRelations],
+          replacementRelations,
           prev.docTypes,
           true
         );

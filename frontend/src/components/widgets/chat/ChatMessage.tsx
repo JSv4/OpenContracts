@@ -19,10 +19,12 @@ export interface ChatMessageProps {
 const MessageContainer = styled(motion.div)<{ $isAssistant: boolean }>`
   display: flex;
   gap: 1rem;
-  padding: 0.5rem 1.5rem;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s ease-in-out;
 
   &:hover {
-    background: rgba(247, 248, 249, 0.7);
+    background: rgba(247, 248, 249, 0.9);
+    backdrop-filter: blur(8px);
   }
 
   /* Add responsive padding */
@@ -40,7 +42,7 @@ const MessageContainer = styled(motion.div)<{ $isAssistant: boolean }>`
 const Avatar = styled.div<{ $isAssistant: boolean }>`
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 12px;
+  border-radius: ${(props) => (props.$isAssistant ? "16px" : "12px")};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,13 +53,25 @@ const Avatar = styled.div<{ $isAssistant: boolean }>`
       : "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)"};
   box-shadow: ${(props) =>
     props.$isAssistant
-      ? "0 2px 4px rgba(33, 133, 208, 0.2)"
-      : "0 2px 4px rgba(0, 0, 0, 0.05)"};
+      ? "0 4px 12px rgba(33, 133, 208, 0.2)"
+      : "0 4px 12px rgba(0, 0, 0, 0.05)"};
   color: ${(props) => (props.$isAssistant ? "white" : "#495057")};
+  transform: translateY(0);
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: ${(props) =>
+      props.$isAssistant
+        ? "0 6px 16px rgba(33, 133, 208, 0.25)"
+        : "0 6px 16px rgba(0, 0, 0, 0.08)"};
+  }
 
   svg {
     width: 1.2rem;
     height: 1.2rem;
+    filter: ${(props) =>
+      props.$isAssistant ? "drop-shadow(0 2px 4px rgba(0,0,0,0.1))" : "none"};
   }
 
   /* Adjust avatar size on mobile */
@@ -83,13 +97,16 @@ const MessageContent = styled.div<{ $isAssistant: boolean }>`
     props.$isAssistant
       ? "linear-gradient(to right, #f8f9fa, #ffffff)"
       : "linear-gradient(to right, #e9ecef, #f1f3f5)"};
-  border-radius: 1rem;
-  padding: 1rem 1.25rem;
+  border-radius: 1.25rem;
+  padding: 1.25rem 1.5rem;
   color: #212529;
   font-size: 0.95rem;
-  line-height: 1.5;
+  line-height: 1.6;
   position: relative;
   margin-bottom: 0.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(231, 234, 237, 0.7);
+  backdrop-filter: blur(8px);
   word-wrap: break-word;
   overflow-wrap: break-word;
 
@@ -115,17 +132,19 @@ const MessageContent = styled.div<{ $isAssistant: boolean }>`
 
   pre {
     background: rgba(0, 0, 0, 0.03);
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
   }
 
   code {
-    font-family: ui-monospace, monospace;
+    font-family: ui-monospace, "SF Mono", Monaco, monospace;
     font-size: 0.9em;
     padding: 0.2em 0.4em;
     background: rgba(0, 0, 0, 0.03);
     border-radius: 0.25rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   pre code {
@@ -201,23 +220,26 @@ const SourcesContainer = styled.div`
 const SourceButton = styled.button`
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
   background: white;
   border: 1px solid rgba(33, 133, 208, 0.2);
   border-radius: 2rem;
   color: #2185d0;
-  font-size: 0.75rem;
-  transition: all 0.2s ease;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-shadow: 0 2px 4px rgba(33, 133, 208, 0.05);
 
   &:hover {
     background: rgba(33, 133, 208, 0.1);
     border-color: #2185d0;
     transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(33, 133, 208, 0.1);
   }
 
   &:active {
@@ -227,18 +249,12 @@ const SourceButton = styled.button`
   svg {
     width: 0.875rem;
     height: 0.875rem;
+    stroke-width: 2.5;
+    transition: transform 0.2s ease;
   }
 
-  /* Mobile optimizations */
-  @media (max-width: 768px) {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
-    max-width: 150px;
-
-    svg {
-      width: 0.75rem;
-      height: 0.75rem;
-    }
+  &:hover svg {
+    transform: translateX(2px);
   }
 `;
 
@@ -256,14 +272,15 @@ const Timestamp = styled.div`
 
 const UserName = styled.div`
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #495057;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.375rem;
   padding-left: 0.25rem;
+  letter-spacing: -0.01em;
 
   @media (max-width: 480px) {
     font-size: 0.8rem;
-    margin-bottom: 0.125rem;
+    margin-bottom: 0.25rem;
   }
 `;
 

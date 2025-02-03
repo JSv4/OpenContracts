@@ -187,32 +187,21 @@ export const useAnalysisManager = () => {
 
   // Fetch annotations for the selected analysis.
   useEffect(() => {
-    if (selected_analysis) {
-      console.log(
-        "selected_analysis changed in AnalysisHooks",
-        selected_analysis
-      );
-      setAllowUserInput(false);
-      setSelectedExtract(null);
-
-      // Clear existing annotations and datacell data
+    if (!selected_analysis) {
+      // Just clear annotations when selection is cleared
       replaceAnnotations([]);
       replaceDocTypeAnnotations([]);
       setDataCells([]);
-
-      fetchAnnotationsForAnalysis({
-        variables: {
-          analysisId: selected_analysis.id,
-          documentId: selectedDocument?.id ?? "",
-        },
-      });
-    } else {
-      setAllowUserInput(true);
-
-      // Restore initial annotations
-      replaceAnnotations(initialAnnotations);
+      return;
     }
-  }, [selected_analysis?.id, selectedDocument?.id, selectedCorpus?.id]);
+
+    // Otherwise fetch new annotations
+    fetchAnnotationsForAnalysis({
+      variables: {
+        analysisId: selected_analysis.id,
+      },
+    });
+  }, [selected_analysis]);
 
   // Update query loading states and errors for annotations
   useEffect(() => {
@@ -244,6 +233,8 @@ export const useAnalysisManager = () => {
       replaceAnnotations([]);
       replaceDocTypeAnnotations([]);
       setDataCells([]);
+
+      console.log("Annotations data retrieved!", annotationsData);
 
       // Process span annotations
       const rawSpanAnnotations =

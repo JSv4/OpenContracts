@@ -38,6 +38,7 @@ const ExtractTraySelector: React.FC<ExtractTraySelectorProps> = ({
   const { width } = useWindowDimensions();
   const { selectedCorpus } = useCorpusState();
   const { selectedExtract, setSelectedExtract } = useAnalysisSelection();
+  const { onSelectExtract } = useAnalysisManager();
 
   const [searchTerm, setSearchTerm] = useState<string>("");
 
@@ -94,7 +95,7 @@ const ExtractTraySelector: React.FC<ExtractTraySelectorProps> = ({
           console.log(
             `Selected extract: ${item.id}, previously selected: ${selectedExtract?.id}`
           );
-          setSelectedExtract(
+          onSelectExtract(
             selectedExtract && item.id === selectedExtract.id ? null : item
           );
         }}
@@ -106,7 +107,7 @@ const ExtractTraySelector: React.FC<ExtractTraySelectorProps> = ({
     read_only,
     selectedExtract,
     selectedCorpus,
-    selectedExtract,
+    onSelectExtract,
   ]);
 
   return (

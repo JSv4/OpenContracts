@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Button, Card, Input, Modal, Segment } from "semantic-ui-react";
-import styled, { keyframes } from "styled-components";
+import styled, { keyframes, css } from "styled-components";
 import { ArrowLeft } from "lucide-react";
 
 export const HeaderContainer = styled(Segment)`
@@ -453,47 +453,152 @@ export const RelationshipType = styled.div`
   margin-bottom: 0.75rem;
 `;
 
-// Add these styled components for our shimmer effect
-export const shimmerAnimation = keyframes`
+// Add new shimmer animation with a more pronounced effect
+const shimmerAnimation = keyframes`
   0% {
     background-position: -1000px 0;
+  }
+  50% {
+    background-position: 0 0;
   }
   100% {
     background-position: 1000px 0;
   }
 `;
 
+// Enhanced base placeholder with better visual feedback
 export const PlaceholderBase = styled.div`
-  background: linear-gradient(90deg, #f0f0f0 0%, #f7f7f7 50%, #f0f0f0 100%);
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #f8f9fa 20%,
+    #e9ecef 40%,
+    #f8f9fa 60%,
+    #f0f0f0 80%
+  );
   background-size: 1000px 100%;
-  animation: ${shimmerAnimation} 2s infinite linear;
+  animation: ${shimmerAnimation} 2.5s infinite ease-in-out;
   border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.4),
+      transparent
+    );
+    transform: translateX(-100%);
+    animation: shimmerOverlay 2.5s infinite;
+  }
 `;
 
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
+
+export const PlaceholderItem = styled(PlaceholderBase)<{ delay: number }>`
+  opacity: 0;
+  animation: ${shimmerAnimation} 2.5s infinite ease-in-out,
+    ${fadeIn} 0.5s forwards;
+  animation-delay: ${(props) => props.delay}s;
+`;
+
+// Add new loading container for document viewer
+export const DocumentLoadingContainer = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 90%;
+  max-width: 600px;
+
+  .progress-text {
+    color: #2185d0;
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-top: 1rem;
+    opacity: 0.9;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+
+    .progress-fill {
+      height: 100%;
+      background: #2185d0;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+      position: relative;
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.3),
+          transparent
+        );
+        animation: progressPulse 1.5s infinite;
+      }
+    }
+  }
+`;
+
+// Enhanced summary placeholder
 export const SummaryPlaceholder = styled.div`
-  padding: 3rem;
+  padding: 2rem;
   max-width: 800px;
   margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
 
   ${PlaceholderBase} {
-    height: 28px;
-    margin-bottom: 1.5rem;
+    height: 24px;
+    margin-bottom: 1.25rem;
+    opacity: 0;
+    animation: ${shimmerAnimation} 2.5s infinite ease-in-out,
+      fadeIn 0.5s forwards;
 
     &:nth-child(1) {
-      width: 70%;
+      width: 60%;
+      animation-delay: 0.1s;
     }
     &:nth-child(2) {
-      width: 90%;
+      width: 95%;
+      animation-delay: 0.2s;
     }
     &:nth-child(3) {
       width: 85%;
+      animation-delay: 0.3s;
     }
     &:nth-child(4) {
-      width: 95%;
+      width: 90%;
+      animation-delay: 0.4s;
     }
-
-    &:last-child {
-      margin-bottom: 0;
+    &:nth-child(5) {
+      width: 75%;
+      animation-delay: 0.5s;
     }
   }
 `;
@@ -564,16 +669,15 @@ export const RelationshipPlaceholder = styled(motion.div)`
   }
 `;
 
+// Enhanced LoadingPlaceholders component
 export const LoadingPlaceholders: React.FC<{
   type: "summary" | "notes" | "relationships";
 }> = ({ type }) => {
-  const placeholderCount = 3;
-
   if (type === "summary") {
     return (
       <SummaryPlaceholder>
-        {[...Array(4)].map((_, i) => (
-          <PlaceholderBase key={i} />
+        {[...Array(5)].map((_, i) => (
+          <PlaceholderItem key={i} delay={i * 0.1} />
         ))}
       </SummaryPlaceholder>
     );
@@ -581,7 +685,7 @@ export const LoadingPlaceholders: React.FC<{
 
   return (
     <>
-      {[...Array(placeholderCount)].map((_, i) => {
+      {[...Array(3)].map((_, i) => {
         const Placeholder =
           type === "notes" ? NotePlaceholder : RelationshipPlaceholder;
         return (
@@ -589,18 +693,37 @@ export const LoadingPlaceholders: React.FC<{
             key={i}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: i * 0.1 }}
+            transition={{
+              duration: 0.4,
+              delay: i * 0.15,
+              ease: [0.4, 0, 0.2, 1],
+            }}
           >
-            <PlaceholderBase className={type === "notes" ? "header" : "type"} />
+            <PlaceholderBase
+              className={type === "notes" ? "header" : "type"}
+              style={{ animationDelay: `${i * 0.1}s` }}
+            />
             {type === "notes" ? (
               <>
-                <PlaceholderBase className="content" />
-                <PlaceholderBase className="content" />
+                <PlaceholderBase
+                  className="content"
+                  style={{ animationDelay: `${i * 0.1 + 0.1}s` }}
+                />
+                <PlaceholderBase
+                  className="content"
+                  style={{ animationDelay: `${i * 0.1 + 0.2}s` }}
+                />
               </>
             ) : (
               <>
-                <PlaceholderBase className="title" />
-                <PlaceholderBase className="meta" />
+                <PlaceholderBase
+                  className="title"
+                  style={{ animationDelay: `${i * 0.1 + 0.1}s` }}
+                />
+                <PlaceholderBase
+                  className="meta"
+                  style={{ animationDelay: `${i * 0.1 + 0.2}s` }}
+                />
               </>
             )}
           </Placeholder>

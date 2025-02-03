@@ -12,6 +12,8 @@ import os
 
 import django
 
+from config.websocket.consumers.corpus_conversation import CorpusQueryConsumer
+
 # This is intentional to avoid Django breaking on startup
 django.setup()  # noqa: E402
 
@@ -40,12 +42,19 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 # This application object is used by any ASGI server configured to use this file.
 django_application = get_asgi_application()
 
-# Define websocket URL patterns
+document_query_pattern = re_path(
+    r"ws/document/(?P<document_id>[-a-zA-Z0-9_=]+)/query/$",
+    DocumentQueryConsumer.as_asgi(),
+)
+
+corpus_query_pattern = re_path(
+    r"ws/corpus/(?P<corpus_id>[-a-zA-Z0-9_=]+)/query/$",
+    CorpusQueryConsumer.as_asgi(),
+)
+
 websocket_urlpatterns = [
-    re_path(
-        r"ws/document/(?P<document_id>[-a-zA-Z0-9_=]+)/query/$",
-        DocumentQueryConsumer.as_asgi(),
-    ),
+    document_query_pattern,
+    corpus_query_pattern,
 ]
 
 # Log all registered websocket patterns

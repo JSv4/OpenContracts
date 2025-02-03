@@ -665,7 +665,7 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:
         model = Document
         interfaces = [relay.Node]
-        exclude = ("embedding",)
+        exclude = ("embedding","description_embedding")
         connection_class = CountableConnection
 
     @classmethod

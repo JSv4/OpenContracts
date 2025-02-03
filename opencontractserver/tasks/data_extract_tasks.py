@@ -590,6 +590,7 @@ async def oc_llama_index_doc_query(
             sbert_rerank = SentenceTransformerRerank(
                 model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=5
             )
+            logger.info(f"Reranked results: {sbert_rerank}")
             retrieved_nodes = sbert_rerank.postprocess_nodes(
                 results, QueryBundle(query)
             )

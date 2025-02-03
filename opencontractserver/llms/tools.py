@@ -3,6 +3,7 @@ This module contains a set of LlamaIndex-compatible tools for interacting with
 our Django models. These tools enable reading from document summary files,
 detailing token counts, retrieving and partially retrieving notes, etc.
 """
+import logging
 
 from typing import Optional, List, Dict
 
@@ -17,6 +18,7 @@ from django.db.models import Q
 from opencontractserver.documents.models import Document
 from opencontractserver.annotations.models import Note
 
+logger = logging.getLogger(__name__)
 
 def _token_count(text: str) -> int:
     """
@@ -59,6 +61,7 @@ def load_document_md_summary(
     # Read the md_summary_file
     with doc.md_summary_file.open("r") as file_obj:
         content = file_obj.read()
+        logger.info(f"Loaded md_summary_file for document {document_id}: {content}")
 
     # Convert truncate_length to int if it's a FieldInfo object
     if hasattr(truncate_length, 'default'):

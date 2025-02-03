@@ -3,6 +3,7 @@ import marvin
 import logging
 from django.conf import settings
 
+from opencontractserver.pipeline.utils import get_preferred_embedder
 from opencontractserver.shared.decorators import doc_analyzer_task
 from opencontractserver.types.dicts import TextSpan
 
@@ -214,7 +215,7 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
     2. **Knowledge Base Article Summary**  
     - **Parties Involved**: Identify all parties and their roles or obligations.  
     - **Key Dates**: Outline important dates (e.g., effective date, milestones, deadlines, renewal dates).  
-    - **Key Definitions**: List or paraphrase any critical definitions that shape the agreement.  
+    - **Key Definitions**: Lisst or paraphrase any critical definitions that shape the agreement.  
     - **Termination & Renewal Provisions**: Summarize any clauses that address how and when the contract can end or renew.
 
     3. **Notes on Referenced Documents & Regulations**  
@@ -266,13 +267,54 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
         
         return get_markdown_response(system_prompt, user_prompt)
     
+    def create_searchable_summary(full_summary: str) -> str:
+        """
+        Creates a concise, searchable summary from the full markdown summary,
+        optimized for document discovery.
+        
+        :param full_summary: The detailed markdown summary
+        :return: A 2-3 sentence searchable summary
+        """
+        system_prompt = (
+            "You are a legal knowledge management specialist. Your task is to create "
+            "a concise 2-3 sentence summary of a contract that will help paralegals "
+            "quickly find this document in a search index. Include specific details "
+            "like party names, dates, and particular context while maintaining clarity. "
+            "Focus on what makes this contract unique and identifiable."
+        )
+        
+        user_prompt = f"""\
+            Based on the following detailed contract summary, create a 2-3 sentence summary 
+            that would help paralegals quickly identify this specific contract in a search. 
+            Include proper names, dates, and specific context where available. The summary 
+            should be both accurate and distinctive enough to differentiate this contract 
+            from similar ones.
+
+            Detailed Summary:
+            {full_summary}
+            """
+        
+        return get_markdown_response(system_prompt, user_prompt)
+    
     doc = Document.objects.get(id=doc_id)
     
     summary = prompt_1_single_pass(pdf_text_extract)
     reference_notes = prompt_4_references(pdf_text_extract)
     cheat_sheet = prompt_5_bullet_points(pdf_text_extract)    
+    searchable_summary = create_searchable_summary(summary)
 
-    doc.md_summary_file=ContentFile(summary.encode("utf-8"), name="summary.md")
+    # Generate embeddings for the searchable summary
+    try:
+        embedder_class = get_preferred_embedder(doc.file_type)
+        if embedder_class:
+            embedder = embedder_class()
+            description_embeddings = embedder.embed_text(searchable_summary)
+            doc.description_embedding = description_embeddings
+    except Exception as e:
+        logger.error(f"Failed to generate description embeddings: {e}")
+
+    doc.md_summary_file = ContentFile(summary.encode("utf-8"), name="summary.md")
+    doc.description = searchable_summary
     doc.save()
     
     Note.objects.create(

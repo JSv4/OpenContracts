@@ -69,6 +69,7 @@ class Document(BaseOCModel):
 
     # Vector for vector search
     embedding = VectorField(dimensions=384, null=True, blank=True)
+    description_embedding = VectorField(dimensions=384, null=True, blank=True)
 
     class Meta:
         permissions = (

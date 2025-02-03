@@ -13,23 +13,21 @@ and encapsulates database operations for reading/writing conversation messages.
 
 import json
 import logging
-from typing import Any, Optional, Type
-
-from graphql_relay import from_global_id
+from typing import Any
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from llama_index.core.chat_engine.types import (
-    StreamingAgentChatResponse,
-)
+from graphql_relay import from_global_id
+from llama_index.core.chat_engine.types import StreamingAgentChatResponse
 
 from config.websocket.utils.extract_ids import extract_websocket_path_id
-from opencontractserver.conversations.models import (
-    Conversation,
-)
+from opencontractserver.conversations.models import Conversation
 from opencontractserver.documents.models import Document
-from opencontractserver.llms.agents import MessageType, OpenContractDbAgent, create_document_agent
-
+from opencontractserver.llms.agents import (
+    MessageType,
+    OpenContractDbAgent,
+    create_document_agent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +41,8 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
     human and LLM messages. Streams or returns results back to the client.
     """
 
-    conversation: Optional[Conversation] = None
-    agent: Optional[OpenContractDbAgent] = None
+    conversation: Conversation | None = None
+    agent: OpenContractDbAgent | None = None
 
     async def connect(self) -> None:
         """
@@ -71,7 +69,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
             # Load the Document from DB
             self.document = await Document.objects.aget(id=self.document_id)
-            
+
             underlying_llama_agent = await create_document_agent(
                 document=self.document_id,
                 user_id=self.scope["user"].id,
@@ -79,7 +77,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
             # Create our conversation record
             logger.debug("Creating conversation record...")
-            self.conversation = await database_sync_to_async(Conversation.objects.create)(
+            self.conversation = await database_sync_to_async(
+                Conversation.objects.create
+            )(
                 creator=self.scope["user"],
                 title=f"Document {self.document_id} Conversation",
                 chat_with_document=self.document,
@@ -88,7 +88,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             # Initialize our custom DocumentAgent instance
             self.agent = OpenContractDbAgent(
                 conversation=self.conversation,
-                user_id=self.scope["user"].id if self.scope["user"].is_authenticated else None,
+                user_id=self.scope["user"].id
+                if self.scope["user"].is_authenticated
+                else None,
                 agent=underlying_llama_agent,
             )
 
@@ -134,9 +136,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
     async def send_standard_message(
         self,
-        msg_type: Type[MessageType],
+        msg_type: type[MessageType],
         content: str = "",
-        data: Optional[dict[str, Any]] = None,
+        data: dict[str, Any] | None = None,
     ) -> None:
         """
         Sends a standardized message over the WebSocket in JSON format.

@@ -26,10 +26,10 @@ const onSelectExtract = (extract: ExtractType | null) => {
    if (datacellsData?.extract && selectedDocument?.id) {
      const filteredDatacells = datacellsData.extract.fullDatacellList
        .filter((datacell) => datacell.document?.id === selectedDocument.id);
-     
+
      setDataCells(filteredDatacells);
      setColumns(datacellsData.extract.fieldset.fullColumnList);
-     
+
      // Process associated annotations
      const processedAnnotations = filteredDatacells
        .flatMap((datacell) => datacell.fullSourceList)

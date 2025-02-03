@@ -70,6 +70,7 @@ def calculate_embedding_for_annotation_text(annotation_id: str | int):
             f"calculate_embedding_for_annotation_text() - failed to generate embeddings due to error: {e}"
         )
 
+
 @celery_app.task(
     autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
 )

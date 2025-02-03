@@ -16,7 +16,7 @@ class AnnotationsConfig(AppConfig):
             from opencontractserver.annotations.models import Annotation, Note
             from opencontractserver.annotations.signals import (
                 process_annot_on_create_atomic,
-                process_note_on_create_atomic
+                process_note_on_create_atomic,
             )
 
             post_save.connect(
@@ -25,7 +25,7 @@ class AnnotationsConfig(AppConfig):
                 dispatch_uid=uuid.uuid4(),
             )
             post_save.connect(
-                process_note_on_create_atomic, 
+                process_note_on_create_atomic,
                 sender=Note,
                 dispatch_uid=uuid.uuid4(),
             )

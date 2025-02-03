@@ -191,7 +191,9 @@ class BaseFixtureTestCase(TransactionTestCase):
                         setattr(doc, field, media_path)
             doc.save()
 
-        self.corpus = Corpus.objects.create(title="Test Corpus", creator=self.user, backend_lock=False)
+        self.corpus = Corpus.objects.create(
+            title="Test Corpus", creator=self.user, backend_lock=False
+        )
 
 
 class WebsocketFixtureBaseTestCase(BaseFixtureTestCase):

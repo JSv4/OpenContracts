@@ -649,6 +649,7 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         the query overhead by using a well-defined base queryset.
         """
         from opencontractserver.annotations.models import Note
+
         user = info.context.user
 
         # Start with a base queryset of all Notes the user can see
@@ -658,14 +659,13 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         # This ensures we only query notes that are both visible to the user and belong to
         # this specific Document (through the related manager self.notes).
         return base_qs.filter(
-            id__in=self.notes.values_list("id", flat=True),
-            corpus_id=corpus_pk
+            id__in=self.notes.values_list("id", flat=True), corpus_id=corpus_pk
         )
 
     class Meta:
         model = Document
         interfaces = [relay.Node]
-        exclude = ("embedding","description_embedding")
+        exclude = ("embedding", "description_embedding")
         connection_class = CountableConnection
 
     @classmethod

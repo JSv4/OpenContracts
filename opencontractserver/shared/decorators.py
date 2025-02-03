@@ -93,7 +93,7 @@ def doc_analyzer_task(max_retries=None):
                     if doc.txt_extract_file
                     else None
                 )
-                
+
                 pdf_pawls_extract = (
                     json.loads(doc.pawls_parse_file.read())
                     if doc.pawls_parse_file
@@ -112,7 +112,7 @@ def doc_analyzer_task(max_retries=None):
                     pdf_text_extract=pdf_text_extract,
                     pdf_pawls_extract=pdf_pawls_extract,
                     *args,
-                    **kwargs
+                    **kwargs,
                 )
 
                 # logger.debug(f"Function result: {result}")

@@ -7,9 +7,9 @@ test_document_query_consumer.py but exercises the actual corpus agent code.
 import json
 import logging
 from typing import Any
+from urllib.parse import quote
 
 import vcr
-from urllib.parse import quote
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
 from graphql_relay import to_global_id
@@ -37,9 +37,7 @@ class CorpusQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
         Network traffic is captured by VCR.py, so no mocking is used here.
         """
         # Ensure we have at least one Corpus from the fixtures
-        self.assertTrue(
-            hasattr(self, "corpus"), "A fixture Corpus must be available."
-        )
+        self.assertTrue(hasattr(self, "corpus"), "A fixture Corpus must be available.")
 
         valid_graphql_corpus_id = to_global_id("CorpusType", self.corpus.id)
         valid_graphql_corpus_id = quote(valid_graphql_corpus_id)
@@ -98,9 +96,7 @@ class CorpusQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
         Verifies that providing an invalid token will lead to the connection being closed
         with code 4000, matching the behavior in the JWT auth middleware.
         """
-        self.assertTrue(
-            hasattr(self, "corpus"), "A fixture Corpus must be available."
-        )
+        self.assertTrue(hasattr(self, "corpus"), "A fixture Corpus must be available.")
 
         communicator = WebsocketCommunicator(
             self.application,
@@ -118,9 +114,7 @@ class CorpusQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
         """
         Verifies that providing no token will also lead to connection close (4000).
         """
-        self.assertTrue(
-            hasattr(self, "corpus"), "A fixture Corpus must be available."
-        )
+        self.assertTrue(hasattr(self, "corpus"), "A fixture Corpus must be available.")
 
         communicator = WebsocketCommunicator(
             self.application,

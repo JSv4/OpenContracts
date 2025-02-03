@@ -609,7 +609,7 @@ class Note(BaseOCModel):
             django.db.models.Index(fields=["created"]),
             django.db.models.Index(fields=["modified"]),
             django.db.models.Index(fields=["parent"]),
-            django.db.models.Index(fields=["corpus"]),  
+            django.db.models.Index(fields=["corpus"]),
         ]
         ordering = ("created",)
 

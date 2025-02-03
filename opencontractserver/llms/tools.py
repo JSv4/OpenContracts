@@ -4,21 +4,18 @@ our Django models. These tools enable reading from document summary files,
 detailing token counts, retrieving and partially retrieving notes, etc.
 """
 import logging
+from typing import Optional
 
-from typing import Optional, List, Dict
-
-from pydantic import Field
 from llama_index.core.tools import FunctionTool
+from pydantic import Field
 
-from django.conf import settings
-from django.core.files.base import File
-from django.db.models import Q
+from opencontractserver.annotations.models import Note
 
 # Assuming these imports resolve correctly within the project's structure:
 from opencontractserver.documents.models import Document
-from opencontractserver.annotations.models import Note
 
 logger = logging.getLogger(__name__)
+
 
 def _token_count(text: str) -> int:
     """
@@ -32,12 +29,12 @@ def load_document_md_summary(
     document_id: int = Field(..., description="Primary key of the Document."),
     truncate_length: Optional[int] = Field(
         None,
-        description="Optional number of characters to truncate. If provided, returns only that many characters."
+        description="Optional number of characters to truncate. If provided, returns only that many characters.",
     ),
     from_start: bool = Field(
         True,
-        description="If truncate_length is provided, determines whether to return from start or end."
-    )
+        description="If truncate_length is provided, determines whether to return from start or end.",
+    ),
 ) -> str:
     """
     Load the content of a Document's md_summary_file field.
@@ -64,10 +61,14 @@ def load_document_md_summary(
         logger.info(f"Loaded md_summary_file for document {document_id}: {content}")
 
     # Convert truncate_length to int if it's a FieldInfo object
-    if hasattr(truncate_length, 'default'):
+    if hasattr(truncate_length, "default"):
         truncate_length = truncate_length.default
 
-    if truncate_length is not None and isinstance(truncate_length, int) and truncate_length > 0:
+    if (
+        truncate_length is not None
+        and isinstance(truncate_length, int)
+        and truncate_length > 0
+    ):
         if from_start:
             content = content[:truncate_length]
         else:
@@ -106,9 +107,10 @@ def get_md_summary_token_length(
 def get_notes_for_document_corpus(
     document_id: int = Field(..., description="Primary key of the Document."),
     corpus_id: Optional[int] = Field(
-        None, description="Optional primary key of the Corpus. If None, only notes without a corpus_id are returned."
-    )
-) -> List[Dict]:
+        None,
+        description="Optional primary key of the Corpus. If None, only notes without a corpus_id are returned.",
+    ),
+) -> list[dict]:
     """
     Retrieve all Note objects for a given document and (optionally) a specific corpus.
 
@@ -173,8 +175,8 @@ def get_partial_note_content(
     start: int = Field(0, description="Start index for substring extraction."),
     end: int = Field(
         500,
-        description="End index (non-inclusive) for substring extraction. Use a large number to see the entire note."
-    )
+        description="End index (non-inclusive) for substring extraction. Use a large number to see the entire note.",
+    ),
 ) -> str:
     """
     Retrieve a substring of the note's content from index 'start' to index 'end'.
@@ -203,7 +205,13 @@ def get_partial_note_content(
 
 # Each tool can be initialized via LlamaIndex's FunctionTool.from_defaults()
 load_document_md_summary_tool = FunctionTool.from_defaults(load_document_md_summary)
-get_md_summary_token_length_tool = FunctionTool.from_defaults(get_md_summary_token_length)
-get_notes_for_document_corpus_tool = FunctionTool.from_defaults(get_notes_for_document_corpus)
-get_note_content_token_length_tool = FunctionTool.from_defaults(get_note_content_token_length)
+get_md_summary_token_length_tool = FunctionTool.from_defaults(
+    get_md_summary_token_length
+)
+get_notes_for_document_corpus_tool = FunctionTool.from_defaults(
+    get_notes_for_document_corpus
+)
+get_note_content_token_length_tool = FunctionTool.from_defaults(
+    get_note_content_token_length
+)
 get_partial_note_content_tool = FunctionTool.from_defaults(get_partial_note_content)

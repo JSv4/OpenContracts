@@ -7,9 +7,9 @@ test_websocket_auth.py but exercises the actual agent code.
 import json
 import logging
 from typing import Any
+from urllib.parse import quote
 
 import vcr
-from urllib.parse import quote
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
 from graphql_relay import to_global_id
@@ -39,11 +39,10 @@ class DocumentQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
         """
         # Ensure we have at least one Document from the fixtures
         self.assertTrue(hasattr(self, "doc"), "A fixture Document must be available.")
-        
+
         valid_graphql_doc_id = to_global_id("DocumentType", self.doc.id)
         valid_graphql_doc_id = quote(valid_graphql_doc_id)
 
-        
         communicator = WebsocketCommunicator(
             self.application,
             f"ws/document/{valid_graphql_doc_id}/query/?token={self.token}",

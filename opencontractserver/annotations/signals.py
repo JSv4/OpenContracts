@@ -13,6 +13,7 @@ def process_annot_on_create_atomic(sender, instance, created, **kwargs):
             annotation_id=instance.id
         ).apply_async()
 
+
 def process_note_on_create_atomic(sender, instance, created, **kwargs):
     if created and instance.embedding is None:
         calculate_embedding_for_note_text.si(note_id=instance.id).apply_async()

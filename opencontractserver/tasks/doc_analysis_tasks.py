@@ -1,6 +1,6 @@
-from typing import List
-import marvin
 import logging
+
+import marvin
 from django.conf import settings
 
 from opencontractserver.pipeline.utils import get_preferred_embedder
@@ -160,13 +160,14 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
     """
     Build a knowledge base from the document.
     """
-    
-    from llama_index.llms.openai import OpenAI
+
+    from django.core.files.base import ContentFile
     from llama_index.core.llms import ChatMessage
+    from llama_index.llms.openai import OpenAI
+
     from opencontractserver.annotations.models import Note
     from opencontractserver.documents.models import Document
-    from django.core.files.base import ContentFile
-    
+
     corpus_id = kwargs.get("corpus_id", None)
     if not corpus_id:
         logger.error("corpus_id is required for build_knowledge_base task")
@@ -176,28 +177,28 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
         model="gpt-4o-mini",  # using the "mini" version as specified
         api_key=settings.OPENAI_API_KEY,  # optional, pulls from env var by default
     )
-    
+
     doc_id = kwargs.get("doc_id", None)
     if not doc_id:
         logger.error("doc_id is required for build_knowledge_base task")
         return [], [], [], False
-    
+
     def get_markdown_response(system_prompt: str, user_prompt: str) -> str | None:
         """
         Creates a conversation with given system and user prompts and returns
         the LLM's response in Markdown format.
-        
+
         :param system_prompt: The content for the system role.
         :param user_prompt: The content for the user role.
         :return: The assistant's response as a string.
         """
-        messages: List[ChatMessage] = [
+        messages: list[ChatMessage] = [
             ChatMessage(role="system", content=system_prompt),
             ChatMessage(role="user", content=user_prompt),
         ]
         response = llm.chat(messages)
         return response.message.content
-    
+
     def prompt_1_single_pass(pdf_text: str) -> str:
         system_prompt = (
             "You are a highly skilled paralegal specializing in contract analysis. "
@@ -205,29 +206,33 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
             "concise summary. Strictly follow the requested format and level of detail. "
             "You write in elegant and expressive markdown."
         )
-        
+
         user_prompt = f"""\
     **Please analyze the following contract** (included below) **and provide the following information:**
 
-    1. **Context and Purpose**  
-    - A brief description (2–3 sentences) explaining the primary purpose of the contract and any relevant background details.
+    1. **Context and Purpose**
+    - A brief description (2–3 sentences) explaining the primary purpose of the contract and any relevant
+      background details.
 
-    2. **Knowledge Base Article Summary**  
-    - **Parties Involved**: Identify all parties and their roles or obligations.  
-    - **Key Dates**: Outline important dates (e.g., effective date, milestones, deadlines, renewal dates).  
-    - **Key Definitions**: Lisst or paraphrase any critical definitions that shape the agreement.  
-    - **Termination & Renewal Provisions**: Summarize any clauses that address how and when the contract can end or renew.
+    2. **Knowledge Base Article Summary**
+    - **Parties Involved**: Identify all parties and their roles or obligations.
+    - **Key Dates**: Outline important dates (e.g., effective date, milestones, deadlines, renewal dates).
+    - **Key Definitions**: Lisst or paraphrase any critical definitions that shape the agreement.
+    - **Termination & Renewal Provisions**: Summarize any clauses that address how and when the contract
+      can end or renew.
 
-    3. **Notes on Referenced Documents & Regulations**  
-    - **Referenced Documents**: List names and any critical details (e.g., date, version, or relevant sections).  
-    - **Referenced Rules/Regulations**: List any laws, statutes, or regulatory bodies referenced, along with a short description of how they apply.
+    3. **Notes on Referenced Documents & Regulations**
+    - **Referenced Documents**: List names and any critical details (e.g., date, version, or relevant
+      sections).
+    - **Referenced Rules/Regulations**: List any laws, statutes, or regulatory bodies referenced,
+      along with a short description of how they apply.
 
     **Contract Text:**
     {pdf_text}
     """
         return get_markdown_response(system_prompt, user_prompt)
 
-    def prompt_4_references(pdf_text: str) -> str: 
+    def prompt_4_references(pdf_text: str) -> str:
         system_prompt = (
             "You are acting as a senior legal assistant. Your primary focus is on ensuring "
             "all references to external documents, exhibits, regulations, or statutes are "
@@ -246,9 +251,8 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
             Highlight any deadlines or termination clauses tied to external compliance requirements.
             Contract Text: {pdf_text} """
         return get_markdown_response(system_prompt, user_prompt)
-    
-    
-    def prompt_5_bullet_points(pdf_text: str) -> str: 
+
+    def prompt_5_bullet_points(pdf_text: str) -> str:
         system_prompt = (
             "You are a paralegal who must produce a bullet-point cheat sheet for "
             "attorneys seeking a quick reference guide. You write in elegant and expressive markdown."
@@ -264,14 +268,14 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
         5. Termination & Renewal
         6. Referenced Documents & Regulations (including names, dates, versions, relevant sections)
         Contract Text: {pdf_text} """
-        
+
         return get_markdown_response(system_prompt, user_prompt)
-    
+
     def create_searchable_summary(full_summary: str) -> str:
         """
         Creates a concise, searchable summary from the full markdown summary,
         optimized for document discovery.
-        
+
         :param full_summary: The detailed markdown summary
         :return: A 2-3 sentence searchable summary
         """
@@ -282,25 +286,25 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
             "like party names, dates, and particular context while maintaining clarity. "
             "Focus on what makes this contract unique and identifiable."
         )
-        
+
         user_prompt = f"""\
-            Based on the following detailed contract summary, create a 2-3 sentence summary 
-            that would help paralegals quickly identify this specific contract in a search. 
-            Include proper names, dates, and specific context where available. The summary 
-            should be both accurate and distinctive enough to differentiate this contract 
+            Based on the following detailed contract summary, create a 2-3 sentence summary
+            that would help paralegals quickly identify this specific contract in a search.
+            Include proper names, dates, and specific context where available. The summary
+            should be both accurate and distinctive enough to differentiate this contract
             from similar ones.
 
             Detailed Summary:
             {full_summary}
             """
-        
+
         return get_markdown_response(system_prompt, user_prompt)
-    
+
     doc = Document.objects.get(id=doc_id)
-    
+
     summary = prompt_1_single_pass(pdf_text_extract)
     reference_notes = prompt_4_references(pdf_text_extract)
-    cheat_sheet = prompt_5_bullet_points(pdf_text_extract)    
+    cheat_sheet = prompt_5_bullet_points(pdf_text_extract)
     searchable_summary = create_searchable_summary(summary)
 
     # Generate embeddings for the searchable summary
@@ -316,22 +320,19 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
     doc.md_summary_file = ContentFile(summary.encode("utf-8"), name="summary.md")
     doc.description = searchable_summary
     doc.save()
-    
+
     Note.objects.create(
         title="Referenced Documents",
         document=doc,
         content=reference_notes,
         corpus_id=corpus_id,
     )
-    
+
     Note.objects.create(
         title="Quick Reference",
         document=doc,
         content=cheat_sheet,
         corpus_id=corpus_id,
     )
-    
+
     return [], [], [], True
-
-
-

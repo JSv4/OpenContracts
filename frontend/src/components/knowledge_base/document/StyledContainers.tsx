@@ -75,17 +75,24 @@ export const ContentArea = styled.div`
 export const TabsColumn = styled(Segment)<{ collapsed: boolean }>`
   &&& {
     margin: 0 !important;
-    padding: 1rem 0 !important;
+    padding: 0.75rem 0 !important;
     border: none !important;
     border-right: 1px solid rgba(231, 234, 237, 0.7) !important;
     border-radius: 0 !important;
-    background: rgba(250, 251, 252, 0.95) !important;
+    background: rgba(250, 251, 252, 0.97) !important;
     backdrop-filter: blur(10px);
-    width: ${(props) => (props.collapsed ? "80px" : "280px")};
+    width: ${(props) => (props.collapsed ? "72px" : "280px")};
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
     z-index: 90;
     box-shadow: 1px 0 2px rgba(0, 0, 0, 0.02);
+
+    /* Subtle gradient background */
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.97) 0%,
+      rgba(249, 250, 251, 0.97) 100%
+    ) !important;
 
     /* Mobile optimization */
     @media (max-width: 768px) {
@@ -115,15 +122,19 @@ export const TabsColumn = styled(Segment)<{ collapsed: boolean }>`
   }
 `;
 
-// Example mapping from a tab's key to a color
+// Enhanced icon color map with more subtle, professional colors
 const iconColorMap: Record<string, string> = {
-  summary: "#00796B",
-  chat: "#7B1FA2",
-  notes: "#E65100",
-  document: "#C2185B",
-  relationships: "#1565C0",
-  // fallback
-  default: "#455A64",
+  summary: "#0891b2", // Cyan
+  chat: "#7c3aed", // Violet
+  notes: "#f59e0b", // Amber
+  document: "#10b981", // Emerald
+  relationships: "#3b82f6", // Blue
+  annotations: "#ec4899", // Pink
+  relations: "#8b5cf6", // Purple
+  analyses: "#06b6d4", // Light Blue
+  extracts: "#f97316", // Orange
+  search: "#6366f1", // Indigo
+  default: "#64748b", // Slate
 };
 
 interface TabButtonProps {
@@ -137,125 +148,84 @@ export const TabButton = styled(Button)<TabButtonProps>`
     width: 100%;
     text-align: ${(props) => (props.collapsed ? "center" : "left")} !important;
     border-radius: 0 !important;
-    margin: 0.5rem 0 !important;
+    margin: 0.25rem 0 !important;
     padding: ${(props) =>
-      props.collapsed ? "1.25rem" : "1rem 1.75rem"} !important;
-    background: transparent;
+      props.collapsed ? "1.25rem 0.75rem" : "1.25rem 2rem"} !important;
+    background: transparent !important;
     border: none !important;
-    color: #1a2027;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    overflow: hidden;
-    font-size: 1.05rem !important;
-    letter-spacing: 0.01em;
-    font-weight: 450;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
-    &:hover {
-      background: rgba(231, 234, 237, 0.5) !important;
-      color: #2185d0;
-      transform: translateX(4px);
-    }
-
-    &.active {
-      background: white !important;
-      color: #2185d0;
-      font-weight: 500;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
-
-      &:before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        background: #2185d0;
-        border-radius: 0 3px 3px 0;
-        box-shadow: 0 0 8px rgba(33, 133, 208, 0.4);
-      }
-
-      svg {
-        color: #2185d0;
-        transform: scale(1.1);
-      }
-    }
-
+    /* Increased icon sizes in both states */
     svg {
-      width: ${(props) => (props.collapsed ? "24px" : "22px")} !important;
-      height: ${(props) => (props.collapsed ? "24px" : "22px")} !important;
-      margin-right: ${(props) => (props.collapsed ? "0" : "1rem")} !important;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      stroke-width: 1.75px;
-      color: ${({ tabKey }) => iconColorMap[tabKey] ?? iconColorMap.default};
-      opacity: 0.85;
-      filter: saturate(1.2);
+      width: ${(props) => (props.collapsed ? "28px" : "22px")};
+      height: ${(props) => (props.collapsed ? "28px" : "22px")};
+      color: ${(props) => iconColorMap[props.tabKey] || iconColorMap.default};
+      opacity: ${(props) => (props.active ? 1 : 0.75)};
+      flex-shrink: 0; /* Prevent icon from shrinking */
     }
 
-    &:hover svg {
-      transform: scale(1.15) rotate(-2deg);
-      opacity: 1;
-      filter: saturate(1.4) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1));
-    }
-
+    /* Improved text styling */
     span {
+      font-size: 1rem; /* Slightly larger font */
+      font-weight: 500;
+      white-space: nowrap;
       opacity: ${(props) => (props.collapsed ? 0 : 1)};
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      ${(props) => props.collapsed && "display: none;"}
-      margin-top: 1px;
-
-      /* Ensure text stays hidden in mobile view regardless of active state */
-      @media (max-width: 768px) {
-        opacity: 0;
-        display: none;
-      }
+      transition: opacity 0.2s ease-in-out;
+      color: ${(props) =>
+        props.active
+          ? iconColorMap[props.tabKey] || iconColorMap.default
+          : "#64748b"};
+      margin-left: 1rem; /* Increased spacing between icon and text */
     }
 
-    /* Mobile-friendly tabs - enhanced */
-    @media (max-width: 768px) {
-      width: 48px !important;
-      height: 48px !important;
-      padding: 0 !important;
-      margin: 0 0.35rem !important;
-      border-radius: 14px !important;
+    /* Active state */
+    ${(props) =>
+      props.active &&
+      css`
+        background: ${`${iconColorMap[props.tabKey]}10`} !important;
+        &::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 3px;
+          background: ${iconColorMap[props.tabKey] || iconColorMap.default};
+          border-radius: 0 2px 2px 0;
+        }
+      `}
+
+    /* Hover effects */
+    &:hover {
+      background: ${(props) =>
+        props.active
+          ? `${iconColorMap[props.tabKey]}15`
+          : "rgba(0, 0, 0, 0.03)"} !important;
 
       svg {
-        width: 24px !important;
-        height: 24px !important;
-      }
-
-      &.active {
-        background: ${(props) =>
-          // Only show active state if the panel is actually open
-          props.theme.colors?.primary || "#2185d0"} !important;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(33, 133, 208, 0.2);
-
-        /* Reset active styles when panel is closed */
-        &[aria-expanded="false"] {
-          background: transparent !important;
-          transform: none;
-          box-shadow: none;
-
-          svg {
-            color: inherit;
-            filter: none;
-          }
-        }
-
-        svg {
-          color: white;
-          filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
-        }
-      }
-
-      &:hover:not(.active) {
-        background: rgba(0, 0, 0, 0.04) !important;
-        transform: translateY(-1px);
+        transform: ${(props) =>
+          props.collapsed ? "scale(1.2)" : "translateX(2px)"};
+        opacity: 1;
       }
     }
 
-    /* Prevent shrinking */
-    flex: 0 0 auto;
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      padding: 0.75rem !important;
+      margin: 0 0.25rem !important;
+      border-radius: 8px !important;
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      &:hover {
+        transform: translateY(-2px);
+      }
+    }
   }
 `;
 
@@ -323,12 +293,20 @@ export const SummaryContent = styled.div`
  * Positions a set of buttons in the top-left corner of the right tray.
  */
 export const ControlButtonGroupLeft = styled.div`
-  position: absolute;
+  position: sticky;
   top: 1rem;
   left: 1rem;
   display: flex;
   gap: 0.75rem;
-  z-index: 1100; /* ensures button stays on top within the tray */
+  z-index: 1100;
+  margin: 0;
+  padding: 0;
+
+  @media (max-width: 768px) {
+    position: fixed;
+    top: env(safe-area-inset-top, 1rem);
+    left: 1rem;
+  }
 `;
 
 /**
@@ -374,11 +352,10 @@ interface SlidingPanelProps {
 }
 
 export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
-  /* For desktop, position absolutely so it can sit to the right. */
+  /* For desktop, position absolutely so it can sit to the right */
   position: absolute;
   top: 0;
   right: 0;
-  /* Ensure the tray is always above the document content. */
   z-index: 2000;
 
   width: clamp(320px, 65%, 520px);
@@ -390,11 +367,26 @@ export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
   flex-direction: column;
   overflow-y: auto;
 
-  /* On mobile, switch to full-screen overlay (fixed) */
+  /* On mobile, switch to full-screen overlay with proper positioning */
   @media (max-width: 768px) {
     position: fixed;
+    inset: 0; /* Shorthand for top: 0; right: 0; bottom: 0; left: 0; */
     width: 100%;
     height: 100%;
+    max-height: 100%;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    transform-origin: top center;
+
+    /* Ensure proper iOS Safari rendering */
+    -webkit-overflow-scrolling: touch;
+
+    /* Fix for iOS Safari bottom bar */
+    padding-bottom: env(safe-area-inset-bottom);
+
+    /* Reset any transforms that might affect positioning */
+    transform: none !important;
   }
 `;
 

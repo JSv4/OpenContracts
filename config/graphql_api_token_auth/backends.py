@@ -1,5 +1,4 @@
 import logging
-
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
@@ -11,7 +10,7 @@ UserModel = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-class Auth0ApiKeyBackend:
+class ApiKeyBackend:
 
     model = None
 
@@ -21,7 +20,6 @@ class Auth0ApiKeyBackend:
             return self.model
 
         from rest_framework.authtoken.models import Token
-
         logger.debug("Using default Token model")
         return Token
 
@@ -77,9 +75,7 @@ class Auth0ApiKeyBackend:
             raise exceptions.AuthenticationFailed(_("Invalid token."))
 
         if not token.user.is_active:
-            logger.warning(
-                f"Authentication failed: Inactive user {token.user.username}"
-            )
+            logger.warning(f"Authentication failed: Inactive user {token.user.username}")
             raise exceptions.AuthenticationFailed(_("User inactive or deleted."))
 
         logger.debug(f"Successfully authenticated user: {token.user.username}")

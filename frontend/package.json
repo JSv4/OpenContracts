@@ -70,7 +70,7 @@
     "worker-loader": "^3.0.8"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "node scripts/env.js && react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

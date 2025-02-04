@@ -11,8 +11,8 @@ import logging
 import os
 
 import django
+from django.conf import settings
 
-from config.websocket.consumers.corpus_conversation import CorpusQueryConsumer
 
 # This is intentional to avoid Django breaking on startup
 django.setup()  # noqa: E402
@@ -27,6 +27,7 @@ from django.urls import re_path  # noqa: E402
 from config.websocket.consumers.document_conversation import (  # noqa: E402
     DocumentQueryConsumer,
 )
+from config.websocket.consumers.corpus_conversation import CorpusQueryConsumer  # noqa: E402
 from config.websocket.middleware import GraphQLJWTTokenAuthMiddleware  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -61,35 +62,28 @@ websocket_urlpatterns = [
 for pattern in websocket_urlpatterns:
     logger.info(f"Registered WebSocket URL pattern: {pattern.pattern}")
 
-
-class LoggingMiddleware:
-    """
-    Simple logging middleware that logs websocket connection attempts.
-    """
-
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, scope, receive, send):
-        if scope["type"] == "websocket":
-            logger.info(f"WebSocket connection attempt - Path: {scope['path']}")
-            logger.info(f"WebSocket scope: {scope}")
-            if "user" in scope:
-                logger.info(f"Authenticated user: {scope['user']}")
-            else:
-                logger.warning("No user in scope")
-        return await self.app(scope, receive, send)
+# Choose the appropriate middleware based on USE_AUTH0
+if settings.USE_AUTH0:
+    logger.info("USE_AUTH0 set to True, using WebsocketAuth0TokenMiddleware")
+    from config.websocket.middlewares.websocket_auth0_middleware import WebsocketAuth0TokenMiddleware  # type: ignore
+    websocket_auth_middleware = WebsocketAuth0TokenMiddleware
+else:
+    logger.info("USE_AUTH0 set to False, using GraphQLJWTTokenAuthMiddleware")
+    from config.websocket.middleware import GraphQLJWTTokenAuthMiddleware
+    websocket_auth_middleware = GraphQLJWTTokenAuthMiddleware
 
 
 # Create the ASGI application with proper middleware order
 # 1. Protocol routing
-# 2. Authentication middleware
+# 2. Auth middleware (determined above)
 # 3. Logging middleware
 # 4. URL routing
 application = ProtocolTypeRouter(
     {
-        "http": get_asgi_application(),
-        "websocket": GraphQLJWTTokenAuthMiddleware(URLRouter(websocket_urlpatterns)),
+        "http": django_application,
+        "websocket": websocket_auth_middleware(
+                URLRouter(websocket_urlpatterns)
+        ),
     }
 )
 

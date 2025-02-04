@@ -27,28 +27,21 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(WebsocketFixtureBaseTestCase):
     """
 
     @mock.patch(
-        "config.websocket.consumers.document_conversation.HuggingFaceEmbedding",
-        new=MagicMock(),
+        "config.websocket.consumers.document_conversation.create_document_agent",
+        new_callable=mock.AsyncMock,
     )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.OpenAIAgent", new=MagicMock()
-    )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.OpenAI", new=MagicMock()
-    )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.VectorStoreIndex",
-        new=MagicMock(),
-    )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.Settings", new=MagicMock()
-    )
-    async def test_middleware_with_valid_token(self) -> None:
+    async def test_middleware_with_valid_token(
+        self,
+        mock_create_document_agent: mock.AsyncMock,
+    ) -> None:
         """
         Verifies that providing a valid token results in successful connection
-        and a logged-in user on the scope.
+        and a logged-in user on the scope. Mocks the create_document_agent factory
+        to avoid spinning up real LLM resources.
         """
-        # Ensure we have at least one Document from the fixtures
+        # We return a MagicMock (our 'agent') when create_document_agent is awaited
+        mock_create_document_agent.return_value = MagicMock()
+
         self.assertTrue(hasattr(self, "doc"), "A fixture Document must be available.")
 
         valid_graphql_doc_id = to_global_id("DocumentType", self.doc.id)
@@ -71,9 +64,7 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(WebsocketFixtureBaseTestCase):
         self.assertEqual(scope_user.username, self.user.username)
 
         # Send a test query to verify the connection works
-        await communicator.send_to(
-            text_data=json.dumps({"query": "Please summarize the doc."})
-        )
+        await communicator.send_to(json.dumps({"query": "Please summarize the doc."}))
 
         # Gather messages until we encounter "ASYNC_FINISH" or "SYNC_CONTENT"
         messages: list[dict[str, Any]] = []
@@ -97,27 +88,21 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(WebsocketFixtureBaseTestCase):
         await communicator.disconnect()
 
     @mock.patch(
-        "config.websocket.consumers.document_conversation.HuggingFaceEmbedding",
-        new=MagicMock(),
+        "config.websocket.consumers.document_conversation.create_document_agent",
+        new_callable=mock.AsyncMock,
     )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.OpenAIAgent", new=MagicMock()
-    )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.OpenAI", new=MagicMock()
-    )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.VectorStoreIndex",
-        new=MagicMock(),
-    )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.Settings", new=MagicMock()
-    )
-    async def test_middleware_with_invalid_token(self) -> None:
+    async def test_middleware_with_invalid_token(
+        self,
+        mock_create_document_agent: mock.AsyncMock,
+    ) -> None:
         """
         Verifies that providing an invalid token will lead to the connection being closed
         with code 4000, matching the behavior in the JWT auth middleware.
+        Mocking create_document_agent to ensure no real LLM resources are used.
         """
+        # Even though invalid, we'll define a MagicMock to satisfy the async patch
+        mock_create_document_agent.return_value = MagicMock()
+
         self.assertTrue(hasattr(self, "doc"), "A fixture Document must be available.")
 
         valid_graphql_doc_id = to_global_id("DocumentType", self.doc.id)
@@ -136,26 +121,20 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(WebsocketFixtureBaseTestCase):
         )
 
     @mock.patch(
-        "config.websocket.consumers.document_conversation.HuggingFaceEmbedding",
-        new=MagicMock(),
+        "config.websocket.consumers.document_conversation.create_document_agent",
+        new_callable=mock.AsyncMock,
     )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.OpenAIAgent", new=MagicMock()
-    )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.OpenAI", new=MagicMock()
-    )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.VectorStoreIndex",
-        new=MagicMock(),
-    )
-    @mock.patch(
-        "config.websocket.consumers.document_conversation.Settings", new=MagicMock()
-    )
-    async def test_middleware_without_token(self) -> None:
+    async def test_middleware_without_token(
+        self,
+        mock_create_document_agent: mock.AsyncMock,
+    ) -> None:
         """
         Verifies that providing no token will also lead to connection close (4000).
+        Mocking create_document_agent to ensure no real LLM resources are used.
         """
+        # Even though no token is provided, we still define our mock
+        mock_create_document_agent.return_value = MagicMock()
+
         self.assertTrue(hasattr(self, "doc"), "A fixture Document must be available.")
 
         valid_graphql_doc_id = to_global_id("DocumentType", self.doc.id)

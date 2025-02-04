@@ -13,7 +13,6 @@ import os
 import django
 from django.conf import settings
 
-
 # This is intentional to avoid Django breaking on startup
 django.setup()  # noqa: E402
 
@@ -24,11 +23,12 @@ from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 from django.core.asgi import get_asgi_application  # noqa: E402
 from django.urls import re_path  # noqa: E402
 
+from config.websocket.consumers.corpus_conversation import (  # noqa: E402
+    CorpusQueryConsumer,
+)
 from config.websocket.consumers.document_conversation import (  # noqa: E402
     DocumentQueryConsumer,
 )
-from config.websocket.consumers.corpus_conversation import CorpusQueryConsumer  # noqa: E402
-from config.websocket.middleware import GraphQLJWTTokenAuthMiddleware  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -65,11 +65,15 @@ for pattern in websocket_urlpatterns:
 # Choose the appropriate middleware based on USE_AUTH0
 if settings.USE_AUTH0:
     logger.info("USE_AUTH0 set to True, using WebsocketAuth0TokenMiddleware")
-    from config.websocket.middlewares.websocket_auth0_middleware import WebsocketAuth0TokenMiddleware  # type: ignore
+    from config.websocket.middlewares.websocket_auth0_middleware import (
+        WebsocketAuth0TokenMiddleware,  # type: ignore
+    )
+
     websocket_auth_middleware = WebsocketAuth0TokenMiddleware
 else:
     logger.info("USE_AUTH0 set to False, using GraphQLJWTTokenAuthMiddleware")
     from config.websocket.middleware import GraphQLJWTTokenAuthMiddleware
+
     websocket_auth_middleware = GraphQLJWTTokenAuthMiddleware
 
 
@@ -81,9 +85,7 @@ else:
 application = ProtocolTypeRouter(
     {
         "http": django_application,
-        "websocket": websocket_auth_middleware(
-                URLRouter(websocket_urlpatterns)
-        ),
+        "websocket": websocket_auth_middleware(URLRouter(websocket_urlpatterns)),
     }
 )
 

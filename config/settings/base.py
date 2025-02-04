@@ -196,9 +196,7 @@ else:
 if USE_API_KEY_AUTH:
     API_TOKEN_HEADER_NAME = "AUTHORIZATION"
     API_TOKEN_PREFIX = "KEY"
-    AUTHENTICATION_BACKENDS += [
-        "config.graphql_api_key_auth.backends.Auth0ApiKeyBackend"
-    ]
+    AUTHENTICATION_BACKENDS += ["config.graphql_api_token_auth.backends.ApiKeyBackend"]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model
 AUTH_USER_MODEL = "users.User"
@@ -487,13 +485,25 @@ MODEL_PATH = pathlib.Path(BASE_PATH, "model")
 
 # Graphene
 # ------------------------------------------------------------------------------
+# Start with the base middleware that we always want
+GRAPHENE_MIDDLEWARE = [
+    "config.graphql.permissioning.permission_annotator.middleware.PermissionAnnotatingMiddleware",
+]
+
+# Add JWT middleware if using Auth0
+if USE_AUTH0:
+    GRAPHENE_MIDDLEWARE.append("graphql_jwt.middleware.JSONWebTokenMiddleware")
+
+# Add API Key middleware if enabled
+if USE_API_KEY_AUTH:
+    GRAPHENE_MIDDLEWARE.append(
+        "config.graphql_api_token_auth.middleware.ApiKeyTokenMiddleware"
+    )
+
+# Configure Graphene with the constructed middleware list
 GRAPHENE = {
     "SCHEMA": "config.graphql.schema.schema",
-    "MIDDLEWARE": [
-        "config.graphql.permissioning.permission_annotator.middleware.PermissionAnnotatingMiddleware",
-        "graphql_jwt.middleware.JSONWebTokenMiddleware",
-        "config.graphql_api_key_auth.middleware.ApiKeyTokenMiddleware",
-    ],
+    "MIDDLEWARE": GRAPHENE_MIDDLEWARE,
 }
 
 

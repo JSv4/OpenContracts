@@ -68,6 +68,7 @@ class DocumentRelationshipsQueryTestCase(TestCase):
             relationship_type="RELATIONSHIP",
             annotation_label=self.annotation_label,
             creator=self.user,
+            corpus=self.corpus,
         )
 
         self.note = DocumentRelationship.objects.create(
@@ -76,6 +77,7 @@ class DocumentRelationshipsQueryTestCase(TestCase):
             relationship_type="NOTES",
             data={"note": "Test note content"},
             creator=self.user,
+            corpus=self.corpus,
         )
 
     def test_document_relationship_query(self):

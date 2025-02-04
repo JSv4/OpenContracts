@@ -1,6 +1,9 @@
 from django.contrib.auth import authenticate, get_user_model
 
-from config.graphql_api_key_auth.utils import get_http_authorization, get_token_argument
+from config.graphql_api_token_auth.utils import (
+    get_http_authorization,
+    get_token_argument,
+)
 
 User = get_user_model()
 

@@ -1003,6 +1003,9 @@ class PipelineComponentsType(graphene.ObjectType):
     thumbnailers = graphene.List(
         PipelineComponentType, description="List of available thumbnail generators."
     )
+    post_processors = graphene.List(
+        PipelineComponentType, description="List of available post-processors."
+    )
 
 
 class NoteType(AnnotatePermissionsForReadMixin, DjangoObjectType):

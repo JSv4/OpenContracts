@@ -1,13 +1,11 @@
 import vcr
-from django.test.utils import override_settings
 from django.core.files.base import ContentFile
-from django.db.models.signals import post_save
-from unittest.mock import patch
+from django.test.utils import override_settings
 
 from opencontractserver.analyzer.models import Analysis, Analyzer
-from opencontractserver.documents.models import Document
 from opencontractserver.annotations.models import Note
 from opencontractserver.corpuses.models import Corpus
+from opencontractserver.documents.models import Document
 from opencontractserver.tasks.doc_analysis_tasks import build_contract_knowledge_base
 from opencontractserver.tests.base import BaseFixtureTestCase
 
@@ -21,7 +19,7 @@ class TestBuildContractKnowledgeBaseTask(BaseFixtureTestCase):
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/test_build_contract_knowledge_base.yaml",
-        filter_headers=["authorization"]
+        filter_headers=["authorization"],
     )
     def test_build_contract_knowledge_base(self) -> None:
         """
@@ -32,7 +30,9 @@ class TestBuildContractKnowledgeBaseTask(BaseFixtureTestCase):
 
         # Create or fetch our test Document (from BaseFixtureTestCase or newly minted),
         # linking it to a newly created Corpus for test isolation.
-        test_corpus = Corpus.objects.create(title="KnowledgeBase Corpus", creator=self.user)
+        test_corpus = Corpus.objects.create(
+            title="KnowledgeBase Corpus", creator=self.user
+        )
         doc = Document.objects.create(
             creator=self.user,
             title="TaskTestDoc",
@@ -48,7 +48,7 @@ class TestBuildContractKnowledgeBaseTask(BaseFixtureTestCase):
             creator=self.user,
             task_name="test_analyzer",  # Either task_name or host_gremlin must be set
         )
-        
+
         self.analysis = Analysis.objects.create(
             analyzer=self.task_name_analyzer,
             analyzed_corpus=self.corpus,
@@ -69,20 +69,30 @@ class TestBuildContractKnowledgeBaseTask(BaseFixtureTestCase):
         self.assertEqual(task_result, ([], [], [], True))
 
         # Assert that the doc has been updated with a new summary file and an updated description
-        self.assertIsNotNone(doc.md_summary_file, "Expected md_summary_file to be created.")
-        self.assertNotEqual(doc.description, "Initial description", "Expected doc description to be updated.")
+        self.assertIsNotNone(
+            doc.md_summary_file, "Expected md_summary_file to be created."
+        )
+        self.assertNotEqual(
+            doc.description,
+            "Initial description",
+            "Expected doc description to be updated.",
+        )
 
         # Check that the relevant notes have been created
-        referenced_docs_note = Note.objects.filter(document=doc, title="Referenced Documents").first()
-        quick_ref_note = Note.objects.filter(document=doc, title="Quick Reference").first()
+        referenced_docs_note = Note.objects.filter(
+            document=doc, title="Referenced Documents"
+        ).first()
+        quick_ref_note = Note.objects.filter(
+            document=doc, title="Quick Reference"
+        ).first()
 
         self.assertIsNotNone(
             referenced_docs_note,
-            "Expected a 'Referenced Documents' note to be created for the document."
+            "Expected a 'Referenced Documents' note to be created for the document.",
         )
         self.assertIsNotNone(
             quick_ref_note,
-            "Expected a 'Quick Reference' note to be created for the document."
+            "Expected a 'Quick Reference' note to be created for the document.",
         )
 
-        print("build_contract_knowledge_base task test completed successfully.") 
+        print("build_contract_knowledge_base task test completed successfully.")

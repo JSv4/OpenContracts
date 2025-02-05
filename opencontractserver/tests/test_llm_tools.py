@@ -1,16 +1,17 @@
 import logging
-from django.test import TestCase
+
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from django.test import TestCase
 
+from opencontractserver.annotations.models import Note
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.annotations.models import Note
 from opencontractserver.llms.tools import (
-    load_document_md_summary,
+    _token_count,
     get_md_summary_token_length,
     get_notes_for_document_corpus,
-    _token_count,
+    load_document_md_summary,
 )
 
 User = get_user_model()
@@ -21,32 +22,33 @@ class TestLLMTools(TestCase):
     def setUp(self):
         """Set up test data."""
         self.user = User.objects.create_user(username="testuser", password="12345")
-        
+
         self.corpus = Corpus.objects.create(
             title="Test Corpus",
             creator=self.user,
         )
-        
+
         # Create a test document with a summary file
         self.doc = Document.objects.create(
             creator=self.user,
             title="Test Document",
             description="Test Description",
         )
-        
+
         # Create a mock summary file
-        summary_content = "This is a test summary.\nIt has multiple lines.\nAnd some content."
-        self.doc.md_summary_file.save(
-            "test_summary.md",
-            ContentFile(summary_content.encode())
+        summary_content = (
+            "This is a test summary.\nIt has multiple lines.\nAnd some content."
         )
-        
+        self.doc.md_summary_file.save(
+            "test_summary.md", ContentFile(summary_content.encode())
+        )
+
         # Create test notes
         self.note = Note.objects.create(
             document=self.doc,
             title="Test Note",
             content="Test note content that is longer than the typical preview length",
-            creator=self.user
+            creator=self.user,
         )
 
     def test_token_count_empty(self):
@@ -76,12 +78,10 @@ class TestLLMTools(TestCase):
     def test_load_document_md_summary_truncate_from_end(self):
         """Test loading summary with truncation from end."""
         result = load_document_md_summary(
-            self.doc.id,
-            truncate_length=10,
-            from_start=False
+            self.doc.id, truncate_length=10, from_start=False
         )
         self.assertEqual(len(result), 10)
-        
+
     def test_get_md_summary_token_length_nonexistent(self):
         """Test token length for non-existent document."""
         result = get_md_summary_token_length(999999)
@@ -104,15 +104,17 @@ class TestLLMTools(TestCase):
             document=self.doc,
             title="Long Note",
             content=long_content,
-            creator=self.user
+            creator=self.user,
         )
-        
-        results = get_notes_for_document_corpus(document_id=self.doc.id, corpus_id=self.corpus.id)
-        
+
+        results = get_notes_for_document_corpus(
+            document_id=self.doc.id, corpus_id=self.corpus.id
+        )
+
         # Verify content truncation
         for note_dict in results:
             self.assertLessEqual(len(note_dict["content"]), 512)
-            
+
         # Verify ordering by created date
         created_dates = [note["created"] for note in results]
-        self.assertEqual(created_dates, sorted(created_dates)) 
+        self.assertEqual(created_dates, sorted(created_dates))

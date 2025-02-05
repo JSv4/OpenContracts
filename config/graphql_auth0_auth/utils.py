@@ -1,5 +1,6 @@
 import json
 import uuid
+import logging  
 
 import jwt
 import requests
@@ -11,6 +12,7 @@ from graphql_jwt import exceptions
 from config.graphql_auth0_auth.settings import auth0_settings
 from opencontractserver.users.tasks import sync_remote_user
 
+logger = logging.getLogger(__name__)
 
 def jwt_auth0_decode(token):
     header = jwt.get_unverified_header(token)
@@ -83,25 +85,36 @@ def get_auth0_user_from_token(remote_username):
     user = None
 
     UserModel = get_user_model()
+    logger.info(f"get_auth0_user_from_token() - UserModel: {UserModel}")
+    logger.info(f"get_auth0_user_from_token() - remote_username: {remote_username}")
+    logger.info(f"get_auth0_user_from_token() - AUTH0_CREATE_NEW_USERS: {auth0_settings.AUTH0_CREATE_NEW_USERS}")
 
     if auth0_settings.AUTH0_CREATE_NEW_USERS:
         user, created = UserModel._default_manager.get_or_create(
             **{UserModel.USERNAME_FIELD: remote_username}
         )
+        logger.info(f"get_auth0_user_from_token() - user created: {created}")
+        logger.info(f"get_auth0_user_from_token() - user: {user}")
         if created:
-            # print("User created", user)
+            logger.info(f"get_auth0_user_from_token() - configuring new user: {user}")
             user = configure_user(user)
+            logger.info(f"get_auth0_user_from_token() - user configured: {user}")
 
     else:
         try:
             user = UserModel._default_manager.get_by_natural_key(remote_username)
+            logger.info(f"get_auth0_user_from_token() - found existing user: {user}")
         except UserModel.DoesNotExist:
+            logger.info("get_auth0_user_from_token() - user does not exist")
             pass
 
     if user is None:
+        logger.info("get_auth0_user_from_token() - returning None as no user found/created")
         return user
     else:
-        return user if user.is_active and user_can_authenticate(user) else None
+        is_active = user.is_active and user_can_authenticate(user)
+        logger.info(f"get_auth0_user_from_token() - user active status: {is_active}")
+        return user if is_active else None
 
 
 def jwt_get_username_from_payload_handler(payload):
@@ -112,18 +125,22 @@ def get_user_by_payload(payload):
 
     # print("get_user_by_payload() - payload", payload)
     username = jwt_get_username_from_payload_handler(payload)
-
+    logger.info(f"get_user_by_payload() - username: {username}")
     # print("get_user_by_payload() - username", username)
 
     if not username:
         raise exceptions.JSONWebTokenError(_("Invalid payload"))
+    
+    logger.info(f"get_user_by_payload() - auth0_settings.AUTH0_GET_USER_FROM_TOKEN_HANDLER: {auth0_settings.AUTH0_GET_USER_FROM_TOKEN_HANDLER}")
 
     user = auth0_settings.AUTH0_GET_USER_FROM_TOKEN_HANDLER(username)
-    # print("get_user_by_payload - user: ", user)
+    logger.info(f"get_user_by_payload - user: {user}")
 
     if user is not None and not getattr(user, "is_active", True):
         raise exceptions.JSONWebTokenError(_("User is disabled"))
 
+
+    logger.info(f"get_user_by_payload() - returning user: {user}")
     return user
 
 
@@ -135,4 +152,5 @@ def get_user_by_token(token, **kwargs):
     create a user, configure it, and return user obj
     """
     payload = get_payload(token)
+    logger.info(f"get_user_by_token() - payload: {payload}")
     return get_user_by_payload(payload)

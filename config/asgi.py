@@ -68,7 +68,6 @@ if settings.USE_AUTH0:
     from config.websocket.middlewares.websocket_auth0_middleware import (
         WebsocketAuth0TokenMiddleware,  # type: ignore
     )
-
     websocket_auth_middleware = WebsocketAuth0TokenMiddleware
 else:
     logger.info("USE_AUTH0 set to False, using GraphQLJWTTokenAuthMiddleware")

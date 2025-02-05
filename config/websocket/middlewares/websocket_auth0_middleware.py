@@ -28,39 +28,21 @@ Dependencies:
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import parse_qsl
 
-from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
-from django.contrib.auth import authenticate
-from django.contrib.auth.models import AnonymousUser, User
-from django.http import HttpRequest
+from channels.db import database_sync_to_async
+from django.contrib.auth.models import AnonymousUser
+
+from django.contrib.auth import get_user_model
+
+
+from config.graphql_auth0_auth.utils import get_user_by_token
 
 logger = logging.getLogger(__name__)
 
-
-class MockWSRequest(HttpRequest):
-    """
-    A minimal HttpRequest-like object for websocket connections so that we can reuse
-    existing auth backends. It allows attaching a META dict to mimic standard request headers.
-    """
-
-    def __init__(
-        self, *, token: str = "", headers: Optional[list[tuple[bytes, bytes]]] = None
-    ) -> None:
-        super().__init__()
-        self.method = "GET"
-        # Populate META in a way that the ApiKeyBackend can parse.
-        # If your backend expects a different header, set it here accordingly.
-        self.META["HTTP_AUTHORIZATION"] = f"Bearer {token}"
-        if headers:
-            for key_bytes, value_bytes in headers:
-                key = key_bytes.decode("utf-8").upper().replace("-", "_")
-                value = value_bytes.decode("utf-8")
-                # Example: b'authorization' -> 'HTTP_AUTHORIZATION'
-                if key == "AUTHORIZATION":
-                    self.META["HTTP_AUTHORIZATION"] = value
+User = get_user_model()
 
 
 class WebsocketAuth0TokenMiddleware(BaseMiddleware):
@@ -80,10 +62,11 @@ class WebsocketAuth0TokenMiddleware(BaseMiddleware):
 
         # 1. Extract the token from query string or scope headers
         query_string = scope.get("query_string", b"").decode("utf-8")
+        logger.info(f"Query string: {query_string}")
         query_params = dict(parse_qsl(query_string))
         token = query_params.get("token")
-        logger.debug(f"Extracted query string parameters: {query_params}")
-        logger.debug(f"Found token in query string: {'Yes' if token else 'No'}")
+        logger.info(f"Extracted query string parameters: {query_params}")
+        logger.info(f"Found token in query string: {'Yes' if token else 'No'}")
 
         # Also allow a standard 'Authorization' header (for example "Authorization: Bearer abc123")
         # scope["headers"] is a list of tuples of the form [(b'header-name', b'value'), ...]
@@ -93,16 +76,12 @@ class WebsocketAuth0TokenMiddleware(BaseMiddleware):
         if token or any(h[0].lower() == b"authorization" for h in headers):
             logger.debug("Attempting authentication with provided credentials")
             try:
-                request = MockWSRequest(
-                    token=token if token else "",
-                    headers=headers if headers else None,
-                )
-                logger.debug("Created mock request object for authentication")
-
-                user = database_sync_to_async(authenticate)(request=request)
+                logger.info(f"WebsocketAuth0TokenMiddleware - Attempting authentication with token: {token}")
+                user = await database_sync_to_async(get_user_by_token)(token)
+                logger.info(f"WebsocketAuth0TokenMiddleware - user: {user}")
                 if user and isinstance(user, User):
-                    logger.debug(f"Websocket user authenticated: {user.username}")
-                    logger.debug(
+                    logger.info(f"Websocket user authenticated: {user.username}")
+                    logger.info(
                         f"Successfully authenticated user {user.username} with ID {user.id}"
                     )
                     scope["user"] = user

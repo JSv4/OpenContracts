@@ -13,7 +13,16 @@ def _context_has_user(request):
 
 
 def _authenticate(request):
-    is_anonymous = _context_has_user(request)
+    """
+    Check if we should attempt API token authentication.
+    Returns False if the request has a Bearer token (which should be handled by JWT middleware)
+    or if the request is already authenticated.
+    """
+    auth = request.META.get("HTTP_AUTHORIZATION", "")
+    if auth.startswith("Bearer "):
+        return False
+    
+    is_anonymous = not _context_has_user(request)
     return is_anonymous and get_http_authorization(request) is not None
 
 

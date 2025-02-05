@@ -506,7 +506,6 @@ GRAPHENE = {
     "MIDDLEWARE": GRAPHENE_MIDDLEWARE,
 }
 
-
 GRAPHQL_JWT = {
     "JWT_AUTH_HEADER_PREFIX": "Bearer",
     "JWT_VERIFY_EXPIRATION": True,
@@ -514,7 +513,7 @@ GRAPHQL_JWT = {
     "JWT_EXPIRATION_DELTA": timedelta(days=7),
     "JWT_REFRESH_EXPIRATION_DELTA": timedelta(days=14),
     "JWT_ALGORITHM": "HS256",
-    "JWT_ALLOW_ANY_HANDLER": "config.graphql.jwt_overrides.allow_any",
+    # "JWT_ALLOW_ANY_HANDLER": "config.graphql.jwt_overrides.allow_any",
 }
 
 # Constants for Permissioning

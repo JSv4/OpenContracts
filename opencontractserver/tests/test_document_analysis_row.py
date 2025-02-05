@@ -24,8 +24,10 @@ class DocumentAnalysisRowTestCase(TestCase):
     def setUp(self):
         with transaction.atomic():
             self.user = User.objects.create_user(
-                username="testuser", password="testpassword"
+                username="testuser",
+                password="testpassword"
             )
+            self.user.save()  # Ensure the user is saved
 
             self.document = Document(
                 title="Test Document", description="Test Description", creator=self.user

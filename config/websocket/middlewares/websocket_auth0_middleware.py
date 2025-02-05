@@ -31,12 +31,10 @@ import logging
 from typing import Any
 from urllib.parse import parse_qsl
 
-from channels.middleware import BaseMiddleware
 from channels.db import database_sync_to_async
-from django.contrib.auth.models import AnonymousUser
-
+from channels.middleware import BaseMiddleware
 from django.contrib.auth import get_user_model
-
+from django.contrib.auth.models import AnonymousUser
 
 from config.graphql_auth0_auth.utils import get_user_by_token
 
@@ -76,7 +74,9 @@ class WebsocketAuth0TokenMiddleware(BaseMiddleware):
         if token or any(h[0].lower() == b"authorization" for h in headers):
             logger.debug("Attempting authentication with provided credentials")
             try:
-                logger.info(f"WebsocketAuth0TokenMiddleware - Attempting authentication with token: {token}")
+                logger.info(
+                    f"WebsocketAuth0TokenMiddleware - Attempting authentication with token: {token}"
+                )
                 user = await database_sync_to_async(get_user_by_token)(token)
                 logger.info(f"WebsocketAuth0TokenMiddleware - user: {user}")
                 if user and isinstance(user, User):

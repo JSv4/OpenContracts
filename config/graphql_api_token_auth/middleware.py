@@ -21,7 +21,7 @@ def _authenticate(request):
     auth = request.META.get("HTTP_AUTHORIZATION", "")
     if auth.startswith("Bearer "):
         return False
-    
+
     is_anonymous = not _context_has_user(request)
     return is_anonymous and get_http_authorization(request) is not None
 

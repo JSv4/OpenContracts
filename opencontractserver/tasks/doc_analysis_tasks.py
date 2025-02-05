@@ -326,6 +326,7 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
         document=doc,
         content=reference_notes,
         corpus_id=corpus_id,
+        creator=doc.creator,
     )
 
     Note.objects.create(
@@ -333,6 +334,7 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
         document=doc,
         content=cheat_sheet,
         corpus_id=corpus_id,
+        creator=doc.creator,
     )
 
     return [], [], [], True

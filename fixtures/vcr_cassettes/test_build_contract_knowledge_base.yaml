@@ -1,0 +1,648 @@
+interactions:
+- request:
+    body: '{"text": ""}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '12'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"error":"Text is required"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '29'
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Feb 2025 00:31:29 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 400
+      message: BAD REQUEST
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a highly skilled
+      paralegal specializing in contract analysis. Your goal is to carefully read
+      the contract and produce a detailed yet concise summary. Strictly follow the
+      requested format and level of detail. You write in elegant and expressive markdown.\"},{\"role\":\"user\",\"content\":\"
+      \   **Please analyze the following contract** (included below) **and provide
+      the following information:**\\n\\n    1. **Context and Purpose**\\n    - A brief
+      description (2\u20133 sentences) explaining the primary purpose of the contract
+      and any relevant\\n      background details.\\n\\n    2. **Knowledge Base Article
+      Summary**\\n    - **Parties Involved**: Identify all parties and their roles
+      or obligations.\\n    - **Key Dates**: Outline important dates (e.g., effective
+      date, milestones, deadlines, renewal dates).\\n    - **Key Definitions**: Lisst
+      or paraphrase any critical definitions that shape the agreement.\\n    - **Termination
+      & Renewal Provisions**: Summarize any clauses that address how and when the
+      contract\\n      can end or renew.\\n\\n    3. **Notes on Referenced Documents
+      & Regulations**\\n    - **Referenced Documents**: List names and any critical
+      details (e.g., date, version, or relevant\\n      sections).\\n    - **Referenced
+      Rules/Regulations**: List any laws, statutes, or regulatory bodies referenced,\\n
+      \     along with a short description of how they apply.\\n\\n    **Contract
+      Text:**\\n    None\\n    \"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"temperature\":0.1}"
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1507'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNda9tAEHz3r9jes21iW64dv4VAaaGUUFoKDUWs79bStafb893Ktgj+
+        70WyYzkkhb7oYWZnbvZDTwMAZY1agdIliq6CG90dvui7D1/fL7NDloWHH9vPcSbfi0l2/7PZqmGr
+        4PVv0vKsGmuugiOx7E+0joRCretkMVsuJvPs9qYjKjbkWlkRZJTxqLLejqY302x0sxhNlmd1yVZT
+        Uit4HAAAPHXfNqc3dFAr6Lw6pKKUsCC1uhQBqMiuRRSmZJOgFzXsSc1eyHfR7ykKWu+ad/CR97Sj
+        OAQrgCEQxgRSooCUBK0kohYQOgjYBJVNyfpiDN8YQuSdNQQIUnLkuigBPbom2TSET7Dn2hnwRKaz
+        Qi01OjiHAN68eGAMD44w0cX01etDQG9aW+scrAlKDKEBYTj1Cg3XsLdSdspI25qSkIFUVxXGphM/
+        pxtfTyXSpk7YbsbXzp3x42XMjosQeZ3O/AXfWG9TmUfCxL4daRIOqmOPA4Bf3TrrFxtSIXIVJBf+
+        Q741nN4uTn6qv6KenU/OpLCg6/FZthy+4ZcbErQuXR2E0qhLMr20vx6sjeUrYnDV9es0b3mfOre+
+        +B/7ntCagpDJQyRj9cuO+7JI7U/2r7LLlLvAKlHcWU25WIrtJgxtsHan01epSUJVvrG+oBiiPd3/
+        JuSLKZkFrueZVoPj4C8AAAD//wMAPXl3ww0EAAA=
+    headers:
+      CF-RAY:
+      - 90cecc42bf4141e6-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Feb 2025 00:31:32 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=4_EKFE2vngwYgbWQRQNvzVVPbwPKzvgW3joYqvfZmWM-1738715492-1.0.1.1-Op0Gl0vIHMem0ugwhIv6lPvRj_6k_0H3y3vno20BpelaYpiyzdL5IgX8zFcOwRCugAgJC8Nj6EdpHUyClwF9nQ;
+        path=/; expires=Wed, 05-Feb-25 01:01:32 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=ZkkfNyP1IzGAjQbb4dKlLtCFH8X1rH4QFpb9MkMSsq0-1738715492094-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '1906'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999641'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 5ms
+      x-request-id:
+      - req_708559b49221a062a37e3b34645b847f
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are acting as a senior legal
+      assistant. Your primary focus is on ensuring all references to external documents,
+      exhibits, regulations, or statutes are identified accurately. You write in elegant
+      and expressive markdown."},{"role":"user","content":"            Given the contract
+      below, please:\n\n            Summarize the contract with attention to main
+      purpose and parties.\n            Enumerate all references to documents, laws,
+      regulations, or external materials:\n            Document/Regulation name\n            Section
+      or clause referencing it\n            Brief note on relevance\n            Identify
+      any key definitions that link to external references or industry-standard terminology.\n            Highlight
+      any deadlines or termination clauses tied to external compliance requirements.\n            Contract
+      Text: None "}],"model":"gpt-4o-mini","stream":false,"temperature":0.1}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '939'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4_EKFE2vngwYgbWQRQNvzVVPbwPKzvgW3joYqvfZmWM-1738715492-1.0.1.1-Op0Gl0vIHMem0ugwhIv6lPvRj_6k_0H3y3vno20BpelaYpiyzdL5IgX8zFcOwRCugAgJC8Nj6EdpHUyClwF9nQ;
+        _cfuvid=ZkkfNyP1IzGAjQbb4dKlLtCFH8X1rH4QFpb9MkMSsq0-1738715492094-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFPLbtswELz7K7Y8y4GfcOxbkVMuTVH0UKAoBIYcSdtQpEquXLtB/r2g
+        5NoOmgK9CMLOznD29TwhUmzVjpRptJi2c9P3hw/mbjvv7pdfDvtP2/Rwm5YP+unBrvczq4rMCI/f
+        YeQP68aEtnMQDn6ETYQWZNX5Znm7ma9X28UAtMHCZVrdyXQVpi17ni5mi9V0tpnOb0/sJrBBUjv6
+        OiEieh6+2ae3OKgdzYo/kRYp6Rpqd04iUjG4HFE6JU6ivajiAprgBX6wfocomr07vqPPgcZsOoae
+        UFUwwnu4Y0H39DP0zpIHLEkDEhyEQjX8Z7WozUjTERRRIUb2NUm4oY8OOoG6GPZs8ZqRZQrS3uYX
+        2DlKfdvqyL9ALAXB9y2ilpE1yMIbpILYwgtXR3rCkSwq9pw7n0axhuvGcd0IaZ9hbR17JAqRBLFl
+        r3MyGaf7hEQ6UcSPHklgb677FFH1SedZ+d65U/zl3HgX6i6Gx3TCz/HsJjVlhE7B5yYnCZ0a0JcJ
+        0bdhwP2rmakuhraTUsITfBacrxajnrrs1QVdz0+gBNHuirVdFm/olRai2aWrFVFGmwb2Qr3sk+4t
+        hytgclX1327e0h4rZ1//j/wFMAadwJZdhGXzuuJLWkQ+u3+lnbs8GFYJcc8GpTBinoRFpXs3HoNK
+        xyRoy4p9jdhFHi+i6srNAnajH9croyYvk98AAAD//wMAp8sxgx8EAAA=
+    headers:
+      CF-RAY:
+      - 90cecc54685a41e6-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Feb 2025 00:31:34 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '1467'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999781'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 3ms
+      x-request-id:
+      - req_ff44ac63a9f8ddb279f9a2751a4e6d01
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a paralegal who must produce
+      a bullet-point cheat sheet for attorneys seeking a quick reference guide. You
+      write in elegant and expressive markdown."},{"role":"user","content":"        Read
+      the contract below and produce a bullet-point summary with the following sections:\n\n        1.
+      Purpose & Context\n        2. Parties\n        3. Key Dates\n        4. Key
+      Definitions\n        5. Termination & Renewal\n        6. Referenced Documents
+      & Regulations (including names, dates, versions, relevant sections)\n        Contract
+      Text: None "}],"model":"gpt-4o-mini","stream":false,"temperature":0.1}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '647'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4_EKFE2vngwYgbWQRQNvzVVPbwPKzvgW3joYqvfZmWM-1738715492-1.0.1.1-Op0Gl0vIHMem0ugwhIv6lPvRj_6k_0H3y3vno20BpelaYpiyzdL5IgX8zFcOwRCugAgJC8Nj6EdpHUyClwF9nQ;
+        _cfuvid=ZkkfNyP1IzGAjQbb4dKlLtCFH8X1rH4QFpb9MkMSsq0-1738715492094-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFZtb9s4DP7eX8FzgX0okmDt0rXXb13XHXZ324pmux2wFp0i0TFXWfIo
+        Oi8b9t8Pku04aTPcvgSOyOfhi0iR3/cAMjLZGWS6UKLLyg7Pl2/15cfxOas/xkfLd/d//cuXf55+
+        y68mk4/LbBARfvoFtXSokfZlZVHIu0asGZVgZD08eXZ6cng8/n2cBKU3aCNsVslw7IclORoePT0a
+        D5+eDA9PW3ThSWPIzuDTHgDA9/Qb/XQGl9kZPB10JyWGoGaYna2VADL2Np5kKgQKopxkg16ovRN0
+        yfULZFHk7Oo3eIHWL4ACKAjCtZaa0cC0thZlWHlyArpAJRAKRAHBsrJKEHLPoEQ8O1yFARgMNHNo
+        QDyEuiwV0zcEBdEoKy2AeY5aaI52NYIJOY3gPIQKNeWkez3BpcBCBajYz8mgGYAUFHrDWjmYIuRk
+        LRogBwuSAhgtzpUTMCiKbAAfLUiBPTMFYJwTLtCMbtyN+/z5c6n43viFu3H7cNHpTZL7K7hIYU9i
+        2FF9fx8OR3BVc+UDwpOkj0u5cUM4OHiXqoLmeHBwBp9eMGFuVzEpmmna+FEqclC1cJ9v+XbbsLSU
+        ieNyWdmIiGpTpe9n7GtnwDNoYl2X8Xo1BrCoDLlZzPsDxuTy0QiuFAthaEzEPys4TybeqhIHoIxh
+        DGEAyhmIBdQ5lxMHgSoCbjfBL34FHFB7Z7bQ58ZQbBRlO5cS0blbgZcCGcjNvZ1jgyIMA6AcVFVZ
+        0mpqsQvp2Qj+whW8VNIFddnVVjpMrPEDFgW67RqYovYlhr4aW98ulxWxit79LwU6s8OzSPK6rDzH
+        roM3ZDGId22If1MQUG4FmklIKwsGlbHkMMQLLdfaXYjjNkTMyaWctYG+Ry4b39aSLuGCXIIKUIem
+        K3aXV04GnZCy8NrlnssU8g7GRaEkwoOQ1IIhfvdY6rEt9SvPGuGN+oI140O+WBtUpmSlWKKBPAHK
+        BgA4Ryeh5XqXiiHGH8N9WCTxmYkvRtPr6/z0D8BPGuF4lOjINbf8BK7R4ULZPrGd6MK7plAb0/1f
+        qJ1BhkVButiuifZNkpYFTRvKWy+kEa6QyZvEdo1fa4ovrGtEVRKl11R6H1p46+JGHl6uXzco/GKn
+        ExxB8dnc2TzPR3CNOTI6jQZeel2XMfUpH7Paqo1i64QQWz1Zf0/Sdzj3NKbVvL1xAAm61UMt4JHW
+        P8ihK7/2G1xdTpEfO98grrtLnsTu7W5o0g2R0J6CxPJVnNIr5HBnWTSE66DXddbbBasWqUO5V9uM
+        +3GbpanSpHofXrtmoiZYvOEPAc+i3VdkbQeurNJYeGuQQzPK1jNxo80gZ19uGRtFoksXYvs04Vq7
+        Hn4xdKV1zTH96WnG3GKcri1DuvMHQygxfgjYzNvNoa/idvC1Jn3fRw+m5jh3DAVdh9D0NYPDmRda
+        pypObPMw96PNrYQxr4OKm5GrrW3Pf6zXHOtnFftpaOXr89j4obhjVMG7uNIE8VWWpD/2AG7TOlVv
+        bUhZxb6s5E78PbpIeHjUrlNZv8X10vHzk1YqXpTtBcennWCL8K5N/sZGlmmlCzQ9tF/fVG3Ibwj2
+        NsJ+7M4u7iZ0crNfoe8FWmMlaO4qRkN6O+RejTHuMz9TW6c5OZwF5DlpvBNCjldhMFe1bXbPLKyC
+        YHmXk5shV0zNAppXdydHaE7U9Hiss70fe/8BAAD//wMAHkV6rI4LAAA=
+    headers:
+      CF-RAY:
+      - 90cecc5e1e3041e6-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Feb 2025 00:31:41 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '6962'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999854'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_6d2f1b7c8dadc6c7f223cf0173c69715
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a legal knowledge management
+      specialist. Your task is to create a concise 2-3 sentence summary of a contract
+      that will help paralegals quickly find this document in a search index. Include
+      specific details like party names, dates, and particular context while maintaining
+      clarity. Focus on what makes this contract unique and identifiable."},{"role":"user","content":"            Based
+      on the following detailed contract summary, create a 2-3 sentence summary\n            that
+      would help paralegals quickly identify this specific contract in a search.\n            Include
+      proper names, dates, and specific context where available. The summary\n            should
+      be both accurate and distinctive enough to differentiate this contract\n            from
+      similar ones.\n\n            Detailed Summary:\n            Certainly! However,
+      it appears that the contract text is missing. To provide a thorough analysis,
+      I would need the actual content of the contract. Please provide the contract
+      text, and I will be happy to assist you with the requested summary and analysis.\n            "}],"model":"gpt-4o-mini","stream":false,"temperature":0.1}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1191'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4_EKFE2vngwYgbWQRQNvzVVPbwPKzvgW3joYqvfZmWM-1738715492-1.0.1.1-Op0Gl0vIHMem0ugwhIv6lPvRj_6k_0H3y3vno20BpelaYpiyzdL5IgX8zFcOwRCugAgJC8Nj6EdpHUyClwF9nQ;
+        _cfuvid=ZkkfNyP1IzGAjQbb4dKlLtCFH8X1rH4QFpb9MkMSsq0-1738715492094-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNNb9swDL3nVxA6O4XjNk2QW9pd2q3Dhvawjw6GItE2V1nSJLprVvS/
+        D7LTON06YBcD5iOfHvnIxwmAIC1WIFQjWbXeTNcP79W7T8vzM6s/Xq4v3/5qrvOrNx2qefwwF1mq
+        cJvvqPi56ki51htkcnaAVUDJmFhni+PlYjaf57MeaJ1Gk8pqz9MTN23J0rTIi5NpvpjOlrvqxpHC
+        KFbwdQIA8Nh/k06r8UGsIM+eIy3GKGsUq30SgAjOpIiQMVJkaVlkI6icZbS99JuGIqT/IBVnwMQG
+        NdyKawz3pBDWdUBs0XJ2K4AibJB/IlpYn53DuQveBZlaBmk1fPr8Ba6d6VIgZoAPqDpGDc7ClQyq
+        gdk8gyIvjo/ggsF1bMhiBG4QGEMboXIBLm4gdt67wBAHDRF8cPekUcNm+/IRYPenkgzIKtNpsjVE
+        j4oqUqDR0D0GuTEYM/BymzoaHs166TLNoCKNlkka4i0oI7uIGbTyLlERg4TO0o8OIWCFAa3CveDd
+        sNDWsu6nFY8O5x2w6qJMntvOmF38aW+gcbUPbhN3+D5ekaXYlAFldDaZFdl50aNPE4Bv/aJ0L7wX
+        PrjWc8nuDm0iLPJi4BPjfo7o6ekOZMfSHFSdLrNX+EqNLMnEg1UTSqoG9Vg67qXsNLkDYHLQ9d9q
+        XuMeOidb/w/9CCiFnlGXPqAm9bLjMS1gOt9/pe2n3AsWO4dLJgzJCY2V7MxwVCJuI2NbVmRrDD7Q
+        cFmVLxcF6oXczE+UmDxNfgMAAP//AwDgJZA/ZwQAAA==
+    headers:
+      CF-RAY:
+      - 90cecc8a18fe41e6-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Feb 2025 00:31:42 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '1659'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999718'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 4ms
+      x-request-id:
+      - req_bb445b94c94dbe6fb5fe8bbb859445bc
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "This contract, titled \"Service Agreement,\" is between ABC Corporation
+      and XYZ Solutions, executed on March 15, 2023. It outlines the terms for IT
+      support services provided by XYZ Solutions to ABC Corporation, including specific
+      deliverables, payment terms, and a confidentiality clause, making it a unique
+      reference for IT service engagements."}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '357'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[-0.12142277508974075,-0.022600220516324043,-0.06784729659557343,-0.031317636370658875,-0.02897021174430847,0.05606335774064064,0.017810482531785965,0.0007805635686963797,-0.043844062834978104,0.03791087493300438,-0.057699695229530334,0.05519004911184311,0.0205394197255373,0.04218016937375069,0.03152326121926308,-0.012942678295075893,0.017536235973238945,-0.1302098035812378,-0.01512904278934002,-0.006852267775684595,0.06382381916046143,0.051727231591939926,-0.0701780691742897,0.029614819213747978,0.00919434241950512,-0.03798939660191536,-0.011136060580611229,-0.007189964409917593,-0.022236481308937073,0.0007571301539428532,-0.011594635434448719,0.07344379276037216,0.03903888165950775,0.045539408922195435,0.03825458511710167,0.09263281524181366,0.007168183568865061,-0.08320540189743042,-0.0785994902253151,0.024525774642825127,-0.015978684648871422,0.06056750938296318,-0.040376875549554825,0.0336955301463604,-0.03007100522518158,0.0396684855222702,0.04082358255982399,-0.04703493416309357,-0.05929497256875038,0.07241568714380264,0.04534444212913513,-0.0010460189078003168,-0.006667566951364279,0.016304271295666695,0.03402343764901161,0.013679702766239643,-0.0986827164888382,0.0024238144978880882,-0.039296772330999374,-0.009531049057841301,0.0760626494884491,-0.01779009960591793,-0.07444649189710617,0.07640426605939865,0.0021195425651967525,0.0010079753119498491,-0.12966004014015198,-0.037241920828819275,-0.06423312425613403,-0.057506121695041656,-0.14486774802207947,-0.04590561240911484,0.010762163437902927,0.010363031178712845,0.015775185078382492,0.0892893448472023,0.13940143585205078,-0.053680505603551865,0.027877077460289,-0.13924342393875122,-0.018029572442173958,-0.003483390435576439,-0.018141109496355057,0.05253363773226738,0.0065684025175869465,-0.004879926797002554,-0.005137024912983179,0.08470674604177475,0.0415218211710453,-0.020362403243780136,0.04577355459332466,-0.004443928133696318,0.06428484618663788,-0.01929396577179432,0.010352126322686672,0.02255536988377571,0.08040150254964828,-0.08559997379779816,-0.04412735626101494,0.03634532913565636,0.027972444891929626,-0.0569189228117466,0.016074510291218758,-0.04800073057413101,0.06566363573074341,-0.03602078557014465,-0.010429549030959606,-0.03370675817131996,0.003308860817924142,0.05330105498433113,-0.06749313324689865,0.0012013394152745605,-0.04138128086924553,0.03420522063970566,-0.016641149297356606,0.05782316252589226,-0.05276056379079819,0.025608090683817863,0.0812249407172203,-0.16791291534900665,0.0006129570538178086,0.029459184035658836,0.02251429669559002,-0.06887577474117279,-0.05788477882742882,0.036468587815761566,0.008690187707543373,4.824232636131308e-32,-0.09206181019544601,-0.03604337200522423,-0.03599477559328079,-0.0411185584962368,0.06184488162398338,-0.006433315109461546,0.07371031492948532,0.10020653158426285,-0.07715829461812973,0.047277092933654785,-0.08229256421327591,0.07075947523117065,0.11532330513000488,0.010052270255982876,-0.008139751851558685,0.02082938142120838,-0.005690682213753462,0.05671023204922676,0.02492412179708481,0.06264368444681168,-0.0078041935339570045,0.025661997497081757,0.051985837519168854,0.02592124044895172,-0.004247753415256739,-0.08012073487043381,-0.01171127799898386,0.028927410021424294,0.030487895011901855,-0.011536338366568089,-0.024781659245491028,0.0016607268480584025,0.048532627522945404,0.011704396456480026,0.01986726187169552,0.07580987364053726,-0.030159777030348778,-0.054675716906785965,-0.029577966779470444,-0.06986042857170105,0.0017722565680742264,0.050350263714790344,-0.0782373771071434,-0.028827501460909843,0.01918470486998558,0.09407784044742584,-0.06705022603273392,0.015487754717469215,0.09826426953077316,0.040087949484586716,-0.0720367506146431,0.0035615789238363504,-0.026066269725561142,-0.0285097174346447,-0.0095237847417593,-0.03025284968316555,-0.007650445215404034,0.04058132693171501,0.017302144318819046,-0.028644997626543045,0.0377463772892952,-0.1309155374765396,-0.0069093406200408936,-0.044075414538383484,0.06094992905855179,0.04504206031560898,-0.012780489400029182,-0.01029093749821186,0.07115695625543594,-0.08316627889871597,-0.011201790533959866,0.003057102207094431,0.04646877944469452,0.06285715103149414,0.02361251227557659,-0.00746777281165123,0.061198651790618896,0.028826581314206123,0.06771866232156754,0.026551896706223488,-0.06321228295564651,0.0050041815266013145,0.09024176001548767,0.025829292833805084,-0.03062249906361103,0.0038670350331813097,0.12681682407855988,0.046078529208898544,-0.04799466207623482,0.0008378987549804151,-0.02289682999253273,-0.036748189479112625,0.005653603933751583,0.110743947327137,0.12211453169584274,-4.980181651298261e-33,-0.001144010340794921,-0.0005850757006555796,-0.06574402749538422,-0.011559787206351757,0.061938732862472534,0.02485368400812149,0.0033590567763894796,0.00039772476884536445,0.036265820264816284,0.0018939469009637833,0.09018459171056747,-0.04543110728263855,-0.027108870446681976,-0.015371739864349365,-0.0027544950135052204,-0.040791407227516174,-0.0517081618309021,-0.08037973940372467,0.034537043422460556,0.09030012041330338,0.01679232157766819,-0.02005508914589882,0.05636092275381088,0.0038722397293895483,0.004427200648933649,-0.02196592278778553,0.008226729929447174,-0.007448296993970871,-0.05197833850979805,0.053306739777326584,-0.05943257361650467,-0.041701436042785645,-0.046818386763334274,-0.02484051324427128,0.002935553900897503,-0.0948321670293808,-0.020692579448223114,-0.028885509818792343,-0.02850475162267685,-0.021795032545924187,0.049904052168130875,-0.03317425027489662,-0.020931802690029144,0.10300915688276291,0.07916496694087982,-0.05238907039165497,-0.0456843301653862,-0.09239543974399567,0.007146126590669155,0.04117017239332199,0.006096402648836374,-0.042961202561855316,0.026130178943276405,-0.018878549337387085,-0.012910427525639534,0.10464760661125183,0.041269123554229736,-0.00408963905647397,-0.0092014716938138,-0.01997169852256775,0.07135513424873352,0.06120581924915314,0.015027964487671852,0.055160101503133774,0.02323232963681221,0.023790359497070312,-0.0016207138542085886,0.006299892440438271,0.018176106736063957,0.021126169711351395,0.031691595911979675,-0.02206873707473278,-0.07698601484298706,-0.03388647362589836,-0.002902207663282752,-0.041949402540922165,-0.004975807387381792,-0.08525194227695465,-0.06840674579143524,-0.022597359493374825,0.02798621729016304,0.0810106173157692,0.03211688622832298,0.13698658347129822,-0.02797948196530342,-0.07969764620065689,0.07505690306425095,0.06860160827636719,-0.03057205118238926,0.03928862139582634,0.003549294313415885,-0.019609181210398674,-0.045146770775318146,0.0955248698592186,0.012810722924768925,-4.5649463533939497e-33,-0.0984191820025444,-0.02814447693526745,-0.07603801041841507,-0.10708440840244293,-0.024213768541812897,-0.012971325777471066,-0.054793402552604675,-0.03663947060704231,0.10075052827596664,0.013688807375729084,0.03185415267944336,0.028873613104224205,-0.03840559348464012,0.013618916273117065,0.017984973266720772,0.021227091550827026,-0.05648411065340042,-0.020345859229564667,-0.049650467932224274,-0.0250419769436121,-0.009014545939862728,-0.008744536899030209,0.005621017888188362,-0.09982956945896149,0.006783580873161554,0.045423392206430435,-0.03825797513127327,0.06723475456237793,0.05520755052566528,-0.03451978415250778,-0.004556757863610983,-0.0129024563357234,0.0018734574550762773,-0.03173622488975525,-0.0666080042719841,-0.009457091800868511,0.002808559685945511,-0.03992227464914322,0.017232639715075493,-0.025251952931284904,-0.002987420652061701,0.0936400443315506,-0.026180854067206383,0.04664452001452446,0.03295312821865082,0.011988365091383457,-0.06920555979013443,-0.028952250257134438,0.06499092280864716,-0.04852838069200516,-0.054157208651304245,0.020738786086440086,0.048500027507543564,-0.04118640720844269,-0.007071953732520342,-0.003405273426324129,-0.060899075120687485,-0.03490639850497246,0.016742873936891556,0.01711268164217472,-0.09651921689510345,-0.025753911584615707,0.08370774984359741,-0.026668444275856018]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8075'
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Feb 2025 00:31:44 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "Certainly! To assist you effectively, I would need the text of
+      the contract you are referring to. Please provide the contract text, and I will
+      summarize it, enumerate the references, identify key definitions, and highlight
+      any deadlines or termination clauses as requested."}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '285'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[-0.10550538450479507,0.05121050029993057,-0.02305697277188301,-0.08494818210601807,-0.02341509610414505,0.06373371928930283,-0.07070820033550262,-0.0021258110646158457,-0.02093331515789032,0.005821596831083298,-0.039308760315179825,0.05316850543022156,0.04524441435933113,-0.01665821112692356,0.015826987102627754,-0.016907798126339912,0.03195072337985039,0.05059272050857544,0.013757503591477871,0.052361004054546356,0.04471505433320999,0.037620991468429565,-0.05484592914581299,0.0020082027185708284,-0.01886799745261669,-0.049473706632852554,0.06034736707806587,0.056913893669843674,-0.014582407660782337,-0.005418221466243267,0.0008059298852458596,-0.030789537355303764,-0.035699352622032166,0.01771283708512783,0.11603350192308426,0.029745882377028465,-0.001466929679736495,0.014728068374097347,0.010865634307265282,0.030105408281087875,0.007355824578553438,-0.044858526438474655,-0.00010936080798273906,0.025618894025683403,0.008694346062839031,-0.03965330123901367,-0.05733101814985275,-0.0809941291809082,-0.14758874475955963,0.09259805828332901,0.0019546898547559977,0.008378798142075539,0.004335157107561827,0.01876746118068695,0.030633043497800827,0.09281434863805771,-0.019795015454292297,-0.11568060517311096,-0.02781679667532444,0.013453777879476547,0.005464944057166576,0.02716037444770336,-0.06754147261381149,0.0434478260576725,0.02364581637084484,0.06759434193372726,-0.05248032882809639,-0.05091585963964462,-0.02580937184393406,-0.029514538124203682,-0.08011506497859955,-0.09096341580152512,-0.021083153784275055,0.006103792227804661,-0.009700430557131767,0.08563761413097382,-0.0197035800665617,0.043129924684762955,-0.04402772709727287,-0.06707936525344849,-0.03458276763558388,0.012341360561549664,-0.02280649170279503,-0.013697594404220581,-0.008901170454919338,-0.02232576347887516,0.07165411114692688,0.054099246859550476,0.08521097153425217,0.01962278224527836,0.02720417082309723,-0.03958442807197571,0.06254075467586517,-0.053067732602357864,-0.10178759694099426,0.03190755471587181,-0.0011262171901762486,-0.08766266703605652,0.014427543617784977,0.02274893783032894,-0.03425300866365433,-0.004226197022944689,-0.0849321261048317,-0.042458098381757736,-0.008010681718587875,-0.022710401564836502,-0.026373304426670074,-0.04751040041446686,-0.023964982479810715,-0.03845777362585068,-0.050834521651268005,0.03300043195486069,-0.04587159678339958,-0.12131068110466003,0.06709045171737671,0.0765470489859581,-0.037854354828596115,-0.03441520407795906,0.06641519069671631,-0.10555927455425262,0.027963683009147644,0.03547040373086929,-0.046120136976242065,-0.010767539031803608,0.0036094989627599716,-0.05500837415456772,0.016359269618988037,-7.1381946175434845e-31,0.020979395136237144,-0.07841820269823074,0.0013938653282821178,-0.026240019127726555,0.05636470019817352,0.008039597421884537,0.01598181761801243,0.0043737092055380344,-0.014217720367014408,-0.028495365753769875,-0.00029702321626245975,0.014564299955964088,0.027827966958284378,-0.053292665630578995,-0.04026670381426811,0.014908888377249241,0.06463127583265305,0.09781505912542343,0.048495735973119736,0.03205156326293945,-0.014828493818640709,-0.1490062177181244,0.005319429561495781,0.005704134237021208,0.06805084645748138,-0.03261365741491318,-0.0414327010512352,-0.002176244044676423,-0.012567556463181973,0.010713174007833004,0.049914680421352386,-0.059946224093437195,0.0197248924523592,0.026839792728424072,0.050281692296266556,0.018412429839372635,-0.07409932464361191,0.03379957750439644,0.04311911016702652,0.003773581003770232,0.058820102363824844,0.01358711626380682,-0.03765619546175003,-0.027376655489206314,-0.028068557381629944,-0.027119215577840805,0.03755922242999077,0.0317474789917469,0.12577824294567108,-0.017663683742284775,-0.031521305441856384,-0.030659139156341553,-0.013974446803331375,-0.015297788195312023,0.04581335559487343,0.0024675652384757996,0.00011294841533526778,0.019112728536128998,0.04269582778215408,0.014053426682949066,-0.03706273064017296,-0.010915077291429043,-0.006929667200893164,0.0243990421295166,0.06624463945627213,0.09731262922286987,0.004810442216694355,-0.06199084222316742,0.10927422344684601,-0.09705884754657745,-0.02055835723876953,-0.004682019352912903,0.08594678342342377,0.06396760791540146,0.027703797444701195,0.014872689731419086,-0.0030183466151356697,0.05298462510108948,0.032042793929576874,-0.007408491335809231,0.04402654990553856,-0.0013039062032476068,0.04781889170408249,0.025396503508090973,0.06341008096933365,0.00011454345076344907,0.11129838973283768,-0.040822144597768784,0.002298592822626233,-0.022015493363142014,-0.07630398124456406,0.027020085602998734,-0.04907109960913658,0.037294045090675354,0.05849665030837059,-5.684194768897329e-33,0.0520857572555542,-0.03417222946882248,0.01985066942870617,0.04667307808995247,0.0396241620182991,0.010467604734003544,-0.05978595092892647,0.004132184665650129,0.017520524561405182,0.046854693442583084,0.088509202003479,-0.09404924511909485,-0.08780591189861298,-0.03350294008851051,-0.06361386179924011,-0.01533820852637291,-0.019892213866114616,-0.1068059653043747,-0.021222025156021118,0.03966020047664642,-0.007660496514290571,0.01554512046277523,-0.02510947175323963,0.0020656350534409285,0.06648620218038559,0.03429700806736946,0.01326939556747675,-0.009949147701263428,-0.10221924632787704,0.04826102778315544,-0.012115090154111385,-0.07939581573009491,-0.14118453860282898,0.04447854682803154,0.016643749549984932,-0.10284563153982162,0.10067015141248703,0.003337135538458824,-0.046689473092556,0.09234083443880081,0.0928836390376091,0.02606387436389923,-0.024545367807149887,0.040695689618587494,0.013559095561504364,-0.0474240705370903,0.022091222926974297,-0.057073019444942474,0.03355610743165016,0.06819446384906769,-0.0677165612578392,-0.005254105199128389,0.01803312450647354,-0.053644657135009766,0.027931105345487595,0.033931393176317215,0.03829827159643173,-0.053467463701963425,0.04191797226667404,-0.023636240512132645,0.0012333873892202973,0.04534571245312691,0.09859009832143784,-0.03769868239760399,0.15900811553001404,-0.08796554803848267,0.01926780678331852,-0.05825858935713768,-0.04270630329847336,0.04407815635204315,-0.027684194967150688,-0.008926124311983585,-0.10299627482891083,0.050821948796510696,0.08569090068340302,-0.12608228623867035,0.04962034523487091,-0.05247420072555542,-0.021308658644557,-0.04227833449840546,-0.02174431085586548,0.037834376096725464,-0.000318769394652918,0.025345655158162117,0.022519094869494438,-0.009321806021034718,-0.026720695197582245,0.07697587460279465,0.05161832273006439,0.05364923179149628,-0.061622828245162964,-0.03809359669685364,0.037407759577035904,0.040762122720479965,-0.03696976974606514,-3.621677891074313e-33,-0.03478255495429039,0.07754731178283691,-0.0015639102784916759,0.011081703938543797,-0.06428822875022888,-0.030299585312604904,0.0015216466272249818,-0.03282507508993149,0.04722307622432709,-0.003922073636204004,0.05771070718765259,-0.012689536437392235,0.02375446818768978,-0.0006454687681980431,-0.10602420568466187,-0.03181600943207741,0.06263644993305206,-0.054244644939899445,-0.04842046648263931,-0.07170983403921127,0.0026566132437437773,0.07087182253599167,-0.06676531583070755,-0.025625940412282944,-0.0019315589452162385,0.007824128493666649,-0.02497071400284767,0.09424397349357605,0.0014241343596950173,-8.064009307418019e-05,-0.03121035173535347,0.05295857787132263,0.07603965699672699,-0.047703903168439865,-0.08588021248579025,-0.04060252755880356,-0.011977502144873142,-0.0024683077353984118,-0.008915070444345474,0.014576436951756477,0.06217605248093605,0.13639135658740997,-0.052598435431718826,0.07416970282793045,0.06793980300426483,-0.02287311479449272,-0.03809943050146103,-0.11601490527391434,-0.05563324689865112,-0.027426308020949364,-0.04795251786708832,-0.0506315678358078,0.08292214572429657,-0.05208732187747955,-0.004295992199331522,0.0577087476849556,0.021621977910399437,0.023954056203365326,-0.01557698380202055,-0.07170701026916504,-0.021124420687556267,-0.016279885545372963,-0.013526094146072865,-0.037572287023067474]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8083'
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Feb 2025 00:31:44 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "Certainly! Below is a structured bullet-point cheat sheet template
+      for attorneys, designed to summarize a contract effectively. Since no specific
+      contract text was provided, this template can be filled in with relevant details
+      once the contract is reviewed.\n\n```markdown\n# Contract Summary Cheat Sheet\n\n##
+      1. Purpose & Context\n- **Objective**: [Briefly describe the main purpose of
+      the contract]\n- **Context**: [Explain the background or circumstances leading
+      to the contract]\n\n## 2. Parties\n- **Party A**: [Name, address, and role of
+      the first party]\n- **Party B**: [Name, address, and role of the second party]\n-
+      **Additional Parties**: [Any other involved parties, if applicable]\n\n## 3.
+      Key Dates\n- **Effective Date**: [Date when the contract becomes effective]\n-
+      **Expiration Date**: [Date when the contract ends, if applicable]\n- **Important
+      Milestones**: [List any critical deadlines or milestones]\n\n## 4. Key Definitions\n-
+      **Term**: [Definition of the term as used in the contract]\n- **Confidential
+      Information**: [Definition of what constitutes confidential information]\n-
+      **Force Majeure**: [Definition and implications of force majeure events]\n-
+      **Other Key Terms**: [Any other significant definitions relevant to the contract]\n\n##
+      5. Termination & Renewal\n- **Termination Conditions**: [Conditions under which
+      the contract can be terminated]\n- **Notice Period**: [Required notice period
+      for termination]\n- **Renewal Terms**: [Details on how the contract can be renewed,
+      if applicable]\n\n## 6. Referenced Documents & Regulations\n- **Document Name**:
+      [Title of the referenced document]\n  - **Date**: [Date of the document]\n  -
+      **Version**: [Version number, if applicable]\n  - **Relevant Sections**: [Specific
+      sections that are pertinent to the contract]\n- **Regulations**: [Any applicable
+      laws or regulations referenced in the contract]\n\n```\n\n### Instructions for
+      Use:\n- Fill in the placeholders with specific information from the contract.\n-
+      Ensure that all details are accurate and reflect the contents of the contract.\n-
+      Use this cheat sheet as a quick reference during discussions or negotiations
+      related to the contract."}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2187'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[-0.1016802042722702,0.054032810032367706,-0.09359611570835114,-0.06355234980583191,-0.05710836499929428,0.0759497731924057,0.018505604937672615,0.03558572754263878,0.03772415220737457,0.0016491124406456947,-0.017393529415130615,0.04921961948275566,0.0540936216711998,-0.04923855513334274,0.010185647755861282,-0.008940553292632103,0.0027197860181331635,0.1148318201303482,0.02402639016509056,-0.0005930494517087936,0.04675375670194626,0.06404069066047668,-0.02563852071762085,0.011206635273993015,0.013068491593003273,0.019182424992322922,-0.004241272807121277,0.04550844058394432,-0.00218314491212368,0.015114940702915192,0.004269437864422798,0.074334055185318,-0.027696985751390457,0.05377466231584549,0.08437608182430267,0.04245529696345329,-0.07582332193851471,0.04690574109554291,0.06672343611717224,0.03060578741133213,-0.007221447769552469,-0.0013860110193490982,0.036883942782878876,0.0587131641805172,0.02811283804476261,-0.009915497153997421,-0.056442562490701675,-0.0243307426571846,-0.08690609782934189,0.07420141994953156,-0.010099614039063454,0.012040926143527031,-0.005157794803380966,-0.011015208438038826,-0.02434944361448288,0.027391333132982254,0.012556753121316433,-0.07406702637672424,0.001636110944673419,0.014755671843886375,0.0315859392285347,0.03896477445960045,-0.04889154061675072,0.03229330852627754,-0.02164631523191929,0.06136586517095566,-0.0626857727766037,0.03443579375743866,-0.03085768222808838,0.07117153704166412,-0.06562242656946182,-0.040134724229574203,-0.007324300706386566,0.00784577801823616,-0.016535352915525436,0.017233438789844513,-0.022576238960027695,-0.024433456361293793,-0.06560539454221725,-0.04289976879954338,-0.008724628947675228,0.0076248664408922195,0.02581539750099182,-0.0014015864580869675,-0.05856645852327347,0.01287122629582882,0.09061222523450851,-0.01711837761104107,0.07715407013893127,-0.003821498714387417,0.02779329940676689,-0.030512187629938126,0.019581228494644165,-0.03384312614798546,-0.052050068974494934,0.011045126244425774,0.01878979429602623,-0.04978843778371811,-0.013312848284840584,0.027474038302898407,0.003211742267012596,-0.00016707740724086761,0.0036007422022521496,-0.034578561782836914,0.008719634264707565,-0.015800146386027336,0.004579809028655291,-0.0489017553627491,-0.00437670573592186,-0.024658359587192535,-0.02245866321027279,0.023668885231018066,-0.023876231163740158,-0.14491140842437744,0.014048155397176743,-0.04947231709957123,-0.013433437794446945,-0.06424599140882492,0.03429039195179939,-0.017376292496919632,0.0227284487336874,0.04924594610929489,-0.0778457522392273,0.04427219182252884,-0.06100191920995712,-0.0492527112364769,0.008620472624897957,-5.91009736471964e-31,-0.02966012991964817,-0.05697181820869446,-0.020112350583076477,0.047578152269124985,0.03232235088944435,0.00780447805300355,0.017981011420488358,-0.022049475461244583,-0.05410591885447502,0.11054462194442749,0.05246547609567642,-0.009223660454154015,-0.014252371154725552,0.021641716361045837,-0.04924079030752182,0.05357813462615013,0.00224912166595459,0.07608006149530411,-0.02217218093574047,0.014199583791196346,-0.045649170875549316,-0.04030466824769974,0.06053221970796585,0.022343948483467102,0.029447607696056366,0.0215214304625988,-0.04544024541974068,-0.02778591215610504,-0.05404576659202576,-0.018722936511039734,0.03038904070854187,-0.05096135288476944,0.031178805977106094,-0.01918053813278675,0.029428526759147644,0.028814777731895447,-0.04451131075620651,-0.019486097618937492,0.008117537945508957,0.020539985969662666,-0.027488047257065773,-0.011206962168216705,-0.0007925806567072868,0.019412821158766747,-0.03494684398174286,0.006995731499046087,-0.03214772045612335,0.025703370571136475,0.09886133670806885,-0.02837820164859295,-0.023523328825831413,0.003183390013873577,-0.01771300658583641,-0.020788773894309998,0.05052337050437927,-0.029484771192073822,-0.034364521503448486,-0.008306432515382767,0.03991451486945152,0.006982322782278061,-0.007086083758622408,0.003740093670785427,-0.013070915825664997,0.0020635686814785004,-0.0461396686732769,0.013757634907960892,-0.05505736172199249,-0.04333842918276787,0.14159837365150452,-0.06585478782653809,-0.03141571953892708,-0.0011862446554005146,0.006244888994842768,0.03631223365664482,0.011878985911607742,-0.00845744926482439,0.021400559693574905,0.04290834069252014,0.04983902722597122,-0.03367217630147934,0.0071242437697947025,-0.06305322051048279,0.029161076992750168,-0.005620903335511684,0.004038624465465546,-0.011740485206246376,0.06532390415668488,-0.07925644516944885,-0.03391221910715103,-0.015997568145394325,-0.051769956946372986,-0.034950412809848785,-0.03739595413208008,-0.01928112283349037,0.07886311411857605,-6.431191306802153e-33,0.0594056062400341,0.02710634097456932,0.024533703923225403,-0.004206222482025623,-0.010339271277189255,-0.04818068817257881,-0.018666882067918777,-0.01725277677178383,0.04039629176259041,0.03340195119380951,0.001492813229560852,0.0173676498234272,-0.054042235016822815,-0.07193276286125183,-0.023113422095775604,-0.01782064512372017,-0.07256016135215759,-0.0584031417965889,-0.017059288918972015,0.07118026167154312,0.018572719767689705,-0.033804431557655334,0.009066087193787098,0.041209276765584946,0.042529843747615814,0.018235210329294205,0.01958407089114189,-0.03440145030617714,-0.010547254234552383,0.043393876403570175,-0.051854729652404785,-0.05655527859926224,-0.005313953384757042,0.04747474193572998,-0.03919978439807892,-0.09417417645454407,0.05770255997776985,0.03494824469089508,-0.0184952262789011,0.013571139425039291,0.043394818902015686,0.0511741079390049,0.003784235566854477,-0.009964268654584885,-0.010690265335142612,-0.026250459253787994,0.015598272904753685,-0.004062529653310776,0.0676165297627449,0.017926333472132683,-0.034731555730104446,-0.025005115196108818,-0.015375503338873386,-0.04921082407236099,-0.012592441402375698,0.04734764248132706,-0.04157128185033798,-0.0807991772890091,0.03253963962197304,0.020910348743200302,0.008332673460245132,0.10951025784015656,0.03806937858462334,-0.015008212067186832,0.09864398837089539,-0.056881941854953766,-0.037005603313446045,-0.03253526613116264,-0.0895325243473053,0.018759146332740784,-0.0077405874617397785,-0.021634699776768684,-0.04852136969566345,-0.0486636720597744,0.0600113570690155,-0.09077848494052887,0.005260259844362736,-0.05123987793922424,-0.03456910699605942,0.029869187623262405,0.02416238933801651,-0.02242385409772396,0.01516962144523859,0.04662937670946121,-0.003011357970535755,0.013559417799115181,0.0004420597106218338,0.08283877372741699,-0.0325368270277977,0.048616088926792145,-0.021364416927099228,0.002924497239291668,0.026623640209436417,0.024284835904836655,-0.06175684183835983,-6.1481811236081023e-33,-0.1020733118057251,0.024309659376740456,0.002509905956685543,-0.06938684731721878,-0.07617779821157455,-0.006225331220775843,0.036799103021621704,-0.01347234845161438,0.008014080114662647,-0.011286073364317417,0.04269528388977051,-0.015065936371684074,-0.02174520120024681,-0.1052766814827919,-0.07467421144247055,-0.01820327900350094,-0.03753693029284477,-0.009282451122999191,-0.03840920329093933,-0.003983343951404095,0.025775842368602753,0.0770931988954544,-0.03335775062441826,-0.007360383402556181,0.04497934877872467,0.02725408971309662,-0.04904454946517944,0.10132657736539841,0.01364984456449747,0.0444561205804348,0.05926105007529259,0.021118922159075737,0.08780928701162338,-0.03760366141796112,-0.02948731556534767,0.0014076363295316696,0.07449262589216232,-0.00048040179535746574,0.03293376415967941,0.024129718542099,0.020940592512488365,0.02006857842206955,-0.013940189965069294,0.028495853766798973,0.014521976001560688,0.029089869931340218,0.011831970885396004,-0.04871995747089386,-0.011660236865282059,-0.0810459554195404,-0.011340986005961895,-0.07916107773780823,0.025117207318544388,0.003984440118074417,-0.031210632994771004,0.032267794013023376,0.005050952546298504,0.10258184373378754,0.0717431902885437,-0.04439786449074745,-0.06461827456951141,0.05473455414175987,0.08922651410102844,-0.002800295129418373]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8067'
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Feb 2025 00:31:45 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@apollo/client": "^3.11.10",
+    "@apollo/client": "^3.12.4",
     "@auth0/auth0-react": "^1.8.0",
     "@rjsf/core": "^3.2.1",
     "@rjsf/semantic-ui": "^3.2.1",

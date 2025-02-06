@@ -1417,6 +1417,7 @@ export type ConversationType = Node & {
   chatWithCorpus?: Maybe<CorpusType>;
   chatWithDocument?: Maybe<DocumentType>;
   chatMessages: ChatMessageTypeConnection;
+  allMessages?: Maybe<ChatMessageType[]>;
   creator: UserType;
   created: Scalars["DateTime"];
   modified: Scalars["DateTime"];

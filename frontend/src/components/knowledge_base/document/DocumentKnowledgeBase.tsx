@@ -16,8 +16,14 @@
  *   - Child content inside the sidebar is scrollable without causing horizontal overflow.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useQuery, useReactiveVar } from "@apollo/client";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { useQuery } from "@apollo/client";
 import { Card, Button, Header, Modal } from "semantic-ui-react";
 import {
   MessageSquare,
@@ -26,9 +32,6 @@ import {
   Database,
   User,
   Calendar,
-  Send,
-  Plus,
-  Clock,
   X,
   ChartNetwork,
   FileType,
@@ -43,12 +46,7 @@ import {
 } from "../../../graphql/queries";
 import { getDocumentRawText, getPawlsLayer } from "../../annotator/api/rest";
 import { LabelType } from "../../../types/graphql-api";
-import { ChatMessage, ChatMessageProps } from "../../widgets/chat/ChatMessage";
-import { authToken, userObj } from "../../../graphql/cache";
-import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { PDFContainer } from "../../annotator/display/viewer/DocumentViewer";
 import { PDFDocumentLoadingTask } from "pdfjs-dist";
 import { useUISettings } from "../../annotator/hooks/useUISettings";
@@ -77,7 +75,6 @@ import {
   RelationGroup,
 } from "../../annotator/types/annotations";
 import {
-  docTypeAnnotationsAtom,
   pdfAnnotationsAtom,
   structuralAnnotationsAtom,
 } from "../../annotator/context/AnnotationAtoms";
@@ -95,25 +92,10 @@ import { AnnotationList } from "../../annotator/display/components/AnnotationLis
 import LayerSwitcher from "../../widgets/buttons/LayerSelector";
 import DocNavigation from "../../widgets/buttons/DocNavigation";
 import {
-  ChatContainer,
-  ChatInput,
-  ChatInputContainer,
-  ConnectionStatus,
-  ConversationCount,
-  ConversationIndicator,
-  ConversationItem,
-  ConversationList,
-  ConversationSelector,
-  ErrorMessage,
-  NewChatButton,
-  SendButton,
-} from "./ChatContainers";
-import {
   ContentArea,
   ControlButton,
   ControlButtonGroupLeft,
   ControlButtonWrapper,
-  EmptyState,
   HeaderContainer,
   LoadingPlaceholders,
   MainContentArea,
@@ -125,6 +107,7 @@ import {
   SummaryContent,
   TabButton,
   TabsColumn,
+  EmptyState,
 } from "./StyledContainers";
 import { NoteModal, NotesGrid, PostItNote, NotesHeader } from "./StickyNotes";
 import { SearchSidebarWidget } from "../../annotator/search_widget/SearchSidebarWidget";
@@ -136,97 +119,20 @@ import {
 import ExtractTraySelector from "../../analyses/ExtractTraySelector";
 import AnalysisTraySelector from "../../analyses/AnalysisTraySelector";
 import { SingleDocumentExtractResults } from "../../annotator/sidebar/SingleDocumentExtractResults";
+import { FullScreenModal, SourceIndicator } from "./LayoutComponents";
+import { ChatTray } from "./right_tray/ChatTray";
+import { SafeMarkdown } from "../markdown/SafeMarkdown";
 
 const pdfjsLib = require("pdfjs-dist");
 
 // Setting worker path to worker bundle.
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
-// Enhanced styled components
-const FullScreenModal = styled(Modal)`
-  &&& {
-    position: fixed !important;
-    margin: 1rem 1rem 1.5rem 1rem !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: calc(100% - 2rem) !important;
-    height: calc(100% - 2.5rem) !important;
-    max-width: none !important;
-    max-height: none !important;
-    border-radius: 0.5rem !important;
-    background: #f8f9fa;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-
-    /* Ensure the close button remains visible and properly positioned */
-    > .close.icon {
-      top: 1rem !important;
-      right: 1rem !important;
-      color: rgba(0, 0, 0, 0.7) !important;
-      z-index: 1000;
-    }
-
-    /* Ensure modal content fills available space */
-    .content {
-      flex: 1 1 auto !important;
-      overflow: hidden !important;
-      padding: 0 !important;
-      margin: 0 !important;
-    }
-  }
-`;
-
-const SourceIndicator = styled.div`
-  padding: 0.5rem;
-  background: #eef2ff;
-  border-left: 3px solid #818cf8;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-  color: #4338ca;
-`;
-
 interface DocumentKnowledgeBaseProps {
   documentId: string;
   corpusId: string;
   onClose?: () => void;
 }
-
-// Get WebSocket URL from environment or fallback to window.location for production
-const getWebSocketUrl = (documentId: string, token: string): string => {
-  // Use environment variable if defined (for development)
-  const wsBaseUrl =
-    process.env.REACT_APP_WS_URL ||
-    process.env.REACT_APP_API_URL ||
-    `${window.location.protocol === "https:" ? "wss" : "ws"}://${
-      window.location.host
-    }`;
-  const normalizedBaseUrl = wsBaseUrl
-    .replace(/\/+$/, "")
-    .replace(/^http/, "ws")
-    .replace(/^https/, "wss");
-
-  return `${normalizedBaseUrl}/ws/document/${encodeURIComponent(
-    documentId
-  )}/query/?token=${encodeURIComponent(token)}`;
-};
-
-// Create a wrapper component to handle the fallback
-const SafeMarkdown: React.FC<{ children: string }> = ({ children }) => {
-  try {
-    return (
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{children}</ReactMarkdown>
-    );
-  } catch (error) {
-    console.warn(
-      "Failed to render with remarkGfm, falling back to basic markdown:",
-      error
-    );
-    return <ReactMarkdown>{children}</ReactMarkdown>;
-  }
-};
 
 // Panels from the old "AnnotatorSidebar":
 const AnnotationsPanel: React.FC = () => {
@@ -270,10 +176,6 @@ const RelationsPanel: React.FC = () => {
   );
 };
 
-const LabelsPanel: React.FC = () => {
-  return <AnnotationList read_only={false} />;
-};
-
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   documentId,
   corpusId,
@@ -282,25 +184,16 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
+  // This holds the partial content coming in from the assistant
+  const partialAssistantContent = useRef("");
+
   // Helper to compute the panel width following the clamp strategy
   const getPanelWidth = (windowWidth: number): number =>
     Math.min(Math.max(windowWidth * 0.65, 320), 520);
 
-  const {
-    setProgress,
-    progress,
-    zoomLevel,
-    setShiftDown,
-    readOnly,
-    setZoomLevel,
-    isSidebarVisible,
-    setSidebarVisible,
-  } = useUISettings({
+  const { setProgress, zoomLevel, setShiftDown, setZoomLevel } = useUISettings({
     width,
   });
-  const [viewComponents, setViewComponents] = useState<JSX.Element>(<></>);
-  const auth_token = useReactiveVar(authToken);
-  const user_obj = useReactiveVar(userObj);
   const [showGraph, setShowGraph] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("summary");
 
@@ -309,18 +202,9 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     "knowledge"
   );
 
-  const [newMessage, setNewMessage] = useState("");
-  const [showSelector, setShowSelector] = useState(false);
   const [viewState, setViewState] = useState<ViewState>(ViewState.LOADING);
-  const [selectedConversationId, setSelectedConversationId] = useState<
-    string | undefined
-  >();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
-  const [chat, setChat] = useState<ChatMessageProps[]>([]);
-  const socketRef = useRef<WebSocket | null>(null);
-  const [wsReady, setWsReady] = useState(false);
-  const [wsError, setWsError] = useState<string | null>(null);
 
   const { setDocumentType } = useDocumentType();
   const { setDocument } = useDocumentState();
@@ -332,7 +216,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const { setPages } = usePages();
   const [_, setPdfAnnotations] = useAtom(pdfAnnotationsAtom);
   const [, setStructuralAnnotations] = useAtom(structuralAnnotationsAtom);
-  const [, setDocTypeAnnotations] = useAtom(docTypeAnnotationsAtom);
   const { setCorpus } = useCorpusState();
   const { setInitialAnnotations } = useInitialAnnotations();
   const { setSearchText } = useSearchText();
@@ -544,7 +427,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         data.document.fileType === "application/pdf" &&
         data.document.pdfFile
       ) {
-        setViewComponents(<PDF read_only={false} />);
+        // setViewComponents(<PDF read_only={false} />);
         const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
           data.document.pdfFile
         );
@@ -597,9 +480,9 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         data.document.fileType === "application/txt" ||
         data.document.fileType === "text/plain"
       ) {
-        setViewComponents(
-          <TxtAnnotatorWrapper readOnly={true} allowInput={false} />
-        );
+        // setViewComponents(
+        //   <TxtAnnotatorWrapper readOnly={true} allowInput={false} />
+        // );
 
         Promise.all([getDocumentRawText(data.document.txtExtractFile || "")])
           .then(([txt]) => {
@@ -611,11 +494,11 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             setViewState(ViewState.ERROR);
           });
       } else {
-        setViewComponents(
-          <div>
-            <p>Unsupported filetype: {data.document.fileType}</p>
-          </div>
-        );
+        // setViewComponents(
+        //   <div>
+        //     <p>Unsupported filetype: {data.document.fileType}</p>
+        //   </div>
+        // );
       }
     },
     skip: !documentId || !corpusId,
@@ -648,208 +531,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     created: new Date().toISOString(),
   };
 
-  const conversations =
-    combinedData?.document?.allDocRelationships
-      ?.map((rel) => {
-        const node = rel.sourceDocument || rel.targetDocument;
-        if (!node) return null;
-        return {
-          id: node.id,
-          title: node.title,
-          createdAt: rel.created,
-          creator: node.creator,
-          messageCount: node.chatMessages?.edges?.length || 0,
-        };
-      })
-      .filter(Boolean) || [];
-
-  const selectedConversation =
-    combinedData?.document?.allDocRelationships?.find(
-      (rel) =>
-        rel.sourceDocument?.id === selectedConversationId ||
-        rel.targetDocument?.id === selectedConversationId
-    )?.sourceDocument ||
-    combinedData?.document?.allDocRelationships?.find(
-      (rel) =>
-        rel.sourceDocument?.id === selectedConversationId ||
-        rel.targetDocument?.id === selectedConversationId
-    )?.targetDocument;
-
-  const transformGraphQLMessages = React.useCallback((): ChatMessageProps[] => {
-    if (!selectedConversation) return [];
-    const edges = selectedConversation.chatMessages?.edges || [];
-    return edges.map(({ node }: any) => ({
-      user: node.creator.email,
-      content: node.content,
-      timestamp: new Date(node.createdAt).toLocaleString(),
-      isAssistant: node.msgType === "ASSISTANT" || node.msgType === "LLM",
-      sources:
-        node.sourceAnnotations?.edges?.map(({ node: ann }: any) => ({
-          text: ann.rawText,
-          onClick: () => console.log("Navigate to annotation", ann.id),
-        })) || [],
-    }));
-  }, [selectedConversation]);
-
-  useEffect(() => {
-    if (!selectedConversation) return;
-    setChat(transformGraphQLMessages());
-  }, [selectedConversation, transformGraphQLMessages]);
-
-  useEffect(() => {
-    if (!selectedConversationId && conversations.length > 0) {
-      setSelectedConversationId(conversations[0]?.id || undefined);
-    }
-  }, [conversations, selectedConversationId]);
-
-  const handleCreateNewConversation = () => {
-    console.log("Create new conversation (mutation TBD)");
-  };
-
-  useEffect(() => {
-    window.addEventListener("keyup", handleKeyUpPress);
-    window.addEventListener("keydown", handleKeyDownPress);
-    return () => {
-      window.removeEventListener("keyup", handleKeyUpPress);
-      window.removeEventListener("keydown", handleKeyDownPress);
-    };
-  }, [handleKeyUpPress, handleKeyDownPress]);
-
-  useEffect(() => {
-    const userIsAuthenticated = !!(auth_token && user_obj);
-    if (!documentId || !corpusId || !userIsAuthenticated) return;
-
-    const wsUrl = getWebSocketUrl(documentId, auth_token);
-    socketRef.current = new WebSocket(wsUrl);
-    const ws = socketRef.current;
-
-    ws.onopen = () => {
-      setWsReady(true);
-      setWsError(null);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const messageData = JSON.parse(event.data);
-        if (!messageData) return;
-        const { type: msgType, content, data } = messageData;
-        switch (msgType) {
-          case "ASYNC_START":
-            break;
-          case "ASYNC_CONTENT":
-            appendStreamingTokenToChat(content);
-            break;
-          case "ASYNC_FINISH":
-            finalizeStreamingResponse(content, data?.sources || "");
-            break;
-          case "SYNC_CONTENT":
-            finalizeSyncResponse(content, data?.sources || "");
-            break;
-          default:
-            console.warn("Unknown message type:", msgType);
-            break;
-        }
-      } catch (err) {
-        console.error("Failed to parse WS message:", err);
-      }
-    };
-
-    ws.onclose = (event) => {
-      setWsReady(false);
-      setWsError("Connection closed. Please try again.");
-    };
-
-    ws.onerror = (error) => {
-      setWsReady(false);
-      setWsError("Failed to connect. Please try again.");
-    };
-
-    return () => {
-      if (ws) {
-        setWsReady(false);
-        ws.close();
-      }
-    };
-  }, [documentId, corpusId, user_obj, auth_token]);
-
-  const appendStreamingTokenToChat = (token: string) => {
-    if (!token) return;
-    setChat((prev) => {
-      if (
-        prev.length &&
-        prev[prev.length - 1].isAssistant &&
-        !prev[prev.length - 1].sources
-      ) {
-        const updatedLast = {
-          ...prev[prev.length - 1],
-          content: prev[prev.length - 1].content + token,
-        };
-        return [...prev.slice(0, -1), updatedLast];
-      } else {
-        return [
-          ...prev,
-          {
-            user: "Assistant",
-            content: token,
-            timestamp: new Date().toLocaleString(),
-            isAssistant: true,
-          },
-        ];
-      }
-    });
-  };
-
-  const finalizeStreamingResponse = (content: string, sources: string) => {
-    setChat((prev) => {
-      if (!prev.length) return prev;
-      const updatedLast = {
-        ...prev[prev.length - 1],
-        content,
-      };
-      return [...prev.slice(0, -1), updatedLast];
-    });
-  };
-
-  const finalizeSyncResponse = (content: string, sources: string) => {
-    setChat((prev) => [
-      ...prev,
-      {
-        user: "Assistant",
-        content,
-        timestamp: new Date().toLocaleString(),
-        isAssistant: true,
-      },
-    ]);
-  };
-
-  const sendMessageOverSocket = React.useCallback(() => {
-    const trimmed = newMessage.trim();
-    if (!trimmed || !socketRef.current) return;
-    if (!wsReady) {
-      console.warn("WebSocket not ready yet");
-      return;
-    }
-    try {
-      setChat((prev) => [
-        ...prev,
-        {
-          user: user_obj?.email || "You",
-          content: trimmed,
-          timestamp: new Date().toLocaleString(),
-          isAssistant: false,
-        },
-      ]);
-      const payload = { query: trimmed };
-      socketRef.current.send(JSON.stringify(payload));
-      setNewMessage("");
-      setWsError(null);
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      setWsError("Failed to send message. Please try again.");
-    }
-  }, [newMessage, user_obj?.email, wsReady]);
-
-  const notes = combinedData?.document?.allNotes ?? [];
   const docRelationships = combinedData?.document?.allDocRelationships ?? [];
 
   // Load MD summary if available
@@ -918,6 +599,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   // Combine the two arrays (for example, add extraTabs to the left nav):
   const visibleTabs = [...baseTabs, ...extraTabs];
 
+  const notes = combinedData?.document?.allNotes ?? [];
+
   // Decide if we show the right panel
   useEffect(() => {
     if (!activeTab) {
@@ -935,7 +618,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           "search",
           "annotations",
           "relations",
-          "labels",
           "analyses",
           "extracts",
         ].includes(activeTab)
@@ -943,173 +625,19 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }
   }, [activeLayer, activeTab]);
 
+  // Add new state for showing load menu
+  const [showLoad, setShowLoad] = useState(false);
+
   // The content for the right panel
   const rightPanelContent = (() => {
     switch (activeTab) {
       case "chat":
         return (
-          <ChatContainer>
-            <ConversationIndicator>
-              <AnimatePresence>
-                {showSelector && (
-                  <ConversationSelector
-                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    transition={{
-                      type: "spring",
-                      damping: 25,
-                      stiffness: 400,
-                      mass: 0.8,
-                    }}
-                  >
-                    <ConversationList>
-                      {conversations.map(
-                        (conv) =>
-                          conv && (
-                            <ConversationItem
-                              key={conv.id}
-                              onClick={() => setSelectedConversationId(conv.id)}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              whileHover={{
-                                scale: 1.02,
-                                backgroundColor: "rgba(33, 133, 208, 0.08)",
-                                transition: { duration: 0.2 },
-                              }}
-                              whileTap={{ scale: 0.98 }}
-                            >
-                              <div className="title">
-                                <MessageSquare
-                                  size={14}
-                                  style={{
-                                    color: "#1a73e8",
-                                    filter:
-                                      "drop-shadow(0 1px 2px rgba(26,115,232,0.2))",
-                                  }}
-                                />
-                                {conv.title || "Untitled Conversation"}
-                                {conv.messageCount && (
-                                  <motion.span
-                                    className="message-count"
-                                    initial={{ scale: 0.8 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ type: "spring", damping: 15 }}
-                                  >
-                                    {conv.messageCount}
-                                  </motion.span>
-                                )}
-                              </div>
-                              <div className="meta">
-                                <Clock size={12} style={{ color: "#6c757d" }} />
-                                {new Date(conv.createdAt).toLocaleDateString()}
-                                <User size={12} style={{ color: "#6c757d" }} />
-                                {conv.creator?.email}
-                              </div>
-                            </ConversationItem>
-                          )
-                      )}
-                    </ConversationList>
-                    <NewChatButton
-                      onClick={handleCreateNewConversation}
-                      whileHover={{
-                        backgroundColor: "rgba(26,115,232,0.08)",
-                        scale: 1.02,
-                      }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Plus
-                        size={16}
-                        style={{
-                          color: "#1a73e8",
-                          filter: "drop-shadow(0 1px 2px rgba(26,115,232,0.2))",
-                        }}
-                      />
-                      New Chat
-                    </NewChatButton>
-                  </ConversationSelector>
-                )}
-              </AnimatePresence>
-              <ConversationCount
-                onClick={() => setShowSelector(!showSelector)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                animate={{
-                  rotate: showSelector ? 180 : 0,
-                  transition: { duration: 0.3 },
-                }}
-              >
-                {conversations.length}
-              </ConversationCount>
-            </ConversationIndicator>
-            <motion.div
-              style={{ flex: 1, overflow: "auto", padding: "1rem" }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              {chat.map((msg, idx) => (
-                <ChatMessage key={idx} {...msg} />
-              ))}
-            </motion.div>
-            <ChatInputContainer>
-              {wsError ? (
-                <ErrorMessage>
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ type: "spring", damping: 20 }}
-                  >
-                    {wsError}
-                    <Button
-                      size="small"
-                      onClick={() => window.location.reload()}
-                      style={{
-                        marginLeft: "0.75rem",
-                        background: "#dc3545",
-                        color: "white",
-                        border: "none",
-                        boxShadow: "0 2px 4px rgba(220,53,69,0.2)",
-                      }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      Reconnect
-                    </Button>
-                  </motion.div>
-                </ErrorMessage>
-              ) : (
-                <ConnectionStatus
-                  connected={wsReady}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                />
-              )}
-              <ChatInput
-                value={newMessage}
-                onChange={(e: {
-                  target: { value: React.SetStateAction<string> };
-                }) => setNewMessage(e.target.value)}
-                placeholder={
-                  wsReady ? "Type your message..." : "Waiting for connection..."
-                }
-                disabled={!wsReady}
-                onKeyPress={(e: { key: string }) =>
-                  e.key === "Enter" && sendMessageOverSocket()
-                }
-              />
-              <SendButton
-                onClick={sendMessageOverSocket}
-                disabled={!wsReady || !newMessage.trim()}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                animate={wsReady ? { y: [0, -2, 0] } : {}}
-                transition={{ duration: 0.2 }}
-              >
-                <Send size={18} />
-              </SendButton>
-            </ChatInputContainer>
-          </ChatContainer>
+          <ChatTray
+            setShowLoad={setShowLoad}
+            showLoad={showLoad}
+            documentId={documentId}
+          />
         );
       case "notes":
         return (
@@ -1246,8 +774,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         return <AnnotationsPanel />;
       case "relations":
         return <RelationsPanel />;
-      case "labels":
-        return <LabelsPanel />;
       case "analyses":
         return (
           <div style={{ padding: "1rem" }}>
@@ -1392,7 +918,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             "relationships",
             "annotations",
             "relations",
-            "labels",
           ].includes(activeTab)
         ) {
           setActiveTab("chat");

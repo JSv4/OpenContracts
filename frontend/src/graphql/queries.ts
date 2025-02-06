@@ -1834,55 +1834,45 @@ export const GET_CONVERSATIONS = gql`
             id
             title
           }
-          chatMessages {
-            edges {
-              node {
-                id
-                msgType
-                content
-                data
-                createdAt
-                creator {
+          allMessages {
+            id
+            msgType
+            content
+            data
+            createdAt
+            creator {
+              id
+              email
+            }
+            sourceDocument {
+              id
+              title
+            }
+            sourceAnnotations {
+              edges {
+                node {
                   id
-                  email
-                }
-                sourceDocument {
-                  id
-                  title
-                }
-                sourceAnnotations {
-                  edges {
-                    node {
-                      id
-                      rawText
-                      annotationLabel {
-                        id
-                        text
-                        labelType
-                      }
-                    }
-                  }
-                }
-                createdAnnotations {
-                  edges {
-                    node {
-                      id
-                      rawText
-                      annotationLabel {
-                        id
-                        text
-                        labelType
-                      }
-                    }
+                  rawText
+                  annotationLabel {
+                    id
+                    text
+                    labelType
                   }
                 }
               }
             }
-            pageInfo {
-              hasNextPage
-              hasPreviousPage
-              startCursor
-              endCursor
+            createdAnnotations {
+              edges {
+                node {
+                  id
+                  rawText
+                  annotationLabel {
+                    id
+                    text
+                    labelType
+                  }
+                }
+              }
             }
           }
           isPublic

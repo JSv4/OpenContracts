@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
-import { Button, Card, Input, Modal, Segment } from "semantic-ui-react";
+import { Button, Card, Segment } from "semantic-ui-react";
 import styled, { keyframes, css } from "styled-components";
-import { ArrowLeft } from "lucide-react";
 
 export const HeaderContainer = styled(Segment)`
   &&& {

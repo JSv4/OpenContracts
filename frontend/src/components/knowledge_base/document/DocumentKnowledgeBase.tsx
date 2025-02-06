@@ -1,28 +1,4 @@
-/**
- * DocumentKnowledgeBase Component
- *
- * This component now connects to our websocket backend IF the user is logged in
- * and we have a valid auth token in the Apollo reactive vars.
- * It will:
- *   1) Load existing conversation data from GraphQL (GET_CONVERSATIONS).
- *   2) If authenticated, open a WebSocket to stream new messages with partial updates
- *      (ASYNC_START, ASYNC_CONTENT, ASYNC_FINISH) or synchronous messages (SYNC_CONTENT).
- *   3) Display those messages in real time, appending them to the chat.
- *   4) Allow sending user queries through the socket.
- *
- * Responsive Enhancements:
- *   - The right sidebar uses a clamp-based width for medium screens, then switches
- *     to full-width on very small screens to prevent overflow.
- *   - Child content inside the sidebar is scrollable without causing horizontal overflow.
- */
-
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@apollo/client";
 import { Card, Button, Header, Modal } from "semantic-ui-react";
 import {

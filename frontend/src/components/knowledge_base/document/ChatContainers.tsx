@@ -2,30 +2,61 @@ import { motion } from "framer-motion";
 import { Button, Input } from "semantic-ui-react";
 import styled from "styled-components";
 
+export const BackButton = styled(motion.button)`
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  svg {
+    transition: transform 0.2s ease;
+  }
+`;
+
 export const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100vh; // Full viewport height
   background: linear-gradient(150deg, #f8faff 0%, #f0f4f8 100%);
   overflow: hidden;
   border-left: 1px solid rgba(226, 232, 240, 0.3);
+  position: relative;
 `;
 
 export const ChatInputContainer = styled(motion.div)<{ $isTyping: boolean }>`
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
+  padding: 1.25rem 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   transform: translateY(${(props) => (props.$isTyping ? 0 : "100%")});
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-top: 1px solid rgba(226, 232, 240, 0.3);
-  box-shadow: 0 -4px 20px rgba(23, 25, 35, 0.03);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
+  box-shadow: 0 -8px 32px rgba(23, 25, 35, 0.08),
+    0 -1px 4px rgba(23, 25, 35, 0.02);
   display: flex;
   align-items: center;
   gap: 1rem;
+  z-index: 10;
+
+  /* Safe area support for modern devices */
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
 `;
 
 export const ChatInput = styled(Input)`
@@ -36,25 +67,28 @@ export const ChatInput = styled(Input)`
     input {
       width: 100%;
       border-radius: 1.5rem !important;
-      padding: 1rem 1.5rem !important;
-      padding-right: 3.5rem !important;
-      border: 1px solid rgba(226, 232, 240, 0.5) !important;
-      background: rgba(255, 255, 255, 0.8) !important;
-      backdrop-filter: blur(8px) !important;
+      padding: 1.25rem 1.75rem !important;
+      padding-right: 4rem !important;
+      border: 2px solid rgba(226, 232, 240, 0.5) !important;
+      background: rgba(255, 255, 255, 0.9) !important;
+      backdrop-filter: blur(12px) !important;
       color: #1a202c !important;
       font-weight: 500 !important;
-      transition: all 0.2s ease-out !important;
-      height: 3rem !important;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      height: 3.5rem !important;
+      font-size: 1rem !important;
 
       &:focus {
         border-color: #3182ce !important;
-        background: rgba(255, 255, 255, 0.95) !important;
-        box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1) !important;
+        background: rgba(255, 255, 255, 1) !important;
+        box-shadow: 0 0 0 4px rgba(49, 130, 206, 0.15) !important;
+        transform: translateY(-1px);
       }
 
       &::placeholder {
         color: #718096 !important;
         font-weight: 400 !important;
+        opacity: 0.8;
       }
     }
   }
@@ -67,6 +101,7 @@ export const ConversationIndicator = styled(motion.div)`
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
 `;
 
 export const ConversationCount = styled(motion.div)`
@@ -210,35 +245,36 @@ export const ErrorMessage = styled.div`
 export const SendButton = styled(Button)`
   &&& {
     position: absolute;
-    right: 0.25rem;
-    height: 2.5rem;
-    width: 2.5rem;
+    right: 0.375rem;
+    height: 2.75rem;
+    width: 2.75rem;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #3182ce;
+    background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
     border: none;
     color: white;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     padding: 0;
-    margin: 0.25rem;
+    margin: 0.375rem;
 
     &:hover:not(:disabled) {
-      transform: translateY(-1px);
-      background: #2c5282;
-      box-shadow: 0 4px 12px rgba(49, 130, 206, 0.25);
+      transform: translateY(-2px) scale(1.05);
+      background: linear-gradient(135deg, #2b6cb0 0%, #2a4365 100%);
+      box-shadow: 0 8px 16px rgba(49, 130, 206, 0.25);
     }
 
     &:disabled {
-      background: #e2e8f0;
+      background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
       cursor: not-allowed;
+      opacity: 0.7;
     }
 
     svg {
       width: 1.25rem;
       height: 1.25rem;
-      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
     }
   }
 `;
@@ -303,117 +339,223 @@ export const ConnectionStatus = styled(motion.div)<ConnectionStatusProps>`
 `;
 
 export const ConversationGrid = styled(motion.div)`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
-  padding: 2rem;
-  max-height: calc(100vh - 180px);
-  overflow-y: auto;
-`;
-
-export const ConversationCard = styled.div`
-  position: relative;
-  background: #ffffff;
-  opacity: 0.7;
-  backdrop-filter: blur(12px);
-  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   padding: 1.5rem;
-  cursor: pointer;
-  overflow: hidden;
-  border: 1px solid #ffffff4d;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  height: calc(100vh - 7rem); // Account for header/footer space
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  margin-bottom: 5.5rem; // Space for input container
 
-  &:hover {
-    background: #ffffff;
-    opacity: 0.9;
+  /* Silky smooth scrolling for modern browsers */
+  overflow-y: overlay;
+  scrollbar-gutter: stable;
+
+  /* Elegant scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 4px;
+    margin: 0.5rem;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.12);
+      border-width: 1px;
+    }
+  }
+
+  /* Prevent content jump on short pages */
+  &::after {
+    content: "";
+    min-height: 0.5rem;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 `;
 
-// Separate motion wrapper for safe animations only
-export const AnimatedCard = motion.div;
-
-// Usage:
-// <AnimatedCard
-//   initial={{ scale: 0.95 }}
-//   animate={{ scale: 1 }}
-//   whileHover={{ y: -4 }}
-// >
-//   <ConversationCard>
-//     {content}
-//   </ConversationCard>
-// </AnimatedCard>
-
-export const CardGlow = styled.div`
+export const CardGlow = styled.div<{ mouseX?: number; mouseY?: number }>`
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: radial-gradient(
-    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-    rgba(255, 255, 255, 0.1) 0%,
-    transparent 60%
+    800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(49, 130, 206, 0.06),
+    transparent 40%
   );
   opacity: 0;
   transition: opacity 0.3s ease;
+  pointer-events: none;
+`;
 
-  ${ConversationCard}:hover & {
-    opacity: 1;
+export const ConversationCard = styled(motion.div)`
+  position: relative;
+  background: linear-gradient(
+    to bottom right,
+    rgba(255, 255, 255, 0.98),
+    rgba(255, 255, 255, 0.92)
+  );
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 1.75rem;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  width: 100%;
+  min-height: 6rem;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 4px 16px rgba(0, 0, 0, 0.02),
+    0 4px 24px rgba(0, 0, 0, 0.02);
+
+  &:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translateY(-2px) scale(1.005);
+    background: linear-gradient(
+      to bottom right,
+      rgba(255, 255, 255, 1),
+      rgba(255, 255, 255, 0.96)
+    );
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03), 0 12px 32px rgba(0, 0, 0, 0.03),
+      0 0 0 1px rgba(255, 255, 255, 0.9);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.995);
+    transition: all 0.1s ease;
   }
 `;
+
+export const MessageCount = styled(motion.div)`
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: ${(props) =>
+    props.children === "0"
+      ? "linear-gradient(135deg, #E2E8F0 0%, #CBD5E0 100%)"
+      : "linear-gradient(135deg, #3182ce 0%, #2c5282 100%)"};
+  color: ${(props) => (props.children === "0" ? "#718096" : "white")};
+  padding: ${(props) =>
+    props.children === "0" ? "0.35rem 0.9rem" : "0.4rem 1rem"};
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  box-shadow: ${(props) =>
+    props.children === "0"
+      ? "0 2px 8px rgba(0, 0, 0, 0.05)"
+      : "0 2px 8px rgba(49, 130, 206, 0.15), 0 0 0 1px rgba(49, 130, 206, 0.2)"};
+  opacity: ${(props) => (props.children === "0" ? 0.8 : 1)};
+
+  &::after {
+    content: ${(props) =>
+      props.children === "0" ? "' pending'" : "' messages'"};
+    font-size: 0.75rem;
+    opacity: 0.9;
+    font-weight: 400;
+  }
+
+  ${ConversationCard}:hover & {
+    transform: translateY(-50%) scale(1.02);
+  }
+`;
+
+export const AnimatedCard = motion.div;
 
 export const CardContent = styled.div`
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0; // Enables text truncation
 `;
 
 export const CardTitle = styled.h3`
+  color: #1a202c;
   font-size: 1.1rem;
-  font-weight: 500;
-  color: #1a1a1a;
-  margin: 0 0 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  padding-right: 5.5rem; // Space for message count
 
-export const MessageCount = styled(motion.span)`
-  background: rgba(26, 115, 232, 0.1);
-  color: #1a73e8;
-  font-size: 0.8rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 12px;
-  font-weight: 500;
+  /* Gradient text for extra pop */
+  background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 export const CardMeta = styled.div`
   display: flex;
   align-items: center;
-  gap: 1rem;
-  font-size: 0.8rem;
-  color: #666;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: #4a5568;
+  margin: 0;
+  line-height: 1.6;
+  flex-wrap: wrap;
 `;
 
 export const TimeStamp = styled.span`
+  color: #718096;
+  font-size: 0.85rem;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.5rem;
+  opacity: 0.9;
+  white-space: nowrap;
 
   &::before {
-    content: "";
-    width: 4px;
-    height: 4px;
-    background: currentColor;
-    border-radius: 50%;
-    opacity: 0.5;
+    content: "•";
+    color: #cbd5e0;
+    opacity: 0.6;
   }
 `;
 
 export const Creator = styled.span`
-  opacity: 0.7;
-  white-space: nowrap;
+  color: #2d3748;
+  font-size: 0.85rem;
+  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
 `;
 
 export const ConversationCardSkeleton = styled(motion.div)`
@@ -452,38 +594,6 @@ export const ConversationCardSkeleton = styled(motion.div)`
   }
 `;
 
-interface EmptyStateProps {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
-
-const EmptyStateContainer = styled(motion.div)`
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
-  text-align: center;
-  color: #666;
-  gap: 1rem;
-
-  h3 {
-    margin: 0;
-    font-weight: 500;
-  }
-
-  p {
-    margin: 0;
-    opacity: 0.7;
-  }
-
-  svg {
-    opacity: 0.5;
-  }
-`;
-
 export const ErrorContainer = styled(motion.div)`
   display: flex;
   align-items: center;
@@ -493,29 +603,4 @@ export const ErrorContainer = styled(motion.div)`
   background: rgba(220, 53, 69, 0.1);
   border-radius: 8px;
   margin: 1rem;
-`;
-
-export const BackButton = styled(motion.button)`
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: none;
-  background: #ffffff;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  color: #666;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-
-  &:hover {
-    background: #f8f9fa;
-  }
-
-  svg {
-    transition: transform 0.2s ease;
-  }
 `;

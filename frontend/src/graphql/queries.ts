@@ -21,6 +21,7 @@ import {
   ConversationType,
   ConversationTypeConnection,
   PipelineComponentType,
+  ChatMessageType,
 } from "../types/graphql-api";
 import { ExportObject } from "../types/graphql-api";
 
@@ -1814,8 +1815,18 @@ export interface GetConversationsOutputs {
  * The shape is now a connection with edges of ConversationType.
  */
 export const GET_CONVERSATIONS = gql`
-  query GetConversations($documentId: String, $corpusId: String) {
-    conversations(documentId: $documentId, corpusId: $corpusId) {
+  query GetConversations(
+    $documentId: String
+    $corpusId: String
+    $limit: Int
+    $cursor: String
+  ) {
+    conversations(
+      documentId: $documentId
+      corpusId: $corpusId
+      first: $limit
+      after: $cursor
+    ) {
       edges {
         node {
           id
@@ -1826,54 +1837,8 @@ export const GET_CONVERSATIONS = gql`
             id
             email
           }
-          chatWithCorpus {
-            id
-            title
-          }
-          chatWithDocument {
-            id
-            title
-          }
-          allMessages {
-            id
-            msgType
-            content
-            data
-            createdAt
-            creator {
-              id
-              email
-            }
-            sourceDocument {
-              id
-              title
-            }
-            sourceAnnotations {
-              edges {
-                node {
-                  id
-                  rawText
-                  annotationLabel {
-                    id
-                    text
-                    labelType
-                  }
-                }
-              }
-            }
-            createdAnnotations {
-              edges {
-                node {
-                  id
-                  rawText
-                  annotationLabel {
-                    id
-                    text
-                    labelType
-                  }
-                }
-              }
-            }
+          chatMessages {
+            totalCount
           }
           isPublic
           myPermissions
@@ -2130,6 +2095,51 @@ export const GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS = gql`
           labelType
         }
       }
+    }
+  }
+`;
+
+/**
+ * Interfaces and query for GET_CHAT_MESSAGES
+ * to fetch messages once a conversation is selected.
+ */
+export interface GetChatMessagesInputs {
+  conversationId: string;
+  orderBy?: string; // e.g. "created_at"
+  limit?: number;
+  cursor?: string;
+}
+
+export interface ChatMessageNode {
+  id: string;
+  msgType: string;
+  content: string;
+  // Add other fields (data, createdAt, creator, etc.) if you need them
+}
+
+export interface ChatMessageEdge {
+  node: ChatMessageNode;
+}
+
+export interface ChatMessageConnection {
+  edges: ChatMessageEdge[];
+  pageInfo?: PageInfo;
+}
+
+export interface GetChatMessagesOutputs {
+  chatMessages: ChatMessageType[];
+}
+
+/**
+ * New query to fetch messages for a specific conversation, optionally ordering
+ * or using pagination (limit/cursor).
+ */
+export const GET_CHAT_MESSAGES = gql`
+  query GetChatMessages($conversationId: ID!, $orderBy: String) {
+    chatMessages(conversationId: $conversationId, orderBy: $orderBy) {
+      id
+      msgType
+      content
     }
   }
 `;

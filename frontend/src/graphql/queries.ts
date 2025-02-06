@@ -2028,6 +2028,7 @@ export const GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS = gql`
       pdfFile
       txtExtractFile
       pawlsParseFile
+      myPermissions
       allNotes(corpusId: $corpusId) {
         id
         title

@@ -95,6 +95,10 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
     }));
   }, [updatedPageInfo]);
 
+  useEffect(() => {
+    console.log("selectedCorpus", selectedCorpus);
+  }, [selectedCorpus]);
+
   /**
    * Handles resizing of the PDF page canvas.
    */

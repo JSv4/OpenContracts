@@ -6,48 +6,50 @@ export const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: white;
-  /* Ensure chat messages can scroll without causing horizontal overflows */
+  background: linear-gradient(150deg, #f8faff 0%, #f0f4f8 100%);
   overflow: hidden;
+  border-left: 1px solid rgba(226, 232, 240, 0.3);
 `;
 
 export const ChatInputContainer = styled.div`
   padding: 1.5rem;
-  border-top: 1px solid rgba(231, 234, 237, 0.7);
-  background: white;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
   position: relative;
-
-  @media (max-width: 768px) {
-    padding: 1rem;
-    position: sticky;
-    bottom: 0;
-    background: white;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-  }
+  border-top: 1px solid rgba(226, 232, 240, 0.3);
+  box-shadow: 0 -4px 20px rgba(23, 25, 35, 0.03);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 `;
 
 export const ChatInput = styled(Input)`
   &&& {
-    width: 100%;
+    flex: 1;
+    position: relative;
 
     input {
+      width: 100%;
       border-radius: 1.5rem !important;
-      padding: 0.8rem 1.5rem !important;
-      padding-right: 4rem !important;
-      border: 2px solid #e9ecef !important;
-      transition: all 0.2s ease !important;
-      background: white !important;
+      padding: 1rem 1.5rem !important;
+      padding-right: 3.5rem !important;
+      border: 1px solid rgba(226, 232, 240, 0.5) !important;
+      background: rgba(255, 255, 255, 0.8) !important;
+      backdrop-filter: blur(8px) !important;
+      color: #1a202c !important;
+      font-weight: 500 !important;
+      transition: all 0.2s ease-out !important;
+      height: 3rem !important;
 
       &:focus {
-        border-color: #2185d0 !important;
-        box-shadow: 0 0 0 2px rgba(33, 133, 208, 0.1) !important;
+        border-color: #3182ce !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+        box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1) !important;
       }
 
-      &:disabled {
-        background: rgba(247, 248, 249, 0.7) !important;
-        border-color: #e9ecef !important;
-        cursor: not-allowed;
-        color: #adb5bd !important;
+      &::placeholder {
+        color: #718096 !important;
+        font-weight: 400 !important;
       }
     }
   }
@@ -203,41 +205,35 @@ export const ErrorMessage = styled.div`
 export const SendButton = styled(Button)`
   &&& {
     position: absolute;
-    right: 1.75rem;
-    bottom: 1.75rem;
-    padding: 0.5rem;
-    width: 2.5rem;
+    right: 0.25rem;
     height: 2.5rem;
+    width: 2.5rem;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #2185d0;
+    background: #3182ce;
     border: none;
     color: white;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0;
+    margin: 0.25rem;
 
     &:hover:not(:disabled) {
       transform: translateY(-1px);
-      background: #1678c2;
-      box-shadow: 0 4px 8px rgba(33, 133, 208, 0.2);
+      background: #2c5282;
+      box-shadow: 0 4px 12px rgba(49, 130, 206, 0.25);
     }
 
     &:disabled {
-      background: #e9ecef;
-      color: #adb5bd;
+      background: #e2e8f0;
       cursor: not-allowed;
-      transform: none;
     }
 
     svg {
       width: 1.25rem;
       height: 1.25rem;
-      transition: transform 0.2s ease;
-    }
-
-    &:hover:not(:disabled) svg {
-      transform: translateX(2px);
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
     }
   }
 `;
@@ -247,23 +243,42 @@ interface ConnectionStatusProps {
 }
 
 export const ConnectionStatus = styled(motion.div)<ConnectionStatusProps>`
-  position: absolute;
-  right: 4.5rem;
-  bottom: 1.875rem;
-  font-size: 0.875rem;
-  color: #adb5bd;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 0.875rem;
+  color: ${(props) => (props.connected ? "#48bb78" : "#a0aec0")};
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(226, 232, 240, 0.5);
+  transition: all 0.2s ease-out;
 
   &::before {
     content: "";
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: ${(props) => (props.connected ? "#12b886" : "#adb5bd")};
+    background: ${(props) => (props.connected ? "#48bb78" : "#a0aec0")};
     display: block;
-    animation: ${(props) => (props.connected ? "none" : "pulse 2s infinite")};
+    box-shadow: 0 0 0 rgba(72, 187, 120, 0.4);
+    animation: ${(props) =>
+      props.connected ? "glow 1.5s infinite" : "pulse 2s infinite"};
+  }
+
+  @keyframes glow {
+    0% {
+      box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.4);
+    }
+    70% {
+      box-shadow: 0 0 0 6px rgba(72, 187, 120, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(72, 187, 120, 0);
+    }
   }
 
   @keyframes pulse {

@@ -293,20 +293,11 @@ export const SummaryContent = styled.div`
  * Positions a set of buttons in the top-left corner of the right tray.
  */
 export const ControlButtonGroupLeft = styled.div`
-  position: sticky;
-  top: 1rem;
-  left: 1rem;
-  display: flex;
-  gap: 0.75rem;
-  z-index: 1100;
-  margin: 0;
-  padding: 0;
-
-  @media (max-width: 768px) {
-    position: fixed;
-    top: env(safe-area-inset-top, 1rem);
-    left: 1rem;
-  }
+  position: absolute;
+  left: -0.5rem; // Slightly closer to panel
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
 `;
 
 /**
@@ -314,35 +305,242 @@ export const ControlButtonGroupLeft = styled.div`
  *
  * A small icon button for our tray, in this example, used to close the tray.
  */
-export const ControlButton = styled(Button)`
-  &&& {
-    width: 2.25rem !important;
-    height: 2.25rem !important;
-    padding: 0 !important;
-    border-radius: 50% !important;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    background: white !important;
-    border: 1px solid rgba(231, 234, 237, 0.7) !important;
-    color: #495057 !important;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+interface ConnectionStatusProps {
+  $isConnected: boolean;
+}
 
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-      border-color: #2185d0 !important;
-      color: #2185d0 !important;
-    }
+export const ConnectionStatus = styled(motion.div)<ConnectionStatusProps>`
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: ${(props) => (props.$isConnected ? "#10B981" : "#EF4444")};
 
-    &:active {
-      transform: translateY(1px);
+  /* Flash animation for disconnected state */
+  animation: ${(props) =>
+    !props.$isConnected ? "flashDisconnected 1s infinite" : "none"};
+
+  @keyframes flashDisconnected {
+    0%,
+    100% {
+      opacity: 1;
+      transform: translateY(-50%) scale(1);
     }
+    50% {
+      opacity: 0.5;
+      transform: translateY(-50%) scale(0.85);
+    }
+  }
+`;
+
+export const ControlButtonWrapper = styled.div`
+  /* Desktop remains unchanged */
+  @media (min-width: 769px) {
+    position: absolute;
+    left: -1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.5rem;
+    height: 6rem;
+    z-index: 2001;
+  }
+
+  /* Mobile - Step 1: Perfect vertical center */
+  @media (max-width: 768px) {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 0;
+    width: 3rem;
+    height: 3rem;
+    z-index: 2001;
+  }
+`;
+
+export const ControlButton = styled(motion.button)`
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  overflow: visible;
+
+  /* The tear in reality */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    background: linear-gradient(
+      90deg,
+      rgba(0, 149, 255, 0.95) 0%,
+      rgba(0, 149, 255, 0.2) 100%
+    );
+    clip-path: polygon(
+      100% 0%,
+      100% 100%,
+      20% 100%,
+      0% 85%,
+      15% 50%,
+      0% 15%,
+      20% 0%
+    );
+    filter: blur(0.5px);
+    transform: translateZ(1px);
+    box-shadow: 0 0 20px rgba(0, 149, 255, 0.5), 0 0 40px rgba(0, 149, 255, 0.3),
+      0 0 60px rgba(0, 149, 255, 0.1);
+    animation: pulseGlow 4s ease-in-out infinite;
+  }
+
+  /* The energy ripple */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.9) 0%,
+      transparent 100%
+    );
+    clip-path: polygon(
+      100% 0%,
+      100% 100%,
+      20% 100%,
+      0% 85%,
+      15% 50%,
+      0% 15%,
+      20% 0%
+    );
+    opacity: 0;
+    transform: translateZ(2px);
+    animation: energyRipple 3s ease-in-out infinite;
+  }
+
+  /* Inner glow */
+  .inner-glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at right,
+      rgba(0, 149, 255, 0.4) 0%,
+      transparent 70%
+    );
+    clip-path: polygon(
+      100% 0%,
+      100% 100%,
+      20% 100%,
+      0% 85%,
+      15% 50%,
+      0% 15%,
+      20% 0%
+    );
+    transform: translateZ(0.5px);
+    mix-blend-mode: screen;
+  }
+
+  .arrow-wrapper {
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%) translateZ(3px);
 
     svg {
-      width: 16px;
-      height: 16px;
+      width: 1.25rem;
+      height: 1.25rem;
+      color: white;
+      filter: drop-shadow(0 0 8px rgba(0, 149, 255, 0.8));
+      transition: all 0.3s ease;
+    }
+  }
+
+  @keyframes pulseGlow {
+    0%,
+    100% {
+      filter: blur(0.5px) brightness(1);
+      transform: translateZ(1px);
+    }
+    50% {
+      filter: blur(0.5px) brightness(1.3);
+      transform: translateZ(1.5px);
+    }
+  }
+
+  @keyframes energyRipple {
+    0%,
+    100% {
+      opacity: 0;
+      transform: translateX(0) translateZ(2px);
+    }
+    50% {
+      opacity: 0.5;
+      transform: translateX(-10px) translateZ(2px);
+    }
+  }
+
+  /* Hover state intensifies everything */
+  &:hover {
+    &::before {
+      animation: pulseGlow 2s ease-in-out infinite;
+      filter: blur(0.5px) brightness(1.4);
+      box-shadow: 0 0 30px rgba(0, 149, 255, 0.6),
+        0 0 60px rgba(0, 149, 255, 0.4), 0 0 90px rgba(0, 149, 255, 0.2);
+    }
+
+    &::after {
+      animation: energyRipple 1.5s ease-in-out infinite;
+    }
+
+    .arrow-wrapper svg {
+      transform: translateX(-2px);
+      filter: drop-shadow(0 0 12px rgba(0, 149, 255, 1));
+    }
+  }
+
+  /* Mobile - LIQUID SMOOTH */
+  @media (max-width: 768px) {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0 12px 12px 0; // Softer curve
+
+    /* Ethereal gradient blend */
+    background: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.99) 0%,
+      rgba(255, 255, 255, 0.99) 50%,
+      rgba(255, 255, 255, 0.95) 70%,
+      rgba(255, 255, 255, 0.8) 85%,
+      rgba(255, 255, 255, 0) 100%
+    );
+
+    /* Gossamer shadow */
+    box-shadow: inset -12px 0 16px -8px rgba(0, 0, 0, 0.03),
+      2px 0 12px -6px rgba(0, 0, 0, 0.06);
+
+    .arrow-wrapper {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 0.75rem; // More space for fade
+      opacity: 0.9; // Soften the arrow too
+
+      svg {
+        width: 20px;
+        height: 20px;
+        color: rgb(0, 149, 255);
+        transform: rotate(180deg);
+      }
     }
   }
 `;
@@ -352,7 +550,7 @@ interface SlidingPanelProps {
 }
 
 export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
-  /* For desktop, position absolutely so it can sit to the right */
+  /* Preserve existing base styling */
   position: absolute;
   top: 0;
   right: 0;
@@ -361,32 +559,43 @@ export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
   width: clamp(320px, 65%, 520px);
   height: 100%;
 
-  background: white;
-  box-shadow: -4px 0 25px rgba(0, 0, 0, 0.05);
+  /* Enhanced background and effects */
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  box-shadow: -4px 0 25px rgba(0, 0, 0, 0.05), -1px 0 2px rgba(0, 0, 0, 0.02);
+  border-left: 1px solid rgba(226, 232, 240, 0.3);
+
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: visible; // Allow our button to breach containment
+  transform-style: preserve-3d; // For that sweet 3D effect
 
-  /* On mobile, switch to full-screen overlay with proper positioning */
+  /* Fancy edge highlight */
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      rgba(26, 115, 232, 0.2),
+      transparent
+    );
+    transform: translateX(-1px);
+  }
+
+  /* Mobile responsiveness preserved */
   @media (max-width: 768px) {
     position: fixed;
-    inset: 0; /* Shorthand for top: 0; right: 0; bottom: 0; left: 0; */
+    inset: 0;
     width: 100%;
     height: 100%;
-    max-height: 100%;
-    margin: 0;
-    padding: 0;
-    border-radius: 0;
-    transform-origin: top center;
-
-    /* Ensure proper iOS Safari rendering */
-    -webkit-overflow-scrolling: touch;
-
-    /* Fix for iOS Safari bottom bar */
-    padding-bottom: env(safe-area-inset-bottom);
-
-    /* Reset any transforms that might affect positioning */
-    transform: none !important;
+    padding-top: max(env(safe-area-inset-top), 1rem);
+    background: white;
+    overflow: visible !important; // CRUCIAL: Let the button breathe!
   }
 `;
 

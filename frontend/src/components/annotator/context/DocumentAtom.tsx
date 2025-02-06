@@ -9,10 +9,9 @@ import {
   TextSearchTokenResult,
   TokenId,
 } from "../../types";
-import { CorpusType, DocumentType } from "../../../types/graphql-api";
+import { DocumentType } from "../../../types/graphql-api";
 import { getPermissions } from "../../../utils/transform";
-import { RefObject, useEffect, useMemo } from "react";
-import { useCorpusState } from "./CorpusAtom";
+import { RefObject, useMemo } from "react";
 
 /**
  * Core document data atoms.
@@ -93,84 +92,6 @@ export const textSearchStateAtom = atom<{
 });
 
 export const searchTextAtom = atom<string>("");
-
-/**
- * Hook to initialize document state atoms with initial values.
- * @param params Initial values for the document state.
- */
-export function useInitializeDocumentAtoms(params: {
-  selectedDocument: DocumentType;
-  selectedCorpus: CorpusType | null | undefined;
-  docText: string;
-  pageTextMaps: Record<number, TokenId> | undefined;
-  isLoading?: boolean;
-  viewState?: ViewState;
-  pdfDoc: PDFDocumentProxy | undefined;
-  pages: Record<number, PDFPageInfo>;
-  documentType: string;
-}) {
-  const {
-    selectedDocument,
-    selectedCorpus,
-    docText,
-    pageTextMaps,
-    isLoading = false,
-    viewState = ViewState.LOADING,
-    pdfDoc,
-    pages,
-    documentType,
-  } = params;
-
-  const setSelectedDocument = useSetAtom(selectedDocumentAtom);
-  const { setCorpus } = useCorpusState();
-  const setFileType = useSetAtom(fileTypeAtom);
-  const setDocText = useSetAtom(docTextAtom);
-  const setPdfDoc = useSetAtom(pdfDocAtom);
-  const setPages = useSetAtom(pagesAtom);
-  const setPageTextMaps = useSetAtom(pageTokenTextMapsAtom);
-  const setDocumentType = useSetAtom(documentTypeAtom);
-  const setIsLoading = useSetAtom(isLoadingAtom);
-  const setViewState = useSetAtom(viewStateAtom);
-  const setRawPermissions = useSetAtom(rawPermissionsAtom);
-  const setPageSelection = useSetAtom(pageSelectionAtom);
-
-  useEffect(() => {
-    setSelectedDocument(selectedDocument);
-    setCorpus({ selectedCorpus });
-    setFileType(selectedDocument.fileType || "");
-    setDocText(docText);
-    setPdfDoc(pdfDoc);
-    setPages(pages);
-    setPageTextMaps(pageTextMaps || {});
-    setDocumentType(documentType);
-    setIsLoading(isLoading);
-    setViewState(viewState);
-    setRawPermissions(selectedDocument?.myPermissions ?? ["READ"]);
-    setPageSelection(undefined); // Initialize page selection as undefined
-  }, [
-    selectedDocument,
-    selectedCorpus,
-    docText,
-    pdfDoc,
-    pages,
-    pageTextMaps,
-    documentType,
-    isLoading,
-    viewState,
-    setSelectedDocument,
-    setCorpus,
-    setFileType,
-    setDocText,
-    setPdfDoc,
-    setPages,
-    setPageTextMaps,
-    setDocumentType,
-    setIsLoading,
-    setViewState,
-    setRawPermissions,
-    setPageSelection,
-  ]);
-}
 
 /**
  * Custom hooks to access and manipulate document state atoms.
@@ -361,5 +282,55 @@ export function useDocumentState() {
       hasDocumentPermission,
     }),
     [activeDocument, canUpdateDocument, canDeleteDocument]
+  );
+}
+
+/**
+ * Hook to manage document permissions
+ * @returns Object containing current permissions and setter functions
+ */
+export function useDocumentPermissions() {
+  const setRawPermissions = useSetAtom(rawPermissionsAtom);
+  const currentPermissions = useAtomValue(permissionsAtom);
+
+  return useMemo(
+    () => ({
+      /** Current processed permissions */
+      permissions: currentPermissions,
+
+      /** Permission checks */
+      canPublish: currentPermissions.includes(PermissionTypes.CAN_PUBLISH),
+      canRemove: currentPermissions.includes(PermissionTypes.CAN_REMOVE),
+      canComment: currentPermissions.includes(PermissionTypes.CAN_COMMENT),
+      canManagePermissions: currentPermissions.includes(
+        PermissionTypes.CAN_PERMISSION
+      ),
+
+      /** Set raw permission strings */
+      setPermissions: (permissions: string[]) => {
+        setRawPermissions(permissions);
+      },
+
+      /** Helper to add new permissions */
+      addPermissions: (newPermissions: string[]) => {
+        setRawPermissions((current) => {
+          const uniquePermissions = new Set([...current, ...newPermissions]);
+          return Array.from(uniquePermissions);
+        });
+      },
+
+      /** Helper to remove permissions */
+      removePermissions: (permissionsToRemove: string[]) => {
+        setRawPermissions((current) =>
+          current.filter((p) => !permissionsToRemove.includes(p))
+        );
+      },
+
+      /** Reset permissions to default (READ only) */
+      resetPermissions: () => {
+        setRawPermissions(["READ"]);
+      },
+    }),
+    [currentPermissions, setRawPermissions]
   );
 }

@@ -21,10 +21,13 @@ const MessageContainer = styled(motion.div)<{ $isAssistant: boolean }>`
   gap: 1rem;
   padding: 0.75rem 1.5rem;
   transition: all 0.2s ease-in-out;
+  background: transparent;
 
   &:hover {
-    background: rgba(247, 248, 249, 0.9);
-    backdrop-filter: blur(8px);
+    background: ${(props) =>
+      props.$isAssistant
+        ? "rgba(247, 249, 252, 0.3)"
+        : "rgba(247, 248, 249, 0.15)"};
   }
 
   /* Add responsive padding */
@@ -50,12 +53,12 @@ const Avatar = styled.div<{ $isAssistant: boolean }>`
   background: ${(props) =>
     props.$isAssistant
       ? "linear-gradient(135deg, #2185d0 0%, #1678c2 100%)"
-      : "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)"};
+      : "linear-gradient(135deg, #2d3748 0%, #4a5568 100%)"};
   box-shadow: ${(props) =>
     props.$isAssistant
       ? "0 4px 12px rgba(33, 133, 208, 0.2)"
-      : "0 4px 12px rgba(0, 0, 0, 0.05)"};
-  color: ${(props) => (props.$isAssistant ? "white" : "#495057")};
+      : "0 4px 12px rgba(45, 55, 72, 0.2)"};
+  color: ${(props) => (props.$isAssistant ? "white" : "#e2e8f0")};
   transform: translateY(0);
   transition: all 0.2s ease;
 
@@ -64,14 +67,13 @@ const Avatar = styled.div<{ $isAssistant: boolean }>`
     box-shadow: ${(props) =>
       props.$isAssistant
         ? "0 6px 16px rgba(33, 133, 208, 0.25)"
-        : "0 6px 16px rgba(0, 0, 0, 0.08)"};
+        : "0 6px 16px rgba(45, 55, 72, 0.25)"};
   }
 
   svg {
     width: 1.2rem;
     height: 1.2rem;
-    filter: ${(props) =>
-      props.$isAssistant ? "drop-shadow(0 2px 4px rgba(0,0,0,0.1))" : "none"};
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
   }
 
   /* Adjust avatar size on mobile */
@@ -95,18 +97,25 @@ const ContentContainer = styled.div`
 const MessageContent = styled.div<{ $isAssistant: boolean }>`
   background: ${(props) =>
     props.$isAssistant
-      ? "linear-gradient(to right, #f8f9fa, #ffffff)"
-      : "linear-gradient(to right, #e9ecef, #f1f3f5)"};
+      ? "rgba(255, 255, 255, 0.7)"
+      : "rgba(247, 248, 249, 0.5)"};
+  backdrop-filter: blur(12px);
   border-radius: 1.25rem;
   padding: 1.25rem 1.5rem;
-  color: #212529;
+  color: ${(props) => (props.$isAssistant ? "#1a1f36" : "#2d3748")};
   font-size: 0.95rem;
   line-height: 1.6;
   position: relative;
   margin-bottom: 0.25rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-  border: 1px solid rgba(231, 234, 237, 0.7);
-  backdrop-filter: blur(8px);
+  box-shadow: ${(props) =>
+    props.$isAssistant
+      ? "0 2px 8px rgba(23, 25, 35, 0.04)"
+      : "0 1px 4px rgba(23, 25, 35, 0.03)"};
+  border: 1px solid
+    ${(props) =>
+      props.$isAssistant
+        ? "rgba(255, 255, 255, 0.5)"
+        : "rgba(247, 248, 249, 0.3)"};
   word-wrap: break-word;
   overflow-wrap: break-word;
 
@@ -131,25 +140,18 @@ const MessageContent = styled.div<{ $isAssistant: boolean }>`
   }
 
   pre {
-    background: rgba(0, 0, 0, 0.03);
-    padding: 1rem;
+    background: rgba(247, 248, 249, 0.6);
+    backdrop-filter: blur(8px);
     border-radius: 0.75rem;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
+    padding: 1.25rem;
+    border: 1px solid rgba(226, 232, 240, 0.3);
   }
 
   code {
-    font-family: ui-monospace, "SF Mono", Monaco, monospace;
-    font-size: 0.9em;
+    color: #2b6cb0;
+    background: rgba(43, 108, 176, 0.08);
+    border-radius: 4px;
     padding: 0.2em 0.4em;
-    background: rgba(0, 0, 0, 0.03);
-    border-radius: 0.25rem;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-  }
-
-  pre code {
-    background: none;
-    padding: 0;
   }
 
   table {
@@ -273,7 +275,7 @@ const Timestamp = styled.div`
 const UserName = styled.div`
   font-size: 0.875rem;
   font-weight: 600;
-  color: #495057;
+  color: #1a1a1a;
   margin-bottom: 0.375rem;
   padding-left: 0.25rem;
   letter-spacing: -0.01em;

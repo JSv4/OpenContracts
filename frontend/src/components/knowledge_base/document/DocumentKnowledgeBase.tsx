@@ -45,7 +45,7 @@ import { getDocumentRawText, getPawlsLayer } from "../../annotator/api/rest";
 import { LabelType } from "../../../types/graphql-api";
 import { ChatMessage, ChatMessageProps } from "../../widgets/chat/ChatMessage";
 import { authToken, userObj } from "../../../graphql/cache";
-import styled, { keyframes } from "styled-components";
+import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -58,6 +58,7 @@ import { Token, ViewState } from "../../types";
 import { toast } from "react-toastify";
 import {
   useDocText,
+  useDocumentPermissions,
   useDocumentState,
   useDocumentType,
   usePages,
@@ -111,6 +112,7 @@ import {
   ContentArea,
   ControlButton,
   ControlButtonGroupLeft,
+  ControlButtonWrapper,
   EmptyState,
   HeaderContainer,
   LoadingPlaceholders,
@@ -334,6 +336,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const { setCorpus } = useCorpusState();
   const { setInitialAnnotations } = useInitialAnnotations();
   const { setSearchText } = useSearchText();
+  const { setPermissions } = useDocumentPermissions();
   const { setTextSearchState } = useTextSearchState();
   const { scrollContainerRef, registerRef } = useAnnotationRefs();
   const { activeSpanLabel, setActiveSpanLabel } = useAnnotationControls();
@@ -529,6 +532,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
       setDocumentType(data.document.fileType ?? "");
       setDocument(data.document);
+      setPermissions(data.document.myPermissions ?? []);
 
       // --------------------------------------------------
       // Call our newly inserted processing function here:
@@ -540,7 +544,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         data.document.fileType === "application/pdf" &&
         data.document.pdfFile
       ) {
-        setViewComponents(<PDF read_only={true} />);
+        setViewComponents(<PDF read_only={false} />);
         const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
           data.document.pdfFile
         );
@@ -949,10 +953,15 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
               <AnimatePresence>
                 {showSelector && (
                   <ConversationSelector
-                    initial={{ opacity: 0, scale: 0.9, x: 20 }}
-                    animate={{ opacity: 1, scale: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, x: 20 }}
-                    transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    transition={{
+                      type: "spring",
+                      damping: 25,
+                      stiffness: 400,
+                      mass: 0.8,
+                    }}
                   >
                     <ConversationList>
                       {conversations.map(
@@ -961,58 +970,109 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                             <ConversationItem
                               key={conv.id}
                               onClick={() => setSelectedConversationId(conv.id)}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.2 }}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              whileHover={{
+                                scale: 1.02,
+                                backgroundColor: "rgba(33, 133, 208, 0.08)",
+                                transition: { duration: 0.2 },
+                              }}
+                              whileTap={{ scale: 0.98 }}
                             >
                               <div className="title">
-                                <MessageSquare size={14} />
+                                <MessageSquare
+                                  size={14}
+                                  style={{
+                                    color: "#1a73e8",
+                                    filter:
+                                      "drop-shadow(0 1px 2px rgba(26,115,232,0.2))",
+                                  }}
+                                />
                                 {conv.title || "Untitled Conversation"}
                                 {conv.messageCount && (
-                                  <span className="message-count">
+                                  <motion.span
+                                    className="message-count"
+                                    initial={{ scale: 0.8 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ type: "spring", damping: 15 }}
+                                  >
                                     {conv.messageCount}
-                                  </span>
+                                  </motion.span>
                                 )}
                               </div>
                               <div className="meta">
-                                <Clock size={12} />
+                                <Clock size={12} style={{ color: "#6c757d" }} />
                                 {new Date(conv.createdAt).toLocaleDateString()}
-                                <User size={12} />
+                                <User size={12} style={{ color: "#6c757d" }} />
                                 {conv.creator?.email}
                               </div>
                             </ConversationItem>
                           )
                       )}
                     </ConversationList>
-                    <NewChatButton onClick={handleCreateNewConversation}>
-                      <Plus size={16} />
+                    <NewChatButton
+                      onClick={handleCreateNewConversation}
+                      whileHover={{
+                        backgroundColor: "rgba(26,115,232,0.08)",
+                        scale: 1.02,
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Plus
+                        size={16}
+                        style={{
+                          color: "#1a73e8",
+                          filter: "drop-shadow(0 1px 2px rgba(26,115,232,0.2))",
+                        }}
+                      />
                       New Chat
                     </NewChatButton>
                   </ConversationSelector>
                 )}
               </AnimatePresence>
-              <ConversationCount onClick={() => setShowSelector(!showSelector)}>
+              <ConversationCount
+                onClick={() => setShowSelector(!showSelector)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                animate={{
+                  rotate: showSelector ? 180 : 0,
+                  transition: { duration: 0.3 },
+                }}
+              >
                 {conversations.length}
               </ConversationCount>
             </ConversationIndicator>
-            <div style={{ flex: 1, overflow: "auto", padding: "1rem" }}>
+            <motion.div
+              style={{ flex: 1, overflow: "auto", padding: "1rem" }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
               {chat.map((msg, idx) => (
                 <ChatMessage key={idx} {...msg} />
               ))}
-            </div>
+            </motion.div>
             <ChatInputContainer>
               {wsError ? (
                 <ErrorMessage>
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.2 }}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", damping: 20 }}
                   >
                     {wsError}
                     <Button
                       size="small"
                       onClick={() => window.location.reload()}
-                      style={{ marginLeft: "0.75rem" }}
+                      style={{
+                        marginLeft: "0.75rem",
+                        background: "#dc3545",
+                        color: "white",
+                        border: "none",
+                        boxShadow: "0 2px 4px rgba(220,53,69,0.2)",
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
                       Reconnect
                     </Button>
@@ -1023,27 +1083,28 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   connected={wsReady}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {wsReady ? "Connected" : "Connecting..."}
-                </ConnectionStatus>
+                />
               )}
               <ChatInput
                 value={newMessage}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setNewMessage(e.target.value)
-                }
+                onChange={(e: {
+                  target: { value: React.SetStateAction<string> };
+                }) => setNewMessage(e.target.value)}
                 placeholder={
                   wsReady ? "Type your message..." : "Waiting for connection..."
                 }
                 disabled={!wsReady}
-                onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) =>
+                onKeyPress={(e: { key: string }) =>
                   e.key === "Enter" && sendMessageOverSocket()
                 }
               />
               <SendButton
                 onClick={sendMessageOverSocket}
                 disabled={!wsReady || !newMessage.trim()}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                animate={wsReady ? { y: [0, -2, 0] } : {}}
+                transition={{ duration: 0.2 }}
               >
                 <Send size={18} />
               </SendButton>
@@ -1462,23 +1523,29 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             {showRightPanel && (
               <SlidingPanel
                 initial={{ x: "100%", opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
+                animate={{ x: "0%", opacity: 1 }}
                 exit={{ x: "100%", opacity: 0 }}
                 transition={{
-                  duration: 0.3,
-                  ease: [0.4, 0, 0.2, 1],
-                  opacity: { duration: 0.2 },
+                  x: { type: "spring", damping: 30, stiffness: 300 },
+                  opacity: { duration: 0.2, ease: "easeOut" },
                 }}
               >
                 <ControlButtonGroupLeft>
-                  <ControlButton
-                    onClick={() => {
-                      setShowRightPanel(false);
-                      setActiveTab("");
-                    }}
-                  >
-                    <ArrowLeft color="red" />
-                  </ControlButton>
+                  <ControlButtonWrapper>
+                    <ControlButton
+                      onClick={() => {
+                        setShowRightPanel(false);
+                        setActiveTab("");
+                      }}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <div className="energy-core" />
+                      <div className="arrow-wrapper">
+                        <ArrowLeft strokeWidth={3} />
+                      </div>
+                    </ControlButton>
+                  </ControlButtonWrapper>
                 </ControlButtonGroupLeft>
                 {rightPanelContent}
               </SlidingPanel>

@@ -41,11 +41,6 @@ export const ChatInputContainer = styled(motion.div)<{ $isTyping: boolean }>`
   padding: 1.25rem 1.5rem;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  transform: translateY(${(props) => (props.$isTyping ? 0 : "100%")});
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   border-top: 1px solid rgba(226, 232, 240, 0.5);
   box-shadow: 0 -8px 32px rgba(23, 25, 35, 0.08),
@@ -102,6 +97,7 @@ export const ConversationIndicator = styled(motion.div)`
   align-items: center;
   gap: 0.5rem;
   width: 100%;
+  height: 100%;
 `;
 
 export const ConversationCount = styled(motion.div)`

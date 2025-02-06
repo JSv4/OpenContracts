@@ -32,6 +32,7 @@ from config.graphql.filters import (
     LabelFilter,
     LabelsetFilter,
     RelationshipFilter,
+    ChatMessageFilter,
 )
 from config.graphql.graphene_types import (
     AnalysisType,
@@ -61,6 +62,7 @@ from config.graphql.graphene_types import (
     RelationshipType,
     UserExportType,
     UserImportType,
+    MessageType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -983,7 +985,9 @@ class Query(graphene.ObjectType):
 
     @login_required
     def resolve_pipeline_components(
-        self, info, mimetype: Optional[FileTypeEnum] = None
+        self, 
+        info, 
+        mimetype: Optional[FileTypeEnum] = None
     ) -> PipelineComponentsType:
         """
         Resolver for the pipeline_components query.
@@ -1064,6 +1068,7 @@ class Query(graphene.ObjectType):
         description="Retrieve conversations, optionally filtered by document_id or corpus_id",
     )
 
+    @login_required
     def resolve_conversations(self, info, **kwargs):
         """
         Resolver to fetch Conversations along with their Messages.
@@ -1092,6 +1097,7 @@ class Query(graphene.ObjectType):
         document_id=graphene.ID(required=False),
     )
 
+    @login_required
     def resolve_document_relationships(self, info, **kwargs):
         # Start with base queryset based on user permissions
         if info.context.user.is_superuser:
@@ -1123,6 +1129,7 @@ class Query(graphene.ObjectType):
 
     document_relationship = relay.Node.Field(DocumentRelationshipType)
 
+    @login_required
     def resolve_document_relationship(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         if info.context.user.is_superuser:
@@ -1142,6 +1149,7 @@ class Query(graphene.ObjectType):
         relationship_type=graphene.String(required=False),
     )
 
+    @login_required
     def resolve_bulk_doc_relationships(self, info, document_id, **kwargs):
         # Start with base queryset based on user permissions
         if info.context.user.is_superuser:
@@ -1184,6 +1192,7 @@ class Query(graphene.ObjectType):
         order_by=graphene.String(),
     )
 
+    @login_required
     def resolve_notes(self, info, **kwargs):
         # Base filtering for user permissions
         queryset = resolve_oc_model_queryset(Note, info.context.user)
@@ -1228,6 +1237,7 @@ class Query(graphene.ObjectType):
 
     note = relay.Node.Field(NoteType)
 
+    @login_required
     def resolve_note(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         if info.context.user.is_superuser:
@@ -1238,3 +1248,76 @@ class Query(graphene.ObjectType):
             return Note.objects.get(
                 Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
             )
+
+    chat_messages = graphene.Field(
+        graphene.List(MessageType),
+        conversation_id=graphene.ID(required=True),
+        order_by=graphene.String(required=False),
+    )
+
+    @login_required
+    def resolve_chat_messages(
+        self, 
+        info: graphene.ResolveInfo, 
+        conversation_id: Optional[str], 
+        order_by: Optional[str] = None, 
+        **kwargs
+    ):
+        """
+        Resolver for fetching ChatMessage objects with optional filters.
+
+        Args:
+            info (graphene.ResolveInfo): GraphQL resolve info
+            conversation_id (Optional[str]): Global Relay ID for Conversation filter
+            order_by (Optional[str]): Field to order by. Defaults to "-created_at"
+                Supported fields: created_at, -created_at, msg_type, -msg_type, 
+                modified, -modified
+            **kwargs: Additional filter arguments
+
+        Returns:
+            QuerySet[ChatMessage]: Filtered and ordered chat messages
+        """
+        queryset = resolve_oc_model_queryset(ChatMessage, info.context.user)
+
+        # Apply conversation filter if provided
+        conversation_pk = from_global_id(conversation_id)[1]
+        queryset = queryset.filter(conversation_id=conversation_pk)
+
+        # Apply ordering
+        valid_order_fields = {
+            "created_at", "-created_at",
+            "msg_type", "-msg_type",
+            "modified", "-modified"
+        }
+        
+        order_field = order_by if order_by in valid_order_fields else "-created_at"
+        queryset = queryset.order_by(order_field)
+
+        return queryset
+
+    chat_message = relay.Node.Field(MessageType)
+
+    @login_required
+    def resolve_chat_message(self, info: graphene.ResolveInfo, **kwargs) -> ChatMessage:
+        """
+        Resolver for fetching a single ChatMessage by global Relay ID.
+
+        Args:
+            info (graphene.ResolveInfo): GraphQL resolve info.
+            **kwargs: Any additional keyword arguments passed from the GraphQL query.
+
+        Returns:
+            ChatMessage: A single ChatMessage object visible to the current user.
+
+        Raises:
+            ChatMessage.DoesNotExist: If the object doesn't exist or is inaccessible.
+        """
+        django_pk = from_global_id(kwargs.get("id"))[1]
+        user = info.context.user
+
+        if user.is_superuser:
+            return ChatMessage.objects.get(pk=django_pk)
+        elif user.is_anonymous:
+            return ChatMessage.objects.get(Q(pk=django_pk) & Q(is_public=True))
+        else:
+            return ChatMessage.objects.get(Q(pk=django_pk) & (Q(creator=user) | Q(is_public=True)))

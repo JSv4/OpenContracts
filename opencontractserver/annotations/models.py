@@ -585,7 +585,6 @@ class Note(BaseOCModel):
         get_user_model(),
         on_delete=django.db.models.CASCADE,
         null=False,
-        default=1,
     )
 
     # Timing variables

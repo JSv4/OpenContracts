@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from django.conf import settings
+
 """
 DocumentQueryConsumer
 
@@ -19,16 +21,18 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from graphql_relay import from_global_id
 from llama_index.core.chat_engine.types import StreamingAgentChatResponse
+import urllib.parse
 
 from config.websocket.utils.extract_ids import extract_websocket_path_id
-from opencontractserver.conversations.models import Conversation
+from opencontractserver.conversations.models import Conversation, ChatMessage
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.agents import (
     MessageType,
     OpenContractDbAgent,
     create_document_agent,
 )
-
+from llama_index.llms.openai import OpenAI
+    
 logger = logging.getLogger(__name__)
 
 # Define a literal type for our standardized message types
@@ -70,20 +74,49 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             # Load the Document from DB
             self.document = await Document.objects.aget(id=self.document_id)
 
+            # Parse query parameters for optional load_from_conversation_id
+            query_string = self.scope.get('query_string', b'').decode('utf-8')
+            query_params = urllib.parse.parse_qs(query_string)
+            load_convo_id_str = query_params.get('load_from_conversation_id', [None])[0]
+            prefix_messages = None
+            if load_convo_id_str:
+                try:
+                    load_convo_id = int(load_convo_id_str)
+                    # Load ChatMessage instances for the given conversation, ordered by creation time
+                    prefix_messages = await database_sync_to_async(list)(
+                        ChatMessage.objects.filter(conversation_id=load_convo_id).order_by('created')
+                    )
+                    logger.debug(f"Loaded {len(prefix_messages)} prefix messages from conversation {load_convo_id}")
+                except Exception as e:
+                    logger.error(f"Could not load prefix messages: {str(e)}")
+                    prefix_messages = None
+
+            # Initialize the underlying Llama agent with optional prefix messages
             underlying_llama_agent = await create_document_agent(
                 document=self.document_id,
                 user_id=self.scope["user"].id,
+                loaded_messages=prefix_messages
             )
 
-            # Create our conversation record
-            logger.debug("Creating conversation record...")
-            self.conversation = await database_sync_to_async(
-                Conversation.objects.create
-            )(
-                creator=self.scope["user"],
-                title=f"Document {self.document_id} Conversation",
-                chat_with_document=self.document,
-            )
+            # Use existing conversation if provided; otherwise, create a new conversation record
+            if load_convo_id_str:
+                try:
+                    load_convo_id = int(load_convo_id_str)
+                    self.conversation = await Conversation.objects.aget(id=load_convo_id)
+                    logger.debug(f"Loaded existing conversation with id: {load_convo_id}")
+                except Conversation.DoesNotExist:
+                    logger.error(f"Conversation with id {load_convo_id} does not exist, creating new conversation")
+                    self.conversation = await Conversation.objects.create(
+                        creator=self.scope["user"],
+                        title=f"Document {self.document_id} Conversation",
+                        chat_with_document=self.document,
+                    )
+            else:
+                self.conversation = await Conversation.objects.acreate(
+                    creator=self.scope["user"],
+                    title=f"Document {self.document_id} Conversation",
+                    chat_with_document=self.document,
+                )
 
             # Initialize our custom DocumentAgent instance
             self.agent = OpenContractDbAgent(
@@ -153,6 +186,37 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             json.dumps({"type": msg_type, "content": content, "data": data})
         )
 
+    async def generate_conversation_title(self, user_query: str) -> str:
+        """
+        Generates a concise conversation title based on the initial user query.
+        
+        Args:
+            user_query: The first message from the user
+            
+        Returns:
+            A short descriptive title for the conversation
+        """
+        system_prompt = (
+            "You are a helpful assistant that creates very concise chat titles. "
+            "Create a brief (maximum 5 words) title that captures the essence "
+            "of what the user is asking about."
+        )
+        
+        user_prompt = f"Create a brief title for a conversation starting with this query: {user_query}"
+        
+        llm = OpenAI(
+            model="gpt-4o-mini",
+            api_key=settings.OPENAI_API_KEY,
+        )
+        
+        messages = [
+            ChatMessage(role="system", content=system_prompt),
+            ChatMessage(role="user", content=user_prompt),
+        ]
+        
+        response = llm.chat(messages)
+        return response.message.content.strip()
+
     async def receive(self, text_data: str) -> None:
         """
         Handles incoming WebSocket messages from the client. Expected input is JSON containing:
@@ -173,6 +237,18 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                     content="No query provided.",
                 )
                 return
+
+            # Generate title if this is a new conversation without one
+            if not self.conversation:
+                title = await self.generate_conversation_title(user_query)
+                logger.debug("Creating conversation record with generated title...")
+                self.conversation = await database_sync_to_async(
+                    Conversation.objects.create
+                )(
+                    creator=self.scope["user"],
+                    title=title,
+                    chat_with_document=self.document,
+                )
 
             # Start partial-token streaming
             logger.debug("Sending ASYNC_START to client")

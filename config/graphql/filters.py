@@ -20,6 +20,7 @@ from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentRelationship
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport
+from opencontractserver.conversations.models import ChatMessage
 
 User = get_user_model()
 
@@ -474,4 +475,19 @@ class ConversationFilter(django_filters.FilterSet):
         model = Conversation
         fields = {
             "created_at": ["gte", "lte"],
+        }
+
+
+class ChatMessageFilter(django_filters.FilterSet):
+    """Filter set for ChatMessage model."""
+
+    class Meta:
+        model = ChatMessage
+        fields = {
+            "msg_type": ["exact"],
+            "conversation_id": ["exact"],
+            "source_document_id": ["exact"],
+            "created_at": ["gte", "lte"],
+            "creator_id": ["exact"],
+            "is_public": ["exact"],
         }

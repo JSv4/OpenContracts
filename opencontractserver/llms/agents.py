@@ -122,28 +122,19 @@ class OpenContractDbAgent:
 async def create_document_agent(
     document: str | int | Document,
     user_id: int | None = None,
-) -> OpenContractDbAgent:
+    loaded_messages: list | None = None,
+):
     """
-    Factory function to create an OpenContractDbAgent for a given Document.
-
-    This function encapsulates:
-      - Building the embedding model
-      - Building an OpenAI-based LLM
-      - Constructing a vector store and index
-      - Creating a set of query engine tools
-      - Defining a system prompt and prefix messages
-      - Creating an OpenAIAgent (llama_index)
-      - Creating a Conversation record
-      - Returning an OpenContractDbAgent instance tied to the Conversation
+    Creates a document agent for processing queries, with an optional prefix of conversation messages.
 
     Args:
-        document (Document): The Django Document instance for which the agent is created.
-        user_id (Optional[int]): The user ID to associate with record ownership and messages.
+        document (str | int | Document): The document identifier or instance.
+        user_id (int | None): The ID of the user.
+        prefix_messages (list, optional): A list of ChatMessage instances to preload conversation context.
 
     Returns:
-        OpenContractDbAgent: An instance of OpenContractDbAgent configured to query the given Document.
+        OpenContractDbAgent: An instance of OpenContractDbAgent configured with the given document and conversation context.
     """
-
     if not isinstance(document, Document):
         document = await Document.objects.aget(id=document)
 
@@ -195,7 +186,19 @@ async def create_document_agent(
         "Return your answers in thoughtful, attractive markdown. "
         "Avoid repeating instructions, writing down your thought processes (unless asked), or giving disclaimers."
     )
+    
     prefix_messages = [LlamaChatMessage(role="system", content=system_prompt)]
+    
+    # Safely convert list of ChatMessage objects to list of LlamaChatMessage
+    if loaded_messages:
+        for msg in loaded_messages:
+            print(f"Message type {type(msg)}: {dir(msg)}")
+            prefix_messages.append(
+                LlamaChatMessage(
+                    role=msg.msg_type.lower(),
+                    content=msg.content
+                )
+            )
 
     logger.debug("Creating the underlying llama_index OpenAIAgent...")
     underlying_llama_agent = OpenAIAgent.from_tools(

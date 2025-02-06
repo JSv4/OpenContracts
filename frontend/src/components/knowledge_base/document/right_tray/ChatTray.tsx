@@ -30,7 +30,14 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, ArrowLeft, Plus, Search, Send } from "lucide-react";
 import { Button, CardMeta } from "semantic-ui-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ChatMessage,
   ChatMessageProps,
@@ -162,10 +169,27 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
    */
   const combinedMessages = [...serverMessages, ...chat];
 
+  // Add ref for messages container
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Add scroll helper function
+  const scrollToBottom = useCallback(() => {
+    if (messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, []);
+
+  // Scroll when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [combinedMessages, scrollToBottom]);
+
   /**
-   * Helper method to append streaming tokens to the last assistant chat entry.
-   * If no assistant entry exists yet, this will create one.
-   * @param token Partial content to be appended
+   * Update the appendStreamingTokenToChat to trigger scroll on new messages
    */
   const appendStreamingTokenToChat = (token: string): void => {
     if (!token) return;
@@ -182,6 +206,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
         };
         return [...prev.slice(0, -1), updatedLast];
       } else {
+        // New message started, scroll to bottom
+        setTimeout(scrollToBottom, 100); // Small delay to ensure DOM update
         return [
           ...prev,
           {
@@ -434,8 +460,148 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     <ChatContainer id="chat-container">
       <ConversationIndicator id="conversation-indicator">
         <AnimatePresence>
-          {!isTyping && !selectedConversationId ? (
-            // 1) Show initial selector menu if not in conversation
+          {isTyping || selectedConversationId ? (
+            <motion.div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                height: "100%",
+                width: "100%",
+                position: "relative",
+              }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {/* Fixed Header */}
+              <motion.div
+                style={{
+                  padding: "0.5rem 1rem",
+                  borderBottom: "1px solid rgba(0,0,0,0.1)",
+                  background: "rgba(255, 255, 255, 0.95)",
+                  zIndex: 2,
+                  position: "sticky",
+                  top: 0,
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Button
+                  size="small"
+                  onClick={exitConversation}
+                  style={{
+                    background: "transparent",
+                    padding: "0.5rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                  Back to Conversations
+                </Button>
+              </motion.div>
+
+              {/* Scrollable Messages Container */}
+              <motion.div
+                style={{
+                  flex: "1 1 auto",
+                  overflowY: "auto",
+                  minHeight: 0,
+                  padding: "1rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                  paddingBottom: "6rem",
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                id="messages-container"
+                ref={messagesContainerRef}
+              >
+                {combinedMessages.map((msg, idx) => (
+                  <ChatMessage
+                    key={idx}
+                    user={msg.user}
+                    content={msg.content}
+                    timestamp={msg.timestamp}
+                    isAssistant={msg.isAssistant}
+                  />
+                ))}
+              </motion.div>
+
+              {/* Fixed Footer with Input */}
+              <ChatInputContainer
+                $isTyping={isTyping}
+                style={{
+                  zIndex: 3,
+                  background: "rgba(255, 255, 255, 0.95)",
+                  backdropFilter: "blur(10px)",
+                  borderTop: "1px solid rgba(0, 0, 0, 0.1)",
+                }}
+              >
+                {wsError ? (
+                  <ErrorMessage>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: "spring", damping: 20 }}
+                    >
+                      {wsError}
+                      <Button
+                        size="small"
+                        onClick={() => window.location.reload()}
+                        style={{
+                          marginLeft: "0.75rem",
+                          background: "#dc3545",
+                          color: "white",
+                          border: "none",
+                          boxShadow: "0 2px 4px rgba(220,53,69,0.2)",
+                        }}
+                      >
+                        Reconnect
+                      </Button>
+                    </motion.div>
+                  </ErrorMessage>
+                ) : (
+                  <ConnectionStatus
+                    connected={wsReady}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  />
+                )}
+                <ChatInput
+                  value={newMessage}
+                  onChange={(e: {
+                    target: { value: SetStateAction<string> };
+                  }) => setNewMessage(e.target.value)}
+                  placeholder={
+                    wsReady
+                      ? "Type your message..."
+                      : "Waiting for connection..."
+                  }
+                  disabled={!wsReady}
+                  onKeyPress={(e: { key: string }) => {
+                    if (e.key === "Enter") {
+                      sendMessageOverSocket();
+                    }
+                  }}
+                />
+                <SendButton
+                  disabled={!wsReady || !newMessage.trim()}
+                  onClick={sendMessageOverSocket}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  animate={wsReady ? { y: [0, -2, 0] } : {}}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Send size={18} />
+                </SendButton>
+              </ChatInputContainer>
+            </motion.div>
+          ) : (
             <motion.div
               id="conversation-menu"
               style={{
@@ -533,124 +699,6 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                   </Button>
                 </>
               )}
-            </motion.div>
-          ) : (
-            // 2) Once a conversation is selected or started, show chat interface
-            <motion.div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                height: "100%",
-                width: "100%",
-              }}
-            >
-              <motion.div
-                style={{
-                  padding: "0.5rem 1rem",
-                  borderBottom: "1px solid rgba(0,0,0,0.1)",
-                }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                <Button
-                  size="small"
-                  onClick={exitConversation}
-                  style={{
-                    background: "transparent",
-                    padding: "0.5rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <ArrowLeft size={16} />
-                  Back to Conversations
-                </Button>
-              </motion.div>
-
-              <motion.div
-                style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  padding: "1rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1rem",
-                }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                {combinedMessages.map((msg, idx) => (
-                  <ChatMessage
-                    key={idx}
-                    user={msg.user}
-                    content={msg.content}
-                    timestamp={msg.timestamp}
-                    isAssistant={msg.isAssistant}
-                  />
-                ))}
-              </motion.div>
-
-              <ChatInputContainer $isTyping={isTyping}>
-                {wsError ? (
-                  <ErrorMessage>
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ type: "spring", damping: 20 }}
-                    >
-                      {wsError}
-                      <Button
-                        size="small"
-                        onClick={() => window.location.reload()}
-                        style={{
-                          marginLeft: "0.75rem",
-                          background: "#dc3545",
-                          color: "white",
-                          border: "none",
-                          boxShadow: "0 2px 4px rgba(220,53,69,0.2)",
-                        }}
-                      >
-                        Reconnect
-                      </Button>
-                    </motion.div>
-                  </ErrorMessage>
-                ) : (
-                  <ConnectionStatus
-                    connected={wsReady}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                  />
-                )}
-
-                <ChatInput
-                  value={newMessage}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setNewMessage(e.target.value)
-                  }
-                  placeholder={
-                    wsReady
-                      ? "Type your message..."
-                      : "Waiting for connection..."
-                  }
-                  disabled={!wsReady}
-                  onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                    if (e.key === "Enter") {
-                      sendMessageOverSocket();
-                    }
-                  }}
-                />
-                <SendButton
-                  disabled={!wsReady || !newMessage.trim()}
-                  onClick={sendMessageOverSocket}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  animate={wsReady ? { y: [0, -2, 0] } : {}}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Send size={18} />
-                </SendButton>
-              </ChatInputContainer>
             </motion.div>
           )}
         </AnimatePresence>

@@ -61,6 +61,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         logger.debug(f"Connection scope: {self.scope}")
 
         try:
+            
+            self.new_conversation = False
+            
             if not self.scope["user"].is_authenticated:
                 logger.warning("User is not authenticated")
                 await self.close(code=4000)
@@ -81,42 +84,31 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             prefix_messages = None
             if load_convo_id_str:
                 try:
-                    load_convo_id = int(load_convo_id_str)
+                    load_convo_id = int(from_global_id(load_convo_id_str)[1])
+                    self.conversation = await Conversation.objects.aget(id=load_convo_id)
+
                     # Load ChatMessage instances for the given conversation, ordered by creation time
-                    prefix_messages = await database_sync_to_async(list)(
-                        ChatMessage.objects.filter(conversation_id=load_convo_id).order_by('created')
-                    )
+                    prefix_messages = await ChatMessage.objects.afilter(conversation_id=load_convo_id).order_by('created')
+                    prefix_messages = list(prefix_messages)
                     logger.debug(f"Loaded {len(prefix_messages)} prefix messages from conversation {load_convo_id}")
                 except Exception as e:
                     logger.error(f"Could not load prefix messages: {str(e)}")
                     prefix_messages = None
-
+            else:
+                self.conversation = await Conversation.objects.create(
+                    creator=self.scope["user"],
+                    title=f"Document {self.document_id} Conversation",
+                    chat_with_document=self.document,
+                )
+            
+            self.new_conversation = await self.conversation.chat_messages.all().acount() == 0    
+            
             # Initialize the underlying Llama agent with optional prefix messages
             underlying_llama_agent = await create_document_agent(
                 document=self.document_id,
                 user_id=self.scope["user"].id,
                 loaded_messages=prefix_messages
             )
-
-            # Use existing conversation if provided; otherwise, create a new conversation record
-            if load_convo_id_str:
-                try:
-                    load_convo_id = int(load_convo_id_str)
-                    self.conversation = await Conversation.objects.aget(id=load_convo_id)
-                    logger.debug(f"Loaded existing conversation with id: {load_convo_id}")
-                except Conversation.DoesNotExist:
-                    logger.error(f"Conversation with id {load_convo_id} does not exist, creating new conversation")
-                    self.conversation = await Conversation.objects.create(
-                        creator=self.scope["user"],
-                        title=f"Document {self.document_id} Conversation",
-                        chat_with_document=self.document,
-                    )
-            else:
-                self.conversation = await Conversation.objects.acreate(
-                    creator=self.scope["user"],
-                    title=f"Document {self.document_id} Conversation",
-                    chat_with_document=self.document,
-                )
 
             # Initialize our custom DocumentAgent instance
             self.agent = OpenContractDbAgent(
@@ -238,17 +230,11 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 )
                 return
 
-            # Generate title if this is a new conversation without one
-            if not self.conversation:
+            # Generate title if this is a new conversation without any messages
+            if self.new_conversation:
                 title = await self.generate_conversation_title(user_query)
-                logger.debug("Creating conversation record with generated title...")
-                self.conversation = await database_sync_to_async(
-                    Conversation.objects.create
-                )(
-                    creator=self.scope["user"],
-                    title=title,
-                    chat_with_document=self.document,
-                )
+                self.conversation.title = title
+                await self.conversation.asave()
 
             # Start partial-token streaming
             logger.debug("Sending ASYNC_START to client")

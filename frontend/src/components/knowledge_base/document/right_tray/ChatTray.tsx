@@ -28,7 +28,15 @@ import {
   TimeStamp,
 } from "../ChatContainers";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, ArrowLeft, Plus, Search, Send } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Plus,
+  Search,
+  Send,
+  X,
+  Calendar,
+} from "lucide-react";
 import { Button, CardMeta, Input } from "semantic-ui-react";
 import {
   SetStateAction,
@@ -89,14 +97,123 @@ const FilterContainer = styled.div`
   position: sticky;
   top: 0;
   z-index: 10;
-  background: white;
-  padding: 1rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  width: 100%;
+`;
+
+const IconButton = styled(motion.button)<{ $isActive?: boolean }>`
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  border: 1px solid
+    ${(props) => (props.$isActive ? "#4299E1" : "rgba(0, 0, 0, 0.08)")};
+  background: ${(props) =>
+    props.$isActive ? "#EBF8FF" : "rgba(255, 255, 255, 0.8)"};
+  display: flex;
+  align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  color: ${(props) => (props.$isActive ? "#2B6CB0" : "#4A5568")};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+
+  &:hover {
+    background: ${(props) => (props.$isActive ? "#E6F6FF" : "white")};
+    border-color: ${(props) =>
+      props.$isActive ? "#63B3ED" : "rgba(66, 153, 225, 0.5)"};
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    opacity: ${(props) => (props.$isActive ? 1 : 0.7)};
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover svg {
+    opacity: 1;
+  }
+
+  /* Active filter indicator */
+  ${(props) =>
+    props.$isActive &&
+    `
+    &::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 4px;
+      background: #4299E1;
+      top: -2px;
+      right: -2px;
+      border: 2px solid white;
+    }
+  `}
+`;
+
+const ExpandingInput = styled(motion.div)`
+  position: relative;
+
+  input {
+    width: 0;
+    padding: 0;
+    border: none;
+    height: 36px;
+    background: transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.expanded {
+      width: 200px;
+      padding: 0 1rem;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.8);
+
+      &:focus {
+        border-color: rgba(66, 153, 225, 0.5);
+        box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.25);
+      }
+    }
+  }
+`;
+
+const DatePickerExpanded = styled(motion.div)`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  z-index: 20;
+
+  input[type="date"] {
+    height: 36px;
+    padding: 0 1rem;
+    border-radius: 18px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    font-size: 0.95rem;
+
+    &:focus {
+      border-color: rgba(66, 153, 225, 0.5);
+      outline: none;
+    }
+  }
 `;
 
 /**
@@ -139,6 +256,13 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   const [debouncedTitle, setDebouncedTitle] = useState<string>("");
   const [createdAtGte, setCreatedAtGte] = useState<string>("");
   const [createdAtLte, setCreatedAtLte] = useState<string>("");
+
+  // For dynamic display of filters
+  const [showSearch, setShowSearch] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
   const { data, loading, error, fetchMore } = useQuery<
     GetConversationsOutputs,
     GetConversationsInputs
@@ -173,20 +297,33 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     setServerMessages(mapped);
   }, [msgData]);
 
+  // Add this effect to handle clicks outside the expanded elements
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowSearch(false);
+      }
+      if (
+        datePickerRef.current &&
+        !datePickerRef.current.contains(event.target as Node)
+      ) {
+        setShowDatePicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   /**
    * Memoized list of conversation nodes from the GraphQL response.
    */
   const conversations = useMemo(() => {
     return data?.conversations?.edges?.map((edge) => edge?.node) || [];
   }, [data]);
-
-  /**
-   * Memoized current conversation based on selected ID.
-   */
-  const selectedConversation = useMemo(() => {
-    if (!selectedConversationId) return null;
-    return conversations.find((c) => c?.id === selectedConversationId) || null;
-  }, [selectedConversationId, conversations]);
 
   /**
    * Combine serverMessages + local chat for final display
@@ -707,38 +844,79 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
               {showLoad ? (
                 <>
                   <FilterContainer>
-                    <Input
-                      icon={<Search size={18} />}
-                      placeholder="Search by title..."
-                      value={titleFilter}
-                      onChange={(e) => setTitleFilter(e.target.value)}
-                      style={{ minWidth: "200px" }}
-                    />
-                    <Input
-                      type="date"
-                      placeholder="Created After"
-                      value={createdAtGte}
-                      onChange={(e) => setCreatedAtGte(e.target.value)}
-                      style={{ maxWidth: "160px" }}
-                    />
-                    <Input
-                      type="date"
-                      placeholder="Created Before"
-                      value={createdAtLte}
-                      onChange={(e) => setCreatedAtLte(e.target.value)}
-                      style={{ maxWidth: "160px" }}
-                    />
-                    <Button
-                      basic
-                      icon
-                      onClick={() => {
-                        setTitleFilter("");
-                        setCreatedAtGte("");
-                        setCreatedAtLte("");
-                      }}
+                    <AnimatePresence>
+                      {showSearch && (
+                        <ExpandingInput
+                          initial={{ width: 0, opacity: 0 }}
+                          animate={{ width: "auto", opacity: 1 }}
+                          exit={{ width: 0, opacity: 0 }}
+                          ref={searchInputRef}
+                        >
+                          <input
+                            className="expanded"
+                            placeholder="Search by title..."
+                            value={titleFilter}
+                            onChange={(e) => setTitleFilter(e.target.value)}
+                            autoFocus
+                          />
+                        </ExpandingInput>
+                      )}
+                    </AnimatePresence>
+
+                    <IconButton
+                      onClick={() => setShowSearch(!showSearch)}
+                      $isActive={!!titleFilter}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      Clear Filters
-                    </Button>
+                      <Search />
+                    </IconButton>
+
+                    <IconButton
+                      onClick={() => setShowDatePicker(!showDatePicker)}
+                      $isActive={!!(createdAtGte || createdAtLte)}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Calendar />
+                    </IconButton>
+
+                    <AnimatePresence>
+                      {showDatePicker && (
+                        <DatePickerExpanded
+                          ref={datePickerRef}
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                        >
+                          <input
+                            type="date"
+                            value={createdAtGte}
+                            onChange={(e) => setCreatedAtGte(e.target.value)}
+                            placeholder="Start Date"
+                          />
+                          <input
+                            type="date"
+                            value={createdAtLte}
+                            onChange={(e) => setCreatedAtLte(e.target.value)}
+                            placeholder="End Date"
+                          />
+                        </DatePickerExpanded>
+                      )}
+                    </AnimatePresence>
+
+                    {(titleFilter || createdAtGte || createdAtLte) && (
+                      <IconButton
+                        onClick={() => {
+                          setTitleFilter("");
+                          setCreatedAtGte("");
+                          setCreatedAtLte("");
+                          setShowSearch(false);
+                          setShowDatePicker(false);
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <X />
+                      </IconButton>
+                    )}
                   </FilterContainer>
                   <ConversationGrid id="conversation-grid">
                     <BackButton onClick={() => setShowLoad(false)}>

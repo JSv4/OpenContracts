@@ -29,7 +29,7 @@ import {
 } from "../ChatContainers";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, ArrowLeft, Plus, Search, Send } from "lucide-react";
-import { Button, CardMeta } from "semantic-ui-react";
+import { Button, CardMeta, Input } from "semantic-ui-react";
 import {
   SetStateAction,
   useCallback,
@@ -61,6 +61,8 @@ import {
   ConnectionStatus,
 } from "../ChatContainers";
 import { FetchMoreOnVisible } from "../../../widgets/infinite_scroll/FetchMoreOnVisible";
+import { NewChatFloatingButton } from "../ChatContainers";
+import styled from "styled-components";
 
 /**
  * MessageData interface for incoming websocket messages.
@@ -82,6 +84,21 @@ interface ChatTrayProps {
   setShowLoad: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+// Add this styled component with your other styled components
+const FilterContainer = styled.div`
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+`;
+
 /**
  * ChatTray component provides:
  * 1) Initial user selection of either creating a new conversation or loading an existing one,
@@ -98,7 +115,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   setShowLoad,
 }) => {
   // Chat state
-  const [isTyping, setIsTyping] = useState(false);
+  const [isNewChat, setIsNewChat] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [chat, setChat] = useState<ChatMessageProps[]>([]);
   const [wsReady, setWsReady] = useState(false);
@@ -118,12 +135,19 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   const socketRef = useRef<WebSocket | null>(null);
 
   // Query for minimal conversation data (no messages)
+  const [titleFilter, setTitleFilter] = useState<string>("");
+  const [debouncedTitle, setDebouncedTitle] = useState<string>("");
+  const [createdAtGte, setCreatedAtGte] = useState<string>("");
+  const [createdAtLte, setCreatedAtLte] = useState<string>("");
   const { data, loading, error, fetchMore } = useQuery<
     GetConversationsOutputs,
     GetConversationsInputs
   >(GET_CONVERSATIONS, {
     variables: {
       documentId,
+      title_Contains: debouncedTitle || undefined,
+      createdAt_Gte: createdAtGte || undefined,
+      createdAt_Lte: createdAtLte || undefined,
     },
     fetchPolicy: "network-only",
   });
@@ -264,7 +288,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
    */
   useEffect(() => {
     // If no conversation is selected or no auth token is present, close any socket and exit.
-    if (!selectedConversationId || !auth_token) {
+    if (!auth_token || (!selectedConversationId && !isNewChat)) {
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
@@ -337,7 +361,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
         socketRef.current = null;
       }
     };
-  }, [auth_token, documentId, selectedConversationId]);
+  }, [auth_token, documentId, selectedConversationId, isNewChat]);
 
   /**
    * Load existing conversation by ID, clearing local state, then showing chat UI.
@@ -345,7 +369,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
    */
   const loadConversation = (conversationId: string): void => {
     setSelectedConversationId(conversationId);
-    setIsTyping(true);
+    setIsNewChat(false);
     setShowLoad(false);
     // Clear both local chat state and server messages
     setChat([]);
@@ -367,7 +391,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
    * Exit the current conversation and reset chat state.
    */
   const exitConversation = (): void => {
-    setIsTyping(false);
+    setIsNewChat(false);
     setShowLoad(false);
     setNewMessage("");
     setChat([]);
@@ -383,7 +407,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
    * Start a new chat (unselect existing conversation).
    */
   const startNewChat = (): void => {
-    setIsTyping(true);
+    setIsNewChat(true);
     setSelectedConversationId(undefined);
     setShowLoad(false);
     setChat([]);
@@ -453,6 +477,52 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     );
   }
 
+  // Add these utility functions at the top of the file
+  const calculateMessageStats = (conversations: any[]) => {
+    const counts = conversations.map(
+      (conv) => conv?.chatMessages?.totalCount || 0
+    );
+    const max = Math.max(...counts);
+    const min = Math.min(...counts);
+    const sum = counts.reduce((a, b) => a + b, 0);
+    const mean = sum / counts.length;
+
+    // Calculate standard deviation
+    const variance =
+      counts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / counts.length;
+    const stdDev = Math.sqrt(variance);
+
+    return { max, min, mean, stdDev };
+  };
+
+  const getMessageCountColor = (
+    count: number,
+    stats: { max: number; min: number; mean: number; stdDev: number }
+  ) => {
+    if (count === 0) {
+      return {
+        background: "linear-gradient(135deg, #EDF2F7 0%, #E2E8F0 100%)",
+        opacity: 0.9,
+        textColor: "#4A5568", // Dark text for zero count
+      };
+    }
+
+    // Calculate z-score
+    const zScore = (count - stats.mean) / (stats.stdDev || 1);
+
+    // Convert z-score to a 0-1 scale using sigmoid function
+    const intensity = 1 / (1 + Math.exp(-zScore));
+
+    // Create gradient based on intensity
+    return {
+      background: `linear-gradient(135deg, 
+        rgba(43, 108, 176, ${0.7 + intensity * 0.3}) 0%, 
+        rgba(44, 82, 130, ${0.8 + intensity * 0.2}) 100%)`,
+      opacity: 0.8 + intensity * 0.2,
+      textColor: intensity > 0.3 ? "white" : "#1A202C", // Flip text color based on intensity
+    };
+  };
+
   /**
    * Main UI return
    */
@@ -460,7 +530,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     <ChatContainer id="chat-container">
       <ConversationIndicator id="conversation-indicator">
         <AnimatePresence>
-          {isTyping || selectedConversationId ? (
+          {isNewChat || selectedConversationId ? (
             <motion.div
               style={{
                 display: "flex",
@@ -534,7 +604,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
               {/* Fixed Footer with Input */}
               <ChatInputContainer
-                $isTyping={isTyping}
+                $isTyping={isNewChat}
                 style={{
                   zIndex: 3,
                   background: "rgba(255, 255, 255, 0.95)",
@@ -618,62 +688,98 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
               transition={{ duration: 0.3 }}
             >
               {showLoad ? (
-                // Show conversation list, with infinite scroll
-                <ConversationGrid id="conversation-grid">
-                  <BackButton onClick={() => setShowLoad(false)}>
-                    <ArrowLeft size={16} />
-                    Back to Menu
-                  </BackButton>
-                  {conversations.map((conv, index) => {
-                    if (!conv) return null;
-                    return (
-                      <ConversationCard
-                        key={conv.id}
-                        onClick={() => loadConversation(conv.id)}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{
-                          duration: 0.3,
-                          delay: index * 0.05,
-                          ease: [0.4, 0, 0.2, 1],
-                        }}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        {conv.chatMessages?.totalCount &&
-                          conv.chatMessages.totalCount > 0 && (
-                            <MessageCount
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              transition={{
-                                type: "spring",
-                                stiffness: 500,
-                                damping: 25,
-                                delay: index * 0.05 + 0.2,
-                              }}
-                            >
-                              {conv.chatMessages.totalCount}
-                            </MessageCount>
-                          )}
-                        <CardContent>
-                          <CardTitle>
-                            {conv.title || "Untitled Conversation"}
-                          </CardTitle>
-                          <CardMeta>
-                            <TimeStamp>
-                              {formatDistanceToNow(new Date(conv.createdAt))}{" "}
-                              ago
-                            </TimeStamp>
-                            <Creator>{conv.creator?.email}</Creator>
-                          </CardMeta>
-                        </CardContent>
-                      </ConversationCard>
-                    );
-                  })}
-                  <FetchMoreOnVisible
-                    fetchNextPage={handleFetchMoreConversations}
-                  />
-                </ConversationGrid>
+                <>
+                  <FilterContainer>
+                    <Input
+                      icon={<Search size={18} />}
+                      placeholder="Search by title..."
+                      value={titleFilter}
+                      onChange={(e) => setTitleFilter(e.target.value)}
+                      style={{ minWidth: "200px" }}
+                    />
+                    <Input
+                      type="date"
+                      placeholder="Created After"
+                      value={createdAtGte}
+                      onChange={(e) => setCreatedAtGte(e.target.value)}
+                      style={{ maxWidth: "160px" }}
+                    />
+                    <Input
+                      type="date"
+                      placeholder="Created Before"
+                      value={createdAtLte}
+                      onChange={(e) => setCreatedAtLte(e.target.value)}
+                      style={{ maxWidth: "160px" }}
+                    />
+                    <Button
+                      basic
+                      icon
+                      onClick={() => {
+                        setTitleFilter("");
+                        setCreatedAtGte("");
+                        setCreatedAtLte("");
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  </FilterContainer>
+                  <ConversationGrid id="conversation-grid">
+                    <BackButton onClick={() => setShowLoad(false)}>
+                      <ArrowLeft size={16} />
+                      Back to Menu
+                    </BackButton>
+                    {conversations.map((conv, index) => {
+                      if (!conv) return null;
+                      return (
+                        <ConversationCard
+                          key={conv.id}
+                          onClick={() => loadConversation(conv.id)}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            duration: 0.3,
+                            delay: index * 0.05,
+                            ease: [0.4, 0, 0.2, 1],
+                          }}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <MessageCount
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 500,
+                              damping: 25,
+                              delay: index * 0.05 + 0.2,
+                            }}
+                            $colorStyle={getMessageCountColor(
+                              conv.chatMessages?.totalCount || 0,
+                              calculateMessageStats(conversations)
+                            )}
+                          >
+                            {conv.chatMessages?.totalCount || 0}
+                          </MessageCount>
+                          <CardContent>
+                            <CardTitle>
+                              {conv.title || "Untitled Conversation"}
+                            </CardTitle>
+                            <CardMeta>
+                              <TimeStamp>
+                                {formatDistanceToNow(new Date(conv.createdAt))}{" "}
+                                ago
+                              </TimeStamp>
+                              <Creator>{conv.creator?.email}</Creator>
+                            </CardMeta>
+                          </CardContent>
+                        </ConversationCard>
+                      );
+                    })}
+                    <FetchMoreOnVisible
+                      fetchNextPage={handleFetchMoreConversations}
+                    />
+                  </ConversationGrid>
+                </>
               ) : (
                 // Show big buttons to create or load
                 <>
@@ -699,6 +805,16 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                   </Button>
                 </>
               )}
+              <NewChatFloatingButton
+                onClick={() => startNewChat()}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Plus />
+              </NewChatFloatingButton>
             </motion.div>
           )}
         </AnimatePresence>

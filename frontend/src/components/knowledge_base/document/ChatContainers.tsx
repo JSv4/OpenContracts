@@ -400,7 +400,7 @@ export const ConversationCard = styled(motion.div)`
   background: linear-gradient(
     to bottom right,
     rgba(255, 255, 255, 0.98),
-    rgba(255, 255, 255, 0.92)
+    rgba(255, 255, 255, 0.94)
   );
   backdrop-filter: blur(12px);
   border-radius: 16px;
@@ -413,7 +413,7 @@ export const ConversationCard = styled(motion.div)`
   display: flex;
   align-items: center;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 4px 16px rgba(0, 0, 0, 0.02),
-    0 4px 24px rgba(0, 0, 0, 0.02);
+    0 4px 24px rgba(0, 0, 0, 0.02), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
 
   &:before {
     content: "";
@@ -423,8 +423,8 @@ export const ConversationCard = styled(motion.div)`
     padding: 1px;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.4) 0%,
-      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.2) 50%,
       transparent 100%
     );
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -440,10 +440,11 @@ export const ConversationCard = styled(motion.div)`
     background: linear-gradient(
       to bottom right,
       rgba(255, 255, 255, 1),
-      rgba(255, 255, 255, 0.96)
+      rgba(255, 255, 255, 0.98)
     );
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03), 0 12px 32px rgba(0, 0, 0, 0.03),
-      0 0 0 1px rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.04),
+      0 0 0 1px rgba(255, 255, 255, 0.9),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.6);
   }
 
   &:active {
@@ -452,38 +453,48 @@ export const ConversationCard = styled(motion.div)`
   }
 `;
 
-export const MessageCount = styled(motion.div)`
+export const MessageCount = styled(motion.div)<{
+  $colorStyle?: { background: string; opacity: number; textColor: string };
+}>`
   position: absolute;
   right: 1.5rem;
   top: 50%;
   transform: translateY(-50%);
   background: ${(props) =>
-    props.children === "0"
-      ? "linear-gradient(135deg, #E2E8F0 0%, #CBD5E0 100%)"
-      : "linear-gradient(135deg, #3182ce 0%, #2c5282 100%)"};
-  color: ${(props) => (props.children === "0" ? "#718096" : "white")};
-  padding: ${(props) =>
-    props.children === "0" ? "0.35rem 0.9rem" : "0.4rem 1rem"};
+    props.$colorStyle?.background ||
+    (props.children === "0"
+      ? "linear-gradient(135deg, #EDF2F7 0%, #E2E8F0 100%)"
+      : "linear-gradient(135deg, #2B6CB0 0%, #2C5282 100%)")};
+  color: ${(props) =>
+    props.$colorStyle?.textColor ||
+    (props.children === "0" ? "#4A5568" : "white")};
+  padding: 0.4rem 1rem;
   border-radius: 12px;
   font-size: 0.85rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: ${(props) =>
+    props.$colorStyle?.opacity || (props.children === "0" ? 0.9 : 1)};
   box-shadow: ${(props) =>
     props.children === "0"
-      ? "0 2px 8px rgba(0, 0, 0, 0.05)"
-      : "0 2px 8px rgba(49, 130, 206, 0.15), 0 0 0 1px rgba(49, 130, 206, 0.2)"};
-  opacity: ${(props) => (props.children === "0" ? 0.8 : 1)};
+      ? "0 2px 8px rgba(0, 0, 0, 0.06)"
+      : "0 4px 12px rgba(43, 108, 176, 0.15), 0 0 0 1px rgba(43, 108, 176, 0.2)"};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   &::after {
-    content: ${(props) =>
-      props.children === "0" ? "' pending'" : "' messages'"};
+    content: ${(props) => (props.children === "0" ? "' New'" : "' messages'")};
     font-size: 0.75rem;
     opacity: 0.9;
-    font-weight: 400;
+    font-weight: 500;
+    margin-left: 1px;
   }
 
   ${ConversationCard}:hover & {
-    transform: translateY(-50%) scale(1.02);
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: ${(props) =>
+      props.children === "0"
+        ? "0 4px 12px rgba(0, 0, 0, 0.08)"
+        : "0 8px 16px rgba(43, 108, 176, 0.2), 0 0 0 1px rgba(43, 108, 176, 0.25)"};
   }
 `;
 
@@ -508,13 +519,21 @@ export const CardTitle = styled.h3`
   line-height: 1.4;
   padding-right: 5.5rem; // Space for message count
 
-  /* Gradient text for extra pop */
+  /* Enhanced gradient text */
   background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  ${ConversationCard}:hover & {
+    background: linear-gradient(135deg, #000000 0%, #1a202c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
 `;
 
 export const CardMeta = styled.div`
@@ -599,4 +618,71 @@ export const ErrorContainer = styled(motion.div)`
   background: rgba(220, 53, 69, 0.1);
   border-radius: 8px;
   margin: 1rem;
+`;
+
+export const NewChatFloatingButton = styled(motion.button)`
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2b6cb0 0%, #2c5282 100%);
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(43, 108, 176, 0.2),
+    0 2px 4px rgba(43, 108, 176, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 100;
+
+  /* Safe area support */
+  padding-bottom: env(safe-area-inset-bottom);
+  margin-bottom: env(safe-area-inset-bottom);
+
+  &:hover {
+    transform: translateY(-2px) scale(1.05);
+    background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+    box-shadow: 0 8px 24px rgba(43, 108, 176, 0.25),
+      0 4px 8px rgba(43, 108, 176, 0.15),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
+    transition: all 0.1s ease;
+  }
+
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    stroke-width: 2;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+
+  /* Optional: Add a tooltip on hover */
+  &::before {
+    content: "New Chat";
+    position: absolute;
+    right: 120%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
+  }
+
+  &:hover::before {
+    opacity: 1;
+    transform: translateY(-50%) translateX(-0.5rem);
+  }
 `;

@@ -1801,6 +1801,9 @@ export const listAnnotations = /* GraphQL */ `
 export interface GetConversationsInputs {
   documentId?: string;
   corpusId?: string;
+  title_Contains?: string;
+  createdAt_Gte?: string;
+  createdAt_Lte?: string;
 }
 
 /**
@@ -1820,12 +1823,18 @@ export const GET_CONVERSATIONS = gql`
     $corpusId: String
     $limit: Int
     $cursor: String
+    $title_Contains: String
+    $createdAt_Gte: DateTime
+    $createdAt_Lte: DateTime
   ) {
     conversations(
       documentId: $documentId
       corpusId: $corpusId
       first: $limit
       after: $cursor
+      title_Contains: $title_Contains
+      createdAt_Gte: $createdAt_Gte
+      createdAt_Lte: $createdAt_Lte
     ) {
       edges {
         node {

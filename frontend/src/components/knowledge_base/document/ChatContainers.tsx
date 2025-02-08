@@ -30,11 +30,11 @@ export const BackButton = styled(motion.button)`
 export const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100vh; // Full viewport height
+  height: 100vh;
   background: linear-gradient(150deg, #f8faff 0%, #f0f4f8 100%);
-  overflow: hidden;
   border-left: 1px solid rgba(226, 232, 240, 0.3);
   position: relative;
+  overflow: hidden;
 `;
 
 export const ChatInputContainer = styled(motion.div)<{ $isTyping: boolean }>`
@@ -89,15 +89,12 @@ export const ChatInput = styled(Input)`
   }
 `;
 
-export const ConversationIndicator = styled(motion.div)`
-  position: absolute;
-  top: 1rem;
-  right: 1.5rem;
+export const ConversationIndicator = styled.div`
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
+  flex-direction: column;
   height: 100%;
+  width: 100%;
+  position: relative;
 `;
 
 export const ConversationCount = styled(motion.div)`
@@ -340,16 +337,14 @@ export const ConversationGrid = styled(motion.div)`
   gap: 1rem;
   padding: 1.5rem;
   width: 100%;
-  height: calc(100vh - 7rem); // Account for header/footer space
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
   overflow-y: auto;
   scroll-behavior: smooth;
-  margin-bottom: 5.5rem; // Space for input container
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
 
-  /* Silky smooth scrolling for modern browsers */
-  overflow-y: overlay;
-  scrollbar-gutter: stable;
-
-  /* Elegant scrollbar styling */
+  /* Scrollbar styling */
   &::-webkit-scrollbar {
     width: 8px;
     background: transparent;
@@ -622,8 +617,8 @@ export const ErrorContainer = styled(motion.div)`
 
 export const NewChatFloatingButton = styled(motion.button)`
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
+  bottom: 1.5rem;
+  right: 1.5rem;
   width: 3.5rem;
   height: 3.5rem;
   border-radius: 50%;
@@ -685,4 +680,17 @@ export const NewChatFloatingButton = styled(motion.button)`
     opacity: 1;
     transform: translateY(-50%) translateX(-0.5rem);
   }
+`;
+
+export const FilterContainer = styled.div`
+  background: white;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  flex: 0 0 auto;
+  z-index: 10;
 `;

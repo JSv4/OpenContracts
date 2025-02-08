@@ -134,7 +134,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   // WebSocket reference
   const socketRef = useRef<WebSocket | null>(null);
 
-  // Query for minimal conversation data (no messages)
+  // State for the search filter
   const [titleFilter, setTitleFilter] = useState<string>("");
   const [debouncedTitle, setDebouncedTitle] = useState<string>("");
   const [createdAtGte, setCreatedAtGte] = useState<string>("");
@@ -282,6 +282,22 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       },
     ]);
   };
+
+  /**
+   * Debounce the title filter input.
+   *
+   * This effect updates `debouncedTitle` 500ms after the user stops typing,
+   * which in turn triggers the GET_CONVERSATIONS query to refetch with the new filter.
+   *
+   * It is crucial that this hook is defined at the top level, not conditionally.
+   */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedTitle(titleFilter);
+    }, 500); // Adjust delay as needed
+
+    return () => clearTimeout(timer);
+  }, [titleFilter]);
 
   /**
    * Whenever the selected conversation changes, (re)establish the WebSocket connection.
@@ -682,6 +698,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                 justifyContent: "center",
                 gap: "1rem",
                 padding: "2rem",
+                overflowY: "hidden",
               }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

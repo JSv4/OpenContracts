@@ -722,165 +722,136 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
-              {showLoad ? (
-                <>
-                  <FilterContainer>
-                    <AnimatePresence>
-                      {showSearch && (
-                        <ExpandingInput
-                          initial={{ width: 0, opacity: 0 }}
-                          animate={{ width: "auto", opacity: 1 }}
-                          exit={{ width: 0, opacity: 0 }}
-                          ref={searchInputRef}
-                        >
-                          <input
-                            className="expanded"
-                            placeholder="Search by title..."
-                            value={titleFilter}
-                            onChange={(e) => setTitleFilter(e.target.value)}
-                            autoFocus
-                          />
-                        </ExpandingInput>
-                      )}
-                    </AnimatePresence>
-
-                    <IconButton
-                      onClick={() => setShowSearch(!showSearch)}
-                      $isActive={!!titleFilter}
-                      whileTap={{ scale: 0.95 }}
+              <FilterContainer>
+                <AnimatePresence>
+                  {showSearch && (
+                    <ExpandingInput
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: "auto", opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      ref={searchInputRef}
                     >
-                      <Search />
-                    </IconButton>
+                      <input
+                        className="expanded"
+                        placeholder="Search by title..."
+                        value={titleFilter}
+                        onChange={(e) => setTitleFilter(e.target.value)}
+                        autoFocus
+                      />
+                    </ExpandingInput>
+                  )}
+                </AnimatePresence>
 
-                    <IconButton
-                      onClick={() => setShowDatePicker(!showDatePicker)}
-                      $isActive={!!(createdAtGte || createdAtLte)}
-                      whileTap={{ scale: 0.95 }}
+                <IconButton
+                  onClick={() => setShowSearch(!showSearch)}
+                  $isActive={!!titleFilter}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Search />
+                </IconButton>
+
+                <IconButton
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  $isActive={!!(createdAtGte || createdAtLte)}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Calendar />
+                </IconButton>
+
+                <AnimatePresence>
+                  {showDatePicker && (
+                    <DatePickerExpanded
+                      ref={datePickerRef}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
                     >
-                      <Calendar />
-                    </IconButton>
+                      <input
+                        type="date"
+                        value={createdAtGte}
+                        onChange={(e) => setCreatedAtGte(e.target.value)}
+                        placeholder="Start Date"
+                      />
+                      <input
+                        type="date"
+                        value={createdAtLte}
+                        onChange={(e) => setCreatedAtLte(e.target.value)}
+                        placeholder="End Date"
+                      />
+                    </DatePickerExpanded>
+                  )}
+                </AnimatePresence>
 
-                    <AnimatePresence>
-                      {showDatePicker && (
-                        <DatePickerExpanded
-                          ref={datePickerRef}
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                        >
-                          <input
-                            type="date"
-                            value={createdAtGte}
-                            onChange={(e) => setCreatedAtGte(e.target.value)}
-                            placeholder="Start Date"
-                          />
-                          <input
-                            type="date"
-                            value={createdAtLte}
-                            onChange={(e) => setCreatedAtLte(e.target.value)}
-                            placeholder="End Date"
-                          />
-                        </DatePickerExpanded>
-                      )}
-                    </AnimatePresence>
-
-                    {(titleFilter || createdAtGte || createdAtLte) && (
-                      <IconButton
-                        onClick={() => {
-                          setTitleFilter("");
-                          setCreatedAtGte("");
-                          setCreatedAtLte("");
-                          setShowSearch(false);
-                          setShowDatePicker(false);
+                {(titleFilter || createdAtGte || createdAtLte) && (
+                  <IconButton
+                    onClick={() => {
+                      setTitleFilter("");
+                      setCreatedAtGte("");
+                      setCreatedAtLte("");
+                      setShowSearch(false);
+                      setShowDatePicker(false);
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <X />
+                  </IconButton>
+                )}
+              </FilterContainer>
+              <ConversationGrid id="conversation-grid">
+                <BackButton onClick={() => setShowLoad(false)}>
+                  <ArrowLeft size={16} />
+                  Back to Menu
+                </BackButton>
+                {conversations.map((conv, index) => {
+                  if (!conv) return null;
+                  return (
+                    <ConversationCard
+                      key={conv.id}
+                      onClick={() => loadConversation(conv.id)}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.3,
+                        delay: index * 0.05,
+                        ease: [0.4, 0, 0.2, 1],
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <MessageCount
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 500,
+                          damping: 25,
+                          delay: index * 0.05 + 0.2,
                         }}
-                        whileTap={{ scale: 0.95 }}
+                        $colorStyle={getMessageCountColor(
+                          conv.chatMessages?.totalCount || 0,
+                          calculateMessageStats(conversations)
+                        )}
                       >
-                        <X />
-                      </IconButton>
-                    )}
-                  </FilterContainer>
-                  <ConversationGrid id="conversation-grid">
-                    <BackButton onClick={() => setShowLoad(false)}>
-                      <ArrowLeft size={16} />
-                      Back to Menu
-                    </BackButton>
-                    {conversations.map((conv, index) => {
-                      if (!conv) return null;
-                      return (
-                        <ConversationCard
-                          key={conv.id}
-                          onClick={() => loadConversation(conv.id)}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{
-                            duration: 0.3,
-                            delay: index * 0.05,
-                            ease: [0.4, 0, 0.2, 1],
-                          }}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <MessageCount
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 500,
-                              damping: 25,
-                              delay: index * 0.05 + 0.2,
-                            }}
-                            $colorStyle={getMessageCountColor(
-                              conv.chatMessages?.totalCount || 0,
-                              calculateMessageStats(conversations)
-                            )}
-                          >
-                            {conv.chatMessages?.totalCount || 0}
-                          </MessageCount>
-                          <CardContent>
-                            <CardTitle>
-                              {conv.title || "Untitled Conversation"}
-                            </CardTitle>
-                            <CardMeta>
-                              <TimeStamp>
-                                {formatDistanceToNow(new Date(conv.createdAt))}{" "}
-                                ago
-                              </TimeStamp>
-                              <Creator>{conv.creator?.email}</Creator>
-                            </CardMeta>
-                          </CardContent>
-                        </ConversationCard>
-                      );
-                    })}
-                    <FetchMoreOnVisible
-                      fetchNextPage={handleFetchMoreConversations}
-                    />
-                  </ConversationGrid>
-                </>
-              ) : (
-                // Show big buttons to create or load
-                <>
-                  <h3 style={{ marginBottom: "1rem" }}>
-                    Start a New Chat or Load Existing
-                  </h3>
-                  <Button
-                    color="blue"
-                    size="big"
-                    onClick={startNewChat}
-                    style={{ width: "50%", marginBottom: "1rem" }}
-                  >
-                    <Plus size={18} style={{ marginRight: "0.5rem" }} />
-                    New Chat
-                  </Button>
-                  <Button
-                    size="big"
-                    onClick={() => setShowLoad(true)}
-                    style={{ width: "50%" }}
-                  >
-                    <Search size={18} style={{ marginRight: "0.5rem" }} />
-                    Load Conversation
-                  </Button>
-                </>
-              )}
+                        {conv.chatMessages?.totalCount || 0}
+                      </MessageCount>
+                      <CardContent>
+                        <CardTitle>
+                          {conv.title || "Untitled Conversation"}
+                        </CardTitle>
+                        <CardMeta>
+                          <TimeStamp>
+                            {formatDistanceToNow(new Date(conv.createdAt))} ago
+                          </TimeStamp>
+                          <Creator>{conv.creator?.email}</Creator>
+                        </CardMeta>
+                      </CardContent>
+                    </ConversationCard>
+                  );
+                })}
+                <FetchMoreOnVisible
+                  fetchNextPage={handleFetchMoreConversations}
+                />
+              </ConversationGrid>
               <NewChatFloatingButton
                 onClick={() => startNewChat()}
                 initial={{ scale: 0, opacity: 0 }}

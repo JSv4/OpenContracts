@@ -1637,7 +1637,14 @@ class StartDocumentAnalysisMutation(graphene.Mutation):
     obj = graphene.Field(AnalysisType)
 
     @login_required
-    def mutate(root, info, analyzer_id, document_id=None, corpus_id=None, analysis_input_data=None):
+    def mutate(
+        root,
+        info,
+        analyzer_id,
+        document_id=None,
+        corpus_id=None,
+        analysis_input_data=None,
+    ):
         """
         Starts a document or corpus analysis using the specified analyzer.
         Accepts optional analysis_input_data for analyzers that need
@@ -1680,7 +1687,9 @@ class StartDocumentAnalysisMutation(graphene.Mutation):
                 analysis_input_data=analysis_input_data,
             )
 
-            return StartDocumentAnalysisMutation(ok=True, message="SUCCESS", obj=analysis)
+            return StartDocumentAnalysisMutation(
+                ok=True, message="SUCCESS", obj=analysis
+            )
         except Exception as e:
             return StartDocumentAnalysisMutation(ok=False, message=f"Error: {str(e)}")
 

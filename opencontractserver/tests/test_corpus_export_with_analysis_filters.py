@@ -1,28 +1,26 @@
 import base64
-import json
 import pathlib
 import uuid
+
 import pytest
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.test import TestCase
+from django.utils import timezone
 
-from opencontractserver.corpuses.models import Corpus, TemporaryFileHandle
 from opencontractserver.analyzer.models import Analysis, Analyzer
-from opencontractserver.corpuses.models import Corpus
-from opencontractserver.documents.models import Document
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
+from opencontractserver.corpuses.models import Corpus, TemporaryFileHandle
+from opencontractserver.documents.models import Document
 from opencontractserver.tasks.import_tasks import import_corpus
 from opencontractserver.tasks.utils import package_zip_into_base64
-from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.types.enums import AnnotationFilterMode, PermissionTypes
+from opencontractserver.utils.etl import build_document_export, build_label_lookups
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
-from opencontractserver.utils.etl import build_label_lookups, build_document_export
-from opencontractserver.types.enums import AnnotationFilterMode
-
 
 User = get_user_model()
+
 
 @pytest.mark.django_db
 class ExportCorpusWithAnalysesTestCase(TestCase):
@@ -30,7 +28,7 @@ class ExportCorpusWithAnalysesTestCase(TestCase):
     Test suite that verifies we can layer on multiple Analyses with extra Annotations,
     and confirm our export pipeline's annotation counts vary according to the
     'annotation_filter_mode' in build_document_export().
-    
+
     This is modeled on test_corpus_export.py, but focuses on multi-analysis filtering behaviors.
     """
 
@@ -68,7 +66,7 @@ class ExportCorpusWithAnalysesTestCase(TestCase):
         )
 
         import_task.apply().get()
-        
+
         self.document = Document.objects.get(corpus=self.original_corpus_obj)
 
         # 4) Create two Analyzers & two Analyses referencing this corpus
@@ -78,7 +76,7 @@ class ExportCorpusWithAnalysesTestCase(TestCase):
             disabled=False,
             is_public=True,
             creator=self.user,
-            task_name="fake.task.name.1"
+            task_name="fake.task.name.1",
         )
         self.analysis_a = Analysis.objects.create(
             analyzer=self.analyzer_a,
@@ -94,7 +92,7 @@ class ExportCorpusWithAnalysesTestCase(TestCase):
             disabled=False,
             is_public=True,
             creator=self.user,
-            task_name="fake.task.name.2"
+            task_name="fake.task.name.2",
         )
         self.analysis_b = Analysis.objects.create(
             analyzer=self.analyzer_b,
@@ -111,19 +109,19 @@ class ExportCorpusWithAnalysesTestCase(TestCase):
             text="Corpus Label",
             label_type="TOKEN_LABEL",
             color="#FF0000",  # e.g. Red
-            creator=self.user
+            creator=self.user,
         )
         self.analysis_a_label = AnnotationLabel.objects.create(
             text="AnalysisA Label",
             label_type="TOKEN_LABEL",
             color="#00FF00",  # e.g. Green
-            creator=self.user
+            creator=self.user,
         )
         self.analysis_b_label = AnnotationLabel.objects.create(
             text="AnalysisB Label",
             label_type="TOKEN_LABEL",
             color="#0000FF",  # e.g. Blue
-            creator=self.user
+            creator=self.user,
         )
 
         # 6) Create some Annotations referencing these labels. Some purely corpus-based (no analysis),
@@ -136,34 +134,22 @@ class ExportCorpusWithAnalysesTestCase(TestCase):
             annotation_label=self.original_corpus_obj_label,
             creator=self.user,
             json={
-                        "0": {
-                            "bounds": {
-                                "top": 88.44,
-                                "left": 76.2,
-                                "right": 186.23999999999998,
-                                "bottom": 103.08
-                            },
-                            "rawText": "ACTIVE WITH ME, Inc.",
-                            "tokensJsons": [
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 22
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 23
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 24
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 25
-                                }
-                            ]
-                        }
+                "0": {
+                    "bounds": {
+                        "top": 88.44,
+                        "left": 76.2,
+                        "right": 186.23999999999998,
+                        "bottom": 103.08,
                     },
+                    "rawText": "ACTIVE WITH ME, Inc.",
+                    "tokensJsons": [
+                        {"pageIndex": 0, "tokenIndex": 22},
+                        {"pageIndex": 0, "tokenIndex": 23},
+                        {"pageIndex": 0, "tokenIndex": 24},
+                        {"pageIndex": 0, "tokenIndex": 25},
+                    ],
+                }
+            },
         )
         Annotation.objects.create(
             document=self.document,
@@ -171,34 +157,22 @@ class ExportCorpusWithAnalysesTestCase(TestCase):
             annotation_label=self.original_corpus_obj_label,
             creator=self.user,
             json={
-                        "0": {
-                            "bounds": {
-                                "top": 88.44,
-                                "left": 76.2,
-                                "right": 186.23999999999998,
-                                "bottom": 103.08
-                            },
-                            "rawText": "ACTIVE WITH ME, Inc.",
-                            "tokensJsons": [
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 22
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 23
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 24
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 25
-                                }
-                            ]
-                        }
-                    }
+                "0": {
+                    "bounds": {
+                        "top": 88.44,
+                        "left": 76.2,
+                        "right": 186.23999999999998,
+                        "bottom": 103.08,
+                    },
+                    "rawText": "ACTIVE WITH ME, Inc.",
+                    "tokensJsons": [
+                        {"pageIndex": 0, "tokenIndex": 22},
+                        {"pageIndex": 0, "tokenIndex": 23},
+                        {"pageIndex": 0, "tokenIndex": 24},
+                        {"pageIndex": 0, "tokenIndex": 25},
+                    ],
+                }
+            },
         )
         Annotation.objects.create(
             document=self.document,
@@ -207,34 +181,22 @@ class ExportCorpusWithAnalysesTestCase(TestCase):
             analysis=self.analysis_a,
             creator=self.user,
             json={
-                        "0": {
-                            "bounds": {
-                                "top": 88.44,
-                                "left": 76.2,
-                                "right": 186.23999999999998,
-                                "bottom": 103.08
-                            },
-                            "rawText": "ACTIVE WITH ME, Inc.",
-                            "tokensJsons": [
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 22
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 23
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 24
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 25
-                                }
-                            ]
-                        }
+                "0": {
+                    "bounds": {
+                        "top": 88.44,
+                        "left": 76.2,
+                        "right": 186.23999999999998,
+                        "bottom": 103.08,
                     },
+                    "rawText": "ACTIVE WITH ME, Inc.",
+                    "tokensJsons": [
+                        {"pageIndex": 0, "tokenIndex": 22},
+                        {"pageIndex": 0, "tokenIndex": 23},
+                        {"pageIndex": 0, "tokenIndex": 24},
+                        {"pageIndex": 0, "tokenIndex": 25},
+                    ],
+                }
+            },
         )
         Annotation.objects.create(
             document=self.document,
@@ -243,34 +205,22 @@ class ExportCorpusWithAnalysesTestCase(TestCase):
             analysis=self.analysis_b,
             creator=self.user,
             json={
-                        "0": {
-                            "bounds": {
-                                "top": 88.44,
-                                "left": 76.2,
-                                "right": 186.23999999999998,
-                                "bottom": 103.08
-                            },
-                            "rawText": "ACTIVE WITH ME, Inc.",
-                            "tokensJsons": [
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 22
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 23
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 24
-                                },
-                                {
-                                    "pageIndex": 0,
-                                    "tokenIndex": 25
-                                }
-                            ]
-                        }
+                "0": {
+                    "bounds": {
+                        "top": 88.44,
+                        "left": 76.2,
+                        "right": 186.23999999999998,
+                        "bottom": 103.08,
                     },
+                    "rawText": "ACTIVE WITH ME, Inc.",
+                    "tokensJsons": [
+                        {"pageIndex": 0, "tokenIndex": 22},
+                        {"pageIndex": 0, "tokenIndex": 23},
+                        {"pageIndex": 0, "tokenIndex": 24},
+                        {"pageIndex": 0, "tokenIndex": 25},
+                    ],
+                }
+            },
         )
 
     def test_filter_modes_change_annotation_count(self):
@@ -286,7 +236,9 @@ class ExportCorpusWithAnalysesTestCase(TestCase):
             analysis_ids=None,
             annotation_filter_mode="CORPUS_LABELSET_ONLY",
         )
-        self.assertEqual(len(lookups_corpus_only["text_labels"]), 4)  # just "Corpus Label"
+        self.assertEqual(
+            len(lookups_corpus_only["text_labels"]), 4
+        )  # just "Corpus Label"
 
         # 2) Now check CORPUS_LABELSET_PLUS_ANALYSES for both A and B
         lookups_plus_analyses = build_label_lookups(
@@ -322,7 +274,7 @@ class ExportCorpusWithAnalysesTestCase(TestCase):
             analysis_ids=None,
             annotation_filter_mode=AnnotationFilterMode.CORPUS_LABELSET_ONLY,
         )
-            
+
         self.assertEqual(len(doc_export_data["labelled_text"]), 7)
 
         # CORPUS_LABELSET_PLUS_ANALYSES => 4 total annotations

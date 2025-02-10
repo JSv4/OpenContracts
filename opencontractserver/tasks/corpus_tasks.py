@@ -1,6 +1,6 @@
 import logging
 
-from celery import chord, group, shared_task, current_app
+from celery import chord, group, shared_task
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -70,7 +70,7 @@ def run_task_name_analyzer(
                         corpus_id=analysis.analyzed_corpus.id
                         if analysis.analyzed_corpus
                         else None,
-                        **(analysis_input_data if analysis_input_data else {})
+                        **(analysis_input_data if analysis_input_data else {}),
                     )
                     for doc_id in document_ids
                 ]

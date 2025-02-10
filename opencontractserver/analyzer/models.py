@@ -133,7 +133,7 @@ class Analyzer(BaseOCModel):
         default=jsonfield_default_value,
         null=True,
         blank=True,
-        help_text="Optional JSONSchema describing the analyzer input."
+        help_text="Optional JSONSchema describing the analyzer input.",
     )
 
 

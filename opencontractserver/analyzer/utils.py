@@ -114,7 +114,7 @@ def auto_create_doc_analyzers(
         default_desc = "Auto-created from @doc_analyzer_task-decorated Celery task."
         description = trimmed_desc if trimmed_desc else default_desc
 
-        schema = getattr(analyzer_task, "_oc_doc_analyzer_input_schema", None)  
+        schema = getattr(analyzer_task, "_oc_doc_analyzer_input_schema", None)
 
         try:
             AnalyzerModel.objects.create(

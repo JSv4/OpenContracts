@@ -781,6 +781,10 @@ class AnalyzerType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     def resolve_analyzer_id(self, info):
         return self.id.__str__()
 
+    input_schema = GenericScalar(
+        description="JSONSchema describing the analyzer's expected input if provided."
+    )
+
     manifest = GenericScalar()
 
     full_label_list = graphene.List(AnnotationLabelType)

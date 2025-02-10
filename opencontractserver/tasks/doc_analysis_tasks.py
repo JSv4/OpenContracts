@@ -29,7 +29,30 @@ def contract_not_contract(*args, pdf_text_extract, **kawrgs):
     return [category], [], [], True
 
 
-@doc_analyzer_task()
+@doc_analyzer_task(input_schema={
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InputSchema",
+    "type": "object",
+    "properties": {
+        "context": {
+        "type": "string",
+        "title": "Context",
+        "description": "A description or context for the input."
+        },
+        "labels": {
+        "type": "array",
+        "title": "Labels",
+        "description": "An optional list of labels.",
+        "items": {
+            "type": "string"
+        },
+        "uniqueItems": True
+        }
+    },
+    "required": ["context"],
+    "additionalProperties": False
+    }
+)
 def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
     """
     Use SALI tags plus GLINER plus SPACY sentence splitter to tag legal entities.

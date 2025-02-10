@@ -26,8 +26,15 @@ DELAY_INCREMENT = 300  # 5 minutes
 logger = logging.getLogger(__name__)
 
 
-def doc_analyzer_task(max_retries=None):
+def doc_analyzer_task(max_retries=None, input_schema: dict | None = None):
+    """
+    Decorator for Celery tasks that analyze documents.
+    Now supports an optional input_schema parameter to be stored
+    for later retrieval and usage.
+    """
+
     def decorator(func):
+        
         @shared_task(bind=True, max_retries=max_retries)
         @wraps(func)
         def wrapper(self, *args, **kwargs):
@@ -294,6 +301,10 @@ def doc_analyzer_task(max_retries=None):
 
         # Add a custom attribute to identify doc_analyzer_tasks
         wrapper.is_doc_analyzer_task = True
+        
+         # Attach the input schema to the function object so we can retrieve later
+        wrapper._oc_doc_analyzer_input_schema = input_schema
+        
         return wrapper
 
     return decorator

@@ -129,6 +129,13 @@ class Analyzer(BaseOCModel):
         default=None,
     )
 
+    input_schema = NullableJSONField(
+        default=jsonfield_default_value,
+        null=True,
+        blank=True,
+        help_text="Optional JSONSchema describing the analyzer input."
+    )
+
 
 class AnalyzerUserObjectPermission(UserObjectPermissionBase):
     content_object = django.db.models.ForeignKey(

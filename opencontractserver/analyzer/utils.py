@@ -57,16 +57,14 @@ def get_gremlin_manifests(gremlin_id: int) -> list[AnalyzerManifest] | None:
 
 
 def auto_create_doc_analyzers(
-    AnalyzerModel: type[
-        Any
-    ],  # Typically the historical Analyzer in migrations or the real one elsewhere
-    UserModel: type[Any],  # The historical or real User model
+    AnalyzerModel: type[Any],
+    UserModel: type[Any],
     fallback_superuser: bool = True,
     max_docstring_length: int = 2000,
-) -> None:
+):
     """
-    Finds all tasks in the Celery registry that are decorated with @doc_analyzer_task
-    (via get_doc_analyzer_task_by_name) and auto-creates Analyzer records.
+    Detects functions decorated with @doc_analyzer_task,
+    creates or updates corresponding Analyzer entries.
 
     If a task name already exists, it's skipped.
     Populates the Analyzer.description from the task's docstring if available.
@@ -116,6 +114,8 @@ def auto_create_doc_analyzers(
         default_desc = "Auto-created from @doc_analyzer_task-decorated Celery task."
         description = trimmed_desc if trimmed_desc else default_desc
 
+        schema = getattr(analyzer_task, "_oc_doc_analyzer_input_schema", None)  
+
         try:
             AnalyzerModel.objects.create(
                 id=analyzer_id,
@@ -126,6 +126,7 @@ def auto_create_doc_analyzers(
                 host_gremlin=None,
                 manifest={},
                 description=description,
+                input_schema=schema,
             )
         except IntegrityError:
             logger.warning(f"IntegrityError creating Analyzer {analyzer_id}. Skipped.")

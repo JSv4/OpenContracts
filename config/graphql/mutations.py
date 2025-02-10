@@ -1627,14 +1627,22 @@ class StartDocumentAnalysisMutation(graphene.Mutation):
             required=False,
             description="Optional Id of the corpus to associate with the analysis.",
         )
+        analysis_input_data = GenericScalar(
+            required=False,
+            description="Optional arguments to be passed to the analyzer.",
+        )
 
     ok = graphene.Boolean()
     message = graphene.String()
     obj = graphene.Field(AnalysisType)
 
     @login_required
-    def mutate(root, info, analyzer_id, document_id=None, corpus_id=None):
-
+    def mutate(root, info, analyzer_id, document_id=None, corpus_id=None, analysis_input_data=None):
+        """
+        Starts a document or corpus analysis using the specified analyzer.
+        Accepts optional analysis_input_data for analyzers that need
+        user-provided parameters.
+        """
         user = info.context.user
 
         document_pk = from_global_id(document_id)[1] if document_id else None
@@ -1669,11 +1677,10 @@ class StartDocumentAnalysisMutation(graphene.Mutation):
                 corpus_id=corpus_pk,
                 document_ids=[document_pk] if document_pk else None,
                 corpus_action=None,
+                analysis_input_data=analysis_input_data,
             )
 
-            return StartDocumentAnalysisMutation(
-                ok=True, message="SUCCESS", obj=analysis
-            )
+            return StartDocumentAnalysisMutation(ok=True, message="SUCCESS", obj=analysis)
         except Exception as e:
             return StartDocumentAnalysisMutation(ok=False, message=f"Error: {str(e)}")
 

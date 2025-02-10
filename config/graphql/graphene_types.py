@@ -926,23 +926,26 @@ class CorpusStatsType(graphene.ObjectType):
     total_analyses = graphene.Int()
     total_extracts = graphene.Int()
 
+
 class MessageType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:
         model = ChatMessage
         interfaces = [relay.Node]
         connection_class = CountableConnection
 
+
 class ConversationType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-    
+
     all_messages = graphene.List(MessageType)
-    
+
     def resolve_all_messages(self, info):
         return self.chat_messages.all()
-    
+
     class Meta:
         model = Conversation
         interfaces = [relay.Node]
         connection_class = CountableConnection
+
 
 class UserFeedbackType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     class Meta:

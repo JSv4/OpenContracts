@@ -98,6 +98,9 @@ import { SingleDocumentExtractResults } from "../../annotator/sidebar/SingleDocu
 import { FullScreenModal, SourceIndicator } from "./LayoutComponents";
 import { ChatTray } from "./right_tray/ChatTray";
 import { SafeMarkdown } from "../markdown/SafeMarkdown";
+import { NewChatFloatingButton } from "./ChatContainers";
+import { showSelectCorpusAnalyzerOrFieldsetModal } from "../../../graphql/cache";
+import { SelectDocumentAnalyzerModal } from "./SelectDocumentAnalyzerModal";
 
 const pdfjsLib = require("pdfjs-dist");
 
@@ -115,7 +118,10 @@ const AnnotationsPanel: React.FC = () => {
   const { selectedAnalysis, selectedExtract } = useAnalysisSelection();
 
   return (
-    <div className="sidebar__annotations" style={{ padding: "1rem" }}>
+    <div
+      className="sidebar__annotations"
+      style={{ padding: "1rem", overflowY: "hidden" }}
+    >
       {selectedAnalysis && (
         <SourceIndicator>
           Showing annotations from analysis: {selectedAnalysis.analyzer.id}
@@ -172,6 +178,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   });
   const [showGraph, setShowGraph] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("summary");
+  const [showAnalyzerModal, setShowAnalyzerModal] = useState(false);
 
   // NEW: a layer to toggle between "knowledge" (summary) and "document" (PDF/TXT).
   const [activeLayer, setActiveLayer] = useState<"knowledge" | "document">(
@@ -752,9 +759,20 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         return <RelationsPanel />;
       case "analyses":
         return (
-          <div style={{ padding: "1rem" }}>
-            <AnalysisTraySelector read_only={false} analyses={analyses} />
-          </div>
+          <>
+            <div style={{ padding: "1rem" }}>
+              <AnalysisTraySelector read_only={false} analyses={analyses} />
+            </div>
+            <NewChatFloatingButton onClick={() => setShowAnalyzerModal(true)}>
+              <i className="plus icon" />
+            </NewChatFloatingButton>
+            <SelectDocumentAnalyzerModal
+              documentId={documentId}
+              corpusId={corpusId}
+              open={showAnalyzerModal}
+              onClose={() => setShowAnalyzerModal(false)}
+            />
+          </>
         );
       case "extracts":
         return (

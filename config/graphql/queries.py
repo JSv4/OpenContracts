@@ -32,7 +32,6 @@ from config.graphql.filters import (
     LabelFilter,
     LabelsetFilter,
     RelationshipFilter,
-    ChatMessageFilter,
 )
 from config.graphql.graphene_types import (
     AnalysisType,
@@ -54,6 +53,7 @@ from config.graphql.graphene_types import (
     FileTypeEnum,
     GremlinEngineType_READ,
     LabelSetType,
+    MessageType,
     NoteType,
     PageAwareAnnotationType,
     PdfPageInfoType,
@@ -62,7 +62,6 @@ from config.graphql.graphene_types import (
     RelationshipType,
     UserExportType,
     UserImportType,
-    MessageType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -985,9 +984,7 @@ class Query(graphene.ObjectType):
 
     @login_required
     def resolve_pipeline_components(
-        self, 
-        info, 
-        mimetype: Optional[FileTypeEnum] = None
+        self, info, mimetype: Optional[FileTypeEnum] = None
     ) -> PipelineComponentsType:
         """
         Resolver for the pipeline_components query.
@@ -1080,13 +1077,15 @@ class Query(graphene.ObjectType):
         Returns:
             QuerySet[Conversation]: Filtered queryset of conversations
         """
-        return resolve_oc_model_queryset(
-            Conversation, info.context.user
-        ).prefetch_related(
-            Prefetch(
-                "chat_messages",
-                queryset=ChatMessage.objects.order_by("created_at"),
+        return (
+            resolve_oc_model_queryset(Conversation, info.context.user)
+            .prefetch_related(
+                Prefetch(
+                    "chat_messages",
+                    queryset=ChatMessage.objects.order_by("created_at"),
+                )
             )
+            .order_by("-created")
         )
 
     # DOCUMENT RELATIONSHIP RESOLVERS #####################################
@@ -1257,11 +1256,11 @@ class Query(graphene.ObjectType):
 
     @login_required
     def resolve_chat_messages(
-        self, 
-        info: graphene.ResolveInfo, 
-        conversation_id: Optional[str], 
-        order_by: Optional[str] = None, 
-        **kwargs
+        self,
+        info: graphene.ResolveInfo,
+        conversation_id: Optional[str],
+        order_by: Optional[str] = None,
+        **kwargs,
     ):
         """
         Resolver for fetching ChatMessage objects with optional filters.
@@ -1270,7 +1269,7 @@ class Query(graphene.ObjectType):
             info (graphene.ResolveInfo): GraphQL resolve info
             conversation_id (Optional[str]): Global Relay ID for Conversation filter
             order_by (Optional[str]): Field to order by. Defaults to "-created_at"
-                Supported fields: created_at, -created_at, msg_type, -msg_type, 
+                Supported fields: created_at, -created_at, msg_type, -msg_type,
                 modified, -modified
             **kwargs: Additional filter arguments
 
@@ -1285,11 +1284,14 @@ class Query(graphene.ObjectType):
 
         # Apply ordering
         valid_order_fields = {
-            "created_at", "-created_at",
-            "msg_type", "-msg_type",
-            "modified", "-modified"
+            "created_at",
+            "-created_at",
+            "msg_type",
+            "-msg_type",
+            "modified",
+            "-modified",
         }
-        
+
         order_field = order_by if order_by in valid_order_fields else "-created_at"
         queryset = queryset.order_by(order_field)
 
@@ -1320,4 +1322,6 @@ class Query(graphene.ObjectType):
         elif user.is_anonymous:
             return ChatMessage.objects.get(Q(pk=django_pk) & Q(is_public=True))
         else:
-            return ChatMessage.objects.get(Q(pk=django_pk) & (Q(creator=user) | Q(is_public=True)))
+            return ChatMessage.objects.get(
+                Q(pk=django_pk) & (Q(creator=user) | Q(is_public=True))
+            )

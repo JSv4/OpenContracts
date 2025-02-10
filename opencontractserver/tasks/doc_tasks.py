@@ -8,6 +8,7 @@ from typing import Any
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
+from django.db.models import Q
 from django.utils import timezone
 from pydantic import validate_arguments
 
@@ -20,12 +21,14 @@ from opencontractserver.pipeline.utils import (
     get_components_by_mimetype,
 )
 from opencontractserver.types.dicts import (
+    AnnotationLabelPythonType,
     FunsdAnnotationType,
     FunsdTokenType,
     LabelLookupPythonType,
     OpenContractDocExport,
     PawlsTokenPythonType,
 )
+from opencontractserver.types.enums import AnnotationFilterMode
 from opencontractserver.utils.etl import build_document_export, pawls_bbox_to_funsd_box
 from opencontractserver.utils.files import split_pdf_into_images
 
@@ -112,11 +115,30 @@ def ingest_doc(self, user_id: int, doc_id: int) -> None:
 @celery_app.task()
 @validate_arguments
 def burn_doc_annotations(
-    label_lookups: LabelLookupPythonType, doc_id: int, corpus_id: int
-) -> tuple[str, str, OpenContractDocExport | None, Any, Any]:
+    label_lookups: LabelLookupPythonType,
+    doc_id: int,
+    corpus_id: int,
+    analysis_ids: list[int] | None = None,
+    annotation_filter_mode: str = "CORPUS_LABELSET_ONLY",
+) -> tuple[
+    str | None,
+    str | None,
+    OpenContractDocExport | None,
+    dict[str | int, AnnotationLabelPythonType],
+    dict[str | int, AnnotationLabelPythonType],
+]:
     """
-    Simple task wrapper for a fairly complex task to burn in the annotations for a given corpus on a given doc.
-    This will alter the PDF and add highlight and labels.
+    Inspects a single Document (doc_id) in corpus (corpus_id) and selects the relevant
+    annotations based on the annotation_filter_mode:
+      - "CORPUS_LABELSET_ONLY": only annotations that match labels from the corpus
+        label set
+      - "CORPUS_LABELSET_PLUS_ANALYSES": union of corpus label set + annotations from
+        the given analyses
+      - "ANALYSES_ONLY": ignore corpus label set and gather only annotations
+        belonging to the listed analyses.
+
+    Returns a tuple containing all data needed for packaging:
+      (filename, base64-encoded file, doc_export_data, text_labels, doc_labels)
     """
     return build_document_export(
         label_lookups=label_lookups, doc_id=doc_id, corpus_id=corpus_id
@@ -125,8 +147,12 @@ def burn_doc_annotations(
 
 @celery_app.task()
 def convert_doc_to_funsd(
-    user_id: int, doc_id: int, corpus_id: int
-) -> tuple[int, dict[int, list[FunsdAnnotationType]], list[tuple[int, str, str]]]:
+    user_id: int,
+    doc_id: int,
+    corpus_id: int,
+    analysis_ids: list[int] | None = None,
+    annotation_filter_mode: str = AnnotationFilterMode.CORPUS_LABELSET_ONLY.value,
+) -> tuple[int, dict[int | str, list[dict[str, Any]]], list[tuple[int, str, str]]]:
     def pawls_token_to_funsd_token(pawls_token: PawlsTokenPythonType) -> FunsdTokenType:
         pawls_xleft = pawls_token["x"]
         pawls_ybottom = pawls_token["y"]
@@ -144,10 +170,44 @@ def convert_doc_to_funsd(
 
     annotation_map: dict[int, list[dict]] = {}
 
-    token_annotations = Annotation.objects.filter(
+    # Modify the annotation query to respect filter mode
+    doc_annotations = Annotation.objects.filter(document_id=doc_id, corpus_id=corpus_id)
+
+    if annotation_filter_mode == AnnotationFilterMode.ANALYSES_ONLY.value:
+        if analysis_ids:
+            doc_annotations = doc_annotations.filter(analysis_id__in=analysis_ids)
+        else:
+            doc_annotations = Annotation.objects.none()
+    elif (
+        annotation_filter_mode
+        == AnnotationFilterMode.CORPUS_LABELSET_PLUS_ANALYSES.value
+    ):
+        label_pks_in_corpus = (
+            Annotation.objects.filter(corpus_id=corpus_id)
+            .values_list("annotation_label_id", flat=True)
+            .distinct()
+        )
+        if analysis_ids:
+            doc_annotations = doc_annotations.filter(
+                Q(annotation_label_id__in=label_pks_in_corpus)
+                | Q(analysis_id__in=analysis_ids)
+            )
+        else:
+            doc_annotations = doc_annotations.filter(
+                annotation_label_id__in=label_pks_in_corpus
+            )
+    else:  # CORPUS_LABELSET_ONLY
+        label_pks_in_corpus = (
+            Annotation.objects.filter(corpus_id=corpus_id)
+            .values_list("annotation_label_id", flat=True)
+            .distinct()
+        )
+        doc_annotations = doc_annotations.filter(
+            annotation_label_id__in=label_pks_in_corpus
+        )
+
+    token_annotations = doc_annotations.filter(
         annotation_label__label_type=TOKEN_LABEL,
-        document_id=doc_id,
-        corpus_id=corpus_id,
     ).order_by("page")
 
     file_object = default_storage.open(doc.pawls_parse_file.name)

@@ -15,12 +15,11 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.conversations.models import Conversation
+from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentRelationship
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport
-from opencontractserver.conversations.models import ChatMessage
 
 User = get_user_model()
 
@@ -475,6 +474,7 @@ class ConversationFilter(django_filters.FilterSet):
         model = Conversation
         fields = {
             "created_at": ["gte", "lte"],
+            "title": ["contains"],
         }
 
 

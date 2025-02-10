@@ -130,10 +130,12 @@ async def create_document_agent(
     Args:
         document (str | int | Document): The document identifier or instance.
         user_id (int | None): The ID of the user.
-        prefix_messages (list, optional): A list of ChatMessage instances to preload conversation context.
+        prefix_messages (list, optional): A list of ChatMessage instances to preload
+            conversation context.
 
     Returns:
-        OpenContractDbAgent: An instance of OpenContractDbAgent configured with the given document and conversation context.
+        OpenContractDbAgent: An instance of OpenContractDbAgent configured with the
+            given document and conversation context.
     """
     if not isinstance(document, Document):
         document = await Document.objects.aget(id=document)
@@ -186,18 +188,15 @@ async def create_document_agent(
         "Return your answers in thoughtful, attractive markdown. "
         "Avoid repeating instructions, writing down your thought processes (unless asked), or giving disclaimers."
     )
-    
+
     prefix_messages = [LlamaChatMessage(role="system", content=system_prompt)]
-    
+
     # Safely convert list of ChatMessage objects to list of LlamaChatMessage
     if loaded_messages:
         for msg in loaded_messages:
             print(f"Message type {type(msg)}: {dir(msg)}")
             prefix_messages.append(
-                LlamaChatMessage(
-                    role=msg.msg_type.lower(),
-                    content=msg.content
-                )
+                LlamaChatMessage(role=msg.msg_type.lower(), content=msg.content)
             )
 
     logger.debug("Creating the underlying llama_index OpenAIAgent...")

@@ -186,6 +186,7 @@ def install_analyzers(
     return resulting_ids
 
 
+# TODO - delete candidate?
 def run_analysis(
     analysis_id: str,
     doc_ids: list[int | str] | None = None,

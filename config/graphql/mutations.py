@@ -76,7 +76,12 @@ from opencontractserver.tasks.permissioning_tasks import (
     make_corpus_public_task,
 )
 from opencontractserver.types.dicts import OpenContractsAnnotatedDocumentImportType
-from opencontractserver.types.enums import ExportType, LabelType, PermissionTypes
+from opencontractserver.types.enums import (
+    AnnotationFilterMode,
+    ExportType,
+    LabelType,
+    PermissionTypes,
+)
 from opencontractserver.users.models import UserExport
 from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
 from opencontractserver.utils.files import is_plaintext_content
@@ -555,6 +560,14 @@ class StartQueryForCorpus(graphene.Mutation):
 
 
 class StartCorpusExport(graphene.Mutation):
+    """
+    Mutation entrypoint for starting a corpus export.
+    Now refactored to optionally accept a list of Analysis IDs (analyses_ids)
+    that should be included in the export. If analyses_ids are provided, then
+    only annotations/labels from those analyses are included. Otherwise, all
+    annotations/labels for the corpus are included.
+    """
+
     class Arguments:
         corpus_id = graphene.String(
             required=True,
@@ -570,6 +583,17 @@ class StartCorpusExport(graphene.Mutation):
             required=False,
             description="Additional keyword arguments to pass to post-processors",
         )
+        analyses_ids = graphene.List(
+            graphene.String,
+            required=False,
+            description="Optional list of Graphene IDs for analyses that should be included in the export",
+        )
+        annotation_filter_mode = graphene.Argument(
+            graphene.Enum.from_enum(AnnotationFilterMode),
+            required=False,
+            default_value=AnnotationFilterMode.CORPUS_LABELSET_ONLY.value,
+            description="How to filter annotations - from corpus label set only, plus analyses, or analyses only",
+        )
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -577,9 +601,33 @@ class StartCorpusExport(graphene.Mutation):
 
     @login_required
     def mutate(
-        root, info, corpus_id, export_format, post_processors=[], input_kwargs={}
-    ):
+        root,
+        info,
+        corpus_id: str,
+        export_format: str,
+        post_processors: list[str] = None,
+        input_kwargs: dict = None,
+        analyses_ids: list[str] = None,
+        annotation_filter_mode: str = AnnotationFilterMode.CORPUS_LABELSET_ONLY.value,
+    ) -> "StartCorpusExport":
+        """
+        Initiates async Celery export tasks. If analyses_ids are supplied,
+        the export is filtered to annotations/labels from only those analyses.
+        Otherwise, all annotations/labels on corpus are included.
 
+        :param root: GraphQL's root object
+        :param info: GraphQL's info, containing context
+        :param corpus_id: Graphene string id for the corpus
+        :param export_format: The type of export to create (OPEN_CONTRACTS, FUNSD, etc.)
+        :param post_processors: Optional list of python paths for post-processing
+        :param input_kwargs: Optional dictionary of extra info for post-processors
+        :param analyses_ids: Optional list of GraphQL IDs for analyses to filter by
+        :return: The StartCorpusExport GraphQL object
+        """
+        post_processors = post_processors or []
+        input_kwargs = input_kwargs or {}
+
+        # Usage checks, permission checks, etc
         if (
             info.context.user.is_usage_capped
             and not settings.USAGE_CAPPED_USER_CAN_EXPORT_CORPUS
@@ -590,9 +638,11 @@ class StartCorpusExport(graphene.Mutation):
             )
 
         try:
+            # Prepare a new UserExport row
             started = timezone.now()
             date_str = started.strftime("%m/%d/%Y, %H:%M:%S")
             corpus_pk = from_global_id(corpus_id)[1]
+
             export = UserExport.objects.create(
                 creator=info.context.user,
                 name=f"Export Corpus PK {corpus_pk} on {date_str}",
@@ -608,43 +658,79 @@ class StartCorpusExport(graphene.Mutation):
                 info.context.user, export, [PermissionTypes.CRUD]
             )
 
-            # TODO - make sure this is correct lookup
+            # For chaining, we convert analyses_ids from GraphQL global IDs → PKs (if any).
+            analysis_pk_list: list[int] = []
+            if analyses_ids is not None:
+                for g_id in analyses_ids:
+                    try:
+                        _, pk_str = from_global_id(g_id)
+                        analysis_pk_list.append(int(pk_str))
+                    except Exception:  # If invalid, just skip for safety
+                        pass
+
+            # Collect doc_ids in the corpus for the tasks
             doc_ids = Document.objects.filter(corpus=corpus_pk).values_list(
                 "id", flat=True
             )
-            logger.info(f"Doc ids: {doc_ids}")
+            logger.info(f"Doc ids: {list(doc_ids)}")
 
+            # Build the Celery chain: label lookups → burn doc annotations → package → optional post-proc
             if export_format == ExportType.OPEN_CONTRACTS.value:
-                # Build celery workflow for export and start async task
                 chain(
-                    build_label_lookups_task.si(corpus_pk),
+                    build_label_lookups_task.si(
+                        corpus_pk,
+                        analysis_pk_list if analysis_pk_list else None,
+                        annotation_filter_mode,
+                    ),
                     chain(
                         chord(
                             group(
-                                burn_doc_annotations.s(doc_id, corpus_pk)
+                                burn_doc_annotations.s(
+                                    doc_id,
+                                    corpus_pk,
+                                    analysis_pk_list if analysis_pk_list else None,
+                                    annotation_filter_mode,
+                                )
                                 for doc_id in doc_ids
                             ),
-                            package_annotated_docs.s(export.id, corpus_pk),
+                            package_annotated_docs.s(
+                                export.id,
+                                corpus_pk,
+                                analysis_pk_list if analysis_pk_list else None,
+                                annotation_filter_mode,
+                            ),
                         ),
-                        on_demand_post_processors.si(export.id, corpus_pk),
+                        on_demand_post_processors.si(
+                            export.id,
+                            corpus_pk,
+                        ),
                     ),
                 ).apply_async()
 
                 ok = True
                 message = "SUCCESS"
+
             elif export_format == ExportType.FUNSD:
                 chain(
                     chord(
                         group(
                             convert_doc_to_funsd.s(
-                                info.context.user.id, doc_id, corpus_pk
+                                info.context.user.id,
+                                doc_id,
+                                corpus_pk,
+                                analysis_pk_list if analysis_pk_list else None,
                             )
                             for doc_id in doc_ids
                         ),
-                        package_funsd_exports.s(export.id, corpus_pk),
+                        package_funsd_exports.s(
+                            export.id,
+                            corpus_pk,
+                            analysis_pk_list if analysis_pk_list else None,
+                        ),
                     ),
                     on_demand_post_processors.si(export.id, corpus_pk),
                 ).apply_async()
+
                 ok = True
                 message = "SUCCESS"
             else:
@@ -658,58 +744,6 @@ class StartCorpusExport(graphene.Mutation):
             export = None
 
         return StartCorpusExport(ok=ok, message=message, export=export)
-
-
-class StartDocumentExport(graphene.Mutation):
-    class Arguments:
-        corpus_id = graphene.String(
-            required=True, description="Id of the document to package?"
-        )
-        document_id = graphene.String(
-            required=True, description="Id of the document to package?"
-        )
-
-    ok = graphene.Boolean()
-    message = graphene.String()
-    export = graphene.Field(UserExportType)
-
-    @login_required
-    def mutate(root, info, document_id, corpus_id):
-
-        try:
-
-            corpus_pk = from_global_id(corpus_id)[1]
-            document_pk = from_global_id(document_id)[1]
-
-            export = UserExport.objects.create(
-                creator=info.context.user, backend_lock=True
-            )
-            set_permissions_for_obj_to_user(
-                info.context.user, export, [PermissionTypes.CRUD]
-            )
-
-            chain(
-                build_label_lookups_task.si(corpus_pk),
-                chord(
-                    group(
-                        burn_doc_annotations.s(pk, corpus_pk) for pk in [document_pk]
-                    ),
-                    package_annotated_docs.s(export.id, corpus_pk),
-                ),
-            ).apply_async()
-
-            ok = True
-            message = "SUCCESS"
-
-        except Exception as e:
-            message = (
-                f"StartDocumentExport() - Unable to create export due to error: {e}"
-            )
-            logger.error(message)
-            ok = False
-            export = None
-
-        return StartDocumentExport(ok=ok, message=message, export=export)
 
 
 class UploadAnnotatedDocument(graphene.Mutation):
@@ -2295,7 +2329,6 @@ class Mutation(graphene.ObjectType):
     upload_document = UploadDocument.Field()  # Limited by user.is_usage_capped
     update_document = UpdateDocument.Field()
     delete_document = DeleteDocument.Field()
-    export_document = StartDocumentExport.Field()
     delete_multiple_documents = DeleteMultipleDocuments.Field()
 
     # CORPUS MUTATIONS #########################################################

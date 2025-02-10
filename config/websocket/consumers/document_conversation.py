@@ -15,24 +15,24 @@ and encapsulates database operations for reading/writing conversation messages.
 
 import json
 import logging
+import urllib.parse
 from typing import Any
 
-from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from graphql_relay import from_global_id
 from llama_index.core.chat_engine.types import StreamingAgentChatResponse
-import urllib.parse
+from llama_index.core.llms import ChatMessage as LlamaChatMessage
+from llama_index.llms.openai import OpenAI
 
 from config.websocket.utils.extract_ids import extract_websocket_path_id
-from opencontractserver.conversations.models import Conversation, ChatMessage
+from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.agents import (
     MessageType,
     OpenContractDbAgent,
     create_document_agent,
 )
-from llama_index.llms.openai import OpenAI
-    
+
 logger = logging.getLogger(__name__)
 
 # Define a literal type for our standardized message types
@@ -61,9 +61,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         logger.debug(f"Connection scope: {self.scope}")
 
         try:
-            
+
             self.new_conversation = False
-            
+
             if not self.scope["user"].is_authenticated:
                 logger.warning("User is not authenticated")
                 await self.close(code=4000)
@@ -78,36 +78,44 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             self.document = await Document.objects.aget(id=self.document_id)
 
             # Parse query parameters for optional load_from_conversation_id
-            query_string = self.scope.get('query_string', b'').decode('utf-8')
+            query_string = self.scope.get("query_string", b"").decode("utf-8")
             query_params = urllib.parse.parse_qs(query_string)
-            load_convo_id_str = query_params.get('load_from_conversation_id', [None])[0]
+            load_convo_id_str = query_params.get("load_from_conversation_id", [None])[0]
             prefix_messages = None
             if load_convo_id_str:
                 try:
                     load_convo_id = int(from_global_id(load_convo_id_str)[1])
-                    self.conversation = await Conversation.objects.aget(id=load_convo_id)
+                    self.conversation = await Conversation.objects.aget(
+                        id=load_convo_id
+                    )
 
                     # Load ChatMessage instances for the given conversation, ordered by creation time
-                    prefix_messages = await ChatMessage.objects.afilter(conversation_id=load_convo_id).order_by('created')
+                    prefix_messages = await ChatMessage.objects.afilter(
+                        conversation_id=load_convo_id
+                    ).order_by("created")
                     prefix_messages = list(prefix_messages)
-                    logger.debug(f"Loaded {len(prefix_messages)} prefix messages from conversation {load_convo_id}")
+                    logger.debug(
+                        f"Loaded {len(prefix_messages)} prefix messages from conversation {load_convo_id}"
+                    )
                 except Exception as e:
                     logger.error(f"Could not load prefix messages: {str(e)}")
                     prefix_messages = None
             else:
-                self.conversation = await Conversation.objects.create(
+                self.conversation = await Conversation.objects.acreate(
                     creator=self.scope["user"],
                     title=f"Document {self.document_id} Conversation",
                     chat_with_document=self.document,
                 )
-            
-            self.new_conversation = await self.conversation.chat_messages.all().acount() == 0    
-            
+
+            self.new_conversation = (
+                await self.conversation.chat_messages.all().acount() == 0
+            )
+
             # Initialize the underlying Llama agent with optional prefix messages
             underlying_llama_agent = await create_document_agent(
                 document=self.document_id,
                 user_id=self.scope["user"].id,
-                loaded_messages=prefix_messages
+                loaded_messages=prefix_messages,
             )
 
             # Initialize our custom DocumentAgent instance
@@ -181,10 +189,10 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
     async def generate_conversation_title(self, user_query: str) -> str:
         """
         Generates a concise conversation title based on the initial user query.
-        
+
         Args:
             user_query: The first message from the user
-            
+
         Returns:
             A short descriptive title for the conversation
         """
@@ -193,19 +201,19 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             "Create a brief (maximum 5 words) title that captures the essence "
             "of what the user is asking about."
         )
-        
+
         user_prompt = f"Create a brief title for a conversation starting with this query: {user_query}"
-        
+
         llm = OpenAI(
             model="gpt-4o-mini",
             api_key=settings.OPENAI_API_KEY,
         )
-        
+
         messages = [
-            ChatMessage(role="system", content=system_prompt),
-            ChatMessage(role="user", content=user_prompt),
+            LlamaChatMessage(role="system", content=system_prompt),
+            LlamaChatMessage(role="user", content=user_prompt),
         ]
-        
+
         response = llm.chat(messages)
         return response.message.content.strip()
 

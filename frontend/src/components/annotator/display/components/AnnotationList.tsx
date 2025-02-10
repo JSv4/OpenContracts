@@ -212,8 +212,8 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
       style={{ display: "flex", flexDirection: "column", overflowY: "auto" }}
     >
       <ViewSettingsPopup label_display_options={labelDisplayOptions} />
-      <AnnotationListContainer>
-        <AnnotationListUl>
+      <AnnotationListContainer id="annotation-list-container">
+        <AnnotationListUl id="annotation-list-ul">
           {filteredAnnotations.length > 0 ? (
             <AnnotationItems
               annotations={filteredAnnotations}

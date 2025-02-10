@@ -57,7 +57,7 @@ def build_label_lookups(
 
     # Base first: only labels within the corpus
     corpus_label_ids = (
-        Annotation.objects.filter(corpus_id=corpus_id)
+        Annotation.objects.filter(corpus_id=corpus_id, analysis__isnull=True)
         .values_list("annotation_label", flat=True)
         .distinct()
     )
@@ -290,7 +290,11 @@ def build_document_export(
                 ] = annot.json
 
                 for targ_page_num in annotation_json:
+                    logger.info(
+                        f"Processing annotation {annot.id} on page {targ_page_num}"
+                    )
                     highlight = annotation_json[targ_page_num]
+                    logger.info(f"Highlight: {highlight}")
 
                     if targ_page_num in page_highlights:
                         if annot.annotation_label.id in page_highlights[targ_page_num]:

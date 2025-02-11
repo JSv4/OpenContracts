@@ -26,7 +26,7 @@ import {
   Header,
 } from "semantic-ui-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search } from "lucide-react";
+import { Search, ArrowLeft } from "lucide-react";
 import { toast } from "react-toastify";
 import styled from "styled-components";
 import {
@@ -57,8 +57,12 @@ interface SelectDocumentAnalyzerModalProps {
 
 /** A container for the search input. */
 const SearchContainer = styled.div`
-  position: relative;
-  margin-bottom: 1rem;
+  position: sticky;
+  top: 0;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(to bottom, white 85%, rgba(255, 255, 255, 0));
+  z-index: 2;
+  margin-bottom: 0.5rem;
 `;
 
 /** Enhanced search input with floating label effect */
@@ -113,43 +117,39 @@ const AnalyzerGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.2rem;
-  max-height: 65vh;
-  overflow-y: auto;
   padding: 1rem;
-  scroll-behavior: smooth;
+  max-height: calc(65vh - 60px); // Account for search bar
+  overflow-y: auto;
 
-  /* Glass-morphism scrollbar */
+  /* Refined scrollbar */
   &::-webkit-scrollbar {
-    width: 10px;
+    width: 8px;
     background: transparent;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
+    background: rgba(74, 144, 226, 0.2);
+    border-radius: 4px;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid transparent;
+      background: rgba(74, 144, 226, 0.3);
     }
   }
 `;
 
 /** A styled Semantic UI Card with enhanced visual design */
 const StyledCard = styled(Card)<{ $selected?: boolean; $hasInputs?: boolean }>`
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  border: none !important; // Remove default border
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+
   cursor: pointer !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
   background: ${(props) =>
     props.$selected ? "#f8f9ff !important" : "white !important"};
-  border: ${(props) =>
-    props.$selected
-      ? "2px solid #4a90e2 !important"
-      : "1px solid #e0e0e0 !important"};
   box-shadow: ${(props) =>
     props.$selected
       ? "0 8px 16px rgba(74, 144, 226, 0.12) !important"
@@ -263,6 +263,16 @@ const StyledCard = styled(Card)<{ $selected?: boolean; $hasInputs?: boolean }>`
   }
 `;
 
+const SelectedCardWrapper = styled.div`
+  height: fit-content;
+  position: relative;
+
+  /* Remove the border and use box shadow for highlight */
+  ${StyledCard} {
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.4) !important;
+  }
+`;
+
 /** A styled container for the analyzer icon */
 const IconContainer = styled.div<{ $selected?: boolean }>`
   float: right;
@@ -353,6 +363,125 @@ const StyledModalActions = styled(Modal.Actions)`
     &:disabled {
       opacity: 0.7 !important;
     }
+  }
+`;
+
+const ModalContent = styled(Modal.Content)`
+  min-height: 65vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+`;
+
+const SelectionContainer = styled.div<{ $isSelecting: boolean }>`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  opacity: ${(props) => (props.$isSelecting ? 1 : 0)};
+  transform: ${(props) =>
+    props.$isSelecting ? "translateX(0)" : "translateX(-20px)"};
+  pointer-events: ${(props) => (props.$isSelecting ? "all" : "none")};
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+`;
+
+const ConfigurationContainer = styled.div<{ $isConfiguring: boolean }>`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: ${(props) => (props.$isConfiguring ? 1 : 0)};
+  transform: ${(props) =>
+    props.$isConfiguring ? "translateX(0)" : "translateX(20px)"};
+  pointer-events: ${(props) => (props.$isConfiguring ? "all" : "none")};
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+`;
+
+const ConfigurationContent = styled.div`
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 2rem;
+  padding: 1.5rem;
+  height: calc(65vh - 40px);
+`;
+
+const SelectedAnalyzerSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const SectionHeader = styled.div`
+  padding: 0.5rem 0;
+
+  h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin: 0;
+    font-weight: 600;
+  }
+`;
+
+const ConfigurationSection = styled.div`
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 1.5rem;
+  overflow-y: auto;
+
+  /* Refined scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(74, 144, 226, 0.15);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(74, 144, 226, 0.25);
+    }
+  }
+`;
+
+const ConfigurationHeader = styled.div`
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+
+  h2 {
+    font-size: 1.1rem;
+    color: #1a202c;
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+  }
+
+  p {
+    color: #64748b;
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+`;
+
+const BackButton = styled.button`
+  background: none;
+  border: none;
+  color: #4a90e2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 1rem;
+
+  &:hover {
+    color: #357abd;
   }
 `;
 
@@ -461,131 +590,171 @@ export const SelectDocumentAnalyzerModal: FC<
   return (
     <Modal open={open} onClose={onClose} size="large">
       <Modal.Header>
-        <Header
-          as="h2"
-          style={{ margin: 0, display: "flex", alignItems: "center" }}
-        >
-          <span>Select Analyzer</span>
-          {loadingAnalyzers && (
-            <Loader active inline size="tiny" style={{ marginLeft: "1rem" }} />
-          )}
+        <Header as="h2" style={{ margin: 0 }}>
+          {selectedAnalyzer && selectedAnalyzerObj?.inputSchema
+            ? "Configure Analyzer"
+            : "Select Analyzer"}
         </Header>
       </Modal.Header>
-      <Modal.Content>
-        {(loadingAnalyzers || startingAnalysis) && (
-          <Dimmer active>
-            <Loader>Loading...</Loader>
-          </Dimmer>
-        )}
 
-        <SearchContainer>
-          <SearchIcon>
-            <Search size={18} />
-          </SearchIcon>
-          <SearchInput
-            placeholder="Search analyzers..."
-            value={searchTerm}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setSearchTerm(e.target.value)
-            }
-            fluid
-          />
-        </SearchContainer>
-
-        <AnalyzerGrid>
-          {filteredAnalyzers.length > 0 ? (
-            filteredAnalyzers.map((analyzer, index) => (
-              <AnalyzerCard
-                key={analyzer.id}
-                selected={selectedAnalyzer === analyzer.id}
-                hasInputs={
-                  !!(
-                    analyzer.inputSchema &&
-                    Object.keys(analyzer.inputSchema).length > 0
-                  )
-                }
-                onClick={() => setSelectedAnalyzer(analyzer.id)}
-                delay={index * 50}
-              >
-                <Card.Content>
-                  <IconContainer $selected={selectedAnalyzer === analyzer.id}>
-                    <img src={analyzer_icon} alt="" />
-                  </IconContainer>
-                  <Card.Header>
-                    <TruncatedText
-                      text={
-                        analyzer.manifest?.metadata?.title ||
-                        analyzer.analyzerId ||
-                        "Untitled Analyzer"
-                      }
-                      limit={40}
-                    />
-                  </Card.Header>
-                  <Card.Meta>
-                    <TruncatedText
-                      text={analyzer.analyzerId || ""}
-                      limit={35}
-                      style={{
-                        fontFamily: "'SF Mono', 'Roboto Mono', monospace",
-                      }}
-                    />
-                    {analyzer.inputSchema &&
-                      Object.keys(analyzer.inputSchema).length > 0 && (
-                        <span className="input-indicator">Configurable</span>
-                      )}
-                  </Card.Meta>
-                  <Card.Description>
-                    <TruncatedText
-                      text={analyzer.description || ""}
-                      limit={120}
-                    />
-                  </Card.Description>
-                </Card.Content>
-                {analyzer.manifest?.metadata?.author_name && (
-                  <Card.Content extra>
-                    Created by {analyzer.manifest.metadata.author_name}
+      <ModalContent>
+        {/* Selection View */}
+        <SelectionContainer
+          $isSelecting={!selectedAnalyzer || !selectedAnalyzerObj?.inputSchema}
+        >
+          <SearchContainer>
+            <SearchIcon>
+              <Search size={18} />
+            </SearchIcon>
+            <SearchInput
+              placeholder="Search analyzers..."
+              value={searchTerm}
+              onChange={(e: {
+                target: { value: React.SetStateAction<string> };
+              }) => setSearchTerm(e.target.value)}
+              fluid
+            />
+          </SearchContainer>
+          <AnalyzerGrid>
+            {filteredAnalyzers.length > 0 ? (
+              filteredAnalyzers.map((analyzer, index) => (
+                <AnalyzerCard
+                  key={analyzer.id}
+                  selected={selectedAnalyzer === analyzer.id}
+                  hasInputs={
+                    !!(
+                      analyzer.inputSchema &&
+                      Object.keys(analyzer.inputSchema).length > 0
+                    )
+                  }
+                  onClick={() => setSelectedAnalyzer(analyzer.id)}
+                  delay={index * 50}
+                >
+                  <Card.Content>
+                    <IconContainer $selected={selectedAnalyzer === analyzer.id}>
+                      <img src={analyzer_icon} alt="" />
+                    </IconContainer>
+                    <Card.Header>
+                      <TruncatedText
+                        text={
+                          analyzer.manifest?.metadata?.title ||
+                          analyzer.analyzerId ||
+                          "Untitled Analyzer"
+                        }
+                        limit={40}
+                      />
+                    </Card.Header>
+                    <Card.Meta>
+                      <TruncatedText
+                        text={analyzer.analyzerId || ""}
+                        limit={35}
+                        style={{
+                          fontFamily: "'SF Mono', 'Roboto Mono', monospace",
+                        }}
+                      />
+                      {analyzer.inputSchema &&
+                        Object.keys(analyzer.inputSchema).length > 0 && (
+                          <span className="input-indicator">Configurable</span>
+                        )}
+                    </Card.Meta>
+                    <Card.Description>
+                      <TruncatedText
+                        text={analyzer.description || ""}
+                        limit={120}
+                      />
+                    </Card.Description>
                   </Card.Content>
-                )}
-              </AnalyzerCard>
-            ))
-          ) : (
-            <NoResults>
-              {searchTerm
-                ? "No analyzers match your search"
-                : "No analyzers available"}
-            </NoResults>
-          )}
-        </AnalyzerGrid>
+                  {analyzer.manifest?.metadata?.author_name && (
+                    <Card.Content extra>
+                      Created by {analyzer.manifest.metadata.author_name}
+                    </Card.Content>
+                  )}
+                </AnalyzerCard>
+              ))
+            ) : (
+              <NoResults>
+                {searchTerm
+                  ? "No analyzers match your search"
+                  : "No analyzers available"}
+              </NoResults>
+            )}
+          </AnalyzerGrid>
+        </SelectionContainer>
 
-        {selectedAnalyzerObj && selectedAnalyzer && (
-          <Message positive style={{ marginTop: "2rem" }}>
-            <Message.Header>Analyzer Selected</Message.Header>
-            <p>
-              {selectedAnalyzerObj?.description ?? "Ready to start analysis."}
-            </p>
-          </Message>
-        )}
+        {/* Configuration View */}
+        {selectedAnalyzer && selectedAnalyzerObj?.inputSchema && (
+          <ConfigurationContainer $isConfiguring={true}>
+            <BackButton onClick={() => setSelectedAnalyzer(null)}>
+              <ArrowLeft size={16} />
+              Back to Analyzers
+            </BackButton>
 
-        {/* If this analyzer has an inputSchema, show a JSON schema form (similar to how post-processor forms are handled). */}
-        {selectedAnalyzerObj?.inputSchema &&
-          Object.keys(selectedAnalyzerObj.inputSchema).length > 0 && (
-            <div style={{ marginTop: "1rem" }}>
-              <Message info>
-                <Message.Header>Analyzer Additional Input</Message.Header>
-                <p>Please provide any additional settings for this analyzer.</p>
-              </Message>
+            <ConfigurationContent>
+              <SelectedAnalyzerSection>
+                <SectionHeader>
+                  <h3>Selected Analyzer</h3>
+                </SectionHeader>
 
-              <div
-                style={{
-                  margin: "1rem 0",
-                  backgroundColor: "#fafafa",
-                  padding: "1rem",
-                  borderRadius: "6px",
-                  border: "1px solid #e8e8e8",
-                }}
-              >
+                <SelectedCardWrapper>
+                  <StyledCard $selected $hasInputs>
+                    <Card.Content>
+                      <IconContainer $selected>
+                        <img src={analyzer_icon} alt="" />
+                      </IconContainer>
+                      <Card.Header>
+                        <TruncatedText
+                          text={
+                            selectedAnalyzerObj.manifest?.metadata?.title ||
+                            selectedAnalyzerObj.analyzerId ||
+                            "Untitled Analyzer"
+                          }
+                          limit={40}
+                        />
+                      </Card.Header>
+                      <Card.Meta>
+                        <TruncatedText
+                          text={selectedAnalyzerObj.analyzerId || ""}
+                          limit={35}
+                          style={{
+                            fontFamily: "'SF Mono', 'Roboto Mono', monospace",
+                          }}
+                        />
+                        {selectedAnalyzerObj.inputSchema &&
+                          Object.keys(selectedAnalyzerObj.inputSchema).length >
+                            0 && (
+                            <span className="input-indicator">
+                              Configurable
+                            </span>
+                          )}
+                      </Card.Meta>
+                      <Card.Description>
+                        <TruncatedText
+                          text={selectedAnalyzerObj.description || ""}
+                          limit={120}
+                        />
+                      </Card.Description>
+                    </Card.Content>
+                    {selectedAnalyzerObj.manifest?.metadata?.author_name && (
+                      <Card.Content extra>
+                        Created by{" "}
+                        {selectedAnalyzerObj.manifest.metadata.author_name}
+                      </Card.Content>
+                    )}
+                  </StyledCard>
+                </SelectedCardWrapper>
+              </SelectedAnalyzerSection>
+
+              <ConfigurationSection>
+                <ConfigurationHeader>
+                  <h2>Configure Analysis</h2>
+                  <p>
+                    Customize how this analyzer processes your document by
+                    providing additional settings below.
+                  </p>
+                </ConfigurationHeader>
+
                 <SemanticUIForm
-                  schema={selectedAnalyzerObj.inputSchema as RJSFSchema}
+                  schema={selectedAnalyzerObj?.inputSchema as RJSFSchema}
                   validator={validator}
                   formData={analysisInputData}
                   onChange={(e: {
@@ -593,14 +762,20 @@ export const SelectDocumentAnalyzerModal: FC<
                   }) => setAnalysisInputData(e.formData)}
                   uiSchema={{
                     "ui:submitButtonOptions": { norender: true },
+                    "*": {
+                      "ui:classNames": "form-field",
+                      "ui:errorElement": "div",
+                    },
                   }}
                 >
                   <></>
                 </SemanticUIForm>
-              </div>
-            </div>
-          )}
-      </Modal.Content>
+              </ConfigurationSection>
+            </ConfigurationContent>
+          </ConfigurationContainer>
+        )}
+      </ModalContent>
+
       <StyledModalActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button
@@ -609,7 +784,9 @@ export const SelectDocumentAnalyzerModal: FC<
           disabled={!selectedAnalyzer || startingAnalysis}
           loading={startingAnalysis}
         >
-          Start Analysis
+          {selectedAnalyzerObj?.inputSchema
+            ? "Start Analysis with Configuration"
+            : "Start Analysis"}
         </Button>
       </StyledModalActions>
     </Modal>

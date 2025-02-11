@@ -6,6 +6,7 @@ import {
   SpanAnnotationJson,
   TokenId,
 } from "../components/types";
+import { JSONSchema7 } from "json-schema";
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -1038,6 +1039,7 @@ export type AnalyzerType = Node & {
   isPublished?: Maybe<Scalars["Boolean"]>;
   objectSharedWith?: Maybe<Scalars["GenericScalar"]>;
   analyzerId?: Maybe<Scalars["String"]>;
+  inputSchema?: JSONSchema7;
 };
 
 export type AnalyzerTypeAnnotationlabelSetArgs = {

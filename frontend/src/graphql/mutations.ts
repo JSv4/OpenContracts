@@ -1524,6 +1524,7 @@ export interface StartAnalysisInput {
   documentId?: string;
   analyzerId: string;
   corpusId?: string;
+  analysisInputData?: Record<string, any>;
 }
 
 export interface StartAnalysisOutput {
@@ -1539,11 +1540,13 @@ export const START_ANALYSIS = gql`
     $documentId: ID
     $analyzerId: ID!
     $corpusId: ID
+    $analysisInputData: GenericScalar
   ) {
     startAnalysisOnDoc(
       documentId: $documentId
       analyzerId: $analyzerId
       corpusId: $corpusId
+      analysisInputData: $analysisInputData
     ) {
       ok
       message

@@ -18,7 +18,6 @@ import {
   CorpusActionType,
   DocumentType,
   AnalysisRowType,
-  ConversationType,
   ConversationTypeConnection,
   PipelineComponentType,
   ChatMessageType,
@@ -829,6 +828,7 @@ export const GET_ANALYZERS = gql`
           disabled
           isPublic
           manifest
+          inputSchema
         }
       }
     }
@@ -902,6 +902,7 @@ export const GET_ANALYSES = gql`
             analyzerId
             description
             manifest
+            inputSchema
             fullLabelList {
               id
               text

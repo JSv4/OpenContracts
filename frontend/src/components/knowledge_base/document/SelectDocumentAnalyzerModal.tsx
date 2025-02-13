@@ -139,127 +139,58 @@ const AnalyzerGrid = styled.div`
 
 /** A styled Semantic UI Card with enhanced visual design */
 const StyledCard = styled(Card)<{ $selected?: boolean; $hasInputs?: boolean }>`
+  width: 100%;
+  max-width: 320px;
+  height: auto !important;
+  margin: 0 !important;
+  border: 1px solid #e2e8f0 !important;
   border-radius: 8px !important;
   overflow: hidden !important;
-  border: none !important; // Remove default border
+  background: white !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 
-  cursor: pointer !important;
-  height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  background: ${(props) =>
-    props.$selected ? "#f8f9ff !important" : "white !important"};
-  box-shadow: ${(props) =>
-    props.$selected
-      ? "0 8px 16px rgba(74, 144, 226, 0.12) !important"
-      : "0 2px 4px rgba(0, 0, 0, 0.02) !important"};
-  position: relative;
-  animation: fadeInUp 0.3s ease forwards;
-  animation-delay: ${(props) => props.$delay}ms;
-  opacity: 0;
+  ${(props) =>
+    props.$selected &&
+    `
+    border-color: #4a90e2 !important;
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.4) !important;
+  `}
 
   &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important;
-  }
-
-  /* Input indicator as a subtle left border accent */
-  border-left: ${(props) =>
-    props.$hasInputs
-      ? `4px solid ${props.$selected ? "#4a90e2" : "#e0e0e0"}`
-      : "1px solid #e0e0e0"} !important;
-
-  /* Status dot in the meta section */
-  .meta {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-
-    &:before {
-      content: "";
-      display: ${(props) => (props.$hasInputs ? "block" : "none")};
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: ${(props) => (props.$selected ? "#4a90e2" : "#94a3b8")};
-      transition: all 0.2s ease;
-    }
-  }
-
-  /* Enhanced input indicator badge */
-  .input-indicator {
-    font-size: 0.7rem !important;
-    background: ${(props) =>
-      props.$selected
-        ? "rgba(74, 144, 226, 0.12)"
-        : "rgba(148, 163, 184, 0.12)"} !important;
-    color: ${(props) => (props.$selected ? "#4a90e2" : "#64748b")} !important;
-    padding: 4px 8px !important;
-    border-radius: 12px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.5px !important;
-    text-transform: uppercase !important;
-    margin-left: auto !important;
-    transition: all 0.2s ease !important;
-    border: 1px solid
-      ${(props) =>
-        props.$selected
-          ? "rgba(74, 144, 226, 0.24)"
-          : "rgba(148, 163, 184, 0.24)"} !important;
-
-    /* Subtle hover effect */
-    &:hover {
-      transform: translateY(-1px);
-      background: ${(props) =>
-        props.$selected
-          ? "rgba(74, 144, 226, 0.16)"
-          : "rgba(148, 163, 184, 0.16)"} !important;
-    }
-
-    /* Optional: Add a subtle icon */
-    &:before {
-      content: "⚡️";
-      margin-right: 4px;
-      font-size: 0.8rem;
-    }
+    border-color: ${(props) =>
+      props.$selected ? "#4a90e2" : "#cbd5e1"} !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    transform: translateY(-2px);
   }
 
   .content {
     padding: 1.2rem !important;
-    flex: 1 0 auto !important;
-  }
+    height: auto !important;
 
-  .header {
-    font-size: 1.1rem !important;
-    color: #2c3e50 !important;
-    margin-bottom: 0.5rem !important;
-    font-weight: 600 !important;
-    padding-right: ${(props) => (props.$hasInputs ? "100px" : "0")} !important;
-  }
+    .header {
+      font-size: 1rem !important;
+      color: #1a202c !important;
+      margin-bottom: 0.5rem !important;
+      line-height: 1.4 !important;
+      font-weight: 500 !important;
+    }
 
-  .meta {
-    color: #7f8c8d !important;
-    font-size: 0.85rem !important;
-    font-family: "SF Mono", "Roboto Mono", monospace !important;
-    margin-bottom: 0.8rem !important;
-  }
+    .meta {
+      font-size: 0.8rem !important;
+      color: #64748b !important;
+      font-family: "SF Mono", "Roboto Mono", monospace !important;
+      margin-bottom: 0.8rem !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+    }
 
-  .description {
-    color: #34495e !important;
-    line-height: 1.5 !important;
-    font-size: 0.95rem !important;
-  }
-
-  .extra.content {
-    background: ${(props) =>
-      props.$selected ? "#f0f7ff !important" : "#f8f9fa !important"};
-    border-top: 1px solid
-      ${(props) => (props.$selected ? "#e3effd !important" : "#eee !important")};
-    padding: 0.8rem 1.2rem !important;
-    font-size: 0.9rem !important;
-    color: #666 !important;
-    flex-shrink: 0 !important;
+    .description {
+      color: #475569 !important;
+      font-size: 0.9rem !important;
+      line-height: 1.5 !important;
+    }
   }
 `;
 
@@ -267,9 +198,97 @@ const SelectedCardWrapper = styled.div`
   height: fit-content;
   position: relative;
 
-  /* Remove the border and use box shadow for highlight */
+  /* Refined highlight with subtle pulse animation */
   ${StyledCard} {
     box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.4) !important;
+    animation: cardPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes cardPulse {
+    0% {
+      box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+    }
+    100% {
+      box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.4);
+    }
+  }
+`;
+
+const ConfigurableTag = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 95px;
+  font-size: 0.7rem;
+  color: #4a90e2;
+  background: rgba(74, 144, 226, 0.08);
+  padding: 4px 10px;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+
+  /* Shimmer effect contained properly */
+  &:after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg,
+      transparent,
+      rgba(255, 255, 255, 0.4),
+      transparent
+    );
+    transform: translateX(-100%) rotate(45deg);
+    animation: shimmer 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  /* Adjusted bolt positioning */
+  &:before {
+    content: "⚡";
+    font-size: 0.8rem;
+    margin-right: 4px;
+    animation: boltPulse 2s ease-in-out infinite;
+    display: inline-block;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%) rotate(45deg);
+    }
+    100% {
+      transform: translateX(100%) rotate(45deg);
+    }
+  }
+
+  @keyframes boltPulse {
+    0% {
+      transform: scale(1);
+      opacity: 0.7;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0.7;
+    }
+  }
+
+  /* Hover state with scale and glow */
+  ${StyledCard}:hover & {
+    transform: translateY(-1px);
+    background: rgba(74, 144, 226, 0.12);
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.15);
   }
 `;
 
@@ -310,12 +329,7 @@ const AnalyzerCard: React.FC<AnalyzerCardProps> = ({
   onClick,
   delay,
 }) => (
-  <StyledCard
-    $selected={selected}
-    $hasInputs={hasInputs}
-    $delay={delay}
-    onClick={onClick}
-  >
+  <StyledCard $selected={selected} $hasInputs={hasInputs} onClick={onClick}>
     {children}
   </StyledCard>
 );
@@ -411,6 +425,7 @@ const SelectedAnalyzerSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  align-items: flex-start;
 `;
 
 const SectionHeader = styled.div`
@@ -478,10 +493,18 @@ const BackButton = styled.button`
   padding: 0.5rem;
   cursor: pointer;
   font-weight: 500;
-  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+
+  svg {
+    transition: transform 0.2s ease;
+  }
 
   &:hover {
     color: #357abd;
+
+    svg {
+      transform: translateX(-2px);
+    }
   }
 `;
 
@@ -654,7 +677,7 @@ export const SelectDocumentAnalyzerModal: FC<
                       />
                       {analyzer.inputSchema &&
                         Object.keys(analyzer.inputSchema).length > 0 && (
-                          <span className="input-indicator">Configurable</span>
+                          <ConfigurableTag>Configurable</ConfigurableTag>
                         )}
                     </Card.Meta>
                     <Card.Description>
@@ -695,53 +718,39 @@ export const SelectDocumentAnalyzerModal: FC<
                   <h3>Selected Analyzer</h3>
                 </SectionHeader>
 
-                <SelectedCardWrapper>
-                  <StyledCard $selected $hasInputs>
-                    <Card.Content>
-                      <IconContainer $selected>
-                        <img src={analyzer_icon} alt="" />
-                      </IconContainer>
-                      <Card.Header>
-                        <TruncatedText
-                          text={
-                            selectedAnalyzerObj.manifest?.metadata?.title ||
-                            selectedAnalyzerObj.analyzerId ||
-                            "Untitled Analyzer"
-                          }
-                          limit={40}
-                        />
-                      </Card.Header>
-                      <Card.Meta>
-                        <TruncatedText
-                          text={selectedAnalyzerObj.analyzerId || ""}
-                          limit={35}
-                          style={{
-                            fontFamily: "'SF Mono', 'Roboto Mono', monospace",
-                          }}
-                        />
-                        {selectedAnalyzerObj.inputSchema &&
-                          Object.keys(selectedAnalyzerObj.inputSchema).length >
-                            0 && (
-                            <span className="input-indicator">
-                              Configurable
-                            </span>
-                          )}
-                      </Card.Meta>
-                      <Card.Description>
-                        <TruncatedText
-                          text={selectedAnalyzerObj.description || ""}
-                          limit={120}
-                        />
-                      </Card.Description>
-                    </Card.Content>
-                    {selectedAnalyzerObj.manifest?.metadata?.author_name && (
-                      <Card.Content extra>
-                        Created by{" "}
-                        {selectedAnalyzerObj.manifest.metadata.author_name}
-                      </Card.Content>
-                    )}
-                  </StyledCard>
-                </SelectedCardWrapper>
+                <StyledCard $selected $hasInputs>
+                  <Card.Content>
+                    <IconContainer $selected>
+                      <img src={analyzer_icon} alt="" />
+                    </IconContainer>
+                    <Card.Header>
+                      <TruncatedText
+                        text={
+                          selectedAnalyzerObj?.manifest?.metadata?.title ||
+                          selectedAnalyzerObj?.analyzerId ||
+                          "Untitled Analyzer"
+                        }
+                        limit={40}
+                      />
+                    </Card.Header>
+                    <Card.Meta>
+                      <TruncatedText
+                        text={selectedAnalyzerObj?.analyzerId || ""}
+                        limit={35}
+                        style={{
+                          fontFamily: "'SF Mono', 'Roboto Mono', monospace",
+                        }}
+                      />
+                      <ConfigurableTag>Configurable</ConfigurableTag>
+                    </Card.Meta>
+                    <Card.Description>
+                      <TruncatedText
+                        text={selectedAnalyzerObj?.description || ""}
+                        limit={120}
+                      />
+                    </Card.Description>
+                  </Card.Content>
+                </StyledCard>
               </SelectedAnalyzerSection>
 
               <ConfigurationSection>

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import uuid
 
 from django.conf import settings
 
@@ -214,8 +215,13 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             LlamaChatMessage(role="user", content=user_prompt),
         ]
 
-        response = llm.chat(messages)
-        return response.message.content.strip()
+        # Just in case the LLM fails, generate a random title
+        try:
+            response = llm.chat(messages)
+            return response.message.content.strip()
+        except Exception as e:
+            logger.error(f"Error generating conversation title: {e}")
+            return f"Conversation {uuid.uuid4()}"
 
     async def receive(self, text_data: str) -> None:
         """

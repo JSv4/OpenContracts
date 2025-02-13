@@ -1,11 +1,16 @@
 import logging
+import json
 
 import marvin
 from django.conf import settings
+from asgiref.sync import async_to_sync
+from typing import Any, Tuple, List
 
 from opencontractserver.pipeline.utils import get_preferred_embedder
 from opencontractserver.shared.decorators import doc_analyzer_task
 from opencontractserver.types.dicts import TextSpan
+from opencontractserver.documents.models import Document
+from opencontractserver.llms.agents import create_document_agent
 
 # Pass OpenAI API key to marvin for parsing / extract
 marvin.settings.openai.api_key = settings.OPENAI_API_KEY
@@ -58,6 +63,8 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
     """
     import spacy
     from gliner import GLiNER
+    
+    print(f"HOHOHO - 🎄❄️: {kawrgs}")
 
     nlp = spacy.load("en_core_web_lg")
 
@@ -360,3 +367,74 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
     )
 
     return [], [], [], True
+
+
+@doc_analyzer_task(
+    input_schema={
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "AgenticHighlighterSchema",
+        "type": "object",
+        "properties": {
+            "instructions": {
+                "type": "string",
+                "title": "Instructions",
+                "description": "User's instructions describing what to highlight in the document.",
+            },
+        },
+        "required": ["instructions"],
+        "additionalProperties": False,
+    }
+)
+def agentic_highlighter(
+    *args: Any,
+    pdf_text_extract: str | None = None,
+    pdf_pawls_extract: dict | None = None,
+    **kwargs: Any,
+) -> Tuple[List[str], List[Tuple[TextSpan, str]], List[dict], bool]:
+    instructions = kwargs.get("instructions", "No instructions provided.")
+    doc_id = kwargs.get("doc_id")
+    
+    if not pdf_text_extract or not doc_id:
+        return [], [], [{"data": {"error": "Missing required input"}}], False
+
+    try:
+        doc = Document.objects.get(pk=doc_id)
+        agent = async_to_sync(create_document_agent)(document=doc.id, user_id=doc.creator_id)
+        
+        system_directive = (
+            "You are a contract interpretation expert. "
+            f"You have received the following user instructions:\n\n\"{instructions}\"\n\n"
+            "Your goal: Identify relevant text from the contract. You must respond with valid JSON of the form:\n"
+            '{"snippets": ["Exact excerpt from the doc", "Another excerpt from the doc"]}\n'
+            "Make sure each excerpt is exactly copied from the doc text so it can be located by substring search. "
+            "If you cannot find any relevant snippet, respond with an empty list for \"snippets\"."
+        )
+
+        response = agent._agent.chat(system_directive).response
+        parsed = json.loads(response)
+        snippets = parsed.get("snippets", [])
+        
+        resulting_spans = []
+        for snippet_text in snippets:
+            start_search = 0
+            while True:
+                idx = pdf_text_extract.find(snippet_text, start_search)
+                if idx == -1:
+                    break
+                resulting_spans.append((
+                    TextSpan(
+                        id=f"match_{len(resulting_spans)}",
+                        start=idx,
+                        end=idx + len(snippet_text),
+                        text=snippet_text,
+                    ),
+                    "AGENTIC_HIGHLIGHT"
+                ))
+                start_search = idx + len(snippet_text)
+
+        return [], resulting_spans, [], True
+
+    except Document.DoesNotExist:
+        return [], [], [{"data": {"error": "Document not found"}}], False
+    except Exception as e:
+        return [], [], [{"data": {"error": str(e)}}], False

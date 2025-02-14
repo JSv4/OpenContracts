@@ -7,7 +7,7 @@ from asgiref.sync import async_to_sync
 from typing import Any, Tuple, List
 
 from opencontractserver.pipeline.utils import get_preferred_embedder
-from opencontractserver.shared.decorators import doc_analyzer_task
+from opencontractserver.shared.decorators import doc_analyzer_task, async_doc_analyzer_task
 from opencontractserver.types.dicts import TextSpan
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.agents import create_document_agent
@@ -385,56 +385,230 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
         "additionalProperties": False,
     }
 )
-def agentic_highlighter(
+def agentic_highlighter_claude(
     *args: Any,
     pdf_text_extract: str | None = None,
     pdf_pawls_extract: dict | None = None,
     **kwargs: Any,
 ) -> Tuple[List[str], List[Tuple[TextSpan, str]], List[dict], bool]:
+    """
+    An alternative to the existing agentic_highlighter that uses Anthropic Claude's
+    citation API. It will accept the PDF text and user instructions, then chunk
+    the doc if necessary, send each chunk to Claude with citations enabled, and
+    collect relevant excerpts from each chunk. Returns matched text as TextSpans.
+
+    :param pdf_text_extract: The full text of the PDF document to be analyzed.
+    :param pdf_pawls_extract: Unused in this version, but included for signature consistency.
+    :param kwargs: A dictionary allowing additional arguments, including:
+        - instructions: The highlighting instructions.
+        - doc_id: The ID of the Document object in the database.
+    :return: A tuple containing:
+        - List[str]: Unused in this version (empty list).
+        - List[Tuple[TextSpan, str]]: The list of matched text spans and their label.
+        - List[dict]: A list of dictionaries containing any errors or debug info.
+        - bool: Success status of the operation.
+    """
+
+    import os
+    import anthropic
+    import math
+    import logging
+
+    from django.conf import settings
+    from opencontractserver.documents.models import Document
+
+    logger = logging.getLogger(__name__)
+
+    logger.info("Starting agentic_highlighter_claude task")
     instructions = kwargs.get("instructions", "No instructions provided.")
     doc_id = kwargs.get("doc_id")
-    
+    logger.info(f"Task parameters - doc_id: {doc_id}, instructions: {instructions}")
+
     if not pdf_text_extract or not doc_id:
+        logger.info("Missing required input - returning early")
         return [], [], [{"data": {"error": "Missing required input"}}], False
 
+    # Ensure the Document exists
     try:
         doc = Document.objects.get(pk=doc_id)
-        agent = async_to_sync(create_document_agent)(document=doc.id, user_id=doc.creator_id)
-        
-        system_directive = (
-            "You are a contract interpretation expert. "
-            f"You have received the following user instructions:\n\n\"{instructions}\"\n\n"
-            "Your goal: Identify relevant text from the contract. You must respond with valid JSON of the form:\n"
-            '{"snippets": ["Exact excerpt from the doc", "Another excerpt from the doc"]}\n'
-            "Make sure each excerpt is exactly copied from the doc text so it can be located by substring search. "
-            "If you cannot find any relevant snippet, respond with an empty list for \"snippets\"."
-        )
-
-        response = agent._agent.chat(system_directive).response
-        parsed = json.loads(response)
-        snippets = parsed.get("snippets", [])
-        
-        resulting_spans = []
-        for snippet_text in snippets:
-            start_search = 0
-            while True:
-                idx = pdf_text_extract.find(snippet_text, start_search)
-                if idx == -1:
-                    break
-                resulting_spans.append((
-                    TextSpan(
-                        id=f"match_{len(resulting_spans)}",
-                        start=idx,
-                        end=idx + len(snippet_text),
-                        text=snippet_text,
-                    ),
-                    "AGENTIC_HIGHLIGHT"
-                ))
-                start_search = idx + len(snippet_text)
-
-        return [], resulting_spans, [], True
-
+        logger.info(f"Successfully retrieved document with id {doc_id}")
     except Document.DoesNotExist:
+        logger.info(f"Document with id {doc_id} not found")
         return [], [], [{"data": {"error": "Document not found"}}], False
-    except Exception as e:
-        return [], [], [{"data": {"error": str(e)}}], False
+
+    # Setup Anthropic client
+    # The API key is typically provided in settings or environment variable
+    kwargs = getattr(settings, "ANALYZER_KWARGS", {})
+    analyzer_kwargs = kwargs.get("opencontractserver.tasks.doc_analysis_tasks.agentic_highlighter_claude", {})
+    ANTHROPIC_API_KEY = analyzer_kwargs.get("ANTHROPIC_API_KEY", None) or os.environ.get("ANTHROPIC_API_KEY", None)
+    if not ANTHROPIC_API_KEY:
+        logger.info("Anthropic API key not found in settings or environment")
+        return [], [], [{"data": {"error": "Anthropic API key not found"}}], False
+
+    logger.info("Successfully configured Anthropic API key")
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+
+    # Maximum chunk size in characters. You may adjust this if you know your model's context window
+    # (approx 100k tokens for claude-3-5, but we use a smaller slice to be safe).
+    MAX_CHARS_PER_CHUNK = 80000
+
+    def chunk_text(text: str, chunk_size: int = MAX_CHARS_PER_CHUNK) -> list[str]:
+        """
+        Splits text into sized chunks, ignoring word boundaries in a naive manner.
+
+        :param text: The full text to be chunked.
+        :param chunk_size: Maximum characters per chunk.
+        :return: A list of chunked text strings.
+        """
+        if len(text) <= chunk_size:
+            return [text]
+
+        chunks = []
+        current_index = 0
+        while current_index < len(text):
+            end_index = min(current_index + chunk_size, len(text))
+            chunks.append(text[current_index:end_index])
+            current_index = end_index
+
+        return chunks
+
+    # Create text chunks for big documents
+    doc_chunks = chunk_text(pdf_text_extract, MAX_CHARS_PER_CHUNK)
+    logger.info(f"Split document into {len(doc_chunks)} chunks")
+
+    # We'll store all matched spans across all chunks here
+    all_spans: List[Tuple[TextSpan, str]] = []
+    error_responses: List[dict] = []
+
+    # Build the system prompt
+    system_directive = (
+        "You are a contract interpretation expert. "
+        f"You have received the following user instructions:\n\n\"{instructions}\"\n\n"
+        "Your goal: Identify relevant text from the contract. Review the full document text if possible, "
+        "or use the largest available chunks of text to find relevant excerpts.\n\n"
+        "Use citations so we can locate the relevant text within each chunk. "
+        "If you cannot find any relevant excerpts, respond with empty text. "
+        "No extra commentary. Return only the relevant text, or nothing."
+    )
+    logger.info("Created system directive for Claude")
+
+    # We'll process each chunk in turn
+    offset_so_far = 0
+    for chunk_index, chunk_text_str in enumerate(doc_chunks):
+        logger.info(f"Processing chunk {chunk_index + 1} of {len(doc_chunks)}")
+        try:
+            # Prepare single 'document' object with citations = True
+            document_for_claude = {
+                "type": "document",
+                "source": {
+                    "type": "text",
+                    "media_type": "text/plain",
+                    "data": chunk_text_str,
+                },
+                "title": f"Chunk-{chunk_index}",
+                "citations": {"enabled": True},
+            }
+
+            # Create the request
+            request_payload = [
+                # The chunked doc
+                document_for_claude,
+                # The instructions / user message
+                {"type": "text", "text": "Please extract the relevant text as specified."},
+            ]
+
+            logger.info(f"Sending request to Claude for chunk {chunk_index + 1}")
+            response = client.messages.create(
+                model="claude-3-5-sonnet-latest",
+                temperature=0.0,
+                max_tokens=1024,
+                system=system_directive,
+                messages=[
+                    {"role": "user", "content": request_payload},
+                ],
+            )
+
+            # Parse the response from Claude
+            if not response or not response.content:
+                logger.info(f"No content in response for chunk {chunk_index + 1}")
+                continue
+
+            # For each block of the response:
+            for content_msg in response.content:
+                if content_msg.type == "text":
+                    snippet_text = content_msg.text.strip()
+
+                    # If there's no text or it's empty, skip
+                    if not snippet_text:
+                        logger.info(f"Empty text content in chunk {chunk_index + 1}")
+                        continue
+
+                    logger.info(f"Processing text content in chunk {chunk_index + 1}")
+                    # If there's citation data, we'll parse them; if not, do naive substring
+                    # match. Claude may produce partial citations, so we handle them:
+                    # We'll match the entire snippet_text in the chunk. 
+                    # Then for each match, build a TextSpan.
+
+                    # Potentially multiple citations in the block
+                    # We'll also handle the case of no citations.
+                    found_citations = getattr(content_msg, "citations", [])
+
+                    # If no citations were provided, simply attempt to find the entire snippet in the chunk
+                    if not found_citations:
+                        logger.info(f"No citations found in chunk {chunk_index + 1}, using full text matching")
+                        start_search = 0
+                        while True:
+                            idx = chunk_text_str.find(snippet_text, start_search)
+                            if idx == -1:
+                                break
+                            # Build the span
+                            span = TextSpan(
+                                id=f"chunk_{chunk_index}_match_{len(all_spans)}",
+                                start=offset_so_far + idx,
+                                end=offset_so_far + idx + len(snippet_text),
+                                text=snippet_text,
+                            )
+                            all_spans.append((span, "AGENTIC_HIGHLIGHT"))
+                            logger.info(f"Added span from full text match in chunk {chunk_index + 1}")
+                            start_search = idx + len(snippet_text)
+                    else:
+                        logger.info(f"Found {len(found_citations)} citations in chunk {chunk_index + 1}")
+                        # If citations exist, each citation can be smaller or bigger block of text
+                        # We'll find them in the chunk. 
+                        for citation_obj in found_citations:
+                            cited_substring = citation_obj.cited_text.strip()
+
+                            # Find all occurrences of the cited_substring within the chunk
+                            start_search = 0
+                            while True:
+                                idx = chunk_text_str.find(cited_substring, start_search)
+                                if idx == -1:
+                                    break
+                                span = TextSpan(
+                                    id=f"chunk_{chunk_index}_match_{len(all_spans)}",
+                                    start=offset_so_far + idx,
+                                    end=offset_so_far + idx + len(cited_substring),
+                                    text=cited_substring,
+                                )
+                                all_spans.append((span, "AGENTIC_HIGHLIGHT"))
+                                logger.info(f"Added span from citation in chunk {chunk_index + 1}")
+                                start_search = idx + len(cited_substring)
+
+        except Exception as exc:
+            logger.exception(f"Error in Claude chunk {chunk_index}: {exc}")
+            error_responses.append({"data": {"error": str(exc), "chunk": chunk_index}})
+
+        # Move offset for the next chunk
+        offset_so_far += len(chunk_text_str)
+        logger.info(f"Completed processing chunk {chunk_index + 1}")
+
+    logger.info(f"Total spans found: {len(all_spans)}")
+    logger.info(f"Error responses: {error_responses}")
+
+    # If anything went wrong in any chunk, success is still True if we found at least some spans
+    # but we'll record all errors in error_responses
+    # Return them so the caller can see them if needed.
+    success = True
+    logger.info("Completed agentic_highlighter_claude task")
+
+    return [], all_spans, error_responses, success

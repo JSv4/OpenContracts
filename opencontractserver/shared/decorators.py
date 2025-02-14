@@ -10,7 +10,7 @@ from asgiref.sync import sync_to_async
 from celery import shared_task
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction
+from django.db import transaction, connection
 from plasmapdf.models.PdfDataLayer import build_translation_layer
 
 from opencontractserver.analyzer.models import Analysis
@@ -355,26 +355,48 @@ def async_doc_analyzer_task(
     Decorator for Celery tasks that analyze documents in an async context,
     providing the same preflight checks as doc_analyzer_task, in the
     same order, and then calling the user-supplied async function.
+
+    This version forces a complete drain of the newly created event loop,
+    ensuring that any tasks or async generators spawned by user code are
+    properly finalized (or canceled) before the loop is closed.
     """
 
     def decorator(async_func: Callable[..., Any]) -> Callable[..., Any]:
-
         @shared_task(bind=True, max_retries=max_retries)
         @functools.wraps(async_func)
         def wrapper(self, *args, **kwargs) -> Any:
+            """
+            Synchronously runs the async_wrapper by creating a dedicated event loop,
+            running the async code, then forcibly draining or canceling any pending
+            tasks before shutting down the loop.
+            """
             loop = asyncio.new_event_loop()
             try:
                 asyncio.set_event_loop(loop)
-                return loop.run_until_complete(async_wrapper(self, *args, **kwargs))
+                result = loop.run_until_complete(async_wrapper(self, *args, **kwargs))
+                return result
             finally:
+                # Forcefully cancel *all* remaining tasks so none linger
+                pending_tasks = asyncio.all_tasks(loop=loop)
+                for task in pending_tasks:
+                    task.cancel()
+                if pending_tasks:
+                    loop.run_until_complete(asyncio.gather(*pending_tasks, return_exceptions=True))
+
+                # Shutdown async generators
                 loop.run_until_complete(loop.shutdown_asyncgens())
+
+                # Finally close the loop
                 loop.close()
+
+                # # Forcibly close the current thread's DB connection.
+                # connection.close()
 
         async def async_wrapper(self, *args, **kwargs) -> Any:
             """
-            This is the core logic, carefully matching the synchronous doc_analyzer_task
-            preflight checks in the same order. Only after we pass these checks do
-            we call the user's async function.
+            The core logic: preflight checks using async-safe ORM methods, then
+            calling the user's async function. Any tasks or async generators 
+            spawned here will be cleaned up in the wrapper after this returns.
             """
             doc_id = kwargs.get("doc_id")
             corpus_id = kwargs.get("corpus_id") 
@@ -561,6 +583,7 @@ def async_doc_analyzer_task(
                             annotation_data = pdf_data_layer.create_opencontract_annotation_from_span(
                                 {"span": span, "annotation_label": label_text}
                             )
+                            logger.info(f"[ASYNC] PDF Annotation data: {annotation_data}")
                             label_obj, _ = await AnnotationLabel.objects.aget_or_create(
                                 text=annotation_data["annotationLabel"],
                                 label_type=LabelType.TOKEN_LABEL,
@@ -583,6 +606,7 @@ def async_doc_analyzer_task(
 
                         elif doc.file_type in ["application/txt", "text/plain"]:
                             span, label_text = span_label_pair
+                            logger.info(f"[ASYNC] TXT Annotation data: {label_text} / {span}")
                             label_obj, _ = await AnnotationLabel.objects.aget_or_create(
                                 text=label_text,
                                 label_type=LabelType.SPAN_LABEL,
@@ -594,8 +618,7 @@ def async_doc_analyzer_task(
                                 analysis=analysis,
                                 annotation_label=label_obj,
                                 page=1,
-                                raw_text=pdf_text_extract[span["start"]: span["end"]]
-                                if pdf_text_extract else "",
+                                raw_text=span['text'],
                                 annotation_type=LabelType.SPAN_LABEL,
                                 json={"start": span["start"], "end": span["end"]},
                                 creator=creator,

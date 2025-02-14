@@ -37,8 +37,8 @@ def get_http_authorization(request):
     auth = request.META.get("HTTP_" + settings.API_TOKEN_HEADER_NAME, "").split()
     prefix = settings.API_TOKEN_PREFIX
 
-    logger.info(f"Authorization header parts: {auth}")
-    logger.info(f"Expected prefix: {prefix}")
+    logger.debug(f"Authorization header parts: {auth}")
+    logger.debug(f"Expected prefix: {prefix}")
 
     if len(auth) != 2 or auth[0].lower() != prefix.lower():
         logger.warning(
@@ -47,5 +47,5 @@ def get_http_authorization(request):
         return None
 
     token = auth[1]
-    logger.info(f"Successfully extracted token: {token[:8]}...")
+    logger.debug(f"Successfully extracted token: {token[:8]}...")
     return token

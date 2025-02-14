@@ -613,5 +613,13 @@ PARSER_KWARGS = {
     },
 }
 
+# Analyzers
+# ------------------------------------------------------------------------------
+ANALYZER_KWARGS = {
+    "opencontractserver.tasks.doc_analysis_tasks.agentic_highlighter_claude": {
+        "ANTHROPIC_API_KEY": env.str("ANTHROPIC_API_KEY", default=""),
+    },
+}
+
 # Default embedder
 DEFAULT_EMBEDDER = "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"

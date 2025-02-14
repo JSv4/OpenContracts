@@ -123,6 +123,7 @@ async def create_document_agent(
     document: str | int | Document,
     user_id: int | None = None,
     loaded_messages: list | None = None,
+    override_system_prompt: str | None = None,
 ):
     """
     Creates a document agent for processing queries, with an optional prefix of conversation messages.
@@ -132,6 +133,9 @@ async def create_document_agent(
         user_id (int | None): The ID of the user.
         prefix_messages (list, optional): A list of ChatMessage instances to preload
             conversation context.
+        override_system_prompt (str, optional): A custom system prompt to override the
+            default one.
+
 
     Returns:
         OpenContractDbAgent: An instance of OpenContractDbAgent configured with the
@@ -188,6 +192,9 @@ async def create_document_agent(
         "Return your answers in thoughtful, attractive markdown. "
         "Avoid repeating instructions, writing down your thought processes (unless asked), or giving disclaimers."
     )
+
+    if override_system_prompt:
+        system_prompt = override_system_prompt
 
     prefix_messages = [LlamaChatMessage(role="system", content=system_prompt)]
 

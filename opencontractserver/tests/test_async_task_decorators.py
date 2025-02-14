@@ -2,14 +2,19 @@ import json
 import logging
 from typing import Any, List, Tuple, Dict
 from django.db import connections
+import gc
+from django.db import close_old_connections
+from django.db import connection
+import factory.django
 
 
 import asyncio
 from celery.exceptions import Retry
+from django.db.models.signals import post_save
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TransactionTestCase
+from django.test import TransactionTestCase, override_settings
 from django.conf import settings
 from django.contrib.auth.models import Group
 
@@ -34,11 +39,17 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_EAGER_PROPAGATES=True
+)
 class AsyncDocAnalyzerTaskTestCase(TransactionTestCase):
     """
     Tests for the async_doc_analyzer_task decorator ensuring parity with the
     doc_analyzer_task test cases, but using async methods. 
+    Celery tasks are run synchronously (eagerly) for these tests.
     """
+    @factory.django.mute_signals(post_save)
     def setUp(self):
         
         with transaction.atomic():
@@ -102,16 +113,35 @@ class AsyncDocAnalyzerTaskTestCase(TransactionTestCase):
         all_docs = Document.objects.all()
         logger.info(f"[TEST CLASS SETUP] All document IDs in test DB: {[d.id for d in all_docs]}")
 
-    def tearDown(self) -> None:
+    @classmethod
+    def tearDownClass(cls):
         """
-        Override tearDown to ensure all database connections are closed
-        after each test. This can help prevent issues where asynchronous tasks
-        or lingering connections cause the test database to be accessed after
-        the test case is torn down.
+        Ensure ALL database connections are closed before the test class is torn down.
+        This runs once after all tests in the class complete.
         """
-        super().tearDown()
-        connections.close_all()
-
+        # First close any old/stale connections
+        close_old_connections()
+        
+        # Force close all remaining connections
+        for conn in connections.all():
+            conn.close()
+            
+        # Force terminate any remaining PostgreSQL connections to the test DB
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = %s AND pid <> pg_backend_pid();
+                """,
+                [connection.settings_dict["NAME"]]
+            )
+            
+        # Force garbage collection
+        gc.collect()
+        
+        # Finally, call parent's teardown
+        super().tearDownClass()
 
     @async_doc_analyzer_task(max_retries=10)
     async def sample_async_task(
@@ -152,7 +182,7 @@ class AsyncDocAnalyzerTaskTestCase(TransactionTestCase):
             await asyncio.sleep(0.01)
             return (
                 ["TEST_DOC_ASYNC"],
-                [(TextSpan(id="1", start=0, end=11, text="Async Span"), "TEXT_SPAN_ASYNC")],
+                [(TextSpan(id="1", start=0, end=11, text="Exhibit 10."), "TEXT_SPAN_ASYNC")],
                 [{"data": pdf_text_extract}],
                 True,
             )
@@ -170,9 +200,10 @@ class AsyncDocAnalyzerTaskTestCase(TransactionTestCase):
         )
 
         # Verify the structure of the returned data
+        logger.info(f"test_async_doc_analyzer_task_no_backend_lock: {result[1][0][0]}")
         self.assertEqual(result[0], ["TEST_DOC_ASYNC"])
         self.assertEqual(len(result[1]), 1)
-        self.assertEqual(result[1][0][0].text, "Async Span")  # The TextSpan text
+        self.assertEqual(result[1][0][0]['text'], "Exhibit 10.")  # The TextSpan text
         self.assertEqual(result[1][0][1], "TEXT_SPAN_ASYNC")
         self.assertIsInstance(result[2], list)
         self.assertTrue(result[3])
@@ -188,7 +219,7 @@ class AsyncDocAnalyzerTaskTestCase(TransactionTestCase):
             document=self.unlocked_pdf_doc, annotation_type=TOKEN_LABEL
         ).first()
         self.assertIsNotNone(span_annotation)
-        self.assertEqual(span_annotation.raw_text, "Async Span")
+        self.assertEqual(span_annotation.raw_text, "Exhibit 10.")
 
     def test_async_function_has_access_to_pdf_text(self) -> None:
         """
@@ -211,7 +242,7 @@ class AsyncDocAnalyzerTaskTestCase(TransactionTestCase):
             .get()[2][0]["data"]
         )
 
-        self.assertIn("This is a sample PDF document", processed_text)
+        self.assertIn("Exhibit 10.1 Certain information identified by bracketed asterisks", processed_text)
         self.assertEqual(
             processed_text.replace("\r\n", "\n").strip(),
             expected_text.replace("\r\n", "\n").strip(),
@@ -564,6 +595,13 @@ class AsyncDocAnalyzerTaskTestCase(TransactionTestCase):
         annotations = Annotation.objects.filter(document=self.txt_doc)
         self.assertEqual(annotations.count(), 2)  # doc-level + span-level annotation
 
+        print("Annotations!")
+        for annot in Annotation.objects.all():
+            print(annot.id)
+            print(annot.raw_text)
+        
+        print("Annotation Labels done!")
+        
         span_annotation = annotations.filter(annotation_type=SPAN_LABEL).first()
         self.assertEqual(span_annotation.raw_text, "Async Span!")
         self.assertDictEqual(span_annotation.json, {"start": 0, "end": 12})

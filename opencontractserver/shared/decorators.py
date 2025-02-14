@@ -1,16 +1,15 @@
 import asyncio
 import functools
 import json
-import traceback
 import logging
+import traceback
 from functools import wraps
 from typing import Any, Callable, Union
 
 from asgiref.sync import sync_to_async
 from celery import shared_task
-
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction, connection
+from django.db import transaction
 from plasmapdf.models.PdfDataLayer import build_translation_layer
 
 from opencontractserver.analyzer.models import Analysis
@@ -37,7 +36,6 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None):
     """
 
     def decorator(func):
-        
         @shared_task(bind=True, max_retries=max_retries)
         @wraps(func)
         def wrapper(self, *args, **kwargs):
@@ -348,8 +346,7 @@ def async_celery_task(*task_args, **task_kwargs) -> Callable:
 
 
 def async_doc_analyzer_task(
-    max_retries: Union[int, None] = None,
-    input_schema: dict | None = None
+    max_retries: Union[int, None] = None, input_schema: dict | None = None
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator for Celery tasks that analyze documents in an async context,
@@ -381,7 +378,9 @@ def async_doc_analyzer_task(
                 for task in pending_tasks:
                     task.cancel()
                 if pending_tasks:
-                    loop.run_until_complete(asyncio.gather(*pending_tasks, return_exceptions=True))
+                    loop.run_until_complete(
+                        asyncio.gather(*pending_tasks, return_exceptions=True)
+                    )
 
                 # Shutdown async generators
                 loop.run_until_complete(loop.shutdown_asyncgens())
@@ -395,20 +394,22 @@ def async_doc_analyzer_task(
         async def async_wrapper(self, *args, **kwargs) -> Any:
             """
             The core logic: preflight checks using async-safe ORM methods, then
-            calling the user's async function. Any tasks or async generators 
+            calling the user's async function. Any tasks or async generators
             spawned here will be cleaned up in the wrapper after this returns.
             """
             doc_id = kwargs.get("doc_id")
-            corpus_id = kwargs.get("corpus_id") 
+            corpus_id = kwargs.get("corpus_id")
             analysis_id = kwargs.get("analysis_id")
-            logger.info(f"[ASYNC] Task parameters - doc_id: {doc_id}, corpus_id: {corpus_id}, analysis_id: {analysis_id}")
+            logger.info(
+                f"[ASYNC] Task parameters - doc_id: {doc_id}, corpus_id: {corpus_id}, analysis_id: {analysis_id}"
+            )
 
             logger.info(f"[ASYNC] Starting task with doc_id: {doc_id}")
-            
+
             # Log all documents in DB before we try to fetch
             all_docs = await Document.objects.all().acount()
             logger.info(f"[ASYNC] Number of documents in DB: {all_docs}")
-            
+
             if doc_id:
                 try:
                     exists = await Document.objects.filter(id=doc_id).aexists()
@@ -460,22 +461,22 @@ def async_doc_analyzer_task(
 
             # 7) If we passed all preflight checks, proceed to gather data and call async func
             try:
-                
+
                 @sync_to_async
                 def get_pdf_text(doc: Document) -> str:
                     return doc.txt_extract_file.read().decode("utf-8")
-                
+
                 @sync_to_async
                 def get_pawls_extract(doc: Document) -> Any:
                     return json.loads(doc.pawls_parse_file.read())
-                
+
                 @sync_to_async
                 def has_txt_extract(doc: Document) -> bool:
                     """
                     Safely check if the txt_extract_file field of the document is truthy.
                     """
                     return bool(doc.txt_extract_file)
-                
+
                 @sync_to_async
                 def has_pawls_parse(doc: Document) -> bool:
                     """
@@ -506,17 +507,18 @@ def async_doc_analyzer_task(
 
                 # Use the wrapped function to get creator
                 creator = await get_analysis_creator(analysis)
-                
+
                 # Use creator in subsequent operations
                 data_row, _ = await DocumentAnalysisRow.objects.aget_or_create(
                     document=doc,
                     analysis=analysis,
-                    creator=creator  # Use the safely retrieved creator
+                    creator=creator,  # Use the safely retrieved creator
                 )
 
                 @sync_to_async
                 def get_analysis_analyzer(analysis):
                     return analysis.analyzer
+
                 analyzer = await get_analysis_analyzer(analysis)
 
                 # -- Call the user's async function --
@@ -559,7 +561,9 @@ def async_doc_analyzer_task(
 
                     if not isinstance(metadata, list) or (
                         len(metadata) > 0
-                        and not all(isinstance(m, dict) and "data" in m for m in metadata)
+                        and not all(
+                            isinstance(m, dict) and "data" in m for m in metadata
+                        )
                     ):
                         raise ValueError(
                             "Third element of the tuple must be a list of dictionaries with 'data' key"
@@ -570,7 +574,9 @@ def async_doc_analyzer_task(
                         if not (
                             isinstance(span_label_pair, tuple)
                             and len(span_label_pair) == 2
-                            and is_dict_instance_of_typed_dict(span_label_pair[0], TextSpan)
+                            and is_dict_instance_of_typed_dict(
+                                span_label_pair[0], TextSpan
+                            )
                             and isinstance(span_label_pair[1], str)
                         ):
                             raise ValueError(
@@ -580,10 +586,14 @@ def async_doc_analyzer_task(
                         # Handle PDF vs TXT annotation creation
                         if doc.file_type in ["application/pdf"]:
                             span, label_text = span_label_pair
-                            annotation_data = pdf_data_layer.create_opencontract_annotation_from_span(
-                                {"span": span, "annotation_label": label_text}
+                            annotation_data = (
+                                pdf_data_layer.create_opencontract_annotation_from_span(
+                                    {"span": span, "annotation_label": label_text}
+                                )
                             )
-                            logger.info(f"[ASYNC] PDF Annotation data: {annotation_data}")
+                            logger.info(
+                                f"[ASYNC] PDF Annotation data: {annotation_data}"
+                            )
                             label_obj, _ = await AnnotationLabel.objects.aget_or_create(
                                 text=annotation_data["annotationLabel"],
                                 label_type=LabelType.TOKEN_LABEL,
@@ -606,7 +616,9 @@ def async_doc_analyzer_task(
 
                         elif doc.file_type in ["application/txt", "text/plain"]:
                             span, label_text = span_label_pair
-                            logger.info(f"[ASYNC] TXT Annotation data: {label_text} / {span}")
+                            logger.info(
+                                f"[ASYNC] TXT Annotation data: {label_text} / {span}"
+                            )
                             label_obj, _ = await AnnotationLabel.objects.aget_or_create(
                                 text=label_text,
                                 label_type=LabelType.SPAN_LABEL,
@@ -618,7 +630,7 @@ def async_doc_analyzer_task(
                                 analysis=analysis,
                                 annotation_label=label_obj,
                                 page=1,
-                                raw_text=span['text'],
+                                raw_text=span["text"],
                                 annotation_type=LabelType.SPAN_LABEL,
                                 json={"start": span["start"], "end": span["end"]},
                                 creator=creator,

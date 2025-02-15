@@ -126,7 +126,29 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
             : "0 4px 24px rgba(0, 0, 0, 0.08)",
         }}
       >
-        <Tag size={24} />
+        <Tag className="tag-icon" size={24} />
+        {activeSpanLabel && (
+          <motion.div
+            className="active-label-display"
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "auto" }}
+          >
+            <span
+              className="color-dot"
+              style={{ backgroundColor: activeSpanLabel.color || "#1a75bc" }}
+            />
+            <span>{activeSpanLabel.text}</span>
+            <button
+              className="clear-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveLabel(undefined);
+              }}
+            >
+              ×
+            </button>
+          </motion.div>
+        )}
         {activeSpanLabel && (
           <motion.div
             className="active-indicator"
@@ -145,27 +167,27 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
           >
-            {activeSpanLabel && (
-              <button
-                className="clear-button"
-                onClick={() => setActiveLabel(undefined)}
-              >
-                Clear Selection
-              </button>
+            {labelOptions.length > 0 ? (
+              labelOptions.map((label) => (
+                <button
+                  key={label.id}
+                  onClick={() => setActiveLabel(label)}
+                  className={activeSpanLabel?.id === label.id ? "active" : ""}
+                >
+                  <span
+                    className="color-dot"
+                    style={{ backgroundColor: label.color || "#1a75bc" }}
+                  />
+                  {label.text}
+                </button>
+              ))
+            ) : (
+              <div className="empty-state">
+                {activeSpanLabel
+                  ? "No other labels available"
+                  : "No labels available for this document type"}
+              </div>
             )}
-            {labelOptions.map((label) => (
-              <button
-                key={label.id}
-                onClick={() => setActiveLabel(label)}
-                className={activeSpanLabel?.id === label.id ? "active" : ""}
-              >
-                <span
-                  className="color-dot"
-                  style={{ backgroundColor: label.color || "#1a75bc" }}
-                />
-                {label.text}
-              </button>
-            ))}
           </motion.div>
         )}
       </AnimatePresence>
@@ -190,7 +212,7 @@ const StyledLabelSelector = styled.div<StyledLabelSelectorProps>`
   transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
 
   .selector-button {
-    width: 48px;
+    min-width: 48px;
     height: 48px;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.98);
@@ -198,12 +220,52 @@ const StyledLabelSelector = styled.div<StyledLabelSelectorProps>`
     border: 1px solid rgba(200, 200, 200, 0.8);
     display: flex;
     align-items: center;
-    justify-content: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .active-label-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #475569;
+
+    .color-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .clear-button {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 1.2rem;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      margin-left: 4px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+        color: #ef4444;
+      }
+    }
     cursor: pointer;
     position: relative;
     transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
 
-    svg {
+    .tag-icon {
       color: #1a75bc;
       stroke-width: 2.2;
       transition: all 0.3s;
@@ -239,20 +301,6 @@ const StyledLabelSelector = styled.div<StyledLabelSelectorProps>`
     min-width: 220px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
     border: 1px solid rgba(200, 200, 200, 0.8);
-
-    .clear-button {
-      border: none;
-      background: transparent;
-      padding: 0.5rem;
-      color: #64748b;
-      font-size: 0.813rem;
-      border-bottom: 1px solid rgba(200, 200, 200, 0.3);
-      transition: all 0.2s;
-
-      &:hover {
-        color: #ef4444;
-      }
-    }
 
     button {
       border: none;
@@ -294,6 +342,14 @@ const StyledLabelSelector = styled.div<StyledLabelSelectorProps>`
           transform: scale(1.3);
         }
       }
+    }
+
+    .empty-state {
+      padding: 0.75rem 1rem;
+      color: #64748b;
+      font-size: 0.875rem;
+      text-align: center;
+      font-style: italic;
     }
   }
 `;

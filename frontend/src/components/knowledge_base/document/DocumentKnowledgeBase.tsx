@@ -99,8 +99,10 @@ import { FullScreenModal, SourceIndicator } from "./LayoutComponents";
 import { ChatTray } from "./right_tray/ChatTray";
 import { SafeMarkdown } from "../markdown/SafeMarkdown";
 import { NewChatFloatingButton } from "./ChatContainers";
-import { showSelectCorpusAnalyzerOrFieldsetModal } from "../../../graphql/cache";
+// import { showSelectCorpusAnalyzerOrFieldsetModal } from "../../../graphql/cache";
 import { SelectDocumentAnalyzerModal } from "./SelectDocumentAnalyzerModal";
+import { SelectDocumentFieldsetModal } from "./SelectDocumentFieldsetModal";
+// TODO - run field set modal
 
 const pdfjsLib = require("pdfjs-dist");
 
@@ -165,9 +167,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 }) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
-
-  // This holds the partial content coming in from the assistant
-  const partialAssistantContent = useRef("");
 
   // Helper to compute the panel width following the clamp strategy
   const getPanelWidth = (windowWidth: number): number =>
@@ -608,8 +607,15 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }
   }, [activeLayer, activeTab]);
 
+  useEffect(() => {
+    console.log("Analyses:", analyses);
+  }, [analyses]);
+
   // Add new state for showing load menu
   const [showLoad, setShowLoad] = useState(false);
+
+  /* State for showing the new SelectDocumentFieldsetModal */
+  const [showFieldsetModal, setShowFieldsetModal] = useState(false);
 
   // The content for the right panel
   const rightPanelContent = (() => {
@@ -828,6 +834,23 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   exit={{ opacity: 0 }}
                 >
                   <ExtractTraySelector read_only={false} extracts={extracts} />
+
+                  {/* Floating button to open our new fieldset picker */}
+                  <NewChatFloatingButton
+                    onClick={() => setShowFieldsetModal(true)}
+                    style={{ bottom: "80px" }}
+                    /* optionally offset if needed */
+                  >
+                    <i className="plus icon" />
+                  </NewChatFloatingButton>
+
+                  {/* Render the new modal */}
+                  <SelectDocumentFieldsetModal
+                    documentId={documentId}
+                    corpusId={corpusId}
+                    open={showFieldsetModal}
+                    onClose={() => setShowFieldsetModal(false)}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>

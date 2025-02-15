@@ -13,20 +13,9 @@
 
 import React, { useState, useEffect, useMemo, FC } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import {
-  Modal,
-  Button,
-  Dimmer,
-  Loader,
-  Form,
-  Message,
-  Input,
-  Card,
-  Image,
-  Header,
-} from "semantic-ui-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, ArrowLeft } from "lucide-react";
+import { Modal, Button, Input, Card, Header } from "semantic-ui-react";
+import { motion } from "framer-motion";
+import { Search, ArrowLeft, FileText, Settings, Play } from "lucide-react";
 import { toast } from "react-toastify";
 import styled from "styled-components";
 import {
@@ -46,7 +35,7 @@ import analyzer_icon from "../../../assets/icons/noun-epicyclic-gearing-800132.p
 import { SemanticUIForm } from "@rjsf/semantic-ui";
 import { RJSFSchema } from "@rjsf/utils";
 import validator from "@rjsf/validator-ajv8";
-import { TruncatedText } from "../../widgets/data-display/TruncatedText";
+import ReactMarkdown from "react-markdown";
 
 interface SelectDocumentAnalyzerModalProps {
   documentId: string;
@@ -115,10 +104,10 @@ const SearchIcon = styled.div`
 /** A grid layout for displaying the analyzer cards with vertical scroll */
 const AnalyzerGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.2rem;
-  padding: 1rem;
-  max-height: calc(65vh - 60px); // Account for search bar
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  gap: 1.5rem;
+  padding: 1.5rem;
+  max-height: calc(75vh - 60px);
   overflow-y: auto;
 
   /* Refined scrollbar */
@@ -139,17 +128,47 @@ const AnalyzerGrid = styled.div`
 
 /** A styled Semantic UI Card with enhanced visual design */
 const StyledCard = styled(Card)<{ $selected?: boolean; $hasInputs?: boolean }>`
-  width: 100%;
-  max-width: 320px;
-  height: auto !important;
+  width: 100% !important;
+  height: 280px !important;
   margin: 0 !important;
   border: 1px solid #e2e8f0 !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
   overflow: hidden !important;
   background: white !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
 
+  /* Configurable indicator - subtle gradient border */
+  ${(props) =>
+    props.$hasInputs &&
+    `
+    &:before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      padding: 1px; /* Control the border thickness */
+      border-radius: 12px;
+      background: linear-gradient(
+        135deg,
+        rgba(74, 144, 226, 0.2),
+        rgba(74, 144, 226, 0.1)
+      );
+      -webkit-mask: 
+        linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0);
+      mask: 
+        linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+  `}
+
+  /* Selected state */
   ${(props) =>
     props.$selected &&
     `
@@ -158,141 +177,113 @@ const StyledCard = styled(Card)<{ $selected?: boolean; $hasInputs?: boolean }>`
   `}
 
   &:hover {
-    border-color: ${(props) =>
-      props.$selected ? "#4a90e2" : "#cbd5e1"} !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
   }
 
-  .content {
-    padding: 1.2rem !important;
-    height: auto !important;
-
-    .header {
-      font-size: 1rem !important;
-      color: #1a202c !important;
-      margin-bottom: 0.5rem !important;
-      line-height: 1.4 !important;
-      font-weight: 500 !important;
-    }
-
-    .meta {
-      font-size: 0.8rem !important;
-      color: #64748b !important;
-      font-family: "SF Mono", "Roboto Mono", monospace !important;
-      margin-bottom: 0.8rem !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-    }
-
-    .description {
-      color: #475569 !important;
-      font-size: 0.9rem !important;
-      line-height: 1.5 !important;
-    }
-  }
-`;
-
-const SelectedCardWrapper = styled.div`
-  height: fit-content;
-  position: relative;
-
-  /* Refined highlight with subtle pulse animation */
-  ${StyledCard} {
-    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.4) !important;
-    animation: cardPulse 3s ease-in-out infinite;
-  }
-
-  @keyframes cardPulse {
-    0% {
-      box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.4);
-    }
-    50% {
-      box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
-    }
-    100% {
-      box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.4);
-    }
-  }
-`;
-
-const ConfigurableTag = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 95px;
-  font-size: 0.7rem;
-  color: #4a90e2;
-  background: rgba(74, 144, 226, 0.08);
-  padding: 4px 10px;
-  border-radius: 12px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  white-space: nowrap;
-
-  /* Shimmer effect contained properly */
-  &:after {
-    content: "";
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
+  /* Configurable card shimmer effect */
+  ${(props) =>
+    props.$hasInputs &&
+    `
     background: linear-gradient(
-      45deg,
-      transparent,
-      rgba(255, 255, 255, 0.4),
-      transparent
-    );
-    transform: translateX(-100%) rotate(45deg);
-    animation: shimmer 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  }
+      135deg,
+      #ffffff 0%,
+      #ffffff 40%,
+      rgba(74, 144, 226, 0.03) 50%,
+      #ffffff 60%,
+      #ffffff 100%
+    ) !important;
+    background-size: 200% 200% !important;
+    animation: shimmerBg 8s ease-in-out infinite !important;
 
-  /* Adjusted bolt positioning */
-  &:before {
-    content: "⚡";
-    font-size: 0.8rem;
-    margin-right: 4px;
-    animation: boltPulse 2s ease-in-out infinite;
-    display: inline-block;
-  }
+    @keyframes shimmerBg {
+      0% { background-position: 200% 200%; }
+      100% { background-position: -200% -200%; }
+    }
+  `}
+`;
 
-  @keyframes shimmer {
-    0% {
-      transform: translateX(-100%) rotate(45deg);
-    }
-    100% {
-      transform: translateX(100%) rotate(45deg);
-    }
-  }
+const ConfigurabilityIndicator = styled.div<{ $hasInputs: boolean }>`
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: ${(props) => (props.$hasInputs ? "#4a90e2" : "#94a3b8")};
+  background: ${(props) =>
+    props.$hasInputs
+      ? "rgba(74, 144, 226, 0.08)"
+      : "rgba(148, 163, 184, 0.08)"};
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 
-  @keyframes boltPulse {
-    0% {
-      transform: scale(1);
-      opacity: 0.7;
-    }
-    50% {
-      transform: scale(1.2);
-      opacity: 1;
-    }
-    100% {
-      transform: scale(1);
-      opacity: 0.7;
-    }
-  }
-
-  /* Hover state with scale and glow */
-  ${StyledCard}:hover & {
-    transform: translateY(-1px);
-    background: rgba(74, 144, 226, 0.12);
-    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.15);
+  svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.8;
   }
 `;
 
-/** A styled container for the analyzer icon */
+// New component to handle analyzer path display
+const AnalyzerPath = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: "SF Mono", "Roboto Mono", monospace !important;
+  font-size: 0.85rem;
+  color: #64748b;
+`;
+
+const PathSegment = styled.span<{ $isLast?: boolean }>`
+  color: ${(props) => (props.$isLast ? "#1e293b" : "#94a3b8")};
+  font-weight: ${(props) => (props.$isLast ? "500" : "400")};
+
+  &:not(:last-child):after {
+    content: "•";
+    margin-left: 4px;
+    color: #cbd5e1;
+  }
+`;
+
+// Helper function to format analyzer path
+const formatAnalyzerPath = (path: string) => {
+  const segments = path.split(".");
+  // Take last 3 segments or all if less than 3
+  const relevantSegments = segments.slice(Math.max(0, segments.length - 3));
+  return relevantSegments;
+};
+
+const CardHeader = styled.div`
+  position: relative;
+  padding-right: 3rem;
+  margin-bottom: 0.75rem;
+`;
+
+const CardTitle = styled.h3`
+  font-size: 1.2rem !important;
+  color: #1a202c !important;
+  line-height: 1.4 !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+`;
+
+const CardMeta = styled.div`
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 1rem !important;
+`;
+
+const AnalyzerId = styled.span`
+  font-size: 0.85rem !important;
+  color: #64748b !important;
+  font-family: "SF Mono", "Roboto Mono", monospace !important;
+`;
+
 const IconContainer = styled.div<{ $selected?: boolean }>`
   float: right;
   width: 32px;
@@ -329,9 +320,15 @@ const AnalyzerCard: React.FC<AnalyzerCardProps> = ({
   onClick,
   delay,
 }) => (
-  <StyledCard $selected={selected} $hasInputs={hasInputs} onClick={onClick}>
-    {children}
-  </StyledCard>
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3, delay: delay * 0.05 }}
+  >
+    <StyledCard $selected={selected} $hasInputs={hasInputs} onClick={onClick}>
+      {children}
+    </StyledCard>
+  </motion.div>
 );
 
 /** A placeholder when no results are found */
@@ -508,6 +505,165 @@ const BackButton = styled.button`
   }
 `;
 
+const MarkdownDescription = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #475569;
+  max-height: 150px; // Ensure scrollability
+
+  /* Refined scrollbar */
+  &::-webkit-scrollbar {
+    width: 4px;
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(74, 144, 226, 0.15);
+    border-radius: 2px;
+
+    &:hover {
+      background: rgba(74, 144, 226, 0.25);
+    }
+  }
+
+  /* Fade out effect at the bottom */
+  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+`;
+
+// New component for empty state with beautiful patterns
+const EmptyDescription = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+
+  /* Beautiful geometric pattern background */
+  &:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+          135deg,
+          transparent 25%,
+          rgba(74, 144, 226, 0.02) 25%
+        ) -10px 0,
+      linear-gradient(225deg, rgba(74, 144, 226, 0.02) 25%, transparent 25%) -10px
+        0,
+      linear-gradient(315deg, transparent 25%, rgba(74, 144, 226, 0.02) 25%),
+      linear-gradient(45deg, rgba(74, 144, 226, 0.02) 25%, transparent 25%);
+    background-size: 20px 20px;
+    opacity: 0.5;
+  }
+
+  /* Floating animation */
+  animation: float 6s ease-in-out infinite;
+  @keyframes float {
+    0% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+    100% {
+      transform: translateY(0px);
+    }
+  }
+`;
+
+const EmptyStateIcon = styled(FileText)`
+  color: #94a3b8;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+  stroke-width: 1.5;
+`;
+
+const EmptyStateText = styled.div`
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  max-width: 200px;
+
+  strong {
+    display: block;
+    font-size: 1.1rem;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+  }
+`;
+
+// New component for short descriptions
+const ShortDescription = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(248, 250, 252, 0.5),
+    rgba(241, 245, 249, 0.8)
+  );
+  border-radius: 8px;
+  margin-top: 1rem;
+
+  /* Animated background patterns */
+  &:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        circle at 0% 0%,
+        rgba(74, 144, 226, 0.03) 20%,
+        transparent 20.5%
+      ),
+      radial-gradient(
+        circle at 100% 0%,
+        rgba(74, 144, 226, 0.03) 20%,
+        transparent 20.5%
+      ),
+      radial-gradient(
+        circle at 100% 100%,
+        rgba(74, 144, 226, 0.03) 20%,
+        transparent 20.5%
+      ),
+      radial-gradient(
+        circle at 0% 100%,
+        rgba(74, 144, 226, 0.03) 20%,
+        transparent 20.5%
+      );
+    background-size: 50px 50px;
+    border-radius: 8px;
+    opacity: 0.5;
+    animation: patternFloat 15s linear infinite;
+  }
+
+  @keyframes patternFloat {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 50px 50px;
+    }
+  }
+
+  p {
+    position: relative;
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #475569;
+  }
+`;
+
 export const SelectDocumentAnalyzerModal: FC<
   SelectDocumentAnalyzerModalProps
 > = ({ documentId, corpusId, open, onClose }) => {
@@ -527,7 +683,9 @@ export const SelectDocumentAnalyzerModal: FC<
   const { loading: loadingAnalyzers, data: analyzersData } = useQuery<
     GetAnalyzersOutputs,
     GetAnalyzersInputs
-  >(GET_ANALYZERS);
+  >(GET_ANALYZERS, {
+    fetchPolicy: "network-only",
+  });
 
   /** Mutation to start analysis on the chosen analyzer with optional user input data. */
   const [startDocumentAnalysis, { loading: startingAnalysis }] = useMutation<
@@ -640,60 +798,87 @@ export const SelectDocumentAnalyzerModal: FC<
           </SearchContainer>
           <AnalyzerGrid>
             {filteredAnalyzers.length > 0 ? (
-              filteredAnalyzers.map((analyzer, index) => (
-                <AnalyzerCard
-                  key={analyzer.id}
-                  selected={selectedAnalyzer === analyzer.id}
-                  hasInputs={
-                    !!(
-                      analyzer.inputSchema &&
-                      Object.keys(analyzer.inputSchema).length > 0
-                    )
-                  }
-                  onClick={() => setSelectedAnalyzer(analyzer.id)}
-                  delay={index * 50}
-                >
-                  <Card.Content>
-                    <IconContainer $selected={selectedAnalyzer === analyzer.id}>
-                      <img src={analyzer_icon} alt="" />
-                    </IconContainer>
-                    <Card.Header>
-                      <TruncatedText
-                        text={
-                          analyzer.manifest?.metadata?.title ||
-                          analyzer.analyzerId ||
-                          "Untitled Analyzer"
-                        }
-                        limit={40}
-                      />
-                    </Card.Header>
-                    <Card.Meta>
-                      <TruncatedText
-                        text={analyzer.analyzerId || ""}
-                        limit={35}
-                        style={{
-                          fontFamily: "'SF Mono', 'Roboto Mono', monospace",
-                        }}
-                      />
-                      {analyzer.inputSchema &&
-                        Object.keys(analyzer.inputSchema).length > 0 && (
-                          <ConfigurableTag>Configurable</ConfigurableTag>
+              filteredAnalyzers.map((analyzer, index) => {
+                const hasInputs = !!(
+                  analyzer.inputSchema &&
+                  Object.keys(analyzer.inputSchema).length > 0
+                );
+                const pathSegments = formatAnalyzerPath(
+                  analyzer.analyzerId || ""
+                );
+
+                return (
+                  <AnalyzerCard
+                    key={analyzer.id}
+                    selected={selectedAnalyzer === analyzer.id}
+                    hasInputs={hasInputs}
+                    onClick={() => setSelectedAnalyzer(analyzer.id)}
+                    delay={index}
+                  >
+                    <Card.Content>
+                      <ConfigurabilityIndicator $hasInputs={hasInputs}>
+                        {hasInputs ? (
+                          <>
+                            <Settings size={14} className="settings-icon" />
+                            Configurable
+                          </>
+                        ) : (
+                          <>
+                            <Play size={14} />
+                            Ready to Run
+                          </>
                         )}
-                    </Card.Meta>
-                    <Card.Description>
-                      <TruncatedText
-                        text={analyzer.description || ""}
-                        limit={120}
-                      />
-                    </Card.Description>
-                  </Card.Content>
-                  {analyzer.manifest?.metadata?.author_name && (
-                    <Card.Content extra>
-                      Created by {analyzer.manifest.metadata.author_name}
+                      </ConfigurabilityIndicator>
+
+                      <CardHeader>
+                        <CardTitle>
+                          {analyzer.manifest?.metadata?.title ||
+                            pathSegments[pathSegments.length - 1] ||
+                            "Untitled Analyzer"}
+                        </CardTitle>
+                      </CardHeader>
+
+                      <CardMeta>
+                        <AnalyzerPath>
+                          {pathSegments.map((segment, idx) => (
+                            <PathSegment
+                              key={idx}
+                              $isLast={idx === pathSegments.length - 1}
+                            >
+                              {segment}
+                            </PathSegment>
+                          ))}
+                        </AnalyzerPath>
+                      </CardMeta>
+
+                      {analyzer.description ? (
+                        analyzer.description.length < 100 ? (
+                          <ShortDescription>
+                            <ReactMarkdown>
+                              {analyzer.description}
+                            </ReactMarkdown>
+                          </ShortDescription>
+                        ) : (
+                          <MarkdownDescription>
+                            <ReactMarkdown>
+                              {analyzer.description}
+                            </ReactMarkdown>
+                          </MarkdownDescription>
+                        )
+                      ) : (
+                        <EmptyDescription>
+                          <EmptyStateIcon size={28} />
+                          <EmptyStateText>
+                            <strong>No Description Yet</strong>
+                            This analyzer is ready to run but hasn't shared its
+                            secrets
+                          </EmptyStateText>
+                        </EmptyDescription>
+                      )}
                     </Card.Content>
-                  )}
-                </AnalyzerCard>
-              ))
+                  </AnalyzerCard>
+                );
+              })
             ) : (
               <NoResults>
                 {searchTerm
@@ -718,39 +903,51 @@ export const SelectDocumentAnalyzerModal: FC<
                   <h3>Selected Analyzer</h3>
                 </SectionHeader>
 
-                <StyledCard $selected $hasInputs>
-                  <Card.Content>
-                    <IconContainer $selected>
-                      <img src={analyzer_icon} alt="" />
-                    </IconContainer>
-                    <Card.Header>
-                      <TruncatedText
-                        text={
-                          selectedAnalyzerObj?.manifest?.metadata?.title ||
-                          selectedAnalyzerObj?.analyzerId ||
-                          "Untitled Analyzer"
-                        }
-                        limit={40}
-                      />
-                    </Card.Header>
-                    <Card.Meta>
-                      <TruncatedText
-                        text={selectedAnalyzerObj?.analyzerId || ""}
-                        limit={35}
-                        style={{
-                          fontFamily: "'SF Mono', 'Roboto Mono', monospace",
-                        }}
-                      />
-                      <ConfigurableTag>Configurable</ConfigurableTag>
-                    </Card.Meta>
-                    <Card.Description>
-                      <TruncatedText
-                        text={selectedAnalyzerObj?.description || ""}
-                        limit={120}
-                      />
-                    </Card.Description>
-                  </Card.Content>
-                </StyledCard>
+                {/* Calculate hasInputs for the selected analyzer */}
+                {(() => {
+                  const hasInputs = !!(
+                    selectedAnalyzerObj?.inputSchema &&
+                    Object.keys(selectedAnalyzerObj.inputSchema).length > 0
+                  );
+
+                  return (
+                    <StyledCard $selected $hasInputs={hasInputs}>
+                      <Card.Content>
+                        <IconContainer $selected>
+                          <img src={analyzer_icon} alt="" />
+                        </IconContainer>
+                        <Card.Header>
+                          {selectedAnalyzerObj?.manifest?.metadata?.title ||
+                            selectedAnalyzerObj?.analyzerId ||
+                            "Untitled Analyzer"}
+                        </Card.Header>
+                        <Card.Meta>
+                          <span>{selectedAnalyzerObj?.analyzerId}</span>
+                          <ConfigurabilityIndicator $hasInputs={hasInputs}>
+                            {hasInputs ? (
+                              <>
+                                <Settings size={14} className="settings-icon" />
+                                Configurable
+                              </>
+                            ) : (
+                              <>
+                                <Play size={14} />
+                                Ready to Run
+                              </>
+                            )}
+                          </ConfigurabilityIndicator>
+                        </Card.Meta>
+                        <Card.Description>
+                          <MarkdownDescription>
+                            <ReactMarkdown>
+                              {selectedAnalyzerObj?.description || ""}
+                            </ReactMarkdown>
+                          </MarkdownDescription>
+                        </Card.Description>
+                      </Card.Content>
+                    </StyledCard>
+                  );
+                })()}
               </SelectedAnalyzerSection>
 
               <ConfigurationSection>

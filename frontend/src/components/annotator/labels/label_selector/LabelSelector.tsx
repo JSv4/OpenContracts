@@ -1,73 +1,102 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import styled from "styled-components";
-import { Icon, Popup, Button } from "semantic-ui-react";
+import { Tag } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { AnnotationLabelType } from "../../../../types/graphql-api";
-import { SpanLabelCard, BlankLabelElement } from "./LabelElements";
-import { LabelSelectorDialog } from "./LabelSelectorDialog";
-import { TruncatedText } from "../../../widgets/data-display/TruncatedText";
 import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 import { useCorpusState } from "../../context/CorpusAtom";
-import {
-  useDocumentType,
-  useSelectedDocument,
-} from "../../context/DocumentAtom";
+import { useSelectedDocument } from "../../context/DocumentAtom";
 
 interface LabelSelectorProps {
-  sidebarWidth: string;
   activeSpanLabel: AnnotationLabelType | null;
   setActiveLabel: (label: AnnotationLabelType | undefined) => void;
+  /** Width of the sidebar to adjust positioning */
+  sidebarWidth: string;
+  /** Optional array of labels to display. If not provided, labels are loaded from the corpus state */
+  labels?: AnnotationLabelType[];
 }
 
+/**
+ * A beautiful floating label selector that expands on hover to show available labels.
+ * This version preserves the new styling while restoring the legacy data loading
+ * and selection logic.
+ *
+ * @param activeSpanLabel - The currently active label
+ * @param setActiveLabel - Callback to change the active label
+ * @param sidebarWidth - The sidebar width used to offset the selector
+ * @param labels - Optional override for label options; if undefined, the component loads
+ *   labels based on the current document file type from the corpus state.
+ */
 export const LabelSelector: React.FC<LabelSelectorProps> = ({
-  sidebarWidth,
   activeSpanLabel,
   setActiveLabel,
+  sidebarWidth,
+  labels,
 }) => {
   const { width } = useWindowDimensions();
-  const [open, setOpen] = useState(false);
-
   const { selectedDocument } = useSelectedDocument();
-  const { documentType } = useDocumentType();
   const { humanSpanLabels, humanTokenLabels } = useCorpusState();
 
-  const titleCharCount = width >= 1024 ? 64 : width >= 800 ? 36 : 24;
-
-  const filteredLabelChoices = useMemo(() => {
-    // Filter labels based on file type
-    const isTextFile = documentType.startsWith("text/") ?? false;
-    const isPdfFile = documentType === "application/pdf" ?? false;
-
+  /**
+   * Compute the available labels based on the file type of the current document.
+   * For text files, we use humanSpanLabels and for PDFs we use humanTokenLabels.
+   * If an active label exists, filter it out from the choices.
+   */
+  const filteredLabelChoices = useMemo<AnnotationLabelType[]>(() => {
+    const isTextFile: boolean =
+      selectedDocument?.fileType?.startsWith("text/") ?? false;
+    const isPdfFile: boolean = selectedDocument?.fileType === "application/pdf";
     let availableLabels: AnnotationLabelType[] = [];
+
     if (isTextFile) {
       availableLabels = [...humanSpanLabels];
     } else if (isPdfFile) {
       availableLabels = [...humanTokenLabels];
     }
 
-    // Filter out the active label if it exists
     return activeSpanLabel
-      ? availableLabels.filter((obj) => obj.id !== activeSpanLabel.id)
+      ? availableLabels.filter((label) => label.id !== activeSpanLabel.id)
       : availableLabels;
   }, [
     humanSpanLabels,
     humanTokenLabels,
+    selectedDocument?.fileType,
     activeSpanLabel,
-    selectedDocument?.id,
   ]);
 
-  const onSelect = (label: AnnotationLabelType): void => {
-    setActiveLabel(label);
-    setOpen(false);
+  // Use the passed-in labels if provided, otherwise use the computed label choices.
+  const labelOptions: AnnotationLabelType[] =
+    labels && labels.length > 0 ? labels : filteredLabelChoices;
+
+  // Internal state controlling whether the label selector is expanded.
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  /**
+   * Handles mouse entering the component by immediately expanding the label menu.
+   */
+  const handleMouseEnter = (): void => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setIsExpanded(true);
   };
 
-  const handleOpen = () => {
-    setOpen(true);
+  /**
+   * Handles mouse leaving the component by collapsing the label menu after a delay.
+   */
+  const handleMouseLeave = (): void => {
+    timeoutRef.current = setTimeout(() => setIsExpanded(false), 300);
   };
 
-  const handleClose = () => {
-    setOpen(false);
-  };
+  // Make sure any pending timeout is cleared when the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
+  // These effects log changes similar to the legacy implementation.
   useEffect(() => {
     console.log("LabelSelector - activeSpanLabel changed:", activeSpanLabel);
   }, [activeSpanLabel]);
@@ -82,146 +111,191 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
   }, [humanSpanLabels, humanTokenLabels]);
 
   return (
-    <LabelSelectorContainer id="LabelSelectorContainer">
-      <StyledPopup
-        trigger={
-          <LabelSelectorWidgetContainer $sidebarWidth={sidebarWidth}>
-            <LabelSelectorContent>
-              <HeaderSection>
-                <IconWrapper>
-                  <StyledIcon name="ellipsis vertical" />
-                </IconWrapper>
-                <TruncatedText
-                  text={
-                    activeSpanLabel
-                      ? "Text Label To Apply:"
-                      : "Select Text Label to Apply"
-                  }
-                  limit={titleCharCount}
-                />
-              </HeaderSection>
-              <BodySection>
-                {activeSpanLabel ? (
-                  <>
-                    <SpanLabelCard
-                      key={activeSpanLabel.id}
-                      label={activeSpanLabel}
-                    />
-                    <ClearButton
-                      icon
-                      circular
-                      size="tiny"
-                      onClick={(e: { stopPropagation: () => void }) => {
-                        e.stopPropagation();
-                        setActiveLabel(undefined);
-                      }}
-                    >
-                      <Icon name="x" />
-                    </ClearButton>
-                  </>
-                ) : (
-                  <BlankLabelElement key="Blank_LABEL" />
-                )}
-              </BodySection>
-            </LabelSelectorContent>
-          </LabelSelectorWidgetContainer>
-        }
-        on="click"
-        open={open}
-        onClose={handleClose}
-        onOpen={handleOpen}
-        position="top center"
-        flowing
-        hoverable
+    <StyledLabelSelector
+      isExpanded={isExpanded}
+      sidebarWidth={sidebarWidth}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <motion.div
+        className="selector-button"
+        animate={{
+          scale: activeSpanLabel ? 1.05 : 1,
+          boxShadow: activeSpanLabel
+            ? "0 8px 32px rgba(26, 117, 188, 0.15)"
+            : "0 4px 24px rgba(0, 0, 0, 0.08)",
+        }}
       >
-        <PopupContent>
-          <LabelSelectorDialog
-            labels={filteredLabelChoices}
-            onSelect={onSelect}
+        <Tag size={24} />
+        {activeSpanLabel && (
+          <motion.div
+            className="active-indicator"
+            layoutId="activeLabel"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
           />
-        </PopupContent>
-      </StyledPopup>
-    </LabelSelectorContainer>
+        )}
+      </motion.div>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            className="labels-menu"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+          >
+            {activeSpanLabel && (
+              <button
+                className="clear-button"
+                onClick={() => setActiveLabel(undefined)}
+              >
+                Clear Selection
+              </button>
+            )}
+            {labelOptions.map((label) => (
+              <button
+                key={label.id}
+                onClick={() => setActiveLabel(label)}
+                className={activeSpanLabel?.id === label.id ? "active" : ""}
+              >
+                <span
+                  className="color-dot"
+                  style={{ backgroundColor: label.color || "#1a75bc" }}
+                />
+                {label.text}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </StyledLabelSelector>
   );
 };
 
-const LabelSelectorContainer = styled.div`
-  position: relative;
-`;
+interface StyledLabelSelectorProps {
+  isExpanded: boolean;
+  sidebarWidth: string;
+}
 
-const LabelSelectorWidgetContainer = styled.div<{ $sidebarWidth: string }>`
+const StyledLabelSelector = styled.div<StyledLabelSelectorProps>`
   position: fixed;
+  bottom: 2.5rem;
+  right: 1.5rem;
   z-index: 1000;
-  bottom: 2vh;
-  right: 2vw;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  transition: all 0.3s ease;
-  cursor: pointer;
+  transform: translateX(
+    ${(props) =>
+      props.sidebarWidth === "0px" ? "0" : `-${props.sidebarWidth}`}
+  );
+  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
 
-  &:hover {
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-  }
-`;
-
-const LabelSelectorContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-`;
-
-const HeaderSection = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 10px 15px;
-  background-color: #e9ecef;
-  border-bottom: 1px solid #dee2e6;
-`;
-
-const IconWrapper = styled.div`
-  margin-right: 10px;
-`;
-
-const StyledIcon = styled(Icon)`
-  color: #495057;
-  transition: color 0.2s ease;
-
-  &:hover {
-    color: #212529;
-  }
-`;
-
-const BodySection = styled.div`
-  padding: 15px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
-
-const ClearButton = styled(Button)`
-  &.ui.button {
-    padding: 8px;
-    min-width: 32px;
-    height: 32px;
+  .selector-button {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(200, 200, 200, 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+
+    svg {
+      color: #1a75bc;
+      stroke-width: 2.2;
+      transition: all 0.3s;
+    }
+
+    .active-indicator {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 6px;
+      background: #1a75bc;
+      border: 2px solid white;
+    }
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  .labels-menu {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    right: 0;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    border-radius: 14px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 220px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(200, 200, 200, 0.8);
+
+    .clear-button {
+      border: none;
+      background: transparent;
+      padding: 0.5rem;
+      color: #64748b;
+      font-size: 0.813rem;
+      border-bottom: 1px solid rgba(200, 200, 200, 0.3);
+      transition: all 0.2s;
+
+      &:hover {
+        color: #ef4444;
+      }
+    }
+
+    button {
+      border: none;
+      background: transparent;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      position: relative;
+      transition: all 0.2s;
+
+      .color-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 4px;
+        transition: all 0.2s;
+      }
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.03);
+        color: #1e293b;
+
+        .color-dot {
+          transform: scale(1.2);
+        }
+      }
+
+      &.active {
+        color: #1a75bc;
+        font-weight: 600;
+        background: rgba(26, 117, 188, 0.08);
+
+        .color-dot {
+          transform: scale(1.3);
+        }
+      }
+    }
   }
 `;
 
-const PopupContent = styled.div`
-  width: 300px;
-  max-width: 90vw;
-`;
-
-const StyledPopup = styled(Popup)`
-  &.ui.popup {
-    z-index: 2000 !important;
-  }
-`;
+export default LabelSelector;

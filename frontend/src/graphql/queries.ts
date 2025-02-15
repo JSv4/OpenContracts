@@ -1114,6 +1114,7 @@ export const GET_FIELDSETS = gql`
             edges {
               node {
                 id
+                name
                 query
                 matchText
                 outputType

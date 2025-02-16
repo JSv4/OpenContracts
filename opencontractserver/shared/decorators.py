@@ -28,14 +28,25 @@ DELAY_INCREMENT = 300  # 5 minutes
 logger = logging.getLogger(__name__)
 
 
-def doc_analyzer_task(max_retries=None, input_schema: dict | None = None):
+def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> callable:
     """
     Decorator for Celery tasks that analyze documents.
-    Now supports an optional input_schema parameter to be stored
-    for later retrieval and usage.
-    """
 
-    def decorator(func):
+    The wrapped function is expected to return either:
+        1) A 4-element tuple:
+           (List[str], List[OpenContractsAnnotationPythonType], List[Dict[str, Any]], bool)
+           If only four elements are returned, we will set the message to "No Return Message"
+        2) A 5-element tuple:
+           (List[str], List[OpenContractsAnnotationPythonType], List[Dict[str, Any]], bool, str)
+           The final element is the message for inclusion in the Analysis.result_message or Analysis.error_message
+
+    An optional input_schema parameter may be stored for later retrieval.
+
+    :param max_retries: Optional maximum number of retries for the Celery task.
+    :param input_schema: Optional dictionary defining input schema for the decorated task.
+    :return: The decorator function.
+    """
+    def decorator(func: callable) -> callable:
         @shared_task(bind=True, max_retries=max_retries)
         @wraps(func)
         def wrapper(self, *args, **kwargs):
@@ -47,32 +58,34 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None):
 
             if not doc_id:
                 raise ValueError("doc_id is required for doc_analyzer_task")
-
             if not analysis_id:
                 raise ValueError("analysis_id is required for doc_analyzer_task")
 
+            # Attempt to retrieve Document
             try:
                 doc = Document.objects.get(id=doc_id)
             except ObjectDoesNotExist:
                 raise ValueError(f"Document with id {doc_id} does not exist")
 
+            # Attempt to retrieve Corpus if corpus_id is present
             if corpus_id:
                 try:
                     Corpus.objects.get(id=corpus_id)
                 except ObjectDoesNotExist:
-                    logger.warn(f"Corpus with id {corpus_id} does not exist")
+                    logger.warning(f"Corpus with id {corpus_id} does not exist")
                     raise ValueError(f"Corpus with id {corpus_id} does not exist")
 
+            # Attempt to retrieve Analysis if analysis_id is present
+            analysis = None
             if analysis_id:
                 try:
                     analysis = Analysis.objects.get(id=analysis_id)
                     logger.info(f"Link to analysis: {analysis}")
                 except ObjectDoesNotExist:
-                    logger.warn(f"Analysis with id {analysis_id} does not exist")
+                    logger.warning(f"Analysis with id {analysis_id} does not exist")
                     raise ValueError(f"Analysis with id {analysis_id} does not exist")
-            else:
-                analysis = None
 
+            # If doc is locked, retry with back-off
             logger.info(f"Doc {doc_id} backend lock: {doc.backend_lock}")
             if doc.backend_lock:
                 logger.info(f"Doc {doc_id} backend lock is True")
@@ -81,41 +94,27 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None):
                 delay = min(INITIAL_DELAY + (retry_count * DELAY_INCREMENT), MAX_DELAY)
                 logger.info(f"\tNew delay: {delay}")
 
-                # If we've reached MAX_DELAY, STOP.
                 if delay < MAX_DELAY:
-                    # delay = INITIAL_DELAY
-
                     logger.info("Starting retry...")
                     raise self.retry(countdown=delay)
 
             try:
-                # Retrieve necessary file contents
-                # NOTE - I disabled this because there is some pretty significant likelihood that text extracted from
-                # PDF won't fully match our extracted text layer. This is due to differences in white space handling,
-                # OCR, etc., etc. I can see reasons to provide the bytes to the decorated function, but it's going to be
-                # something that introduces ALL kinds of drift. Rather than deal with that absent a really compelling
-                # reasons, going to avoid it for now.
-                # pdf_file_bytes = doc.pdf_file.read() if doc.pdf_file else None
+                # Prepare text extracts
                 pdf_text_extract = (
                     doc.txt_extract_file.read().decode("utf-8")
                     if doc.txt_extract_file
                     else None
                 )
-
                 pdf_pawls_extract = (
                     json.loads(doc.pawls_parse_file.read())
                     if doc.pawls_parse_file
                     else None
                 )
-
-                # Create PdfDataLayer
                 pdf_data_layer = (
-                    build_translation_layer(pdf_pawls_extract)
-                    if pdf_pawls_extract
-                    else []
+                    build_translation_layer(pdf_pawls_extract) if pdf_pawls_extract else []
                 )
 
-                # Call the wrapped function with the retrieved data
+                # Call the wrapped function
                 result = func(
                     pdf_text_extract=pdf_text_extract,
                     pdf_pawls_extract=pdf_pawls_extract,
@@ -123,35 +122,48 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None):
                     **kwargs,
                 )
 
-                # logger.debug(f"Function result: {result}")
-
-                if not isinstance(result, tuple) or len(result) != 4:
+                # Validate return structure: allow 4 or 5 elements
+                if not isinstance(result, tuple):
                     raise ValueError(
-                        "Function must return a tuple of (List[str], List[OpenContractsAnnotationPythonType], "
-                        "List[Dict[str, Any]], bool)"
+                        "Wrapped function must return a tuple of either 4 or 5 elements."
                     )
 
-                doc_annotations, span_label_pairs, metadata, task_pass = result
-
-                if not isinstance(task_pass, bool):
+                if len(result) == 4:
+                    doc_annotations, span_label_pairs, metadata, task_pass = result
+                    message = "No Return Message"
+                elif len(result) == 5:
+                    doc_annotations, span_label_pairs, metadata, task_pass, message = result
+                else:
                     raise ValueError(
-                        "Fourth element of the return value must be true/false. False for failure of some kind "
-                        "(for tests)."
+                        "Function must return a tuple of 4 (without message) or 5 elements (with message)."
                     )
 
-                # Process annotations if task passed
-                if task_pass and analysis:
+                # Update Analysis with the returned message (and clear any previous error) if analysis is available
+                if analysis:
+                    if task_pass:
+                        analysis.error_message = None
+                        analysis.result_message = message
+                    else:
+                        # If the task did not pass, treat the message as an error
+                        analysis.error_message = message
+                        analysis.result_message = None
+                    analysis.save()
 
+                # If task is false, skip further processing
+                if not task_pass:
+                    # Return the final 5-tuple to match the updated spec
+                    return (doc_annotations, span_label_pairs, metadata, task_pass, message)
+
+                # Process annotations if task passed and we have a valid analysis
+                if analysis:
                     logger.info("Doc analyzer task passed... handle outputs.")
-
-                    # Create doc analysis row
                     data_row, _ = DocumentAnalysisRow.objects.get_or_create(
                         document=doc, analysis=analysis, creator=analysis.creator
                     )
                     logger.info(f"Retrieved data row: {data_row}")
                     data_row.save()
 
-                    # Check returned types if passed.
+                    # Validate doc_annotations
                     if not isinstance(doc_annotations, list) or (
                         len(doc_annotations) > 0
                         and not all(isinstance(a, str) for a in doc_annotations)
@@ -160,61 +172,52 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None):
                             "First element of the tuple must be a list of doc labels"
                         )
 
+                    # Validate span_label_pairs
                     if not isinstance(span_label_pairs, list):
                         raise ValueError(
                             "Second element of the tuple must be a list of (TextSpan, str) tuples"
                         )
 
+                    # Validate metadata
                     if not isinstance(metadata, list) or (
                         len(metadata) > 0
-                        and not all(
-                            isinstance(m, dict) and "data" in m for m in metadata
-                        )
+                        and not all(isinstance(m, dict) and "data" in m for m in metadata)
                     ):
                         raise ValueError(
                             "Third element of the tuple must be a list of dictionaries with 'data' key"
                         )
 
                     resulting_annotations = []
-
                     with transaction.atomic():
                         for span_label_pair in span_label_pairs:
-
                             logger.debug(f"Look at span_label_pair: {span_label_pair}")
-
                             if not (
                                 isinstance(span_label_pair, tuple)
                                 and len(span_label_pair) == 2
-                                and is_dict_instance_of_typed_dict(
-                                    span_label_pair[0], TextSpan
-                                )
+                                and is_dict_instance_of_typed_dict(span_label_pair[0], TextSpan)
                                 and isinstance(span_label_pair[1], str)
                             ):
                                 raise ValueError(
-                                    "Second element of the tuple must be a list of (TextSpan, str) tuples"
+                                    "Second element must be a list of (TextSpan, str) tuples"
                                 )
 
-                            # Convert to appropriate form of annotation depending on the document type...
-                            # FOR application/pdf... we want token annotations
+                            # Convert to the appropriate form of annotation
                             if doc.file_type in ["application/pdf"]:
-                                # Convert (TextSpan, str) pairs to OpenContractsAnnotationPythonType
-                                logger.info(f"Create Annotation Linked to {corpus_id}")
-                                span, label = span_label_pair
+                                # PDF / token-based annotation
+                                span, label_text = span_label_pair
                                 annotation_data = pdf_data_layer.create_opencontract_annotation_from_span(
-                                    {"span": span, "annotation_label": label}
+                                    {"span": span, "annotation_label": label_text}
                                 )
-                                label, _ = AnnotationLabel.objects.get_or_create(
+                                label_obj, _ = AnnotationLabel.objects.get_or_create(
                                     text=annotation_data["annotationLabel"],
                                     label_type=LabelType.TOKEN_LABEL,
                                     creator=analysis.creator,
                                     analyzer=analysis.analyzer,
                                 )
-
-                                # Harder to filter these to ensure no duplicates...
                                 annot = Annotation(
                                     document=doc,
                                     analysis=analysis,
-                                    annotation_label=label,
+                                    annotation_label=label_obj,
                                     page=annotation_data["page"],
                                     raw_text=annotation_data["rawText"],
                                     json=annotation_data["annotation_json"],
@@ -225,26 +228,21 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None):
                                 annot.save()
                                 resulting_annotations.append(annot)
 
-                            # FOR application/txt... we want span-based annotations
                             elif doc.file_type in ["application/txt", "text/plain"]:
-                                logger.info(f"Create Annotation Linked to {corpus_id}")
-                                span, label = span_label_pair
-                                label, _ = AnnotationLabel.objects.get_or_create(
-                                    text=label,
+                                # Plain text / span-based annotation
+                                span, label_text = span_label_pair
+                                label_obj, _ = AnnotationLabel.objects.get_or_create(
+                                    text=label_text,
                                     label_type=LabelType.SPAN_LABEL,
                                     creator=analysis.creator,
                                     analyzer=analysis.analyzer,
                                 )
-
-                                # Harder to filter these to ensure no duplicates...
                                 annot = Annotation(
                                     document=doc,
                                     analysis=analysis,
-                                    annotation_label=label,
+                                    annotation_label=label_obj,
                                     page=1,
-                                    raw_text=pdf_text_extract[
-                                        span["start"] : span["end"]
-                                    ],
+                                    raw_text=pdf_text_extract[span["start"] : span["end"]],
                                     annotation_type=LabelType.SPAN_LABEL,
                                     json={"start": span["start"], "end": span["end"]},
                                     creator=analysis.creator,
@@ -252,26 +250,22 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None):
                                 )
                                 annot.save()
                                 resulting_annotations.append(annot)
-
                             else:
-                                raise ValueError(
-                                    f"Unexpected file type: {doc.file_type}"
-                                )
+                                raise ValueError(f"Unexpected file type: {doc.file_type}")
 
+                        # Now handle doc-level labels
                         for doc_label in doc_annotations:
                             logger.info(f"Creating doc label annotation: {doc_label}")
-                            label, _ = AnnotationLabel.objects.get_or_create(
+                            label_obj, _ = AnnotationLabel.objects.get_or_create(
                                 text=doc_label,
                                 label_type=LabelType.DOC_TYPE_LABEL,
                                 creator=analysis.creator,
                                 analyzer=analysis.analyzer,
                             )
-                            logger.info(f"Created/found label: {label}")
-
                             annot = Annotation(
                                 document=doc,
                                 analysis=analysis,
-                                annotation_label=label,
+                                annotation_label=label_obj,
                                 page=1,
                                 raw_text="",
                                 json={},
@@ -279,31 +273,33 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None):
                                 creator=analysis.creator,
                                 **({"corpus_id": corpus_id} if corpus_id else {}),
                             )
-                            logger.info(f"Created annotation object: {annot}")
                             annot.save()
-                            logger.info(f"Saved annotation: {annot.id}")
                             resulting_annotations.append(annot)
 
-                    # Link resulting annotations
-                    transaction.on_commit(
-                        lambda: data_row.annotations.add(*resulting_annotations)
-                    )
+                        transaction.on_commit(
+                            lambda: data_row.annotations.add(*resulting_annotations)
+                        )
 
-                return result  # Return the result from the wrapped function
+                # Return the final 5-tuple to keep results uniform
+                return (doc_annotations, span_label_pairs, metadata, task_pass, message)
 
             except ValueError:
-                # Re-raise ValueError instead of catching it as we're throwing these intentionally when return values
-                # are off...
+                # Re-raise ValueError as is, since they're raised intentionally for invalid return values
                 raise
 
             except Exception as e:
                 logger.info(f"Error in doc_analyzer_task for doc_id {doc_id}: {str(e)}")
-                return [], [], [{"data": {"error": str(e)}}], False
+                if analysis:
+                    analysis.error_message = str(e)
+                    analysis.result_message = None
+                    analysis.save()
 
-        # Add a custom attribute to identify doc_analyzer_tasks
+                # Return a 5-element tuple (with the error in the last position)
+                return [], [], [{"data": {"error": str(e)}}], False, str(e)
+
+        # Identify tasks decorated by this wrapper
         wrapper.is_doc_analyzer_task = True
-
-        # Attach the input schema to the function object so we can retrieve later
+        # Attach the input schema for runtime retrieval
         wrapper._oc_doc_analyzer_input_schema = input_schema
 
         return wrapper

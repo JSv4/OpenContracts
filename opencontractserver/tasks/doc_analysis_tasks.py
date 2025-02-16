@@ -17,7 +17,17 @@ logger = logging.getLogger(__name__)
 @doc_analyzer_task()
 def contract_not_contract(*args, pdf_text_extract, **kawrgs):
     """
-    Uses marvin and gpt 4o to triage contracts vs not contracts.
+    # Contract Classification
+    
+    Uses Marvin and GPT-4 to triage documents into contract vs non-contract categories.
+    
+    ## Process
+    - Analyzes first and last 1000 characters of document text
+    - Classifies into one of:
+      - CONTRACT
+      - CONTRACT TEMPLATE  
+      - PRESENTATION
+      - OTHER
     """
     print("Contract not contract")
     category = marvin.classify(
@@ -55,15 +65,50 @@ def contract_not_contract(*args, pdf_text_extract, **kawrgs):
 )
 def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
     """
-    Use SALI tags plus GLINER plus SPACY sentence splitter to tag legal entities.
+    # Legal Entity Tagger
+    
+    Uses SALI tags, GLiNER, and spaCy sentence splitter to identify and tag legal entities in text.
+    
+    ## Features
+    - Leverages pre-trained GLiNER model for entity recognition
+    - Supports custom label sets via input schema
+    - Default support for 39+ legal entity types including:
+      - Corporations (B, C, S Corps)
+      - Partnerships
+      - LLCs
+      - Government entities
+      - Committees
+      - And more
+    
+    ## Process
+    1. Splits text into sentences using spaCy
+    2. Applies GLiNER model with confidence threshold of 0.7
+    3. Maps entities to text spans with precise character offsets
+    
+    ## Parameters
+    - labels: Optional list of custom entity types to detect. If not provided, uses default legal entity types.
+    
+    ## Returns
+    Tagged entities with:
+    - Entity text
+    - Entity type
+    - Character offsets
+    - Confidence score
     """
+    import logging
     import spacy
     from gliner import GLiNER
 
-    print(f"HOHOHO - 🎄❄️: {kawrgs}")
+    logger = logging.getLogger(__name__)
+    logger.info("Starting legal entity tagger task")
 
+    logger.info(f"Task parameters: {kawrgs}")
+
+    logger.info("Loading spaCy model")
     nlp = spacy.load("en_core_web_lg")
+    logger.info("Successfully loaded spaCy model")
 
+    logger.info("Loading GLiNER model")
     model = GLiNER.from_pretrained("urchade/gliner_base")
     model.set_sampling_params(
         max_types=25,  # maximum number of entity types during training
@@ -72,8 +117,10 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
         max_neg_type_ratio=1,  # ratio of positive/negative types, 1 mean 50%/50%, 2 mean 33%/66%, 3 mean 25%/75% ...
         max_len=2500,  # maximum sentence length
     )
+    logger.info("Successfully loaded and configured GLiNER model")
 
-    labels = [
+    # Use provided labels if available, otherwise fall back to defaults
+    default_labels = [
         "Legal Entity",
         "Entity",
         "Business Trust",
@@ -115,30 +162,42 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
         "Joint Defense Group",
         "Joint Defense Group Member",
     ]
+    
+    labels_to_use = kawrgs.get("labels", default_labels)
+    logger.info(f"Using label set with {len(labels_to_use)} labels")
 
+    logger.info("Splitting text into sentences")
     sentences = [i for i in nlp(pdf_text_extract).sents]
+    logger.info(f"Split text into {len(sentences)} sentences")
+
     results = []
 
     for index, sent in enumerate(sentences):
-        ents = model.predict_entities(sent.text, labels)
+        logger.debug(f"Processing sentence {index + 1}/{len(sentences)}")
+        ents = model.predict_entities(sent.text, labels_to_use)
+        logger.debug(f"Found {len(ents)} potential entities in sentence {index + 1}")
+        
         for e in ents:
             # Rough heuristic - drop anything with score of less than .7. Anecdotally, anything much lower is garbage.
             if e["score"] > 0.7:
-                # print(f"Found Entity with suitable score: {e}")
+                logger.debug(f"Found high-confidence entity: {e['text']} ({e['label']}) - score: {e['score']}")
                 span = TextSpan(
                     id=str(index),
                     start=sent.start_char + e["start"],
                     end=sent.start_char + e["end"],
                     text=e["text"],
                 )
-                # print(f"Mapped to span: {span}")
                 results.append(
                     (
                         span,
                         str(e["label"]),
                     )
                 )
-                # print(f"Expected text: {pdf_text_extract[span['start']:span['end']]}")
+            else:
+                logger.debug(f"Skipping low-confidence entity: {e['text']} ({e['label']}) - score: {e['score']}")
+
+    logger.info(f"Found {len(results)} total entities above confidence threshold")
+    logger.info("Completed legal entity tagger task")
 
     return [], results, [], True
 
@@ -146,7 +205,24 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
 @doc_analyzer_task()
 def proper_name_tagger(*args, pdf_text_extract, **kawrgs):
     """
-    Use Spacy to tag named entities for organizations, geopolitical entities, people and products.
+    # Proper Name Entity Tagger
+    
+    Uses spaCy to identify and tag named entities in text.
+    
+    ## Entity Types
+    - Organizations (ORG)
+    - Geopolitical Entities (GPE) 
+    - People (PERSON)
+    - Products (PRODUCT)
+    
+    ## Process
+    1. Applies spaCy's small English model
+    2. Extracts entities of specified types
+    3. Maps to text spans with character offsets
+    4. Returns top 10 most relevant entities
+    
+    ## Notes
+    Currently limited to 10 entities to manage annotation density. Future improvements planned for page-aware annotations.
     """
 
     import spacy
@@ -183,7 +259,28 @@ def proper_name_tagger(*args, pdf_text_extract, **kawrgs):
 @doc_analyzer_task()
 def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
     """
-    Build a knowledge base from the document.
+    # Contract Knowledge Base Builder
+    
+    Analyzes contract documents to build a searchable knowledge base with summaries and notes.
+    
+    ## Features
+    - Generates multiple analysis perspectives:
+      - Detailed contract summary
+      - Referenced documents analysis  
+      - Quick reference guide
+      - Searchable description
+    - Creates embedded vectors for semantic search
+    - Stores results as document metadata and notes
+    
+    ## Process
+    1. Analyzes full contract text using GPT-4
+    2. Generates multiple summary formats
+    3. Creates embeddings for search
+    4. Saves as document attachments and notes
+    
+    ## Requirements
+    - corpus_id: Required for note creation
+    - doc_id: Required for document updates
     """
 
     from django.core.files.base import ContentFile
@@ -210,12 +307,16 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
 
     def get_markdown_response(system_prompt: str, user_prompt: str) -> str | None:
         """
-        Creates a conversation with given system and user prompts and returns
-        the LLM's response in Markdown format.
-
-        :param system_prompt: The content for the system role.
-        :param user_prompt: The content for the user role.
-        :return: The assistant's response as a string.
+        # Markdown Response Generator
+        
+        Creates a conversation with system and user prompts and returns formatted response.
+        
+        ## Parameters
+        - system_prompt: Instructions for the AI system
+        - user_prompt: User's specific request
+        
+        ## Returns
+        Markdown formatted response from the AI
         """
         messages: list[ChatMessage] = [
             ChatMessage(role="system", content=system_prompt),
@@ -298,11 +399,23 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
 
     def create_searchable_summary(full_summary: str) -> str:
         """
-        Creates a concise, searchable summary from the full markdown summary,
-        optimized for document discovery.
-
-        :param full_summary: The detailed markdown summary
-        :return: A 2-3 sentence searchable summary
+        # Searchable Summary Generator
+        
+        Creates a concise, searchable summary optimized for document discovery.
+        
+        ## Features
+        - Condenses full summary to 2-3 sentences
+        - Focuses on unique identifiers
+        - Includes key details like:
+          - Party names
+          - Dates
+          - Specific context
+        
+        ## Parameters
+        - full_summary: Detailed markdown summary
+        
+        ## Returns
+        Concise, searchable summary
         """
         system_prompt = (
             "You are a legal knowledge management specialist. Your task is to create "
@@ -388,21 +501,35 @@ def agentic_highlighter_claude(
     **kwargs: Any,
 ) -> tuple[list[str], list[tuple[TextSpan, str]], list[dict], bool]:
     """
-    An alternative to the existing agentic_highlighter that uses Anthropic Claude's
-    citation API. It will accept the PDF text and user instructions, then chunk
-    the doc if necessary, send each chunk to Claude with citations enabled, and
-    collect relevant excerpts from each chunk. Returns matched text as TextSpans.
-
-    :param pdf_text_extract: The full text of the PDF document to be analyzed.
-    :param pdf_pawls_extract: Unused in this version, but included for signature consistency.
-    :param kwargs: A dictionary allowing additional arguments, including:
-        - instructions: The highlighting instructions.
-        - doc_id: The ID of the Document object in the database.
-    :return: A tuple containing:
-        - List[str]: Unused in this version (empty list).
-        - List[Tuple[TextSpan, str]]: The list of matched text spans and their label.
-        - List[dict]: A list of dictionaries containing any errors or debug info.
-        - bool: Success status of the operation.
+    # Agentic Document Highlighter (Claude)
+    
+    Uses Anthropic's Claude API to intelligently highlight document sections based on user instructions.
+    
+    ## Features
+    - Processes large documents in chunks
+    - Uses Claude's citation API for precise text location
+    - Handles documents with or without explicit citations
+    - Maintains character-level accuracy for highlights
+    
+    ## Parameters
+    - pdf_text_extract: Full document text
+    - pdf_pawls_extract: Optional PDF structure data
+    - kwargs:
+      - instructions: User highlighting instructions
+      - doc_id: Document identifier
+    
+    ## Process
+    1. Chunks document if needed
+    2. Sends each chunk to Claude
+    3. Processes citations or falls back to text matching
+    4. Maps matches to precise character spans
+    
+    ## Returns
+    Tuple containing:
+    - List[str]: Empty list (reserved)
+    - List[Tuple[TextSpan, str]]: Matched spans with labels
+    - List[dict]: Error/debug information
+    - bool: Success status
     """
 
     import logging
@@ -444,11 +571,16 @@ def agentic_highlighter_claude(
 
     def chunk_text(text: str, chunk_size: int = MAX_CHARS_PER_CHUNK) -> list[str]:
         """
-        Splits text into sized chunks, ignoring word boundaries in a naive manner.
-
-        :param text: The full text to be chunked.
-        :param chunk_size: Maximum characters per chunk.
-        :return: A list of chunked text strings.
+        # Text Chunker
+        
+        Splits text into sized chunks for processing.
+        
+        ## Parameters
+        - text: Full text to chunk
+        - chunk_size: Maximum characters per chunk
+        
+        ## Returns
+        List of text chunks
         """
         if len(text) <= chunk_size:
             return [text]
@@ -613,3 +745,247 @@ def agentic_highlighter_claude(
     logger.info("Completed agentic_highlighter_claude task")
 
     return [], all_spans, error_responses, success
+
+@doc_analyzer_task()
+def pii_highlighter_claude(
+    *args: Any,
+    pdf_text_extract: str | None = None,
+    pdf_pawls_extract: dict | None = None,
+    **kwargs: Any,
+) -> tuple[list[str], list[tuple[TextSpan, str]], list[dict], bool]:
+    """
+    # PII Highlighter (Citation-Aware)
+
+    Analyzes the provided document text for personally identifiable information (PII), using Anthropic's
+    Claude API with citation-enabled responses. This closely mirrors the citation-parsing logic used by
+    `agentic_highlighter_claude` but focuses specifically on identifying PII.
+
+    ## Features
+    - Automatically splits the document into manageable chunks (up to ~80k characters each).
+    - Sends each chunk to Anthropic's Claude model with a PII-focused prompt.
+    - Uses Claude's citation feature to retrieve precise text offsets for each identified snippet of PII.
+    - Falls back to naive substring matching if Claude's response has no citation data.
+    - Returns:
+      1. A list of textual "analysis" responses from Claude (one per chunk).
+      2. A list of (TextSpan, str) tuples mapping PII text sections to a "PII" label.
+      3. A list of error/debug dictionaries (if any).
+      4. A success boolean.
+
+    ## Parameters
+    - pdf_text_extract (str): Full document text to analyze.
+    - pdf_pawls_extract (dict): Optional PDF structure data (currently unused).
+    - kwargs (dict): Additional arguments like doc_id, etc.
+
+    ## Returns
+    Tuple containing:
+    1. A list of string responses with analysis (len = number of chunks).
+    2. A list of (TextSpan, str) pairs for PII text spans.
+    3. A list of debug/error info.
+    4. A bool indicating success.
+    """
+
+    import logging
+    import os
+    from typing import Any
+    import anthropic
+    from django.conf import settings
+
+    from opencontractserver.types.dicts import TextSpan
+
+    logger = logging.getLogger(__name__)
+    logger.info("Starting updated pii_highlighter_claude task with citation handling")
+
+    doc_id = kwargs.get("doc_id")
+    if doc_id:
+        logger.info(f"Processing doc_id: {doc_id}")
+
+    # Early return if no text provided
+    if not pdf_text_extract:
+        msg = "No pdf_text_extract provided; cannot process PII."
+        logger.error(msg)
+        return [], [], [{"data": {"error": msg}}], False
+
+    # Configure Anthropic
+    analyzer_kwargs = getattr(settings, "ANALYZER_KWARGS", {})
+    config_key = "opencontractserver.tasks.doc_analysis_tasks.agentic_highlighter_claude"
+    model_params = analyzer_kwargs.get(config_key, {})
+    anthropic_api_key = (
+        model_params.get("ANTHROPIC_API_KEY", None)
+        or os.environ.get("ANTHROPIC_API_KEY", None)
+    )
+
+    if not anthropic_api_key:
+        msg = "Anthropic API key not found."
+        logger.error(msg)
+        return [], [], [{"data": {"error": msg}}], False
+
+    client = anthropic.Anthropic(api_key=anthropic_api_key)
+
+    # Fixed prompt describing the PII identification task
+    PII_PROMPT = (
+        "You are tasked with analyzing a block of text for the presence of personally "
+        "identifiable information (PII). Your goal is to perform a thorough examination "
+        "to identify any fact patterns or specific data points that could be considered PII. "
+        "This includes, but is not limited to:\n\n"
+        "- Full Names (first name, last name, initials)\n"
+        "- Addresses (street addresses, city names, postal codes)\n"
+        "- Contact Information (phone numbers, email addresses, fax numbers)\n"
+        "- Identification Numbers (Social Security numbers, driver's license numbers, passport numbers)\n"
+        "- Financial Details (bank account numbers, credit card numbers)\n"
+        "- Dates of Birth or Age\n"
+        "- Any other data that could uniquely identify an individual either directly or indirectly.\n\n"
+        "Instructions:\n"
+        "1. Examine the text carefully.\n"
+        "2. Identify and categorize any PII elements.\n"
+        "3. Provide context or surrounding text for each identified element.\n"
+        "4. Assess indirect identifiers.\n"
+        "5. Summarize your findings in a structured format. If no PII is found, explicitly state that.\n"
+    )
+
+    MAX_CHARS_PER_CHUNK = 80000
+
+    def chunk_text(text: str, chunk_size: int) -> list[str]:
+        """
+        Splits the given text into a list of chunks, each up to `chunk_size` characters.
+        """
+        if len(text) <= chunk_size:
+            return [text]
+
+        start_idx = 0
+        chunks = []
+        while start_idx < len(text):
+            end_idx = min(start_idx + chunk_size, len(text))
+            chunks.append(text[start_idx:end_idx])
+            start_idx = end_idx
+        return chunks
+
+    doc_chunks = chunk_text(pdf_text_extract, MAX_CHARS_PER_CHUNK)
+    logger.info(f"Document split into {len(doc_chunks)} chunk(s).")
+
+    chunk_analysis: list[str] = []
+    all_spans: list[tuple[TextSpan, str]] = []
+    error_responses: list[dict] = []
+    offset_so_far = 0  # Tracks offset from the start of the entire document
+
+    for chunk_index, chunk_str in enumerate(doc_chunks):
+        logger.info(f"Processing chunk {chunk_index+1}/{len(doc_chunks)}.")
+
+        # Build a doc object for citation-enabled analysis
+        document_for_claude = {
+            "type": "document",
+            "source": {
+                "type": "text",
+                "media_type": "text/plain",
+                "data": chunk_str,
+            },
+            "title": f"Chunk-{chunk_index}",
+            "citations": {"enabled": True},
+        }
+        request_payload = [
+            document_for_claude,
+            {
+                "type": "text",
+                "text": (
+                    "Please identify any PII in the provided text above. "
+                    "Use citations to pinpoint the relevant substrings. "
+                    "If no PII is found, please state that explicitly."
+                ),
+            },
+        ]
+
+        try:
+            # Send the request
+            response = client.messages.create(
+                model="claude-3-5-sonnet-latest",
+                temperature=0.0,
+                max_tokens=2048,
+                system=PII_PROMPT,  # Overall instructions
+                messages=[
+                    {"role": "user", "content": request_payload},
+                ],
+            )
+        except Exception as exc:
+            logger.exception(f"Error invoking Anthropic for chunk {chunk_index}: {exc}")
+            error_responses.append({"error": str(exc), "chunk": chunk_index})
+            # Append an error message to the chunk analysis (optional)
+            chunk_analysis.append(f"Error for chunk {chunk_index+1}: {str(exc)}")
+            offset_so_far += len(chunk_str)
+            continue
+
+        logger.info(f"Response: {response}")
+
+        # Process the response
+        if not response or not response.content:
+            logger.warning(f"No content in response for chunk {chunk_index+1}")
+            chunk_analysis.append("No response content.")
+            offset_so_far += len(chunk_str)
+            continue
+
+        # We'll build a textual summary for each chunk from the returned messages
+        chunk_collected_text = []
+
+        # Check each message in the response
+        for content_msg in response.content:
+            # We only care about "text" blocks
+            if content_msg.type == "text":
+                snippet_text = content_msg.text.strip()
+                chunk_collected_text.append(snippet_text)
+
+                # Attempt to retrieve any citations for more precise offsets
+                found_citations = getattr(content_msg, "citations", [])
+                if not found_citations:
+                    # If Claude provided no citations, do a naive substring match
+                    # for the entire snippet in the chunk
+                    if snippet_text:
+                        start_search = 0
+                        while True:
+                            idx = chunk_str.find(snippet_text, start_search)
+                            if idx == -1:
+                                break
+                            # Build text span
+                            span = TextSpan(
+                                id=f"chunk_{chunk_index}_span_{len(all_spans)}",
+                                start=offset_so_far + idx,
+                                end=offset_so_far + idx + len(snippet_text),
+                                text=snippet_text,
+                            )
+                            all_spans.append((span, "PII"))
+                            start_search = idx + len(snippet_text)
+                else:
+                    # If Claude provided citations, we use them to localize each snippet
+                    for citation_obj in found_citations:
+                        cited_substring = citation_obj.cited_text.strip()
+                        if not cited_substring:
+                            continue
+
+                        # Find all occurrences of the cited substring
+                        start_search = 0
+                        while True:
+                            idx = chunk_str.find(cited_substring, start_search)
+                            if idx == -1:
+                                break
+                            span = TextSpan(
+                                id=f"chunk_{chunk_index}_span_{len(all_spans)}",
+                                start=offset_so_far + idx,
+                                end=offset_so_far + idx + len(cited_substring),
+                                text=cited_substring,
+                            )
+                            all_spans.append((span, "PII"))
+                            start_search = idx + len(cited_substring)
+
+        # Combine and store the chunk-level textual analysis
+        final_chunk_text = "\n\n".join(chunk_collected_text) if chunk_collected_text else ""
+        chunk_analysis.append(final_chunk_text or "No response text provided.")
+        offset_so_far += len(chunk_str)
+
+    logger.info(f"Completed PII analysis with citation extraction.")
+    logger.info(f"Total spans found: {len(all_spans)}")
+    
+    for span in all_spans:
+        logger.info(f"Span: {span}")
+        
+    if error_responses:
+        logger.info(f"Errors encountered: {error_responses}")
+
+    # If partial success (some chunk calls may have failed but others succeeded), we still return True
+    return [], all_spans, error_responses, True, " ".join(chunk_analysis)

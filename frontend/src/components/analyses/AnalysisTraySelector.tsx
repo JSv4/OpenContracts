@@ -1,6 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import Fuse from "fuse.js";
-import { Form, Segment } from "semantic-ui-react";
+import { Form, Segment, Button } from "semantic-ui-react";
 import { AnalysisType } from "../../types/graphql-api";
 import styled from "styled-components";
 import {
@@ -14,6 +20,8 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -23,6 +31,14 @@ import {
   useAnalysisManager,
   useAnalysisSelection,
 } from "../annotator/hooks/AnalysisHooks";
+import { usePdfAnnotations } from "../annotator/hooks/AnnotationHooks";
+
+/**
+ * Import the HighlightItem used in SingleDocumentExtractResults.
+ * Adjust the import path to wherever HighlightItem is located in your project.
+ */
+import { HighlightItem } from "../annotator/sidebar/HighlightItem";
+import { AnnotationList } from "../annotator/display/components/AnnotationList";
 
 /**
  * Props for AnalysisTraySelector
@@ -199,6 +215,22 @@ const AnalysisCard = styled.div<{ $selected?: boolean }>`
 
   &:active {
     transform: translateY(0);
+  }
+
+  .annotations-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid
+      ${(props) => (props.$selected ? "rgba(74, 144, 226, 0.2)" : "#e2e8f0")};
+  }
+
+  .annotations-container {
+    margin-top: 0.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
   }
 `;
 
@@ -463,9 +495,8 @@ const calculateDuration = (start: string, end: string): string => {
 };
 
 /**
- * A vertical tray selector for analyses.
- *
- * It supports fuzzy search and displays filtered analyses.
+ * A vertical tray selector for analyses, which now also displays
+ * annotations for each analysis in a style similar to SingleDocumentExtractResults.
  */
 const AnalysisTraySelector: React.FC<AnalysisTraySelectorProps> = ({
   read_only,
@@ -475,8 +506,23 @@ const AnalysisTraySelector: React.FC<AnalysisTraySelectorProps> = ({
   const { selectedCorpus } = useCorpusState();
   const { selectedAnalysis } = useAnalysisSelection();
   const { onSelectAnalysis } = useAnalysisManager();
+  const { pdfAnnotations } = usePdfAnnotations();
 
   const [searchTerm, setSearchTerm] = useState<string>("");
+  /**
+   * Maintain open/closed state of annotation visibility for each analysis.
+   * Keyed by Analysis ID.
+   */
+  const [annotationVisibility, setAnnotationVisibility] = useState<{
+    [analysisId: string]: boolean;
+  }>({});
+
+  const toggleAnnotationsVisibility = (analysisId: string) => {
+    setAnnotationVisibility((prev) => ({
+      ...prev,
+      [analysisId]: !prev[analysisId],
+    }));
+  };
 
   // Fuse configuration for fuzzy searching the analyses.
   const fuseOptions = useMemo(
@@ -537,104 +583,139 @@ const AnalysisTraySelector: React.FC<AnalysisTraySelectorProps> = ({
             </p>
           </NoAnalysesMessage>
         ) : (
-          filteredItems.map((item) => (
-            <AnalysisCard
-              key={item.id}
-              $selected={Boolean(
-                selectedAnalysis && item.id === selectedAnalysis.id
-              )}
-              onClick={() =>
-                onSelectAnalysis(
-                  selectedAnalysis && item.id === selectedAnalysis.id
-                    ? null
-                    : item
-                )
-              }
-            >
-              <AnalysisHeader
-                $selected={Boolean(
-                  selectedAnalysis && item.id === selectedAnalysis.id
-                )}
+          filteredItems.map((item) => {
+            const isSelected = Boolean(
+              selectedAnalysis && item.id === selectedAnalysis.id
+            );
+            const itemId = item.id;
+
+            // Get the annotations from the store that match this analysis (assuming .analysisId is a valid field)
+            const relevantAnnotations = pdfAnnotations.annotations.filter(
+              (ann) => ann.id === item.id
+            );
+
+            const isVisible = annotationVisibility[itemId];
+
+            return (
+              <AnalysisCard
+                key={itemId}
+                $selected={isSelected}
+                onClick={(e) => {
+                  // Cast e.target as HTMLElement to use closest()
+                  if (
+                    (e.target as HTMLElement).closest(".annotations-container")
+                  ) {
+                    e.stopPropagation();
+                    return;
+                  }
+                  // Don't trigger if clicking the show/hide button
+                  if ((e.target as HTMLElement).closest("button")) {
+                    return;
+                  }
+                  onSelectAnalysis(isSelected ? null : item);
+                }}
               >
-                <AnalysisTitle
-                  $selected={Boolean(
-                    selectedAnalysis && item.id === selectedAnalysis.id
-                  )}
-                >
-                  <div className="icon-wrapper">
-                    <ChartNetwork size={18} />
-                  </div>
-                  <div className="text">
-                    <h4>{item.analyzer.id || "Untitled Analysis"}</h4>
-                    <div className="id">{item.id}</div>
-                  </div>
-                </AnalysisTitle>
-                <MetadataBadges>
-                  <Badge $variant="primary">
-                    <Tag size={14} />
-                    {item.fullAnnotationList?.reduce(
-                      (acc: string[], curr) =>
-                        curr.annotationLabel?.text
-                          ? [...new Set([...acc, curr.annotationLabel.text])]
-                          : acc,
-                      []
-                    ).length || 0}{" "}
-                    Labels
-                  </Badge>
-                  <Badge>
-                    <Edit3 size={14} />
-                    {item.annotations?.totalCount || 0} Annotations
-                  </Badge>
-                  <Badge>
-                    <BarChart3 size={14} />
-                    Analysis
-                  </Badge>
-                </MetadataBadges>
-              </AnalysisHeader>
-              <div className="timestamps">
-                <div className="timestamp-row">
-                  <div className="label">
-                    <PlayCircle />
-                    Started
-                  </div>
-                  <div className="value">
-                    {formatTimestamp(item.analysisStarted)}
-                  </div>
-                </div>
-                <div className="timestamp-row">
-                  <div className="label">
-                    <CheckCircle />
-                    Completed
-                  </div>
-                  <div className="value">
-                    {formatTimestamp(item.analysisCompleted)}
-                  </div>
-                </div>
-                {item.analysisStarted && item.analysisCompleted && (
+                <AnalysisHeader $selected={isSelected}>
+                  <AnalysisTitle $selected={isSelected}>
+                    <div className="icon-wrapper">
+                      <ChartNetwork size={18} />
+                    </div>
+                    <div className="text">
+                      <h4>{item.analyzer.id || "Untitled Analysis"}</h4>
+                      <div className="id">{itemId}</div>
+                    </div>
+                  </AnalysisTitle>
+                  <MetadataBadges>
+                    <Badge $variant="primary">
+                      <Tag size={14} />
+                      {item.fullAnnotationList?.reduce(
+                        (acc: string[], curr) =>
+                          curr.annotationLabel?.text
+                            ? [...new Set([...acc, curr.annotationLabel.text])]
+                            : acc,
+                        []
+                      ).length || 0}{" "}
+                      Labels
+                    </Badge>
+                    <Badge>
+                      <Edit3 size={14} />
+                      {item.annotations?.totalCount || 0} Annotations
+                    </Badge>
+                    <Badge>
+                      <BarChart3 size={14} />
+                      Analysis
+                    </Badge>
+                  </MetadataBadges>
+                </AnalysisHeader>
+                <div className="timestamps">
                   <div className="timestamp-row">
                     <div className="label">
-                      <Timer />
-                      Duration
+                      <PlayCircle />
+                      Started
                     </div>
                     <div className="value">
-                      {calculateDuration(
-                        item.analysisStarted,
-                        item.analysisCompleted
-                      )}
+                      {formatTimestamp(item.analysisStarted)}
                     </div>
                   </div>
-                )}
-              </div>
-              {item.analyzer.description && (
-                <DescriptionExpander
-                  description={item.analyzer.description}
-                  selected={Boolean(
-                    selectedAnalysis && item.id === selectedAnalysis.id
+                  <div className="timestamp-row">
+                    <div className="label">
+                      <CheckCircle />
+                      Completed
+                    </div>
+                    <div className="value">
+                      {formatTimestamp(item.analysisCompleted)}
+                    </div>
+                  </div>
+                  {item.analysisStarted && item.analysisCompleted && (
+                    <div className="timestamp-row">
+                      <div className="label">
+                        <Timer />
+                        Duration
+                      </div>
+                      <div className="value">
+                        {calculateDuration(
+                          item.analysisStarted,
+                          item.analysisCompleted
+                        )}
+                      </div>
+                    </div>
                   )}
-                />
-              )}
-            </AnalysisCard>
-          ))
+                </div>
+                {item.analyzer.description && (
+                  <DescriptionExpander
+                    description={item.analyzer.description}
+                    selected={isSelected}
+                  />
+                )}
+                <div className="annotations-section">
+                  <Button
+                    size="tiny"
+                    icon
+                    labelPosition="left"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleAnnotationsVisibility(itemId);
+                    }}
+                  >
+                    {annotationVisibility[itemId] ? (
+                      <EyeOff size={14} />
+                    ) : (
+                      <Eye size={14} />
+                    )}
+                    {annotationVisibility[itemId]
+                      ? "Hide Annotations"
+                      : "Show Annotations"}
+                  </Button>
+
+                  {annotationVisibility[itemId] && (
+                    <div className="annotations-container">
+                      <AnnotationList read_only={false} />
+                    </div>
+                  )}
+                </div>
+              </AnalysisCard>
+            );
+          })
         )}
       </AnalysisListSegment>
     </TrayContainer>

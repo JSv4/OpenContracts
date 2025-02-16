@@ -99,10 +99,9 @@ import { FullScreenModal, SourceIndicator } from "./LayoutComponents";
 import { ChatTray } from "./right_tray/ChatTray";
 import { SafeMarkdown } from "../markdown/SafeMarkdown";
 import { NewChatFloatingButton } from "./ChatContainers";
-// import { showSelectCorpusAnalyzerOrFieldsetModal } from "../../../graphql/cache";
 import { SelectDocumentAnalyzerModal } from "./SelectDocumentAnalyzerModal";
 import { SelectDocumentFieldsetModal } from "./SelectDocumentFieldsetModal";
-// TODO - run field set modal
+import { useAnnotationSelection } from "../../annotator/hooks/useAnnotationSelection";
 
 const pdfjsLib = require("pdfjs-dist");
 
@@ -179,7 +178,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [activeTab, setActiveTab] = useState<string>("summary");
   const [showAnalyzerModal, setShowAnalyzerModal] = useState(false);
 
-  // NEW: a layer to toggle between "knowledge" (summary) and "document" (PDF/TXT).
+  // This layer state still determines whether to show the knowledge base layout vs document layout
   const [activeLayer, setActiveLayer] = useState<"knowledge" | "document">(
     "knowledge"
   );
@@ -210,6 +209,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [markdownError, setMarkdownError] = useState<boolean>(false);
 
   const { selectedAnalysis, selectedExtract } = useAnalysisSelection();
+  const { selectedAnnotations } = useAnnotationSelection();
 
   const {
     dataCells,
@@ -237,19 +237,27 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   }, []);
 
   /**
+   * If analysis or annotation is selected, switch to document view.
+   */
+  useEffect(() => {
+    if (selectedAnalysis || (selectedAnnotations?.length ?? 0) > 0) {
+      setActiveLayer("document");
+    }
+  }, [selectedAnalysis, selectedAnnotations]);
+
+  /**
    * processAnnotationsData
    *
    * Processes annotation data for the current document, updating state atoms
    * and corpus label sets. Accepts GetDocumentKnowledgeAndAnnotationsOutput,
    * which is what's returned from
-   * the updated GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS query.
+   * the GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS query.
    *
    * @param data - The query result containing document + corpus info
    */
   const processAnnotationsData = (
     data: GetDocumentKnowledgeAndAnnotationsOutput
   ) => {
-    console.log("Processing annotations data:", data);
     if (data?.document) {
       const processedAnnotations =
         data.document.allAnnotations?.map((annotation) =>
@@ -318,7 +326,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       // Update label atoms
       if (data.corpus?.labelSet) {
         const allLabels = data.corpus.labelSet.allAnnotationLabels ?? [];
-        console.log("All labels:", allLabels);
         const filteredTokenLabels = allLabels.filter(
           (label) => label.labelType === LabelType.TokenLabel
         );
@@ -331,11 +338,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         const filteredDocTypeLabels = allLabels.filter(
           (label) => label.labelType === LabelType.DocTypeLabel
         );
-
-        console.log("Filtered span labels:", filteredSpanLabels);
-        console.log("Filtered relation labels:", filteredRelationLabels);
-        console.log("Filtered doc type labels:", filteredDocTypeLabels);
-        console.log("Filtered token labels:", filteredTokenLabels);
 
         setCorpus({
           spanLabels: filteredSpanLabels,
@@ -393,23 +395,20 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       analysisId: undefined,
     },
     onCompleted: (data) => {
-      console.log("Combined data:", data);
-
       setDocumentType(data.document.fileType ?? "");
       setDocument(data.document);
       setPermissions(data.document.myPermissions ?? []);
 
       // --------------------------------------------------
-      // Call our newly inserted processing function here:
+      // Call our processing function here:
       // --------------------------------------------------
       processAnnotationsData(data);
 
-      // The rest: load PDF or TXT if relevant, etc.
+      // Load PDF or TXT as needed:
       if (
         data.document.fileType === "application/pdf" &&
         data.document.pdfFile
       ) {
-        // setViewComponents(<PDF read_only={false} />);
         const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
           data.document.pdfFile
         );
@@ -445,9 +444,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           })
           .then((loadedPages) => {
             setPages(loadedPages);
-            let { doc_text, string_index_token_map } =
+            const { doc_text, string_index_token_map } =
               createTokenStringSearch(loadedPages);
-            // console.log("Doc text:", doc_text);
             setPageTextMaps({
               ...string_index_token_map,
               ...pageTextMaps,
@@ -462,10 +460,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         data.document.fileType === "application/txt" ||
         data.document.fileType === "text/plain"
       ) {
-        // setViewComponents(
-        //   <TxtAnnotatorWrapper readOnly={true} allowInput={false} />
-        // );
-
         Promise.all([getDocumentRawText(data.document.txtExtractFile || "")])
           .then(([txt]) => {
             setDocText(txt);
@@ -476,11 +470,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             setViewState(ViewState.ERROR);
           });
       } else {
-        // setViewComponents(
-        //   <div>
-        //     <p>Unsupported filetype: {data.document.fileType}</p>
-        //   </div>
-        // );
+        // Unsupported or unknown file type
       }
     },
     skip: !documentId || !corpusId,
@@ -494,7 +484,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         analysisId: selectedAnalysis?.id,
       });
     }
-  }, [selectedAnalysis, corpusId, refetch]);
+  }, [selectedAnalysis, corpusId, refetch, loading, documentId]);
 
   useEffect(() => {
     if (!loading) {
@@ -504,7 +494,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         analysisId: selectedExtract?.id,
       });
     }
-  }, [selectedExtract, corpusId, refetch]);
+  }, [selectedExtract, corpusId, refetch, loading, documentId]);
 
   const metadata = combinedData?.document ?? {
     title: "Loading...",
@@ -544,72 +534,91 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   /* doc viewer (pdf or text snippet) */
   const { setPdfDoc } = usePdfDoc();
 
-  // Minimal arrays of tabs for each layer
-  const knowledgeTabs = [
-    { key: "summary", label: "Summary", icon: <FileText size={18} /> },
-    { key: "chat", label: "Chat", icon: <MessageSquare size={18} /> },
-    { key: "notes", label: "Notes", icon: <Notebook size={18} /> },
+  // Minimal arrays are replaced by a single unified array of tabs:
+  // Each tab includes which layer it wants by default ("knowledge", "document", or "both").
+  // If tab.layer === "document", we switch activeLayer to "document".
+  // If tab.layer === "knowledge", we switch activeLayer to "knowledge".
+  // If tab.layer === "both", we don't change the layer from whatever it currently is.
+  interface NavTab {
+    key: string;
+    label: string;
+    icon: React.ReactNode;
+    layer: "knowledge" | "document" | "both";
+  }
+
+  const allTabs: NavTab[] = [
+    {
+      key: "summary",
+      label: "Summary",
+      icon: <FileText size={18} />,
+      layer: "knowledge",
+    },
+    {
+      key: "chat",
+      label: "Chat",
+      icon: <MessageSquare size={18} />,
+      layer: "both",
+    },
+    {
+      key: "notes",
+      label: "Notes",
+      icon: <Notebook size={18} />,
+      layer: "both",
+    },
     {
       key: "relationships",
       label: "Doc Relationships",
       icon: <ChartNetwork size={18} />,
+      layer: "both",
     },
-  ];
-  const documentTabs = [
-    { key: "chat", label: "Chat", icon: <MessageSquare size={18} /> },
-    { key: "annotations", label: "Annotations", icon: <FileText size={18} /> },
+    {
+      key: "annotations",
+      label: "Annotations",
+      icon: <FileText size={18} />,
+      layer: "document",
+    },
     {
       key: "relations",
       label: "Annotation Relationships",
       icon: <ChartNetwork size={18} />,
+      layer: "document",
     },
-    { key: "search", label: "Search", icon: <Search size={18} /> },
-    { key: "notes", label: "Notes", icon: <Notebook size={18} /> },
     {
-      key: "relationships",
-      label: "Doc Relationships",
-      icon: <ChartNetwork size={18} />,
+      key: "search",
+      label: "Search",
+      icon: <Search size={18} />,
+      layer: "document",
+    },
+    {
+      key: "analyses",
+      label: "Analyses",
+      icon: <BarChart3 size={18} />,
+      layer: "document",
+    },
+    {
+      key: "extracts",
+      label: "Extracts",
+      icon: <FileText size={18} />,
+      layer: "document",
     },
   ];
 
-  // Find your visibleTabs declaration (near line ~XXX) and update it:
-  const baseTabs = activeLayer === "knowledge" ? knowledgeTabs : documentTabs;
-  const extraTabs = [
-    { key: "analyses", label: "Analyses", icon: <BarChart3 size={18} /> },
-    { key: "extracts", label: "Extracts", icon: <FileText size={18} /> },
-  ];
-  // Combine the two arrays (for example, add extraTabs to the left nav):
-  const visibleTabs = [...baseTabs, ...extraTabs];
+  // We no longer base tabs on the layer. Instead, we always show allTabs.
+  const visibleTabs = allTabs;
 
   const notes = combinedData?.document?.allNotes ?? [];
 
-  // Decide if we show the right panel
+  // Decide if we show the right panel based on whether or not a tab is selected
   useEffect(() => {
     if (!activeTab) {
       // If no tab is selected, always hide the panel
       setShowRightPanel(false);
-    } else if (activeLayer === "knowledge") {
-      setShowRightPanel(activeTab !== "summary");
     } else {
-      // for the "document" layer, any tab means show the right panel
-      setShowRightPanel(
-        [
-          "chat",
-          "notes",
-          "relationships",
-          "search",
-          "annotations",
-          "relations",
-          "analyses",
-          "extracts",
-        ].includes(activeTab)
-      );
+      // In practice, we do want to show the right panel for all selected tabs
+      // The existing code already handles which content to show. We'll keep it that way.
+      setShowRightPanel(true);
     }
-  }, [activeLayer, activeTab]);
-
-  useEffect(() => {
-    console.log("Analyses:", analyses);
-  }, [analyses]);
+  }, [activeTab]);
 
   // Add new state for showing load menu
   const [showLoad, setShowLoad] = useState(false);
@@ -617,7 +626,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   /* State for showing the new SelectDocumentFieldsetModal */
   const [showFieldsetModal, setShowFieldsetModal] = useState(false);
 
-  // The content for the right panel
   const rightPanelContent = (() => {
     switch (activeTab) {
       case "chat":
@@ -839,12 +847,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   <NewChatFloatingButton
                     onClick={() => setShowFieldsetModal(true)}
                     style={{ bottom: "80px" }}
-                    /* optionally offset if needed */
                   >
                     <i className="plus icon" />
                   </NewChatFloatingButton>
 
-                  {/* Render the new modal */}
                   <SelectDocumentFieldsetModal
                     documentId={documentId}
                     corpusId={corpusId}
@@ -856,6 +862,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             </AnimatePresence>
           </div>
         );
+      case "summary":
       default:
         return null;
     }
@@ -910,50 +917,63 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     );
   }
 
-  const layers = [
-    {
-      id: "knowledge",
-      label: "Knowledge Base",
-      icon: <Database size={16} />,
-      isActive: activeLayer === "knowledge",
-      onClick: () => {
-        setActiveLayer("knowledge");
-        setActiveTab("summary");
-      },
-    },
-    {
-      id: "document",
-      label: "Document",
-      icon: <FileText size={16} />,
-      isActive: activeLayer === "document",
-      onClick: () => {
-        setActiveLayer("document");
-        if (
-          ![
-            "chat",
-            "notes",
-            "relationships",
-            "annotations",
-            "relations",
-          ].includes(activeTab)
-        ) {
-          setActiveTab("chat");
-        }
-      },
-    },
-  ];
+  // Decide which content is in the center based on activeLayer
+  const mainLayerContent =
+    activeLayer === "knowledge" ? (
+      <SummaryContent className={showRightPanel ? "dimmed" : ""}>
+        {loading ? (
+          <LoadingPlaceholders type="summary" />
+        ) : markdownContent ? (
+          <div className="prose max-w-none">
+            <SafeMarkdown>{markdownContent}</SafeMarkdown>
+          </div>
+        ) : (
+          <EmptyState
+            icon={<FileText size={40} />}
+            title="No summary available"
+            description={
+              markdownError
+                ? "Failed to load the document summary"
+                : "This document doesn't have a summary yet"
+            }
+          />
+        )}
+      </SummaryContent>
+    ) : (
+      <div
+        id="document-layer"
+        style={{
+          flex: 1,
+          position: "relative",
+          marginRight:
+            !isMobile && showRightPanel
+              ? `${getPanelWidth(width)}px`
+              : undefined,
+        }}
+      >
+        {viewerContent}
+      </div>
+    );
 
-  // Modify the tab click handler to support toggling
+  // Minimal onClick logic to unify the nav:
   const handleTabClick = (tabKey: string) => {
     if (activeTab === tabKey) {
-      // If clicking the active tab, deselect it and close panel
+      // If clicking the same tab, deselect it and close panel
       setActiveTab("");
       setShowRightPanel(false);
-    } else {
-      // Otherwise, select the new tab
-      setActiveTab(tabKey);
-      setShowRightPanel(true);
+      return;
     }
+
+    setActiveTab(tabKey);
+
+    // Determine which layer to switch to based on tab's declared layer
+    const clickedTab = visibleTabs.find((t) => t.key === tabKey);
+    if (clickedTab?.layer === "document") {
+      setActiveLayer("document");
+    } else if (clickedTab?.layer === "knowledge") {
+      setActiveLayer("knowledge");
+    }
+    // If layer === 'both', remain on the current activeLayer
   };
 
   return (
@@ -984,7 +1004,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       </HeaderContainer>
 
       <ContentArea id="content-area">
-        {/* LEFT SIDEBAR TABS */}
+        {/* LEFT SIDEBAR TABS (always visible now) */}
         <TabsColumn
           collapsed={sidebarCollapsed}
           onMouseEnter={() => setSidebarCollapsed(false)}
@@ -1005,64 +1025,57 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         </TabsColumn>
 
         <MainContentArea id="main-content-area">
-          {/* The main content depends on which layer is active */}
-          {activeLayer === "knowledge" ? (
-            <SummaryContent className={showRightPanel ? "dimmed" : ""}>
-              {loading ? (
-                <LoadingPlaceholders type="summary" />
-              ) : markdownContent ? (
-                <div className="prose max-w-none">
-                  <SafeMarkdown>{markdownContent}</SafeMarkdown>
-                </div>
-              ) : (
-                <EmptyState
-                  icon={<FileText size={40} />}
-                  title="No summary available"
-                  description={
-                    markdownError
-                      ? "Failed to load the document summary"
-                      : "This document doesn't have a summary yet"
+          {mainLayerContent}
+
+          <LayerSwitcher
+            layers={[
+              {
+                id: "knowledge",
+                label: "Knowledge Base",
+                icon: <Database size={16} />,
+                isActive: activeLayer === "knowledge",
+                onClick: () => {
+                  setActiveLayer("knowledge");
+                  setActiveTab("summary");
+                },
+              },
+              {
+                id: "document",
+                label: "Document",
+                icon: <FileText size={16} />,
+                isActive: activeLayer === "document",
+                onClick: () => {
+                  setActiveLayer("document");
+                  // If we had no active tab or knowledge tab, default to e.g. "chat" in doc
+                  if (
+                    ![
+                      "chat",
+                      "notes",
+                      "relationships",
+                      "annotations",
+                      "relations",
+                      "search",
+                      "analyses",
+                      "extracts",
+                    ].includes(activeTab)
+                  ) {
+                    setActiveTab("chat");
                   }
-                />
-              )}
-            </SummaryContent>
-          ) : (
-            // Document layer
-            <div
-              id="document-layer"
-              style={{
-                flex: 1,
-                position: "relative",
-                /*
-                  Push the document to the left only when:
-                  1) Not mobile
-                  2) Right panel is open
-                */
-                marginRight:
-                  !isMobile && showRightPanel
-                    ? `${getPanelWidth(width)}px`
-                    : undefined,
-              }}
-            >
-              {viewerContent}
-            </div>
-          )}
+                },
+              },
+            ]}
+          />
 
-          {/* FLOATING LAYER SWITCHER (bottom-right) */}
-
-          <LayerSwitcher layers={layers} />
-
-          {/* Floating navigation bar (top-left) */}
-          {activeLayer === "document" ? (
+          {activeLayer === "document" && (
             <DocNavigation
               zoomLevel={zoomLevel}
               onZoomIn={() => setZoomLevel(Math.min(zoomLevel + 0.1, 4))}
               onZoomOut={() => setZoomLevel(Math.min(zoomLevel - 0.1, 4))}
             />
-          ) : null}
+          )}
           {/* Right Panel, if needed */}
           <AnimatePresence>
-            {showRightPanel && (
+            {showRightPanel && activeTab && (
               <SlidingPanel
                 initial={{ x: "100%", opacity: 0 }}
                 animate={{ x: "0%", opacity: 1 }}
@@ -1076,8 +1089,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   <ControlButtonWrapper>
                     <ControlButton
                       onClick={() => {
-                        setShowRightPanel(false);
                         setActiveTab("");
+                        setShowRightPanel(false);
                       }}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.95 }}

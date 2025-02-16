@@ -46,6 +46,7 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
     :param input_schema: Optional dictionary defining input schema for the decorated task.
     :return: The decorator function.
     """
+
     def decorator(func: callable) -> callable:
         @shared_task(bind=True, max_retries=max_retries)
         @wraps(func)
@@ -111,7 +112,9 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
                     else None
                 )
                 pdf_data_layer = (
-                    build_translation_layer(pdf_pawls_extract) if pdf_pawls_extract else []
+                    build_translation_layer(pdf_pawls_extract)
+                    if pdf_pawls_extract
+                    else []
                 )
 
                 # Call the wrapped function
@@ -132,7 +135,13 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
                     doc_annotations, span_label_pairs, metadata, task_pass = result
                     message = "No Return Message"
                 elif len(result) == 5:
-                    doc_annotations, span_label_pairs, metadata, task_pass, message = result
+                    (
+                        doc_annotations,
+                        span_label_pairs,
+                        metadata,
+                        task_pass,
+                        message,
+                    ) = result
                 else:
                     raise ValueError(
                         "Function must return a tuple of 4 (without message) or 5 elements (with message)."
@@ -152,7 +161,13 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
                 # If task is false, skip further processing
                 if not task_pass:
                     # Return the final 5-tuple to match the updated spec
-                    return (doc_annotations, span_label_pairs, metadata, task_pass, message)
+                    return (
+                        doc_annotations,
+                        span_label_pairs,
+                        metadata,
+                        task_pass,
+                        message,
+                    )
 
                 # Process annotations if task passed and we have a valid analysis
                 if analysis:
@@ -181,7 +196,9 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
                     # Validate metadata
                     if not isinstance(metadata, list) or (
                         len(metadata) > 0
-                        and not all(isinstance(m, dict) and "data" in m for m in metadata)
+                        and not all(
+                            isinstance(m, dict) and "data" in m for m in metadata
+                        )
                     ):
                         raise ValueError(
                             "Third element of the tuple must be a list of dictionaries with 'data' key"
@@ -194,7 +211,9 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
                             if not (
                                 isinstance(span_label_pair, tuple)
                                 and len(span_label_pair) == 2
-                                and is_dict_instance_of_typed_dict(span_label_pair[0], TextSpan)
+                                and is_dict_instance_of_typed_dict(
+                                    span_label_pair[0], TextSpan
+                                )
                                 and isinstance(span_label_pair[1], str)
                             ):
                                 raise ValueError(
@@ -242,7 +261,9 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
                                     analysis=analysis,
                                     annotation_label=label_obj,
                                     page=1,
-                                    raw_text=pdf_text_extract[span["start"] : span["end"]],
+                                    raw_text=pdf_text_extract[
+                                        span["start"] : span["end"]
+                                    ],
                                     annotation_type=LabelType.SPAN_LABEL,
                                     json={"start": span["start"], "end": span["end"]},
                                     creator=analysis.creator,
@@ -251,7 +272,9 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
                                 annot.save()
                                 resulting_annotations.append(annot)
                             else:
-                                raise ValueError(f"Unexpected file type: {doc.file_type}")
+                                raise ValueError(
+                                    f"Unexpected file type: {doc.file_type}"
+                                )
 
                         # Now handle doc-level labels
                         for doc_label in doc_annotations:

@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 def contract_not_contract(*args, pdf_text_extract, **kawrgs):
     """
     # Contract Classification
-    
+
     Uses Marvin and GPT-4 to triage documents into contract vs non-contract categories.
-    
+
     ## Process
     - Analyzes first and last 1000 characters of document text
     - Classifies into one of:
       - CONTRACT
-      - CONTRACT TEMPLATE  
+      - CONTRACT TEMPLATE
       - PRESENTATION
       - OTHER
     """
@@ -66,9 +66,9 @@ def contract_not_contract(*args, pdf_text_extract, **kawrgs):
 def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
     """
     # Legal Entity Tagger
-    
+
     Uses SALI tags, GLiNER, and spaCy sentence splitter to identify and tag legal entities in text.
-    
+
     ## Features
     - Leverages pre-trained GLiNER model for entity recognition
     - Supports custom label sets via input schema
@@ -79,15 +79,15 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
       - Government entities
       - Committees
       - And more
-    
+
     ## Process
     1. Splits text into sentences using spaCy
     2. Applies GLiNER model with confidence threshold of 0.7
     3. Maps entities to text spans with precise character offsets
-    
+
     ## Parameters
     - labels: Optional list of custom entity types to detect. If not provided, uses default legal entity types.
-    
+
     ## Returns
     Tagged entities with:
     - Entity text
@@ -96,6 +96,7 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
     - Confidence score
     """
     import logging
+
     import spacy
     from gliner import GLiNER
 
@@ -162,7 +163,7 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
         "Joint Defense Group",
         "Joint Defense Group Member",
     ]
-    
+
     labels_to_use = kawrgs.get("labels", default_labels)
     logger.info(f"Using label set with {len(labels_to_use)} labels")
 
@@ -176,11 +177,13 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
         logger.debug(f"Processing sentence {index + 1}/{len(sentences)}")
         ents = model.predict_entities(sent.text, labels_to_use)
         logger.debug(f"Found {len(ents)} potential entities in sentence {index + 1}")
-        
+
         for e in ents:
             # Rough heuristic - drop anything with score of less than .7. Anecdotally, anything much lower is garbage.
             if e["score"] > 0.7:
-                logger.debug(f"Found high-confidence entity: {e['text']} ({e['label']}) - score: {e['score']}")
+                logger.debug(
+                    f"Found high-confidence entity: {e['text']} ({e['label']}) - score: {e['score']}"
+                )
                 span = TextSpan(
                     id=str(index),
                     start=sent.start_char + e["start"],
@@ -194,7 +197,9 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
                     )
                 )
             else:
-                logger.debug(f"Skipping low-confidence entity: {e['text']} ({e['label']}) - score: {e['score']}")
+                logger.debug(
+                    f"Skipping low-confidence entity: {e['text']} ({e['label']}) - score: {e['score']}"
+                )
 
     logger.info(f"Found {len(results)} total entities above confidence threshold")
     logger.info("Completed legal entity tagger task")
@@ -206,23 +211,24 @@ def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
 def proper_name_tagger(*args, pdf_text_extract, **kawrgs):
     """
     # Proper Name Entity Tagger
-    
+
     Uses spaCy to identify and tag named entities in text.
-    
+
     ## Entity Types
     - Organizations (ORG)
-    - Geopolitical Entities (GPE) 
+    - Geopolitical Entities (GPE)
     - People (PERSON)
     - Products (PRODUCT)
-    
+
     ## Process
     1. Applies spaCy's small English model
     2. Extracts entities of specified types
     3. Maps to text spans with character offsets
     4. Returns top 10 most relevant entities
-    
+
     ## Notes
-    Currently limited to 10 entities to manage annotation density. Future improvements planned for page-aware annotations.
+    Currently limited to 10 entities to manage
+    annotation density. Future improvements planned for page-aware annotations.
     """
 
     import spacy
@@ -260,24 +266,24 @@ def proper_name_tagger(*args, pdf_text_extract, **kawrgs):
 def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
     """
     # Contract Knowledge Base Builder
-    
+
     Analyzes contract documents to build a searchable knowledge base with summaries and notes.
-    
+
     ## Features
     - Generates multiple analysis perspectives:
       - Detailed contract summary
-      - Referenced documents analysis  
+      - Referenced documents analysis
       - Quick reference guide
       - Searchable description
     - Creates embedded vectors for semantic search
     - Stores results as document metadata and notes
-    
+
     ## Process
     1. Analyzes full contract text using GPT-4
     2. Generates multiple summary formats
     3. Creates embeddings for search
     4. Saves as document attachments and notes
-    
+
     ## Requirements
     - corpus_id: Required for note creation
     - doc_id: Required for document updates
@@ -308,13 +314,13 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
     def get_markdown_response(system_prompt: str, user_prompt: str) -> str | None:
         """
         # Markdown Response Generator
-        
+
         Creates a conversation with system and user prompts and returns formatted response.
-        
+
         ## Parameters
         - system_prompt: Instructions for the AI system
         - user_prompt: User's specific request
-        
+
         ## Returns
         Markdown formatted response from the AI
         """
@@ -400,9 +406,9 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
     def create_searchable_summary(full_summary: str) -> str:
         """
         # Searchable Summary Generator
-        
+
         Creates a concise, searchable summary optimized for document discovery.
-        
+
         ## Features
         - Condenses full summary to 2-3 sentences
         - Focuses on unique identifiers
@@ -410,10 +416,10 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
           - Party names
           - Dates
           - Specific context
-        
+
         ## Parameters
         - full_summary: Detailed markdown summary
-        
+
         ## Returns
         Concise, searchable summary
         """
@@ -502,28 +508,28 @@ def agentic_highlighter_claude(
 ) -> tuple[list[str], list[tuple[TextSpan, str]], list[dict], bool]:
     """
     # Agentic Document Highlighter (Claude)
-    
+
     Uses Anthropic's Claude API to intelligently highlight document sections based on user instructions.
-    
+
     ## Features
     - Processes large documents in chunks
     - Uses Claude's citation API for precise text location
     - Handles documents with or without explicit citations
     - Maintains character-level accuracy for highlights
-    
+
     ## Parameters
     - pdf_text_extract: Full document text
     - pdf_pawls_extract: Optional PDF structure data
     - kwargs:
       - instructions: User highlighting instructions
       - doc_id: Document identifier
-    
+
     ## Process
     1. Chunks document if needed
     2. Sends each chunk to Claude
     3. Processes citations or falls back to text matching
     4. Maps matches to precise character spans
-    
+
     ## Returns
     Tuple containing:
     - List[str]: Empty list (reserved)
@@ -572,13 +578,13 @@ def agentic_highlighter_claude(
     def chunk_text(text: str, chunk_size: int = MAX_CHARS_PER_CHUNK) -> list[str]:
         """
         # Text Chunker
-        
+
         Splits text into sized chunks for processing.
-        
+
         ## Parameters
         - text: Full text to chunk
         - chunk_size: Maximum characters per chunk
-        
+
         ## Returns
         List of text chunks
         """
@@ -746,6 +752,7 @@ def agentic_highlighter_claude(
 
     return [], all_spans, error_responses, success
 
+
 @doc_analyzer_task()
 def pii_highlighter_claude(
     *args: Any,
@@ -786,7 +793,7 @@ def pii_highlighter_claude(
 
     import logging
     import os
-    from typing import Any
+
     import anthropic
     from django.conf import settings
 
@@ -807,11 +814,12 @@ def pii_highlighter_claude(
 
     # Configure Anthropic
     analyzer_kwargs = getattr(settings, "ANALYZER_KWARGS", {})
-    config_key = "opencontractserver.tasks.doc_analysis_tasks.agentic_highlighter_claude"
+    config_key = (
+        "opencontractserver.tasks.doc_analysis_tasks.agentic_highlighter_claude"
+    )
     model_params = analyzer_kwargs.get(config_key, {})
-    anthropic_api_key = (
-        model_params.get("ANTHROPIC_API_KEY", None)
-        or os.environ.get("ANTHROPIC_API_KEY", None)
+    anthropic_api_key = model_params.get("ANTHROPIC_API_KEY", None) or os.environ.get(
+        "ANTHROPIC_API_KEY", None
     )
 
     if not anthropic_api_key:
@@ -974,16 +982,18 @@ def pii_highlighter_claude(
                             start_search = idx + len(cited_substring)
 
         # Combine and store the chunk-level textual analysis
-        final_chunk_text = "\n\n".join(chunk_collected_text) if chunk_collected_text else ""
+        final_chunk_text = (
+            "\n\n".join(chunk_collected_text) if chunk_collected_text else ""
+        )
         chunk_analysis.append(final_chunk_text or "No response text provided.")
         offset_so_far += len(chunk_str)
 
-    logger.info(f"Completed PII analysis with citation extraction.")
+    logger.info("Completed PII analysis with citation extraction.")
     logger.info(f"Total spans found: {len(all_spans)}")
-    
+
     for span in all_spans:
         logger.info(f"Span: {span}")
-        
+
     if error_responses:
         logger.info(f"Errors encountered: {error_responses}")
 

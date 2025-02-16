@@ -147,6 +147,12 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
                         "Function must return a tuple of 4 (without message) or 5 elements (with message)."
                     )
 
+                # Added type check for task_pass
+                if not isinstance(task_pass, bool):
+                    raise ValueError(
+                        "Fourth element of the return value must be true/false"
+                    )
+
                 # Update Analysis with the returned message (and clear any previous error) if analysis is available
                 if analysis:
                     if task_pass:

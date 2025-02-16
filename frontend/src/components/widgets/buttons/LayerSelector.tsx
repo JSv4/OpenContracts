@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import { Layers } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 /**
  * Represents a layer option in the LayerSwitcher
@@ -39,25 +40,80 @@ export const StyledLayerSwitcher = styled.div<StyledLayerSwitcherProps>`
   }
 
   .layers-button {
-    width: 48px;
+    min-width: 48px;
     height: 48px;
+    padding: 0 16px;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(200, 200, 200, 0.8);
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 12px;
     cursor: pointer;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
     transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+    position: relative;
+    overflow: hidden;
 
-    svg {
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        120deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.6) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      transform: translateX(-100%);
+      transition: transform 0.6s;
+    }
+
+    &:hover::after {
+      transform: translateX(100%);
+    }
+
+    .layer-icon {
       width: 24px;
       height: 24px;
       color: #1a75bc;
       stroke-width: 2.2;
       transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+      flex-shrink: 0;
+      transform-origin: center;
+    }
+
+    .active-layer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #475569;
+
+      .active-indicator {
+        position: relative;
+        width: 8px;
+        height: 8px;
+        border-radius: 4px;
+        background: #1a75bc;
+        flex-shrink: 0;
+        &::after {
+          content: "";
+          position: absolute;
+          top: -4px;
+          left: -4px;
+          right: -4px;
+          bottom: -4px;
+          border-radius: 50%;
+          background: rgba(26, 117, 188, 0.2);
+          animation: pulse 2s infinite;
+        }
+      }
     }
 
     &:hover {
@@ -107,6 +163,28 @@ export const StyledLayerSwitcher = styled.div<StyledLayerSwitcherProps>`
       min-width: 180px;
       transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
       position: relative;
+      transform-origin: right;
+
+      &::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 0;
+        background: rgba(26, 117, 188, 0.08);
+        border-radius: 10px;
+        transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+      }
+
+      &:hover::before {
+        width: 100%;
+      }
+
+      &.active::before {
+        width: 100%;
+        background: rgba(26, 117, 188, 0.15);
+      }
 
       &:hover:not(.active) {
         color: #1e293b;
@@ -156,6 +234,21 @@ export const StyledLayerSwitcher = styled.div<StyledLayerSwitcherProps>`
       transform: translateX(100%);
     }
   }
+
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    50% {
+      transform: scale(1.5);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
 `;
 
 /**
@@ -187,6 +280,9 @@ export const LayerSwitcher: React.FC<LayerSwitcherProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const timeoutRef = React.useRef<NodeJS.Timeout>();
 
+  // Find the active layer
+  const activeLayer = layers.find((layer) => layer.isActive);
+
   const handleMouseEnter = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -215,21 +311,123 @@ export const LayerSwitcher: React.FC<LayerSwitcherProps> = ({
       onMouseLeave={handleMouseLeave}
       className={className}
     >
-      <div className="layers-button">
-        <Layers size={24} />
-      </div>
-      <div className="layers-menu">
-        {layers.map((layer) => (
-          <button
-            key={layer.id}
-            onClick={layer.onClick}
-            className={layer.isActive ? "active" : ""}
+      <motion.div
+        className="layers-button"
+        animate={{
+          scale: activeLayer ? 1.05 : 1,
+          boxShadow: activeLayer
+            ? "0 8px 32px rgba(26, 117, 188, 0.15)"
+            : "0 4px 24px rgba(0, 0, 0, 0.08)",
+        }}
+        whileHover={{
+          scale: activeLayer ? 1.07 : 1.02,
+          transition: { type: "spring", stiffness: 400, damping: 17 },
+        }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <motion.div
+          animate={{
+            rotate: isExpanded ? 180 : 0,
+            scale: activeLayer ? 1.1 : 1,
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 260,
+            damping: 20,
+          }}
+        >
+          <Layers className="layer-icon" />
+        </motion.div>
+
+        <AnimatePresence>
+          {activeLayer && (
+            <motion.div
+              className="active-layer"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{
+                opacity: 1,
+                x: 0,
+                transition: {
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 30,
+                },
+              }}
+              exit={{ opacity: 0, x: -10 }}
+            >
+              <motion.div
+                className="active-indicator"
+                layoutId="activeIndicator"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 30,
+                }}
+              />
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                {activeLayer.label}
+              </motion.span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            className="layers-menu"
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              transition: {
+                type: "spring",
+                stiffness: 500,
+                damping: 30,
+              },
+            }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
           >
-            {layer.icon}
-            {layer.label}
-          </button>
-        ))}
-      </div>
+            {layers.map((layer, index) => (
+              <motion.button
+                key={layer.id}
+                onClick={() => layer.onClick()}
+                className={layer.isActive ? "active" : ""}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{
+                  opacity: 1,
+                  x: 0,
+                  transition: {
+                    delay: index * 0.05,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 24,
+                  },
+                }}
+                whileHover={{
+                  x: 4,
+                  transition: {
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 17,
+                  },
+                }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {layer.icon}
+                {layer.label}
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </StyledLayerSwitcher>
   );
 };

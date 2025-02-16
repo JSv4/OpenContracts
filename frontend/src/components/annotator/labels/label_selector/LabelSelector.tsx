@@ -201,7 +201,7 @@ interface StyledLabelSelectorProps {
 }
 
 const StyledLabelSelector = styled.div<StyledLabelSelectorProps>`
-  position: fixed;
+  position: absolute;
   bottom: 2.5rem;
   right: 1.5rem;
   z-index: 1000;

@@ -9,7 +9,7 @@ import {
 } from "semantic-ui-react";
 
 import styled from "styled-components";
-import { FileText, Plus, X } from "lucide-react";
+import { FileText, Plus, X, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { DocTypeLabel, BlankDocTypeLabel } from "./DocTypeLabels";
@@ -143,7 +143,10 @@ export const DocTypeLabelDisplay: React.FC = () => {
       onMouseLeave={handleMouseLeave}
     >
       <motion.div className="selector-button">
-        <FileText className="doc-icon" size={24} />
+        <div className="composite-icon">
+          <FileText className="doc-icon primary" size={24} />
+          <Tag className="tag-icon secondary" size={14} />
+        </div>
         {doc_annotations.length > 0 && (
           <motion.div className="label-count">
             {doc_annotations.length}
@@ -250,13 +253,40 @@ const StyledDocTypeSelector = styled.div`
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
 
-    &:hover {
-      transform: translateY(-2px);
+    .composite-icon {
+      position: relative;
+      width: 24px;
+      height: 24px;
+
+      .primary {
+        color: #1a75bc;
+        stroke-width: 2;
+        position: relative;
+        z-index: 1;
+      }
+
+      .secondary {
+        position: absolute;
+        bottom: -4px;
+        right: -4px;
+        color: #1a75bc;
+        stroke-width: 2.2;
+        background: white;
+        border-radius: 4px;
+        padding: 2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 2;
+      }
     }
 
-    .doc-icon {
-      color: #1a75bc;
-      stroke-width: 2.2;
+    &:hover {
+      transform: translateY(-2px);
+      
+      .composite-icon {
+        .secondary {
+          transform: scale(1.1);
+        }
+      }
     }
 
     .label-count {

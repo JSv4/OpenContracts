@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 export interface ChatMessageProps {
+  messageId?: string; // Optional because some messages (like streaming ones) might not have an ID yet
   user: string;
   content: string;
   timestamp: string;
@@ -310,15 +311,48 @@ const UserName = styled.div`
 
 const SourceIndicator = styled.div<{ $isSelected?: boolean }>`
   position: absolute;
-  left: -24px;
-  top: 50%;
-  transform: translateY(-50%);
-  opacity: ${({ $isSelected }) => ($isSelected ? 1 : 0.6)};
-  color: #5c7c9d;
+  right: 1rem;
+  top: 1rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: ${(props) =>
+    props.$isSelected ? "#5C7C9D" : "rgba(92, 124, 157, 0.1)"};
+  color: ${(props) => (props.$isSelected ? "white" : "#5C7C9D")};
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transform: none;
+  opacity: 1;
   transition: all 0.2s ease;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  border: 1px solid
+    ${(props) =>
+      props.$isSelected ? "transparent" : "rgba(92, 124, 157, 0.2)"};
+
+  svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+  }
 
   &:hover {
-    opacity: 1;
+    background: ${(props) =>
+      props.$isSelected ? "#4A6B8C" : "rgba(92, 124, 157, 0.15)"};
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(92, 124, 157, 0.15);
+
+    svg {
+      transform: rotate(-15deg);
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
   }
 `;
 
@@ -342,7 +376,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   >
     {hasSources && (
       <SourceIndicator $isSelected={isSelected}>
-        <Pin size={16} />
+        <Pin size={14} />
+        {sources.length > 0 ? `${sources.length} sources` : "View sources"}
       </SourceIndicator>
     )}
     <Avatar $isAssistant={isAssistant}>

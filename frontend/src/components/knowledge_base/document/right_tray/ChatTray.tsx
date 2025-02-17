@@ -140,7 +140,11 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | undefined
   >();
-  const { setChatSourceState } = useChatSourceState();
+  const {
+    messages: sourcedMessages,
+    selectedMessageId,
+    setChatSourceState,
+  } = useChatSourceState();
 
   // For messages from server (via the new GET_CHAT_MESSAGES query)
   const [serverMessages, setServerMessages] = useState<ChatMessageProps[]>([]);
@@ -185,15 +189,36 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     GET_CHAT_MESSAGES
   );
 
-  // Once we have new message data from server, convert them into ChatMessageProps
+  /**
+   * On server data load, we map messages to local ChatMessageProps and
+   * also store any 'sources' in the chatSourcesAtom (so pins and selection work).
+   */
   useEffect(() => {
     if (!msgData?.chatMessages) return;
-    const messages = msgData.chatMessages; // Direct array of messages
+    const messages = msgData.chatMessages;
+
+    // First, register them in our chatSourcesAtom if they have sources
+    messages.forEach((srvMsg) => {
+      if (srvMsg.data?.sources?.length) {
+        handleCompleteMessage(
+          srvMsg.content,
+          srvMsg.data.sources,
+          srvMsg.id,
+          srvMsg.createdAt
+        );
+      }
+    });
+
+    console.log("messages", messages);
+
+    // Then, map them for immediate display - NOW INCLUDING hasSources FLAG
     const mapped = messages.map((msg) => ({
+      messageId: msg.id,
       user: msg.msgType === "HUMAN" ? "You" : "Assistant",
       content: msg.content,
-      timestamp: Date.now().toString(),
+      timestamp: new Date(msg.createdAt).toLocaleString(),
       isAssistant: msg.msgType !== "HUMAN",
+      hasSources: !!msg.data?.sources?.length,
     }));
     setServerMessages(mapped);
   }, [msgData]);
@@ -593,6 +618,10 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     };
   };
 
+  /**
+   * Enhanced to accept optional override IDs (so server messages can
+   * match their original ID rather than a new 'msg_timestamp' ID).
+   */
   const handleCompleteMessage = (
     content: string,
     sourcesData?: Array<{
@@ -601,34 +630,48 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       annotation_id: number;
       label: string;
       label_id: number;
-    }>
+    }>,
+    overrideId?: string,
+    overrideCreatedAt?: string
   ) => {
-    const messageId = `msg_${Date.now()}`;
-    const mappedSources =
-      sourcesData?.map((src, index) => {
-        return {
-          id: `${messageId}.${index}`,
-          tokens: src.json.tokens || [],
-          bounds: src.json.bounds || {},
-          page: src.page,
-          label: src.label,
-          label_id: src.label_id,
-          annotation_id: src.annotation_id,
-        };
-      }) || [];
+    // If provided, use the server's message id and creation time;
+    // otherwise fall back to a newly generated one for streaming.
+    const messageId = overrideId ?? `msg_${Date.now()}`;
+    const messageTimestamp = overrideCreatedAt
+      ? new Date(overrideCreatedAt).toISOString()
+      : new Date().toISOString();
 
-    setChatSourceState((prev: ChatSourceState) => ({
-      messages: [
-        ...prev.messages,
-        {
-          messageId,
-          content,
-          timestamp: new Date().toISOString(),
-          sources: mappedSources,
-        },
-      ],
-      selectedMessageId: messageId,
-    }));
+    const mappedSources =
+      sourcesData?.map((src, index) => ({
+        id: `${messageId}.${index}`,
+        tokens: src.json.tokens || [],
+        bounds: src.json.bounds || {},
+        page: src.page,
+        label: src.label,
+        label_id: src.label_id,
+        annotation_id: src.annotation_id,
+      })) || [];
+
+    // Ensure we do not duplicate if the message is already in the store
+    setChatSourceState((prev: ChatSourceState) => {
+      if (prev.messages.find((m) => m.messageId === messageId)) {
+        return prev; // already exists
+      }
+      return {
+        ...prev,
+        messages: [
+          ...prev.messages,
+          {
+            messageId,
+            content,
+            timestamp: messageTimestamp,
+            sources: mappedSources,
+          },
+        ],
+        // Optionally auto-select the newly streamed or loaded message
+        selectedMessageId: overrideId ? prev.selectedMessageId : messageId,
+      };
+    });
   };
 
   /**
@@ -699,15 +742,43 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                 id="messages-container"
                 ref={messagesContainerRef}
               >
-                {combinedMessages.map((msg, idx) => (
-                  <ChatMessage
-                    key={idx}
-                    user={msg.user}
-                    content={msg.content}
-                    timestamp={msg.timestamp}
-                    isAssistant={msg.isAssistant}
-                  />
-                ))}
+                {combinedMessages.map((msg, idx) => {
+                  // Find if this message has sources in our sourced messages state
+                  const sourcedMessage = sourcedMessages.find(
+                    (m) =>
+                      // Match either by messageId (for loaded messages) or by matching content and timestamp
+                      // for newly streamed messages
+                      m.messageId === msg.messageId ||
+                      (m.content === msg.content &&
+                        Math.abs(
+                          new Date(m.timestamp).getTime() -
+                            new Date(msg.timestamp).getTime()
+                        ) < 1000)
+                  );
+
+                  return (
+                    <ChatMessage
+                      key={msg.messageId || idx}
+                      {...msg}
+                      hasSources={!!sourcedMessage?.sources.length}
+                      isSelected={
+                        sourcedMessage?.messageId === selectedMessageId
+                      }
+                      onSelect={() => {
+                        if (sourcedMessage) {
+                          setChatSourceState((prev) => ({
+                            ...prev,
+                            selectedMessageId:
+                              prev.selectedMessageId ===
+                              sourcedMessage.messageId
+                                ? null // deselect if already selected
+                                : sourcedMessage.messageId,
+                          }));
+                        }
+                      }}
+                    />
+                  );
+                })}
               </motion.div>
 
               {/* Fixed Footer with Input */}

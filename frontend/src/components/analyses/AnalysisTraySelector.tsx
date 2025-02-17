@@ -33,11 +33,6 @@ import {
 } from "../annotator/hooks/AnalysisHooks";
 import { usePdfAnnotations } from "../annotator/hooks/AnnotationHooks";
 
-/**
- * Import the HighlightItem used in SingleDocumentExtractResults.
- * Adjust the import path to wherever HighlightItem is located in your project.
- */
-import { HighlightItem } from "../annotator/sidebar/HighlightItem";
 import { AnnotationList } from "../annotator/display/components/AnnotationList";
 
 /**
@@ -116,87 +111,57 @@ const AnalysisListSegment = styled(Segment)`
 `;
 
 const AnalysisCard = styled.div<{ $selected?: boolean }>`
-  padding: 1.25rem;
-  margin-bottom: 1rem;
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
   background: ${(props) =>
     props.$selected
-      ? "linear-gradient(135deg, rgba(74, 144, 226, 0.08), rgba(74, 144, 226, 0.03))"
-      : "linear-gradient(135deg, #ffffff, #fafbff)"};
-  border: 1px solid ${(props) => (props.$selected ? "#4a90e2" : "#e2e8f0")};
-  border-radius: 12px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      ? "linear-gradient(165deg, rgba(74, 144, 226, 0.03), rgba(255, 255, 255, 0.5))"
+      : "#ffffff"};
+  border: 1px solid ${(props) => (props.$selected ? "#4a90e2" : "#edf2f7")};
+  border-radius: 20px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   position: relative;
   overflow: hidden;
   box-shadow: ${(props) =>
     props.$selected
-      ? "0 4px 20px rgba(74, 144, 226, 0.12)"
-      : "0 2px 8px rgba(0, 0, 0, 0.02)"};
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: ${(props) => (props.$selected ? "#4a90e2" : "transparent")};
-    transition: all 0.3s ease;
-  }
+      ? "0 8px 32px rgba(74, 144, 226, 0.06)"
+      : "0 1px 3px rgba(0, 0, 0, 0.01)"};
 
   .timestamps {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid
-      ${(props) =>
-        props.$selected
-          ? "rgba(74, 144, 226, 0.15)"
-          : "rgba(226, 232, 240, 0.6)"};
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
+    margin-top: 2rem;
+    display: flex;
+    gap: 1.25rem;
+    padding: 0.5rem;
+    background: ${(props) =>
+      props.$selected ? "rgba(74, 144, 226, 0.02)" : "#fafbfc"};
+    border-radius: 16px;
 
     .timestamp-row {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.375rem;
-      padding: 0.5rem;
+      flex: 1;
+      padding: 0.875rem;
       background: ${(props) =>
-        props.$selected
-          ? "rgba(74, 144, 226, 0.06)"
-          : "rgba(247, 249, 252, 0.8)"};
-      border-radius: 8px;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background: ${(props) =>
-          props.$selected
-            ? "rgba(74, 144, 226, 0.09)"
-            : "rgba(247, 249, 252, 0.95)"};
-      }
+        props.$selected ? "rgba(255, 255, 255, 0.8)" : "#ffffff"};
+      border-radius: 12px;
+      border: 1px solid
+        ${(props) => (props.$selected ? "rgba(74, 144, 226, 0.1)" : "#edf2f7")};
 
       .label {
-        display: flex;
-        align-items: center;
-        gap: 0.375rem;
-        font-size: 0.75rem;
-        color: #64748b;
-        font-weight: 500;
+        font-size: 0.7rem;
+        letter-spacing: 0.03em;
+        color: #94a3b8;
+        margin-bottom: 0.5rem;
 
         svg {
-          width: 14px;
-          height: 14px;
-          color: ${(props) => (props.$selected ? "#4a90e2" : "#94a3b8")};
+          width: 12px;
+          height: 12px;
+          vertical-align: -1px;
         }
       }
 
       .value {
-        font-size: 0.875rem;
-        color: ${(props) => (props.$selected ? "#1a202c" : "#475569")};
-        font-weight: ${(props) => (props.$selected ? "500" : "400")};
-        font-feature-settings: "tnum";
-        font-variant-numeric: tabular-nums;
+        font-size: 0.8125rem;
+        color: ${(props) => (props.$selected ? "#2d3748" : "#4a5568")};
       }
     }
   }
@@ -205,12 +170,8 @@ const AnalysisCard = styled.div<{ $selected?: boolean }>`
     transform: translateY(-2px);
     box-shadow: ${(props) =>
       props.$selected
-        ? "0 8px 30px rgba(74, 144, 226, 0.15)"
-        : "0 8px 20px rgba(0, 0, 0, 0.05)"};
-
-    &::before {
-      background: ${(props) => (props.$selected ? "#4a90e2" : "#e2e8f0")};
-    }
+        ? "0 12px 32px rgba(74, 144, 226, 0.12)"
+        : "0 8px 24px rgba(0, 0, 0, 0.04)"};
   }
 
   &:active {
@@ -218,74 +179,67 @@ const AnalysisCard = styled.div<{ $selected?: boolean }>`
   }
 
   .annotations-section {
-    margin-top: 1rem;
-    padding-top: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
     border-top: 1px solid
-      ${(props) => (props.$selected ? "rgba(74, 144, 226, 0.2)" : "#e2e8f0")};
+      ${(props) => (props.$selected ? "rgba(74, 144, 226, 0.12)" : "#f1f5f9")};
   }
 
   .annotations-container {
-    margin-top: 0.5rem;
-    max-height: 300px;
-    overflow-y: auto;
+    margin-top: 1rem;
     background: #f8fafc;
-    border-radius: 6px;
+    border-radius: 12px;
     border: 1px solid #e2e8f0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 `;
 
 const AnalysisHeader = styled.div<{ $selected?: boolean }>`
-  position: relative;
-  margin: -1.25rem -1.25rem 1rem -1.25rem;
-  padding: 1.25rem;
+  margin: -1.75rem -1.75rem 1.5rem -1.75rem;
+  padding: 1.75rem;
   background: ${(props) =>
     props.$selected
-      ? "linear-gradient(135deg, rgba(74, 144, 226, 0.12), rgba(74, 144, 226, 0.04))"
-      : "linear-gradient(135deg, #f8fafc, #f1f5f9)"};
-  border-bottom: 1px solid
-    ${(props) =>
-      props.$selected ? "rgba(74, 144, 226, 0.2)" : "rgba(226, 232, 240, 0.8)"};
+      ? "linear-gradient(165deg, rgba(74, 144, 226, 0.04), transparent)"
+      : "transparent"};
 `;
 
 const AnalysisTitle = styled.div<{ $selected?: boolean }>`
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  gap: 1rem;
+  margin-bottom: 1rem;
 
   .icon-wrapper {
+    width: 38px;
+    height: 38px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
     background: ${(props) =>
-      props.$selected ? "rgba(74, 144, 226, 0.1)" : "white"};
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      props.$selected
+        ? "linear-gradient(135deg, rgba(74, 144, 226, 0.1), rgba(74, 144, 226, 0.05))"
+        : "#f8fafc"};
+    border-radius: 10px;
+    transition: all 0.3s ease;
 
     svg {
-      color: ${(props) => (props.$selected ? "#4a90e2" : "#64748b")};
+      color: ${(props) => (props.$selected ? "#4a90e2" : "#94a3b8")};
     }
   }
 
   .text {
-    flex: 1;
-
     h4 {
-      margin: 0;
-      font-size: 1rem;
+      font-size: 1.125rem;
       font-weight: 600;
       color: #1a202c;
-      line-height: 1.3;
+      margin-bottom: 0.25rem;
     }
 
     .id {
-      font-family: "SF Mono", "Roboto Mono", monospace;
       font-size: 0.75rem;
-      color: ${(props) => (props.$selected ? "#4a90e2" : "#64748b")};
-      margin-top: 0.25rem;
-      letter-spacing: -0.5px;
+      color: #94a3b8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        monospace;
     }
   }
 `;
@@ -294,36 +248,32 @@ const MetadataBadges = styled.div`
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  margin-top: 1.25rem;
 `;
 
 const Badge = styled.div<{ $variant?: "primary" | "secondary" }>`
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
   background: ${(props) =>
     props.$variant === "primary"
-      ? "rgba(74, 144, 226, 0.1)"
+      ? "rgba(74, 144, 226, 0.04)"
       : "rgba(255, 255, 255, 0.8)"};
   border: 1px solid
     ${(props) =>
       props.$variant === "primary"
-        ? "rgba(74, 144, 226, 0.2)"
+        ? "rgba(74, 144, 226, 0.15)"
         : "rgba(226, 232, 240, 0.8)"};
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  border-radius: 10px;
+  font-size: 0.8125rem;
   color: ${(props) => (props.$variant === "primary" ? "#4a90e2" : "#64748b")};
-  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
 
   svg {
     width: 14px;
     height: 14px;
-  }
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    opacity: 0.8;
   }
 `;
 
@@ -360,15 +310,16 @@ const NoAnalysesMessage = styled.div`
 `;
 
 const DescriptionContainer = styled.div<{ $expanded?: boolean }>`
-  margin-top: 0.5rem;
+  margin-top: 1rem;
   position: relative;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  max-height: ${(props) => (props.$expanded ? "300px" : "100px")};
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: ${(props) => (props.$expanded ? "400px" : "120px")};
   overflow-y: ${(props) => (props.$expanded ? "auto" : "hidden")};
-  padding: 0.5rem;
+  padding: 1rem;
   background: #f8fafc;
-  border-radius: 6px;
+  border-radius: 12px;
+  border: 1px solid #e8edf5;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -376,10 +327,10 @@ const DescriptionContainer = styled.div<{ $expanded?: boolean }>`
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(74, 144, 226, 0.2);
-    border-radius: 2px;
+    background: rgba(74, 144, 226, 0.15);
+    border-radius: 4px;
     &:hover {
-      background: rgba(74, 144, 226, 0.3);
+      background: rgba(74, 144, 226, 0.25);
     }
   }
 `;
@@ -472,6 +423,94 @@ const EmptyDescription = styled.div`
   }
 `;
 
+const AnnotationsToggle = styled.button<{ $isVisible: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: ${(props) =>
+    props.$isVisible
+      ? "linear-gradient(135deg, rgba(74, 144, 226, 0.08), rgba(74, 144, 226, 0.04))"
+      : "#ffffff"};
+  border: 1px solid
+    ${(props) => (props.$isVisible ? "rgba(74, 144, 226, 0.2)" : "#e2e8f0")};
+  border-radius: 12px;
+  color: ${(props) => (props.$isVisible ? "#4a90e2" : "#64748b")};
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: ${(props) =>
+      props.$isVisible
+        ? "linear-gradient(135deg, rgba(74, 144, 226, 0.1), transparent)"
+        : "linear-gradient(135deg, rgba(226, 232, 240, 0.5), transparent)"};
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: ${(props) =>
+      props.$isVisible
+        ? "0 4px 12px rgba(74, 144, 226, 0.1)"
+        : "0 4px 12px rgba(0, 0, 0, 0.05)"};
+
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  &:active {
+    transform: translateY(0px);
+  }
+
+  .icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: ${(props) =>
+      props.$isVisible
+        ? "rgba(74, 144, 226, 0.1)"
+        : "rgba(226, 232, 240, 0.5)"};
+    border-radius: 6px;
+    transition: all 0.3s ease;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      transition: all 0.3s ease;
+      color: ${(props) => (props.$isVisible ? "#4a90e2" : "#94a3b8")};
+    }
+  }
+
+  .count-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: auto;
+    padding: 0.25rem 0.5rem;
+    background: ${(props) =>
+      props.$isVisible
+        ? "rgba(74, 144, 226, 0.1)"
+        : "rgba(226, 232, 240, 0.5)"};
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: ${(props) => (props.$isVisible ? "#4a90e2" : "#64748b")};
+  }
+`;
+
 // Helper function to format timestamps
 const formatTimestamp = (timestamp: string): string => {
   const date = new Date(timestamp);
@@ -555,6 +594,25 @@ const AnalysisTraySelector: React.FC<AnalysisTraySelectorProps> = ({
     };
   }, []);
 
+  // Memoized calculation of unique labels for each analysis
+  const analysisLabelsCount = useMemo(() => {
+    return analyses.reduce((acc, item) => {
+      const uniqueLabels =
+        item.fullAnnotationList?.reduce(
+          (labelAcc: string[], curr) =>
+            curr.annotationLabel?.text
+              ? [...new Set([...labelAcc, curr.annotationLabel.text])]
+              : labelAcc,
+          []
+        ) || [];
+
+      return {
+        ...acc,
+        [item.id]: uniqueLabels.length,
+      };
+    }, {} as Record<string, number>);
+  }, [analyses]);
+
   return (
     <TrayContainer>
       <SearchSegment attached="top">
@@ -628,14 +686,7 @@ const AnalysisTraySelector: React.FC<AnalysisTraySelectorProps> = ({
                   <MetadataBadges>
                     <Badge $variant="primary">
                       <Tag size={14} />
-                      {item.fullAnnotationList?.reduce(
-                        (acc: string[], curr) =>
-                          curr.annotationLabel?.text
-                            ? [...new Set([...acc, curr.annotationLabel.text])]
-                            : acc,
-                        []
-                      ).length || 0}{" "}
-                      Labels
+                      {analysisLabelsCount[item.id]} Labels
                     </Badge>
                     <Badge>
                       <Edit3 size={14} />
@@ -688,26 +739,23 @@ const AnalysisTraySelector: React.FC<AnalysisTraySelectorProps> = ({
                   />
                 )}
                 <div className="annotations-section">
-                  <Button
-                    size="tiny"
-                    icon
-                    labelPosition="left"
+                  <AnnotationsToggle
+                    $isVisible={isVisible}
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleAnnotationsVisibility(itemId);
                     }}
                   >
-                    {annotationVisibility[itemId] ? (
-                      <EyeOff size={14} />
-                    ) : (
-                      <Eye size={14} />
-                    )}
-                    {annotationVisibility[itemId]
-                      ? "Hide Annotations"
-                      : "Show Annotations"}
-                  </Button>
+                    <span className="icon-container">
+                      {isVisible ? <EyeOff /> : <Eye />}
+                    </span>
+                    {isVisible ? "Hide Annotations" : "Show Annotations"}
+                    <span className="count-badge">
+                      {relevantAnnotations.length}
+                    </span>
+                  </AnnotationsToggle>
 
-                  {annotationVisibility[itemId] && (
+                  {isVisible && (
                     <div className="annotations-container">
                       <AnnotationList read_only={false} />
                     </div>

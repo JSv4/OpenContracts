@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@apollo/client";
 import { Card, Button, Header, Modal } from "semantic-ui-react";
 import {
@@ -102,6 +102,8 @@ import { NewChatFloatingButton } from "./ChatContainers";
 import { SelectDocumentAnalyzerModal } from "./SelectDocumentAnalyzerModal";
 import { SelectDocumentFieldsetModal } from "./SelectDocumentFieldsetModal";
 import { useAnnotationSelection } from "../../annotator/hooks/useAnnotationSelection";
+import styled from "styled-components";
+import { Icon } from "semantic-ui-react";
 
 const pdfjsLib = require("pdfjs-dist");
 
@@ -158,6 +160,91 @@ const RelationsPanel: React.FC = () => {
     </div>
   );
 };
+
+const SelectedExtractHeader = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #f8fafc, rgba(255, 255, 255, 0.8));
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    background: linear-gradient(135deg, #f1f5f9, rgba(255, 255, 255, 0.9));
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(148, 163, 184, 0.05);
+  }
+`;
+
+const ExtractInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+
+  h3 {
+    margin: 0 0 0.375rem 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #64748b;
+  }
+`;
+
+const BackButton = styled(Button)`
+  background: white !important;
+  color: #64748b !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 0.625rem 1rem !important;
+  border-radius: 12px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  transition: all 0.2s ease !important;
+
+  &:hover {
+    background: #f8fafc !important;
+    color: #4a90e2 !important;
+    border-color: #4a90e2 !important;
+    transform: translateX(-2px);
+  }
+
+  i.icon {
+    margin: 0 !important;
+    font-size: 1rem !important;
+    transition: transform 0.2s ease !important;
+  }
+
+  &:hover i.icon {
+    transform: translateX(-2px);
+  }
+`;
+
+const AnimatedWrapper = styled.div`
+  &.exit {
+    animation: slideOut 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideOut {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+`;
 
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   documentId,
@@ -626,6 +713,16 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   /* State for showing the new SelectDocumentFieldsetModal */
   const [showFieldsetModal, setShowFieldsetModal] = useState(false);
 
+  const [isExiting, setIsExiting] = useState(false);
+
+  const handleBack = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onSelectExtract(null);
+      setIsExiting(false);
+    }, 200); // Match the slideOut animation duration
+  };
+
   const rightPanelContent = (() => {
     switch (activeTab) {
       case "chat":
@@ -695,7 +792,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         );
       case "search":
         return (
-          <div className="p-4 flex-1 flex flex-col">
+          <div
+            className="p-4 flex-1 flex flex-col"
+            style={{ overflow: "hidden" }}
+          >
             <SearchSidebarWidget />
           </div>
         );
@@ -774,7 +874,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       case "analyses":
         return (
           <>
-            <div style={{ padding: "1rem" }}>
+            <div style={{ padding: "1rem", overflow: "hidden" }}>
               <AnalysisTraySelector read_only={false} analyses={analyses} />
             </div>
             <NewChatFloatingButton onClick={() => setShowAnalyzerModal(true)}>
@@ -790,7 +890,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         );
       case "extracts":
         return (
-          <div style={{ padding: "1rem" }}>
+          <div style={{ padding: "1rem", overflow: "hidden" }}>
             <AnimatePresence exitBeforeEnter>
               {selectedExtract ? (
                 <motion.div
@@ -799,29 +899,21 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      marginBottom: "1rem",
-                      padding: "0.5rem",
-                      background: "#f7f9f9",
-                      borderRadius: "8px",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ margin: 0 }}>{selectedExtract.name}</h3>
-                      <p
-                        style={{ margin: 0, fontSize: "0.9rem", color: "#555" }}
-                      >
-                        {"Placeholder for narrative content"}
-                      </p>
-                    </div>
-                    <Button size="small" onClick={() => onSelectExtract(null)}>
-                      Unselect
-                    </Button>
-                  </div>
+                  <AnimatedWrapper className={isExiting ? "exit" : ""}>
+                    <SelectedExtractHeader>
+                      <ExtractInfo>
+                        <h3>{selectedExtract.name}</h3>
+                        <p>
+                          {selectedExtract.fieldset?.description ||
+                            "No description available"}
+                        </p>
+                      </ExtractInfo>
+                      <BackButton onClick={handleBack}>
+                        <Icon name="arrow left" />
+                        Back to Extracts
+                      </BackButton>
+                    </SelectedExtractHeader>
+                  </AnimatedWrapper>
                   <motion.div
                     key="extract-results"
                     initial={{ opacity: 0 }}

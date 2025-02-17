@@ -15,6 +15,7 @@ import {
   useAnalysisSelection,
 } from "../annotator/hooks/AnalysisHooks";
 import { ExtractItem } from "../extracts/ExtractItem";
+import styled from "styled-components";
 
 /**
  * Props for ExtractTraySelector.
@@ -25,6 +26,108 @@ interface ExtractTraySelectorProps {
   /** The list of available extracts */
   extracts: ExtractType[];
 }
+
+const TrayContainer = styled(Segment.Group)`
+  height: 100%;
+  display: flex !important;
+  flex-direction: column !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  overflow: hidden;
+`;
+
+const SearchSegment = styled(Segment)`
+  flex: 0 0 auto !important;
+  padding: 1.25rem !important;
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  border-bottom: none !important;
+  border-radius: 12px 12px 0 0 !important;
+  z-index: 1;
+
+  .ui.input {
+    width: 100%;
+
+    input {
+      border-radius: 10px !important;
+      border: 1px solid #e2e8f0 !important;
+      padding: 0.75rem 1rem !important;
+      font-size: 0.875rem;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+
+      &::placeholder {
+        color: #94a3b8;
+      }
+
+      &:focus {
+        border-color: #4a90e2 !important;
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.08) !important;
+      }
+    }
+
+    i.icon {
+      font-size: 1rem;
+      color: #64748b;
+      opacity: 0.7;
+      transition: all 0.2s ease;
+
+      &:hover {
+        opacity: 1;
+        color: #4a90e2;
+      }
+    }
+  }
+`;
+
+const ExtractListSegment = styled(Segment)`
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0 0 12px 12px !important;
+  padding: 1rem !important;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(74, 144, 226, 0.15);
+    border-radius: 2px;
+
+    &:hover {
+      background: rgba(74, 144, 226, 0.25);
+    }
+  }
+`;
+
+const EmptyState = styled(Segment)`
+  margin: 2rem 0 !important;
+  padding: 2.5rem !important;
+  text-align: center !important;
+  background: linear-gradient(165deg, #f8fafc, #fff) !important;
+  border: 1px dashed #e2e8f0 !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+
+  h4 {
+    color: #1e293b;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  p {
+    color: #64748b;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    max-width: 24rem;
+    margin: 0 auto;
+  }
+`;
 
 /**
  * A vertical tray selector for extracts.
@@ -74,27 +177,24 @@ const ExtractTraySelector: React.FC<ExtractTraySelectorProps> = ({
   const renderItems = useCallback(() => {
     if (filteredItems.length === 0) {
       return (
-        <Segment padded textAlign="center" key="no_extracts_placeholder">
-          <h4>No Extracts Available...</h4>
+        <EmptyState key="no_extracts_placeholder">
+          <h4>No Extracts Available</h4>
           <p>
             If you have sufficient privileges, try creating a new extract from
             the corpus page.
           </p>
-        </Segment>
+        </EmptyState>
       );
     }
     return filteredItems.map((item) => (
       <ExtractItem
+        key={item.id}
         corpus={selectedCorpus}
         compact={width <= 768}
-        key={item.id}
         extract={item}
         selected={Boolean(selectedExtract && item.id === selectedExtract.id)}
         read_only={read_only}
         onSelect={() => {
-          console.log(
-            `Selected extract: ${item.id}, previously selected: ${selectedExtract?.id}`
-          );
           onSelectExtract(
             selectedExtract && item.id === selectedExtract.id ? null : item
           );
@@ -111,10 +211,8 @@ const ExtractTraySelector: React.FC<ExtractTraySelectorProps> = ({
   ]);
 
   return (
-    <Segment.Group
-      style={{ height: "100%", display: "flex", flexDirection: "column" }}
-    >
-      <Segment attached="top" style={{ padding: "1rem" }}>
+    <TrayContainer>
+      <SearchSegment>
         <Form>
           <Form.Input
             icon={{
@@ -127,20 +225,11 @@ const ExtractTraySelector: React.FC<ExtractTraySelectorProps> = ({
             value={searchTerm}
           />
         </Form>
-      </Segment>
-      <Segment
-        attached="bottom"
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          padding: "0.5rem",
-        }}
-      >
+      </SearchSegment>
+      <ExtractListSegment>
         {mountedRef.current && renderItems()}
-      </Segment>
-    </Segment.Group>
+      </ExtractListSegment>
+    </TrayContainer>
   );
 };
 

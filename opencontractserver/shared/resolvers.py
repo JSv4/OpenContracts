@@ -61,11 +61,6 @@ def resolve_single_oc_model_from_id(
     Helper method for resolvers for single objs... gets object with id and makes sure the
     user has sufficient permissions to request it too.
     """
-
-    logger.error(
-        f"resolve_single_oc_model_from_id - started for user {user} and model_type {model_type}"
-    )
-
     model_name = model_type._meta.model_name
     app_label = model_type._meta.app_label
 

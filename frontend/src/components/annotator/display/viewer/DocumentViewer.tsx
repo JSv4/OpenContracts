@@ -64,7 +64,7 @@ export const StyledMenu = styled(Menu)`
   }
 `;
 
-const PDFContainer = styled.div<{ width?: number }>(
+export const PDFContainer = styled.div<{ width?: number }>(
   ({ width }) => `
     overflow-y: scroll;
     overflow-x: scroll;

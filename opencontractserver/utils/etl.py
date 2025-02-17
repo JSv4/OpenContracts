@@ -5,23 +5,25 @@ import logging
 import os
 import traceback
 import uuid
-from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
+from django.db.models import Q
 from pydantic import TypeAdapter, ValidationError, create_model
 from typing_extensions import TypedDict
 
-from opencontractserver.annotations.models import Annotation
+from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.types.dicts import (
+    AnnotationLabelPythonType,
     BoundingBoxPythonType,
     LabelLookupPythonType,
     OpenContractDocExport,
     OpenContractsSinglePageAnnotationType,
     PawlsPagePythonType,
 )
+from opencontractserver.types.enums import AnnotationFilterMode
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -29,32 +31,82 @@ logger.setLevel(logging.DEBUG)
 User = get_user_model()
 
 
-def build_label_lookups(corpus_id: str) -> LabelLookupPythonType:
+def build_label_lookups(
+    corpus_id: str,
+    analysis_ids: list[int] | None = None,
+    annotation_filter_mode: AnnotationFilterMode = AnnotationFilterMode.CORPUS_LABELSET_ONLY,
+) -> LabelLookupPythonType:
+    """
+    Build a label lookup dictionary for the specified corpus. Optionally filter
+    out labels to only those found in certain analyses or combine with corpus label set.
+
+    Args:
+        corpus_id (str): The primary key (UUID string) of the corpus.
+        analysis_ids (list[int] | None): Optional list of Analysis PKs.
+        annotation_filter_mode (str): One of:
+          - "CORPUS_LABELSET_ONLY"
+          - "CORPUS_LABELSET_PLUS_ANALYSES"
+          - "ANALYSES_ONLY"
+
+    Returns:
+        LabelLookupPythonType: A dictionary with two keys:
+            "text_labels": A dict of all token/text labels keyed by label PK.
+            "doc_labels": A dict of all doc-type labels keyed by label PK.
+    """
     logger.info(f"build_label_lookups for corpus id #{corpus_id}")
 
-    doc_labels = {}
-    text_labels = {}
-
-    corpus = Corpus.objects.get(pk=corpus_id)
-    label_set = corpus.label_set
-
-    text_label_queryset = label_set.annotation_labels.filter(label_type="TOKEN_LABEL")
-    doc_type_labels_queryset = label_set.annotation_labels.filter(
-        label_type="DOC_TYPE_LABEL"
+    # Base first: only labels within the corpus
+    corpus_label_ids = (
+        Annotation.objects.filter(corpus_id=corpus_id, analysis__isnull=True)
+        .values_list("annotation_label", flat=True)
+        .distinct()
     )
 
+    if annotation_filter_mode == "ANALYSES_ONLY":
+        logger.info("Using ANALYSES_ONLY mode for label filtering")
+        # If analyses are specified, gather only labels used by those analyses
+        if analysis_ids:
+            analyses_label_ids = (
+                Annotation.objects.filter(analysis_id__in=analysis_ids)
+                .values_list("annotation_label", flat=True)
+                .distinct()
+            )
+            label_ids = analyses_label_ids
+        else:
+            # If user wants only analyses but there are none, no labels
+            label_ids = []
+    elif annotation_filter_mode == "CORPUS_LABELSET_PLUS_ANALYSES":
+        logger.info("Using CORPUS_LABELSET_PLUS_ANALYSES mode for label filtering")
+        # Combine corpus' label set with any from the analyses
+        if analysis_ids:
+            analyses_label_ids = (
+                Annotation.objects.filter(analysis_id__in=analysis_ids)
+                .values_list("annotation_label", flat=True)
+                .distinct()
+            )
+            label_ids = corpus_label_ids.union(analyses_label_ids)
+        else:
+            label_ids = corpus_label_ids
+    else:  # Default: "CORPUS_LABELSET_ONLY"
+        logger.info("Using CORPUS_LABELSET_ONLY mode for label filtering")
+        label_ids = corpus_label_ids
+
+    logger.info(f"Found {len(label_ids)} labels in corpus label set")
+
+    # Pull the corresponding AnnotationLabel objects
+    labels = AnnotationLabel.objects.filter(pk__in=label_ids)
+
+    text_labels = {}
+    doc_labels = {}
+
+    # Split them into text labels vs. doc labels
+    text_label_queryset = labels.filter(label_type="TOKEN_LABEL")
+    doc_type_labels_queryset = labels.filter(label_type="DOC_TYPE_LABEL")
+
     for tl in text_label_queryset:
-
-        # logger.info(f"Text label: {tl}")
-
-        hex_color = "#9ACD32"
-        if hasattr(tl, "color"):
-            hex_color = tl.color
-
-        # color = tuple(int(hex_color.lstrip('#')[i:i + 2], 16) / 256 for i in (0, 2, 4))
-
-        text_labels[f"{tl.pk}"] = {
-            "id": f"{tl.pk}",
+        hex_color = getattr(tl, "color", "#9ACD32")
+        text_labels[str(tl.pk)] = {
+            "id": str(tl.pk),
             "color": hex_color,
             "description": tl.description,
             "icon": tl.icon,
@@ -63,15 +115,9 @@ def build_label_lookups(corpus_id: str) -> LabelLookupPythonType:
         }
 
     for dl in doc_type_labels_queryset:
-
-        # logger.info(f"Doc label: {dl}")
-
-        hex_color = "#9ACD32"
-        if hasattr(dl, "color"):
-            hex_color = dl.color
-
-        doc_labels[f"{dl.pk}"] = {
-            "id": f"{dl.pk}",
+        hex_color = getattr(dl, "color", "#9ACD32")
+        doc_labels[str(dl.pk)] = {
+            "id": str(dl.pk),
             "color": hex_color,
             "description": dl.description,
             "icon": dl.icon,
@@ -79,18 +125,35 @@ def build_label_lookups(corpus_id: str) -> LabelLookupPythonType:
             "label_type": "DOC_TYPE_LABEL",
         }
 
-    return {"text_labels": text_labels, "doc_labels": doc_labels}
+    return {
+        "text_labels": text_labels,
+        "doc_labels": doc_labels,
+    }
 
 
 def build_document_export(
-    label_lookups: LabelLookupPythonType, doc_id: int, corpus_id: int
-) -> tuple[str, str, OpenContractDocExport | None, Any, Any]:
+    label_lookups: LabelLookupPythonType,
+    doc_id: int,
+    corpus_id: int,
+    analysis_ids: list[int] | None = None,
+    annotation_filter_mode: AnnotationFilterMode = AnnotationFilterMode.CORPUS_LABELSET_ONLY,
+) -> tuple[
+    str | None,
+    str | None,
+    OpenContractDocExport | None,
+    dict[str | int, AnnotationLabelPythonType],
+    dict[str | int, AnnotationLabelPythonType],
+]:
     """
     Fairly complex function to burn in the annotations for a given corpus on a given doc. This will alter the PDF
     and add highlight and labels. It's still a bit ugly, but it works.
 
     TODO - this makes assumptions that only work for PDF files and fails on all others, preventing export.
 
+    Additional args:
+        analysis_ids: Optional list of analysis PKs to include in annotation selection
+        annotation_filter_mode: How to filter annotations - "CORPUS_LABELSET_ONLY" (default),
+            "CORPUS_LABELSET_PLUS_ANALYSES", or "ANALYSES_ONLY"
     """
 
     logger.info(f"burn_doc_annotations - label_lookups: {label_lookups}")
@@ -129,6 +192,48 @@ def build_document_export(
 
         annotated_pdf_bytes = io.BytesIO()
         doc_annotations = Annotation.objects.filter(document=doc, corpus=corpus)
+
+        if annotation_filter_mode == AnnotationFilterMode.ANALYSES_ONLY:
+            if analysis_ids:
+                doc_annotations = doc_annotations.filter(analysis_id__in=analysis_ids)
+            else:
+                doc_annotations = Annotation.objects.none()
+
+        elif (
+            annotation_filter_mode == AnnotationFilterMode.CORPUS_LABELSET_PLUS_ANALYSES
+        ):
+            corpus_label_pks = (
+                label_lookups.get("doc_labels", {}).keys()
+                | label_lookups.get("text_labels", {}).keys()
+            )
+            corpus_label_ids = [int(pk) for pk in corpus_label_pks]
+
+            if analysis_ids:
+                doc_annotations = doc_annotations.filter(
+                    Q(annotation_label_id__in=corpus_label_ids)
+                    | Q(analysis_id__in=analysis_ids)
+                )
+            else:
+                doc_annotations = doc_annotations.filter(
+                    annotation_label_id__in=corpus_label_ids
+                )
+
+        elif (
+            annotation_filter_mode == AnnotationFilterMode.CORPUS_LABELSET_ONLY
+        ):  # "CORPUS_LABELSET_ONLY"
+            corpus_label_pks = (
+                label_lookups.get("doc_labels", {}).keys()
+                | label_lookups.get("text_labels", {}).keys()
+            )
+            corpus_label_ids = [int(pk) for pk in corpus_label_pks]
+            doc_annotations = doc_annotations.filter(
+                annotation_label_id__in=corpus_label_ids
+            )
+
+        else:
+            raise ValueError(
+                f"Invalid annotation_filter_mode: {annotation_filter_mode}"
+            )
 
         # PDF Code:
         try:
@@ -185,7 +290,11 @@ def build_document_export(
                 ] = annot.json
 
                 for targ_page_num in annotation_json:
+                    logger.info(
+                        f"Processing annotation {annot.id} on page {targ_page_num}"
+                    )
                     highlight = annotation_json[targ_page_num]
+                    logger.info(f"Highlight: {highlight}")
 
                     if targ_page_num in page_highlights:
                         if annot.annotation_label.id in page_highlights[targ_page_num]:
@@ -206,6 +315,9 @@ def build_document_export(
 
         total_page_count = len(pdf_input.pages)
 
+        print(f"Page_highlights: {page_highlights}")
+        print(f"Page_sizes: {page_sizes}")
+
         for i in range(0, total_page_count):
             page = pdf_input.pages[i]
             page_box = page.mediabox
@@ -214,13 +326,14 @@ def build_document_export(
             page_width = page_box.lower_right[0]
 
             if f"{i + 1}" in page_highlights:
-                data_height = page_sizes[i]["height"]
-                data_width = page_sizes[i]["width"]
+                data_height = page_sizes[i + 1]["height"]
+                data_width = page_sizes[i + 1]["width"]
 
                 y_scale = float(page_height) / float(data_height)
                 x_scale = float(page_width) / float(data_width)
 
                 for label_id in page_highlights[f"{i + 1}"]:
+
                     label = text_labels[f"{label_id}"]
 
                     for rect in page_highlights[f"{i + 1}"][label_id]:

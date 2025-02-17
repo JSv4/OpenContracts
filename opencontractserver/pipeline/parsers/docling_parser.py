@@ -98,7 +98,7 @@ def convert_docling_item_to_annotation(
     page_no = first_prov.page_no - 1  # Convert 1-indexed to 0-indexed
     item_text = getattr(item, "text", "")
 
-    logger.info(f"Page dimensions: {page_dimensions}")
+    # logger.info(f"Page dimensions: {page_dimensions}")
 
     # Get page height for coordinate transformation
     _, page_height = page_dimensions.get(page_no, (0, 0))
@@ -183,7 +183,7 @@ class DoclingParser(BaseParser):
             )
 
         # Log the contents of the models directory
-        logger.info(f"Docling models directory contents: {os.listdir(artifacts_path)}")
+        # logger.info(f"Docling models directory contents: {os.listdir(artifacts_path)}")
 
         # TODO - expose some settings from here - like GPU acceleration
         ocr_options = EasyOcrOptions(
@@ -281,7 +281,7 @@ class DoclingParser(BaseParser):
             text_lookup = {}
 
             text_lookup = build_text_lookup(doc)
-            logger.info(f"Text lookup: {text_lookup}")
+            # logger.info(f"Text lookup: {text_lookup}")
             base_annotation_lookup = {
                 text.self_ref: convert_docling_item_to_annotation(
                     text,
@@ -296,7 +296,7 @@ class DoclingParser(BaseParser):
             # Use Chunks to find and apply parent_ids (warning this will )
             for i, chunk in enumerate(chunks):
 
-                logger.info(f"Chunk {i} has headings: {chunk.meta.headings}")
+                logger.debug(f"Chunk {i} has headings: {chunk.meta.headings}")
 
                 # Print headers if they exist
                 if chunk.meta.headings:
@@ -305,9 +305,9 @@ class DoclingParser(BaseParser):
                             f"Docling chunk {i} has multiple headings; this is not supported yet"
                         )
                     heading = chunk.meta.headings[0]
-                    logger.info(f"Find heading: {heading}")
+                    logger.debug(f"Find heading: {heading}")
                     parent_ref = text_lookup.get(heading.strip())
-                    logger.info(f"Found parent ref: {parent_ref}")
+                    logger.debug(f"Found parent ref: {parent_ref}")
 
                     # Add parent_ref to heading_annot_id_to_children if it doesn't exist
                     if roll_up_groups:
@@ -320,7 +320,7 @@ class DoclingParser(BaseParser):
                     parent_ref = None
 
                 if hasattr(chunk.meta, "doc_items"):
-                    logger.info(f"Number of doc_items: {len(chunk.meta.doc_items)}")
+                    logger.debug(f"Number of doc_items: {len(chunk.meta.doc_items)}")
 
                     # Inspect each doc_item
                     accumulator = []
@@ -411,7 +411,7 @@ class DoclingParser(BaseParser):
             # in terms of complex doc hierarchy) and use LLM to infer relationships between sections.
             # EXPERIMENTAL - NOT UPDATED TO PRODUCE GROUP RELATIONSHIPS
             if kwargs.get("llm_enhanced_hierarchy", False):
-                logger.info(
+                logger.debug(
                     "LLM-enhanced hierarchy enabled - adds processing time but improves hierarchy quality"
                 )
                 enriched_data = reassign_annotation_hierarchy(
@@ -446,7 +446,7 @@ class DoclingParser(BaseParser):
             if text.label in [DocItemLabel.TITLE, DocItemLabel.PAGE_HEADER]:
                 logger.info(f"Title found in first {text.label}: {text.text}")
                 return text.text
-        logger.info(f"No title found, using default title: {default_title}")
+        logger.debug(f"No title found, using default title: {default_title}")
         return default_title
 
     def _extract_description(self, doc: DoclingDocument, title: str) -> str:
@@ -505,7 +505,7 @@ class DoclingParser(BaseParser):
                 - Dict[int, np.ndarray]: Mapping from page indices to arrays of token indices.
                 - str: The full content of the document, constructed from the tokens.
         """
-        logger.info("Generating PAWLS content")
+        logger.debug("Generating PAWLS content")
 
         pawls_pages: list[PawlsPagePythonType] = []
         spatial_indices_by_page: dict[int, STRtree] = {}
@@ -517,23 +517,23 @@ class DoclingParser(BaseParser):
         # Check if PDF requires OCR
         pdf_file_stream = io.BytesIO(doc_bytes)
         needs_ocr = check_if_pdf_needs_ocr(pdf_file_stream)
-        logger.info(f"PDF needs OCR: {needs_ocr}")
+        logger.debug(f"PDF needs OCR: {needs_ocr}")
 
         if not needs_ocr and not force_ocr:
             # Use pdfplumber to extract tokens and text
-            logger.info("Using pdfplumber to extract text and tokens")
+            logger.debug("Using pdfplumber to extract text and tokens")
             import pdfplumber
 
             with pdfplumber.open(pdf_file_stream) as pdf:
                 for page_num, page in enumerate(pdf.pages, start=1):
-                    logger.info(f"Processing page number {page_num}")
+                    logger.debug(f"Processing page number {page_num}")
 
                     # Get page size from Docling document if available
                     docling_page = doc.pages.get(page_num)
                     if docling_page and docling_page.size:
                         width = docling_page.size.width
                         height = docling_page.size.height
-                        logger.info(
+                        logger.debug(
                             f"Page dimensions from Docling: width={width}, height={height}"
                         )
                     else:
@@ -553,7 +553,7 @@ class DoclingParser(BaseParser):
                     if plumber_width != width or plumber_height != height:
                         scale_x = width / plumber_width
                         scale_y = height / plumber_height
-                        logger.info(
+                        logger.debug(
                             f"Scaling pdfplumber coordinates by factors scale_x={scale_x}, scale_y={scale_y}"
                         )
                     else:
@@ -618,21 +618,21 @@ class DoclingParser(BaseParser):
                     }
 
                     pawls_pages.append(pawls_page)
-                    logger.info(f"PAWLS content for page {page_num} added")
+                    logger.debug(f"PAWLS content for page {page_num} added")
 
         else:
             # Use pdf2image and pytesseract to extract tokens and text
-            logger.info("Using OCR to extract text and tokens")
+            logger.debug("Using OCR to extract text and tokens")
             images = pdf2image.convert_from_bytes(doc_bytes)
             for page_num, page_image in enumerate(images, start=1):
-                logger.info(f"Processing page number {page_num}")
+                logger.debug(f"Processing page number {page_num}")
 
                 # Get page size from Docling document if available
                 page = doc.pages.get(page_num)
                 if page and page.size:
                     width = page.size.width
                     height = page.size.height
-                    logger.info(
+                    logger.debug(
                         f"Page dimensions from Docling: width={width}, height={height}"
                     )
                 else:
@@ -720,7 +720,7 @@ class DoclingParser(BaseParser):
                 }
 
                 pawls_pages.append(pawls_page)
-                logger.info(f"PAWLS content for page {page_num} added")
+                logger.debug(f"PAWLS content for page {page_num} added")
 
         # Combine content parts into full content
         content = "\n".join(content_parts)

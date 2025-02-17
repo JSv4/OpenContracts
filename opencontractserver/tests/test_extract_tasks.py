@@ -1,4 +1,5 @@
 import logging
+from unittest.mock import patch
 
 import vcr
 from django.contrib.auth import get_user_model
@@ -91,7 +92,7 @@ class ExtractsTaskTestCase(BaseFixtureTestCase):
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/test_run_extract_task.yaml",
-        record_mode="none",
+        record_mode="once",
         filter_headers=["authorization"],
         before_record_response=vcr_response_handler,
         match_on=["method"],
@@ -103,7 +104,11 @@ class ExtractsTaskTestCase(BaseFixtureTestCase):
         ],
         ignore_query_params=True,
     )
-    def test_run_extract_task(self) -> None:
+    @patch(
+        "opencontractserver.tasks.data_extract_tasks.StructuredPlannerAgent.chat",
+        return_value="mocked agent response",
+    )
+    def test_run_extract_task(self, mock_agent_chat) -> None:
         """
         Tests the run_extract Celery task by running it synchronously (always eager)
         and checking that Datacells are created as expected. Logs progress info to the
@@ -140,6 +145,9 @@ class ExtractsTaskTestCase(BaseFixtureTestCase):
             self.assertIsNotNone(
                 cell.data, "Datacell data should not be None after extraction."
             )
+
+        # Verify our mock was called
+        mock_agent_chat.assert_called()
 
 
 class AssembleAndTrimForTokenLimitTestCase(TestCase):

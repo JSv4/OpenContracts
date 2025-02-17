@@ -123,7 +123,7 @@ const StyledCardExtra = styled(Card.Content)`
   }
 `;
 
-const LabelsetCorner = styled.div<{ hasLabelset: boolean }>`
+const LabelsetCorner = styled.div<{ $hasLabelset: boolean }>`
   position: absolute;
   top: 0;
   right: 0;
@@ -143,7 +143,7 @@ const LabelsetCorner = styled.div<{ hasLabelset: boolean }>`
     border-style: solid;
     border-width: 0 100px 100px 0;
     border-color: transparent
-      ${(props) => (props.hasLabelset ? "#22c55e" : "#ef4444")} transparent
+      ${(props) => (props.$hasLabelset ? "#22c55e" : "#ef4444")} transparent
       transparent;
     transition: all 0.3s ease;
     z-index: 1;
@@ -379,7 +379,7 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
         ) : null}
         <LabelsetCorner
           ref={cornerRef}
-          hasLabelset={Boolean(labelSet)}
+          $hasLabelset={Boolean(labelSet)}
           onMouseEnter={() => setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
         >

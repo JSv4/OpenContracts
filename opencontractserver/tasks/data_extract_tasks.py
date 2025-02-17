@@ -590,6 +590,7 @@ async def oc_llama_index_doc_query(
             sbert_rerank = SentenceTransformerRerank(
                 model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=5
             )
+            logger.info(f"Reranked results: {sbert_rerank}")
             retrieved_nodes = sbert_rerank.postprocess_nodes(
                 results, QueryBundle(query)
             )
@@ -799,7 +800,6 @@ async def oc_llama_index_doc_query(
         # Optional: definitions from agentic approach
         agent_response_str = None
         if datacell.column.agentic:
-
             logger.info(f"Datacell {datacell.id} is agentic")
 
             # Now build the doc_engine query and incorporate these new tools
@@ -864,7 +864,7 @@ Context provided (combined_text):
 {combined_text}
 """
 
-            agentic_response = await agent.aquery(agent_instructions)
+            agentic_response = agent.chat(agent_instructions)
             logger.info(f"Agentic response: {agentic_response}")
 
             agent_response_str = str(agentic_response)
@@ -888,14 +888,14 @@ Context provided (combined_text):
 
         if datacell.column.extract_is_list:
             logger.info("Extracting list")
-            result = await marvin.extract_async(
+            result = marvin.extract(
                 final_text_for_marvin,
                 target=output_type,
                 instructions=parse_instructions if parse_instructions else query,
             )
         else:
-            logger.info("Casting to single instance")
-            result = await marvin.cast_async(
+            logger.info(f"Casting to single instance ({type(final_text_for_marvin)})")
+            result = marvin.cast(
                 final_text_for_marvin,
                 target=output_type,
                 instructions=parse_instructions if parse_instructions else query,

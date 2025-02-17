@@ -18,7 +18,9 @@ import {
   CorpusActionType,
   DocumentType,
   AnalysisRowType,
+  ConversationTypeConnection,
   PipelineComponentType,
+  ChatMessageType,
 } from "../types/graphql-api";
 import { ExportObject } from "../types/graphql-api";
 
@@ -826,6 +828,7 @@ export const GET_ANALYZERS = gql`
           disabled
           isPublic
           manifest
+          inputSchema
         }
       }
     }
@@ -899,6 +902,7 @@ export const GET_ANALYSES = gql`
             analyzerId
             description
             manifest
+            inputSchema
             fullLabelList {
               id
               text
@@ -1110,6 +1114,7 @@ export const GET_FIELDSETS = gql`
             edges {
               node {
                 id
+                name
                 query
                 matchText
                 outputType
@@ -1771,7 +1776,7 @@ export const getAnnotationsByDocumentId = /* GraphQL */ `
   }
 `;
 
-export const listAnnotations = gql`
+export const listAnnotations = /* GraphQL */ `
   query ListAnnotations(
     $filter: ModelAnnotationFilterInput
     $limit: Int
@@ -1795,11 +1800,146 @@ export const listAnnotations = gql`
   }
 `;
 
-// src/types/graphql-api.ts
+export interface GetConversationsInputs {
+  documentId?: string;
+  corpusId?: string;
+  title_Contains?: string;
+  createdAt_Gte?: string;
+  createdAt_Lte?: string;
+}
+
+/**
+ * Returns a connection of conversations.
+ */
+export interface GetConversationsOutputs {
+  conversations: ConversationTypeConnection;
+}
+
+/**
+ * Updated to query the new "conversations" field instead of "conversation".
+ * The shape is now a connection with edges of ConversationType.
+ */
+export const GET_CONVERSATIONS = gql`
+  query GetConversations(
+    $documentId: String
+    $corpusId: String
+    $limit: Int
+    $cursor: String
+    $title_Contains: String
+    $createdAt_Gte: DateTime
+    $createdAt_Lte: DateTime
+  ) {
+    conversations(
+      documentId: $documentId
+      corpusId: $corpusId
+      first: $limit
+      after: $cursor
+      title_Contains: $title_Contains
+      createdAt_Gte: $createdAt_Gte
+      createdAt_Lte: $createdAt_Lte
+    ) {
+      edges {
+        node {
+          id
+          title
+          createdAt
+          updatedAt
+          creator {
+            id
+            email
+          }
+          chatMessages {
+            totalCount
+          }
+          isPublic
+          myPermissions
+        }
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+    }
+  }
+`;
+
+/**
+ * Fetches all the data needed for the DocumentKnowledgeBase component:
+ * - Basic document info (title, fileType, creator, created)
+ * - All non-structural annotations for this document in the specified corpus
+ * - All direct document-document relationships (e.g., references, related)
+ * - All notes associated with this document
+ */
+
+export interface GetDocumentKnowledgeBaseInputs {
+  documentId: string;
+  corpusId: string;
+}
+
+export interface GetDocumentKnowledgeBaseOutputs {
+  document: DocumentType;
+}
+
+export const GET_DOCUMENT_KNOWLEDGE_BASE = gql`
+  query GetDocumentKnowledgeBase($documentId: String, $corpusId: ID!) {
+    document(id: $documentId) {
+      id
+      title
+
+      fileType
+      creator {
+        email
+      }
+      created
+      mdSummaryFile
+      allAnnotations(corpusId: $corpusId) {
+        id
+        page
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+        annotationType
+        rawText
+        json
+        myPermissions
+      }
+      allDocRelationships(corpusId: $corpusId) {
+        id
+        relationshipType
+        sourceDocument {
+          id
+          title
+          fileType
+        }
+        targetDocument {
+          id
+          title
+          fileType
+        }
+        created
+      }
+      allNotes(corpusId: $corpusId) {
+        id
+        title
+        content
+        created
+        creator {
+          email
+        }
+      }
+    }
+  }
+`;
 
 /** Input type for the getPostprocessors query. */
 export interface GetPostprocessorsInput {}
-
 /** Output type for the getPostprocessors query. */
 export interface GetPostprocessorsOutput {
   pipelineComponents: {
@@ -1807,7 +1947,6 @@ export interface GetPostprocessorsOutput {
     postProcessors: Array<PipelineComponentType>;
   };
 }
-
 export const GET_POST_PROCESSORS = gql`
   query {
     pipelineComponents {
@@ -1820,6 +1959,199 @@ export const GET_POST_PROCESSORS = gql`
         componentType
         inputSchema
       }
+    }
+  }
+`;
+
+// First, we'll define a new combined query that gets everything we need:
+export interface GetDocumentKnowledgeAndAnnotationsInput {
+  documentId: string;
+  corpusId: string;
+  analysisId?: string;
+}
+
+export interface GetDocumentKnowledgeAndAnnotationsOutput {
+  document: DocumentType;
+  corpus: CorpusType;
+}
+
+export const GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS = gql`
+  query GetDocumentKnowledgeAndAnnotations(
+    $documentId: String!
+    $corpusId: ID!
+    $analysisId: ID
+  ) {
+    document(id: $documentId) {
+      # Knowledge base fields
+      id
+      title
+      fileType
+      creator {
+        email
+      }
+      created
+      mdSummaryFile
+      pdfFile
+      txtExtractFile
+      pawlsParseFile
+      myPermissions
+      allNotes(corpusId: $corpusId) {
+        id
+        title
+        content
+        created
+        creator {
+          email
+        }
+      }
+      allDocRelationships(corpusId: $corpusId) {
+        id
+        relationshipType
+        sourceDocument {
+          id
+          title
+          fileType
+        }
+        targetDocument {
+          id
+          title
+          fileType
+        }
+        created
+      }
+
+      # Annotation fields
+      allStructuralAnnotations {
+        id
+        page
+        parent {
+          id
+        }
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+        annotationType
+        rawText
+        json
+        myPermissions
+        structural
+      }
+      allAnnotations(corpusId: $corpusId, analysisId: $analysisId) {
+        id
+        page
+        annotationLabel {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+        userFeedback {
+          edges {
+            node {
+              id
+              approved
+              rejected
+            }
+          }
+          totalCount
+        }
+        annotationType
+        rawText
+        json
+        myPermissions
+      }
+      allRelationships(corpusId: $corpusId, analysisId: $analysisId) {
+        id
+        structural
+        relationshipLabel {
+          id
+          text
+          color
+          icon
+          description
+        }
+        sourceAnnotations {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+        targetAnnotations {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    }
+    corpus(id: $corpusId) {
+      id
+      labelSet {
+        id
+        allAnnotationLabels {
+          id
+          text
+          color
+          icon
+          description
+          labelType
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Interfaces and query for GET_CHAT_MESSAGES
+ * to fetch messages once a conversation is selected.
+ */
+export interface GetChatMessagesInputs {
+  conversationId: string;
+  orderBy?: string; // e.g. "created_at"
+  limit?: number;
+  cursor?: string;
+}
+
+export interface ChatMessageNode {
+  id: string;
+  msgType: string;
+  content: string;
+  // Add other fields (data, createdAt, creator, etc.) if you need them
+}
+
+export interface ChatMessageEdge {
+  node: ChatMessageNode;
+}
+
+export interface ChatMessageConnection {
+  edges: ChatMessageEdge[];
+  pageInfo?: PageInfo;
+}
+
+export interface GetChatMessagesOutputs {
+  chatMessages: ChatMessageType[];
+}
+
+/**
+ * New query to fetch messages for a specific conversation, optionally ordering
+ * or using pagination (limit/cursor).
+ */
+export const GET_CHAT_MESSAGES = gql`
+  query GetChatMessages($conversationId: ID!, $orderBy: String) {
+    chatMessages(conversationId: $conversationId, orderBy: $orderBy) {
+      id
+      msgType
+      content
+      data
     }
   }
 `;

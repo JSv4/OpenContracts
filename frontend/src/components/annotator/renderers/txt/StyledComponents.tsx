@@ -12,14 +12,28 @@ export const spiralOut = keyframes`
   }
 `;
 
+// Enhanced version of the existing fadeInSlide animation
 const fadeInSlide = keyframes`
   from {
     opacity: 0;
-    transform: translateX(-10px);
+    transform: translateX(-10px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
+  }
+`;
+
+// Add a subtle hover animation
+const pulseGlow = keyframes`
+  0% {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  100% {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 `;
 
@@ -42,26 +56,33 @@ export const LabelContainer = styled.div<{ color: string }>`
     height: 2px;
     background-color: ${(props) => props.color};
     opacity: 0.8;
+    transition: all 0.2s ease;
   }
 
-  /* Target RadialButtonCloud directly */
+  &:hover::before {
+    width: 12px;
+    opacity: 1;
+  }
+
+  /* Enhanced hover animation for RadialButtonCloud */
   & > div:last-child {
     opacity: 0;
-    transform: translateX(-4px);
-    transition: all 0.2s ease;
+    transform: translateX(-4px) scale(0.9);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   &:hover > div:last-child {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
   }
 `;
 
 // Adjusted to handle spiral movement
 export const Label = styled.span<{ color: string; $index: number }>`
-  padding: 4px 8px;
-  border-radius: 4px;
-  background-color: ${(props) => props.color};
+  padding: 4px 12px;
+  border-radius: 6px;
+  background-color: ${(props) =>
+    `${props.color}f0`}; // Added slight transparency
   color: white;
   font-size: 0.85em;
   white-space: nowrap;
@@ -72,29 +93,32 @@ export const Label = styled.span<{ color: string; $index: number }>`
   animation-delay: ${(props) => props.$index * 0.05}s;
   pointer-events: auto;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-right: 4px; /* Add space for the action buttons */
+  margin-right: 4px;
+  backdrop-filter: blur(4px);
 
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px) scale(1.02);
+    animation: ${pulseGlow} 2s infinite;
+    background-color: ${(props) => props.color}; // Full opacity on hover
   }
 
-  /* Add a subtle indicator for actions */
   &::after {
     content: "⋮";
     opacity: 0.7;
     font-size: 1.2em;
     font-weight: bold;
     padding-left: 4px;
-    transition: opacity 0.2s ease;
+    transition: all 0.2s ease;
+    transform: rotate(90deg);
   }
 
   &:hover::after {
     opacity: 1;
+    transform: rotate(90deg) scale(1.1);
   }
 `;
 
@@ -105,8 +129,10 @@ interface PaperContainerProps {
 }
 
 export const PaperContainer = styled.div<PaperContainerProps>`
-  background-color: #f9f9f9;
-  padding: 1em;
+  background-color: #ffffff;
+  background-image: linear-gradient(#f9f9f9 1px, transparent 1px);
+  background-size: 100% 1.6em;
+  padding: 1.5em;
   font-family: "Helvetica Neue", Arial, sans-serif;
   line-height: 1.6;
   position: relative;
@@ -115,9 +141,14 @@ export const PaperContainer = styled.div<PaperContainerProps>`
   width: 100%;
   height: 100%;
   flex: 1 1 auto;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
   white-space: normal;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  }
 
   ${(props) =>
     props.maxWidth &&

@@ -5,9 +5,19 @@ import { Button, SemanticICONS, Modal } from "semantic-ui-react";
 import { getLuminance } from "polished";
 
 // Calculate dot color with good contrast
-const getContrastColor = (bgColor: string) => {
-  const luminance = getLuminance(bgColor);
-  return luminance > 0.5 ? "#00aa00" : "#00ff00";
+const getContrastColor = (bgColor: string): string => {
+  // If it looks like a hex color without the #, add it
+  if (/^[A-Fa-f0-9]{3,6}$/.test(bgColor)) {
+    bgColor = "#" + bgColor;
+  }
+
+  try {
+    const luminance = getLuminance(bgColor);
+    return luminance > 0.5 ? "#000" : "#fff";
+  } catch (error) {
+    console.warn(`Invalid color format: ${bgColor}, using fallback`);
+    return "#000"; // fallback to black
+  }
 };
 
 const pulse = keyframes`
@@ -196,11 +206,6 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
     spacingAlong,
     skipCount
   );
-
-  const getContrastColor = (bgColor: string) => {
-    const luminance = getLuminance(bgColor);
-    return luminance > 0.5 ? "#000" : "#fff";
-  };
 
   const dotColor = getContrastColor(parentBackgroundColor);
 

@@ -14,7 +14,8 @@ type RefType =
   | "scrollContainer"
   | "pdfPageCanvas"
   | "pdfPageRenderer"
-  | "pdfPageContainer";
+  | "pdfPageContainer"
+  | "chatSource";
 
 /**
  * Hook for managing annotation references
@@ -63,6 +64,7 @@ export const useAnnotationRefs = () => {
     PDFPageContainerRefs: { current: refs.PDFPageContainerRefs },
     annotationElementRefs: { current: refs.annotationElementRefs },
     textSearchElementRefs: { current: refs.textSearchElementRefs },
+    chatSourceElementRefs: { current: refs.chatSourceElementRefs },
     registerRef,
     unregisterRef,
   };

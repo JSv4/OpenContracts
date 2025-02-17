@@ -94,27 +94,20 @@ export const PDF = ({ read_only }: { read_only: boolean }) => {
   );
 };
 
-export const PageAnnotationsContainer = styled.div(
-  ({ theme }) => `
-    position: relative;
-    box-shadow: 2px 2px 4px 0 rgba(0, 0, 0, 0.2);
-    margin: 0 0 .5rem;
-    &:last-child {
-        margin-bottom: 0;
-    }
-    // align-items: center;
-    // justify-content: center;
-    // display: flex;
-    // flex-direction: column;
-`
-);
+export const PageAnnotationsContainer = styled.div`
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  margin: 1rem 0;
+`;
 
-interface PageCanvasProps {
-  width?: number;
-}
-
-export const PageCanvas = styled.canvas<PageCanvasProps>`
-  display: block;
-  ${(props) => (props.width ? `width: ${props.width}px;` : "")}
+export const PageCanvas = styled.canvas`
+  // Add box shadow and border for better visibility
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  // Ensure canvas maintains aspect ratio
+  max-width: 100%;
   height: auto;
 `;

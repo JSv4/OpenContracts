@@ -93,6 +93,7 @@ import { CorpusExtractCards } from "../components/extracts/CorpusExtractCards";
 import { getPermissions } from "../utils/transform";
 import { MOBILE_VIEW_BREAKPOINT } from "../assets/configurations/constants";
 import { CorpusDashboard } from "../components/corpuses/CorpusDashboard";
+import { useCorpusState } from "../components/annotator/context/CorpusAtom";
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
@@ -105,6 +106,7 @@ export const Corpuses = () => {
     selectedMetaAnnotationId
   );
 
+  const { setCorpus } = useCorpusState();
   const selected_document_ids = useReactiveVar(selectedDocumentIds);
   const document_search_term = useReactiveVar(documentSearchTerm);
   const corpus_search_term = useReactiveVar(corpusSearchTerm);
@@ -311,13 +313,16 @@ export const Corpuses = () => {
   }, [location]);
 
   useEffect(() => {
-    if (!opened_corpus_id || opened_corpus_id === null) {
+    setCorpus({
+      selectedCorpus: opened_corpus,
+    });
+    if (!opened_corpus || opened_corpus === null) {
       refetchCorpuses();
     } else {
       console.log("Fetch metdata for corpus id: ", opened_corpus_id);
-      fetchMetadata({ variables: { metadataForCorpusId: opened_corpus_id } });
+      fetchMetadata({ variables: { metadataForCorpusId: opened_corpus.id } });
     }
-  }, [opened_corpus_id]);
+  }, [opened_corpus]);
 
   useEffect(() => {
     console.log(

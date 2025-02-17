@@ -1,4 +1,5 @@
 import enum
+from enum import Enum
 
 
 class OpenContractsEnum(str, enum.Enum):
@@ -43,3 +44,9 @@ class PermissionTypes(str, enum.Enum):
     PUBLISH = "PUBLISH"
     CRUD = "CRUD"
     ALL = "ALL"
+
+
+class AnnotationFilterMode(Enum):
+    CORPUS_LABELSET_ONLY = "CORPUS_LABELSET_ONLY"
+    CORPUS_LABELSET_PLUS_ANALYSES = "CORPUS_LABELSET_PLUS_ANALYSES"
+    ANALYSES_ONLY = "ANALYSES_ONLY"

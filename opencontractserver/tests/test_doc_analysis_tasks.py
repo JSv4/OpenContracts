@@ -66,7 +66,7 @@ class TestBuildContractKnowledgeBaseTask(BaseFixtureTestCase):
         doc.refresh_from_db()
 
         # Verify the Celery task signaled success
-        self.assertEqual(task_result, ([], [], [], True))
+        self.assertEqual(task_result, ([], [], [], True, "No Return Message"))
 
         # Assert that the doc has been updated with a new summary file and an updated description
         self.assertIsNotNone(

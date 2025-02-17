@@ -76,15 +76,26 @@ import {
   FilterContainer,
   IconButton,
 } from "../FilterContainers";
+import { MultipageAnnotationJson } from "../../../types";
+import {
+  useChatSourceState,
+  ChatSourceState,
+} from "../../../annotator/context/ChatSourceAtom";
 
 /**
  * MessageData interface for incoming websocket messages.
  */
 interface MessageData {
-  type: string;
+  type: "ASYNC_START" | "ASYNC_CONTENT" | "ASYNC_FINISH" | "SYNC_CONTENT";
   content: string;
   data?: {
-    sources?: string;
+    sources?: {
+      page: number;
+      json: { start: number; end: number } | MultipageAnnotationJson;
+      annotation_id: number;
+      label: string;
+      label_id: number;
+    }[];
   };
 }
 
@@ -121,6 +132,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | undefined
   >();
+  const { setChatSourceState } = useChatSourceState();
 
   // For messages from server (via the new GET_CHAT_MESSAGES query)
   const [serverMessages, setServerMessages] = useState<ChatMessageProps[]>([]);
@@ -356,7 +368,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
     newSocket.onmessage = (event) => {
       try {
-        const messageData = JSON.parse(event.data) as MessageData;
+        const messageData = JSON.parse(event.data);
         if (!messageData) return;
         const { type: msgType, content, data } = messageData;
         switch (msgType) {
@@ -366,12 +378,27 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           case "ASYNC_CONTENT":
             appendStreamingTokenToChat(content);
             break;
-          case "ASYNC_FINISH":
-            finalizeStreamingResponse(content, data?.sources || "");
+          case "ASYNC_FINISH": {
+            const sourcesToPass =
+              data?.sources &&
+              typeof data.sources !== "string" &&
+              data.sources.length > 0
+                ? data.sources
+                : undefined;
+            console.log("sourcesToPass", sourcesToPass);
+            handleCompleteMessage(content, sourcesToPass);
             break;
-          case "SYNC_CONTENT":
-            finalizeSyncResponse(content, data?.sources || "");
+          }
+          case "SYNC_CONTENT": {
+            const sourcesToPass =
+              data?.sources &&
+              typeof data.sources !== "string" &&
+              data.sources.length > 0
+                ? data.sources
+                : undefined;
+            handleCompleteMessage(content, sourcesToPass);
             break;
+          }
           default:
             console.warn("Unknown message type:", msgType);
             break;
@@ -555,6 +582,44 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       opacity: 0.8 + intensity * 0.2,
       textColor: intensity > 0.3 ? "white" : "#1A202C", // Flip text color based on intensity
     };
+  };
+
+  const handleCompleteMessage = (
+    content: string,
+    sourcesData?: Array<{
+      page: number;
+      json: any;
+      annotation_id: number;
+      label: string;
+      label_id: number;
+    }>
+  ) => {
+    const messageId = `msg_${Date.now()}`;
+    const mappedSources =
+      sourcesData?.map((src, index) => {
+        return {
+          id: `${messageId}.${index}`,
+          tokens: src.json.tokens || [],
+          bounds: src.json.bounds || {},
+          page: src.page,
+          label: src.label,
+          label_id: src.label_id,
+          annotation_id: src.annotation_id,
+        };
+      }) || [];
+
+    setChatSourceState((prev: ChatSourceState) => ({
+      messages: [
+        ...prev.messages,
+        {
+          messageId,
+          content,
+          timestamp: new Date().toISOString(),
+          sources: mappedSources,
+        },
+      ],
+      selectedMessageId: messageId,
+    }));
   };
 
   /**

@@ -309,23 +309,37 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   };
 
   /**
-   * Helper method to finalize streaming responses, replacing the partial content
-   * with the final content from the websocket.
-   * @param content The final content text
-   * @param sources (Optional) sources for the assistant response
+   * Finalize a partially-streamed response by replacing the last chat entry
+   * with the final content (and calling `handleCompleteMessage` to store sources).
+   * @param content - the fully streamed final response
+   * @param sourcesData - optional array of WebSocketSources describing pinned info
    */
   const finalizeStreamingResponse = (
     content: string,
-    sources: string
+    sourcesData?: WebSocketSources[]
   ): void => {
+    // First update the partially streamed message in local state
     setChat((prev) => {
       if (!prev.length) return prev;
-      const updatedLast = {
-        ...prev[prev.length - 1],
+
+      // Find the last assistant message in the local chat array
+      const lastIndex = [...prev].reverse().findIndex((msg) => msg.isAssistant);
+      if (lastIndex === -1) return prev;
+
+      // Because we used .reverse(), we translate back to the forward index
+      const forwardIndex = prev.length - 1 - lastIndex;
+      const updatedMessages = [...prev];
+      const assistantMsg = updatedMessages[forwardIndex];
+
+      updatedMessages[forwardIndex] = {
+        ...assistantMsg,
         content,
       };
-      return [...prev.slice(0, -1), updatedLast];
+      return updatedMessages;
     });
+
+    // Then persist the final content in the chatSourcesAtom
+    handleCompleteMessage(content, sourcesData);
   };
 
   /**
@@ -401,7 +415,6 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
     newSocket.onmessage = (event) => {
       try {
-        // Explicitly type the parsed data as MessageData
         const messageData: MessageData = JSON.parse(event.data);
         if (!messageData) return;
         const { type: msgType, content, data } = messageData;
@@ -415,19 +428,16 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
             break;
           case "ASYNC_FINISH": {
             const sourcesToPass =
-              data?.sources &&
-              typeof data.sources !== "string" &&
-              data.sources.length > 0
+              data?.sources && Array.isArray(data.sources)
                 ? data.sources
                 : undefined;
-            handleCompleteMessage(content, sourcesToPass);
+            console.log("sourcesToPass", sourcesToPass);
+            finalizeStreamingResponse(content, sourcesToPass);
             break;
           }
           case "SYNC_CONTENT": {
             const sourcesToPass =
-              data?.sources &&
-              typeof data.sources !== "string" &&
-              data.sources.length > 0
+              data?.sources && Array.isArray(data.sources)
                 ? data.sources
                 : undefined;
             handleCompleteMessage(content, sourcesToPass);
@@ -621,6 +631,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   /**
    * Enhanced to accept optional override IDs (so server messages can
    * match their original ID rather than a new 'msg_timestamp' ID).
+   * This updated version handles both old and new formats of the 'json'
+   * field by checking for 'tokens' or 'tokensJsons' within the embedded object.
    */
   const handleCompleteMessage = (
     content: string,
@@ -633,26 +645,32 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     }>,
     overrideId?: string,
     overrideCreatedAt?: string
-  ) => {
-    // If provided, use the server's message id and creation time;
-    // otherwise fall back to a newly generated one for streaming.
+  ): void => {
     const messageId = overrideId ?? `msg_${Date.now()}`;
     const messageTimestamp = overrideCreatedAt
       ? new Date(overrideCreatedAt).toISOString()
       : new Date().toISOString();
 
     const mappedSources =
-      sourcesData?.map((src, index) => ({
-        id: `${messageId}.${index}`,
-        tokens: src.json.tokens || [],
-        bounds: src.json.bounds || {},
-        page: src.page,
-        label: src.label,
-        label_id: src.label_id,
-        annotation_id: src.annotation_id,
-      })) || [];
+      sourcesData?.map((src, index) => {
+        // Our incoming json is an object keyed by page numbers (e.g., "20")
+        // Extract the first section available from the JSON payload
+        const annotationSection = Object.values(src.json)[0] as
+          | { bounds?: any; tokens?: any[]; tokensJsons?: any[] }
+          | undefined;
+        return {
+          id: `${messageId}.${index}`,
+          // Prefer the `tokens` field if available; otherwise, fall back to `tokensJsons`
+          tokens:
+            annotationSection?.tokens ?? annotationSection?.tokensJsons ?? [],
+          bounds: annotationSection?.bounds ?? {},
+          page: src.page,
+          label: src.label,
+          label_id: src.label_id,
+          annotation_id: src.annotation_id,
+        };
+      }) || [];
 
-    // Ensure we do not duplicate if the message is already in the store
     setChatSourceState((prev: ChatSourceState) => {
       if (prev.messages.find((m) => m.messageId === messageId)) {
         return prev; // already exists
@@ -668,7 +686,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
             sources: mappedSources,
           },
         ],
-        // Optionally auto-select the newly streamed or loaded message
+        // Optionally auto-select the newly streamed or loaded message.
         selectedMessageId: overrideId ? prev.selectedMessageId : messageId,
       };
     });

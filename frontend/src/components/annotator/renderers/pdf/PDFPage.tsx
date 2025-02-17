@@ -26,6 +26,11 @@ import SelectionLayer from "./SelectionLayer";
 import { PDFPageInfo } from "../../types/pdf";
 import _ from "lodash";
 import { useCorpusState } from "../../context/CorpusAtom";
+import { useAtomValue } from "jotai";
+import { chatSourcesAtom } from "../../context/ChatSourceAtom";
+import { ChatSourceTokenResult } from "../../context/ChatSourceAtom";
+import { ChatSourceToken } from "../../display/components/ChatSourceToken";
+import { ChatSourceSpan } from "../../display/components/ChatSourceSpan";
 
 /**
  * This wrapper is inline-block (shrink-wrapped) and position:relative
@@ -35,6 +40,55 @@ const CanvasWrapper = styled.div`
   position: relative;
   display: inline-block;
 `;
+
+// New: Define ChatSourceItem component that uses hooks at top-level
+interface ChatSourceItemProps {
+  source: ChatSourceTokenResult;
+  index: number;
+  messageId: string;
+  pageInfo: PDFPageInfo;
+}
+
+const ChatSourceItem: React.FC<ChatSourceItemProps> = ({
+  source,
+  index,
+  messageId,
+  pageInfo,
+}) => {
+  const { registerRef, unregisterRef } = useAnnotationRefs();
+  const itemRef = useRef<HTMLSpanElement | null>(null);
+  const key = `${messageId}.${index}`;
+
+  useEffect(() => {
+    registerRef("chatSource", itemRef, key);
+    return () => {
+      unregisterRef("chatSource", key);
+    };
+  }, [key, registerRef, unregisterRef]);
+
+  if ("tokens" in source) {
+    const tokenSource = source as ChatSourceTokenResult;
+    const pageNumberIndex = pageInfo.page.pageNumber - 1;
+    if (!tokenSource.tokens[pageNumberIndex]) return null;
+    return (
+      <span ref={itemRef}>
+        <ChatSourceToken
+          source={tokenSource}
+          pageInfo={pageInfo}
+          hidden={false}
+          showBoundingBox={true}
+          scrollIntoView={false}
+        />
+      </span>
+    );
+  } else {
+    return (
+      <span ref={itemRef}>
+        <ChatSourceSpan source={source} hidden={false} />
+      </span>
+    );
+  }
+};
 
 /**
  * PDFPage Component
@@ -79,6 +133,13 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
   const annotationControls = useAnnotationControls();
   const { spanLabelsToView, activeSpanLabel } = annotationControls;
 
+  const chatState = useAtomValue(chatSourcesAtom);
+  const { messages, selectedMessageId } = chatState;
+  const selectedMessage = useMemo(
+    () => messages.find((m) => m.messageId === selectedMessageId),
+    [messages, selectedMessageId]
+  );
+
   const updatedPageInfo = useMemo(() => {
     return new PDFPageInfo(
       pageInfo.page,
@@ -102,26 +163,19 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
   /**
    * Handles resizing of the PDF page canvas.
    */
+  const handleResize = () => {
+    if (canvasRef.current === null || rendererRef.current === null) {
+      onError(new Error("Canvas or renderer not available."));
+      return;
+    }
+    const viewport = pageInfo.page.getViewport({ scale: zoomLevel });
+    canvasRef.current.width = viewport.width;
+    canvasRef.current.height = viewport.height;
+    rendererRef.current.rescaleAndRender(zoomLevel);
+  };
+
   useEffect(() => {
-    const handleResize = () => {
-      if (canvasRef.current === null || rendererRef.current === null) {
-        onError(new Error("Canvas or renderer not available."));
-        return;
-      }
-
-      // Get new viewport
-      const viewport = pageInfo.page.getViewport({ scale: zoomLevel });
-
-      // Update canvas dimensions
-      canvasRef.current.width = viewport.width;
-      canvasRef.current.height = viewport.height;
-
-      // Re-render the page
-      rendererRef.current.rescaleAndRender(zoomLevel);
-    };
-
     if (!hasPdfPageRendered && canvasRef.current && pageContainerRef.current) {
-      // console.log("Try to initialize page", pageInfo);
       const initializePage = async () => {
         try {
           // console.log(`PDFPage ${pageInfo.page.pageNumber}: Starting render`);
@@ -306,6 +360,27 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
     selectedAnnotations,
   ]);
 
+  /**
+   * Once the PDF is rendered, scroll to the first chat source (if any)
+   */
+  const { chatSourceElementRefs } = useAnnotationRefs();
+  useLayoutEffect(() => {
+    if (
+      selectedMessage &&
+      selectedMessage.sources.length > 0 &&
+      hasPdfPageRendered
+    ) {
+      const firstKey = `${selectedMessage.messageId}.${0}`;
+      const el = chatSourceElementRefs.current[firstKey];
+      if (el) {
+        el.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    }
+  }, [selectedMessage, hasPdfPageRendered]);
+
   return (
     <PageAnnotationsContainer
       className="PageAnnotationsContainer"
@@ -347,6 +422,17 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
                 />
               );
             })}
+
+        {selectedMessage &&
+          selectedMessage.sources.map((source, index) => (
+            <ChatSourceItem
+              key={`${selectedMessage.messageId}.${index}`}
+              source={source as ChatSourceTokenResult}
+              index={index}
+              messageId={selectedMessage.messageId}
+              pageInfo={updatedPageInfo}
+            />
+          ))}
       </CanvasWrapper>
     </PageAnnotationsContainer>
   );

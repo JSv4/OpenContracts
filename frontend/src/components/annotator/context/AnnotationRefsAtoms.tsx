@@ -8,7 +8,8 @@ type RefType =
   | "scrollContainer"
   | "pdfPageCanvas"
   | "pdfPageRenderer"
-  | "pdfPageContainer";
+  | "pdfPageContainer"
+  | "chatSource";
 
 /**
  * Atom for the scroll container reference
@@ -41,6 +42,11 @@ const annotationElementRefsAtom = atom<Record<string, HTMLElement | null>>({});
  * Atom for text search element references
  */
 const textSearchElementRefsAtom = atom<Record<string, HTMLElement | null>>({});
+
+/**
+ * Atom for chat source element references
+ */
+const chatSourceElementRefsAtom = atom<Record<string, HTMLElement | null>>({});
 
 /**
  * Atom for registering refs
@@ -83,6 +89,12 @@ export const registerRefAtom = atom(
       case "search":
         set(textSearchElementRefsAtom, {
           ...get(textSearchElementRefsAtom),
+          [id!.toString()]: ref.current,
+        });
+        break;
+      case "chatSource":
+        set(chatSourceElementRefsAtom, {
+          ...get(chatSourceElementRefsAtom),
           [id!.toString()]: ref.current,
         });
         break;
@@ -135,6 +147,12 @@ export const unregisterRefAtom = atom(
         set(textSearchElementRefsAtom, newRefs);
         break;
       }
+      case "chatSource": {
+        const newRefs = { ...get(chatSourceElementRefsAtom) };
+        delete newRefs[id!.toString()];
+        set(chatSourceElementRefsAtom, newRefs);
+        break;
+      }
       default:
         console.warn(`Unhandled RefType: ${type}`);
     }
@@ -151,4 +169,5 @@ export const annotationRefsAtom = atom((get) => ({
   PDFPageContainerRefs: get(PDFPageContainerRefsAtom),
   annotationElementRefs: get(annotationElementRefsAtom),
   textSearchElementRefs: get(textSearchElementRefsAtom),
+  chatSourceElementRefs: get(chatSourceElementRefsAtom),
 }));

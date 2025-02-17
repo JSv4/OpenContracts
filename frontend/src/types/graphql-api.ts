@@ -7,6 +7,7 @@ import {
   TokenId,
 } from "../components/types";
 import { JSONSchema7 } from "json-schema";
+import { WebSocketSources } from "../components/knowledge_base/document/right_tray/ChatTray";
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -1446,7 +1447,9 @@ export type ChatMessageType = Node & {
   conversation: ConversationType;
   msgType: Scalars["String"];
   content: Scalars["String"];
-  data?: Maybe<Scalars["JSONString"]>;
+  data?: Maybe<{
+    sources?: WebSocketSources[];
+  }>;
   createdAt: Scalars["DateTime"];
   sourceDocument?: Maybe<DocumentType>;
   sourceAnnotations: AnnotationTypeConnection;

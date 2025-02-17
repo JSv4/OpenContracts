@@ -83,19 +83,27 @@ import {
 } from "../../../annotator/context/ChatSourceAtom";
 
 /**
- * MessageData interface for incoming websocket messages.
+ * A helper interface representing the properties of data included in websocket messages,
+ * specifically any source annotations or label metadata.
  */
-interface MessageData {
+export interface WebSocketSources {
+  page: number;
+  json: { start: number; end: number } | MultipageAnnotationJson;
+  annotation_id: number;
+  label: string;
+  label_id: number;
+}
+
+/**
+ * An interface for the full websocket message structure.
+ * Includes the type of content (async start, streaming content, final, etc.),
+ * the actual text content, and optional annotation data.
+ */
+export interface MessageData {
   type: "ASYNC_START" | "ASYNC_CONTENT" | "ASYNC_FINISH" | "SYNC_CONTENT";
   content: string;
   data?: {
-    sources?: {
-      page: number;
-      json: { start: number; end: number } | MultipageAnnotationJson;
-      annotation_id: number;
-      label: string;
-      label_id: number;
-    }[];
+    sources?: WebSocketSources[];
   };
 }
 
@@ -368,9 +376,11 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
     newSocket.onmessage = (event) => {
       try {
-        const messageData = JSON.parse(event.data);
+        // Explicitly type the parsed data as MessageData
+        const messageData: MessageData = JSON.parse(event.data);
         if (!messageData) return;
         const { type: msgType, content, data } = messageData;
+
         switch (msgType) {
           case "ASYNC_START":
             // If necessary, any "start" logic can go here
@@ -385,7 +395,6 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
               data.sources.length > 0
                 ? data.sources
                 : undefined;
-            console.log("sourcesToPass", sourcesToPass);
             handleCompleteMessage(content, sourcesToPass);
             break;
           }

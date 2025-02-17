@@ -1,7 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
-import { User, Bot, ExternalLink } from "lucide-react";
+import { User, Bot, ExternalLink, Pin } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -10,24 +10,46 @@ export interface ChatMessageProps {
   content: string;
   timestamp: string;
   isAssistant: boolean;
+  hasSources?: boolean;
+  isSelected?: boolean;
+  onSelect?: () => void;
   sources?: Array<{
     text: string;
     onClick?: () => void;
   }>;
 }
 
-const MessageContainer = styled(motion.div)<{ $isAssistant: boolean }>`
+const MessageContainer = styled(motion.div)<{
+  $isAssistant: boolean;
+  $isSelected?: boolean;
+}>`
   display: flex;
   gap: 1rem;
   padding: 0.75rem 1.5rem;
   transition: all 0.2s ease-in-out;
-  background: transparent;
+  position: relative;
+  cursor: ${(props) =>
+    props.$isSelected !== undefined ? "pointer" : "default"};
+  background: ${(props) =>
+    props.$isSelected
+      ? "rgba(92,124,157,0.05)"
+      : props.$isAssistant
+      ? "rgba(247, 249, 252, 0.3)"
+      : "rgba(247, 248, 249, 0.15)"};
+
+  ${(props) =>
+    props.$isSelected &&
+    `
+    box-shadow: inset 4px 0 0 #5C7C9D;
+  `}
 
   &:hover {
     background: ${(props) =>
-      props.$isAssistant
-        ? "rgba(247, 249, 252, 0.3)"
-        : "rgba(247, 248, 249, 0.15)"};
+      props.$isSelected
+        ? "rgba(92,124,157,0.08)"
+        : props.$isAssistant
+        ? "rgba(247, 249, 252, 0.4)"
+        : "rgba(247, 248, 249, 0.25)"};
   }
 
   /* Add responsive padding */
@@ -286,19 +308,43 @@ const UserName = styled.div`
   }
 `;
 
+const SourceIndicator = styled.div<{ $isSelected?: boolean }>`
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: ${({ $isSelected }) => ($isSelected ? 1 : 0.6)};
+  color: #5c7c9d;
+  transition: all 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+`;
+
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   user,
   content,
   timestamp,
   isAssistant,
   sources = [],
+  hasSources,
+  isSelected,
+  onSelect,
 }) => (
   <MessageContainer
     $isAssistant={isAssistant}
+    $isSelected={isSelected}
+    onClick={onSelect}
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.3, ease: "easeOut" }}
   >
+    {hasSources && (
+      <SourceIndicator $isSelected={isSelected}>
+        <Pin size={16} />
+      </SourceIndicator>
+    )}
     <Avatar $isAssistant={isAssistant}>
       {isAssistant ? <Bot /> : <User />}
     </Avatar>
@@ -311,7 +357,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             {sources.map((source, idx) => (
               <SourceButton
                 key={idx}
-                onClick={() => source.onClick?.()}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent message selection when clicking source
+                  source.onClick?.();
+                }}
                 title={source.text}
               >
                 <ExternalLink />[{idx + 1}] {source.text}

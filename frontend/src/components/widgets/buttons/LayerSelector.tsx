@@ -22,7 +22,7 @@ interface LayerSwitcherProps {
 }
 
 interface StyledLayerSwitcherProps {
-  isExpanded: boolean;
+  $isExpanded: boolean;
 }
 
 export const StyledLayerSwitcher = styled.div<StyledLayerSwitcherProps>`
@@ -140,8 +140,8 @@ export const StyledLayerSwitcher = styled.div<StyledLayerSwitcherProps>`
     pointer-events: none;
     transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
 
-    ${({ isExpanded }) =>
-      isExpanded &&
+    ${({ $isExpanded }) =>
+      $isExpanded &&
       `
       opacity: 1;
       transform: translateY(0);
@@ -306,7 +306,7 @@ export const LayerSwitcher: React.FC<LayerSwitcherProps> = ({
 
   return (
     <StyledLayerSwitcher
-      isExpanded={isExpanded}
+      $isExpanded={isExpanded}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={className}

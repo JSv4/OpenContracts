@@ -751,7 +751,7 @@ const AnalysisTraySelector: React.FC<AnalysisTraySelectorProps> = ({
                     </span>
                     {isVisible ? "Hide Annotations" : "Show Annotations"}
                     <span className="count-badge">
-                      {relevantAnnotations.length}
+                      {item.annotations?.totalCount || 0}
                     </span>
                   </AnnotationsToggle>
 

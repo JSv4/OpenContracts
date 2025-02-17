@@ -1,10 +1,10 @@
 import logging
+from unittest.mock import patch
 
 import vcr
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.test.utils import override_settings
-from unittest.mock import patch
 
 from opencontractserver.documents.models import DocumentAnalysisRow
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
@@ -104,7 +104,10 @@ class ExtractsTaskTestCase(BaseFixtureTestCase):
         ],
         ignore_query_params=True,
     )
-    @patch("opencontractserver.tasks.data_extract_tasks.StructuredPlannerAgent.chat", return_value="mocked agent response")
+    @patch(
+        "opencontractserver.tasks.data_extract_tasks.StructuredPlannerAgent.chat",
+        return_value="mocked agent response",
+    )
     def test_run_extract_task(self, mock_agent_chat) -> None:
         """
         Tests the run_extract Celery task by running it synchronously (always eager)
@@ -142,7 +145,7 @@ class ExtractsTaskTestCase(BaseFixtureTestCase):
             self.assertIsNotNone(
                 cell.data, "Datacell data should not be None after extraction."
             )
-            
+
         # Verify our mock was called
         mock_agent_chat.assert_called()
 

@@ -1,7 +1,7 @@
 import { atom } from "jotai";
 import { PDFPageRenderer } from "../renderers/pdf/PDF";
 
-type RefType =
+export type RefType =
   | "selection"
   | "search"
   | "annotation"
@@ -9,6 +9,7 @@ type RefType =
   | "pdfPageCanvas"
   | "pdfPageRenderer"
   | "pdfPageContainer"
+  | "chatSourceBoundary"
   | "chatSource";
 
 /**

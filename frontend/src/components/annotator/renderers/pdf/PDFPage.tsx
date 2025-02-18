@@ -1,6 +1,8 @@
 import { useRef, useState, useEffect, useMemo, useLayoutEffect } from "react";
 import styled from "styled-components";
 import { useAtom } from "jotai";
+import { useAtomValue } from "jotai";
+import _ from "lodash";
 import { PageProps, TextSearchTokenResult } from "../../../types";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
 import { Selection } from "../../display/components/Selection";
@@ -24,13 +26,13 @@ import {
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 import SelectionLayer from "./SelectionLayer";
 import { PDFPageInfo } from "../../types/pdf";
-import _ from "lodash";
-import { useCorpusState } from "../../context/CorpusAtom";
-import { useAtomValue } from "jotai";
-import { chatSourcesAtom } from "../../context/ChatSourceAtom";
-import { ChatSourceTokenResult } from "../../context/ChatSourceAtom";
+import {
+  chatSourcesAtom,
+  ChatMessageSource,
+} from "../../context/ChatSourceAtom";
 import { ChatSourceToken } from "../../display/components/ChatSourceToken";
 import { ChatSourceSpan } from "../../display/components/ChatSourceSpan";
+import { useCorpusState } from "../../context/CorpusAtom";
 
 /**
  * This wrapper is inline-block (shrink-wrapped) and position:relative
@@ -41,14 +43,16 @@ const CanvasWrapper = styled.div`
   display: inline-block;
 `;
 
-// New: Define ChatSourceItem component that uses hooks at top-level
 interface ChatSourceItemProps {
-  source: ChatSourceTokenResult;
+  source: ChatMessageSource;
   index: number;
   messageId: string;
   pageInfo: PDFPageInfo;
 }
 
+/**
+ * Decide whether to render bounding-box tokens or text-based spans.
+ */
 const ChatSourceItem: React.FC<ChatSourceItemProps> = ({
   source,
   index,
@@ -66,28 +70,25 @@ const ChatSourceItem: React.FC<ChatSourceItemProps> = ({
     };
   }, [key, registerRef, unregisterRef]);
 
-  if ("tokens" in source) {
-    const tokenSource = source as ChatSourceTokenResult;
-    const pageNumberIndex = pageInfo.page.pageNumber - 1;
-    if (!tokenSource.tokens[pageNumberIndex]) return null;
-    return (
-      <span ref={itemRef}>
-        <ChatSourceToken
-          source={tokenSource}
-          pageInfo={pageInfo}
-          hidden={false}
-          showBoundingBox={true}
-          scrollIntoView={false}
-        />
-      </span>
-    );
-  } else {
-    return (
-      <span ref={itemRef}>
-        <ChatSourceSpan source={source} hidden={false} />
-      </span>
-    );
+  const pageNumber = pageInfo.page.pageNumber;
+
+  // Only render if this source has content for this page
+  if (source.page !== pageNumber) {
+    return null;
   }
+
+  // At this point, we know this source is meant for this page
+  return (
+    <span ref={itemRef}>
+      <ChatSourceToken
+        source={source}
+        pageInfo={pageInfo}
+        hidden={false}
+        showBoundingBox
+        scrollIntoView={false}
+      />
+    </span>
+  );
 };
 
 /**
@@ -155,10 +156,6 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
       [pageInfo.page.pageNumber - 1]: updatedPageInfo,
     }));
   }, [updatedPageInfo]);
-
-  useEffect(() => {
-    console.log("selectedCorpus", selectedCorpus);
-  }, [selectedCorpus]);
 
   /**
    * Handles resizing of the PDF page canvas.
@@ -426,8 +423,8 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
         {selectedMessage &&
           selectedMessage.sources.map((source, index) => (
             <ChatSourceItem
-              key={`${selectedMessage.messageId}.${index}`}
-              source={source as ChatSourceTokenResult}
+              key={source.id}
+              source={source}
               index={index}
               messageId={selectedMessage.messageId}
               pageInfo={updatedPageInfo}

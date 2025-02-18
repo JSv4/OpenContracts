@@ -80,6 +80,7 @@ import { MultipageAnnotationJson } from "../../../types";
 import {
   useChatSourceState,
   ChatSourceState,
+  mapWebSocketSourcesToChatMessageSources,
 } from "../../../annotator/context/ChatSourceAtom";
 
 /**
@@ -419,6 +420,13 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
         if (!messageData) return;
         const { type: msgType, content, data } = messageData;
 
+        console.log("[ChatTray WebSocket] Received message:", {
+          type: msgType,
+          hasContent: !!content,
+          hasSources: !!data?.sources,
+          sourceCount: data?.sources?.length,
+        });
+
         switch (msgType) {
           case "ASYNC_START":
             // If necessary, any "start" logic can go here
@@ -431,7 +439,10 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
               data?.sources && Array.isArray(data.sources)
                 ? data.sources
                 : undefined;
-            console.log("sourcesToPass", sourcesToPass);
+            console.log(
+              "[ChatTray WebSocket] ASYNC_FINISH sources:",
+              sourcesToPass
+            );
             finalizeStreamingResponse(content, sourcesToPass);
             break;
           }
@@ -440,6 +451,10 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
               data?.sources && Array.isArray(data.sources)
                 ? data.sources
                 : undefined;
+            console.log(
+              "[ChatTray WebSocket] SYNC_CONTENT sources:",
+              sourcesToPass
+            );
             handleCompleteMessage(content, sourcesToPass);
             break;
           }
@@ -629,20 +644,13 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   };
 
   /**
-   * Enhanced to accept optional override IDs (so server messages can
-   * match their original ID rather than a new 'msg_timestamp' ID).
-   * This updated version handles both old and new formats of the 'json'
-   * field by checking for 'tokens' or 'tokensJsons' within the embedded object.
+   * This replaces the old "handleCompleteMessage" approach that manually
+   * pieced together tokens/bounds. Now we rely on mapWebSocketSourcesToChatMessageSources
+   * for consistency across the codebase.
    */
   const handleCompleteMessage = (
     content: string,
-    sourcesData?: Array<{
-      page: number;
-      json: any;
-      annotation_id: number;
-      label: string;
-      label_id: number;
-    }>,
+    sourcesData?: Array<WebSocketSources>,
     overrideId?: string,
     overrideCreatedAt?: string
   ): void => {
@@ -651,31 +659,33 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       ? new Date(overrideCreatedAt).toISOString()
       : new Date().toISOString();
 
-    const mappedSources =
-      sourcesData?.map((src, index) => {
-        // Our incoming json is an object keyed by page numbers (e.g., "20")
-        // Extract the first section available from the JSON payload
-        const annotationSection = Object.values(src.json)[0] as
-          | { bounds?: any; tokens?: any[]; tokensJsons?: any[] }
-          | undefined;
-        return {
-          id: `${messageId}.${index}`,
-          // Prefer the `tokens` field if available; otherwise, fall back to `tokensJsons`
-          tokens:
-            annotationSection?.tokens ?? annotationSection?.tokensJsons ?? [],
-          bounds: annotationSection?.bounds ?? {},
-          page: src.page,
-          label: src.label,
-          label_id: src.label_id,
-          annotation_id: src.annotation_id,
-        };
-      }) || [];
+    console.log("[ChatTray handleCompleteMessage] Processing message:", {
+      messageId,
+      hasContent: !!content,
+      sourceCount: sourcesData?.length,
+    });
 
-    setChatSourceState((prev: ChatSourceState) => {
-      if (prev.messages.find((m) => m.messageId === messageId)) {
-        return prev; // already exists
+    const mappedSources = mapWebSocketSourcesToChatMessageSources(
+      sourcesData,
+      messageId
+    );
+
+    console.log(
+      "[ChatTray handleCompleteMessage] Mapped sources:",
+      mappedSources
+    );
+
+    setChatSourceState((prev) => {
+      // Avoid duplicating a message with the same ID:
+      if (prev.messages.some((m) => m.messageId === messageId)) {
+        console.log(
+          "[ChatTray handleCompleteMessage] Skipping duplicate message:",
+          messageId
+        );
+        return prev;
       }
-      return {
+
+      const newState = {
         ...prev,
         messages: [
           ...prev.messages,
@@ -686,9 +696,11 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
             sources: mappedSources,
           },
         ],
-        // Optionally auto-select the newly streamed or loaded message.
         selectedMessageId: overrideId ? prev.selectedMessageId : messageId,
       };
+
+      console.log("[ChatTray handleCompleteMessage] Updated state:", newState);
+      return newState;
     });
   };
 

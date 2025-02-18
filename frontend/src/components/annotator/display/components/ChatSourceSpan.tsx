@@ -1,17 +1,24 @@
 import { FC, useEffect, useRef } from "react";
 import styled from "styled-components";
-import { ChatSourceSpanResult } from "../../context/ChatSourceAtom";
 
+/**
+ * If you need text-based highlighting, ensure your
+ * ChatMessageSource includes a `text` prop.
+ * For brevity, we'll just pass in an object with `id` and `text` below.
+ */
 interface ChatSourceSpanProps {
-  source: ChatSourceSpanResult;
+  source: {
+    id: string;
+    text: string;
+  };
   hidden: boolean;
   scrollIntoView?: boolean;
 }
 
 const SpanHighlight = styled.span<{ hidden: boolean }>`
-  background-color: ${({ hidden }) =>
-    hidden ? "transparent" : "rgba(92,124,157,0.3)"};
-  transition: background-color 0.2s ease;
+  background-color: ${(props) => (props.hidden ? "transparent" : "#ffed99")};
+  border-radius: 4px;
+  padding: 0 2px;
 `;
 
 export const ChatSourceSpan: FC<ChatSourceSpanProps> = ({

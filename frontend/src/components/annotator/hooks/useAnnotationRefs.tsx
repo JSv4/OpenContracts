@@ -6,16 +6,7 @@ import {
 } from "../context/AnnotationRefsAtoms";
 import { PDFPageRenderer } from "../renderers/pdf/PDF";
 import { useCallback } from "react";
-
-type RefType =
-  | "selection"
-  | "search"
-  | "annotation"
-  | "scrollContainer"
-  | "pdfPageCanvas"
-  | "pdfPageRenderer"
-  | "pdfPageContainer"
-  | "chatSource";
+import type { RefType } from "../context/AnnotationRefsAtoms";
 
 /**
  * Hook for managing annotation references

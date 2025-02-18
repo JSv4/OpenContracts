@@ -205,6 +205,18 @@ export class PDFPageInfo {
     return scaled(b, this.scale);
   }
 
+  getScreenSpaceBounds(b: BoundingBox): BoundingBox {
+    const scaledBounds = this.getScaledBounds(b);
+    const pageHeight = this.page.getViewport({ scale: this.scale }).height;
+
+    return {
+      left: scaledBounds.left,
+      top: pageHeight - scaledBounds.bottom,
+      right: scaledBounds.right,
+      bottom: pageHeight - scaledBounds.top,
+    };
+  }
+
   // Method to create a new instance with an updated scale
   public withScale(newScale: number): PDFPageInfo {
     return new PDFPageInfo(this.page, this.tokens, newScale, this.bounds);

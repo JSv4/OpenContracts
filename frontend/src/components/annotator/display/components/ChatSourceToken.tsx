@@ -26,33 +26,40 @@ export const ChatSourceToken: FC<ChatSourceTokenProps> = ({
   scrollIntoView = false,
   selected = false,
 }) => {
-  const color = "#5C7C9D"; // e.g. your highlight color
-  const pageNumber = pageInfo.page.pageNumber;
+  console.log("Handle source:", source);
+  console.log("Page info:", pageInfo);
 
-  // First check if this source is meant for this page
-  if (source.page !== pageNumber) {
-    // This source isn't meant for this page
+  const color = "#5C7C9D"; // e.g. your highlight color
+  const currentPageIndex = pageInfo.page.pageNumber;
+  console.log("Current page index:", currentPageIndex);
+  const currentBounds = source.boundsByPage[currentPageIndex];
+
+  if (!currentBounds) {
     return null;
+  } else {
+    console.log("YES!!! - Current bounds:", currentBounds);
   }
+
+  // Use the new screen-space method instead
+  const bounds = pageInfo.getScreenSpaceBounds(currentBounds);
 
   console.log("[ChatSourceToken] Attempting to render for:", {
     sourceId: source.id,
     sourcePage: source.page,
-    currentPage: pageNumber,
-    hasTokens: !!source.tokensByPage[pageNumber],
-    tokenCount: source.tokensByPage[pageNumber]?.length,
-    hasBounds: !!source.boundsByPage[pageNumber],
+    currentPage: pageInfo.page.pageNumber,
+    hasTokens: !!source.tokensByPage[pageInfo.page.pageNumber],
+    tokenCount: source.tokensByPage[pageInfo.page.pageNumber]?.length,
+    hasBounds: !!source.boundsByPage[pageInfo.page.pageNumber],
     allTokens: source.tokensByPage,
     allBounds: source.boundsByPage,
   });
 
-  const tokens = source.tokensByPage[pageNumber];
-  const bounds = source.boundsByPage[pageNumber];
+  const tokens = source.tokensByPage[pageInfo.page.pageNumber];
   if (!tokens && !bounds) {
     console.log("[ChatSourceToken] No tokens or bounds found for:", {
       sourceId: source.id,
       sourcePage: source.page,
-      currentPage: pageNumber,
+      currentPage: pageInfo.page.pageNumber,
       tokensByPage: source.tokensByPage,
       boundsByPage: source.boundsByPage,
     });
@@ -73,6 +80,7 @@ export const ChatSourceToken: FC<ChatSourceTokenProps> = ({
         bounds={scaledBounds}
         scrollIntoView={scrollIntoView}
         selected={selected}
+        pageInfo={pageInfo}
       />
     );
   }

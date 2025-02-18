@@ -5,6 +5,7 @@ import React, { useEffect, useRef } from "react";
 import styled, { css } from "styled-components";
 import { BoundingBox } from "../../types/annotations";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
+import { PDFPageInfo } from "../../types/pdf";
 
 interface ChatSourceBoundaryProps {
   id: string;
@@ -14,6 +15,7 @@ interface ChatSourceBoundaryProps {
   color: string;
   bounds: BoundingBox;
   selected: boolean;
+  pageInfo: PDFPageInfo;
   children?: React.ReactNode;
 }
 
@@ -46,6 +48,7 @@ export const ChatSourceBoundary: React.FC<ChatSourceBoundaryProps> = ({
   color,
   bounds,
   selected,
+  pageInfo,
   children,
 }) => {
   const { registerRef, unregisterRef } = useAnnotationRefs();
@@ -67,11 +70,12 @@ export const ChatSourceBoundary: React.FC<ChatSourceBoundaryProps> = ({
     }
   }, [scrollIntoView]);
 
+  const scaledBounds = pageInfo.getScaledBounds(bounds);
   const style = {
-    left: `${bounds.left}px`,
-    top: `${bounds.top}px`,
-    width: `${bounds.right - bounds.left}px`,
-    height: `${bounds.bottom - bounds.top}px`,
+    left: `${scaledBounds.left}px`,
+    top: `${scaledBounds.top}px`,
+    width: `${scaledBounds.right - scaledBounds.left}px`,
+    height: `${scaledBounds.bottom - scaledBounds.top}px`,
   };
 
   return (
@@ -79,7 +83,7 @@ export const ChatSourceBoundary: React.FC<ChatSourceBoundaryProps> = ({
       id={`CHATSOURCE_BOUNDARY_${id}`}
       ref={boundaryRef}
       style={style}
-      $bounds={bounds}
+      $bounds={scaledBounds}
       $color={color}
       $hidden={hidden}
       $showBoundingBox={showBoundingBox}

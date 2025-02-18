@@ -55,6 +55,7 @@ export const ChatSourceTokens: FC<ChatSourceTokensProps> = ({
         const pageToken = pageInfo.tokens?.[token.tokenIndex];
         if (!pageToken) return null;
 
+        // Scale the token bounds using pageInfo to maintain consistency with SearchResult and Selection rescaling
         const b = pageInfo.getScaledTokenBounds(pageToken);
         const style = {
           left: `${b.left}px`,

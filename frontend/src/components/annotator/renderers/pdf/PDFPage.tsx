@@ -33,6 +33,7 @@ import {
 import { ChatSourceToken } from "../../display/components/ChatSourceToken";
 import { ChatSourceSpan } from "../../display/components/ChatSourceSpan";
 import { useCorpusState } from "../../context/CorpusAtom";
+import { ChatSourceResult } from "../../display/components/ChatSourceResult";
 
 /**
  * This wrapper is inline-block (shrink-wrapped) and position:relative
@@ -422,12 +423,16 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
 
         {selectedMessage &&
           selectedMessage.sources.map((source, index) => (
-            <ChatSourceItem
+            <ChatSourceResult
               key={source.id}
-              source={source}
-              index={index}
-              messageId={selectedMessage.messageId}
+              total_results={selectedMessage.sources.length}
+              showBoundingBox={true}
+              hidden={false}
               pageInfo={updatedPageInfo}
+              source={source}
+              showInfo={true}
+              scrollIntoView={false}
+              selected={false}
             />
           ))}
       </CanvasWrapper>

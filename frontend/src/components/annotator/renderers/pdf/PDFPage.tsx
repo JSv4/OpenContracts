@@ -52,47 +52,6 @@ interface ChatSourceItemProps {
 }
 
 /**
- * Decide whether to render bounding-box tokens or text-based spans.
- */
-const ChatSourceItem: React.FC<ChatSourceItemProps> = ({
-  source,
-  index,
-  messageId,
-  pageInfo,
-}) => {
-  const { registerRef, unregisterRef } = useAnnotationRefs();
-  const itemRef = useRef<HTMLSpanElement | null>(null);
-  const key = `${messageId}.${index}`;
-
-  useEffect(() => {
-    registerRef("chatSource", itemRef, key);
-    return () => {
-      unregisterRef("chatSource", key);
-    };
-  }, [key, registerRef, unregisterRef]);
-
-  const pageNumber = pageInfo.page.pageNumber;
-
-  // Only render if this source has content for this page
-  if (source.page !== pageNumber) {
-    return null;
-  }
-
-  // At this point, we know this source is meant for this page
-  return (
-    <span ref={itemRef}>
-      <ChatSourceToken
-        source={source}
-        pageInfo={pageInfo}
-        hidden={false}
-        showBoundingBox
-        scrollIntoView={false}
-      />
-    </span>
-  );
-};
-
-/**
  * PDFPage Component
  *
  * Renders a single PDF page with annotations, selections, and search results.
@@ -136,7 +95,7 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
   const { spanLabelsToView, activeSpanLabel } = annotationControls;
 
   const chatState = useAtomValue(chatSourcesAtom);
-  const { messages, selectedMessageId } = chatState;
+  const { messages, selectedMessageId, selectedSourceIndex } = chatState;
   const selectedMessage = useMemo(
     () => messages.find((m) => m.messageId === selectedMessageId),
     [messages, selectedMessageId]
@@ -309,6 +268,8 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
       selectedRelations.flatMap((rel) => [...rel.sourceIds, ...rel.targetIds])
     );
 
+    console.log("defined_annotations", defined_annotations);
+
     // If not showing structural, hide structural unless the annotation is forced
     const filtered_by_structural = !showStructural
       ? defined_annotations.filter(
@@ -427,12 +388,14 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
               key={source.id}
               total_results={selectedMessage.sources.length}
               showBoundingBox={true}
-              hidden={false}
+              hidden={
+                selectedSourceIndex !== null && selectedSourceIndex !== index
+              }
               pageInfo={updatedPageInfo}
               source={source}
               showInfo={true}
               scrollIntoView={false}
-              selected={false}
+              selected={selectedSourceIndex === index}
             />
           ))}
       </CanvasWrapper>

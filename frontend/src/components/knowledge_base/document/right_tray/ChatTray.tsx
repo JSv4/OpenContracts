@@ -93,6 +93,7 @@ export interface WebSocketSources {
   annotation_id: number;
   label: string;
   label_id: number;
+  rawText: string;
 }
 
 /**
@@ -786,11 +787,26 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                         ) < 1000)
                   );
 
+                  // Map sources to include onClick handlers and text content
+                  const sources =
+                    sourcedMessage?.sources.map((source, index) => ({
+                      text: source.rawText || `Source ${index + 1}`,
+                      onClick: () => {
+                        // Update the chatSourcesAtom with the selected source
+                        setChatSourceState((prev) => ({
+                          ...prev,
+                          selectedMessageId: sourcedMessage.messageId,
+                          selectedSourceIndex: index,
+                        }));
+                      },
+                    })) || [];
+
                   return (
                     <ChatMessage
                       key={msg.messageId || idx}
                       {...msg}
                       hasSources={!!sourcedMessage?.sources.length}
+                      sources={sources}
                       isSelected={
                         sourcedMessage?.messageId === selectedMessageId
                       }
@@ -803,6 +819,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                               sourcedMessage.messageId
                                 ? null // deselect if already selected
                                 : sourcedMessage.messageId,
+                            selectedSourceIndex: null, // Reset source selection when message selection changes
                           }));
                         }
                       }}

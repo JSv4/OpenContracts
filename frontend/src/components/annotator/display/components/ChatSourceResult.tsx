@@ -50,7 +50,7 @@ export const ChatSourceResult = ({
   const color = "#5C7C9D";
   const [hovered, setHovered] = useState(false);
 
-  const currentPage = pageInfo.page.pageNumber;
+  const currentPage = pageInfo.page.pageNumber - 1;
   const boundsData = source.boundsByPage[currentPage];
   // If no bounds available for this page, do not render anything.
   if (!boundsData) return null;

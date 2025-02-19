@@ -1,7 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
-import { motion } from "framer-motion";
-import { User, Bot, ExternalLink, Pin } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  User,
+  Bot,
+  ExternalLink,
+  Pin,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -231,83 +238,257 @@ const MessageContent = styled.div<{ $isAssistant: boolean }>`
 
 const SourcesContainer = styled.div`
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.5rem;
   margin-top: 0.75rem;
+  transition: all 0.2s ease-in-out;
+`;
 
-  /* Adjust spacing on mobile */
-  @media (max-width: 480px) {
-    gap: 0.375rem;
-    margin-top: 0.5rem;
+const SourcePreviewContainer = styled.div`
+  position: relative;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(92, 124, 157, 0.2);
+  overflow: hidden;
+  transition: all 0.2s ease-in-out;
+`;
+
+const SourcePreviewHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(92, 124, 157, 0.05);
+  border-bottom: 1px solid rgba(92, 124, 157, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background: rgba(92, 124, 157, 0.1);
   }
 `;
 
-const SourceButton = styled.button`
-  display: inline-flex;
+const SourcePreviewTitle = styled.div`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #5c7c9d;
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: white;
-  border: 1px solid rgba(33, 133, 208, 0.2);
-  border-radius: 2rem;
-  color: #2185d0;
-  font-size: 0.8rem;
-  font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-shadow: 0 2px 4px rgba(33, 133, 208, 0.05);
+`;
+
+const SourcePreviewContent = styled(motion.div)`
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #4a5568;
+  max-height: 300px;
+  overflow-y: auto;
+`;
+
+const SourceList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.25rem;
+`;
+
+const SourceChip = styled.div<{ $isSelected: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: ${(props) =>
+    props.$isSelected
+      ? "rgba(92, 124, 157, 0.15)"
+      : "rgba(255, 255, 255, 0.7)"};
+  border: 1px solid
+    ${(props) =>
+      props.$isSelected
+        ? "rgba(92, 124, 157, 0.3)"
+        : "rgba(92, 124, 157, 0.1)"};
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
 
   &:hover {
-    background: rgba(33, 133, 208, 0.1);
-    border-color: #2185d0;
+    background: ${(props) =>
+      props.$isSelected
+        ? "rgba(92, 124, 157, 0.2)"
+        : "rgba(255, 255, 255, 0.9)"};
+    border-color: rgba(92, 124, 157, 0.3);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(33, 133, 208, 0.1);
+    box-shadow: 0 2px 8px rgba(92, 124, 157, 0.1);
   }
 
   &:active {
     transform: translateY(0);
   }
+`;
+
+const SourceHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+`;
+
+const SourceTitle = styled.div<{ $isSelected: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: ${(props) => (props.$isSelected ? "#2d3748" : "#4a5568")};
+`;
+
+const SourceText = styled(motion.div)<{ $isExpanded: boolean }>`
+  font-size: 0.8125rem;
+  color: #4a5568;
+  line-height: 1.5;
+  position: relative;
+  overflow: hidden;
+
+  ${(props) =>
+    !props.$isExpanded &&
+    `
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  `}
+`;
+
+const ExpandButton = styled.button<{ $isExpanded: boolean }>`
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  color: #5c7c9d;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    color: #4a6b8c;
+  }
 
   svg {
-    width: 0.875rem;
-    height: 0.875rem;
-    stroke-width: 2.5;
-    transition: transform 0.2s ease;
-  }
-
-  &:hover svg {
-    transform: translateX(2px);
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease-in-out;
+    transform: ${(props) =>
+      props.$isExpanded ? "rotate(180deg)" : "rotate(0deg)"};
   }
 `;
 
-const Timestamp = styled.div`
-  color: #868e96;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-  padding-left: 0.25rem;
+interface SourceItemProps {
+  text: string;
+  index: number;
+  isSelected: boolean;
+  onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+}
 
-  @media (max-width: 480px) {
-    font-size: 0.7rem;
-    margin-top: 0.125rem;
-  }
-`;
+const SourceItem: React.FC<SourceItemProps> = ({
+  text,
+  index,
+  isSelected,
+  onClick,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
 
-const UserName = styled.div`
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 0.375rem;
-  padding-left: 0.25rem;
-  letter-spacing: -0.01em;
+  const toggleExpand = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
+  };
 
-  @media (max-width: 480px) {
-    font-size: 0.8rem;
-    margin-bottom: 0.25rem;
-  }
-`;
+  return (
+    <SourceChip $isSelected={isSelected} onClick={onClick}>
+      <SourceHeader>
+        <SourceTitle $isSelected={isSelected}>
+          <Pin size={12} />
+          Source {index + 1}
+        </SourceTitle>
+        <ExpandButton
+          $isExpanded={isExpanded}
+          onClick={toggleExpand}
+          title={isExpanded ? "Show less" : "Show more"}
+        >
+          {isExpanded ? "Show less" : "Show more"}
+          <ChevronDown />
+        </ExpandButton>
+      </SourceHeader>
+      <SourceText
+        $isExpanded={isExpanded}
+        initial={false}
+        animate={{ height: isExpanded ? "auto" : "3em" }}
+        transition={{ duration: 0.2 }}
+      >
+        {text}
+      </SourceText>
+    </SourceChip>
+  );
+};
+
+interface SourcePreviewProps {
+  sources: Array<{ text: string; onClick?: () => void }>;
+  selectedIndex?: number;
+  onSourceSelect: (index: number) => void;
+}
+
+const SourcePreview: React.FC<SourcePreviewProps> = ({
+  sources,
+  selectedIndex,
+  onSourceSelect,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
+  };
+
+  return (
+    <SourcePreviewContainer
+      onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+    >
+      <SourcePreviewHeader onClick={handleHeaderClick}>
+        <SourcePreviewTitle>
+          <Pin size={14} />
+          {sources.length} {sources.length === 1 ? "Source" : "Sources"}
+        </SourcePreviewTitle>
+        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </SourcePreviewHeader>
+      <AnimatePresence>
+        {isExpanded && (
+          <SourcePreviewContent
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <SourceList>
+              {sources.map((source, index) => (
+                <SourceItem
+                  key={index}
+                  text={source.text}
+                  index={index}
+                  isSelected={selectedIndex === index}
+                  onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+                    e.stopPropagation();
+                    onSourceSelect(index);
+                    source.onClick?.();
+                  }}
+                />
+              ))}
+            </SourceList>
+          </SourcePreviewContent>
+        )}
+      </AnimatePresence>
+    </SourcePreviewContainer>
+  );
+};
 
 const SourceIndicator = styled.div<{ $isSelected?: boolean }>`
   position: absolute;
@@ -356,7 +537,34 @@ const SourceIndicator = styled.div<{ $isSelected?: boolean }>`
   }
 `;
 
+const Timestamp = styled.div`
+  color: #868e96;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  padding-left: 0.25rem;
+
+  @media (max-width: 480px) {
+    font-size: 0.7rem;
+    margin-top: 0.125rem;
+  }
+`;
+
+const UserName = styled.div`
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 0.375rem;
+  padding-left: 0.25rem;
+  letter-spacing: -0.01em;
+
+  @media (max-width: 480px) {
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+  }
+`;
+
 export const ChatMessage: React.FC<ChatMessageProps> = ({
+  messageId,
   user,
   content,
   timestamp,
@@ -365,46 +573,47 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   hasSources,
   isSelected,
   onSelect,
-}) => (
-  <MessageContainer
-    $isAssistant={isAssistant}
-    $isSelected={isSelected}
-    onClick={onSelect}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.3, ease: "easeOut" }}
-  >
-    {hasSources && (
-      <SourceIndicator $isSelected={isSelected}>
-        <Pin size={14} />
-        {sources.length > 0 ? `${sources.length} sources` : "View sources"}
-      </SourceIndicator>
-    )}
-    <Avatar $isAssistant={isAssistant}>
-      {isAssistant ? <Bot /> : <User />}
-    </Avatar>
-    <ContentContainer>
-      <UserName>{isAssistant ? "AI Assistant" : user}</UserName>
-      <MessageContent $isAssistant={isAssistant}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-        {sources.length > 0 && (
-          <SourcesContainer>
-            {sources.map((source, idx) => (
-              <SourceButton
-                key={idx}
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent message selection when clicking source
-                  source.onClick?.();
-                }}
-                title={source.text}
-              >
-                <ExternalLink />[{idx + 1}] {source.text}
-              </SourceButton>
-            ))}
-          </SourcesContainer>
-        )}
-      </MessageContent>
-      <Timestamp>{timestamp}</Timestamp>
-    </ContentContainer>
-  </MessageContainer>
-);
+}) => {
+  const [selectedSourceIndex, setSelectedSourceIndex] = useState<
+    number | undefined
+  >();
+
+  const handleSourceSelect = (index: number) => {
+    setSelectedSourceIndex(index === selectedSourceIndex ? undefined : index);
+  };
+
+  return (
+    <MessageContainer
+      $isAssistant={isAssistant}
+      $isSelected={isSelected}
+      onClick={onSelect}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+    >
+      {hasSources && (
+        <SourceIndicator $isSelected={isSelected}>
+          <Pin size={14} />
+          {sources.length > 0 ? `${sources.length} sources` : "View sources"}
+        </SourceIndicator>
+      )}
+      <Avatar $isAssistant={isAssistant}>
+        {isAssistant ? <Bot /> : <User />}
+      </Avatar>
+      <ContentContainer>
+        <UserName>{isAssistant ? "AI Assistant" : user}</UserName>
+        <MessageContent $isAssistant={isAssistant}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          {sources.length > 0 && (
+            <SourcePreview
+              sources={sources}
+              selectedIndex={selectedSourceIndex}
+              onSourceSelect={handleSourceSelect}
+            />
+          )}
+        </MessageContent>
+        <Timestamp>{timestamp}</Timestamp>
+      </ContentContainer>
+    </MessageContainer>
+  );
+};

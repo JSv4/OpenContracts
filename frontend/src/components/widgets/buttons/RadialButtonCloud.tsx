@@ -217,23 +217,23 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
    * @returns A contrast color in hex format.
    */
   const getContrastColor = (bgColor: string): string => {
-    console.log("getContrastColor called with:", {
-      value: bgColor,
-      type: typeof bgColor,
-      isNull: bgColor === null,
-      isUndefined: bgColor === undefined,
-    });
+    // console.log("getContrastColor called with:", {
+    //   value: bgColor,
+    //   type: typeof bgColor,
+    //   isNull: bgColor === null,
+    //   isUndefined: bgColor === undefined,
+    // });
 
     // Handle undefined, null, or empty string
     if (!bgColor) {
-      console.warn("No background color provided or empty value:", bgColor);
+      // console.warn("No background color provided or empty value:", bgColor);
       return "#00ff00";
     }
 
     // If it looks like a hex color without the #, add it
     if (/^[A-Fa-f0-9]{3,6}$/.test(bgColor)) {
       bgColor = "#" + bgColor;
-      console.log("Added # prefix to hex color:", bgColor);
+      // console.log("Added # prefix to hex color:", bgColor);
     }
 
     // Log the validation results for each format
@@ -249,40 +249,38 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
       ),
     };
 
-    console.log("Color format validation results:", validationResults);
-
     // If the color isn't in a valid format, return default
     if (!Object.values(validationResults).some((result) => result)) {
-      console.warn(`Invalid color format. Color string: "${bgColor}"`);
-      console.warn("Color string length:", bgColor.length);
-      console.warn(
-        "Color string characters:",
-        Array.from(bgColor).map((c) => `'${c}'(${c.charCodeAt(0)})`)
-      );
+      // console.warn(`Invalid color format. Color string: "${bgColor}"`);
+      // console.warn("Color string length:", bgColor.length);
+      // console.warn(
+      //   "Color string characters:",
+      //   Array.from(bgColor).map((c) => `'${c}'(${c.charCodeAt(0)})`)
+      // );
       return "#00ff00";
     }
 
     try {
-      console.log("Attempting to calculate luminance for color:", bgColor);
+      // console.log("Attempting to calculate luminance for color:", bgColor);
       const luminance = getLuminance(bgColor);
-      console.log("Calculated luminance:", luminance);
+      // console.log("Calculated luminance:", luminance);
       return luminance > 0.5 ? "#00aa00" : "#00ff00";
     } catch (error: any) {
-      console.error("Luminance calculation error:", {
-        color: bgColor,
-        error: error.message,
-        stack: error.stack,
-      });
+      // console.error("Luminance calculation error:", {
+      //   color: bgColor,
+      //   error: error.message,
+      //   stack: error.stack,
+      // });
       return "#00ff00";
     }
   };
 
-  console.log("Component render - Parent background color:", {
-    value: parentBackgroundColor,
-    type: typeof parentBackgroundColor,
-  });
+  // console.log("Component render - Parent background color:", {
+  //   value: parentBackgroundColor,
+  //   type: typeof parentBackgroundColor,
+  // });
   const dotColor = getContrastColor(parentBackgroundColor);
-  console.log("Final dot color:", dotColor);
+  // console.log("Final dot color:", dotColor);
 
   return (
     <div style={{ position: "relative", display: "inline-block" }}>

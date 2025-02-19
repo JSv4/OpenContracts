@@ -18,6 +18,7 @@ export interface ChatMessageSource {
   label: string;
   label_id: number;
   annotation_id: number;
+  rawText: string;
   tokensByPage: Record<number, TokenId[] | undefined>;
   boundsByPage: Record<number, BoundingBox | undefined>;
 }
@@ -32,11 +33,13 @@ export interface ChatMessage {
 export interface ChatSourceState {
   messages: ChatMessage[];
   selectedMessageId: string | null;
+  selectedSourceIndex: number | null;
 }
 
 export const chatSourcesAtom = atom<ChatSourceState>({
   messages: [],
   selectedMessageId: null,
+  selectedSourceIndex: null,
 });
 
 /**
@@ -47,6 +50,7 @@ export const useChatSourceState = () => {
   return {
     messages: state.messages,
     selectedMessageId: state.selectedMessageId,
+    selectedSourceIndex: state.selectedSourceIndex,
     setChatSourceState: setState,
   };
 };
@@ -110,6 +114,9 @@ export function mapWebSocketSourcesToChatMessageSources(
       label: src.label,
       label_id: src.label_id,
       annotation_id: src.annotation_id,
+      rawText: Object.values(src.json as MultipageAnnotationJson)
+        .map((data) => data.rawText)
+        .join(" "),
       tokensByPage,
       boundsByPage,
     };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { VerticallyJustifiedEndDiv } from "../../sidebar/common";
 import { ResultBoundary } from "./ResultBoundary";
@@ -8,11 +8,14 @@ import { ChatSourceTokens } from "./ChatSourceTokens";
 import { PDFPageInfo } from "../../types/pdf";
 import { useAnnotationDisplay } from "../../context/UISettingsAtom";
 import { BoundingBox } from "../../../types";
+import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 
 /**
  * Props for rendering a chat message source on a PDF page.
  */
 export interface ChatSourceResultProps {
+  /** Unique key used to register this chat source element e.g. `${messageId}.${index}` */
+  refKey: string;
   /** Total number of chat sources available in the current message. */
   total_results: number;
   /** Whether to show a bounding box around the source. */
@@ -37,6 +40,7 @@ export interface ChatSourceResultProps {
  * with an overlaid label and token highlights.
  */
 export const ChatSourceResult = ({
+  refKey,
   total_results,
   showBoundingBox,
   hidden,
@@ -46,6 +50,19 @@ export const ChatSourceResult = ({
   scrollIntoView = false,
   selected = false,
 }: ChatSourceResultProps) => {
+  // Register the DOM node of this chat source with the annotation refs
+  const { registerRef, unregisterRef } = useAnnotationRefs();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      registerRef("chatSource", containerRef, refKey);
+    }
+    return () => {
+      unregisterRef("chatSource", refKey);
+    };
+  }, [refKey, registerRef, unregisterRef]);
+
   const { showLabels, hideLabels } = useAnnotationDisplay();
   const color = "#5C7C9D";
   const [hovered, setHovered] = useState(false);
@@ -59,7 +76,7 @@ export const ChatSourceResult = ({
   const border = getBorderWidthFromBounds(bounds);
 
   return (
-    <>
+    <div ref={containerRef}>
       <ResultBoundary
         id={source.id}
         hidden={hidden}
@@ -105,7 +122,7 @@ export const ChatSourceResult = ({
           tokens={source.tokensByPage[currentPage] || []}
         />
       ) : null}
-    </>
+    </div>
   );
 };
 

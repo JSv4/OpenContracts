@@ -26,12 +26,7 @@ import {
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 import SelectionLayer from "./SelectionLayer";
 import { PDFPageInfo } from "../../types/pdf";
-import {
-  chatSourcesAtom,
-  ChatMessageSource,
-} from "../../context/ChatSourceAtom";
-import { ChatSourceToken } from "../../display/components/ChatSourceToken";
-import { ChatSourceSpan } from "../../display/components/ChatSourceSpan";
+import { chatSourcesAtom } from "../../context/ChatSourceAtom";
 import { useCorpusState } from "../../context/CorpusAtom";
 import { ChatSourceResult } from "../../display/components/ChatSourceResult";
 
@@ -44,11 +39,8 @@ const CanvasWrapper = styled.div`
   display: inline-block;
 `;
 
-interface ChatSourceItemProps {
-  source: ChatMessageSource;
-  index: number;
-  messageId: string;
-  pageInfo: PDFPageInfo;
+interface PDFPageProps extends PageProps {
+  containerWidth?: number | null;
 }
 
 /**
@@ -56,10 +48,15 @@ interface ChatSourceItemProps {
  *
  * Renders a single PDF page with annotations, selections, and search results.
  *
- * @param {PageProps} props - Properties for the PDF page.
+ * @param {PDFPageProps} props - Properties for the PDF page.
  * @returns {JSX.Element} The rendered PDF page component.
  */
-export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
+export const PDFPage = ({
+  pageInfo,
+  read_only,
+  onError,
+  containerWidth,
+}: PDFPageProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<PDFPageRenderer | null>(null);
   const { pdfAnnotations } = usePdfAnnotations();
@@ -73,9 +70,10 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
     bottom: pageViewport.height,
   });
   const [hasPdfPageRendered, setPdfPageRendered] = useState(false);
+  const [initialZoomSet, setInitialZoomSet] = useState(false);
 
   const { showStructural } = useAnnotationDisplay();
-  const { zoomLevel } = useZoomLevel();
+  const { zoomLevel, setZoomLevel } = useZoomLevel();
   const { selectedAnnotations, selectedRelations } = useAnnotationSelection();
 
   const { annotationElementRefs, registerRef, unregisterRef } =
@@ -116,6 +114,30 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
       [pageInfo.page.pageNumber - 1]: updatedPageInfo,
     }));
   }, [updatedPageInfo]);
+
+  useEffect(() => {
+    // If this is page #1, and we haven't set initial zoom yet, and containerWidth is known:
+    if (!initialZoomSet && containerWidth && pageInfo.page.pageNumber === 1) {
+      (async () => {
+        try {
+          // measure the PDF's natural width
+          const viewport = pageInfo.page.getViewport({ scale: 1 });
+          const naturalWidth = viewport.width;
+
+          // compute scale
+          const scaleToFit = containerWidth / naturalWidth;
+
+          // clamp if you like, e.g. [0.3 ... 3.0]
+          const safeScale = Math.min(Math.max(scaleToFit, 0.3), 4.0);
+          setZoomLevel(safeScale);
+
+          setInitialZoomSet(true);
+        } catch (err) {
+          console.warn("Failed computing initial PDF scale:", err);
+        }
+      })();
+    }
+  }, [initialZoomSet, containerWidth, pageInfo.page, setZoomLevel]);
 
   /**
    * Handles resizing of the PDF page canvas.
@@ -324,21 +346,82 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
    */
   const { chatSourceElementRefs } = useAnnotationRefs();
   useLayoutEffect(() => {
-    if (
-      selectedMessage &&
-      selectedMessage.sources.length > 0 &&
-      hasPdfPageRendered
-    ) {
-      const firstKey = `${selectedMessage.messageId}.${0}`;
-      const el = chatSourceElementRefs.current[firstKey];
+    if (selectedMessage && hasPdfPageRendered) {
+      const index =
+        selectedSourceIndex !== null && selectedSourceIndex !== undefined
+          ? selectedSourceIndex
+          : 0;
+      const key = `${selectedMessage.messageId}.${index}`;
+      const el = chatSourceElementRefs.current[key];
+      console.log(
+        "[PDFPage] useLayoutEffect: attempting to scroll to chat source with key",
+        key,
+        "Element:",
+        el
+      );
       if (el) {
         el.scrollIntoView({
           behavior: "smooth",
           block: "center",
         });
+      } else {
+        console.warn(
+          "[PDFPage] useLayoutEffect: No element found for key:",
+          key
+        );
       }
     }
-  }, [selectedMessage, hasPdfPageRendered]);
+  }, [selectedMessage, selectedSourceIndex, hasPdfPageRendered]);
+
+  // Fallback effect in case useLayoutEffect did not scroll
+  useEffect(() => {
+    if (selectedMessage && hasPdfPageRendered) {
+      const index =
+        selectedSourceIndex !== null && selectedSourceIndex !== undefined
+          ? selectedSourceIndex
+          : 0;
+      const key = `${selectedMessage.messageId}.${index}`;
+      const el = chatSourceElementRefs.current[key];
+      console.log(
+        "[PDFPage] useEffect fallback: attempting to scroll to chat source with key",
+        key,
+        "Element:",
+        el
+      );
+      if (el) {
+        el.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      } else {
+        console.warn(
+          "[PDFPage] useEffect fallback: No element found for key:",
+          key,
+          ". Retrying after 200ms"
+        );
+        setTimeout(() => {
+          const retryEl = chatSourceElementRefs.current[key];
+          console.log(
+            "[PDFPage] useEffect fallback timeout: retrying scroll for key",
+            key,
+            "Element:",
+            retryEl
+          );
+          if (retryEl) {
+            retryEl.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+          } else {
+            console.warn(
+              "[PDFPage] useEffect fallback timeout: Still no element found for key:",
+              key
+            );
+          }
+        }, 200);
+      }
+    }
+  }, [selectedMessage, selectedSourceIndex, hasPdfPageRendered]);
 
   return (
     <PageAnnotationsContainer
@@ -385,6 +468,7 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
         {selectedMessage &&
           selectedMessage.sources.map((source, index) => (
             <ChatSourceResult
+              refKey={`${selectedMessage.messageId}.${index}`}
               key={source.id}
               total_results={selectedMessage.sources.length}
               showBoundingBox={true}
@@ -394,7 +478,7 @@ export const PDFPage = ({ pageInfo, read_only, onError }: PageProps) => {
               pageInfo={updatedPageInfo}
               source={source}
               showInfo={true}
-              scrollIntoView={false}
+              scrollIntoView={selectedSourceIndex === index}
               selected={selectedSourceIndex === index}
             />
           ))}

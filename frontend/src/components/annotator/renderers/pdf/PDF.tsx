@@ -61,35 +61,36 @@ export class PDFPageRenderer {
   }
 }
 
-export const PDF = ({ read_only }: { read_only: boolean }) => {
-  const { pdfDoc: doc } = usePdfDoc();
+type PDFProps = {
+  read_only: boolean;
+  containerWidth?: number | null;
+};
+
+export const PDF = ({ read_only, containerWidth }: PDFProps) => {
+  const { pdfDoc } = usePdfDoc();
   const { pages } = usePages();
   const setViewStateError = useSetViewStateError();
 
-  if (!doc) {
-    // Instead of throwing an error, render nothing or a fallback UI
-    console.warn("PDF component rendered without a valid document.");
-    return null; // Or return a fallback UI
+  if (!pdfDoc) {
+    // fallback if doc not loaded
+    return null;
   }
-
   if (!pages) {
-    // Similarly, handle missing pages gracefully
-    console.warn("PDF component rendered without pages.");
+    // fallback if pages not defined
     return <div>No pages available.</div>;
   }
 
   return (
     <>
-      {Object.values(pages).map((p) => {
-        return (
-          <PDFPage
-            key={p.page.pageNumber}
-            read_only={read_only}
-            pageInfo={p}
-            onError={setViewStateError}
-          />
-        );
-      })}
+      {Object.values(pages).map((p) => (
+        <PDFPage
+          key={p.page.pageNumber}
+          pageInfo={p}
+          read_only={read_only}
+          onError={setViewStateError}
+          containerWidth={containerWidth}
+        />
+      ))}
     </>
   );
 };
@@ -104,10 +105,10 @@ export const PageAnnotationsContainer = styled.div`
 `;
 
 export const PageCanvas = styled.canvas`
-  // Add box shadow and border for better visibility
+  // Remove max-width so the canvas can exceed its parent's width
+  // max-width: 100%;
+  // height: auto;
+
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(0, 0, 0, 0.1);
-  // Ensure canvas maintains aspect ratio
-  max-width: 100%;
-  height: auto;
 `;

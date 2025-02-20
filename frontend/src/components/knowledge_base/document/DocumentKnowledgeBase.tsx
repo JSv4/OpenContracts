@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@apollo/client";
 import { Card, Button, Header, Modal } from "semantic-ui-react";
 import {
@@ -437,15 +437,34 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }
   };
 
-  const containerRefCallback = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (node !== null) {
-        scrollContainerRef.current = node;
-        registerRef("scrollContainer", scrollContainerRef);
-      }
-    },
-    [scrollContainerRef, registerRef]
-  );
+  // We'll store the measured containerWidth here
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
+
+  // Our PDFContainer callback ref
+  const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
+    if (node) {
+      // Measure the node's width now
+      const width = node.getBoundingClientRect().width;
+      setContainerWidth(width);
+
+      // If you need to store this node for scrolling, you can still do so:
+      // scrollContainerRef.current = node;
+      // registerRef("scrollContainer", scrollContainerRef);
+    }
+  }, []);
+
+  // Whenever the window resizes, re-measure that container
+  useEffect(() => {
+    function handleResize() {
+      const node = document.getElementById("pdf-container");
+      if (!node) return;
+      const width = node.getBoundingClientRect().width;
+      setContainerWidth(width);
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleKeyUpPress = useCallback(
     (event: { keyCode: any }) => {
@@ -971,7 +990,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           setActiveLabel={setActiveSpanLabel}
         />
         <DocTypeLabelDisplay />
-        <PDF read_only={false} />
+        <PDF read_only={false} containerWidth={containerWidth} />
       </PDFContainer>
     );
   } else if (

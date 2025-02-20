@@ -106,6 +106,7 @@ export interface MessageData {
   content: string;
   data?: {
     sources?: WebSocketSources[];
+    message_id?: string;
   };
 }
 
@@ -277,29 +278,36 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     scrollToBottom();
   }, [combinedMessages, scrollToBottom]);
 
-  /**
-   * Update the appendStreamingTokenToChat to trigger scroll on new messages
-   */
-  const appendStreamingTokenToChat = (token: string): void => {
-    if (!token) return;
+  function appendStreamingTokenToChat(
+    token: string,
+    overrideMessageId?: string
+  ): string {
+    // Return the messageId
+    if (!token) return "";
+
+    let messageId = "";
     setChat((prev) => {
       const lastMessage = prev[prev.length - 1];
-      if (
-        lastMessage &&
-        lastMessage.isAssistant &&
-        !Object.prototype.hasOwnProperty.call(lastMessage, "sources")
-      ) {
+
+      // If we were already streaming the assistant's last message, just append:
+      if (lastMessage && lastMessage.isAssistant) {
+        messageId = lastMessage.messageId || ""; // Capture existing ID
+        console.log("append to existing messageId", messageId);
         const updatedLast = {
           ...lastMessage,
           content: lastMessage.content + token,
         };
         return [...prev.slice(0, -1), updatedLast];
       } else {
-        // New message started, scroll to bottom
-        setTimeout(scrollToBottom, 100); // Small delay to ensure DOM update
+        // Otherwise, create a fresh assistant message with a brand-new messageId
+        messageId =
+          overrideMessageId ||
+          `msg_${Date.now()}_${Math.random().toString(36).substr(2)}`;
+        console.log("append to new messageId", messageId);
         return [
           ...prev,
           {
+            messageId, // Use the same ID we'll return
             user: "Assistant",
             content: token,
             timestamp: new Date().toLocaleString(),
@@ -308,7 +316,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
         ];
       }
     });
-  };
+    return messageId; // Return the ID so we can use it in finalizeStreamingResponse
+  }
 
   /**
    * Finalize a partially-streamed response by replacing the last chat entry
@@ -318,48 +327,57 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
    */
   const finalizeStreamingResponse = (
     content: string,
-    sourcesData?: WebSocketSources[]
+    sourcesData?: WebSocketSources[],
+    overrideId?: string
   ): void => {
-    // First update the partially streamed message in local state
+    console.log("finalizeStreamingResponse", {
+      content,
+      sourcesData,
+      overrideId,
+    });
+
+    let lastMsgId: string | undefined;
     setChat((prev) => {
-      if (!prev.length) return prev;
-
-      // Find the last assistant message in the local chat array
+      // Make sure we have a recent assistant message to finalize
+      if (!prev.length) {
+        console.log("No previous messages to finalize");
+        return prev;
+      }
       const lastIndex = [...prev].reverse().findIndex((msg) => msg.isAssistant);
-      if (lastIndex === -1) return prev;
+      console.log("Finding last assistant message, reverse index:", lastIndex);
+      if (lastIndex === -1) {
+        console.log("No assistant message found to finalize");
+        return prev;
+      }
 
-      // Because we used .reverse(), we translate back to the forward index
+      // Because we reversed, compute forward index
       const forwardIndex = prev.length - 1 - lastIndex;
+      console.log("Forward index for update:", forwardIndex);
       const updatedMessages = [...prev];
       const assistantMsg = updatedMessages[forwardIndex];
+      console.log("XOXO - Found assistant message to update:", {
+        messageId: assistantMsg.messageId,
+        oldContent: assistantMsg.content.substring(0, 50) + "...",
+      });
 
+      // Capture the messageId so we can pass it into handleCompleteMessage
+      lastMsgId = assistantMsg.messageId;
+
+      // Overwrite its content with the final chunk
       updatedMessages[forwardIndex] = {
         ...assistantMsg,
         content,
       };
+      console.log("Updated message with final content:", {
+        messageId: lastMsgId,
+        newContent: content.substring(0, 50) + "...",
+      });
+
+      // Now store the final content + sources in ChatSourceAtom with the same ID
+      handleCompleteMessage(content, sourcesData, lastMsgId, overrideId);
+
       return updatedMessages;
     });
-
-    // Then persist the final content in the chatSourcesAtom
-    handleCompleteMessage(content, sourcesData);
-  };
-
-  /**
-   * Helper method for synchronous responses (SYNC_CONTENT),
-   * which just appends a new message from the assistant.
-   * @param content The assistant text
-   * @param sources (Optional) sources for the assistant response
-   */
-  const finalizeSyncResponse = (content: string, sources: string): void => {
-    setChat((prev) => [
-      ...prev,
-      {
-        user: "Assistant",
-        content,
-        timestamp: new Date().toLocaleString(),
-        isAssistant: true,
-      },
-    ]);
   };
 
   /**
@@ -426,27 +444,19 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           hasContent: !!content,
           hasSources: !!data?.sources,
           sourceCount: data?.sources?.length,
+          message_id: data?.message_id,
         });
 
         switch (msgType) {
           case "ASYNC_START":
-            // If necessary, any "start" logic can go here
+            appendStreamingTokenToChat(content, data?.message_id);
             break;
           case "ASYNC_CONTENT":
-            appendStreamingTokenToChat(content);
+            appendStreamingTokenToChat(content, data?.message_id);
             break;
-          case "ASYNC_FINISH": {
-            const sourcesToPass =
-              data?.sources && Array.isArray(data.sources)
-                ? data.sources
-                : undefined;
-            console.log(
-              "[ChatTray WebSocket] ASYNC_FINISH sources:",
-              sourcesToPass
-            );
-            finalizeStreamingResponse(content, sourcesToPass);
+          case "ASYNC_FINISH":
+            finalizeStreamingResponse(content, data?.sources, data?.message_id);
             break;
-          }
           case "SYNC_CONTENT": {
             const sourcesToPass =
               data?.sources && Array.isArray(data.sources)
@@ -456,7 +466,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
               "[ChatTray WebSocket] SYNC_CONTENT sources:",
               sourcesToPass
             );
-            handleCompleteMessage(content, sourcesToPass);
+            handleCompleteMessage(content, sourcesToPass, data?.message_id);
             break;
           }
           default:
@@ -644,64 +654,64 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     };
   };
 
-  /**
-   * This replaces the old "handleCompleteMessage" approach that manually
-   * pieced together tokens/bounds. Now we rely on mapWebSocketSourcesToChatMessageSources
-   * for consistency across the codebase.
-   */
   const handleCompleteMessage = (
     content: string,
     sourcesData?: Array<WebSocketSources>,
     overrideId?: string,
     overrideCreatedAt?: string
   ): void => {
-    const messageId = overrideId ?? `msg_${Date.now()}`;
+    if (!overrideId) {
+      console.warn(
+        "handleCompleteMessage called without an overrideId - sources may not display correctly"
+      );
+    }
+    const messageId = overrideId ?? `msg_${Date.now()}`; // Only fallback if really needed
+    console.log("XOXO - handleCompleteMessage messageId", messageId);
     const messageTimestamp = overrideCreatedAt
       ? new Date(overrideCreatedAt).toISOString()
       : new Date().toISOString();
-
-    console.log("[ChatTray handleCompleteMessage] Processing message:", {
-      messageId,
-      hasContent: !!content,
-      sourceCount: sourcesData?.length,
-    });
 
     const mappedSources = mapWebSocketSourcesToChatMessageSources(
       sourcesData,
       messageId
     );
 
-    console.log(
-      "[ChatTray handleCompleteMessage] Mapped sources:",
-      mappedSources
-    );
-
     setChatSourceState((prev) => {
-      // Avoid duplicating a message with the same ID:
-      if (prev.messages.some((m) => m.messageId === messageId)) {
-        console.log(
-          "[ChatTray handleCompleteMessage] Skipping duplicate message:",
-          messageId
-        );
-        return prev;
+      const existingIndex = prev.messages.findIndex(
+        (m) => m.messageId === messageId
+      );
+
+      if (existingIndex !== -1) {
+        const existingMsg = prev.messages[existingIndex];
+        const updatedMsg = {
+          ...existingMsg,
+          content,
+          timestamp: messageTimestamp,
+          sources: mappedSources.length ? mappedSources : existingMsg.sources,
+        };
+
+        const updatedMessages = [...prev.messages];
+        updatedMessages[existingIndex] = updatedMsg;
+
+        return {
+          ...prev,
+          messages: updatedMessages,
+        };
+      } else {
+        return {
+          ...prev,
+          messages: [
+            ...prev.messages,
+            {
+              messageId,
+              content,
+              timestamp: messageTimestamp,
+              sources: mappedSources,
+            },
+          ],
+          selectedMessageId: overrideId ? prev.selectedMessageId : messageId,
+        };
       }
-
-      const newState = {
-        ...prev,
-        messages: [
-          ...prev.messages,
-          {
-            messageId,
-            content,
-            timestamp: messageTimestamp,
-            sources: mappedSources,
-          },
-        ],
-        selectedMessageId: overrideId ? prev.selectedMessageId : messageId,
-      };
-
-      console.log("[ChatTray handleCompleteMessage] Updated state:", newState);
-      return newState;
     });
   };
 
@@ -776,15 +786,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                 {combinedMessages.map((msg, idx) => {
                   // Find if this message has sources in our sourced messages state
                   const sourcedMessage = sourcedMessages.find(
-                    (m) =>
-                      // Match either by messageId (for loaded messages) or by matching content and timestamp
-                      // for newly streamed messages
-                      m.messageId === msg.messageId ||
-                      (m.content === msg.content &&
-                        Math.abs(
-                          new Date(m.timestamp).getTime() -
-                            new Date(msg.timestamp).getTime()
-                        ) < 1000)
+                    (m) => m.messageId === msg.messageId
                   );
 
                   // Map sources to include onClick handlers and text content

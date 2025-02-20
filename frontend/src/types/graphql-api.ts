@@ -1449,6 +1449,7 @@ export type ChatMessageType = Node & {
   content: Scalars["String"];
   data?: Maybe<{
     sources?: WebSocketSources[];
+    message_id?: string;
   }>;
   createdAt: Scalars["DateTime"];
   sourceDocument?: Maybe<DocumentType>;

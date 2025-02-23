@@ -21,6 +21,9 @@ export interface ChatMessageSource {
   rawText: string;
   tokensByPage: Record<number, TokenId[] | undefined>;
   boundsByPage: Record<number, BoundingBox | undefined>;
+  startIndex?: number;
+  endIndex?: number;
+  isTextBased?: boolean;
 }
 
 export interface ChatMessage {
@@ -55,6 +58,13 @@ export const useChatSourceState = () => {
   };
 };
 
+type TextJson = { start: number; end: number; text?: string };
+type PDFJson = MultipageAnnotationJson;
+
+function isTextJson(obj: any): obj is TextJson {
+  return typeof obj?.start === "number" && typeof obj?.end === "number";
+}
+
 /**
  * Maps incoming WebSocketSources into ChatMessageSource[]
  */
@@ -80,58 +90,60 @@ export function mapWebSocketSourcesToChatMessageSources(
       }
     );
 
-    const multiPageObj = src.json as MultipageAnnotationJson;
-    const tokensByPage: Record<number, TokenId[]> = {};
-    const boundsByPage: Record<number, BoundingBox> = {};
+    if (isTextJson(src.json)) {
+      const { start, end, text = "" } = src.json;
+      return {
+        id: `${messageId}.${index}`,
+        page: src.page ?? 0, // keep or set 0 if there's truly no pages in text docs
+        label: src.label,
+        label_id: src.label_id,
+        annotation_id: src.annotation_id,
+        rawText: text,
+        tokensByPage: {},
+        boundsByPage: {},
+        startIndex: start,
+        endIndex: end,
+        isTextBased: true,
+      };
+    } else {
+      const multiPageObj = src.json as MultipageAnnotationJson;
+      const tokensByPage: Record<number, TokenId[]> = {};
+      const boundsByPage: Record<number, BoundingBox> = {};
 
-    // Build our per-page tokens/bounds
-    for (const [pageKey, pageData] of Object.entries(multiPageObj)) {
-      const pageNum = parseInt(pageKey, 10);
-      const data = pageData as SinglePageAnnotationJson;
+      // Build per-page tokens/bounds
+      for (const [pageKey, pageData] of Object.entries(multiPageObj)) {
+        // Attempt a numeric parse
+        const pageNum = parseInt(pageKey, 10);
+        const data = pageData as SinglePageAnnotationJson;
 
-      console.log(
-        `[mapWebSocketSourcesToChatMessageSources] Processing page ${pageNum}:`,
-        {
-          tokensJsons: data.tokensJsons,
-          bounds: data.bounds,
-          pageKey,
-          pageNum,
+        // Store the token data if any
+        tokensByPage[pageNum] = data.tokensJsons ?? [];
+
+        // Store bounding boxes if present
+        if (data.bounds) {
+          boundsByPage[pageNum] = data.bounds;
         }
-      );
-
-      // Store the full TokenId objects
-      tokensByPage[pageNum] = data.tokensJsons ?? [];
-
-      // Only store bounds if they exist
-      if (data.bounds) {
-        boundsByPage[pageNum] = data.bounds;
       }
+
+      // Combine rawText from all pages
+      const combinedRawText = Object.values(multiPageObj)
+        .map((data) => data.rawText || "")
+        .join(" ");
+
+      return {
+        id: `${messageId}.${index}`,
+        page: src.page, // keep source's page as is
+        label: src.label,
+        label_id: src.label_id,
+        annotation_id: src.annotation_id,
+        rawText: combinedRawText,
+        tokensByPage,
+        boundsByPage,
+        startIndex: undefined,
+        endIndex: undefined,
+        isTextBased: false,
+      };
     }
-
-    const result = {
-      id: `${messageId}.${index}`,
-      page: src.page,
-      label: src.label,
-      label_id: src.label_id,
-      annotation_id: src.annotation_id,
-      rawText: Object.values(src.json as MultipageAnnotationJson)
-        .map((data) => data.rawText)
-        .join(" "),
-      tokensByPage,
-      boundsByPage,
-    };
-
-    console.log(
-      `[mapWebSocketSourcesToChatMessageSources] Mapped source ${index}:`,
-      {
-        ...result,
-        availablePages: Object.keys(tokensByPage),
-        tokenCounts: Object.entries(tokensByPage).map(
-          ([page, tokens]) => `Page ${page}: ${tokens?.length || 0} tokens`
-        ),
-      }
-    );
-    return result;
   });
 
   console.log(

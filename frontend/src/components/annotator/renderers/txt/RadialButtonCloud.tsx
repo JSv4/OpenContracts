@@ -1,63 +1,114 @@
 // src/RadialButtonCloud.tsx
 import React, { useState, useRef, useEffect } from "react";
 import styled, { createGlobalStyle, css, keyframes } from "styled-components";
-import { Button, SemanticICONS, Modal } from "semantic-ui-react";
+import { Button, Icon, SemanticICONS, Modal } from "semantic-ui-react";
 import { getLuminance } from "polished";
+
+// Helper function to ensure valid hex color
+const ensureValidHexColor = (color: string): string => {
+  // If it's already a valid hex color, return it
+  if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+    return color;
+  }
+
+  // If it's a hex without #, add it
+  if (/^[0-9A-Fa-f]{6}$/.test(color)) {
+    return `#${color}`;
+  }
+
+  // If it's a 3-digit hex, convert to 6-digit
+  if (/^#?[0-9A-Fa-f]{3}$/.test(color)) {
+    const stripped = color.replace("#", "");
+    return `#${stripped[0]}${stripped[0]}${stripped[1]}${stripped[1]}${stripped[2]}${stripped[2]}`;
+  }
+
+  // Default fallback color
+  return "#00b5ad"; // Teal as default
+};
 
 // Calculate dot color with good contrast
 const getContrastColor = (bgColor: string): string => {
-  // If it looks like a hex color without the #, add it
-  if (/^[A-Fa-f0-9]{3,6}$/.test(bgColor)) {
-    bgColor = "#" + bgColor;
-  }
-
+  const validColor = ensureValidHexColor(bgColor);
   try {
-    const luminance = getLuminance(bgColor);
-    return luminance > 0.5 ? "#000" : "#fff";
+    const luminance = getLuminance(validColor);
+    return luminance > 0.5 ? "#000000" : "#ffffff";
   } catch (error) {
-    console.warn(`Invalid color format: ${bgColor}, using fallback`);
-    return "#000"; // fallback to black
+    console.warn(`Error calculating contrast color:`, error);
+    return "#000000"; // fallback to black
   }
 };
 
 const pulse = keyframes`
   0% {
-    box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
+    box-shadow: 0 0 0 0 rgba(0, 176, 155, 0.4);
+    transform: scale(1);
   }
-  70% {
-    box-shadow: 0 0 0 10px rgba(0, 255, 0, 0);
+  50% {
+    box-shadow: 0 0 0 8px rgba(0, 176, 155, 0);
+    transform: scale(1.1);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(0, 255, 0, 0);
+    box-shadow: 0 0 0 0 rgba(0, 176, 155, 0);
+    transform: scale(1);
   }
 `;
 
 interface PulsingDotProps {
   backgroundColor: string;
+  isVisible: boolean;
 }
 
 const PulsingDot = styled.div<PulsingDotProps>`
-  width: 12px;
-  height: 12px;
-  background-color: ${(props) => props.backgroundColor};
+  width: 16px;
+  height: 16px;
+  background-color: ${(props) => ensureValidHexColor(props.backgroundColor)};
   border-radius: 50%;
-  animation: ${pulse} 2s infinite;
   cursor: pointer;
-  position: absolute;
-  top: -6px;
-  right: -6px;
+  position: relative;
+  opacity: ${(props) => (props.isVisible ? 0.9 : 0.4)};
+  transform-origin: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    animation: ${pulse} 2s infinite;
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at center,
+      rgba(255, 255, 255, 0.8) 0%,
+      rgba(255, 255, 255, 0) 70%
+    );
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover::before {
+    opacity: 1;
+  }
 `;
 
 const CloudContainer = styled.div`
   position: absolute;
-  top: -60px;
-  left: -60px;
-  width: 120px;
-  height: 120px;
+  top: -70px;
+  left: -70px;
+  width: 140px;
+  height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: auto;
+  z-index: 10001;
 `;
 
 interface ButtonPosition {
@@ -98,28 +149,48 @@ interface CloudButtonProps {
 const moveOut = keyframes`
   from {
     opacity: 0;
-    transform: translate(0, 0);
+    transform: translate(0, 0) scale(0.8);
   }
   to {
     opacity: 1;
-    transform: translate(var(--x), var(--y));
+    transform: translate(var(--x), var(--y)) scale(1);
   }
 `;
 
-const CloudButton = styled(Button).attrs<CloudButtonProps>((props) => ({
-  style: {
-    position: "absolute",
-    opacity: 0,
-    "--x": `${props.position.x}px`,
-    "--y": `${props.position.y}px`,
-    backgroundColor: props.backgroundColor,
-    color: getContrastColor(props.backgroundColor),
-  },
-}))<CloudButtonProps>`
+const CloudButton = styled(Button).attrs<CloudButtonProps>((props) => {
+  const validColor = ensureValidHexColor(props.backgroundColor);
+  return {
+    style: {
+      position: "absolute",
+      opacity: 0,
+      "--x": `${props.position.x}px`,
+      "--y": `${props.position.y}px`,
+      backgroundColor: validColor,
+      color: getContrastColor(validColor),
+    },
+  };
+})<CloudButtonProps>`
   ${(props) => css`
-    animation: ${moveOut} 0.5s forwards;
+    animation: ${moveOut} 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     animation-delay: ${props.delay}s;
   `}
+  padding: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.2s ease !important;
+
+  &:hover {
+    transform: translate(var(--x), var(--y)) scale(1.1) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  &:active {
+    transform: translate(var(--x), var(--y)) scale(0.95) !important;
+  }
+
+  i.icon {
+    margin: 0 !important;
+    font-size: 1rem !important;
+  }
 `;
 
 const GlobalStyle = createGlobalStyle`
@@ -207,9 +278,15 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
     skipCount
   );
 
-  const dotColor = getContrastColor(parentBackgroundColor);
+  const dotColor = ensureValidHexColor(parentBackgroundColor);
 
-  const pastelColors = ["#AEC6CF", "#FFB347", "#77DD77", "#CFCFC4", "#F49AC2"];
+  const buttonColors = [
+    "#00B5AD", // Teal
+    "#2185D0", // Blue
+    "#21BA45", // Green
+    "#DB2828", // Red
+    "#A333C8", // Purple
+  ];
 
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
@@ -217,6 +294,7 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
         className="pulsing-dot"
         onMouseEnter={() => setCloudVisible(true)}
         backgroundColor={dotColor}
+        isVisible={cloudVisible}
       />
       <GlobalStyle />
       {cloudVisible && (
@@ -224,9 +302,9 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
           {buttonList.map((btn, index) => (
             <CloudButton
               key={index}
-              icon={btn.name}
+              icon
               circular
-              size="mini"
+              size="small"
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.stopPropagation();
                 handleButtonClick(btn);
@@ -234,8 +312,10 @@ const RadialButtonCloud: React.FC<RadialButtonCloudProps> = ({
               title={btn.tooltip}
               delay={index * 0.1}
               position={buttonPositions[index]}
-              backgroundColor={pastelColors[index % pastelColors.length]}
-            />
+              backgroundColor={buttonColors[index % buttonColors.length]}
+            >
+              <Icon name={btn.name} />
+            </CloudButton>
           ))}
         </CloudContainer>
       )}

@@ -932,6 +932,9 @@ class CorpusStatsType(graphene.ObjectType):
 
 
 class MessageType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    
+    data = GenericScalar()
+    
     class Meta:
         model = ChatMessage
         interfaces = [relay.Node]

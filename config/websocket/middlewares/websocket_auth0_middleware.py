@@ -72,28 +72,27 @@ class WebsocketAuth0TokenMiddleware(BaseMiddleware):
 
         # 2. If we found a token or relevant header, try to authenticate
         if token or any(h[0].lower() == b"authorization" for h in headers):
-            logger.debug("Attempting authentication with provided credentials")
+            # logger.debug("Attempting authentication with provided credentials")
             try:
-                logger.info(
-                    f"WebsocketAuth0TokenMiddleware - Attempting authentication with token: {token}"
-                )
+                # logger.info(
+                #     f"WebsocketAuth0TokenMiddleware - Attempting authentication with token: {token}"
+                # )
                 user = await database_sync_to_async(get_user_by_token)(token)
-                logger.info(f"WebsocketAuth0TokenMiddleware - user: {user}")
+                # logger.info(f"WebsocketAuth0TokenMiddleware - user: {user}")
                 if user and isinstance(user, User):
-                    logger.info(f"Websocket user authenticated: {user.username}")
-                    logger.info(
-                        f"Successfully authenticated user {user.username} with ID {user.id}"
-                    )
+                    # logger.info(f"Websocket user authenticated: {user.username}")
+                    # logger.info(
+                    #     f"Successfully authenticated user {user.username} with ID {user.id}"
+                    # )
                     scope["user"] = user
                 else:
-                    logger.warning(
-                        "Websocket token authentication failed, using AnonymousUser"
-                    )
+                    # logger.warning(
+                    #     "Websocket token authentication failed, using AnonymousUser"
+                    # )
                     logger.debug("Authentication attempt returned no valid user")
 
             except Exception as e:
                 logger.error(f"Error during Websocket auth: {e}", exc_info=True)
-                logger.debug("Authentication attempt failed with exception")
 
         # Log final authentication state
         logger.debug(

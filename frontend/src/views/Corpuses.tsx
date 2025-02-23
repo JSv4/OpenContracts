@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Button, Tab } from "semantic-ui-react";
+import { Button, Tab, Menu } from "semantic-ui-react";
 import _ from "lodash";
 import { toast } from "react-toastify";
 import {
@@ -10,6 +10,15 @@ import {
   useReactiveVar,
 } from "@apollo/client";
 import { useLocation } from "react-router-dom";
+import {
+  Search,
+  FileText,
+  MessageSquare,
+  Table,
+  Factory,
+  Brain,
+} from "lucide-react";
+import styled from "styled-components";
 
 import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { CorpusCards } from "../components/corpuses/CorpusCards";
@@ -94,6 +103,102 @@ import { getPermissions } from "../utils/transform";
 import { MOBILE_VIEW_BREAKPOINT } from "../assets/configurations/constants";
 import { CorpusDashboard } from "../components/corpuses/CorpusDashboard";
 import { useCorpusState } from "../components/annotator/context/CorpusAtom";
+
+const MobileTabMenu = styled(Menu)`
+  &.ui.menu {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    margin-bottom: 0;
+
+    .item {
+      flex: 1;
+      justify-content: center;
+      padding: 1rem 0.5rem;
+      min-height: 4rem;
+      border: none;
+      background: transparent;
+      position: relative;
+
+      &::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 10%;
+        right: 10%;
+        height: 3px;
+        background: transparent;
+        border-radius: 3px;
+        transition: all 0.2s ease;
+      }
+
+      &.active {
+        color: #4a90e2;
+        font-weight: 500;
+
+        &::after {
+          background: #4a90e2;
+        }
+
+        svg {
+          stroke-width: 2.5;
+          transform: translateY(-2px);
+        }
+      }
+
+      svg {
+        width: 24px;
+        height: 24px;
+        stroke-width: 2;
+        transition: all 0.2s ease;
+        margin: 0;
+      }
+    }
+  }
+`;
+
+const TabIcon = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+
+  span {
+    font-size: 0.75rem;
+    font-weight: 500;
+    opacity: 0.8;
+    white-space: nowrap;
+    color: inherit;
+  }
+`;
+
+// First add a styled container for the tab layout
+const TabContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+
+  .ui.menu {
+    flex-shrink: 0; /* Prevent menu from shrinking */
+    margin-bottom: 0;
+    padding: 0.5rem 0.5rem 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .tab-content {
+    flex: 1; /* Take remaining space */
+    overflow: hidden; /* Create new stacking context */
+    position: relative; /* For absolute children if any */
+    display: flex;
+    flex-direction: column;
+
+    .ui.tab {
+      height: 100%;
+      overflow-y: auto;
+    }
+  }
+`;
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
@@ -524,8 +629,14 @@ export const Corpuses = () => {
     {
       menuItem: {
         key: "documents",
-        icon: "file text",
-        content: use_mobile_layout ? "" : "Documents",
+        content: use_mobile_layout ? (
+          <TabIcon>
+            <FileText />
+            <span>Docs</span>
+          </TabIcon>
+        ) : (
+          "Documents"
+        ),
       },
       render: () => (
         <Tab.Pane
@@ -539,8 +650,14 @@ export const Corpuses = () => {
     {
       menuItem: {
         key: "annotations",
-        icon: "rocketchat",
-        content: use_mobile_layout ? "" : "Annotations",
+        content: use_mobile_layout ? (
+          <TabIcon>
+            <MessageSquare />
+            <span>Notes</span>
+          </TabIcon>
+        ) : (
+          "Annotations"
+        ),
       },
       render: () => (
         <Tab.Pane style={{ overflowY: "scroll" }}>
@@ -551,8 +668,14 @@ export const Corpuses = () => {
     {
       menuItem: {
         key: "analyses",
-        icon: "factory",
-        content: use_mobile_layout ? "" : "Analyses",
+        content: use_mobile_layout ? (
+          <TabIcon>
+            <Factory />
+            <span>Analyze</span>
+          </TabIcon>
+        ) : (
+          "Analyses"
+        ),
       },
       render: () => (
         <Tab.Pane style={{ overflowY: "scroll" }}>
@@ -563,8 +686,14 @@ export const Corpuses = () => {
     {
       menuItem: {
         key: "extracts",
-        icon: "table",
-        content: use_mobile_layout ? "" : "Extracts",
+        content: use_mobile_layout ? (
+          <TabIcon>
+            <Table />
+            <span>Extract</span>
+          </TabIcon>
+        ) : (
+          "Extracts"
+        ),
       },
       render: () => (
         <Tab.Pane style={{ overflowY: "scroll" }}>
@@ -634,8 +763,14 @@ export const Corpuses = () => {
       {
         menuItem: {
           key: "query",
-          icon: "search",
-          content: use_mobile_layout ? "" : "Query",
+          content: use_mobile_layout ? (
+            <TabIcon>
+              <Brain />
+              <span>Query</span>
+            </TabIcon>
+          ) : (
+            "Query"
+          ),
         },
         render: () => (
           <Tab.Pane style={{ height: "100%", overflowY: "scroll" }}>
@@ -684,26 +819,26 @@ export const Corpuses = () => {
           justifyContent: "center",
           height: "100%",
           flex: 1,
-          overflowY: "hidden",
-          marginLeft: "5px",
-          marginRight: "5px",
+          overflow: "hidden",
         }}
       >
-        <Tab
-          id="SelectedCorpusTabDiv"
-          attached="bottom"
-          style={{
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-start",
-          }}
-          activeIndex={active_tab}
-          onTabChange={(e, { activeIndex }) =>
-            setActiveTab(activeIndex ? Number(activeIndex) : 0)
-          }
-          panes={panes}
-        />
+        <TabContainer>
+          <Tab
+            id="SelectedCorpusTabDiv"
+            menu={{
+              secondary: true,
+              pointing: true,
+              as: use_mobile_layout ? MobileTabMenu : undefined,
+            }}
+            attached={false}
+            activeIndex={active_tab}
+            onTabChange={(e, { activeIndex }) =>
+              setActiveTab(activeIndex ? Number(activeIndex) : 0)
+            }
+            panes={panes}
+            className="tab-content"
+          />
+        </TabContainer>
       </div>
     );
   } else if (

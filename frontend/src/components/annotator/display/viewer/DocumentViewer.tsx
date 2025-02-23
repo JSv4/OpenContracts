@@ -76,6 +76,19 @@ export const PDFContainer = styled.div<{ width?: number }>(
     flex-direction: column;
     position: relative;
     z-index: 1;
+    -webkit-overflow-scrolling: touch; /* Enable smooth scrolling on iOS */
+    
+    @media (max-width: 768px) {
+      padding: 0.5rem;
+      width: 100%;
+      min-width: 100%;
+      overflow-x: auto;
+      overflow-y: auto;
+      /* Ensure content can be scrolled fully into view */
+      scroll-padding: 1rem;
+      /* Prevent any horizontal bounce/rubber-band effect */
+      overscroll-behavior-x: none;
+    }
   `
 );
 

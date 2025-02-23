@@ -1292,7 +1292,7 @@ class Query(graphene.ObjectType):
             "-modified",
         }
 
-        order_field = order_by if order_by in valid_order_fields else "-created_at"
+        order_field = order_by if order_by in valid_order_fields else "created_at"
         queryset = queryset.order_by(order_field)
 
         return queryset

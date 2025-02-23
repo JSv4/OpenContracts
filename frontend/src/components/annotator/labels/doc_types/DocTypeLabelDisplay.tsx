@@ -43,8 +43,17 @@ const StyledPopup = styled(Popup)`
   }
 `;
 
-export const DocTypeLabelDisplay: React.FC = () => {
+interface DocTypeLabelDisplayProps {
+  /** Whether the right panel is currently shown */
+  showRightPanel?: boolean;
+}
+
+export const DocTypeLabelDisplay: React.FC<DocTypeLabelDisplayProps> = ({
+  showRightPanel,
+}) => {
   const { width } = useWindowDimensions();
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const componentRef = useRef<HTMLDivElement>(null);
 
   const selected_extract = useReactiveVar(selectedExtract);
   const selected_analysis = useReactiveVar(selectedAnalysis);
@@ -59,31 +68,92 @@ export const DocTypeLabelDisplay: React.FC = () => {
   const deleteDocTypeAnnotation = useDeleteDocTypeAnnotation();
   const createDocTypeAnnotation = useAddDocTypeAnnotation();
 
+  // Add logging for incoming data
+  useEffect(() => {
+    console.log("DocTypeLabelDisplay - Received annotations:", {
+      docTypes: pdfAnnotations.docTypes,
+      corpus_permissions,
+      read_only,
+    });
+  }, [pdfAnnotations.docTypes, corpus_permissions, read_only]);
+
   const doc_label_choices = docTypeLabels;
   const doc_annotations = pdfAnnotations.docTypes;
 
   const [open, setOpen] = useState(false);
-  const [hovered, setHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const setHover = (hover: boolean | ((prevState: boolean) => boolean)) => {
-    if (!hover) {
-      if (open) setOpen(false);
-    }
-    setHovered(hover);
+  // Clear analysis and extract states on mount
+  useEffect(() => {
+    // Clear any lingering analysis or extract selections
+    selectedAnalysis(null);
+    selectedExtract(null);
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Update isMobile state on window resize
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Handle clicks outside for mobile
+  React.useEffect(() => {
+    if (!isMobile) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        componentRef.current &&
+        !componentRef.current.contains(event.target as Node)
+      ) {
+        setIsExpanded(false);
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [isMobile]);
+
+  const handleMouseEnter = (): void => {
+    if (isMobile) return; // Skip for mobile
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setIsExpanded(true);
+  };
+
+  const handleMouseLeave = (): void => {
+    if (isMobile) return; // Skip for mobile
+    timeoutRef.current = setTimeout(() => {
+      setIsExpanded(false);
+      setOpen(false);
+    }, 300);
+  };
+
+  const handleClick = () => {
+    if (!isMobile) return; // Only for mobile
+    setIsExpanded(!isExpanded);
   };
 
   const onAdd = (label: AnnotationLabelType) => {
-    // console.log("onAddDocToLabel", label);
-
-    createDocTypeAnnotation(label);
-    setHover(false);
+    try {
+      createDocTypeAnnotation(label);
+      setIsExpanded(false);
+      setOpen(false);
+    } catch (error) {
+      console.error("Error creating doc type annotation:", error);
+    }
   };
 
   const onDelete = (doc_type_annotation: DocTypeAnnotation) => {
-    // console.log("Delete annotation_id", doc_type_annotation.id);
-    deleteDocTypeAnnotation(doc_type_annotation.id);
+    try {
+      deleteDocTypeAnnotation(doc_type_annotation.id);
+    } catch (error) {
+      console.error("Error deleting doc type annotation:", error);
+    }
   };
 
   let annotation_elements: any[] = [];
@@ -92,6 +162,17 @@ export const DocTypeLabelDisplay: React.FC = () => {
   } else {
     for (var annotation of doc_annotations) {
       try {
+        // Add logging for each annotation's permissions
+        console.log("Processing doc type annotation:", {
+          id: annotation.id,
+          label: annotation.annotationLabel.text,
+          myPermissions: annotation.myPermissions,
+          canRemove: annotation.myPermissions.includes(
+            PermissionTypes.CAN_REMOVE
+          ),
+          isReadOnly: read_only,
+        });
+
         annotation_elements.push(
           <DocTypeLabel
             key={annotation.id}
@@ -104,19 +185,51 @@ export const DocTypeLabelDisplay: React.FC = () => {
             label={annotation.annotationLabel}
           />
         );
-      } catch {}
+      } catch (error) {
+        console.error("Error processing doc type annotation:", {
+          annotation,
+          error,
+        });
+      }
     }
   }
 
-  // Fix the existing labels array construction
-  const existing_labels: string[] = doc_annotations.map(
-    (annotation) => annotation.annotationLabel.id
-  );
+  // Fix the existing labels array construction with proper error handling
+  const existing_labels: string[] = useMemo(() => {
+    try {
+      return doc_annotations.map((annotation) => annotation.annotationLabel.id);
+    } catch (error) {
+      console.error("Error mapping doc annotations:", error);
+      return [];
+    }
+  }, [doc_annotations]);
 
   // Filter out already applied labels from the label options
-  const filtered_doc_label_choices = doc_label_choices.filter(
-    (label) => !existing_labels.includes(label.id)
-  );
+  const filtered_doc_label_choices = useMemo(() => {
+    return doc_label_choices.filter(
+      (label) => !existing_labels.includes(label.id)
+    );
+  }, [doc_label_choices, existing_labels]);
+
+  // Add logging for permissions calculations
+  useEffect(() => {
+    if (doc_annotations.length > 0) {
+      console.log("DocType annotations permissions summary:", {
+        totalAnnotations: doc_annotations.length,
+        annotationsWithRemovePermission: doc_annotations.filter((a) =>
+          a.myPermissions.includes(PermissionTypes.CAN_REMOVE)
+        ).length,
+        readOnlyState: read_only,
+        corpusPermissions: corpus_permissions,
+      });
+    }
+  }, [doc_annotations, read_only, corpus_permissions]);
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   // Early return if conditions are met
   if (
@@ -128,19 +241,13 @@ export const DocTypeLabelDisplay: React.FC = () => {
     return <></>;
   }
 
-  const handleMouseEnter = (): void => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setIsExpanded(true);
-  };
-
-  const handleMouseLeave = (): void => {
-    timeoutRef.current = setTimeout(() => setIsExpanded(false), 300);
-  };
-
   return (
     <StyledDocTypeSelector
+      ref={componentRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
+      $showRightPanel={showRightPanel}
     >
       <motion.div className="selector-button">
         <div className="composite-icon">
@@ -233,11 +340,14 @@ export const DocTypeLabelDisplay: React.FC = () => {
   );
 };
 
-const StyledDocTypeSelector = styled.div`
+const StyledDocTypeSelector = styled.div<{ $showRightPanel?: boolean }>`
   position: absolute;
   top: 1.5rem;
   right: 1.5rem;
   z-index: 100000;
+  transform: ${(props) =>
+    props.$showRightPanel ? "translateX(-520px)" : "none"};
+  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
 
   .selector-button {
     width: 48px;

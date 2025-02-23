@@ -102,6 +102,14 @@ export const PageAnnotationsContainer = styled.div`
   align-items: flex-start;
   width: 100%;
   margin: 1rem 0;
+
+  @media (max-width: 768px) {
+    margin: 0.5rem 0;
+    min-width: fit-content;
+    /* Ensure container expands to fit content but allows scrolling */
+    width: auto;
+    justify-content: flex-start;
+  }
 `;
 
 export const PageCanvas = styled.canvas`

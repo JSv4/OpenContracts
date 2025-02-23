@@ -18,7 +18,7 @@ and encapsulates database operations for reading/writing conversation messages.
 import json
 import logging
 import urllib.parse
-from typing import Any
+from typing import Any, Optional
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from graphql_relay import from_global_id
@@ -44,97 +44,54 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
     """
     A Channels WebSocket consumer for querying documents with LLM support.
     Sets up embeddings, an LLM agent, and a conversation record to store
-    human and LLM messages. Streams or returns results back to the client.
+    human and LLM messages.
     """
 
     conversation: Conversation | None = None
     agent: OpenContractDbAgent | None = None
+    document: Document | None = None
+    new_conversation: bool = False
+
+    # Each consumer instance will get a unique session_id created in connect()
+    session_id: Optional[str] = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.consumer_id = uuid.uuid4()  # Unique identifier for this instance
+        logger.debug(f"[Consumer {self.consumer_id}] __init__ called.")
 
     async def connect(self) -> None:
         """
-        Handles the WebSocket connection event. Attempts to load the associated Document,
-        sets up the LLM embedding model and query engine, and accepts the connection.
-
-        Raises:
-            ValueError: if the path does not contain a valid document ID.
-            Document.DoesNotExist: if no matching Document is found.
+        Handles the WebSocket connection event.
+        - Verifies the user is authenticated.
+        - Attempts to load the associated Document.
+        - Accepts the connection and logs the session_id for debugging.
         """
-        logger.debug("WebSocket connection attempt received")
-        logger.debug(f"Connection scope: {self.scope}")
-
+        self.session_id = str(uuid.uuid4())
+        logger.debug(
+            f"[Consumer {self.consumer_id} | Session {self.session_id}] connect() called. Scope: {self.scope}"
+        )
+        
         try:
-
-            self.new_conversation = False
-
             if not self.scope["user"].is_authenticated:
-                logger.warning("User is not authenticated")
+                logger.warning(f"[Session {self.session_id}] User is not authenticated.")
                 await self.close(code=4000)
                 return
 
             # Extract a numeric Document ID from path
             graphql_doc_id = extract_websocket_path_id(self.scope["path"], "document")
             self.document_id = int(from_global_id(graphql_doc_id)[1])
-            logger.debug(f"Extracted document_id: {self.document_id}")
+            logger.debug(f"[Session {self.session_id}] Extracted document_id: {self.document_id}")
 
             # Load the Document from DB
             self.document = await Document.objects.aget(id=self.document_id)
 
-            # Parse query parameters for optional load_from_conversation_id
-            query_string = self.scope.get("query_string", b"").decode("utf-8")
-            query_params = urllib.parse.parse_qs(query_string)
-            load_convo_id_str = query_params.get("load_from_conversation_id", [None])[0]
-            prefix_messages = None
-            if load_convo_id_str:
-                try:
-                    load_convo_id = int(from_global_id(load_convo_id_str)[1])
-                    self.conversation = await Conversation.objects.aget(
-                        id=load_convo_id
-                    )
-
-                    # Load ChatMessage instances for the given conversation, ordered by creation time
-                    prefix_messages = await ChatMessage.objects.afilter(
-                        conversation_id=load_convo_id
-                    ).order_by("created")
-                    prefix_messages = list(prefix_messages)
-                    logger.debug(
-                        f"Loaded {len(prefix_messages)} prefix messages from conversation {load_convo_id}"
-                    )
-                except Exception as e:
-                    logger.error(f"Could not load prefix messages: {str(e)}")
-                    prefix_messages = None
-            else:
-                self.conversation = await Conversation.objects.acreate(
-                    creator=self.scope["user"],
-                    title=f"Document {self.document_id} Conversation",
-                    chat_with_document=self.document,
-                )
-
-            self.new_conversation = (
-                await self.conversation.chat_messages.all().acount() == 0
-            )
-
-            # Initialize the underlying Llama agent with optional prefix messages
-            underlying_llama_agent = await create_document_agent(
-                document=self.document_id,
-                user_id=self.scope["user"].id,
-                loaded_messages=prefix_messages,
-            )
-
-            # Initialize our custom DocumentAgent instance
-            self.agent = OpenContractDbAgent(
-                conversation=self.conversation,
-                user_id=self.scope["user"].id
-                if self.scope["user"].is_authenticated
-                else None,
-                agent=underlying_llama_agent,
-            )
-
-            logger.debug("Accepting WebSocket connection")
+            logger.debug(f"[Session {self.session_id}] Accepting WebSocket connection.")
             await self.accept()
-            logger.debug("WebSocket connection accepted")
+            logger.debug(f"[Session {self.session_id}] Connection accepted.")
 
         except ValueError as v_err:
-            logger.error(f"Invalid document path: {v_err}")
+            logger.error(f"[Session {self.session_id}] Invalid document path: {v_err}")
             await self.accept()
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",
@@ -143,7 +100,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             )
             await self.close(code=4000)
         except Document.DoesNotExist:
-            logger.error(f"Document not found: {self.document_id}")
+            logger.error(f"[Session {self.session_id}] Document not found: {self.document_id}")
             await self.accept()
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",
@@ -152,7 +109,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             )
             await self.close(code=4000)
         except Exception as e:
-            logger.error(f"Error during connection: {str(e)}", exc_info=True)
+            logger.error(f"[Session {self.session_id}] Error during connection: {str(e)}", exc_info=True)
             await self.accept()
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",
@@ -163,9 +120,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code: int) -> None:
         """
-        Handles the WebSocket disconnection event.
+        Handles the WebSocket disconnection event, logs the session_id and close_code.
         """
-        logger.debug(f"WebSocket disconnected with code: {close_code}")
+        logger.debug(f"[Consumer {self.consumer_id} | Session {self.session_id}] disconnect() called.")
         self.conversation = None
         self.agent = None
 
@@ -176,14 +133,12 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         data: dict[str, Any] | None = None,
     ) -> None:
         """
-        Sends a standardized message over the WebSocket in JSON format.
+        Sends a standardized message over the WebSocket in JSON format,
+        logging session_id for better filtering in logs.
         """
         if data is None:
             data = {}
 
-        logger.debug(
-            f"Sending message - Type: {msg_type}, Content length: {len(content)}"
-        )
         await self.send(
             json.dumps({"type": msg_type, "content": content, "data": data})
         )
@@ -221,101 +176,172 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             response = llm.chat(messages)
             return response.message.content.strip()
         except Exception as e:
-            logger.error(f"Error generating conversation title: {e}")
+            logger.error(f"[Session {self.session_id}] Error generating conversation title: {e}")
             return f"Conversation {uuid.uuid4()}"
 
     async def receive(self, text_data: str) -> None:
         """
-        Handles incoming WebSocket messages from the client. Expected input is JSON containing:
-            {
-                "query": "Some user query"
-            }
+        Receives a message from the WebSocket and processes a user query.
+
+        Args:
+            text_data: The raw text data from the WebSocket client.
+
+        Returns:
+            None
         """
-        logger.debug(f"WebSocket received message: {text_data}")
+        logger.debug(f"[Session {self.session_id}] receive() called with text_data: {text_data}")
 
         try:
             text_data_json: dict[str, Any] = json.loads(text_data)
             user_query: str = text_data_json.get("query", "").strip()
 
             if not user_query:
-                logger.warning("Empty query received")
+                logger.warning(f"[Session {self.session_id}] Empty query received.")
                 await self.send_standard_message(
                     msg_type="SYNC_CONTENT",
                     content="No query provided.",
                 )
                 return
 
-            # Generate title if this is a new conversation without any messages
-            if self.new_conversation:
+            logger.info(f"[Session {self.session_id}] Received user query: '{user_query}'")
+            
+            # If we haven't yet loaded/created a Conversation, do it now
+            if self.conversation is None:
+                logger.info(f"[Session {self.session_id}] No conversation loaded yet, initializing...")
+                # Attempt to parse 'load_from_conversation_id' from query string
+                query_string = self.scope.get("query_string", b"").decode("utf-8")
+                query_params = urllib.parse.parse_qs(query_string)
+                load_convo_id_str = query_params.get("load_from_conversation_id", [None])[0]
+
+                if load_convo_id_str:
+                    try:
+                        load_convo_id = int(from_global_id(load_convo_id_str)[1])
+                        logger.info(f"[Session {self.session_id}] Attempting to load existing conversation {load_convo_id}")
+                        self.conversation = await Conversation.objects.aget(id=load_convo_id)
+                        logger.info(f"[Session {self.session_id}] Successfully loaded conversation {load_convo_id}")
+                        prefix_messages = [
+                            msg
+                            async for msg in ChatMessage.objects.filter(
+                                conversation_id=load_convo_id
+                            ).order_by("created")
+                        ]
+                        logger.info(f"[Session {self.session_id}] Loaded {len(prefix_messages)} prefix messages")
+                    except Exception as e:
+                        logger.error(f"[Session {self.session_id}] Could not load prefix messages: {str(e)}")
+                        prefix_messages = []
+                        self.conversation = None
+                else:
+                    # Create a brand new conversation
+                    logger.info(f"[Session {self.session_id}] Creating new conversation")
+                    self.conversation = await Conversation.objects.acreate(
+                        creator=self.scope["user"],
+                        title="",  # Temporary empty title, will be replaced below
+                        chat_with_document=self.document,
+                    )
+                    logger.info(f"[Session {self.session_id}] Created new conversation with ID {self.conversation.id}")
+                    prefix_messages = []
+                    self.new_conversation = True
+
+                # Initialize the underlying Llama agent with optional prefix messages
+                logger.info(f"[Session {self.session_id}] Creating document agent for document {self.document_id}")
+                underlying_llama_agent = await create_document_agent(
+                    document=self.document_id,
+                    user_id=self.scope["user"].id,
+                    loaded_messages=prefix_messages if prefix_messages else None,
+                    override_conversation=self.conversation,
+                )
+
+                # Initialize our custom agent
+                logger.info(f"[Session {self.session_id}] Initializing OpenContractDbAgent wrapper")
+                self.agent = underlying_llama_agent  # It's already wrapped!
+
+            # If conversation is brand new and has no chat messages, rename it
+            if self.new_conversation and await self.conversation.chat_messages.all().acount() == 0:
+                logger.info(f"[Session {self.session_id}] Generating title for new conversation")
                 title = await self.generate_conversation_title(user_query)
                 self.conversation.title = title
                 await self.conversation.asave()
+                logger.info(f"[Session {self.session_id}] Set conversation title to: {title}")
+                self.new_conversation = False
 
-            # Start partial-token streaming
-            logger.debug("Sending ASYNC_START to client")
-            await self.send_standard_message(
-                msg_type="ASYNC_START",
-                content="Starting asynchronous content streaming...",
+            # Store user message BEFORE LLM message stored
+            await ChatMessage.objects.acreate(
+                creator_id=self.scope["user"].id,
+                conversation=self.conversation,
+                msg_type="HUMAN",
+                content=user_query,
             )
 
-            # The agent will store the user message in DB,
-            # then return a streaming or normal response object
-            logger.debug("Calling DocumentAgent to handle user message asynchronously")
-            response = await self.agent.astream_chat(user_query)
+            # Then create a placeholder for the LLM's message
+            message_id = await self.agent.store_llm_message("")
 
-            # If it's streaming-based, gather tokens from the generator
+            # Then call the agent to generate a response, ensure NOT to resave user message (this
+            # is super kludgy, yes, I know)
+            response = await self.agent.astream_chat(user_query, store_user_message=False)
+
             if isinstance(response, StreamingAgentChatResponse):
-                logger.debug("Processing streaming response from the agent")
+                
+                await self.send_standard_message(
+                    msg_type="ASYNC_START",
+                    content="",
+                    data={"message_id": message_id},
+                )
                 llm_response_buffer = ""
+                token_count = 0
 
                 async for token in response.async_response_gen():
-                    logger.debug(f"Emitting partial token: {token}")
+                    token_count += 1
                     llm_response_buffer += token
                     await self.send_standard_message(
                         msg_type="ASYNC_CONTENT",
                         content=token,
+                        data={"message_id": message_id},
                     )
 
-                sources_str = ""
+                # Gather final sources (if any)
+                sources = {}
+                source_count = 0
+                if response.sources:
+                    for source in response.sources:
+                        raw_output = source.raw_output
+                        if hasattr(raw_output, "source_nodes"):
+                            for sn in raw_output.source_nodes:
+                                sources[sn.metadata["annotation_id"]] = sn.metadata
+                                source_count += 1
+
                 if response.source_nodes:
-                    # You can adjust how source nodes are conveyed to the frontend
-                    sources_str = json.dumps(
-                        [sn.model_extra for sn in response.source_nodes],
-                        indent=4,
-                    )
+                    for sn in response.source_nodes:
+                        sources[sn.metadata["annotation_id"]] = sn.metadata
+                        source_count += 1
 
-                # Store final LLM text after streaming completes
-                logger.debug("Storing final LLM message into DB")
-                await self.agent.store_final_llm_message(llm_response_buffer)
+                logger.info(f"[Session {self.session_id}] Collected {source_count} source references")
 
-                logger.debug("Sending ASYNC_FINISH message")
+                data = {"sources": list(sources.values()), "message_id": message_id}
+                logger.info(f"[Session {self.session_id}] Updating final LLM message content")
+                await self.agent.update_message(llm_response_buffer, message_id, data=data)
+
                 await self.send_standard_message(
                     msg_type="ASYNC_FINISH",
                     content=llm_response_buffer,
-                    data={"sources": sources_str},
+                    data=data,
                 )
+                logger.info(f"[Session {self.session_id}] Completed streaming response processing")
 
             else:
-                # Non-streaming response
-                logger.debug("Processing non-streaming response from the agent")
+                # Handle non-streaming response
+                logger.info(f"[Session {self.session_id}] Processing non-streaming response")
                 final_text: str = getattr(response, "response", "")
-                sources_str = ""
-                if hasattr(response, "source_nodes") and response.source_nodes:
-                    sources_str = response.get_formatted_sources()
+                await self.agent.update_message(final_text, message_id)
 
-                # Store final (non-streamed) LLM text in DB
-                logger.debug("Storing final LLM message into DB")
-                await self.agent.store_final_llm_message(final_text)
-
-                logger.debug("Sending SYNC_CONTENT message")
                 await self.send_standard_message(
                     msg_type="SYNC_CONTENT",
                     content=final_text,
-                    data={"sources": sources_str},
+                    data={"message_id": message_id},
                 )
+                logger.info(f"[Session {self.session_id}] Completed non-streaming response processing")
 
         except Exception as e:
-            logger.error(f"Error during message processing: {e}", exc_info=True)
+            logger.error(f"[Session {self.session_id}] Error during message processing: {e}", exc_info=True)
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",
                 content="",

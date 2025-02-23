@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import styled from "styled-components";
 import { Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,8 +25,18 @@ interface StyledLayerSwitcherProps {
   $isExpanded: boolean;
 }
 
+/**
+ * Creates an abbreviated version of a label by taking the first letter of each word
+ * and capitalizing it. E.g. "Knowledge Base" -> "KB"
+ */
+const createAbbreviation = (label: string): string => {
+  return label
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join("");
+};
+
 export const StyledLayerSwitcher = styled.div<StyledLayerSwitcherProps>`
-  /* Default: absolute for desktop, as desired: */
   position: absolute;
   bottom: 2.5rem;
   left: 1.5rem;
@@ -35,8 +45,44 @@ export const StyledLayerSwitcher = styled.div<StyledLayerSwitcherProps>`
   transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
 
   @media (max-width: 768px) {
-    /* Mobile: use fixed so it doesn't scroll away */
     position: fixed;
+    bottom: 1rem;
+    left: 1rem;
+
+    .layers-button {
+      min-width: 40px !important;
+      height: 40px !important;
+      padding: 0 12px !important;
+    }
+
+    .layer-icon {
+      width: 20px !important;
+      height: 20px !important;
+    }
+
+    .active-layer {
+      font-size: 0.75rem !important;
+
+      .active-indicator {
+        width: 6px !important;
+        height: 6px !important;
+      }
+    }
+
+    .layers-menu {
+      min-width: auto !important;
+
+      button {
+        padding: 0.5rem 1rem !important;
+        min-width: 140px !important;
+        font-size: 0.75rem !important;
+
+        svg {
+          width: 14px !important;
+          height: 14px !important;
+        }
+      }
+    }
   }
 
   .layers-button {
@@ -279,11 +325,41 @@ export const LayerSwitcher: React.FC<LayerSwitcherProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const timeoutRef = React.useRef<NodeJS.Timeout>();
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const componentRef = useRef<HTMLDivElement>(null);
 
   // Find the active layer
   const activeLayer = layers.find((layer) => layer.isActive);
 
+  // Update isMobile state on window resize
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Handle clicks outside for mobile
+  React.useEffect(() => {
+    if (!isMobile) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        componentRef.current &&
+        !componentRef.current.contains(event.target as Node)
+      ) {
+        setIsExpanded(false);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [isMobile]);
+
   const handleMouseEnter = () => {
+    if (isMobile) return; // Skip for mobile
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
@@ -291,9 +367,15 @@ export const LayerSwitcher: React.FC<LayerSwitcherProps> = ({
   };
 
   const handleMouseLeave = () => {
+    if (isMobile) return; // Skip for mobile
     timeoutRef.current = setTimeout(() => {
       setIsExpanded(false);
     }, 300);
+  };
+
+  const handleClick = () => {
+    if (!isMobile) return; // Only for mobile
+    setIsExpanded(!isExpanded);
   };
 
   React.useEffect(() => {
@@ -306,9 +388,11 @@ export const LayerSwitcher: React.FC<LayerSwitcherProps> = ({
 
   return (
     <StyledLayerSwitcher
+      ref={componentRef}
       $isExpanded={isExpanded}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
       className={className}
     >
       <motion.div
@@ -371,7 +455,9 @@ export const LayerSwitcher: React.FC<LayerSwitcherProps> = ({
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.1 }}
               >
-                {activeLayer.label}
+                {isMobile
+                  ? createAbbreviation(activeLayer.label)
+                  : activeLayer.label}
               </motion.span>
             </motion.div>
           )}
@@ -422,7 +508,7 @@ export const LayerSwitcher: React.FC<LayerSwitcherProps> = ({
                 whileTap={{ scale: 0.98 }}
               >
                 {layer.icon}
-                {layer.label}
+                {isMobile ? createAbbreviation(layer.label) : layer.label}
               </motion.button>
             ))}
           </motion.div>

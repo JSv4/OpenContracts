@@ -458,7 +458,9 @@ async def oc_llama_index_doc_query(
         # Build or load index
         # =====================
         vector_store = DjangoAnnotationVectorStore.from_params(
-            document_id=document.id, must_have_text=datacell.column.must_contain_text
+            document_id=document.id, 
+            user_id=document.creator.id,
+            must_have_text=datacell.column.must_contain_text
         )
 
         # async_index = await VectorStoreIndex.from_vector_store(vector_store=vector_store, use_async=True)
@@ -961,7 +963,9 @@ def llama_index_react_agent_query(cell_id):
         Settings.llm = llm
 
         vector_store = DjangoAnnotationVectorStore.from_params(
-            document_id=document.id, must_have_text=datacell.column.must_contain_text
+            user_id=document.creator.id,
+            document_id=document.id, 
+            must_have_text=datacell.column.must_contain_text
         )
         index = VectorStoreIndex.from_vector_store(
             vector_store=vector_store, use_async=True

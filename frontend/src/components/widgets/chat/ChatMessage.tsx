@@ -579,6 +579,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   >();
 
   const handleSourceSelect = (index: number) => {
+    console.log("XOXO - handleSourceSelect index", index);
     setSelectedSourceIndex(index === selectedSourceIndex ? undefined : index);
   };
 

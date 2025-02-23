@@ -402,41 +402,23 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "%(levelname)s %(asctime)s %(module)s "
-            "%(process)d %(thread)d %(message)s"
+            "format": (
+                "%(asctime)s %(levelname)s %(name)s [%(filename)s:%(lineno)d] "
+                "%(message)s"
+            ),
         },
-        "simple": {"format": "%(levelname)s %(message)s"},
     },
     "handlers": {
         "console": {
-            "level": "DEBUG",
             "class": "logging.StreamHandler",
             "formatter": "verbose",
-        }
-    },
-    "root": {"level": "INFO", "handlers": ["console"]},
-    "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": True,
-        },
-        "channels": {
-            "handlers": ["console"],
-            "level": "DEBUG",
-            "propagate": True,
-        },
-        "config.websocket": {
-            "handlers": ["console"],
-            "level": "DEBUG",
-            "propagate": True,
-        },
-        "config.asgi": {
-            "handlers": ["console"],
-            "level": "DEBUG",
-            "propagate": True,
         },
     },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {},
 }
 
 # Celery

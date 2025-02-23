@@ -117,6 +117,7 @@ interface ChatTrayProps {
   documentId: string;
   showLoad: boolean;
   setShowLoad: React.Dispatch<React.SetStateAction<boolean>>;
+  onMessageSelect?: () => void;
 }
 
 /**
@@ -133,6 +134,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   documentId,
   showLoad,
   setShowLoad,
+  onMessageSelect,
 }) => {
   // Chat state
   const [isNewChat, setIsNewChat] = useState(false);
@@ -158,6 +160,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
   // WebSocket reference
   const socketRef = useRef<WebSocket | null>(null);
+  const sendingLockRef = useRef<boolean>(false);
 
   // State for the search filter
   const [titleFilter, setTitleFilter] = useState<string>("");
@@ -171,7 +174,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
 
-  const { data, loading, error, fetchMore } = useQuery<
+  const { data, loading, error, fetchMore, refetch } = useQuery<
     GetConversationsOutputs,
     GetConversationsInputs
   >(GET_CONVERSATIONS, {
@@ -510,7 +513,6 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     fetchChatMessages({
       variables: {
         conversationId,
-        orderBy: "created_at",
         limit: 10,
       },
       // Add fetchPolicy to ensure we always get fresh data
@@ -532,6 +534,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       socketRef.current.close();
       socketRef.current = null;
     }
+    refetch();
   };
 
   /**
@@ -578,6 +581,16 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       console.warn("WebSocket not ready yet");
       return;
     }
+
+    // Check if a message is already being sent
+    if (sendingLockRef.current) {
+      console.warn("Message is already being sent, ignoring duplicate send.");
+      return;
+    }
+
+    // Lock sending to prevent duplicate sends
+    sendingLockRef.current = true;
+
     try {
       setChat((prev) => [
         ...prev,
@@ -588,13 +601,17 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           isAssistant: false,
         },
       ]);
-
       socketRef.current.send(JSON.stringify({ query: trimmed }));
       setNewMessage("");
       setWsError(null);
     } catch (err) {
       console.error("Failed to send message:", err);
       setWsError("Failed to send message. Please try again.");
+    } finally {
+      // Release the lock after a debounce interval (e.g., 300ms)
+      setTimeout(() => {
+        sendingLockRef.current = false;
+      }, 300);
     }
   }, [newMessage, user_obj?.email, wsReady]);
 
@@ -823,6 +840,10 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                                 : sourcedMessage.messageId,
                             selectedSourceIndex: null, // Reset source selection when message selection changes
                           }));
+                          // Call the onMessageSelect callback when a message with sources is selected
+                          if (sourcedMessage.sources.length > 0) {
+                            onMessageSelect?.();
+                          }
                         }
                       }}
                     />

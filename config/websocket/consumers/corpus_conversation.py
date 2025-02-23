@@ -206,7 +206,7 @@ class CorpusQueryConsumer(AsyncWebsocketConsumer):
 
                 # Store final LLM message in DB
                 logger.debug("Storing final LLM message for corpus conversation in DB")
-                await self.agent.store_final_llm_message(llm_response_buffer)
+                await self.agent.store_llm_message(llm_response_buffer)
 
                 logger.debug("Sending ASYNC_FINISH (corpus) message")
                 await self.send_standard_message(
@@ -229,7 +229,7 @@ class CorpusQueryConsumer(AsyncWebsocketConsumer):
 
                 # Store final text
                 logger.debug("Storing final LLM message for corpus conversation in DB")
-                await self.agent.store_final_llm_message(final_text)
+                await self.agent.store_llm_message(final_text)
 
                 logger.debug("Sending SYNC_CONTENT (corpus) message")
                 await self.send_standard_message(

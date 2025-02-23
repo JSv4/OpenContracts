@@ -7,14 +7,14 @@ For more information on this file, see
 https://docs.djangoproject.com/en/dev/howto/deployment/asgi/
 
 """
-import logging
 import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 
 import django
-from django.conf import settings
+django.setup()
 
-# This is intentional to avoid Django breaking on startup
-django.setup()  # noqa: E402
+import logging
+import uuid
 
 import sys  # noqa: E402
 from pathlib import Path  # noqa: E402
@@ -22,6 +22,7 @@ from pathlib import Path  # noqa: E402
 from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 from django.core.asgi import get_asgi_application  # noqa: E402
 from django.urls import re_path  # noqa: E402
+from django.conf import settings
 
 from config.websocket.consumers.corpus_conversation import (  # noqa: E402
     CorpusQueryConsumer,
@@ -36,9 +37,6 @@ logger = logging.getLogger(__name__)
 # delphic directory.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 sys.path.append(str(BASE_DIR / "delphic"))
-
-# If DJANGO_SETTINGS_MODULE is unset, default to the local settings
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 
 # This application object is used by any ASGI server configured to use this file.
 django_application = get_asgi_application()
@@ -90,3 +88,6 @@ application = ProtocolTypeRouter(
 )
 
 logger.info("ASGI application configured with WebSocket support")
+
+unique_id = uuid.uuid4()
+logger.info(f"ASGI.py loaded (unique_id={unique_id})")

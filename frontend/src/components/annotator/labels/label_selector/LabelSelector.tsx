@@ -14,6 +14,8 @@ interface LabelSelectorProps {
   sidebarWidth: string;
   /** Optional array of labels to display. If not provided, labels are loaded from the corpus state */
   labels?: AnnotationLabelType[];
+  /** Whether the right panel is currently shown */
+  showRightPanel?: boolean;
 }
 
 /**
@@ -32,8 +34,10 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
   setActiveLabel,
   sidebarWidth,
   labels,
+  showRightPanel,
 }) => {
   const { width } = useWindowDimensions();
+  const isMobile = width <= 768; // Match the media query breakpoint
   const { selectedDocument } = useSelectedDocument();
   const { humanSpanLabels, humanTokenLabels } = useCorpusState();
 
@@ -74,8 +78,11 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
 
   /**
    * Handles mouse entering the component by immediately expanding the label menu.
+   * Only triggers on desktop.
    */
   const handleMouseEnter = (): void => {
+    if (isMobile) return;
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
@@ -84,17 +91,26 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
 
   /**
    * Handles mouse leaving the component by collapsing the label menu after a delay.
+   * Only triggers on desktop.
    */
   const handleMouseLeave = (): void => {
+    if (isMobile) return;
+
     timeoutRef.current = setTimeout(() => setIsExpanded(false), 300);
   };
 
-  // Make sure any pending timeout is cleared when the component unmounts.
+  // Add click handler for mobile
+  const handleSelectorClick = (): void => {
+    if (!isMobile) return;
+    setIsExpanded(!isExpanded);
+  };
+
+  // Clear expanded state when active label is cleared on mobile
   useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, []);
+    if (isMobile && !activeSpanLabel) {
+      setIsExpanded(false);
+    }
+  }, [activeSpanLabel, isMobile]);
 
   // These effects log changes similar to the legacy implementation.
   useEffect(() => {
@@ -114,8 +130,10 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
     <StyledLabelSelector
       isExpanded={isExpanded}
       sidebarWidth={sidebarWidth}
+      showRightPanel={showRightPanel}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={handleSelectorClick}
     >
       <motion.div
         className="selector-button"
@@ -143,6 +161,9 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveLabel(undefined);
+                if (isMobile) {
+                  setIsExpanded(false);
+                }
               }}
             >
               ×
@@ -198,6 +219,7 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
 interface StyledLabelSelectorProps {
   isExpanded: boolean;
   sidebarWidth: string;
+  showRightPanel?: boolean;
 }
 
 const StyledLabelSelector = styled.div<StyledLabelSelectorProps>`
@@ -205,11 +227,45 @@ const StyledLabelSelector = styled.div<StyledLabelSelectorProps>`
   bottom: 2.5rem;
   right: 1.5rem;
   z-index: 1000;
-  transform: translateX(
-    ${(props) =>
-      props.sidebarWidth === "0px" ? "0" : `-${props.sidebarWidth}`}
-  );
+  transform: ${(props) =>
+    props.showRightPanel ? "translateX(-520px)" : "none"};
   transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+
+  @media (max-width: 768px) {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+
+    .selector-button {
+      min-width: 40px !important;
+      height: 40px !important;
+      padding: 0 12px !important;
+    }
+
+    .tag-icon {
+      width: 20px !important;
+      height: 20px !important;
+    }
+
+    .active-label-display {
+      font-size: 0.75rem !important;
+
+      .color-dot {
+        width: 6px !important;
+        height: 6px !important;
+      }
+    }
+
+    .labels-menu {
+      min-width: auto !important;
+
+      button {
+        padding: 0.5rem 1rem !important;
+        min-width: 140px !important;
+        font-size: 0.75rem !important;
+      }
+    }
+  }
 
   .selector-button {
     min-width: 48px;

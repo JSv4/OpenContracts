@@ -189,6 +189,8 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
   className,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const componentRef = useRef<HTMLDivElement>(null);
 
   // We'll also need the annotationRefs so we can scroll matched text into view
   const annotationRefs = useAnnotationRefs();
@@ -205,12 +207,43 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
   const [localInput, setLocalInput] = useState<string>(searchText || "");
   const timeoutRef = useRef<NodeJS.Timeout>();
 
+  // Update isMobile state on window resize
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Handle clicks outside for mobile
+  React.useEffect(() => {
+    if (!isMobile) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        componentRef.current &&
+        !componentRef.current.contains(event.target as Node)
+      ) {
+        setIsExpanded(false);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [isMobile]);
+
   /**
    * Debounce calls to setSearchText by 1 second to avoid excessive updates.
    */
   const debouncedSetSearchText = useMemo(
     () =>
       _.debounce((value: string) => {
+        if (value.trim() === "") {
+          setSearchText("");
+          return;
+        }
         setSearchText(value);
       }, 1000),
     [setSearchText]
@@ -225,8 +258,21 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
         clearTimeout(timeoutRef.current);
       }
       debouncedSetSearchText.cancel();
+      // Don't clear search text on unmount as it triggers hooks with invalid data
     };
   }, [debouncedSetSearchText]);
+
+  // Effect to handle panel closing - move search text clearing here
+  useEffect(() => {
+    if (!isExpanded) {
+      debouncedSetSearchText.cancel();
+      // Only clear search if the panel is closing and we have an empty input
+      if (localInput.trim() === "") {
+        setLocalInput("");
+        setSearchText("");
+      }
+    }
+  }, [isExpanded, localInput, debouncedSetSearchText, setSearchText]);
 
   /**
    * Keep localInput in sync when the global searchText changes.
@@ -253,9 +299,10 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
   }, [selectedTextSearchMatchIndex, annotationRefs.textSearchElementRefs]);
 
   /**
-   * Expand on hover, collapse after a delay on mouse leave.
+   * Handle mouse enter/leave for desktop and click for mobile
    */
   const handleMouseEnter = () => {
+    if (isMobile) return; // Skip for mobile
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
@@ -263,9 +310,22 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
   };
 
   const handleMouseLeave = () => {
+    if (isMobile) return; // Skip for mobile
     timeoutRef.current = setTimeout(() => {
       setIsExpanded(false);
     }, 300);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (!isMobile) return; // Only for mobile
+
+    // If clicking the search input or inside the search panel, don't toggle
+    const target = e.target as Element;
+    if (target.closest(".search-input") || target.closest(".search-panel")) {
+      return;
+    }
+
+    setIsExpanded(!isExpanded);
   };
 
   /**
@@ -300,6 +360,7 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
       }
     }
   };
+
   /**
    * Create the "Match X of Y" indicator if valid results exist.
    */
@@ -328,9 +389,11 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
       </div>
 
       <div
+        ref={componentRef}
         className="search-container"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
       >
         <div className="search-button">
           <Search size={24} />
@@ -342,6 +405,7 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
             value={localInput}
             onChange={handleSearchChange}
             onKeyDown={handleSearchKeyDown}
+            onMouseDown={(e: React.MouseEvent) => e.stopPropagation()} // Prevent click from bubbling up
           />
           {matchIndicator && (
             <div className="search-status">{matchIndicator}</div>

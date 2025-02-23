@@ -290,8 +290,6 @@ export const PDFPage = ({
       selectedRelations.flatMap((rel) => [...rel.sourceIds, ...rel.targetIds])
     );
 
-    console.log("defined_annotations", defined_annotations);
-
     // If not showing structural, hide structural unless the annotation is forced
     const filtered_by_structural = !showStructural
       ? defined_annotations.filter(
@@ -345,35 +343,6 @@ export const PDFPage = ({
    * Once the PDF is rendered, scroll to the first chat source (if any)
    */
   const { chatSourceElementRefs } = useAnnotationRefs();
-  useLayoutEffect(() => {
-    if (selectedMessage && hasPdfPageRendered) {
-      const index =
-        selectedSourceIndex !== null && selectedSourceIndex !== undefined
-          ? selectedSourceIndex
-          : 0;
-      const key = `${selectedMessage.messageId}.${index}`;
-      const el = chatSourceElementRefs.current[key];
-      console.log(
-        "[PDFPage] useLayoutEffect: attempting to scroll to chat source with key",
-        key,
-        "Element:",
-        el
-      );
-      if (el) {
-        el.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      } else {
-        console.warn(
-          "[PDFPage] useLayoutEffect: No element found for key:",
-          key
-        );
-      }
-    }
-  }, [selectedMessage, selectedSourceIndex, hasPdfPageRendered]);
-
-  // Fallback effect in case useLayoutEffect did not scroll
   useEffect(() => {
     if (selectedMessage && hasPdfPageRendered) {
       const index =
@@ -381,47 +350,30 @@ export const PDFPage = ({
           ? selectedSourceIndex
           : 0;
       const key = `${selectedMessage.messageId}.${index}`;
-      const el = chatSourceElementRefs.current[key];
-      console.log(
-        "[PDFPage] useEffect fallback: attempting to scroll to chat source with key",
-        key,
-        "Element:",
-        el
-      );
-      if (el) {
-        el.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      } else {
-        console.warn(
-          "[PDFPage] useEffect fallback: No element found for key:",
-          key,
-          ". Retrying after 200ms"
-        );
-        setTimeout(() => {
-          const retryEl = chatSourceElementRefs.current[key];
-          console.log(
-            "[PDFPage] useEffect fallback timeout: retrying scroll for key",
-            key,
-            "Element:",
-            retryEl
-          );
-          if (retryEl) {
-            retryEl.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-            });
-          } else {
-            console.warn(
-              "[PDFPage] useEffect fallback timeout: Still no element found for key:",
-              key
-            );
-          }
-        }, 200);
-      }
+
+      // Add a small delay to ensure DOM is ready and any other effects have completed
+      const timeoutId = setTimeout(() => {
+        const el = chatSourceElementRefs.current[key];
+        if (el) {
+          // Use a more precise scroll that should work consistently
+          const elementRect = el.getBoundingClientRect();
+          const absoluteElementTop = elementRect.top + window.pageYOffset;
+          const middle = absoluteElementTop - window.innerHeight / 2;
+          window.scrollTo({
+            top: middle,
+            behavior: "smooth",
+          });
+        }
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
     }
-  }, [selectedMessage, selectedSourceIndex, hasPdfPageRendered]);
+  }, [
+    selectedMessage,
+    selectedSourceIndex,
+    hasPdfPageRendered,
+    chatSourceElementRefs,
+  ]);
 
   return (
     <PageAnnotationsContainer

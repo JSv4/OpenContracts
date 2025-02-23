@@ -104,6 +104,7 @@ import { SelectDocumentFieldsetModal } from "./SelectDocumentFieldsetModal";
 import { useAnnotationSelection } from "../../annotator/hooks/useAnnotationSelection";
 import styled from "styled-components";
 import { Icon } from "semantic-ui-react";
+import { useChatSourceState } from "../../annotator/context/ChatSourceAtom";
 
 const pdfjsLib = require("pdfjs-dist");
 
@@ -289,8 +290,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const { setSearchText } = useSearchText();
   const { setPermissions } = useDocumentPermissions();
   const { setTextSearchState } = useTextSearchState();
-  const { scrollContainerRef, registerRef } = useAnnotationRefs();
   const { activeSpanLabel, setActiveSpanLabel } = useAnnotationControls();
+  const { setChatSourceState } = useChatSourceState();
 
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
   const [markdownError, setMarkdownError] = useState<boolean>(false);
@@ -750,6 +751,9 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             setShowLoad={setShowLoad}
             showLoad={showLoad}
             documentId={documentId}
+            onMessageSelect={() => {
+              setActiveLayer("document");
+            }}
           />
         );
       case "notes":
@@ -984,12 +988,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   if (metadata.fileType === "application/pdf") {
     viewerContent = (
       <PDFContainer id="pdf-container" ref={containerRefCallback}>
-        <LabelSelector
-          sidebarWidth="0px"
-          activeSpanLabel={activeSpanLabel ?? null}
-          setActiveLabel={setActiveSpanLabel}
-        />
-        <DocTypeLabelDisplay />
         <PDF read_only={false} containerWidth={containerWidth} />
       </PDFContainer>
     );
@@ -999,12 +997,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   ) {
     viewerContent = (
       <PDFContainer ref={containerRefCallback}>
-        <LabelSelector
-          sidebarWidth="0px"
-          activeSpanLabel={activeSpanLabel ?? null}
-          setActiveLabel={setActiveSpanLabel}
-        />
-        <DocTypeLabelDisplay />
         <TxtAnnotatorWrapper readOnly={true} allowInput={false} />
       </PDFContainer>
     );
@@ -1075,6 +1067,13 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       return;
     }
 
+    // Special handling for summary tab - don't show right panel
+    if (tabKey === "summary") {
+      setActiveTab(tabKey);
+      setShowRightPanel(false);
+      return;
+    }
+
     setActiveTab(tabKey);
 
     // Determine which layer to switch to based on tab's declared layer
@@ -1086,6 +1085,13 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }
     // If layer === 'both', remain on the current activeLayer
   };
+
+  // Set initial state
+  useEffect(() => {
+    setActiveTab("summary");
+    setShowRightPanel(false);
+    setActiveLayer("knowledge");
+  }, []);
 
   return (
     <FullScreenModal
@@ -1137,7 +1143,13 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
         <MainContentArea id="main-content-area">
           {mainLayerContent}
-
+          <LabelSelector
+            sidebarWidth="0px"
+            activeSpanLabel={activeSpanLabel ?? null}
+            setActiveLabel={setActiveSpanLabel}
+            showRightPanel={showRightPanel}
+          />
+          <DocTypeLabelDisplay showRightPanel={showRightPanel} />
           <LayerSwitcher
             layers={[
               {
@@ -1148,6 +1160,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                 onClick: () => {
                   setActiveLayer("knowledge");
                   setActiveTab("summary");
+                  // Clear chat selections when switching to knowledge layer
+                  setChatSourceState((prev) => ({
+                    ...prev,
+                    selectedMessageId: null,
+                    selectedSourceIndex: null,
+                  }));
                 },
               },
               {

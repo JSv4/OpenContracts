@@ -348,28 +348,25 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
                 # Gather final sources (if any)
                 sources = {}
-                source_count = 0
                 if response.sources:
                     for source in response.sources:
                         raw_output = source.raw_output
                         if hasattr(raw_output, "source_nodes"):
                             for sn in raw_output.source_nodes:
-                                sources[sn.metadata["annotation_id"]] = sn.metadata
-                                source_count += 1
+                                sources[sn.metadata["annotation_id"]] = {
+                                    **sn.metadata,
+                                    "rawText": sn.text,
+                                }
 
                 if response.source_nodes:
                     for sn in response.source_nodes:
-                        sources[sn.metadata["annotation_id"]] = sn.metadata
-                        source_count += 1
-
-                logger.info(
-                    f"[Session {self.session_id}] Collected {source_count} source references"
-                )
+                        sources[sn.metadata["annotation_id"]] = {
+                            **sn.metadata,
+                            "rawText": sn.text,
+                        }
 
                 data = {"sources": list(sources.values()), "message_id": message_id}
-                logger.info(
-                    f"[Session {self.session_id}] Updating final LLM message content"
-                )
+
                 await self.agent.update_message(
                     llm_response_buffer, message_id, data=data
                 )
@@ -379,15 +376,8 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                     content=llm_response_buffer,
                     data=data,
                 )
-                logger.info(
-                    f"[Session {self.session_id}] Completed streaming response processing"
-                )
 
             else:
-                # Handle non-streaming response
-                logger.info(
-                    f"[Session {self.session_id}] Processing non-streaming response"
-                )
                 final_text: str = getattr(response, "response", "")
                 await self.agent.update_message(final_text, message_id)
 
@@ -395,9 +385,6 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                     msg_type="SYNC_CONTENT",
                     content=final_text,
                     data={"message_id": message_id},
-                )
-                logger.info(
-                    f"[Session {self.session_id}] Completed non-streaming response processing"
                 )
 
         except Exception as e:

@@ -115,8 +115,10 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
 
         structural_queryset = Annotation.objects.filter(
             Q(is_public=True) | Q(structural=True)
-        )
-        other_queryset = resolve_oc_model_queryset(Annotation, user=self.user_id)
+        ).distinct()
+        other_queryset = resolve_oc_model_queryset(
+            Annotation, user=self.user_id
+        ).distinct()
         queryset = structural_queryset | other_queryset
 
         if self.corpus_id is not None:

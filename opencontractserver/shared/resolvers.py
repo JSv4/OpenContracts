@@ -23,7 +23,9 @@ def resolve_oc_model_queryset(
     """
 
     try:
-        if user.is_anonymous:
+        if isinstance(user, (int, str)):
+            user = User.objects.get(id=user)
+        elif user.is_anonymous:
             user = None
         elif not isinstance(user, User):
             user = User.objects.get(id=user)

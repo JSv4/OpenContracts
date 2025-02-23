@@ -59,7 +59,6 @@ export const useChatSourceState = () => {
 };
 
 type TextJson = { start: number; end: number; text?: string };
-type PDFJson = MultipageAnnotationJson;
 
 function isTextJson(obj: any): obj is TextJson {
   return typeof obj?.start === "number" && typeof obj?.end === "number";
@@ -72,24 +71,9 @@ export function mapWebSocketSourcesToChatMessageSources(
   sourcesData: WebSocketSources[] | undefined,
   messageId: string
 ): ChatMessageSource[] {
-  console.log("[mapWebSocketSourcesToChatMessageSources] Input:", {
-    sourcesData,
-    messageId,
-  });
-
   if (!sourcesData) return [];
 
   const mappedSources = sourcesData.map((src, index) => {
-    console.log(
-      `[mapWebSocketSourcesToChatMessageSources] Processing source ${index}:`,
-      {
-        page: src.page,
-        label: src.label,
-        json: src.json,
-        availablePages: Object.keys(src.json),
-      }
-    );
-
     if (isTextJson(src.json)) {
       const { start, end, text = "" } = src.json;
       return {
@@ -98,7 +82,7 @@ export function mapWebSocketSourcesToChatMessageSources(
         label: src.label,
         label_id: src.label_id,
         annotation_id: src.annotation_id,
-        rawText: text,
+        rawText: src.rawText,
         tokensByPage: {},
         boundsByPage: {},
         startIndex: start,

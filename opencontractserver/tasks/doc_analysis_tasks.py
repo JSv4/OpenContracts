@@ -760,14 +760,14 @@ def pii_highlighter_claude(
     pdf_pawls_extract: dict | None = None,
     **kwargs: Any,
 ) -> tuple[
-    list[str],               # doc-level labels
+    list[str],  # doc-level labels
     list[tuple[TextSpan, str]],  # span-level annotations
-    list[dict[str, Any]],    # metadata
-    bool                     # success/failure
+    list[dict[str, Any]],  # metadata
+    bool,  # success/failure
 ]:
     """
     # PII Highlighter (Claude)
-    
+
     Analyzes the text of a contract, sends it to Claude for potential PII redactions,
     and returns a 4-element tuple consistent with doc_analyzer_task requirements:
 
@@ -795,10 +795,11 @@ def pii_highlighter_claude(
                 4) Success or failure as a boolean.
     """
 
-    import os
     import logging
-    from django.conf import settings
+    import os
+
     import anthropic
+    from django.conf import settings
 
     from opencontractserver.types.dicts import TextSpan
 
@@ -812,9 +813,8 @@ def pii_highlighter_claude(
     pii_config = analyzer_config.get(
         "opencontractserver.tasks.doc_analysis_tasks.pii_highlighter_claude", {}
     )
-    ANTHROPIC_API_KEY = (
-        pii_config.get("ANTHROPIC_API_KEY")
-        or os.environ.get("ANTHROPIC_API_KEY")
+    ANTHROPIC_API_KEY = pii_config.get("ANTHROPIC_API_KEY") or os.environ.get(
+        "ANTHROPIC_API_KEY"
     )
 
     if not ANTHROPIC_API_KEY:

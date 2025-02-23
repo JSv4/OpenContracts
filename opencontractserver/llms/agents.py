@@ -3,9 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
-from llama_cloud import MessageRole
-
 from django.conf import settings
+from llama_cloud import MessageRole
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.base.llms.types import ChatMessage as LlamaChatMessage
@@ -65,7 +64,7 @@ class OpenContractDbAgent:
             conversation: The Conversation record for storing all messages.
             user_id: Optional user ID for message attribution.
             agent: An instance of OpenAIAgent from llama_index, configured with tools.
-        """        
+        """
         self.conversation = conversation
         self.user_id = user_id
         self._agent = agent
@@ -88,24 +87,26 @@ class OpenContractDbAgent:
         """
         if user_query in OpenContractDbAgent._processing_queries:
             return await self._agent.astream_chat(user_query)
-        
+
         OpenContractDbAgent._processing_queries.add(user_query)
-        
+
         if store_user_message:
             await ChatMessage.objects.acreate(
-                    creator_id=self.user_id,
-                    conversation=self.conversation,
-                    msg_type="HUMAN",
-                    content=user_query,
+                creator_id=self.user_id,
+                conversation=self.conversation,
+                msg_type="HUMAN",
+                content=user_query,
             )
-        
-        try:                
+
+        try:
             response = await self._agent.astream_chat(user_query)
             return response
         finally:
             OpenContractDbAgent._processing_queries.remove(user_query)
 
-    async def store_llm_message(self, final_content: str, data: dict | None = None) -> str | int:
+    async def store_llm_message(
+        self, final_content: str, data: dict | None = None
+    ) -> str | int:
         """
         Stores or updates an LLM message in the DB after partial token streaming completes.
 
@@ -120,12 +121,15 @@ class OpenContractDbAgent:
             data=data,
         )
         return message.id
-    
-    async def update_message(self, content:str, message_id:int, data: dict | None = None) -> None:
-        message =  await ChatMessage.objects.aget(id=message_id)
-        message.content=content
-        message.data=data
+
+    async def update_message(
+        self, content: str, message_id: int, data: dict | None = None
+    ) -> None:
+        message = await ChatMessage.objects.aget(id=message_id)
+        message.content = content
+        message.data = data
         await message.asave()
+
 
 """Factory function to construct an OpenContractDbAgent for a given Document."""
 
@@ -170,8 +174,7 @@ async def create_document_agent(
 
     logger.debug("Building vector store and index...")
     vector_store = DjangoAnnotationVectorStore.from_params(
-        user_id=user_id,
-        document_id=document.id
+        user_id=user_id, document_id=document.id
     )
     index = VectorStoreIndex.from_vector_store(
         vector_store=vector_store,
@@ -214,7 +217,12 @@ async def create_document_agent(
     if loaded_messages:
         for msg in loaded_messages:
             prefix_messages.append(
-                LlamaChatMessage(role=MessageRole.ASSISTANT if msg.msg_type.lower() == "llm" else MessageRole.USER, content=msg.content)
+                LlamaChatMessage(
+                    role=MessageRole.ASSISTANT
+                    if msg.msg_type.lower() == "llm"
+                    else MessageRole.USER,
+                    content=msg.content,
+                )
             )
 
     logger.debug("Creating OpenAIAgent...")

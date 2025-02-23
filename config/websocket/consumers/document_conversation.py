@@ -18,7 +18,7 @@ and encapsulates database operations for reading/writing conversation messages.
 import json
 import logging
 import urllib.parse
-from typing import Any, Optional
+from typing import Any
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from graphql_relay import from_global_id
@@ -53,7 +53,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
     new_conversation: bool = False
 
     # Each consumer instance will get a unique session_id created in connect()
-    session_id: Optional[str] = None
+    session_id: str | None = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -71,17 +71,21 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         logger.debug(
             f"[Consumer {self.consumer_id} | Session {self.session_id}] connect() called. Scope: {self.scope}"
         )
-        
+
         try:
             if not self.scope["user"].is_authenticated:
-                logger.warning(f"[Session {self.session_id}] User is not authenticated.")
+                logger.warning(
+                    f"[Session {self.session_id}] User is not authenticated."
+                )
                 await self.close(code=4000)
                 return
 
             # Extract a numeric Document ID from path
             graphql_doc_id = extract_websocket_path_id(self.scope["path"], "document")
             self.document_id = int(from_global_id(graphql_doc_id)[1])
-            logger.debug(f"[Session {self.session_id}] Extracted document_id: {self.document_id}")
+            logger.debug(
+                f"[Session {self.session_id}] Extracted document_id: {self.document_id}"
+            )
 
             # Load the Document from DB
             self.document = await Document.objects.aget(id=self.document_id)
@@ -100,7 +104,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             )
             await self.close(code=4000)
         except Document.DoesNotExist:
-            logger.error(f"[Session {self.session_id}] Document not found: {self.document_id}")
+            logger.error(
+                f"[Session {self.session_id}] Document not found: {self.document_id}"
+            )
             await self.accept()
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",
@@ -109,7 +115,10 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             )
             await self.close(code=4000)
         except Exception as e:
-            logger.error(f"[Session {self.session_id}] Error during connection: {str(e)}", exc_info=True)
+            logger.error(
+                f"[Session {self.session_id}] Error during connection: {str(e)}",
+                exc_info=True,
+            )
             await self.accept()
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",
@@ -122,7 +131,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         """
         Handles the WebSocket disconnection event, logs the session_id and close_code.
         """
-        logger.debug(f"[Consumer {self.consumer_id} | Session {self.session_id}] disconnect() called.")
+        logger.debug(
+            f"[Consumer {self.consumer_id} | Session {self.session_id}] disconnect() called."
+        )
         self.conversation = None
         self.agent = None
 
@@ -176,7 +187,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             response = llm.chat(messages)
             return response.message.content.strip()
         except Exception as e:
-            logger.error(f"[Session {self.session_id}] Error generating conversation title: {e}")
+            logger.error(
+                f"[Session {self.session_id}] Error generating conversation title: {e}"
+            )
             return f"Conversation {uuid.uuid4()}"
 
     async def receive(self, text_data: str) -> None:
@@ -189,7 +202,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         Returns:
             None
         """
-        logger.debug(f"[Session {self.session_id}] receive() called with text_data: {text_data}")
+        logger.debug(
+            f"[Session {self.session_id}] receive() called with text_data: {text_data}"
+        )
 
         try:
             text_data_json: dict[str, Any] = json.loads(text_data)
@@ -203,47 +218,69 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 )
                 return
 
-            logger.info(f"[Session {self.session_id}] Received user query: '{user_query}'")
-            
+            logger.info(
+                f"[Session {self.session_id}] Received user query: '{user_query}'"
+            )
+
             # If we haven't yet loaded/created a Conversation, do it now
             if self.conversation is None:
-                logger.info(f"[Session {self.session_id}] No conversation loaded yet, initializing...")
+                logger.info(
+                    f"[Session {self.session_id}] No conversation loaded yet, initializing..."
+                )
                 # Attempt to parse 'load_from_conversation_id' from query string
                 query_string = self.scope.get("query_string", b"").decode("utf-8")
                 query_params = urllib.parse.parse_qs(query_string)
-                load_convo_id_str = query_params.get("load_from_conversation_id", [None])[0]
+                load_convo_id_str = query_params.get(
+                    "load_from_conversation_id", [None]
+                )[0]
 
                 if load_convo_id_str:
                     try:
                         load_convo_id = int(from_global_id(load_convo_id_str)[1])
-                        logger.info(f"[Session {self.session_id}] Attempting to load existing conversation {load_convo_id}")
-                        self.conversation = await Conversation.objects.aget(id=load_convo_id)
-                        logger.info(f"[Session {self.session_id}] Successfully loaded conversation {load_convo_id}")
+                        logger.info(
+                            f"[Session {self.session_id}] Attempting to load existing conversation {load_convo_id}"
+                        )
+                        self.conversation = await Conversation.objects.aget(
+                            id=load_convo_id
+                        )
+                        logger.info(
+                            f"[Session {self.session_id}] Successfully loaded conversation {load_convo_id}"
+                        )
                         prefix_messages = [
                             msg
                             async for msg in ChatMessage.objects.filter(
                                 conversation_id=load_convo_id
                             ).order_by("created")
                         ]
-                        logger.info(f"[Session {self.session_id}] Loaded {len(prefix_messages)} prefix messages")
+                        logger.info(
+                            f"[Session {self.session_id}] Loaded {len(prefix_messages)} prefix messages"
+                        )
                     except Exception as e:
-                        logger.error(f"[Session {self.session_id}] Could not load prefix messages: {str(e)}")
+                        logger.error(
+                            f"[Session {self.session_id}] Could not load prefix messages: {str(e)}"
+                        )
                         prefix_messages = []
                         self.conversation = None
                 else:
                     # Create a brand new conversation
-                    logger.info(f"[Session {self.session_id}] Creating new conversation")
+                    logger.info(
+                        f"[Session {self.session_id}] Creating new conversation"
+                    )
                     self.conversation = await Conversation.objects.acreate(
                         creator=self.scope["user"],
                         title="",  # Temporary empty title, will be replaced below
                         chat_with_document=self.document,
                     )
-                    logger.info(f"[Session {self.session_id}] Created new conversation with ID {self.conversation.id}")
+                    logger.info(
+                        f"[Session {self.session_id}] Created new conversation with ID {self.conversation.id}"
+                    )
                     prefix_messages = []
                     self.new_conversation = True
 
                 # Initialize the underlying Llama agent with optional prefix messages
-                logger.info(f"[Session {self.session_id}] Creating document agent for document {self.document_id}")
+                logger.info(
+                    f"[Session {self.session_id}] Creating document agent for document {self.document_id}"
+                )
                 underlying_llama_agent = await create_document_agent(
                     document=self.document_id,
                     user_id=self.scope["user"].id,
@@ -252,16 +289,25 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 )
 
                 # Initialize our custom agent
-                logger.info(f"[Session {self.session_id}] Initializing OpenContractDbAgent wrapper")
+                logger.info(
+                    f"[Session {self.session_id}] Initializing OpenContractDbAgent wrapper"
+                )
                 self.agent = underlying_llama_agent  # It's already wrapped!
 
             # If conversation is brand new and has no chat messages, rename it
-            if self.new_conversation and await self.conversation.chat_messages.all().acount() == 0:
-                logger.info(f"[Session {self.session_id}] Generating title for new conversation")
+            if (
+                self.new_conversation
+                and await self.conversation.chat_messages.all().acount() == 0
+            ):
+                logger.info(
+                    f"[Session {self.session_id}] Generating title for new conversation"
+                )
                 title = await self.generate_conversation_title(user_query)
                 self.conversation.title = title
                 await self.conversation.asave()
-                logger.info(f"[Session {self.session_id}] Set conversation title to: {title}")
+                logger.info(
+                    f"[Session {self.session_id}] Set conversation title to: {title}"
+                )
                 self.new_conversation = False
 
             # Store user message BEFORE LLM message stored
@@ -277,10 +323,12 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
             # Then call the agent to generate a response, ensure NOT to resave user message (this
             # is super kludgy, yes, I know)
-            response = await self.agent.astream_chat(user_query, store_user_message=False)
+            response = await self.agent.astream_chat(
+                user_query, store_user_message=False
+            )
 
             if isinstance(response, StreamingAgentChatResponse):
-                
+
                 await self.send_standard_message(
                     msg_type="ASYNC_START",
                     content="",
@@ -314,22 +362,32 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                         sources[sn.metadata["annotation_id"]] = sn.metadata
                         source_count += 1
 
-                logger.info(f"[Session {self.session_id}] Collected {source_count} source references")
+                logger.info(
+                    f"[Session {self.session_id}] Collected {source_count} source references"
+                )
 
                 data = {"sources": list(sources.values()), "message_id": message_id}
-                logger.info(f"[Session {self.session_id}] Updating final LLM message content")
-                await self.agent.update_message(llm_response_buffer, message_id, data=data)
+                logger.info(
+                    f"[Session {self.session_id}] Updating final LLM message content"
+                )
+                await self.agent.update_message(
+                    llm_response_buffer, message_id, data=data
+                )
 
                 await self.send_standard_message(
                     msg_type="ASYNC_FINISH",
                     content=llm_response_buffer,
                     data=data,
                 )
-                logger.info(f"[Session {self.session_id}] Completed streaming response processing")
+                logger.info(
+                    f"[Session {self.session_id}] Completed streaming response processing"
+                )
 
             else:
                 # Handle non-streaming response
-                logger.info(f"[Session {self.session_id}] Processing non-streaming response")
+                logger.info(
+                    f"[Session {self.session_id}] Processing non-streaming response"
+                )
                 final_text: str = getattr(response, "response", "")
                 await self.agent.update_message(final_text, message_id)
 
@@ -338,10 +396,15 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                     content=final_text,
                     data={"message_id": message_id},
                 )
-                logger.info(f"[Session {self.session_id}] Completed non-streaming response processing")
+                logger.info(
+                    f"[Session {self.session_id}] Completed non-streaming response processing"
+                )
 
         except Exception as e:
-            logger.error(f"[Session {self.session_id}] Error during message processing: {e}", exc_info=True)
+            logger.error(
+                f"[Session {self.session_id}] Error during message processing: {e}",
+                exc_info=True,
+            )
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",
                 content="",

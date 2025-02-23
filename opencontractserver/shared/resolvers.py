@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_oc_model_queryset(
-    django_obj_model_type: type[BaseOCModel] = None, 
-    user: User | int | str = None
+    django_obj_model_type: type[BaseOCModel] = None, user: User | int | str = None
 ) -> QuerySet[BaseOCModel]:
     """
     Given a model_type and a user instance, resolve a base queryset of the models this user
@@ -28,7 +27,10 @@ def resolve_oc_model_queryset(
             user = None
         elif not isinstance(user, User):
             user = User.objects.get(id=user)
-    except:
+    except Exception as e:
+        logger.error(
+            f"Error resolving user for queryset of model {django_obj_model_type}: {e}"
+        )
         user = None
 
     model_name = django_obj_model_type._meta.model_name
@@ -37,10 +39,14 @@ def resolve_oc_model_queryset(
     # Get the base queryset first (only stuff given user CAN see)
     if user:
         if user.is_superuser:
-            queryset = django_obj_model_type.objects.all().order_by("created").distinct()
+            queryset = (
+                django_obj_model_type.objects.all().order_by("created").distinct()
+            )
         elif user.is_anonymous:
-            queryset = django_obj_model_type.objects.filter(Q(is_public=True)).distinct()
-    # Finally, in all other cases, actually do the hard work
+            queryset = django_obj_model_type.objects.filter(
+                Q(is_public=True)
+            ).distinct()
+        # Finally, in all other cases, actually do the hard work
         else:
 
             permission_model_type = apps.get_model(

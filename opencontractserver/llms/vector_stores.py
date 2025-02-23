@@ -113,10 +113,12 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         # Need to do this this way because some annotations don't travel with the corpus but the document itself - e.g.
         # layout and structural annotations from the nlm parser.
 
-        structural_queryset = Annotation.objects.filter(Q(is_public=True) | Q(structural=True))
+        structural_queryset = Annotation.objects.filter(
+            Q(is_public=True) | Q(structural=True)
+        )
         other_queryset = resolve_oc_model_queryset(Annotation, user=self.user_id)
         queryset = structural_queryset | other_queryset
-        
+
         if self.corpus_id is not None:
             queryset = queryset.filter(
                 Q(corpus_id=self.corpus_id) | Q(document__corpus=self.corpus_id)

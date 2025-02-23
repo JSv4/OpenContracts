@@ -7,22 +7,23 @@ For more information on this file, see
 https://docs.djangoproject.com/en/dev/howto/deployment/asgi/
 
 """
-import os
+import os  # noqa: E402
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 
-import django
+import django  # noqa: E402
+
 django.setup()
 
-import logging
-import uuid
-
+import logging  # noqa: E402
 import sys  # noqa: E402
+import uuid  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
+from django.conf import settings  # noqa: E402
 from django.core.asgi import get_asgi_application  # noqa: E402
 from django.urls import re_path  # noqa: E402
-from django.conf import settings
 
 from config.websocket.consumers.corpus_conversation import (  # noqa: E402
     CorpusQueryConsumer,

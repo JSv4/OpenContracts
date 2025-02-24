@@ -2155,3 +2155,65 @@ export const GET_CHAT_MESSAGES = gql`
     }
   }
 `;
+
+export const GET_CORPUS_ACTIONS = gql`
+  query GetCorpusActions($corpusId: ID!) {
+    corpusActions(corpusId: $corpusId) {
+      edges {
+        node {
+          id
+          name
+          trigger
+          disabled
+          runOnAllCorpuses
+          creator {
+            id
+            username
+          }
+          fieldset {
+            id
+            name
+          }
+          analyzer {
+            id
+            analyzerId
+          }
+          created
+          modified
+        }
+      }
+    }
+  }
+`;
+
+export interface GetCorpusActionsInput {
+  corpusId: string;
+}
+
+export interface GetCorpusActionsOutput {
+  corpusActions: {
+    edges: Array<{
+      node: {
+        id: string;
+        name: string;
+        trigger: string;
+        disabled: boolean;
+        runOnAllCorpuses: boolean;
+        creator: {
+          id: string;
+          username: string;
+        };
+        fieldset?: {
+          id: string;
+          name: string;
+        };
+        analyzer?: {
+          id: string;
+          name: string;
+        };
+        created: string;
+        modified: string;
+      };
+    }>;
+  };
+}

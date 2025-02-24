@@ -16,6 +16,7 @@ import {
   LabelType,
   Maybe,
   UserExportType,
+  CorpusActionType,
 } from "../types/graphql-api";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1708,3 +1709,124 @@ export const REQUEST_UPDATE_EXTRACT = gql`
     }
   }
 `;
+
+export const UPDATE_CORPUS_SETTINGS = gql`
+  mutation UpdateCorpusSettings(
+    $corpusId: ID!
+    $title: String
+    $description: String
+    $allowComments: Boolean
+  ) {
+    updateCorpus(
+      input: {
+        id: $corpusId
+        title: $title
+        description: $description
+        allowComments: $allowComments
+      }
+    ) {
+      corpus {
+        id
+        title
+        description
+        allowComments
+      }
+    }
+  }
+`;
+
+export interface UpdateCorpusSettingsInput {
+  corpusId: string;
+  title?: string;
+  description?: string;
+  allowComments?: boolean;
+}
+
+export interface UpdateCorpusSettingsOutput {
+  updateCorpus: {
+    corpus: {
+      id: string;
+      title?: string;
+      description?: string;
+      allowComments?: boolean;
+    };
+  };
+}
+
+export const CREATE_CORPUS_ACTION = gql`
+  mutation CreateCorpusAction(
+    $corpusId: ID!
+    $trigger: String!
+    $name: String
+    $fieldsetId: ID
+    $analyzerId: ID
+    $disabled: Boolean
+    $runOnAllCorpuses: Boolean
+  ) {
+    createCorpusAction(
+      corpusId: $corpusId
+      trigger: $trigger
+      name: $name
+      fieldsetId: $fieldsetId
+      analyzerId: $analyzerId
+      disabled: $disabled
+      runOnAllCorpuses: $runOnAllCorpuses
+    ) {
+      ok
+      message
+      obj {
+        id
+        name
+        trigger
+        disabled
+        runOnAllCorpuses
+        fieldset {
+          id
+          name
+        }
+        analyzer {
+          id
+          description
+        }
+      }
+    }
+  }
+`;
+
+export interface CreateCorpusActionInput {
+  corpusId: string;
+  trigger: "add_document" | "edit_document";
+  name?: string;
+  fieldsetId?: string;
+  analyzerId?: string;
+  disabled?: boolean;
+  runOnAllCorpuses?: boolean;
+}
+
+export interface CreateCorpusActionOutput {
+  createCorpusAction: {
+    ok: boolean;
+    message: string;
+    obj: CorpusActionType | null;
+  };
+}
+
+export const DELETE_CORPUS_ACTION = gql`
+  mutation DeleteCorpusAction($id: String!) {
+    deleteCorpusAction(id: $id) {
+      ok
+      message
+    }
+  }
+`;
+
+export interface DeleteCorpusActionInput {
+  id: string;
+}
+
+export interface DeleteCorpusActionOutput {
+  deleteCorpusAction: {
+    ok: boolean;
+    message: string;
+  };
+}

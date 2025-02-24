@@ -17,6 +17,7 @@ import {
   Table,
   Factory,
   Brain,
+  Settings,
 } from "lucide-react";
 import styled from "styled-components";
 
@@ -103,6 +104,7 @@ import { getPermissions } from "../utils/transform";
 import { MOBILE_VIEW_BREAKPOINT } from "../assets/configurations/constants";
 import { CorpusDashboard } from "../components/corpuses/CorpusDashboard";
 import { useCorpusState } from "../components/annotator/context/CorpusAtom";
+import { CorpusSettings } from "../components/corpuses/CorpusSettings";
 
 const MobileTabMenu = styled(Menu)`
   &.ui.menu {
@@ -628,6 +630,26 @@ export const Corpuses = () => {
   let panes = [
     {
       menuItem: {
+        key: "query",
+        content: use_mobile_layout ? (
+          <TabIcon>
+            <Brain />
+            <span>Query</span>
+          </TabIcon>
+        ) : (
+          "Query"
+        ),
+      },
+      render: () => (
+        <Tab.Pane style={{ height: "100%", overflowY: "scroll" }}>
+          {opened_corpus && (
+            <CorpusDashboard corpus={opened_corpus as CorpusType} />
+          )}
+        </Tab.Pane>
+      ),
+    },
+    {
+      menuItem: {
         key: "documents",
         content: use_mobile_layout ? (
           <TabIcon>
@@ -701,6 +723,40 @@ export const Corpuses = () => {
         </Tab.Pane>
       ),
     },
+    ...(opened_corpus &&
+    getPermissions(opened_corpus.myPermissions || []).includes(
+      PermissionTypes.CAN_UPDATE
+    )
+      ? [
+          {
+            menuItem: {
+              key: "settings",
+              content: use_mobile_layout ? (
+                <TabIcon>
+                  <Settings />
+                  <span>Settings</span>
+                </TabIcon>
+              ) : (
+                "Settings"
+              ),
+            },
+            render: () => (
+              <Tab.Pane style={{ overflowY: "scroll" }}>
+                {opened_corpus?.title && (
+                  <CorpusSettings
+                    corpus={{
+                      id: opened_corpus.id,
+                      title: opened_corpus.title,
+                      description: opened_corpus.description || "",
+                      allowComments: opened_corpus.allowComments || false,
+                    }}
+                  />
+                )}
+              </Tab.Pane>
+            ),
+          },
+        ]
+      : []),
   ];
 
   // Load our query view components. Show either ASK or VIEW component in the tab depending on global state setting.
@@ -728,7 +784,11 @@ export const Corpuses = () => {
               />
             )}
           </div>
-          {opened_corpus ? <CorpusDashboard corpus={opened_corpus} /> : <></>}
+          {opened_corpus ? (
+            <CorpusDashboard corpus={opened_corpus as CorpusType} />
+          ) : (
+            <></>
+          )}
         </>
       );
     } else {

@@ -36,6 +36,7 @@ from config.graphql.graphene_types import (
     UserExportType,
     UserFeedbackType,
     UserType,
+    CorpusActionType,
 )
 from config.graphql.serializers import (
     AnnotationLabelSerializer,
@@ -51,7 +52,7 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus, CorpusQuery, TemporaryFileHandle
+from opencontractserver.corpuses.models import Corpus, CorpusQuery, TemporaryFileHandle, CorpusAction
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.feedback.models import UserFeedback
@@ -357,8 +358,8 @@ class AddDocumentsToCorpus(graphene.Mutation):
 
     @login_required
     def mutate(root, info, corpus_id, document_ids):
-
         ok = False
+        message = "Success"
 
         try:
             user = info.context.user
@@ -373,12 +374,11 @@ class AddDocumentsToCorpus(graphene.Mutation):
                 & (Q(creator=user) | Q(is_public=True))
             )
             corpus.documents.add(*doc_objs)
-
             ok = True
-            message = "Success"
 
         except Exception as e:
             message = f"Error on upload: {e}"
+            ok = False
 
         return AddDocumentsToCorpus(message=message, ok=ok)
 
@@ -399,8 +399,8 @@ class RemoveDocumentsFromCorpus(graphene.Mutation):
 
     @login_required
     def mutate(root, info, corpus_id, document_ids_to_remove):
-
         ok = False
+        message = "Success"
 
         try:
             user = info.context.user
@@ -417,10 +417,10 @@ class RemoveDocumentsFromCorpus(graphene.Mutation):
             corpus_docs = corpus.documents.filter(pk__in=doc_pks)
             corpus.documents.remove(*corpus_docs)
             ok = True
-            message = "Success"
 
         except Exception as e:
             message = f"Error on upload: {e}"
+            ok = False
 
         return RemoveDocumentsFromCorpus(message=message, ok=ok)
 
@@ -2303,6 +2303,106 @@ class DeleteExtract(DRFDeletion):
         id = graphene.String(required=True)
 
 
+class CreateCorpusAction(graphene.Mutation):
+    """
+    Create a new CorpusAction that will be triggered when documents are added or edited in a corpus.
+    The action can either run a fieldset extraction or an analyzer, but not both.
+    Requires UPDATE permission on the corpus to create actions.
+    """
+    class Arguments:
+        corpus_id = graphene.ID(required=True, description="ID of the corpus this action is for")
+        name = graphene.String(required=False, description="Name of the action")
+        trigger = graphene.String(required=True, description="When to trigger the action (add_document or edit_document)")
+        fieldset_id = graphene.ID(required=False, description="ID of the fieldset to run")
+        analyzer_id = graphene.ID(required=False, description="ID of the analyzer to run")
+        disabled = graphene.Boolean(required=False, description="Whether the action is disabled")
+        run_on_all_corpuses = graphene.Boolean(required=False, description="Whether to run this action on all corpuses")
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(CorpusActionType)
+
+    @login_required
+    def mutate(root, info, corpus_id: str, trigger: str, name: str = None,
+               fieldset_id: str = None, analyzer_id: str = None,
+               disabled: bool = False, run_on_all_corpuses: bool = False):
+        try:
+            user = info.context.user
+            corpus_pk = from_global_id(corpus_id)[1]
+            
+            # Get corpus and check permissions
+            corpus = Corpus.objects.get(pk=corpus_pk)
+            
+            # Check if user has update permission on the corpus
+            if corpus.creator.id != user.id:
+                return CreateCorpusAction(
+                    ok=False,
+                    message="You can only create actions for your own corpuses",
+                    obj=None
+                )
+
+            # Validate that exactly one of fieldset_id or analyzer_id is provided
+            if bool(fieldset_id) == bool(analyzer_id):
+                return CreateCorpusAction(
+                    ok=False,
+                    message="Exactly one of fieldset_id or analyzer_id must be provided",
+                    obj=None
+                )
+
+            # Get fieldset or analyzer if provided
+            fieldset = None
+            analyzer = None
+            
+            if fieldset_id:
+                fieldset_pk = from_global_id(fieldset_id)[1]
+                fieldset = Fieldset.objects.get(pk=fieldset_pk)
+           
+            if analyzer_id:
+                analyzer_pk = from_global_id(analyzer_id)[1]
+                analyzer = Analyzer.objects.get(pk=analyzer_pk)
+                # Analyzers don't have permissions currently, but we could add them here if needed
+
+            # Create the corpus action
+            corpus_action = CorpusAction.objects.create(
+                name=name or "Corpus Action",
+                corpus=corpus,
+                fieldset=fieldset,
+                analyzer=analyzer,
+                trigger=trigger,
+                disabled=disabled,
+                run_on_all_corpuses=run_on_all_corpuses,
+                creator=user
+            )
+            
+            set_permissions_for_obj_to_user(user, corpus_action, [PermissionTypes.CRUD])
+
+            return CreateCorpusAction(
+                ok=True,
+                message="Successfully created corpus action",
+                obj=corpus_action
+            )
+
+        except Exception as e:
+            return CreateCorpusAction(
+                ok=False,
+                message=f"Failed to create corpus action: {str(e)}",
+                obj=None
+            )
+
+
+class DeleteCorpusAction(DRFDeletion):
+    """
+    Mutation to delete a CorpusAction.
+    Requires the user to be the creator of the action or have appropriate permissions.
+    """
+    class IOSettings:
+        model = CorpusAction
+        lookup_field = "id"
+
+    class Arguments:
+        id = graphene.String(required=True, description="ID of the corpus action to delete")
+
+
 class Mutation(graphene.ObjectType):
     # TOKEN MUTATIONS (IF WE'RE NOT OUTSOURCING JWT CREATION TO AUTH0) #######
     if not settings.USE_AUTH0:
@@ -2355,6 +2455,8 @@ class Mutation(graphene.ObjectType):
     delete_corpus = DeleteCorpusMutation.Field()
     link_documents_to_corpus = AddDocumentsToCorpus.Field()
     remove_documents_from_corpus = RemoveDocumentsFromCorpus.Field()
+    create_corpus_action = CreateCorpusAction.Field()
+    delete_corpus_action = DeleteCorpusAction.Field()
 
     # IMPORT MUTATIONS #########################################################
     import_open_contracts_zip = UploadCorpusImportZip.Field()

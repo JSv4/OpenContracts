@@ -6,9 +6,7 @@ import {
   Loader,
   Statistic,
   Menu,
-  Icon,
   Header,
-  Popup,
   Label,
 } from "semantic-ui-react";
 import {

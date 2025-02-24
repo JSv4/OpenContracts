@@ -62,6 +62,7 @@ from config.graphql.graphene_types import (
     RelationshipType,
     UserExportType,
     UserImportType,
+    CorpusActionType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -1325,3 +1326,37 @@ class Query(graphene.ObjectType):
             return ChatMessage.objects.get(
                 Q(pk=django_pk) & (Q(creator=user) | Q(is_public=True))
             )
+
+    corpus_actions = DjangoConnectionField(
+        CorpusActionType,
+        corpus_id=graphene.ID(required=False),
+        trigger=graphene.String(required=False),
+        disabled=graphene.Boolean(required=False),
+    )
+
+    @login_required
+    def resolve_corpus_actions(self, info, **kwargs):
+        """
+        Resolver for corpus_actions that returns actions visible to the current user.
+        Can be filtered by corpus_id, trigger type, and disabled status.
+        """
+        user = info.context.user
+        queryset = resolve_oc_model_queryset(CorpusAction, user)
+
+        # Filter by corpus if provided
+        corpus_id = kwargs.get('corpus_id')
+        if corpus_id:
+            corpus_pk = from_global_id(corpus_id)[1]
+            queryset = queryset.filter(corpus_id=corpus_pk)
+
+        # Filter by trigger type if provided
+        trigger = kwargs.get('trigger')
+        if trigger:
+            queryset = queryset.filter(trigger=trigger)
+
+        # Filter by disabled status if provided
+        disabled = kwargs.get('disabled')
+        if disabled is not None:
+            queryset = queryset.filter(disabled=disabled)
+
+        return queryset.order_by('-created')

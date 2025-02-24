@@ -41,6 +41,7 @@ from config.graphql.graphene_types import (
     AssignmentType,
     ColumnType,
     ConversationType,
+    CorpusActionType,
     CorpusQueryType,
     CorpusStatsType,
     CorpusType,
@@ -62,7 +63,6 @@ from config.graphql.graphene_types import (
     RelationshipType,
     UserExportType,
     UserImportType,
-    CorpusActionType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -1344,19 +1344,19 @@ class Query(graphene.ObjectType):
         queryset = resolve_oc_model_queryset(CorpusAction, user)
 
         # Filter by corpus if provided
-        corpus_id = kwargs.get('corpus_id')
+        corpus_id = kwargs.get("corpus_id")
         if corpus_id:
             corpus_pk = from_global_id(corpus_id)[1]
             queryset = queryset.filter(corpus_id=corpus_pk)
 
         # Filter by trigger type if provided
-        trigger = kwargs.get('trigger')
+        trigger = kwargs.get("trigger")
         if trigger:
             queryset = queryset.filter(trigger=trigger)
 
         # Filter by disabled status if provided
-        disabled = kwargs.get('disabled')
+        disabled = kwargs.get("disabled")
         if disabled is not None:
             queryset = queryset.filter(disabled=disabled)
 
-        return queryset.order_by('-created')
+        return queryset.order_by("-created")

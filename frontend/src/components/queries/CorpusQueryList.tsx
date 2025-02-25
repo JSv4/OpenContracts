@@ -25,8 +25,10 @@ import { QueryList } from "./QueryList";
 
 export const CorpusQueryList = ({
   opened_corpus_id,
+  onConversationSelect,
 }: {
   opened_corpus_id: string;
+  onConversationSelect?: (query: CorpusQueryType) => void;
 }) => {
   /**
    * Similar to AnnotationCorpusCards, this component wraps the QueryList component
@@ -148,7 +150,12 @@ export const CorpusQueryList = ({
         style={{ minHeight: "40vh" }}
         fetchMore={fetchMoreDocuments}
         onDelete={(item: CorpusQueryType) => handleRemoveQuery(item.id)}
-        onSelectRow={(item: CorpusQueryType) => openedQueryObj(item)}
+        onSelectRow={(item: CorpusQueryType) => {
+          openedQueryObj(item);
+          if (onConversationSelect) {
+            onConversationSelect(item);
+          }
+        }}
       />
     </div>
   );

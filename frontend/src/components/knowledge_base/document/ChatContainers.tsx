@@ -2,99 +2,79 @@ import { motion } from "framer-motion";
 import { Button, Input } from "semantic-ui-react";
 import styled from "styled-components";
 
-export const BackButton = styled(motion.button)`
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
+export const BackButton = styled.button`
+  position: sticky;
+  top: 0;
+  left: 0;
+  background: white;
+  border: none;
+  padding: 0.75rem 1rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: none;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #4a5568;
   cursor: pointer;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  border-bottom: 1px solid #e2e8f0;
+  z-index: 10;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  svg {
-    transition: transform 0.2s ease;
+    background: #f7fafc;
   }
 `;
 
 export const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background: linear-gradient(150deg, #f8faff 0%, #f0f4f8 100%);
-  border-left: 1px solid rgba(226, 232, 240, 0.3);
-  position: relative;
+  height: 100%;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  position: relative;
 `;
 
-export const ChatInputContainer = styled(motion.div)<{ $isTyping: boolean }>`
-  padding: 1.25rem 1.5rem;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  border-top: 1px solid rgba(226, 232, 240, 0.5);
-  box-shadow: 0 -8px 32px rgba(23, 25, 35, 0.08),
-    0 -1px 4px rgba(23, 25, 35, 0.02);
+export const ChatInputContainer = styled(motion.div)<{ $isTyping?: boolean }>`
+  position: sticky;
+  bottom: 0;
   display: flex;
   align-items: center;
   gap: 1rem;
-  z-index: 10;
-
-  /* Safe area support for modern devices */
-  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  padding: 1rem 1.5rem;
+  background: white;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.02);
 `;
 
-export const ChatInput = styled(Input)`
-  &&& {
-    flex: 1;
-    position: relative;
+export const ChatInput = styled.input`
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background: #f7fafc;
 
-    input {
-      width: 100%;
-      border-radius: 1.5rem !important;
-      padding: 1.25rem 1.75rem !important;
-      padding-right: 4rem !important;
-      border: 2px solid rgba(226, 232, 240, 0.5) !important;
-      background: rgba(255, 255, 255, 0.9) !important;
-      backdrop-filter: blur(12px) !important;
-      color: #1a202c !important;
-      font-weight: 500 !important;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-      height: 3.5rem !important;
-      font-size: 1rem !important;
+  &:focus {
+    outline: none;
+    border-color: #4299e1;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+  }
 
-      &:focus {
-        border-color: #3182ce !important;
-        background: rgba(255, 255, 255, 1) !important;
-        box-shadow: 0 0 0 4px rgba(49, 130, 206, 0.15) !important;
-        transform: translateY(-1px);
-      }
-
-      &::placeholder {
-        color: #718096 !important;
-        font-weight: 400 !important;
-        opacity: 0.8;
-      }
-    }
+  &:disabled {
+    background: #edf2f7;
+    cursor: not-allowed;
   }
 `;
 
 export const ConversationIndicator = styled.div`
+  flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
-  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f7fafc 0%, #edf2f7 100%);
 `;
 
 export const ConversationCount = styled(motion.div)`
@@ -224,51 +204,38 @@ export const NewChatButton = styled(motion.button)`
 `;
 
 export const ErrorMessage = styled.div`
-  color: #dc3545;
+  color: #e53e3e;
   font-size: 0.875rem;
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
+  padding: 0.5rem 0;
+  display: flex;
+  align-items: center;
+`;
+
+export const SendButton = styled(motion.button)`
+  background: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(220, 53, 69, 0.1);
-  border-radius: 0.5rem;
-`;
+  cursor: pointer;
+  transition: background 0.2s ease;
 
-export const SendButton = styled(Button)`
-  &&& {
-    position: absolute;
-    right: 0.375rem;
-    height: 2.75rem;
-    width: 2.75rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
-    border: none;
-    color: white;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    padding: 0;
-    margin: 0.375rem;
+  &:hover {
+    background: #3182ce;
+  }
 
-    &:hover:not(:disabled) {
-      transform: translateY(-2px) scale(1.05);
-      background: linear-gradient(135deg, #2b6cb0 0%, #2a4365 100%);
-      box-shadow: 0 8px 16px rgba(49, 130, 206, 0.25);
-    }
+  &:disabled {
+    background: #cbd5e0;
+    cursor: not-allowed;
+  }
 
-    &:disabled {
-      background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
-      cursor: not-allowed;
-      opacity: 0.7;
-    }
-
-    svg {
-      width: 1.25rem;
-      height: 1.25rem;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-    }
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `;
 
@@ -277,175 +244,81 @@ interface ConnectionStatusProps {
 }
 
 export const ConnectionStatus = styled(motion.div)<ConnectionStatusProps>`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: ${(props) => (props.connected ? "#48bb78" : "#a0aec0")};
-  font-weight: 500;
-  padding: 0.5rem 1rem;
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-  border: 1px solid rgba(226, 232, 240, 0.5);
-  transition: all 0.2s ease-out;
-
-  &::before {
-    content: "";
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: ${(props) => (props.connected ? "#48bb78" : "#a0aec0")};
-    display: block;
-    box-shadow: 0 0 0 rgba(72, 187, 120, 0.4);
-    animation: ${(props) =>
-      props.connected ? "glow 1.5s infinite" : "pulse 2s infinite"};
-  }
-
-  @keyframes glow {
-    0% {
-      box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.4);
-    }
-    70% {
-      box-shadow: 0 0 0 6px rgba(72, 187, 120, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(72, 187, 120, 0);
-    }
-  }
-
-  @keyframes pulse {
-    0% {
-      transform: scale(0.95);
-      opacity: 0.5;
-    }
-    50% {
-      transform: scale(1.05);
-      opacity: 0.8;
-    }
-    100% {
-      transform: scale(0.95);
-      opacity: 0.5;
-    }
-  }
-`;
-
-export const ConversationGrid = styled(motion.div)`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem;
-  width: 100%;
-  flex: 1 1 auto;
-  min-height: 0;
-  position: relative;
-  overflow-y: auto;
-  scroll-behavior: smooth;
-  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
-
-  /* Scrollbar styling */
-  &::-webkit-scrollbar {
-    width: 8px;
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.02);
-    border-radius: 4px;
-    margin: 0.5rem;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.08);
-    border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.12);
-      border-width: 1px;
-    }
-  }
-
-  /* Prevent content jump on short pages */
-  &::after {
-    content: "";
-    min-height: 0.5rem;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-`;
-
-export const CardGlow = styled.div<{ mouseX?: number; mouseY?: number }>`
   position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-    rgba(49, 130, 206, 0.06),
-    transparent 40%
-  );
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  background: ${(props) => (props.connected ? "#48BB78" : "#F56565")};
+  color: white;
+  opacity: 0.9;
+  transition: all 0.2s ease;
+
+  &:before {
+    content: "${(props) =>
+      props.connected ? "🟢 Connected" : "🔴 Disconnected"}";
+  }
+`;
+
+export const ConversationGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+  position: relative;
 `;
 
 export const ConversationCard = styled(motion.div)`
-  position: relative;
-  background: linear-gradient(
-    to bottom right,
-    rgba(255, 255, 255, 0.98),
-    rgba(255, 255, 255, 0.94)
-  );
-  backdrop-filter: blur(12px);
-  border-radius: 16px;
-  padding: 1.75rem;
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-  width: 100%;
-  min-height: 6rem;
   display: flex;
-  align-items: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 4px 16px rgba(0, 0, 0, 0.02),
-    0 4px 24px rgba(0, 0, 0, 0.02), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-
-  &:before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 16px;
-    padding: 1px;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.5) 0%,
-      rgba(255, 255, 255, 0.2) 50%,
-      transparent 100%
-    );
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
+  align-items: flex-start;
+  gap: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
 
   &:hover {
-    transform: translateY(-2px) scale(1.005);
-    background: linear-gradient(
-      to bottom right,
-      rgba(255, 255, 255, 1),
-      rgba(255, 255, 255, 0.98)
-    );
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.04),
-      0 0 0 1px rgba(255, 255, 255, 0.9),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.1);
   }
+`;
 
-  &:active {
-    transform: translateY(0) scale(0.995);
-    transition: all 0.1s ease;
-  }
+export const CardContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+export const CardTitle = styled.h3`
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2d3748;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+export const CardMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+`;
+
+export const TimeStamp = styled.span`
+  color: #718096;
+`;
+
+export const Creator = styled.span`
+  color: #4a5568;
+  font-weight: 500;
 `;
 
 export const MessageCount = styled(motion.div)<{
@@ -495,79 +368,6 @@ export const MessageCount = styled(motion.div)<{
 
 export const AnimatedCard = motion.div;
 
-export const CardContent = styled.div`
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  flex: 1;
-  min-width: 0; // Enables text truncation
-`;
-
-export const CardTitle = styled.h3`
-  color: #1a202c;
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0;
-  letter-spacing: -0.01em;
-  line-height: 1.4;
-  padding-right: 5.5rem; // Space for message count
-
-  /* Enhanced gradient text */
-  background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-fill-color: transparent;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  ${ConversationCard}:hover & {
-    background: linear-gradient(135deg, #000000 0%, #1a202c 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-  }
-`;
-
-export const CardMeta = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.9rem;
-  color: #4a5568;
-  margin: 0;
-  line-height: 1.6;
-  flex-wrap: wrap;
-`;
-
-export const TimeStamp = styled.span`
-  color: #718096;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  opacity: 0.9;
-  white-space: nowrap;
-
-  &::before {
-    content: "•";
-    color: #cbd5e0;
-    opacity: 0.6;
-  }
-`;
-
-export const Creator = styled.span`
-  color: #2d3748;
-  font-size: 0.85rem;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
-`;
-
 export const ConversationCardSkeleton = styled(motion.div)`
   background: #ffffff;
   opacity: 0.7;
@@ -607,90 +407,51 @@ export const ConversationCardSkeleton = styled(motion.div)`
 export const ErrorContainer = styled(motion.div)`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   padding: 1rem;
-  color: #dc3545;
-  background: rgba(220, 53, 69, 0.1);
+  background: #fed7d7;
+  color: #c53030;
   border-radius: 8px;
   margin: 1rem;
 `;
 
 export const NewChatFloatingButton = styled(motion.button)`
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #2b6cb0 0%, #2c5282 100%);
-  border: none;
+  bottom: 2rem;
+  right: 2rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: #4299e1;
   color: white;
+  border: none;
+  box-shadow: 0 4px 6px rgba(66, 153, 225, 0.2);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(43, 108, 176, 0.2),
-    0 2px 4px rgba(43, 108, 176, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 100;
 
-  /* Safe area support */
-  padding-bottom: env(safe-area-inset-bottom);
-  margin-bottom: env(safe-area-inset-bottom);
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 
   &:hover {
-    transform: translateY(-2px) scale(1.05);
-    background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
-    box-shadow: 0 8px 24px rgba(43, 108, 176, 0.25),
-      0 4px 8px rgba(43, 108, 176, 0.15),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-  }
-
-  &:active {
-    transform: translateY(0) scale(0.98);
-    transition: all 0.1s ease;
-  }
-
-  svg {
-    width: 1.5rem;
-    height: 1.5rem;
-    stroke-width: 2;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-  }
-
-  /* Optional: Add a tooltip on hover */
-  &::before {
-    content: "New Chat";
-    position: absolute;
-    right: 120%;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.2s ease;
-  }
-
-  &:hover::before {
-    opacity: 1;
-    transform: translateY(-50%) translateX(-0.5rem);
+    background: #3182ce;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(66, 153, 225, 0.3);
   }
 `;
 
 export const FilterContainer = styled.div`
-  background: white;
-  padding: 1rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
   display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
   z-index: 10;
 `;

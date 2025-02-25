@@ -23,6 +23,7 @@ import {
   ChatMessageType,
 } from "../types/graphql-api";
 import { ExportObject } from "../types/graphql-api";
+import { WebSocketSources } from "../components/knowledge_base/document/right_tray/ChatTray";
 
 export interface RequestDocumentsInputs {
   textSearch?: string;
@@ -2213,6 +2214,130 @@ export interface GetCorpusActionsOutput {
         };
         created: string;
         modified: string;
+      };
+    }>;
+  };
+}
+
+export const GET_CORPUS_CONVERSATIONS = gql`
+  query GetCorpusConversations(
+    $corpusId: String!
+    $title_Contains: String
+    $createdAt_Gte: DateTime
+    $createdAt_Lte: DateTime
+    $cursor: String
+    $limit: Int
+  ) {
+    conversations(
+      corpusId: $corpusId
+      title_Contains: $title_Contains
+      createdAt_Gte: $createdAt_Gte
+      createdAt_Lte: $createdAt_Lte
+      first: $limit
+      after: $cursor
+    ) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        node {
+          id
+          title
+          createdAt
+          updatedAt
+          chatMessages {
+            totalCount
+          }
+          creator {
+            email
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const GET_CORPUS_CHAT_MESSAGES = gql`
+  query GetCorpusChatMessages(
+    $conversationId: ID!
+    $cursor: String
+    $limit: Int
+  ) {
+    chatMessages(
+      conversation_Id: $conversationId
+      first: $limit
+      after: $cursor
+    ) {
+      edges {
+        node {
+          id
+          content
+          msgType
+          createdAt
+          data
+          creator {
+            email
+          }
+        }
+      }
+    }
+  }
+`;
+
+export interface GetCorpusConversationsInputs {
+  corpusId: string;
+  title_Contains?: string;
+  createdAt_Gte?: string;
+  createdAt_Lte?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+export interface GetCorpusConversationsOutputs {
+  conversations: {
+    pageInfo: {
+      hasNextPage: boolean;
+      endCursor: string;
+    };
+    edges: Array<{
+      node: {
+        id: string;
+        title: string;
+        createdAt: string;
+        updatedAt: string;
+        chatMessages: {
+          totalCount: number;
+        };
+        creator: {
+          email: string;
+        };
+      };
+    }>;
+  };
+}
+
+export interface GetCorpusChatMessagesInputs {
+  conversationId: string;
+  cursor?: string;
+  limit?: number;
+}
+
+export interface GetCorpusChatMessagesOutputs {
+  chatMessages: {
+    edges: Array<{
+      node: {
+        id: string;
+        content: string;
+        msgType: string;
+        createdAt: string;
+        data: {
+          sources?: WebSocketSources[];
+          message_id?: string;
+        };
+        creator: {
+          email: string;
+        };
       };
     }>;
   };

@@ -11,12 +11,10 @@
  *   4) Allow sending user queries through the socket.
  */
 
-import { ConversationType } from "../../../../types/graphql-api";
 import { formatDistanceToNow } from "date-fns";
 import {
   BackButton,
   CardContent,
-  CardGlow,
   CardTitle,
   ChatContainer,
   ConversationCard,
@@ -79,7 +77,6 @@ import {
 import { MultipageAnnotationJson } from "../../../types";
 import {
   useChatSourceState,
-  ChatSourceState,
   mapWebSocketSourcesToChatMessageSources,
 } from "../../../annotator/context/ChatSourceAtom";
 

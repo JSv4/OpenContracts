@@ -106,7 +106,6 @@ export const useTextSearch = () => {
             }
           }
         }
-        console.log("XOXO - lead_in_tokens", lead_in_tokens);
         const safe_lead_in_tokens = lead_in_tokens.filter(
           (token) => token && typeof token.text === "string"
         );

@@ -11,13 +11,14 @@ import {
 } from "@apollo/client";
 import { useLocation } from "react-router-dom";
 import {
-  Search,
   FileText,
   MessageSquare,
   Table,
   Factory,
   Brain,
   Settings,
+  Home,
+  ArrowLeft,
 } from "lucide-react";
 import styled from "styled-components";
 
@@ -96,7 +97,6 @@ import { CorpusAnalysesCards } from "../components/analyses/CorpusAnalysesCards"
 import { FilterToAnalysesSelector } from "../components/widgets/model-filters/FilterToAnalysesSelector";
 import useWindowDimensions from "../components/hooks/WindowDimensionHook";
 import { SelectExportTypeModal } from "../components/widgets/modals/SelectExportTypeModal";
-import { CorpusQueryList } from "../components/queries/CorpusQueryList";
 import { ViewQueryResultsModal } from "../components/widgets/modals/ViewQueryResultsModal";
 import { FilterToCorpusActionOutputs } from "../components/widgets/model-filters/FilterToCorpusActionOutputs";
 import { CorpusExtractCards } from "../components/extracts/CorpusExtractCards";
@@ -105,6 +105,7 @@ import { MOBILE_VIEW_BREAKPOINT } from "../assets/configurations/constants";
 import { CorpusDashboard } from "../components/corpuses/CorpusDashboard";
 import { useCorpusState } from "../components/annotator/context/CorpusAtom";
 import { CorpusSettings } from "../components/corpuses/CorpusSettings";
+import { CorpusChat } from "../components/corpuses/CorpusChat";
 
 const MobileTabMenu = styled(Menu)`
   &.ui.menu {
@@ -201,6 +202,414 @@ const TabContainer = styled.div`
     }
   }
 `;
+
+// Add these styled components near your other styled components
+const DashboardContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  justify-content: center;
+`;
+
+// TODO - need to drop this padding
+const ContentWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: ${({ theme }) =>
+    theme.width <= MOBILE_VIEW_BREAKPOINT ? "2rem 1rem" : "0"};
+  height: 100%;
+`;
+
+const ChatTransitionContainer = styled.div<{
+  isExpanded: boolean;
+  isSearchTransform?: boolean;
+}>`
+  display: flex;
+  flex-direction: column;
+  height: ${(props) =>
+    props.isSearchTransform ? (props.isExpanded ? "100%" : "56px") : "100%"};
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  background: white;
+  border-radius: ${(props) => (props.isExpanded ? "0" : "12px")};
+  box-shadow: ${(props) =>
+    props.isExpanded ? "none" : "0 4px 12px rgba(0,0,0,0.1)"};
+  overflow: hidden;
+  position: relative;
+  z-index: ${(props) => (props.isExpanded ? "10" : "1")};
+`;
+
+const SearchToConversationInput = styled.div<{ isExpanded: boolean }>`
+  display: flex;
+  align-items: center;
+  padding: ${(props) => (props.isExpanded ? "1rem" : "0.75rem 1rem")};
+  border-bottom: ${(props) =>
+    props.isExpanded ? "1px solid #e2e8f0" : "none"};
+  background: ${(props) => (props.isExpanded ? "white" : "transparent")};
+
+  input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 1rem;
+    background: transparent;
+
+    &::placeholder {
+      color: #a0aec0;
+    }
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .nav-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #4a5568;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    .button-text {
+      @media (max-width: 768px) {
+        display: none;
+      }
+    }
+  }
+`;
+
+const ConversationContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
+  overflow: hidden; /* Important: prevent double scrollbars */
+  position: relative;
+
+  /* This ensures the chat content scrolls but input stays fixed */
+  .chat-messages-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    padding-bottom: 80px; /* Add padding to prevent content from being hidden behind input */
+  }
+
+  .chat-input-area {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    padding: 1rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    z-index: 10;
+  }
+`;
+
+const DashboardActionBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+`;
+
+const ChatEntryPoint = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  margin: 1rem;
+
+  &:hover {
+    background: #f7fafc;
+  }
+
+  h3 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  p {
+    color: #718096;
+    max-width: 400px;
+  }
+`;
+
+const RecentChatsContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem;
+`;
+
+const RecentChatCard = styled.div`
+  flex: 1;
+  min-width: 250px;
+  max-width: 350px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #4a90e2;
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
+  }
+
+  h4 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  p {
+    color: #718096;
+    font-size: 0.875rem;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .timestamp {
+    font-size: 0.75rem;
+    color: #a0aec0;
+    margin-top: 0.5rem;
+  }
+`;
+
+// Create a component for the corpus query view with the new search-to-chat functionality
+const CorpusQueryView = ({
+  opened_corpus,
+  opened_corpus_id,
+}: {
+  opened_corpus: CorpusType | null;
+  opened_corpus_id: string | null;
+}) => {
+  const [chatExpanded, setChatExpanded] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isSearchMode, setIsSearchMode] = useState<boolean>(true);
+  const show_query_view_state = useReactiveVar(showQueryViewState);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { width } = useWindowDimensions();
+  const isDesktop = width > MOBILE_VIEW_BREAKPOINT;
+
+  // Focus the input when component mounts or when returning to search mode
+  useEffect(() => {
+    if (isSearchMode && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isSearchMode]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setChatExpanded(true);
+      setIsSearchMode(false);
+      // Ensure we stay in ASK mode rather than switching to VIEW
+      showQueryViewState("ASK");
+    }
+  };
+
+  const resetToSearch = () => {
+    setChatExpanded(false);
+    setIsSearchMode(true);
+    setSearchQuery("");
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
+  };
+
+  const openHistoryView = () => {
+    showQueryViewState("VIEW");
+  };
+
+  if (!opened_corpus) {
+    return <div>No corpus selected</div>;
+  }
+
+  // Render the navigation header consistently across all states
+  const renderNavigationHeader = () => {
+    if (chatExpanded || show_query_view_state === "VIEW") {
+      return (
+        <SearchToConversationInput
+          isExpanded={true}
+          style={{ borderBottom: "1px solid #e2e8f0" }}
+        >
+          <Button
+            as="div"
+            className="nav-button"
+            onClick={
+              show_query_view_state === "VIEW"
+                ? () => showQueryViewState("ASK")
+                : resetToSearch
+            }
+          >
+            <ArrowLeft size={16} />
+            <span className="button-text">
+              {show_query_view_state === "VIEW" ? "Back to Dashboard" : "Back"}
+            </span>
+          </Button>
+
+          <div style={{ flex: 1, textAlign: "center", fontWeight: 500 }}>
+            {show_query_view_state === "VIEW" ? "Conversation History" : "Chat"}
+          </div>
+
+          <div className="actions">
+            {show_query_view_state !== "VIEW" && (
+              <Button
+                icon="list"
+                basic
+                circular
+                size="small"
+                onClick={openHistoryView}
+                title="View conversation history"
+              />
+            )}
+            <Button
+              as="div"
+              basic
+              circular
+              size="small"
+              onClick={() => showQueryViewState("ASK")}
+              title="Return to Dashboard"
+            >
+              <Home size={16} />
+            </Button>
+          </div>
+        </SearchToConversationInput>
+      );
+    } else {
+      // Search input for dashboard view
+      return (
+        <form onSubmit={handleSearchSubmit}>
+          <SearchToConversationInput isExpanded={false}>
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Ask a question about this corpus..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && searchQuery.trim()) {
+                  e.preventDefault();
+                  setChatExpanded(true);
+                  setIsSearchMode(false);
+                }
+              }}
+            />
+            <div className="actions">
+              <Button
+                icon="history"
+                basic
+                circular
+                size="small"
+                onClick={openHistoryView}
+                title="View conversation history"
+              />
+              <Button
+                icon="search"
+                primary
+                circular
+                size="small"
+                type="submit"
+              />
+            </div>
+          </SearchToConversationInput>
+        </form>
+      );
+    }
+  };
+
+  if (show_query_view_state === "ASK") {
+    return (
+      <DashboardContainer>
+        <ContentWrapper id="corpus-dashboard-content-wrapper">
+          {!chatExpanded && (
+            <CorpusDashboard corpus={opened_corpus as CorpusType} />
+          )}
+
+          <ChatTransitionContainer
+            isExpanded={chatExpanded}
+            isSearchTransform={true}
+            style={{
+              position: chatExpanded ? "relative" : "relative",
+              maxWidth: chatExpanded ? "100%" : "100%",
+              width: chatExpanded ? "100%" : isDesktop ? "600px" : "100%",
+              margin: "0 auto",
+              marginTop: !chatExpanded ? "1.5rem" : "0",
+              boxShadow: chatExpanded ? "none" : "0 4px 20px rgba(0,0,0,0.15)",
+              transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+              height: chatExpanded ? "100%" : "auto",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            {renderNavigationHeader()}
+
+            {chatExpanded && !isSearchMode && (
+              <ConversationContainer>
+                <CorpusChat
+                  corpusId={opened_corpus.id}
+                  showLoad={false}
+                  initialQuery={searchQuery}
+                  setShowLoad={() => {}}
+                  onMessageSelect={() => {}}
+                  forceNewChat={true}
+                />
+              </ConversationContainer>
+            )}
+          </ChatTransitionContainer>
+        </ContentWrapper>
+      </DashboardContainer>
+    );
+  } else {
+    return (
+      <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        {renderNavigationHeader()}
+
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          <CorpusChat
+            corpusId={opened_corpus.id}
+            showLoad={true}
+            setShowLoad={() => {}}
+            onMessageSelect={() => {}}
+          />
+        </div>
+      </div>
+    );
+  }
+};
 
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
@@ -641,10 +1050,17 @@ export const Corpuses = () => {
         ),
       },
       render: () => (
-        <Tab.Pane style={{ height: "100%", overflowY: "scroll" }}>
-          {opened_corpus && (
-            <CorpusDashboard corpus={opened_corpus as CorpusType} />
-          )}
+        <Tab.Pane
+          style={{
+            height: "100%",
+            overflow: "hidden",
+            padding: use_mobile_layout ? "0.25rem 0" : undefined,
+          }}
+        >
+          <CorpusQueryView
+            opened_corpus={opened_corpus}
+            opened_corpus_id={opened_corpus_id}
+          />
         </Tab.Pane>
       ),
     },
@@ -661,10 +1077,7 @@ export const Corpuses = () => {
         ),
       },
       render: () => (
-        <Tab.Pane
-          style={{ overflowY: "scroll" }}
-          id="CorpusDocumentCardTabPane"
-        >
+        <Tab.Pane style={{ overflowY: "scroll" }} id="CorpusesTabDiv">
           <CorpusDocumentCards opened_corpus_id={opened_corpus_id} />
         </Tab.Pane>
       ),
@@ -758,88 +1171,6 @@ export const Corpuses = () => {
         ]
       : []),
   ];
-
-  // Load our query view components. Show either ASK or VIEW component in the tab depending on global state setting.
-  if (opened_corpus_id) {
-    let query_view = <></>;
-    if (show_query_view_state === "ASK") {
-      query_view = (
-        <>
-          <div style={{ position: "absolute", top: "1rem", right: "1rem" }}>
-            {use_mobile_layout ? (
-              <Button
-                circular
-                primary
-                icon="left arrow"
-                onClick={() => showQueryViewState("VIEW")}
-              />
-            ) : (
-              <Button
-                size="mini"
-                primary
-                content="Previous Queries"
-                icon="left arrow"
-                labelPosition="left"
-                onClick={() => showQueryViewState("VIEW")}
-              />
-            )}
-          </div>
-          {opened_corpus ? (
-            <CorpusDashboard corpus={opened_corpus as CorpusType} />
-          ) : (
-            <></>
-          )}
-        </>
-      );
-    } else {
-      query_view = (
-        <div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "flex-end",
-              width: "100%",
-            }}
-          >
-            <div>
-              <Button
-                size="mini"
-                primary
-                content="New Question"
-                icon="question"
-                labelPosition="left"
-                onClick={() => showQueryViewState("ASK")}
-                style={{ margin: "1rem" }}
-              />
-            </div>
-          </div>
-          <CorpusQueryList opened_corpus_id={opened_corpus_id} />
-        </div>
-      );
-    }
-
-    panes = [
-      {
-        menuItem: {
-          key: "query",
-          content: use_mobile_layout ? (
-            <TabIcon>
-              <Brain />
-              <span>Query</span>
-            </TabIcon>
-          ) : (
-            "Query"
-          ),
-        },
-        render: () => (
-          <Tab.Pane style={{ height: "100%", overflowY: "scroll" }}>
-            {query_view}
-          </Tab.Pane>
-        ),
-      },
-    ].concat(panes);
-  }
 
   let content = <></>;
   // TODO - move <Annotator/> to root of <App>

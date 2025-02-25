@@ -20,78 +20,49 @@ export const FilterContainer = styled.div`
 export const IconButton = styled(motion.button)<{ $isActive?: boolean }>`
   width: 36px;
   height: 36px;
-  border-radius: 18px;
-  border: 1px solid
-    ${(props) => (props.$isActive ? "#4299E1" : "rgba(0, 0, 0, 0.08)")};
-  background: ${(props) =>
-    props.$isActive ? "#EBF8FF" : "rgba(255, 255, 255, 0.8)"};
+  border-radius: 8px;
+  border: none;
+  background: ${(props) => (props.$isActive ? "#EBF8FF" : "#F7FAFC")};
+  color: ${(props) => (props.$isActive ? "#3182CE" : "#4A5568")};
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: ${(props) => (props.$isActive ? "#2B6CB0" : "#4A5568")};
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
+  transition: all 0.2s ease;
 
   &:hover {
-    background: ${(props) => (props.$isActive ? "#E6F6FF" : "white")};
-    border-color: ${(props) =>
-      props.$isActive ? "#63B3ED" : "rgba(66, 153, 225, 0.5)"};
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    background: ${(props) => (props.$isActive ? "#BEE3F8" : "#EDF2F7")};
   }
 
   svg {
-    width: 16px;
-    height: 16px;
-    opacity: ${(props) => (props.$isActive ? 1 : 0.7)};
-    transition: opacity 0.2s ease;
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
   }
-
-  &:hover svg {
-    opacity: 1;
-  }
-
-  /* Active filter indicator */
-  ${(props) =>
-    props.$isActive &&
-    `
-    &::after {
-      content: '';
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      border-radius: 4px;
-      background: #4299E1;
-      top: -2px;
-      right: -2px;
-      border: 2px solid white;
-    }
-  `}
 `;
 
 export const ExpandingInput = styled(motion.div)`
   position: relative;
+  overflow: hidden;
 
   input {
-    width: 0;
-    padding: 0;
-    border: none;
-    height: 36px;
-    background: transparent;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 250px;
+    padding: 0.5rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    background: #f7fafc;
+    transition: all 0.2s ease;
 
-    &.expanded {
-      width: 200px;
-      padding: 0 1rem;
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.8);
+    &:focus {
+      outline: none;
+      border-color: #4299e1;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+    }
 
-      &:focus {
-        border-color: rgba(66, 153, 225, 0.5);
-        box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.25);
-      }
+    &::placeholder {
+      color: #a0aec0;
     }
   }
 `;
@@ -99,28 +70,64 @@ export const ExpandingInput = styled(motion.div)`
 export const DatePickerExpanded = styled(motion.div)`
   position: absolute;
   top: 100%;
-  right: 0;
+  left: 0;
   margin-top: 0.5rem;
-  padding: 1rem;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+  z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  z-index: 20;
+  gap: 1rem;
 
-  input[type="date"] {
-    height: 36px;
-    padding: 0 1rem;
-    border-radius: 18px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    font-size: 0.95rem;
+  .date-inputs {
+    display: flex;
+    gap: 1rem;
 
-    &:focus {
-      border-color: rgba(66, 153, 225, 0.5);
-      outline: none;
+    input {
+      padding: 0.5rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.875rem;
+
+      &:focus {
+        outline: none;
+        border-color: #4299e1;
+      }
+    }
+  }
+
+  .date-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+
+    button {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &.cancel {
+        background: #edf2f7;
+        color: #4a5568;
+
+        &:hover {
+          background: #e2e8f0;
+        }
+      }
+
+      &.apply {
+        background: #4299e1;
+        color: white;
+
+        &:hover {
+          background: #3182ce;
+        }
+      }
     }
   }
 `;

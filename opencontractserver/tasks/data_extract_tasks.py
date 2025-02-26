@@ -3,6 +3,7 @@ import json
 import logging
 import os
 
+from asgiref.sync import sync_to_async
 from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
@@ -233,6 +234,72 @@ def _assemble_and_trim_for_token_limit(
     return None
 
 
+@sync_to_async
+def get_annotation_label_text(annotation):
+    """
+    Safely get the annotation label text from an annotation object.
+
+    Args:
+        annotation: The annotation object to get the label text from.
+
+    Returns:
+        str: The label text or 'Unlabeled' if no label exists.
+    """
+    return (
+        annotation.annotation_label.text if annotation.annotation_label else "Unlabeled"
+    )
+
+
+@sync_to_async
+def get_column_search_params(datacell):
+    """
+    Safely get the search text and query from a datacell's column.
+
+    Args:
+        datacell: The datacell object to get search parameters from.
+
+    Returns:
+        tuple: A tuple containing (match_text, query).
+    """
+    return datacell.column.match_text, datacell.column.query
+
+
+@sync_to_async
+def get_relationship_label_text(relationship):
+    """
+    Safely get the relationship label text from a relationship object.
+
+    Args:
+        relationship: The relationship object to get the label text from.
+
+    Returns:
+        str: The label text or 'relates_to' if no label exists.
+    """
+    return (
+        relationship.relationship_label.text
+        if relationship.relationship_label
+        else "relates_to"
+    )
+
+
+@sync_to_async
+def get_column_extraction_params(datacell):
+    """
+    Safely get the output_type, instructions, and extract_is_list from a datacell's column.
+
+    Args:
+        datacell: The datacell object to get extraction parameters from.
+
+    Returns:
+        tuple: A tuple containing (output_type, instructions, extract_is_list).
+    """
+    return (
+        datacell.column.output_type,
+        datacell.column.instructions,
+        datacell.column.extract_is_list,
+    )
+
+
 @async_celery_task()
 async def oc_llama_index_doc_query(
     cell_id: int, similarity_top_k: int = 8, max_token_length: int = 64000
@@ -457,10 +524,15 @@ async def oc_llama_index_doc_query(
         # =====================
         # Build or load index
         # =====================
+        # Get user_id with sync_to_async to properly resolve the related field
+        user_id = await sync_to_async(lambda: document.creator.id)()
+
         vector_store = DjangoAnnotationVectorStore.from_params(
             document_id=document.id,
-            user_id=document.creator.id,
-            must_have_text=datacell.column.must_contain_text,
+            user_id=user_id,
+            must_have_text=await sync_to_async(
+                lambda: datacell.column.must_contain_text
+            )(),
         )
 
         # async_index = await VectorStoreIndex.from_vector_store(vector_store=vector_store, use_async=True)
@@ -481,12 +553,13 @@ async def oc_llama_index_doc_query(
         #     document_id=document.id, structural=True, page=0
         # )
         first_page_structural_text = await get_structural_annotations(document.id, 0)
-        first_page_structural_annots = [
-            f"{annot.annotation_label.text if annot.annotation_label else 'Unlabeled'}: {annot.raw_text}"
-            for annot in (
-                first_page_structural_text if first_page_structural_text else []
-            )
-        ]
+
+        # Process annotations with proper async handling
+        first_page_structural_annots = []
+        for annot in first_page_structural_text if first_page_structural_text else []:
+            label_text = await get_annotation_label_text(annot)
+            first_page_structural_annots.append(f"{label_text}: {annot.raw_text}")
+
         structural_context = "\n".join(first_page_structural_annots)
 
         if structural_context:
@@ -499,22 +572,18 @@ async def oc_llama_index_doc_query(
         # =====================
         # Searching logic
         # =====================
-        search_text = datacell.column.match_text
-        query = datacell.column.query
+        # Properly retrieve search parameters with async handling
+        search_text, query = await get_column_search_params(datacell)
 
         if not search_text and not query:
             logger.warning(
                 "No search_text or query provided. Skipping retrieval or using fallback."
             )
-            # datacell.data = {
-            #     "data": f"Context Exceeded Token Limit of {max_token_length} Tokens"
-            # }
-            # datacell.completed = timezone.now()
-            # datacell.save()
-            sync_mark_completed(
+            await sync_mark_completed(
                 datacell,
                 {"data": f"Context Exceeded Token Limit of {max_token_length} Tokens"},
             )
+            return
 
         # We store relevant sections in raw_retrieved_text
         raw_retrieved_text = ""
@@ -707,11 +776,7 @@ async def oc_llama_index_doc_query(
             relationship_detailed.append("Textual Description of Relationships:")
 
             for rel in relationships:
-                rel_type = (
-                    rel.relationship_label.text
-                    if rel.relationship_label
-                    else "relates_to"
-                )
+                rel_type = await get_relationship_label_text(rel)
                 relationship_detailed.append(f"\nRelationship Type: {rel_type}")
 
                 for source in await sync_to_async(rel.source_annotations.all)():
@@ -726,12 +791,16 @@ async def oc_llama_index_doc_query(
                             if target.id in retrieved_annotation_ids
                             else ""
                         )
+
+                        source_label = await get_annotation_label_text(source)
+                        target_label = await get_annotation_label_text(target)
+
                         relationship_detailed.append(
                             f"• Node{source.id}[label: "
-                            f"{source.annotation_label.text if source.annotation_label else 'unlabeled'}, "
+                            f"{source_label}, "
                             f'text: "{source.raw_text}"] {retrieved_source}\n  {rel_type}\n  '
                             f"Node{target.id}"
-                            f"[label: {target.annotation_label.text if target.annotation_label else 'unlabeled'}, "
+                            f"[label: {target_label}, "
                             f'text: "{target.raw_text}"] {retrieved_target}'
                         )
 
@@ -795,9 +864,12 @@ async def oc_llama_index_doc_query(
         # =====================
         # Marvin casting/extraction
         # =====================
-        output_type = parse_model_or_primitive(datacell.column.output_type)
-
-        parse_instructions = datacell.column.instructions
+        (
+            output_type_str,
+            parse_instructions,
+            extract_is_list,
+        ) = await get_column_extraction_params(datacell)
+        output_type = parse_model_or_primitive(output_type_str)
 
         # Optional: definitions from agentic approach
         agent_response_str = None
@@ -888,7 +960,7 @@ Context provided (combined_text):
 
         logger.info(f"Final text for Marvin: {final_text_for_marvin}")
 
-        if datacell.column.extract_is_list:
+        if extract_is_list:
             logger.info("Extracting list")
             result = marvin.extract(
                 final_text_for_marvin,

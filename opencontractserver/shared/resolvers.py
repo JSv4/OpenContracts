@@ -4,6 +4,7 @@ import logging
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q, QuerySet
 from graphql_relay import from_global_id
 
@@ -15,20 +16,20 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_oc_model_queryset(
-    django_obj_model_type: type[BaseOCModel] = None, user: User | int | str = None
+    django_obj_model_type: type[BaseOCModel] = None,
+    user: AnonymousUser | User | int | str = None,
 ) -> QuerySet[BaseOCModel]:
     """
     Given a model_type and a user instance, resolve a base queryset of the models this user
     could possibly see.
     """
-
     try:
         if isinstance(user, (int, str)):
             user = User.objects.get(id=user)
-        elif user.is_anonymous:
-            user = None
-        elif not isinstance(user, User):
-            user = User.objects.get(id=user)
+        elif not isinstance(user, (User, AnonymousUser)):
+            raise ValueError(
+                "User must be an instance of AnonymousUser, User, or an integer or string id"
+            )
     except Exception as e:
         logger.error(
             f"Error resolving user for queryset of model {django_obj_model_type}: {e}"

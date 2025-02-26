@@ -134,27 +134,28 @@ class OpenContractDbAgent:
 """Factory function to construct an OpenContractDbAgent for a given Document."""
 
 
-async def create_document_agent(
+async def create_openai_document_agent(
     document: str | int | Document,
     user_id: int | None = None,
-    override_conversation: Conversation | None = None,
     override_system_prompt: str | None = None,
     loaded_messages: list[ChatMessage] | None = None,
-) -> OpenContractDbAgent:
-    """
-    Factory function to construct an OpenContractDbAgent for a given Document.
-    Sets up embeddings, vector store, and query tools for document interaction.
+) -> OpenAIAgent:
+
+    """Create an OpenAI agent for a document with vector search capabilities.
+
+    This function initializes an OpenAI agent with document context, embedding model,
+    and query engine tools to search and retrieve information from the document.
 
     Args:
-        document: Either a Document instance or its ID.
-        user_id: Optional user ID for message attribution and permission checks.
-        override_conversation: Optional existing Conversation to use instead of creating new.
-        override_system_prompt: Optional custom system prompt to override default.
-        loaded_messages: Optional list of existing messages to initialize chat history.
+        document (Union[str, int, Document]): The document ID or Document instance
+        user_id (Optional[int]): The user ID for permission filtering
+        override_system_prompt (Optional[str]): Custom system prompt to override default
+        loaded_messages (Optional[List[ChatMessage]]): Pre-loaded conversation messages
 
     Returns:
-        OpenContractDbAgent: Configured agent ready for document interaction.
+        OpenAIAgent: An initialized agent ready to answer queries about the document
     """
+
     if not isinstance(document, Document):
         document = await Document.objects.aget(id=document)
 
@@ -231,6 +232,37 @@ async def create_document_agent(
         verbose=True,
         chat_history=prefix_messages,
     )
+    return underlying_llama_agent
+
+
+async def create_document_agent(
+    document: str | int | Document,
+    user_id: int | None = None,
+    override_conversation: Conversation | None = None,
+    override_system_prompt: str | None = None,
+    loaded_messages: list[ChatMessage] | None = None,
+) -> OpenContractDbAgent:
+    """
+    Factory function to construct an OpenContractDbAgent for a given Document.
+    Sets up embeddings, vector store, and query tools for document interaction.
+
+    Args:
+        document: Either a Document instance or its ID.
+        user_id: Optional user ID for message attribution and permission checks.
+        override_conversation: Optional existing Conversation to use instead of creating new.
+        override_system_prompt: Optional custom system prompt to override default.
+        loaded_messages: Optional list of existing messages to initialize chat history.
+
+    Returns:
+        OpenContractDbAgent: Configured agent ready for document interaction.
+    """
+
+    underlying_llama_agent = await create_openai_document_agent(
+        document=document,
+        user_id=user_id,
+        override_system_prompt=override_system_prompt,
+        loaded_messages=loaded_messages,
+    )
 
     logger.debug("Creating Conversation record...")
     if override_conversation:
@@ -252,6 +284,9 @@ async def create_document_agent(
 async def create_corpus_agent(
     corpus_id: str | int,
     user_id: int | None = None,
+    override_conversation: Conversation | None = None,
+    override_system_prompt: str | None = None,
+    loaded_messages: list[ChatMessage] | None = None,
 ) -> OpenContractDbAgent:
     """
     Factory function to create an OpenContractDbAgent for a given Corpus.
@@ -260,6 +295,9 @@ async def create_corpus_agent(
     Args:
         corpus_id: ID of the Corpus to create an agent for.
         user_id: Optional user ID for message attribution and permission checks.
+        override_conversation: Optional existing Conversation to use instead of creating new.
+        override_system_prompt: Optional custom system prompt to override default.
+        loaded_messages: Optional list of existing messages to initialize chat history.
 
     Returns:
         OpenContractDbAgent: Agent configured to handle queries across all corpus documents.
@@ -282,24 +320,74 @@ async def create_corpus_agent(
     corpus = await Corpus.objects.aget(id=corpus_id)
     logger.debug(f"Fetched corpus: {corpus.title}")
 
-    doc_agents = []
+    all_tools = []
     async for doc in corpus.documents.all():
         logger.debug(f"Building agent for document: {doc.title}")
-        doc_agents.append(await create_document_agent(doc, user_id))
+        doc_agent = await create_openai_document_agent(doc, user_id)
+
+        # Use the document's actual ID for the tool name
+        tool_name = f"doc_{doc.id}"
+
+        doc_summary = (
+            f"This tool provides information about the document titled '{doc.title}'. "
+            f"Description: {doc.description[:200]}... "
+            f"Use this tool when you need information from this specific document."
+        )
+
+        doc_tool = QueryEngineTool(
+            query_engine=doc_agent,
+            metadata=ToolMetadata(
+                name=tool_name,
+                description=doc_summary,
+            ),
+        )
+        all_tools.append(doc_tool)
 
     logger.debug("Building ObjectIndex over document agents...")
-    obj_index = ObjectIndex.from_objects(doc_agents, index_cls=VectorStoreIndex)
+    obj_index = ObjectIndex.from_objects(all_tools, index_cls=VectorStoreIndex)
 
-    aggregator_system_prompt = (
-        f"You are an agent designed to answer queries about the documents in corpus '{corpus.title}'. "
+    system_prompt = (
+        "You are an agent designed to answer queries about documents in collection of documents "
+        "called a corpus. This corpus is called '{corpus.title}'. "
         "Please always use the provided tools (each corresponding to a document) to answer questions. "
         "Do not rely on prior knowledge."
     )
 
+    if override_system_prompt:
+        system_prompt = override_system_prompt
+
+    prefix_messages = [LlamaChatMessage(role="system", content=system_prompt)]
+
+    if loaded_messages:
+        for msg in loaded_messages:
+            prefix_messages.append(
+                LlamaChatMessage(
+                    role=MessageRole.ASSISTANT
+                    if msg.msg_type.lower() == "llm"
+                    else MessageRole.USER,
+                    content=msg.content,
+                )
+            )
+
     aggregator_agent = OpenAIAgent.from_tools(
         tool_retriever=obj_index.as_retriever(similarity_top_k=3),
-        system_prompt=aggregator_system_prompt,
+        system_prompt=system_prompt,
         verbose=True,
+        chat_history=prefix_messages,
     )
 
-    return aggregator_agent
+    logger.debug("Creating Conversation record...")
+    if override_conversation:
+        conversation = override_conversation
+    else:
+        conversation = await Conversation.objects.acreate(
+            creator_id=user_id,
+            title=f"Corpus {corpus.id} Conversation",
+            chat_with_corpus=corpus,
+        )
+
+    return OpenContractDbAgent(
+        conversation=conversation,
+        user_id=user_id,
+        agent=aggregator_agent,
+    )

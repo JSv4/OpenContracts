@@ -19,18 +19,6 @@ from opencontractserver.tests.base import BaseFixtureTestCase
 
 User = get_user_model()
 
-# # Configure logging to a file relative to this test file's location
-# LOG_DIR = os.path.dirname(__file__)
-# logging.basicConfig(
-#     filename=os.path.join(LOG_DIR, "test_extract_tasks.log"),
-#     level=logging.DEBUG,
-#     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
-#     force=True,
-# )
-# vcr_log = logging.getLogger("vcr")
-# vcr_log.setLevel(logging.DEBUG)
-
-
 class ExtractsTaskTestCase(BaseFixtureTestCase):
     """
     TestCase covering the orchestration of document extracts.

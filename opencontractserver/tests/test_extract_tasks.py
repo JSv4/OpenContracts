@@ -84,7 +84,6 @@ class ExtractsTaskTestCase(BaseFixtureTestCase):
         record_mode="once",
         filter_headers=["authorization"],
         before_record_response=vcr_response_handler,
-        match_on=["uri", "method", "body"],
         ignore_hosts=[
             "huggingface.co",
             "hf.co",

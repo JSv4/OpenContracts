@@ -69,13 +69,8 @@ export const LabelsetCards = ({
     <PlaceholderCard
       key={0}
       title="No Matching Labelsets..."
-      include_image
       style={{
         height: "40vh",
-      }}
-      image_style={{
-        height: "30vh",
-        width: "auto",
       }}
     />,
   ];

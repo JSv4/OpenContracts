@@ -93,10 +93,13 @@ export function convertToDocTypeAnnotation(
     throw new Error("Invalid annotation type. Expected DOC_TYPE_LABEL.");
   }
 
+  // Transform raw permissions to frontend PermissionTypes
+  const transformedPermissions = getPermissions(serverAnnotation.myPermissions);
+
   // Create and return a new DocTypeAnnotation instance
   return new DocTypeAnnotation(
     serverAnnotation.annotationLabel,
-    serverAnnotation.myPermissions || [],
+    transformedPermissions,
     serverAnnotation.id
   );
 }

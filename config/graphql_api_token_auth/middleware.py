@@ -1,6 +1,9 @@
 from django.contrib.auth import authenticate, get_user_model
 
-from config.graphql_api_key_auth.utils import get_http_authorization, get_token_argument
+from config.graphql_api_token_auth.utils import (
+    get_http_authorization,
+    get_token_argument,
+)
 
 User = get_user_model()
 
@@ -10,7 +13,16 @@ def _context_has_user(request):
 
 
 def _authenticate(request):
-    is_anonymous = _context_has_user(request)
+    """
+    Check if we should attempt API token authentication.
+    Returns False if the request has a Bearer token (which should be handled by JWT middleware)
+    or if the request is already authenticated.
+    """
+    auth = request.META.get("HTTP_AUTHORIZATION", "")
+    if auth.startswith("Bearer "):
+        return False
+
+    is_anonymous = not _context_has_user(request)
     return is_anonymous and get_http_authorization(request) is not None
 
 

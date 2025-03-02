@@ -6,6 +6,8 @@ import {
   SpanAnnotationJson,
   TokenId,
 } from "../components/types";
+import { JSONSchema7 } from "json-schema";
+import { WebSocketSources } from "../components/knowledge_base/document/right_tray/ChatTray";
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -132,6 +134,8 @@ export type ServerAnnotationType = Node & {
   assignmentSet: AssignmentTypeConnection;
   sourceNodeInRelationships: RelationshipTypeConnection;
   targetNodeInRelationships: RelationshipTypeConnection;
+  chatMessages: ChatMessageTypeConnection;
+  createdByChatMessage: ChatMessageTypeConnection;
 };
 
 export type AnnotationTypeAssignmentSetArgs = {
@@ -244,6 +248,7 @@ export type CorpusType = Node & {
   analyses: AnalysisTypeConnection;
   isPublic?: Scalars["Boolean"];
   myPermissions?: PermissionTypes[];
+  conversations?: ConversationTypeConnection;
 };
 
 export type CorpusTypeDocumentsArgs = {
@@ -299,6 +304,7 @@ export type DocumentType = Node & {
   customMeta?: Maybe<Scalars["JSONString"]>;
   icon?: Scalars["String"];
   pdfFile?: Scalars["String"];
+  mdSummaryFile?: Scalars["String"];
   is_open?: boolean;
   is_selected?: boolean;
   pageCount?: Maybe<Scalars["Int"]>;
@@ -317,9 +323,13 @@ export type DocumentType = Node & {
   myPermissions?: PermissionTypes[];
   allAnnotations?: ServerAnnotationType[];
   allRelationships?: RelationshipType[];
+  allDocRelationships?: DocumentRelationshipType[];
   allStructuralAnnotations?: ServerAnnotationType[];
   docLabelAnnotations?: Maybe<AnnotationTypeConnection>;
   metadataAnnotations?: Maybe<AnnotationTypeConnection>;
+  conversations?: ConversationTypeConnection;
+  chatMessages?: ChatMessageTypeConnection;
+  allNotes?: NoteType[];
 };
 
 export type DocumentTypeAssignmentSetArgs = {
@@ -1030,6 +1040,7 @@ export type AnalyzerType = Node & {
   isPublished?: Maybe<Scalars["Boolean"]>;
   objectSharedWith?: Maybe<Scalars["GenericScalar"]>;
   analyzerId?: Maybe<Scalars["String"]>;
+  inputSchema?: JSONSchema7;
 };
 
 export type AnalyzerTypeAnnotationlabelSetArgs = {
@@ -1399,6 +1410,156 @@ export interface FeedbackType extends Node {
   metadata: Record<any, any>;
   commented_annotation?: ServerAnnotationType | null;
 }
+
+export type ConversationType = Node & {
+  __typename?: "ConversationType";
+  id: Scalars["ID"];
+  title?: Maybe<Scalars["String"]>;
+  createdAt: Scalars["DateTime"];
+  updatedAt: Scalars["DateTime"];
+  chatWithCorpus?: Maybe<CorpusType>;
+  chatWithDocument?: Maybe<DocumentType>;
+  chatMessages: ChatMessageTypeConnection;
+  allMessages?: Maybe<ChatMessageType[]>;
+  creator: UserType;
+  created: Scalars["DateTime"];
+  modified: Scalars["DateTime"];
+  isPublic?: Scalars["Boolean"];
+  myPermissions?: PermissionTypes[];
+};
+
+export type ConversationTypeConnection = {
+  __typename?: "ConversationTypeConnection";
+  pageInfo: PageInfo;
+  edges: Array<Maybe<ConversationTypeEdge>>;
+  totalCount?: Maybe<Scalars["Int"]>;
+};
+
+export type ConversationTypeEdge = {
+  __typename?: "ConversationTypeEdge";
+  node?: Maybe<ConversationType>;
+  cursor: Scalars["String"];
+};
+
+export type ChatMessageType = Node & {
+  __typename?: "ChatMessageType";
+  id: Scalars["ID"];
+  conversation: ConversationType;
+  msgType: Scalars["String"];
+  content: Scalars["String"];
+  data?: Maybe<{
+    sources?: WebSocketSources[];
+    message_id?: string;
+  }>;
+  createdAt: Scalars["DateTime"];
+  sourceDocument?: Maybe<DocumentType>;
+  sourceAnnotations: AnnotationTypeConnection;
+  createdAnnotations: AnnotationTypeConnection;
+  creator: UserType;
+  created: Scalars["DateTime"];
+  modified: Scalars["DateTime"];
+  isPublic?: Scalars["Boolean"];
+  myPermissions?: PermissionTypes[];
+};
+
+export type ChatMessageTypeConnection = {
+  __typename?: "ChatMessageTypeConnection";
+  pageInfo: PageInfo;
+  edges: Array<Maybe<ChatMessageTypeEdge>>;
+  totalCount?: Maybe<Scalars["Int"]>;
+};
+
+export type ChatMessageTypeEdge = {
+  __typename?: "ChatMessageTypeEdge";
+  node?: Maybe<ChatMessageType>;
+  cursor: Scalars["String"];
+};
+
+/**
+ * Represents a single Note record in GraphQL.
+ * Includes hierarchical tree fields (descendantsTree, fullTree, subtree).
+ */
+export type NoteType = Node & {
+  __typename?: "NoteType";
+  id: string;
+  title: string;
+  content: string;
+  parent?: Maybe<NoteType>;
+  annotation?: Maybe<ServerAnnotationType>;
+  document: DocumentType;
+  isPublic: boolean;
+  creator: UserType;
+  created: string; // DateTime
+  modified: string; // DateTime
+  myPermissions?: Maybe<Array<Maybe<PermissionTypes>>>;
+  /**
+   * A flat list of descendant notes, each including only
+   * the IDs of its immediate children.
+   * Freeform data structure.
+   */
+  descendantsTree?: Maybe<any>;
+  /**
+   * A flat list of notes from the root ancestor,
+   * each including only the IDs of its immediate children.
+   * Freeform data structure.
+   */
+  fullTree?: Maybe<any>;
+  /**
+   * A combined tree that includes the path
+   * from the root ancestor to this note
+   * and all its descendants.
+   * Freeform data structure.
+   */
+  subtree?: Maybe<any>;
+};
+
+export type NoteTypeEdge = {
+  __typename?: "NoteTypeEdge";
+  node?: Maybe<NoteType>;
+  cursor: string;
+};
+
+export type NoteTypeConnection = {
+  __typename?: "NoteTypeConnection";
+  edges: Array<Maybe<NoteTypeEdge>>;
+  pageInfo: PageInfo;
+  totalCount?: Maybe<number>;
+};
+
+/**
+ * Represents a relationship between two documents in GraphQL.
+ */
+export type DocumentRelationshipType = Node & {
+  __typename?: "DocumentRelationshipType";
+  id: string;
+  /**
+   * Arbitrary JSON data field.
+   */
+  data?: Maybe<any>;
+  relationshipType: string;
+  annotationLabel?: Maybe<AnnotationLabelType>;
+  corpus?: Maybe<CorpusType>;
+  sourceDocument: DocumentType;
+  targetDocument: DocumentType;
+  creator: UserType;
+  created: string; // DateTime
+  modified: string; // DateTime
+  isPublic?: Maybe<boolean>;
+  myPermissions?: Maybe<Array<Maybe<PermissionTypes>>>;
+};
+
+export type DocumentRelationshipTypeEdge = {
+  __typename?: "DocumentRelationshipTypeEdge";
+  node?: Maybe<DocumentRelationshipType>;
+  cursor: string;
+};
+
+export type DocumentRelationshipTypeConnection = {
+  __typename?: "DocumentRelationshipTypeConnection";
+  edges: Array<Maybe<DocumentRelationshipTypeEdge>>;
+  pageInfo: PageInfo;
+  totalCount?: Maybe<number>;
+};
 
 /** Graphene type for pipeline components. */
 export type PipelineComponentType = {

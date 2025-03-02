@@ -102,13 +102,11 @@ export const CorpusCards = ({
     <PlaceholderCard
       key="Placeholder"
       title="No Matching Corpuses..."
-      include_image
+      compact
       style={{
-        height: "40vh",
-      }}
-      image_style={{
-        height: "30vh",
-        width: "auto",
+        width: "100%",
+        margin: "2rem auto",
+        maxWidth: "600px",
       }}
     />,
   ];

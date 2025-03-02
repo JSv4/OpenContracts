@@ -71,7 +71,7 @@ class DRFDeletion(graphene.Mutation):
     class IOSettings(ABC):
         lookup_field = "id"
 
-    class Arguments(ABC):
+    class Arguments:
         id = graphene.String(required=False)
 
     ok = graphene.Boolean()
@@ -124,7 +124,7 @@ class DRFMutation(graphene.Mutation):
         graphene_model: DjangoObjectType = None
         serializer = None
 
-    class Arguments(ABC):
+    class Arguments:
         pass
 
     ok = graphene.Boolean()

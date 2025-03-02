@@ -5,6 +5,7 @@ from opencontractserver.annotations.models import (
     Annotation,
     AnnotationLabel,
     LabelSet,
+    Note,
     Relationship,
 )
 
@@ -39,3 +40,13 @@ class AnnotationLabelAdmin(GuardedModelAdmin):
 @admin.register(LabelSet)
 class LabelSetAdmin(GuardedModelAdmin):
     list_display = ["id", "title", "description"]
+
+
+@admin.register(Note)
+class NoteAdmin(GuardedModelAdmin):
+    """Admin interface for Note model"""
+
+    list_display = ["id", "title", "document", "creator", "created", "modified"]
+    search_fields = ["id", "title", "content", "document__title", "creator__username"]
+    list_filter = ("is_public", "created", "modified")
+    raw_id_fields = ("parent", "document", "annotation", "creator")

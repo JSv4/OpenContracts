@@ -84,7 +84,7 @@ class ExtractsTaskTestCase(BaseFixtureTestCase):
         record_mode="once",
         filter_headers=["authorization"],
         before_record_response=vcr_response_handler,
-        match_on=["method"],
+        match_on=["uri", "method", "body"],
         ignore_hosts=[
             "huggingface.co",
             "hf.co",
@@ -97,7 +97,9 @@ class ExtractsTaskTestCase(BaseFixtureTestCase):
         "opencontractserver.tasks.data_extract_tasks.StructuredPlannerAgent.chat",
         return_value="mocked agent response",
     )
-    def test_run_extract_task(self, mock_agent_chat) -> None:
+    @patch("marvin.cast", return_value="value1")
+    @patch("marvin.extract", return_value=["value1", "value2"])
+    def test_run_extract_task(self, mock_extract, mock_cast, mock_agent_chat) -> None:
         """
         Tests the run_extract Celery task by running it synchronously (always eager)
         and checking that Datacells are created as expected. Logs progress info to the

@@ -64,19 +64,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNj9MwEL3nV4x8bqum9GtzQYDQsmglLisQUBS59iT2rmMbe7wsqvrf
-        kdOPdMUicYmc9+a9zLxxdgUA05JVwITiJDpvxm+XH7F89Tk+XT1u332bXd9+2uqvyw/rh9trvGej
-        rHDbexR0Uk2E67xB0s4eaBGQE2bXcjWfrueLcl32ROckmixrPY3nbjybzubj6Xo8XR6FymmBkVXw
-        vQAA2PXP3KKV+MQqmI5OSIcx8hZZdS4CYMGZjDAeo47ELbHRQApnCW3f9Z1yqVVUwZ1CECkEtASG
-        2zbxFsE1QAohRQygI7y3rdFRTeAGLKIEcpkCDuScyW8KjYcOgdv4C0Ov/Zkw5jwmG/tG5EMF0oka
-        bastnjC4sT5RBbsN0/m0YRVs2BfFKX8221jeHdvRMRukDi293rD95VwBmxR5jtUmY474/hyUca0P
-        bhuP/BlvtNVR1QF5dDaHEsl51rP7AuBHv5D0LGPmg+s81eQe0GbD+ao8+LHhClywyyNJjrgZ8EW5
-        Gr3gV0skrk28WCkTXCiUg3TYP09SuwuiuJj6725e8j5Mrm37P/YDIQR6Qln7gFKL5xMPZQHzH/Kv
-        snPKfcMsYnjUAmvSGPImJDY8mcPlZfF3JOzqRtsWgw/6cIMbX+P2SgpcLPmaFfviDwAAAP//AwBX
-        zEQXygMAAA==
+        H4sIAAAAAAAAAwAAAP//jFNdi9swEHz3r1j0nITk6iY5vxwtlOOao5Qj0EJTjCKtbLWypEqrfoX8
+        90POh3P0Dvpi5BnNsDu72hUATEtWARMtJ9F5M347f7iNq07em/T5/e36g1Ar/fD3PqjVq48LNsoK
+        t/2Ggk6qiXCdN0ja2QMtAnLC7DpblNPloiyvlz3ROYkmyxpP49KNr6ZX5Xi6HE/nR2HrtMDIKvhS
+        AADs+m8u0Ur8zSqYjk5IhzHyBll1vgTAgjMZYTxGHYlbYqOBFM4S2r7qdetS01IF6xZBpBDQEhhu
+        m8QbBKeAWoQUMYCOFbyzjdGxncAdWEQJ5DIHHMg5k/9aNB46BG7jLwy9+EfCmAOZbOwbkQ8VSCdq
+        tI22eMLgzvpEFew2TOfThlWwYZ9aTqBjb2N5d6xHx2yQOrR0s2H7y8YCqhR5ztUmY474/pyUcY0P
+        bhuP/BlX2urY1gF5dDanEsl51rP7AuBrP5H0JGTmg+s81eS+o82G5WJ28GPDDlyyR5IccTPgr2fL
+        0TN+tUTi2sSLmTLBRYtykA4LwJPU7oIoLrr+t5rnvA+da9v8j/1ACIGeUNY+oNTiacfDtYD5ibx0
+        7ZxyXzCLGH5qgTVpDHkSEhVP5rC9LP6JhF2ttG0w+KAPK6x8ra5VqbZzuVWs2BePAAAA//8DAGNa
+        fCzLAwAA
     headers:
       CF-RAY:
-      - 9199e6ae88ebcb75-DFW
+      - 919cb2710bcef787-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -84,14 +84,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:06:23 GMT
+      - Sun, 02 Mar 2025 00:15:00 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=JQ5SdAm_rWgmgVJOxKYhcfovQ8nQdBmmBSde996y.oA-1740845183-1.0.1.1-NTLhzifLSpMIvYvnLmwe_ycJapTyzHYHuo1UoYsTI6JheII6_n4Cp0k_GylOIcYyZ9In52.5bFaAL9ZD3p67SbKaahqUxYWCiAM6r4hVQiM;
-        path=/; expires=Sat, 01-Mar-25 16:36:23 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=cN73k7OjrRVux66fhWZs4rOqMrTfpt3wUDeo8uMpk6w-1740874500-1.0.1.1-9iBVYCXY114RDeItS39Tv066PHerhr1HiPfk0wviV7s.j2.AKlWlW5TrpVHGRIwD.u2jnpYftKhLYipo1s.hjVHYM8q9KEX8lg2afGjVAqE;
+        path=/; expires=Sun, 02-Mar-25 00:45:00 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=A63iZikr.2h_n8D7eLLI0tDIFkl7dUXz_u5xufvxGV0-1740845183541-0.0.1.1-604800000;
+      - _cfuvid=HkMnsFaIQd6HwMVqnqixiW99rDoBOjDOhYhEXR17L.Y-1740874500444-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -106,7 +106,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1736'
+      - '1574'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -124,7 +124,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 40ms
       x-request-id:
-      - req_76cb8b16bef6e0a0d8c240a223cfa119
+      - req_abc28652965fcab3bd49cce7fe3e1569
     status:
       code: 200
       message: OK
@@ -219,8 +219,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=JQ5SdAm_rWgmgVJOxKYhcfovQ8nQdBmmBSde996y.oA-1740845183-1.0.1.1-NTLhzifLSpMIvYvnLmwe_ycJapTyzHYHuo1UoYsTI6JheII6_n4Cp0k_GylOIcYyZ9In52.5bFaAL9ZD3p67SbKaahqUxYWCiAM6r4hVQiM;
-        _cfuvid=A63iZikr.2h_n8D7eLLI0tDIFkl7dUXz_u5xufvxGV0-1740845183541-0.0.1.1-604800000
+      - __cf_bm=cN73k7OjrRVux66fhWZs4rOqMrTfpt3wUDeo8uMpk6w-1740874500-1.0.1.1-9iBVYCXY114RDeItS39Tv066PHerhr1HiPfk0wviV7s.j2.AKlWlW5TrpVHGRIwD.u2jnpYftKhLYipo1s.hjVHYM8q9KEX8lg2afGjVAqE;
+        _cfuvid=HkMnsFaIQd6HwMVqnqixiW99rDoBOjDOhYhEXR17L.Y-1740874500444-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -246,19 +246,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBjtQwDL33K6ycp6tO1Rm6c0QCJC4IwQUhVHkStw2kcUjSAbSaf0dp
-        Z9uudpG4+ODn9/Se7YcMQGglTiBkj1EOzuSvj++pYtV2nz4c7vHnuzeIXz6i9r/QyLdilxh8/k4y
-        PrLuJA/OUNRsZ1h6wkhJdf+qKurqsK+rCRhYkUm0zsW84rwsyiov6rw43og9a0lBnOBrBgDwMNVk
-        0Sr6LU5Q7B47A4WAHYnTMgQgPJvUERiCDhFtFLsVlGwj2cn1557A4kDALcSeQLEcB7IRdADLEZzn
-        i1akQNsJ7/SFLGjbsh8w5bzbCntqx4Aplx2NufWvi1PDnfN8Djd86bfa6tA3njCwTa5CZCcm9JoB
-        fJs2Mj4JKZznwcUm8g+ySbAs99UsKNYjrPACRo5otrSy3r2g2CiKqE3YbFVIlD2plbueAEeleQNk
-        m9zP7bykPWfXtvsf+RWQklwk1ThPSsunkdcxT+lJ/zW27HkyLAL5i5bURE0+3UJRi6OZ/0eEPyHS
-        0LTaduSd1/MTta6h872SdDhiLbJr9hcAAP//AwAJKQ2YTQMAAA==
+        H4sIAAAAAAAAA4xSwWrcMBC9+ysGndfBMc7G2WOhpIdeWloolGK00thWI2uENDYNYf+9yN7aDk2h
+        lznMm/d4b2ZeMgBhtDiBUL1kNXibvzt+fhzHp+kDT98+tbF+//DVcfjYIT6Wz+KQGHT+iYr/sG4U
+        Dd4iG3ILrAJKxqR6e18V9X11VxQzMJBGm2id57yivCzKKi/qvDheiT0ZhVGc4HsGAPAy12TRafwl
+        TjDLzJ0BY5QditM6BCAC2dQRMkYTWToWhw1U5Bjd7PpLj+DkgEAtcI+gSY0DOgYTwRGDDzQZjRqM
+        m/HOTOjAuJbCIFPOm71wwHaMMuVyo7XX/mV1aqnzgc7xiq/91jgT+yagjOSSq8jkxYxeMoAf80bG
+        VyGFDzR4bpie0CXBsrytFkGxHWGDV5CJpd3TyvrwhmKjkaWxcbdVoaTqUW/c7QRy1IZ2QLbL/bed
+        t7SX7MZ1/yO/AUqhZ9SND6iNeh15GwuYnvRfY+ueZ8MiYpiMwoYNhnQLja0c7fI/Ij5HxqFpjesw
+        +GCWJ2p9g+cHrfDuKGuRXbLfAAAA//8DAL7fMohNAwAA
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 9199e6bf9e10cb75-DFW
+      - 919cb27d5926f787-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -266,7 +266,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:06:24 GMT
+      - Sun, 02 Mar 2025 00:15:01 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -280,7 +280,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '482'
+      - '539'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -298,7 +298,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 111ms
       x-request-id:
-      - req_68d6a2fc340122548f7941a94a5ea403
+      - req_042fa1a4ad20fee19962ea262e02907f
     status:
       code: 200
       message: OK
@@ -331,7 +331,7 @@ interactions:
       here (In the same language as the user''s question)]\n```\n\n## Current Conversation\n\nBelow
       is the current conversation consisting of interleaving human and assistant messages.\n"},{"role":"user","content":"What
       is the name of this document"},{"role":"assistant","content":"Thought: The current
-      language of the user is English. I need to use a tool to help me answer the
+      language of the user is: English. I need to use a tool to help me answer the
       question.\nAction: doc_engine\nAction Input: {''input'': ''What is the name
       of this document?''}"},{"role":"user","content":"Observation: The name of the
       document is not provided in the given information."}],"model":"gpt-4o","stream":false,"temperature":0.1}'
@@ -343,12 +343,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2638'
+      - '2639'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=JQ5SdAm_rWgmgVJOxKYhcfovQ8nQdBmmBSde996y.oA-1740845183-1.0.1.1-NTLhzifLSpMIvYvnLmwe_ycJapTyzHYHuo1UoYsTI6JheII6_n4Cp0k_GylOIcYyZ9In52.5bFaAL9ZD3p67SbKaahqUxYWCiAM6r4hVQiM;
-        _cfuvid=A63iZikr.2h_n8D7eLLI0tDIFkl7dUXz_u5xufvxGV0-1740845183541-0.0.1.1-604800000
+      - __cf_bm=cN73k7OjrRVux66fhWZs4rOqMrTfpt3wUDeo8uMpk6w-1740874500-1.0.1.1-9iBVYCXY114RDeItS39Tv066PHerhr1HiPfk0wviV7s.j2.AKlWlW5TrpVHGRIwD.u2jnpYftKhLYipo1s.hjVHYM8q9KEX8lg2afGjVAqE;
+        _cfuvid=HkMnsFaIQd6HwMVqnqixiW99rDoBOjDOhYhEXR17L.Y-1740874500444-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -374,18 +374,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37KwidkyBJHTf1re2AYd1hKNDLsBWGItG2NlnUJDrZUOTf
-        BzlpnGAd0IsOfHxP75F8yQCE0aIEoVrJqvN2elc8YP4YHu+uvt73i4/uodjlH+TnVXErv9Rikhi0
-        +YGKX1kzRZ23yIbcAVYBJWNSXVzn83W+WqzzAehIo020xvM0p+lyvsyn8/V0XhyJLRmFUZTwLQMA
-        eBneZNFp/C1KmE9eKx3GKBsU5akJQASyqSJkjCaydCwmI6jIMbrB9VNLfdNyCZ9ASeeIQbq4wwDc
-        IvzqMaYssDPcDhUfaGs0amAiG2ff3e3QXcJTi+Bkh0D10KhJ9R06BhNhUN1KY+XGIhh3qWRcTaGT
-        6Z/ZucmAdR9lmpHrrT3W96fUlhofaBOP+KleG2diWwWUkVxKGJm8GNB9BvA8TLe/GJjwgTrPFdNP
-        dElwdXVz0BPjPkd0uT6CTCztGau4nryhV2lkaWw8249QUrWoR+q4TNlrQ2dAdpb6XzdvaR+SG9e8
-        R34ElELPqCsfUBt1mXhsC5jO/X9tpykPhkXEsDUKKzYY0iY01rK3h0sU8U9k7KrauAaDD+ZwjrWv
-        cHOjFa4KuRbZPvsLAAD//wMAWJk6DJcDAAA=
+        H4sIAAAAAAAAAwAAAP//jFJNj9MwEL3nV4x8bqtsle12c1sQIC4IoQUhAYoce5wYHI/XnnRBq/3v
+        yOlHWgESFx/mzXt+b2aeCgBhtahBqF6yGoJbvth8eLMb1S3yZ/nqo9u1d9278L59+br7pB7EIjOo
+        /Y6Kj6yVoiE4ZEt+D6uIkjGrXt1U5famui6vJmAgjS7TusDLipbrcl0ty+2y3ByIPVmFSdTwpQAA
+        eJrebNFr/ClqKBfHyoApyQ5FfWoCEJFcrgiZkk0sPYvFDCryjH5yfd/T2PVcw1tQ0ntikD49YgTu
+        ER5GTDkLPFrup0qItLMaNTCRS6uv/m7qruG+R/ByQCAzNWpS44CewSaYVHfSOtk6BOsvlaw3FAeZ
+        /1mdm4xoxiTzjPzo3KH+fErtqAuR2nTAT3VjvU19E1Em8jlhYgpiQp8LgG/TdMeLgYkQaQjcMP1A
+        nwWvq8N0xbzPGV1vDyATS3fG2hyBC71GI0vr0tl+hJKqRz1T52XKUVs6A4qz1H+6+Zv2Prn13f/I
+        z4BSGBh1EyJqqy4Tz20R87n/q+005cmwSBh3VmHDFmPehEYjR7e/RJF+JcahMdZ3GEO0+3M0oTG3
+        pjLtRrdGFM/FbwAAAP//AwDT7JoDlwMAAA==
     headers:
       CF-RAY:
-      - 9199e6c36e72cb75-DFW
+      - 919cb2816b58f787-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -393,7 +393,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:06:25 GMT
+      - Sun, 02 Mar 2025 00:15:02 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -409,7 +409,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1217'
+      - '879'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -421,13 +421,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '799387'
+      - '799385'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 45ms
+      - 46ms
       x-request-id:
-      - req_6e9d0a140643a322ce42717b71a216c2
+      - req_9a7d7cdde7df053fc16c437e6017e4f7
     status:
       code: 200
       message: OK
@@ -463,7 +463,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:06:32 GMT
+      - Sun, 02 Mar 2025 00:15:06 GMT
       Server:
       - gunicorn
     status:
@@ -501,7 +501,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:06:32 GMT
+      - Sun, 02 Mar 2025 00:15:06 GMT
       Server:
       - gunicorn
     status:
@@ -563,22 +563,22 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFTbTttAEH3PV4z2OYlCbgW/QdUKURUhkHpNZU3WY3vJesfdHUMixL9X
-        60CcUCqah2g8lzNnbvvQA1AmUwkoXaLoqraDs/lFfn56XVxdfNHvx4Z1eTP/Vl5/uFmf4VfVjxG8
-        vCUtz1FDzVVtSQy7rVl7QqGIevRuOjqezsazk9ZQcUY2hhW1DKY8GI/G08HoeDCaPwWWbDQFlcDP
-        HgDAQ/sfKbqM1iqBUf9ZU1EIWJBKdk4AyrONGoUhmCDoRPU7o2Yn5CJr11i7ZxBmm2q0tku8/T3s
-        yV2f0Nr0quLZ5fdbf/zj6v4mfDq/GK/t/chc7uXbQm/qllDeOL3rz559p09eJANQDqs29iP7CuWa
-        Qs0u0AsEAIW+aCpyEtmrh4W6Q9vQQiULdTSEz6xXlCVwY6rGxqEAezCVkSj3gXMhB02gDIwDKQna
-        Lq0FOAehIMYVMaKdaJQRPNXWaIwO8QPt4J69zSBocugNDxcLNx7CaUFOEjh1QE6MbEBKFEAtAdjB
-        kkq0eYvhWEryb1AJnMs9eopc0IvJjTZowTgha01BThMIQ00+Z1+BYFiF6FvhiiAjbYJhFyK1yRCe
-        W5nAaVvNJnp6wnYSEQYhSOxX02L8bshv3uCnuaoaZzS2EOwhQ0GgtS7RFTRcqEd1MLbH3mvyr72l
-        9JQ3Ae3Ttj7pH3frb7moPS/Di21WuXEmlKknDO1WqSBcb3PHPG0G1Rxcjqo9V7WkwityEXAymWzx
-        VHfYnfXk6QaVsKDt9NPxc9QBXpqRoGlPa3fNGnVJWRfaXTU2meE9Q2+v6r/ZvIa9rdy44n/gO4PW
-        VAtlae0pM/qw4s7NU3z3/uW263JLWAXyd0ZTKoZ8nERGOTZ2+ySpsAlCVZobV5CvvWnfJZXXKS1P
-        Mk2zOR6r3mPvDwAAAP//AwD9pMY1oAUAAA==
+        H4sIAAAAAAAAAwAAAP//jFRNb9swDL3nVxA6J0Gapm3qW7vuG9vaYthhy2AoMm1rkUVXpNNmRf77
+        ILuN064D5oMh8OO9R5HU/QBA2UwloEypxVS1G50fX78/X12cfvHr7+X1pswml6++fLjasL3hczWM
+        GbT8hUYes8aGqtqhWPKd2wTUghH14GQ2mZ/Mjk5OW0dFGbqYVtQymtFoOpnORpP5aHL8kFiSNcgq
+        gR8DAID79h8l+gzvVAKT4aOlQmZdoEp2QQAqkIsWpZkti/aihr3TkBf0UbVvnNtzCJFLjXauJ+6+
+        +71zf0/aubS5m76lM/ari3cf/e3lFX2ev/5mf2d7fB30pm4F5Y03u/vZ8+/syTMyAOV11ea+oVBp
+        uUauyTM+QwBQOhRNhV6ienW/UGvtGlyoZKEOxvCJzAqzBM5AMFTQMGYgBBmyCXaJwFShlNYXIKUW
+        sAxsq8bF9gEFsJWVeB4C5YIecgogyBITKECGFXmWoGMNUDehJkYeLxZ+OoazAr0kcI05Bo6k2gN6
+        sbLpuLQRBvKwxFK7HCgH7UlKDI9krVjroW3cnTA4u4qKc7nVAUFHfI4yAtYBGb1oseuO/3AMjzeW
+        wNcSY4zbxGDt+RYDFHaNPqIH1G0LWoVw08TqyA8hYHsexhy20rQ1jhdqq540YDt46fxzb7wC5g1r
+        9zB3D/btbpAdFXWgJT+bS5Vbb7lMA2pu50OxUN1xR56WQTVPdkDVgapaUqEV+gh4eHjY4al+RXvv
+        yfzBKSTa9fbZwcHwBbw0Q9G2XZLdXhptSsz61H4/dZNZ2nMM9qr+W81L2F3l1hf/A987jMFaMEvr
+        gJk1TyvuwwLGF+xfYbtbbgUrxrC2BlOxGGInMsx147rHRfGGBas0t77AUAfbvjAqr1NcnmYGj471
+        XA22gz8AAAD//wMAU1dq1moFAAA=
     headers:
       CF-RAY:
-      - 9199e896be612e4e-DFW
+      - 919cb467ae700c27-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -586,14 +586,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:43 GMT
+      - Sun, 02 Mar 2025 00:16:21 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=FZvyWm.SUCBOi145_uEXnbxP780VG.qS.tNgAIBeNqU-1740845263-1.0.1.1-O.Owt.SQ9SjP0sP85_ZkK9SMqXOKmGHXIJt8safmJOTQ0HvWpKXKwn0yMjFiVPhxGlEfmx3Sw96vho_5lh1HdCt9oks9YN.FrkqoOAa06Qw;
-        path=/; expires=Sat, 01-Mar-25 16:37:43 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=_Rk2Bsed0wx6D7GGHC7Kv1OOLik9hsuRASrP4vEoIyQ-1740874581-1.0.1.1-yj8GUAT0inTenicvIeLhcsVAM9_6v2bPG6.m4pq8OXhvSXncNqx6DQAAE6auWqgKfdEUAgV_Dz8fsHMR_Xrie11AiFu2FiYLJSdRWwboTUM;
+        path=/; expires=Sun, 02-Mar-25 00:46:21 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=DyHF83mPe9a1gN0MgbyhXKdJ.XHnhyd6ra4BxYgF.KI-1740845263627-0.0.1.1-604800000;
+      - _cfuvid=DLtRvodacBFXIzF9JC1uIISHlqpzeOPLkTvoMrr_sgY-1740874581884-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -608,7 +608,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '4212'
+      - '2663'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -626,7 +626,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 23ms
       x-request-id:
-      - req_b7b351a91f800e83912fbe054d49e03f
+      - req_8f4d023448c90b5e9a99d6f1c846e23e
     status:
       code: 200
       message: OK
@@ -695,19 +695,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPBjtMwEL3nK0Y+t1Vb0m43FwRiD7twYyWE6Cpy7UnsxbGNPV5YVf13
-        5DRtWgESl8h5b97LzBtnXwAwLVkFTChOovNm+n790Hzyvnz96B+W68/4slh+9XfPruO36gObZIXb
-        PaOgk2omXOcNknb2SIuAnDC7Lm7K+aZcLddveqJzEk2WtZ6mpZsu58tyOt9M5+tBqJwWGFkF3woA
-        gH3/zC1aib9YBfPJCekwRt4iq85FACw4kxHGY9SRuCU2GUnhLKHtu35ULrWKKnhUCCKFgJbAcNsm
-        3iK4BkghpIgBdIQ72xod1QzuwSJKIJcp4EDOmfym0HjoELiNPzH02h8JY85jtrXvRD5UIJ2o0bba
-        4gmDe+sTVbDfMp1PW1bBln1RnPJns43l3dCOjtkgdWjp7ZYdLucK2KTIc6w2GTPgh3NQxrU+uF0c
-        +DPeaKujqgPy6GwOJZLzrGcPBcBTv5B0lTHzwXWeanLf0WbD8mZYCBuvwAW7HkhyxM2IrxYn4sqv
-        lkhcm3ixUia4UChH6bh/nqR2F0RxMfWf3fzN+zi5tu3/2I+EEOgJZe0DSi2uJx7LAuY/5F9l55T7
-        hlnE8KIF1qQx5E1IbHgyx8vL4msk7OpG2xaDD/p4gxtf4+5WClyt+YYVh+I3AAAA//8DAGfpxfrK
-        AwAA
+        H4sIAAAAAAAAAwAAAP//jFPRjtMwEHzvV6z83Fa9KteWvCBOVKJCIHGqhBBFkWtvYnOObew1B1T9
+        d+Q0bVoBEi+RM7Mz2Z11DiMApiUrgQnFSbTeTB4Wj5v1r3ebD4/q4cms6dNr5M9uM7dvtu/fsnFW
+        uP1XFHRWTYVrvUHSzp5oEZATZte7ZTFbLYv71bwjWifRZFnjaVK4yXw2Lyaz1WS26IXKaYGRlfB5
+        BABw6J65RSvxBythNj4jLcbIG2TlpQiABWcywniMOhK3xMYDKZwltF3XW+VSo6iErUIQKQS0BIbb
+        JvEGwdVACiFFDKAjrG1jdFRT2IBFlEAuU8CBnDP5TaHx0CJwG58xdNpvCWPOY7qzr0Q+lCCdqNA2
+        2uIZg431iUo47JjOpx0rYcc+Kk75s9nG8rZvR8dskFq09HLHjtdzBaxT5DlWm4zp8eMlKOMaH9w+
+        9vwFr7XVUVUBeXQ2hxLJedaxxxHAl24h6SZj5oNrPVXkntBmw2LZL4QNV+CKXfQkOeJmwO/vzsSN
+        XyWRuDbxaqVMcKFQDtJh/zxJ7a6I0dXUf3bzN+/T5No2/2M/EEKgJ5SVDyi1uJ14KAuY/5B/lV1S
+        7hpmEcN3LbAijSFvQmLNkzldXhZ/RsK2qrVtMPigTze49lX9oi7q/ULuazY6jn4DAAD//wMAm05P
+        1soDAAA=
     headers:
       CF-RAY:
-      - 9199e8b338c24870-DFW
+      - 919cb47b0d30f084-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -715,14 +715,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:45 GMT
+      - Sun, 02 Mar 2025 00:16:24 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=X6_OLDld4jfEKzNheQqG0VlhNQ2ERdhPsJrAqGl6LUY-1740845265-1.0.1.1-eh01SK.ZjxIPvyJsZ97Pr0bebQII.bfA60RF8RTBXmmWgHYjTTS_vAVpkRMdSmGuIUXDUbcSMkO6eY3SpO8RS8j5RVknYWU0bRXbjeaJ5Mk;
-        path=/; expires=Sat, 01-Mar-25 16:37:45 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=wufM1UMxVQDZaleq29L1OUarnbZbYVKAFKPozs_pdlA-1740874584-1.0.1.1-Sln2geese5xZ3i2_xwetRQQqHxldhT2ZcGYs77mUE7T1nbXj3.amdTwCVnA9SvK1QdsR1CB8s51yWv1WCm2c95hVdbkHvoGJ5kOJx7KrfMA;
+        path=/; expires=Sun, 02-Mar-25 00:46:24 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=p7Eb4qaC2.hH9RfAZlgklvxveH06kH2CUByv8xVNqWc-1740845265496-0.0.1.1-604800000;
+      - _cfuvid=qKeogjxwN0zF0uEg38SlYJxAK2trHGOOzkc0pyePrEc-1740874584326-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -737,7 +737,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1538'
+      - '2010'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -755,7 +755,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 40ms
       x-request-id:
-      - req_abc7c058bb3cf1f813734f4812b52d55
+      - req_8e91b4c7176fbfe27f294d283d5d9887
     status:
       code: 200
       message: OK
@@ -850,8 +850,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=X6_OLDld4jfEKzNheQqG0VlhNQ2ERdhPsJrAqGl6LUY-1740845265-1.0.1.1-eh01SK.ZjxIPvyJsZ97Pr0bebQII.bfA60RF8RTBXmmWgHYjTTS_vAVpkRMdSmGuIUXDUbcSMkO6eY3SpO8RS8j5RVknYWU0bRXbjeaJ5Mk;
-        _cfuvid=p7Eb4qaC2.hH9RfAZlgklvxveH06kH2CUByv8xVNqWc-1740845265496-0.0.1.1-604800000
+      - __cf_bm=wufM1UMxVQDZaleq29L1OUarnbZbYVKAFKPozs_pdlA-1740874584-1.0.1.1-Sln2geese5xZ3i2_xwetRQQqHxldhT2ZcGYs77mUE7T1nbXj3.amdTwCVnA9SvK1QdsR1CB8s51yWv1WCm2c95hVdbkHvoGJ5kOJx7KrfMA;
+        _cfuvid=qKeogjxwN0zF0uEg38SlYJxAK2trHGOOzkc0pyePrEc-1740874584326-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -877,17 +877,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37Kwid48JxnczLcUAvGzBswHrZMBiKRNtaZVGQ6LRDkX8f
-        ZKexi3XALjzw8T28R/I5AxBGiwMI1UtWg7f5h/3H9vOdffwU6VF9D1+K7e3d/cNT/bWWt/dikxh0
-        /IWKX1g3igZvkQ25GVYBJWNS3b6rirralfvdBAyk0SZa5zmvKC+LssqLOi/2F2JPRmEUB/iRAQA8
-        TzVZdBqfxAGKzUtnwBhlh+JwHQIQgWzqCBmjiSwdi80CKnKMbnL9rUdwckCgFrhH0KTGAR2DieCI
-        wQc6GY0ajJvwzpzQgXEthUGmnDdr4YDtGGXK5UZrL/3z1amlzgc6xgt+7bfGmdg3AWUkl1xFJi8m
-        9JwB/Jw2Mr4KKXygwXPD9IAuCZbltpoFxXKEBb6CTCztmlbWmzcUG40sjY2rrQolVY964S4nkKM2
-        tAKyVe6/7bylPWc3rvsf+QVQCj2jbnxAbdTryMtYwPSk/xq77nkyLCKGk1HYsMGQbqGxlaOd/0fE
-        35FxaFrjOgw+mPmJWt/g8b1WuNvLWmTn7A8AAAD//wMA1OWPv00DAAA=
+        H4sIAAAAAAAAAwAAAP//dFJBbtswELzrFQue7UA2FFnxLUGLIL20SHtqUQg0uZLYUlyCXDktAv+9
+        oOxICppceJjZGcws9zkDEEaLPQjVSVa9t+u78vHh/vaLbr4/fb6xDx/uvg5Pjx/LT8N9eTuIVVLQ
+        4RcqflFdKeq9RTbkzrQKKBmT62ZX5NWuuK6KkehJo02y1vO6oPU23xbrvFrn5UXYkVEYxR5+ZAAA
+        z+ObIjqNf8Qe8tUL0mOMskWxn4YARCCbECFjNJGlY7GaSUWO0Y2pv3UITvYI1AB3CJrU0KNjMBEc
+        MfhAR6NRg3Ej35ojOjCuodDL1PNqaRywGaJMvdxg7QU/TUkttT7QIV74CW+MM7GrA8pILqWKTF6M
+        7CkD+DluZHhVUvhAveea6Te6ZLjdboqzoZg/YaYnkomlXcq21eoNx1ojS2PjYqtCSdWhXmg3u3Lq
+        IAdtaObybFH9/0Rv2Z/rG9cuXN61nwml0DPq2gfURr1uPY8FTHf63ti06jGwiBiORmHNBkP6Do2N
+        HOz5hET8Gxn7ujGuxeCDOd9R42s83GiF16WsRHbK/gEAAP//AwDwjsZiUAMAAA==
     headers:
       CF-RAY:
-      - 9199e8becdd24870-DFW
+      - 919cb48939cdf084-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -895,7 +895,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:46 GMT
+      - Sun, 02 Mar 2025 00:16:25 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -911,7 +911,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '634'
+      - '479'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -929,7 +929,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 111ms
       x-request-id:
-      - req_344dd28be24af44b7e75496030bcbf74
+      - req_1e9acc1d05f70d3e603dbee44581587d
     status:
       code: 200
       message: OK
@@ -978,8 +978,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=X6_OLDld4jfEKzNheQqG0VlhNQ2ERdhPsJrAqGl6LUY-1740845265-1.0.1.1-eh01SK.ZjxIPvyJsZ97Pr0bebQII.bfA60RF8RTBXmmWgHYjTTS_vAVpkRMdSmGuIUXDUbcSMkO6eY3SpO8RS8j5RVknYWU0bRXbjeaJ5Mk;
-        _cfuvid=p7Eb4qaC2.hH9RfAZlgklvxveH06kH2CUByv8xVNqWc-1740845265496-0.0.1.1-604800000
+      - __cf_bm=wufM1UMxVQDZaleq29L1OUarnbZbYVKAFKPozs_pdlA-1740874584-1.0.1.1-Sln2geese5xZ3i2_xwetRQQqHxldhT2ZcGYs77mUE7T1nbXj3.amdTwCVnA9SvK1QdsR1CB8s51yWv1WCm2c95hVdbkHvoGJ5kOJx7KrfMA;
+        _cfuvid=qKeogjxwN0zF0uEg38SlYJxAK2trHGOOzkc0pyePrEc-1740874584326-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -1005,20 +1005,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJNj9MwEL3nV4x8bqpS2mzJja2QWC5wWCQQoMi1J4kXx+O1J13Qqv8d
-        OWmblg+Jiw/z5j2/NzPPGYAwWpQgVCtZdd7mt8W7+j1L+tBut9o97G/eus2n7Wf75u7246OYJQbt
-        HlDxiTVX1HmLbMiNsAooGZPqi5vVYrNaL4tiADrSaBOt8ZyvKF8ulqt8sckXxZHYklEYRQlfMgCA
-        5+FNFp3GH6KExexU6TBG2aAoz00AIpBNFSFjNJGlYzGbQEWO0Q2u71vqm5ZLuAMlnSMG6eITBuAW
-        4bHHmLLAk+F2qPhAe6NRAxPZOP/qXg/dJdy3CE52CFQPjZpU36FjMBEG1b00Vu4sgnHXSsbVFDqZ
-        /plfmgxY91GmGbne2mP9cE5tqfGBdvGIn+u1cSa2VUAZyaWEkcmLAT1kAN+G6fZXAxM+UOe5YvqO
-        LgmuX25GPTHtc0KXJ5CJpb1gjav9Xa/SyNLYeLEfoaRqUU/UaZmy14YugOwi9Z9u/qY9Jjeu+R/5
-        CVAKPaOufEBt1HXiqS1gOvd/tZ2nPBgWEcPeKKzYYEib0FjL3o6XKOLPyNhVtXENBh/MeI61r3D3
-        SitcF3IjskP2CwAA//8DAC2R8ZCXAwAA
+        H4sIAAAAAAAAA4xSTW/bMAy9+1cQOidB2jqpm9t22XpaNwy7bIOhSJStVhY1iW43FPnvg5QPJ9gG
+        7GIYfHxP75F8rQCE1WIDQvWS1RDc/O360/37Po4fbHOnH+NDzVdfuG/44V339FHMMoO2j6j4yFoo
+        GoJDtuT3sIooGbPq1W29bG7rVbMqwEAaXaZ1gec1za+X1/V82cyX6wOxJ6swiQ18rQAAXss3W/Qa
+        f4oNLGfHyoApyQ7F5tQEICK5XBEyJZtYehazCVTkGX1x/bmnset5A/egpPfEIH16wQjcI/wYMeUs
+        8GK5L5UQ6dlq1MBELi2++TelO9PlAKOXW4fABBoZ42A9FpaXAwKZ8q9JjQN6njStNxQHWR466i/O
+        7UY0Y5J5Wn507lDfnfI76kKkbTrgp7qx3qa+jSgT+Zw1MQVR0F0F8L3MebwYnQiRhsAt0xP6LLi6
+        afZ6YtrshN4cliCYWLoz1vrIutBrNbK0Lp1tSiipetQTdVqrHLWlM6A6S/2nm79p75Nb3/2P/AQo
+        hYFRtyGituoy8dQWMR/+v9pOUy6GRcL4bBW2bDHmTWg0cnT7mxTpV2IcWmN9hzFEuz9ME1pzZ2qz
+        XeutEdWu+g0AAP//AwDMxMUpoQMAAA==
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 9199e8c3abbf4870-DFW
+      - 919cb48cfb78f084-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1026,7 +1024,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:47 GMT
+      - Sun, 02 Mar 2025 00:16:26 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -1037,10 +1035,12 @@ interactions:
       - X-Request-ID
       alt-svc:
       - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1182'
+      - '1233'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1052,13 +1052,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '799386'
+      - '799387'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
       - 45ms
       x-request-id:
-      - req_7f369869507a5eab2adf81b3f3dabc4d
+      - req_724b4a502138b904af9aaad42f2bd479
     status:
       code: 200
       message: OK
@@ -1094,7 +1094,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:51 GMT
+      - Sun, 02 Mar 2025 00:16:30 GMT
       Server:
       - gunicorn
     status:
@@ -1132,7 +1132,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:51 GMT
+      - Sun, 02 Mar 2025 00:16:30 GMT
       Server:
       - gunicorn
     status:
@@ -1194,21 +1194,22 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xUy27bMBC8+ysWPNuG4lds3Vz0gbbwJQXStHUh0NRKokORLLkM4hr+94KSYylp
-        ClQHgdjhzOwulzwOAJjMWQpMVJxEbdXozeJTcTNPbvcPd5u7it+FzRf+7uNmvylW4i0bRobZ7VHQ
-        E2ssTG0VkjS6hYVDThhVr65nyXI2nyxWDVCbHFWklZZGMzOaJJPZKFmOksWZWBkp0LMUfgwAAI7N
-        P6aoc3xkKSTDp0iN3vMSWXrZBMCcUTHCuPfSE9fEhh0ojCbUMWsdlOoBZIzKBFeqM26/Y2/d9Ykr
-        lVVXif19za8/+P3t90W+WS+/iTr5/LXn10ofbJNQEbS49KeHX+LpCzMApnndcN8bV3O6QW+N9vhC
-        AYBxV4YaNcXs2XHLHrgKuGXpll2NYWPEPeYprIHQ1RA85kAGcvTCyR2CNzVSJXUJVHEC6cHLOqh4
-        fGAcyFpSXA/BFIQaCuOA0FMk2OCs8ejH262ejGFdoqYU1hpQk6RDK8gFeTAadlhxVYApgGtDFboh
-        0MHK2MwDSA0cdsFLjd5H2zhQgXjsDFfQHNwjRZ/pGJ4aEWtyaNUhEhzypo+xNg6eYg2hkfoV0B3G
-        W3Ziz/p2Gry2/tmbCodF8Fydx+UcP13mT5nSOrPzL8aJFVJLX2UOuW+OlXkytvWOPo0DC89Gl1ln
-        aksZmXvUUXA6nbZ6rLtZHbqYn0EyxFWPtVoOX9HLciQum9m+XCfBRYV5R+2uFQ+5ND1g0Kv672xe
-        024rl7r8H/kOEAItYZ5Zh7kUzyvutjmMD8+/tl263CTMPLoHKTAjiS6eRI4FD6p9E5g/eMI6K6Qu
-        0Vknm4eBFTbD3SoXOF/wJRucBn8AAAD//wMAv+XfHSEFAAA=
+        H4sIAAAAAAAAAwAAAP//jFRRb9NADH7vr7Duua26rRtd3oAJhAZMqhBDUBS5Fyc5erm7nZ1tZdp/
+        R5dsTTeGRB6ikz/78+ezfXcjAGUKlYHSNYpugp28OVl+OP9lPn47my8+X75v7TX+Pjw7+7rd3C5L
+        NU4Rfv2LtDxGTbVvgiUx3vWwjoRCifXg1Xy2eDU/Xiw6oPEF2RRWBZnM/eRwdjifzBaT2clDYO2N
+        JlYZ/BgBANx1/yTRFXSrMpiNHy0NMWNFKts5AajobbIoZDYs6ESNB1B7J+SSatdauweI9zbXaO2Q
+        uP/u9s7DPaG1+fK0iPXJWs7fXpxdtPjp+1X99rI+/76Xr6fehk5Q2Tq9u589fGfPniUDUA6bLvad
+        jw3Kkjh4x/SMAUBhrNqGnCT16m6lrtG2tFLZSh1M4ZPXGyoyeA1CsYGWqQDxUBDraNYE7BuS2rgK
+        pEYBw8CmaW1qH/gIpjGSzmPwpZCD0kcQYkkBoY3BM/F0tXKHU3hdkZMMllRS5JQDHZATI9ueGrUw
+        eAdrqtGW4EtA56Wm+MjdaTMOpCboenUryYt9KTcYKcnBKKY02qAF44SsNRU5TX2CQLH0sWEQ5A0n
+        9wY3xFCQNmy864QeTeHxJjP4UhNECnbbcTu+oQiVuSYH622Sj6mkhPGWhZokLhJ2DesKhKuWYhcc
+        6aollulK3asn/bkfvXT+uTd9kcqW0T6M5YP9fjfn1lch+jU/G1tVGme4ziMhd+OjWHzoc6c8XQbV
+        PlkRFaJvguTiN+QS4dHRUc+nhg0e0MXxAyhe0A72+cFi/AJfXpCg6XZot7YadU3FEDqsL7aF8XvA
+        aK/qv9W8xN1Xblz1P/QDoDUFoSIPkQqjn1Y8uEVKD9y/3Ha33AlWTPHaaMrFUEydKKjE1vZvj+pH
+        Jy+NqyiGaLoHSJUhp/Vpoen4BBdqdD/6AwAA//8DAFzTuiOJBQAA
     headers:
       CF-RAY:
-      - 9199e8d48bc82caa-DFW
+      - 919cb4a02ea445fc-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1216,14 +1217,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:51 GMT
+      - Sun, 02 Mar 2025 00:16:30 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=RKg_hyQLNu9GvNwFGwPHKjks1JCQyi1OO5qz0d_sQ1E-1740845271-1.0.1.1-6obM1DqHgwJba41jC40SD1cv8L3aF86OCHOZuYaOqAo3dzB4L1lyK0u4ReqXwyjPxhKHW1PIV9eB7EW1JhO2xm2cysPo0rtH6I0LZuYCzac;
-        path=/; expires=Sat, 01-Mar-25 16:37:51 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=nPuKkj6oVej44hHjOOsxhvMc98a2qmMXEoc52vKXawM-1740874590-1.0.1.1-USWOGmf4JBVMOJhNcyDin2HNFyyQi7Hs0fq52dC5mKT3Cj80CMH.NEXaP3Wx8CItd6gX2nM1F3wmKy4iZTon0iu0Pq1tsKzY1vMXEpvd3MY;
+        path=/; expires=Sun, 02-Mar-25 00:46:30 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=6u7bJ4FlS5STtCppQNb4Gi9oHRLrgdEbK.QuRx.tlZ0-1740845271136-0.0.1.1-604800000;
+      - _cfuvid=t1ttpJp1F9t3Akw1z0N30RFy9rbl0RUU44jS.ZJyYI8-1740874590667-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -1238,7 +1239,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1837'
+      - '2407'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1256,7 +1257,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 23ms
       x-request-id:
-      - req_83c1311b58251d8431ae50e70f9cc9b5
+      - req_be423035bacd01776566eeaa198187d6
     status:
       code: 200
       message: OK
@@ -1325,19 +1326,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPLbtswELzrKxY824bs+FXdErRA0x4KFAaKogoEmlxJbCiSIZdxG8P/
-        XlB+yEFToBeBmtkZ7c5S+wyAKckKYKLlJDqnx3fLT/Vm9+Xz7OPXZ/x+9+Jf3t8+zm6eurhTORsl
-        hd3+REFn1UTYzmkkZc2RFh45YXKdrub5er6YraY90VmJOskaR+O5Hc/y2Xycr8f58iRsrRIYWAE/
-        MgCAff9MLRqJv1gB+eiMdBgCb5AVlyIA5q1OCOMhqEDcEBsNpLCG0PRdb1obm5YK2LQIInqPhkBz
-        00TeINgaqEWIAT2oAB9Mo1VoJ3APBlEC2UQBB7JWp7cWtYMOgZuwQ99rnyKGlMekNLciHQqQVlRo
-        GmXwjMG9cZEK2JdMpVPJCijZt5ZT+myyMbw7taNCMogdGirZ4Xosj3UMPKVqotYn/HDJSdvGebsN
-        J/6C18qo0FYeebAmZRLIOtazhwzgod9HfBUxc952jiqyj2iS4Xx1c/Rjww24YhcnkixxPeCL6Xr0
-        hl8lkbjS4WqjTHDRohykw/p5lMpeEdnV1H9385b3cXJlmv+xHwgh0BHKynmUSryeeCjzmH6Qf5Vd
-        Uu4bZgH9sxJYkUKfNiGx5lEf7y4LvwNhV9XKNOidV8cLXLsKt++kwMWSr1l2yP4AAAD//wMAA6Fz
-        cskDAAA=
+        H4sIAAAAAAAAAwAAAP//jFPRjtMwEHzPV6z83FbtXa695gWBhEQ5CcTpJE5QFLn2JjF1bGOvKVD1
+        309O2qYnDomXyJnZmezOOvsMgCnJCmCi4SRap8dv5verD+8+5Xzr8u3Ha/v+8e7ufrFb7b78edRs
+        lBR28x0FnVQTYVunkZQ1PS08csLkOlvk09tFfrOcdURrJeokqx2Nczu+ml7l4+nteDo/ChurBAZW
+        wNcMAGDfPVOLRuIvVsB0dEJaDIHXyIpzEQDzVieE8RBUIG6IjQZSWENouq4fGhvrhgp4aBBE9B4N
+        geamjrxGsBVQgxADelAB3ppaq9BMYAUGUQLZRAEHslantwa1gxaBm7BD32l/RAwpj8navBbpUIC0
+        okRTK4MnDFbGRSpgv2YqndasgDX73HBKn002hrfHdlRIBrFFQ6/W7HA5l8cqBp5iNVHrI344B6Vt
+        7bzdhCN/xitlVGhKjzxYk0IJZB3r2EMG8K1bSHyWMXPeto5Ksls0yTBfXPd+bLgCF+z8SJIlrgf8
+        ZrYcveBXSiSudLhYKRNcNCgH6bB/HqWyF0R2MfXf3bzk3U+uTP0/9gMhBDpCWTqPUonnEw9lHtMf
+        8q+yc8pdwyyg/6kElqTQp01IrHjU/eVl4XcgbMtKmRq986q/wZUrq2WVV5u53FQsO2RPAAAA//8D
+        AA2mG5HKAwAA
     headers:
       CF-RAY:
-      - 9199e8e1fad845f9-DFW
+      - 919cb4b23adf2ccc-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1345,14 +1346,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:52 GMT
+      - Sun, 02 Mar 2025 00:16:32 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=NaygNl_C9HMR12XPFZDQgSuUaaoOfMdJ48aFBLemuJk-1740845272-1.0.1.1-s4Vkj0zx8_3T6vRHi8SXEUlaPLl8VYkokmP3UGFk2qMyX6b89J2r5_A8BknP.ps9a.imceIOmUAzL_K1sPQ63lJR51R9pOtYH6ollF7b_bM;
-        path=/; expires=Sat, 01-Mar-25 16:37:52 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=DOov16TZr33eStDOX.9wnOAe_hAMqBLdDdUDf_d3T7g-1740874592-1.0.1.1-gtFMcQvvZhT5mGm5mCwfoJ30_uR1SwDAORLYaUHrdLttXBWhb86DWBtD7hdTqerbMJaeTC9hmTVKjSvix4cZQZ58LQpjdzcT9hfjdvpn5Gk;
+        path=/; expires=Sun, 02-Mar-25 00:46:32 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=PXnGGHZ5ROf5WfuODdDYzgpCnQPckNO4gZORXrma_mU-1740845272662-0.0.1.1-604800000;
+      - _cfuvid=EPZbsl6A1dtyzRn495Zo5cCesgJgkhMK6KRtWt_TbJk-1740874592440-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -1367,7 +1368,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1220'
+      - '1290'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1385,7 +1386,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 40ms
       x-request-id:
-      - req_1d0d755ebd3646f84b48ee910b291d75
+      - req_5274c9344430df93b62376561c6d3851
     status:
       code: 200
       message: OK
@@ -1410,21 +1411,7 @@ interactions:
       {''pageIndex'': 6, ''tokenIndex'': 79}, {''pageIndex'': 6, ''tokenIndex'': 80}]}}\nbounding_box:
       {''top'': 0, ''left'': 0, ''right'': 0, ''bottom'': 0}\nannotation_id: 1020\nlabel:
       section_header\nlabel_id: 32\n\nREFERENCES IN PUB. L. 109-115\n\npage: 5\njson:
-      {''5'': {''bounds'': {''top'': 667.0420532226562, ''left'': 234.067138671875,
-      ''right'': 412.09246826171875, ''bottom'': 677.5748291015625}, ''rawText'':
-      ''REFERENCES IN PUB. L. 109-289'', ''tokensJsons'': [{''pageIndex'': 5, ''tokenIndex'':
-      544}, {''pageIndex'': 5, ''tokenIndex'': 545}, {''pageIndex'': 5, ''tokenIndex'':
-      546}, {''pageIndex'': 5, ''tokenIndex'': 547}, {''pageIndex'': 5, ''tokenIndex'':
-      548}]}}\nbounding_box: {''top'': 0, ''left'': 0, ''right'': 0, ''bottom'': 0}\nannotation_id:
-      837\nlabel: section_header\nlabel_id: 26\n\nREFERENCES IN PUB. L. 109-289\n\npage:
-      5\njson: {''5'': {''bounds'': {''top'': 667.0420532226562, ''left'': 234.067138671875,
-      ''right'': 412.09246826171875, ''bottom'': 677.5748291015625}, ''rawText'':
-      ''REFERENCES IN PUB. L. 109-289'', ''tokensJsons'': [{''pageIndex'': 5, ''tokenIndex'':
-      544}, {''pageIndex'': 5, ''tokenIndex'': 545}, {''pageIndex'': 5, ''tokenIndex'':
-      546}, {''pageIndex'': 5, ''tokenIndex'': 547}, {''pageIndex'': 5, ''tokenIndex'':
-      548}]}}\nbounding_box: {''top'': 0, ''left'': 0, ''right'': 0, ''bottom'': 0}\nannotation_id:
-      1016\nlabel: section_header\nlabel_id: 32\n\nREFERENCES IN PUB. L. 109-289\n\npage:
-      5\njson: {''5'': {''bounds'': {''top'': 738.4901123046875, ''left'': 233.8118896484375,
+      {''5'': {''bounds'': {''top'': 738.4901123046875, ''left'': 233.8118896484375,
       ''right'': 412.09246826171875, ''bottom'': 749.0448303222656}, ''rawText'':
       ''REFERENCES IN PUB. L. 109-148'', ''tokensJsons'': [{''pageIndex'': 5, ''tokenIndex'':
       599}, {''pageIndex'': 5, ''tokenIndex'': 600}, {''pageIndex'': 5, ''tokenIndex'':
@@ -1438,6 +1425,20 @@ interactions:
       601}, {''pageIndex'': 5, ''tokenIndex'': 602}, {''pageIndex'': 5, ''tokenIndex'':
       603}]}}\nbounding_box: {''top'': 0, ''left'': 0, ''right'': 0, ''bottom'': 0}\nannotation_id:
       1018\nlabel: page_footer\nlabel_id: 35\n\nREFERENCES IN PUB. L. 109-148\n\npage:
+      5\njson: {''5'': {''bounds'': {''top'': 667.0420532226562, ''left'': 234.067138671875,
+      ''right'': 412.09246826171875, ''bottom'': 677.5748291015625}, ''rawText'':
+      ''REFERENCES IN PUB. L. 109-289'', ''tokensJsons'': [{''pageIndex'': 5, ''tokenIndex'':
+      544}, {''pageIndex'': 5, ''tokenIndex'': 545}, {''pageIndex'': 5, ''tokenIndex'':
+      546}, {''pageIndex'': 5, ''tokenIndex'': 547}, {''pageIndex'': 5, ''tokenIndex'':
+      548}]}}\nbounding_box: {''top'': 0, ''left'': 0, ''right'': 0, ''bottom'': 0}\nannotation_id:
+      837\nlabel: section_header\nlabel_id: 26\n\nREFERENCES IN PUB. L. 109-289\n\npage:
+      5\njson: {''5'': {''bounds'': {''top'': 667.0420532226562, ''left'': 234.067138671875,
+      ''right'': 412.09246826171875, ''bottom'': 677.5748291015625}, ''rawText'':
+      ''REFERENCES IN PUB. L. 109-289'', ''tokensJsons'': [{''pageIndex'': 5, ''tokenIndex'':
+      544}, {''pageIndex'': 5, ''tokenIndex'': 545}, {''pageIndex'': 5, ''tokenIndex'':
+      546}, {''pageIndex'': 5, ''tokenIndex'': 547}, {''pageIndex'': 5, ''tokenIndex'':
+      548}]}}\nbounding_box: {''top'': 0, ''left'': 0, ''right'': 0, ''bottom'': 0}\nannotation_id:
+      1016\nlabel: section_header\nlabel_id: 32\n\nREFERENCES IN PUB. L. 109-289\n\npage:
       5\njson: {''5'': {''bounds'': {''top'': 477.0339050292969, ''left'': 234.14222717285156,
       ''right'': 412.09246826171875, ''bottom'': 487.6748352050781}, ''rawText'':
       ''REFERENCES IN PUB. L. 110-329'', ''tokensJsons'': [{''pageIndex'': 5, ''tokenIndex'':
@@ -1467,7 +1468,7 @@ interactions:
       4}]}}\nbounding_box: {''top'': 0, ''left'': 0, ''right'': 0, ''bottom'': 0}\nannotation_id:
       974\nlabel: section_header\nlabel_id: 32\n\nREFERENCES IN PUB. L. 115-245\n---------------------\nGiven
       the context information and not prior knowledge, answer the query.\nQuery: What
-      is the name of this document\nAnswer: "}],"model":"gpt-4o","stream":false,"temperature":0.1}'
+      is the name of this document?\nAnswer: "}],"model":"gpt-4o","stream":false,"temperature":0.1}'
     headers:
       accept:
       - application/json
@@ -1476,12 +1477,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '6117'
+      - '6118'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=NaygNl_C9HMR12XPFZDQgSuUaaoOfMdJ48aFBLemuJk-1740845272-1.0.1.1-s4Vkj0zx8_3T6vRHi8SXEUlaPLl8VYkokmP3UGFk2qMyX6b89J2r5_A8BknP.ps9a.imceIOmUAzL_K1sPQ63lJR51R9pOtYH6ollF7b_bM;
-        _cfuvid=PXnGGHZ5ROf5WfuODdDYzgpCnQPckNO4gZORXrma_mU-1740845272662-0.0.1.1-604800000
+      - __cf_bm=DOov16TZr33eStDOX.9wnOAe_hAMqBLdDdUDf_d3T7g-1740874592-1.0.1.1-gtFMcQvvZhT5mGm5mCwfoJ30_uR1SwDAORLYaUHrdLttXBWhb86DWBtD7hdTqerbMJaeTC9hmTVKjSvix4cZQZ58LQpjdzcT9hfjdvpn5Gk;
+        _cfuvid=EPZbsl6A1dtyzRn495Zo5cCesgJgkhMK6KRtWt_TbJk-1740874592440-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -1507,17 +1508,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37Kwid48Jx3cTLcTut22XYhh2GwVAk2lYni4JEByuK/Psg
-        O41dtAN24YGP7+E9kk8ZgDBaHECoXrIavM3f7+7b748fx/sd3m6/Vly3+08f6odh7758/iE2iUHH
-        B1T8zLpRNHiLbMjNsAooGZPqdl8VdXVX7ssJGEijTbTOc15RXhZllRd1XuwuxJ6MwigO8DMDAHia
-        arLoNP4RByg2z50BY5QdisN1CEAEsqkjZIwmsnQsNguoyDG6yfW3HsHJAYFa4B5BkxoHdAwmgiMG
-        H+hkNGowbsI7c0IHxrUUBply3qyFA7ZjlCmXG6299M9Xp5Y6H+gYL/i13xpnYt8ElJFcchWZvJjQ
-        cwbwa9rI+CKk8IEGzw3Tb3RJsCy39SwoliMs8La6gEws7Zp2W27eUGw0sjQ2rrYqlFQ96oW7nECO
-        2tAKyFa5X9t5S3vOblz3P/ILoBR6Rt34gNqol5GXsYDpSf81dt3zZFhEDCejsGGDId1CYytHO/+P
-        iI+RcWha4zoMPpj5iVrf4PGdVni3k7XIztlfAAAA//8DAIf/NipNAwAA
+        H4sIAAAAAAAAAwAAAP//dFJNb9swDL37VxA6J4XjOh/NccPQ7jRgKAZ0w2AoEm2rk0VBooMWRf77
+        ICe1XbS96MDH9/QeyZcMQBgt9iBUK1l13i6/bH5+//H4++tD/ev+Tue3u4fVbXnsv921RenFIjHo
+        8IiKX1lXijpvkQ25M6wCSsakutqW+W5brm+KAehIo020xvOypGWRF+Uy3y3zzYXYklEYxR7+ZAAA
+        L8ObLDqNT2IP+eK10mGMskGxH5sARCCbKkLGaCJLx2IxgYocoxtc37cITnYIVAO3CJpU36FjMBEc
+        MeCTt0YZts/gAx2NRg3GDa2NOaID42oKnUyRr+Z/BKz7KFNE11t7qZ9G05YaH+gQL/hYr40zsa0C
+        ykguGYxMXgzoKQP4Owynf5NX+ECd54rpH7okWBSr3VlQTPuY4NX6AjKxtHPa9fXiA8VKI0tj42zA
+        QknVop5xV9vNmEH22tCE5dks+ntHH8mf4xvXzFQ+lZ8ApdAz6soH1Ea9TT21BUwn+1nbOOrBsIgY
+        jkZhxQZDWofGWvb2fE0iPkfGrqqNazD4YM4nVfsKDzda4XojdyI7Zf8BAAD//wMAe18QZFsDAAA=
     headers:
       CF-RAY:
-      - 9199e8eaef1f45f9-DFW
+      - 919cb4bc0e412ccc-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1525,7 +1526,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:53 GMT
+      - Sun, 02 Mar 2025 00:16:33 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -1541,7 +1542,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '888'
+      - '503'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1553,13 +1554,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '798507'
+      - '798508'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
       - 111ms
       x-request-id:
-      - req_20bf8cbb2c7c379132e85de2c1fd0c61
+      - req_2c9c81aa8da45b9023a185967328115b
     status:
       code: 200
       message: OK
@@ -1594,8 +1595,8 @@ interactions:
       is the name of this document"},{"role":"assistant","content":"Thought: The current
       language of the user is English. I need to use a tool to help me answer the
       question.\nAction: doc_engine\nAction Input: {''input'': ''What is the name
-      of this document''}"},{"role":"user","content":"Observation: The name of the
-      document is not provided in the given information."}],"model":"gpt-4o","stream":false,"temperature":0.1}'
+      of this document?''}"},{"role":"user","content":"Observation: The name of the
+      document is not explicitly provided in the given information."}],"model":"gpt-4o","stream":false,"temperature":0.1}'
     headers:
       accept:
       - application/json
@@ -1604,12 +1605,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2639'
+      - '2651'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=NaygNl_C9HMR12XPFZDQgSuUaaoOfMdJ48aFBLemuJk-1740845272-1.0.1.1-s4Vkj0zx8_3T6vRHi8SXEUlaPLl8VYkokmP3UGFk2qMyX6b89J2r5_A8BknP.ps9a.imceIOmUAzL_K1sPQ63lJR51R9pOtYH6ollF7b_bM;
-        _cfuvid=PXnGGHZ5ROf5WfuODdDYzgpCnQPckNO4gZORXrma_mU-1740845272662-0.0.1.1-604800000
+      - __cf_bm=DOov16TZr33eStDOX.9wnOAe_hAMqBLdDdUDf_d3T7g-1740874592-1.0.1.1-gtFMcQvvZhT5mGm5mCwfoJ30_uR1SwDAORLYaUHrdLttXBWhb86DWBtD7hdTqerbMJaeTC9hmTVKjSvix4cZQZ58LQpjdzcT9hfjdvpn5Gk;
+        _cfuvid=EPZbsl6A1dtyzRn495Zo5cCesgJgkhMK6KRtWt_TbJk-1740874592440-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -1635,18 +1636,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJNj9MwEL3nV4x8bqtsSbMlN5BgBYcFiYUVX4pce5IYHI+xJ13Qqv8d
-        Of1IK0Di4sO8ec/vzcxjBiCMFhUI1UlWvbfz5+Xr5sN903607/D9p/7m5upFieXt2+ZN+/JWzBKD
-        Nt9Q8ZG1UNR7i2zI7WEVUDIm1avrIl8Xq+X1kxHoSaNNtNbzvKD5Ml8W83w9z8sDsSOjMIoKPmcA
-        AI/jmyw6jT9FBfnsWOkxRtmiqE5NACKQTRUhYzSRpWMxm0BFjtGNru86GtqOK3gFSjpHDNLFBwzA
-        HcKPAWPKAg+Gu7HiA22NRg1MZOPii3s2dldw1yE42SNQMzZqUkOPjsFEGFW30li5sQjGXSoZ11Do
-        ZfpncW4yYDNEmWbkBmsP9d0ptaXWB9rEA36qN8aZ2NUBZSSXEkYmL0Z0lwF8Hac7XAxM+EC955rp
-        O7okuCoO0xXTPid0uT6ATCztGas8Ahd6tUaWxsaz/QglVYd6ok7LlIM2dAZkZ6n/dPM37X1y49r/
-        kZ8ApdAz6toH1EZdJp7aAqZz/1fbacqjYRExbI3Cmg2GtAmNjRzs/hJF/BUZ+7oxrsXgg9mfY+Nr
-        3DzVClelXItsl/0GAAD//wMA1OCCIJcDAAA=
+        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37KwidkyBJnaTxbcOAobd1yKHANhiKRNtaZFGV6DRdkX8f
+        5KRxinbALjrwPT69R/IlAxBGiwKEaiSr1tvx5+X3u29uhzfTP7uHzXa2+OLv+eHWfX28PyzFKHXQ
+        9jcqfu2aKGq9RTbkTrAKKBmT6myVT29X+WJ90wMtabSprfY8zmk8n87z8fR2PD3rqoaMwigK+JEB
+        ALz0b7LoNB5EAdPRa6XFGGWNoriQAEQgmypCxmgiS8diNICKHKPrXW8a6uqGC7gDJZ0jBuniEwbg
+        BuGxw5iywJPhpq/4QHujUQMT2Tj56T717AI2DYKTLQJVPVGT6lp0DCZCUsWDt0YZts+DhnE9tTZ7
+        dGBcRaGV6bvJtdeAVRdlGpXrrD3Xj5fwlmofaBvP+KVeGWdiUwaUkVwKGpm86NFjBvCrH3L3Zm7C
+        B2o9l0w7dElwkc9PemJY64DO12eQiaW96lrNRh/olRpZGhuv1iSUVA3qoXXYqey0oSsgu0r93s1H
+        2qfkxtX/Iz8ASqFn1KUPqI16m3igBUxX/y/aZcq9YREx7I3Ckg2GtAmNlezs6SBFfI6MbVkZV2Pw
+        wZyusvJlta7yarvU20pkx+wvAAAA//8DAHFUNJ6eAwAA
     headers:
       CF-RAY:
-      - 9199e8f14f6045f9-DFW
+      - 919cb4bfeafa2ccc-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1654,7 +1655,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:54 GMT
+      - Sun, 02 Mar 2025 00:16:34 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -1670,7 +1671,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '811'
+      - '1195'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1682,13 +1683,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '799385'
+      - '799383'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
       - 46ms
       x-request-id:
-      - req_a7146210240da2ec3f620b031463aea4
+      - req_b25bffd8b3fc0f79b16b0128a38e2d95
     status:
       code: 200
       message: OK
@@ -1724,7 +1725,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:58 GMT
+      - Sun, 02 Mar 2025 00:16:38 GMT
       Server:
       - gunicorn
     status:
@@ -1762,7 +1763,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:58 GMT
+      - Sun, 02 Mar 2025 00:16:38 GMT
       Server:
       - gunicorn
     status:
@@ -1824,22 +1825,22 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFTbbuM2EH33Vwz4bBuO43i9ekvRG3abLRC0213UhUBRQ4kbisNwRtl1
-        g/x7QSmxnDQFqgeBmMM5c+bG+xmAcrUqQJlWi+miX3y3fWc/t/27Lz990L98b/3Vzafrq937n3/4
-        nS7/VvPsQdUXNPLktTTURY/iKIywSagFM+vZm81qt7lYv9kOQEc1+uzWRFlsaLFerTeL1W6x2j46
-        tuQMsirgzxkAwP3wzxJDjd9UAav5k6VDZt2gKo6XAFQiny1KMzsWHUTNJ9BQEAxZdei9PwGEyJdG
-        ez8FHr/7k/NUJ+19efj8vtKfuur20v56aLZvw8cPwf7xsTqJN1If4iDI9sEc63OCH+3Fi2AAKuhu
-        8P2RUqflGjlSYHzBAKB0avoOg2T16n6v7rTvca+KvTpbwhWZG6wLuATB1EHPWIMQ1MgmuQqBqUNp
-        XWhAWi3gGNh1vc/tA0rgOif5PAeyggEsJRBkyQ6xT5EYebnfh/USLhsMUsA1WkycY+gAGMTJYaTW
-        RhgoQIWt9hbIgg4kLaYn7kGbCyAtwtCrb5JvMVn5qhNmOTqJs8447cEFQe9dg8HgGCBispQ6BtF8
-        w6B7oUAd9ewPWeL5Ep5qWMBvLULC6A8Da+CvmKBxdxigOmThOieTMT6wYDekA7c9psEh4W2PLMu9
-        elDPuvEwe+3818msJbQ9a/84hI/2h+NUe2pioopfDKmyLjhuy4Sah2FRLBTH2DnOEEH1zxZCxURd
-        lFLoBkMmPD8/H/nUtK8Tuls/gkKi/WTfnF3MX+EraxTtho05LqnRpsV6cp2WVfe1oxNgdpL1v9W8
-        xj1m7kLzf+gnwBiMgnUZE9bOPM94upYwP2f/de1Y5UGwYkx3zmApDlPuRI1W9358adQ4LqV1ocEU
-        kxueG2VjidXb2uDFVu/U7GH2DwAAAP//AwDQHfE7dwUAAA==
+        H4sIAAAAAAAAAwAAAP//jFRNb9swDL3nVxA6J0Gaph/xrR2wrodiQNdhGJbBUGTaViOLmki3zYr+
+        90F2G6ddB8wHQ+AjH5/4occRgLKFykCZWotpgpucH19fflmuF3H77fa3vbrw+qL9fnm2mN3P689q
+        nCJofYtGXqKmhprgUCz5HjYRtWBiPThZzE5PFkfL4w5oqECXwqogkwVN5rP5YjI7ncyOnwNrsgZZ
+        ZfBjBADw2P2TRF/gg8pgNn6xNMisK1TZzglARXLJojSzZdFe1HgADXlBn1T71rk9QIhcbrRzQ+L+
+        e9w7D3XSzuU33x42Xz9clsXNsvi0OZ9tDoq7ZXm/n6+n3oZOUNl6s6vPHr6zZ2+SASivmy72I8VG
+        yzVyIM/4hgFA6Vi1DXpJ6tXjSt1p1+JKZSt1MIUrMhssMjgDwdhAy1iAEBTIJto1AlODUltfgdRa
+        wDKwbVqX2gcUwTZW0nkMVAp6KCmCIEsKCG0MxMjT1crPp3BWoZcMrrHEyCmH9oBerGx7am2EgTys
+        sdauBCpBe5Ia4wt3p816kBqh69WDJC+mUu51xCRHR7GlNVY7sF7QOVuhN9gnCBhLig2DaN4w6FbI
+        U0Mtu22SeDiFlxpmcFMjRAxu27F6vscIlb1DnwRE1F1TuksASypIy8nzV4txO12pJ/WqCU+j984/
+        90YsYtmyds+z92x/2g2zoypEWvOb2VSl9ZbrPKLmbkYUC4U+d8rTZVDtqz1QIVITJBfaoE+Eh4eH
+        PZ8a1nRAT5bPoJBoN9gXB/PxO3x5gaJttyi73TTa1FgMocOO6rawtAeM9m79t5r3uPubW1/9D/0A
+        GINBsMhDxMKa1zce3CKmV+xfbrsqd4IVY7yzBnOxGFMnCix16/qFV7xlwSYvra8whmi7V0aVIcf1
+        sjB4dKxP1ehp9AcAAP//AwAT6aVcbgUAAA==
     headers:
       CF-RAY:
-      - 9199e903296469c9-DFW
+      - 919cb4d2fcea69c3-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1847,14 +1848,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:07:58 GMT
+      - Sun, 02 Mar 2025 00:16:38 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=BucgL.t3Tm9LKqN16xjzx9icz2WXqtvWIANK0UP5axs-1740845278-1.0.1.1-vTHXE9jnRSV0Dw218IWXQ_zLpUKkqpGL_mGvxerMb.fMCovZnNrjsHzoj_LwyoYoY0TWUoW1qC2gVuFsgGr2d4zoILbug7.H1moKZP_tiw4;
-        path=/; expires=Sat, 01-Mar-25 16:37:58 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=lbrtVZxM4LO18uGNqsnOAemTBhO_RIqNF0WNzGtGcdo-1740874598-1.0.1.1-CMJE6v7ls5_NZ8kTyCEN9flf2qEZkaX9AVINF_XVPwqNAw8_gqzxcCLJyLJ4U_XMEXZDKcwR.xuced6CGEZcZ4CbJwEmFuuQKk39y23TiA4;
+        path=/; expires=Sun, 02-Mar-25 00:46:38 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=MY6lNV6r69N0QJEQFS1LLFg2p.R9Ih8mL88OWsZgoQU-1740845278648-0.0.1.1-604800000;
+      - _cfuvid=LQGHSgCjAq_H8lmuHECfS7ipKJuML0SMdDv_iJB1JP8-1740874598768-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -1869,7 +1870,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1911'
+      - '2377'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1887,7 +1888,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 23ms
       x-request-id:
-      - req_31d2246c337de8f020ce10ffe1200199
+      - req_4d6eba19369b66b9bf3401a0249ebcdd
     status:
       code: 200
       message: OK
@@ -1947,19 +1948,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNj9MwEL3nV1hz2Uu76jclRxbtASRAS2ERFEWuPUnM+qu2U7aq+t+R
-        k26SliKRQ2TNm/fezHh8SAgBwSElwEoamLJy+GbxLucfd1tp+Rf1dvzp+y5w9yx/s+1spWAQGWbz
-        C1l4Yd0yo6zEIIxuYOaQBoyq41ez0XI2nyzHNaAMRxlphQ3DmRlORpPZcLQcjhYnYmkEQw8p+ZEQ
-        Qsih/scSNcdnSMlo8BJR6D0tENI2iRBwRsYIUO+FD1QHGHQgMzqgjlXrSsoeEIyRGaNSdsbNd+id
-        uzlRKbPFg/7w/r54fNyblfzKP4c763bbu289v0Z6b+uC8kqzdj49vI2nF2aEgKaq5t4bp2h4QG+N
-        9nihQAhQV1QKdYjVw2ENOyorXEO6hlWJJKoQk5NQCk+4YXUqEZ7cKMOekBNaxIA7yd/cruEIZxbH
-        5Nr5Z2+ADvPKU3ma7Cl+bK9KmsI6s/EXk4dcaOHLzCH19QTAB2Mb7+hTO0B1dstgnVE2ZME8oY6C
-        0+m00YNuCTt0vDyBwQQqe6z5eHBFL+MYqKjXoN08RlmJvKN2G0grLkwPSHpd/13NNe2mc6GL/5Hv
-        AMbQBuSZdcgFO++4S3MY3+i/0top1wWDR7cTDLMg0MWb4JjTSjbPB/zeB1RZLnSBzjpRvyHIbYab
-        15zhfEGXkByTPwAAAP//AwCuvOYJTAQAAA==
+        H4sIAAAAAAAAAwAAAP//jFNNj9owEL3nV1hz2QuswvJZjtuy227bXRX1Q1WpImNPEoNjG9tBu0X8
+        98oJJYFSqTlE1rx5782Mx7uIEBAcpgRYTj0rjOzejubvvq22m6diFrvHXw938Zf7x/XmO11uWR86
+        gaGXK2T+D+ua6cJI9EKrGmYWqceg2hsP4sl4MIrjCig0RxlomfHdge7exDeDbjzpxqMDMdeCoYMp
+        +RERQsiu+ocSFcdnmJJKpooU6BzNEKbHJELAahkiQJ0TzlPlodOATCuPKlStSilbgNdaJoxK2RjX
+        3651buZEpUz48MPz5uvD8O1YfRrOXs8+vr+1q/v5m5ZfLf1iqoLSUrHjfFr4MT49MyMEFC0q7p22
+        BfVzdEYrh2cKhAC1WVmg8qF62C1gS2WJC5gu4HOOJKgQnRKfC0e4ZlUqEY5cFZqtkROahYA9yF9d
+        L2APJxb76NL5Z2uAFtPSUXmY7CG+P16V1JmxeunOJg+pUMLliUXqqgmA89rU3sGncoDy5JbBWF0Y
+        n3i9RhUE+/1+rQfNEjZob3IAvfZUtljDXueCXsLRU1GtwXHzGGU58obabCAtudAtIGp1/Xc1l7Tr
+        zoXK/ke+ARhD45EnxiIX7LTjJs1ieKP/SjtOuSoYHNqtYJh4gTbcBMeUlrJ+PuBenMciSYXK0Bor
+        qjcEqUlw+YozHI7oBKJ99BsAAP//AwC1dmhETAQAAA==
     headers:
       CF-RAY:
-      - 9199e9223db64683-DFW
+      - 919cb4ebddeef079-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1967,14 +1968,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:08:02 GMT
+      - Sun, 02 Mar 2025 00:16:41 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=aCHGGZzZB1qvWY5J8CBV8Ib5_gIvJT_KNs9m0SdAwUs-1740845282-1.0.1.1-oAYFc7CweIQ2vcvrkNuSG9w8BBHY6TtZtffB4eSGxiE12.At.EWGZJj6K_aVAa8Y9EOpeEvpSactleir1QjrN5Iq.J7VqTtmoFvMhL8mXXE;
-        path=/; expires=Sat, 01-Mar-25 16:38:02 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=OOsqR5XGtnmoevr3qU3xRAIBr8czjIJ.gACkx2HKlE0-1740874601-1.0.1.1-KkPNGUWuEzKBEASknvG2JyPhnNFwzc3gNX_tc0l8t2G6m4nf7OyX3uPtNihcq5PCVPIZUhPQRVr2_RkGQRCvfN5B7FA6LqcernP1s8MgjzA;
+        path=/; expires=Sun, 02-Mar-25 00:46:41 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=oBATpAiLpQK_R38nRfc0MYWVYosOITjqgBLUKcW80C0-1740845282306-0.0.1.1-604800000;
+      - _cfuvid=8xi.X2FNU.ivvW47yRq7zzVtpqQNmMYl0OnTnfL8ZkI-1740874601158-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -1989,7 +1990,7 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '581'
+      - '773'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -2007,7 +2008,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 23ms
       x-request-id:
-      - req_2140c40cb953349f6d30d4a81e886e2b
+      - req_43f6e72237aec07b515650bb86e39eaf
     status:
       code: 200
       message: OK
@@ -2043,7 +2044,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:08:05 GMT
+      - Sun, 02 Mar 2025 00:16:44 GMT
       Server:
       - gunicorn
     status:
@@ -2081,7 +2082,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:08:06 GMT
+      - Sun, 02 Mar 2025 00:16:45 GMT
       Server:
       - gunicorn
     status:
@@ -2143,662 +2144,23 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFRNb9swDL3nVxA6N0GaZG3q24Zthw37aLEN+8hgMDJtq5FFTaLTBkX/
-        +yA7jdNuA+aDIfCRfI8iqbsRgDKFykDpGkU33o5fnL0py/PFyw9z3H6c3uBueb22375Pv3wy3y/V
-        SYrg9TVpeYiaaG68JTHselgHQqGU9fR8MV0uns2W8w5ouCCbwiov4wWPZ9PZYjxdjqdn+8Cajaao
-        MvgxAgC46/5JoivoVmUwPXmwNBQjVqSygxOACmyTRWGMJgo6UScDqNkJuaTatdYeAcJsc43WDsT9
-        d3d0Hu4Jrc2/vl+Yzbvp5+rc/brctvNbvngVbt5eH/H1qXe+E1S2Th/u5wg/2LMnZADKYdPFvubQ
-        oFxR9OwiPckAoDBUbUNOknp1t1JbtC2tVLZSpxN4x3pDRQbPQSg00EYqQBgKijqYNUHkhqQ2rgKp
-        UcBEiKZpbWofcADTGEnnE+BSyEHJAYSipAAOUFDDLkrAVAP4NniOFCerlZtN4HlFTjK4opJCTKTo
-        gJwY2fVcqCUCO1hTjbYELgEdS03hgawTaxxITdA171aSV+RSbjBQEoBBTGm0QQvGCVlrKnKaEpun
-        UHJoQDBuYvJtcENQkDbRsOtEzifwcK0ZfKoJAnm76/K6eEMBKrMlB+tdko6pnITFXRRqkrBA2HWv
-        Kw5+tRS6YON8K5OVulePWnU/+tv559EgBirbiHY/oXv7/WHkLVc+8Do+mWBVGmdinQfC2E2SisK+
-        5048HYNqH22L8oEbL7nwhlxKOJ/P+3xqWOYBXZ7vQWFBO9gXs/1CPs6XFyRounU6bLBGXVMxhA6b
-        jG1h+AgYHVX9p5q/5e4rN676n/QDoDV5oSL3gQqjH1c8uAVKb92/3A633AlWkcLWaMrFUEidKKjE
-        1vbPkOoHJy+Nqyj4YLq3SJU+p/VFoenZGS7V6H70GwAA//8DADCHw1uUBQAA
-    headers:
-      CF-RAY:
-      - 9199e92d79cc6b4c-DFW
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 01 Mar 2025 16:08:05 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - __cf_bm=7fMiZiahHbCp8G3lWBtaNrqxwqD9ASBueGk7wMCp7pg-1740845285-1.0.1.1-HBsbVyQJEvk03wkOMRFtFeqATQdtBa64jOiLlEsQPLLz3RfQxgKFe4t1I_f5aPa5gjJIxTu_Bv3HJoDy98ycBjjuXxJi3ajP9O4my7Y6yYc;
-        path=/; expires=Sat, 01-Mar-25 16:38:05 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=MBuPDQ29OZoOqxmSQNNxm2sfFgmzyQn5ewITnlaPSIA-1740845285693-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - user-54labie7aicgek5urzpgydpm
-      openai-processing-ms:
-      - '2170'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '5000'
-      x-ratelimit-limit-tokens:
-      - '800000'
-      x-ratelimit-remaining-requests:
-      - '4999'
-      x-ratelimit-remaining-tokens:
-      - '799685'
-      x-ratelimit-reset-requests:
-      - 12ms
-      x-ratelimit-reset-tokens:
-      - 23ms
-      x-request-id:
-      - req_589f3b8e4801c6d4c798eb6a7aa420f1
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"content":[{"type":"text","text":"# Expert Data Converter\n\nYou
-      are an expert data converter that always maintains as much semantic\nmeaning
-      as possible. You use inference or deduction whenever necessary to\nsupply missing
-      or omitted data. Transform the provided data, text, or\ninformation into the
-      requested format."}],"role":"system"},{"content":[{"type":"text","text":"##
-      Data to convert\n\nmocked agent response\n\n## Additional instructions\n\nWhat
-      is the name of this document\n\n## Response format\n\nCall the `FormatResponse`
-      tool to validate your response, and use the\nfollowing schema: {''description'':
-      ''Format the response with valid JSON.'', ''properties'': {''value'': {''description'':
-      ''The formatted response'', ''title'': ''Value'', ''type'': ''string''}}, ''required'':
-      [''value''], ''type'': ''object''}\n\n- When providing integers, do not write
-      out any decimals at all\n- Use deduction where appropriate e.g. \"3 dollars
-      fifty cents\" is a single\n  value [3.5] not two values [3, 50] unless the user
-      specifically asks for\n  each part.\n- When providing a string response, do
-      not return JSON or a quoted string\n  unless they provided instructions requiring
-      it. If you do return JSON, it\n  must be valid and parseable including double
-      quotes.\n- When converting to bool, treat \"truthy\" values as true"}],"role":"user"}],"model":"gpt-4o","frequency_penalty":0.0,"n":1,"presence_penalty":0.0,"stream":false,"temperature":0.0,"tool_choice":{"type":"function","function":{"name":"FormatResponse"}},"tools":[{"type":"function","function":{"name":"FormatResponse","description":"Format
-      the response with valid JSON.","parameters":{"description":"Format the response
-      with valid JSON.","properties":{"value":{"description":"The formatted response","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}],"top_p":1.0}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1843'
-      content-type:
-      - application/json
-      host:
-      - api.openai.com
-      user-agent:
-      - AsyncOpenAI/Python 1.58.1
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - async:asyncio
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 1.58.1
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNb9swDL37Vwi89JIU+Z7r27q1WLdhwLphBboMhiLRthJZEiQ5WBrk
-        vw+yU9vJMmA+GAIf33skRe0jQkBwSAiwgnpWGjm8XXzMRHUn3z1Mp+9vs5fnnY831XZu7p+/rGAQ
-        GHq1RuZfWddMl0aiF1o1MLNIPQbV8ZvZKJ7NJ/GiBkrNUQZabvxwpoeT0WQ2HMXD0eJILLRg6CAh
-        PyNCCNnX/1Ci4vgbEjIavEZKdI7mCEmbRAhYLUMEqHPCeao8DDqQaeVRhapVJWUP8FrLlFEpO+Pm
-        2/fO3ZyolOln8cH4t+tPm2+Th/H6xyZevZi7r09lz6+R3pm6oKxSrJ1PD2/jyZkZIaBoWXPvtS2p
-        f0RntHJ4pkAIUJtXJSofqof9ErZUVriEZAnfCyRBheiM+EI4wjWrU4lw5KrUbIOc0DwE7FH+6noJ
-        BzixOESXzr96A7SYVY7K42SP8UN7VVLnxuqVO5s8ZEIJV6QWqasnAM5r03gHn9oBqpNbBmN1aXzq
-        9QZVEJxOp40edEvYoeP4CHrtqeyx5uPBBb2Uo6eiXoN28xhlBfKO2m0grbjQPSDqdf13NZe0m86F
-        yv9HvgMYQ+ORp8YiF+y04y7NYnij/0prp1wXDA7tVjBMvUAbboJjRivZPB9wO+exTDOhcrTGivoN
-        QWZSXN1whvMFjSE6RH8AAAD//wMAaIUno0wEAAA=
-    headers:
-      CF-RAY:
-      - 9199e9412812f0ae-DFW
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 01 Mar 2025 16:08:07 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - __cf_bm=gdd1fLWAMjj5AUNHgGOCFfOdPnXGzcQhn6_rRt_kqx4-1740845287-1.0.1.1-2QzqBsJPTv.ZKOeaM7rf_fs29j.Nk78iGzT0YsevpcHPQjDTedsUYQs57ViS57N9nNp.ADn7fpzyQsRlccglEgKjHYkkOYUHBaLXdlvMN5A;
-        path=/; expires=Sat, 01-Mar-25 16:38:07 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=bO3Kxtbt4QnJZQxltiOEK21Ynb4Wn5R_JXAmjvYLrto-1740845287213-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - user-54labie7aicgek5urzpgydpm
-      openai-processing-ms:
-      - '544'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '5000'
-      x-ratelimit-limit-tokens:
-      - '800000'
-      x-ratelimit-remaining-requests:
-      - '4999'
-      x-ratelimit-remaining-tokens:
-      - '799685'
-      x-ratelimit-reset-requests:
-      - 12ms
-      x-ratelimit-reset-tokens:
-      - 23ms
-      x-request-id:
-      - req_7e0148a6842f129dac8b4f93f4e099c9
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"text": "A defined term is defined as a term that is defined...\n"}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '68'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - python-requests/2.32.3
-      X-API-Key:
-      - abc123
-    method: POST
-    uri: http://vector-embedder:8000/embeddings
-  response:
-    body:
-      string: '{"embeddings":[[0.0011845814296975732,0.0005737419123761356,-0.013196799904108047,-0.005769272334873676,-0.07224661111831665,-0.02517852745950222,0.03706574812531471,0.017122704535722733,0.039805009961128235,-0.012777105905115604,-0.023758601397275925,-0.05966700613498688,0.01130157895386219,0.016412444412708282,0.03426127880811691,-0.04565425217151642,-0.018823236227035522,0.01762809418141842,-0.029556185007095337,0.03383511304855347,0.24023418128490448,0.09702982008457184,-0.05832099914550781,0.0005220911698415875,-0.017327021807432175,-0.02052903361618519,-0.045897990465164185,-0.02549584209918976,0.05380665883421898,0.09024450182914734,-0.013825769536197186,0.06034038960933685,0.050408486276865005,0.02631293796002865,0.018930191174149513,0.05369507521390915,-0.07800836116075516,0.04509476572275162,0.01613905094563961,-0.0742458775639534,-0.05013618990778923,-0.009212914854288101,-0.010975828394293785,0.04603342339396477,-0.047279175370931625,0.025547577068209648,0.10857470333576202,-0.014435171149671078,-0.08336631953716278,-0.0032101913820952177,-0.06022900342941284,0.021292857825756073,-0.09571663290262222,-0.011269966140389442,0.020724114030599594,0.022488107904791832,-0.0434671975672245,0.0006902354070916772,-0.015262694098055363,-0.032992884516716,-0.0809740200638771,0.05337028205394745,0.023286975920200348,0.1065409779548645,-0.04782834276556969,-0.02388842962682247,-0.12450705468654633,0.013580630533397198,0.029077254235744476,0.056387417018413544,-0.004846144933253527,-0.005410587880760431,0.11579622328281403,0.022592972964048386,-0.02152065373957157,-0.019431037828326225,0.044813018292188644,0.04858383163809776,0.02271052449941635,0.07152469456195831,-0.029530886560678482,0.06379314512014389,-0.026721665635704994,0.03398028016090393,0.01440356019884348,0.0005258791497908533,0.032496482133865356,-0.06728211045265198,-0.03450901806354523,0.03504783660173416,-0.0988600105047226,-0.1328301727771759,0.11603717505931854,-0.07445169985294342,-0.04977717250585556,-0.09740099310874939,0.06696700304746628,-0.025249158963561058,0.07204537838697433,-0.03658345341682434,-0.008969726972281933,0.0054531521163880825,-0.0804523155093193,0.03673309460282326,0.035178042948246,-0.04672319069504738,-0.020845657214522362,-0.052091002464294434,-0.00468149920925498,-0.030854813754558563,-0.033033985644578934,-0.009561281651258469,0.044992413371801376,-0.08529623597860336,0.030557192862033844,-0.03518953546881676,-0.07025173306465149,-0.030937435105443,0.03631801903247833,0.06115137040615082,-0.013470104895532131,0.042321864515542984,0.03927432745695114,-0.025528211146593094,0.019631052389740944,-0.018279531970620155,0.02722867578268051,3.5143575931392605e-31,-0.09196437150239944,-0.06788063049316406,-0.02695399709045887,0.01399675477296114,-0.05260198190808296,0.0923825278878212,0.060156721621751785,-0.03659795597195625,-0.03234400227665901,0.05991429090499878,0.06597300618886948,0.06655881553888321,-0.03379399701952934,0.12551526725292206,0.10206287354230881,0.10470341145992279,0.06551230698823929,0.09284508973360062,0.027965763583779335,0.0010063434019684792,-0.016128484159708023,0.013158389367163181,-0.02370317652821541,-0.012935069389641285,-0.0716865137219429,-0.02958567813038826,0.005643501412123442,-0.010244276374578476,-0.02091679349541664,-0.021609393879771233,-0.00026842995430342853,-0.009768792428076267,0.04555117338895798,0.001208135741762817,0.024935852736234665,0.03055315650999546,0.017361393198370934,0.0017804806120693684,0.02983928471803665,-0.012236271053552628,0.05029706284403801,0.011906023137271404,0.018558690324425697,-0.03295331820845604,0.0562799796462059,-0.017338978126645088,-0.06004076823592186,-0.010409488342702389,-0.07834156602621078,0.02272784523665905,-0.014393907971680164,-0.03711796551942825,0.1553102731704712,-0.03561047464609146,-0.08209434896707535,0.0030609979294240475,-0.018933361396193504,0.02699744701385498,-0.1261398196220398,0.052038755267858505,-0.026603424921631813,0.05806167423725128,0.028772447258234024,0.016221994534134865,0.023382415995001793,-0.03269986808300018,-0.008539553731679916,0.06843645870685577,-0.04009417071938515,0.0010103200329467654,0.050546642392873764,0.008964323438704014,0.04653271287679672,0.08809725195169449,0.042625170201063156,0.026367703452706337,0.019907191395759583,0.005630556493997574,-0.11069490760564804,-0.02957952581346035,-0.10864970088005066,0.01785118132829666,0.011842682026326656,-0.01033730898052454,0.011536533944308758,0.013139409013092518,-0.026260115206241608,-0.030256330966949463,-0.04367440193891525,0.02783820964396,-0.01602967455983162,0.0031728153117001057,-0.051488447934389114,0.020603319630026817,-0.0013168829027563334,-3.666550551207031e-33,0.0545528382062912,0.0336335152387619,-0.03474931791424751,0.021113542839884758,-0.02325006015598774,-0.01731221191585064,-0.06608634442090988,-0.0009916929993778467,-0.06484807282686234,-0.012044752016663551,-0.060437820851802826,-0.030031787231564522,-0.010017013177275658,-0.028483422473073006,-0.036211758852005005,-0.022016450762748718,-0.019701410084962845,-0.12957775592803955,0.010072823613882065,0.12941467761993408,-0.04354487732052803,-0.03683556616306305,0.03547905385494232,-0.012373304925858974,0.03370121866464615,0.006536406930536032,0.009684553369879723,0.03941784054040909,0.0003919081063941121,0.0472385436296463,-0.07653377205133438,0.04193142056465149,-0.05381019786000252,-0.07696597278118134,0.0035130816977471113,-0.044608984142541885,0.060666125267744064,-0.12912000715732574,0.008003507740795612,-0.09190106391906738,0.002683959435671568,-0.019450867548584938,-0.022616051137447357,-0.056819308549165726,0.09443330019712448,-0.010206555016338825,0.0038479643408209085,-0.024799635633826256,0.052556756883859634,-0.04138518497347832,-0.022089462727308273,-0.09977123141288757,0.0006734000635333359,-0.025126051157712936,0.03570592775940895,-0.019688144326210022,-0.012917477637529373,-0.002723477315157652,0.0212142001837492,0.009441487491130829,0.0798577070236206,-0.02366543933749199,-0.057751480489969254,0.054504163563251495,-0.004796059336513281,0.02247924730181694,-0.08094605803489685,0.060434967279434204,0.011289884336292744,-0.011900334618985653,0.02485203742980957,0.05299391224980354,-0.03347136080265045,-0.03442731872200966,-0.04275888949632645,-0.002017353894189,-0.011983722448348999,-0.029791180044412613,0.06501150131225586,0.039662014693021774,-0.028195587918162346,0.00788871943950653,-0.005035690497606993,-0.07544654607772827,-0.002477039350196719,-0.05810515582561493,-0.014959678053855896,0.12104984372854233,-0.0877695381641388,-0.02609437145292759,0.09527430683374405,0.004283390007913113,-0.07126864790916443,0.05170559883117676,-0.0894760712981224,-4.759998702419784e-33,-0.0025411369279026985,0.03341155871748924,0.04740782082080841,-0.013818838633596897,0.045593224465847015,0.00824000220745802,0.08100791275501251,-0.028449295088648796,0.018702950328588486,-0.10705607384443283,0.015207264572381973,0.008626275695860386,0.012974877841770649,0.06367762386798859,-0.0023962734267115593,-0.04278237000107765,-0.04135656729340553,-0.04924838989973068,0.028433149680495262,0.0969453752040863,0.04070085287094116,-0.044717833399772644,-0.1234595775604248,0.030040709301829338,0.018773317337036133,-0.07215579599142075,0.018791357055306435,0.04088597744703293,0.05514989420771599,0.026261743158102036,0.01304627675563097,0.0631582960486412,-0.026138246059417725,0.06402559578418732,-0.01322334073483944,-0.011825736612081528,0.04774383455514908,0.04656435549259186,0.04342517629265785,0.06086982414126396,-0.06952236592769623,0.05634443834424019,-0.0007720651919953525,-0.03763047233223915,-0.011408066377043724,0.06505774706602097,-0.020853133872151375,0.009913944639265537,0.01607750728726387,-0.0589538998901844,-0.033463411033153534,0.1068992167711258,0.01702011749148369,-0.03631948307156563,-0.042502570897340775,0.04319746047258377,0.010356911458075047,-0.02234099619090557,-0.09065963327884674,-0.010996246710419655,-0.010687156580388546,0.0019633350893855095,0.0430433563888073,0.03044673055410385]]}
-
-        '
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '8066'
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 01 Mar 2025 16:08:10 GMT
-      Server:
-      - gunicorn
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"text": "\nPerson shall mean a person."}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '41'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - python-requests/2.32.3
-      X-API-Key:
-      - abc123
-    method: POST
-    uri: http://vector-embedder:8000/embeddings
-  response:
-    body:
-      string: '{"embeddings":[[0.019998157396912575,0.009387667290866375,-0.04199403151869774,-0.07108259946107864,-0.08744508028030396,-0.009312310256063938,0.11139863729476929,-0.05600114166736603,0.02205910161137581,-0.003929234109818935,0.06898681819438934,-0.05651329457759857,0.01621641032397747,-0.049119796603918076,0.02483760006725788,0.014930176548659801,-0.04690335690975189,0.014836957678198814,0.0003642152005340904,0.08285211771726608,0.03479766473174095,0.02011343277990818,0.021237347275018692,-0.043527502566576004,-0.05814773589372635,-0.03873306140303612,0.06533605605363846,-0.10413023084402084,0.06373976916074753,0.06401857733726501,-0.04138282313942909,0.03675631806254387,-0.006916020065546036,0.08891265839338303,-0.045238249003887177,0.056045759469270706,0.013053696602582932,-0.012374641373753548,0.0084922406822443,-0.00935992132872343,0.020077789202332497,-0.04794960096478462,-0.0011291704140603542,0.040860287845134735,-0.013123435899615288,0.05888274684548378,0.046919748187065125,-0.04355014115571976,-0.06263218820095062,0.0560426339507103,-0.033441152423620224,-0.0325995609164238,-0.05248023197054863,0.021404344588518143,-0.05788807570934296,-0.023203477263450623,-0.05637213587760925,0.006960791070014238,0.01715521700680256,0.006618206389248371,-0.01927104778587818,0.013634036295115948,-0.0014302994823083282,0.049318309873342514,0.06210847944021225,-0.010502738878130913,0.029340101405978203,-0.006503626238554716,-0.08847782015800476,0.007070717867463827,-0.015841087326407433,-0.007642467971891165,0.08101174980401993,0.008531653322279453,-0.09634808450937271,-0.1294984668493271,0.0699337050318718,0.020322205498814583,0.025804229080677032,0.0065751392394304276,-0.09683962166309357,0.007978340610861778,0.029021745547652245,-0.019275959581136703,-0.0290004163980484,0.007715958636254072,-0.019765887409448624,-0.027819722890853882,-0.02539036050438881,0.04842666536569595,-0.05157870054244995,-0.007873610593378544,0.06825759261846542,0.01589951477944851,-0.010367371141910553,0.022320060059428215,0.015622402541339397,-0.04029412567615509,-0.03498426079750061,0.08642233908176422,-0.04239516705274582,0.04785127192735672,0.005965342279523611,0.08517688512802124,0.04279303550720215,-0.015485714189708233,-0.07301542907953262,-0.06476207077503204,-0.015219329856336117,0.004947274923324585,-0.06654390692710876,-0.07079997658729553,-0.0018008679617196321,-0.030087005347013474,0.07780639827251434,-0.04442717134952545,-0.06630980223417282,0.0474674329161644,0.0032721555326133966,-0.13589586317539215,-0.003749487455934286,0.022290362045168877,-0.0014145893510431051,0.010635030455887318,-0.004131439607590437,-0.004959709942340851,-0.012047037482261658,6.206807655392616e-31,-0.035767704248428345,0.0529889278113842,0.01526246964931488,0.017500346526503563,-0.002879691543057561,0.04097345843911171,-0.03205288201570511,-0.0024020650889724493,0.0007509352872148156,0.0038428418338298798,0.07377628982067108,-0.10913395881652832,-0.012313791550695896,0.07050810754299164,0.04015902429819107,0.08938932418823242,0.04692856967449188,-0.012086424045264721,-0.041095517575740814,-0.011187601834535599,-0.01526052039116621,0.057920560240745544,-0.05020565912127495,0.011967480182647705,-0.06851918250322342,-0.058116912841796875,0.06826872378587723,0.006638259626924992,0.028961919248104095,-0.01877889595925808,0.004700666759163141,0.07464660704135895,0.04301655292510986,0.05840232968330383,0.024294067174196243,-0.02968534640967846,-0.018414657562971115,0.024661604315042496,0.04090377688407898,-0.028088057413697243,0.030361268669366837,0.08942883461713791,0.0242761243134737,0.006631844211369753,-0.04398287460207939,-0.02160121127963066,0.023332450538873672,-0.009221076965332031,-0.005228149238973856,0.03258751332759857,-0.01267622783780098,-0.04588354378938675,0.07738088816404343,0.06179714947938919,-0.03607742488384247,-0.022675689309835434,-0.06927414983510971,0.10756761580705643,-0.14205268025398254,-0.05899565666913986,-0.0004535227199085057,-0.11133384704589844,0.10202132910490036,0.06151602417230606,0.037771694362163544,-0.14674292504787445,-0.03957124054431915,0.00839578453451395,0.04336140677332878,-0.0043786317110061646,0.0017866899725049734,-0.018428437411785126,-0.031405914574861526,0.07462082803249359,-0.08794084191322327,0.019185302779078484,0.06104755401611328,-0.03454861417412758,-0.028797997161746025,0.07697197049856186,-0.08021477609872818,0.006546215619891882,-0.02180333063006401,-0.09263504296541214,0.06351833790540695,0.05555098503828049,-0.05163726210594177,-0.029388774186372757,0.05823124200105667,-0.016903474926948547,0.059956930577754974,0.020784806460142136,0.026152465492486954,-0.00022877573792356998,-0.11617238819599152,-3.287034485862378e-33,0.006185214966535568,-0.003681700909510255,0.003543669590726495,0.08183764666318893,0.015035361982882023,-0.06944714486598969,0.019012533128261566,0.033679187297821045,-0.01635892130434513,0.06790027022361755,-0.13474169373512268,-0.06651241332292557,-0.011291811242699623,0.0460815355181694,0.08498873561620712,-0.06176530197262764,-0.015915777534246445,-0.09367331117391586,-0.025783298537135124,0.0672222375869751,-0.002085586078464985,-0.03414494916796684,-0.0271479319781065,-0.011893096379935741,-0.01300976425409317,-0.011844456195831299,0.0789119303226471,-2.692860107345041e-06,-0.09304403513669968,-0.025597859174013138,0.013256512582302094,0.0037685008719563484,-0.19701553881168365,-0.060046080499887466,0.006250506266951561,-0.0925680473446846,0.06921800971031189,0.06311983615159988,-0.05023614689707756,0.06049433723092079,-0.00628996267914772,0.0011332615977153182,-0.03756314888596535,-0.013031178154051304,-0.0059494138695299625,-0.027103710919618607,0.032971661537885666,-0.0749727413058281,0.00977824255824089,0.023116042837500572,-0.08876701444387436,-0.0007268555928021669,0.06851587444543839,-0.037563569843769073,-0.0015623944345861673,-0.07692462205886841,-0.07502222806215286,-0.03670445457100868,0.04198368266224861,-0.0514652281999588,0.013546121306717396,-0.0007744700997136533,0.028477072715759277,0.09551288932561874,-0.004234063904732466,0.07500187307596207,-0.059776127338409424,0.11038020998239517,-0.04496770352125168,0.021678751334547997,0.08046658337116241,-0.10270708054304123,-0.05519740656018257,-0.040661267936229706,-0.03192935883998871,-0.077276311814785,0.0415230467915535,-0.03781677037477493,0.08729914575815201,-0.07801522314548492,0.03397751972079277,-0.03262266144156456,-0.024362120777368546,-0.0007739295833744109,-0.019343430176377296,-0.1243867576122284,0.06781607866287231,0.07211640477180481,0.003881719196215272,0.026984097436070442,0.03244740515947342,0.015776311978697777,-0.03274029120802879,-0.04531592130661011,-0.07783322036266327,-3.383607958938152e-33,-0.02880673296749592,-0.025352241471409798,0.009584968909621239,-0.017035286873579025,0.07349257916212082,0.04207662492990494,0.015974633395671844,-0.07774951308965683,-0.018941638991236687,0.05077475309371948,0.07511776685714722,0.045469023287296295,0.028534645214676857,0.005121173802763224,0.08796501904726028,-0.010050689801573753,0.0013096415204927325,-0.044372353702783585,-0.02321493811905384,0.05570376291871071,0.06536008417606354,-0.028082896023988724,-0.017202870920300484,0.09639470279216766,-0.004605984315276146,0.015636911615729332,-0.0012308681616559625,0.054366473108530045,-0.034147296100854874,0.04307282343506813,-0.059560202062129974,0.05931525304913521,0.009455184452235699,0.004016004502773285,0.008183727972209454,0.04277146980166435,0.01234484277665615,-0.028962304815649986,0.07026220858097076,0.04083345830440521,-0.03010490909218788,0.0690593421459198,0.05544327571988106,0.032712776213884354,0.03524409607052803,0.02726660668849945,0.07674390822649002,-0.005176903214305639,-0.0014489953173324466,-0.023762231692671776,-0.03348862752318382,0.04606331139802933,0.007376401219516993,0.051070429384708405,-0.02508101984858513,-0.020163800567388535,0.021161464974284172,0.06786862760782242,-0.05454280227422714,0.01101665012538433,0.023669935762882233,-0.008493800647556782,0.07625371217727661,-0.07257725298404694]]}
-
-        '
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '8081'
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 01 Mar 2025 16:08:10 GMT
-      Server:
-      - gunicorn
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"content":[{"type":"text","text":"# Expert Data Converter\n\nYou
-      are an expert data converter that always maintains as much semantic\nmeaning
-      as possible. You use inference or deduction whenever necessary to\nsupply missing
-      or omitted data. Transform the provided data, text, or\ninformation into the
-      requested format."}],"role":"system"},{"content":[{"type":"text","text":"##
-      Data to convert\n\nmocked agent response\n\n## Additional instructions\n\nProvide
-      a list of the defined terms \n\n## Response format\n\nCall the `FormatResponse`
-      tool to validate your response, and use the\nfollowing schema: {''description'':
-      ''Format the response with valid JSON.'', ''properties'': {''value'': {''description'':
-      ''The formatted response'', ''title'': ''Value'', ''type'': ''string''}}, ''required'':
-      [''value''], ''type'': ''object''}\n\n- When providing integers, do not write
-      out any decimals at all\n- Use deduction where appropriate e.g. \"3 dollars
-      fifty cents\" is a single\n  value [3.5] not two values [3, 50] unless the user
-      specifically asks for\n  each part.\n- When providing a string response, do
-      not return JSON or a quoted string\n  unless they provided instructions requiring
-      it. If you do return JSON, it\n  must be valid and parseable including double
-      quotes.\n- When converting to bool, treat \"truthy\" values as true"}],"role":"user"}],"model":"gpt-4o","frequency_penalty":0.0,"n":1,"presence_penalty":0.0,"stream":false,"temperature":0.0,"tool_choice":{"type":"function","function":{"name":"FormatResponse"}},"tools":[{"type":"function","function":{"name":"FormatResponse","description":"Format
-      the response with valid JSON.","parameters":{"description":"Format the response
-      with valid JSON.","properties":{"value":{"description":"The formatted response","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}],"top_p":1.0}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1846'
-      content-type:
-      - application/json
-      host:
-      - api.openai.com
-      user-agent:
-      - AsyncOpenAI/Python 1.58.1
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - async:asyncio
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 1.58.1
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFTfT9swEH7vX3Hyc1uVUqDLG2hjbBOThtA2bZ0i17kkBsdnfBdGhfjf
-        JyfQFMak5SGy7vN9990v348AlC1UBsrUWkwT3OTk8GN5/f3k5PCqOD21X9/679+ujs5+nMcz/W5P
-        jZMHra/QyJPX1FATHIol38MmohZMrHtHi9lycTBfLjugoQJdcquCTBY0mc/mi8lsOZkdPjrWZA2y
-        yuDnCADgvvsnib7AO5XBbPxkaZBZV6iy7SUAFckli9LMlkV7UeMBNOQFfVLtW+d2ACFyudHODYH7
-        737nPNRJO5efvW/ipw/y5ub4i198+Hx5Nqdw8bFqd+L11JvQCSpbb7b12cG39uxFMADlddP5nlJs
-        tFwgB/KMLxgAlI5V26CXpF7dr9Stdi2uVLZSe1M4J3ONRQbHIBgbaBkLEIIC2US7RmBqUGrrK5Ba
-        C1gGtk3rUvuAItjGSjqPgUpBDyVFEGRJDqGNgRh5ulr5+RSOK/SSwQWWGDnF0B7Qi5VNT62NMJCH
-        NdbalUAlaE9SY3zi7rRZD1IjdL26k3SLqZTfOmKSo6PY0hqrHVgv6Jyt0BvsAwSMJcWGQTRfM+hW
-        yFNDLbtNkrg/hacaZnBZI0QMbtOxev6NESp7ix7WmyRcp2QSxhsWbLp04KbF2DlEvGmRZbpSD+pZ
-        Nx5Gr51/7cxaxLJl7R6H8NH+sJ1qR1WItOYXQ6pK6y3XeUTN3bAoFgp97BSni6DaZwuhQqQmSC50
-        jT4R7u/v93xq2NcBXc4fQSHRbrAv9g7Gr/DlBYq23cZsl9RoU2MxuA7LqtvC0g4w2sn6bzWvcfeZ
-        W1/9D/0AGINBsMhDxMKa5xkP1yKm5+xf17ZV7gQrxnhrDeZiMaZOFFjq1vUvjerHJS+trzCGaLvn
-        RpUhx/WbwuDBoV6q0cPoDwAAAP//AwBBI/3OdwUAAA==
-    headers:
-      CF-RAY:
-      - 9199e94cbb782cd9-DFW
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 01 Mar 2025 16:08:10 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - __cf_bm=N3K8.7yRW6JeuhWbYv2r4VWb_TGOV3_O5Rt9HF0WSHg-1740845290-1.0.1.1-A5E1AMam.pltMYuHY9o3SXrcE7W6ig3Zu0ZP.ijO6ZoOECwKHaupgEycnTly73DADqBWKRj3VsglfDb7S4aM04CY7CmyMjglHnZmDL59UMg;
-        path=/; expires=Sat, 01-Mar-25 16:38:10 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=h56KLim5Hdz9SY0UJLeLKBesOHWECgYyObv90x.MnQA-1740845290983-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - user-54labie7aicgek5urzpgydpm
-      openai-processing-ms:
-      - '2471'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '5000'
-      x-ratelimit-limit-tokens:
-      - '800000'
-      x-ratelimit-remaining-requests:
-      - '4999'
-      x-ratelimit-remaining-tokens:
-      - '799685'
-      x-ratelimit-reset-requests:
-      - 12ms
-      x-ratelimit-reset-tokens:
-      - 23ms
-      x-request-id:
-      - req_54a639e49fef8eb0c1fc325a2e9f409d
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"content":[{"type":"text","text":"# Expert Data Converter\n\nYou
-      are an expert data converter that always maintains as much semantic\nmeaning
-      as possible. You use inference or deduction whenever necessary to\nsupply missing
-      or omitted data. Transform the provided data, text, or\ninformation into the
-      requested format."}],"role":"system"},{"content":[{"type":"text","text":"##
-      Data to convert\n\nmocked agent response\n\n## Additional instructions\n\nWhat
-      is the name of this document\n\n## Response format\n\nCall the `FormatResponse`
-      tool to validate your response, and use the\nfollowing schema: {''description'':
-      ''Format the response with valid JSON.'', ''properties'': {''value'': {''description'':
-      ''The formatted response'', ''title'': ''Value'', ''type'': ''string''}}, ''required'':
-      [''value''], ''type'': ''object''}\n\n- When providing integers, do not write
-      out any decimals at all\n- Use deduction where appropriate e.g. \"3 dollars
-      fifty cents\" is a single\n  value [3.5] not two values [3, 50] unless the user
-      specifically asks for\n  each part.\n- When providing a string response, do
-      not return JSON or a quoted string\n  unless they provided instructions requiring
-      it. If you do return JSON, it\n  must be valid and parseable including double
-      quotes.\n- When converting to bool, treat \"truthy\" values as true"}],"role":"user"}],"model":"gpt-4o","frequency_penalty":0.0,"n":1,"presence_penalty":0.0,"stream":false,"temperature":0.0,"tool_choice":{"type":"function","function":{"name":"FormatResponse"}},"tools":[{"type":"function","function":{"name":"FormatResponse","description":"Format
-      the response with valid JSON.","parameters":{"description":"Format the response
-      with valid JSON.","properties":{"value":{"description":"The formatted response","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}],"top_p":1.0}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1843'
-      content-type:
-      - application/json
-      host:
-      - api.openai.com
-      user-agent:
-      - AsyncOpenAI/Python 1.58.1
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - async:asyncio
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 1.58.1
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNb9swDL3nVwi89JIU+XCyxLcF7YYVW4cuuRTLYCgSbauRJUGSu6ZB
-        /vsgO7WdrAPmgyHw8b1HUtShRwgIDjEBllPPCiMHy9ldqn+/Cvpym367f1gw9rSKFh+j/Wq1X0I/
-        MPT2CZl/Y10zXRiJXmhVw8wi9RhURx+i4TyajhfjCig0RxlomfGDSA/Gw3E0GM4Hw9mJmGvB0EFM
-        fvYIIeRQ/UOJiuMLxGTYf4sU6BzNEOImiRCwWoYIUOeE81R56Lcg08qjClWrUsoO4LWWCaNStsb1
-        d+ic2zlRKRO3my/X6893X76v1vR29ri4yb7ePNw/dvxq6b2pCkpLxZr5dPAmHl+YEQKKFhX3k7YF
-        9T/QGa0cXigQAtRmZYHKh+rhsIFnKkvcQLyBdY4kqBCdEp8LR7hmVSoRjlwVmu2QE5qFgD3JX11v
-        4AhnFsfee+dfnQFaTEtH5Wmyp/ixuSqpM2P11l1MHlKhhMsTi9RVEwDntam9g0/lAOXZLYOxujA+
-        8XqHKghOJpNaD9olbNHR/AR67anssKaj/jt6CUdPRbUGzeYxynLkLbXdQFpyoTtAr9P139W8p113
-        LlT2P/ItwBgajzwxFrlg5x23aRbDG/1XWjPlqmBwaJ8Fw8QLtOEmOKa0lPXzAbd3HoskFSpDa6yo
-        3hCkJsHtgjOczugcesfeHwAAAP//AwAhM5/hTAQAAA==
-    headers:
-      CF-RAY:
-      - 9199e963da5569e2-DFW
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 01 Mar 2025 16:08:12 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - __cf_bm=pNhLqVg2qpkAfnXkxlvMaM43pWDc5KhcWUX5pegVwjE-1740845292-1.0.1.1-PSKTZcqycWE5qA8RWHJ8YbskJqO7nJUwueve9ESi15vUIriuxjsaSS2t3ik5JlC2whkO1Hf2WFRUlDS0PNJuNWxDQumDwOy6mZs2IMNMGsM;
-        path=/; expires=Sat, 01-Mar-25 16:38:12 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=kZbLHDl2A.eKl58UVu3p08ljoP37QmV5ckkYqQnPeH8-1740845292655-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - user-54labie7aicgek5urzpgydpm
-      openai-processing-ms:
-      - '448'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '5000'
-      x-ratelimit-limit-tokens:
-      - '800000'
-      x-ratelimit-remaining-requests:
-      - '4999'
-      x-ratelimit-remaining-tokens:
-      - '799685'
-      x-ratelimit-reset-requests:
-      - 12ms
-      x-ratelimit-reset-tokens:
-      - 23ms
-      x-request-id:
-      - req_d445e9bdf2308c8aa5af82b426aba10a
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"text": "A defined term is defined as a term that is defined...\n"}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '68'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - python-requests/2.32.3
-      X-API-Key:
-      - abc123
-    method: POST
-    uri: http://vector-embedder:8000/embeddings
-  response:
-    body:
-      string: '{"embeddings":[[0.0011845814296975732,0.0005737419123761356,-0.013196799904108047,-0.005769272334873676,-0.07224661111831665,-0.02517852745950222,0.03706574812531471,0.017122704535722733,0.039805009961128235,-0.012777105905115604,-0.023758601397275925,-0.05966700613498688,0.01130157895386219,0.016412444412708282,0.03426127880811691,-0.04565425217151642,-0.018823236227035522,0.01762809418141842,-0.029556185007095337,0.03383511304855347,0.24023418128490448,0.09702982008457184,-0.05832099914550781,0.0005220911698415875,-0.017327021807432175,-0.02052903361618519,-0.045897990465164185,-0.02549584209918976,0.05380665883421898,0.09024450182914734,-0.013825769536197186,0.06034038960933685,0.050408486276865005,0.02631293796002865,0.018930191174149513,0.05369507521390915,-0.07800836116075516,0.04509476572275162,0.01613905094563961,-0.0742458775639534,-0.05013618990778923,-0.009212914854288101,-0.010975828394293785,0.04603342339396477,-0.047279175370931625,0.025547577068209648,0.10857470333576202,-0.014435171149671078,-0.08336631953716278,-0.0032101913820952177,-0.06022900342941284,0.021292857825756073,-0.09571663290262222,-0.011269966140389442,0.020724114030599594,0.022488107904791832,-0.0434671975672245,0.0006902354070916772,-0.015262694098055363,-0.032992884516716,-0.0809740200638771,0.05337028205394745,0.023286975920200348,0.1065409779548645,-0.04782834276556969,-0.02388842962682247,-0.12450705468654633,0.013580630533397198,0.029077254235744476,0.056387417018413544,-0.004846144933253527,-0.005410587880760431,0.11579622328281403,0.022592972964048386,-0.02152065373957157,-0.019431037828326225,0.044813018292188644,0.04858383163809776,0.02271052449941635,0.07152469456195831,-0.029530886560678482,0.06379314512014389,-0.026721665635704994,0.03398028016090393,0.01440356019884348,0.0005258791497908533,0.032496482133865356,-0.06728211045265198,-0.03450901806354523,0.03504783660173416,-0.0988600105047226,-0.1328301727771759,0.11603717505931854,-0.07445169985294342,-0.04977717250585556,-0.09740099310874939,0.06696700304746628,-0.025249158963561058,0.07204537838697433,-0.03658345341682434,-0.008969726972281933,0.0054531521163880825,-0.0804523155093193,0.03673309460282326,0.035178042948246,-0.04672319069504738,-0.020845657214522362,-0.052091002464294434,-0.00468149920925498,-0.030854813754558563,-0.033033985644578934,-0.009561281651258469,0.044992413371801376,-0.08529623597860336,0.030557192862033844,-0.03518953546881676,-0.07025173306465149,-0.030937435105443,0.03631801903247833,0.06115137040615082,-0.013470104895532131,0.042321864515542984,0.03927432745695114,-0.025528211146593094,0.019631052389740944,-0.018279531970620155,0.02722867578268051,3.5143575931392605e-31,-0.09196437150239944,-0.06788063049316406,-0.02695399709045887,0.01399675477296114,-0.05260198190808296,0.0923825278878212,0.060156721621751785,-0.03659795597195625,-0.03234400227665901,0.05991429090499878,0.06597300618886948,0.06655881553888321,-0.03379399701952934,0.12551526725292206,0.10206287354230881,0.10470341145992279,0.06551230698823929,0.09284508973360062,0.027965763583779335,0.0010063434019684792,-0.016128484159708023,0.013158389367163181,-0.02370317652821541,-0.012935069389641285,-0.0716865137219429,-0.02958567813038826,0.005643501412123442,-0.010244276374578476,-0.02091679349541664,-0.021609393879771233,-0.00026842995430342853,-0.009768792428076267,0.04555117338895798,0.001208135741762817,0.024935852736234665,0.03055315650999546,0.017361393198370934,0.0017804806120693684,0.02983928471803665,-0.012236271053552628,0.05029706284403801,0.011906023137271404,0.018558690324425697,-0.03295331820845604,0.0562799796462059,-0.017338978126645088,-0.06004076823592186,-0.010409488342702389,-0.07834156602621078,0.02272784523665905,-0.014393907971680164,-0.03711796551942825,0.1553102731704712,-0.03561047464609146,-0.08209434896707535,0.0030609979294240475,-0.018933361396193504,0.02699744701385498,-0.1261398196220398,0.052038755267858505,-0.026603424921631813,0.05806167423725128,0.028772447258234024,0.016221994534134865,0.023382415995001793,-0.03269986808300018,-0.008539553731679916,0.06843645870685577,-0.04009417071938515,0.0010103200329467654,0.050546642392873764,0.008964323438704014,0.04653271287679672,0.08809725195169449,0.042625170201063156,0.026367703452706337,0.019907191395759583,0.005630556493997574,-0.11069490760564804,-0.02957952581346035,-0.10864970088005066,0.01785118132829666,0.011842682026326656,-0.01033730898052454,0.011536533944308758,0.013139409013092518,-0.026260115206241608,-0.030256330966949463,-0.04367440193891525,0.02783820964396,-0.01602967455983162,0.0031728153117001057,-0.051488447934389114,0.020603319630026817,-0.0013168829027563334,-3.666550551207031e-33,0.0545528382062912,0.0336335152387619,-0.03474931791424751,0.021113542839884758,-0.02325006015598774,-0.01731221191585064,-0.06608634442090988,-0.0009916929993778467,-0.06484807282686234,-0.012044752016663551,-0.060437820851802826,-0.030031787231564522,-0.010017013177275658,-0.028483422473073006,-0.036211758852005005,-0.022016450762748718,-0.019701410084962845,-0.12957775592803955,0.010072823613882065,0.12941467761993408,-0.04354487732052803,-0.03683556616306305,0.03547905385494232,-0.012373304925858974,0.03370121866464615,0.006536406930536032,0.009684553369879723,0.03941784054040909,0.0003919081063941121,0.0472385436296463,-0.07653377205133438,0.04193142056465149,-0.05381019786000252,-0.07696597278118134,0.0035130816977471113,-0.044608984142541885,0.060666125267744064,-0.12912000715732574,0.008003507740795612,-0.09190106391906738,0.002683959435671568,-0.019450867548584938,-0.022616051137447357,-0.056819308549165726,0.09443330019712448,-0.010206555016338825,0.0038479643408209085,-0.024799635633826256,0.052556756883859634,-0.04138518497347832,-0.022089462727308273,-0.09977123141288757,0.0006734000635333359,-0.025126051157712936,0.03570592775940895,-0.019688144326210022,-0.012917477637529373,-0.002723477315157652,0.0212142001837492,0.009441487491130829,0.0798577070236206,-0.02366543933749199,-0.057751480489969254,0.054504163563251495,-0.004796059336513281,0.02247924730181694,-0.08094605803489685,0.060434967279434204,0.011289884336292744,-0.011900334618985653,0.02485203742980957,0.05299391224980354,-0.03347136080265045,-0.03442731872200966,-0.04275888949632645,-0.002017353894189,-0.011983722448348999,-0.029791180044412613,0.06501150131225586,0.039662014693021774,-0.028195587918162346,0.00788871943950653,-0.005035690497606993,-0.07544654607772827,-0.002477039350196719,-0.05810515582561493,-0.014959678053855896,0.12104984372854233,-0.0877695381641388,-0.02609437145292759,0.09527430683374405,0.004283390007913113,-0.07126864790916443,0.05170559883117676,-0.0894760712981224,-4.759998702419784e-33,-0.0025411369279026985,0.03341155871748924,0.04740782082080841,-0.013818838633596897,0.045593224465847015,0.00824000220745802,0.08100791275501251,-0.028449295088648796,0.018702950328588486,-0.10705607384443283,0.015207264572381973,0.008626275695860386,0.012974877841770649,0.06367762386798859,-0.0023962734267115593,-0.04278237000107765,-0.04135656729340553,-0.04924838989973068,0.028433149680495262,0.0969453752040863,0.04070085287094116,-0.044717833399772644,-0.1234595775604248,0.030040709301829338,0.018773317337036133,-0.07215579599142075,0.018791357055306435,0.04088597744703293,0.05514989420771599,0.026261743158102036,0.01304627675563097,0.0631582960486412,-0.026138246059417725,0.06402559578418732,-0.01322334073483944,-0.011825736612081528,0.04774383455514908,0.04656435549259186,0.04342517629265785,0.06086982414126396,-0.06952236592769623,0.05634443834424019,-0.0007720651919953525,-0.03763047233223915,-0.011408066377043724,0.06505774706602097,-0.020853133872151375,0.009913944639265537,0.01607750728726387,-0.0589538998901844,-0.033463411033153534,0.1068992167711258,0.01702011749148369,-0.03631948307156563,-0.042502570897340775,0.04319746047258377,0.010356911458075047,-0.02234099619090557,-0.09065963327884674,-0.010996246710419655,-0.010687156580388546,0.0019633350893855095,0.0430433563888073,0.03044673055410385]]}
-
-        '
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '8066'
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 01 Mar 2025 16:08:16 GMT
-      Server:
-      - gunicorn
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"text": "\nPerson shall mean a person."}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '41'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - python-requests/2.32.3
-      X-API-Key:
-      - abc123
-    method: POST
-    uri: http://vector-embedder:8000/embeddings
-  response:
-    body:
-      string: '{"embeddings":[[0.019998157396912575,0.009387667290866375,-0.04199403151869774,-0.07108259946107864,-0.08744508028030396,-0.009312310256063938,0.11139863729476929,-0.05600114166736603,0.02205910161137581,-0.003929234109818935,0.06898681819438934,-0.05651329457759857,0.01621641032397747,-0.049119796603918076,0.02483760006725788,0.014930176548659801,-0.04690335690975189,0.014836957678198814,0.0003642152005340904,0.08285211771726608,0.03479766473174095,0.02011343277990818,0.021237347275018692,-0.043527502566576004,-0.05814773589372635,-0.03873306140303612,0.06533605605363846,-0.10413023084402084,0.06373976916074753,0.06401857733726501,-0.04138282313942909,0.03675631806254387,-0.006916020065546036,0.08891265839338303,-0.045238249003887177,0.056045759469270706,0.013053696602582932,-0.012374641373753548,0.0084922406822443,-0.00935992132872343,0.020077789202332497,-0.04794960096478462,-0.0011291704140603542,0.040860287845134735,-0.013123435899615288,0.05888274684548378,0.046919748187065125,-0.04355014115571976,-0.06263218820095062,0.0560426339507103,-0.033441152423620224,-0.0325995609164238,-0.05248023197054863,0.021404344588518143,-0.05788807570934296,-0.023203477263450623,-0.05637213587760925,0.006960791070014238,0.01715521700680256,0.006618206389248371,-0.01927104778587818,0.013634036295115948,-0.0014302994823083282,0.049318309873342514,0.06210847944021225,-0.010502738878130913,0.029340101405978203,-0.006503626238554716,-0.08847782015800476,0.007070717867463827,-0.015841087326407433,-0.007642467971891165,0.08101174980401993,0.008531653322279453,-0.09634808450937271,-0.1294984668493271,0.0699337050318718,0.020322205498814583,0.025804229080677032,0.0065751392394304276,-0.09683962166309357,0.007978340610861778,0.029021745547652245,-0.019275959581136703,-0.0290004163980484,0.007715958636254072,-0.019765887409448624,-0.027819722890853882,-0.02539036050438881,0.04842666536569595,-0.05157870054244995,-0.007873610593378544,0.06825759261846542,0.01589951477944851,-0.010367371141910553,0.022320060059428215,0.015622402541339397,-0.04029412567615509,-0.03498426079750061,0.08642233908176422,-0.04239516705274582,0.04785127192735672,0.005965342279523611,0.08517688512802124,0.04279303550720215,-0.015485714189708233,-0.07301542907953262,-0.06476207077503204,-0.015219329856336117,0.004947274923324585,-0.06654390692710876,-0.07079997658729553,-0.0018008679617196321,-0.030087005347013474,0.07780639827251434,-0.04442717134952545,-0.06630980223417282,0.0474674329161644,0.0032721555326133966,-0.13589586317539215,-0.003749487455934286,0.022290362045168877,-0.0014145893510431051,0.010635030455887318,-0.004131439607590437,-0.004959709942340851,-0.012047037482261658,6.206807655392616e-31,-0.035767704248428345,0.0529889278113842,0.01526246964931488,0.017500346526503563,-0.002879691543057561,0.04097345843911171,-0.03205288201570511,-0.0024020650889724493,0.0007509352872148156,0.0038428418338298798,0.07377628982067108,-0.10913395881652832,-0.012313791550695896,0.07050810754299164,0.04015902429819107,0.08938932418823242,0.04692856967449188,-0.012086424045264721,-0.041095517575740814,-0.011187601834535599,-0.01526052039116621,0.057920560240745544,-0.05020565912127495,0.011967480182647705,-0.06851918250322342,-0.058116912841796875,0.06826872378587723,0.006638259626924992,0.028961919248104095,-0.01877889595925808,0.004700666759163141,0.07464660704135895,0.04301655292510986,0.05840232968330383,0.024294067174196243,-0.02968534640967846,-0.018414657562971115,0.024661604315042496,0.04090377688407898,-0.028088057413697243,0.030361268669366837,0.08942883461713791,0.0242761243134737,0.006631844211369753,-0.04398287460207939,-0.02160121127963066,0.023332450538873672,-0.009221076965332031,-0.005228149238973856,0.03258751332759857,-0.01267622783780098,-0.04588354378938675,0.07738088816404343,0.06179714947938919,-0.03607742488384247,-0.022675689309835434,-0.06927414983510971,0.10756761580705643,-0.14205268025398254,-0.05899565666913986,-0.0004535227199085057,-0.11133384704589844,0.10202132910490036,0.06151602417230606,0.037771694362163544,-0.14674292504787445,-0.03957124054431915,0.00839578453451395,0.04336140677332878,-0.0043786317110061646,0.0017866899725049734,-0.018428437411785126,-0.031405914574861526,0.07462082803249359,-0.08794084191322327,0.019185302779078484,0.06104755401611328,-0.03454861417412758,-0.028797997161746025,0.07697197049856186,-0.08021477609872818,0.006546215619891882,-0.02180333063006401,-0.09263504296541214,0.06351833790540695,0.05555098503828049,-0.05163726210594177,-0.029388774186372757,0.05823124200105667,-0.016903474926948547,0.059956930577754974,0.020784806460142136,0.026152465492486954,-0.00022877573792356998,-0.11617238819599152,-3.287034485862378e-33,0.006185214966535568,-0.003681700909510255,0.003543669590726495,0.08183764666318893,0.015035361982882023,-0.06944714486598969,0.019012533128261566,0.033679187297821045,-0.01635892130434513,0.06790027022361755,-0.13474169373512268,-0.06651241332292557,-0.011291811242699623,0.0460815355181694,0.08498873561620712,-0.06176530197262764,-0.015915777534246445,-0.09367331117391586,-0.025783298537135124,0.0672222375869751,-0.002085586078464985,-0.03414494916796684,-0.0271479319781065,-0.011893096379935741,-0.01300976425409317,-0.011844456195831299,0.0789119303226471,-2.692860107345041e-06,-0.09304403513669968,-0.025597859174013138,0.013256512582302094,0.0037685008719563484,-0.19701553881168365,-0.060046080499887466,0.006250506266951561,-0.0925680473446846,0.06921800971031189,0.06311983615159988,-0.05023614689707756,0.06049433723092079,-0.00628996267914772,0.0011332615977153182,-0.03756314888596535,-0.013031178154051304,-0.0059494138695299625,-0.027103710919618607,0.032971661537885666,-0.0749727413058281,0.00977824255824089,0.023116042837500572,-0.08876701444387436,-0.0007268555928021669,0.06851587444543839,-0.037563569843769073,-0.0015623944345861673,-0.07692462205886841,-0.07502222806215286,-0.03670445457100868,0.04198368266224861,-0.0514652281999588,0.013546121306717396,-0.0007744700997136533,0.028477072715759277,0.09551288932561874,-0.004234063904732466,0.07500187307596207,-0.059776127338409424,0.11038020998239517,-0.04496770352125168,0.021678751334547997,0.08046658337116241,-0.10270708054304123,-0.05519740656018257,-0.040661267936229706,-0.03192935883998871,-0.077276311814785,0.0415230467915535,-0.03781677037477493,0.08729914575815201,-0.07801522314548492,0.03397751972079277,-0.03262266144156456,-0.024362120777368546,-0.0007739295833744109,-0.019343430176377296,-0.1243867576122284,0.06781607866287231,0.07211640477180481,0.003881719196215272,0.026984097436070442,0.03244740515947342,0.015776311978697777,-0.03274029120802879,-0.04531592130661011,-0.07783322036266327,-3.383607958938152e-33,-0.02880673296749592,-0.025352241471409798,0.009584968909621239,-0.017035286873579025,0.07349257916212082,0.04207662492990494,0.015974633395671844,-0.07774951308965683,-0.018941638991236687,0.05077475309371948,0.07511776685714722,0.045469023287296295,0.028534645214676857,0.005121173802763224,0.08796501904726028,-0.010050689801573753,0.0013096415204927325,-0.044372353702783585,-0.02321493811905384,0.05570376291871071,0.06536008417606354,-0.028082896023988724,-0.017202870920300484,0.09639470279216766,-0.004605984315276146,0.015636911615729332,-0.0012308681616559625,0.054366473108530045,-0.034147296100854874,0.04307282343506813,-0.059560202062129974,0.05931525304913521,0.009455184452235699,0.004016004502773285,0.008183727972209454,0.04277146980166435,0.01234484277665615,-0.028962304815649986,0.07026220858097076,0.04083345830440521,-0.03010490909218788,0.0690593421459198,0.05544327571988106,0.032712776213884354,0.03524409607052803,0.02726660668849945,0.07674390822649002,-0.005176903214305639,-0.0014489953173324466,-0.023762231692671776,-0.03348862752318382,0.04606331139802933,0.007376401219516993,0.051070429384708405,-0.02508101984858513,-0.020163800567388535,0.021161464974284172,0.06786862760782242,-0.05454280227422714,0.01101665012538433,0.023669935762882233,-0.008493800647556782,0.07625371217727661,-0.07257725298404694]]}
-
-        '
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '8081'
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 01 Mar 2025 16:08:16 GMT
-      Server:
-      - gunicorn
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"content":[{"type":"text","text":"# Expert Data Converter\n\nYou
-      are an expert data converter that always maintains as much semantic\nmeaning
-      as possible. You use inference or deduction whenever necessary to\nsupply missing
-      or omitted data. Transform the provided data, text, or\ninformation into the
-      requested format."}],"role":"system"},{"content":[{"type":"text","text":"##
-      Data to convert\n\nmocked agent response\n\n## Additional instructions\n\nProvide
-      a list of the defined terms \n\n## Response format\n\nCall the `FormatResponse`
-      tool to validate your response, and use the\nfollowing schema: {''description'':
-      ''Format the response with valid JSON.'', ''properties'': {''value'': {''description'':
-      ''The formatted response'', ''title'': ''Value'', ''type'': ''string''}}, ''required'':
-      [''value''], ''type'': ''object''}\n\n- When providing integers, do not write
-      out any decimals at all\n- Use deduction where appropriate e.g. \"3 dollars
-      fifty cents\" is a single\n  value [3.5] not two values [3, 50] unless the user
-      specifically asks for\n  each part.\n- When providing a string response, do
-      not return JSON or a quoted string\n  unless they provided instructions requiring
-      it. If you do return JSON, it\n  must be valid and parseable including double
-      quotes.\n- When converting to bool, treat \"truthy\" values as true"}],"role":"user"}],"model":"gpt-4o","frequency_penalty":0.0,"n":1,"presence_penalty":0.0,"stream":false,"temperature":0.0,"tool_choice":{"type":"function","function":{"name":"FormatResponse"}},"tools":[{"type":"function","function":{"name":"FormatResponse","description":"Format
-      the response with valid JSON.","parameters":{"description":"Format the response
-      with valid JSON.","properties":{"value":{"description":"The formatted response","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}],"top_p":1.0}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1846'
-      content-type:
-      - application/json
-      host:
-      - api.openai.com
-      user-agent:
-      - AsyncOpenAI/Python 1.58.1
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - async:asyncio
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 1.58.1
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFTfbxMxDH7vX2Hlua1KW7bu3jYESAgQjCHxo+iU5py70CTOEt9Ymfa/
-        o9xtvW4MiXs4Rf7s77NjOzcjAGEqUYBQjWTlgp2cHb3R4Xrx5dOH92+l/rY7jsp8DPh6sfr9+UKM
-        cwRtfqLi+6ipIhcssiHfwyqiZMysz46Xs9Xy+fxk0QGOKrQ5rA48WdJkPpsvJ7PVZHZ0F9iQUZhE
-        Ad9HAAA33T+n6Cu8FgXMxvcWhynJGkWxdwIQkWy2CJmSSSw9i/EAKvKMPmftW2sPACaypZLWDsL9
-        d3NwHu5JWlueqM2ML7+uXpxVL1dzd630crn93L4+0Oupd6FLSLde7e/nAN/bi0diAMJL18W+ougk
-        n2MK5BM+YgAQMtatQ885e3GzFlfStrgWxVo8m8I7UlusCjgFxuigTVgBE1SYVDQbhEQOuTG+Bm4k
-        g0mQjGttbh9QBOMM5/MYSDN60BSBG4TQxkAJgTQwJs7xFKFCRz5xlLmk6Xrt51M4rdFzAeeoMaYs
-        LT2gZ8O7XlEqTkAeNthIqzOh9MQNxnvJLmXjO9muhdecvRJp/iUjZl0Z2WijjLRgPKO1pkavMKsF
-        jJqiA5Zpm7Kvk1uECpVJhnzKSS6mcH+5BVw0CBGD3XW8Pv3CCLW5Qg+bXU5d5nIylnaJ0eXEIsqu
-        h11xcNli7IIjXraYeLoWt+JBy25HT51/HAxkRN0mae8m9c5+ux99S3WItEmPJllo401qyogydRMl
-        ElPotbNOpyDaB1sjQiQXuGTaos+Ei8Wi5xPDUg/o6uQOZGJpB/tyPh8/wVdWyNJ0a7XfZCVVg9UQ
-        Omy0bCtDB8DooOq/s3mKu6/c+Pp/6AdAKQyMVRkiVkY9rHhwi5jfvH+57W+5S1gkjFdGYckGY+5E
-        hVq2tn+ORD86pTa+xhii6d4koUOJm5NK4fMjuRKj29EfAAAA//8DAOgfMqGcBQAA
+        H4sIAAAAAAAAAwAAAP//jFTva9swEP2ev+LQ5yTkV1PX39J1hRUGo2MMugyjyGdbrSyp0mnEC/nf
+        h+w0drsO5g9G3NN77+500mEEwGTOUmCi4iRqqybX6/tPD8l8tb+6WwZcJItr3DdlHmbfby4+sHFk
+        mN0jCnphTYWprUKSRnewcMgJo+r8cjVLLlfr2bIFapOjirTS0mRlJovZYjWZJZPZ+kSsjBToWQo/
+        RgAAh/YfU9Q57lkKs/FLpEbveYksPW8CYM6oGGHce+mJa2LjHhRGE+qYtQ5KDQAyRmWCK9Ubd99h
+        sO77xJXKbr4k+e/9t8f57V0pP14+LL9u6udZshj4ddKNbRMqghbn/gzwczx9YwbANK9b7q1xNad7
+        9NZoj28UABh3ZahRU8yeHbbsF1cBtyzdsvkUPhvxhHkKGyB0NQSPOZCBHL1wcofgTY1USV0CVZxA
+        evCyDioeHxgHspYU12MwBaGGwjgg9BQJNjhrPPrpdqsXU9iUqCmFjQbUJKnpBLkgD0bDDiuuCjAF
+        cG2oQjcGaqyMzWxAauCwC15q9D7axoEKxGNnuIL24PYUfZZTeGlErMmhVU0kOORtH2NtHDzFGkIr
+        9RzQNdMtO7JXfTuO3lv/HEyFwyJ4rk7jcoofz/OnTGmd2fk348QKqaWvMofct8fKPBnbeUef1oGF
+        V6PLrDO1pYzME+oouFwuOz3W36weXV+cQDLE1YB1lYzf0ctyJC7b2T5fJ8FFhXlP7a8VD7k0A2A0
+        qPrvbN7T7iqXuvwf+R4QAi1hnlmHuRSvK+63OYwPz7+2nbvcJsw8ul9SYEYSXTyJHAseVPcmMN94
+        wjorpC7RWSfbh4EVNsPdVS7wYs0TNjqO/gAAAP//AwCzgyfEIQUAAA==
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 9199e96e9838478a-DFW
+      - 919cb4fcefd52e6c-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -2806,14 +2168,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 01 Mar 2025 16:08:16 GMT
+      - Sun, 02 Mar 2025 00:16:45 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=Iw2wv2hepZzQNBBobmEXZxRYjQgdJPkLbjoN8UfvhxU-1740845296-1.0.1.1-tcd9GiUmQNRnU9XCsE5s4b0nQ8bYCKXnNmHnwNI4b5Lq7Ceu3zeAW.Q9RB10wlgYpkLd.01Q8Pw8CzFNOvdBKdddovJtEJd8PmgLET0tdX0;
-        path=/; expires=Sat, 01-Mar-25 16:38:16 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=xPIMlY6o3PMjypw6H_UmJBsh3x_JKvGeXjCuDMR19nc-1740874605-1.0.1.1-pXGeqoJalEoWWijLiwXqdLB2I1db1oLSKskY1eG606unZNn6fK9IhmLWOf99vlbLdQegXvrJ1JSg9aZq2JB9BsCptYurxLuayndSOzlrkFE;
+        path=/; expires=Sun, 02-Mar-25 00:46:45 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=HWDMNfuXRijCV1ggeiet771K_s_KBxsxidK8PqLpppM-1740845296028-0.0.1.1-604800000;
+      - _cfuvid=VFlRaR6u8N5GGKVBxZbrXIO7E0ZSAkBnqbRGNWYgvEk-1740874605179-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -2844,7 +2206,645 @@ interactions:
       x-ratelimit-reset-tokens:
       - 23ms
       x-request-id:
-      - req_91bb9c0617d83d4f8e621bae8c914558
+      - req_b424e842242bbb42e320441d6f525c4a
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":[{"type":"text","text":"# Expert Data Converter\n\nYou
+      are an expert data converter that always maintains as much semantic\nmeaning
+      as possible. You use inference or deduction whenever necessary to\nsupply missing
+      or omitted data. Transform the provided data, text, or\ninformation into the
+      requested format."}],"role":"system"},{"content":[{"type":"text","text":"##
+      Data to convert\n\nmocked agent response\n\n## Additional instructions\n\nWhat
+      is the name of this document\n\n## Response format\n\nCall the `FormatResponse`
+      tool to validate your response, and use the\nfollowing schema: {''description'':
+      ''Format the response with valid JSON.'', ''properties'': {''value'': {''description'':
+      ''The formatted response'', ''title'': ''Value'', ''type'': ''string''}}, ''required'':
+      [''value''], ''type'': ''object''}\n\n- When providing integers, do not write
+      out any decimals at all\n- Use deduction where appropriate e.g. \"3 dollars
+      fifty cents\" is a single\n  value [3.5] not two values [3, 50] unless the user
+      specifically asks for\n  each part.\n- When providing a string response, do
+      not return JSON or a quoted string\n  unless they provided instructions requiring
+      it. If you do return JSON, it\n  must be valid and parseable including double
+      quotes.\n- When converting to bool, treat \"truthy\" values as true"}],"role":"user"}],"model":"gpt-4o","frequency_penalty":0.0,"n":1,"presence_penalty":0.0,"stream":false,"temperature":0.0,"tool_choice":{"type":"function","function":{"name":"FormatResponse"}},"tools":[{"type":"function","function":{"name":"FormatResponse","description":"Format
+      the response with valid JSON.","parameters":{"description":"Format the response
+      with valid JSON.","properties":{"value":{"description":"The formatted response","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}],"top_p":1.0}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1843'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFPLbtswELzrK4i95GIH8iOKo1sLtGgObQGjqftwIdDkSmJNkQxJOQkM
+        /3tByZFk1wWqg0Ds7M7sDpf7iBAQHFICrKSeVUaO3ybLe7b78cF9/rjafX/IH79Juvtql88r+5TA
+        KFTozW9k/rXqmunKSPRCqxZmFqnHwDq5nceL23kSJw1QaY4ylBXGj+d6PI2n83G8GMdHXlZqwdBB
+        Sn5GhBCyb/6hRcXxGVISj14jFTpHC4S0SyIErJYhAtQ54TxVHkY9yLTyqELXqpZyAHitZcaolL1w
+        ++0H594nKmVW34nFfHXvk8eHT1VSxu+2b6ZlPX0a6LXUL6ZpKK8V6/wZ4F08PRMjBBStmtr32lbU
+        L9EZrRyeMRAC1BZ1hcqH7mG/hh2VNa4hXcOXEklgITonvhSOcM2aVCIcuao02yIntAgBe6S/ul7D
+        AU4kDtGl86+BgRbz2lF5dPYYP3RXJXVhrN64M+chF0q4MrNIXeMAOK9Nqx10GgWoT24ZjNWV8ZnX
+        W1SBcDabtXzQL2GPThZH0GtP5aDqZjK6wJdx9FQ0a9BtHqOsRN6X9htIay70AIgGU//dzSXudnKh
+        iv+h7wHG0HjkmbHIBTuduE+zGN7ov9I6l5uGwaHdCYaZF2jDTXDMaS3b5wPuxXmsslyoAq2xonlD
+        kJsMN3ec4U1CFxAdoj8AAAD//wMAIBgSDEwEAAA=
+    headers:
+      CF-RAY:
+      - 919cb513cd454767-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 02 Mar 2025 00:16:47 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=joBaUhVVLw32geqifbiprr4Sgo5tvPTty9OmD6_s8Ek-1740874607-1.0.1.1-Rz2tKsx4Ioi7KbPEa17sPUvqZG8BdPiWvO8qaaZbA8qgYBtBuM0LvU90mTPG3nhej.nmGvOsPxit3t3ZIsRl2LDvCvQnv9s5AeIb8B1xgqo;
+        path=/; expires=Sun, 02-Mar-25 00:46:47 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=YunIHgZtbHi6mD5nT3Ai3HEJFdoCpo6F.h4U8kYRrq4-1740874607483-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '630'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '799685'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 23ms
+      x-request-id:
+      - req_695bb93042541e6cabef48061bdcc62c
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "A defined term is defined as a term that is defined...\n"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[0.0011845814296975732,0.0005737419123761356,-0.013196799904108047,-0.005769272334873676,-0.07224661111831665,-0.02517852745950222,0.03706574812531471,0.017122704535722733,0.039805009961128235,-0.012777105905115604,-0.023758601397275925,-0.05966700613498688,0.01130157895386219,0.016412444412708282,0.03426127880811691,-0.04565425217151642,-0.018823236227035522,0.01762809418141842,-0.029556185007095337,0.03383511304855347,0.24023418128490448,0.09702982008457184,-0.05832099914550781,0.0005220911698415875,-0.017327021807432175,-0.02052903361618519,-0.045897990465164185,-0.02549584209918976,0.05380665883421898,0.09024450182914734,-0.013825769536197186,0.06034038960933685,0.050408486276865005,0.02631293796002865,0.018930191174149513,0.05369507521390915,-0.07800836116075516,0.04509476572275162,0.01613905094563961,-0.0742458775639534,-0.05013618990778923,-0.009212914854288101,-0.010975828394293785,0.04603342339396477,-0.047279175370931625,0.025547577068209648,0.10857470333576202,-0.014435171149671078,-0.08336631953716278,-0.0032101913820952177,-0.06022900342941284,0.021292857825756073,-0.09571663290262222,-0.011269966140389442,0.020724114030599594,0.022488107904791832,-0.0434671975672245,0.0006902354070916772,-0.015262694098055363,-0.032992884516716,-0.0809740200638771,0.05337028205394745,0.023286975920200348,0.1065409779548645,-0.04782834276556969,-0.02388842962682247,-0.12450705468654633,0.013580630533397198,0.029077254235744476,0.056387417018413544,-0.004846144933253527,-0.005410587880760431,0.11579622328281403,0.022592972964048386,-0.02152065373957157,-0.019431037828326225,0.044813018292188644,0.04858383163809776,0.02271052449941635,0.07152469456195831,-0.029530886560678482,0.06379314512014389,-0.026721665635704994,0.03398028016090393,0.01440356019884348,0.0005258791497908533,0.032496482133865356,-0.06728211045265198,-0.03450901806354523,0.03504783660173416,-0.0988600105047226,-0.1328301727771759,0.11603717505931854,-0.07445169985294342,-0.04977717250585556,-0.09740099310874939,0.06696700304746628,-0.025249158963561058,0.07204537838697433,-0.03658345341682434,-0.008969726972281933,0.0054531521163880825,-0.0804523155093193,0.03673309460282326,0.035178042948246,-0.04672319069504738,-0.020845657214522362,-0.052091002464294434,-0.00468149920925498,-0.030854813754558563,-0.033033985644578934,-0.009561281651258469,0.044992413371801376,-0.08529623597860336,0.030557192862033844,-0.03518953546881676,-0.07025173306465149,-0.030937435105443,0.03631801903247833,0.06115137040615082,-0.013470104895532131,0.042321864515542984,0.03927432745695114,-0.025528211146593094,0.019631052389740944,-0.018279531970620155,0.02722867578268051,3.5143575931392605e-31,-0.09196437150239944,-0.06788063049316406,-0.02695399709045887,0.01399675477296114,-0.05260198190808296,0.0923825278878212,0.060156721621751785,-0.03659795597195625,-0.03234400227665901,0.05991429090499878,0.06597300618886948,0.06655881553888321,-0.03379399701952934,0.12551526725292206,0.10206287354230881,0.10470341145992279,0.06551230698823929,0.09284508973360062,0.027965763583779335,0.0010063434019684792,-0.016128484159708023,0.013158389367163181,-0.02370317652821541,-0.012935069389641285,-0.0716865137219429,-0.02958567813038826,0.005643501412123442,-0.010244276374578476,-0.02091679349541664,-0.021609393879771233,-0.00026842995430342853,-0.009768792428076267,0.04555117338895798,0.001208135741762817,0.024935852736234665,0.03055315650999546,0.017361393198370934,0.0017804806120693684,0.02983928471803665,-0.012236271053552628,0.05029706284403801,0.011906023137271404,0.018558690324425697,-0.03295331820845604,0.0562799796462059,-0.017338978126645088,-0.06004076823592186,-0.010409488342702389,-0.07834156602621078,0.02272784523665905,-0.014393907971680164,-0.03711796551942825,0.1553102731704712,-0.03561047464609146,-0.08209434896707535,0.0030609979294240475,-0.018933361396193504,0.02699744701385498,-0.1261398196220398,0.052038755267858505,-0.026603424921631813,0.05806167423725128,0.028772447258234024,0.016221994534134865,0.023382415995001793,-0.03269986808300018,-0.008539553731679916,0.06843645870685577,-0.04009417071938515,0.0010103200329467654,0.050546642392873764,0.008964323438704014,0.04653271287679672,0.08809725195169449,0.042625170201063156,0.026367703452706337,0.019907191395759583,0.005630556493997574,-0.11069490760564804,-0.02957952581346035,-0.10864970088005066,0.01785118132829666,0.011842682026326656,-0.01033730898052454,0.011536533944308758,0.013139409013092518,-0.026260115206241608,-0.030256330966949463,-0.04367440193891525,0.02783820964396,-0.01602967455983162,0.0031728153117001057,-0.051488447934389114,0.020603319630026817,-0.0013168829027563334,-3.666550551207031e-33,0.0545528382062912,0.0336335152387619,-0.03474931791424751,0.021113542839884758,-0.02325006015598774,-0.01731221191585064,-0.06608634442090988,-0.0009916929993778467,-0.06484807282686234,-0.012044752016663551,-0.060437820851802826,-0.030031787231564522,-0.010017013177275658,-0.028483422473073006,-0.036211758852005005,-0.022016450762748718,-0.019701410084962845,-0.12957775592803955,0.010072823613882065,0.12941467761993408,-0.04354487732052803,-0.03683556616306305,0.03547905385494232,-0.012373304925858974,0.03370121866464615,0.006536406930536032,0.009684553369879723,0.03941784054040909,0.0003919081063941121,0.0472385436296463,-0.07653377205133438,0.04193142056465149,-0.05381019786000252,-0.07696597278118134,0.0035130816977471113,-0.044608984142541885,0.060666125267744064,-0.12912000715732574,0.008003507740795612,-0.09190106391906738,0.002683959435671568,-0.019450867548584938,-0.022616051137447357,-0.056819308549165726,0.09443330019712448,-0.010206555016338825,0.0038479643408209085,-0.024799635633826256,0.052556756883859634,-0.04138518497347832,-0.022089462727308273,-0.09977123141288757,0.0006734000635333359,-0.025126051157712936,0.03570592775940895,-0.019688144326210022,-0.012917477637529373,-0.002723477315157652,0.0212142001837492,0.009441487491130829,0.0798577070236206,-0.02366543933749199,-0.057751480489969254,0.054504163563251495,-0.004796059336513281,0.02247924730181694,-0.08094605803489685,0.060434967279434204,0.011289884336292744,-0.011900334618985653,0.02485203742980957,0.05299391224980354,-0.03347136080265045,-0.03442731872200966,-0.04275888949632645,-0.002017353894189,-0.011983722448348999,-0.029791180044412613,0.06501150131225586,0.039662014693021774,-0.028195587918162346,0.00788871943950653,-0.005035690497606993,-0.07544654607772827,-0.002477039350196719,-0.05810515582561493,-0.014959678053855896,0.12104984372854233,-0.0877695381641388,-0.02609437145292759,0.09527430683374405,0.004283390007913113,-0.07126864790916443,0.05170559883117676,-0.0894760712981224,-4.759998702419784e-33,-0.0025411369279026985,0.03341155871748924,0.04740782082080841,-0.013818838633596897,0.045593224465847015,0.00824000220745802,0.08100791275501251,-0.028449295088648796,0.018702950328588486,-0.10705607384443283,0.015207264572381973,0.008626275695860386,0.012974877841770649,0.06367762386798859,-0.0023962734267115593,-0.04278237000107765,-0.04135656729340553,-0.04924838989973068,0.028433149680495262,0.0969453752040863,0.04070085287094116,-0.044717833399772644,-0.1234595775604248,0.030040709301829338,0.018773317337036133,-0.07215579599142075,0.018791357055306435,0.04088597744703293,0.05514989420771599,0.026261743158102036,0.01304627675563097,0.0631582960486412,-0.026138246059417725,0.06402559578418732,-0.01322334073483944,-0.011825736612081528,0.04774383455514908,0.04656435549259186,0.04342517629265785,0.06086982414126396,-0.06952236592769623,0.05634443834424019,-0.0007720651919953525,-0.03763047233223915,-0.011408066377043724,0.06505774706602097,-0.020853133872151375,0.009913944639265537,0.01607750728726387,-0.0589538998901844,-0.033463411033153534,0.1068992167711258,0.01702011749148369,-0.03631948307156563,-0.042502570897340775,0.04319746047258377,0.010356911458075047,-0.02234099619090557,-0.09065963327884674,-0.010996246710419655,-0.010687156580388546,0.0019633350893855095,0.0430433563888073,0.03044673055410385]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8066'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 02 Mar 2025 00:16:51 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "\nPerson shall mean a person."}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '41'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[0.019998157396912575,0.009387667290866375,-0.04199403151869774,-0.07108259946107864,-0.08744508028030396,-0.009312310256063938,0.11139863729476929,-0.05600114166736603,0.02205910161137581,-0.003929234109818935,0.06898681819438934,-0.05651329457759857,0.01621641032397747,-0.049119796603918076,0.02483760006725788,0.014930176548659801,-0.04690335690975189,0.014836957678198814,0.0003642152005340904,0.08285211771726608,0.03479766473174095,0.02011343277990818,0.021237347275018692,-0.043527502566576004,-0.05814773589372635,-0.03873306140303612,0.06533605605363846,-0.10413023084402084,0.06373976916074753,0.06401857733726501,-0.04138282313942909,0.03675631806254387,-0.006916020065546036,0.08891265839338303,-0.045238249003887177,0.056045759469270706,0.013053696602582932,-0.012374641373753548,0.0084922406822443,-0.00935992132872343,0.020077789202332497,-0.04794960096478462,-0.0011291704140603542,0.040860287845134735,-0.013123435899615288,0.05888274684548378,0.046919748187065125,-0.04355014115571976,-0.06263218820095062,0.0560426339507103,-0.033441152423620224,-0.0325995609164238,-0.05248023197054863,0.021404344588518143,-0.05788807570934296,-0.023203477263450623,-0.05637213587760925,0.006960791070014238,0.01715521700680256,0.006618206389248371,-0.01927104778587818,0.013634036295115948,-0.0014302994823083282,0.049318309873342514,0.06210847944021225,-0.010502738878130913,0.029340101405978203,-0.006503626238554716,-0.08847782015800476,0.007070717867463827,-0.015841087326407433,-0.007642467971891165,0.08101174980401993,0.008531653322279453,-0.09634808450937271,-0.1294984668493271,0.0699337050318718,0.020322205498814583,0.025804229080677032,0.0065751392394304276,-0.09683962166309357,0.007978340610861778,0.029021745547652245,-0.019275959581136703,-0.0290004163980484,0.007715958636254072,-0.019765887409448624,-0.027819722890853882,-0.02539036050438881,0.04842666536569595,-0.05157870054244995,-0.007873610593378544,0.06825759261846542,0.01589951477944851,-0.010367371141910553,0.022320060059428215,0.015622402541339397,-0.04029412567615509,-0.03498426079750061,0.08642233908176422,-0.04239516705274582,0.04785127192735672,0.005965342279523611,0.08517688512802124,0.04279303550720215,-0.015485714189708233,-0.07301542907953262,-0.06476207077503204,-0.015219329856336117,0.004947274923324585,-0.06654390692710876,-0.07079997658729553,-0.0018008679617196321,-0.030087005347013474,0.07780639827251434,-0.04442717134952545,-0.06630980223417282,0.0474674329161644,0.0032721555326133966,-0.13589586317539215,-0.003749487455934286,0.022290362045168877,-0.0014145893510431051,0.010635030455887318,-0.004131439607590437,-0.004959709942340851,-0.012047037482261658,6.206807655392616e-31,-0.035767704248428345,0.0529889278113842,0.01526246964931488,0.017500346526503563,-0.002879691543057561,0.04097345843911171,-0.03205288201570511,-0.0024020650889724493,0.0007509352872148156,0.0038428418338298798,0.07377628982067108,-0.10913395881652832,-0.012313791550695896,0.07050810754299164,0.04015902429819107,0.08938932418823242,0.04692856967449188,-0.012086424045264721,-0.041095517575740814,-0.011187601834535599,-0.01526052039116621,0.057920560240745544,-0.05020565912127495,0.011967480182647705,-0.06851918250322342,-0.058116912841796875,0.06826872378587723,0.006638259626924992,0.028961919248104095,-0.01877889595925808,0.004700666759163141,0.07464660704135895,0.04301655292510986,0.05840232968330383,0.024294067174196243,-0.02968534640967846,-0.018414657562971115,0.024661604315042496,0.04090377688407898,-0.028088057413697243,0.030361268669366837,0.08942883461713791,0.0242761243134737,0.006631844211369753,-0.04398287460207939,-0.02160121127963066,0.023332450538873672,-0.009221076965332031,-0.005228149238973856,0.03258751332759857,-0.01267622783780098,-0.04588354378938675,0.07738088816404343,0.06179714947938919,-0.03607742488384247,-0.022675689309835434,-0.06927414983510971,0.10756761580705643,-0.14205268025398254,-0.05899565666913986,-0.0004535227199085057,-0.11133384704589844,0.10202132910490036,0.06151602417230606,0.037771694362163544,-0.14674292504787445,-0.03957124054431915,0.00839578453451395,0.04336140677332878,-0.0043786317110061646,0.0017866899725049734,-0.018428437411785126,-0.031405914574861526,0.07462082803249359,-0.08794084191322327,0.019185302779078484,0.06104755401611328,-0.03454861417412758,-0.028797997161746025,0.07697197049856186,-0.08021477609872818,0.006546215619891882,-0.02180333063006401,-0.09263504296541214,0.06351833790540695,0.05555098503828049,-0.05163726210594177,-0.029388774186372757,0.05823124200105667,-0.016903474926948547,0.059956930577754974,0.020784806460142136,0.026152465492486954,-0.00022877573792356998,-0.11617238819599152,-3.287034485862378e-33,0.006185214966535568,-0.003681700909510255,0.003543669590726495,0.08183764666318893,0.015035361982882023,-0.06944714486598969,0.019012533128261566,0.033679187297821045,-0.01635892130434513,0.06790027022361755,-0.13474169373512268,-0.06651241332292557,-0.011291811242699623,0.0460815355181694,0.08498873561620712,-0.06176530197262764,-0.015915777534246445,-0.09367331117391586,-0.025783298537135124,0.0672222375869751,-0.002085586078464985,-0.03414494916796684,-0.0271479319781065,-0.011893096379935741,-0.01300976425409317,-0.011844456195831299,0.0789119303226471,-2.692860107345041e-06,-0.09304403513669968,-0.025597859174013138,0.013256512582302094,0.0037685008719563484,-0.19701553881168365,-0.060046080499887466,0.006250506266951561,-0.0925680473446846,0.06921800971031189,0.06311983615159988,-0.05023614689707756,0.06049433723092079,-0.00628996267914772,0.0011332615977153182,-0.03756314888596535,-0.013031178154051304,-0.0059494138695299625,-0.027103710919618607,0.032971661537885666,-0.0749727413058281,0.00977824255824089,0.023116042837500572,-0.08876701444387436,-0.0007268555928021669,0.06851587444543839,-0.037563569843769073,-0.0015623944345861673,-0.07692462205886841,-0.07502222806215286,-0.03670445457100868,0.04198368266224861,-0.0514652281999588,0.013546121306717396,-0.0007744700997136533,0.028477072715759277,0.09551288932561874,-0.004234063904732466,0.07500187307596207,-0.059776127338409424,0.11038020998239517,-0.04496770352125168,0.021678751334547997,0.08046658337116241,-0.10270708054304123,-0.05519740656018257,-0.040661267936229706,-0.03192935883998871,-0.077276311814785,0.0415230467915535,-0.03781677037477493,0.08729914575815201,-0.07801522314548492,0.03397751972079277,-0.03262266144156456,-0.024362120777368546,-0.0007739295833744109,-0.019343430176377296,-0.1243867576122284,0.06781607866287231,0.07211640477180481,0.003881719196215272,0.026984097436070442,0.03244740515947342,0.015776311978697777,-0.03274029120802879,-0.04531592130661011,-0.07783322036266327,-3.383607958938152e-33,-0.02880673296749592,-0.025352241471409798,0.009584968909621239,-0.017035286873579025,0.07349257916212082,0.04207662492990494,0.015974633395671844,-0.07774951308965683,-0.018941638991236687,0.05077475309371948,0.07511776685714722,0.045469023287296295,0.028534645214676857,0.005121173802763224,0.08796501904726028,-0.010050689801573753,0.0013096415204927325,-0.044372353702783585,-0.02321493811905384,0.05570376291871071,0.06536008417606354,-0.028082896023988724,-0.017202870920300484,0.09639470279216766,-0.004605984315276146,0.015636911615729332,-0.0012308681616559625,0.054366473108530045,-0.034147296100854874,0.04307282343506813,-0.059560202062129974,0.05931525304913521,0.009455184452235699,0.004016004502773285,0.008183727972209454,0.04277146980166435,0.01234484277665615,-0.028962304815649986,0.07026220858097076,0.04083345830440521,-0.03010490909218788,0.0690593421459198,0.05544327571988106,0.032712776213884354,0.03524409607052803,0.02726660668849945,0.07674390822649002,-0.005176903214305639,-0.0014489953173324466,-0.023762231692671776,-0.03348862752318382,0.04606331139802933,0.007376401219516993,0.051070429384708405,-0.02508101984858513,-0.020163800567388535,0.021161464974284172,0.06786862760782242,-0.05454280227422714,0.01101665012538433,0.023669935762882233,-0.008493800647556782,0.07625371217727661,-0.07257725298404694]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8081'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 02 Mar 2025 00:16:51 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":[{"type":"text","text":"# Expert Data Converter\n\nYou
+      are an expert data converter that always maintains as much semantic\nmeaning
+      as possible. You use inference or deduction whenever necessary to\nsupply missing
+      or omitted data. Transform the provided data, text, or\ninformation into the
+      requested format."}],"role":"system"},{"content":[{"type":"text","text":"##
+      Data to convert\n\nmocked agent response\n\n## Additional instructions\n\nProvide
+      a list of the defined terms \n\n## Response format\n\nCall the `FormatResponse`
+      tool to validate your response, and use the\nfollowing schema: {''description'':
+      ''Format the response with valid JSON.'', ''properties'': {''value'': {''description'':
+      ''The formatted response'', ''title'': ''Value'', ''type'': ''string''}}, ''required'':
+      [''value''], ''type'': ''object''}\n\n- When providing integers, do not write
+      out any decimals at all\n- Use deduction where appropriate e.g. \"3 dollars
+      fifty cents\" is a single\n  value [3.5] not two values [3, 50] unless the user
+      specifically asks for\n  each part.\n- When providing a string response, do
+      not return JSON or a quoted string\n  unless they provided instructions requiring
+      it. If you do return JSON, it\n  must be valid and parseable including double
+      quotes.\n- When converting to bool, treat \"truthy\" values as true"}],"role":"user"}],"model":"gpt-4o","frequency_penalty":0.0,"n":1,"presence_penalty":0.0,"stream":false,"temperature":0.0,"tool_choice":{"type":"function","function":{"name":"FormatResponse"}},"tools":[{"type":"function","function":{"name":"FormatResponse","description":"Format
+      the response with valid JSON.","parameters":{"description":"Format the response
+      with valid JSON.","properties":{"value":{"description":"The formatted response","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}],"top_p":1.0}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1846'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFTBbtswDL3nKwidk8BpsqT1LcM2bMV2WNEObZfBkGXaVitLqkSlzYr8
+        +yA7idOuA+aDIfDpvUeRlJ4HAEwWLAUmak6isWr0fn7xpSzyfH29nOjJzcfL8w98eXV1d5lUzS0b
+        RobJ71DQnjUWprEKSRrdwcIhJ4yqk8UsOV3M5slZCzSmQBVplaXRzIxOkpPZKDkdJfMdsTZSoGcp
+        /BwAADy3/5iiLvCJpZAM95EGvecVsvSwCYA5o2KEce+lJ66JDXtQGE2oY9Y6KHUEkDEqE1yp3rj7
+        no/WfZ24Utn5jzJ8/1xcfV2Kx9vJ9c3v5fz6OrnDI79OemPbhMqgxaE+R/ghnr4yA2CaNy33k3EN
+        pwv01mj/2gGAcVeFBjXF7Nnziq25Crhi6YpNxvDNiHssUlgCoWsgeCyADBTohZM5gjcNUi11BVRz
+        AunByyao2D4wDmQjKa6HYEpCDaVxQOgpEmxw1nj049VKn4xhWaGmFC6wROejB9eAmiRtOmkuyIPR
+        kGPNVQmmBK4N1ej22lIDhzx4qdH7aB7HKhCP9eEK2vY9UXSbjmFfjhQuawSHVm0ihWv/iA4quUYN
+        +SbmwGNeEfMbT9i0mcFDQNcSHD4E9DResS17Udjt4K31r6OxcVgGz9Vunnbx7WFAlamsM7l/NW+s
+        lFr6OnPIfdt35snYzjv6tA4svJhtZp1pLGVk7lFHwel02umx/ur16GK2A8kQV318liyGb+hlBRKX
+        7fAf7pvgosaip/b3jodCmiNgcHTqv7N5S7s7udTV/8j3gBBoCYvMOiykeHnifpvD+DL9a9uhym3C
+        zKNbS4EZSXSxEwWWPKju0WDduGSl1BU662T7crDSZpifFQLfzfkpG2wHfwAAAP//AwB684dxQgUA
+        AA==
+    headers:
+      CF-RAY:
+      - 919cb5242811f785-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 02 Mar 2025 00:16:51 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=7XAm3opmturFiyz3mAuucsVV8Fc8x60lBhhmLWPIvjE-1740874611-1.0.1.1-Zh.Z.IbXNikW.3F5UWq41jRKzHAthE4RKFk38x4gl1ab03Ikw.l85EGKpeNCvVD_WVpEXjahBFBkqeyWB0OZPC37LOJkpj_kSbbMkGFJ8k8;
+        path=/; expires=Sun, 02-Mar-25 00:46:51 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=HPhnmFKJu2.firYPPgFn2jNyagmQJm3SIo.e6RDL4P4-1740874611291-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '1896'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '799685'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 23ms
+      x-request-id:
+      - req_04a4004e136214d27b2a89045f7c9518
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":[{"type":"text","text":"# Expert Data Converter\n\nYou
+      are an expert data converter that always maintains as much semantic\nmeaning
+      as possible. You use inference or deduction whenever necessary to\nsupply missing
+      or omitted data. Transform the provided data, text, or\ninformation into the
+      requested format."}],"role":"system"},{"content":[{"type":"text","text":"##
+      Data to convert\n\nmocked agent response\n\n## Additional instructions\n\nWhat
+      is the name of this document\n\n## Response format\n\nCall the `FormatResponse`
+      tool to validate your response, and use the\nfollowing schema: {''description'':
+      ''Format the response with valid JSON.'', ''properties'': {''value'': {''description'':
+      ''The formatted response'', ''title'': ''Value'', ''type'': ''string''}}, ''required'':
+      [''value''], ''type'': ''object''}\n\n- When providing integers, do not write
+      out any decimals at all\n- Use deduction where appropriate e.g. \"3 dollars
+      fifty cents\" is a single\n  value [3.5] not two values [3, 50] unless the user
+      specifically asks for\n  each part.\n- When providing a string response, do
+      not return JSON or a quoted string\n  unless they provided instructions requiring
+      it. If you do return JSON, it\n  must be valid and parseable including double
+      quotes.\n- When converting to bool, treat \"truthy\" values as true"}],"role":"user"}],"model":"gpt-4o","frequency_penalty":0.0,"n":1,"presence_penalty":0.0,"stream":false,"temperature":0.0,"tool_choice":{"type":"function","function":{"name":"FormatResponse"}},"tools":[{"type":"function","function":{"name":"FormatResponse","description":"Format
+      the response with valid JSON.","parameters":{"description":"Format the response
+      with valid JSON.","properties":{"value":{"description":"The formatted response","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}],"top_p":1.0}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1843'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xTy27bMBC86yuIveRiB34osutb7Kat2wQB0iLow4VAkyuJNUUSJBUkNfzvBSXH
+        kl0XqA4CsbMzs7tcbiNCQHCYEWAF9aw0sj9PHpbiLlmb6d2Hahl/vY3fJ4/fs8Xi8dpOoBcYev0L
+        mX9lXTJdGoleaNXAzCL1GFSHk3gwncTJcFQDpeYoAy03vh/r/mgwivuDaX+Q7ImFFgwdzMiPiBBC
+        tvU/lKg4PsOMDHqvkRKdoznC7JBECFgtQwSoc8J5qjz0WpBp5VGFqlUlZQfwWsuUUSlb4+bbds7t
+        nKiU6f013tzc4vx58Xv8iW++vf38MZ8v56OOXyP9YuqCskqxw3w6+CE+OzEjBBQta+47bUvqH9AZ
+        rRyeKBAC1OZVicqH6mG7gicqK1zBbAVfCiRBheiM+EI4wjWrU4lw5KLUbIOc0DwE7F7+4nIFOziy
+        2EXnzj87A7SYVY7K/WT38d3hqqTOjdVrdzJ5yIQSrkgtUldPAJzXpvEOPrUDVEe3DMbq0vjU6w2q
+        IDgejxs9aJewRYfTPei1p7LDuhr2zuilHD0V9RocNo9RViBvqe0G0ooL3QGiTtd/V3NOu+lcqPx/
+        5FuAMTQeeWoscsGOO27TLIY3+q+0w5TrgsGhfRIMUy/QhpvgmNFKNs8H3IvzWKaZUDlaY0X9hiAz
+        Ka7fcIZXCZ1CtIv+AAAA//8DAIJD/u1MBAAA
+    headers:
+      CF-RAY:
+      - 919cb5389a462cb6-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 02 Mar 2025 00:16:53 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=f8ZOG6gzyOP0lrDOrfbkycVehbxR0VVkbmgmxk2ZFQg-1740874613-1.0.1.1-3yi.XROj8TBq3tygHW6TU2dZtOb4Z16dxRTdCBFbEfQYoK9gjcZgbf_V4X.PdCW1jlzVNlPzpQC7Rciof8dR3VhEPSL79vymhas4DfdqwUs;
+        path=/; expires=Sun, 02-Mar-25 00:46:53 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=9uGfEL5FbU0cTHsdVzlabtPB_3XgNT6SaSAdmtAqMAQ-1740874613225-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '551'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '799685'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 23ms
+      x-request-id:
+      - req_f12c8b4323b4c7f71289099cad57130f
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "A defined term is defined as a term that is defined...\n"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[0.0011845814296975732,0.0005737419123761356,-0.013196799904108047,-0.005769272334873676,-0.07224661111831665,-0.02517852745950222,0.03706574812531471,0.017122704535722733,0.039805009961128235,-0.012777105905115604,-0.023758601397275925,-0.05966700613498688,0.01130157895386219,0.016412444412708282,0.03426127880811691,-0.04565425217151642,-0.018823236227035522,0.01762809418141842,-0.029556185007095337,0.03383511304855347,0.24023418128490448,0.09702982008457184,-0.05832099914550781,0.0005220911698415875,-0.017327021807432175,-0.02052903361618519,-0.045897990465164185,-0.02549584209918976,0.05380665883421898,0.09024450182914734,-0.013825769536197186,0.06034038960933685,0.050408486276865005,0.02631293796002865,0.018930191174149513,0.05369507521390915,-0.07800836116075516,0.04509476572275162,0.01613905094563961,-0.0742458775639534,-0.05013618990778923,-0.009212914854288101,-0.010975828394293785,0.04603342339396477,-0.047279175370931625,0.025547577068209648,0.10857470333576202,-0.014435171149671078,-0.08336631953716278,-0.0032101913820952177,-0.06022900342941284,0.021292857825756073,-0.09571663290262222,-0.011269966140389442,0.020724114030599594,0.022488107904791832,-0.0434671975672245,0.0006902354070916772,-0.015262694098055363,-0.032992884516716,-0.0809740200638771,0.05337028205394745,0.023286975920200348,0.1065409779548645,-0.04782834276556969,-0.02388842962682247,-0.12450705468654633,0.013580630533397198,0.029077254235744476,0.056387417018413544,-0.004846144933253527,-0.005410587880760431,0.11579622328281403,0.022592972964048386,-0.02152065373957157,-0.019431037828326225,0.044813018292188644,0.04858383163809776,0.02271052449941635,0.07152469456195831,-0.029530886560678482,0.06379314512014389,-0.026721665635704994,0.03398028016090393,0.01440356019884348,0.0005258791497908533,0.032496482133865356,-0.06728211045265198,-0.03450901806354523,0.03504783660173416,-0.0988600105047226,-0.1328301727771759,0.11603717505931854,-0.07445169985294342,-0.04977717250585556,-0.09740099310874939,0.06696700304746628,-0.025249158963561058,0.07204537838697433,-0.03658345341682434,-0.008969726972281933,0.0054531521163880825,-0.0804523155093193,0.03673309460282326,0.035178042948246,-0.04672319069504738,-0.020845657214522362,-0.052091002464294434,-0.00468149920925498,-0.030854813754558563,-0.033033985644578934,-0.009561281651258469,0.044992413371801376,-0.08529623597860336,0.030557192862033844,-0.03518953546881676,-0.07025173306465149,-0.030937435105443,0.03631801903247833,0.06115137040615082,-0.013470104895532131,0.042321864515542984,0.03927432745695114,-0.025528211146593094,0.019631052389740944,-0.018279531970620155,0.02722867578268051,3.5143575931392605e-31,-0.09196437150239944,-0.06788063049316406,-0.02695399709045887,0.01399675477296114,-0.05260198190808296,0.0923825278878212,0.060156721621751785,-0.03659795597195625,-0.03234400227665901,0.05991429090499878,0.06597300618886948,0.06655881553888321,-0.03379399701952934,0.12551526725292206,0.10206287354230881,0.10470341145992279,0.06551230698823929,0.09284508973360062,0.027965763583779335,0.0010063434019684792,-0.016128484159708023,0.013158389367163181,-0.02370317652821541,-0.012935069389641285,-0.0716865137219429,-0.02958567813038826,0.005643501412123442,-0.010244276374578476,-0.02091679349541664,-0.021609393879771233,-0.00026842995430342853,-0.009768792428076267,0.04555117338895798,0.001208135741762817,0.024935852736234665,0.03055315650999546,0.017361393198370934,0.0017804806120693684,0.02983928471803665,-0.012236271053552628,0.05029706284403801,0.011906023137271404,0.018558690324425697,-0.03295331820845604,0.0562799796462059,-0.017338978126645088,-0.06004076823592186,-0.010409488342702389,-0.07834156602621078,0.02272784523665905,-0.014393907971680164,-0.03711796551942825,0.1553102731704712,-0.03561047464609146,-0.08209434896707535,0.0030609979294240475,-0.018933361396193504,0.02699744701385498,-0.1261398196220398,0.052038755267858505,-0.026603424921631813,0.05806167423725128,0.028772447258234024,0.016221994534134865,0.023382415995001793,-0.03269986808300018,-0.008539553731679916,0.06843645870685577,-0.04009417071938515,0.0010103200329467654,0.050546642392873764,0.008964323438704014,0.04653271287679672,0.08809725195169449,0.042625170201063156,0.026367703452706337,0.019907191395759583,0.005630556493997574,-0.11069490760564804,-0.02957952581346035,-0.10864970088005066,0.01785118132829666,0.011842682026326656,-0.01033730898052454,0.011536533944308758,0.013139409013092518,-0.026260115206241608,-0.030256330966949463,-0.04367440193891525,0.02783820964396,-0.01602967455983162,0.0031728153117001057,-0.051488447934389114,0.020603319630026817,-0.0013168829027563334,-3.666550551207031e-33,0.0545528382062912,0.0336335152387619,-0.03474931791424751,0.021113542839884758,-0.02325006015598774,-0.01731221191585064,-0.06608634442090988,-0.0009916929993778467,-0.06484807282686234,-0.012044752016663551,-0.060437820851802826,-0.030031787231564522,-0.010017013177275658,-0.028483422473073006,-0.036211758852005005,-0.022016450762748718,-0.019701410084962845,-0.12957775592803955,0.010072823613882065,0.12941467761993408,-0.04354487732052803,-0.03683556616306305,0.03547905385494232,-0.012373304925858974,0.03370121866464615,0.006536406930536032,0.009684553369879723,0.03941784054040909,0.0003919081063941121,0.0472385436296463,-0.07653377205133438,0.04193142056465149,-0.05381019786000252,-0.07696597278118134,0.0035130816977471113,-0.044608984142541885,0.060666125267744064,-0.12912000715732574,0.008003507740795612,-0.09190106391906738,0.002683959435671568,-0.019450867548584938,-0.022616051137447357,-0.056819308549165726,0.09443330019712448,-0.010206555016338825,0.0038479643408209085,-0.024799635633826256,0.052556756883859634,-0.04138518497347832,-0.022089462727308273,-0.09977123141288757,0.0006734000635333359,-0.025126051157712936,0.03570592775940895,-0.019688144326210022,-0.012917477637529373,-0.002723477315157652,0.0212142001837492,0.009441487491130829,0.0798577070236206,-0.02366543933749199,-0.057751480489969254,0.054504163563251495,-0.004796059336513281,0.02247924730181694,-0.08094605803489685,0.060434967279434204,0.011289884336292744,-0.011900334618985653,0.02485203742980957,0.05299391224980354,-0.03347136080265045,-0.03442731872200966,-0.04275888949632645,-0.002017353894189,-0.011983722448348999,-0.029791180044412613,0.06501150131225586,0.039662014693021774,-0.028195587918162346,0.00788871943950653,-0.005035690497606993,-0.07544654607772827,-0.002477039350196719,-0.05810515582561493,-0.014959678053855896,0.12104984372854233,-0.0877695381641388,-0.02609437145292759,0.09527430683374405,0.004283390007913113,-0.07126864790916443,0.05170559883117676,-0.0894760712981224,-4.759998702419784e-33,-0.0025411369279026985,0.03341155871748924,0.04740782082080841,-0.013818838633596897,0.045593224465847015,0.00824000220745802,0.08100791275501251,-0.028449295088648796,0.018702950328588486,-0.10705607384443283,0.015207264572381973,0.008626275695860386,0.012974877841770649,0.06367762386798859,-0.0023962734267115593,-0.04278237000107765,-0.04135656729340553,-0.04924838989973068,0.028433149680495262,0.0969453752040863,0.04070085287094116,-0.044717833399772644,-0.1234595775604248,0.030040709301829338,0.018773317337036133,-0.07215579599142075,0.018791357055306435,0.04088597744703293,0.05514989420771599,0.026261743158102036,0.01304627675563097,0.0631582960486412,-0.026138246059417725,0.06402559578418732,-0.01322334073483944,-0.011825736612081528,0.04774383455514908,0.04656435549259186,0.04342517629265785,0.06086982414126396,-0.06952236592769623,0.05634443834424019,-0.0007720651919953525,-0.03763047233223915,-0.011408066377043724,0.06505774706602097,-0.020853133872151375,0.009913944639265537,0.01607750728726387,-0.0589538998901844,-0.033463411033153534,0.1068992167711258,0.01702011749148369,-0.03631948307156563,-0.042502570897340775,0.04319746047258377,0.010356911458075047,-0.02234099619090557,-0.09065963327884674,-0.010996246710419655,-0.010687156580388546,0.0019633350893855095,0.0430433563888073,0.03044673055410385]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8066'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 02 Mar 2025 00:16:57 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "\nPerson shall mean a person."}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '41'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[0.019998157396912575,0.009387667290866375,-0.04199403151869774,-0.07108259946107864,-0.08744508028030396,-0.009312310256063938,0.11139863729476929,-0.05600114166736603,0.02205910161137581,-0.003929234109818935,0.06898681819438934,-0.05651329457759857,0.01621641032397747,-0.049119796603918076,0.02483760006725788,0.014930176548659801,-0.04690335690975189,0.014836957678198814,0.0003642152005340904,0.08285211771726608,0.03479766473174095,0.02011343277990818,0.021237347275018692,-0.043527502566576004,-0.05814773589372635,-0.03873306140303612,0.06533605605363846,-0.10413023084402084,0.06373976916074753,0.06401857733726501,-0.04138282313942909,0.03675631806254387,-0.006916020065546036,0.08891265839338303,-0.045238249003887177,0.056045759469270706,0.013053696602582932,-0.012374641373753548,0.0084922406822443,-0.00935992132872343,0.020077789202332497,-0.04794960096478462,-0.0011291704140603542,0.040860287845134735,-0.013123435899615288,0.05888274684548378,0.046919748187065125,-0.04355014115571976,-0.06263218820095062,0.0560426339507103,-0.033441152423620224,-0.0325995609164238,-0.05248023197054863,0.021404344588518143,-0.05788807570934296,-0.023203477263450623,-0.05637213587760925,0.006960791070014238,0.01715521700680256,0.006618206389248371,-0.01927104778587818,0.013634036295115948,-0.0014302994823083282,0.049318309873342514,0.06210847944021225,-0.010502738878130913,0.029340101405978203,-0.006503626238554716,-0.08847782015800476,0.007070717867463827,-0.015841087326407433,-0.007642467971891165,0.08101174980401993,0.008531653322279453,-0.09634808450937271,-0.1294984668493271,0.0699337050318718,0.020322205498814583,0.025804229080677032,0.0065751392394304276,-0.09683962166309357,0.007978340610861778,0.029021745547652245,-0.019275959581136703,-0.0290004163980484,0.007715958636254072,-0.019765887409448624,-0.027819722890853882,-0.02539036050438881,0.04842666536569595,-0.05157870054244995,-0.007873610593378544,0.06825759261846542,0.01589951477944851,-0.010367371141910553,0.022320060059428215,0.015622402541339397,-0.04029412567615509,-0.03498426079750061,0.08642233908176422,-0.04239516705274582,0.04785127192735672,0.005965342279523611,0.08517688512802124,0.04279303550720215,-0.015485714189708233,-0.07301542907953262,-0.06476207077503204,-0.015219329856336117,0.004947274923324585,-0.06654390692710876,-0.07079997658729553,-0.0018008679617196321,-0.030087005347013474,0.07780639827251434,-0.04442717134952545,-0.06630980223417282,0.0474674329161644,0.0032721555326133966,-0.13589586317539215,-0.003749487455934286,0.022290362045168877,-0.0014145893510431051,0.010635030455887318,-0.004131439607590437,-0.004959709942340851,-0.012047037482261658,6.206807655392616e-31,-0.035767704248428345,0.0529889278113842,0.01526246964931488,0.017500346526503563,-0.002879691543057561,0.04097345843911171,-0.03205288201570511,-0.0024020650889724493,0.0007509352872148156,0.0038428418338298798,0.07377628982067108,-0.10913395881652832,-0.012313791550695896,0.07050810754299164,0.04015902429819107,0.08938932418823242,0.04692856967449188,-0.012086424045264721,-0.041095517575740814,-0.011187601834535599,-0.01526052039116621,0.057920560240745544,-0.05020565912127495,0.011967480182647705,-0.06851918250322342,-0.058116912841796875,0.06826872378587723,0.006638259626924992,0.028961919248104095,-0.01877889595925808,0.004700666759163141,0.07464660704135895,0.04301655292510986,0.05840232968330383,0.024294067174196243,-0.02968534640967846,-0.018414657562971115,0.024661604315042496,0.04090377688407898,-0.028088057413697243,0.030361268669366837,0.08942883461713791,0.0242761243134737,0.006631844211369753,-0.04398287460207939,-0.02160121127963066,0.023332450538873672,-0.009221076965332031,-0.005228149238973856,0.03258751332759857,-0.01267622783780098,-0.04588354378938675,0.07738088816404343,0.06179714947938919,-0.03607742488384247,-0.022675689309835434,-0.06927414983510971,0.10756761580705643,-0.14205268025398254,-0.05899565666913986,-0.0004535227199085057,-0.11133384704589844,0.10202132910490036,0.06151602417230606,0.037771694362163544,-0.14674292504787445,-0.03957124054431915,0.00839578453451395,0.04336140677332878,-0.0043786317110061646,0.0017866899725049734,-0.018428437411785126,-0.031405914574861526,0.07462082803249359,-0.08794084191322327,0.019185302779078484,0.06104755401611328,-0.03454861417412758,-0.028797997161746025,0.07697197049856186,-0.08021477609872818,0.006546215619891882,-0.02180333063006401,-0.09263504296541214,0.06351833790540695,0.05555098503828049,-0.05163726210594177,-0.029388774186372757,0.05823124200105667,-0.016903474926948547,0.059956930577754974,0.020784806460142136,0.026152465492486954,-0.00022877573792356998,-0.11617238819599152,-3.287034485862378e-33,0.006185214966535568,-0.003681700909510255,0.003543669590726495,0.08183764666318893,0.015035361982882023,-0.06944714486598969,0.019012533128261566,0.033679187297821045,-0.01635892130434513,0.06790027022361755,-0.13474169373512268,-0.06651241332292557,-0.011291811242699623,0.0460815355181694,0.08498873561620712,-0.06176530197262764,-0.015915777534246445,-0.09367331117391586,-0.025783298537135124,0.0672222375869751,-0.002085586078464985,-0.03414494916796684,-0.0271479319781065,-0.011893096379935741,-0.01300976425409317,-0.011844456195831299,0.0789119303226471,-2.692860107345041e-06,-0.09304403513669968,-0.025597859174013138,0.013256512582302094,0.0037685008719563484,-0.19701553881168365,-0.060046080499887466,0.006250506266951561,-0.0925680473446846,0.06921800971031189,0.06311983615159988,-0.05023614689707756,0.06049433723092079,-0.00628996267914772,0.0011332615977153182,-0.03756314888596535,-0.013031178154051304,-0.0059494138695299625,-0.027103710919618607,0.032971661537885666,-0.0749727413058281,0.00977824255824089,0.023116042837500572,-0.08876701444387436,-0.0007268555928021669,0.06851587444543839,-0.037563569843769073,-0.0015623944345861673,-0.07692462205886841,-0.07502222806215286,-0.03670445457100868,0.04198368266224861,-0.0514652281999588,0.013546121306717396,-0.0007744700997136533,0.028477072715759277,0.09551288932561874,-0.004234063904732466,0.07500187307596207,-0.059776127338409424,0.11038020998239517,-0.04496770352125168,0.021678751334547997,0.08046658337116241,-0.10270708054304123,-0.05519740656018257,-0.040661267936229706,-0.03192935883998871,-0.077276311814785,0.0415230467915535,-0.03781677037477493,0.08729914575815201,-0.07801522314548492,0.03397751972079277,-0.03262266144156456,-0.024362120777368546,-0.0007739295833744109,-0.019343430176377296,-0.1243867576122284,0.06781607866287231,0.07211640477180481,0.003881719196215272,0.026984097436070442,0.03244740515947342,0.015776311978697777,-0.03274029120802879,-0.04531592130661011,-0.07783322036266327,-3.383607958938152e-33,-0.02880673296749592,-0.025352241471409798,0.009584968909621239,-0.017035286873579025,0.07349257916212082,0.04207662492990494,0.015974633395671844,-0.07774951308965683,-0.018941638991236687,0.05077475309371948,0.07511776685714722,0.045469023287296295,0.028534645214676857,0.005121173802763224,0.08796501904726028,-0.010050689801573753,0.0013096415204927325,-0.044372353702783585,-0.02321493811905384,0.05570376291871071,0.06536008417606354,-0.028082896023988724,-0.017202870920300484,0.09639470279216766,-0.004605984315276146,0.015636911615729332,-0.0012308681616559625,0.054366473108530045,-0.034147296100854874,0.04307282343506813,-0.059560202062129974,0.05931525304913521,0.009455184452235699,0.004016004502773285,0.008183727972209454,0.04277146980166435,0.01234484277665615,-0.028962304815649986,0.07026220858097076,0.04083345830440521,-0.03010490909218788,0.0690593421459198,0.05544327571988106,0.032712776213884354,0.03524409607052803,0.02726660668849945,0.07674390822649002,-0.005176903214305639,-0.0014489953173324466,-0.023762231692671776,-0.03348862752318382,0.04606331139802933,0.007376401219516993,0.051070429384708405,-0.02508101984858513,-0.020163800567388535,0.021161464974284172,0.06786862760782242,-0.05454280227422714,0.01101665012538433,0.023669935762882233,-0.008493800647556782,0.07625371217727661,-0.07257725298404694]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8081'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 02 Mar 2025 00:16:57 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":[{"type":"text","text":"# Expert Data Converter\n\nYou
+      are an expert data converter that always maintains as much semantic\nmeaning
+      as possible. You use inference or deduction whenever necessary to\nsupply missing
+      or omitted data. Transform the provided data, text, or\ninformation into the
+      requested format."}],"role":"system"},{"content":[{"type":"text","text":"##
+      Data to convert\n\nmocked agent response\n\n## Additional instructions\n\nProvide
+      a list of the defined terms \n\n## Response format\n\nCall the `FormatResponse`
+      tool to validate your response, and use the\nfollowing schema: {''description'':
+      ''Format the response with valid JSON.'', ''properties'': {''value'': {''description'':
+      ''The formatted response'', ''title'': ''Value'', ''type'': ''string''}}, ''required'':
+      [''value''], ''type'': ''object''}\n\n- When providing integers, do not write
+      out any decimals at all\n- Use deduction where appropriate e.g. \"3 dollars
+      fifty cents\" is a single\n  value [3.5] not two values [3, 50] unless the user
+      specifically asks for\n  each part.\n- When providing a string response, do
+      not return JSON or a quoted string\n  unless they provided instructions requiring
+      it. If you do return JSON, it\n  must be valid and parseable including double
+      quotes.\n- When converting to bool, treat \"truthy\" values as true"}],"role":"user"}],"model":"gpt-4o","frequency_penalty":0.0,"n":1,"presence_penalty":0.0,"stream":false,"temperature":0.0,"tool_choice":{"type":"function","function":{"name":"FormatResponse"}},"tools":[{"type":"function","function":{"name":"FormatResponse","description":"Format
+      the response with valid JSON.","parameters":{"description":"Format the response
+      with valid JSON.","properties":{"value":{"description":"The formatted response","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}],"top_p":1.0}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1846'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFRNb+M2EL37Vwx4jg0n9ma9umU/UgRBgCII2kNdCGNqJHFNchhylMYJ
+        8t8XlGLLSbfo6iAQ8/HemxkOnycAylSqAKVbFO2CnX4+v72y94934Xq57a7v2uXTw++L1dNv139e
+        +Fqd5AzefCct+6yZZhcsiWE/uHUkFMqopx+X89XH5fnph97huCKb05og0yVPz+Zny+l8NZ2fvya2
+        bDQlVcBfEwCA5/6fJfqKHlUB85O9xVFK2JAqDkEAKrLNFoUpmSToRZ2MTs1eyGfVvrP2yCHMttRo
+        7Ug8fM9H57FPaG0pt09fu6/3N1dXlw7p9PLb6svupvnj2xHfAL0LvaC68/rQnyP/wV68IwNQHl2f
+        e8nRodxSCuwTvUMAUBibzpGXrF49r9UD2o7Wqlir0xncsN5SVcAFCEUHXaIKhKGipKPZECR2JK3x
+        DUiLAiZBMq6zeXzAEYwzks8nwLWQh5ojCCXJCRyhIsc+ScRcA4QuBk6UZuu1P5vBRUNeCrilmmLK
+        pOiBvBjZDVyoJQF72FCLtgauAT1LS3FP1os1HqQl6If3KDkqcS3/YKQsAKOY2miDFowXstY05DVl
+        tkCx5uhAMG1TjnW4JahIm2TY9yIXM9i3tYC7liBSsLscGwn7ufSyIUnuSdej3HcUd/+jULNznTd6
+        aEvuEwoCPeoWfUOztXpRb4b4MvnZ+e+jKxqp7hLa17v7an85LIPlJkTepHd3W9XGm9SWkTD1d0wl
+        4TBwZ56eQXVv9kiFyC5IKbwlnwEXi8WAp8Y1H72fXjdSCQva0b4822e9wSsrEjT9oh12W6NuqRpT
+        xx3HrjJ85JgcVf1vNT/DHio3vvkV+NGhNQWhqgyRKqPfVjyGRcqv4H+FHbrcC1aJ4oPRVIqhmCdR
+        UY2dHR4olXZJyJW18Q3FEE3/Sqk6lLT5VGn6cI4rNXmZ/AAAAP//AwAm+AACrgUAAA==
+    headers:
+      CF-RAY:
+      - 919cb54a7ed06e66-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 02 Mar 2025 00:16:58 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=8Jzcf9mWf8SJtKp5v9Pkh2VnfnD5Fjpg4trMAVDRW7Q-1740874618-1.0.1.1-GB3ztxyfT9UlRW9Qnob9I9s8lLmk090qYnV0vV15JxhxEtiJwjEPW76RY904i7WdpqO9rGlvyqX1gVhcVqqUKbU9IP6udjjjDUaS5JfZgh4;
+        path=/; expires=Sun, 02-Mar-25 00:46:58 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=X1GW6JyK0Cephl_SsHQn4UNY6mwUSeLHRYZSl6PwWvA-1740874618388-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '2846'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '799685'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 23ms
+      x-request-id:
+      - req_2f485fd8c820d9fe0814c5e9c3ef4205
     status:
       code: 200
       message: OK

@@ -10,10 +10,10 @@ from typing import Any
 from unittest.mock import patch
 from urllib.parse import quote
 
-from django.test import override_settings
 import vcr
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from graphql_relay import to_global_id
 
 from opencontractserver.tests.base import WebsocketFixtureBaseTestCase
@@ -29,14 +29,18 @@ class CorpusQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
     """
 
     @override_settings(USE_AUTH0=False)
-    @patch('config.websocket.consumers.corpus_conversation.CorpusQueryConsumer.generate_conversation_title')
+    @patch(
+        "config.websocket.consumers.corpus_conversation.CorpusQueryConsumer.generate_conversation_title"
+    )
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/corpus_query_consumer/test_valid_token.yaml",
         filter_headers=["authorization"],
-        match_on=['method', 'scheme', 'host', 'port', 'path', 'query'],
-        record_mode='once'
+        match_on=["method", "scheme", "host", "port", "path", "query"],
+        record_mode="once",
     )
-    async def test_corpus_query_consumer_with_valid_token(self, mock_generate_title) -> None:
+    async def test_corpus_query_consumer_with_valid_token(
+        self, mock_generate_title
+    ) -> None:
         """
         Verifies that providing a valid token allows a user to connect to the
         CorpusQueryConsumer, send a query, and receive a streaming or synchronous response.
@@ -44,7 +48,7 @@ class CorpusQueryConsumerTestCase(WebsocketFixtureBaseTestCase):
         """
         # Mock the title generation to return a fixed value
         mock_generate_title.return_value = "Mocked Conversation Title"
-        
+
         # Ensure we have at least one Corpus from the fixtures
         self.assertTrue(hasattr(self, "corpus"), "A fixture Corpus must be available.")
 

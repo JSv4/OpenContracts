@@ -338,16 +338,11 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
 
 def async_celery_task(*task_args, **task_kwargs) -> Callable:
     """
-    A decorator to convert an async function into a Celery task that runs
-    within its own asyncio event loop.
+    Decorator for async Celery tasks.
 
-    Args:
-        *task_args: Positional arguments for Celery's shared_task.
-        **task_kwargs: Keyword arguments for Celery's shared_task.
-
-    Returns:
-        A standard sync Celery task function that internally spins up an
-        event loop to run the originally wrapped async function.
+    This decorator wraps an async function to make it compatible with Celery,
+    which expects synchronous functions. It creates a new event loop or uses
+    an existing one to run the originally wrapped async function.
     """
 
     def decorator(async_func: Callable[..., Any]) -> Callable[..., Any]:
@@ -355,6 +350,12 @@ def async_celery_task(*task_args, **task_kwargs) -> Callable:
         @shared_task(*task_args, **task_kwargs)
         @functools.wraps(async_func)
         def wrapper(*args, **kwargs) -> Any:
+            from django.db import connections
+
+            # Close any existing connections before starting the async task
+            for conn in connections.all():
+                conn.close_if_unusable_or_obsolete()
+
             # Create a new event loop (or reuse an existing one if needed)
             loop = asyncio.new_event_loop()
             try:
@@ -363,6 +364,12 @@ def async_celery_task(*task_args, **task_kwargs) -> Callable:
             finally:
                 # Ensure we gracefully shut down async gens/tasks
                 loop.run_until_complete(loop.shutdown_asyncgens())
+
+                # Close connections after task completion to prevent hanging connections
+                for conn in connections.all():
+                    conn.close_if_unusable_or_obsolete()
+                    conn.close()
+
                 loop.close()
 
         return wrapper

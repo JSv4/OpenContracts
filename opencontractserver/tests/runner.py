@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class TerminateConnectionsTestRunner(DiscoverRunner):
     """
-    Custom test runner that forcibly terminates all database connections
+    Custom test runner that gracefully handles database connections
     before attempting to drop the test database.
     """
 
@@ -20,18 +20,29 @@ class TerminateConnectionsTestRunner(DiscoverRunner):
 
     def teardown_databases(self, old_config, **kwargs):
         """
-        Override teardown_databases to terminate connections before dropping the database.
+        Override teardown_databases to gracefully close connections before dropping the database.
         """
         db_name = connections[DEFAULT_DB_ALIAS].settings_dict["NAME"]
 
         # Close Django's own connections first
         for conn in connections.all():
+            conn.close_if_unusable_or_obsolete()
             conn.close()
 
         # Retry termination and dropping multiple times
         for attempt in range(5):
             try:
+                # First check for active queries and wait for them to complete
+                if self._has_active_queries(db_name):
+                    logger.warning(
+                        f"Waiting for active queries to complete on {db_name}..."
+                    )
+                    time.sleep(2)
+                    continue
+
+                # Now terminate idle connections
                 self._terminate_db_connections(db_name)
+
                 # Now attempt to drop the database
                 return super().teardown_databases(old_config, **kwargs)
             except Exception as e:
@@ -47,18 +58,77 @@ class TerminateConnectionsTestRunner(DiscoverRunner):
             f"Could not drop test database '{db_name}' after multiple attempts."
         )
 
+    def _has_active_queries(self, db_name):
+        """
+        Check if there are any active queries running on the database.
+        """
+        with connections[DEFAULT_DB_ALIAS].cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM pg_stat_activity
+                WHERE datname = %s
+                  AND pid <> pg_backend_pid()
+                  AND state = 'active'
+                  AND query <> '<IDLE>';
+                """,
+                [db_name],
+            )
+            active_count = cursor.fetchone()[0]
+            if active_count > 0:
+                logger.warning(
+                    f"Found {active_count} active queries on database '{db_name}'."
+                )
+                return True
+            return False
+
     def _terminate_db_connections(self, db_name):
         """
         Terminate all connections to the specified database.
+        First try to terminate idle connections, then all connections if needed.
         """
+        # First try to terminate only idle connections
         with connections[DEFAULT_DB_ALIAS].cursor() as cursor:
             cursor.execute(
                 """
                 SELECT pg_terminate_backend(pid)
                 FROM pg_stat_activity
+                WHERE datname = %s
+                  AND pid <> pg_backend_pid()
+                  AND state = 'idle';
+                """,
+                [db_name],
+            )
+            idle_terminated = cursor.rowcount
+            logger.info(
+                f"Terminated {idle_terminated} idle connections to database '{db_name}'."
+            )
+
+        # If we still have active connections, terminate them as a last resort
+        with connections[DEFAULT_DB_ALIAS].cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM pg_stat_activity
                 WHERE datname = %s AND pid <> pg_backend_pid();
                 """,
                 [db_name],
             )
-            terminated = cursor.rowcount
-            logger.info(f"Terminated {terminated} connections to database '{db_name}'.")
+            remaining = cursor.fetchone()[0]
+
+            if remaining > 0:
+                logger.warning(
+                    f"Still have {remaining} active connections to terminate."
+                )
+                cursor.execute(
+                    """
+                    SELECT pg_terminate_backend(pid)
+                    FROM pg_stat_activity
+                    WHERE datname = %s AND pid <> pg_backend_pid();
+                    """,
+                    [db_name],
+                )
+                terminated = cursor.rowcount
+                logger.info(
+                    f"Terminated {terminated} remaining connections to database '{db_name}'."
+                )

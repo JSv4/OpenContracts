@@ -270,7 +270,18 @@ class CeleryEagerModeFixtureTestCase(BaseFixtureTestCase, CeleryEagerModeTestCas
         BaseFixtureTestCase.setUp(self)
         CeleryEagerModeTestCase.setUp(self)
 
+        # Ensure we have fresh connections before running async tasks
+        for alias in connections:
+            connections[alias].close()
+            connections[alias].connect()
+
     def tearDown(self):
+        # Close connections before teardown to prevent them from being terminated
+        # while still in use by async tasks
+        for alias in connections:
+            connections[alias].close_if_unusable_or_obsolete()
+            connections[alias].close()
+
         # Call both parent tearDown methods in reverse order
         CeleryEagerModeTestCase.tearDown(self)
         BaseFixtureTestCase.tearDown(self)

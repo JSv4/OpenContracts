@@ -96,11 +96,6 @@ export const AnalysesCards = ({
           margin: ".75em",
           minWidth: "300px",
         }}
-        include_image
-        image_style={{
-          height: "30vh",
-          width: "auto",
-        }}
         key="no_analyses_available_placeholder"
         title="No Analyses Available..."
         description="If you have sufficient privileges, try running a new analysis from the corpus page (right click on the corpus)."

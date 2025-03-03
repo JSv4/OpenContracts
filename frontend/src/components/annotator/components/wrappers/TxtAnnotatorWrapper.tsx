@@ -25,6 +25,7 @@ import {
   useZoomLevel,
 } from "../../context/UISettingsAtom";
 import { useCorpusState } from "../../context/CorpusAtom";
+import { useChatSourceState } from "../../context/ChatSourceAtom";
 
 interface TxtAnnotatorWrapperProps {
   readOnly: boolean;
@@ -55,6 +56,40 @@ export const TxtAnnotatorWrapper: React.FC<TxtAnnotatorWrapperProps> = ({
   const handleUpdateAnnotation = useUpdateAnnotation();
   const handleApproveAnnotation = useApproveAnnotation();
   const handleRejectAnnotation = useRejectAnnotation();
+
+  const { messages, selectedMessageId, selectedSourceIndex } =
+    useChatSourceState();
+
+  const chatSourceMatches = React.useMemo(() => {
+    const allSources: {
+      start_index: number;
+      end_index: number;
+      sourceId: string;
+      messageId: string;
+    }[] = [];
+
+    for (const msg of messages) {
+      for (const src of msg.sources) {
+        // If this is a text-based source, we have numeric startIndex/endIndex
+        if (
+          src.isTextBased &&
+          typeof src.startIndex === "number" &&
+          typeof src.endIndex === "number"
+        ) {
+          allSources.push({
+            start_index: src.startIndex,
+            end_index: src.endIndex,
+            sourceId: src.id,
+            messageId: msg.messageId,
+          });
+        }
+      }
+    }
+
+    return allSources;
+  }, [messages]);
+
+  console.log("chatSourceMatches", chatSourceMatches);
 
   // Memoized getSpan callback
   const getSpan = useCallback(
@@ -95,6 +130,12 @@ export const TxtAnnotatorWrapper: React.FC<TxtAnnotatorWrapperProps> = ({
       text={docText}
       annotations={filteredAnnotations}
       searchResults={filteredSearchResults}
+      chatSources={chatSourceMatches}
+      selectedChatSourceId={
+        selectedMessageId && selectedSourceIndex
+          ? `${selectedMessageId}.${selectedSourceIndex}`
+          : undefined
+      }
       getSpan={getSpan}
       visibleLabels={spanLabelsToView}
       availableLabels={spanLabels}

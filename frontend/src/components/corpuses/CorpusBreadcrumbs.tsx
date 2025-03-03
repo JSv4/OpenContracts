@@ -21,7 +21,14 @@ export const CorpusBreadcrumbs = () => {
     <VerticallyCenteredDiv>
       <BreadCrumbContainer>
         <div style={{ marginRight: ".5rem" }}>
-          <Header as="h4">Selected Corpus:</Header>
+          <Header
+            as="h4"
+            style={{
+              fontSize: window.innerWidth <= 768 ? "0.9rem" : undefined,
+            }}
+          >
+            Selected Corpus:
+          </Header>
         </div>
         <Breadcrumb>
           {opened_corpus ? (
@@ -70,4 +77,9 @@ const BreadCrumbContainer = styled.div`
   width: 100%;
   flex-direction: row;
   justify-content: flex-start;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    padding: 0.5rem;
+  }
 `;

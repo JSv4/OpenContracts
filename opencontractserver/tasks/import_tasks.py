@@ -102,11 +102,21 @@ def import_corpus(
                         label_data_dict=text_label_data_dict,
                         existing_labels=existing_text_labels,
                     )
+                    logger.info(
+                        f"import_corpus() - existing_text_labels: {existing_text_labels}"
+                    )
+                    # This is super hacky... need to rebuild entire import / export pipeline (one day)
                     existing_doc_labels = load_or_create_labels(
                         user_id=user_id,
                         labelset_obj=labelset_obj,
                         label_data_dict=doc_label_data_dict,
                         existing_labels=existing_doc_labels,
+                    )
+                    doc_label_lookup = {
+                        label.text: label for label in existing_doc_labels.values()
+                    }
+                    logger.info(
+                        f"import_corpus() - existing_doc_labels: {existing_doc_labels}"
                     )
                     label_lookup = {**existing_text_labels, **existing_doc_labels}
 
@@ -157,8 +167,15 @@ def import_corpus(
 
                                 # Import Document-level annotations
                                 doc_labels_list = doc_data.get("doc_labels", [])
+                                logger.info(
+                                    f"import_corpus() - Found {len(doc_labels_list)} doc labels to import"
+                                )
+
                                 for doc_label_name in doc_labels_list:
-                                    label_obj = existing_doc_labels.get(doc_label_name)
+                                    label_obj = doc_label_lookup.get(doc_label_name)
+                                    logger.info(
+                                        f"import_corpus() - Found doc label_obj: {label_obj}"
+                                    )
                                     if label_obj:
                                         annot_obj = Annotation.objects.create(
                                             annotation_label=label_obj,
@@ -173,6 +190,9 @@ def import_corpus(
                                 # Import Text annotations
                                 text_annotations_data = doc_data.get(
                                     "labelled_text", []
+                                )
+                                logger.info(
+                                    f"import_corpus() - Found {len(text_annotations_data)} text annotations to import"
                                 )
                                 import_annotations(
                                     user_id=user_id,

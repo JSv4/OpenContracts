@@ -1,0 +1,457 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You thoroughly answer requests
+      about the document titled ''Test Doc'' (ID: 1). This document is described as:\n\n`USC
+      Title 1 - Chapter 1`\n\nReturn your answers in thoughtful, attractive markdown.
+      Avoid repeating instructions, writing down your thought processes (unless asked),
+      or giving disclaimers."},{"role":"user","content":"Please summarize the doc."}],"model":"gpt-4o","stream":true,"temperature":0.1,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
+      int, truncate_length: Optional[int], from_start: bool) -> str\n\n    Load the
+      content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document.\n        truncate_length: Optional integer
+      specifying how many characters to return.\n        from_start: If True, return
+      from the start up to truncate_length. Otherwise, return from the end.\n\n    Returns:\n        A
+      string containing the content of the md_summary_file (possibly truncated).\n    ","parameters":{"properties":{"document_id":{"description":"Primary
+      key of the Document.","title":"Document Id","type":"integer"},"truncate_length":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"description":"Optional
+      number of characters to truncate. If provided, returns only that many characters.","title":"Truncate
+      Length"},"from_start":{"default":true,"description":"If truncate_length is provided,
+      determines whether to return from start or end.","title":"From Start","type":"boolean"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_md_summary_token_length","description":"get_md_summary_token_length(document_id:
+      int) -> int\n\n    Calculates the approximate token length of a Document''s
+      md_summary_file.\n    Uses a naive whitespace-based split for tokenization.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document.\n\n    Returns:\n        An integer representing
+      the approximate token count of the md_summary_file.\n    ","parameters":{"properties":{"document_id":{"description":"Primary
+      key of the Document.","title":"Document Id","type":"integer"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_notes_for_document_corpus","description":"get_notes_for_document_corpus(document_id:
+      int, corpus_id: Optional[int]) -> list[dict]\n\n    Retrieve all Note objects
+      for a given document and (optionally) a specific corpus.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document.\n        corpus_id: The primary key (ID)
+      of the Corpus, or None if unspecified.\n\n    Returns:\n        A list of dictionaries,
+      each containing Note data (strings truncated to preview length of 512 characters):\n        [\n            {\n                \"id\":
+      <note_id>,\n                \"title\": <title>,\n                \"content\":
+      <content>,\n                \"creator_id\": <creator id>,\n                \"created\":
+      <created datetime>,\n                \"modified\": <modified datetime>,\n            },\n            ...\n        ]\n    ","parameters":{"properties":{"document_id":{"description":"Primary
+      key of the Document.","title":"Document Id","type":"integer"},"corpus_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"description":"Optional
+      primary key of the Corpus. If None, only notes without a corpus_id are returned.","title":"Corpus
+      Id"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_note_content_token_length","description":"get_note_content_token_length(note_id:
+      int) -> int\n\n    Calculates the approximate token length of a Note''s content
+      using a naive whitespace-based split.\n\n    Args:\n        note_id: The primary
+      key (ID) of the Note.\n\n    Returns:\n        An integer representing the approximate
+      token count of the note''s content.\n    ","parameters":{"properties":{"note_id":{"description":"Primary
+      key of the Note.","title":"Note Id","type":"integer"}},"required":["note_id"],"type":"object"}}},{"type":"function","function":{"name":"get_partial_note_content","description":"get_partial_note_content(note_id:
+      int, start: int, end: int) -> str\n\n    Retrieve a substring of the note''s
+      content from index ''start'' to index ''end''.\n\n    Args:\n        note_id:
+      The primary key (ID) of the Note.\n        start: The starting position for
+      extraction.\n        end: The position at which to stop before extraction (non-inclusive).\n\n    Returns:\n        A
+      string representing the specified portion of the note''s content.\n    ","parameters":{"properties":{"note_id":{"description":"Primary
+      key of the Note.","title":"Note Id","type":"integer"},"start":{"default":0,"description":"Start
+      index for substring extraction.","title":"Start","type":"integer"},"end":{"default":500,"description":"End
+      index (non-inclusive) for substring extraction. Use a large number to see the
+      entire note.","title":"End","type":"integer"}},"required":["note_id"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '5330'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-B1jiMjvFT5t0gaE2Dy3SRj7ANn211","object":"chat.completion.chunk","created":1739753754,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_DoFz7jKNWvfpbjGdHixJIFmF","type":"function","function":{"name":"load_document_md_summary","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiMjvFT5t0gaE2Dy3SRj7ANn211","object":"chat.completion.chunk","created":1739753754,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiMjvFT5t0gaE2Dy3SRj7ANn211","object":"chat.completion.chunk","created":1739753754,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"document"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiMjvFT5t0gaE2Dy3SRj7ANn211","object":"chat.completion.chunk","created":1739753754,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"_id"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiMjvFT5t0gaE2Dy3SRj7ANn211","object":"chat.completion.chunk","created":1739753754,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiMjvFT5t0gaE2Dy3SRj7ANn211","object":"chat.completion.chunk","created":1739753754,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"1"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiMjvFT5t0gaE2Dy3SRj7ANn211","object":"chat.completion.chunk","created":1739753754,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"}"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiMjvFT5t0gaE2Dy3SRj7ANn211","object":"chat.completion.chunk","created":1739753754,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 9131d0858ebb2e6f-DFW
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 17 Feb 2025 00:55:54 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=SGC0gUr6ghgk0oGyepCI_buck3NO8.lnbHuDYiO26_8-1739753754-1.0.1.1-eAYnlIeZw.kuF__WGETck0_voG5TA3qgs5aPbFhT6dDCqT9Q9K8b7cEnB4QQhqfzAZHmcejwg7NW_Z7C9f7XVg;
+        path=/; expires=Mon, 17-Feb-25 01:25:54 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=HmLDwifiW1aRrucJsjANizk1j7YcA5kgAs_lhDzvTM4-1739753754926-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '296'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '799900'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 7ms
+      x-request-id:
+      - req_c8311871441519f18ea937f5078517ea
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You thoroughly answer requests
+      about the document titled ''Test Doc'' (ID: 1). This document is described as:\n\n`USC
+      Title 1 - Chapter 1`\n\nReturn your answers in thoughtful, attractive markdown.
+      Avoid repeating instructions, writing down your thought processes (unless asked),
+      or giving disclaimers."},{"role":"user","content":"Please summarize the doc."},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_DoFz7jKNWvfpbjGdHixJIFmF","function":{"arguments":"{\"document_id\":1}","name":"load_document_md_summary"},"type":"function"}]},{"role":"tool","content":"No
+      md_summary_file attached to this document.","name":"load_document_md_summary","tool_call_id":"call_DoFz7jKNWvfpbjGdHixJIFmF"}],"model":"gpt-4o","stream":true,"temperature":0.1,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
+      int, truncate_length: Optional[int], from_start: bool) -> str\n\n    Load the
+      content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document.\n        truncate_length: Optional integer
+      specifying how many characters to return.\n        from_start: If True, return
+      from the start up to truncate_length. Otherwise, return from the end.\n\n    Returns:\n        A
+      string containing the content of the md_summary_file (possibly truncated).\n    ","parameters":{"properties":{"document_id":{"description":"Primary
+      key of the Document.","title":"Document Id","type":"integer"},"truncate_length":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"description":"Optional
+      number of characters to truncate. If provided, returns only that many characters.","title":"Truncate
+      Length"},"from_start":{"default":true,"description":"If truncate_length is provided,
+      determines whether to return from start or end.","title":"From Start","type":"boolean"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_md_summary_token_length","description":"get_md_summary_token_length(document_id:
+      int) -> int\n\n    Calculates the approximate token length of a Document''s
+      md_summary_file.\n    Uses a naive whitespace-based split for tokenization.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document.\n\n    Returns:\n        An integer representing
+      the approximate token count of the md_summary_file.\n    ","parameters":{"properties":{"document_id":{"description":"Primary
+      key of the Document.","title":"Document Id","type":"integer"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_notes_for_document_corpus","description":"get_notes_for_document_corpus(document_id:
+      int, corpus_id: Optional[int]) -> list[dict]\n\n    Retrieve all Note objects
+      for a given document and (optionally) a specific corpus.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document.\n        corpus_id: The primary key (ID)
+      of the Corpus, or None if unspecified.\n\n    Returns:\n        A list of dictionaries,
+      each containing Note data (strings truncated to preview length of 512 characters):\n        [\n            {\n                \"id\":
+      <note_id>,\n                \"title\": <title>,\n                \"content\":
+      <content>,\n                \"creator_id\": <creator id>,\n                \"created\":
+      <created datetime>,\n                \"modified\": <modified datetime>,\n            },\n            ...\n        ]\n    ","parameters":{"properties":{"document_id":{"description":"Primary
+      key of the Document.","title":"Document Id","type":"integer"},"corpus_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"description":"Optional
+      primary key of the Corpus. If None, only notes without a corpus_id are returned.","title":"Corpus
+      Id"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_note_content_token_length","description":"get_note_content_token_length(note_id:
+      int) -> int\n\n    Calculates the approximate token length of a Note''s content
+      using a naive whitespace-based split.\n\n    Args:\n        note_id: The primary
+      key (ID) of the Note.\n\n    Returns:\n        An integer representing the approximate
+      token count of the note''s content.\n    ","parameters":{"properties":{"note_id":{"description":"Primary
+      key of the Note.","title":"Note Id","type":"integer"}},"required":["note_id"],"type":"object"}}},{"type":"function","function":{"name":"get_partial_note_content","description":"get_partial_note_content(note_id:
+      int, start: int, end: int) -> str\n\n    Retrieve a substring of the note''s
+      content from index ''start'' to index ''end''.\n\n    Args:\n        note_id:
+      The primary key (ID) of the Note.\n        start: The starting position for
+      extraction.\n        end: The position at which to stop before extraction (non-inclusive).\n\n    Returns:\n        A
+      string representing the specified portion of the note''s content.\n    ","parameters":{"properties":{"note_id":{"description":"Primary
+      key of the Note.","title":"Note Id","type":"integer"},"start":{"default":0,"description":"Start
+      index for substring extraction.","title":"Start","type":"integer"},"end":{"default":500,"description":"End
+      index (non-inclusive) for substring extraction. Use a large number to see the
+      entire note.","title":"End","type":"integer"}},"required":["note_id"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '5684'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=SGC0gUr6ghgk0oGyepCI_buck3NO8.lnbHuDYiO26_8-1739753754-1.0.1.1-eAYnlIeZw.kuF__WGETck0_voG5TA3qgs5aPbFhT6dDCqT9Q9K8b7cEnB4QQhqfzAZHmcejwg7NW_Z7C9f7XVg;
+        _cfuvid=HmLDwifiW1aRrucJsjANizk1j7YcA5kgAs_lhDzvTM4-1739753754926-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.58.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"role":"assistant","content":"","refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"It"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        seems"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        there"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        is"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        no"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        summary"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        available"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        for"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        the"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        document"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        titled"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        \""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"Test"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        Doc"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"\""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        ("},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"ID"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"1"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":")."},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        If"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        you"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        have"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        any"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        specific"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        questions"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        or"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        need"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        information"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        on"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        a"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        particular"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        section"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        feel"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        free"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"
+        ask"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{"content":"!"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-B1jiNMRHEOxhkswsXOqJYeeIAZkRN","object":"chat.completion.chunk","created":1739753755,"model":"gpt-4o-2024-08-06","service_tier":"default","system_fingerprint":"fp_523b9b6e5f","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 9131d0890b532e6f-DFW
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 17 Feb 2025 00:55:55 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '206'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '800000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '799888'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 8ms
+      x-request-id:
+      - req_559b60d945b6e28641639b5096a4bbaa
+    status:
+      code: 200
+      message: OK
+version: 1

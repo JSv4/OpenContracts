@@ -106,7 +106,10 @@ export const useTextSearch = () => {
             }
           }
         }
-        const lead_in_text = lead_in_tokens
+        const safe_lead_in_tokens = lead_in_tokens.filter(
+          (token) => token && typeof token.text === "string"
+        );
+        const lead_in_text = safe_lead_in_tokens
           .reverse()
           .reduce((prev, curr) => prev + " " + curr.text, "");
 
@@ -139,7 +142,10 @@ export const useTextSearch = () => {
             end_page = chap.pageIndex;
           }
         }
-        const lead_out_text = lead_out_tokens.reduce(
+        const safe_lead_out_tokens = lead_out_tokens.filter(
+          (token) => token && typeof token.text === "string"
+        );
+        const lead_out_text = safe_lead_out_tokens.reduce(
           (prev, curr) => prev + " " + curr.text,
           ""
         );

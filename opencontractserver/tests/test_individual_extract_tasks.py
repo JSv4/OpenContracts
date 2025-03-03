@@ -4,22 +4,20 @@ using BaseFixtureTestCase, ensuring that the Extract models and related objects
 (Fieldset, Column, Datacell) are set up correctly.
 """
 import logging
-import vcr
+from typing import Optional
 
+import vcr
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.test.utils import override_settings
-from opencontractserver.extracts.models import (
-    Extract,
-    Fieldset,
-    Column,
-    Datacell,
-)
-from opencontractserver.tasks.data_extract_tasks import _assemble_and_trim_for_token_limit, oc_llama_index_doc_query
-from opencontractserver.tests.base import BaseFixtureTestCase
 
-from typing import Optional
-from django.contrib.auth import get_user_model
 from opencontractserver.documents.models import DocumentAnalysisRow
+from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
+from opencontractserver.tasks.data_extract_tasks import (
+    _assemble_and_trim_for_token_limit,
+    oc_llama_index_doc_query,
+)
+from opencontractserver.tests.base import CeleryEagerModeFixtureTestCase
 
 vcr_log = logging.getLogger("vcr")
 vcr_log.setLevel(logging.WARNING)
@@ -27,7 +25,7 @@ vcr_log.setLevel(logging.WARNING)
 User = get_user_model()
 
 
-class TestOcLlamaIndexDocQuery(BaseFixtureTestCase):
+class TestOcLlamaIndexDocQuery(CeleryEagerModeFixtureTestCase):
     """
     Tests oc_llama_index_doc_query by creating an Extract along with the
     Datacell, Column, and Fieldset models, then invoking the Celery task
@@ -79,16 +77,16 @@ class TestOcLlamaIndexDocQuery(BaseFixtureTestCase):
 
         # Invoke the Celery task synchronously (via .get())
         oc_llama_index_doc_query.delay(
-            cell_id=datacell.id,
-            similarity_top_k=3,
-            max_token_length=1000
+            cell_id=datacell.id, similarity_top_k=3, max_token_length=1000
         ).get()
-        
+
         datacell.refresh_from_db()
         result = datacell.data
 
         # Assert the result is valid
-        self.assertIsNotNone(result, "Expected a non-None result from oc_llama_index_doc_query.")
+        self.assertIsNotNone(
+            result, "Expected a non-None result from oc_llama_index_doc_query."
+        )
 
         # Optionally, assert structure/contents of 'result' as appropriate for your logic
         # self.assertIn("some_expected_value", str(result))
@@ -96,7 +94,7 @@ class TestOcLlamaIndexDocQuery(BaseFixtureTestCase):
         print(f"Synchronous oc_llama_index_doc_query result: {result}")
 
 
-class TestOcLlamaIndexDocQueryDirect(BaseFixtureTestCase):
+class TestOcLlamaIndexDocQueryDirect(CeleryEagerModeFixtureTestCase):
     """
     A test class that uses the same fixture setup as our orchestrator-based test
     but calls the oc_llama_index_doc_query task directly on newly created Datacells.
@@ -124,7 +122,7 @@ class TestOcLlamaIndexDocQueryDirect(BaseFixtureTestCase):
             fieldset=self.fieldset,
             query="What is the name of this document?",
             output_type="str",
-            agentic=False, # this triggers some blackmagic voodoo buggery between async, django tests and llamaindex. Juice is not worth the squeeze...
+            agentic=False,  # agent keeps triggering some awful, buried issues with async tests.
             creator=self.user,
             task_name="opencontractserver.tasks.data_extract_tasks.llama_index_react_agent_query",
         )
@@ -165,7 +163,7 @@ class TestOcLlamaIndexDocQueryDirect(BaseFixtureTestCase):
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/test_individual_extract_task.yaml",
-        record_mode="new_episodes",
+        record_mode="none",
         filter_headers=["authorization"],
         before_record_response=_vcr_response_handler,
         ignore_hosts=[
@@ -205,9 +203,12 @@ class TestOcLlamaIndexDocQueryDirect(BaseFixtureTestCase):
             logging.debug(f"Result for cell {cell.id}: {result}")
 
             # Basic checks
-            self.assertIsNotNone(result, f"Expected a non-None result from cell {cell.id}")
             self.assertIsNotNone(
-                cell.data, f"The Datacell's data (ID: {cell.id}) should not be None after the extraction."
+                result, f"Expected a non-None result from cell {cell.id}"
+            )
+            self.assertIsNotNone(
+                cell.data,
+                f"The Datacell's data (ID: {cell.id}) should not be None after the extraction.",
             )
 
         # Double-check the number of DocumentAnalysisRows if desired

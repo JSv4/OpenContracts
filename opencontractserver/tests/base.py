@@ -233,3 +233,44 @@ class WebsocketFixtureBaseTestCase(BaseFixtureTestCase):
         super().setUp()
         self.token = get_token(user=self.user)
         self.application = application
+
+
+class CeleryEagerModeTestCase(TransactionTestCase):
+    """
+    Base test case for tests that use Celery's eager mode.
+
+    This test case ensures that database connections are properly managed
+    when running Celery tasks in eager mode during tests.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # Ensure we have a fresh connection before each test
+        for alias in connections:
+            connections[alias].close()
+            connections[alias].connect()
+
+    def tearDown(self):
+        # Close connections after each test to prevent them from being terminated
+        # while still in use
+        for alias in connections:
+            connections[alias].close()
+        super().tearDown()
+
+
+class CeleryEagerModeFixtureTestCase(BaseFixtureTestCase, CeleryEagerModeTestCase):
+    """
+    Combines BaseFixtureTestCase with CeleryEagerModeTestCase.
+
+    Use this for tests that need both fixtures and Celery eager mode.
+    """
+
+    def setUp(self):
+        # Call both parent setUp methods
+        BaseFixtureTestCase.setUp(self)
+        CeleryEagerModeTestCase.setUp(self)
+
+    def tearDown(self):
+        # Call both parent tearDown methods in reverse order
+        CeleryEagerModeTestCase.tearDown(self)
+        BaseFixtureTestCase.tearDown(self)

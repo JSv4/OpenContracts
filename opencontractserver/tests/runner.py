@@ -1,81 +1,64 @@
 import logging
 import time
-from django.conf import settings
-from django.db import connection, connections
+
+from django.db import DEFAULT_DB_ALIAS, connections
 from django.test.runner import DiscoverRunner
 
 logger = logging.getLogger(__name__)
+
 
 class TerminateConnectionsTestRunner(DiscoverRunner):
     """
     Custom test runner that forcibly terminates all database connections
     before attempting to drop the test database.
     """
-    
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.connection_termination_attempts = 0
+        self.max_termination_attempts = 3
+
     def teardown_databases(self, old_config, **kwargs):
         """
-        Override teardown_databases to forcibly terminate all connections
-        before Django tries to drop the test database.
+        Override teardown_databases to terminate connections before dropping the database.
         """
-        # First, close all Django connections
+        db_name = connections[DEFAULT_DB_ALIAS].settings_dict["NAME"]
+
+        # Close Django's own connections first
         for conn in connections.all():
-            conn.close_if_unusable_or_obsolete()
             conn.close()
-        
-        # Wait a moment for any async operations to complete
-        time.sleep(2)
-        
-        # Forcibly terminate all other connections to the test database
-        db_name = settings.DATABASES["default"]["NAME"]
-        with connection.cursor() as cursor:
-            logger.info(f"Test runner: Terminating ALL connections to {db_name}")
-            
-            # Get count of connections
+
+        # Retry termination and dropping multiple times
+        for attempt in range(5):
+            try:
+                self._terminate_db_connections(db_name)
+                # Now attempt to drop the database
+                return super().teardown_databases(old_config, **kwargs)
+            except Exception as e:
+                if "being accessed by other users" in str(e):
+                    logger.warning(
+                        f"Attempt {attempt + 1}: Database still in use, retrying in 2 seconds..."
+                    )
+                    time.sleep(2)
+                else:
+                    raise
+        # If we reach here, raise an error explicitly
+        raise RuntimeError(
+            f"Could not drop test database '{db_name}' after multiple attempts."
+        )
+
+    def _terminate_db_connections(self, db_name):
+        """
+        Terminate all connections to the specified database.
+        """
+        with connections[DEFAULT_DB_ALIAS].cursor() as cursor:
             cursor.execute(
                 """
-                SELECT COUNT(*) 
-                FROM pg_stat_activity 
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
                 WHERE datname = %s AND pid <> pg_backend_pid();
                 """,
                 [db_name],
             )
-            count = cursor.fetchone()[0]
-            logger.info(f"Test runner: Found {count} connections to terminate")
-            
-            if count > 0:
-                # Terminate ALL connections to the test database
-                cursor.execute(
-                    """
-                    SELECT pg_terminate_backend(pid)
-                    FROM pg_stat_activity
-                    WHERE pid <> pg_backend_pid()
-                      AND datname = %s;
-                    """,
-                    [db_name],
-                )
-                logger.info(f"Test runner: Terminated {count} connections")
-        
-        # Try multiple times if needed
-        for attempt in range(3):
-            try:
-                # Call the parent method to drop the database
-                return super().teardown_databases(old_config, **kwargs)
-            except Exception as e:
-                if "database is being accessed by other users" in str(e) and attempt < 2:
-                    logger.warning(f"Test runner: Database still in use (attempt {attempt+1}), retrying...")
-                    time.sleep(3)  # Wait longer
-                    
-                    # Try terminating connections again
-                    with connection.cursor() as cursor:
-                        cursor.execute(
-                            """
-                            SELECT pg_terminate_backend(pid)
-                            FROM pg_stat_activity
-                            WHERE pid <> pg_backend_pid()
-                              AND datname = %s;
-                            """,
-                            [db_name],
-                        )
-                else:
-                    # If it's not a "database in use" error or we've tried 3 times, re-raise
-                    raise 
+            terminated = cursor.rowcount
+            logger.info(f"Terminated {terminated} connections to database '{db_name}'.")

@@ -15,64 +15,6 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-def resolve_oc_model_queryset(
-    django_obj_model_type: type[BaseOCModel] = None,
-    user: AnonymousUser | User | int | str = None,
-) -> QuerySet[BaseOCModel]:
-    """
-    Given a model_type and a user instance, resolve a base queryset of the models this user
-    could possibly see.
-    """
-    try:
-        if isinstance(user, (int, str)):
-            user = User.objects.get(id=user)
-        elif not isinstance(user, (User, AnonymousUser)):
-            raise ValueError(
-                "User must be an instance of AnonymousUser, User, or an integer or string id"
-            )
-    except Exception as e:
-        logger.error(
-            f"Error resolving user for queryset of model {django_obj_model_type}: {e}"
-        )
-        user = None
-
-    model_name = django_obj_model_type._meta.model_name
-    app_label = django_obj_model_type._meta.app_label
-
-    # Get the base queryset first (only stuff given user CAN see)
-    if user:
-        if user.is_superuser:
-            queryset = (
-                django_obj_model_type.objects.all().order_by("created").distinct()
-            )
-        elif user.is_anonymous:
-            queryset = django_obj_model_type.objects.filter(
-                Q(is_public=True)
-            ).distinct()
-        # Finally, in all other cases, actually do the hard work
-        else:
-
-            permission_model_type = apps.get_model(
-                app_label, f"{model_name}userobjectpermission"
-            )
-            # logger.info(f"Got permission model type: {permission_model_type}")
-
-            must_have_permissions = permission_model_type.objects.filter(
-                permission__codename=f"read_{model_name}", user_id=user.id
-            )
-            # logger.info(f"Must have permissions: {must_have_permissions}")
-
-            queryset = django_obj_model_type.objects.filter(
-                Q(creator=user)
-                | Q(is_public=True)
-                | Q(**{f"{model_name}userobjectpermission__in": must_have_permissions})
-            ).distinct()
-    else:
-        queryset = django_obj_model_type.objects.none()
-
-    return queryset
-
-
 def resolve_single_oc_model_from_id(
     model_type: type[BaseOCModel] = None, graphql_id: str = "", user: User = None
 ) -> BaseOCModel:

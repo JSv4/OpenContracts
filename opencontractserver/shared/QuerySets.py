@@ -7,6 +7,8 @@ from django.db.models import Exists, OuterRef, Q
 # from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from tree_queries.query import TreeQuerySet
+from django.contrib.auth.models import AnonymousUser
+from guardian.shortcuts import get_objects_for_user
 
 User = get_user_model()
 
@@ -95,51 +97,42 @@ class UserFeedbackQuerySet(models.QuerySet):
 
 
 class PermissionQuerySet(models.QuerySet):
-    def visible_to_user(self, user, perm=None):
-
-        if user.is_superuser:
-            return self.all()
-
-        # model = self.model
-        # content_type = ContentType.objects.get_for_model(model)
-        #
-        # # Determine the permission codename
-        # permission_codename = f'{perm}_{model._meta.model_name}'
-        #
-        # # User permission subquery
-        # user_perm = UserObjectPermission.objects.filter(
-        #     content_type=content_type,
-        #     user=user,
-        #     permission__codename=permission_codename,
-        #     object_pk=OuterRef('pk')
-        # )
-        #
-        # # Group permission subquery
-        # group_perm = GroupObjectPermission.objects.filter(
-        #     content_type=content_type,
-        #     group__user=user,
-        #     permission__codename=permission_codename,
-        #     object_pk=OuterRef('pk')
-        # )
-
-        # Construct the base queryset
-        # queryset = self.annotate(
-        #     has_user_perm=Exists(user_perm),
-        #     has_group_perm=Exists(group_perm)
-        # )
-
-        # Filter based on permissions and public status - TODO - make this work for user/obj instance level sharing
-        # permission_filter = Q(has_user_perm=True) | Q(has_group_perm=True) | Q(is_public=True)
-        permission_filter = Q(is_public=True)
-        if not user.is_anonymous:
-            permission_filter |= Q(creator=user)
-
-        # # Add extra conditions based on permission type
-        # if perm == 'read':
-        #     # For read permission, include objects created by the user
-        #     permission_filter |= Q(creator=user)
-        # elif perm == 'publish':
-        #     # For publish permission, only include objects created by the user
-        #     permission_filter &= Q(creator=user)
-
-        return self.filter(permission_filter).distinct()
+    def visible_to_user(self, user):
+        """
+        Filter queryset to only include objects the user has permission to view.
+        Uses the hierarchical permission system that checks:
+        1. Direct object permissions
+        2. Inherited corpus permissions
+        3. Public status or creator ownership
+        """
+        from opencontractserver.utils.permissioning import filter_queryset_by_permission
+        
+        # Use the centralized permission filtering logic
+        return filter_queryset_by_permission(
+            queryset=self,
+            user=user,
+            permission='view'  # or 'read' depending on your permission naming
+        )
+    
+    def editable_by_user(self, user):
+        """
+        Filter queryset to only include objects the user has permission to edit.
+        """
+        from opencontractserver.utils.permissioning import filter_queryset_by_permission
+        
+        return filter_queryset_by_permission(
+            queryset=self,
+            user=user,
+            permission='change'  # or 'update' depending on your permission naming
+        )
+    
+    # Keep other useful methods
+    def approved(self):
+        return self.filter(approved=True)
+    
+    def recent(self, days=30):
+        recent_date = timezone.now() - timezone.timedelta(days=days)
+        return self.filter(created__gte=recent_date)
+    
+    def by_creator(self, creator):
+        return self.filter(creator=creator)

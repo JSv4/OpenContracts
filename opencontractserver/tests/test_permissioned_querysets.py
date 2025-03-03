@@ -5,7 +5,8 @@ from graphene.test import Client
 from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
-from opencontractserver.annotations.models import Annotation
+from opencontractserver.annotations.models import Annotation, Note
+from opencontractserver.conversations.models import Conversation, ChatMessage
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.types.enums import PermissionTypes
@@ -59,7 +60,7 @@ class ComprehensivePermissionTestCase(TestCase):
             self.collaborator, self.shared_corpus, [PermissionTypes.READ]
         )
 
-        # Create Documents
+        # Create Documents (inherits corpus permissions)
         self.public_doc = Document.objects.create(
             title="Public Doc", creator=self.owner, is_public=True
         )
@@ -68,12 +69,42 @@ class ComprehensivePermissionTestCase(TestCase):
         )
         self.public_corpus.documents.add(self.public_doc, self.private_doc)
 
-        # Create Annotations
+        # Create Annotations (inherits corpus permissions)
         self.public_annotation = Annotation.objects.create(
-            document=self.public_doc, creator=self.owner, is_public=True
+            document=self.public_doc, creator=self.owner, is_public=True, corpus=self.public_corpus
         )
         self.private_annotation = Annotation.objects.create(
-            document=self.public_doc, creator=self.owner, is_public=False
+            document=self.public_doc, creator=self.owner, is_public=False, corpus=self.public_corpus
+        )
+        
+        # Create Notes (inherits corpus permissions)
+        self.public_note = Note.objects.create(
+            document=self.public_doc, creator=self.owner, is_public=True, 
+            corpus=self.public_corpus, title="Public Note", content="Public content"
+        )
+        self.private_note = Note.objects.create(
+            document=self.public_doc, creator=self.owner, is_public=False,
+            corpus=self.public_corpus, title="Private Note", content="Private content"
+        )
+        
+        # Create Conversations (does NOT inherit corpus permissions)
+        self.public_conversation = Conversation.objects.create(
+            title="Public Conversation", creator=self.owner, is_public=True,
+            chat_with_corpus=self.public_corpus
+        )
+        self.private_conversation = Conversation.objects.create(
+            title="Private Conversation", creator=self.owner, is_public=False,
+            chat_with_corpus=self.public_corpus
+        )
+        
+        # Create ChatMessages (does NOT inherit corpus permissions)
+        self.public_message = ChatMessage.objects.create(
+            conversation=self.public_conversation, creator=self.owner, is_public=True,
+            content="Public message"
+        )
+        self.private_message = ChatMessage.objects.create(
+            conversation=self.private_conversation, creator=self.owner, is_public=False,
+            content="Private message"
         )
 
     def test_corpus_visibility(self):
@@ -95,19 +126,17 @@ class ComprehensivePermissionTestCase(TestCase):
         result = self.owner_client.execute(query)
         self.assertEqual(len(result["data"]["corpuses"]["edges"]), 3)
 
-        # Test for collaborator - AT THE MOMENT, PER INSTANCE PERMISSIONS ARE NOT USED ON QUERY RETRIEVAL.
-        # THIS IS FOR SAFETY. We are moving the insetance-leval permission filter into GraphqlObjectType
-        # get_queryset(...) to ensure safety on nested FKs and M2M.
+        # Test for collaborator
         result = self.collaborator_client.execute(query)
-        self.assertEqual(len(result["data"]["corpuses"]["edges"]), 1)
+        self.assertEqual(len(result["data"]["corpuses"]["edges"]), 2)  # Public + Shared
 
         # Test for regular user
         result = self.regular_client.execute(query)
-        self.assertEqual(len(result["data"]["corpuses"]["edges"]), 1)
+        self.assertEqual(len(result["data"]["corpuses"]["edges"]), 1)  # Only Public
 
         # Test for anonymous user
         result = self.anonymous_client.execute(query)
-        self.assertEqual(len(result["data"]["corpuses"]["edges"]), 1)
+        self.assertEqual(len(result["data"]["corpuses"]["edges"]), 1)  # Only Public
 
     def test_nested_document_visibility(self):
         query = """
@@ -133,11 +162,11 @@ class ComprehensivePermissionTestCase(TestCase):
 
         # Test for regular user
         result = self.regular_client.execute(query, variable_values=variables)
-        self.assertEqual(len(result["data"]["corpus"]["documents"]["edges"]), 1)
+        self.assertEqual(len(result["data"]["corpus"]["documents"]["edges"]), 1)  # Only Public
 
     def test_nested_annotation_visibility(self):
         query = """
-        query($id: String!) {
+        query($id: ID!) {
           document(id: $id) {
             docAnnotations {
               edges {
@@ -154,12 +183,166 @@ class ComprehensivePermissionTestCase(TestCase):
 
         # Test for owner
         result = self.owner_client.execute(query, variable_values=variables)
-        print("Result: ", result)
         self.assertEqual(len(result["data"]["document"]["docAnnotations"]["edges"]), 2)
 
         # Test for regular user
         result = self.regular_client.execute(query, variable_values=variables)
-        self.assertEqual(len(result["data"]["document"]["docAnnotations"]["edges"]), 1)
+        self.assertEqual(len(result["data"]["document"]["docAnnotations"]["edges"]), 1)  # Only Public
+
+    def test_notes_visibility(self):
+        query = """
+        query {
+          notes {
+            edges {
+              node {
+                id
+                title
+                isPublic
+              }
+            }
+          }
+        }
+        """
+
+        # Test for owner
+        result = self.owner_client.execute(query)
+        self.assertEqual(len(result["data"]["notes"]["edges"]), 2)  # Both notes
+
+        # Test for regular user
+        result = self.regular_client.execute(query)
+        self.assertEqual(len(result["data"]["notes"]["edges"]), 1)  # Only Public
+
+    def test_conversations_visibility(self):
+        query = """
+        query {
+          conversations {
+            edges {
+              node {
+                id
+                title
+                isPublic
+              }
+            }
+          }
+        }
+        """
+
+        # Test for owner
+        result = self.owner_client.execute(query)
+        self.assertEqual(len(result["data"]["conversations"]["edges"]), 2)  # Both conversations
+
+        # Test for regular user
+        result = self.regular_client.execute(query)
+        self.assertEqual(len(result["data"]["conversations"]["edges"]), 1)  # Only Public
+
+    def test_corpus_permission_inheritance(self):
+        """Test that models correctly inherit or don't inherit corpus permissions"""
+        # Grant collaborator access to private_corpus
+        set_permissions_for_obj_to_user(
+            self.collaborator, self.private_corpus, [PermissionTypes.READ]
+        )
+        
+        # Create private objects in private_corpus
+        private_doc = Document.objects.create(
+            title="Private Doc in Private Corpus", 
+            creator=self.owner, 
+            is_public=False
+        )
+        self.private_corpus.documents.add(private_doc)
+        
+        Annotation.objects.create(
+            document=private_doc, 
+            creator=self.owner, 
+            is_public=False, 
+            corpus=self.private_corpus
+        )
+        
+        Note.objects.create(
+            document=private_doc, 
+            creator=self.owner, 
+            is_public=False,
+            corpus=self.private_corpus, 
+            title="Private Note in Private Corpus", 
+            content="Private content"
+        )
+        
+        Conversation.objects.create(
+            title="Private Conversation in Private Corpus", 
+            creator=self.owner, 
+            is_public=False,
+            chat_with_corpus=self.private_corpus
+        )
+        
+        # Test document visibility (should inherit corpus permissions)
+        doc_query = """
+        query {
+          documents {
+            edges {
+              node {
+                id
+                title
+              }
+            }
+          }
+        }
+        """
+        result = self.collaborator_client.execute(doc_query)
+        doc_titles = [edge["node"]["title"] for edge in result["data"]["documents"]["edges"]]
+        self.assertIn("Private Doc in Private Corpus", doc_titles)
+        
+        # Test annotation visibility (should inherit corpus permissions)
+        annotation_query = """
+        query {
+          annotations {
+            edges {
+              node {
+                id
+                document {
+                  title
+                }
+              }
+            }
+          }
+        }
+        """
+        result = self.collaborator_client.execute(annotation_query)
+        doc_titles = [edge["node"]["document"]["title"] for edge in result["data"]["annotations"]["edges"] if edge["node"]["document"]]
+        self.assertIn("Private Doc in Private Corpus", doc_titles)
+        
+        # Test note visibility (should inherit corpus permissions)
+        note_query = """
+        query {
+          notes {
+            edges {
+              node {
+                id
+                title
+              }
+              }
+            }
+          }
+        }
+        """
+        result = self.collaborator_client.execute(note_query)
+        note_titles = [edge["node"]["title"] for edge in result["data"]["notes"]["edges"]]
+        self.assertIn("Private Note in Private Corpus", note_titles)
+        
+        # Test conversation visibility (should NOT inherit corpus permissions)
+        conversation_query = """
+        query {
+          conversations {
+            edges {
+              node {
+                id
+                title
+              }
+            }
+          }
+        }
+        """
+        result = self.collaborator_client.execute(conversation_query)
+        conversation_titles = [edge["node"]["title"] for edge in result["data"]["conversations"]["edges"]]
+        self.assertNotIn("Private Conversation in Private Corpus", conversation_titles)
 
     def test_mutation_permissions(self):
         mutation = """
@@ -176,7 +359,7 @@ class ComprehensivePermissionTestCase(TestCase):
 
         # Deletions ARE tied to per instance permissions.
         set_permissions_for_obj_to_user(
-            self.owner.id, corpus_to_delete, [PermissionTypes.CRUD]
+            self.owner, corpus_to_delete, [PermissionTypes.CRUD]
         )
         variables = {"id": to_global_id("CorpusType", corpus_to_delete.id)}
 

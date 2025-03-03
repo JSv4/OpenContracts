@@ -71,6 +71,8 @@ class Document(BaseOCModel):
     embedding = VectorField(dimensions=384, null=True, blank=True)
     description_embedding = VectorField(dimensions=384, null=True, blank=True)
 
+    INHERITS_CORPUS_PERMISSIONS = True
+
     class Meta:
         permissions = (
             ("permission_document", "permission document"),
@@ -251,6 +253,8 @@ class DocumentRelationship(BaseOCModel):
         null=True,
         blank=True,
     )
+
+    INHERITS_CORPUS_PERMISSIONS = True
 
     class Meta:
         permissions = (

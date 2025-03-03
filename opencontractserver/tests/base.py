@@ -1,5 +1,7 @@
+import logging
 import os
 import shutil
+import time
 from pathlib import Path
 from typing import ClassVar
 
@@ -20,6 +22,7 @@ from opencontractserver.documents.models import Document
 from opencontractserver.documents.signals import process_doc_on_create_atomic
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.django_db
@@ -51,15 +54,29 @@ class BaseFixtureTestCase(TransactionTestCase):
         """
         db_name = settings.DATABASES["default"]["NAME"]
         with connection.cursor() as cursor:
+            logger.info(f"Terminating stale DB connections for DB: {db_name}")
             cursor.execute(
                 """
-                SELECT pg_terminate_backend(pid)
+                SELECT COUNT(*)
                 FROM pg_stat_activity
-                WHERE pid <> pg_backend_pid()
-                  AND datname = %s;
+                WHERE datname = %s AND pid <> pg_backend_pid();
                 """,
                 [db_name],
             )
+            count = cursor.fetchone()[0]
+            logger.info(f"Found {count} other connections to {db_name}")
+
+            if count > 0:
+                cursor.execute(
+                    """
+                    SELECT pg_terminate_backend(pid)
+                    FROM pg_stat_activity
+                    WHERE pid <> pg_backend_pid()
+                      AND datname = %s;
+                    """,
+                    [db_name],
+                )
+                logger.info(f"Terminated {count} connections to {db_name}")
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -101,26 +118,34 @@ class BaseFixtureTestCase(TransactionTestCase):
     def tearDownClass(cls) -> None:
         """
         Clean up signal patches, test media, and database connections.
-
-        Overridden to ensure that any leftover connections (e.g., from Celery tasks)
-        are completely closed before Django attempts to destroy the test database.
         """
         try:
-            cls._terminate_other_connections()
-
+            # First, just close connections normally without terminating
             for conn in connections.all():
                 conn.close_if_unusable_or_obsolete()
                 conn.close()
-
             connection.close()
 
+            # Try the parent teardown without forcibly terminating connections
             try:
                 super().tearDownClass()
             except OperationalError as e:
                 if "database is being accessed by other users" in str(e):
-                    print(
+                    logger.warning(
                         "Warning: Could not delete test database (in use by other connections)."
                     )
+
+                    # Only now, as a last resort, terminate connections
+                    time.sleep(2)  # Give any in-progress operations time to finish
+                    cls._terminate_other_connections()
+
+                    # Try again with super teardown
+                    try:
+                        super().tearDownClass()
+                    except OperationalError:
+                        logger.warning(
+                            "Still could not delete test database after terminating connections."
+                        )
                 else:
                     raise
         finally:
@@ -130,10 +155,6 @@ class BaseFixtureTestCase(TransactionTestCase):
 
             if os.path.exists(settings.MEDIA_ROOT):
                 shutil.rmtree(settings.MEDIA_ROOT)
-
-            for conn in connections.all():
-                conn.close()
-            connection.close()
 
     def copy_fixture_file(self, fixture_path: str, dest_path: str) -> None:
         """
@@ -183,7 +204,7 @@ class BaseFixtureTestCase(TransactionTestCase):
                 file_field = getattr(doc, field)
                 if file_field:
                     file_path = file_field.name
-                    # Check for the "files/" prefix in case it’s present
+                    # Check for the "files/" prefix in case it's present
                     if file_path.startswith("files/"):
                         # Strip off the "files/" portion and copy to MEDIA_ROOT
                         media_path = file_path.replace("files/", "", 1)

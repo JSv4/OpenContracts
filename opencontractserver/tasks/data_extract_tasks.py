@@ -6,6 +6,7 @@ import os
 from asgiref.sync import sync_to_async
 from celery import shared_task
 from django.conf import settings
+from django.db import DatabaseError, OperationalError
 from django.utils import timezone
 from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.agent import (
@@ -350,23 +351,21 @@ async def oc_llama_index_doc_query(
 
     @sync_to_async
     def sync_get_datacell(pk: int):
-        """
-        Retrieves the Datacell object (preloading related Document and Column)
-        with the given primary key.
+        logger.info(f"Entering sync_get_datacell with cell_id={pk}")
+        try:
+            datacell = Datacell.objects.select_related(
+                "extract", "column", "document", "creator"
+            ).get(pk=pk)
+            logger.info(f"Datacell fetched successfully: {datacell.id}")
+            return datacell
+        except Exception as e:
+            import traceback
 
-        Args:
-            pk (int): ID of the Datacell.
-
-        Returns:
-            Datacell: The Datacell instance, with Document and Column already loaded.
-        """
-        from opencontractserver.extracts.models import Datacell
-
-        return Datacell.objects.select_related(
-            "document", "column"
-        ).get(  # preload foreign keys
-            id=pk
-        )
+            stack_trace = traceback.format_exc()
+            logger.exception(
+                f"Exception in sync_get_datacell for cell_id={pk}: {e}\nFull stacktrace:\n{stack_trace}"
+            )
+            raise
 
     @sync_to_async
     def sync_mark_started(dc):
@@ -494,16 +493,20 @@ async def oc_llama_index_doc_query(
     from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
 
     # Retrieve Datacell
-    datacell = await sync_get_datacell(cell_id)
-    # datacell = Datacell.objects.get(id=cell_id)
+    logger.info(f"Starting oc_llama_index_doc_query for cell_id={cell_id}")
 
     try:
+        logger.info("Attempting to fetch Datacell from database")
+        datacell = await sync_get_datacell(cell_id)
+        logger.info(f"Successfully fetched Datacell: {datacell.id}")
+    except (DatabaseError, OperationalError) as e:
+        logger.exception(f"Database error fetching Datacell {cell_id}: {e}")
+        raise
 
+    try:
+        logger.info("Attempting to perform query logic")
         # Mark as started
         await sync_mark_started(datacell)
-
-        # datacell.started = timezone.now()
-        # datacell.save()
 
         document = datacell.document
 
@@ -640,11 +643,12 @@ async def oc_llama_index_doc_query(
                 ]
 
             try:
+                # TODO - this is NOT preloaded, I don't think.
                 sbert_rerank = SentenceTransformerRerank(
                     model="/models/sentence-transformers/cross-encoder/ms-marco-MiniLM-L-2-v2",
                     top_n=5,
                 )
-            except (OSError, ValueError) as e:
+            except (OSError, ValueError, TypeError) as e:
                 logger.info(
                     "Local model not found, falling back to downloading from HuggingFace Hub: %s",
                     str(e),
@@ -938,7 +942,7 @@ Context provided (combined_text):
 {combined_text}
 """
 
-            agentic_response = agent.chat(agent_instructions)
+            agentic_response = await agent.achat(agent_instructions)
             logger.info(f"Agentic response: {agentic_response}")
 
             agent_response_str = str(agentic_response)
@@ -975,7 +979,7 @@ Context provided (combined_text):
                 instructions=parse_instructions if parse_instructions else query,
             )
 
-        logger.debug(f"Result processed from marvin: {result}")
+        logger.debug(f"Result processed from marvin (type: {type(result)}): {result}")
 
         if issubclass(output_type, BaseModel) or isinstance(result, BaseModel):
             # datacell.data = {"data": result.model_dump()}
@@ -990,21 +994,25 @@ Context provided (combined_text):
         # datacell.completed = timezone.now()
         # datacell.save()
 
+        logger.info("Query logic completed successfully")
     except Exception as e:
+        logger.exception(f"Error during query logic for Datacell {cell_id}: {e}")
+        raise
+
+    try:
+        logger.info("Attempting to save Datacell results to database")
+        await sync_mark_completed(datacell, data)
+        logger.info("Successfully saved Datacell results")
+    except (DatabaseError, OperationalError) as e:
         import traceback
 
-        logger.error(f"run_extract() - Ran into error: {e}")
-        logger.error(f"Full traceback:\n{traceback.format_exc()}")
-        await sync_mark_failed(
-            datacell,
-            e,
-            f"Error processing: {e}\n\nFull traceback:\n{traceback.format_exc()}",
+        stack_trace = traceback.format_exc()
+        logger.exception(
+            f"Database error saving Datacell {cell_id}: {e}\nFull stacktrace:\n{stack_trace}"
         )
-        # datacell.stacktrace = (
-        #     f"Error processing: {e}\n\nFull traceback:\n{traceback.format_exc()}"
-        # )
-        # datacell.failed = timezone.now()
-        # datacell.save()
+        raise
+
+    logger.info(f"Completed oc_llama_index_doc_query for cell_id={cell_id}")
 
 
 @shared_task
@@ -1384,3 +1392,15 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
 
     except Exception as e:
         return f"Error: Exception encountered while retrieving annotation window: {e}"
+
+
+def sync_save_datacell(datacell: Datacell) -> None:
+    logger.info(f"Entering sync_save_datacell for Datacell id={datacell.id}")
+    try:
+        datacell.save()
+        logger.info(f"Datacell saved successfully: {datacell.id}")
+    except Exception as e:
+        logger.exception(
+            f"Exception in sync_save_datacell for Datacell id={datacell.id}: {e}"
+        )
+        raise

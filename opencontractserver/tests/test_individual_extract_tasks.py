@@ -8,6 +8,7 @@ from typing import Optional
 
 import vcr
 from django.contrib.auth import get_user_model
+from django.db import connections
 from django.test import TestCase
 from django.test.utils import override_settings
 
@@ -75,23 +76,43 @@ class TestOcLlamaIndexDocQuery(CeleryEagerModeFixtureTestCase):
             creator=self.user,
         )
 
-        # Invoke the Celery task synchronously (via .get())
-        oc_llama_index_doc_query.delay(
-            cell_id=datacell.id, similarity_top_k=3, max_token_length=1000
-        ).get()
+        # Ensure connection is fresh before invoking the task
+        for alias in connections:
+            connections[alias].close_if_unusable_or_obsolete()
+            connections[alias].connect()
 
-        datacell.refresh_from_db()
-        result = datacell.data
+        try:
+            # Invoke the Celery task synchronously (via .get())
+            oc_llama_index_doc_query.delay(
+                cell_id=datacell.id, similarity_top_k=3, max_token_length=1000
+            ).get()
 
-        # Assert the result is valid
-        self.assertIsNotNone(
-            result, "Expected a non-None result from oc_llama_index_doc_query."
-        )
+            # After task completion, refresh connection before database access
+            for alias in connections:
+                connections[alias].close_if_unusable_or_obsolete()
+                connections[alias].connect()
 
-        # Optionally, assert structure/contents of 'result' as appropriate for your logic
-        # self.assertIn("some_expected_value", str(result))
+            # Now access the database
+            datacell.refresh_from_db()
+            result = datacell.data
 
-        print(f"Synchronous oc_llama_index_doc_query result: {result}")
+            # Assert the result is valid
+            self.assertIsNotNone(
+                result, "Expected a non-None result from oc_llama_index_doc_query."
+            )
+
+            # Optionally, assert structure/contents of 'result' as appropriate for your logic
+            # self.assertIn("some_expected_value", str(result))
+
+            print(f"Synchronous oc_llama_index_doc_query result: {result}")
+        except Exception as e:
+            logging.error(
+                f"Exception in test_oc_llama_index_doc_query_synchronously: {e}"
+            )
+            import traceback
+
+            logging.error(traceback.format_exc())
+            raise
 
 
 class TestOcLlamaIndexDocQueryDirect(CeleryEagerModeFixtureTestCase):
@@ -177,39 +198,54 @@ class TestOcLlamaIndexDocQueryDirect(CeleryEagerModeFixtureTestCase):
     def test_oc_llama_index_doc_query_task_directly(self) -> None:
         """
         Tests oc_llama_index_doc_query by creating new Datacells for each document
-        in the Extract, then calling the task in Celery's eager mode to verify
-        synchronous behavior and result content.
+        in the extract and calling the task directly against them. This allows more
+        focused testing without the extracts orchestration layer.
         """
-
         logging.info("Starting test_oc_llama_index_doc_query_task_directly.")
 
-        # We expect multiple documents in self.extract
         for doc in self.extract.documents.all():
-            # Create a Datacell referencing the doc, the Extract, and the first column
-            cell: Datacell = Datacell.objects.create(
+            cell = Datacell.objects.create(
                 extract=self.extract,
-                column=self.column1,  # for example, test with column1
-                creator=self.user,
+                column=self.column1,
                 document=doc,
                 data_definition="Testing oc_llama_index_doc_query directly",
+                creator=self.user,
             )
 
-            # Call the Celery task
-            oc_llama_index_doc_query.delay(cell.id).get()
+            # Ensure connection is fresh before invoking the task
+            for alias in connections:
+                connections[alias].close_if_unusable_or_obsolete()
+                connections[alias].connect()
 
-            # Reload the Datacell from DB if needed
-            cell.refresh_from_db()
-            result = cell.data
-            logging.debug(f"Result for cell {cell.id}: {result}")
+            try:
+                oc_llama_index_doc_query.delay(cell.id).get()
 
-            # Basic checks
-            self.assertIsNotNone(
-                result, f"Expected a non-None result from cell {cell.id}"
-            )
-            self.assertIsNotNone(
-                cell.data,
-                f"The Datacell's data (ID: {cell.id}) should not be None after the extraction.",
-            )
+                # After task completion, refresh connection before database access
+                for alias in connections:
+                    connections[alias].close_if_unusable_or_obsolete()
+                    connections[alias].connect()
+
+                # Reload the Datacell from DB if needed
+                cell.refresh_from_db()
+                result = cell.data
+                logging.debug(f"Result for cell {cell.id}: {result}")
+
+                # Basic checks
+                self.assertIsNotNone(
+                    result, f"Expected a non-None result from cell {cell.id}"
+                )
+                self.assertIsNotNone(
+                    cell.data,
+                    f"The Datacell's data (ID: {cell.id}) should not be None after the extraction.",
+                )
+            except Exception as e:
+                logging.error(
+                    f"Exception in test_oc_llama_index_doc_query_task_directly for cell {cell.id}: {e}"
+                )
+                import traceback
+
+                logging.error(traceback.format_exc())
+                raise
 
         # Double-check the number of DocumentAnalysisRows if desired
         rows = DocumentAnalysisRow.objects.filter(extract=self.extract)

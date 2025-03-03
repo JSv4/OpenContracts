@@ -276,11 +276,21 @@ class CeleryEagerModeFixtureTestCase(BaseFixtureTestCase, CeleryEagerModeTestCas
             connections[alias].connect()
 
     def tearDown(self):
-        # Close connections before teardown to prevent them from being terminated
-        # while still in use by async tasks
-        for alias in connections:
-            connections[alias].close_if_unusable_or_obsolete()
-            connections[alias].close()
+        # IMPORTANT: Django will close and terminate connections during test teardown,
+        # but our Celery tasks in eager mode might still be using them.
+        # We need to make sure all Celery tasks are done before closing connections.
+
+        # Give pending tasks a chance to complete
+        time.sleep(0.5)  # Add a small delay to ensure tasks have a chance to finish
+
+        try:
+            # Close connections before teardown to prevent them from being terminated
+            # while still in use by async tasks
+            for alias in connections:
+                connections[alias].close_if_unusable_or_obsolete()
+                connections[alias].close()
+        except Exception as e:
+            logging.warning(f"Error closing connections during tearDown: {e}")
 
         # Call both parent tearDown methods in reverse order
         CeleryEagerModeTestCase.tearDown(self)

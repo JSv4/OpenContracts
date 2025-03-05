@@ -6,15 +6,7 @@ import {
 } from "../context/AnnotationRefsAtoms";
 import { PDFPageRenderer } from "../renderers/pdf/PDF";
 import { useCallback } from "react";
-
-type RefType =
-  | "selection"
-  | "search"
-  | "annotation"
-  | "scrollContainer"
-  | "pdfPageCanvas"
-  | "pdfPageRenderer"
-  | "pdfPageContainer";
+import type { RefType } from "../context/AnnotationRefsAtoms";
 
 /**
  * Hook for managing annotation references
@@ -63,6 +55,7 @@ export const useAnnotationRefs = () => {
     PDFPageContainerRefs: { current: refs.PDFPageContainerRefs },
     annotationElementRefs: { current: refs.annotationElementRefs },
     textSearchElementRefs: { current: refs.textSearchElementRefs },
+    chatSourceElementRefs: { current: refs.chatSourceElementRefs },
     registerRef,
     unregisterRef,
   };

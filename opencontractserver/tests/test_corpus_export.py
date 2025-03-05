@@ -56,6 +56,10 @@ class ExportCorpusTestCase(TestCase):
         # TODO - load the import zip into memory so we can compare exports against original import
         self.import_zip = None
 
+    # TODO - we really need to update the export format... to make it more useful for exchanges analyses,
+    #  stopped exporting ALL labelset labels
+    #  and not just export labels used in the corpus. This is a temporary fix to get working outputs,
+    #  but more thorough redesign is needed..
     def test_export_utils(self):
         print(
             "# TEST CORPUS EXPORT PIPELINE #########################################################################"
@@ -70,14 +74,14 @@ class ExportCorpusTestCase(TestCase):
         assert "text_labels" in label_lookups
         print(f"\t\tlabel_lookups['text_labels']: {label_lookups['text_labels']}")
         print(f"Length of text_labels: {len(label_lookups['text_labels'])}")
-        assert len(label_lookups["text_labels"]) == 79
+        assert len(label_lookups["text_labels"]) == 3
         print("\t\tSUCCESS")
 
         print("3)\tTest that we have proper doc_labels value in return obj")
         assert "doc_labels" in label_lookups
         print(f"\t\tlabel_lookups['doc_labels']: {label_lookups['doc_labels']}")
         print(f"Length of doc_labels: {len(label_lookups['doc_labels'])}")
-        assert len(label_lookups["doc_labels"]) == 28
+        assert len(label_lookups["doc_labels"]) == 1
         print("\t\tSUCCESS")
 
         print(

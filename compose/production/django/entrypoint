@@ -36,6 +36,13 @@ sys.exit(0)
 
 END
 }
+
+# Add this to your entrypoint script before postgres_ready()
+echo "Python path: $(which python)"
+echo "Python version: $(python --version)"
+echo "Installed packages:"
+pip list | grep psycopg
+
 until postgres_ready; do
   >&2 echo 'Waiting for PostgreSQL to become available...'
   sleep 1

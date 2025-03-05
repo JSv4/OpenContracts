@@ -1,1 +1,1 @@
-pdfredact==0.0.5  # https://github.com/JSv4/pdfredact
+pdfredact>=0.0.6  # https://github.com/JSv4/pdfredact

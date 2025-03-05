@@ -66,11 +66,6 @@ export const ExtractCards = ({
           margin: ".75em",
           minWidth: "300px",
         }}
-        include_image
-        image_style={{
-          height: "30vh",
-          width: "auto",
-        }}
         key="no_extracts_available_placeholder"
         title="No Extracts Available..."
         description="If you have sufficient privileges, try creating a new extract from the corpus page (right click on the corpus)."

@@ -34,7 +34,17 @@ User = get_user_model()
 
 
 @shared_task
-def on_demand_post_processors(export_id: str | int, corpus_pk: str | int):
+def on_demand_post_processors(
+    export_id: int,
+    corpus_pk: int,
+):
+    """
+    If user has selected some optional post-processors to run on the final
+    ZIP, we perform them here. The annotation_filter_mode and analysis_ids
+    are mostly relevant if the post-processor itself wants to consult or
+    further refine data. Typically, though, it uses the final data.json
+    as-is.
+    """
     try:
         export = UserExport.objects.get(pk=export_id)
         corpus = Corpus.objects.get(pk=corpus_pk)
@@ -81,10 +91,18 @@ def package_annotated_docs(
             dict[str | int, AnnotationLabelPythonType],
         ]
     ],
-    export_id: str | int,
-    corpus_pk: str | int,
+    export_id: int,
+    corpus_pk: int,
 ):
+    """
+    Gathers the partial doc exports from burn_doc_annotations() and compiles
+    the final zip (with pdf/image data + data.json). If annotation_filter_mode
+    is "CORPUS_LABELSET_ONLY", we rely exclusively on data from the corpus label set.
+    Otherwise, we handle combined or analysis-only data, which should already be
+    reflected in burned_docs.
 
+    Because burned_docs is already filtered, we mostly just package what's provided.
+    """
     logger.info(f"Package corpus for export {export_id}...")
 
     annotated_docs = {}
@@ -173,10 +191,15 @@ def package_funsd_exports(
             list[tuple[int, str, str]],
         ]
     ],
-    export_id: str | int,
-    corpus_pk: str | int,
+    export_id: int,
+    corpus_pk: int,
 ):
-
+    """
+    Similar to package_annotated_docs, but for FUNSD exports. The key difference
+    is we store per-page images and annotations in separate files. The
+    annotation_filter_mode logic should already be applied upstream, so we just
+    need to handle the final packaging.
+    """
     logger.info(f"package_funsd_exports() - data:\n{json.dumps(funsd_data, indent=4)}")
 
     s3 = None

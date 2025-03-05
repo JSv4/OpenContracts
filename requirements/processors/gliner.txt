@@ -1,2 +1,2 @@
 spacy
-gliner
+gliner == 0.2.16

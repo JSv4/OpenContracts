@@ -104,6 +104,15 @@ jobs:
       - name: Collect Static Files
         run: docker compose -f test.yml run --rm django python manage.py collectstatic
 
+      # Add this step to configure PostgreSQL for better stability in CI
+      - name: Configure PostgreSQL for CI
+        run: |
+          docker compose -f test.yml exec -T postgres bash -c "echo 'max_connections = 200' >> /var/lib/postgresql/data/postgresql.conf"
+          docker compose -f test.yml exec -T postgres bash -c "echo 'idle_in_transaction_session_timeout = 60000' >> /var/lib/postgresql/data/postgresql.conf"
+          docker compose -f test.yml exec -T postgres bash -c "echo 'statement_timeout = 60000' >> /var/lib/postgresql/data/postgresql.conf"
+          docker compose -f test.yml restart postgres
+          sleep 5  # Give PostgreSQL time to restart
+
       - name: Verify Docker Containers
         run: |
           docker compose -f test.yml ps

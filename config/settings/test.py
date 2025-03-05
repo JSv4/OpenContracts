@@ -13,6 +13,11 @@ SECRET_KEY = env(
     default="q1JMhn0BHYv6DB4QTeSuvO06R3cMWn362D3DJhnNqSO3CO9z4aMbPqPgd8yKUNf8",
 )
 
+# Database
+# ------------------------------------------------------------------------------
+CONN_MAX_AGE = 0
+CONN_HEALTH_CHECKS = True
+
 # PASSWORDS
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#password-hashers

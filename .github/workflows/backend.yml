@@ -116,12 +116,6 @@ jobs:
           docker compose -f test.yml restart postgres
           sleep 10  # Give PostgreSQL time to restart
 
-      # Add environment variables to help with connection handling
-      - name: Set Django DB Connection Settings
-        run: |
-          docker compose -f test.yml exec -T django bash -c "echo 'export CONN_MAX_AGE=0' >> /app/.env"
-          docker compose -f test.yml exec -T django bash -c "echo 'export CONN_HEALTH_CHECKS=True' >> /app/.env"
-
       - name: Verify Docker Containers
         run: |
           docker compose -f test.yml ps

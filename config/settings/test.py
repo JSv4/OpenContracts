@@ -15,8 +15,21 @@ SECRET_KEY = env(
 
 # Database
 # ------------------------------------------------------------------------------
-CONN_MAX_AGE = 0
-CONN_HEALTH_CHECKS = True
+# Update database connection settings for tests
+DATABASES["default"]["CONN_MAX_AGE"] = 0  # Disable connection pooling
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+DATABASES["default"]["OPTIONS"] = {
+    **DATABASES["default"].get("OPTIONS", {}),
+    "connect_timeout": 10,
+    "keepalives": 1,
+    "keepalives_idle": 30,
+    "keepalives_interval": 5,
+    "keepalives_count": 5,
+}
+DATABASES["default"]["TEST"] = {
+    **DATABASES["default"].get("TEST", {}),
+    "SERIALIZE": False,  # Speeds up tests
+}
 
 # PASSWORDS
 # ------------------------------------------------------------------------------

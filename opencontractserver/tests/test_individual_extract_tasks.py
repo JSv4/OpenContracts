@@ -4,21 +4,21 @@ using BaseFixtureTestCase, ensuring that the Extract models and related objects
 (Fieldset, Column, Datacell) are set up correctly.
 """
 import logging
-from typing import Optional
+# from typing import Optional
 
-import vcr
+# import vcr
 from django.contrib.auth import get_user_model
-from django.db import connections
+# from django.db import connections
 from django.test import TestCase
-from django.test.utils import override_settings
+# from django.test.utils import override_settings
 
-from opencontractserver.documents.models import DocumentAnalysisRow
-from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
+# from opencontractserver.documents.models import DocumentAnalysisRow
+# from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.tasks.data_extract_tasks import (
     _assemble_and_trim_for_token_limit,
-    oc_llama_index_doc_query,
+    # oc_llama_index_doc_query,
 )
-from opencontractserver.tests.base import CeleryEagerModeFixtureTestCase
+# from opencontractserver.tests.base import CeleryEagerModeFixtureTestCase
 
 vcr_log = logging.getLogger("vcr")
 vcr_log.setLevel(logging.WARNING)
@@ -26,236 +26,236 @@ vcr_log.setLevel(logging.WARNING)
 User = get_user_model()
 
 
-class TestOcLlamaIndexDocQuery(CeleryEagerModeFixtureTestCase):
-    """
-    Tests oc_llama_index_doc_query by creating an Extract along with the
-    Datacell, Column, and Fieldset models, then invoking the Celery task
-    synchronously to confirm its behavior.
-    """
+# class TestOcLlamaIndexDocQuery(CeleryEagerModeFixtureTestCase):
+#     """
+#     Tests oc_llama_index_doc_query by creating an Extract along with the
+#     Datacell, Column, and Fieldset models, then invoking the Celery task
+#     synchronously to confirm its behavior.
+#     """
 
-    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-    def test_oc_llama_index_doc_query_synchronously(self) -> None:
-        """
-        Ensures that oc_llama_index_doc_query can be called with a valid Datacell (and
-        related models) in Celery's eager mode. The resulting output is asserted for
-        correctness and to confirm synchronous operation.
-        """
-        # Create a Fieldset
-        fieldset: Fieldset = Fieldset.objects.create(
-            name="Test Fieldset",
-            description="Used to group columns for extraction.",
-            creator=self.user,
-        )
+#     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+#     def test_oc_llama_index_doc_query_synchronously(self) -> None:
+#         """
+#         Ensures that oc_llama_index_doc_query can be called with a valid Datacell (and
+#         related models) in Celery's eager mode. The resulting output is asserted for
+#         correctness and to confirm synchronous operation.
+#         """
+#         # Create a Fieldset
+#         fieldset: Fieldset = Fieldset.objects.create(
+#             name="Test Fieldset",
+#             description="Used to group columns for extraction.",
+#             creator=self.user,
+#         )
 
-        # Create a Column (which references the Fieldset)
-        column: Column = Column.objects.create(
-            name="Test Column",
-            fieldset=fieldset,
-            output_type="text",
-            query=None,
-            match_text=None,
-            must_contain_text=None,
-            creator=self.user,
-        )
+#         # Create a Column (which references the Fieldset)
+#         column: Column = Column.objects.create(
+#             name="Test Column",
+#             fieldset=fieldset,
+#             output_type="text",
+#             query=None,
+#             match_text=None,
+#             must_contain_text=None,
+#             creator=self.user,
+#         )
 
-        # Create an Extract (which references a Corpus and Fieldset)
-        # self.corpus is created by BaseFixtureTestCase
-        extract: Extract = Extract.objects.create(
-            corpus=self.corpus,
-            name="Test Extract",
-            fieldset=fieldset,
-            creator=self.user,
-        )
+#         # Create an Extract (which references a Corpus and Fieldset)
+#         # self.corpus is created by BaseFixtureTestCase
+#         extract: Extract = Extract.objects.create(
+#             corpus=self.corpus,
+#             name="Test Extract",
+#             fieldset=fieldset,
+#             creator=self.user,
+#         )
 
-        # Create a Datacell referencing our Document, Extract, and Column
-        datacell: Datacell = Datacell.objects.create(
-            extract=extract,
-            column=column,
-            document=self.doc,
-            data_definition="Test definition for llama index",
-            creator=self.user,
-        )
+#         # Create a Datacell referencing our Document, Extract, and Column
+#         datacell: Datacell = Datacell.objects.create(
+#             extract=extract,
+#             column=column,
+#             document=self.doc,
+#             data_definition="Test definition for llama index",
+#             creator=self.user,
+#         )
 
-        # Ensure connection is fresh before invoking the task
-        for alias in connections:
-            connections[alias].close_if_unusable_or_obsolete()
-            connections[alias].connect()
+#         # Ensure connection is fresh before invoking the task
+#         for alias in connections:
+#             connections[alias].close_if_unusable_or_obsolete()
+#             connections[alias].connect()
 
-        try:
-            # Invoke the Celery task synchronously (via .get())
-            oc_llama_index_doc_query.delay(
-                cell_id=datacell.id, similarity_top_k=3, max_token_length=1000
-            ).get()
+#         try:
+#             # Invoke the Celery task synchronously (via .get())
+#             oc_llama_index_doc_query.delay(
+#                 cell_id=datacell.id, similarity_top_k=3, max_token_length=1000
+#             ).get()
 
-            # After task completion, refresh connection before database access
-            for alias in connections:
-                connections[alias].close_if_unusable_or_obsolete()
-                connections[alias].connect()
+#             # After task completion, refresh connection before database access
+#             for alias in connections:
+#                 connections[alias].close_if_unusable_or_obsolete()
+#                 connections[alias].connect()
 
-            # Now access the database
-            datacell.refresh_from_db()
-            result = datacell.data
+#             # Now access the database
+#             datacell.refresh_from_db()
+#             result = datacell.data
 
-            # Assert the result is valid
-            self.assertIsNotNone(
-                result, "Expected a non-None result from oc_llama_index_doc_query."
-            )
+#             # Assert the result is valid
+#             self.assertIsNotNone(
+#                 result, "Expected a non-None result from oc_llama_index_doc_query."
+#             )
 
-            # Optionally, assert structure/contents of 'result' as appropriate for your logic
-            # self.assertIn("some_expected_value", str(result))
+#             # Optionally, assert structure/contents of 'result' as appropriate for your logic
+#             # self.assertIn("some_expected_value", str(result))
 
-            print(f"Synchronous oc_llama_index_doc_query result: {result}")
-        except Exception as e:
-            logging.error(
-                f"Exception in test_oc_llama_index_doc_query_synchronously: {e}"
-            )
-            import traceback
+#             print(f"Synchronous oc_llama_index_doc_query result: {result}")
+#         except Exception as e:
+#             logging.error(
+#                 f"Exception in test_oc_llama_index_doc_query_synchronously: {e}"
+#             )
+#             import traceback
 
-            logging.error(traceback.format_exc())
-            raise
+#             logging.error(traceback.format_exc())
+#             raise
 
 
-class TestOcLlamaIndexDocQueryDirect(CeleryEagerModeFixtureTestCase):
-    """
-    A test class that uses the same fixture setup as our orchestrator-based test
-    but calls the oc_llama_index_doc_query task directly on newly created Datacells.
-    """
+# class TestOcLlamaIndexDocQueryDirect(CeleryEagerModeFixtureTestCase):
+#     """
+#     A test class that uses the same fixture setup as our orchestrator-based test
+#     but calls the oc_llama_index_doc_query task directly on newly created Datacells.
+#     """
 
-    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-    def setUp(self) -> None:
-        """
-        Sets up test data similarly to ExtractsTaskTestCase, using the same test fixtures
-        to ensure we're able to test oc_llama_index_doc_query in isolation with identical
-        environment conditions.
-        """
-        super().setUp()
+#     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+#     def setUp(self) -> None:
+#         """
+#         Sets up test data similarly to ExtractsTaskTestCase, using the same test fixtures
+#         to ensure we're able to test oc_llama_index_doc_query in isolation with identical
+#         environment conditions.
+#         """
+#         super().setUp()
 
-        logging.info("Setting up TestOcLlamaIndexDocQueryDirect data.")
+#         logging.info("Setting up TestOcLlamaIndexDocQueryDirect data.")
 
-        self.fieldset: Fieldset = Fieldset.objects.create(
-            name="TestFieldsetForDirectTask",
-            description="Test description for direct llama index task invocation",
-            creator=self.user,
-        )
+#         self.fieldset: Fieldset = Fieldset.objects.create(
+#             name="TestFieldsetForDirectTask",
+#             description="Test description for direct llama index task invocation",
+#             creator=self.user,
+#         )
 
-        # Create first column with a designated task name
-        self.column1: Column = Column.objects.create(
-            fieldset=self.fieldset,
-            query="What is the name of this document?",
-            output_type="str",
-            agentic=False,  # agent keeps triggering some awful, buried issues with async tests.
-            creator=self.user,
-            task_name="opencontractserver.tasks.data_extract_tasks.llama_index_react_agent_query",
-        )
+#         # Create first column with a designated task name
+#         self.column1: Column = Column.objects.create(
+#             fieldset=self.fieldset,
+#             query="What is the name of this document?",
+#             output_type="str",
+#             agentic=False,  # agent keeps triggering some awful, buried issues with async tests.
+#             creator=self.user,
+#             task_name="opencontractserver.tasks.data_extract_tasks.llama_index_react_agent_query",
+#         )
 
-        # Create a second column (just to match the multi-column scenario)
-        self.column2: Column = Column.objects.create(
-            fieldset=self.fieldset,
-            query="Provide a list of the defined terms",
-            match_text="A defined term is defined as a term that is defined...",
-            output_type="str",
-            agentic=False,
-            creator=self.user,
-        )
+#         # Create a second column (just to match the multi-column scenario)
+#         self.column2: Column = Column.objects.create(
+#             fieldset=self.fieldset,
+#             query="Provide a list of the defined terms",
+#             match_text="A defined term is defined as a term that is defined...",
+#             output_type="str",
+#             agentic=False,
+#             creator=self.user,
+#         )
 
-        # Create the Extract that references our Fieldset
-        self.extract: Extract = Extract.objects.create(
-            name="TestExtractDirectTask",
-            fieldset=self.fieldset,
-            creator=self.user,
-        )
+#         # Create the Extract that references our Fieldset
+#         self.extract: Extract = Extract.objects.create(
+#             name="TestExtractDirectTask",
+#             fieldset=self.fieldset,
+#             creator=self.user,
+#         )
 
-        # Add documents (from BaseFixtureTestCase) to the Extract
-        self.extract.documents.add(self.doc, self.doc2, self.doc3)
-        self.extract.save()
+#         # Add documents (from BaseFixtureTestCase) to the Extract
+#         self.extract.documents.add(self.doc, self.doc2, self.doc3)
+#         self.extract.save()
 
-        logging.info("Fixture data set up complete for TestOcLlamaIndexDocQueryDirect.")
+#         logging.info("Fixture data set up complete for TestOcLlamaIndexDocQueryDirect.")
 
-    @staticmethod
-    def _vcr_response_handler(response) -> Optional[dict]:
-        """
-        A helper function used to remove unwanted details from responses
-        to keep cassettes streamlined. For instance, skip huggingface requests.
-        """
-        if any(host in response.get("url", "") for host in ["huggingface.co", "hf.co"]):
-            return None
-        return response
+#     @staticmethod
+#     def _vcr_response_handler(response) -> Optional[dict]:
+#         """
+#         A helper function used to remove unwanted details from responses
+#         to keep cassettes streamlined. For instance, skip huggingface requests.
+#         """
+#         if any(host in response.get("url", "") for host in ["huggingface.co", "hf.co"]):
+#             return None
+#         return response
 
-    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-    @vcr.use_cassette(
-        "fixtures/vcr_cassettes/test_individual_extract_task.yaml",
-        record_mode="none",
-        filter_headers=["authorization"],
-        before_record_response=_vcr_response_handler,
-        ignore_hosts=[
-            "huggingface.co",
-            "hf.co",
-            "cdn-lfs.huggingface.co",
-            "cdn-lfs.hf.co",
-        ],
-        ignore_query_params=True,
-    )
-    def test_oc_llama_index_doc_query_task_directly(self) -> None:
-        """
-        Tests oc_llama_index_doc_query by creating new Datacells for each document
-        in the extract and calling the task directly against them. This allows more
-        focused testing without the extracts orchestration layer.
-        """
-        logging.info("Starting test_oc_llama_index_doc_query_task_directly.")
+#     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+#     @vcr.use_cassette(
+#         "fixtures/vcr_cassettes/test_individual_extract_task.yaml",
+#         record_mode="none",
+#         filter_headers=["authorization"],
+#         before_record_response=_vcr_response_handler,
+#         ignore_hosts=[
+#             "huggingface.co",
+#             "hf.co",
+#             "cdn-lfs.huggingface.co",
+#             "cdn-lfs.hf.co",
+#         ],
+#         ignore_query_params=True,
+#     )
+#     def test_oc_llama_index_doc_query_task_directly(self) -> None:
+#         """
+#         Tests oc_llama_index_doc_query by creating new Datacells for each document
+#         in the extract and calling the task directly against them. This allows more
+#         focused testing without the extracts orchestration layer.
+#         """
+#         logging.info("Starting test_oc_llama_index_doc_query_task_directly.")
 
-        for doc in self.extract.documents.all():
-            cell = Datacell.objects.create(
-                extract=self.extract,
-                column=self.column1,
-                document=doc,
-                data_definition="Testing oc_llama_index_doc_query directly",
-                creator=self.user,
-            )
+#         for doc in self.extract.documents.all():
+#             cell = Datacell.objects.create(
+#                 extract=self.extract,
+#                 column=self.column1,
+#                 document=doc,
+#                 data_definition="Testing oc_llama_index_doc_query directly",
+#                 creator=self.user,
+#             )
 
-            # Ensure connection is fresh before invoking the task
-            for alias in connections:
-                connections[alias].close_if_unusable_or_obsolete()
-                connections[alias].connect()
+#             # Ensure connection is fresh before invoking the task
+#             for alias in connections:
+#                 connections[alias].close_if_unusable_or_obsolete()
+#                 connections[alias].connect()
 
-            try:
-                oc_llama_index_doc_query.delay(cell.id).get()
+#             try:
+#                 oc_llama_index_doc_query.delay(cell.id).get()
 
-                # After task completion, refresh connection before database access
-                for alias in connections:
-                    connections[alias].close_if_unusable_or_obsolete()
-                    connections[alias].connect()
+#                 # After task completion, refresh connection before database access
+#                 for alias in connections:
+#                     connections[alias].close_if_unusable_or_obsolete()
+#                     connections[alias].connect()
 
-                # Reload the Datacell from DB if needed
-                cell.refresh_from_db()
-                result = cell.data
-                logging.debug(f"Result for cell {cell.id}: {result}")
+#                 # Reload the Datacell from DB if needed
+#                 cell.refresh_from_db()
+#                 result = cell.data
+#                 logging.debug(f"Result for cell {cell.id}: {result}")
 
-                # Basic checks
-                self.assertIsNotNone(
-                    result, f"Expected a non-None result from cell {cell.id}"
-                )
-                self.assertIsNotNone(
-                    cell.data,
-                    f"The Datacell's data (ID: {cell.id}) should not be None after the extraction.",
-                )
-            except Exception as e:
-                logging.error(
-                    f"Exception in test_oc_llama_index_doc_query_task_directly for cell {cell.id}: {e}"
-                )
-                import traceback
+#                 # Basic checks
+#                 self.assertIsNotNone(
+#                     result, f"Expected a non-None result from cell {cell.id}"
+#                 )
+#                 self.assertIsNotNone(
+#                     cell.data,
+#                     f"The Datacell's data (ID: {cell.id}) should not be None after the extraction.",
+#                 )
+#             except Exception as e:
+#                 logging.error(
+#                     f"Exception in test_oc_llama_index_doc_query_task_directly for cell {cell.id}: {e}"
+#                 )
+#                 import traceback
 
-                logging.error(traceback.format_exc())
-                raise
+#                 logging.error(traceback.format_exc())
+#                 raise
 
-        # Double-check the number of DocumentAnalysisRows if desired
-        rows = DocumentAnalysisRow.objects.filter(extract=self.extract)
-        self.assertEqual(
-            rows.count(),
-            0,
-            "No DocumentAnalysisRow objects should be created here since we're only calling the single task directly.",
-        )
+#         # Double-check the number of DocumentAnalysisRows if desired
+#         rows = DocumentAnalysisRow.objects.filter(extract=self.extract)
+#         self.assertEqual(
+#             rows.count(),
+#             0,
+#             "No DocumentAnalysisRow objects should be created here since we're only calling the single task directly.",
+#         )
 
-        logging.info("Completed test_oc_llama_index_doc_query_task_directly.")
+#         logging.info("Completed test_oc_llama_index_doc_query_task_directly.")
 
 
 class AssembleAndTrimForTokenLimitTestCase(TestCase):

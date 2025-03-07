@@ -115,22 +115,12 @@ class Query(graphene.ObjectType):
     def resolve_annotations(
         self, info, analysis_isnull=None, structural=None, **kwargs
     ):
-        # Base filtering for user permissions
-        if info.context.user.is_superuser:
-            logger.info("User is superuser, returning all annotations")
-            queryset = Annotation.objects.all()
-        elif info.context.user.is_anonymous:
-            logger.info("User is anonymous, returning public annotations")
-            queryset = Annotation.objects.filter(Q(is_public=True))
-            logger.info(f"{queryset.count()} public annotations...")
-        else:
-            logger.info(
-                "User is authenticated, returning user's and public annotations"
-            )
-            queryset = Annotation.objects.filter(
-                Q(creator=info.context.user) | Q(is_public=True)
-            )
-
+        # Use the central permission system to filter annotations
+        # This ensures consistent handling of permissions, including corpus inheritance
+        queryset = Annotation.objects.visible_to_user(info.context.user)
+        
+        print(f"Annotations queryset: {queryset}")
+        
         # Filter by uses_label_from_labelset_id
         labelset_id = kwargs.get("uses_label_from_labelset_id")
         if labelset_id:
@@ -289,21 +279,19 @@ class Query(graphene.ObjectType):
 
     def resolve_bulk_doc_relationships_in_corpus(self, info, corpus_id, document_id):
         # Get the base queryset first (only stuff given user CAN see)
-        if info.context.user.is_superuser:
-            queryset = Relationship.objects.all().order_by("created")
-        # Otherwise, if user is anonymous, try easy query
-        elif info.context.user.is_anonymous:
-            queryset = Relationship.objects.filter(Q(is_public=True))
-        # Finally, in all other cases, actually do the hard work
-        else:
-            queryset = Relationship.objects.filter(
-                Q(creator=info.context.user) | Q(is_public=True)
-            )
+        queryset = DocumentRelationship.objects.visible_to_user(info.context.user)
 
-        doc_django_pk = from_global_id(document_id)[1]
-        corpus_django_pk = from_global_id(corpus_id)[1]
+        # Always filter by document
+        doc_pk = from_global_id(document_id)[1]
+        queryset = queryset.filter(
+            Q(source_document_id=doc_pk) | Q(target_document_id=doc_pk)
+        )
 
-        return queryset.filter(corpus_id=corpus_django_pk, document_id=doc_django_pk)
+        # Apply optional filters
+        corpus_pk = from_global_id(corpus_id)[1]
+        queryset = queryset.filter(corpus_id=corpus_pk)
+
+        return queryset.order_by("created")
 
     bulk_doc_annotations_in_corpus = graphene.Field(
         graphene.List(AnnotationType),
@@ -1008,18 +996,13 @@ class Query(graphene.ObjectType):
 
     document_relationship = relay.Node.Field(DocumentRelationshipType)
 
-    @login_required
-    def resolve_document_relationship(self, info, **kwargs):
+    def resolve_documentrelationship(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
-        if info.context.user.is_superuser:
-            return DocumentRelationship.objects.get(id=django_pk)
-        elif info.context.user.is_anonymous:
-            return DocumentRelationship.objects.get(Q(id=django_pk) & Q(is_public=True))
-        else:
-            return DocumentRelationship.objects.get(
-                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
-            )
-            
+        try:
+            return DocumentRelationship.objects.visible_to_user(info.context.user).get(id=django_pk)
+        except DocumentRelationship.DoesNotExist:
+            return None
+
     # Also add a bulk resolver similar to bulk_doc_relationships_in_corpus
     bulk_doc_relationships = graphene.Field(
         graphene.List(DocumentRelationshipType),
@@ -1125,14 +1108,10 @@ class Query(graphene.ObjectType):
     @login_required
     def resolve_note(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
-        if info.context.user.is_superuser:
-            return Note.objects.get(id=django_pk)
-        elif info.context.user.is_anonymous:
-            return Note.objects.get(Q(id=django_pk) & Q(is_public=True))
-        else:
-            return Note.objects.get(
-                Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
-            )
+        try:
+            return Note.objects.visible_to_user(info.context.user).get(id=django_pk)
+        except Note.DoesNotExist:
+            return None
 
     chat_messages = graphene.Field(
         graphene.List(MessageType),
@@ -1189,31 +1168,21 @@ class Query(graphene.ObjectType):
     chat_message = relay.Node.Field(MessageType)
 
     @login_required
-    def resolve_chat_message(self, info: graphene.ResolveInfo, **kwargs) -> ChatMessage:
-        """
-        Resolver for fetching a single ChatMessage by global Relay ID.
+    def resolve_chat_message(self, info, **kwargs):
+        try:
+            django_pk = from_global_id(kwargs.get("id", None))[1]
+            user = info.context.user
 
-        Args:
-            info (graphene.ResolveInfo): GraphQL resolve info.
-            **kwargs: Any additional keyword arguments passed from the GraphQL query.
-
-        Returns:
-            ChatMessage: A single ChatMessage object visible to the current user.
-
-        Raises:
-            ChatMessage.DoesNotExist: If the object doesn't exist or is inaccessible.
-        """
-        django_pk = from_global_id(kwargs.get("id"))[1]
-        user = info.context.user
-
-        if user.is_superuser:
-            return ChatMessage.objects.get(pk=django_pk)
-        elif user.is_anonymous:
-            return ChatMessage.objects.get(Q(pk=django_pk) & Q(is_public=True))
-        else:
-            return ChatMessage.objects.get(
-                Q(pk=django_pk) & (Q(creator=user) | Q(is_public=True))
-            )
+            if user.is_superuser:
+                return ChatMessage.objects.get(pk=django_pk)
+            elif user.is_anonymous:
+                return ChatMessage.objects.get(Q(pk=django_pk) & Q(is_public=True))
+            else:
+                return ChatMessage.objects.get(
+                    Q(pk=django_pk) & (Q(creator=user) | Q(is_public=True))
+                )
+        except ChatMessage.DoesNotExist:
+            return None
 
     corpus_actions = DjangoConnectionField(
         CorpusActionType,

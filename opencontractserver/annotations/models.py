@@ -305,6 +305,8 @@ class AnnotationManager(CTEManager.from_queryset(AnnotationQuerySet)):
 class Annotation(BaseOCModel):
     """
     The Annotation model represents annotations within documents.
+    
+    Annotations inherit permissions from their parent corpus.
     """
 
     # Use the custom manager that combines permissioning and CTE capabilities
@@ -385,6 +387,7 @@ class Annotation(BaseOCModel):
     )
     modified = django.db.models.DateTimeField(default=timezone.now, blank=True)
 
+    # Flag to indicate that Annotations inherit permissions from their parent corpus
     INHERITS_CORPUS_PERMISSIONS = True
 
     class Meta:
@@ -617,6 +620,7 @@ class Note(BaseOCModel):
     created = django.db.models.DateTimeField(default=timezone.now)
     modified = django.db.models.DateTimeField(default=timezone.now, blank=True)
 
+    # Flag to indicate that Notes inherit permissions from their parent corpus
     INHERITS_CORPUS_PERMISSIONS = True
 
     class Meta:

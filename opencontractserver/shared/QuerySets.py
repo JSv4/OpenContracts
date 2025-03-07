@@ -35,19 +35,20 @@ class PermissionedTreeQuerySet(TreeQuerySet):
 
     def visible_to_user(self, user):
         """
-        Gets queryset with_tree_fields that is visible to user. At moment, we're JUST filtering
-        on creator and is_public, BUT this will filter on per-obj permissions later.
+        Gets queryset with_tree_fields that is visible to user.
+        This method now properly respects individual object permissions.
         """
+        from opencontractserver.utils.permissioning import filter_queryset_by_permission
 
-        if user.is_superuser:
-            return self.all()
-
-        if user.is_anonymous:
-            queryset = self.filter(Q(is_public=True)).distinct()
-        else:
-            queryset = self.filter(Q(creator=user) | Q(is_public=True)).distinct()
-
-        return queryset.with_tree_fields()
+        # Delegate to the central permission filtering logic
+        filtered_qs = filter_queryset_by_permission(
+            queryset=self,
+            user=user,
+            permission='view'  # or 'read' depending on your permission naming
+        )
+        
+        # Apply tree fields for proper hierarchical display
+        return filtered_qs.with_tree_fields() if hasattr(self, 'with_tree_fields') else filtered_qs
 
     def with_tree_fields(self):
         return super().with_tree_fields()

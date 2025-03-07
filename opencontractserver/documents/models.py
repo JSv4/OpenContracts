@@ -14,6 +14,8 @@ from opencontractserver.shared.utils import calc_oc_file_path
 class Document(BaseOCModel):
     """
     Document
+    
+    Documents inherit permissions from their parent corpus.
     """
 
     # Key fields
@@ -71,6 +73,7 @@ class Document(BaseOCModel):
     embedding = VectorField(dimensions=384, null=True, blank=True)
     description_embedding = VectorField(dimensions=384, null=True, blank=True)
 
+    # This flag enables permission inheritance from parent corpus
     INHERITS_CORPUS_PERMISSIONS = True
 
     class Meta:

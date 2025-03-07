@@ -304,3 +304,7 @@ class CorpusActionGroupObjectPermission(GroupObjectPermissionBase):
         "CorpusAction", on_delete=django.db.models.CASCADE
     )
     # enabled = False
+
+
+# Documents inherit permissions from their parent corpus
+INHERITS_CORPUS_PERMISSIONS = True

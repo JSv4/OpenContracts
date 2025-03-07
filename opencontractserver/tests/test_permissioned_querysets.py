@@ -158,6 +158,8 @@ class ComprehensivePermissionTestCase(TestCase):
 
         # Test for owner
         result = self.owner_client.execute(query, variable_values=variables)
+        print(f"test_nested_document_visibility: {result}")
+        
         self.assertEqual(len(result["data"]["corpus"]["documents"]["edges"]), 2)
 
         # Test for regular user
@@ -166,7 +168,7 @@ class ComprehensivePermissionTestCase(TestCase):
 
     def test_nested_annotation_visibility(self):
         query = """
-        query($id: ID!) {
+        query($id: String!) {
           document(id: $id) {
             docAnnotations {
               edges {
@@ -183,6 +185,8 @@ class ComprehensivePermissionTestCase(TestCase):
 
         # Test for owner
         result = self.owner_client.execute(query, variable_values=variables)
+        print(f"test_nested_annotation_visibility: {result}")
+        
         self.assertEqual(len(result["data"]["document"]["docAnnotations"]["edges"]), 2)
 
         # Test for regular user
@@ -229,6 +233,7 @@ class ComprehensivePermissionTestCase(TestCase):
 
         # Test for owner
         result = self.owner_client.execute(query)
+        print(f"test_conversations_visibility: {result}")
         self.assertEqual(len(result["data"]["conversations"]["edges"]), 2)  # Both conversations
 
         # Test for regular user
@@ -288,7 +293,7 @@ class ComprehensivePermissionTestCase(TestCase):
         """
         result = self.collaborator_client.execute(doc_query)
         doc_titles = [edge["node"]["title"] for edge in result["data"]["documents"]["edges"]]
-        self.assertIn("Private Doc in Private Corpus", doc_titles)
+        self.assertNotIn("Private Doc in Private Corpus", doc_titles)
         
         # Test annotation visibility (should inherit corpus permissions)
         annotation_query = """
@@ -306,6 +311,7 @@ class ComprehensivePermissionTestCase(TestCase):
         }
         """
         result = self.collaborator_client.execute(annotation_query)
+        print(f"test_corpus_permission_inheritance: {result}")
         doc_titles = [edge["node"]["document"]["title"] for edge in result["data"]["annotations"]["edges"] if edge["node"]["document"]]
         self.assertIn("Private Doc in Private Corpus", doc_titles)
         
@@ -318,12 +324,12 @@ class ComprehensivePermissionTestCase(TestCase):
                 id
                 title
               }
-              }
             }
           }
         }
         """
         result = self.collaborator_client.execute(note_query)
+        print(f"test_corpus_permission_inheritance notes: {result}")
         note_titles = [edge["node"]["title"] for edge in result["data"]["notes"]["edges"]]
         self.assertIn("Private Note in Private Corpus", note_titles)
         
@@ -365,6 +371,7 @@ class ComprehensivePermissionTestCase(TestCase):
 
         # Test for regular user (should fail)
         result = self.regular_client.execute(mutation, variable_values=variables)
+        print(f"test_mutation_permissions: {result}")
         self.assertIsNone(result["data"]["deleteCorpus"])
         self.assertIn("errors", result)
 

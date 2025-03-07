@@ -1,17 +1,9 @@
 import django
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models import Manager
 
-from opencontractserver.shared.QuerySets import PermissionQuerySet
+from opencontractserver.shared.Managers import PermissionManager
 
-
-class PermissionManager(Manager):
-    def get_queryset(self):
-        return PermissionQuerySet(self.model, using=self._db)
-
-    def for_user(self, user, perm, extra_conditions=None):
-        return self.get_queryset().for_user(user, perm, extra_conditions)
 
 
 class BaseOCModel(models.Model):

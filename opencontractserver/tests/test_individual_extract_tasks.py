@@ -4,20 +4,23 @@ using BaseFixtureTestCase, ensuring that the Extract models and related objects
 (Fieldset, Column, Datacell) are set up correctly.
 """
 import logging
-# from typing import Optional
 
 # import vcr
 from django.contrib.auth import get_user_model
+
 # from django.db import connections
 from django.test import TestCase
-# from django.test.utils import override_settings
 
 # from opencontractserver.documents.models import DocumentAnalysisRow
 # from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
-from opencontractserver.tasks.data_extract_tasks import (
+from opencontractserver.tasks.data_extract_tasks import (  # oc_llama_index_doc_query,
     _assemble_and_trim_for_token_limit,
-    # oc_llama_index_doc_query,
 )
+
+# from typing import Optional
+
+# from django.test.utils import override_settings
+
 # from opencontractserver.tests.base import CeleryEagerModeFixtureTestCase
 
 vcr_log = logging.getLogger("vcr")
@@ -252,10 +255,10 @@ User = get_user_model()
 #         self.assertEqual(
 #             rows.count(),
 #             0,
-#             "No DocumentAnalysisRow objects should be created here since we're only calling the single task directly.",
+#             "No DocumentAnalysisRow objects should be created here since we're only calling the single task directly.",  # noqa: E501
 #         )
 
-#         logging.info("Completed test_oc_llama_index_doc_query_task_directly.")
+#         logging.info("Completed test_oc_llama_index_doc_query_task_directly.")  # noqa: E501
 
 
 class AssembleAndTrimForTokenLimitTestCase(TestCase):

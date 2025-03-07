@@ -25,4 +25,4 @@ comment:
   require_changes: no
 
 ignore:
-  - "opencontractserver/tasks/data_extract_tasks.py" 
+  - "opencontractserver/tasks/data_extract_tasks.py"

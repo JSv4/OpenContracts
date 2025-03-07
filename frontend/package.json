@@ -24,7 +24,7 @@
     "@types/react-textfit": "^1.1.0",
     "@uiw/react-color": "^2.3.2",
     "@uiw/react-json-view": "^2.0.0-alpha.30",
-    "axios": "^1.7.9",
+    "axios": "^1.8.2",
     "d3": "^7.9.0",
     "date-fns": "^4.1.0",
     "framer-motion": "6.*",

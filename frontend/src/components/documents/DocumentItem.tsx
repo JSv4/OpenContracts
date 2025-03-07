@@ -20,6 +20,8 @@ import {
   showAddDocsToCorpusModal,
   showDeleteDocumentsModal,
   viewingDocument,
+  showKnowledgeBaseModal,
+  openedCorpus,
 } from "../../graphql/cache";
 import { AnnotationLabelType, DocumentType } from "../../types/graphql-api";
 import { downloadFile } from "../../utils/files";
@@ -245,6 +247,11 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
     event: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
     value: any
   ) => {
+    // Don't trigger if clicking within context menu
+    if ((event.target as HTMLElement).closest(".Corpus_Context_Menu")) {
+      return;
+    }
+
     event.stopPropagation();
     if (event.shiftKey) {
       if (onShiftClick && _.isFunction(onShiftClick)) {
@@ -303,8 +310,24 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
         icon: "download",
         onClick: () => onDownload(pdfFile),
       });
-      // Overwrite existing context menu with "view" only
+      // Add knowledge base option
       context_menus = [
+        {
+          key: "knowledge_base",
+          content: "Open Knowledge Base",
+          icon: "book",
+          onClick: () => {
+            const currentCorpus = openedCorpus();
+            if (currentCorpus) {
+              showKnowledgeBaseModal({
+                isOpen: true,
+                documentId: item.id,
+                corpusId: currentCorpus.id,
+              });
+              if (onClick) onClick(item);
+            }
+          },
+        },
         {
           key: "view",
           content: "View Details",
@@ -372,7 +395,7 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
           MozUserSelect: "none",
         }}
         onContextMenu={onContextMenuHandler}
-        onClick={backendLock ? () => {} : cardClickHandler}
+        onClick={backendLock ? undefined : cardClickHandler}
       >
         {backendLock ? (
           <Dimmer active inverted>
@@ -454,7 +477,14 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
             open={true}
             hideOnScroll
           >
-            <Menu className="Corpus_Context_Menu" secondary vertical>
+            <Menu
+              className="Corpus_Context_Menu"
+              secondary
+              vertical
+              onClick={(e: { stopPropagation: () => any }) =>
+                e.stopPropagation()
+              } // Stop click propagation here
+            >
               {context_menus.map((menuItem) => (
                 <Menu.Item
                   key={menuItem.key}

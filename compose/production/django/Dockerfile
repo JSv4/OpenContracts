@@ -1,6 +1,4 @@
 ARG PYTHON_VERSION=3.12-slim-bookworm
-
-# define an alias for the specfic python version used in this file.
 FROM python:${PYTHON_VERSION} as python
 
 # Python build stage
@@ -29,13 +27,15 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # psycopg2 dependencies
   libpq-dev
 
-# Requirements are installed here to ensure they will be cached.
-COPY ./requirements .
+# Copy the entire requirements directory for recursive building
+COPY ./requirements ./requirements
 
-# Create Python Dependency and Sub-Dependency Wheels.
-RUN pip wheel --wheel-dir /usr/src/app/wheels  \
-  -r ${BUILD_ENVIRONMENT}.txt
+# Upgrade pip
+RUN pip install --upgrade pip
 
+# Recursively build wheels for all *.txt found within requirements directory
+RUN find ./requirements -type f -name "*.txt" -exec echo "-r" {} \; | \
+    xargs pip wheel --wheel-dir /usr/src/app/wheels
 
 # Python 'run' stage
 FROM python as python-run-stage
@@ -67,23 +67,25 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*
 
-# All absolute dir copies ignore workdir instruction. All relative dir copies are wrt to the workdir instruction
-# copy python dependency wheels from python-build-stage
-COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
+# Copy python dependency wheels from the python-build-stage and install them
+COPY --from=python-build-stage /usr/src/app/wheels /wheels/
+RUN pip install --upgrade pip
 
 # Install CPU-less requirements
 RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 RUN pip install sentence-transformers
 
-# use wheels to install python dependencies
+# Install the remaining Python dependencies from wheels
 RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
-  && rm -rf /wheels/
+    && rm -rf /wheels/
 
-# Download sentence transformer binaries
-# ensure /models directory exists
-COPY download_embeddings_model.py .
+# Create /models, copy model preloaders from the build context, and run them
 RUN mkdir -p /models
-RUN python download_embeddings_model.py
+COPY ./model_preloaders ./model_preloaders
+RUN for script in ./model_preloaders/*.py; do \
+      echo "Running $script"; \
+      python "$script"; \
+    done
 
 # Download spacy models
 RUN python -m spacy download en_core_web_sm
@@ -97,6 +99,7 @@ RUN chmod +x /entrypoint
 COPY --chown=django:django ./compose/production/django/start /start
 RUN sed -i 's/\r$//g' /start
 RUN chmod +x /start
+
 COPY --chown=django:django ./compose/production/django/celery/worker/start /start-celeryworker
 RUN sed -i 's/\r$//g' /start-celeryworker
 RUN chmod +x /start-celeryworker
@@ -111,8 +114,7 @@ COPY ./compose/production/django/celery/flower/start /start-flower
 RUN sed -i 's/\r$//g' /start-flower
 RUN chmod +x /start-flower
 
-
-# copy application code to WORKDIR
+# Copy the full application code
 COPY --chown=django:django . ${APP_HOME}
 
 # make django owner of the WORKDIR directory as well.

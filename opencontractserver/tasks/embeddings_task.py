@@ -1,7 +1,7 @@
 import logging
 
 from config import celery_app
-from opencontractserver.annotations.models import Annotation
+from opencontractserver.annotations.models import Annotation, Note
 from opencontractserver.documents.models import Document
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.utils import (
@@ -68,4 +68,29 @@ def calculate_embedding_for_annotation_text(annotation_id: str | int):
     except Exception as e:
         logger.error(
             f"calculate_embedding_for_annotation_text() - failed to generate embeddings due to error: {e}"
+        )
+
+
+@celery_app.task(
+    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+)
+def calculate_embedding_for_note_text(note_id: str | int):
+    try:
+        note = Note.objects.get(id=note_id)
+        text = note.content
+
+        # Get the default embedder since annotations may not have a mimetype
+        embedder_class = get_default_embedder()
+        if embedder_class is None:
+            logger.error("No default embedder found")
+            return
+
+        embedder: BaseEmbedder = embedder_class()
+        embeddings = embedder.embed_text(text)
+        note.embedding = embeddings
+        note.save()
+
+    except Exception as e:
+        logger.error(
+            f"calculate_embedding_for_note_text() - failed to generate embeddings due to error: {e}"
         )

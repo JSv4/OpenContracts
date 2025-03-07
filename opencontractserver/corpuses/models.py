@@ -267,6 +267,14 @@ class CorpusAction(BaseOCModel):
                 name="exactly_one_of_fieldset_or_analyzer",
             )
         ]
+        permissions = (
+            ("permission_corpusaction", "permission corpusaction"),
+            ("publish_corpusaction", "publish corpusaction"),
+            ("create_corpusaction", "create corpusaction"),
+            ("read_corpusaction", "read corpusaction"),
+            ("update_corpusaction", "update corpusaction"),
+            ("remove_corpusaction", "delete corpusaction"),
+        )
 
     def clean(self):
         if self.fieldset and self.analyzer:

@@ -14,72 +14,113 @@ interface HighlightContainerProps {
 }
 
 const HighlightContainer = styled.div<HighlightContainerProps>`
-  border-left: 4px solid ${(props) => props.color || "gray"};
+  border-left: 4px solid ${(props) => props.color || "#e0e1e2"};
   background-color: ${(props) =>
-    props.selected ? "rgba(46, 204, 113, 0.1)" : "white"};
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  transition: all 0.3s ease;
+    props.selected ? "rgba(46, 204, 113, 0.08)" : "white"};
+  box-shadow: ${(props) =>
+    props.selected
+      ? "0 2px 8px rgba(46, 204, 113, 0.2)"
+      : "0 1px 3px rgba(0, 0, 0, 0.08)"};
+  border-radius: 6px;
+  padding: 0.875rem 1rem;
+  margin: 0.5rem 0.75rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
 
   &:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
+    background-color: ${(props) =>
+      props.selected ? "rgba(46, 204, 113, 0.08)" : "rgba(0, 0, 0, 0.01)"};
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
 `;
 
 const AnnotationLabel = styled(Label)`
   &&& {
-    background-color: #${(props) => props.color || "grey"};
+    background-color: #${(props) => props.color || "e0e1e2"};
     color: white;
     margin: 0 0.5rem 0.5rem 0;
-    padding: 0.5em 0.8em;
-    font-weight: 600;
-    border-radius: 20px;
+    padding: 0.5em 1em;
+    font-weight: 500;
+    font-size: 0.85rem;
+    border-radius: 99px;
     display: inline-flex;
     align-items: center;
-    gap: 0.5em;
+    gap: 0.4em;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }
 `;
 
 const DeleteButton = styled(Button)`
   &&& {
-    padding: 0.5em;
+    padding: 0.4em;
     margin-left: 0.5rem;
     background-color: transparent;
-    color: #e74c3c;
+    color: #99a1a7;
+    transition: all 0.2s ease;
+
     &:hover {
-      background-color: #e74c3c;
-      color: white;
+      background-color: #fee2e2;
+      color: #dc2626;
+    }
+
+    &:active {
+      background-color: #fecaca;
     }
   }
 `;
 
 const BlockQuote = styled.blockquote`
-  margin: 0.5rem 0;
-  padding: 0.5rem;
-  background-color: #f8f8f8;
-  border-left: 3px solid #ddd;
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  background-color: #f8fafc;
+  border-left: 3px solid #e2e8f0;
+  border-radius: 4px;
   font-style: italic;
-  color: #555;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.5;
+
+  &:hover {
+    background-color: #f1f5f9;
+  }
 `;
 
 const RelationshipLabel = styled(Label)`
   &&& {
-    margin-top: 0.5rem;
-    font-size: 0.8em;
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
     padding: 0.4em 0.8em;
     display: inline-flex;
     align-items: center;
-    gap: 0.3em;
+    gap: 0.4em;
+    border-radius: 4px;
+    font-weight: 500;
+
+    &[pointing="right"] {
+      background-color: #eff6ff;
+      color: #3b82f6;
+      border: 1px solid #bfdbfe;
+    }
+
+    &[pointing="left"] {
+      background-color: #f0fdf4;
+      color: #22c55e;
+      border: 1px solid #bbf7d0;
+    }
   }
 `;
 
 const LocationText = styled.div`
-  font-size: 0.8em;
-  color: #888;
-  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.75rem;
+  font-weight: 500;
 `;
 
 interface HighlightItemProps {

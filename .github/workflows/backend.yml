@@ -104,6 +104,34 @@ jobs:
       - name: Collect Static Files
         run: docker compose -f test.yml run --rm django python manage.py collectstatic
 
+      # Configure PostgreSQL for better stability in CI
+      - name: Configure PostgreSQL for CI
+        run: |
+          # Create a custom postgresql.conf with optimized settings for CI
+          cat << EOF > pg_config.conf
+          max_connections = 300
+          shared_buffers = 256MB
+          work_mem = 16MB
+          maintenance_work_mem = 64MB
+          effective_cache_size = 512MB
+          idle_in_transaction_session_timeout = 120000  # 2 minutes
+          statement_timeout = 120000  # 2 minutes
+          tcp_keepalives_idle = 30
+          tcp_keepalives_interval = 10
+          tcp_keepalives_count = 10
+          synchronous_commit = off
+          fsync = off
+          full_page_writes = off
+          EOF
+
+          # Copy the config file into the container
+          docker cp pg_config.conf $(docker compose -f test.yml ps -q postgres):/tmp/pg_config.conf
+
+          # Apply the settings and restart PostgreSQL
+          docker compose -f test.yml exec -T postgres bash -c "cat /tmp/pg_config.conf >> /var/lib/postgresql/data/postgresql.conf"
+          docker compose -f test.yml restart postgres
+          sleep 15  # Give PostgreSQL time to restart
+
       - name: Verify Docker Containers
         run: |
           docker compose -f test.yml ps

@@ -15,8 +15,9 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Relationship,
 )
+from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus, CorpusQuery
-from opencontractserver.documents.models import Document
+from opencontractserver.documents.models import Document, DocumentRelationship
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport
 
@@ -435,4 +436,58 @@ class DatacellFilter(django_filters.FilterSet):
             "started": ["lte", "gte"],
             "completed": ["lte", "gte"],
             "failed": ["lte", "gte"],
+        }
+
+
+class DocumentRelationshipFilter(django_filters.FilterSet):
+    """Filter set for DocumentRelationship model."""
+
+    class Meta:
+        model = DocumentRelationship
+        fields = [
+            "relationship_type",
+            "source_document",
+            "target_document",
+            "annotation_label",
+            "creator",
+            "is_public",
+        ]
+
+
+class ConversationFilter(django_filters.FilterSet):
+    """Filter set for Conversation model."""
+
+    document_id = filters.CharFilter(method="filter_by_document_id")
+    corpus_id = filters.CharFilter(method="filter_by_corpus_id")
+
+    def filter_by_document_id(self, queryset, name, value):
+        """Filter conversations by document ID."""
+        django_pk = from_global_id(value)[1]
+        return queryset.filter(chat_with_document_id=django_pk)
+
+    def filter_by_corpus_id(self, queryset, name, value):
+        """Filter conversations by corpus ID."""
+        django_pk = from_global_id(value)[1]
+        return queryset.filter(chat_with_corpus_id=django_pk)
+
+    class Meta:
+        model = Conversation
+        fields = {
+            "created_at": ["gte", "lte"],
+            "title": ["contains"],
+        }
+
+
+class ChatMessageFilter(django_filters.FilterSet):
+    """Filter set for ChatMessage model."""
+
+    class Meta:
+        model = ChatMessage
+        fields = {
+            "msg_type": ["exact"],
+            "conversation_id": ["exact"],
+            "source_document_id": ["exact"],
+            "created_at": ["gte", "lte"],
+            "creator_id": ["exact"],
+            "is_public": ["exact"],
         }

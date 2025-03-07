@@ -2,7 +2,7 @@
 import logging
 from typing import Any, Optional
 
-from asgiref.sync import sync_to_async
+from channels.db import database_sync_to_async
 from django.db import models
 from django.db.models import Q, QuerySet
 from llama_index.core.schema import BaseNode, TextNode
@@ -16,6 +16,7 @@ from llama_index.core.vector_stores.types import (
 from pgvector.django import CosineDistance
 
 from opencontractserver.annotations.models import Annotation
+from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 
 _logger = logging.getLogger(__name__)
 
@@ -37,12 +38,14 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     stores_text: bool = True
     flat_metadata: bool = False
 
+    user_id: str | int | None
     corpus_id: str | int | None
     document_id: str | int | None
     must_have_text: str | None
 
     def __init__(
         self,
+        user_id: str | int | None = None,
         corpus_id: str | int | None = None,
         document_id: str | int | None = None,
         must_have_text: str | None = None,
@@ -56,6 +59,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     ):
 
         super().__init__(
+            user_id=user_id,
             corpus_id=corpus_id,
             document_id=document_id,
             must_have_text=must_have_text,
@@ -78,6 +82,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     @classmethod
     def from_params(
         cls,
+        user_id: str | int | None = None,
         corpus_id: str | int | None = None,
         document_id: str | int | None = None,
         must_have_text: str | None = None,
@@ -90,6 +95,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         use_jsonb: bool = False,
     ) -> "DjangoAnnotationVectorStore":
         return cls(
+            user_id=user_id,
             corpus_id=corpus_id,
             document_id=document_id,
             must_have_text=must_have_text,
@@ -107,7 +113,14 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         # Need to do this this way because some annotations don't travel with the corpus but the document itself - e.g.
         # layout and structural annotations from the nlm parser.
 
-        queryset = Annotation.objects.all()
+        structural_queryset = Annotation.objects.filter(
+            Q(is_public=True) | Q(structural=True)
+        ).distinct()
+        other_queryset = resolve_oc_model_queryset(
+            Annotation, user=self.user_id
+        ).distinct()
+        queryset = structural_queryset | other_queryset
+
         if self.corpus_id is not None:
             queryset = queryset.filter(
                 Q(corpus_id=self.corpus_id) | Q(document__corpus=self.corpus_id)
@@ -155,6 +168,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
                 else [],
                 extra_info={
                     "page": row.page,
+                    "json": row.json,
                     "bounding_box": row.bounding_box,
                     "annotation_id": row.id,
                     "label": row.annotation_label.text
@@ -245,4 +259,4 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         self, query: VectorStoreQuery, **kwargs: Any
     ) -> VectorStoreQueryResult:
         """Query the vector store asynchronously."""
-        return await sync_to_async(self.query)(query, **kwargs)
+        return await database_sync_to_async(self.query)(query, **kwargs)

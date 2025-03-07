@@ -38,7 +38,7 @@ def run_query(
         Settings.llm = llm
 
         vector_store = DjangoAnnotationVectorStore.from_params(
-            corpus_id=query.corpus.id
+            user_id=query.creator.id, corpus_id=query.corpus.id
         )
         index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
 

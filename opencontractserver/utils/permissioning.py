@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def set_permissions_for_obj_to_user(
-    user_val: int | str | User,
+    user_val: int | str | type[User],
     instance: type[django.db.models.Model],
     permissions: list[PermissionTypes],
 ) -> None:
@@ -177,7 +177,7 @@ def get_permission_id_to_name_map_for_model(
 
 
 def get_users_permissions_for_obj(
-    user: User,
+    user: type[User],
     instance: type[django.db.models.Model],
     include_group_permissions: bool = False,
 ) -> set[str]:
@@ -224,7 +224,7 @@ def get_users_permissions_for_obj(
 
 
 def user_has_permission_for_obj(
-    user_val: int | str | User,
+    user_val: int | str | type[User],
     instance: type[django.db.models.Model],
     permission: PermissionTypes,
     include_group_permissions: bool = False,

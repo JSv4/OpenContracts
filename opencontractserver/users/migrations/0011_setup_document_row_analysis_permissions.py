@@ -22,14 +22,6 @@ public_group_permissions = {
 
 
 def add_group_permissions(apps, schema_editor):
-    # See https://code.djangoproject.com/ticket/23422
-    db_alias = schema_editor.connection.alias
-
-    try:
-        emit_post_migrate_signal(2, False, 'default')
-    except TypeError:  # Django < 1.8
-        emit_post_migrate_signal([], 2, False, 'default', db_alias)
-
     for group in public_group_permissions:
         role, created = Group.objects.get_or_create(name=group)
         logger.info(f'{group} Group created')

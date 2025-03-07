@@ -149,7 +149,7 @@ export class PDFPageInfo {
       throw new Error("Unknown Page Bounds");
     }
 
-    console.log("Get annotations for bounds", selection);
+    // console.log("Get annotations for bounds", selection);
 
     const ids: TokenId[] = [];
     const tokenBounds: BoundingBox[] = [];
@@ -203,6 +203,18 @@ export class PDFPageInfo {
 
   getScaledBounds(b: BoundingBox): BoundingBox {
     return scaled(b, this.scale);
+  }
+
+  getScreenSpaceBounds(b: BoundingBox): BoundingBox {
+    const scaledBounds = this.getScaledBounds(b);
+    const pageHeight = this.page.getViewport({ scale: this.scale }).height;
+
+    return {
+      left: scaledBounds.left,
+      top: pageHeight - scaledBounds.bottom,
+      right: scaledBounds.right,
+      bottom: pageHeight - scaledBounds.top,
+    };
   }
 
   // Method to create a new instance with an updated scale

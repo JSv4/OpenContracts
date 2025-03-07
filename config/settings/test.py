@@ -12,8 +12,24 @@ SECRET_KEY = env(
     "DJANGO_SECRET_KEY",
     default="q1JMhn0BHYv6DB4QTeSuvO06R3cMWn362D3DJhnNqSO3CO9z4aMbPqPgd8yKUNf8",
 )
-# https://docs.djangoproject.com/en/dev/ref/settings/#test-runner
-TEST_RUNNER = "django.test.runner.DiscoverRunner"
+
+# Database
+# ------------------------------------------------------------------------------
+# Update database connection settings for tests
+DATABASES["default"]["CONN_MAX_AGE"] = 0  # Disable connection pooling
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+DATABASES["default"]["OPTIONS"] = {
+    **DATABASES["default"].get("OPTIONS", {}),
+    "connect_timeout": 10,
+    "keepalives": 1,
+    "keepalives_idle": 30,
+    "keepalives_interval": 5,
+    "keepalives_count": 5,
+}
+DATABASES["default"]["TEST"] = {
+    **DATABASES["default"].get("TEST", {}),
+    "SERIALIZE": False,  # Speeds up tests
+}
 
 # PASSWORDS
 # ------------------------------------------------------------------------------
@@ -67,3 +83,6 @@ AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default=None)
 # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html#cloudfront
 AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default=None)
 aws_s3_domain = AWS_S3_CUSTOM_DOMAIN or f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+
+# Test redis setup
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}

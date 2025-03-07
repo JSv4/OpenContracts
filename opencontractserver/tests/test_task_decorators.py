@@ -361,7 +361,9 @@ class DocAnalyzerTaskTestCase(TestCase):
         def invalid_text_annotation_schema_task(*args, **kwargs):
             return [], [{"random_key": "I am lazy", "wishlist?": "RTFD"}], [], True
 
-        with self.assertRaisesRegex(ValueError, "Second element of the tuple must be"):
+        with self.assertRaisesRegex(
+            ValueError, r"Second element must be a list of \(TextSpan, str\) tuples"
+        ):
             invalid_text_annotation_schema_task.si(
                 doc_id=self.document.id, analysis_id=self.analysis.id
             ).apply().get()

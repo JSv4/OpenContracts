@@ -29,9 +29,14 @@ logger = logging.getLogger(__name__)
 def run_task_name_analyzer(
     analysis_id: int | str,
     document_ids: list[str | int] | None = None,
+    analysis_input_data: dict | None = None,
 ):
-
-    analysis = Analysis.objects.get(pk=analysis_id)
+    """
+    Invokes a task-based analyzer by analysis_id. Pass any input data
+    that the analyzer might require.
+    """
+    # Retrieve the analysis
+    analysis = Analysis.objects.get(id=analysis_id)
     analyzer = analysis.analyzer
 
     task_name = analyzer.task_name
@@ -65,6 +70,7 @@ def run_task_name_analyzer(
                         corpus_id=analysis.analyzed_corpus.id
                         if analysis.analyzed_corpus
                         else None,
+                        **(analysis_input_data if analysis_input_data else {}),
                     )
                     for doc_id in document_ids
                 ]
@@ -79,6 +85,7 @@ def process_analyzer(
     corpus_id: str | int | None = None,
     document_ids: list[str | int] | None = None,
     corpus_action: CorpusAction | None = None,
+    analysis_input_data: dict | None = None,
 ) -> Analysis:
 
     analysis = create_and_setup_analysis(
@@ -97,6 +104,7 @@ def process_analyzer(
             lambda: run_task_name_analyzer.si(
                 analysis_id=analysis.id,
                 document_ids=document_ids,
+                analysis_input_data=analysis_input_data,
             ).apply_async()
         )
 

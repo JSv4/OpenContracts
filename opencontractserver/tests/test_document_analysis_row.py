@@ -26,6 +26,7 @@ class DocumentAnalysisRowTestCase(TestCase):
             self.user = User.objects.create_user(
                 username="testuser", password="testpassword"
             )
+            self.user.save()  # Ensure the user is saved
 
             self.document = Document(
                 title="Test Document", description="Test Description", creator=self.user

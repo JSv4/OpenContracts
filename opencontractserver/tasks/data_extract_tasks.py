@@ -3,8 +3,10 @@ import json
 import logging
 import os
 
+from asgiref.sync import sync_to_async
 from celery import shared_task
 from django.conf import settings
+from django.db import DatabaseError, OperationalError
 from django.utils import timezone
 from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.agent import (
@@ -233,6 +235,72 @@ def _assemble_and_trim_for_token_limit(
     return None
 
 
+@sync_to_async
+def get_annotation_label_text(annotation):
+    """
+    Safely get the annotation label text from an annotation object.
+
+    Args:
+        annotation: The annotation object to get the label text from.
+
+    Returns:
+        str: The label text or 'Unlabeled' if no label exists.
+    """
+    return (
+        annotation.annotation_label.text if annotation.annotation_label else "Unlabeled"
+    )
+
+
+@sync_to_async
+def get_column_search_params(datacell):
+    """
+    Safely get the search text and query from a datacell's column.
+
+    Args:
+        datacell: The datacell object to get search parameters from.
+
+    Returns:
+        tuple: A tuple containing (match_text, query).
+    """
+    return datacell.column.match_text, datacell.column.query
+
+
+@sync_to_async
+def get_relationship_label_text(relationship):
+    """
+    Safely get the relationship label text from a relationship object.
+
+    Args:
+        relationship: The relationship object to get the label text from.
+
+    Returns:
+        str: The label text or 'relates_to' if no label exists.
+    """
+    return (
+        relationship.relationship_label.text
+        if relationship.relationship_label
+        else "relates_to"
+    )
+
+
+@sync_to_async
+def get_column_extraction_params(datacell):
+    """
+    Safely get the output_type, instructions, and extract_is_list from a datacell's column.
+
+    Args:
+        datacell: The datacell object to get extraction parameters from.
+
+    Returns:
+        tuple: A tuple containing (output_type, instructions, extract_is_list).
+    """
+    return (
+        datacell.column.output_type,
+        datacell.column.instructions,
+        datacell.column.extract_is_list,
+    )
+
+
 @async_celery_task()
 async def oc_llama_index_doc_query(
     cell_id: int, similarity_top_k: int = 8, max_token_length: int = 64000
@@ -283,23 +351,21 @@ async def oc_llama_index_doc_query(
 
     @sync_to_async
     def sync_get_datacell(pk: int):
-        """
-        Retrieves the Datacell object (preloading related Document and Column)
-        with the given primary key.
+        logger.info(f"Entering sync_get_datacell with cell_id={pk}")
+        try:
+            datacell = Datacell.objects.select_related(
+                "extract", "column", "document", "creator"
+            ).get(pk=pk)
+            logger.info(f"Datacell fetched successfully: {datacell.id}")
+            return datacell
+        except Exception as e:
+            import traceback
 
-        Args:
-            pk (int): ID of the Datacell.
-
-        Returns:
-            Datacell: The Datacell instance, with Document and Column already loaded.
-        """
-        from opencontractserver.extracts.models import Datacell
-
-        return Datacell.objects.select_related(
-            "document", "column"
-        ).get(  # preload foreign keys
-            id=pk
-        )
+            stack_trace = traceback.format_exc()
+            logger.exception(
+                f"Exception in sync_get_datacell for cell_id={pk}: {e}\nFull stacktrace:\n{stack_trace}"
+            )
+            raise
 
     @sync_to_async
     def sync_mark_started(dc):
@@ -427,16 +493,20 @@ async def oc_llama_index_doc_query(
     from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
 
     # Retrieve Datacell
-    datacell = await sync_get_datacell(cell_id)
-    # datacell = Datacell.objects.get(id=cell_id)
+    logger.info(f"Starting oc_llama_index_doc_query for cell_id={cell_id}")
 
     try:
+        logger.info("Attempting to fetch Datacell from database")
+        datacell = await sync_get_datacell(cell_id)
+        logger.info(f"Successfully fetched Datacell: {datacell.id}")
+    except (DatabaseError, OperationalError) as e:
+        logger.exception(f"Database error fetching Datacell {cell_id}: {e}")
+        raise
 
+    try:
+        logger.info("Attempting to perform query logic")
         # Mark as started
         await sync_mark_started(datacell)
-
-        # datacell.started = timezone.now()
-        # datacell.save()
 
         document = datacell.document
 
@@ -457,8 +527,15 @@ async def oc_llama_index_doc_query(
         # =====================
         # Build or load index
         # =====================
+        # Get user_id with sync_to_async to properly resolve the related field
+        user_id = await sync_to_async(lambda: document.creator.id)()
+
         vector_store = DjangoAnnotationVectorStore.from_params(
-            document_id=document.id, must_have_text=datacell.column.must_contain_text
+            document_id=document.id,
+            user_id=user_id,
+            must_have_text=await sync_to_async(
+                lambda: datacell.column.must_contain_text
+            )(),
         )
 
         # async_index = await VectorStoreIndex.from_vector_store(vector_store=vector_store, use_async=True)
@@ -479,12 +556,13 @@ async def oc_llama_index_doc_query(
         #     document_id=document.id, structural=True, page=0
         # )
         first_page_structural_text = await get_structural_annotations(document.id, 0)
-        first_page_structural_annots = [
-            f"{annot.annotation_label.text if annot.annotation_label else 'Unlabeled'}: {annot.raw_text}"
-            for annot in (
-                first_page_structural_text if first_page_structural_text else []
-            )
-        ]
+
+        # Process annotations with proper async handling
+        first_page_structural_annots = []
+        for annot in first_page_structural_text if first_page_structural_text else []:
+            label_text = await get_annotation_label_text(annot)
+            first_page_structural_annots.append(f"{label_text}: {annot.raw_text}")
+
         structural_context = "\n".join(first_page_structural_annots)
 
         if structural_context:
@@ -497,22 +575,18 @@ async def oc_llama_index_doc_query(
         # =====================
         # Searching logic
         # =====================
-        search_text = datacell.column.match_text
-        query = datacell.column.query
+        # Properly retrieve search parameters with async handling
+        search_text, query = await get_column_search_params(datacell)
 
         if not search_text and not query:
             logger.warning(
                 "No search_text or query provided. Skipping retrieval or using fallback."
             )
-            # datacell.data = {
-            #     "data": f"Context Exceeded Token Limit of {max_token_length} Tokens"
-            # }
-            # datacell.completed = timezone.now()
-            # datacell.save()
-            sync_mark_completed(
+            await sync_mark_completed(
                 datacell,
                 {"data": f"Context Exceeded Token Limit of {max_token_length} Tokens"},
             )
+            return
 
         # We store relevant sections in raw_retrieved_text
         raw_retrieved_text = ""
@@ -569,11 +643,12 @@ async def oc_llama_index_doc_query(
                 ]
 
             try:
+                # TODO - this is NOT preloaded, I don't think.
                 sbert_rerank = SentenceTransformerRerank(
                     model="/models/sentence-transformers/cross-encoder/ms-marco-MiniLM-L-2-v2",
                     top_n=5,
                 )
-            except (OSError, ValueError) as e:
+            except (OSError, ValueError, TypeError) as e:
                 logger.info(
                     "Local model not found, falling back to downloading from HuggingFace Hub: %s",
                     str(e),
@@ -590,6 +665,7 @@ async def oc_llama_index_doc_query(
             sbert_rerank = SentenceTransformerRerank(
                 model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=5
             )
+            logger.info(f"Reranked results: {sbert_rerank}")
             retrieved_nodes = sbert_rerank.postprocess_nodes(
                 results, QueryBundle(query)
             )
@@ -704,11 +780,7 @@ async def oc_llama_index_doc_query(
             relationship_detailed.append("Textual Description of Relationships:")
 
             for rel in relationships:
-                rel_type = (
-                    rel.relationship_label.text
-                    if rel.relationship_label
-                    else "relates_to"
-                )
+                rel_type = await get_relationship_label_text(rel)
                 relationship_detailed.append(f"\nRelationship Type: {rel_type}")
 
                 for source in await sync_to_async(rel.source_annotations.all)():
@@ -723,12 +795,16 @@ async def oc_llama_index_doc_query(
                             if target.id in retrieved_annotation_ids
                             else ""
                         )
+
+                        source_label = await get_annotation_label_text(source)
+                        target_label = await get_annotation_label_text(target)
+
                         relationship_detailed.append(
                             f"• Node{source.id}[label: "
-                            f"{source.annotation_label.text if source.annotation_label else 'unlabeled'}, "
+                            f"{source_label}, "
                             f'text: "{source.raw_text}"] {retrieved_source}\n  {rel_type}\n  '
                             f"Node{target.id}"
-                            f"[label: {target.annotation_label.text if target.annotation_label else 'unlabeled'}, "
+                            f"[label: {target_label}, "
                             f'text: "{target.raw_text}"] {retrieved_target}'
                         )
 
@@ -792,14 +868,16 @@ async def oc_llama_index_doc_query(
         # =====================
         # Marvin casting/extraction
         # =====================
-        output_type = parse_model_or_primitive(datacell.column.output_type)
-
-        parse_instructions = datacell.column.instructions
+        (
+            output_type_str,
+            parse_instructions,
+            extract_is_list,
+        ) = await get_column_extraction_params(datacell)
+        output_type = parse_model_or_primitive(output_type_str)
 
         # Optional: definitions from agentic approach
         agent_response_str = None
         if datacell.column.agentic:
-
             logger.info(f"Datacell {datacell.id} is agentic")
 
             # Now build the doc_engine query and incorporate these new tools
@@ -864,7 +942,7 @@ Context provided (combined_text):
 {combined_text}
 """
 
-            agentic_response = await agent.aquery(agent_instructions)
+            agentic_response = await agent.achat(agent_instructions)
             logger.info(f"Agentic response: {agentic_response}")
 
             agent_response_str = str(agentic_response)
@@ -886,22 +964,22 @@ Context provided (combined_text):
 
         logger.info(f"Final text for Marvin: {final_text_for_marvin}")
 
-        if datacell.column.extract_is_list:
+        if extract_is_list:
             logger.info("Extracting list")
-            result = await marvin.extract_async(
+            result = marvin.extract(
                 final_text_for_marvin,
                 target=output_type,
                 instructions=parse_instructions if parse_instructions else query,
             )
         else:
-            logger.info("Casting to single instance")
-            result = await marvin.cast_async(
+            logger.info(f"Casting to single instance ({type(final_text_for_marvin)})")
+            result = marvin.cast(
                 final_text_for_marvin,
                 target=output_type,
                 instructions=parse_instructions if parse_instructions else query,
             )
 
-        logger.debug(f"Result processed from marvin: {result}")
+        logger.debug(f"Result processed from marvin (type: {type(result)}): {result}")
 
         if issubclass(output_type, BaseModel) or isinstance(result, BaseModel):
             # datacell.data = {"data": result.model_dump()}
@@ -916,21 +994,25 @@ Context provided (combined_text):
         # datacell.completed = timezone.now()
         # datacell.save()
 
+        logger.info("Query logic completed successfully")
     except Exception as e:
+        logger.exception(f"Error during query logic for Datacell {cell_id}: {e}")
+        raise
+
+    try:
+        logger.info("Attempting to save Datacell results to database")
+        await sync_mark_completed(datacell, data)
+        logger.info("Successfully saved Datacell results")
+    except (DatabaseError, OperationalError) as e:
         import traceback
 
-        logger.error(f"run_extract() - Ran into error: {e}")
-        logger.error(f"Full traceback:\n{traceback.format_exc()}")
-        await sync_mark_failed(
-            datacell,
-            e,
-            f"Error processing: {e}\n\nFull traceback:\n{traceback.format_exc()}",
+        stack_trace = traceback.format_exc()
+        logger.exception(
+            f"Database error saving Datacell {cell_id}: {e}\nFull stacktrace:\n{stack_trace}"
         )
-        # datacell.stacktrace = (
-        #     f"Error processing: {e}\n\nFull traceback:\n{traceback.format_exc()}"
-        # )
-        # datacell.failed = timezone.now()
-        # datacell.save()
+        raise
+
+    logger.info(f"Completed oc_llama_index_doc_query for cell_id={cell_id}")
 
 
 @shared_task
@@ -961,7 +1043,9 @@ def llama_index_react_agent_query(cell_id):
         Settings.llm = llm
 
         vector_store = DjangoAnnotationVectorStore.from_params(
-            document_id=document.id, must_have_text=datacell.column.must_contain_text
+            user_id=document.creator.id,
+            document_id=document.id,
+            must_have_text=datacell.column.must_contain_text,
         )
         index = VectorStoreIndex.from_vector_store(
             vector_store=vector_store, use_async=True
@@ -1308,3 +1392,15 @@ def annotation_window(document_id: int, annotation_id: str, window_size: str) ->
 
     except Exception as e:
         return f"Error: Exception encountered while retrieving annotation window: {e}"
+
+
+def sync_save_datacell(datacell: Datacell) -> None:
+    logger.info(f"Entering sync_save_datacell for Datacell id={datacell.id}")
+    try:
+        datacell.save()
+        logger.info(f"Datacell saved successfully: {datacell.id}")
+    except Exception as e:
+        logger.exception(
+            f"Exception in sync_save_datacell for Datacell id={datacell.id}: {e}"
+        )
+        raise

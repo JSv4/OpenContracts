@@ -59,6 +59,7 @@ const SearchBarWrapper = styled.div`
 const ScrollableSegment = styled(StyledSegment)`
   &.ui.segment {
     flex: 1;
+    min-height: 70vh;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;

@@ -291,13 +291,13 @@ class AnnotationManager(CTEManager.from_queryset(AnnotationQuerySet)):
         # This method should now use filter_queryset_by_permission to ensure
         # consistent permission handling that respects INHERITS_CORPUS_PERMISSIONS
         from opencontractserver.utils.permissioning import filter_queryset_by_permission
-        
+
         queryset = self.get_queryset()
-        
+
         # Apply extra conditions if provided
         if extra_conditions:
             queryset = queryset.filter(extra_conditions)
-            
+
         # Use the centralized permission filtering
         return filter_queryset_by_permission(queryset, user, perm)
 
@@ -305,7 +305,7 @@ class AnnotationManager(CTEManager.from_queryset(AnnotationQuerySet)):
 class Annotation(BaseOCModel):
     """
     The Annotation model represents annotations within documents.
-    
+
     Annotations inherit permissions from their parent corpus.
     """
 
@@ -548,13 +548,13 @@ class NoteManager(CTEManager.from_queryset(NoteQuerySet)):
         # This method should now use filter_queryset_by_permission to ensure
         # consistent permission handling that respects INHERITS_CORPUS_PERMISSIONS
         from opencontractserver.utils.permissioning import filter_queryset_by_permission
-        
+
         queryset = self.get_queryset()
-        
+
         # Apply extra conditions if provided
         if extra_conditions:
             queryset = queryset.filter(extra_conditions)
-            
+
         # Use the centralized permission filtering
         return filter_queryset_by_permission(queryset, user, perm)
 

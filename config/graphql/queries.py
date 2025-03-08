@@ -5,7 +5,7 @@ from typing import Optional
 
 import graphene
 from django.conf import settings
-from django.db.models import Prefetch, Q
+from django.db.models import Q
 from graphene import relay
 from graphene.types.generic import GenericScalar
 from graphene_django.fields import DjangoConnectionField
@@ -72,7 +72,7 @@ from opencontractserver.annotations.models import (
     Note,
     Relationship,
 )
-from opencontractserver.conversations.models import ChatMessage, Conversation
+from opencontractserver.conversations.models import ChatMessage
 from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
 from opencontractserver.documents.models import Document, DocumentRelationship
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
@@ -118,9 +118,9 @@ class Query(graphene.ObjectType):
         # Use the central permission system to filter annotations
         # This ensures consistent handling of permissions, including corpus inheritance
         queryset = Annotation.objects.visible_to_user(info.context.user)
-        
+
         print(f"Annotations queryset: {queryset}")
-        
+
         # Filter by uses_label_from_labelset_id
         labelset_id = kwargs.get("uses_label_from_labelset_id")
         if labelset_id:
@@ -306,14 +306,7 @@ class Query(graphene.ObjectType):
         corpus_django_pk = from_global_id(corpus_id)[1]
 
         # Get the base queryset first (only stuff given user CAN see)
-        if info.context.user.is_superuser:
-            queryset = Annotation.objects.all().order_by("page")
-        elif info.context.user.is_anonymous:
-            queryset = Annotation.objects.filter(Q(is_public=True))
-        else:
-            queryset = Annotation.objects.filter(
-                Q(creator=info.context.user) | Q(is_public=True)
-            )
+        queryset = Annotation.objects.visible_to_user(info.context.user)
 
         # Now build query to stuff they want to see (filter to annotations in this corpus or with NO corpus FK, which
         # travel with document.
@@ -368,14 +361,7 @@ class Query(graphene.ObjectType):
         document = Document.objects.get(id=doc_django_pk)
 
         # Get the base queryset first (only stuff given user CAN see)
-        if info.context.user.is_superuser:
-            queryset = Annotation.objects.all().order_by("page")
-        elif info.context.user.is_anonymous:
-            queryset = Annotation.objects.filter(Q(is_public=True))
-        else:
-            queryset = Annotation.objects.filter(
-                Q(creator=info.context.user) | Q(is_public=True)
-            )
+        queryset = Annotation.objects.visible_to_user(info.context.user)
 
         # Now build query to stuff they want to see
         q_objects = Q(document_id=doc_django_pk)
@@ -515,7 +501,9 @@ class Query(graphene.ObjectType):
 
     def resolve_annotation_label(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
-        return AnnotationLabel.objects.visible_to_user(info.context.user).get(id=django_pk)
+        return AnnotationLabel.objects.visible_to_user(info.context.user).get(
+            id=django_pk
+        )
 
     # LABEL SET RESOLVERS #####################################
 
@@ -611,7 +599,9 @@ class Query(graphene.ObjectType):
 
         def resolve_gremlin_engine(self, info, **kwargs):
             django_pk = from_global_id(kwargs.get("id", None))[1]
-            return GremlinEngine.objects.visible_to_user(info.context.user).get(id=django_pk)
+            return GremlinEngine.objects.visible_to_user(info.context.user).get(
+                id=django_pk
+            )
 
         gremlin_engines = DjangoFilterConnectionField(
             GremlinEngineType_READ, filterset_class=GremlinEngineFilter
@@ -630,7 +620,7 @@ class Query(graphene.ObjectType):
                 django_pk = kwargs.get("analyzerId", None)
             else:
                 return None
-                
+
             return Analyzer.objects.visible_to_user(info.context.user).get(id=django_pk)
 
         analyzers = DjangoFilterConnectionField(
@@ -942,9 +932,10 @@ class Query(graphene.ObjectType):
         Returns:
             QuerySet[Conversation]: Filtered queryset of conversations
         """
-        from opencontractserver.conversations.models import Conversation, ChatMessage
         from django.db.models import Prefetch
-        
+
+        from opencontractserver.conversations.models import ChatMessage, Conversation
+
         return (
             Conversation.objects.visible_to_user(info.context.user)
             .prefetch_related(
@@ -966,15 +957,7 @@ class Query(graphene.ObjectType):
 
     @login_required
     def resolve_document_relationships(self, info, **kwargs):
-        # Start with base queryset based on user permissions
-        if info.context.user.is_superuser:
-            queryset = DocumentRelationship.objects.all()
-        elif info.context.user.is_anonymous:
-            queryset = DocumentRelationship.objects.filter(Q(is_public=True))
-        else:
-            queryset = DocumentRelationship.objects.filter(
-                Q(creator=info.context.user) | Q(is_public=True)
-            )
+        queryset = DocumentRelationship.objects.visible_to_user(info.context.user)
 
         # Apply filters if provided
         corpus_id = kwargs.get("corpus_id")
@@ -999,7 +982,9 @@ class Query(graphene.ObjectType):
     def resolve_documentrelationship(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         try:
-            return DocumentRelationship.objects.visible_to_user(info.context.user).get(id=django_pk)
+            return DocumentRelationship.objects.visible_to_user(info.context.user).get(
+                id=django_pk
+            )
         except DocumentRelationship.DoesNotExist:
             return None
 
@@ -1014,14 +999,7 @@ class Query(graphene.ObjectType):
     @login_required
     def resolve_bulk_doc_relationships(self, info, document_id, **kwargs):
         # Start with base queryset based on user permissions
-        if info.context.user.is_superuser:
-            queryset = DocumentRelationship.objects.all()
-        elif info.context.user.is_anonymous:
-            queryset = DocumentRelationship.objects.filter(Q(is_public=True))
-        else:
-            queryset = DocumentRelationship.objects.filter(
-                Q(creator=info.context.user) | Q(is_public=True)
-            )
+        queryset = DocumentRelationship.objects.visible_to_user(info.context.user)
 
         # Always filter by document
         doc_pk = from_global_id(document_id)[1]
@@ -1061,10 +1039,10 @@ class Query(graphene.ObjectType):
         Can be filtered by title, content, document_id, and annotation_id.
         """
         from opencontractserver.annotations.models import Note
-        
+
         # Start with base queryset using consistent permission filtering
         queryset = Note.objects.visible_to_user(info.context.user)
-        
+
         # Filter by title
         title_contains = kwargs.get("title_contains")
         if title_contains:
@@ -1142,7 +1120,7 @@ class Query(graphene.ObjectType):
             QuerySet[ChatMessage]: Filtered and ordered chat messages
         """
         from opencontractserver.conversations.models import ChatMessage
-        
+
         # Use consistent permission filtering
         queryset = ChatMessage.objects.visible_to_user(info.context.user)
 
@@ -1198,7 +1176,7 @@ class Query(graphene.ObjectType):
         Can be filtered by corpus_id, trigger type, and disabled status.
         """
         from opencontractserver.corpuses.models import CorpusAction
-        
+
         # Use consistent permission filtering
         queryset = CorpusAction.objects.visible_to_user(info.context.user)
 

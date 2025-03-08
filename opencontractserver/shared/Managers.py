@@ -1,9 +1,7 @@
-from django.db import models
-from django.db.models import Q
-from django.db.models import Manager
+from django.db.models import Manager, Q
 
-from opencontractserver.shared.QuerySets import PermissionQuerySet
-from opencontractserver.shared.QuerySets import UserFeedbackQuerySet
+from opencontractserver.shared.QuerySets import PermissionQuerySet, UserFeedbackQuerySet
+
 
 class PermissionManager(Manager):
     def get_queryset(self):

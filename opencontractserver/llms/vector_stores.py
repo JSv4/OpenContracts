@@ -110,24 +110,29 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     def _get_annotation_queryset(self) -> QuerySet:
         """
         Get the base Annotation queryset with proper permission filtering.
-        
+
         This handles structural annotations (which are always visible) and
         user-specific permissions using our consistent permission system.
         """
         from opencontractserver.annotations.models import Annotation
-        
+
         # Get structural annotations which are always visible
         structural_queryset = Annotation.objects.filter(structural=True).distinct()
-        
+
         # Get annotations the user can see based on permissions
         if self.user_id:
             # Use the model's permission filtering
-            user_visible_queryset = Annotation.objects.visible_to_user(self.user_id).distinct()
+            user_visible_queryset = Annotation.objects.visible_to_user(
+                self.user_id
+            ).distinct()
             queryset = structural_queryset | user_visible_queryset
         else:
             # For anonymous users, only show public and structural annotations
-            queryset = structural_queryset | Annotation.objects.filter(is_public=True).distinct()
-        
+            queryset = (
+                structural_queryset
+                | Annotation.objects.filter(is_public=True).distinct()
+            )
+
         # Apply additional filters
         if self.corpus_id is not None:
             queryset = queryset.filter(
@@ -137,7 +142,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             queryset = queryset.filter(document=self.document_id)
         if self.must_have_text is not None:
             queryset = queryset.filter(raw_text__icontains=self.must_have_text)
-            
+
         return queryset.distinct()
 
     def _build_filter_query(self, filters: Optional[MetadataFilters]) -> QuerySet:

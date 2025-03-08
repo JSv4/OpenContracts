@@ -1483,9 +1483,10 @@ class UpdateCorpusMutation(DRFMutation):
 
 class DeleteCorpusMutation(DRFDeletion):
     """Delete a corpus object.
-    
+
     This mutation is exposed as 'deleteCorpus' in the GraphQL API.
     """
+
     class IOSettings:
         model = Corpus
         lookup_field = "id"

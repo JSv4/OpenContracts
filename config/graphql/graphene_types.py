@@ -646,15 +646,17 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         filtered by corpus_id. Uses the model's built-in permission filtering for consistency.
         """
         from opencontractserver.annotations.models import Note
-        
+
         user = info.context.user
         corpus_pk = from_global_id(corpus_id)[1]
-        
+
         # Use the document's related manager to get notes, then filter by corpus and permissions
         document_notes = self.notes.filter(corpus_id=corpus_pk)
-        
+
         # Apply permission filtering using the model's visible_to_user method
-        return Note.objects.visible_to_user(user).filter(id__in=document_notes.values_list('id', flat=True))
+        return Note.objects.visible_to_user(user).filter(
+            id__in=document_notes.values_list("id", flat=True)
+        )
 
     class Meta:
         model = Document

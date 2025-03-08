@@ -1,16 +1,35 @@
 from django.contrib.auth import get_user_model
 from django.db import models
-
-# from guardian.models import UserObjectPermission, GroupObjectPermission
-from django.db.models import Exists, OuterRef, Q
-
-# from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from tree_queries.query import TreeQuerySet
-from django.contrib.auth.models import AnonymousUser
-from guardian.shortcuts import get_objects_for_user
+
+from opencontractserver.utils.permissioning import filter_queryset_by_permission
 
 User = get_user_model()
+
+
+class PermissionQuerySet(models.QuerySet):
+    def visible_to_user(self, user, perm: str = "read") -> models.QuerySet:
+        """
+        Return objects visible to the user using unified logic:
+          1. Superuser: all objects.
+          2. Anonymous: only objects with is_public==True.
+          3. Authenticated: objects where the user is the creator, or objects that are public,
+             or objects for which the user has explicit guardian permission (e.g. "read_<model>").
+          4. Additionally, if the model has a direct link to a corpus (or reverse relation 'corpus_set'),
+             include objects whose corpus is visible to the user.
+        """
+        return filter_queryset_by_permission(self, user, perm)
+
+    def approved(self):
+        return self.filter(approved=True)
+
+    def recent(self, days=30):
+        recent_date = timezone.now() - timezone.timedelta(days=days)
+        return self.filter(created__gte=recent_date)
+
+    def by_creator(self, creator):
+        return self.filter(creator=creator)
 
 
 class PermissionedTreeQuerySet(TreeQuerySet):
@@ -34,21 +53,8 @@ class PermissionedTreeQuerySet(TreeQuerySet):
         return self.filter(creator=creator)
 
     def visible_to_user(self, user):
-        """
-        Gets queryset with_tree_fields that is visible to user.
-        This method now properly respects individual object permissions.
-        """
-        from opencontractserver.utils.permissioning import filter_queryset_by_permission
-
-        # Delegate to the central permission filtering logic
-        filtered_qs = filter_queryset_by_permission(
-            queryset=self,
-            user=user,
-            permission='view'  # or 'read' depending on your permission naming
-        )
-        
-        # Apply tree fields for proper hierarchical display
-        return filtered_qs.with_tree_fields() if hasattr(self, 'with_tree_fields') else filtered_qs
+        qs = filter_queryset_by_permission(self, user, permission="read")
+        return qs.with_tree_fields() if hasattr(self, "with_tree_fields") else qs
 
     def with_tree_fields(self):
         return super().with_tree_fields()
@@ -75,65 +81,4 @@ class UserFeedbackQuerySet(models.QuerySet):
         return self.filter(creator=creator)
 
     def visible_to_user(self, user):
-        from opencontractserver.annotations.models import (  # Import here to avoid circular imports
-            Annotation,
-        )
-
-        if user.is_superuser:
-            return self.all()
-
-        if user.is_anonymous:
-            return self.filter(Q(is_public=True)).distinct()
-
-        return self.filter(
-            Q(creator=user)
-            | Q(is_public=True)
-            | Q(commented_annotation__isnull=False)
-            & Exists(
-                Annotation.objects.filter(
-                    id=OuterRef("commented_annotation"), is_public=True
-                )
-            )
-        ).distinct()
-
-
-class PermissionQuerySet(models.QuerySet):
-    def visible_to_user(self, user):
-        """
-        Filter queryset to only include objects the user has permission to view.
-        Uses the hierarchical permission system that checks:
-        1. Direct object permissions
-        2. Inherited corpus permissions
-        3. Public status or creator ownership
-        """
-        from opencontractserver.utils.permissioning import filter_queryset_by_permission
-        
-        # Use the centralized permission filtering logic
-        return filter_queryset_by_permission(
-            queryset=self,
-            user=user,
-            permission='view'  # or 'read' depending on your permission naming
-        )
-    
-    def editable_by_user(self, user):
-        """
-        Filter queryset to only include objects the user has permission to edit.
-        """
-        from opencontractserver.utils.permissioning import filter_queryset_by_permission
-        
-        return filter_queryset_by_permission(
-            queryset=self,
-            user=user,
-            permission='change'  # or 'update' depending on your permission naming
-        )
-    
-    # Keep other useful methods
-    def approved(self):
-        return self.filter(approved=True)
-    
-    def recent(self, days=30):
-        recent_date = timezone.now() - timezone.timedelta(days=days)
-        return self.filter(created__gte=recent_date)
-    
-    def by_creator(self, creator):
-        return self.filter(creator=creator)
+        return filter_queryset_by_permission(self, user, permission="read")

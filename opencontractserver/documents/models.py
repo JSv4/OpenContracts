@@ -14,7 +14,7 @@ from opencontractserver.shared.utils import calc_oc_file_path
 class Document(BaseOCModel):
     """
     Document
-    
+
     Documents inherit permissions from their parent corpus.
     """
 

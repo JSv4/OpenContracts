@@ -126,12 +126,13 @@ RUN chmod +x /start-flower
 # Update the environment variable check, after all stages
 COPY ./setup_codecov.sh .
 RUN echo "RUN STAGE GITHUB_ACTIONS: $GITHUB_ACTIONS" && \
+    sed -i 's/\r$//' ./setup_codecov.sh && \
     if [ "$GITHUB_ACTIONS" = "true" ] ; then \
         echo "GITHUB ACTION MODE" && \
         apt-get update && \
         apt-get install -y curl && \
         chmod u+x setup_codecov.sh && \
-        ./setup_codecov.sh && \
+        bash ./setup_codecov.sh && \
         ls -la /bin/codecov && \
         apt-get remove -y curl && \
         apt-get autoremove -y && \

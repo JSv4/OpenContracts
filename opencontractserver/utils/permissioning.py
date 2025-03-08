@@ -4,8 +4,10 @@ import logging
 
 import django
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.db import models, transaction
 from django.db.models import Q
+from guardian.models import GroupObjectPermission, UserObjectPermission
 from guardian.shortcuts import assign_perm
 
 from opencontractserver.types.enums import PermissionTypes
@@ -14,13 +16,95 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
+# -------------------------------------------------------------------------
+#                             HELPER FUNCTIONS
+# -------------------------------------------------------------------------
+
+
+def _get_permission_mapping() -> dict[PermissionTypes, set[str]]:
+    """
+    Returns the dictionary that maps each PermissionTypes enum value
+    to a set of underlying actions (e.g. "read", "create", "update", etc.).
+    """
+    return {
+        PermissionTypes.CREATE: {"create"},
+        PermissionTypes.READ: {"read"},
+        PermissionTypes.UPDATE: {"update"},
+        PermissionTypes.EDIT: {"update"},  # EDIT is treated as UPDATE
+        PermissionTypes.DELETE: {"delete"},  # Some models might call it "remove"
+        PermissionTypes.PERMISSION: {"permission"},
+        PermissionTypes.PUBLISH: {"publish"},
+        PermissionTypes.CRUD: {"create", "read", "update", "delete"},
+        PermissionTypes.ALL: {
+            "create",
+            "read",
+            "update",
+            "delete",
+            "permission",
+            "publish",
+        },
+    }
+
+
+def _get_actions_for_permissions(
+    permissions: PermissionTypes | list[PermissionTypes],
+) -> set[str]:
+    """
+    Given a permission or list of permissions from PermissionTypes, returns
+    the combined set of actions (strings) they represent.
+    """
+    # Normalize to a list.
+    if not isinstance(permissions, list):
+        permissions = [permissions]
+
+    permission_mapping = _get_permission_mapping()
+    actions_to_assign: set[str] = set()
+    for perm in permissions:
+        actions = permission_mapping.get(perm, set())
+        actions_to_assign.update(actions)
+    return actions_to_assign
+
+
+def _clear_object_level_perms(instance: models.Model) -> None:
+    """
+    Removes all existing object-level permissions for the given instance,
+    regardless of user or group.
+    """
+    model_name = instance._meta.model_name
+    existing_permissions = getattr(instance, f"{model_name}userobjectpermission_set")
+    existing_permissions.all().delete()
+
+    group_permissions = getattr(
+        instance, f"{model_name}groupobjectpermission_set", None
+    )
+    if group_permissions:
+        group_permissions.all().delete()
+
+
+def _assign_actions_to_user_for_obj(
+    user: User, instance: models.Model, actions: set[str]
+) -> None:
+    """
+    Assigns each action in 'actions' (e.g. "read", "update") to the user
+    for the given instance using django-guardian's assign_perm.
+    """
+    model_name = instance._meta.model_name
+    app_label = instance._meta.app_label
+    for action in actions:
+        codename = f"{app_label}.{action}_{model_name}"
+        assign_perm(codename, user, instance)
+
+
+# -------------------------------------------------------------------------
+#                         PUBLIC FUNCTIONS (UNMODIFIED SIGNATURES)
+# -------------------------------------------------------------------------
+
+
 def resolve_user(user: User | int | str) -> User:
     """Resolve a user given an int (id), a string (username or numeric id), or a User instance.
     If the provided user is anonymous, return it immediately.
     """
     logger = logging.getLogger(__name__)
-
-    # Special case: if the user is already an AnonymousUser, return it.
     if hasattr(user, "is_anonymous") and user.is_anonymous:
         logger.debug("RESOLVE_USER: AnonymousUser provided; returning as is")
         return user
@@ -81,11 +165,8 @@ def filter_queryset_by_permission(queryset, user, permission: str = "read"):
                 Guardian permission (e.g. "update_<model>" or "delete_<model>").
               * (Note: is_public and corpus fallback do not automatically grant non-read permissions.)
     """
-    import logging
-
     from opencontractserver.corpuses.models import Corpus
 
-    logger = logging.getLogger(__name__)
     model_name = queryset.model._meta.model_name
     logger.info(
         f"Filtering {model_name} queryset for user {user} with permission: {permission}"
@@ -110,7 +191,6 @@ def filter_queryset_by_permission(queryset, user, permission: str = "read"):
 
     logger.info(f"Base query: {base_q}")
 
-    # Construct guardian query.
     permission_codename = f"{permission.lower()}_{model_name}"
     logger.info(f"Looking for Guardian permission: {permission_codename}")
     guardian_q = Q(
@@ -123,7 +203,7 @@ def filter_queryset_by_permission(queryset, user, permission: str = "read"):
     qs = queryset.filter(base_q | guardian_q)
     logger.info(f"After base and guardian filtering: {qs.count()} objects")
 
-    # Add corpus fallback.
+    # Add corpus fallback (read-only).
     if hasattr(queryset.model, "corpus"):
         logger.info("Model has 'corpus' relation - checking corpus visibility")
         visible_corpora = Corpus.objects.visible_to_user(user)
@@ -161,17 +241,11 @@ def user_has_permission_for_obj(
     """
     user = resolve_user(user_val)
 
-    # Build a queryset for the instance (filter by primary key).
     qs = instance.__class__.objects.filter(pk=instance.pk)
-
-    # Use the helper. Note: our helper expects a string permission.
-    # If your PermissionTypes enum is all uppercase (e.g. "READ"), we convert it to lowercase.
     perm_str = permission.value.lower()
 
     visible_qs = filter_queryset_by_permission(qs, user, perm_str)
-    result = visible_qs.exists()
-
-    return result
+    return visible_qs.exists()
 
 
 def set_permissions_for_obj_to_user(
@@ -186,56 +260,19 @@ def set_permissions_for_obj_to_user(
       - CRUD assigns: create, read, update, delete.
       - ALL assigns: create, read, update, delete, permission, publish.
     """
-    # Normalize to list.
-    if not isinstance(permissions, list):
-        permissions = [permissions]
+    # Resolve user
+    user = resolve_user(user_val)
 
-    # Retrieve user instance if necessary.
-    if isinstance(user_val, (str, int)):
-        user = User.objects.get(id=user_val)
-    else:
-        user = user_val
-
-    model_name = instance._meta.model_name
-    app_name = instance._meta.app_label
-
-    # Remove existing object-level permissions.
+    # Remove existing object-level permissions for everyone (not just this user).
     with transaction.atomic():
-        existing_permissions = getattr(
-            instance, f"{model_name}userobjectpermission_set"
-        )
-        existing_permissions.all().delete()
+        _clear_object_level_perms(instance)
 
-    # Map enum to underlying permission actions.
-    permission_mapping: dict[PermissionTypes, set[str]] = {
-        PermissionTypes.CREATE: {"create"},
-        PermissionTypes.READ: {"read"},
-        PermissionTypes.UPDATE: {"update"},
-        PermissionTypes.EDIT: {"update"},
-        PermissionTypes.DELETE: {"delete"},
-        PermissionTypes.PERMISSION: {"permission"},
-        PermissionTypes.PUBLISH: {"publish"},
-        PermissionTypes.CRUD: {"create", "read", "update", "delete"},
-        PermissionTypes.ALL: {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "permission",
-            "publish",
-        },
-    }
+    # Convert the user-specified PermissionTypes into underlying actions
+    actions_to_assign = _get_actions_for_permissions(permissions)
 
-    actions_to_assign: set[str] = set()
-    for perm in permissions:
-        actions = permission_mapping.get(perm)
-        if actions:
-            actions_to_assign.update(actions)
-
+    # Now assign them to the user
     with transaction.atomic():
-        for action in actions_to_assign:
-            codename = f"{app_name}.{action}_{model_name}"
-            assign_perm(codename, user, instance)
+        _assign_actions_to_user_for_obj(user, instance, actions_to_assign)
 
 
 def generate_permissions_md_table_for_object(
@@ -277,11 +314,10 @@ def generate_permissions_md_table_for_object(
     | alice | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
     | bob | No | Yes | No | No | No | No | No | No |
     """
-    # Define the permission types (order matters)
     permission_types = [
         PermissionTypes.CREATE,
         PermissionTypes.READ,
-        PermissionTypes.UPDATE,  # EDIT is treated as UPDATE
+        PermissionTypes.UPDATE,
         PermissionTypes.DELETE,
         PermissionTypes.PERMISSION,
         PermissionTypes.PUBLISH,
@@ -289,21 +325,130 @@ def generate_permissions_md_table_for_object(
         PermissionTypes.ALL,
     ]
 
-    # Build table header.
     headers = ["Username"] + [perm.value for perm in permission_types]
     md_lines = []
     md_lines.append("| " + " | ".join(headers) + " |")
     md_lines.append("| " + " | ".join(["---"] * len(headers)) + " |")
 
-    # For each user, evaluate each permission.
-    for user in users:
-        username = getattr(user, "username", str(user))
+    for user_obj in users:
+        username = getattr(user_obj, "username", str(user_obj))
         row = [username]
         for perm in permission_types:
             has_perm = user_has_permission_for_obj(
-                user, instance, perm, include_group_permissions=True
+                user_obj, instance, perm, include_group_permissions=True
             )
             row.append("Yes" if has_perm else "No")
         md_lines.append("| " + " | ".join(row) + " |")
 
     return "\n".join(md_lines)
+
+
+def get_users_permissions_for_obj(
+    user_val: User | int | str,
+    instance: models.Model,
+    include_group_permissions: bool = False,
+) -> set[str]:
+    """
+    Return a set of effective permission codenames for the given user on the provided model instance.
+
+    This function performs a SINGLE pass at collecting all relevant object-level codenames
+    rather than calling user_has_permission_for_obj() repeatedly. By doing so, it is more
+    performant for scenarios where you need to know every permission the user has at once.
+
+    -------------
+    LOGIC SUMMARY:
+      1) If user is superuser: return all codenames for 'create', 'read', 'update', 'delete',
+         'permission', and 'publish'.
+      2) If user is AnonymousUser: only add "read_<model>" if:
+         - The instance is marked is_public=True, OR
+         - The corpus fallback is relevant and that corpus is public.
+      3) For authenticated users:
+         - If user == instance.creator, add CRUD automatically.
+         - If instance is public, add "read_<model>".
+         - If the object is linked to a corpus that is visible, add "read_<model>".
+         - Then add any object-level guardian permissions from userobjectpermission
+           and (optionally) groupobjectpermission.
+    """
+    from opencontractserver.corpuses.models import Corpus
+    from opencontractserver.shared.resolvers import resolve_oc_model_queryset
+
+    user = resolve_user(user_val)
+    model_name = instance._meta.model_name
+    app_label = instance._meta.app_label
+    final_codenames: set[str] = set()
+
+    # 1) SUPERUSER => all codenames
+    if getattr(user, "is_superuser", False):
+        for action in ["create", "read", "update", "delete", "permission", "publish"]:
+            final_codenames.add(f"{action}_{model_name}")
+        return final_codenames
+
+    # 2) ANONYMOUS => read only if public or corpus fallback
+    if isinstance(user, AnonymousUser):
+        if getattr(instance, "is_public", False):
+            final_codenames.add(f"read_{model_name}")
+        else:
+            # corpus fallback
+            if hasattr(instance, "corpus") and instance.corpus:
+                if Corpus.objects.filter(
+                    pk=instance.corpus.pk, is_public=True
+                ).exists():
+                    final_codenames.add(f"read_{model_name}")
+            elif hasattr(instance, "corpus_set"):
+                if instance.corpus_set.filter(is_public=True).exists():
+                    final_codenames.add(f"read_{model_name}")
+        return final_codenames
+
+    # 3) AUTHENTICATED USERS
+    # 3.1) Creator => gets CRUD
+    if getattr(instance, "creator_id", None) == user.id:
+        for action in ["create", "read", "update", "delete"]:
+            final_codenames.add(f"{action}_{model_name}")
+
+    # 3.2) is_public => read
+    if getattr(instance, "is_public", False):
+        final_codenames.add(f"read_{model_name}")
+
+    # 3.3) corpus fallback => read
+    # Single object approach:
+    if hasattr(instance, "corpus") and instance.corpus:
+        visible_corpora = resolve_oc_model_queryset(Corpus, user).filter(
+            pk=instance.corpus.pk
+        )
+        if visible_corpora.exists():
+            final_codenames.add(f"read_{model_name}")
+    elif hasattr(instance, "corpus_set") and instance.corpus_set.exists():
+        visible_corpora = resolve_oc_model_queryset(Corpus, user).filter(
+            pk__in=instance.corpus_set.all()
+        )
+        if visible_corpora.exists():
+            final_codenames.add(f"read_{model_name}")
+
+    # 3.4) Guardian permissions (user + optional groups)
+    user_perm_codenames = set()
+
+    # user-level perms
+    user_perms = UserObjectPermission.objects.filter(
+        content_object_id=instance.pk,
+        user=user,
+        content_type__app_label=app_label,
+        content_type__model=model_name,
+    ).values_list("permission__codename", flat=True)
+    user_perm_codenames.update(user_perms)
+
+    # group-level perms
+    if include_group_permissions:
+        group_ids = user.groups.values_list("id", flat=True)
+        group_perms = GroupObjectPermission.objects.filter(
+            content_object_id=instance.pk,
+            group_id__in=group_ids,
+            content_type__app_label=app_label,
+            content_type__model=model_name,
+        ).values_list("permission__codename", flat=True)
+        user_perm_codenames.update(group_perms)
+
+    # Merge them
+    for codename in user_perm_codenames:
+        final_codenames.add(codename)
+
+    return final_codenames

@@ -1,8 +1,7 @@
-# opencontractserver/llms/vector_stores.py
-import logging
 from typing import Any, Optional
 
 from channels.db import database_sync_to_async
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Q, QuerySet
 from llama_index.core.schema import BaseNode, TextNode
@@ -16,8 +15,9 @@ from llama_index.core.vector_stores.types import (
 from pgvector.django import CosineDistance
 
 from opencontractserver.annotations.models import Annotation
+from opencontractserver.utils.permissioning import resolve_user
 
-_logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
 class DjangoAnnotationVectorStore(BasePydanticVectorStore):
@@ -38,6 +38,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     flat_metadata: bool = False
 
     user_id: str | int | None
+    user: User | None
     corpus_id: str | int | None
     document_id: str | int | None
     must_have_text: str | None
@@ -57,8 +58,11 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         use_jsonb: bool = False,
     ):
 
+        actual_user = resolve_user(user_id)
+
         super().__init__(
             user_id=user_id,
+            user=actual_user,
             corpus_id=corpus_id,
             document_id=document_id,
             must_have_text=must_have_text,
@@ -123,7 +127,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         if self.user_id:
             # Use the model's permission filtering
             user_visible_queryset = Annotation.objects.visible_to_user(
-                self.user_id
+                self.user
             ).distinct()
             queryset = structural_queryset | user_visible_queryset
         else:

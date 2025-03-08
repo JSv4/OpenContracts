@@ -370,7 +370,6 @@ def get_users_permissions_for_obj(
            and (optionally) groupobjectpermission.
     """
     from opencontractserver.corpuses.models import Corpus
-    from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 
     user = resolve_user(user_val)
     model_name = instance._meta.model_name
@@ -412,14 +411,8 @@ def get_users_permissions_for_obj(
     # 3.3) corpus fallback => read
     # Single object approach:
     if hasattr(instance, "corpus") and instance.corpus:
-        visible_corpora = resolve_oc_model_queryset(Corpus, user).filter(
+        visible_corpora = Corpus.objects.visible_to_user(user).filter(
             pk=instance.corpus.pk
-        )
-        if visible_corpora.exists():
-            final_codenames.add(f"read_{model_name}")
-    elif hasattr(instance, "corpus_set") and instance.corpus_set.exists():
-        visible_corpora = resolve_oc_model_queryset(Corpus, user).filter(
-            pk__in=instance.corpus_set.all()
         )
         if visible_corpora.exists():
             final_codenames.add(f"read_{model_name}")
@@ -429,7 +422,7 @@ def get_users_permissions_for_obj(
 
     # user-level perms
     user_perms = UserObjectPermission.objects.filter(
-        content_object_id=instance.pk,
+        object_pk=str(instance.pk),
         user=user,
         content_type__app_label=app_label,
         content_type__model=model_name,
@@ -440,7 +433,7 @@ def get_users_permissions_for_obj(
     if include_group_permissions:
         group_ids = user.groups.values_list("id", flat=True)
         group_perms = GroupObjectPermission.objects.filter(
-            content_object_id=instance.pk,
+            object_pk=str(instance.pk),
             group_id__in=group_ids,
             content_type__app_label=app_label,
             content_type__model=model_name,

@@ -132,7 +132,7 @@ class DRFDeletion(graphene.Mutation):
         logger.info(
             f"DRFDeletion: Successfully deleted {obj.__class__.__name__} {django_id}"
         )
-        return cls(ok=True, message="Success ya bastard!")
+        return cls(ok=True, message="Success!")
 
 
 class DRFMutation(graphene.Mutation):

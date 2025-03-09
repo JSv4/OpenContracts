@@ -1,6 +1,6 @@
 # OpenContracts Permission System: Comprehensive Overview
 
-The permission system uses a multi-layered architecture that integrates Django Guardian for object-level permissions with custom logic for inheritance, annotation, and enforcement. Here's how permissions flow through the system:
+The permission system uses a multi-layered architecture that integrates Django Guardian for object-level permissions with custom logic for inheritance, annotation, and enforcement.
 
 ## 🔄 Permission Flow Diagram
 
@@ -42,10 +42,44 @@ The permission system uses a multi-layered architecture that integrates Django G
   - Default manager (`PermissionManager`)
 
 - **`PermissionTypes` Enum**:
-  - Granular permissions: CREATE, READ, UPDATE, DELETE, PERMISSION, PUBLISH
+  - Basic permissions: CREATE, READ, UPDATE, DELETE, PERMISSION, PUBLISH
   - Composite permissions: CRUD, ALL
 
-### 2. Permission Filtering (Query Level)
+### 2. Permission Expansion
+
+The system handles composite permissions by expanding them to their component permissions:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│  Permission Expansion                                   │
+│  ┌─────────┐                                            │
+│  │   ALL   │──┐                                         │
+│  └─────────┘  │                                         │
+│               ▼                                         │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │ CREATE, READ, UPDATE, DELETE, PERMISSION, PUBLISH│    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│  Permission Expansion                                   │
+│  ┌─────────┐                                            │
+│  │  CRUD   │──┐                                         │
+│  └─────────┘  │                                         │
+│               ▼                                         │
+│  ┌───────────────────────────────┐                      │
+│  │ CREATE, READ, UPDATE, DELETE  │                      │
+│  └───────────────────────────────┘                      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+This expansion happens consistently in both setting and checking permissions.
+
+### 3. Permission Filtering (Query Level)
 
 The system filters querysets based on user permissions through several layers:
 
@@ -54,12 +88,6 @@ The system filters querysets based on user permissions through several layers:
 Document.objects.visible_to_user(info.context.user)
 ```
 
-This flows through:
-
-1. **`PermissionManager.visible_to_user()`** → Delegates to queryset
-2. **`PermissionQuerySet.visible_to_user()`** → Calls core util function
-3. **`filter_queryset_by_permission()`** → Applies core permission logic
-
 The filtering logic implements a "waterfall" approach:
 - **Superusers**: See everything
 - **Anonymous users**: See only public objects
@@ -67,11 +95,11 @@ The filtering logic implements a "waterfall" approach:
   - Creator status (own objects)
   - Public status (for READ)
   - Explicit Guardian permissions
-  - Inherited permissions (via parent corpus FK if it has one and model class has `INHERITS_CORPUS_PERMISSIONS=True`)
+  - Inherited permissions (via parent corpus if applicable)
 
-### 3. Mutation Guards (Object Level)
+### 4. Mutation Guards (Object Level)
 
-The system protects mutations through permission checks in the base model:
+The system protects mutations through permission checks:
 
 ```python
 # Example usage in a view or GraphQL mutation
@@ -79,17 +107,11 @@ document.save_as(user)
 document.delete_as(user)
 ```
 
-This runs through:
-
-1. **`BaseOCModel.save_as()/delete_as()`** → Check permission before action
-2. **`user_has_permission_for_obj()`** → Verifies appropriate permission
-3. **Raises `PermissionDenied`** if check fails
-
 The permission logic follows object lifecycle:
 - **New objects**: Check CREATE permission
 - **Existing objects**: Check UPDATE (for save) or DELETE (for delete)
 
-### 4. GraphQL Permission Annotation
+### 5. GraphQL Permission Annotation
 
 The system annotates GraphQL responses with permission data:
 
@@ -109,13 +131,6 @@ This enables frontend components to show/hide UI based on permissions without ad
 - Models opt-in with `INHERITS_CORPUS_PERMISSIONS = True`
 - Permissions cascade through relationships (corpus → documents → annotations)
 
-### Expansion
-
-- Special permission types expand to multiple underlying permissions:
-  - `CRUD` → CREATE, READ, UPDATE, DELETE
-  - `ALL` → All available permissions
-- Expansion handled consistently in both permission setting and checking
-
 ### Performance Optimizations
 
 - **Single-pass corpus inheritance**: Avoids recursive queries
@@ -134,8 +149,15 @@ For a typical document query:
    - For regular users, includes documents they:
      - Created themselves
      - Have explicit permissions for
-     - That belong to a corpus they can access (if inheritance enabled for specific model)
+     - That belong to a corpus they can access (if inheritance enabled)
 4. `PermissionAnnotatingMiddleware` annotates returned objects with permission data
 5. Frontend receives both documents and their associated permissions
+
+## 🔧 Best Practices
+
+1. Use `visible_to_user()` for filtering querysets rather than manual permission checks
+2. Use `save_as()` and `delete_as()` for permission-aware mutations
+3. Use `set_permissions_for_obj_to_user()` for setting permissions
+4. Use `get_users_permissions_for_obj()` to get all permissions at once
 
 This multi-layered approach ensures consistent permission enforcement while providing flexibility and maintaining performance.

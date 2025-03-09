@@ -89,6 +89,7 @@ from opencontractserver.types.enums import (
     PermissionTypes,
 )
 from opencontractserver.users.models import UserExport
+from django.contrib.auth import get_user_model
 from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
 from opencontractserver.utils.files import is_plaintext_content
 from opencontractserver.utils.permissioning import (
@@ -98,6 +99,7 @@ from opencontractserver.utils.permissioning import (
 
 logger = logging.getLogger(__name__)
 
+User = get_user_model()
 
 class MakeAnalysisPublic(graphene.Mutation):
     class Arguments:
@@ -151,13 +153,88 @@ class MakeCorpusPublic(graphene.Mutation):
             ok = True
 
         except Exception as e:
-            message = f"Failed to start task to make your corpus public due to unexpected error: {e}"
             ok = False
+            message = f"ERROR - Could not make corpus public due to unexpected error: {e}"
 
-        return MakeCorpusPublic(
-            ok=ok,
-            message=message,
+        return MakeCorpusPublic(ok=ok, message=message)
+
+
+class SetUserCorpusPermissions(graphene.Mutation):
+    class Arguments:
+        corpus_id = graphene.ID(
+            required=True,
+            description="ID of the corpus to set permissions on"
         )
+        user_id = graphene.ID(
+            required=True,
+            description="ID of the user to grant permissions to"
+        )
+        permissions = graphene.List(
+            graphene.Enum.from_enum(PermissionTypes),
+            required=True,
+            description="List of permissions to grant to the user"
+        )
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+
+    @login_required
+    def mutate(root, info, corpus_id, user_id, permissions):
+        from opencontractserver.utils.permissioning import (
+            set_permissions_for_obj_to_user,
+            user_has_permission_for_obj
+        )
+        from opencontractserver.types.enums import PermissionTypes
+        from opencontractserver.corpuses.models import Corpus
+
+        user = info.context.user
+        
+        try:
+            # Get the corpus
+            corpus_pk = from_global_id(corpus_id)[1]
+            corpus = Corpus.objects.get(pk=corpus_pk)
+            
+            # Verify the requester has PERMISSION rights on this corpus
+            if not user_has_permission_for_obj(user, corpus, PermissionTypes.PERMISSION):
+                return SetUserCorpusPermissions(
+                    ok=False,
+                    message="You don't have permission to change permissions on this corpus"
+                )
+                
+            # Resolve the target user
+            target_user_pk = from_global_id(user_id)[1]
+            target_user = User.objects.get(pk=target_user_pk)
+            
+            # Convert the permissions list to a list of PermissionTypes
+            # No conversion needed since graphene will already convert the enum values
+            
+            # Set the permissions
+            set_permissions_for_obj_to_user(
+                target_user,
+                corpus,
+                permissions
+            )
+            
+            return SetUserCorpusPermissions(
+                ok=True,
+                message=f"Successfully set permissions for user {target_user.username} on corpus {corpus.title}"
+            )
+            
+        except Corpus.DoesNotExist:
+            return SetUserCorpusPermissions(
+                ok=False,
+                message="Corpus not found"
+            )
+        except User.DoesNotExist:
+            return SetUserCorpusPermissions(
+                ok=False,
+                message="User not found"
+            )
+        except Exception as e:
+            return SetUserCorpusPermissions(
+                ok=False,
+                message=f"Error setting permissions: {str(e)}"
+            )
 
 
 class UpdateLabelset(DRFMutation):
@@ -2481,6 +2558,7 @@ class Mutation(graphene.ObjectType):
     # CORPUS MUTATIONS #########################################################
     fork_corpus = StartCorpusFork.Field()
     make_corpus_public = MakeCorpusPublic.Field()
+    permission_corpus_for_user = SetUserCorpusPermissions.Field()
     create_corpus = CreateCorpusMutation.Field()
     update_corpus = UpdateCorpusMutation.Field()
     delete_corpus = DeleteCorpusMutation.Field()

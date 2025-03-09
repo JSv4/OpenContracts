@@ -23,25 +23,19 @@ logger = logging.getLogger(__name__)
 
 def _get_permission_mapping() -> dict[PermissionTypes, set[str]]:
     """
-    Returns the dictionary that maps each PermissionTypes enum value
-    to a set of underlying actions (e.g. "read", "create", "update", etc.).
+    Private helper that returns the expansions for our special permission enums,
+    i.e. CRUD => create, read, update, delete and ALL => create, read, update, delete, permission, publish.
+    Used by both set_permissions_for_obj_to_user and filter_queryset_by_permission to maintain consistency.
     """
     return {
-        PermissionTypes.CREATE: {"create"},
-        PermissionTypes.READ: {"read"},
-        PermissionTypes.UPDATE: {"update"},
-        PermissionTypes.EDIT: {"update"},  # EDIT is treated as UPDATE
-        PermissionTypes.DELETE: {"delete"},  # Some models might call it "remove"
-        PermissionTypes.PERMISSION: {"permission"},
-        PermissionTypes.PUBLISH: {"publish"},
-        PermissionTypes.CRUD: {"create", "read", "update", "delete"},
+        PermissionTypes.CRUD: {"CREATE", "READ", "UPDATE", "DELETE"},
         PermissionTypes.ALL: {
-            "create",
-            "read",
-            "update",
-            "delete",
-            "permission",
-            "publish",
+            "CREATE",
+            "READ",
+            "UPDATE",
+            "DELETE",
+            "PERMISSION",
+            "PUBLISH",
         },
     }
 
@@ -146,44 +140,70 @@ def resolve_user(user: User | int | str) -> User:
         raise
 
 
-def filter_queryset_by_permission(queryset, user, permission: str = "read"):
+def filter_queryset_by_permission(
+    queryset: models.QuerySet,
+    user: User | AnonymousUser,
+    permission: str | PermissionTypes = "read",
+) -> models.QuerySet:
     """
     Returns a queryset filtered so that only objects the given user is allowed to
     access under a given permission are included.
 
-    Criteria:
+    BIG-PICTURE CRITERIA:
       1. Superusers see all objects.
-      2. Anonymous users see only objects with is_public == True.
+      2. Anonymous users see only objects with is_public==True.
       3. Authenticated users:
          - For "read" permission:
-              * See objects that are public OR that they created,
-                OR for which they have an explicit Guardian permission (e.g. "read_<model>").
-              * Additionally, if the object is linked to a corpus (or corpus_set)
-                and the corpus is visible to the user, include the object.
+             * See objects that are public OR they created,
+               OR for which they have an explicit Guardian permission (e.g. "read_<model>").
+             * If model.INHERITS_CORPUS_PERMISSIONS is True, and the user has the *same* permission on the corpus,
+               they inherit that permission on the child.
          - For non-"read" permissions:
-              * Only see objects that they created OR for which they have an explicit
-                Guardian permission (e.g. "update_<model>" or "delete_<model>").
-              * (Note: is_public and corpus fallback do not automatically grant non-read permissions.)
+             * See objects they created OR for which they have explicit Guardian permission (e.g. "update_<model>").
+             * If model.INHERITS_CORPUS_PERMISSIONS is True, and the user has the *same* permission on the corpus,
+               they inherit that permission on the child as well.
+         - Special permission types:
+             * CRUD => union of create, read, update, delete
+             * ALL => union of create, read, update, delete, permission, publish
     """
+
     from opencontractserver.corpuses.models import Corpus
+    from django.db.models import Q
 
     model_name = queryset.model._meta.model_name
     logger.info(
         f"Filtering {model_name} queryset for user {user} with permission: {permission}"
     )
 
-    # Superuser: no filtering.
-    if user.is_superuser:
+    # If permission is an Enum, possibly expand special permissions (CRUD, ALL):
+    if isinstance(permission, PermissionTypes):
+        permission_mapping = _get_permission_mapping()
+        if permission in (PermissionTypes.CRUD, PermissionTypes.ALL):
+            logger.info(f"Special permission type: {permission}")
+            actions = permission_mapping.get(permission, set())
+            combined_qs = queryset.none()
+            for action in actions:
+                combined_qs |= filter_queryset_by_permission(queryset, user, action)
+            return combined_qs.distinct()
+        else:
+            # Convert PermissionTypes to string for standard processing
+            permission = permission.value.lower()
+
+    # Superuser => all
+    if getattr(user, "is_superuser", False):
         logger.info("User is superuser - returning all objects")
         return queryset.all()
 
-    # Anonymous: only public objects (read permission only).
-    if user.is_anonymous:
+    # Anonymous => only public
+    if getattr(user, "is_anonymous", False):
         logger.info("User is anonymous - returning only public objects")
+        # No need to worry about corpus fallback for anonymous:
+        # they only get is_public anyway unless explicitly handled in code for anonymous.
         return queryset.filter(is_public=True).distinct()
 
-    # For authenticated users:
-    # For "read", include public objects; for non-read, do not.
+    # Authenticated logic:
+
+    # Base query depends on read vs. other (e.g. update/delete)
     if permission.lower() == "read":
         base_q = Q(is_public=True) | Q(creator=user)
     else:
@@ -191,6 +211,7 @@ def filter_queryset_by_permission(queryset, user, permission: str = "read"):
 
     logger.info(f"Base query: {base_q}")
 
+    # Guardian permission codename
     permission_codename = f"{permission.lower()}_{model_name}"
     logger.info(f"Looking for Guardian permission: {permission_codename}")
     guardian_q = Q(
@@ -203,19 +224,73 @@ def filter_queryset_by_permission(queryset, user, permission: str = "read"):
     qs = queryset.filter(base_q | guardian_q)
     logger.info(f"After base and guardian filtering: {qs.count()} objects")
 
-    # Add corpus fallback (read-only).
-    if hasattr(queryset.model, "corpus"):
-        logger.info("Model has 'corpus' relation - checking corpus visibility")
-        visible_corpora = Corpus.objects.visible_to_user(user)
-        corpus_qs = queryset.filter(
-            Q(corpus__isnull=False) & Q(corpus__in=visible_corpora)
-        )
-        logger.info(f"Corpus fallback added {corpus_qs.count()} objects")
-        qs = qs | corpus_qs
+    # If the model says to inherit corpus permissions, then union with all objects
+    # whose corpus** is visible under the *same* permission.
+    inherits_permissions = (
+        hasattr(queryset.model, "INHERITS_CORPUS_PERMISSIONS")
+        and getattr(queryset.model, "INHERITS_CORPUS_PERMISSIONS", False)
+    )
+    if inherits_permissions and hasattr(queryset.model, "corpus"):
+        logger.info("Model has 'corpus' relation and inherits corpus permissions - checking corpus-level perms")
+        qs = _add_corpus_fallback(qs, user, permission)
 
     final_qs = qs.distinct()
     logger.info(f"Final filtered queryset has {final_qs.count()} objects")
     return final_qs
+
+
+def _add_corpus_fallback(
+    child_queryset: models.QuerySet,
+    user: User,
+    permission: str,
+) -> models.QuerySet:
+    """
+    Return child_queryset unioned with any objects whose corpus is permitted to the user
+    under the *same* 'permission'.
+
+    1) Build a set of corpus PKs the user can access under `permission`.
+    2) Return union of the existing child_queryset plus the objects whose corpus__in=that set.
+    """
+
+    from opencontractserver.corpuses.models import Corpus
+    from django.db.models import Q
+
+    # If user is superuser, all corpora are permitted
+    if user.is_superuser:
+        permitted_corpus_ids = Corpus.objects.values_list("pk", flat=True)
+    # If user is anonymous, no fallback
+    elif user.is_anonymous:
+        # Normally anonymous users only get is_public anyway.
+        # We won't union anything here.
+        return child_queryset
+    else:
+        # Build a base corpus Q
+        if permission.lower() == "read":
+            # read => public or own or guardian read
+            corpus_base_q = Q(is_public=True) | Q(creator=user)
+        else:
+            corpus_base_q = Q(creator=user)
+
+        corpus_codename = f"{permission.lower()}_corpus"
+        guardian_corpus_q = Q(
+            **{
+                f"corpususerobjectpermission__permission__codename": corpus_codename,
+                f"corpususerobjectpermission__user": user,
+            }
+        )
+
+        permitted_corpora = Corpus.objects.filter(corpus_base_q | guardian_corpus_q)
+        permitted_corpora = permitted_corpora.distinct()
+
+        # If that set is non-empty, union them
+        permitted_corpus_ids = permitted_corpora.values_list("pk", flat=True)
+
+    fallback_qs = child_queryset.model.objects.filter(
+        Q(corpus__isnull=False) & Q(corpus__in=permitted_corpus_ids)
+    )
+    logger.info(f"Corpus fallback added {fallback_qs.count()} objects")
+
+    return (child_queryset | fallback_qs).distinct()
 
 
 def user_has_permission_for_obj(

@@ -52,6 +52,7 @@ def resolve_single_oc_model_from_id(
         inherits_corpus_perms = getattr(
             model_type, "INHERITS_CORPUS_PERMISSIONS", False
         )
+        logger.debug(f"model_type ({type(model_type)}): {model_type}")
 
         # If model has a corpus field and inherits permissions, add corpus permissions
         if inherits_corpus_perms:

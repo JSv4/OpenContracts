@@ -6,7 +6,6 @@ import django
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.db import models, transaction
-from django.db.models import Q
 from guardian.models import GroupObjectPermission, UserObjectPermission
 from guardian.shortcuts import assign_perm
 
@@ -27,7 +26,8 @@ def _get_permission_mapping() -> dict[PermissionTypes, set[str]]:
     i.e. CRUD => create, read, update, delete and ALL => create, read, update, delete, permission, publish.
     Used by both set_permissions_for_obj_to_user and filter_queryset_by_permission to maintain consistency.
     """
-    return {
+    logger.debug("_get_permission_mapping called")
+    mapping = {
         PermissionTypes.CRUD: {"CREATE", "READ", "UPDATE", "DELETE"},
         PermissionTypes.ALL: {
             "CREATE",
@@ -38,6 +38,33 @@ def _get_permission_mapping() -> dict[PermissionTypes, set[str]]:
             "PUBLISH",
         },
     }
+    logger.debug(f"Permission mapping: {mapping}")
+
+    # Log all available PermissionTypes for comparison
+    all_permission_types = [pt for pt in PermissionTypes]
+    logger.debug(f"All available PermissionTypes: {all_permission_types}")
+
+    return mapping
+
+
+def _get_db_codename_for_action(action: str, model_name: str) -> str:
+    """
+    Convert an action string (e.g., "delete") to the actual database codename (e.g., "remove_corpus").
+    This centralizes our permission naming conventions to avoid mismatches.
+    """
+    logger.debug(
+        f"_get_db_codename_for_action called with action: {action}, model_name: {model_name}"
+    )
+    action_lower = action.lower()
+
+    # Special case: Django models.Meta uses "remove_corpus" for the delete permission
+    if action_lower == "delete":
+        logger.debug("Converting 'delete' to 'remove' for Django compatibility")
+        action_lower = "remove"
+
+    codename = f"{action_lower}_{model_name}"
+    logger.debug(f"Generated codename: {codename}")
+    return codename
 
 
 def _get_actions_for_permissions(
@@ -54,7 +81,12 @@ def _get_actions_for_permissions(
     permission_mapping = _get_permission_mapping()
     actions_to_assign: set[str] = set()
     for perm in permissions:
-        actions = permission_mapping.get(perm, set())
+        # For special permission types, use the mapping
+        if perm in permission_mapping:
+            actions = permission_mapping[perm]
+        # For basic permission types, use the permission value directly
+        else:
+            actions = {perm.value}
         actions_to_assign.update(actions)
     return actions_to_assign
 
@@ -64,34 +96,89 @@ def _clear_object_level_perms(instance: models.Model) -> None:
     Removes all existing object-level permissions for the given instance,
     regardless of user or group.
     """
+    logger.debug(
+        f"_clear_object_level_perms called for {instance._meta.model_name} {instance.pk}"
+    )
+
     model_name = instance._meta.model_name
+
+    # Log existing permissions before clearing
+    from guardian.shortcuts import get_users_with_perms
+
+    users_with_perms = get_users_with_perms(instance, attach_perms=True)
+    logger.debug(f"Users with permissions before clearing: {users_with_perms}")
+
     existing_permissions = getattr(instance, f"{model_name}userobjectpermission_set")
+    perm_count = existing_permissions.count()
+    logger.debug(f"Found {perm_count} user object permissions to clear")
     existing_permissions.all().delete()
+    logger.debug(f"Cleared {perm_count} user object permissions")
 
     group_permissions = getattr(
         instance, f"{model_name}groupobjectpermission_set", None
     )
     if group_permissions:
+        group_perm_count = group_permissions.count()
+        logger.debug(f"Found {group_perm_count} group object permissions to clear")
         group_permissions.all().delete()
+        logger.debug(f"Cleared {group_perm_count} group object permissions")
+    else:
+        logger.debug(f"No group permissions attribute found for {model_name}")
+
+    # Log permissions after clearing
+    users_with_perms_after = get_users_with_perms(instance, attach_perms=True)
+    logger.debug(f"Users with permissions after clearing: {users_with_perms_after}")
 
 
 def _assign_actions_to_user_for_obj(
     user: User, instance: models.Model, actions: set[str]
 ) -> None:
     """
-    Assigns each action in 'actions' (e.g. "read", "update") to the user
-    for the given instance using django-guardian's assign_perm.
+    Assign each action in 'actions' (e.g. "read", "update") to the user
+    for the given instance, using django-guardian's assign_perm.
     """
+    from django.contrib.auth.models import Permission
+    from django.core.exceptions import ObjectDoesNotExist
+
+    logger.debug(
+        f"_assign_actions_to_user_for_obj called for user {user.username} with actions: {actions}"
+    )
+
     model_name = instance._meta.model_name
-    app_label = instance._meta.app_label
+    app_name = instance._meta.app_label
+
+    logger.debug(f"Model name: {model_name}, App name: {app_name}")
+
     for action in actions:
-        codename = f"{app_label}.{action}_{model_name}"
-        assign_perm(codename, user, instance)
+        # Use the centralized helper to get the correct codename
+        perm_codename = _get_db_codename_for_action(action, model_name)
+        logger.debug(
+            f"Converting action '{action}' to permission codename: '{perm_codename}'"
+        )
 
+        try:
+            # Guardian expects the full permission string with app_label
+            full_perm = f"{app_name}.{perm_codename}"
+            logger.debug(
+                f"Assigning permission '{full_perm}' to user {user.username} for {model_name} {instance.pk}"
+            )
+            assign_perm(full_perm, user, instance)
+            logger.debug(
+                f"Successfully assigned permission '{full_perm}' to user {user.username}"
+            )
+        except (Permission.DoesNotExist, ObjectDoesNotExist) as exc:
+            logger.warning(
+                f"Permission '{perm_codename}' does not exist for '{model_name}'; skipping assignment. "
+                f"Error: {exc}"
+            )
 
-# -------------------------------------------------------------------------
-#                         PUBLIC FUNCTIONS (UNMODIFIED SIGNATURES)
-# -------------------------------------------------------------------------
+    # Log all permissions after assignment
+    from guardian.shortcuts import get_perms
+
+    assigned_perms = get_perms(user, instance)
+    logger.debug(
+        f"After assignment, user {user.username} has permissions on {model_name} {instance.pk}: {assigned_perms}"
+    )
 
 
 def resolve_user(user: User | int | str) -> User:
@@ -167,7 +254,6 @@ def filter_queryset_by_permission(
              * ALL => union of create, read, update, delete, permission, publish
     """
 
-    from opencontractserver.corpuses.models import Corpus
     from django.db.models import Q
 
     model_name = queryset.model._meta.model_name
@@ -175,19 +261,12 @@ def filter_queryset_by_permission(
         f"Filtering {model_name} queryset for user {user} with permission: {permission}"
     )
 
-    # If permission is an Enum, possibly expand special permissions (CRUD, ALL):
-    if isinstance(permission, PermissionTypes):
-        permission_mapping = _get_permission_mapping()
-        if permission in (PermissionTypes.CRUD, PermissionTypes.ALL):
-            logger.info(f"Special permission type: {permission}")
-            actions = permission_mapping.get(permission, set())
-            combined_qs = queryset.none()
-            for action in actions:
-                combined_qs |= filter_queryset_by_permission(queryset, user, action)
-            return combined_qs.distinct()
-        else:
-            # Convert PermissionTypes to string for standard processing
-            permission = permission.value.lower()
+    # If permission is a string, convert it to lowercase
+    if isinstance(permission, str):
+        permission = permission.lower()
+    else:
+        # If it's an enum, get its lowercase string value
+        permission = permission.value.lower()
 
     # Superuser => all
     if getattr(user, "is_superuser", False):
@@ -204,15 +283,16 @@ def filter_queryset_by_permission(
     # Authenticated logic:
 
     # Base query depends on read vs. other (e.g. update/delete)
-    if permission.lower() == "read":
+    if permission == "read":
         base_q = Q(is_public=True) | Q(creator=user)
     else:
         base_q = Q(creator=user)
 
     logger.info(f"Base query: {base_q}")
 
-    # Guardian permission codename
-    permission_codename = f"{permission.lower()}_{model_name}"
+    # Get the correct permission codename using our centralized helper
+    permission_codename = _get_db_codename_for_action(permission, model_name)
+
     logger.info(f"Looking for Guardian permission: {permission_codename}")
     guardian_q = Q(
         **{
@@ -226,12 +306,13 @@ def filter_queryset_by_permission(
 
     # If the model says to inherit corpus permissions, then union with all objects
     # whose corpus** is visible under the *same* permission.
-    inherits_permissions = (
-        hasattr(queryset.model, "INHERITS_CORPUS_PERMISSIONS")
-        and getattr(queryset.model, "INHERITS_CORPUS_PERMISSIONS", False)
-    )
+    inherits_permissions = hasattr(
+        queryset.model, "INHERITS_CORPUS_PERMISSIONS"
+    ) and getattr(queryset.model, "INHERITS_CORPUS_PERMISSIONS", False)
     if inherits_permissions and hasattr(queryset.model, "corpus"):
-        logger.info("Model has 'corpus' relation and inherits corpus permissions - checking corpus-level perms")
+        logger.info(
+            "Model has 'corpus' relation and inherits corpus permissions - checking corpus-level perms"
+        )
         qs = _add_corpus_fallback(qs, user, permission)
 
     final_qs = qs.distinct()
@@ -252,8 +333,9 @@ def _add_corpus_fallback(
     2) Return union of the existing child_queryset plus the objects whose corpus__in=that set.
     """
 
-    from opencontractserver.corpuses.models import Corpus
     from django.db.models import Q
+
+    from opencontractserver.corpuses.models import Corpus
 
     # If user is superuser, all corpora are permitted
     if user.is_superuser:
@@ -274,8 +356,8 @@ def _add_corpus_fallback(
         corpus_codename = f"{permission.lower()}_corpus"
         guardian_corpus_q = Q(
             **{
-                f"corpususerobjectpermission__permission__codename": corpus_codename,
-                f"corpususerobjectpermission__user": user,
+                "corpususerobjectpermission__permission__codename": corpus_codename,
+                "corpususerobjectpermission__user": user,
             }
         )
 
@@ -301,24 +383,25 @@ def user_has_permission_for_obj(
 ) -> bool:
     """
     Check if a user has the given permission on an object.
-
-    This function reuses the central permission filtering logic by constructing
-    a queryset for the instance and filtering it using filter_queryset_by_permission.
-
-    Args:
-        user_val: A User instance, an int (ID) or a str (ID or username).
-        instance: The Django model instance to check.
-        permission: The permission to check (from PermissionTypes).
-        include_group_permissions: (Not separately used here since the helper already includes group permissions)
-
-    Returns:
-        True if the object is visible under the given permission; False otherwise.
     """
     user = resolve_user(user_val)
 
+    # Special handling for ALL and CRUD
+    if permission in [PermissionTypes.ALL, PermissionTypes.CRUD]:
+        # Get the component permissions
+        permission_mapping = _get_permission_mapping()
+        component_permissions = permission_mapping.get(permission, set())
+
+        # Check if the user has all the component permissions
+        for component in component_permissions:
+            component_enum = getattr(PermissionTypes, component)
+            if not user_has_permission_for_obj(user, instance, component_enum):
+                return False
+        return True
+
+    # Regular permission check
     qs = instance.__class__.objects.filter(pk=instance.pk)
     perm_str = permission.value.lower()
-
     visible_qs = filter_queryset_by_permission(qs, user, perm_str)
     return visible_qs.exists()
 
@@ -337,17 +420,39 @@ def set_permissions_for_obj_to_user(
     """
     # Resolve user
     user = resolve_user(user_val)
+    logger.debug(
+        f"set_permissions_for_obj_to_user called for user {user.username} on {instance._meta.model_name} {instance.pk}"
+    )
+    logger.debug(f"Permissions to set: {permissions}")
 
     # Remove existing object-level permissions for everyone (not just this user).
+    logger.debug(
+        f"Clearing existing object-level permissions for {instance._meta.model_name} {instance.pk}"
+    )
     with transaction.atomic():
         _clear_object_level_perms(instance)
 
     # Convert the user-specified PermissionTypes into underlying actions
+    logger.debug("Converting permission types to actions")
     actions_to_assign = _get_actions_for_permissions(permissions)
+    logger.debug(f"Actions to assign: {actions_to_assign}")
 
     # Now assign them to the user
+    logger.debug(f"Assigning actions to user {user.username}")
     with transaction.atomic():
         _assign_actions_to_user_for_obj(user, instance, actions_to_assign)
+
+    # Log the final permissions
+    from guardian.shortcuts import get_perms
+
+    final_perms = get_perms(user, instance)
+    logger.debug(
+        f"Final permissions for user {user.username} on {instance._meta.model_name} {instance.pk}: {final_perms}"
+    )
+
+    # Also log the permissions from our custom function
+    custom_perms = get_users_permissions_for_obj(user, instance)
+    logger.debug(f"Custom get_users_permissions_for_obj result: {custom_perms}")
 
 
 def generate_permissions_md_table_for_object(
@@ -447,52 +552,77 @@ def get_users_permissions_for_obj(
     from opencontractserver.corpuses.models import Corpus
 
     user = resolve_user(user_val)
+    logger.debug(
+        f"get_users_permissions_for_obj called for user {user.username} on {instance._meta.model_name} {instance.pk}"
+    )
+
     model_name = instance._meta.model_name
     app_label = instance._meta.app_label
+    logger.debug(f"Model name: {model_name}, App label: {app_label}")
+
     final_codenames: set[str] = set()
 
     # 1) SUPERUSER => all codenames
     if getattr(user, "is_superuser", False):
+        logger.debug(f"User {user.username} is superuser - granting all permissions")
         for action in ["create", "read", "update", "delete", "permission", "publish"]:
-            final_codenames.add(f"{action}_{model_name}")
+            final_codenames.add(_get_db_codename_for_action(action, model_name))
+        logger.debug(f"Final codenames for superuser: {final_codenames}")
         return final_codenames
 
     # 2) ANONYMOUS => read only if public or corpus fallback
     if isinstance(user, AnonymousUser):
+        logger.debug("User is anonymous")
         if getattr(instance, "is_public", False):
-            final_codenames.add(f"read_{model_name}")
+            logger.debug("Instance is public - granting read permission")
+            final_codenames.add(_get_db_codename_for_action("read", model_name))
         else:
             # corpus fallback
+            logger.debug("Instance is not public - checking corpus fallback")
             if hasattr(instance, "corpus") and instance.corpus:
+                logger.debug(f"Instance has corpus attribute: {instance.corpus}")
                 if Corpus.objects.filter(
                     pk=instance.corpus.pk, is_public=True
                 ).exists():
-                    final_codenames.add(f"read_{model_name}")
+                    logger.debug("Corpus is public - granting read permission")
+                    final_codenames.add(_get_db_codename_for_action("read", model_name))
             elif hasattr(instance, "corpus_set"):
+                logger.debug("Instance has corpus_set attribute")
                 if instance.corpus_set.filter(is_public=True).exists():
-                    final_codenames.add(f"read_{model_name}")
+                    logger.debug(
+                        "Corpus set contains public corpus - granting read permission"
+                    )
+                    final_codenames.add(_get_db_codename_for_action("read", model_name))
+        logger.debug(f"Final codenames for anonymous user: {final_codenames}")
         return final_codenames
 
     # 3) AUTHENTICATED USERS
+    logger.debug(f"Processing authenticated user {user.username}")
+
     # 3.1) Creator => gets CRUD
     if getattr(instance, "creator_id", None) == user.id:
+        logger.debug("User is creator - granting CRUD permissions")
         for action in ["create", "read", "update", "delete"]:
-            final_codenames.add(f"{action}_{model_name}")
+            final_codenames.add(_get_db_codename_for_action(action, model_name))
 
     # 3.2) is_public => read
     if getattr(instance, "is_public", False):
-        final_codenames.add(f"read_{model_name}")
+        logger.debug("Instance is public - granting read permission")
+        final_codenames.add(_get_db_codename_for_action("read", model_name))
 
     # 3.3) corpus fallback => read
     # Single object approach:
     if hasattr(instance, "corpus") and instance.corpus:
+        logger.debug(f"Instance has corpus attribute: {instance.corpus}")
         visible_corpora = Corpus.objects.visible_to_user(user).filter(
             pk=instance.corpus.pk
         )
         if visible_corpora.exists():
-            final_codenames.add(f"read_{model_name}")
+            logger.debug("Corpus is visible to user - granting read permission")
+            final_codenames.add(_get_db_codename_for_action("read", model_name))
 
     # 3.4) Guardian permissions (user + optional groups)
+    logger.debug("Checking Guardian permissions")
     user_perm_codenames = set()
 
     # user-level perms
@@ -502,21 +632,27 @@ def get_users_permissions_for_obj(
         content_type__app_label=app_label,
         content_type__model=model_name,
     ).values_list("permission__codename", flat=True)
+    logger.debug(f"Direct user permissions from Guardian: {list(user_perms)}")
     user_perm_codenames.update(user_perms)
 
-    # group-level perms
+    # group-level perms (optional)
     if include_group_permissions:
-        group_ids = user.groups.values_list("id", flat=True)
+        logger.debug("Including group permissions")
+        user_groups = user.groups.all()
+        logger.debug(f"User groups: {[g.name for g in user_groups]}")
+
         group_perms = GroupObjectPermission.objects.filter(
             object_pk=str(instance.pk),
-            group_id__in=group_ids,
+            group__in=user_groups,
             content_type__app_label=app_label,
             content_type__model=model_name,
         ).values_list("permission__codename", flat=True)
+        logger.debug(f"Group permissions from Guardian: {list(group_perms)}")
         user_perm_codenames.update(group_perms)
 
-    # Merge them
-    for codename in user_perm_codenames:
-        final_codenames.add(codename)
+    # Add all the guardian perms to our final set
+    logger.debug(f"All Guardian permissions: {user_perm_codenames}")
+    final_codenames.update(user_perm_codenames)
 
+    logger.debug(f"Final codenames for user {user.username}: {final_codenames}")
     return final_codenames

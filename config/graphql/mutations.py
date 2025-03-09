@@ -7,6 +7,7 @@ import graphene
 import graphql_jwt
 from celery import chain, chord, group
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from django.db import transaction
@@ -89,7 +90,6 @@ from opencontractserver.types.enums import (
     PermissionTypes,
 )
 from opencontractserver.users.models import UserExport
-from django.contrib.auth import get_user_model
 from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
 from opencontractserver.utils.files import is_plaintext_content
 from opencontractserver.utils.permissioning import (
@@ -100,6 +100,7 @@ from opencontractserver.utils.permissioning import (
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
 
 class MakeAnalysisPublic(graphene.Mutation):
     class Arguments:
@@ -154,7 +155,9 @@ class MakeCorpusPublic(graphene.Mutation):
 
         except Exception as e:
             ok = False
-            message = f"ERROR - Could not make corpus public due to unexpected error: {e}"
+            message = (
+                f"ERROR - Could not make corpus public due to unexpected error: {e}"
+            )
 
         return MakeCorpusPublic(ok=ok, message=message)
 
@@ -162,17 +165,15 @@ class MakeCorpusPublic(graphene.Mutation):
 class SetUserCorpusPermissions(graphene.Mutation):
     class Arguments:
         corpus_id = graphene.ID(
-            required=True,
-            description="ID of the corpus to set permissions on"
+            required=True, description="ID of the corpus to set permissions on"
         )
         user_id = graphene.ID(
-            required=True,
-            description="ID of the user to grant permissions to"
+            required=True, description="ID of the user to grant permissions to"
         )
         permissions = graphene.List(
             graphene.Enum.from_enum(PermissionTypes),
             required=True,
-            description="List of permissions to grant to the user"
+            description="List of permissions to grant to the user",
         )
 
     ok = graphene.Boolean()
@@ -180,60 +181,51 @@ class SetUserCorpusPermissions(graphene.Mutation):
 
     @login_required
     def mutate(root, info, corpus_id, user_id, permissions):
+        from opencontractserver.corpuses.models import Corpus
+        from opencontractserver.types.enums import PermissionTypes
         from opencontractserver.utils.permissioning import (
             set_permissions_for_obj_to_user,
-            user_has_permission_for_obj
+            user_has_permission_for_obj,
         )
-        from opencontractserver.types.enums import PermissionTypes
-        from opencontractserver.corpuses.models import Corpus
 
         user = info.context.user
-        
+
         try:
             # Get the corpus
             corpus_pk = from_global_id(corpus_id)[1]
             corpus = Corpus.objects.get(pk=corpus_pk)
-            
+
             # Verify the requester has PERMISSION rights on this corpus
-            if not user_has_permission_for_obj(user, corpus, PermissionTypes.PERMISSION):
+            if not user_has_permission_for_obj(
+                user, corpus, PermissionTypes.PERMISSION
+            ):
                 return SetUserCorpusPermissions(
                     ok=False,
-                    message="You don't have permission to change permissions on this corpus"
+                    message="You don't have permission to change permissions on this corpus",
                 )
-                
+
             # Resolve the target user
             target_user_pk = from_global_id(user_id)[1]
             target_user = User.objects.get(pk=target_user_pk)
-            
+
             # Convert the permissions list to a list of PermissionTypes
             # No conversion needed since graphene will already convert the enum values
-            
+
             # Set the permissions
-            set_permissions_for_obj_to_user(
-                target_user,
-                corpus,
-                permissions
-            )
-            
+            set_permissions_for_obj_to_user(target_user, corpus, permissions)
+
             return SetUserCorpusPermissions(
                 ok=True,
-                message=f"Successfully set permissions for user {target_user.username} on corpus {corpus.title}"
+                message=f"Successfully set permissions for user {target_user.username} on corpus {corpus.title}",
             )
-            
+
         except Corpus.DoesNotExist:
-            return SetUserCorpusPermissions(
-                ok=False,
-                message="Corpus not found"
-            )
+            return SetUserCorpusPermissions(ok=False, message="Corpus not found")
         except User.DoesNotExist:
-            return SetUserCorpusPermissions(
-                ok=False,
-                message="User not found"
-            )
+            return SetUserCorpusPermissions(ok=False, message="User not found")
         except Exception as e:
             return SetUserCorpusPermissions(
-                ok=False,
-                message=f"Error setting permissions: {str(e)}"
+                ok=False, message=f"Error setting permissions: {str(e)}"
             )
 
 

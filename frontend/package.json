@@ -51,7 +51,7 @@
     "react-json-tree": "^0.19.0",
     "react-json-view": "^1.21.3",
     "react-markdown": "^9.0.3",
-    "react-router-dom": "6",
+    "react-router-dom": "6.29.0",
     "react-scripts": "5.0.0",
     "react-syntax-highlighter": "^15.5.0",
     "react-toastify": "9.1.3",

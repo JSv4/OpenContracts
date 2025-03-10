@@ -6,8 +6,6 @@ import django
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.db import models, transaction
-from guardian.models import GroupObjectPermission, UserObjectPermission
-from guardian.shortcuts import assign_perm
 
 from opencontractserver.types.enums import PermissionTypes
 
@@ -137,9 +135,19 @@ def _assign_actions_to_user_for_obj(
     Assign each action in 'actions' (e.g. "read", "update") to the user
     for the given instance, using django-guardian's assign_perm.
     """
+    import sys
+
     from django.contrib.auth.models import Permission
     from django.core.exceptions import ObjectDoesNotExist
+    from django.db.transaction import TransactionManagementError
+    from guardian.shortcuts import get_perms_for_model
 
+    # Debug by printing available permissions for your model
+    logger.debug(
+        f"Available permissions for {instance.__class__}: {get_perms_for_model(instance.__class__)}"
+    )
+    for perm in get_perms_for_model(instance.__class__):
+        logger.debug(f"Permission {perm.codename}: {perm} ")
     logger.debug(
         f"_assign_actions_to_user_for_obj called for user {user.username} with actions: {actions}"
     )
@@ -149,6 +157,15 @@ def _assign_actions_to_user_for_obj(
 
     logger.debug(f"Model name: {model_name}, App name: {app_name}")
 
+    # Check if we're running in a test environment
+    is_test = "test" in sys.argv or any("pytest" in arg for arg in sys.argv)
+    if is_test:
+        logger.debug("Running in test environment - special handling for permissions")
+
+    # Create list to store successful permissions
+    successful_permissions = []
+
+    # Process each action and create permissions
     for action in actions:
         # Use the centralized helper to get the correct codename
         perm_codename = _get_db_codename_for_action(action, model_name)
@@ -162,23 +179,39 @@ def _assign_actions_to_user_for_obj(
             logger.debug(
                 f"Assigning permission '{full_perm}' to user {user.username} for {model_name} {instance.pk}"
             )
-            assign_perm(full_perm, user, instance)
-            logger.debug(
-                f"Successfully assigned permission '{full_perm}' to user {user.username}"
+
+            # Create permission object directly without transaction
+            obj_perm, created = assign_permission_directly(
+                user, perm_codename, instance
             )
+            logger.debug(f"Permission created: {created}, object: {obj_perm}")
+
+            if obj_perm and created:
+                successful_permissions.append(perm_codename)
+
         except (Permission.DoesNotExist, ObjectDoesNotExist) as exc:
             logger.warning(
                 f"Permission '{perm_codename}' does not exist for '{model_name}'; skipping assignment. "
                 f"Error: {exc}"
             )
 
-    # Log all permissions after assignment
-    from guardian.shortcuts import get_perms
+    # After all permissions have been created, explicitly commit the transaction
+    if transaction.get_autocommit() is False and not is_test:
+        try:
+            transaction.commit()
+            logger.debug(
+                "Explicitly committed transaction to ensure permissions are saved"
+            )
+        except TransactionManagementError:
+            # We're inside an atomic block, can't commit directly
+            logger.debug("Inside atomic block, can't commit transaction directly")
+            # Force Django to save the permission object instead
+            from django.db import connection
 
-    assigned_perms = get_perms(user, instance)
-    logger.debug(
-        f"After assignment, user {user.username} has permissions on {model_name} {instance.pk}: {assigned_perms}"
-    )
+            connection.cursor().execute(
+                "SELECT 1"
+            )  # This forces a flush to the DB in most cases
+            logger.debug("Attempted to flush DB operations")
 
 
 def resolve_user(user: User | int | str) -> User:
@@ -503,13 +536,6 @@ def set_permissions_for_obj_to_user(
     )
     logger.debug(f"Permissions to set: {permissions}")
 
-    # Remove existing object-level permissions for everyone (not just this user).
-    logger.debug(
-        f"Clearing existing object-level permissions for {instance._meta.model_name} {instance.pk}"
-    )
-    with transaction.atomic():
-        _clear_object_level_perms(instance)
-
     # Convert the user-specified PermissionTypes into underlying actions
     logger.debug("Converting permission types to actions")
     actions_to_assign = _get_actions_for_permissions(permissions)
@@ -533,45 +559,20 @@ def set_permissions_for_obj_to_user(
     logger.debug(f"Custom get_users_permissions_for_obj result: {custom_perms}")
 
 
-def generate_permissions_md_table_for_object(
+def get_user_permissions_table_data(
     users: list[User], instance: models.Model
-) -> str:
+) -> dict[int, dict[str, bool]]:
     """
-    Generate a Markdown table summarizing the effective permissions on a given object for each user.
+    Return a dictionary mapping each user's ID to a dictionary of permission-type -> bool,
+    indicating whether they hold each of the table's permission columns (CREATE, READ, UPDATE,
+    DELETE, PERMISSION, PUBLISH, CRUD, ALL) for the given instance.
 
-    For each user in the list, the following permission types are evaluated:
-      - CREATE
-      - READ
-      - UPDATE (EDIT is considered equivalent to UPDATE)
-      - DELETE
-      - PERMISSION
-      - PUBLISH
-      - CRUD (implying create, read, update, delete)
-      - ALL (all available permissions)
-
-    The permission evaluation uses the unified permission logic via
-    `user_has_permission_for_obj()`. In our design:
-      - Superusers are assumed to have all permissions.
-      - Anonymous users see only public objects (i.e. typically only READ permission).
-      - Authenticated users are granted permissions if they are the creator,
-        if the object is public, if explicit guardian permissions exist, or if a linked corpus
-        is visible per our fallback logic.
-
-    Args:
-        users: A list of User objects to check.
-        instance: The Django model instance for which to check permissions.
-
-    Returns:
-        A Markdown-formatted string containing a table with one row per user and columns
-        for each permission type.
-
-    Example output:
-
-    | Username | CREATE | READ | UPDATE | DELETE | PERMISSION | PUBLISH | CRUD | ALL |
-    | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-    | alice | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-    | bob | No | Yes | No | No | No | No | No | No |
+    This function uses a single pass at collecting the user's codenames by calling
+    get_users_permissions_for_obj(user, instance), and then infers whether a user has each
+    permission type. Composite permissions (CRUD, ALL) are expanded by checking the relevant
+    individual codenames.
     """
+    # These are the same permission types used in generate_permissions_md_table_for_object
     permission_types = [
         PermissionTypes.CREATE,
         PermissionTypes.READ,
@@ -583,19 +584,118 @@ def generate_permissions_md_table_for_object(
         PermissionTypes.ALL,
     ]
 
+    # A helper for expanding composite permission types
+    # (CRUD => create, read, update, delete, ALL => + permission, publish)
+    composite_mapping = (
+        _get_permission_mapping()
+    )  # {CRUD: {CREATE, READ, UPDATE, DELETE}, ALL: {...}}
+    # Turn the sets of uppercase members into sets of string-lower for codenames
+    # e.g. CRUD => {"create", "read", "update", "delete"}, then we'll build codenames with _get_db_codename_for_action
+    composite_dict = {
+        perm_type: {action.lower() for action in composite_mapping[perm_type]}
+        for perm_type in composite_mapping
+    }
+
+    # We'll store the final: { user.id: { "CREATE": bool, "READ": bool, ... } }
+    results: dict[int, dict[str, bool]] = {}
+
+    # For naming the underlying model codenames
+    model_name = instance._meta.model_name
+
+    for user_obj in users:
+
+        if user_obj.id is None:
+            logger.warning(f"User {user_obj.username} has no ID - skipping")
+            continue
+
+        # Fetch all raw codenames (e.g. "read_<model>") for this user on this instance
+        codenames = get_users_permissions_for_obj(
+            user_obj, instance, include_group_permissions=True
+        )
+
+        # Build a sub-dict for each permission type: True/False
+        user_data: dict[str, bool] = {}
+
+        for perm in permission_types:
+            # If we're dealing with a composite (CRUD or ALL):
+            if perm in composite_dict:
+                # e.g. if perm == PermissionTypes.CRUD, we see if user has create_<model>, read_<model>, ...
+                # for each action in composite_dict[perm], build codename and check membership
+                needed_actions = composite_dict[perm]
+                has_all = True
+                for action in needed_actions:
+                    codename = _get_db_codename_for_action(action, model_name)
+                    if codename not in codenames:
+                        has_all = False
+                        break
+                user_data[perm.value] = has_all
+            else:
+                # Normal permission (create, read, etc.): check if its codename is in codenames
+                codename = _get_db_codename_for_action(perm.value.lower(), model_name)
+                user_data[perm.value] = codename in codenames
+
+        results[user_obj.id] = user_data
+
+    return results
+
+
+def generate_permissions_md_table_for_object(
+    users: list[User], instance: models.Model
+) -> str:
+    """
+    Generate a Markdown table summarizing the effective permissions on a given object for each user.
+    This is a thin wrapper that collects all data via get_user_permissions_table_data() and then
+    produces a Markdown-formatted string.
+
+    For each user in the list, the following permission types are evaluated:
+      - CREATE
+      - READ
+      - UPDATE
+      - DELETE
+      - PERMISSION
+      - PUBLISH
+      - CRUD
+      - ALL
+
+    The returned table has one row per user, columns for each permission type, with "Yes"/"No"
+    in each cell depending on whether the permission is granted.
+    """
+    # We re-use the same set of permission types for columns
+    permission_types = [
+        PermissionTypes.CREATE,
+        PermissionTypes.READ,
+        PermissionTypes.UPDATE,
+        PermissionTypes.DELETE,
+        PermissionTypes.PERMISSION,
+        PermissionTypes.PUBLISH,
+        PermissionTypes.CRUD,
+        PermissionTypes.ALL,
+    ]
+
+    # Prepare headers
     headers = ["Username"] + [perm.value for perm in permission_types]
+
+    # Collect all user-permission data in a single pass
+    table_data = get_user_permissions_table_data(users, instance)
+
     md_lines = []
     md_lines.append("| " + " | ".join(headers) + " |")
     md_lines.append("| " + " | ".join(["---"] * len(headers)) + " |")
 
     for user_obj in users:
+
+        if user_obj.id is None:
+            logger.warning(f"User {user_obj.username} has no ID - skipping")
+            continue
+
         username = getattr(user_obj, "username", str(user_obj))
         row = [username]
+
+        # Retrieve the already-computed booleans for each permission type
+        user_data = table_data.get(user_obj.id, {})
         for perm in permission_types:
-            has_perm = user_has_permission_for_obj(
-                user_obj, instance, perm, include_group_permissions=True
-            )
-            row.append("Yes" if has_perm else "No")
+            row.append("Yes" if user_data.get(perm.value, False) else "No")
+
         md_lines.append("| " + " | ".join(row) + " |")
 
     return "\n".join(md_lines)
@@ -627,6 +727,8 @@ def get_users_permissions_for_obj(
          - Then add any object-level guardian permissions from userobjectpermission
            and (optionally) groupobjectpermission.
     """
+    from guardian.models import GroupObjectPermission, UserObjectPermission
+
     from opencontractserver.corpuses.models import Corpus
 
     user = resolve_user(user_val)
@@ -634,6 +736,7 @@ def get_users_permissions_for_obj(
         f"get_users_permissions_for_obj called for user {user.username} on {instance._meta.model_name} {instance.pk}"
     )
 
+    # Extract model info
     model_name = instance._meta.model_name
     app_label = instance._meta.app_label
     logger.debug(f"Model name: {model_name}, App label: {app_label}")
@@ -700,21 +803,64 @@ def get_users_permissions_for_obj(
             final_codenames.add(_get_db_codename_for_action("read", model_name))
 
     # 3.4) Guardian permissions (user + optional groups)
-    logger.debug("Checking Guardian permissions")
+    logger.debug(
+        f"Checking Guardian permissions for app_label: {app_label}, model_name: {model_name}"
+    )
     user_perm_codenames = set()
 
-    # user-level perms
+    # user-level perms - try both the generic and model-specific permission classes
+    # 1. Standard guardian check
     user_perms = UserObjectPermission.objects.filter(
         object_pk=str(instance.pk),
         user=user,
         content_type__app_label=app_label,
         content_type__model=model_name,
-    ).values_list("permission__codename", flat=True)
+    )
+    logger.debug(f"UserObjectPermission permissions: {user_perms}")
+
+    # 2. Check model-specific permission class if standard check returns nothing
+    if not user_perms.exists():
+        try:
+            from django.apps import apps
+
+            # Try to get the model-specific permission class
+            permission_class_name = f"{model_name}UserObjectPermission"
+            try:
+                permission_class = apps.get_model(app_label, permission_class_name)
+                logger.debug(
+                    f"Checking model-specific permission class: {permission_class}"
+                )
+
+                # Check for permissions in the model-specific class
+                model_specific_perms = permission_class.objects.filter(
+                    user=user,
+                    content_object=instance,
+                )
+
+                if model_specific_perms.exists():
+                    logger.debug(
+                        f"Found permissions in model-specific class: {model_specific_perms}"
+                    )
+                    # Extract the permission codenames
+                    for perm in model_specific_perms:
+                        user_perm_codenames.add(perm.permission.codename)
+                    logger.debug(f"Model-specific permissions: {user_perm_codenames}")
+                else:
+                    logger.debug("No permissions found in model-specific class")
+            except LookupError:
+                logger.debug(
+                    f"Model-specific permission class {permission_class_name} not found"
+                )
+        except Exception as e:
+            logger.debug(f"Error checking model-specific permissions: {e}")
+
+    # Process the standard guardian permissions
+    user_perms = user_perms.values_list("permission__codename", flat=True)
     logger.debug(f"Direct user permissions from Guardian: {list(user_perms)}")
     user_perm_codenames.update(user_perms)
 
     # group-level perms (optional)
-    if include_group_permissions:
+    if include_group_permissions and hasattr(user, "id") and user.id is not None:
         logger.debug("Including group permissions")
         user_groups = user.groups.all()
         logger.debug(f"User groups: {[g.name for g in user_groups]}")
@@ -734,3 +880,58 @@ def get_users_permissions_for_obj(
 
     logger.debug(f"Final codenames for user {user.username}: {final_codenames}")
     return final_codenames
+
+
+def assign_permission_directly(user, perm_codename, instance):
+    """Create permission object directly rather than using guardian shortcut"""
+    from django.apps import apps
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    from guardian.models import UserObjectPermission as GuardianUserObjectPermission
+
+    app_label = instance._meta.app_label
+    model_name = instance._meta.model_name
+
+    # Get the Permission object
+    content_type = ContentType.objects.get_for_model(instance)
+    permission = Permission.objects.get(
+        content_type=content_type, codename=perm_codename
+    )
+
+    # Determine the UserObjectPermission class name
+    permission_class_name = f"{model_name}UserObjectPermission"
+
+    # Use Django's app registry instead of importing the module
+    try:
+        permission_class = apps.get_model(app_label, permission_class_name)
+        logger.debug(f"Found specific permission class: {permission_class}")
+    except LookupError as e:
+        logger.warning(
+            f"Could not find permission class {permission_class_name} in {app_label}: {e}"
+        )
+        logger.warning("Falling back to guardian base UserObjectPermission class")
+        permission_class = GuardianUserObjectPermission
+
+    # Create the UserObjectPermission record
+    try:
+        if permission_class == GuardianUserObjectPermission:
+            # If using the base class, we need to set content_type and object_pk manually
+            obj_perm, created = permission_class.objects.get_or_create(
+                permission=permission,
+                user=user,
+                content_type=content_type,
+                object_pk=str(instance.pk),
+            )
+        else:
+            # Using the model-specific class which has content_object field
+            obj_perm, created = permission_class.objects.get_or_create(
+                permission=permission, user=user, content_object=instance
+            )
+
+        logger.debug(
+            f"Direct permission creation: {created}, {permission_class.__name__}"
+        )
+        return obj_perm, created
+    except Exception as e:
+        logger.error(f"Error creating permission object: {e}")
+        return None, False

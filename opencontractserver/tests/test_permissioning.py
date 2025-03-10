@@ -362,7 +362,7 @@ class PermissioningTestCase(TestCase):
                 "create_corpus",
                 "read_corpus",
                 "update_corpus",
-                "delete_corpus",
+                "remove_corpus",
             },
         )
         for doc in user_one_corpus_response["data"]["corpuses"]["edges"][0]["node"][
@@ -549,7 +549,7 @@ class PermissioningTestCase(TestCase):
                 "create_corpus",
                 "read_corpus",
                 "update_corpus",
-                "delete_corpus",
+                "remove_corpus",
             },
             set(full_permission_response["data"]["corpus"]["myPermissions"]),
         )
@@ -585,7 +585,7 @@ class PermissioningTestCase(TestCase):
             request_corpus_query, variables=variables
         )
         self.assertEqual(
-            {"read_corpus", "delete_corpus"},
+            {"read_corpus", "remove_corpus"},
             set(user_two_permission_response["data"]["corpus"]["myPermissions"]),
         )
 
@@ -603,7 +603,7 @@ class PermissioningTestCase(TestCase):
             request_corpus_query, variables=variables
         )
         self.assertEqual(
-            {"read_corpus", "delete_corpus", "update_corpus"},
+            {"read_corpus", "remove_corpus", "update_corpus"},
             set(user_two_permission_response["data"]["corpus"]["myPermissions"]),
         )
 
@@ -622,7 +622,7 @@ class PermissioningTestCase(TestCase):
             request_corpus_query, variables=variables
         )
         self.assertEqual(
-            {"read_corpus", "delete_corpus", "update_corpus", "publish_corpus"},
+            {"read_corpus", "remove_corpus", "update_corpus", "publish_corpus"},
             set(user_two_permission_response["data"]["corpus"]["myPermissions"]),
         )
 
@@ -644,7 +644,7 @@ class PermissioningTestCase(TestCase):
         self.assertEqual(
             {
                 "read_corpus",
-                "delete_corpus",
+                "remove_corpus",
                 "update_corpus",
                 "publish_corpus",
                 "permission_corpus",
@@ -665,7 +665,7 @@ class PermissioningTestCase(TestCase):
             request_corpus_query, variables=variables
         )
         self.assertEqual(
-            {"read_corpus", "delete_corpus"},
+            {"read_corpus", "remove_corpus"},
             set(user_two_permission_response["data"]["corpus"]["myPermissions"]),
         )
 

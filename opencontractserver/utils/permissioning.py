@@ -326,24 +326,32 @@ def _add_corpus_fallback(
     permission: str,
 ) -> models.QuerySet:
     """
-    Return child_queryset unioned with any objects whose corpus is permitted to the user
+    Return child_queryset enhanced with objects whose corpus is permitted to the user
     under the *same* 'permission'.
 
     1) Build a set of corpus PKs the user can access under `permission`.
-    2) Return union of the existing child_queryset plus the objects whose corpus__in=that set.
+    2) Return a queryset that includes objects whose corpus is in the permitted set.
     """
 
-    from django.db.models import Q
+    from django.db.models import Q, Subquery
 
     from opencontractserver.corpuses.models import Corpus
 
+    logger.debug(
+        f"_add_corpus_fallback called for user {user} with permission {permission}"
+    )
+
     # If user is superuser, all corpora are permitted
     if user.is_superuser:
-        permitted_corpus_ids = Corpus.objects.values_list("pk", flat=True)
+        logger.debug("User is superuser - all corpora are permitted")
+        # No need to filter further for superusers
+        return child_queryset
+
     # If user is anonymous, no fallback
     elif user.is_anonymous:
+        logger.debug("User is anonymous - no corpus fallback")
         # Normally anonymous users only get is_public anyway.
-        # We won't union anything here.
+        # We won't add anything here.
         return child_queryset
     else:
         # Build a base corpus Q
@@ -361,18 +369,38 @@ def _add_corpus_fallback(
             }
         )
 
-        permitted_corpora = Corpus.objects.filter(corpus_base_q | guardian_corpus_q)
-        permitted_corpora = permitted_corpora.distinct()
+        # Get the IDs of permitted corpora
+        permitted_corpora = Corpus.objects.filter(
+            corpus_base_q | guardian_corpus_q
+        ).distinct()
+        permitted_corpus_ids = list(permitted_corpora.values_list("pk", flat=True))
 
-        # If that set is non-empty, union them
-        permitted_corpus_ids = permitted_corpora.values_list("pk", flat=True)
+        logger.debug(
+            f"Found {len(permitted_corpus_ids)} permitted corpus IDs for user {user}"
+        )
 
-    fallback_qs = child_queryset.model.objects.filter(
-        Q(corpus__isnull=False) & Q(corpus__in=permitted_corpus_ids)
-    )
-    logger.info(f"Corpus fallback added {fallback_qs.count()} objects")
+        if not permitted_corpus_ids:
+            # No permitted corpora, return original queryset
+            logger.debug("No permitted corpora found - returning original queryset")
+            return child_queryset
 
-    return (child_queryset | fallback_qs).distinct()
+        # Create a new condition to include objects with permitted corpus
+        # Use Q objects to create a more compatible query structure
+        model = child_queryset.model
+        model_name = model._meta.model_name
+
+        logger.debug(f"Adding corpus fallback condition for model {model_name}")
+
+        # Create a new queryset with the same base as the original but with an additional filter
+        # This avoids creating incompatible query structures
+        enhanced_qs = model.objects.filter(
+            Q(pk__in=Subquery(child_queryset.values("pk")))
+            | Q(corpus__in=permitted_corpus_ids)
+        ).distinct()
+
+        logger.debug("Enhanced queryset created with corpus fallback")
+
+        return enhanced_qs
 
 
 def user_has_permission_for_obj(
@@ -383,27 +411,77 @@ def user_has_permission_for_obj(
 ) -> bool:
     """
     Check if a user has the given permission on an object.
+
+    This function reuses the central permission filtering logic by constructing
+    a queryset for the instance and filtering it using filter_queryset_by_permission.
+
+    Args:
+        user_val: A User instance, an int (ID) or a str (ID or username).
+        instance: The Django model instance to check.
+        permission: The permission to check (from PermissionTypes).
+        include_group_permissions: (Not separately used here since the helper already includes group permissions)
+
+    Returns:
+        True if the object is visible under the given permission; False otherwise.
     """
     user = resolve_user(user_val)
+    logger.debug(
+        f"user_has_permission_for_obj called for user {user.username} on {instance._meta.model_name} {instance.pk}"
+    )
+    logger.debug(f"Checking permission: {permission}")
 
-    # Special handling for ALL and CRUD
+    # Special handling for composite permission types (ALL, CRUD)
     if permission in [PermissionTypes.ALL, PermissionTypes.CRUD]:
+        logger.debug(f"Special handling for composite permission type: {permission}")
         # Get the component permissions
         permission_mapping = _get_permission_mapping()
         component_permissions = permission_mapping.get(permission, set())
+        logger.debug(f"Component permissions to check: {component_permissions}")
 
         # Check if the user has all the component permissions
         for component in component_permissions:
-            component_enum = getattr(PermissionTypes, component)
-            if not user_has_permission_for_obj(user, instance, component_enum):
+            logger.debug(f"Checking component permission: {component}")
+            # Convert string permission to enum
+            try:
+                component_enum = getattr(PermissionTypes, component)
+                logger.debug(f"Converted to enum: {component_enum}")
+                if not user_has_permission_for_obj(user, instance, component_enum):
+                    logger.debug(
+                        f"User does not have component permission: {component}"
+                    )
+                    return False
+            except AttributeError:
+                logger.error(f"Invalid permission type: {component}")
                 return False
+
+        logger.debug(f"User has all component permissions for {permission}")
         return True
 
-    # Regular permission check
-    qs = instance.__class__.objects.filter(pk=instance.pk)
-    perm_str = permission.value.lower()
-    visible_qs = filter_queryset_by_permission(qs, user, perm_str)
-    return visible_qs.exists()
+    # For direct permission checks, use get_users_permissions_for_obj
+    # This is more reliable than filter_queryset_by_permission for individual objects
+    model_name = instance._meta.model_name
+    perm_codename = _get_db_codename_for_action(permission.value.lower(), model_name)
+    logger.debug(f"Checking for permission codename: {perm_codename}")
+
+    user_perms = get_users_permissions_for_obj(
+        user, instance, include_group_permissions
+    )
+    logger.debug(f"User permissions: {user_perms}")
+
+    # Check if the user has the specific permission
+    has_perm = perm_codename in user_perms
+    logger.debug(f"Permission check result: {has_perm}")
+
+    # If not found directly, try the queryset approach as a fallback
+    if not has_perm:
+        logger.debug("Permission not found directly, trying queryset approach")
+        qs = instance.__class__.objects.filter(pk=instance.pk)
+        perm_str = permission.value.lower()
+        visible_qs = filter_queryset_by_permission(qs, user, perm_str)
+        has_perm = visible_qs.exists()
+        logger.debug(f"Queryset approach result: {has_perm}")
+
+    return has_perm
 
 
 def set_permissions_for_obj_to_user(

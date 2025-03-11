@@ -1,0 +1,29 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create model directory
+RUN mkdir -p /models/sentence-transformers
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy model preloader script
+COPY model_preloaders/download_minn_modernbert_model.py .
+
+# Download and cache the model
+RUN python download_minn_modernbert_model.py
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV TRANSFORMERS_CACHE=/models
+ENV SENTENCE_TRANSFORMERS_HOME=/models
+
+# Default command
+CMD ["python", "-c", "import time; print('Minnesota Case Law ModernBERT model is ready!'); time.sleep(3600)"] 

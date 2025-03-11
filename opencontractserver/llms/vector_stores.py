@@ -1,25 +1,24 @@
-# opencontractserver/llms/vector_stores.py
 import logging
 from typing import Any, Optional
 
 from channels.db import database_sync_to_async
-from django.db import models
 from django.db.models import Q, QuerySet
 from llama_index.core.schema import BaseNode, TextNode
 from llama_index.core.vector_stores.types import (
     BasePydanticVectorStore,
     MetadataFilters,
     VectorStoreQuery,
-    VectorStoreQueryMode,
     VectorStoreQueryResult,
 )
 from pgvector.django import CosineDistance
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
+from opencontractserver.pipeline.utils import get_dimension_from_embedder
+from opencontractserver.corpuses.models import Corpus
+from opencontractserver.tasks.embeddings_task import get_embedder_for_corpus
 
 _logger = logging.getLogger(__name__)
-
 
 class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     """Django Annotation Vector Store.
@@ -28,11 +27,11 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     from the Annotation model. It allows filtering by AnnotationLabel text.
 
     Args:
-        connection_string (str): The Django database connection string.
-
-    Example:
-        >>> from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
-        >>> vector_store = DjangoAnnotationVectorStore()
+        user_id (str|int|None): Filter by user ID
+        corpus_id (str|int|None): Filter by corpus ID
+        document_id (str|int|None): Filter by document ID
+        must_have_text (str|None): Filter by text content
+        embed_dim (int): Embedding dimension to use (384, 768, 1536, or 3072)
     """
 
     stores_text: bool = True
@@ -51,12 +50,27 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         must_have_text: str | None = None,
         hybrid_search: bool = False,
         text_search_config: str = "english",
-        embed_dim: int = 1536,
+        embed_dim: int = 384,
         cache_ok: bool = False,
         perform_setup: bool = True,
         debug: bool = False,
         use_jsonb: bool = False,
     ):
+        # Get the preferred embedder and its dimension from the corpus if available
+        if corpus_id:
+            try:
+                # Get the embedder for the corpus
+                embedder_class, _ = get_embedder_for_corpus(corpus_id)
+                if embedder_class and hasattr(embedder_class, 'vector_size'):
+                    # Get the dimension from the embedder class
+                    embed_dim = embedder_class.vector_size
+            except Exception as e:
+                _logger.error(f"Error getting embedder for corpus {corpus_id}: {e}")
+        
+        # Validate the embedding dimension
+        if embed_dim not in [384, 768, 1536, 3072]:
+            from django.conf import settings
+            embed_dim = getattr(settings, 'DEFAULT_EMBEDDING_DIMENSION', 768)
 
         super().__init__(
             user_id=user_id,
@@ -71,6 +85,9 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             debug=debug,
             use_jsonb=use_jsonb,
         )
+        
+        # Store the embedding dimension for use in query methods
+        self.embed_dim = embed_dim
 
     async def close(self) -> None:
         return
@@ -205,55 +222,92 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         """Don't want this to occur through LlamaIndex."""
         pass
 
-    def query(self, query: VectorStoreQuery, **kwargs: Any) -> VectorStoreQueryResult:
+    def _get_embedding_field(self) -> str:
+        """
+        Get the appropriate embedding field name based on the dimension.
+        
+        Returns:
+            str: The field name to use for vector similarity search
+        """
+        if self.embed_dim == 384:
+            return "embeddings__vector_384", "embedding"  # Also return legacy field for 384
+        elif self.embed_dim == 768:
+            return "embeddings__vector_768", None
+        elif self.embed_dim == 1536:
+            return "embeddings__vector_1536", None
+        elif self.embed_dim == 3072:
+            return "embeddings__vector_3072", None
+        else:
+            # Default to 384 for backward compatibility
+            return "embeddings__vector_384", "embedding"
+        
+    async def query(self, query: VectorStoreQuery) -> VectorStoreQueryResult:
         """Query the vector store."""
-        queryset = self._build_filter_query(query.filters)
-
-        if query.mode == VectorStoreQueryMode.HYBRID:
-            if query.query_str is None:
-                raise ValueError("query_str must be provided for hybrid search.")
-
-            if query.alpha is None:
-                alpha = 0.5  # Default alpha value for hybrid search
-            else:
-                alpha = query.alpha
-
-            queryset = queryset.annotate(
-                similarity=alpha * CosineDistance("embeddings", query.query_embedding)
-                + (1 - alpha)
-                * models.functions.TrigramSimilarity("raw_text", query.query_str)
-            ).order_by("-similarity")[: query.hybrid_top_k]
-
-        elif query.mode in [
-            VectorStoreQueryMode.SPARSE,
-            VectorStoreQueryMode.TEXT_SEARCH,
-        ]:
-            if query.query_str is None:
-                raise ValueError("query_str must be provided for text search.")
-
-            queryset = (
-                queryset.filter(raw_text__search=query.query_str)
-                .annotate(
-                    similarity=models.functions.TrigramSimilarity(
-                        "raw_text", query.query_str
+        from opencontractserver.annotations.models import Annotation
+        
+        # Get the embedding field name based on the dimension
+        embedding_field, legacy_field = self._get_embedding_field()
+            
+        # Build the query
+        queryset = Annotation.objects.all()
+        
+        # Apply filters
+        if self.corpus_id:
+            queryset = queryset.filter(corpus_id=self.corpus_id)
+        if self.document_id:
+            queryset = queryset.filter(document_id=self.document_id)
+        if self.user_id:
+            queryset = queryset.filter(creator_id=self.user_id)
+        if self.must_have_text:
+            queryset = queryset.filter(raw_text__icontains=self.must_have_text)
+            
+        # Apply metadata filters if provided
+        if query.filters is not None:
+            queryset = self._apply_metadata_filters(queryset, query.filters)
+            
+        # Apply vector similarity search
+        if query.query_embedding is not None:
+            # Try the new embedding model first
+            new_embedding_queryset = queryset.filter(**{f"{embedding_field}__isnull": False})
+            
+            if await database_sync_to_async(new_embedding_queryset.exists)():
+                # Use the new embedding model
+                queryset = new_embedding_queryset.order_by(
+                    CosineDistance(embedding_field, query.query_embedding)
+                )
+            elif legacy_field and self.embed_dim == 384:
+                # Fall back to legacy embedding field for 384-dim only
+                legacy_queryset = queryset.filter(**{f"{legacy_field}__isnull": False})
+                if await database_sync_to_async(legacy_queryset.exists)():
+                    queryset = legacy_queryset.order_by(
+                        CosineDistance(legacy_field, query.query_embedding)
                     )
-                )
-                .order_by("-similarity")[: query.sparse_top_k]
+                    
+        # Apply limit
+        if query.similarity_top_k is not None:
+            queryset = queryset[:query.similarity_top_k]
+            
+        # Execute query and convert to nodes
+        annotations = await database_sync_to_async(list)(queryset)
+        nodes = []
+        
+        for annotation in annotations:
+            node = TextNode(
+                text=annotation.raw_text or "",
+                id_=str(annotation.id),
+                metadata={
+                    "annotation_id": annotation.id,
+                    "document_id": annotation.document_id,
+                    "corpus_id": annotation.corpus_id,
+                    "page": annotation.page,
+                    "annotation_type": annotation.annotation_type,
+                    "creator_id": annotation.creator_id,
+                    "created": annotation.created.isoformat() if annotation.created else None,
+                },
             )
-
-        else:  # Default to vector search
-            queryset = (
-                queryset.order_by(
-                    CosineDistance("embedding", query.query_embedding)
-                ).annotate(
-                    similarity=CosineDistance("embedding", query.query_embedding)
-                )
-            )[: query.similarity_top_k]
-
-        rows = list(queryset)
-        # print(f"Returned rows: {rows}")
-
-        return self._db_rows_to_query_result(rows)
+            nodes.append(node)
+            
+        return VectorStoreQueryResult(nodes=nodes)
 
     async def aquery(
         self, query: VectorStoreQuery, **kwargs: Any

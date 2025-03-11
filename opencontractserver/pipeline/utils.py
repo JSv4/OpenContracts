@@ -2,7 +2,7 @@ import importlib
 import inspect
 import logging
 import pkgutil
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from django.conf import settings
 
@@ -101,7 +101,19 @@ def get_components_by_mimetype(
     embedders = []
     thumbnailers = []
     post_processors = []
-    mimetype_enum = FileTypeEnum(mimetype)
+    
+    # Convert mimetype to FileTypeEnum
+    mimetype_enum = FileTypeEnum.from_mimetype(mimetype)
+    
+    # If mimetype is not supported, return empty lists
+    if mimetype_enum is None:
+        logger.warning(f"Unsupported mimetype: {mimetype}")
+        return {
+            "parsers": parsers,
+            "embedders": embedders,
+            "thumbnailers": thumbnailers,
+            "post_processors": post_processors,
+        }
 
     # Get compatible parsers
     for parser_class in get_all_parsers():
@@ -325,6 +337,137 @@ def get_default_embedder() -> Optional[type[BaseEmbedder]]:
     else:
         logger.error("No default embedder specified in settings")
         return None
+
+
+def get_embedder_by_dimension(dimension: int) -> Optional[type[BaseEmbedder]]:
+    """
+    Get a fallback embedder class for a specific dimension.
+
+    Args:
+        dimension (int): The embedding dimension (e.g., 384, 768, 1536, 3072)
+
+    Returns:
+        Optional[Type[BaseEmbedder]]: A fallback embedder class for the specified dimension, 
+        or None if not found.
+    """
+    # This function is deprecated and should not be used
+    logger.warning("get_embedder_by_dimension is deprecated. Use get_default_embedder_for_filetype_and_dimension instead.")
+    return get_default_embedder()
+
+
+def get_default_embedder_for_filetype_and_dimension(
+    mimetype: str, 
+    dimension: int
+) -> Optional[type[BaseEmbedder]]:
+    """
+    Get the default embedder for a specific filetype and dimension.
+    
+    Args:
+        mimetype: The MIME type of the file
+        dimension: The desired embedding dimension
+        
+    Returns:
+        Optional[Type[BaseEmbedder]]: The default embedder for the specified filetype and dimension,
+        or None if not found
+    """
+    # Get the default embedders for the mimetype
+    filetype_embedders = settings.DEFAULT_EMBEDDERS_BY_FILETYPE_AND_DIMENSION.get(mimetype, {})
+    
+    # Get the embedder for the specified dimension
+    embedder_path = filetype_embedders.get(dimension)
+    
+    if embedder_path:
+        try:
+            module_path, class_name = embedder_path.rsplit(".", 1)
+            module = importlib.import_module(module_path)
+            embedder_class = getattr(module, class_name)
+            return embedder_class
+        except (ModuleNotFoundError, AttributeError) as e:
+            logger.error(f"Error loading embedder '{embedder_path}': {e}")
+            return None
+    else:
+        logger.warning(f"No default embedder found for mimetype '{mimetype}' and dimension {dimension}")
+        return None
+
+
+def find_embedders_by_dimension(dimension: int) -> list[type[BaseEmbedder]]:
+    """
+    Find all available embedders for a specific dimension.
+
+    Args:
+        dimension (int): The embedding dimension to search for
+
+    Returns:
+        list[Type[BaseEmbedder]]: List of embedder classes with the specified dimension
+    """
+    all_embedders = get_all_embedders()
+    matching_embedders = [
+        embedder for embedder in all_embedders 
+        if hasattr(embedder, 'vector_size') and embedder.vector_size == dimension
+    ]
+    
+    return matching_embedders
+
+
+def get_dimension_from_embedder(embedder_class_or_path: Union[type[BaseEmbedder], str]) -> int:
+    """
+    Get the dimension from an embedder class or path.
+
+    Args:
+        embedder_class_or_path: Either an embedder class or a path to an embedder class
+
+    Returns:
+        int: The dimension of the embedder, or the default dimension if not found
+    """
+    from django.conf import settings
+    
+    default_dim = getattr(settings, 'DEFAULT_EMBEDDING_DIMENSION', 768)
+    
+    if isinstance(embedder_class_or_path, str):
+        try:
+            embedder_class = get_component_by_name(embedder_class_or_path)
+        except ValueError:
+            logger.error(f"Could not find embedder class: {embedder_class_or_path}")
+            return default_dim
+    else:
+        embedder_class = embedder_class_or_path
+    
+    if embedder_class and hasattr(embedder_class, 'vector_size'):
+        return embedder_class.vector_size
+    
+    return default_dim
+
+
+def find_embedder_for_filetype_and_dimension(
+    mimetype: str, 
+    dimension: int = None
+) -> Optional[type[BaseEmbedder]]:
+    """
+    Find an appropriate embedder for a specific file type and dimension.
+    
+    Args:
+        mimetype: The MIME type of the file
+        dimension: The desired embedding dimension (optional)
+        
+    Returns:
+        Optional[Type[BaseEmbedder]]: An appropriate embedder class, or None if not found
+    """
+    # If no dimension is specified, just return the preferred embedder for the mimetype
+    if dimension is None:
+        return get_preferred_embedder(mimetype)
+    
+    # If a dimension is specified, try to get the default embedder for that filetype and dimension
+    embedder = get_default_embedder_for_filetype_and_dimension(mimetype, dimension)
+    if embedder:
+        return embedder
+    
+    # If no specific embedder is found, fall back to the preferred embedder for the mimetype
+    preferred_embedder = get_preferred_embedder(mimetype)
+    if preferred_embedder:
+        return preferred_embedder
+    
+    # Last resort: return the default embedder
+    return get_default_embedder()
 
 
 def run_post_processors(

@@ -45,6 +45,18 @@ LABEL_TYPES = [
     (METADATA_LABEL, _("Metadata label for manual entry field")),
 ]
 
+# Define embedding dimensions constants
+EMBEDDING_DIM_384 = 384
+EMBEDDING_DIM_768 = 768
+EMBEDDING_DIM_1536 = 1536
+EMBEDDING_DIM_3072 = 3072
+
+EMBEDDING_DIMENSIONS = [
+    (EMBEDDING_DIM_384, "384"),
+    (EMBEDDING_DIM_768, "768"),
+    (EMBEDDING_DIM_1536, "1536"),
+    (EMBEDDING_DIM_3072, "3072"),
+]
 
 class AnnotationLabel(BaseOCModel):
 
@@ -291,6 +303,33 @@ class AnnotationManager(CTEManager.from_queryset(AnnotationQuerySet)):
         return self.get_queryset().for_user(user, perm, extra_conditions)
 
 
+class Embedding(BaseOCModel):
+    """
+    Embedding model to store vector embeddings with different dimensions.
+    This allows for multiple embedding types to be associated with annotations and notes.
+    """
+    
+    # The actual vector embedding
+    vector_384 = VectorField(dimensions=EMBEDDING_DIM_384, null=True)
+    vector_768 = VectorField(dimensions=EMBEDDING_DIM_768, null=True)
+    vector_1536 = VectorField(dimensions=EMBEDDING_DIM_1536, null=True)
+    vector_3072 = VectorField(dimensions=EMBEDDING_DIM_3072, null=True)
+    
+    # The embedder used to generate this embedding
+    embedder_path = django.db.models.CharField(max_length=256, null=True, blank=True)
+    
+    # Metadata
+    created = django.db.models.DateTimeField(default=timezone.now)
+    modified = django.db.models.DateTimeField(default=timezone.now, blank=True)
+    
+    class Meta:
+        indexes = [
+            django.db.models.Index(fields=["embedder_path"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
+        ]
+
+
 class Annotation(BaseOCModel):
     """
     The Annotation model represents annotations within documents.
@@ -344,8 +383,17 @@ class Annotation(BaseOCModel):
         related_name="annotations",
     )
 
-    # Vector for vector search
+    # Vector for vector search - legacy field, will be deprecated
     embedding = VectorField(dimensions=384, null=True)
+    
+    # New relationship to the Embedding model
+    embeddings = django.db.models.ForeignKey(
+        "annotations.Embedding",
+        null=True,
+        blank=True,
+        on_delete=django.db.models.SET_NULL,
+        related_name="annotations",
+    )
 
     # If this annotation was created as part of an analysis... track that.
     analysis = django.db.models.ForeignKey(
@@ -542,8 +590,17 @@ class Note(BaseOCModel):
     title = django.db.models.CharField(max_length=1024, db_index=True)
     content = django.db.models.TextField(default="", blank=True)
 
-    # Vector for vector search
+    # Vector for vector search - legacy field, will be deprecated
     embedding = VectorField(dimensions=384, null=True)
+    
+    # New relationship to the Embedding model
+    embeddings = django.db.models.ForeignKey(
+        "annotations.Embedding",
+        null=True,
+        blank=True,
+        on_delete=django.db.models.SET_NULL,
+        related_name="notes",
+    )
 
     # Hierarchical relationship
     parent = django.db.models.ForeignKey(

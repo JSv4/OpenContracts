@@ -1,0 +1,2 @@
+# Add sentence-transformers for ModernBERT embedder
+sentence-transformers>=2.2.2 

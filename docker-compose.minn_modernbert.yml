@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  minn_modernbert:
+    build:
+      context: .
+      dockerfile: Dockerfile.minn_modernbert
+    container_name: minn-modernbert-embedder
+    volumes:
+      - minn_modernbert_models:/models
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TRANSFORMERS_CACHE=/models
+      - SENTENCE_TRANSFORMERS_HOME=/models
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('/models/sentence-transformers/teraflop-minn-caselaw'); print('Model loaded successfully')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  minn_modernbert_models:
+    name: minn_modernbert_models 

@@ -642,3 +642,11 @@ ANALYZER_KWARGS = {
         "ANTHROPIC_API_KEY": env.str("ANTHROPIC_API_KEY", default=""),
     },
 }
+
+# Minnesota Case Law ModernBERT embedder settings
+MINN_MODERNBERT_EMBEDDERS = {
+    "application/pdf": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
+    "text/plain": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
+    "text/html": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
+}

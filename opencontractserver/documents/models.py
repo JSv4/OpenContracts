@@ -68,8 +68,8 @@ class Document(BaseOCModel):
     processing_finished = django.db.models.DateTimeField(null=True)
 
     # Vector for vector search
-    embedding = VectorField(dimensions=384, null=True, blank=True)
-    description_embedding = VectorField(dimensions=384, null=True, blank=True)
+    embedding = VectorField(dimensions=768, null=True, blank=True)
+    description_embedding = VectorField(dimensions=768, null=True, blank=True)
 
     class Meta:
         permissions = (

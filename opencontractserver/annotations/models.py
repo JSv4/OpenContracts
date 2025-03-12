@@ -345,7 +345,7 @@ class Annotation(BaseOCModel):
     )
 
     # Vector for vector search
-    embedding = VectorField(dimensions=384, null=True)
+    embedding = VectorField(dimensions=768, null=True)
 
     # If this annotation was created as part of an analysis... track that.
     analysis = django.db.models.ForeignKey(
@@ -543,7 +543,7 @@ class Note(BaseOCModel):
     content = django.db.models.TextField(default="", blank=True)
 
     # Vector for vector search
-    embedding = VectorField(dimensions=384, null=True)
+    embedding = VectorField(dimensions=768, null=True)
 
     # Hierarchical relationship
     parent = django.db.models.ForeignKey(

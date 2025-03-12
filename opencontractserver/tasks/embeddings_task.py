@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 from config import celery_app
 from django.conf import settings
@@ -6,6 +7,7 @@ from opencontractserver.annotations.models import Annotation, Embedding, Note
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
+from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.utils import (
     find_embedder_for_filetype_and_dimension,
     get_component_by_name,
@@ -17,13 +19,13 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def get_embedder_for_corpus(corpus_id: int | str = None, mimetype: str = None) -> tuple[type[BaseEmbedder], str]:
+def get_embedder_for_corpus(corpus_id: int | str = None, mimetype_or_enum: Union[str, FileTypeEnum] = None) -> tuple[type[BaseEmbedder], str]:
     """
     Get the appropriate embedder for a corpus.
     
     Args:
         corpus_id: The ID of the corpus
-        mimetype: The MIME type of the document (used as fallback)
+        mimetype_or_enum: The MIME type of the document or a FileTypeEnum (used as fallback)
         
     Returns:
         A tuple of (embedder_class, embedder_path)
@@ -48,7 +50,7 @@ def get_embedder_for_corpus(corpus_id: int | str = None, mimetype: str = None) -
     
     # If no corpus-specific embedder was found and a mimetype is provided,
     # try to find an appropriate embedder for the mimetype
-    if embedder_class is None and mimetype:
+    if embedder_class is None and mimetype_or_enum:
         # If we have a corpus embedder path but couldn't load it, try to get its dimension
         dimension = None
         if corpus_id and embedder_path:
@@ -58,7 +60,7 @@ def get_embedder_for_corpus(corpus_id: int | str = None, mimetype: str = None) -
                 pass
         
         # Find an embedder for the mimetype and dimension
-        embedder_class = find_embedder_for_filetype_and_dimension(mimetype, dimension)
+        embedder_class = find_embedder_for_filetype_and_dimension(mimetype_or_enum, dimension)
         if embedder_class:
             embedder_path = f"{embedder_class.__module__}.{embedder_class.__name__}"
     

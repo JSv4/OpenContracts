@@ -439,19 +439,37 @@ def get_dimension_from_embedder(embedder_class_or_path: Union[type[BaseEmbedder]
 
 
 def find_embedder_for_filetype_and_dimension(
-    mimetype: str, 
+    mimetype_or_enum: Union[str, FileTypeEnum], 
     dimension: int = None
 ) -> Optional[type[BaseEmbedder]]:
     """
     Find an appropriate embedder for a specific file type and dimension.
     
     Args:
-        mimetype: The MIME type of the file
+        mimetype_or_enum: The MIME type of the file or a FileTypeEnum
         dimension: The desired embedding dimension (optional)
         
     Returns:
         Optional[Type[BaseEmbedder]]: An appropriate embedder class, or None if not found
     """
+    # Ensure we're working with a mimetype string, not a FileTypeEnum
+    if isinstance(mimetype_or_enum, FileTypeEnum):
+        # Convert FileTypeEnum to mimetype string using a reverse mapping
+        mime_to_enum = {
+            "application/pdf": FileTypeEnum.PDF,
+            "text/plain": FileTypeEnum.TXT,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": FileTypeEnum.DOCX,
+            "text/html": FileTypeEnum.HTML,
+        }
+        # Create a reverse mapping
+        enum_to_mime = {v: k for k, v in mime_to_enum.items()}
+        mimetype = enum_to_mime.get(mimetype_or_enum)
+        if not mimetype:
+            logger.warning(f"Could not convert FileTypeEnum {mimetype_or_enum} to mimetype")
+            return get_default_embedder()
+    else:
+        mimetype = mimetype_or_enum
+    
     # If no dimension is specified, just return the preferred embedder for the mimetype
     if dimension is None:
         return get_preferred_embedder(mimetype)

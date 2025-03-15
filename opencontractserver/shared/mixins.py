@@ -21,7 +21,7 @@ class VectorSearchViaEmbeddingMixin:
     """
 
     # If your reverse relationship is not named "embeddings", override below in your subclass
-    EMBEDDING_RELATED_NAME: str = "embeddings"
+    EMBEDDING_RELATED_NAME: str = "embedding_set"
 
     def _dimension_to_field(self, dimension: int) -> str:
         """

@@ -138,7 +138,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_find_embedder.return_value = TestEmbedder
         
         # Call the function
-        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id=1, mimetype="application/pdf")
+        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id=1, mimetype_or_enum="application/pdf")
         
         # Verify the results
         self.assertEqual(embedder_class, TestEmbedder)
@@ -169,7 +169,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_find_embedder.return_value = TestEmbedder
         
         # Call the function
-        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id=1, mimetype="application/pdf")
+        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id=1, mimetype_or_enum="application/pdf")
         
         # Verify the results
         self.assertEqual(embedder_class, TestEmbedder)
@@ -195,7 +195,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_find_embedder.return_value = TestEmbedder
         
         # Call the function
-        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id=1, mimetype="application/pdf")
+        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id=1, mimetype_or_enum="application/pdf")
         
         # Verify the results
         self.assertEqual(embedder_class, TestEmbedder)
@@ -225,7 +225,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_get_default.return_value = TestEmbedder
         
         # Call the function
-        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id=1, mimetype="application/pdf")
+        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id=1, mimetype_or_enum="application/pdf")
         
         # Verify the results
         self.assertEqual(embedder_class, TestEmbedder)

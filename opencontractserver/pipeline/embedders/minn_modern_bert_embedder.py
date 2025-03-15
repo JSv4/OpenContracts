@@ -27,7 +27,7 @@ class MinnModernBERTEmbedder(BaseEmbedder):
         FileTypeEnum.PDF,
         FileTypeEnum.TXT,
         FileTypeEnum.DOCX,
-        FileTypeEnum.HTML,
+        # FileTypeEnum.HTML,  # Removed as we don't support HTML
     ]
 
     def __init__(self):

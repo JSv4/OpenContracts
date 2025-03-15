@@ -1002,8 +1002,16 @@ class Query(graphene.ObjectType):
         )
 
         if mimetype:
+            # Convert the GraphQL enum value to the appropriate MIME type string
+            mime_type_mapping = {
+                "pdf": "application/pdf",
+                "txt": "text/plain",
+                "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            }
+            mime_type_str = mime_type_mapping.get(mimetype.value)
+            
             # If mimetype is provided, get compatible components
-            components_data = get_components_by_mimetype(mimetype.value, detailed=True)
+            components_data = get_components_by_mimetype(mime_type_str, detailed=True)
         else:
             # Get all components
             components_data = {
@@ -1035,6 +1043,16 @@ class Query(graphene.ObjectType):
                     component_cls = component
                     metadata = get_metadata_for_component(component_cls)
                 if component_cls:
+                    # Filter out any file types that are no longer supported
+                    supported_file_types = []
+                    for ft in metadata.get("supported_file_types", []):
+                        try:
+                            # Only include file types that are still defined in FileTypeEnum
+                            supported_file_types.append(FileTypeEnumModel(ft).value)
+                        except (ValueError, AttributeError):
+                            # Skip file types that are no longer supported
+                            pass
+                            
                     component_info = PipelineComponentType(
                         name=component_cls.__name__,
                         title=metadata.get("title", ""),
@@ -1042,10 +1060,7 @@ class Query(graphene.ObjectType):
                         description=metadata.get("description", ""),
                         author=metadata.get("author", ""),
                         dependencies=metadata.get("dependencies", []),
-                        supported_file_types=[
-                            FileTypeEnumModel(ft).value
-                            for ft in metadata.get("supported_file_types", [])
-                        ],
+                        supported_file_types=supported_file_types,
                         component_type=component_type[:-1],
                         input_schema=metadata.get("input_schema", {}),
                     )

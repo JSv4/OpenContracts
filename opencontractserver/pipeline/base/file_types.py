@@ -5,7 +5,7 @@ class FileTypeEnum(str, Enum):
     PDF = "pdf"
     TXT = "txt"
     DOCX = "docx"
-    HTML = "html"
+    # HTML = "html"  # Removed as we don't support it
     # Add more as needed
 
     @classmethod
@@ -23,7 +23,7 @@ class FileTypeEnum(str, Enum):
             "application/pdf": cls.PDF,
             "text/plain": cls.TXT,
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document": cls.DOCX,
-            "text/html": cls.HTML,
+            # "text/html": cls.HTML,  # Removed as we don't support it
         }
 
         return mime_to_enum.get(mimetype)

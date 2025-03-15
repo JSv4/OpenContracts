@@ -31,7 +31,8 @@ class TestMinnModernBERTEmbedder(unittest.TestCase):
         self.assertIn(FileTypeEnum.PDF, embedder.supported_file_types)
         self.assertIn(FileTypeEnum.TXT, embedder.supported_file_types)
         self.assertIn(FileTypeEnum.DOCX, embedder.supported_file_types)
-        self.assertIn(FileTypeEnum.HTML, embedder.supported_file_types)
+        # HTML is no longer supported
+        # self.assertIn(FileTypeEnum.HTML, embedder.supported_file_types)
 
         # Check cache path
         self.assertEqual(embedder.cache_dir, "/models")

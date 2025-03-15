@@ -68,6 +68,7 @@ class TestParser(BaseParser):
 
         cls.embedder_code = '''
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
+from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from typing import Optional, List
 
 class TestEmbedder(BaseEmbedder):
@@ -80,8 +81,10 @@ class TestEmbedder(BaseEmbedder):
     author: str = "Test Author"
     dependencies: List[str] = []
     vector_size: int = 128
+    supported_file_types: List[FileTypeEnum] = [FileTypeEnum.PDF, FileTypeEnum.TXT, FileTypeEnum.DOCX]
 
-    def embed_text(self, text: str) -> Optional[List[float]]:
+    def embed_text(self, text: str, **kwargs) -> Optional[List[float]]:
+        # Return a dummy embedding vector
         return [0.0] * self.vector_size
 '''
 
@@ -278,7 +281,7 @@ class TestPostProcessor(BasePostProcessor):
     def test_pipeline_components_query_with_mimetype(self):
         """Test querying pipeline components filtered by mimetype."""
         query = """
-        query($mimetype: FileTypeEnum) {
+        query($mimetype: FileTypeEnum!) {
             pipelineComponents(mimetype: $mimetype) {
                 parsers {
                     name
@@ -312,9 +315,9 @@ class TestPostProcessor(BasePostProcessor):
             }
         }
         """
-
-        variables = {"mimetype": "PDF"}
-
+        
+        variables = {"mimetype": "PDF"}  # This should match the backend enum names
+        
         result = self.client.execute(query, variables=variables)
         self.assertIsNone(result.get("errors"))
 
@@ -343,7 +346,7 @@ class TestPostProcessor(BasePostProcessor):
     def test_pipeline_components_query_with_mimetype_no_components(self):
         """Test querying pipeline components with a mimetype that has no components."""
 
-        # Assuming "DOCX" is not a supported file type for our test components
+        # Use the enum value, not the full MIME type
         query = """
         query($mimetype: FileTypeEnum) {
             pipelineComponents(mimetype: $mimetype) {

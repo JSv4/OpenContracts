@@ -591,7 +591,7 @@ class LabelSetGroupObjectPermission(GroupObjectPermissionBase):
     # enabled = False
 
 
-class Note(BaseOCModel):
+class Note(BaseOCModel, HasEmbeddingMixin):
     """
     Notes model for attaching hierarchical comments/notes to documents.
     Uses django_cte for hierarchical relationships.

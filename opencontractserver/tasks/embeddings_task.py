@@ -19,7 +19,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def get_embedder_for_corpus(corpus_id: int | str = None, mimetype_or_enum: Union[str, FileTypeEnum] = None) -> tuple[type[BaseEmbedder], str]:
+def get_embedder_for_corpus(
+    corpus_id: int | str = None, 
+    mimetype_or_enum: Union[str, FileTypeEnum] = None
+) -> tuple[type[BaseEmbedder], str]:
     """
     Get the appropriate embedder for a corpus.
     

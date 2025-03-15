@@ -1,7 +1,9 @@
 import django
 from django.contrib.auth import get_user_model
 from django.db import models
+
 from opencontractserver.shared.Managers import PermissionManager
+
 
 class BaseOCModel(models.Model):
 

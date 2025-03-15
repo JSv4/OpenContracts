@@ -78,4 +78,4 @@ MINN_MODERNBERT_EMBEDDERS = {
 
 - The first time the model is used, it will be downloaded from Hugging Face, which may take some time.
 - For faster startup, use the Docker setup which preloads the model.
-- Using GPU acceleration is recommended for processing large volumes of text. 
+- Using GPU acceleration is recommended for processing large volumes of text.

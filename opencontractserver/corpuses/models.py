@@ -73,7 +73,7 @@ class Corpus(TreeNode):
         blank=True,
         help_text="List of fully qualified Python paths to post-processor functions",
     )
-    
+
     # Embedder configuration
     preferred_embedder = django.db.models.CharField(
         max_length=256,
@@ -81,7 +81,7 @@ class Corpus(TreeNode):
         blank=True,
         help_text="Fully qualified Python path to the embedder class to use for this corpus",
     )
-    
+
     # Sharing
     allow_comments = django.db.models.BooleanField(default=False)
     is_public = django.db.models.BooleanField(default=False)

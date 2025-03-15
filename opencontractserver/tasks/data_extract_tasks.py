@@ -414,6 +414,7 @@ async def oc_llama_index_doc_query(
         This way, the DB interaction is purely in sync code.
         """
         from pgvector.django import CosineDistance
+
         from opencontractserver.annotations.models import Annotation
         from opencontractserver.documents.models import Document
         from opencontractserver.tasks.embeddings_task import get_embedder_for_corpus
@@ -422,19 +423,19 @@ async def oc_llama_index_doc_query(
         document = Document.objects.get(id=document_id)
         corpus_id = None
         embed_dim = 384  # Default dimension
-        
+
         # Check if the document is part of any corpus and use that corpus's embedder
         corpus_set = document.corpus_set.all()
         if corpus_set.exists():
             # Use the first corpus for now - could be enhanced to handle multiple corpuses
             corpus_id = corpus_set.first().id
-            
+
             # Get the embedder for the corpus, passing the document's file type
             embedder_class, _ = get_embedder_for_corpus(corpus_id, document.file_type)
-            if embedder_class and hasattr(embedder_class, 'vector_size'):
+            if embedder_class and hasattr(embedder_class, "vector_size"):
                 # Get the dimension from the embedder class
                 embed_dim = embedder_class.vector_size
-        
+
         # Determine which embedding field to use based on dimension
         if embed_dim == 384:
             embedding_field, legacy_field = "embeddings__vector_384", "embedding"
@@ -447,16 +448,19 @@ async def oc_llama_index_doc_query(
         else:
             # Default to 384 for backward compatibility
             embedding_field, legacy_field = "embeddings__vector_384", "embedding"
-        
+
         # Try the new embedding model first
         queryset = Annotation.objects.filter(document_id=document_id)
-        new_embedding_queryset = queryset.filter(**{f"{embedding_field}__isnull": False})
-        
+        new_embedding_queryset = queryset.filter(
+            **{f"{embedding_field}__isnull": False}
+        )
+
         if new_embedding_queryset.exists():
             # Use the new embedding model
             queryset = (
-                new_embedding_queryset
-                .order_by(CosineDistance(embedding_field, avg_embedding))
+                new_embedding_queryset.order_by(
+                    CosineDistance(embedding_field, avg_embedding)
+                )
                 .annotate(similarity=CosineDistance(embedding_field, avg_embedding))
                 .select_related("annotation_label")
             )[:similarity_top_k]
@@ -465,8 +469,9 @@ async def oc_llama_index_doc_query(
             legacy_queryset = queryset.filter(**{f"{legacy_field}__isnull": False})
             if legacy_queryset.exists():
                 queryset = (
-                    legacy_queryset
-                    .order_by(CosineDistance(legacy_field, avg_embedding))
+                    legacy_queryset.order_by(
+                        CosineDistance(legacy_field, avg_embedding)
+                    )
                     .annotate(similarity=CosineDistance(legacy_field, avg_embedding))
                     .select_related("annotation_label")
                 )[:similarity_top_k]
@@ -652,7 +657,7 @@ async def oc_llama_index_doc_query(
             )
             examples = [ex for ex in search_text.split("|||") if ex.strip()]
             embeddings: list[list[float | int]] = []
-            
+
             # Get corpus_id if the document is in a corpus
             corpus_id = None
             corpus_set = document.corpus_set.all()
@@ -662,9 +667,7 @@ async def oc_llama_index_doc_query(
             for example in examples:
                 # Pass both corpus_id and document file_type
                 vector = calculate_embedding_for_text(
-                    example, 
-                    corpus_id=corpus_id, 
-                    mimetype=document.file_type
+                    example, corpus_id=corpus_id, mimetype=document.file_type
                 )
                 if vector is not None:
                     embeddings.append(vector)

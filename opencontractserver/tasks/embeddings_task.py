@@ -2,7 +2,6 @@ import logging
 from typing import Union
 
 from config import celery_app
-from django.conf import settings
 from opencontractserver.annotations.models import Annotation, Embedding, Note
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
@@ -20,22 +19,21 @@ logger.setLevel(logging.DEBUG)
 
 
 def get_embedder_for_corpus(
-    corpus_id: int | str = None, 
-    mimetype_or_enum: Union[str, FileTypeEnum] = None
+    corpus_id: int | str = None, mimetype_or_enum: Union[str, FileTypeEnum] = None
 ) -> tuple[type[BaseEmbedder], str]:
     """
     Get the appropriate embedder for a corpus.
-    
+
     Args:
         corpus_id: The ID of the corpus
         mimetype_or_enum: The MIME type of the document or a FileTypeEnum (used as fallback)
-        
+
     Returns:
         A tuple of (embedder_class, embedder_path)
     """
     embedder_class = None
     embedder_path = None
-    
+
     # Try to get the corpus's preferred embedder
     if corpus_id:
         try:
@@ -50,7 +48,7 @@ def get_embedder_for_corpus(
         except Exception:
             # If corpus doesn't exist, fall back to mimetype
             pass
-    
+
     # If no corpus-specific embedder was found and a mimetype is provided,
     # try to find an appropriate embedder for the mimetype
     if embedder_class is None and mimetype_or_enum:
@@ -61,38 +59,42 @@ def get_embedder_for_corpus(
                 dimension = get_dimension_from_embedder(embedder_path)
             except Exception:
                 pass
-        
+
         # Find an embedder for the mimetype and dimension
-        embedder_class = find_embedder_for_filetype_and_dimension(mimetype_or_enum, dimension)
+        embedder_class = find_embedder_for_filetype_and_dimension(
+            mimetype_or_enum, dimension
+        )
         if embedder_class:
             embedder_path = f"{embedder_class.__module__}.{embedder_class.__name__}"
-    
+
     # Fall back to default embedder if no specific embedder is found
     if embedder_class is None:
         embedder_class = get_default_embedder()
         if embedder_class:
             embedder_path = f"{embedder_class.__module__}.{embedder_class.__name__}"
-    
+
     return embedder_class, embedder_path
 
 
-def store_embeddings(embedder: BaseEmbedder, text: str, embedder_path: str) -> Embedding:
+def store_embeddings(
+    embedder: BaseEmbedder, text: str, embedder_path: str
+) -> Embedding:
     """
     Generate and store embeddings for text using the specified embedder.
-    
+
     Args:
         embedder: The embedder instance
         text: The text to embed
         embedder_path: The path to the embedder class
-        
+
     Returns:
         The created Embedding object
     """
     embedding_obj = Embedding(embedder_path=embedder_path)
-    
+
     # Generate embeddings
     embeddings = embedder.embed_text(text)
-    
+
     if embeddings:
         # Store the embeddings in the appropriate field based on dimension
         vector_size = embedder.vector_size
@@ -106,7 +108,7 @@ def store_embeddings(embedder: BaseEmbedder, text: str, embedder_path: str) -> E
             embedding_obj.vector_3072 = embeddings
         else:
             logger.warning(f"Unsupported vector size: {vector_size}")
-    
+
     embedding_obj.save()
     return embedding_obj
 
@@ -127,7 +129,7 @@ def calculate_embedding_for_doc_text(doc_id: str | int):
         # Get the document's mimetype
         mimetype = doc.file_type
         corpus_id = None
-        
+
         # Check if the document is part of any corpus and use that corpus's embedder
         corpus_set = doc.corpus_set.all()
         if corpus_set.exists():
@@ -136,13 +138,13 @@ def calculate_embedding_for_doc_text(doc_id: str | int):
 
         # Get the embedder based on corpus and mimetype
         embedder_class, embedder_path = get_embedder_for_corpus(corpus_id, mimetype)
-            
+
         if embedder_class is None:
             logger.error(f"No embedder found for document: {doc_id}")
             return
 
         embedder: BaseEmbedder = embedder_class()
-        
+
         # For now, just store in the document's embedding field
         # In the future, we could create an Embedding object and link it
         embeddings = embedder.embed_text(text)
@@ -166,19 +168,19 @@ def calculate_embedding_for_annotation_text(annotation_id: str | int):
 
         # Get the embedder based on the corpus configuration
         embedder_class, embedder_path = get_embedder_for_corpus(corpus_id)
-        
+
         if embedder_class is None:
             logger.error("No embedder found for annotation")
             return
 
         embedder: BaseEmbedder = embedder_class()
-        
+
         # Create a new Embedding object
         embedding_obj = store_embeddings(embedder, text, embedder_path)
-        
+
         # For backward compatibility, also store in the legacy field
         annot.embedding = embedder.embed_text(text)
-        
+
         # Link the new embedding object
         annot.embeddings = embedding_obj
         annot.save()
@@ -200,19 +202,19 @@ def calculate_embedding_for_note_text(note_id: str | int):
 
         # Get the embedder based on the corpus configuration
         embedder_class, embedder_path = get_embedder_for_corpus(corpus_id)
-        
+
         if embedder_class is None:
             logger.error("No embedder found for note")
             return
 
         embedder: BaseEmbedder = embedder_class()
-        
+
         # Create a new Embedding object
         embedding_obj = store_embeddings(embedder, text, embedder_path)
-        
+
         # For backward compatibility, also store in the legacy field
         note.embedding = embedder.embed_text(text)
-        
+
         # Link the new embedding object
         note.embeddings = embedding_obj
         note.save()

@@ -2,6 +2,7 @@ import logging
 from typing import Union
 
 from config import celery_app
+from django.contrib.auth import get_user_model
 from opencontractserver.annotations.models import Annotation, Embedding, Note
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
@@ -13,6 +14,8 @@ from opencontractserver.pipeline.utils import (
     get_default_embedder,
     get_dimension_from_embedder,
 )
+
+User = get_user_model()
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -77,7 +80,10 @@ def get_embedder_for_corpus(
 
 
 def store_embeddings(
-    embedder: BaseEmbedder, text: str, embedder_path: str
+    embedder: BaseEmbedder, 
+    text: str, 
+    embedder_path: str,
+    creator: User
 ) -> Embedding:
     """
     Generate and store embeddings for text using the specified embedder.
@@ -86,11 +92,15 @@ def store_embeddings(
         embedder: The embedder instance
         text: The text to embed
         embedder_path: The path to the embedder class
+        creator: The user who should be set as the creator of the embedding
 
     Returns:
         The created Embedding object
     """
-    embedding_obj = Embedding(embedder_path=embedder_path)
+    embedding_obj = Embedding(
+        embedder_path=embedder_path,
+        creator=creator
+    )
 
     # Generate embeddings
     embeddings = embedder.embed_text(text)
@@ -175,8 +185,13 @@ def calculate_embedding_for_annotation_text(annotation_id: str | int):
 
         embedder: BaseEmbedder = embedder_class()
 
-        # Create a new Embedding object
-        embedding_obj = store_embeddings(embedder, text, embedder_path)
+        # Create a new Embedding object - pass the creator
+        embedding_obj = store_embeddings(
+            embedder, 
+            text, 
+            embedder_path,
+            creator=annot.creator  # Pass the creator from the annotation
+        )
 
         # For backward compatibility, also store in the legacy field
         annot.embedding = embedder.embed_text(text)
@@ -210,7 +225,12 @@ def calculate_embedding_for_note_text(note_id: str | int):
         embedder: BaseEmbedder = embedder_class()
 
         # Create a new Embedding object
-        embedding_obj = store_embeddings(embedder, text, embedder_path)
+        embedding_obj = store_embeddings(
+            embedder, 
+            text, 
+            embedder_path,
+            creator=note.creator
+        )
 
         # For backward compatibility, also store in the legacy field
         note.embedding = embedder.embed_text(text)

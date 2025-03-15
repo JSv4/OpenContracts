@@ -4,16 +4,17 @@ can be created and queried via the manager-provided vector search methods, using
 new mixin-based approach to register embeddings (e.g. model_instance.add_embedding()).
 """
 import random
-from typing import List
+
 from django.test import TestCase
 
-from opencontractserver.documents.models import Document
 from opencontractserver.annotations.models import Annotation, Note
+from opencontractserver.documents.models import Document
+
 # We no longer need to directly import Embedding for creation, unless required for other tests
 # from opencontractserver.annotations.models import Embedding
 
 
-def random_vector(dimension: int = 384) -> List[float]:
+def random_vector(dimension: int = 384) -> list[float]:
     """
     Generates a random vector of the specified dimension. By default, 384 floats.
     In practice, for deterministic tests, you might fix the seed or choose exact values.
@@ -21,7 +22,7 @@ def random_vector(dimension: int = 384) -> List[float]:
     return [random.random() for _ in range(dimension)]
 
 
-def constant_vector(dimension: int = 384, value: float = 0.1) -> List[float]:
+def constant_vector(dimension: int = 384, value: float = 0.1) -> list[float]:
     """
     Generates a constant vector of given dimension (default 384).
     Useful to simulate a 'dummy' query vector of the correct dimension.
@@ -194,4 +195,4 @@ class TestEmbeddingSearch(TestCase):
             self.assertIn(self.note2, results_other)
             self.assertNotIn(self.note1, results_other)
         except AttributeError:
-            self.skipTest("NoteQuerySet does not implement search_by_embedding") 
+            self.skipTest("NoteQuerySet does not implement search_by_embedding")

@@ -7,15 +7,15 @@ class FileTypeEnum(str, Enum):
     DOCX = "docx"
     HTML = "html"
     # Add more as needed
-    
+
     @classmethod
     def from_mimetype(cls, mimetype: str) -> "FileTypeEnum":
         """
         Convert a MIME type to a FileTypeEnum.
-        
+
         Args:
             mimetype: The MIME type to convert
-            
+
         Returns:
             The corresponding FileTypeEnum, or None if not found
         """
@@ -25,5 +25,5 @@ class FileTypeEnum(str, Enum):
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document": cls.DOCX,
             "text/html": cls.HTML,
         }
-        
+
         return mime_to_enum.get(mimetype)

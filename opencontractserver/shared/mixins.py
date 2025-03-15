@@ -1,5 +1,3 @@
-from typing import List
-
 from django.db.models import QuerySet
 from pgvector.django import CosineDistance
 
@@ -8,7 +6,7 @@ class VectorSearchViaEmbeddingMixin:
     """
     A mixin to enable vector similarity searches on a model that does NOT
     itself hold the embedding columns, but instead has a *reverse* relationship
-    to an Embedding model. 
+    to an Embedding model.
     Specifically, we assume the model's related name is "embeddings", pointing
     from Embedding -> e.g. document/annotation/note.
 
@@ -41,7 +39,7 @@ class VectorSearchViaEmbeddingMixin:
 
     def search_by_embedding(
         self,
-        query_vector: List[float],
+        query_vector: list[float],
         embedder_path: str,
         top_k: int = 10,
     ) -> QuerySet:
@@ -56,7 +54,7 @@ class VectorSearchViaEmbeddingMixin:
         - sorts ascending by that distance
         - slices top_k
 
-        Returns a QuerySet of your model (Document, Annotation, Note), 
+        Returns a QuerySet of your model (Document, Annotation, Note),
         annotated with 'similarity_score'.
         """
         dimension = len(query_vector)
@@ -99,9 +97,11 @@ class HasEmbeddingMixin:
         Must be overridden by the subclass.
         Return a dictionary like {"document_id": self.pk} or {"annotation_id": self.pk}, etc.
         """
-        raise NotImplementedError("Subclass must implement get_embedding_reference_kwargs()")
+        raise NotImplementedError(
+            "Subclass must implement get_embedding_reference_kwargs()"
+        )
 
-    def add_embedding(self, embedder_path: str, vector: List[float]):
+    def add_embedding(self, embedder_path: str, vector: list[float]):
         """
         Creates or updates an Embedding for this object (Document, Annotation, Note, etc.)
         with the given embedder and vector.
@@ -117,16 +117,18 @@ class HasEmbeddingMixin:
         from opencontractserver.annotations.models import Embedding
 
         dimension = len(vector)
-        kwargs = self.get_embedding_reference_kwargs()  # e.g. {"document_id": self.pk} for Documents
+        kwargs = (
+            self.get_embedding_reference_kwargs()
+        )  # e.g. {"document_id": self.pk} for Documents
         return Embedding.objects.store_embedding(
             creator=self.creator,
             dimension=dimension,
             vector=vector,
             embedder_path=embedder_path,
-            **kwargs
+            **kwargs,
         )
 
-    def add_embeddings(self, embedder_path: str, vectors: List[List[float]]):
+    def add_embeddings(self, embedder_path: str, vectors: list[list[float]]):
         """
         Creates or updates multiple Embedding records for this object, given a collection of
         vectors (all presumably from the same embedder).
@@ -149,7 +151,7 @@ class HasEmbeddingMixin:
                 dimension=dimension,
                 vector=vec,
                 embedder_path=embedder_path,
-                **kwargs
+                **kwargs,
             )
             embedding_objects.append(emb)
         return embedding_objects

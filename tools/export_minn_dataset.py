@@ -1,14 +1,12 @@
 import argparse
 import json
 import zipfile
-from typing import Dict, Any, Optional
+from typing import Any
+
 from datasets import load_dataset
 
 
-def export_minn_dataset_to_zip(
-    output_zip_path: str,
-    max_docs: int = 100
-) -> None:
+def export_minn_dataset_to_zip(output_zip_path: str, max_docs: int = 100) -> None:
     """
     Exports the free-law/minn dataset from Hugging Face into a ZIP file
     containing:
@@ -22,9 +20,9 @@ def export_minn_dataset_to_zip(
     ds = load_dataset("free-law/minn")["train"]
 
     # Prepare top-level data.json fields
-    annotated_docs: Dict[str, Dict[str, Any]] = {}
-    doc_labels: Dict[str, Any] = {}
-    text_labels: Dict[str, Any] = {}
+    annotated_docs: dict[str, dict[str, Any]] = {}
+    doc_labels: dict[str, Any] = {}
+    text_labels: dict[str, Any] = {}
 
     # Minimal corpus metadata
     corpus = {
@@ -64,7 +62,7 @@ def export_minn_dataset_to_zip(
         )
 
         # We use TXT for the "filename" as a stand-in for PDF.
-        doc_filename = f"{row['id']}.txt" if 'id' in row else f"doc_{i}.txt"
+        doc_filename = f"{row['id']}.txt" if "id" in row else f"doc_{i}.txt"
         text_content = row.get("text", "")
 
         annotated_docs[doc_filename] = {
@@ -99,19 +97,19 @@ def export_minn_dataset_to_zip(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Export the free-law/minn dataset into a ZIP "
-                    "containing data.json and text files."
+        "containing data.json and text files."
     )
     parser.add_argument(
         "--output-zip",
         type=str,
         default="minn_export.zip",
-        help="Path to the output ZIP file."
+        help="Path to the output ZIP file.",
     )
     parser.add_argument(
         "--max-docs",
         type=int,
         default=100,
-        help="Maximum number of documents to include in the export."
+        help="Maximum number of documents to include in the export.",
     )
     args = parser.parse_args()
-    export_minn_dataset_to_zip(args.output_zip, args.max_docs) 
+    export_minn_dataset_to_zip(args.output_zip, args.max_docs)

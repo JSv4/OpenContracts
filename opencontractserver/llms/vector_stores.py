@@ -14,11 +14,10 @@ from pgvector.django import CosineDistance
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
-from opencontractserver.pipeline.utils import get_dimension_from_embedder
-from opencontractserver.corpuses.models import Corpus
 from opencontractserver.tasks.embeddings_task import get_embedder_for_corpus
 
 _logger = logging.getLogger(__name__)
+
 
 class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     """Django Annotation Vector Store.
@@ -61,16 +60,17 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             try:
                 # Get the embedder for the corpus
                 embedder_class, _ = get_embedder_for_corpus(corpus_id)
-                if embedder_class and hasattr(embedder_class, 'vector_size'):
+                if embedder_class and hasattr(embedder_class, "vector_size"):
                     # Get the dimension from the embedder class
                     embed_dim = embedder_class.vector_size
             except Exception as e:
                 _logger.error(f"Error getting embedder for corpus {corpus_id}: {e}")
-        
+
         # Validate the embedding dimension
         if embed_dim not in [384, 768, 1536, 3072]:
             from django.conf import settings
-            embed_dim = getattr(settings, 'DEFAULT_EMBEDDING_DIMENSION', 768)
+
+            embed_dim = getattr(settings, "DEFAULT_EMBEDDING_DIMENSION", 768)
 
         super().__init__(
             user_id=user_id,
@@ -85,7 +85,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             debug=debug,
             use_jsonb=use_jsonb,
         )
-        
+
         # Store the embedding dimension for use in query methods
         self.embed_dim = embed_dim
 
@@ -225,12 +225,15 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     def _get_embedding_field(self) -> str:
         """
         Get the appropriate embedding field name based on the dimension.
-        
+
         Returns:
             str: The field name to use for vector similarity search
         """
         if self.embed_dim == 384:
-            return "embeddings__vector_384", "embedding"  # Also return legacy field for 384
+            return (
+                "embeddings__vector_384",
+                "embedding",
+            )  # Also return legacy field for 384
         elif self.embed_dim == 768:
             return "embeddings__vector_768", None
         elif self.embed_dim == 1536:
@@ -240,17 +243,17 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         else:
             # Default to 384 for backward compatibility
             return "embeddings__vector_384", "embedding"
-        
+
     async def query(self, query: VectorStoreQuery) -> VectorStoreQueryResult:
         """Query the vector store."""
         from opencontractserver.annotations.models import Annotation
-        
+
         # Get the embedding field name based on the dimension
         embedding_field, legacy_field = self._get_embedding_field()
-            
+
         # Build the query
         queryset = Annotation.objects.all()
-        
+
         # Apply filters
         if self.corpus_id:
             queryset = queryset.filter(corpus_id=self.corpus_id)
@@ -260,16 +263,18 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             queryset = queryset.filter(creator_id=self.user_id)
         if self.must_have_text:
             queryset = queryset.filter(raw_text__icontains=self.must_have_text)
-            
+
         # Apply metadata filters if provided
         if query.filters is not None:
             queryset = self._apply_metadata_filters(queryset, query.filters)
-            
+
         # Apply vector similarity search
         if query.query_embedding is not None:
             # Try the new embedding model first
-            new_embedding_queryset = queryset.filter(**{f"{embedding_field}__isnull": False})
-            
+            new_embedding_queryset = queryset.filter(
+                **{f"{embedding_field}__isnull": False}
+            )
+
             if await database_sync_to_async(new_embedding_queryset.exists)():
                 # Use the new embedding model
                 queryset = new_embedding_queryset.order_by(
@@ -282,15 +287,15 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
                     queryset = legacy_queryset.order_by(
                         CosineDistance(legacy_field, query.query_embedding)
                     )
-                    
+
         # Apply limit
         if query.similarity_top_k is not None:
-            queryset = queryset[:query.similarity_top_k]
-            
+            queryset = queryset[: query.similarity_top_k]
+
         # Execute query and convert to nodes
         annotations = await database_sync_to_async(list)(queryset)
         nodes = []
-        
+
         for annotation in annotations:
             node = TextNode(
                 text=annotation.raw_text or "",
@@ -302,11 +307,13 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
                     "page": annotation.page,
                     "annotation_type": annotation.annotation_type,
                     "creator_id": annotation.creator_id,
-                    "created": annotation.created.isoformat() if annotation.created else None,
+                    "created": annotation.created.isoformat()
+                    if annotation.created
+                    else None,
                 },
             )
             nodes.append(node)
-            
+
         return VectorStoreQueryResult(nodes=nodes)
 
     async def aquery(

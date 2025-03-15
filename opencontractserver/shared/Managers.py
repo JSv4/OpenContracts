@@ -1,19 +1,19 @@
-from django.db.models import Q
+from typing import Optional
 
 from django.contrib.auth import get_user_model
-from django.db.models import Manager
-from opencontractserver.shared.QuerySets import (
-    DocumentQuerySet, 
-    AnnotationQuerySet, 
-    NoteQuerySet,
-    UserFeedbackQuerySet,
-    PermissionQuerySet
-)
-
-from typing import Optional, List
+from django.db.models import Manager, Q
 from django_cte import CTEManager
 
+from opencontractserver.shared.QuerySets import (
+    AnnotationQuerySet,
+    DocumentQuerySet,
+    NoteQuerySet,
+    PermissionQuerySet,
+    UserFeedbackQuerySet,
+)
+
 User = get_user_model()
+
 
 class PermissionManager(Manager):
     def get_queryset(self):
@@ -21,8 +21,10 @@ class PermissionManager(Manager):
 
     def for_user(self, user, perm, extra_conditions=None):
         return self.get_queryset().for_user(user, perm, extra_conditions)
-    
-    def visible_to_user(self, user: User, perm: Optional[str] = None) -> PermissionQuerySet:
+
+    def visible_to_user(
+        self, user: User, perm: Optional[str] = None
+    ) -> PermissionQuerySet:
         """
         Returns queryset filtered by user permission via PermissionQuerySet.
         """
@@ -78,6 +80,7 @@ class DocumentManager(PermissionManager):
     Extends PermissionManager to return a DocumentQuerySet
     that supports vector searching via the mixin.
     """
+
     def get_queryset(self):
         return DocumentQuerySet(self.model, using=self._db)
 
@@ -87,7 +90,9 @@ class DocumentManager(PermissionManager):
             Document.objects.search_by_embedding([...])
         directly.
         """
-        return self.get_queryset().search_by_embedding(query_vector, embedder_path, top_k)
+        return self.get_queryset().search_by_embedding(
+            query_vector, embedder_path, top_k
+        )
 
 
 class AnnotationManager(PermissionCTEManager.from_queryset(AnnotationQuerySet)):
@@ -114,7 +119,9 @@ class AnnotationManager(PermissionCTEManager.from_queryset(AnnotationQuerySet)):
         you can call this convenience method just like:
             Annotation.objects.search_by_embedding([0.1, 0.2, ...], "xx-embedder", top_k=10)
         """
-        return self.get_queryset().search_by_embedding(query_vector, embedder_path, top_k)
+        return self.get_queryset().search_by_embedding(
+            query_vector, embedder_path, top_k
+        )
 
 
 class NoteManager(PermissionCTEManager.from_queryset(NoteQuerySet)):
@@ -141,7 +148,9 @@ class NoteManager(PermissionCTEManager.from_queryset(NoteQuerySet)):
         you can call:
             Note.objects.search_by_embedding([0.1, 0.2, ...], "xx-embedder", top_k=10)
         """
-        return self.get_queryset().search_by_embedding(query_vector, embedder_path, top_k)
+        return self.get_queryset().search_by_embedding(
+            query_vector, embedder_path, top_k
+        )
 
 
 class EmbeddingManager(PermissionManager):
@@ -167,7 +176,7 @@ class EmbeddingManager(PermissionManager):
         *,
         creator: User,
         dimension: int,
-        vector: List[float],
+        vector: list[float],
         embedder_path: str,
         document_id: Optional[int] = None,
         annotation_id: Optional[int] = None,
@@ -179,19 +188,23 @@ class EmbeddingManager(PermissionManager):
         instead of creating a new record.
         """
         if not any([document_id, annotation_id, note_id]):
-            raise ValueError("Must provide one of document_id, annotation_id, or note_id.")
+            raise ValueError(
+                "Must provide one of document_id, annotation_id, or note_id."
+            )
 
         field_name = self._get_vector_field_name(dimension)
 
         # Find existing embedding (if any)
-        embedding = self.visible_to_user(
-            user=creator
-        ).filter(
-            embedder_path=embedder_path,
-            document_id=document_id,
-            annotation_id=annotation_id,
-            note_id=note_id,
-        ).first()
+        embedding = (
+            self.visible_to_user(user=creator)
+            .filter(
+                embedder_path=embedder_path,
+                document_id=document_id,
+                annotation_id=annotation_id,
+                note_id=note_id,
+            )
+            .first()
+        )
 
         if embedding:
             setattr(embedding, field_name, vector)

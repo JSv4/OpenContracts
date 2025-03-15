@@ -86,4 +86,4 @@ DEFAULT_EMBEDDERS_BY_FILETYPE_AND_DIMENSION = {
 - The first time the model is used, it will be downloaded from Hugging Face, which may take some time.
 - For faster startup, use the Docker setup which preloads the model.
 - The model requires approximately 500MB of disk space.
-- Using GPU acceleration is recommended for processing large volumes of text. 
+- Using GPU acceleration is recommended for processing large volumes of text.

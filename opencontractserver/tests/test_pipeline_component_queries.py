@@ -315,9 +315,9 @@ class TestPostProcessor(BasePostProcessor):
             }
         }
         """
-        
+
         variables = {"mimetype": "PDF"}  # This should match the backend enum names
-        
+
         result = self.client.execute(query, variables=variables)
         self.assertIsNone(result.get("errors"))
 

@@ -89,11 +89,11 @@ def get_components_by_mimetype(
 ) -> dict[str, list[Any]]:
     """
     Given a FileTypeEnum, fetch lists of compatible parsers, embedders, and thumbnailers.
-    
+
     Args:
         file_type (Optional[FileTypeEnum]): The file type enum
         detailed (bool): If True, include title, description, and author details
-        
+
     Returns:
         Dict[str, List[Any]]: Dictionary with lists of compatible components
     """
@@ -102,11 +102,11 @@ def get_components_by_mimetype(
     embedders = []
     thumbnailers = []
     post_processors = []
-    
+
     # Handle mimetype string case for backward compatibility
     if isinstance(file_type, str):
         file_type = FileTypeEnum.from_mimetype(file_type)
-        
+
     # If file_type is None or not supported, return empty lists
     if file_type is None:
         logger.warning(f"Unsupported file type: {file_type}")
@@ -116,7 +116,7 @@ def get_components_by_mimetype(
             "thumbnailers": thumbnailers,
             "post_processors": post_processors,
         }
-        
+
     # Get compatible parsers
     for parser_class in get_all_parsers():
         if file_type in parser_class.supported_file_types:

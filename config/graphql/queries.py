@@ -1009,7 +1009,7 @@ class Query(graphene.ObjectType):
                 "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             }
             mime_type_str = mime_type_mapping.get(mimetype.value)
-            
+
             # If mimetype is provided, get compatible components
             components_data = get_components_by_mimetype(mime_type_str, detailed=True)
         else:
@@ -1052,7 +1052,7 @@ class Query(graphene.ObjectType):
                         except (ValueError, AttributeError):
                             # Skip file types that are no longer supported
                             pass
-                            
+
                     component_info = PipelineComponentType(
                         name=component_cls.__name__,
                         title=metadata.get("title", ""),

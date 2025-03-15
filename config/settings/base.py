@@ -584,14 +584,16 @@ MIMETYPE_TO_LABEL_TYPE = {
 
 # Map of MIME types to preferred embedders
 PREFERRED_EMBEDDERS = {
-    "application/pdf": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",
-    "text/plain": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",
-    # "text/html": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",  # Removed as we don't support HTML
+    "application/pdf": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",  # noqa:
+    "text/plain": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",  # noqa:
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",  # noqa:
+    # "text/html": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",  # Removed as we don't support HTML  # noqa:
 }
 
 # Default embedder to use if no preferred embedder is found
-DEFAULT_EMBEDDER = "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768"
+DEFAULT_EMBEDDER = (
+    "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768"
+)
 
 # Default embedding dimension to use if no dimension is specified
 DEFAULT_EMBEDDING_DIMENSION = 768
@@ -624,8 +626,8 @@ DEFAULT_EMBEDDERS_BY_FILETYPE_AND_DIMENSION = {
 MINN_EMBEDDERS = {
     "application/pdf": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
     "text/plain": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
-    # "text/html": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",  # Removed as we don't support HTML
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",  # noqa:
+    # "text/html": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",  # Removed as we don't support HTML  # noqa:
 }
 
 # Default runner

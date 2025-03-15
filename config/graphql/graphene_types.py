@@ -35,6 +35,7 @@ from opencontractserver.feedback.models import UserFeedback
 from opencontractserver.pipeline.base.file_types import (
     FileTypeEnum as BackendFileTypeEnum,
 )
+from opencontractserver.pipeline.utils import get_components_by_mimetype
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.users.models import Assignment, UserExport, UserImport
 
@@ -974,6 +975,7 @@ class UserFeedbackType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
 class FileTypeEnum(graphene.Enum):
     """Graphene enum for FileTypeEnum."""
+
     PDF = BackendFileTypeEnum.PDF.value
     TXT = BackendFileTypeEnum.TXT.value
     DOCX = BackendFileTypeEnum.DOCX.value
@@ -1162,14 +1164,16 @@ class NoteType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
 def resolve_pipeline_components(self, info, mimetype=None):
     from opencontractserver.pipeline.base.file_types import FileTypeEnum
-    
+
     # Convert GraphQL string to backend enum
     backend_enum = None
     if mimetype:
         try:
-            backend_enum = FileTypeEnum[mimetype]  # This should work if the enum values match
+            backend_enum = FileTypeEnum[
+                mimetype
+            ]  # This should work if the enum values match
         except KeyError:
             pass
-            
+
     components = get_components_by_mimetype(backend_enum)
     return components

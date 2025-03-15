@@ -221,7 +221,7 @@ class DRFMutation(graphene.Mutation):
 
                 # If we created new obj... give user proper permissions
                 set_permissions_for_obj_to_user(
-                    info.context.user, obj, [PermissionTypes.ALL]
+                    info.context.user, obj, [PermissionTypes.CRUD]
                 )
                 # logger.info("Permissioned obj")
 

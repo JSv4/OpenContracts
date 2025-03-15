@@ -1452,7 +1452,6 @@ class DeleteMultipleLabelMutation(graphene.Mutation):
 
 class CreateCorpusMutation(DRFMutation):
     class IOSettings:
-        lookup_field = "id"
         pk_fields = ["label_set"]
         serializer = CorpusSerializer
         model = Corpus

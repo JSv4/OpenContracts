@@ -21,7 +21,7 @@ class MicroserviceEmbedder(BaseEmbedder):
     description = "Generates embeddings using a vector embeddings microservice."
     author = "Your Name"
     dependencies = ["numpy", "requests"]
-    vector_size = 768  # Adjust based on actual embedding size
+    vector_size = 768  # Default embedding size
     supported_file_types = [
         FileTypeEnum.PDF,
         FileTypeEnum.TXT,

@@ -4,7 +4,7 @@ from typing import Union
 from django.contrib.auth import get_user_model
 
 from config import celery_app
-from opencontractserver.annotations.models import Annotation, Embedding, Note
+from opencontractserver.annotations.models import Annotation, Note
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
@@ -80,48 +80,10 @@ def get_embedder_for_corpus(
     return embedder_class, embedder_path
 
 
-def store_embeddings(
-    embedder: BaseEmbedder, text: str, embedder_path: str, creator: User
-) -> Embedding:
-    """
-    Generate and store embeddings for text using the specified embedder.
-
-    Args:
-        embedder: The embedder instance
-        text: The text to embed
-        embedder_path: The path to the embedder class
-        creator: The user who should be set as the creator of the embedding
-
-    Returns:
-        The created Embedding object
-    """
-    embedding_obj = Embedding(embedder_path=embedder_path, creator=creator)
-
-    # Generate embeddings
-    embeddings = embedder.embed_text(text)
-
-    if embeddings:
-        # Store the embeddings in the appropriate field based on dimension
-        vector_size = embedder.vector_size
-        if vector_size == 384:
-            embedding_obj.vector_384 = embeddings
-        elif vector_size == 768:
-            embedding_obj.vector_768 = embeddings
-        elif vector_size == 1536:
-            embedding_obj.vector_1536 = embeddings
-        elif vector_size == 3072:
-            embedding_obj.vector_3072 = embeddings
-        else:
-            logger.warning(f"Unsupported vector size: {vector_size}")
-
-    embedding_obj.save()
-    return embedding_obj
-
-
 @celery_app.task(
     autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
 )
-def calculate_embedding_for_doc_text(doc_id: str | int):
+def calculate_embedding_for_doc_text(doc_id: str | int, corpus_id: str | int):
     try:
         doc = Document.objects.get(id=doc_id)
 
@@ -131,30 +93,10 @@ def calculate_embedding_for_doc_text(doc_id: str | int):
         else:
             text = ""
 
-        # Get the document's mimetype
-        mimetype = doc.file_type
-        corpus_id = None
-
         # Check if the document is part of any corpus and use that corpus's embedder
-        corpus_set = doc.corpus_set.all()
-        if corpus_set.exists():
-            # Use the first corpus for now - could be enhanced to handle multiple corpuses
-            corpus_id = corpus_set.first().id
-
-        # Get the embedder based on corpus and mimetype
-        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id, mimetype)
-
-        if embedder_class is None:
-            logger.error(f"No embedder found for document: {doc_id}")
-            return
-
-        embedder: BaseEmbedder = embedder_class()
-
-        # For now, just store in the document's embedding field
-        # In the future, we could create an Embedding object and link it
-        embeddings = embedder.embed_text(text)
-        doc.embedding = embeddings
-        doc.save()
+        corpus = Corpus.objects.get(id=corpus_id)
+        embedder_path, embeddings = corpus.embed_text(text)
+        doc.add_embedding(embedder_path, embeddings)
 
     except Exception as e:
         logger.error(
@@ -170,23 +112,9 @@ def calculate_embedding_for_annotation_text(annotation_id: str | int):
         annot = Annotation.objects.get(id=annotation_id)
         text = annot.raw_text
         corpus_id = annot.corpus_id if annot.corpus else None
-
-        # Get the embedder based on the corpus configuration
-        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id)
-
-        if embedder_class is None:
-            logger.error("No embedder found for annotation")
-            return
-
-        embedder: BaseEmbedder = embedder_class()
-
-        # Create a new Embedding object - pass the creator
-        store_embeddings(
-            embedder,
-            text,
-            embedder_path,
-            creator=annot.creator,  # Pass the creator from the annotation
-        )
+        corpus = Corpus.objects.get(id=corpus_id)
+        embedder_path, embeddings = corpus.embed_text(text)
+        annot.add_embedding(embedder_path, embeddings)
 
     except Exception as e:
         logger.error(
@@ -201,28 +129,9 @@ def calculate_embedding_for_note_text(note_id: str | int):
     try:
         note = Note.objects.get(id=note_id)
         text = note.content
-        corpus_id = note.corpus_id if note.corpus else None
 
-        # Get the embedder based on the corpus configuration
-        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id)
-
-        if embedder_class is None:
-            logger.error("No embedder found for note")
-            return
-
-        embedder: BaseEmbedder = embedder_class()
-
-        # Create a new Embedding object
-        embedding_obj = store_embeddings(
-            embedder, text, embedder_path, creator=note.creator
-        )
-
-        # For backward compatibility, also store in the legacy field
-        note.embedding = embedder.embed_text(text)
-
-        # Link the new embedding object
-        note.embeddings = embedding_obj
-        note.save()
+        embedder_path, embeddings = note.corpus.embed_text(text)
+        note.add_embedding(embedder_path, embeddings)
 
     except Exception as e:
         logger.error(

@@ -168,7 +168,7 @@ class Corpus(TreeNode):
                     {"post_processors": f"Invalid Python path: {processor}"}
                 )
 
-    def get_embeddings(self, text: str) -> Tuple[Optional[str], Optional[list[float]]]:
+    def embed_text(self, text: str) -> Tuple[Optional[str], Optional[list[float]]]:
         """
         Use the corpus's configured preferred_embedder to generate embeddings for the given text.
         

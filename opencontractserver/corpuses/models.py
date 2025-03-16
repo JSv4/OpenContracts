@@ -1,6 +1,10 @@
 import uuid
+import importlib
+import logging
+from typing import Optional, Tuple
 
 import django
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -8,9 +12,12 @@ from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from tree_queries.models import TreeNode
 
 from opencontractserver.annotations.models import Annotation
+from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.QuerySets import PermissionedTreeQuerySet
 from opencontractserver.shared.utils import calc_oc_file_path
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_icon_filepath(instance, filename):
@@ -160,6 +167,47 @@ class Corpus(TreeNode):
                 raise ValidationError(
                     {"post_processors": f"Invalid Python path: {processor}"}
                 )
+
+    def get_embeddings(self, text: str) -> Tuple[Optional[str], Optional[list[float]]]:
+        """
+        Use the corpus's configured preferred_embedder to generate embeddings for the given text.
+        
+        Args:
+            text (str): The text to generate embeddings for
+            
+        Returns:
+            Tuple[str, Optional[list[float]]]: A tuple containing:
+                - The embedder instance name (or None if embedding failed)
+                - The generated embeddings (or None if embedding failed)
+        """
+        from opencontractserver.pipeline.utils import get_component_by_name, get_default_embedder
+
+        name = None
+        embedder = None
+        embeddings = None
+        
+        try:
+            # Get the embedder class from the preferred_embedder path
+            if self.preferred_embedder:
+                embedder_class = get_component_by_name(self.preferred_embedder)
+                if embedder_class:
+                    # Create an instance of the embedder
+                    embedder = embedder_class()
+                    # Generate embeddings
+                    embeddings = embedder.embed_text(text)
+                    name = self.preferred_embedder
+            else:
+                # If no preferred embedder is set, use the default embedder
+                embedder_class = get_default_embedder()
+                if embedder_class:
+                    embedder = embedder_class()
+                    embeddings = embedder.embed_text(text)
+                    name = settings.DEFAULT_EMBEDDER
+
+        except Exception as e:
+            logger.error(f"Failed to generate embeddings using corpus preferred embedder: {e}")
+            
+        return name, embeddings
 
 
 # Model for Django Guardian permissions... trying to improve performance...

@@ -218,6 +218,14 @@ class TestPostProcessor(BasePostProcessor):
 
         # Reload the importlib caches and modules
         importlib.invalidate_caches()
+
+        # Force a direct import of the test modules to ensure they're loaded
+        import sys
+
+        if cls.parser_path not in sys.path:
+            sys.path.insert(0, os.path.dirname(os.path.dirname(cls.parser_path)))
+
+        # Reload and then directly import the modules to force discovery
         importlib.reload(importlib.import_module("opencontractserver.pipeline.parsers"))
         importlib.reload(
             importlib.import_module("opencontractserver.pipeline.embedders")
@@ -228,6 +236,32 @@ class TestPostProcessor(BasePostProcessor):
         importlib.reload(
             importlib.import_module("opencontractserver.pipeline.post_processors")
         )
+
+        # Force import the new modules directly
+        try:
+            from opencontractserver.pipeline.embedders.test_embedder import (  # noqa
+                TestEmbedder,
+                TestEmbedder384,
+                TestEmbedder768,
+            )
+            from opencontractserver.pipeline.parsers.test_parser import (  # noqa
+                TestParser,
+            )
+            from opencontractserver.pipeline.post_processors.test_post_processor import (  # noqa
+                TestPostProcessor,
+            )
+            from opencontractserver.pipeline.thumbnailers.test_thumbnailer import (  # noqa
+                TestThumbnailer,
+            )
+
+            logger.info("Successfully imported test classes after reloading")
+        except ImportError as e:
+            logger.error(f"Failed to import test classes: {e}")
+
+        # Verify the embedders were loaded correctly
+        embedders = get_all_embedders()
+        embedder_titles = [embedder.title for embedder in embedders]
+        logger.info(f"Available embedder titles after reload: {embedder_titles}")
 
     @classmethod
     def tearDownClass(cls):
@@ -252,6 +286,14 @@ class TestPostProcessor(BasePostProcessor):
         importlib.reload(
             importlib.import_module("opencontractserver.pipeline.post_processors")
         )
+
+        # Force direct import
+        try:
+            from opencontractserver.pipeline.post_processors.test_post_processor import (  # noqa
+                TestPostProcessor,
+            )
+        except ImportError as e:
+            logger.error(f"Failed to import TestPostProcessor in setUp: {e}")
 
     def test_get_all_subclasses(self):
         """

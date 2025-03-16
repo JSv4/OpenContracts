@@ -4,8 +4,6 @@ from typing import Any
 import marvin
 from django.conf import settings
 
-from opencontractserver.corpuses.models import Corpus
-from opencontractserver.pipeline.utils import get_preferred_embedder
 from opencontractserver.shared.decorators import doc_analyzer_task
 from opencontractserver.types.dicts import TextSpan
 
@@ -301,8 +299,6 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
     if not corpus_id:
         logger.error("corpus_id is required for build_knowledge_base task")
         return [], [], [], False
-
-    corpus = Corpus.objects.get(id=corpus_id)
 
     llm = OpenAI(
         model="gpt-4o-mini",  # using the "mini" version as specified

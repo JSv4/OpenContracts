@@ -5,10 +5,7 @@ from django.contrib.auth import get_user_model
 
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
-from opencontractserver.tasks.embeddings_task import (
-    get_embedder_for_corpus,
-    store_embeddings,
-)
+from opencontractserver.tasks.embeddings_task import get_embedder_for_corpus
 
 User = get_user_model()
 
@@ -271,129 +268,6 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_corpus.objects.get.assert_called_with(id=1)
         mock_find_embedder.assert_called_with("application/pdf", None)
         mock_get_default.assert_called_once()
-
-    @patch("opencontractserver.tasks.embeddings_task.Embedding")
-    def test_store_embeddings(self, mock_embedding):
-        """
-        Test store_embeddings function.
-        """
-        # Set up mocks
-        mock_embedding_instance = MagicMock()
-        # Explicitly set vector fields to None
-        mock_embedding_instance.vector_384 = None
-        mock_embedding_instance.vector_768 = None
-        mock_embedding_instance.vector_1536 = None
-        mock_embedding_instance.vector_3072 = None
-        mock_embedding.return_value = mock_embedding_instance
-
-        # Mock user for creator parameter
-        mock_creator = MagicMock(spec=User)
-
-        # Create a test embedder
-        embedder = TestEmbedder()
-
-        # Call the function with the creator parameter
-        result = store_embeddings(
-            embedder, "Test text", "path.to.TestEmbedder", creator=mock_creator
-        )
-
-        # Verify the results
-        self.assertEqual(result, mock_embedding_instance)
-        mock_embedding.assert_called_with(
-            embedder_path="path.to.TestEmbedder", creator=mock_creator
-        )
-        mock_embedding_instance.save.assert_called_once()
-
-        # Verify the embeddings were stored in the correct field
-        self.assertIsNone(mock_embedding_instance.vector_384)
-        self.assertIsNone(mock_embedding_instance.vector_768)
-        self.assertIsNone(mock_embedding_instance.vector_1536)
-        self.assertIsNone(mock_embedding_instance.vector_3072)
-
-        # The test embedder has vector_size=128, which is not one of the standard sizes
-        # So no vector field should be set
-
-    @patch("opencontractserver.tasks.embeddings_task.Embedding")
-    def test_store_embeddings_with_different_dimensions(self, mock_embedding):
-        """
-        Test store_embeddings function with different vector dimensions.
-        """
-        # Set up mocks
-        mock_embedding_instance = MagicMock()
-        # Explicitly set vector fields to None initially
-        mock_embedding_instance.vector_384 = None
-        mock_embedding_instance.vector_768 = None
-        mock_embedding_instance.vector_1536 = None
-        mock_embedding_instance.vector_3072 = None
-        mock_embedding.return_value = mock_embedding_instance
-
-        # Mock user for creator parameter
-        mock_creator = MagicMock(spec=User)
-
-        # Test with 384-dimensional embedder
-        embedder_384 = TestEmbedder384()
-        result_384 = store_embeddings(
-            embedder_384, "Test text", "path.to.TestEmbedder384", creator=mock_creator
-        )
-        self.assertEqual(result_384, mock_embedding_instance)
-        mock_embedding_instance.save.assert_called()
-        # Check that the vector was stored in the correct field
-        self.assertIsNotNone(mock_embedding_instance.vector_384)
-        self.assertIsNone(mock_embedding_instance.vector_768)
-        self.assertIsNone(mock_embedding_instance.vector_1536)
-        self.assertIsNone(mock_embedding_instance.vector_3072)
-
-        # Reset mock
-        mock_embedding_instance.reset_mock()
-        mock_embedding_instance.vector_384 = None
-
-        # Test with 768-dimensional embedder
-        embedder_768 = TestEmbedder768()
-        result_768 = store_embeddings(
-            embedder_768, "Test text", "path.to.TestEmbedder768", creator=mock_creator
-        )
-        self.assertEqual(result_768, mock_embedding_instance)
-        mock_embedding_instance.save.assert_called()
-        # Check that the vector was stored in the correct field
-        self.assertIsNone(mock_embedding_instance.vector_384)
-        self.assertIsNotNone(mock_embedding_instance.vector_768)
-        self.assertIsNone(mock_embedding_instance.vector_1536)
-        self.assertIsNone(mock_embedding_instance.vector_3072)
-
-        # Reset mock
-        mock_embedding_instance.reset_mock()
-        mock_embedding_instance.vector_768 = None
-
-        # Test with 1536-dimensional embedder
-        embedder_1536 = TestEmbedder1536()
-        result_1536 = store_embeddings(
-            embedder_1536, "Test text", "path.to.TestEmbedder1536", creator=mock_creator
-        )
-        self.assertEqual(result_1536, mock_embedding_instance)
-        mock_embedding_instance.save.assert_called()
-        # Check that the vector was stored in the correct field
-        self.assertIsNone(mock_embedding_instance.vector_384)
-        self.assertIsNone(mock_embedding_instance.vector_768)
-        self.assertIsNotNone(mock_embedding_instance.vector_1536)
-        self.assertIsNone(mock_embedding_instance.vector_3072)
-
-        # Reset mock
-        mock_embedding_instance.reset_mock()
-        mock_embedding_instance.vector_1536 = None
-
-        # Test with 3072-dimensional embedder
-        embedder_3072 = TestEmbedder3072()
-        result_3072 = store_embeddings(
-            embedder_3072, "Test text", "path.to.TestEmbedder3072", creator=mock_creator
-        )
-        self.assertEqual(result_3072, mock_embedding_instance)
-        mock_embedding_instance.save.assert_called()
-        # Check that the vector was stored in the correct field
-        self.assertIsNone(mock_embedding_instance.vector_384)
-        self.assertIsNone(mock_embedding_instance.vector_768)
-        self.assertIsNone(mock_embedding_instance.vector_1536)
-        self.assertIsNotNone(mock_embedding_instance.vector_3072)
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -347,45 +347,23 @@ def get_default_embedder() -> Optional[type[BaseEmbedder]]:
         return None
 
 
-def get_embedder_by_dimension(dimension: int) -> Optional[type[BaseEmbedder]]:
+def get_default_embedder_for_filetype(mimetype: str) -> Optional[type[BaseEmbedder]]:
     """
-    Get a fallback embedder class for a specific dimension.
-
-    Args:
-        dimension (int): The embedding dimension (e.g., 384, 768, 1536, 3072)
-
-    Returns:
-        Optional[Type[BaseEmbedder]]: A fallback embedder class for the specified dimension,
-        or None if not found.
-    """
-    # This function is deprecated and should not be used
-    logger.warning(
-        "get_embedder_by_dimension is deprecated. Use get_default_embedder_for_filetype_and_dimension instead."
-    )
-    return get_default_embedder()
-
-
-def get_default_embedder_for_filetype_and_dimension(
-    mimetype: str, dimension: int
-) -> Optional[type[BaseEmbedder]]:
-    """
-    Get the default embedder for a specific filetype and dimension.
+    Get the default embedder for a specific filetype.
 
     Args:
         mimetype: The MIME type of the file
-        dimension: The desired embedding dimension
 
     Returns:
         Optional[Type[BaseEmbedder]]: The default embedder for the specified filetype and dimension,
         or None if not found
     """
     # Get the default embedders for the mimetype
-    filetype_embedders = settings.DEFAULT_EMBEDDERS_BY_FILETYPE_AND_DIMENSION.get(
-        mimetype, {}
-    )
+    embedder_path = settings.DEFAULT_EMBEDDERS_BY_FILETYPE.get(mimetype, {})
 
-    # Get the embedder for the specified dimension
-    embedder_path = filetype_embedders.get(dimension)
+    logger.info(
+        f"get_default_embedder_for_filetype - Default embedder path: {embedder_path}"
+    )
 
     if embedder_path:
         try:
@@ -397,30 +375,8 @@ def get_default_embedder_for_filetype_and_dimension(
             logger.error(f"Error loading embedder '{embedder_path}': {e}")
             return None
     else:
-        logger.warning(
-            f"No default embedder found for mimetype '{mimetype}' and dimension {dimension}"
-        )
+        logger.warning(f"No default embedder found for mimetype '{mimetype}'")
         return None
-
-
-def find_embedders_by_dimension(dimension: int) -> list[type[BaseEmbedder]]:
-    """
-    Find all available embedders for a specific dimension.
-
-    Args:
-        dimension (int): The embedding dimension to search for
-
-    Returns:
-        list[Type[BaseEmbedder]]: List of embedder classes with the specified dimension
-    """
-    all_embedders = get_all_embedders()
-    matching_embedders = [
-        embedder
-        for embedder in all_embedders
-        if hasattr(embedder, "vector_size") and embedder.vector_size == dimension
-    ]
-
-    return matching_embedders
 
 
 def get_dimension_from_embedder(
@@ -454,8 +410,8 @@ def get_dimension_from_embedder(
     return default_dim
 
 
-def find_embedder_for_filetype_and_dimension(
-    mimetype_or_enum: Union[str, FileTypeEnum], dimension: int = None
+def find_embedder_for_filetype(
+    mimetype_or_enum: Union[str, FileTypeEnum]
 ) -> Optional[type[BaseEmbedder]]:
     """
     Find an appropriate embedder for a specific file type and dimension.
@@ -487,22 +443,7 @@ def find_embedder_for_filetype_and_dimension(
     else:
         mimetype = mimetype_or_enum
 
-    # If no dimension is specified, just return the preferred embedder for the mimetype
-    if dimension is None:
-        return get_preferred_embedder(mimetype)
-
-    # If a dimension is specified, try to get the default embedder for that filetype and dimension
-    embedder = get_default_embedder_for_filetype_and_dimension(mimetype, dimension)
-    if embedder:
-        return embedder
-
-    # If no specific embedder is found, fall back to the preferred embedder for the mimetype
-    preferred_embedder = get_preferred_embedder(mimetype)
-    if preferred_embedder:
-        return preferred_embedder
-
-    # Last resort: return the default embedder
-    return get_default_embedder()
+    return get_preferred_embedder(mimetype)
 
 
 def run_post_processors(

@@ -10,10 +10,9 @@ from opencontractserver.documents.models import Document
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.utils import (
-    find_embedder_for_filetype_and_dimension,
+    find_embedder_for_filetype,
     get_component_by_name,
     get_default_embedder,
-    get_dimension_from_embedder,
 )
 
 User = get_user_model()
@@ -56,18 +55,9 @@ def get_embedder_for_corpus(
     # If no corpus-specific embedder was found and a mimetype is provided,
     # try to find an appropriate embedder for the mimetype
     if embedder_class is None and mimetype_or_enum:
-        # If we have a corpus embedder path but couldn't load it, try to get its dimension
-        dimension = None
-        if corpus_id and embedder_path:
-            try:
-                dimension = get_dimension_from_embedder(embedder_path)
-            except Exception:
-                pass
 
         # Find an embedder for the mimetype and dimension
-        embedder_class = find_embedder_for_filetype_and_dimension(
-            mimetype_or_enum, dimension
-        )
+        embedder_class = find_embedder_for_filetype(mimetype_or_enum)
         if embedder_class:
             embedder_path = f"{embedder_class.__module__}.{embedder_class.__name__}"
 

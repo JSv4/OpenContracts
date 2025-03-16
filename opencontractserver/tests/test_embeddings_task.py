@@ -269,5 +269,6 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_find_embedder.assert_called_with("application/pdf", None)
         mock_get_default.assert_called_once()
 
+
 if __name__ == "__main__":
     unittest.main()

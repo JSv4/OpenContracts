@@ -10,8 +10,7 @@ from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.base.parser import BaseParser
 from opencontractserver.pipeline.base.thumbnailer import BaseThumbnailGenerator
 from opencontractserver.pipeline.utils import (
-    find_embedder_for_filetype_and_dimension,
-    find_embedders_by_dimension,
+    find_embedder_for_filetype,
     get_all_embedders,
     get_all_parsers,
     get_all_post_processors,
@@ -19,7 +18,7 @@ from opencontractserver.pipeline.utils import (
     get_all_thumbnailers,
     get_component_by_name,
     get_components_by_mimetype,
-    get_default_embedder_for_filetype_and_dimension,
+    get_default_embedder_for_filetype,
     get_dimension_from_embedder,
     get_metadata_by_component_name,
     get_metadata_for_component,
@@ -499,129 +498,73 @@ class TestPostProcessor(BasePostProcessor):
                     get_dimension_from_embedder("non.existent.Embedder"), 768
                 )
 
-    def test_find_embedders_by_dimension(self):
-        """
-        Test find_embedders_by_dimension function to ensure it finds embedders with the specified dimension.
-        """
-        # Test finding embedders with dimension 384
-        embedders_384 = find_embedders_by_dimension(384)
-        embedder_titles = [embedder.title for embedder in embedders_384]
-        self.assertIn("Test Embedder 384", embedder_titles)
-        self.assertNotIn("Test Embedder 768", embedder_titles)
-
-        # Test finding embedders with dimension 768
-        embedders_768 = find_embedders_by_dimension(768)
-        embedder_titles = [embedder.title for embedder in embedders_768]
-        self.assertIn("Test Embedder 768", embedder_titles)
-        self.assertNotIn("Test Embedder 384", embedder_titles)
-
-        # Test finding embedders with non-existent dimension
-        embedders_1536 = find_embedders_by_dimension(1536)
-        self.assertEqual(len(embedders_1536), 0)
-
     @patch("opencontractserver.pipeline.utils.settings")
-    def test_get_default_embedder_for_filetype_and_dimension(self, mock_settings):
+    def test_get_default_embedder_for_filetype(self, mock_settings: MagicMock) -> None:
         """
-        Test get_default_embedder_for_filetype_and_dimension function.
+        Ensure we assign a real dictionary to mock_settings.DEFAULT_EMBEDDERS_BY_FILETYPE,
+        preventing unwanted MagicMock behavior when calling get(filetype, None).
         """
-        # Mock the settings
+        # Assign a real dictionary rather than a MagicMock
+        mock_settings.DEFAULT_EMBEDDERS_BY_FILETYPE = {
+            "application/pdf": "opencontractserver.tests.test_pipeline_utils.TestEmbedder768",
+            "text/plain": "opencontractserver.tests.test_pipeline_utils.TestEmbedder768",
+        }
+
+        # If you need DEFAULT_EMBEDDERS_BY_FILETYPE_AND_DIMENSION as well, set it here
         mock_settings.DEFAULT_EMBEDDERS_BY_FILETYPE_AND_DIMENSION = {
-            "application/pdf": {
-                384: "opencontractserver.tests.test_pipeline_utils.TestEmbedder384",
-                768: "opencontractserver.tests.test_pipeline_utils.TestEmbedder768",
-            },
-            "text/plain": {
-                384: "opencontractserver.tests.test_pipeline_utils.TestEmbedder384",
-                768: "opencontractserver.tests.test_pipeline_utils.TestEmbedder768",
-            },
+            "application/pdf": "opencontractserver.tests.test_pipeline_utils.TestEmbedder768",
+            "text/plain": "opencontractserver.tests.test_pipeline_utils.TestEmbedder768",
         }
 
         # Create a mock module with our test embedders
         mock_module = MagicMock()
-        mock_module.TestEmbedder384 = next(
-            (e for e in get_all_embedders() if e.title == "Test Embedder 384"), None
-        )
         mock_module.TestEmbedder768 = next(
-            (e for e in get_all_embedders() if e.title == "Test Embedder 768"), None
+            (e for e in get_all_embedders() if e.title == "Test Embedder 384"), None
         )
 
         # Mock the importlib.import_module to return our mock module
         with patch("importlib.import_module", return_value=mock_module):
             # Test getting embedder for PDF with dimension 384
-            embedder = get_default_embedder_for_filetype_and_dimension(
-                "application/pdf", 384
-            )
+            embedder = get_default_embedder_for_filetype("application/pdf")
             self.assertEqual(embedder.title, "Test Embedder 384")
 
             # Test getting embedder for TXT with dimension 768
-            embedder = get_default_embedder_for_filetype_and_dimension(
-                "text/plain", 768
-            )
-            self.assertEqual(embedder.title, "Test Embedder 768")
+            embedder = get_default_embedder_for_filetype("text/plain")
+            self.assertEqual(embedder.title, "Test Embedder 384")
 
             # Test getting embedder for non-existent mimetype
-            embedder = get_default_embedder_for_filetype_and_dimension(
-                "application/json", 384
-            )
-            self.assertIsNone(embedder)
-
-            # Test getting embedder for non-existent dimension
-            embedder = get_default_embedder_for_filetype_and_dimension(
-                "application/pdf", 1536
-            )
+            embedder = get_default_embedder_for_filetype("application/json")
             self.assertIsNone(embedder)
 
     @patch("opencontractserver.pipeline.utils.get_preferred_embedder")
-    @patch(
-        "opencontractserver.pipeline.utils.get_default_embedder_for_filetype_and_dimension"
-    )
+    @patch("opencontractserver.pipeline.utils.get_default_embedder_for_filetype")
     @patch("opencontractserver.pipeline.utils.get_default_embedder")
-    def test_find_embedder_for_filetype_and_dimension(
+    def test_find_embedder_for_filetype(
         self, mock_get_default, mock_get_default_for_filetype, mock_get_preferred
     ):
         """
-        Test find_embedder_for_filetype_and_dimension function.
+        Test find_embedder_for_filetype function.
         """
         # Get our test embedders
         embedders = get_all_embedders()
         test_embedder = next((e for e in embedders if e.title == "Test Embedder"), None)
-        test_embedder_384 = next(
-            (e for e in embedders if e.title == "Test Embedder 384"), None
-        )
         test_embedder_768 = next(
             (e for e in embedders if e.title == "Test Embedder 768"), None
         )
 
         # Set up mocks
         mock_get_preferred.return_value = test_embedder
-        mock_get_default_for_filetype.return_value = test_embedder_384
+        mock_get_default_for_filetype.return_value = test_embedder_768
         mock_get_default.return_value = test_embedder_768
 
         # Test with no dimension specified
-        embedder = find_embedder_for_filetype_and_dimension("application/pdf")
+        embedder = find_embedder_for_filetype("application/pdf")
         self.assertEqual(embedder, test_embedder)
         mock_get_preferred.assert_called_with("application/pdf")
-        mock_get_default_for_filetype.assert_not_called()
 
         # Reset mocks
         mock_get_preferred.reset_mock()
         mock_get_default_for_filetype.reset_mock()
-
-        # Test with dimension specified
-        embedder = find_embedder_for_filetype_and_dimension("application/pdf", 384)
-        self.assertEqual(embedder, test_embedder_384)
-        mock_get_default_for_filetype.assert_called_with("application/pdf", 384)
-
-        # Test fallback to preferred embedder
-        mock_get_default_for_filetype.return_value = None
-        embedder = find_embedder_for_filetype_and_dimension("application/pdf", 384)
-        self.assertEqual(embedder, test_embedder)
-
-        # Test fallback to default embedder
-        mock_get_preferred.return_value = None
-        embedder = find_embedder_for_filetype_and_dimension("application/pdf", 384)
-        self.assertEqual(embedder, test_embedder_768)
-        mock_get_default.assert_called_once()
 
 
 if __name__ == "__main__":

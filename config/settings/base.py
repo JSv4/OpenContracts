@@ -599,35 +599,10 @@ DEFAULT_EMBEDDER = (
 DEFAULT_EMBEDDING_DIMENSION = 768
 
 # Map of MIME types to default embedders for different dimensions
-DEFAULT_EMBEDDERS_BY_FILETYPE_AND_DIMENSION = {
-    "application/pdf": {
-        384: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder384",
-        768: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",
-        1536: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder1536",
-    },
-    "text/plain": {
-        384: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder384",
-        768: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",
-        1536: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder1536",
-    },
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
-        384: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder384",
-        768: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",
-        1536: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder1536",
-    },
-    # "text/html": {  # Removed as we don't support HTML
-    #     384: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder384",
-    #     768: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",
-    #     1536: "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder1536",
-    # },
-}
-
-# Map of MIME types to Minnesota Case Law embedders
-MINN_EMBEDDERS = {
-    "application/pdf": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
-    "text/plain": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",  # noqa:
-    # "text/html": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",  # Removed as we don't support HTML  # noqa:
+DEFAULT_EMBEDDERS_BY_FILETYPE = {
+    "application/pdf": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",
+    "text/plain": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",  # noqa
 }
 
 # Default runner

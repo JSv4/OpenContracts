@@ -102,9 +102,7 @@ class TestEmbeddingsTask(unittest.TestCase):
 
     @patch("opencontractserver.tasks.embeddings_task.Corpus")
     @patch("opencontractserver.tasks.embeddings_task.get_component_by_name")
-    @patch(
-        "opencontractserver.tasks.embeddings_task.find_embedder_for_filetype_and_dimension"
-    )
+    @patch("opencontractserver.tasks.embeddings_task.find_embedder_for_filetype")
     @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
     def test_get_embedder_for_corpus_with_preferred_embedder(
         self, mock_get_default, mock_find_embedder, mock_get_component, mock_corpus
@@ -132,9 +130,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_get_default.assert_not_called()
 
     @patch("opencontractserver.tasks.embeddings_task.Corpus")
-    @patch(
-        "opencontractserver.tasks.embeddings_task.find_embedder_for_filetype_and_dimension"
-    )
+    @patch("opencontractserver.tasks.embeddings_task.find_embedder_for_filetype")
     @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
     def test_get_embedder_for_corpus_with_mimetype(
         self, mock_get_default, mock_find_embedder, mock_corpus
@@ -161,14 +157,12 @@ class TestEmbeddingsTask(unittest.TestCase):
             embedder_path, f"{TestEmbedder.__module__}.{TestEmbedder.__name__}"
         )
         mock_corpus.objects.get.assert_called_with(id=1)
-        mock_find_embedder.assert_called_with("application/pdf", None)
+        mock_find_embedder.assert_called_with("application/pdf")
         mock_get_default.assert_not_called()
 
     @patch("opencontractserver.tasks.embeddings_task.Corpus")
     @patch("opencontractserver.tasks.embeddings_task.get_component_by_name")
-    @patch(
-        "opencontractserver.tasks.embeddings_task.find_embedder_for_filetype_and_dimension"
-    )
+    @patch("opencontractserver.tasks.embeddings_task.find_embedder_for_filetype")
     @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
     def test_get_embedder_for_corpus_with_error_loading_preferred(
         self, mock_get_default, mock_find_embedder, mock_get_component, mock_corpus
@@ -199,13 +193,11 @@ class TestEmbeddingsTask(unittest.TestCase):
         )
         mock_corpus.objects.get.assert_called_with(id=1)
         mock_get_component.assert_called_with("path.to.NonExistentEmbedder")
-        mock_find_embedder.assert_called_with("application/pdf", None)
+        mock_find_embedder.assert_called_with("application/pdf")
         mock_get_default.assert_not_called()
 
     @patch("opencontractserver.tasks.embeddings_task.Corpus")
-    @patch(
-        "opencontractserver.tasks.embeddings_task.find_embedder_for_filetype_and_dimension"
-    )
+    @patch("opencontractserver.tasks.embeddings_task.find_embedder_for_filetype")
     @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
     def test_get_embedder_for_corpus_with_corpus_not_found(
         self, mock_get_default, mock_find_embedder, mock_corpus
@@ -230,13 +222,11 @@ class TestEmbeddingsTask(unittest.TestCase):
             embedder_path, f"{TestEmbedder.__module__}.{TestEmbedder.__name__}"
         )
         mock_corpus.objects.get.assert_called_with(id=1)
-        mock_find_embedder.assert_called_with("application/pdf", None)
+        mock_find_embedder.assert_called_with("application/pdf")
         mock_get_default.assert_not_called()
 
     @patch("opencontractserver.tasks.embeddings_task.Corpus")
-    @patch(
-        "opencontractserver.tasks.embeddings_task.find_embedder_for_filetype_and_dimension"
-    )
+    @patch("opencontractserver.tasks.embeddings_task.find_embedder_for_filetype")
     @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
     def test_get_embedder_for_corpus_fallback_to_default(
         self, mock_get_default, mock_find_embedder, mock_corpus
@@ -266,7 +256,7 @@ class TestEmbeddingsTask(unittest.TestCase):
             embedder_path, f"{TestEmbedder.__module__}.{TestEmbedder.__name__}"
         )
         mock_corpus.objects.get.assert_called_with(id=1)
-        mock_find_embedder.assert_called_with("application/pdf", None)
+        mock_find_embedder.assert_called_with("application/pdf")
         mock_get_default.assert_called_once()
 
 

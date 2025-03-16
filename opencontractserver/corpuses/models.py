@@ -1,7 +1,6 @@
-import uuid
-import importlib
 import logging
-from typing import Optional, Tuple
+import uuid
+from typing import Optional
 
 import django
 from django.conf import settings
@@ -12,7 +11,6 @@ from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from tree_queries.models import TreeNode
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.QuerySets import PermissionedTreeQuerySet
 from opencontractserver.shared.utils import calc_oc_file_path
@@ -168,24 +166,27 @@ class Corpus(TreeNode):
                     {"post_processors": f"Invalid Python path: {processor}"}
                 )
 
-    def embed_text(self, text: str) -> Tuple[Optional[str], Optional[list[float]]]:
+    def embed_text(self, text: str) -> tuple[Optional[str], Optional[list[float]]]:
         """
         Use the corpus's configured preferred_embedder to generate embeddings for the given text.
-        
+
         Args:
             text (str): The text to generate embeddings for
-            
+
         Returns:
             Tuple[str, Optional[list[float]]]: A tuple containing:
                 - The embedder instance name (or None if embedding failed)
                 - The generated embeddings (or None if embedding failed)
         """
-        from opencontractserver.pipeline.utils import get_component_by_name, get_default_embedder
+        from opencontractserver.pipeline.utils import (
+            get_component_by_name,
+            get_default_embedder,
+        )
 
         name = None
         embedder = None
         embeddings = None
-        
+
         try:
             # Get the embedder class from the preferred_embedder path
             if self.preferred_embedder:
@@ -205,8 +206,10 @@ class Corpus(TreeNode):
                     name = settings.DEFAULT_EMBEDDER
 
         except Exception as e:
-            logger.error(f"Failed to generate embeddings using corpus preferred embedder: {e}")
-            
+            logger.error(
+                f"Failed to generate embeddings using corpus preferred embedder: {e}"
+            )
+
         return name, embeddings
 
 

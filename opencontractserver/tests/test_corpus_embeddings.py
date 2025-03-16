@@ -9,16 +9,18 @@ from opencontractserver.pipeline.base.embedder import BaseEmbedder
 
 User = get_user_model()
 
+
 class TestEmbedder(BaseEmbedder):
     """
     A test embedder for unit testing.
     """
+
     title = "Test Embedder"
     description = "A test embedder for unit testing."
     author = "Test Author"
     dependencies = []
     vector_size = 768
-    
+
     def embed_text(self, text: str, **kwargs) -> list[float]:
         """Return a dummy embedding vector."""
         return [0.1] * self.vector_size
@@ -26,7 +28,7 @@ class TestEmbedder(BaseEmbedder):
 
 class CorpusEmbeddingsTestCase(TestCase):
     """Test cases for the Corpus model's embed_text functionality."""
-    
+
     def setUp(self):
         """Set up test data."""
         self.user = User.objects.create_user(username="testuser", password="testpass")
@@ -40,13 +42,13 @@ class CorpusEmbeddingsTestCase(TestCase):
         embedder_path = "path.to.TestEmbedder"
         self.corpus.preferred_embedder = embedder_path
         self.corpus.save()
-        
+
         # Mock the component lookup
         mock_get_component.return_value = TestEmbedder
-        
+
         # Call the function
         embedder_name, embeddings = self.corpus.embed_text(self.test_text)
-        
+
         # Verify results
         self.assertEqual(embedder_name, embedder_path)
         self.assertEqual(len(embeddings), 768)  # TestEmbedder's vector_size
@@ -59,13 +61,13 @@ class CorpusEmbeddingsTestCase(TestCase):
         # Ensure corpus has no preferred embedder
         self.corpus.preferred_embedder = None
         self.corpus.save()
-        
+
         # Mock the default embedder
         mock_get_default.return_value = TestEmbedder
-        
+
         # Call the function
         embedder_name, embeddings = self.corpus.embed_text(self.test_text)
-        
+
         # Verify results
         self.assertEqual(embedder_name, settings.DEFAULT_EMBEDDER)
         self.assertEqual(len(embeddings), 768)
@@ -80,14 +82,14 @@ class CorpusEmbeddingsTestCase(TestCase):
         embedder_path = "path.to.NonExistentEmbedder"
         self.corpus.preferred_embedder = embedder_path
         self.corpus.save()
-        
+
         # Mock the component lookup to raise an exception
         mock_get_component.side_effect = ImportError("Module not found")
         mock_get_default.side_effect = ImportError("Default module not found")
-        
+
         # Call the function
         embedder_name, embeddings = self.corpus.embed_text(self.test_text)
-        
+
         # Verify results - embedder_name should be None since both preferred and default failed
         self.assertIsNone(embedder_name)
         self.assertIsNone(embeddings)
@@ -100,22 +102,22 @@ class CorpusEmbeddingsTestCase(TestCase):
         embedder_path = "path.to.TestEmbedder"
         self.corpus.preferred_embedder = embedder_path
         self.corpus.save()
-        
+
         # Create a mock embedder that returns None
         mock_embedder = MagicMock(spec=BaseEmbedder)
         mock_embedder.embed_text.return_value = None
-        
+
         # Mock the component lookup
         class MockEmbedderClass:
             def __new__(cls, *args, **kwargs):
                 return mock_embedder
-        
+
         mock_get_component.return_value = MockEmbedderClass
-        
+
         # Call the function
         embedder_name, embeddings = self.corpus.embed_text(self.test_text)
-        
+
         # Verify results
         self.assertEqual(embedder_name, embedder_path)
         self.assertIsNone(embeddings)
-        mock_embedder.embed_text.assert_called_with(self.test_text) 
+        mock_embedder.embed_text.assert_called_with(self.test_text)

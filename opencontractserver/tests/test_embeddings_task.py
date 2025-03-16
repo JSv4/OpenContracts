@@ -1,12 +1,16 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+from django.contrib.auth import get_user_model
+
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.tasks.embeddings_task import (
     get_embedder_for_corpus,
     store_embeddings,
 )
+
+User = get_user_model()
 
 
 class TestEmbedder(BaseEmbedder):
@@ -282,15 +286,22 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_embedding_instance.vector_3072 = None
         mock_embedding.return_value = mock_embedding_instance
 
+        # Mock user for creator parameter
+        mock_creator = MagicMock(spec=User)
+
         # Create a test embedder
         embedder = TestEmbedder()
 
-        # Call the function
-        result = store_embeddings(embedder, "Test text", "path.to.TestEmbedder")
+        # Call the function with the creator parameter
+        result = store_embeddings(
+            embedder, "Test text", "path.to.TestEmbedder", creator=mock_creator
+        )
 
         # Verify the results
         self.assertEqual(result, mock_embedding_instance)
-        mock_embedding.assert_called_with(embedder_path="path.to.TestEmbedder")
+        mock_embedding.assert_called_with(
+            embedder_path="path.to.TestEmbedder", creator=mock_creator
+        )
         mock_embedding_instance.save.assert_called_once()
 
         # Verify the embeddings were stored in the correct field
@@ -316,10 +327,13 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_embedding_instance.vector_3072 = None
         mock_embedding.return_value = mock_embedding_instance
 
+        # Mock user for creator parameter
+        mock_creator = MagicMock(spec=User)
+
         # Test with 384-dimensional embedder
         embedder_384 = TestEmbedder384()
         result_384 = store_embeddings(
-            embedder_384, "Test text", "path.to.TestEmbedder384"
+            embedder_384, "Test text", "path.to.TestEmbedder384", creator=mock_creator
         )
         self.assertEqual(result_384, mock_embedding_instance)
         mock_embedding_instance.save.assert_called()
@@ -336,7 +350,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         # Test with 768-dimensional embedder
         embedder_768 = TestEmbedder768()
         result_768 = store_embeddings(
-            embedder_768, "Test text", "path.to.TestEmbedder768"
+            embedder_768, "Test text", "path.to.TestEmbedder768", creator=mock_creator
         )
         self.assertEqual(result_768, mock_embedding_instance)
         mock_embedding_instance.save.assert_called()
@@ -353,7 +367,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         # Test with 1536-dimensional embedder
         embedder_1536 = TestEmbedder1536()
         result_1536 = store_embeddings(
-            embedder_1536, "Test text", "path.to.TestEmbedder1536"
+            embedder_1536, "Test text", "path.to.TestEmbedder1536", creator=mock_creator
         )
         self.assertEqual(result_1536, mock_embedding_instance)
         mock_embedding_instance.save.assert_called()
@@ -370,7 +384,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         # Test with 3072-dimensional embedder
         embedder_3072 = TestEmbedder3072()
         result_3072 = store_embeddings(
-            embedder_3072, "Test text", "path.to.TestEmbedder3072"
+            embedder_3072, "Test text", "path.to.TestEmbedder3072", creator=mock_creator
         )
         self.assertEqual(result_3072, mock_embedding_instance)
         mock_embedding_instance.save.assert_called()

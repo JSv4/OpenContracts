@@ -1,8 +1,9 @@
 import logging
 from typing import Union
 
-from config import celery_app
 from django.contrib.auth import get_user_model
+
+from config import celery_app
 from opencontractserver.annotations.models import Annotation, Embedding, Note
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
@@ -80,10 +81,7 @@ def get_embedder_for_corpus(
 
 
 def store_embeddings(
-    embedder: BaseEmbedder, 
-    text: str, 
-    embedder_path: str,
-    creator: User
+    embedder: BaseEmbedder, text: str, embedder_path: str, creator: User
 ) -> Embedding:
     """
     Generate and store embeddings for text using the specified embedder.
@@ -97,10 +95,7 @@ def store_embeddings(
     Returns:
         The created Embedding object
     """
-    embedding_obj = Embedding(
-        embedder_path=embedder_path,
-        creator=creator
-    )
+    embedding_obj = Embedding(embedder_path=embedder_path, creator=creator)
 
     # Generate embeddings
     embeddings = embedder.embed_text(text)
@@ -187,10 +182,10 @@ def calculate_embedding_for_annotation_text(annotation_id: str | int):
 
         # Create a new Embedding object - pass the creator
         embedding_obj = store_embeddings(
-            embedder, 
-            text, 
+            embedder,
+            text,
             embedder_path,
-            creator=annot.creator  # Pass the creator from the annotation
+            creator=annot.creator,  # Pass the creator from the annotation
         )
 
         # For backward compatibility, also store in the legacy field
@@ -226,10 +221,7 @@ def calculate_embedding_for_note_text(note_id: str | int):
 
         # Create a new Embedding object
         embedding_obj = store_embeddings(
-            embedder, 
-            text, 
-            embedder_path,
-            creator=note.creator
+            embedder, text, embedder_path, creator=note.creator
         )
 
         # For backward compatibility, also store in the legacy field

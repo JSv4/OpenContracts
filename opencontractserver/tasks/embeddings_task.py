@@ -181,19 +181,12 @@ def calculate_embedding_for_annotation_text(annotation_id: str | int):
         embedder: BaseEmbedder = embedder_class()
 
         # Create a new Embedding object - pass the creator
-        embedding_obj = store_embeddings(
+        store_embeddings(
             embedder,
             text,
             embedder_path,
             creator=annot.creator,  # Pass the creator from the annotation
         )
-
-        # For backward compatibility, also store in the legacy field
-        annot.embedding = embedder.embed_text(text)
-
-        # Link the new embedding object
-        annot.embeddings = embedding_obj
-        annot.save()
 
     except Exception as e:
         logger.error(

@@ -1,6 +1,7 @@
 import logging
 from typing import Union
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 
 from config import celery_app
@@ -100,16 +101,44 @@ def calculate_embedding_for_doc_text(doc_id: str | int, corpus_id: str | int):
 def calculate_embedding_for_annotation_text(annotation_id: str | int):
     try:
         annot = Annotation.objects.get(id=annotation_id)
+
         text = annot.raw_text
-        corpus_id = annot.corpus_id if annot.corpus else None
-        corpus = Corpus.objects.get(id=corpus_id)
-        embedder_path, embeddings = corpus.embed_text(text)
-        annot.add_embedding(embedder_path, embeddings)
+
+        if not isinstance(text, str) or len(text) == 0:
+            logger.warning(
+                f"Annotation with ID {annotation_id} has no content or is not a string"
+            )
+            return
+
+        try:
+            corpus_id = annot.corpus_id if annot.corpus else None
+
+            if corpus_id:
+                corpus = Corpus.objects.get(id=corpus_id)
+                embedder_path, embeddings = corpus.embed_text(text)
+            else:
+                raise ValueError("No corpus found for annotation")
+        except Exception as corpus_error:
+            logger.warning(
+                f"Failed to use corpus embedder: {corpus_error}. Falling back to default embedder."
+            )
+            embedder_path = settings.DEFAULT_EMBEDDER
+            embedder_class = get_default_embedder()
+            embedder = embedder_class()  # Create an instance
+            embeddings = embedder.embed_text(text)
+
+        if embeddings:
+            annot.add_embedding(embedder_path, embeddings)
+        else:
+            logger.error(
+                f"Generated embeddings were None for annotation ID: {annotation_id}"
+            )
 
     except Exception as e:
         logger.error(
             f"calculate_embedding_for_annotation_text() - failed to generate embeddings due to error: {e}"
         )
+        logger.exception("Full traceback for annotation embedding failure:")
 
 
 @celery_app.task(
@@ -120,7 +149,21 @@ def calculate_embedding_for_note_text(note_id: str | int):
         note = Note.objects.get(id=note_id)
         text = note.content
 
-        embedder_path, embeddings = note.corpus.embed_text(text)
+        if not isinstance(text, str) or len(text) == 0:
+            logger.warning(f"Note with ID {note_id} has no content or is not a string")
+            return
+
+        try:
+            embedder_path, embeddings = note.corpus.embed_text(text)
+        except Exception as e:
+            logger.warning(
+                f"Failed to use corpus embedder: {e}. Falling back to default embedder."
+            )
+            embedder_path = settings.DEFAULT_EMBEDDER
+            embedder_class = get_default_embedder()
+            embedder = embedder_class()  # Create an instance
+            embeddings = embedder.embed_text(text)
+
         note.add_embedding(embedder_path, embeddings)
 
     except Exception as e:

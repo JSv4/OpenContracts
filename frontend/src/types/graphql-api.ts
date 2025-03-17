@@ -234,6 +234,7 @@ export type CorpusType = Node & {
   icon?: Maybe<Scalars["String"]>;
   documents?: DocumentTypeConnection;
   labelSet?: Maybe<LabelSetType>;
+  preferredEmbedder?: Maybe<Scalars["String"]>;
   creator?: UserType;
   parent?: CorpusType;
   backendLock?: Scalars["Boolean"];

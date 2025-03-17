@@ -22,13 +22,11 @@ class PermissionManager(Manager):
     def for_user(self, user, perm, extra_conditions=None):
         return self.get_queryset().for_user(user, perm, extra_conditions)
 
-    def visible_to_user(
-        self, user: User, perm: Optional[str] = None
-    ) -> PermissionQuerySet:
+    def visible_to_user(self, user: User) -> PermissionQuerySet:
         """
         Returns queryset filtered by user permission via PermissionQuerySet.
         """
-        return self.get_queryset().visible_to_user(user, perm)
+        return self.get_queryset().visible_to_user(user)
 
 
 class PermissionCTEManager(CTEManager, PermissionManager):

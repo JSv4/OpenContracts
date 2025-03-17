@@ -35,6 +35,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
 
     stores_text: bool = True
     flat_metadata: bool = False
+    embed_dim: int = 384
 
     user_id: str | int | None
     corpus_id: str | int | None

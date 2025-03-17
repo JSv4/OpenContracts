@@ -166,6 +166,29 @@ class Corpus(TreeNode):
                     {"post_processors": f"Invalid Python path: {processor}"}
                 )
 
+    def get_embedder_class(self) -> Optional[type]:
+        """
+        Get the embedder class for this corpus based on preferred_embedder setting.
+
+        Returns:
+            Optional[type]: The embedder class or None if not found
+        """
+        from opencontractserver.pipeline.utils import (
+            get_component_by_name,
+            get_default_embedder,
+        )
+
+        embedder_class = None
+        try:
+            if self.preferred_embedder:
+                embedder_class = get_component_by_name(self.preferred_embedder)
+            else:
+                embedder_class = get_default_embedder()
+        except Exception as e:
+            logger.error(f"Failed to get embedder class: {e}")
+
+        return embedder_class
+
     def embed_text(self, text: str) -> tuple[Optional[str], Optional[list[float]]]:
         """
         Use the corpus's configured preferred_embedder to generate embeddings for the given text.
@@ -178,39 +201,37 @@ class Corpus(TreeNode):
                 - The embedder instance name (or None if embedding failed)
                 - The generated embeddings (or None if embedding failed)
         """
-        from opencontractserver.pipeline.utils import (
-            get_component_by_name,
-            get_default_embedder,
-        )
-
         name = None
-        embedder = None
         embeddings = None
 
         try:
-            # Get the embedder class from the preferred_embedder path
-            if self.preferred_embedder:
-                embedder_class = get_component_by_name(self.preferred_embedder)
-                if embedder_class:
-                    # Create an instance of the embedder
-                    embedder = embedder_class()
-                    # Generate embeddings
-                    embeddings = embedder.embed_text(text)
-                    name = self.preferred_embedder
-            else:
-                # If no preferred embedder is set, use the default embedder
-                embedder_class = get_default_embedder()
-                if embedder_class:
-                    embedder = embedder_class()
-                    embeddings = embedder.embed_text(text)
-                    name = settings.DEFAULT_EMBEDDER
-
+            embedder_class = self.get_embedder_class()
+            if embedder_class:
+                # Create an instance of the embedder
+                embedder = embedder_class()
+                # Generate embeddings
+                embeddings = embedder.embed_text(text)
+                # Set the name based on which embedder was used
+                name = (
+                    self.preferred_embedder
+                    if self.preferred_embedder
+                    else settings.DEFAULT_EMBEDDER
+                )
         except Exception as e:
             logger.error(
                 f"Failed to generate embeddings using corpus preferred embedder: {e}"
             )
 
         return name, embeddings
+
+    def get_embed_dim(self) -> int:
+        """
+        Get the embedding dimension for the corpus.
+        """
+        embedder_class = self.get_embedder_class()
+        if embedder_class and hasattr(embedder_class, "vector_size"):
+            return embedder_class.vector_size
+        return settings.DEFAULT_EMBEDDING_DIMENSION
 
 
 # Model for Django Guardian permissions... trying to improve performance...

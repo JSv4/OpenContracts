@@ -86,6 +86,7 @@ export const GET_DOCUMENTS = gql`
                 corpus {
                   title
                   icon
+                  preferredEmbedder
                 }
               }
             }
@@ -443,6 +444,7 @@ export const GET_CORPUSES = gql`
             email
           }
           description
+          preferredEmbedder
           appliedAnalyzerIds
           isPublic
           is_selected @client
@@ -650,6 +652,7 @@ export const GET_ANNOTATIONS = gql`
             icon
             title
             description
+            preferredEmbedder
             __typename
           }
           document {

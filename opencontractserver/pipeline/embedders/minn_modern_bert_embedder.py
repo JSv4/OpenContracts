@@ -90,14 +90,3 @@ class MinnModernBERTEmbedder(BaseEmbedder):
             logger.error(f"Error generating embeddings: {e}")
             return None
 
-
-# Create specialized versions with different model variants if needed
-class MinnModernBERTEmbedder768(MinnModernBERTEmbedder):
-    """
-    Minnesota Case Law ModernBERT embedder that generates 768-dimensional vectors.
-    This is the default size for the Minnesota Case Law ModernBERT model.
-    """
-
-    title = "Minnesota Case Law ModernBERT Embedder (768d)"
-    description = "Generates 768-dimensional embeddings using the Minnesota Case Law ModernBERT model."
-    vector_size = 768

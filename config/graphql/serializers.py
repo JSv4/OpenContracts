@@ -35,6 +35,7 @@ class CorpusSerializer(serializers.ModelSerializer):
             "label_set",
             "creator",
             "creator_id",
+            "preferred_embedder",
         ]
         read_only_fields = ["id"]
 

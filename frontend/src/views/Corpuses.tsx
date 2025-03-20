@@ -32,6 +32,7 @@ import { CRUDModal } from "../components/widgets/CRUD/CRUDModal";
 import { CardLayout } from "../components/layout/CardLayout";
 import { CorpusBreadcrumbs } from "../components/corpuses/CorpusBreadcrumbs";
 import { LabelSetSelector } from "../components/widgets/CRUD/LabelSetSelector";
+import { EmbedderSelector } from "../components/widgets/CRUD/EmbedderSelector";
 import {
   newCorpusForm_Ui_Schema,
   newCorpusForm_Schema,
@@ -1162,6 +1163,11 @@ export const Corpuses = () => {
                       title: opened_corpus.title,
                       description: opened_corpus.description || "",
                       allowComments: opened_corpus.allowComments || false,
+                      preferredEmbedder: opened_corpus.preferredEmbedder,
+                      creator: opened_corpus.creator,
+                      created: opened_corpus.created,
+                      modified: opened_corpus.modified,
+                      isPublic: opened_corpus.isPublic,
                     }}
                   />
                 )}
@@ -1285,7 +1291,10 @@ export const Corpuses = () => {
             fileLabel="Corpus Icon"
             fileIsImage={true}
             acceptedFileTypes="image/*"
-            propertyWidgets={{ labelSet: <LabelSetSelector /> }}
+            propertyWidgets={{
+              labelSet: <LabelSetSelector />,
+              preferredEmbedder: <EmbedderSelector />,
+            }}
           />
           {exporting_corpus ? (
             <SelectExportTypeModal visible={Boolean(exportingCorpus)} />
@@ -1317,6 +1326,7 @@ export const Corpuses = () => {
               acceptedFileTypes="image/*"
               propertyWidgets={{
                 labelSet: <LabelSetSelector read_only={true} />,
+                preferredEmbedder: <EmbedderSelector read_only={true} />,
               }}
             />
           ) : (
@@ -1338,7 +1348,10 @@ export const Corpuses = () => {
               fileLabel="Corpus Icon"
               fileIsImage={true}
               acceptedFileTypes="image/*"
-              propertyWidgets={{ labelSet: <LabelSetSelector /> }}
+              propertyWidgets={{
+                labelSet: <LabelSetSelector />,
+                preferredEmbedder: <EmbedderSelector />,
+              }}
             />
           ) : (
             <></>

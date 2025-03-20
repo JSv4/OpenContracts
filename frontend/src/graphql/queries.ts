@@ -1967,6 +1967,33 @@ export const GET_POST_PROCESSORS = gql`
   }
 `;
 
+/** Input type for the getPostprocessors query. */
+export interface GetEmbeddersInput {}
+/** Output type for the getPostprocessors query. */
+export interface GetEmbeddersOutput {
+  pipelineComponents: {
+    /** List of available post-processors. */
+    embedders: Array<PipelineComponentType>;
+  };
+}
+export const GET_EMBEDDERS = gql`
+  query {
+    pipelineComponents {
+      embedders {
+        name
+        moduleName
+        title
+        description
+        author
+        componentType
+        inputSchema
+        vectorSize
+        className
+      }
+    }
+  }
+`;
+
 // First, we'll define a new combined query that gets everything we need:
 export interface GetDocumentKnowledgeAndAnnotationsInput {
   documentId: string;

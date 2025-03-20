@@ -81,7 +81,7 @@ class Corpus(TreeNode):
 
     # Embedder configuration
     preferred_embedder = django.db.models.CharField(
-        max_length=256,
+        max_length=1024,
         null=True,
         blank=True,
         help_text="Fully qualified Python path to the embedder class to use for this corpus",

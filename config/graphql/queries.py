@@ -983,7 +983,6 @@ class Query(graphene.ObjectType):
         description="Retrieve all registered pipeline components, optionally filtered by MIME type.",
     )
 
-    @login_required
     def resolve_pipeline_components(
         self, info, mimetype: Optional[FileTypeEnum] = None
     ) -> PipelineComponentsType:
@@ -1055,6 +1054,7 @@ class Query(graphene.ObjectType):
 
                     component_info = PipelineComponentType(
                         name=component_cls.__name__,
+                        class_name=f"{component_cls.__module__}.{component_cls.__name__}",
                         title=metadata.get("title", ""),
                         module_name=metadata.get("module_name", ""),
                         description=metadata.get("description", ""),

@@ -92,14 +92,3 @@ class ModernBERTEmbedder(BaseEmbedder):
             logger.error(f"Error generating embeddings: {e}")
             return None
 
-
-# Create specialized versions with different model variants if needed
-class ModernBERTEmbedder768(ModernBERTEmbedder):
-    """
-    ModernBERT embedder that generates 768-dimensional vectors.
-    This is the default size for the ModernBERT model.
-    """
-
-    title = "ModernBERT Embedder (768d)"
-    description = "Generates 768-dimensional embeddings using the ModernBERT model."
-    vector_size = 768

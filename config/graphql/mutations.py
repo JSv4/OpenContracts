@@ -1462,6 +1462,7 @@ class CreateCorpusMutation(DRFMutation):
         description = graphene.String(required=False)
         icon = graphene.String(required=False)
         label_set = graphene.String(required=False)
+        preferred_embedder = graphene.String(required=False)
 
 
 class UpdateCorpusMutation(DRFMutation):
@@ -1478,7 +1479,7 @@ class UpdateCorpusMutation(DRFMutation):
         description = graphene.String(required=False)
         icon = graphene.String(required=False)
         label_set = graphene.String(required=False)
-
+        preferred_embedder = graphene.String(required=False)
 
 class DeleteCorpusMutation(DRFDeletion):
     class IOSettings:

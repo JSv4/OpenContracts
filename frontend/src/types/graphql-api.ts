@@ -1576,6 +1576,7 @@ export type PipelineComponentType = {
   dependencies?: string[];
   /** Vector size for embedders. */
   vectorSize?: number;
+  className?: string;
   /** Module name for the component. */
   moduleName?: string;
   /** List of supported file types. */

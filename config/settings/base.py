@@ -173,7 +173,7 @@ AUTHENTICATION_BACKENDS = [
 
 # AUTH0
 USE_AUTH0 = env.bool("USE_AUTH0", False)
-USE_API_KEY_AUTH = env.bool("ALLOW_API_KEYS", True)
+USE_API_KEY_AUTH = env.bool("ALLOW_API_KEYS", False)
 
 if USE_AUTH0:
 
@@ -584,15 +584,15 @@ MIMETYPE_TO_LABEL_TYPE = {
 
 # Map of MIME types to preferred embedders
 PREFERRED_EMBEDDERS = {
-    "application/pdf": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",  # noqa:
-    "text/plain": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",  # noqa:
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",  # noqa:
-    # "text/html": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",  # Removed as we don't support HTML  # noqa:
+    "application/pdf": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # noqa:
+    "text/plain": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # noqa:
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # noqa:
+    # "text/html": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # Removed as we don't support HTML  # noqa:
 }
 
 # Default embedder to use if no preferred embedder is found
 DEFAULT_EMBEDDER = (
-    "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768"
+    "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"
 )
 
 # Default embedding dimension to use if no dimension is specified
@@ -600,9 +600,9 @@ DEFAULT_EMBEDDING_DIMENSION = 768
 
 # Map of MIME types to default embedders for different dimensions
 DEFAULT_EMBEDDERS_BY_FILETYPE = {
-    "application/pdf": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",
-    "text/plain": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.modern_bert_embedder.ModernBERTEmbedder768",  # noqa
+    "application/pdf": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+    "text/plain": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # noqa
 }
 
 # Default runner

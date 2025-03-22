@@ -1,10 +1,12 @@
 import logging
 from typing import Union
 
+from celery import shared_task
+from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
-from config import celery_app
+# from config import celery_app
 from opencontractserver.annotations.models import Annotation, Note
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
@@ -18,7 +20,7 @@ from opencontractserver.pipeline.utils import (
 
 User = get_user_model()
 
-logger = logging.getLogger(__name__)
+logger = get_task_logger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
@@ -71,10 +73,23 @@ def get_embedder_for_corpus(
     return embedder_class, embedder_path
 
 
-@celery_app.task(
-    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 3, "countdown": 60},
 )
-def calculate_embedding_for_doc_text(doc_id: str | int, corpus_id: str | int):
+def calculate_embedding_for_doc_text(
+    self, doc_id: Union[str, int], corpus_id: Union[str, int]
+) -> None:
+    """
+    Calculate embeddings for the text extracted from a document, using its associated corpus.
+    Retries automatically if any exception occurs, up to 3 times with a 60-second delay.
+
+    Args:
+        self: (Celery task instance, passed automatically when bind=True)
+        doc_id (str | int): ID of the document.
+        corpus_id (str | int): ID of the corpus to use for embedding.
+    """
     try:
         doc = Document.objects.get(id=doc_id)
 
@@ -84,7 +99,6 @@ def calculate_embedding_for_doc_text(doc_id: str | int, corpus_id: str | int):
         else:
             text = ""
 
-        # Check if the document is part of any corpus and use that corpus's embedder
         corpus = Corpus.objects.get(id=corpus_id)
         embedder_path, embeddings = corpus.embed_text(text)
         doc.add_embedding(embedder_path, embeddings)
@@ -93,20 +107,24 @@ def calculate_embedding_for_doc_text(doc_id: str | int, corpus_id: str | int):
         logger.error(
             f"calculate_embedding_for_doc_text() - failed to generate embeddings due to error: {e}"
         )
+        raise
 
 
-@celery_app.task(
-    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 3, "countdown": 60},
 )
 def calculate_embedding_for_annotation_text(
-    annotation_id: str | int, embedder_path: str = None
-):
+    self, annotation_id: Union[str, int], embedder_path: str = None
+) -> None:
     """
-    Calculate embeddings for an annotation text.
+    Calculate embeddings for an annotation's text.
 
     Args:
-        annotation_id: The ID of the annotation
-        embedder_path: Optional explicit embedder path to use (highest precedence)
+        self: (Celery task instance, passed automatically when bind=True)
+        annotation_id (str | int): ID of the annotation
+        embedder_path (str, optional): Optional explicit embedder path to use (highest precedence)
     """
     try:
         annot = Annotation.objects.get(id=annotation_id)
@@ -175,12 +193,23 @@ def calculate_embedding_for_annotation_text(
             f"calculate_embedding_for_annotation_text() - failed to generate embeddings due to error: {e}"
         )
         logger.exception("Full traceback for annotation embedding failure:")
+        raise
 
 
-@celery_app.task(
-    autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 3, "countdown": 60},
 )
-def calculate_embedding_for_note_text(note_id: str | int):
+def calculate_embedding_for_note_text(self, note_id: Union[str, int]) -> None:
+    """
+    Calculate embeddings for the text in a Note object, possibly falling back to a default embedder.
+    Retries automatically if any exception occurs, up to 3 times with a 60-second delay.
+
+    Args:
+        self: (Celery task instance, passed automatically when bind=True)
+        note_id (str | int): ID of the note.
+    """
     try:
         note = Note.objects.get(id=note_id)
         text = note.content
@@ -206,3 +235,4 @@ def calculate_embedding_for_note_text(note_id: str | int):
         logger.error(
             f"calculate_embedding_for_note_text() - failed to generate embeddings due to error: {e}"
         )
+        raise

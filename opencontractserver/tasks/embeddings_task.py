@@ -98,10 +98,18 @@ def calculate_embedding_for_doc_text(doc_id: str | int, corpus_id: str | int):
 @celery_app.task(
     autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5}
 )
-def calculate_embedding_for_annotation_text(annotation_id: str | int):
+def calculate_embedding_for_annotation_text(
+    annotation_id: str | int, embedder_path: str = None
+):
+    """
+    Calculate embeddings for an annotation text.
+
+    Args:
+        annotation_id: The ID of the annotation
+        embedder_path: Optional explicit embedder path to use (highest precedence)
+    """
     try:
         annot = Annotation.objects.get(id=annotation_id)
-
         text = annot.raw_text
 
         if not isinstance(text, str) or len(text) == 0:
@@ -110,22 +118,50 @@ def calculate_embedding_for_annotation_text(annotation_id: str | int):
             )
             return
 
-        try:
-            corpus_id = annot.corpus_id if annot.corpus else None
+        embeddings = None
 
-            if corpus_id:
-                corpus = Corpus.objects.get(id=corpus_id)
+        # Case 1: Explicit embedder_path provided
+        if embedder_path:
+            try:
+                embedder_class = get_component_by_name(embedder_path)
+                embedder = embedder_class()
+                embeddings = embedder.embed_text(text)
+                logger.debug(
+                    f"Using explicitly provided embedder_path: {embedder_path}"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to use explicit embedder_path: {e}. Will try other options."
+                )
+                embedder_path = None  # Reset to try other options
+
+        # Case 2: Use embedder from annotation's corpus
+        if embeddings is None and (getattr(annot, "corpus_id", None) is not None):
+            try:
+                corpus = Corpus.objects.get(id=annot.corpus_id)
+                # Expect corpus.embed_text to return a tuple (embedder_path, embeddings)
                 embedder_path, embeddings = corpus.embed_text(text)
+                logger.debug(
+                    f"Using embedder from annotation's corpus {annot.corpus_id}: {embedder_path}"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to use corpus embedder: {e}. Will try default.")
+                embeddings = None
+
+        # Case 3: Fallback to default system embedder
+        if embeddings is None:
+            embedder_instance = get_default_embedder()()
+            result = embedder_instance.embed_text(text)
+            if isinstance(result, tuple) and len(result) == 2:
+                default_embedder_path, embeddings = result
+                embedder_path = settings.DEFAULT_EMBEDDER or default_embedder_path
             else:
-                raise ValueError("No corpus found for annotation")
-        except Exception as corpus_error:
-            logger.warning(
-                f"Failed to use corpus embedder: {corpus_error}. Falling back to default embedder."
-            )
-            embedder_path = settings.DEFAULT_EMBEDDER
-            embedder_class = get_default_embedder()
-            embedder = embedder_class()  # Create an instance
-            embeddings = embedder.embed_text(text)
+                embeddings = result
+                embedder_path = (
+                    settings.DEFAULT_EMBEDDER
+                    or f"{embedder_instance.__module__}.{embedder_instance.__class__.__name__}"
+                )
+            logger.debug(f"Using default system embedder: {embedder_path}")
 
         if embeddings:
             annot.add_embedding(embedder_path, embeddings)

@@ -1,4 +1,5 @@
 import logging
+
 from django.conf import settings
 from django.test.signals import setting_changed
 from django.utils.module_loading import import_string
@@ -18,9 +19,13 @@ DEFAULTS = {
     "AUTH0_M2M_MANAGEMENT_GRANT_TYPE": settings.AUTH0_M2M_MANAGEMENT_GRANT_TYPE,
 }
 
-logger.debug(f"Auth0 settings initialized with domain: {DEFAULTS['AUTH0_DOMAIN']}, client ID: {DEFAULTS['AUTH0_CLIENT_ID']}")
+logger.debug(
+    f"Auth0 settings initialized with domain: {DEFAULTS['AUTH0_DOMAIN']}, client ID: {DEFAULTS['AUTH0_CLIENT_ID']}"
+)
 logger.debug(f"AUTH0_CREATE_NEW_USERS set to: {DEFAULTS['AUTH0_CREATE_NEW_USERS']}")
-logger.debug(f"AUTH0_GET_USER_FROM_TOKEN_HANDLER set to: {DEFAULTS['AUTH0_GET_USER_FROM_TOKEN_HANDLER']}")
+logger.debug(
+    f"AUTH0_GET_USER_FROM_TOKEN_HANDLER set to: {DEFAULTS['AUTH0_GET_USER_FROM_TOKEN_HANDLER']}"
+)
 
 IMPORT_STRINGS = (
     "AUTH0_DECODE_HANDLER",
@@ -63,19 +68,25 @@ class Auth0JWTSettings:
         self.defaults = defaults
         self.import_strings = import_strings
         self._cached_attrs = set()
-        logger.debug(f"Auth0JWTSettings initialized with {len(defaults)} defaults and {len(import_strings)} import_strings")
+        logger.debug(
+            f"Auth0JWTSettings initialized with {len(defaults)} defaults and {len(import_strings)} import_strings"
+        )
 
     def __getattr__(self, attr):
         logger.debug(f"Auth0JWTSettings.__getattr__() - Accessing setting: {attr}")
         if attr not in self.defaults:
-            logger.error(f"Auth0JWTSettings.__getattr__() - Invalid setting requested: {attr}")
+            logger.error(
+                f"Auth0JWTSettings.__getattr__() - Invalid setting requested: {attr}"
+            )
             raise AttributeError(f"Invalid setting: `{attr}`")
 
         value = self.user_settings.get(attr, self.defaults[attr])
         logger.debug(f"Auth0JWTSettings.__getattr__() - Value for {attr}: {value}")
 
         if attr in self.import_strings:
-            logger.debug(f"Auth0JWTSettings.__getattr__() - Importing string for {attr}")
+            logger.debug(
+                f"Auth0JWTSettings.__getattr__() - Importing string for {attr}"
+            )
             value = perform_import(value, attr)
 
         self._cached_attrs.add(attr)
@@ -85,15 +96,23 @@ class Auth0JWTSettings:
     @property
     def user_settings(self):
         if not hasattr(self, "_user_settings"):
-            logger.debug("Auth0JWTSettings.user_settings - Initializing user settings from Django settings")
+            logger.debug(
+                "Auth0JWTSettings.user_settings - Initializing user settings from Django settings"
+            )
             self._user_settings = getattr(settings, "AUTH0_JWT", {})
-            logger.debug(f"Auth0JWTSettings.user_settings - Retrieved {len(self._user_settings)} user settings")
+            logger.debug(
+                f"Auth0JWTSettings.user_settings - Retrieved {len(self._user_settings)} user settings"
+            )
         return self._user_settings
 
     def reload(self):
-        logger.debug(f"Auth0JWTSettings.reload() - Reloading {len(self._cached_attrs)} cached attributes")
+        logger.debug(
+            f"Auth0JWTSettings.reload() - Reloading {len(self._cached_attrs)} cached attributes"
+        )
         for attr in self._cached_attrs:
-            logger.debug(f"Auth0JWTSettings.reload() - Deleting cached attribute: {attr}")
+            logger.debug(
+                f"Auth0JWTSettings.reload() - Deleting cached attribute: {attr}"
+            )
             delattr(self, attr)
 
         self._cached_attrs.clear()

@@ -6,7 +6,6 @@ import numpy as np
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.embedders.modern_bert_embedder import (
     ModernBERTEmbedder,
-    ModernBERTEmbedder768,
 )
 
 
@@ -148,18 +147,6 @@ class TestModernBERTEmbedder(unittest.TestCase):
 
         # Check that the result is None
         self.assertIsNone(result)
-
-    def test_modernbert_embedder_768(self):
-        """Test the specialized 768-dimensional embedder."""
-        embedder = ModernBERTEmbedder768()
-
-        # Check attributes
-        self.assertEqual(embedder.title, "ModernBERT Embedder (768d)")
-        self.assertEqual(embedder.vector_size, 768)
-        self.assertEqual(embedder.model_name, "answerdotai/ModernBERT-base")
-        self.assertEqual(
-            embedder.model_path, "/models/sentence-transformers/ModernBERT-base"
-        )
 
 
 if __name__ == "__main__":

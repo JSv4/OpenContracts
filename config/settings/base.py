@@ -591,9 +591,7 @@ PREFERRED_EMBEDDERS = {
 }
 
 # Default embedder to use if no preferred embedder is found
-DEFAULT_EMBEDDER = (
-    "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"
-)
+DEFAULT_EMBEDDER = "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"
 
 # Default embedding dimension to use if no dimension is specified
 DEFAULT_EMBEDDING_DIMENSION = 768

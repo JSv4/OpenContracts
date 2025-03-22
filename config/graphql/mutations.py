@@ -1481,6 +1481,7 @@ class UpdateCorpusMutation(DRFMutation):
         label_set = graphene.String(required=False)
         preferred_embedder = graphene.String(required=False)
 
+
 class DeleteCorpusMutation(DRFDeletion):
     class IOSettings:
         model = Corpus

@@ -91,4 +91,3 @@ class ModernBERTEmbedder(BaseEmbedder):
         except Exception as e:
             logger.error(f"Error generating embeddings: {e}")
             return None
-

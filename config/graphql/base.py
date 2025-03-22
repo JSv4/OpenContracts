@@ -168,9 +168,11 @@ class DRFMutation(graphene.Mutation):
 
             # Check if lookup_field exists in IOSettings and if it's in kwargs
             # This allows create mutations to work without requiring lookup_field
-            is_update = (hasattr(cls.IOSettings, "lookup_field") and 
-                         cls.IOSettings.lookup_field in kwargs)
-            
+            is_update = (
+                hasattr(cls.IOSettings, "lookup_field")
+                and cls.IOSettings.lookup_field in kwargs
+            )
+
             if is_update:
                 logger.info("Lookup_field specified - update")
                 obj = cls.IOSettings.model.objects.get(

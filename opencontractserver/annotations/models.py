@@ -434,7 +434,7 @@ class Annotation(BaseOCModel, HasEmbeddingMixin):
     )
 
     # Vector for vector search - legacy field, will be deprecated
-    embedding = VectorField(dimensions=384, null=True)
+    embedding = VectorField(dimensions=384, null=True, blank=True)
 
     # New relationship to the Embedding model
     embeddings = django.db.models.ForeignKey(
@@ -607,7 +607,7 @@ class Note(BaseOCModel, HasEmbeddingMixin):
     content = django.db.models.TextField(default="", blank=True)
 
     # Vector for vector search - legacy field, will be deprecated
-    embedding = VectorField(dimensions=384, null=True)
+    embedding = VectorField(dimensions=384, null=True, blank=True)
 
     # New relationship to the Embedding model
     embeddings = django.db.models.ForeignKey(

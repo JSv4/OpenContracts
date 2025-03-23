@@ -8,6 +8,7 @@ from typing import Any, Callable, Union
 
 from asgiref.sync import sync_to_async
 from celery import shared_task
+from celery.exceptions import Retry
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from plasmapdf.models.PdfDataLayer import build_translation_layer
@@ -311,6 +312,10 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
 
                 # Return the final 5-tuple to keep results uniform
                 return (doc_annotations, span_label_pairs, metadata, task_pass, message)
+
+            except Retry:
+                logger.info(f"Retry in doc_analyzer_task for doc_id {doc_id}")
+                raise
 
             except ValueError:
                 # Re-raise ValueError as is, since they're raised intentionally for invalid return values

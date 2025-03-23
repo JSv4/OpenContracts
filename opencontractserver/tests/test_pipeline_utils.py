@@ -177,7 +177,7 @@ class TestPostProcessor(BasePostProcessor):
             os.path.dirname(__file__), "..", "pipeline", "parsers", "test_parser.py"
         )
         cls.embedder_path = os.path.join(
-            os.path.dirname(__file__), "..", "pipeline", "embedders", "test_embedder.py"
+            os.path.dirname(__file__), "..", "pipeline", "embedders", "temp_embedder.py"
         )
         cls.thumbnailer_path = os.path.join(
             os.path.dirname(__file__),
@@ -238,7 +238,7 @@ class TestPostProcessor(BasePostProcessor):
 
         # Force import the new modules directly
         try:
-            from opencontractserver.pipeline.embedders.test_embedder import (  # noqa
+            from opencontractserver.pipeline.embedders.temp_embedder import (  # noqa
                 TestEmbedder,
                 TestEmbedder384,
                 TestEmbedder768,
@@ -416,8 +416,8 @@ class TestPostProcessor(BasePostProcessor):
         self.assertEqual(component, TestParser)
 
         # Test embedder component
-        component = get_component_by_name("test_embedder")
-        from opencontractserver.pipeline.embedders.test_embedder import (
+        component = get_component_by_name("temp_embedder")
+        from opencontractserver.pipeline.embedders.temp_embedder import (
             TestEmbedder,  # type: ignore; type: ignore
         )
 
@@ -508,24 +508,24 @@ class TestPostProcessor(BasePostProcessor):
         """
         # Get the test embedder class
         embedders = get_all_embedders()
-        test_embedder = next((e for e in embedders if e.title == "Test Embedder"), None)
-        test_embedder_384 = next(
+        temp_embedder = next((e for e in embedders if e.title == "Test Embedder"), None)
+        temp_embedder_384 = next(
             (e for e in embedders if e.title == "Test Embedder 384"), None
         )
 
         # Test with class
-        self.assertEqual(get_dimension_from_embedder(test_embedder), 128)
-        self.assertEqual(get_dimension_from_embedder(test_embedder_384), 384)
+        self.assertEqual(get_dimension_from_embedder(temp_embedder), 128)
+        self.assertEqual(get_dimension_from_embedder(temp_embedder_384), 384)
 
         self.assertEqual(
             get_dimension_from_embedder(
-                "opencontractserver.pipeline.embedders.test_embedder.TestEmbedder"
+                "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder"
             ),
             128,
         )
         self.assertEqual(
             get_dimension_from_embedder(
-                "opencontractserver.pipeline.embedders.test_embedder.TestEmbedder384"
+                "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder384"
             ),
             384,
         )
@@ -535,8 +535,8 @@ class TestPostProcessor(BasePostProcessor):
 
     @override_settings(
         DEFAULT_EMBEDDERS_BY_FILETYPE={
-            "application/pdf": "opencontractserver.pipeline.embedders.test_embedder.TestEmbedder384",
-            "text/plain": "opencontractserver.pipeline.embedders.test_embedder.TestEmbedder768",
+            "application/pdf": "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder384",
+            "text/plain": "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder768",
         }
     )
     def test_get_default_embedder_for_filetype(self) -> None:

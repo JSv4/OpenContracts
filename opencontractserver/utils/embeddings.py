@@ -85,6 +85,7 @@ def generate_embeddings_from_text(
                 f"Failed to generate embeddings via embedder class {embedder_class}: {e}"
             )
 
+    # TODO - this needs attention. Possible removal.
     # If no embedder_class or it failed, deploy the microservice approach
     logger.debug("Falling back to the embeddings microservice for embedding text.")
     try:

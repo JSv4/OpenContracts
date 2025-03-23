@@ -216,7 +216,7 @@ class TestDjangoAnnotationVectorStore(TestCase):
         )
 
     @override_settings(
-        DEFAULT_EMBEDDING_PATH="opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"  # noqa: E501
+        DEFAULT_EMBEDDER="opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"  # noqa: E501
     )
     def test_query_by_vector_similarity_explicit_embedding(self) -> None:
         """

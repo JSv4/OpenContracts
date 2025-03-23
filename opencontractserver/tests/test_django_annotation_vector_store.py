@@ -1,25 +1,24 @@
 import random
-from typing import List, Union, Optional
+from typing import Optional
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
-from unittest.mock import patch
+from llama_index.core.vector_stores import (
+    MetadataFilter,
+    MetadataFilters,
+    VectorStoreQuery,
+)
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
-from llama_index.core.vector_stores import (
-    VectorStoreQuery,
-    MetadataFilters,
-    MetadataFilter
-)
-from opencontractserver.utils.embeddings import generate_embeddings_from_text
 
 User = get_user_model()
 
 
-def random_vector(dimension: int = 384, seed: Optional[int] = None) -> List[float]:
+def random_vector(dimension: int = 384, seed: Optional[int] = None) -> list[float]:
     """
     Generates a random vector of the specified dimension.
     Optionally accepts a seed to ensure reproducibility.
@@ -28,7 +27,7 @@ def random_vector(dimension: int = 384, seed: Optional[int] = None) -> List[floa
     return [rng.random() for _ in range(dimension)]
 
 
-def constant_vector(dimension: int = 384, value: float = 0.5) -> List[float]:
+def constant_vector(dimension: int = 384, value: float = 0.5) -> list[float]:
     """
     Generates a constant vector of a given dimension (default 384).
     Useful to simulate a dummy query vector of the correct dimension.
@@ -129,9 +128,18 @@ class TestDjangoAnnotationVectorStore(TestCase):
 
         # Add embeddings (384 dimension) to anno1, anno2, anno3; skip anno4 to confirm no-embed.
         dim = 384
-        cls.anno1.add_embedding("opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder", constant_vector(dim, 0.1))
-        cls.anno2.add_embedding("opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder", constant_vector(dim, 0.2))
-        cls.anno3.add_embedding("opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder", constant_vector(dim, 0.3))
+        cls.anno1.add_embedding(
+            "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+            constant_vector(dim, 0.1),
+        )
+        cls.anno2.add_embedding(
+            "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+            constant_vector(dim, 0.2),
+        )
+        cls.anno3.add_embedding(
+            "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+            constant_vector(dim, 0.3),
+        )
         # no embedding for anno4
 
     def setUp(self) -> None:
@@ -156,9 +164,15 @@ class TestDjangoAnnotationVectorStore(TestCase):
         If we do a query without specifying either query_embedding or query_str,
         just retrieve all matching annotations for the corpus (and user) with no doc_id.
         """
-        query = VectorStoreQuery(query_embedding=None, query_str=None, similarity_top_k=None)
+        query = VectorStoreQuery(
+            query_embedding=None, query_str=None, similarity_top_k=None
+        )
         result = self.run_sync_query(query)
-        self.assertEqual(len(result.nodes), 4, "Should return all four annotations (no embedding filter).")
+        self.assertEqual(
+            len(result.nodes),
+            4,
+            "Should return all four annotations (no embedding filter).",
+        )
 
     def test_query_with_document_filter(self) -> None:
         """
@@ -170,9 +184,13 @@ class TestDjangoAnnotationVectorStore(TestCase):
             corpus_id=self.corpus.id,
             document_id=self.doc1.id,
         )
-        query = VectorStoreQuery(query_embedding=None, query_str=None, similarity_top_k=None)
+        query = VectorStoreQuery(
+            query_embedding=None, query_str=None, similarity_top_k=None
+        )
         result = store_doc1.query(query)
-        self.assertEqual(len(result.nodes), 2, "Should have exactly 2 annotations from doc1.")
+        self.assertEqual(
+            len(result.nodes), 2, "Should have exactly 2 annotations from doc1."
+        )
         texts = [n.text for n in result.nodes]
         self.assertTrue(any("first annotation text" in t for t in texts))
         self.assertTrue(any("Another annotation" in t for t in texts))
@@ -186,12 +204,20 @@ class TestDjangoAnnotationVectorStore(TestCase):
             corpus_id=self.corpus.id,
             must_have_text="Another",
         )
-        query = VectorStoreQuery(query_embedding=None, query_str=None, similarity_top_k=None)
+        query = VectorStoreQuery(
+            query_embedding=None, query_str=None, similarity_top_k=None
+        )
         result = store_text_filter.query(query)
-        self.assertEqual(len(result.nodes), 1, "Only anno2 matches the substring 'Another'.")
-        self.assertIn("Another annotation text, minor label, on doc1", result.nodes[0].text)
+        self.assertEqual(
+            len(result.nodes), 1, "Only anno2 matches the substring 'Another'."
+        )
+        self.assertIn(
+            "Another annotation text, minor label, on doc1", result.nodes[0].text
+        )
 
-    @override_settings(DEFAULT_EMBEDDING_PATH="opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder")
+    @override_settings(
+        DEFAULT_EMBEDDING_PATH="opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"  # noqa: E501
+    )
     def test_query_by_vector_similarity_explicit_embedding(self) -> None:
         """
         Provide an explicit query embedding. Expect to see only annotations with embeddings
@@ -202,7 +228,11 @@ class TestDjangoAnnotationVectorStore(TestCase):
         result = self.run_sync_query(query)
         # Because the dimension is 384, we only expect anno1,2,3 to appear. Anno4 has no embedding.
         returned_ids = {n.id_ for n in result.nodes}
-        self.assertNotIn(str(self.anno4.id), returned_ids, "anno4 has no embedding, shouldn't appear.")
+        self.assertNotIn(
+            str(self.anno4.id),
+            returned_ids,
+            "anno4 has no embedding, shouldn't appear.",
+        )
         self.assertIn(str(self.anno1.id), returned_ids)
         self.assertIn(str(self.anno2.id), returned_ids)
         self.assertIn(str(self.anno3.id), returned_ids)
@@ -216,7 +246,7 @@ class TestDjangoAnnotationVectorStore(TestCase):
         # 1) Mock the generate_embeddings_from_text to return a vector of dimension 384
         mock_gen_embeds.return_value = (
             "mocked-embedder",
-            [0.25] * 384  # or any other test vector
+            [0.25] * 384,  # or any other test vector
         )
 
         # 2) Instantiate your vector store
@@ -228,27 +258,39 @@ class TestDjangoAnnotationVectorStore(TestCase):
         )
 
         # 3) Run the query with a query_str
-        query = VectorStoreQuery(query_embedding=None, query_str="some text", similarity_top_k=3)
+        query = VectorStoreQuery(
+            query_embedding=None, query_str="some text", similarity_top_k=3
+        )
         result = store.query(query)
 
         # 4) Assert you get the annotations you expect
-        returned_ids = set(n.id_ for n in result.nodes)
+        returned_ids = {n.id_ for n in result.nodes}
         self.assertIn(str(self.anno1.id), returned_ids)
         self.assertIn(str(self.anno2.id), returned_ids)
         self.assertIn(str(self.anno3.id), returned_ids)
-        self.assertNotIn(str(self.anno4.id), returned_ids, "Should exclude anno4 with no embedding.")
+        self.assertNotIn(
+            str(self.anno4.id), returned_ids, "Should exclude anno4 with no embedding."
+        )
 
     def test_query_with_label_metadata_filter(self) -> None:
         """
         Ensures we can filter by annotation_label text via the VectorStoreQuery filters.
         """
-        filters = MetadataFilters(filters=[MetadataFilter(key="annotation_label", value="Important Label")])
-        query = VectorStoreQuery(query_embedding=None, query_str=None, filters=filters, similarity_top_k=10)
+        filters = MetadataFilters(
+            filters=[MetadataFilter(key="annotation_label", value="Important Label")]
+        )
+        query = VectorStoreQuery(
+            query_embedding=None, query_str=None, filters=filters, similarity_top_k=10
+        )
 
         result = self.run_sync_query(query)
         returned_texts = [n.text for n in result.nodes]
         # anno1, anno3 both have "Important Label"
-        self.assertEqual(len(returned_texts), 2, "We expect exactly 2 annotations with label=Important Label.")
+        self.assertEqual(
+            len(returned_texts),
+            2,
+            "We expect exactly 2 annotations with label=Important Label.",
+        )
         self.assertTrue(any("first annotation text" in txt for txt in returned_texts))
         self.assertTrue(any("doc2, important label" in txt for txt in returned_texts))
 
@@ -262,9 +304,15 @@ class TestDjangoAnnotationVectorStore(TestCase):
         # can't do a similarity search and must fallback.
         mock_gen_embeds.return_value = (None, None)
 
-        query = VectorStoreQuery(query_embedding=None, query_str="some text", similarity_top_k=10)
+        query = VectorStoreQuery(
+            query_embedding=None, query_str="some text", similarity_top_k=10
+        )
         result = self.run_sync_query(query)
-        self.assertEqual(len(result.nodes), 3, "Should return all annotations with non-null embedding if embedding is None.")
+        self.assertEqual(
+            len(result.nodes),
+            3,
+            "Should return all annotations with non-null embedding if embedding is None.",
+        )
 
     def test_query_with_top_k_exceeded(self) -> None:
         """
@@ -274,4 +322,8 @@ class TestDjangoAnnotationVectorStore(TestCase):
         query_vec = constant_vector(384, value=0.25)
         query = VectorStoreQuery(query_embedding=query_vec, similarity_top_k=2)
         result = self.run_sync_query(query)
-        self.assertLessEqual(len(result.nodes), 2, "We should only retrieve top_k=2 with similarity search.") 
+        self.assertLessEqual(
+            len(result.nodes),
+            2,
+            "We should only retrieve top_k=2 with similarity search.",
+        )

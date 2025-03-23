@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Optional, Tuple, List
+from typing import Optional
 
 import django
 from django.conf import settings
@@ -11,14 +11,14 @@ from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from tree_queries.models import TreeNode
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.shared.Models import BaseOCModel
-from opencontractserver.shared.QuerySets import PermissionedTreeQuerySet
-from opencontractserver.shared.utils import calc_oc_file_path
-from opencontractserver.utils.embeddings import generate_embeddings_from_text
 from opencontractserver.pipeline.utils import (
     get_component_by_name,
     get_default_embedder,
 )
+from opencontractserver.shared.Models import BaseOCModel
+from opencontractserver.shared.QuerySets import PermissionedTreeQuerySet
+from opencontractserver.shared.utils import calc_oc_file_path
+from opencontractserver.utils.embeddings import generate_embeddings_from_text
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +186,7 @@ class Corpus(TreeNode):
             logger.error(f"Failed to get embedder class: {e}")
         return embedder_class
 
-    def embed_text(self, text: str) -> Tuple[Optional[str], Optional[List[float]]]:
+    def embed_text(self, text: str) -> tuple[Optional[str], Optional[list[float]]]:
         """
         Use a unified embeddings function from utils to create embeddings for the text.
 

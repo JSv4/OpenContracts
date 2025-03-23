@@ -1,22 +1,24 @@
 import logging
 from typing import Any, Optional
 
-from django.conf import settings
-
 from channels.db import database_sync_to_async
+from django.conf import settings
 from django.db.models import Q, QuerySet
 from llama_index.core.schema import BaseNode, TextNode
 from llama_index.core.vector_stores.types import (
     BasePydanticVectorStore,
-    MetadataFilters,
     MetadataFilter,
+    MetadataFilters,
     VectorStoreQuery,
     VectorStoreQueryResult,
 )
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
-from opencontractserver.utils.embeddings import get_embedder_for_corpus, generate_embeddings_from_text
+from opencontractserver.utils.embeddings import (
+    generate_embeddings_from_text,
+    get_embedder_for_corpus,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -73,6 +75,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         # Validate or fallback dimension
         if embed_dim not in [384, 768, 1536, 3072]:
             from django.conf import settings
+
             embed_dim = getattr(settings, "DEFAULT_EMBEDDING_DIMENSION", 768)
 
         super().__init__(
@@ -153,8 +156,6 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         """Build the filter query based on the provided metadata filters."""
         queryset = self._get_annotation_queryset()
 
-        # print(f"_build_filter_query: {queryset.count()}")
-
         if filters is None:
             return queryset
 
@@ -176,8 +177,6 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         ids = []
 
         for row in rows:
-            # print(f"Embedding type: {type(row.embedding)} {row.embedding}")
-            # print(f"Row id: {row.id}")
             node = TextNode(
                 doc_id=str(row.id),
                 text=row.raw_text,
@@ -197,9 +196,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
                     else None,
                 },
             )
-            # print(f"Created node: {node}")
-            # print(f"Node ref doc: {node.ref_doc_id}")
-            # print(f"Node dir: {dir(node)}")
+
             nodes.append(node)
             similarities.append(row.similarity)
             ids.append(str(row.id))
@@ -252,70 +249,53 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         """
         # Build the base queryset
         queryset = Annotation.objects.all()
-        print(f"Starting with base queryset: {queryset.query}")
 
         if self.corpus_id:
             queryset = queryset.filter(corpus_id=self.corpus_id)
-            print(f"Applied corpus_id filter: {self.corpus_id}, queryset count: {queryset.count()}")
+
         if self.document_id:
             queryset = queryset.filter(document_id=self.document_id)
-            print(f"Applied document_id filter: {self.document_id}, queryset count: {queryset.count()}")
+
         if self.user_id:
             queryset = queryset.filter(creator_id=self.user_id)
-            print(f"Applied user_id filter: {self.user_id}, queryset count: {queryset.count()}")
+
         if self.must_have_text:
             queryset = queryset.filter(raw_text__icontains=self.must_have_text)
-            print(f"Applied text filter: '{self.must_have_text}', queryset count: {queryset.count()}")
 
         # Apply any metadata filters
         if query.filters:
-            print(f"Applying metadata filters: {query.filters}")
             queryset = self._apply_metadata_filters(queryset, query.filters)
-            print(f"After metadata filters, queryset count: {queryset.count()}")
 
         # Determine the embedding (either from query.query_embedding or generate from query.query_str)
         top_k = query.similarity_top_k if query.similarity_top_k else 100
-        print(f"Using top_k value: {top_k}")
         vector = query.query_embedding
         embedder_path = settings.DEFAULT_EMBEDDING_PATH
 
         if vector is None and query.query_str is not None:
             # Generate embeddings from the textual query
             # ignoring dimension mismatch or advanced error handling for brevity
-            print(f"Generating embeddings from query string: '{query.query_str}'")
             embedder_path, vector = generate_embeddings_from_text(
                 query.query_str,
                 corpus_id=self.corpus_id if self.corpus_id else None,
             )
-            print(f"Generated embeddings using embedder: {embedder_path}, vector dimension: {len(vector) if vector else 'None'}")
 
         # If we do have a vector, run search_by_embedding...
         if vector is not None and len(vector) in [384, 768, 1536, 3072]:
-            print(f"Valid vector found with dimension: {len(vector)}")
             # Provide a fallback for embedder_path if none is found
             if not embedder_path:
                 embedder_path = "unknown-embedder"
-                print(f"No embedder_path provided, using fallback: {embedder_path}")
 
             # Because `search_by_embedding` requires embedder_path & query_vector
-            print(f"Performing vector search with embedder: {embedder_path}")
-            queryset = queryset.search_by_embedding(query_vector=vector, embedder_path=embedder_path, top_k=top_k)
-            print(f"Vector search complete, retrieved {queryset.count()} results")
+            queryset = queryset.search_by_embedding(
+                query_vector=vector, embedder_path=embedder_path, top_k=top_k
+            )
         else:
             # Either no vector or invalid dimension => do nothing special
-            if vector is not None:
-                print(f"Invalid vector dimension: {len(vector)}, skipping vector search")
-            else:
-                print("No vector provided, skipping vector search")
-                
             if query.similarity_top_k is not None:
                 queryset = queryset[:top_k]
-                print(f"Applied top_k limit: {top_k}")
 
         # Fetch the annotations
-        print("Fetching final annotation results")
         annotations = list(queryset)
-        print(f"Retrieved {len(annotations)} annotations")
 
         # Convert them to TextNodes
         nodes = []
@@ -334,7 +314,6 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
                 },
             )
             nodes.append(node)
-            print(f"Created TextNode for annotation {ann.id}")
 
         return VectorStoreQueryResult(nodes=nodes)
 

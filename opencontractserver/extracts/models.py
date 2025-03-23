@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.corpuses.models import Corpus
+
 from opencontractserver.documents.models import Document
 from opencontractserver.shared.defaults import jsonfield_default_value
 from opencontractserver.shared.fields import NullableJSONField
@@ -87,7 +87,7 @@ class ColumnGroupObjectPermission(GroupObjectPermissionBase):
 
 class Extract(BaseOCModel):
     corpus = django.db.models.ForeignKey(
-        Corpus,
+        "corpuses.Corpus",  # Using string reference instead of direct import
         related_name="extracts",
         on_delete=django.db.models.SET_NULL,
         null=True,
@@ -113,7 +113,7 @@ class Extract(BaseOCModel):
 
     # If applicable, what CorpusAction ran?
     corpus_action = django.db.models.ForeignKey(
-        "corpuses.CorpusAction",
+        "corpuses.CorpusAction",  # Using string reference instead of direct import
         related_name="extracts",
         blank=True,
         null=True,

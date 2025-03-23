@@ -1,20 +1,22 @@
 import logging
 from typing import Any, Optional
 
+from django.conf import settings
+
 from channels.db import database_sync_to_async
 from django.db.models import Q, QuerySet
 from llama_index.core.schema import BaseNode, TextNode
 from llama_index.core.vector_stores.types import (
     BasePydanticVectorStore,
     MetadataFilters,
+    MetadataFilter,
     VectorStoreQuery,
     VectorStoreQueryResult,
 )
-from pgvector.django import CosineDistance
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
-from opencontractserver.tasks.embeddings_task import get_embedder_for_corpus
+from opencontractserver.utils.embeddings import get_embedder_for_corpus, generate_embeddings_from_text
 
 _logger = logging.getLogger(__name__)
 
@@ -23,7 +25,10 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     """Django Annotation Vector Store.
 
     This vector store uses Django's ORM to store and retrieve embeddings and text data
-    from the Annotation model. It allows filtering by AnnotationLabel text.
+    from the Annotation model. It allows filtering by AnnotationLabel text, user, corpus, etc.
+
+    Additionally, we now leverage `search_by_embedding` from `VectorSearchViaEmbeddingMixin`
+    for vector-based retrieval (with a fallback to legacy-embedding fields, if needed).
 
     Args:
         user_id (str|int|None): Filter by user ID
@@ -56,21 +61,18 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         debug: bool = False,
         use_jsonb: bool = False,
     ):
-        # Get the preferred embedder and its dimension from the corpus if available
-        if corpus_id:
+        # If a corpus is supplied, attempt to detect its configured embedder dimension
+        if corpus_id is not None:
             try:
-                # Get the embedder for the corpus
-                embedder_class, _ = get_embedder_for_corpus(corpus_id)
+                embedder_class, _ = get_embedder_for_corpus(int(corpus_id))
                 if embedder_class and hasattr(embedder_class, "vector_size"):
-                    # Get the dimension from the embedder class
                     embed_dim = embedder_class.vector_size
-            except Exception as e:
-                _logger.error(f"Error getting embedder for corpus {corpus_id}: {e}")
+            except Exception as exc:
+                _logger.error(f"Error getting embedder for corpus {corpus_id}: {exc}")
 
-        # Validate the embedding dimension
+        # Validate or fallback dimension
         if embed_dim not in [384, 768, 1536, 3072]:
             from django.conf import settings
-
             embed_dim = getattr(settings, "DEFAULT_EMBEDDING_DIMENSION", 768)
 
         super().__init__(
@@ -86,8 +88,6 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             debug=debug,
             use_jsonb=use_jsonb,
         )
-
-        # Store the embedding dimension for use in query methods
         self.embed_dim = embed_dim
 
     async def close(self) -> None:
@@ -159,7 +159,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             return queryset
 
         for filter_ in filters.filters:
-            # print(f"_build_filter_query - filter: {filter_}")
+            # logger.info(f"_build_filter_query - filter: {filter_}")
             if filter_.key == "label":
                 queryset = queryset.filter(annotation_label__text__iexact=filter_.value)
             else:
@@ -223,102 +223,123 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         """Don't want this to occur through LlamaIndex."""
         pass
 
-    def _get_embedding_field(self) -> str:
+    def _apply_metadata_filters(self, queryset, filters: MetadataFilters):
         """
-        Get the appropriate embedding field name based on the dimension.
-
-        Returns:
-            str: The field name to use for vector similarity search
+        Applies the key-value filters from the VectorStore query to the base QuerySet.
         """
-        if self.embed_dim == 384:
-            return (
-                "embeddings__vector_384",
-                "embedding",
-            )  # Also return legacy field for 384
-        elif self.embed_dim == 768:
-            return "embeddings__vector_768", None
-        elif self.embed_dim == 1536:
-            return "embeddings__vector_1536", None
-        elif self.embed_dim == 3072:
-            return "embeddings__vector_3072", None
-        else:
-            # Default to 384 for backward compatibility
-            return "embeddings__vector_384", "embedding"
+        if not filters or not filters.filters:
+            return queryset
 
-    async def query(self, query: VectorStoreQuery) -> VectorStoreQueryResult:
-        """Query the vector store."""
-        from opencontractserver.annotations.models import Annotation
+        for f in filters.filters:
+            if isinstance(f, MetadataFilter):
+                key, val = f.key, f.value
+                if key == "annotation_label":
+                    # Example: searching for a matching label text
+                    queryset = queryset.filter(annotation_label__text__icontains=val)
+                else:
+                    # Otherwise fallback to a more generic approach if needed
+                    queryset = queryset.filter(**{f"{key}__icontains": val})
+        return queryset
 
-        # Get the embedding field name based on the dimension
-        embedding_field, legacy_field = self._get_embedding_field()
-
-        # Build the query
+    def query(self, query: VectorStoreQuery) -> VectorStoreQueryResult:
+        """
+        Executes a vector-based query or simple filter-based query on Annotations.
+        1. If query.query_embedding is provided, use that directly.
+        2. Else if query.query_str is provided, generate embeddings from text.
+        3. Apply filters (corpus_id, document_id, user_id, must_have_text, etc.).
+        4. If we have valid (embedder_path, vector), run search_by_embedding() for top_k results.
+        5. Convert to LlamaIndex TextNodes and return.
+        """
+        # Build the base queryset
         queryset = Annotation.objects.all()
+        print(f"Starting with base queryset: {queryset.query}")
 
-        # Apply filters
         if self.corpus_id:
             queryset = queryset.filter(corpus_id=self.corpus_id)
+            print(f"Applied corpus_id filter: {self.corpus_id}, queryset count: {queryset.count()}")
         if self.document_id:
             queryset = queryset.filter(document_id=self.document_id)
+            print(f"Applied document_id filter: {self.document_id}, queryset count: {queryset.count()}")
         if self.user_id:
             queryset = queryset.filter(creator_id=self.user_id)
+            print(f"Applied user_id filter: {self.user_id}, queryset count: {queryset.count()}")
         if self.must_have_text:
             queryset = queryset.filter(raw_text__icontains=self.must_have_text)
+            print(f"Applied text filter: '{self.must_have_text}', queryset count: {queryset.count()}")
 
-        # Apply metadata filters if provided
-        if query.filters is not None:
+        # Apply any metadata filters
+        if query.filters:
+            print(f"Applying metadata filters: {query.filters}")
             queryset = self._apply_metadata_filters(queryset, query.filters)
+            print(f"After metadata filters, queryset count: {queryset.count()}")
 
-        # Apply vector similarity search
-        if query.query_embedding is not None:
-            # Try the new embedding model first
-            new_embedding_queryset = queryset.filter(
-                **{f"{embedding_field}__isnull": False}
+        # Determine the embedding (either from query.query_embedding or generate from query.query_str)
+        top_k = query.similarity_top_k if query.similarity_top_k else 100
+        print(f"Using top_k value: {top_k}")
+        vector = query.query_embedding
+        embedder_path = settings.DEFAULT_EMBEDDING_PATH
+
+        if vector is None and query.query_str is not None:
+            # Generate embeddings from the textual query
+            # ignoring dimension mismatch or advanced error handling for brevity
+            print(f"Generating embeddings from query string: '{query.query_str}'")
+            embedder_path, vector = generate_embeddings_from_text(
+                query.query_str,
+                corpus_id=self.corpus_id if self.corpus_id else None,
             )
+            print(f"Generated embeddings using embedder: {embedder_path}, vector dimension: {len(vector) if vector else 'None'}")
 
-            if await database_sync_to_async(new_embedding_queryset.exists)():
-                # Use the new embedding model
-                queryset = new_embedding_queryset.order_by(
-                    CosineDistance(embedding_field, query.query_embedding)
-                )
-            elif legacy_field and self.embed_dim == 384:
-                # Fall back to legacy embedding field for 384-dim only
-                legacy_queryset = queryset.filter(**{f"{legacy_field}__isnull": False})
-                if await database_sync_to_async(legacy_queryset.exists)():
-                    queryset = legacy_queryset.order_by(
-                        CosineDistance(legacy_field, query.query_embedding)
-                    )
+        # If we do have a vector, run search_by_embedding...
+        if vector is not None and len(vector) in [384, 768, 1536, 3072]:
+            print(f"Valid vector found with dimension: {len(vector)}")
+            # Provide a fallback for embedder_path if none is found
+            if not embedder_path:
+                embedder_path = "unknown-embedder"
+                print(f"No embedder_path provided, using fallback: {embedder_path}")
 
-        # Apply limit
-        if query.similarity_top_k is not None:
-            queryset = queryset[: query.similarity_top_k]
+            # Because `search_by_embedding` requires embedder_path & query_vector
+            print(f"Performing vector search with embedder: {embedder_path}")
+            queryset = queryset.search_by_embedding(query_vector=vector, embedder_path=embedder_path, top_k=top_k)
+            print(f"Vector search complete, retrieved {queryset.count()} results")
+        else:
+            # Either no vector or invalid dimension => do nothing special
+            if vector is not None:
+                print(f"Invalid vector dimension: {len(vector)}, skipping vector search")
+            else:
+                print("No vector provided, skipping vector search")
+                
+            if query.similarity_top_k is not None:
+                queryset = queryset[:top_k]
+                print(f"Applied top_k limit: {top_k}")
 
-        # Execute query and convert to nodes
-        annotations = await database_sync_to_async(list)(queryset)
+        # Fetch the annotations
+        print("Fetching final annotation results")
+        annotations = list(queryset)
+        print(f"Retrieved {len(annotations)} annotations")
+
+        # Convert them to TextNodes
         nodes = []
-
-        for annotation in annotations:
+        for ann in annotations:
             node = TextNode(
-                text=annotation.raw_text or "",
-                id_=str(annotation.id),
+                text=ann.raw_text or "",
+                id_=str(ann.id),
                 metadata={
-                    "annotation_id": annotation.id,
-                    "document_id": annotation.document_id,
-                    "corpus_id": annotation.corpus_id,
-                    "page": annotation.page,
-                    "annotation_type": annotation.annotation_type,
-                    "creator_id": annotation.creator_id,
-                    "created": annotation.created.isoformat()
-                    if annotation.created
-                    else None,
+                    "annotation_id": ann.id,
+                    "document_id": ann.document_id,
+                    "corpus_id": ann.corpus_id,
+                    "page": ann.page,
+                    "annotation_type": ann.annotation_type,
+                    "creator_id": ann.creator_id,
+                    "created": ann.created.isoformat() if ann.created else None,
                 },
             )
             nodes.append(node)
+            print(f"Created TextNode for annotation {ann.id}")
 
         return VectorStoreQueryResult(nodes=nodes)
 
     async def aquery(
         self, query: VectorStoreQuery, **kwargs: Any
     ) -> VectorStoreQueryResult:
-        """Query the vector store asynchronously."""
+        """Asynchronous convenience wrapper that calls query()."""
         return await database_sync_to_async(self.query)(query, **kwargs)

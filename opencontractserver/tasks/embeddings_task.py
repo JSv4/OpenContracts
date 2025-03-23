@@ -17,6 +17,7 @@ from opencontractserver.pipeline.utils import (
     get_component_by_name,
     get_default_embedder,
 )
+from opencontractserver.utils.embeddings import generate_embeddings_from_text
 
 User = get_user_model()
 
@@ -127,73 +128,36 @@ def calculate_embedding_for_annotation_text(
         embedder_path (str, optional): Optional explicit embedder path to use (highest precedence)
     """
     try:
-        annot = Annotation.objects.get(id=annotation_id)
-        text = annot.raw_text
+        annotation = Annotation.objects.get(pk=annotation_id)
+    except Annotation.DoesNotExist:
+        logger.warning(f"Annotation {annotation_id} not found.")
+        return
 
-        if not isinstance(text, str) or len(text) == 0:
-            logger.warning(
-                f"Annotation with ID {annotation_id} has no content or is not a string"
-            )
-            return
+    corpus_id = annotation.corpus_id  # if your annotation references a corpus
+    text = annotation.raw_text or ""
+    if not text.strip():
+        logger.info(f"Annotation {annotation_id} has no raw_text to embed.")
+        return
 
-        embeddings = None
+    # If we want to override the embedder path, do so. If not, generate_embeddings_from_text
+    # will figure out from the corpus or fallback to default microservice or embedder.
+    returned_path, vector = generate_embeddings_from_text(text, corpus_id=corpus_id)
 
-        # Case 1: Explicit embedder_path provided
-        if embedder_path:
-            try:
-                embedder_class = get_component_by_name(embedder_path)
-                embedder = embedder_class()
-                embeddings = embedder.embed_text(text)
-                logger.debug(
-                    f"Using explicitly provided embedder_path: {embedder_path}"
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Failed to use explicit embedder_path: {e}. Will try other options."
-                )
-                embedder_path = None  # Reset to try other options
-
-        # Case 2: Use embedder from annotation's corpus
-        if embeddings is None and (getattr(annot, "corpus_id", None) is not None):
-            try:
-                corpus = Corpus.objects.get(id=annot.corpus_id)
-                # Expect corpus.embed_text to return a tuple (embedder_path, embeddings)
-                embedder_path, embeddings = corpus.embed_text(text)
-                logger.debug(
-                    f"Using embedder from annotation's corpus {annot.corpus_id}: {embedder_path}"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to use corpus embedder: {e}. Will try default.")
-                embeddings = None
-
-        # Case 3: Fallback to default system embedder
-        if embeddings is None:
-            embedder_instance = get_default_embedder()()
-            result = embedder_instance.embed_text(text)
-            if isinstance(result, tuple) and len(result) == 2:
-                default_embedder_path, embeddings = result
-                embedder_path = settings.DEFAULT_EMBEDDER or default_embedder_path
-            else:
-                embeddings = result
-                embedder_path = (
-                    settings.DEFAULT_EMBEDDER
-                    or f"{embedder_instance.__module__}.{embedder_instance.__class__.__name__}"
-                )
-            logger.debug(f"Using default system embedder: {embedder_path}")
-
-        if embeddings:
-            annot.add_embedding(embedder_path, embeddings)
-        else:
-            logger.error(
-                f"Generated embeddings were None for annotation ID: {annotation_id}"
-            )
-
-    except Exception as e:
+    if vector is None:
         logger.error(
-            f"calculate_embedding_for_annotation_text() - failed to generate embeddings due to error: {e}"
+            f"Embedding could not be generated for annotation {annotation_id}."
         )
-        logger.exception("Full traceback for annotation embedding failure:")
-        raise
+        return
+
+    # If user explicitly requested an embedder path override, replace
+    # the path from the function's defaults:
+    final_path = embedder_path if embedder_path else returned_path
+
+    # Now store the embedding
+    annotation.add_embedding(final_path or "unknown-embedder", vector)
+    logger.info(
+        f"Embedding for Annotation {annotation_id} stored using path: {final_path}, dimension={len(vector)}."
+    )
 
 
 @shared_task(

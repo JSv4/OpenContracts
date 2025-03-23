@@ -8,7 +8,6 @@ from django.core.files.base import ContentFile
 from plasmapdf.models.PdfDataLayer import build_translation_layer
 
 from opencontractserver.annotations.models import RELATIONSHIP_LABEL
-from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.types.dicts import OpenContractDocExport
@@ -84,6 +83,9 @@ class BaseParser(ABC):
 
         # Associate with corpus if provided
         if corpus_id:
+            # Use Django's lazy-loading with string reference to avoid circular import
+            from django.apps import apps
+            Corpus = apps.get_model('corpuses', 'Corpus')
             corpus_obj = Corpus.objects.get(id=corpus_id)
             corpus_obj.documents.add(document)
             corpus_obj.save()

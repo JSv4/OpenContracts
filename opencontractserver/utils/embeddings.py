@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Union, Tuple, List
+from typing import Optional, Union
 
 import numpy as np
 import requests
@@ -12,17 +12,16 @@ logger.setLevel(logging.DEBUG)
 
 
 def get_embedder_for_corpus(
-    corpus_id: int, 
-    mimetype: Optional[Union[str, "FileTypeEnum"]] = None
-) -> Tuple[Optional[type], Optional[str]]:
+    corpus_id: int, mimetype: Optional[Union[str, "FileTypeEnum"]] = None
+) -> tuple[Optional[type], Optional[str]]:
     """
     Retrieve the Python embedder class (if any) and embedder path for a given corpus.
     If none is found or specified, you can fall back to a default.
-    
+
     Args:
         corpus_id (int): The ID of the corpus.
         mimetype (Optional[Union[str, FileTypeEnum]]): MIME type that might affect embedder choice.
-    
+
     Returns:
         (embedder_class, embedder_path) - either may be None if no embedder is configured.
     """
@@ -42,7 +41,9 @@ def get_embedder_for_corpus(
             embedder_path = settings.DEFAULT_EMBEDDER
 
     except Corpus.DoesNotExist:
-        logger.warning(f"No corpus found with id={corpus_id}. Using fallback embedder path.")
+        logger.warning(
+            f"No corpus found with id={corpus_id}. Using fallback embedder path."
+        )
         embedder_path = settings.DEFAULT_EMBEDDER
 
     return embedder_class, embedder_path
@@ -52,7 +53,7 @@ def generate_embeddings_from_text(
     text: str,
     corpus_id: Optional[int] = None,
     mimetype: Optional[Union[str, "FileTypeEnum"]] = None,
-) -> Tuple[Optional[str], Optional[List[float]]]:
+) -> tuple[Optional[str], Optional[list[float]]]:
     """
     Unified function to generate embeddings for a given text, optionally using
     the corpus's configured embedder class if available, otherwise falling
@@ -64,7 +65,7 @@ def generate_embeddings_from_text(
         mimetype (Optional[Union[str, FileTypeEnum]]): MIME type or file type for specialized embedding logic.
 
     Returns:
-        Tuple[Optional[str], Optional[List[float]]]: 
+        Tuple[Optional[str], Optional[List[float]]]:
             - The embedder_path that was used (or None if not found).
             - The list of floats representing the embedding vector (or None on error).
     """
@@ -80,7 +81,9 @@ def generate_embeddings_from_text(
             vector = embedder_instance.embed_text(text)  # type: ignore
             return embedder_path, vector
         except Exception as e:
-            logger.error(f"Failed to generate embeddings via embedder class {embedder_class}: {e}")
+            logger.error(
+                f"Failed to generate embeddings via embedder class {embedder_class}: {e}"
+            )
 
     # If no embedder_class or it failed, deploy the microservice approach
     logger.debug("Falling back to the embeddings microservice for embedding text.")
@@ -117,7 +120,7 @@ def calculate_embedding_for_text(
     text: str,
     corpus_id: Optional[int] = None,
     mimetype: Optional[Union[str, "FileTypeEnum"]] = None,
-) -> Optional[List[float]]:
+) -> Optional[list[float]]:
     """
     DEPRECATED (but kept for backward compatibility):
     Please use generate_embeddings_from_text(...) directly.

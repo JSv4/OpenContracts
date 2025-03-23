@@ -85,7 +85,8 @@ class BaseParser(ABC):
         if corpus_id:
             # Use Django's lazy-loading with string reference to avoid circular import
             from django.apps import apps
-            Corpus = apps.get_model('corpuses', 'Corpus')
+
+            Corpus = apps.get_model("corpuses", "Corpus")
             corpus_obj = Corpus.objects.get(id=corpus_id)
             corpus_obj.documents.add(document)
             corpus_obj.save()

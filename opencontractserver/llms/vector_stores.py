@@ -269,7 +269,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         # Determine the embedding (either from query.query_embedding or generate from query.query_str)
         top_k = query.similarity_top_k if query.similarity_top_k else 100
         vector = query.query_embedding
-        embedder_path = settings.DEFAULT_EMBEDDING_PATH
+        embedder_path = settings.DEFAULT_EMBEDDER
 
         if vector is None and query.query_str is not None:
             # Generate embeddings from the textual query

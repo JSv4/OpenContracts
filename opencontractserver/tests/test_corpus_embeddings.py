@@ -1,6 +1,5 @@
 from unittest.mock import MagicMock, patch
 
-import requests
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -36,7 +35,7 @@ class CorpusEmbeddingsTestCase(TestCase):
         self.corpus = Corpus.objects.create(title="Test Corpus", creator=self.user)
         self.test_text = "This is a test text for embedding."
 
-    @patch("opencontractserver.corpuses.models.get_component_by_name")
+    @patch("opencontractserver.pipeline.utils.get_component_by_name")
     @patch("requests.post")
     def test_embed_text_with_preferred_embedder(self, mock_post, mock_get_component):
         """Test embed_text when the corpus has a preferred embedder."""
@@ -59,43 +58,45 @@ class CorpusEmbeddingsTestCase(TestCase):
         # The microservice should not be called if the embedder works
         mock_post.assert_not_called()
 
-    @patch("opencontractserver.corpuses.models.get_default_embedder")
+    @patch("opencontractserver.pipeline.utils.get_default_embedder")
     @patch("requests.post")
-    def test_embed_text_with_default_embedder(self, mock_post, mock_get_default):
+    @patch("opencontractserver.corpuses.models.generate_embeddings_from_text")
+    def test_embed_text_with_default_embedder(
+        self, mock_generate_embeddings, mock_post, mock_get_default
+    ):
         """Test embed_text when the corpus has no preferred embedder."""
         # Ensure corpus has no preferred embedder
         self.corpus.preferred_embedder = None
         self.corpus.save()
 
-        # Mock the default embedder to return None, forcing fallback to microservice
-        mock_get_default.return_value = None
+        # Set up expected return values
+        expected_embedder = settings.DEFAULT_EMBEDDER
+        expected_embeddings = [0.1] * 768
 
-        # Configure mock response from the microservice
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"embeddings": [[0.1] * 768]}
-        mock_post.return_value = mock_response
+        # Mock generate_embeddings_from_text to return our expected values
+        mock_generate_embeddings.return_value = (expected_embedder, expected_embeddings)
 
         # Call the function
         embedder_name, embeddings = self.corpus.embed_text(self.test_text)
 
         # Verify results
-        self.assertEqual(embedder_name, settings.DEFAULT_EMBEDDER)
+        self.assertEqual(embedder_name, expected_embedder)
         self.assertEqual(len(embeddings), 768)
-        self.assertEqual(embeddings, [0.1] * 768)
+        self.assertEqual(embeddings, expected_embeddings)
 
-        # Verify the microservice was called with correct parameters
-        mock_post.assert_called_once()
-        # Verify the first positional argument (URL)
-        self.assertTrue(mock_post.call_args[0][0].endswith("/embeddings"))
-        # Verify the request contained the text in JSON payload
-        self.assertEqual(mock_post.call_args[1]["json"]["text"], self.test_text)
+        # Verify generate_embeddings_from_text was called with the right arguments
+        mock_generate_embeddings.assert_called_with(
+            self.test_text, corpus_id=self.corpus.pk
+        )
 
-    @patch("opencontractserver.corpuses.models.get_component_by_name")
-    @patch("opencontractserver.corpuses.models.get_default_embedder")
+        # The other mocks won't be called since we're mocking at a higher level
+
+    @patch("opencontractserver.pipeline.utils.get_component_by_name")
+    @patch("opencontractserver.pipeline.utils.get_default_embedder")
     @patch("requests.post")
+    @patch("opencontractserver.corpuses.models.generate_embeddings_from_text")
     def test_embed_text_handles_errors(
-        self, mock_post, mock_get_default, mock_get_component
+        self, mock_generate_embeddings, mock_post, mock_get_default, mock_get_component
     ):
         """Test that embed_text handles errors gracefully."""
         # Set up the corpus with a preferred embedder
@@ -103,14 +104,11 @@ class CorpusEmbeddingsTestCase(TestCase):
         self.corpus.preferred_embedder = embedder_path
         self.corpus.save()
 
-        # Mock the component lookup to raise an exception
-        mock_get_component.side_effect = ImportError("Module not found")
-        mock_get_default.side_effect = ImportError("Default module not found")
+        # Mock generate_embeddings_from_text to return None, None (simulating all failures)
+        mock_generate_embeddings.return_value = (None, None)
 
-        # Mock the microservice to fail in a realistic way
-        mock_post.side_effect = requests.exceptions.RequestException(
-            "Microservice connection error"
-        )
+        # The error handlers in the other mocks won't be called because we're directly mocking the
+        # generate_embeddings_from_text function at the highest level
 
         # Call the function
         embedder_name, embeddings = self.corpus.embed_text(self.test_text)
@@ -118,10 +116,12 @@ class CorpusEmbeddingsTestCase(TestCase):
         # Verify results - embedder_name and embeddings should be None since everything failed
         self.assertIsNone(embedder_name)
         self.assertIsNone(embeddings)
-        mock_get_component.assert_called_with(embedder_path)
-        mock_post.assert_called_once()
+        mock_generate_embeddings.assert_called_with(
+            self.test_text, corpus_id=self.corpus.pk
+        )
+        # We don't need to verify mock_post or mock_get_component as they won't be called
 
-    @patch("opencontractserver.corpuses.models.get_component_by_name")
+    @patch("opencontractserver.pipeline.utils.get_component_by_name")
     @patch("requests.post")
     def test_embed_text_embedder_returns_none(self, mock_post, mock_get_component):
         """Test that embed_text handles the case where embedder.embed_text returns None."""

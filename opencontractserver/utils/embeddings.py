@@ -1,7 +1,6 @@
-from datetime import time
 import logging
+import time
 from typing import Optional, Union
-
 
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
@@ -23,9 +22,13 @@ def get_embedder(
     Returns:
         A tuple of (embedder_class, embedder_path)
     """
-    
-    from opencontractserver.pipeline.utils import find_embedder_for_filetype, get_default_embedder, get_component_by_name
+
     from opencontractserver.corpuses.models import Corpus
+    from opencontractserver.pipeline.utils import (
+        find_embedder_for_filetype,
+        get_component_by_name,
+        get_default_embedder,
+    )
 
     embedder_class = None
     embedder_path = None
@@ -84,31 +87,41 @@ def generate_embeddings_from_text(
             - The list of floats representing the embedding vector (or None on error).
     """
     if not text.strip():
-        logger.warning(f"generate_embeddings_from_text() - text is empty or whitespace for corpus_id {corpus_id}")
+        logger.warning(
+            f"generate_embeddings_from_text() - text is empty or whitespace for corpus_id {corpus_id}"
+        )
         return None, None
 
-    logger.info(f"Generating embeddings for text of length {len(text)} with corpus_id={corpus_id}, mimetype={mimetype}")
-    
+    logger.info(
+        f"Generating embeddings for text of length {len(text)} with corpus_id={corpus_id}, mimetype={mimetype}"
+    )
+
     embedder_class, embedder_path = get_embedder(corpus_id, mimetype)
-    logger.debug(f"Selected embedder: class={embedder_class.__name__ if embedder_class else None}, path={embedder_path}")
+    logger.debug(
+        f"Selected embedder: class={embedder_class.__name__ if embedder_class else None}, path={embedder_path}"
+    )
 
     # If we found a valid Python embedder class with an embed_text method, use it.
     if embedder_class:
         try:
             logger.info(f"Initializing embedder instance of {embedder_class.__name__}")
             embedder_instance = embedder_class()
-            
+
             logger.info(f"Embedding text with {embedder_class.__name__}")
             start_time = time.time()
             vector = embedder_instance.embed_text(text)  # type: ignore
             elapsed_time = time.time() - start_time
-            
+
             if vector is not None:
                 vector_dim = len(vector) if isinstance(vector, list) else "unknown"
-                logger.info(f"Successfully generated embedding with dimension={vector_dim} in {elapsed_time:.2f}s")
+                logger.info(
+                    f"Successfully generated embedding with dimension={vector_dim} in {elapsed_time:.2f}s"
+                )
             else:
-                logger.warning(f"Embedder {embedder_class.__name__} returned None vector")
-                
+                logger.warning(
+                    f"Embedder {embedder_class.__name__} returned None vector"
+                )
+
             return embedder_path, vector
         except Exception as e:
             logger.error(
@@ -116,7 +129,9 @@ def generate_embeddings_from_text(
             )
             logger.exception("Detailed embedding generation error:")
 
-    logger.warning(f"No suitable embedder found or embedding generation failed for corpus_id={corpus_id}")
+    logger.warning(
+        f"No suitable embedder found or embedding generation failed for corpus_id={corpus_id}"
+    )
     return None, None
 
 

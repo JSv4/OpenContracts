@@ -417,7 +417,7 @@ async def oc_llama_index_doc_query(
 
         from opencontractserver.annotations.models import Annotation
         from opencontractserver.documents.models import Document
-        from opencontractserver.tasks.embeddings_task import get_embedder_for_corpus
+        from opencontractserver.tasks.embeddings_task import get_embedder
 
         # Get the document to find its corpus
         document = Document.objects.get(id=document_id)
@@ -431,7 +431,7 @@ async def oc_llama_index_doc_query(
             corpus_id = corpus_set.first().id
 
             # Get the embedder for the corpus, passing the document's file type
-            embedder_class, _ = get_embedder_for_corpus(corpus_id, document.file_type)
+            embedder_class, _ = get_embedder(corpus_id, document.file_type)
             if embedder_class and hasattr(embedder_class, "vector_size"):
                 # Get the dimension from the embedder class
                 embed_dim = embedder_class.vector_size

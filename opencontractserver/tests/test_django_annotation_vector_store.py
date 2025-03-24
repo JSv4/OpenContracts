@@ -3,6 +3,7 @@ from typing import Optional
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.db.models.signals import post_save
 from django.test import TestCase, override_settings
 from llama_index.core.vector_stores import (
     MetadataFilter,
@@ -11,8 +12,10 @@ from llama_index.core.vector_stores import (
 )
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
+from opencontractserver.annotations.signals import process_annot_on_create_atomic
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.documents.signals import process_doc_on_create_atomic
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
 
 User = get_user_model()
@@ -56,6 +59,7 @@ class TestDjangoAnnotationVectorStore(TestCase):
         to support the tests. We'll use our updated code that adds embeddings
         for these objects, thus ensuring we can retrieve them by vector queries.
         """
+
         cls.user = User.objects.create_user(
             username="testuser",
             password="testpass",
@@ -300,12 +304,16 @@ class TestDjangoAnnotationVectorStore(TestCase):
         If a user calls a query with query_str but the dimension is unsupported or generate_embeddings
         fails (None, None), we should just return results with no vector-based ordering.
         """
+
+        post_save.disconnect(process_doc_on_create_atomic, sender=Document)
+        post_save.disconnect(process_annot_on_create_atomic, sender=Annotation)
+
         # Return (None, None) from generate_embeddings_from_text so the vector store
         # can't do a similarity search and must fallback.
         mock_gen_embeds.return_value = (None, None)
 
         query = VectorStoreQuery(
-            query_embedding=None, query_str="some text", similarity_top_k=10
+            query_embedding=None, query_str="some text", similarity_top_k=3
         )
         result = self.run_sync_query(query)
         self.assertEqual(

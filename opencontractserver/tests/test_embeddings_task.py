@@ -105,7 +105,11 @@ class TestEmbeddingsTask(unittest.TestCase):
     @patch("opencontractserver.pipeline.utils.find_embedder_for_filetype")
     @patch("opencontractserver.pipeline.utils.get_default_embedder")
     def test_get_embedder_for_corpus_with_preferred_embedder(
-        self, mock_get_default, mock_find_embedder, mock_get_component, mock_corpus_model
+        self,
+        mock_get_default,
+        mock_find_embedder,
+        mock_get_component,
+        mock_corpus_model,
     ):
         """
         Test get_embedder when the corpus has a preferred embedder.
@@ -498,7 +502,9 @@ class TestEmbeddingTask(unittest.TestCase):
         mock_annot = MagicMock()
         mock_annot.id = 1
         mock_annot.raw_text = "This is test text"
-        mock_annot.corpus_id = 123  # This will be passed to generate_embeddings_from_text
+        mock_annot.corpus_id = (
+            123  # This will be passed to generate_embeddings_from_text
+        )
         mock_annotation_model.objects.get.return_value = mock_annot
 
         # Mock generate_embeddings_from_text to return a path and vector
@@ -542,7 +548,9 @@ class TestEmbeddingTask(unittest.TestCase):
         mock_annot.id = 1
         mock_annot.raw_text = "This is test text"
         mock_annot.embedding = None
-        mock_annot.corpus_id = 123  # This is what gets passed to generate_embeddings_from_text
+        mock_annot.corpus_id = (
+            123  # This is what gets passed to generate_embeddings_from_text
+        )
         mock_annotation_model.objects.get.return_value = mock_annot
 
         # Mock generate_embeddings_from_text to simulate corpus-based embedding

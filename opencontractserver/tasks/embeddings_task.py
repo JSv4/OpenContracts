@@ -10,11 +10,7 @@ from django.contrib.auth import get_user_model
 from opencontractserver.annotations.models import Annotation, Note
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.pipeline.base.embedder import BaseEmbedder
-from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.pipeline.utils import (
-    find_embedder_for_filetype,
-    get_component_by_name,
     get_default_embedder,
 )
 from opencontractserver.utils.embeddings import generate_embeddings_from_text
@@ -23,55 +19,6 @@ User = get_user_model()
 
 logger = get_task_logger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-def get_embedder_for_corpus(
-    corpus_id: int | str = None, mimetype_or_enum: Union[str, FileTypeEnum] = None
-) -> tuple[type[BaseEmbedder], str]:
-    """
-    Get the appropriate embedder for a corpus.
-
-    Args:
-        corpus_id: The ID of the corpus
-        mimetype_or_enum: The MIME type of the document or a FileTypeEnum (used as fallback)
-
-    Returns:
-        A tuple of (embedder_class, embedder_path)
-    """
-    embedder_class = None
-    embedder_path = None
-
-    # Try to get the corpus's preferred embedder
-    if corpus_id:
-        try:
-            corpus = Corpus.objects.get(id=corpus_id)
-            if corpus.preferred_embedder:
-                try:
-                    embedder_class = get_component_by_name(corpus.preferred_embedder)
-                    embedder_path = corpus.preferred_embedder
-                except Exception:
-                    # If we can't load the preferred embedder, fall back to mimetype
-                    pass
-        except Exception:
-            # If corpus doesn't exist, fall back to mimetype
-            pass
-
-    # If no corpus-specific embedder was found and a mimetype is provided,
-    # try to find an appropriate embedder for the mimetype
-    if embedder_class is None and mimetype_or_enum:
-
-        # Find an embedder for the mimetype and dimension
-        embedder_class = find_embedder_for_filetype(mimetype_or_enum)
-        if embedder_class:
-            embedder_path = f"{embedder_class.__module__}.{embedder_class.__name__}"
-
-    # Fall back to default embedder if no specific embedder is found
-    if embedder_class is None:
-        embedder_class = get_default_embedder()
-        if embedder_class:
-            embedder_path = f"{embedder_class.__module__}.{embedder_class.__name__}"
-
-    return embedder_class, embedder_path
 
 
 @shared_task(
@@ -128,20 +75,25 @@ def calculate_embedding_for_annotation_text(
         embedder_path (str, optional): Optional explicit embedder path to use (highest precedence)
     """
     try:
+        logger.info(f"Retrieving annotation with ID {annotation_id}")
         annotation = Annotation.objects.get(pk=annotation_id)
     except Annotation.DoesNotExist:
         logger.warning(f"Annotation {annotation_id} not found.")
         return
 
     corpus_id = annotation.corpus_id  # if your annotation references a corpus
+    logger.info(f"Processing annotation {annotation_id} with corpus_id {corpus_id}")
+    
     text = annotation.raw_text or ""
     if not text.strip():
         logger.info(f"Annotation {annotation_id} has no raw_text to embed.")
         return
-
+    
+    logger.info(f"Generating embeddings for annotation {annotation_id} with text length {len(text)}")
     # If we want to override the embedder path, do so. If not, generate_embeddings_from_text
     # will figure out from the corpus or fallback to default microservice or embedder.
     returned_path, vector = generate_embeddings_from_text(text, corpus_id=corpus_id)
+    logger.info(f"Generated embeddings for annotation {annotation_id} using {returned_path}")
 
     if vector is None:
         logger.error(

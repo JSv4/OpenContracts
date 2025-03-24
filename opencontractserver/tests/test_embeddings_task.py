@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
-from opencontractserver.tasks.embeddings_task import get_embedder_for_corpus
+from opencontractserver.utils.embeddings import get_embedder
 
 User = get_user_model()
 
@@ -100,38 +100,44 @@ class TestEmbeddingsTask(unittest.TestCase):
     Tests for the embeddings task functions.
     """
 
-    @patch("opencontractserver.tasks.embeddings_task.Corpus")
-    @patch("opencontractserver.tasks.embeddings_task.get_component_by_name")
-    @patch("opencontractserver.tasks.embeddings_task.find_embedder_for_filetype")
-    @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
+    @patch("opencontractserver.corpuses.models.Corpus")
+    @patch("opencontractserver.pipeline.utils.get_component_by_name")
+    @patch("opencontractserver.pipeline.utils.find_embedder_for_filetype")
+    @patch("opencontractserver.pipeline.utils.get_default_embedder")
     def test_get_embedder_for_corpus_with_preferred_embedder(
-        self, mock_get_default, mock_find_embedder, mock_get_component, mock_corpus
+        self, mock_get_default, mock_find_embedder, mock_get_component, mock_corpus_model
     ):
         """
-        Test get_embedder_for_corpus when the corpus has a preferred embedder.
+        Test get_embedder when the corpus has a preferred embedder.
         """
-        # Set up mocks
-        mock_corpus_obj = MagicMock()
-        mock_corpus_obj.preferred_embedder = "path.to.TestEmbedder"
-        mock_corpus.objects.get.return_value = mock_corpus_obj
+        # Set up the mock corpus object with a preferred embedder
+        mock_corpus = MagicMock()
+        mock_corpus.preferred_embedder = "path.to.TestEmbedder"
+        mock_corpus_model.objects.get.return_value = mock_corpus
 
-        # Mock the component lookup
+        # Mock the component lookup to return our test embedder class
         mock_get_component.return_value = TestEmbedder
 
         # Call the function
-        embedder_class, embedder_path = get_embedder_for_corpus(corpus_id=1)
+        embedder_class, embedder_path = get_embedder(corpus_id=1)
 
-        # Verify the results
-        self.assertEqual(embedder_class, TestEmbedder)
-        self.assertEqual(embedder_path, "path.to.TestEmbedder")
-        mock_corpus.objects.get.assert_called_with(id=1)
+        # Verify the corpus was looked up by ID
+        mock_corpus_model.objects.get.assert_called_with(id=1)
+
+        # Verify the embedder class was loaded by path
         mock_get_component.assert_called_with("path.to.TestEmbedder")
+
+        # Verify the fallback methods were not called
         mock_find_embedder.assert_not_called()
         mock_get_default.assert_not_called()
 
-    @patch("opencontractserver.tasks.embeddings_task.Corpus")
-    @patch("opencontractserver.tasks.embeddings_task.find_embedder_for_filetype")
-    @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
+        # Verify the correct results were returned
+        self.assertEqual(embedder_class, TestEmbedder)
+        self.assertEqual(embedder_path, "path.to.TestEmbedder")
+
+    @patch("opencontractserver.corpuses.models.Corpus")
+    @patch("opencontractserver.pipeline.utils.find_embedder_for_filetype")
+    @patch("opencontractserver.pipeline.utils.get_default_embedder")
     def test_get_embedder_for_corpus_with_mimetype(
         self, mock_get_default, mock_find_embedder, mock_corpus
     ):
@@ -147,7 +153,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_find_embedder.return_value = TestEmbedder
 
         # Call the function
-        embedder_class, embedder_path = get_embedder_for_corpus(
+        embedder_class, embedder_path = get_embedder(
             corpus_id=1, mimetype_or_enum="application/pdf"
         )
 
@@ -160,10 +166,10 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_find_embedder.assert_called_with("application/pdf")
         mock_get_default.assert_not_called()
 
-    @patch("opencontractserver.tasks.embeddings_task.Corpus")
-    @patch("opencontractserver.tasks.embeddings_task.get_component_by_name")
-    @patch("opencontractserver.tasks.embeddings_task.find_embedder_for_filetype")
-    @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
+    @patch("opencontractserver.corpuses.models.Corpus")
+    @patch("opencontractserver.pipeline.utils.get_component_by_name")
+    @patch("opencontractserver.pipeline.utils.find_embedder_for_filetype")
+    @patch("opencontractserver.pipeline.utils.get_default_embedder")
     def test_get_embedder_for_corpus_with_error_loading_preferred(
         self, mock_get_default, mock_find_embedder, mock_get_component, mock_corpus
     ):
@@ -182,7 +188,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_find_embedder.return_value = TestEmbedder
 
         # Call the function
-        embedder_class, embedder_path = get_embedder_for_corpus(
+        embedder_class, embedder_path = get_embedder(
             corpus_id=1, mimetype_or_enum="application/pdf"
         )
 
@@ -196,9 +202,9 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_find_embedder.assert_called_with("application/pdf")
         mock_get_default.assert_not_called()
 
-    @patch("opencontractserver.tasks.embeddings_task.Corpus")
-    @patch("opencontractserver.tasks.embeddings_task.find_embedder_for_filetype")
-    @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
+    @patch("opencontractserver.corpuses.models.Corpus")
+    @patch("opencontractserver.pipeline.utils.find_embedder_for_filetype")
+    @patch("opencontractserver.pipeline.utils.get_default_embedder")
     def test_get_embedder_for_corpus_with_corpus_not_found(
         self, mock_get_default, mock_find_embedder, mock_corpus
     ):
@@ -212,7 +218,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_find_embedder.return_value = TestEmbedder
 
         # Call the function
-        embedder_class, embedder_path = get_embedder_for_corpus(
+        embedder_class, embedder_path = get_embedder(
             corpus_id=1, mimetype_or_enum="application/pdf"
         )
 
@@ -225,9 +231,9 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_find_embedder.assert_called_with("application/pdf")
         mock_get_default.assert_not_called()
 
-    @patch("opencontractserver.tasks.embeddings_task.Corpus")
-    @patch("opencontractserver.tasks.embeddings_task.find_embedder_for_filetype")
-    @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
+    @patch("opencontractserver.corpuses.models.Corpus")
+    @patch("opencontractserver.pipeline.utils.find_embedder_for_filetype")
+    @patch("opencontractserver.pipeline.utils.get_default_embedder")
     def test_get_embedder_for_corpus_fallback_to_default(
         self, mock_get_default, mock_find_embedder, mock_corpus
     ):
@@ -246,7 +252,7 @@ class TestEmbeddingsTask(unittest.TestCase):
         mock_get_default.return_value = TestEmbedder
 
         # Call the function
-        embedder_class, embedder_path = get_embedder_for_corpus(
+        embedder_class, embedder_path = get_embedder(
             corpus_id=1, mimetype_or_enum="application/pdf"
         )
 
@@ -477,9 +483,9 @@ class TestEmbeddingTask(unittest.TestCase):
     """
 
     @patch("opencontractserver.tasks.embeddings_task.Annotation")
-    @patch("opencontractserver.tasks.embeddings_task.get_component_by_name")
+    @patch("opencontractserver.tasks.embeddings_task.generate_embeddings_from_text")
     def test_calculate_embedding_for_annotation_text_with_explicit_embedder(
-        self, mock_get_component, mock_annotation
+        self, mock_generate_embeddings, mock_annotation_model
     ):
         """
         Test that calculate_embedding_for_annotation_text uses an explicitly provided embedder_path.
@@ -488,38 +494,40 @@ class TestEmbeddingTask(unittest.TestCase):
             calculate_embedding_for_annotation_text,
         )
 
-        # Create mock annotation
+        # Create mock annotation with a corpus_id
         mock_annot = MagicMock()
         mock_annot.id = 1
         mock_annot.raw_text = "This is test text"
-        mock_annotation.objects.get.return_value = mock_annot
+        mock_annot.corpus_id = 123  # This will be passed to generate_embeddings_from_text
+        mock_annotation_model.objects.get.return_value = mock_annot
 
-        # Mock the embedder
-        mock_embedder = MagicMock()
-        mock_embedder.embed_text.return_value = [0.1, 0.2, 0.3]
-        mock_embedder_class = MagicMock(return_value=mock_embedder)
-        mock_get_component.return_value = mock_embedder_class
+        # Mock generate_embeddings_from_text to return a path and vector
+        default_path = "default.embedder.path"
+        test_vector = [0.1, 0.2, 0.3]
+        mock_generate_embeddings.return_value = (default_path, test_vector)
+
+        # Define the explicit embedder path we'll provide
+        explicit_embedder_path = "path.to.TestEmbedder"
 
         # Call the function with explicit embedder_path
         calculate_embedding_for_annotation_text(
-            annotation_id=1, embedder_path="path.to.TestEmbedder"
+            annotation_id=1, embedder_path=explicit_embedder_path
         )
 
-        # Verify the correct embedder was used
-        mock_get_component.assert_called_with("path.to.TestEmbedder")
-        mock_embedder.embed_text.assert_called_with("This is test text")
+        # Verify annotation was retrieved correctly
+        mock_annotation_model.objects.get.assert_called_with(pk=1)
 
-        # Verify embedding was stored
-        mock_annot.add_embedding.assert_called_with(
-            "path.to.TestEmbedder", [0.1, 0.2, 0.3]
-        )
+        # Verify generate_embeddings_from_text was called with correct parameters
+        mock_generate_embeddings.assert_called_with("This is test text", corpus_id=123)
+
+        # The key test: verify that the explicit embedder_path was used instead of the one
+        # returned by generate_embeddings_from_text
+        mock_annot.add_embedding.assert_called_with(explicit_embedder_path, test_vector)
 
     @patch("opencontractserver.tasks.embeddings_task.Annotation")
-    @patch("opencontractserver.tasks.embeddings_task.get_component_by_name")
-    @patch("opencontractserver.tasks.embeddings_task.Corpus")
-    @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
+    @patch("opencontractserver.tasks.embeddings_task.generate_embeddings_from_text")
     def test_calculate_embedding_for_annotation_text_fallback_to_annotation_corpus(
-        self, mock_get_default, mock_corpus_model, mock_get_component, mock_annotation
+        self, mock_generate_embeddings, mock_annotation_model
     ):
         """
         Test that calculate_embedding_for_annotation_text falls back to the annotation's corpus embedder
@@ -529,48 +537,36 @@ class TestEmbeddingTask(unittest.TestCase):
             calculate_embedding_for_annotation_text,
         )
 
-        # Create mock corpus with proper embed_text method
-        mock_corpus_instance = MagicMock()
-        mock_corpus_instance.embed_text.return_value = (
-            "corpus.embedder.path",
-            [0.4, 0.5, 0.6],
-        )
-        mock_corpus_instance.preferred_embedder = "corpus.embedder.path"
-        mock_corpus_model.objects.get.return_value = mock_corpus_instance
-
         # Create mock annotation with corpus reference
         mock_annot = MagicMock()
         mock_annot.id = 1
         mock_annot.raw_text = "This is test text"
         mock_annot.embedding = None
-        # The key insight: in the code it doesn't use annot.corpus directly, but checks annot.corpus_id
-        mock_annot.corpus = None  # This isn't used directly in the code
-        mock_annot.corpus_id = 123  # This is what the code actually checks
-        mock_annotation.objects.get.return_value = mock_annot
+        mock_annot.corpus_id = 123  # This is what gets passed to generate_embeddings_from_text
+        mock_annotation_model.objects.get.return_value = mock_annot
+
+        # Mock generate_embeddings_from_text to simulate corpus-based embedding
+        corpus_embedder_path = "corpus.embedder.path"
+        test_vector = [0.4, 0.5, 0.6]
+        mock_generate_embeddings.return_value = (corpus_embedder_path, test_vector)
 
         # Call the function without embedder_path
         calculate_embedding_for_annotation_text(annotation_id=1)
 
-        # Verify Corpus.objects.get was called with the correct corpus_id
-        mock_corpus_model.objects.get.assert_called_with(id=123)
+        # Verify annotation was retrieved correctly
+        mock_annotation_model.objects.get.assert_called_with(pk=1)
 
-        # Verify corpus embedder was used
-        mock_corpus_instance.embed_text.assert_called_with("This is test text")
+        # Verify generate_embeddings_from_text was called with corpus_id
+        mock_generate_embeddings.assert_called_with("This is test text", corpus_id=123)
 
-        # Verify embedding was stored
-        mock_annot.add_embedding.assert_called_with(
-            "corpus.embedder.path", [0.4, 0.5, 0.6]
-        )
-
-        # Verify default embedder was not used
-        mock_get_default.assert_not_called()
+        # Verify embedding was stored with the corpus embedder path
+        mock_annot.add_embedding.assert_called_with(corpus_embedder_path, test_vector)
 
     @patch("opencontractserver.tasks.embeddings_task.Annotation")
-    @patch("opencontractserver.tasks.embeddings_task.get_component_by_name")
-    @patch("opencontractserver.tasks.embeddings_task.get_default_embedder")
+    @patch("opencontractserver.tasks.embeddings_task.generate_embeddings_from_text")
     @patch("opencontractserver.tasks.embeddings_task.settings")
     def test_calculate_embedding_for_annotation_text_fallback_to_default(
-        self, mock_settings, mock_get_default, mock_get_component, mock_annotation
+        self, mock_settings, mock_generate_embeddings, mock_annotation_model
     ):
         """
         Test that calculate_embedding_for_annotation_text falls back to the default embedder
@@ -584,31 +580,29 @@ class TestEmbeddingTask(unittest.TestCase):
         mock_annot = MagicMock()
         mock_annot.id = 1
         mock_annot.raw_text = "This is test text"
-        # Explicitly set corpus to None to ensure the test is clear about this case
-        mock_annot.corpus = None
-        mock_annot.corpus_id = None
-        mock_annotation.objects.get.return_value = mock_annot
+        mock_annot.corpus_id = None  # No corpus
+        mock_annotation_model.objects.get.return_value = mock_annot
 
-        # Mock default embedder settings and class
+        # Mock default embedder settings
         mock_settings.DEFAULT_EMBEDDER = "default.embedder.path"
 
-        # Set up the embedder class and instance
-        mock_embedder = MagicMock()
-        mock_embedder.embed_text.return_value = [0.7, 0.8, 0.9]
-        mock_embedder_class = MagicMock(return_value=mock_embedder)
-        mock_get_default.return_value = mock_embedder_class
+        # Mock generate_embeddings_from_text to return default path
+        # When corpus_id is None, it should use the default embedder
+        default_path = "default.embedder.path"
+        test_vector = [0.7, 0.8, 0.9]
+        mock_generate_embeddings.return_value = (default_path, test_vector)
 
         # Call the function without embedder_path
         calculate_embedding_for_annotation_text(annotation_id=1)
 
-        # Verify default embedder was used
-        mock_get_default.assert_called_once()
-        mock_embedder.embed_text.assert_called_with("This is test text")
+        # Verify annotation was retrieved correctly
+        mock_annotation_model.objects.get.assert_called_with(pk=1)
 
-        # Verify embedding was stored
-        mock_annot.add_embedding.assert_called_with(
-            "default.embedder.path", [0.7, 0.8, 0.9]
-        )
+        # Verify generate_embeddings_from_text was called with corpus_id=None
+        mock_generate_embeddings.assert_called_with("This is test text", corpus_id=None)
+
+        # Verify embedding was stored with the default path
+        mock_annot.add_embedding.assert_called_with(default_path, test_vector)
 
 
 if __name__ == "__main__":

@@ -1,50 +1,64 @@
+from datetime import time
 import logging
 from typing import Optional, Union
 
-import numpy as np
-import requests
-from django.conf import settings
 
+from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def get_embedder_for_corpus(
-    corpus_id: int, mimetype: Optional[Union[str, "FileTypeEnum"]] = None
-) -> tuple[Optional[type], Optional[str]]:
+def get_embedder(
+    corpus_id: int | str = None, mimetype_or_enum: Union[str, FileTypeEnum] = None
+) -> tuple[type[BaseEmbedder], str]:
     """
-    Retrieve the Python embedder class (if any) and embedder path for a given corpus.
-    If none is found or specified, you can fall back to a default.
+    Get the appropriate embedder for a corpus.
 
     Args:
-        corpus_id (int): The ID of the corpus.
-        mimetype (Optional[Union[str, FileTypeEnum]]): MIME type that might affect embedder choice.
+        corpus_id: The ID of the corpus
+        mimetype_or_enum: The MIME type of the document or a FileTypeEnum (used as fallback)
 
     Returns:
-        (embedder_class, embedder_path) - either may be None if no embedder is configured.
+        A tuple of (embedder_class, embedder_path)
     """
+    
+    from opencontractserver.pipeline.utils import find_embedder_for_filetype, get_default_embedder, get_component_by_name
     from opencontractserver.corpuses.models import Corpus
 
     embedder_class = None
     embedder_path = None
 
-    try:
-        corpus = Corpus.objects.get(pk=corpus_id)
-        embedder_class = corpus.get_embedder_class()
-        # The embedder_path is typically the FQ path of the embedder class
-        # or some user-defined identifier from corpus.preferred_embedder
-        if corpus.preferred_embedder:
-            embedder_path = corpus.preferred_embedder
-        else:
-            embedder_path = settings.DEFAULT_EMBEDDER
+    # Try to get the corpus's preferred embedder
+    if corpus_id:
+        try:
+            corpus = Corpus.objects.get(id=corpus_id)
+            if corpus.preferred_embedder:
+                try:
+                    embedder_class = get_component_by_name(corpus.preferred_embedder)
+                    embedder_path = corpus.preferred_embedder
+                except Exception:
+                    # If we can't load the preferred embedder, fall back to mimetype
+                    pass
+        except Exception:
+            # If corpus doesn't exist, fall back to mimetype
+            pass
 
-    except Corpus.DoesNotExist:
-        logger.warning(
-            f"No corpus found with id={corpus_id}. Using fallback embedder path."
-        )
-        embedder_path = settings.DEFAULT_EMBEDDER
+    # If no corpus-specific embedder was found and a mimetype is provided,
+    # try to find an appropriate embedder for the mimetype
+    if embedder_class is None and mimetype_or_enum:
+
+        # Find an embedder for the mimetype and dimension
+        embedder_class = find_embedder_for_filetype(mimetype_or_enum)
+        if embedder_class:
+            embedder_path = f"{embedder_class.__module__}.{embedder_class.__name__}"
+
+    # Fall back to default embedder if no specific embedder is found
+    if embedder_class is None:
+        embedder_class = get_default_embedder()
+        if embedder_class:
+            embedder_path = f"{embedder_class.__module__}.{embedder_class.__name__}"
 
     return embedder_class, embedder_path
 
@@ -70,50 +84,39 @@ def generate_embeddings_from_text(
             - The list of floats representing the embedding vector (or None on error).
     """
     if not text.strip():
+        logger.warning(f"generate_embeddings_from_text() - text is empty or whitespace for corpus_id {corpus_id}")
         return None, None
 
-    embedder_class, embedder_path = get_embedder_for_corpus(corpus_id, mimetype)
+    logger.info(f"Generating embeddings for text of length {len(text)} with corpus_id={corpus_id}, mimetype={mimetype}")
+    
+    embedder_class, embedder_path = get_embedder(corpus_id, mimetype)
+    logger.debug(f"Selected embedder: class={embedder_class.__name__ if embedder_class else None}, path={embedder_path}")
 
     # If we found a valid Python embedder class with an embed_text method, use it.
     if embedder_class:
         try:
+            logger.info(f"Initializing embedder instance of {embedder_class.__name__}")
             embedder_instance = embedder_class()
+            
+            logger.info(f"Embedding text with {embedder_class.__name__}")
+            start_time = time.time()
             vector = embedder_instance.embed_text(text)  # type: ignore
+            elapsed_time = time.time() - start_time
+            
+            if vector is not None:
+                vector_dim = len(vector) if isinstance(vector, list) else "unknown"
+                logger.info(f"Successfully generated embedding with dimension={vector_dim} in {elapsed_time:.2f}s")
+            else:
+                logger.warning(f"Embedder {embedder_class.__name__} returned None vector")
+                
             return embedder_path, vector
         except Exception as e:
             logger.error(
-                f"Failed to generate embeddings via embedder class {embedder_class}: {e}"
+                f"Failed to generate embeddings via embedder class {embedder_class.__name__}: {e}"
             )
+            logger.exception("Detailed embedding generation error:")
 
-    # TODO - this needs attention. Possible removal.
-    # If no embedder_class or it failed, deploy the microservice approach
-    logger.debug("Falling back to the embeddings microservice for embedding text.")
-    try:
-        payload = {"text": text}
-        # If the embedder_class has a vector_size, or we glean a dimension from the corpus,
-        # we can pass that to the microservice:
-        if embedder_class and hasattr(embedder_class, "vector_size"):
-            payload["vector_size"] = embedder_class.vector_size
-
-        response = requests.post(
-            f"{settings.EMBEDDINGS_MICROSERVICE_URL}/embeddings",
-            json=payload,
-            headers={"X-API-Key": settings.VECTOR_EMBEDDER_API_KEY},
-        )
-
-        if response.status_code == 200:
-            arr = np.array(response.json()["embeddings"])
-            if not np.isnan(arr).any():
-                # Typically shape is (1, D), so reduce to 1-D
-                vector = arr[0].tolist()
-                if embedder_path is None:
-                    embedder_path = settings.DEFAULT_EMBEDDER
-                return embedder_path, vector
-            else:
-                logger.error("Microservice returned NaN in embeddings array.")
-    except Exception as e:
-        logger.error(f"generate_embeddings_from_text() - failed via microservice: {e}")
-
+    logger.warning(f"No suitable embedder found or embedding generation failed for corpus_id={corpus_id}")
     return None, None
 
 

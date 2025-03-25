@@ -553,6 +553,70 @@ class TestPostProcessor(BasePostProcessor):
         embedder = get_default_embedder_for_filetype("application/json")
         self.assertIsNone(embedder)
 
+    @override_settings(
+        PREFERRED_EMBEDDERS={
+            "application/pdf": "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder384",
+            "text/plain": "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder768",
+        },
+        DEFAULT_EMBEDDER="opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder",
+    )
+    def test_find_embedder_for_filetype(self) -> None:
+        """
+        Test find_embedder_for_filetype function with different input types and scenarios.
+        """
+        from opencontractserver.pipeline.base.file_types import FileTypeEnum
+        from opencontractserver.pipeline.utils import (
+            find_embedder_for_filetype,
+            get_default_embedder,
+        )
+
+        # Get the default embedder for comparison
+        default_embedder = get_default_embedder()
+        self.assertIsNotNone(default_embedder)
+        self.assertEqual(default_embedder.title, "Test Embedder")
+
+        # Test with mimetype string
+        embedder = find_embedder_for_filetype("application/pdf")
+        self.assertEqual(embedder.title, "Test Embedder 384")
+
+        embedder = find_embedder_for_filetype("text/plain")
+        self.assertEqual(embedder.title, "Test Embedder 768")
+
+        # Test with FileTypeEnum
+        embedder = find_embedder_for_filetype(FileTypeEnum.PDF)
+        self.assertEqual(embedder.title, "Test Embedder 384")
+
+        embedder = find_embedder_for_filetype(FileTypeEnum.TXT)
+        self.assertEqual(embedder.title, "Test Embedder 768")
+
+        # Test with unknown mimetype (should return None from get_preferred_embedder)
+        embedder = find_embedder_for_filetype("application/unknown")
+        self.assertIsNone(
+            embedder
+        )  # None because no preferred embedder for this mimetype
+
+        # Test with DOCX FileTypeEnum (which should map to a known mimetype)
+        embedder = find_embedder_for_filetype(FileTypeEnum.DOCX)
+        self.assertIsNone(
+            embedder
+        )  # None because no preferred embedder for this mimetype
+
+    @override_settings(
+        PREFERRED_EMBEDDERS={
+            "application/pdf": "non.existent.EmbedderClass",
+        },
+        DEFAULT_EMBEDDER="opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder",
+    )
+    def test_find_embedder_for_filetype_error_handling(self) -> None:
+        """
+        Test find_embedder_for_filetype error handling when embedder path can't be loaded.
+        """
+        from opencontractserver.pipeline.utils import find_embedder_for_filetype
+
+        # When a preferred embedder can't be loaded, the function should return None
+        embedder = find_embedder_for_filetype("application/pdf")
+        self.assertIsNone(embedder)
+
 
 if __name__ == "__main__":
     unittest.main()

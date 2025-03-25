@@ -3,7 +3,6 @@ import uuid
 from typing import Optional
 
 import django
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -11,10 +10,6 @@ from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from tree_queries.models import TreeNode
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.pipeline.utils import (
-    get_component_by_name,
-    get_default_embedder,
-)
 from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.QuerySets import PermissionedTreeQuerySet
 from opencontractserver.shared.utils import calc_oc_file_path
@@ -171,21 +166,6 @@ class Corpus(TreeNode):
                     {"post_processors": f"Invalid Python path: {processor}"}
                 )
 
-    def get_embedder_class(self) -> Optional[type]:
-        """
-        Retrieve the embedder class (Python-based) if possible from the
-        corpus preferred_embedder, else from default embedder config.
-        """
-        embedder_class = None
-        try:
-            if self.preferred_embedder:
-                embedder_class = get_component_by_name(self.preferred_embedder)
-            else:
-                embedder_class = get_default_embedder()
-        except Exception as e:
-            logger.error(f"Failed to get embedder class: {e}")
-        return embedder_class
-
     def embed_text(self, text: str) -> tuple[Optional[str], Optional[list[float]]]:
         """
         Use a unified embeddings function from utils to create embeddings for the text.
@@ -197,15 +177,6 @@ class Corpus(TreeNode):
             A tuple of (embedder path, embeddings list), or (None, None) on failure.
         """
         return generate_embeddings_from_text(text, corpus_id=self.pk)
-
-    def get_embed_dim(self) -> int:
-        """
-        Get the embedding dimension for the corpus.
-        """
-        embedder_class = self.get_embedder_class()
-        if embedder_class and hasattr(embedder_class, "vector_size"):
-            return embedder_class.vector_size
-        return settings.DEFAULT_EMBEDDING_DIMENSION
 
 
 # Model for Django Guardian permissions... trying to improve performance...

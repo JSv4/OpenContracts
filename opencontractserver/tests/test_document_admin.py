@@ -167,7 +167,7 @@ class TestDocumentAdmin(TestCase):
         # document 2 => "Document #<pk>" (appears twice for two embeddings)
         self.assertContains(response, f"Document #{self.document.pk}")
         self.assertContains(response, f"Document #{self.document2.pk}")
-        
+
         # Check dimension_info
         self.assertContains(response, "384")
         self.assertContains(response, "768")
@@ -220,7 +220,7 @@ class TestDocumentAdmin(TestCase):
 
     def test_document_with_multiple_dimension_embeddings(self):
         """
-        Test that a document with embeddings of different dimensions 
+        Test that a document with embeddings of different dimensions
         correctly displays all dimensions in the admin.
         """
         # Create a document with embeddings of different dimensions
@@ -230,7 +230,7 @@ class TestDocumentAdmin(TestCase):
             creator=self.superuser,
             is_public=True,
         )
-        
+
         # Create embeddings with different dimensions
         Embedding.objects.create(
             document=multi_dim_doc,
@@ -250,23 +250,23 @@ class TestDocumentAdmin(TestCase):
             creator=self.superuser,
             vector_1536=random_vector(dimension=1536),
         )
-        
+
         # Go to the document change page
         url = reverse("admin:documents_document_change", args=[multi_dim_doc.pk])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        
+
         # Check that all dimensions are displayed
         self.assertContains(response, "384")
         self.assertContains(response, "768")
         self.assertContains(response, "1536")
-        
+
         # Check the total embeddings count
         changelist_url = reverse("admin:documents_document_changelist")
         list_response = self.client.get(changelist_url)
         self.assertEqual(list_response.status_code, 200)
-        
+
         # The document should have 3 embeddings
         content = list_response.content.decode("utf-8")
-        doc_row = content.split(f'>{multi_dim_doc.title}<')[1].split('</tr>')[0]
-        self.assertIn('>3<', doc_row, "Should display total_embeddings=3") 
+        doc_row = content.split(f">{multi_dim_doc.title}<")[1].split("</tr>")[0]
+        self.assertIn(">3<", doc_row, "Should display total_embeddings=3")

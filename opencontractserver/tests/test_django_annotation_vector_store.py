@@ -3,7 +3,7 @@ from typing import Optional
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.db.models.signals import post_save
+from django.db import transaction
 from django.test import TestCase, override_settings
 from llama_index.core.vector_stores import (
     MetadataFilter,
@@ -12,10 +12,8 @@ from llama_index.core.vector_stores import (
 )
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
-from opencontractserver.annotations.signals import process_annot_on_create_atomic
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.documents.signals import process_doc_on_create_atomic
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
 
 User = get_user_model()
@@ -60,75 +58,76 @@ class TestDjangoAnnotationVectorStore(TestCase):
         for these objects, thus ensuring we can retrieve them by vector queries.
         """
 
-        cls.user = User.objects.create_user(
-            username="testuser",
-            password="testpass",
-            email="testuser@example.com",
-        )
+        with transaction.atomic():
+            cls.user = User.objects.create_user(
+                username="testuser",
+                password="testpass",
+                email="testuser@example.com",
+            )
 
-        cls.corpus = Corpus.objects.create(
-            title="Test Corpus for DAVA",
-            creator=cls.user,
-            is_public=True,
-        )
+            cls.corpus = Corpus.objects.create(
+                title="Test Corpus for DAVA",
+                creator=cls.user,
+                is_public=True,
+            )
 
-        cls.doc1 = Document.objects.create(
-            title="Document One",
-            corpus=cls.corpus,
-            creator=cls.user,
-            is_public=True,
-        )
+            cls.doc1 = Document.objects.create(
+                title="Document One",
+                corpus=cls.corpus,
+                creator=cls.user,
+                is_public=True,
+            )
 
-        cls.doc2 = Document.objects.create(
-            title="Document Two",
-            corpus=cls.corpus,
-            creator=cls.user,
-            is_public=True,
-        )
+            cls.doc2 = Document.objects.create(
+                title="Document Two",
+                corpus=cls.corpus,
+                creator=cls.user,
+                is_public=True,
+            )
 
-        # Labels
-        cls.label_important = AnnotationLabel.objects.create(
-            text="Important Label",
-            creator=cls.user,
-        )
-        cls.label_minor = AnnotationLabel.objects.create(
-            text="Minor Label",
-            creator=cls.user,
-        )
+            # Labels
+            cls.label_important = AnnotationLabel.objects.create(
+                text="Important Label",
+                creator=cls.user,
+            )
+            cls.label_minor = AnnotationLabel.objects.create(
+                text="Minor Label",
+                creator=cls.user,
+            )
 
-        # Annotations
-        cls.anno1 = Annotation.objects.create(
-            document=cls.doc1,
-            corpus=cls.corpus,
-            creator=cls.user,
-            raw_text="This is the first annotation text for doc1",
-            annotation_label=cls.label_important,
-            is_public=True,
-        )
-        cls.anno2 = Annotation.objects.create(
-            document=cls.doc1,
-            corpus=cls.corpus,
-            creator=cls.user,
-            raw_text="Another annotation text, minor label, on doc1",
-            annotation_label=cls.label_minor,
-            is_public=True,
-        )
-        cls.anno3 = Annotation.objects.create(
-            document=cls.doc2,
-            corpus=cls.corpus,
-            creator=cls.user,
-            raw_text="Annotation text for doc2, important label",
-            annotation_label=cls.label_important,
-            is_public=True,
-        )
-        cls.anno4 = Annotation.objects.create(
-            document=cls.doc2,
-            corpus=cls.corpus,
-            creator=cls.user,
-            raw_text="Just some random text in doc2 with no label set",
-            annotation_label=None,
-            is_public=True,
-        )
+            # Annotations
+            cls.anno1 = Annotation.objects.create(
+                document=cls.doc1,
+                corpus=cls.corpus,
+                creator=cls.user,
+                raw_text="This is the first annotation text for doc1",
+                annotation_label=cls.label_important,
+                is_public=True,
+            )
+            cls.anno2 = Annotation.objects.create(
+                document=cls.doc1,
+                corpus=cls.corpus,
+                creator=cls.user,
+                raw_text="Another annotation text, minor label, on doc1",
+                annotation_label=cls.label_minor,
+                is_public=True,
+            )
+            cls.anno3 = Annotation.objects.create(
+                document=cls.doc2,
+                corpus=cls.corpus,
+                creator=cls.user,
+                raw_text="Annotation text for doc2, important label",
+                annotation_label=cls.label_important,
+                is_public=True,
+            )
+            cls.anno4 = Annotation.objects.create(
+                document=cls.doc2,
+                corpus=cls.corpus,
+                creator=cls.user,
+                raw_text="Just some random text in doc2 with no label set",
+                annotation_label=None,
+                is_public=True,
+            )
 
         # Add embeddings (384 dimension) to anno1, anno2, anno3; skip anno4 to confirm no-embed.
         dim = 384
@@ -265,10 +264,17 @@ class TestDjangoAnnotationVectorStore(TestCase):
         query = VectorStoreQuery(
             query_embedding=None, query_str="some text", similarity_top_k=3
         )
+
+        # Ensure anno4 doesn't have an embedding before running the query
+        # TODO - the embedding shouldn't be here... but having trouble stopping signal from firing.
+        self.anno4.embedding_set.all().delete()
+
         result = store.query(query)
 
         # 4) Assert you get the annotations you expect
         returned_ids = {n.id_ for n in result.nodes}
+
+        # Verify the expected annotations are returned
         self.assertIn(str(self.anno1.id), returned_ids)
         self.assertIn(str(self.anno2.id), returned_ids)
         self.assertIn(str(self.anno3.id), returned_ids)
@@ -304,9 +310,6 @@ class TestDjangoAnnotationVectorStore(TestCase):
         If a user calls a query with query_str but the dimension is unsupported or generate_embeddings
         fails (None, None), we should just return results with no vector-based ordering.
         """
-
-        post_save.disconnect(process_doc_on_create_atomic, sender=Document)
-        post_save.disconnect(process_annot_on_create_atomic, sender=Annotation)
 
         # Return (None, None) from generate_embeddings_from_text so the vector store
         # can't do a similarity search and must fallback.

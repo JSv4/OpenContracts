@@ -248,56 +248,97 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         5. Convert to LlamaIndex TextNodes and return.
         """
         # Build the base queryset
+        _logger.info("Building base queryset for vector store query")
         queryset = Annotation.objects.all()
+        _logger.debug(f"Initial queryset: {queryset.query}")
 
         if self.corpus_id:
+            _logger.info(f"Filtering by corpus_id: {self.corpus_id}")
             queryset = queryset.filter(corpus_id=self.corpus_id)
+            _logger.debug(f"After corpus filter: {queryset.query}")
 
         if self.document_id:
+            _logger.info(f"Filtering by document_id: {self.document_id}")
             queryset = queryset.filter(document_id=self.document_id)
+            _logger.debug(f"After document filter: {queryset.query}")
 
         if self.user_id:
+            _logger.info(f"Filtering by user_id: {self.user_id}")
             queryset = queryset.filter(creator_id=self.user_id)
+            _logger.debug(f"After user filter: {queryset.query}")
 
         if self.must_have_text:
+            _logger.info(f"Filtering by text content: '{self.must_have_text}'")
             queryset = queryset.filter(raw_text__icontains=self.must_have_text)
+            _logger.debug(f"After text content filter: {queryset.query}")
 
         # Apply any metadata filters
         if query.filters:
+            _logger.info(f"Applying metadata filters: {query.filters}")
             queryset = self._apply_metadata_filters(queryset, query.filters)
+            _logger.debug(f"After metadata filters: {queryset.query}")
 
         # Determine the embedding (either from query.query_embedding or generate from query.query_str)
         top_k = query.similarity_top_k if query.similarity_top_k else 100
+        _logger.info(f"Using top_k value: {top_k}")
         vector = query.query_embedding
         embedder_path = settings.DEFAULT_EMBEDDER
 
         if vector is None and query.query_str is not None:
             # Generate embeddings from the textual query
             # ignoring dimension mismatch or advanced error handling for brevity
+            _logger.info(
+                f"Generating embeddings from query string: '{query.query_str}'"
+            )
             embedder_path, vector = generate_embeddings_from_text(
                 query.query_str,
                 corpus_id=self.corpus_id if self.corpus_id else None,
             )
+            _logger.info(f"Generated embeddings using embedder: {embedder_path}")
+            if vector is not None:
+                _logger.debug(f"Vector dimension: {len(vector)}")
+            else:
+                _logger.warning("Failed to generate embeddings - vector is None")
 
         # If we do have a vector, run search_by_embedding...
         if vector is not None and len(vector) in [384, 768, 1536, 3072]:
+            _logger.info(f"Using vector search with dimension: {len(vector)}")
             # Provide a fallback for embedder_path if none is found
             if not embedder_path:
                 embedder_path = "unknown-embedder"
+                _logger.info(
+                    "No embedder path found, using fallback: 'unknown-embedder'"
+                )
 
             # Because `search_by_embedding` requires embedder_path & query_vector
+            _logger.info(f"Performing vector search with embedder: {embedder_path}")
             queryset = queryset.search_by_embedding(
                 query_vector=vector, embedder_path=embedder_path, top_k=top_k
             )
+            _logger.debug(f"After vector search: {queryset.query}")
         else:
             # Either no vector or invalid dimension => do nothing special
+            if vector is None:
+                _logger.info("No vector available for search, using standard filtering")
+            else:
+                _logger.warning(
+                    f"Invalid vector dimension: {len(vector)}, using standard filtering"
+                )
+
             if query.similarity_top_k is not None:
+                _logger.info(f"Limiting results to top {top_k}")
                 queryset = queryset[:top_k]
+                _logger.debug(f"After limiting results: {queryset}")
 
         # Fetch the annotations
+        _logger.info("Fetching annotations from database")
         annotations = list(queryset)
+        _logger.info(f"Retrieved {len(annotations)} annotations")
+        if annotations:
+            _logger.debug(f"First annotation ID: {annotations[0].id}")
 
         # Convert them to TextNodes
+        _logger.info("Converting annotations to TextNodes")
         nodes = []
         for ann in annotations:
             node = TextNode(

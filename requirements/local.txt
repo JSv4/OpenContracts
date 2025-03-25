@@ -54,6 +54,10 @@ pypdf
 python-docx
 openpyxl
 python-pptx
+
+# Not directly required, pinned by Snyk to avoid a vulnerability
+# ------------------------------------------------------------------------------
+twisted>=24.7.0rc1 # not directly required, pinned by Snyk to avoid a vulnerability
 ipython>=8.10.0 # not directly required, pinned by Snyk to avoid a vulnerability
 requests>=2.32.2 # not directly required, pinned by Snyk to avoid a vulnerability
 setuptools>=70.0.0 # not directly required, pinned by Snyk to avoid a vulnerability

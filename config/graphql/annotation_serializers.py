@@ -8,6 +8,9 @@ from opencontractserver.annotations.models import AnnotationLabel
 
 User = get_user_model()
 
+
+# Why is this here? If placed in serializers, causes circular import error
+# TODO - better solution
 class AnnotationLabelSerializer(serializers.ModelSerializer):
     creator_id = serializers.IntegerField(write_only=True)
 
@@ -33,4 +36,4 @@ class AnnotationLabelSerializer(serializers.ModelSerializer):
                 validated_data["creator"] = get_user_model().objects.get(pk=creator_id)
             except get_user_model().DoesNotExist:
                 raise serializers.ValidationError({"creator_id": "Invalid creator ID"})
-        return super().create(validated_data) 
+        return super().create(validated_data)

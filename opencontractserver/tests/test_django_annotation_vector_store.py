@@ -338,3 +338,79 @@ class TestDjangoAnnotationVectorStore(TestCase):
             2,
             "We should only retrieve top_k=2 with similarity search.",
         )
+
+    def test_batch_add_embeddings_and_corpus_exclusion(self) -> None:
+        """
+        1) Demonstrates adding embeddings in batch via add_embeddings().
+        2) Ensures that annotations belonging to a different corpus
+           are excluded from queries restricted to self.corpus.
+        """
+        # Create a separate corpus for testing exclusion
+        other_corpus = Corpus.objects.create(
+            title="Unrelated Corpus",
+            creator=self.user,
+            is_public=True,
+        )
+
+        # Create a new annotation in cls.corpus
+        new_annotation_in_corpus = Annotation.objects.create(
+            document=self.doc1,
+            corpus=self.corpus,
+            creator=self.user,
+            raw_text="Batch-embedded annotation in the existing test corpus",
+            annotation_label=self.label_important,
+            is_public=True,
+        )
+
+        # Create an annotation in the other_corpus
+        annotation_other_corpus = Annotation.objects.create(
+            document=self.doc1,
+            corpus=other_corpus,
+            creator=self.user,
+            raw_text="Annotation in a different corpus",
+            annotation_label=self.label_important,
+            is_public=True,
+        )
+
+        # Add multiple embeddings in a single batch for each annotation
+        vectors_for_batch = [
+            constant_vector(384, 0.45),
+            constant_vector(384, 0.55),
+        ]
+        new_annotation_in_corpus.add_embeddings(
+            "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+            vectors_for_batch,
+        )
+        annotation_other_corpus.add_embeddings(
+            "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+            vectors_for_batch,
+        )
+
+        # Instantiate a vector store restricted to self.corpus
+        store = DjangoAnnotationVectorStore(
+            user_id=self.user.id,
+            corpus_id=self.corpus.id,
+            document_id=None,
+            must_have_text=None,
+        )
+
+        # Submit a vector-based query
+        query_vec = constant_vector(384, value=0.50)
+        query = VectorStoreQuery(query_embedding=query_vec, similarity_top_k=10)
+        result = store.query(query)
+
+        returned_ids = {node.id_ for node in result.nodes}
+
+        # Annotation in self.corpus should appear
+        self.assertIn(
+            str(new_annotation_in_corpus.id),
+            returned_ids,
+            "Expected in-corpus annotation to be retrieved.",
+        )
+
+        # Annotation in other_corpus should not appear
+        self.assertNotIn(
+            str(annotation_other_corpus.id),
+            returned_ids,
+            "Annotation from a different corpus must be excluded.",
+        )

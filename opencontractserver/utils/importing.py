@@ -1,7 +1,7 @@
 import logging
 from typing import Union
 
-from config.graphql.serializers import AnnotationLabelSerializer
+from config.graphql.annotation_serializers import AnnotationLabelSerializer
 from opencontractserver.annotations.models import (
     TOKEN_LABEL,
     Annotation,

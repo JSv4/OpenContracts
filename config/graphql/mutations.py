@@ -18,6 +18,7 @@ from graphql import GraphQLError
 from graphql_jwt.decorators import login_required, user_passes_test
 from graphql_relay import from_global_id, to_global_id
 
+from config.graphql.annotation_serializers import AnnotationLabelSerializer
 from config.graphql.base import DRFDeletion, DRFMutation
 from config.graphql.graphene_types import (
     AnalysisType,
@@ -39,7 +40,6 @@ from config.graphql.graphene_types import (
     UserType,
 )
 from config.graphql.serializers import (
-    AnnotationLabelSerializer,
     AnnotationSerializer,
     CorpusSerializer,
     DocumentSerializer,

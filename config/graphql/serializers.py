@@ -5,6 +5,7 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel, LabelSet
+from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import Column, Extract
 from opencontractserver.shared.fields import PDFBase64File
@@ -25,7 +26,7 @@ class CorpusSerializer(serializers.ModelSerializer):
     icon = Base64ImageField(required=False)
 
     class Meta:
-        model = "corpuses.Corpus"
+        model = Corpus
         fields = [
             "id",
             "title",
@@ -86,34 +87,6 @@ class LabelsetSerializer(serializers.ModelSerializer):
         model = LabelSet
         fields = ["id", "title", "description", "icon", "creator", "creator_id"]
         read_only_fields = ["id"]
-
-
-class AnnotationLabelSerializer(serializers.ModelSerializer):
-    creator_id = serializers.IntegerField(write_only=True)
-
-    class Meta:
-        model = AnnotationLabel
-        fields = [
-            "id",
-            "creator",
-            "label_type",
-            "color",
-            "description",
-            "icon",
-            "text",
-            "creator_id",
-            "read_only",
-        ]
-        read_only_fields = ["id", "creator"]
-
-    def create(self, validated_data):
-        creator_id = validated_data.pop("creator_id", None)
-        if creator_id:
-            try:
-                validated_data["creator"] = get_user_model().objects.get(pk=creator_id)
-            except get_user_model().DoesNotExist:
-                raise serializers.ValidationError({"creator_id": "Invalid creator ID"})
-        return super().create(validated_data)
 
 
 class AnnotationSerializer(serializers.ModelSerializer):

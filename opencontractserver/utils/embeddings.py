@@ -10,7 +10,9 @@ logger.setLevel(logging.DEBUG)
 
 
 def get_embedder(
-    corpus_id: int | str = None, mimetype_or_enum: Union[str, FileTypeEnum] = None
+    corpus_id: int | str = None,
+    mimetype_or_enum: Union[str, FileTypeEnum] = None,
+    embedder_path: Optional[str] = None,
 ) -> tuple[type[BaseEmbedder], str]:
     """
     Get the appropriate embedder for a corpus.
@@ -18,6 +20,7 @@ def get_embedder(
     Args:
         corpus_id: The ID of the corpus
         mimetype_or_enum: The MIME type of the document or a FileTypeEnum (used as fallback)
+        embedder_path: The path to the embedder class to use (OVERRIDES ALL OTHER ARGUMENTS)
 
     Returns:
         A tuple of (embedder_class, embedder_path)
@@ -31,10 +34,15 @@ def get_embedder(
     )
 
     embedder_class = None
-    embedder_path = None
 
     # Try to get the corpus's preferred embedder
-    if corpus_id:
+    if embedder_path:
+        try:
+            embedder_class = get_component_by_name(embedder_path)
+        except Exception:
+            logger.warning(f"Failed to load embedder class from path {embedder_path}")
+
+    elif corpus_id:
         try:
             corpus = Corpus.objects.get(id=corpus_id)
             if corpus.preferred_embedder:
@@ -48,7 +56,7 @@ def get_embedder(
             # If corpus doesn't exist, fall back to mimetype
             pass
 
-    # If no corpus-specific embedder was found and a mimetype is provided,
+    # If no explicit or corpus-specific embedder was found and a mimetype is provided,
     # try to find an appropriate embedder for the mimetype
     if embedder_class is None and mimetype_or_enum:
 
@@ -63,6 +71,10 @@ def get_embedder(
         if embedder_class:
             embedder_path = f"{embedder_class.__module__}.{embedder_class.__name__}"
 
+    logger.info(
+        f"Return embedder class: {embedder_class}, embedder path: {embedder_path}"
+    )
+
     return embedder_class, embedder_path
 
 
@@ -70,6 +82,7 @@ def generate_embeddings_from_text(
     text: str,
     corpus_id: Optional[int] = None,
     mimetype: Optional[Union[str, "FileTypeEnum"]] = None,
+    embedder_path: Optional[str] = None,
 ) -> tuple[Optional[str], Optional[list[float]]]:
     """
     Unified function to generate embeddings for a given text, optionally using
@@ -92,11 +105,9 @@ def generate_embeddings_from_text(
         )
         return None, None
 
-    logger.info(
-        f"Generating embeddings for text of length {len(text)} with corpus_id={corpus_id}, mimetype={mimetype}"
+    embedder_class, embedder_path = get_embedder(
+        corpus_id, mimetype_or_enum=mimetype, embedder_path=embedder_path
     )
-
-    embedder_class, embedder_path = get_embedder(corpus_id, mimetype)
     logger.debug(
         f"Selected embedder: class={embedder_class.__name__ if embedder_class else None}, path={embedder_path}"
     )

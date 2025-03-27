@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
+import nest_asyncio
 from django.conf import settings
 from llama_cloud import MessageRole
 from llama_index.agent.openai import OpenAIAgent
@@ -28,6 +29,10 @@ from opencontractserver.llms.tools import (
     load_document_md_summary_tool,
 )
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
+
+# Apply nest_asyncio to enable nested event loops
+# I HATE this, but it's llama_index internals keep changing and causing issues
+nest_asyncio.apply()
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +191,7 @@ async def create_openai_document_agent(
     doc_engine = index.as_query_engine(similarity_top_k=10, streaming=False)
 
     logger.debug("Initializing query engine tools...")
+    # We're using nest_asyncio to handle nested event loops, so we can use the original tools directly
     query_engine_tools = [
         QueryEngineTool(
             query_engine=doc_engine,
@@ -222,7 +228,7 @@ async def create_openai_document_agent(
                     role=MessageRole.ASSISTANT
                     if msg.msg_type.lower() == "llm"
                     else MessageRole.USER,
-                    content=msg.content,
+                    content=msg.content if isinstance(msg.content, str) else "",
                 )
             )
 
@@ -231,6 +237,7 @@ async def create_openai_document_agent(
         query_engine_tools,
         verbose=True,
         chat_history=prefix_messages,
+        use_async=True,
     )
     return underlying_llama_agent
 
@@ -320,7 +327,8 @@ async def create_corpus_agent(
     corpus = await Corpus.objects.aget(id=corpus_id)
     logger.debug(f"Fetched corpus: {corpus.title}")
 
-    all_tools = []
+    # We're using nest_asyncio to handle nested event loops, so we can use the original tools directly
+    query_engine_tools = []
     async for doc in corpus.documents.all():
         logger.debug(f"Building agent for document: {doc.title}")
         doc_agent = await create_openai_document_agent(doc, user_id)
@@ -341,10 +349,21 @@ async def create_corpus_agent(
                 description=doc_summary,
             ),
         )
-        all_tools.append(doc_tool)
+        query_engine_tools.append(doc_tool)
+
+    # Add our async wrapped tools
+    query_engine_tools.extend(
+        [
+            load_document_md_summary_tool,
+            get_md_summary_token_length_tool,
+            get_notes_for_document_corpus_tool,
+            get_note_content_token_length_tool,
+            get_partial_note_content_tool,
+        ]
+    )
 
     logger.debug("Building ObjectIndex over document agents...")
-    obj_index = ObjectIndex.from_objects(all_tools, index_cls=VectorStoreIndex)
+    obj_index = ObjectIndex.from_objects(query_engine_tools, index_cls=VectorStoreIndex)
 
     system_prompt = (
         "You are an agent designed to answer queries about documents in collection of documents "
@@ -365,7 +384,7 @@ async def create_corpus_agent(
                     role=MessageRole.ASSISTANT
                     if msg.msg_type.lower() == "llm"
                     else MessageRole.USER,
-                    content=msg.content,
+                    content=msg.content if isinstance(msg.content, str) else "",
                 )
             )
 

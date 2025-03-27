@@ -19,8 +19,8 @@ export interface ChatMessageSource {
   label_id: number;
   annotation_id: number;
   rawText: string;
-  tokensByPage: Record<number, TokenId[] | undefined>;
-  boundsByPage: Record<number, BoundingBox | undefined>;
+  tokensByPage: Record<number, TokenId[]>;
+  boundsByPage: Record<number, BoundingBox>;
   startIndex?: number;
   endIndex?: number;
   isTextBased?: boolean;
@@ -73,62 +73,86 @@ export function mapWebSocketSourcesToChatMessageSources(
 ): ChatMessageSource[] {
   if (!sourcesData) return [];
 
-  const mappedSources = sourcesData.map((src, index) => {
-    if (isTextJson(src.json)) {
-      const { start, end, text = "" } = src.json;
-      return {
-        id: `${messageId}.${index}`,
-        page: src.page ?? 0, // keep or set 0 if there's truly no pages in text docs
-        label: src.label,
-        label_id: src.label_id,
-        annotation_id: src.annotation_id,
-        rawText: src.rawText,
-        tokensByPage: {},
-        boundsByPage: {},
-        startIndex: start,
-        endIndex: end,
-        isTextBased: true,
-      };
-    } else {
-      const multiPageObj = src.json as MultipageAnnotationJson;
-      const tokensByPage: Record<number, TokenId[]> = {};
-      const boundsByPage: Record<number, BoundingBox> = {};
-
-      // Build per-page tokens/bounds
-      for (const [pageKey, pageData] of Object.entries(multiPageObj)) {
-        // Attempt a numeric parse
-        const pageNum = parseInt(pageKey, 10);
-        const data = pageData as SinglePageAnnotationJson;
-
-        // Store the token data if any
-        tokensByPage[pageNum] = data.tokensJsons ?? [];
-
-        // Store bounding boxes if present
-        if (data.bounds) {
-          boundsByPage[pageNum] = data.bounds;
+  // Filter out invalid sources and map valid ones
+  const mappedSources = sourcesData
+    .map((src, index) => {
+      try {
+        if (!src || src.json === null || src.json === undefined) {
+          console.warn(
+            `Skipping invalid source at index ${index}: missing or null json property`
+          );
+          return null;
         }
+
+        if (isTextJson(src.json)) {
+          const { start, end, text = "" } = src.json;
+          return {
+            id: `${messageId}.${index}`,
+            page: src.page ?? 0, // keep or set 0 if there's truly no pages in text docs
+            label: src.label,
+            label_id: src.label_id,
+            annotation_id: src.annotation_id,
+            rawText: src.rawText,
+            tokensByPage: {},
+            boundsByPage: {},
+            startIndex: start,
+            endIndex: end,
+            isTextBased: true,
+          };
+        } else {
+          const multiPageObj = src.json as MultipageAnnotationJson;
+
+          // Safety check for multiPageObj
+          if (!multiPageObj || typeof multiPageObj !== "object") {
+            console.warn(
+              `Skipping invalid source at index ${index}: json is not a valid object`
+            );
+            return null;
+          }
+
+          const tokensByPage: Record<number, TokenId[]> = {};
+          const boundsByPage: Record<number, BoundingBox> = {};
+
+          // Build per-page tokens/bounds
+          for (const [pageKey, pageData] of Object.entries(multiPageObj)) {
+            // Attempt a numeric parse
+            const pageNum = parseInt(pageKey, 10);
+            const data = pageData as SinglePageAnnotationJson;
+
+            // Store the token data if any
+            tokensByPage[pageNum] = data.tokensJsons ?? [];
+
+            // Store bounding boxes if present
+            if (data.bounds) {
+              boundsByPage[pageNum] = data.bounds;
+            }
+          }
+
+          // Combine rawText from all pages
+          const combinedRawText = Object.values(multiPageObj)
+            .map((data) => data.rawText || "")
+            .join(" ");
+
+          return {
+            id: `${messageId}.${index}`,
+            page: src.page, // keep source's page as is
+            label: src.label,
+            label_id: src.label_id,
+            annotation_id: src.annotation_id,
+            rawText: combinedRawText,
+            tokensByPage,
+            boundsByPage,
+            startIndex: undefined,
+            endIndex: undefined,
+            isTextBased: false,
+          };
+        }
+      } catch (error) {
+        console.error(`Error processing source at index ${index}:`, error);
+        return null;
       }
-
-      // Combine rawText from all pages
-      const combinedRawText = Object.values(multiPageObj)
-        .map((data) => data.rawText || "")
-        .join(" ");
-
-      return {
-        id: `${messageId}.${index}`,
-        page: src.page, // keep source's page as is
-        label: src.label,
-        label_id: src.label_id,
-        annotation_id: src.annotation_id,
-        rawText: combinedRawText,
-        tokensByPage,
-        boundsByPage,
-        startIndex: undefined,
-        endIndex: undefined,
-        isTextBased: false,
-      };
-    }
-  });
+    })
+    .filter((source): source is NonNullable<typeof source> => source !== null);
 
   console.log(
     "[mapWebSocketSourcesToChatMessageSources] Final output:",

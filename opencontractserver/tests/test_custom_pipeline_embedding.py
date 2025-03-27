@@ -49,7 +49,7 @@ class TestOpenContractsPipelineEmbedding(TestCase):
         """
         Test the synchronous query embedding generation.
         """
-        mock_generate_embeddings.return_value = [0.1, 0.2, 0.3]
+        mock_generate_embeddings.return_value = "random_embedder", [0.1, 0.2, 0.3]
         query_text = "Test query"
         result_embedding = self.embedding_model.get_query_embedding(query_text)
 
@@ -70,7 +70,7 @@ class TestOpenContractsPipelineEmbedding(TestCase):
         """
         Test the synchronous text embedding generation.
         """
-        mock_generate_embeddings.return_value = [0.5, 0.6, 0.7]
+        mock_generate_embeddings.return_value = "random_embedder", [0.5, 0.6, 0.7]
         text_content = "Embedding this text"
         result_embedding = self.embedding_model.get_text_embedding(text_content)
 
@@ -91,7 +91,7 @@ class TestOpenContractsPipelineEmbedding(TestCase):
         """
         Test the async query embedding generation.
         """
-        mock_generate_embeddings.return_value = [1.0, 1.1, 1.2]
+        mock_generate_embeddings.return_value = "random_embedder", [1.0, 1.1, 1.2]
         query_text = "Async query"
 
         result_embedding = self.get_async_task_result(
@@ -110,7 +110,7 @@ class TestOpenContractsPipelineEmbedding(TestCase):
         """
         Test the async text embedding generation.
         """
-        mock_generate_embeddings.return_value = [2.0, 2.1, 2.2]
+        mock_generate_embeddings.return_value = "random_embedder", [2.0, 2.1, 2.2]
         text_content = "Async text"
 
         result_embedding = self.get_async_task_result(

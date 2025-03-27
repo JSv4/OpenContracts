@@ -524,7 +524,9 @@ class TestEmbeddingTask(unittest.TestCase):
         mock_annotation_model.objects.get.assert_called_with(pk=1)
 
         # Verify generate_embeddings_from_text was called with correct parameters
-        mock_generate_embeddings.assert_called_with("This is test text", corpus_id=123)
+        mock_generate_embeddings.assert_called_with(
+            "This is test text", corpus_id=123, embedder_path="path.to.TestEmbedder"
+        )
 
         # The key test: verify that the explicit embedder_path was used instead of the one
         # returned by generate_embeddings_from_text
@@ -565,7 +567,9 @@ class TestEmbeddingTask(unittest.TestCase):
         mock_annotation_model.objects.get.assert_called_with(pk=1)
 
         # Verify generate_embeddings_from_text was called with corpus_id
-        mock_generate_embeddings.assert_called_with("This is test text", corpus_id=123)
+        mock_generate_embeddings.assert_called_with(
+            "This is test text", corpus_id=123, embedder_path=None
+        )
 
         # Verify embedding was stored with the corpus embedder path
         mock_annot.add_embedding.assert_called_with(corpus_embedder_path, test_vector)
@@ -607,7 +611,9 @@ class TestEmbeddingTask(unittest.TestCase):
         mock_annotation_model.objects.get.assert_called_with(pk=1)
 
         # Verify generate_embeddings_from_text was called with corpus_id=None
-        mock_generate_embeddings.assert_called_with("This is test text", corpus_id=None)
+        mock_generate_embeddings.assert_called_with(
+            "This is test text", corpus_id=None, embedder_path=None
+        )
 
         # Verify embedding was stored with the default path
         mock_annot.add_embedding.assert_called_with(default_path, test_vector)

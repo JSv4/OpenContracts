@@ -1,16 +1,15 @@
-from typing import List, Optional, Union
 import asyncio
 import logging
+from typing import Optional, Union
 
-from llama_index.core.base.embeddings.base import (
-    BaseEmbedding,
-    Embedding,
-)
+from llama_index.core.base.embeddings.base import BaseEmbedding, Embedding
 from llama_index.core.callbacks import CallbackManager
+
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.utils.embeddings import generate_embeddings_from_text
 
 logger = logging.getLogger(__name__)
+
 
 class OpenContractsPipelineEmbedding(BaseEmbedding):
     """
@@ -32,8 +31,8 @@ class OpenContractsPipelineEmbedding(BaseEmbedding):
 
     # Create an instance of our custom embedding class
     custom_embedder = OpenContractsPipelineEmbedding(
-        corpus_id=123, 
-        mimetype="application/pdf", 
+        corpus_id=123,
+        mimetype="application/pdf",
         embedder_path="/models/my_custom_embedder"
     )
 
@@ -60,7 +59,7 @@ class OpenContractsPipelineEmbedding(BaseEmbedding):
         callback_manager: Optional[CallbackManager] = None,
     ):
         """
-        Initialize with optional corpus_id, mimetype, and embedder_path. These will be passed 
+        Initialize with optional corpus_id, mimetype, and embedder_path. These will be passed
         to the underlying OpenContracts pipeline function that generates embeddings.
 
         :param corpus_id: An optional corpus ID for scoping embeddings.
@@ -80,7 +79,7 @@ class OpenContractsPipelineEmbedding(BaseEmbedding):
 
     def _get_query_embedding(self, query: str) -> Embedding:
         """
-        Embed the input query text synchronously, by calling OpenContracts' 
+        Embed the input query text synchronously, by calling OpenContracts'
         ``generate_embeddings_from_text`` function.
 
         :param query: A string representing the query text.
@@ -88,7 +87,7 @@ class OpenContractsPipelineEmbedding(BaseEmbedding):
         """
         # Call our custom pipeline function to get embeddings as list of floats
         logger.debug(f"Generating embeddings for query: {query}")
-        embedding: List[float] = generate_embeddings_from_text(
+        embedding: list[float] = generate_embeddings_from_text(
             text=query,
             corpus_id=self.corpus_id,
             mimetype=self.mimetype,
@@ -98,7 +97,7 @@ class OpenContractsPipelineEmbedding(BaseEmbedding):
 
     async def _aget_query_embedding(self, query: str) -> Embedding:
         """
-        Asynchronously embed the input query text, by calling OpenContracts' 
+        Asynchronously embed the input query text, by calling OpenContracts'
         ``generate_embeddings_from_text`` function in a background thread.
 
         :param query: A string representing the query text.
@@ -108,14 +107,14 @@ class OpenContractsPipelineEmbedding(BaseEmbedding):
 
     def _get_text_embedding(self, text: str) -> Embedding:
         """
-        Embed the input text synchronously, by calling OpenContracts' 
+        Embed the input text synchronously, by calling OpenContracts'
         ``generate_embeddings_from_text`` function.
 
         :param text: A string representing the text content.
         :return: A list of floats representing the generated embedding.
         """
         logger.debug(f"Generating embeddings for text: {text[:50]}...")
-        embedding: List[float] = generate_embeddings_from_text(
+        embedding: list[float] = generate_embeddings_from_text(
             text=text,
             corpus_id=self.corpus_id,
             mimetype=self.mimetype,
@@ -125,7 +124,7 @@ class OpenContractsPipelineEmbedding(BaseEmbedding):
 
     async def _aget_text_embedding(self, text: str) -> Embedding:
         """
-        Asynchronously embed the input text, by calling OpenContracts' 
+        Asynchronously embed the input text, by calling OpenContracts'
         ``generate_embeddings_from_text`` function in a background thread.
 
         :param text: A string representing text content.

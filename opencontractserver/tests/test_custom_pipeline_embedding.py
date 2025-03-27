@@ -2,12 +2,16 @@
 Tests for the OpenContractsPipelineEmbedding class.
 """
 
-from typing import List, Any, Callable
-from unittest.mock import patch
 import asyncio
+from typing import Any, Callable
+from unittest.mock import patch
+
 from django.test import TestCase
-from opencontractserver.llms.custom_pipeline_embedding import OpenContractsPipelineEmbedding
 from llama_index.core.callbacks import CallbackManager
+
+from opencontractserver.llms.custom_pipeline_embedding import (
+    OpenContractsPipelineEmbedding,
+)
 
 
 class TestOpenContractsPipelineEmbedding(TestCase):
@@ -27,16 +31,20 @@ class TestOpenContractsPipelineEmbedding(TestCase):
             mimetype=self.test_mimetype,
             embedder_path=self.test_embedder_path,
             embed_batch_size=2,
-            callback_manager=CallbackManager([])
+            callback_manager=CallbackManager([]),
         )
 
-    def get_async_task_result(self, async_func: Callable[..., Any], *args, **kwargs) -> Any:
+    def get_async_task_result(
+        self, async_func: Callable[..., Any], *args, **kwargs
+    ) -> Any:
         """
         Helper method to run an async function synchronously in a test context.
         """
         return asyncio.run(async_func(*args, **kwargs))
 
-    @patch("opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text")
+    @patch(
+        "opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text"
+    )
     def test_get_query_embedding(self, mock_generate_embeddings):
         """
         Test the synchronous query embedding generation.
@@ -50,12 +58,14 @@ class TestOpenContractsPipelineEmbedding(TestCase):
             text=query_text,
             corpus_id=self.test_corpus_id,
             mimetype=self.test_mimetype,
-            embedder_path=self.test_embedder_path
+            embedder_path=self.test_embedder_path,
         )
         self.assertIsInstance(result_embedding, list)
         self.assertListEqual(result_embedding, [0.1, 0.2, 0.3])
 
-    @patch("opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text")
+    @patch(
+        "opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text"
+    )
     def test_get_text_embedding(self, mock_generate_embeddings):
         """
         Test the synchronous text embedding generation.
@@ -69,12 +79,14 @@ class TestOpenContractsPipelineEmbedding(TestCase):
             text=text_content,
             corpus_id=self.test_corpus_id,
             mimetype=self.test_mimetype,
-            embedder_path=self.test_embedder_path
+            embedder_path=self.test_embedder_path,
         )
         self.assertIsInstance(result_embedding, list)
         self.assertListEqual(result_embedding, [0.5, 0.6, 0.7])
 
-    @patch("opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text")
+    @patch(
+        "opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text"
+    )
     def test_async_get_query_embedding(self, mock_generate_embeddings):
         """
         Test the async query embedding generation.
@@ -91,7 +103,9 @@ class TestOpenContractsPipelineEmbedding(TestCase):
         self.assertIsInstance(result_embedding, list)
         self.assertListEqual(result_embedding, [1.0, 1.1, 1.2])
 
-    @patch("opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text")
+    @patch(
+        "opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text"
+    )
     def test_async_get_text_embedding(self, mock_generate_embeddings):
         """
         Test the async text embedding generation.
@@ -122,4 +136,6 @@ class TestOpenContractsPipelineEmbedding(TestCase):
         """
         Verify the model name is set as expected.
         """
-        self.assertEqual(self.embedding_model.model_name, "opencontracts-pipeline-model")
+        self.assertEqual(
+            self.embedding_model.model_name, "opencontracts-pipeline-model"
+        )

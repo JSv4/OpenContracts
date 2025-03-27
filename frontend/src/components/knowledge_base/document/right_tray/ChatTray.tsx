@@ -35,7 +35,7 @@ import {
   X,
   Calendar,
 } from "lucide-react";
-import { Button, CardMeta, Input } from "semantic-ui-react";
+import { Button, CardMeta } from "semantic-ui-react";
 import {
   SetStateAction,
   useCallback,
@@ -115,6 +115,7 @@ interface ChatTrayProps {
   showLoad: boolean;
   setShowLoad: React.Dispatch<React.SetStateAction<boolean>>;
   onMessageSelect?: () => void;
+  corpusId?: string;
 }
 
 /**
@@ -132,6 +133,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   showLoad,
   setShowLoad,
   onMessageSelect,
+  corpusId,
 }) => {
   // Chat state
   const [isNewChat, setIsNewChat] = useState(false);
@@ -414,7 +416,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     const wsUrl = getWebSocketUrl(
       documentId,
       auth_token,
-      selectedConversationId
+      selectedConversationId,
+      corpusId
     );
     const newSocket = new WebSocket(wsUrl);
 

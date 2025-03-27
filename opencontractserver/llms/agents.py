@@ -15,12 +15,16 @@ from llama_index.core.chat_engine.types import (
 )
 from llama_index.core.objects import ObjectIndex
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+
+# from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
 
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.llms.custom_pipeline_embedding import (
+    OpenContractsPipelineEmbedding,
+)
 from opencontractserver.llms.tools import (
     get_md_summary_token_length_tool,
     get_note_content_token_length_tool,
@@ -144,6 +148,7 @@ async def create_openai_document_agent(
     user_id: int | None = None,
     override_system_prompt: str | None = None,
     loaded_messages: list[ChatMessage] | None = None,
+    embedder_path: str | None = None,
 ) -> OpenAIAgent:
 
     """Create an OpenAI agent for a document with vector search capabilities.
@@ -165,8 +170,11 @@ async def create_openai_document_agent(
         document = await Document.objects.aget(id=document)
 
     logger.debug("Creating embedding model...")
-    embed_model = HuggingFaceEmbedding(
-        "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    # embed_model = HuggingFaceEmbedding(
+    #     "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    # )
+    embed_model = OpenContractsPipelineEmbedding(
+        embedder_path=embedder_path,
     )
     Settings.embed_model = embed_model
 
@@ -248,6 +256,7 @@ async def create_document_agent(
     override_conversation: Conversation | None = None,
     override_system_prompt: str | None = None,
     loaded_messages: list[ChatMessage] | None = None,
+    embedder_path: str | None = None,
 ) -> OpenContractDbAgent:
     """
     Factory function to construct an OpenContractDbAgent for a given Document.
@@ -269,6 +278,7 @@ async def create_document_agent(
         user_id=user_id,
         override_system_prompt=override_system_prompt,
         loaded_messages=loaded_messages,
+        embedder_path=embedder_path,
     )
 
     logger.debug("Creating Conversation record...")
@@ -318,13 +328,18 @@ async def create_corpus_agent(
     )
     Settings.llm = llm
 
+    corpus = await Corpus.objects.aget(id=corpus_id)
+
     logger.debug("Creating embedding model...")
-    embed_model = HuggingFaceEmbedding(
-        "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    # embed_model = HuggingFaceEmbedding(
+    #     "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    # )
+    embed_model = OpenContractsPipelineEmbedding(
+        corpus_id=corpus.id,
+        embedder_path=corpus.preferred_embedder,
     )
     Settings.embed_model = embed_model
 
-    corpus = await Corpus.objects.aget(id=corpus_id)
     logger.debug(f"Fetched corpus: {corpus.title}")
 
     # We're using nest_asyncio to handle nested event loops, so we can use the original tools directly

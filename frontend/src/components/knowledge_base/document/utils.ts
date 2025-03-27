@@ -8,7 +8,8 @@ export /*
 const getWebSocketUrl = (
   documentId: string,
   token: string,
-  conversationId?: string
+  conversationId?: string,
+  corpusId?: string
 ): string => {
   // Use environment variables or fallback to window.location for production
   const wsBaseUrl =
@@ -26,6 +27,10 @@ const getWebSocketUrl = (
   let url = `${normalizedBaseUrl}/ws/document/${encodeURIComponent(
     documentId
   )}/query/`;
+
+  if (corpusId) {
+    url += `corpus/${encodeURIComponent(corpusId)}/`;
+  }
 
   const params: string[] = [];
 

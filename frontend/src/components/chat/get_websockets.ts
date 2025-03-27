@@ -1,14 +1,4 @@
 /**
- * Configuration type for WebSocket URL generation
- */
-type WebSocketConfig = {
-  /** Optional root domain override. If not provided, uses window.location.host */
-  rootDomain?: string;
-  /** Whether to use secure WebSocket (wss://) or not (ws://) */
-  secure?: boolean;
-};
-
-/**
  * Get WebSocket URL for document queries.
  * @param documentId - Document identifier.
  * @param token - Authentication token from the user session.
@@ -18,7 +8,8 @@ type WebSocketConfig = {
 export function getDocumentQueryWebSocket(
   documentId: string,
   token: string,
-  conversationId?: string
+  conversationId?: string,
+  corpusId?: string
 ): string {
   // Use environment variables or fallback to window.location for production
   const wsBaseUrl =
@@ -36,6 +27,10 @@ export function getDocumentQueryWebSocket(
   let url = `${normalizedBaseUrl}/ws/document/${encodeURIComponent(
     documentId
   )}/query/`;
+
+  if (corpusId) {
+    url += `corpus/${encodeURIComponent(corpusId)}/`;
+  }
 
   const params: string[] = [];
 

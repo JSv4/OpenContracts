@@ -79,7 +79,6 @@ import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisibl
 import { ChatMessage, ChatMessageProps } from "../widgets/chat/ChatMessage";
 import { getCorpusQueryWebSocket } from "../chat/get_websockets";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
-import { TruncatedText } from "../widgets/data-display/TruncatedText";
 
 /**
  * A helper interface representing the properties of data included in websocket messages,

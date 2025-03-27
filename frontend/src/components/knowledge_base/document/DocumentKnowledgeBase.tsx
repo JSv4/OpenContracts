@@ -754,6 +754,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             onMessageSelect={() => {
               setActiveLayer("document");
             }}
+            corpusId={corpusId}
           />
         );
       case "notes":

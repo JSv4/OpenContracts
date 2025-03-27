@@ -43,7 +43,7 @@ sys.path.append(str(BASE_DIR / "delphic"))
 django_application = get_asgi_application()
 
 document_query_pattern = re_path(
-    r"ws/document/(?P<document_id>[-a-zA-Z0-9_=]+)/query/$",
+    r"ws/document/(?P<document_id>[-a-zA-Z0-9_=]+)/query/(?:corpus/(?P<corpus_id>[-a-zA-Z0-9_=]+)/)?$",
     DocumentQueryConsumer.as_asgi(),
 )
 

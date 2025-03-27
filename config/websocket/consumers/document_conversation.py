@@ -87,6 +87,27 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 f"[Session {self.session_id}] Extracted document_id: {self.document_id}"
             )
 
+            # Try to extract optional corpus_id
+            try:
+                # Check if "corpus" is in the path, if so, try to extract it
+                if "/corpus/" in self.scope["path"]:
+                    graphql_corpus_id = extract_websocket_path_id(
+                        self.scope["path"], "corpus"
+                    )
+                    self.corpus_id = int(from_global_id(graphql_corpus_id)[1])
+                    logger.info(
+                        f"[Session {self.session_id}] Extracted corpus_id: {self.corpus_id}"
+                    )
+                else:
+                    self.corpus_id = None
+                    logger.info(f"[Session {self.session_id}] No corpus_id in path")
+            except ValueError:
+                # If there's an error extracting corpus_id, it's not there
+                self.corpus_id = None
+                logger.info(
+                    f"[Session {self.session_id}] No valid corpus_id found in path"
+                )
+
             # Load the Document from DB
             self.document = await Document.objects.aget(id=self.document_id)
 
@@ -286,6 +307,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                     user_id=self.scope["user"].id,
                     loaded_messages=prefix_messages if prefix_messages else None,
                     override_conversation=self.conversation,
+                    corpus_id=self.corpus_id,
                 )
 
                 # Initialize our custom agent

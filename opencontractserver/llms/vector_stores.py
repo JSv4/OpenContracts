@@ -250,33 +250,33 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         # Build the base queryset
         _logger.info("Building base queryset for vector store query")
         queryset = Annotation.objects.all()
-        _logger.debug(f"Initial queryset: {queryset.query}")
+        _logger.info(f"Initial queryset: {queryset.query}")
 
         if self.corpus_id:
             _logger.info(f"Filtering by corpus_id: {self.corpus_id}")
             queryset = queryset.filter(corpus_id=self.corpus_id)
-            _logger.debug(f"After corpus filter: {queryset.query}")
+            _logger.info(f"After corpus filter: {queryset.query}")
 
         if self.document_id:
             _logger.info(f"Filtering by document_id: {self.document_id}")
             queryset = queryset.filter(document_id=self.document_id)
-            _logger.debug(f"After document filter: {queryset.query}")
+            _logger.info(f"After document filter: {queryset.query}")
 
         if self.user_id:
             _logger.info(f"Filtering by user_id: {self.user_id}")
             queryset = queryset.filter(creator_id=self.user_id)
-            _logger.debug(f"After user filter: {queryset.query}")
+            _logger.info(f"After user filter: {queryset.query}")
 
         if self.must_have_text:
             _logger.info(f"Filtering by text content: '{self.must_have_text}'")
             queryset = queryset.filter(raw_text__icontains=self.must_have_text)
-            _logger.debug(f"After text content filter: {queryset.query}")
+            _logger.info(f"After text content filter: {queryset.query}")
 
         # Apply any metadata filters
         if query.filters:
             _logger.info(f"Applying metadata filters: {query.filters}")
             queryset = self._apply_metadata_filters(queryset, query.filters)
-            _logger.debug(f"After metadata filters: {queryset.query}")
+            _logger.info(f"After metadata filters: {queryset.query}")
 
         # Determine the embedding (either from query.query_embedding or generate from query.query_str)
         top_k = query.similarity_top_k if query.similarity_top_k else 100
@@ -296,7 +296,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             )
             _logger.info(f"Generated embeddings using embedder: {embedder_path}")
             if vector is not None:
-                _logger.debug(f"Vector dimension: {len(vector)}")
+                _logger.info(f"Vector dimension: {len(vector)}")
             else:
                 _logger.warning("Failed to generate embeddings - vector is None")
 
@@ -315,7 +315,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             queryset = queryset.search_by_embedding(
                 query_vector=vector, embedder_path=embedder_path, top_k=top_k
             )
-            _logger.debug(f"After vector search: {queryset.query}")
+            _logger.info(f"After vector search: {queryset.query}")
         else:
             # Either no vector or invalid dimension => do nothing special
             if vector is None:
@@ -328,21 +328,41 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             if query.similarity_top_k is not None:
                 _logger.info(f"Limiting results to top {top_k}")
                 queryset = queryset[:top_k]
-                _logger.debug(f"After limiting results: {queryset}")
+                _logger.info(f"After limiting results: {queryset}")
 
         # Fetch the annotations
         _logger.info("Fetching annotations from database")
+
+        # Fails here
         annotations = list(queryset)
         _logger.info(f"Retrieved {len(annotations)} annotations")
         if annotations:
-            _logger.debug(f"First annotation ID: {annotations[0].id}")
+            _logger.info(f"First annotation ID: {annotations[0].id}")
+            _logger.info(f"Sample annotation fields: {vars(annotations[0])}")
+        else:
+            _logger.warning("No annotations found for the query")
 
         # Convert them to TextNodes
         _logger.info("Converting annotations to TextNodes")
         nodes = []
-        for ann in annotations:
+        similarities = []
+        ids = []
+
+        for i, ann in enumerate(annotations):
+            # Log each annotation being processed
+            _logger.info(
+                f"Processing annotation {i}: ID={ann.id}, text length={len(ann.raw_text) if ann.raw_text else 0}"
+            )
+
+            # Check for null or empty text
+            if not ann.raw_text:
+                _logger.warning(f"Annotation {ann.id} has null or empty raw_text")
+                text_value = ""  # Provide a fallback empty string
+            else:
+                text_value = ann.raw_text
+
             node = TextNode(
-                text=ann.raw_text or "",
+                text=text_value,
                 id_=str(ann.id),
                 metadata={
                     "annotation_id": ann.id,
@@ -354,9 +374,22 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
                     "created": ann.created.isoformat() if ann.created else None,
                 },
             )
+
             nodes.append(node)
 
-        return VectorStoreQueryResult(nodes=nodes)
+            # Add similarity score if available (from vector search) or a default value
+            similarity_value = getattr(ann, "similarity_score", 1.0)
+            _logger.info(f"Annotation {ann.id} similarity score: {similarity_value}")
+            similarities.append(similarity_value)
+
+            # Always include the ID
+            ids.append(str(ann.id))
+
+        # Log the final result details
+        if nodes:
+            _logger.info(f"First node text sample: {nodes[0].text[:100]}...")
+
+        return VectorStoreQueryResult(nodes=nodes, similarities=similarities, ids=ids)
 
     async def aquery(
         self, query: VectorStoreQuery, **kwargs: Any

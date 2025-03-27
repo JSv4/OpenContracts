@@ -92,7 +92,9 @@ def calculate_embedding_for_annotation_text(
     )
     # If we want to override the embedder path, do so. If not, generate_embeddings_from_text
     # will figure out from the corpus or fallback to default microservice or embedder.
-    returned_path, vector = generate_embeddings_from_text(text, corpus_id=corpus_id)
+    returned_path, vector = generate_embeddings_from_text(
+        text, corpus_id=corpus_id, embedder_path=embedder_path
+    )
     logger.info(
         f"Generated embeddings for annotation {annotation_id} using {returned_path}"
     )

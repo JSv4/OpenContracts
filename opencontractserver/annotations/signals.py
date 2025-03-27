@@ -80,6 +80,8 @@ def process_structural_annotation_for_corpuses(annotation):
         "id", "preferred_embedder"
     )
 
+    logger.info(f"Corpus embedders: {corpus_embedders}")
+
     if not corpus_embedders:
         return
 

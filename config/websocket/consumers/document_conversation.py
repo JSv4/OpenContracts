@@ -4,6 +4,8 @@ import uuid
 
 from django.conf import settings
 
+from opencontractserver.corpuses.models import Corpus
+
 """
 DocumentQueryConsumer
 
@@ -95,11 +97,13 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                         self.scope["path"], "corpus"
                     )
                     self.corpus_id = int(from_global_id(graphql_corpus_id)[1])
+                    self.corpus = await Corpus.objects.aget(id=self.corpus_id)
                     logger.info(
                         f"[Session {self.session_id}] Extracted corpus_id: {self.corpus_id}"
                     )
                 else:
                     self.corpus_id = None
+                    self.corpus = None
                     logger.info(f"[Session {self.session_id}] No corpus_id in path")
             except ValueError:
                 # If there's an error extracting corpus_id, it's not there
@@ -307,7 +311,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                     user_id=self.scope["user"].id,
                     loaded_messages=prefix_messages if prefix_messages else None,
                     override_conversation=self.conversation,
-                    corpus_id=self.corpus_id,
+                    embedder_path=self.corpus.preferred_embedder,
                 )
 
                 # Initialize our custom agent

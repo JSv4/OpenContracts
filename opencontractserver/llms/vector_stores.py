@@ -2,7 +2,6 @@ import logging
 from typing import Any, Optional
 
 from channels.db import database_sync_to_async
-from django.conf import settings
 from django.db.models import Q, QuerySet
 from llama_index.core.schema import BaseNode, TextNode
 from llama_index.core.vector_stores.types import (
@@ -44,16 +43,18 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     flat_metadata: bool = False
     embed_dim: int = 384
 
-    user_id: str | int | None
-    corpus_id: str | int | None
-    document_id: str | int | None
-    must_have_text: str | None
+    user_id: str | int | None = None
+    corpus_id: str | int | None = None
+    document_id: str | int | None = None
+    must_have_text: str | None = None
+    embedder_path: str | None = None
 
     def __init__(
         self,
         user_id: str | int | None = None,
         corpus_id: str | int | None = None,
         document_id: str | int | None = None,
+        embedder_path: str | None = None,
         must_have_text: str | None = None,
         hybrid_search: bool = False,
         text_search_config: str = "english",
@@ -63,25 +64,12 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         debug: bool = False,
         use_jsonb: bool = False,
     ):
-        # If a corpus is supplied, attempt to detect its configured embedder dimension
-        if corpus_id is not None:
-            try:
-                embedder_class, _ = get_embedder(int(corpus_id))
-                if embedder_class and hasattr(embedder_class, "vector_size"):
-                    embed_dim = embedder_class.vector_size
-            except Exception as exc:
-                _logger.error(f"Error getting embedder for corpus {corpus_id}: {exc}")
-
-        # Validate or fallback dimension
-        if embed_dim not in [384, 768, 1536, 3072]:
-            from django.conf import settings
-
-            embed_dim = getattr(settings, "DEFAULT_EMBEDDING_DIMENSION", 768)
-
+        # First initialize the Pydantic model with all fields
         super().__init__(
             user_id=user_id,
             corpus_id=corpus_id,
             document_id=document_id,
+            embedder_path=embedder_path,
             must_have_text=must_have_text,
             hybrid_search=hybrid_search,
             text_search_config=text_search_config,
@@ -91,7 +79,18 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             debug=debug,
             use_jsonb=use_jsonb,
         )
-        self.embed_dim = embed_dim
+
+        # If a corpus is supplied, attempt to detect its configured embedder dimension
+        embedder_class, embedder_path = get_embedder(
+            corpus_id=corpus_id,
+            embedder_path=embedder_path,
+        )
+        self.embedder_path = embedder_path
+        _logger.info(f"On setup for vector store, embedder path: {self.embedder_path}")
+
+        # Validate or fallback dimension
+        if self.embed_dim not in [384, 768, 1536, 3072]:
+            self.embed_dim = getattr(embedder_class, "vector_size", 768)
 
     async def close(self) -> None:
         return
@@ -114,6 +113,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         perform_setup: bool = True,
         debug: bool = False,
         use_jsonb: bool = False,
+        embedder_path: str | None = None,
     ) -> "DjangoAnnotationVectorStore":
         return cls(
             user_id=user_id,
@@ -127,6 +127,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             perform_setup=perform_setup,
             debug=debug,
             use_jsonb=use_jsonb,
+            embedder_path=embedder_path,
         )
 
     def _get_annotation_queryset(self) -> QuerySet:
@@ -282,7 +283,6 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         top_k = query.similarity_top_k if query.similarity_top_k else 100
         _logger.info(f"Using top_k value: {top_k}")
         vector = query.query_embedding
-        embedder_path = settings.DEFAULT_EMBEDDER
 
         if vector is None and query.query_str is not None:
             # Generate embeddings from the textual query
@@ -290,9 +290,10 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             _logger.info(
                 f"Generating embeddings from query string: '{query.query_str}'"
             )
+            _logger.info(f"Filter on embedder path: {self.embedder_path}")
             embedder_path, vector = generate_embeddings_from_text(
                 query.query_str,
-                corpus_id=self.corpus_id if self.corpus_id else None,
+                embedder_path=self.embedder_path,
             )
             _logger.info(f"Generated embeddings using embedder: {embedder_path}")
             if vector is not None:
@@ -303,19 +304,15 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         # If we do have a vector, run search_by_embedding...
         if vector is not None and len(vector) in [384, 768, 1536, 3072]:
             _logger.info(f"Using vector search with dimension: {len(vector)}")
-            # Provide a fallback for embedder_path if none is found
-            if not embedder_path:
-                embedder_path = "unknown-embedder"
-                _logger.info(
-                    "No embedder path found, using fallback: 'unknown-embedder'"
-                )
 
             # Because `search_by_embedding` requires embedder_path & query_vector
-            _logger.info(f"Performing vector search with embedder: {embedder_path}")
-            queryset = queryset.search_by_embedding(
-                query_vector=vector, embedder_path=embedder_path, top_k=top_k
+            _logger.info(
+                f"Performing vector search with embedder: {self.embedder_path}"
             )
-            _logger.info(f"After vector search: {queryset.query}")
+            queryset = queryset.search_by_embedding(
+                query_vector=vector, embedder_path=self.embedder_path, top_k=top_k
+            )
+            _logger.info(f"After vector search: {queryset}")
         else:
             # Either no vector or invalid dimension => do nothing special
             if vector is None:

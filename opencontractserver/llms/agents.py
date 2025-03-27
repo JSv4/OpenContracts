@@ -188,7 +188,7 @@ async def create_openai_document_agent(
 
     logger.debug("Building vector store and index...")
     vector_store = DjangoAnnotationVectorStore.from_params(
-        user_id=user_id, document_id=document.id
+        user_id=user_id, document_id=document.id, embedder_path=embedder_path
     )
     index = VectorStoreIndex.from_vector_store(
         vector_store=vector_store,

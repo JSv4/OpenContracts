@@ -62,7 +62,7 @@ def get_embedder(
         try:
             logger.debug(f"Querying database for corpus with id: {corpus_id}")
             corpus = Corpus.objects.get(id=corpus_id)
-            logger.info(f"Found corpus: {corpus.id} - {corpus.name}")
+            logger.info(f"Found corpus: {corpus.id}")
 
             if corpus.preferred_embedder:
                 logger.info(

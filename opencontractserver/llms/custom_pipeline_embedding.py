@@ -87,7 +87,7 @@ class OpenContractsPipelineEmbedding(BaseEmbedding):
         """
         # Call our custom pipeline function to get embeddings as list of floats
         logger.debug(f"Generating embeddings for query: {query}")
-        embedding: list[float] = generate_embeddings_from_text(
+        _, embedding = generate_embeddings_from_text(
             text=query,
             corpus_id=self.corpus_id,
             mimetype=self.mimetype,
@@ -114,7 +114,7 @@ class OpenContractsPipelineEmbedding(BaseEmbedding):
         :return: A list of floats representing the generated embedding.
         """
         logger.debug(f"Generating embeddings for text: {text[:50]}...")
-        embedding: list[float] = generate_embeddings_from_text(
+        _, embedding = generate_embeddings_from_text(
             text=text,
             corpus_id=self.corpus_id,
             mimetype=self.mimetype,

@@ -9,7 +9,7 @@ from config.websocket.utils.extract_ids import extract_websocket_path_id
 class ExtractWebsocketPathIdTests(TestCase):
     """
     Tests for the extract_websocket_path_id function which extracts IDs from websocket paths.
-    
+
     This function is crucial for the WebSocket consumers to correctly identify
     documents and corpora from the WebSocket URL paths.
     """
@@ -31,7 +31,7 @@ class ExtractWebsocketPathIdTests(TestCase):
         path = "ws/document/RG9jdW1lbnRUeXBlOjE=/query/corpus/Q29ycHVzVHlwZToyMw==/"
         document_id = extract_websocket_path_id(path, "document")
         self.assertEqual(document_id, "RG9jdW1lbnRUeXBlOjE=")
-    
+
     def test_extract_corpus_id_from_corpus_path(self):
         """Test extracting corpus_id from a standard corpus query path."""
         path = "ws/corpus/Q29ycHVzVHlwZToyMw==/query/"
@@ -79,9 +79,9 @@ class ExtractWebsocketPathIdTests(TestCase):
         path = "ws/document/RG9jdW1lbnRUeXBlOjE=/invalid/corpus/Q29ycHVzVHlwZToyMw==/"
         with self.assertRaises(ValueError):
             extract_websocket_path_id(path, "corpus")
-            
+
     def test_other_resource_type_from_document_corpus_path(self):
         """Test extracting a different resource type from document+corpus path raises ValueError."""
         path = "ws/document/RG9jdW1lbnRUeXBlOjE=/query/corpus/Q29ycHVzVHlwZToyMw==/"
         with self.assertRaises(ValueError):
-            extract_websocket_path_id(path, "other_resource") 
+            extract_websocket_path_id(path, "other_resource")

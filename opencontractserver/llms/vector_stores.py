@@ -180,7 +180,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         for row in rows:
             node = TextNode(
                 doc_id=str(row.id),
-                text=row.raw_text,
+                text=row.raw_text if isinstance(row.raw_text, str) else "",
                 embedding=row.embedding.tolist()
                 if getattr(row, "embedding", None) is not None
                 else [],
@@ -199,7 +199,8 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
             )
 
             nodes.append(node)
-            similarities.append(row.similarity)
+            similarity_value = getattr(row, "similarity_score", 1.0)
+            similarities.append(similarity_value)
             ids.append(str(row.id))
 
         return VectorStoreQueryResult(nodes=nodes, similarities=similarities, ids=ids)
@@ -341,52 +342,15 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
 
         # Convert them to TextNodes
         _logger.info("Converting annotations to TextNodes")
-        nodes = []
-        similarities = []
-        ids = []
-
-        for i, ann in enumerate(annotations):
-            # Log each annotation being processed
-            _logger.info(
-                f"Processing annotation {i}: ID={ann.id}, text length={len(ann.raw_text) if ann.raw_text else 0}"
-            )
-
-            # Check for null or empty text
-            if not ann.raw_text:
-                _logger.warning(f"Annotation {ann.id} has null or empty raw_text")
-                text_value = ""  # Provide a fallback empty string
-            else:
-                text_value = ann.raw_text
-
-            node = TextNode(
-                text=text_value,
-                id_=str(ann.id),
-                metadata={
-                    "annotation_id": ann.id,
-                    "document_id": ann.document_id,
-                    "corpus_id": ann.corpus_id,
-                    "page": ann.page,
-                    "annotation_type": ann.annotation_type,
-                    "creator_id": ann.creator_id,
-                    "created": ann.created.isoformat() if ann.created else None,
-                },
-            )
-
-            nodes.append(node)
-
-            # Add similarity score if available (from vector search) or a default value
-            similarity_value = getattr(ann, "similarity_score", 1.0)
-            _logger.info(f"Annotation {ann.id} similarity score: {similarity_value}")
-            similarities.append(similarity_value)
-
-            # Always include the ID
-            ids.append(str(ann.id))
 
         # Log the final result details
-        if nodes:
-            _logger.info(f"First node text sample: {nodes[0].text[:100]}...")
 
-        return VectorStoreQueryResult(nodes=nodes, similarities=similarities, ids=ids)
+        return self._db_rows_to_query_result(annotations)
+
+        # if nodes:
+        #     _logger.info(f"First node text sample: {nodes[0].text[:100]}...")
+
+        # return VectorStoreQueryResult(nodes=nodes, similarities=similarities, ids=ids)
 
     async def aquery(
         self, query: VectorStoreQuery, **kwargs: Any

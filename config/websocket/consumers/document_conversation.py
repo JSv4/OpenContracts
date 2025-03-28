@@ -434,7 +434,13 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                                 }
 
                 if response.source_nodes:
+                    logger.info(
+                        f"[Session {self.session_id}] Response has source_nodes: {bool(response.source_nodes)}"
+                    )
                     for sn_idx, sn in enumerate(response.source_nodes):
+                        logger.info(
+                            f"[Session {self.session_id}] Source node {sn_idx}: {sn.metadata}"
+                        )
                         sources[sn.metadata["annotation_id"]] = {
                             **sn.metadata,
                             "rawText": sn.text,

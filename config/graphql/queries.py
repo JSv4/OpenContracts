@@ -63,6 +63,7 @@ from config.graphql.graphene_types import (
     RelationshipType,
     UserExportType,
     UserImportType,
+    BulkDocumentUploadStatusType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -1375,3 +1376,82 @@ class Query(graphene.ObjectType):
             queryset = queryset.filter(disabled=disabled)
 
         return queryset.order_by("-created")
+
+    conversation = relay.Node.Field(ConversationType)
+
+    @login_required
+    def resolve_conversation(self, info, **kwargs):
+        django_pk = from_global_id(kwargs.get("id", None))[1]
+        return Conversation.objects.get(
+            Q(id=django_pk) & (Q(creator=info.context.user) | Q(is_public=True))
+        )
+        
+    # BULK DOCUMENT UPLOAD STATUS QUERY ###########################################
+    bulk_document_upload_status = graphene.Field(
+        BulkDocumentUploadStatusType,
+        job_id=graphene.String(required=True),
+        description="Check the status of a bulk document upload job by job ID",
+    )
+    
+    @login_required
+    def resolve_bulk_document_upload_status(self, info, job_id):
+        """
+        Resolver for the bulk_document_upload_status query.
+        
+        This queries Redis for the status of a bulk document upload job.
+        The status is stored as a result in Celery's backend.
+        
+        Args:
+            info: GraphQL execution info
+            job_id: The unique identifier for the upload job
+            
+        Returns:
+            BulkDocumentUploadStatusType with the current job status
+        """
+        from config import celery_app
+        
+        try:
+            # Try to get the task result from Celery
+            async_result = celery_app.AsyncResult(job_id)
+            
+            if async_result.ready():
+                # Task is finished
+                if async_result.successful():
+                    result = async_result.get()
+                    # Ensure it has the right structure
+                    return BulkDocumentUploadStatusType(
+                        job_id=job_id,
+                        success=result.get("success", False),
+                        total_files=result.get("total_files", 0),
+                        processed_files=result.get("processed_files", 0),
+                        skipped_files=result.get("skipped_files", 0),
+                        error_files=result.get("error_files", 0),
+                        document_ids=result.get("document_ids", []),
+                        errors=result.get("errors", []),
+                        completed=True,
+                    )
+                else:
+                    # Task failed
+                    return BulkDocumentUploadStatusType(
+                        job_id=job_id,
+                        success=False,
+                        completed=True,
+                        errors=["Task failed with an exception"],
+                    )
+            else:
+                # Task is still running
+                return BulkDocumentUploadStatusType(
+                    job_id=job_id,
+                    success=False,
+                    completed=False,
+                    errors=["Task is still running"],
+                )
+                
+        except Exception as e:
+            logger.error(f"Error checking bulk upload status: {str(e)}")
+            return BulkDocumentUploadStatusType(
+                job_id=job_id,
+                success=False,
+                completed=False,
+                errors=[f"Error checking status: {str(e)}"],
+            )

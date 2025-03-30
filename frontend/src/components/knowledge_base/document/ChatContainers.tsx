@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { Button, Input } from "semantic-ui-react";
 import styled from "styled-components";
 
 export const BackButton = styled.button`
@@ -18,6 +17,7 @@ export const BackButton = styled.button`
   width: 100%;
   border-bottom: 1px solid #e2e8f0;
   z-index: 10;
+  margin-bottom: 0.75rem;
 
   &:hover {
     background: #f7fafc;
@@ -264,69 +264,137 @@ export const ConnectionStatus = styled(motion.div)<ConnectionStatusProps>`
 
 export const ConversationGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-  padding: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  width: 100%;
   overflow-y: auto;
   position: relative;
 `;
 
 export const ConversationCard = styled(motion.div)`
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "content"
+    "meta";
   background: white;
   border-radius: 12px;
-  padding: 1.25rem;
+  padding: 1.5rem 1.75rem;
   cursor: pointer;
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: visible;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(to bottom, #4299e1, #2b6cb0);
+    opacity: 0.7;
+    transition: width 0.3s ease;
+  }
 
   &:hover {
-    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
-    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+    border-color: rgba(66, 153, 225, 0.3);
+    transform: translateY(-2px);
+
+    &::before {
+      width: 6px;
+    }
   }
 `;
 
 export const CardContent = styled.div`
-  flex: 1;
+  grid-area: content;
   min-width: 0;
+  padding-right: 3rem; /* Make space for the badge */
 `;
 
 export const CardTitle = styled.h3`
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #2d3748;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  position: relative;
+  padding-bottom: 0.25rem;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(to right, #4299e1, transparent);
+    transition: width 0.3s ease;
+  }
+
+  ${ConversationCard}:hover & {
+    &::after {
+      width: 100%;
+    }
+  }
 `;
 
 export const CardMeta = styled.div`
+  grid-area: meta;
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
   font-size: 0.875rem;
 `;
 
 export const TimeStamp = styled.span`
   color: #718096;
+  display: flex;
+  align-items: center;
+
+  &::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: #4299e1;
+    margin-right: 6px;
+  }
 `;
 
 export const Creator = styled.span`
   color: #4a5568;
   font-weight: 500;
+  position: relative;
+  padding-left: 12px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 12px;
+    width: 1px;
+    background-color: #cbd5e0;
+  }
 `;
 
 export const MessageCount = styled(motion.div)<{
   $colorStyle?: { background: string; opacity: number; textColor: string };
 }>`
   position: absolute;
-  right: 1.5rem;
   top: 50%;
+  right: -12px; /* Extend beyond the card boundary */
   transform: translateY(-50%);
   background: ${(props) =>
     props.$colorStyle?.background ||
@@ -336,8 +404,8 @@ export const MessageCount = styled(motion.div)<{
   color: ${(props) =>
     props.$colorStyle?.textColor ||
     (props.children === "0" ? "#4A5568" : "white")};
-  padding: 0.4rem 1rem;
-  border-radius: 12px;
+  padding: 0.4rem 0.75rem;
+  border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -347,18 +415,24 @@ export const MessageCount = styled(motion.div)<{
     props.children === "0"
       ? "0 2px 8px rgba(0, 0, 0, 0.06)"
       : "0 4px 12px rgba(43, 108, 176, 0.15), 0 0 0 1px rgba(43, 108, 176, 0.2)"};
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  z-index: 2;
 
   &::after {
-    content: ${(props) => (props.children === "0" ? "' New'" : "' messages'")};
-    font-size: 0.75rem;
+    content: ${(props) => (props.children === "0" ? "' New'" : "' msgs'")};
+    font-size: 0.7rem;
     opacity: 0.9;
     font-weight: 500;
-    margin-left: 1px;
+    margin-left: 3px;
   }
 
   ${ConversationCard}:hover & {
-    transform: translateY(-50%) scale(1.05);
+    transform: translateY(-50%) translateX(-4px);
     box-shadow: ${(props) =>
       props.children === "0"
         ? "0 4px 12px rgba(0, 0, 0, 0.08)"

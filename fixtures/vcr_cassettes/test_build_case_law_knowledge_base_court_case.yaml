@@ -1,0 +1,618 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are an expert legal researcher.
+      Determine if the provided document is a court case. Respond ONLY with ''YES''
+      or ''NO''."},{"role":"user","content":"Document Text:\nFull text of the court
+      case."}],"model":"gpt-4o-mini","stream":false,"temperature":0.1}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '293'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.65.4
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.65.4
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJNb9swDIbv/hUCz3GRD6fpcttnLrutBToMhSFLtKNNFgWJHtoU+e+F
+        7DR2tg7YxQc+fKn3pfmcCQFGw1aA2ktWrbf5h92hdXeHXfP1/acifun8x+72fqc4uKfDAmZJQdVP
+        VPyqulLUeotsyA1YBZSMaepiU6xW7+bFetWDljTaJGs85wXlrXEmX86XRT7f5Iubk3pPRmGErfiR
+        CSHEc/9NPp3GR9iK+ey10mKMskHYnpuEgEA2VUDGaCJLxzAboSLH6Hrr3z9/m5KAdRdlcuc6aydA
+        OkcsU7re08OJHM8uLDU+UBX/kEJtnIn7MqCM5NKLkclDT4+ZEA992u4iAPhAreeS6Rf2zxU3wzgY
+        dzzC5YkxsbRjeX1a0OWwUiNLY+NkWaCk2qMeleNmZacNTUA2ify3l7dmD7GNa/5n/AiUQs+oSx9Q
+        G3WZd2wLmA7wX23nFfeGIWL4bRSWbDCk36Cxlp0dzgLiU2Rsy9q4BoMPZriN2pfVanOt66rSa8iO
+        2QsAAAD//wMAJC5udCkDAAA=
+    headers:
+      CF-RAY:
+      - 928ca31fbd66ddad-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 03:07:34 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=o5g2jCf8JaVbhpn4jpPEvzZpS9_6Z6kxPFSa4kt00wY-1743390454-1.0.1.1-Fh8lT0XHsV8rzsvnMklqYdpcugA3pHaGlz0NHOUKTNwEsd.4BMF6DFO_DSdUfEX.q4oM_DjdSVpiEJ7HW6UOZij70MHJVQQ10vLHolbx8dc;
+        path=/; expires=Mon, 31-Mar-25 03:37:34 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=x9ROxRLW1f5.ZHSCLh3vUA.__16_6FiKvsMUSfnPDZM-1743390454084-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '225'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999956'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_df1f2e1fe3195ce34db8b542dd6b482e
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are an expert legal research
+      librarian. Generate structured headnotes for the provided court case. Each headnote
+      should succinctly summarize a key legal holding or principle from the case.
+      Format each headnote clearly and concisely in markdown."},{"role":"user","content":"Case
+      Text:\nFull text of the court case."}],"model":"gpt-4o-mini","stream":false,"temperature":0.1}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '417'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=o5g2jCf8JaVbhpn4jpPEvzZpS9_6Z6kxPFSa4kt00wY-1743390454-1.0.1.1-Fh8lT0XHsV8rzsvnMklqYdpcugA3pHaGlz0NHOUKTNwEsd.4BMF6DFO_DSdUfEX.q4oM_DjdSVpiEJ7HW6UOZij70MHJVQQ10vLHolbx8dc;
+        _cfuvid=x9ROxRLW1f5.ZHSCLh3vUA.__16_6FiKvsMUSfnPDZM-1743390454084-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.65.4
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.65.4
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFPBjtMwEL3nK0Y+J1W7TdulN0AIgdCKA0IgtIpce5J4cTyWPem2rPrv
+        yGm3aWGRuOQwb97zmzeTpwxAGC3WIFQrWXXeFm/e/+ro8eGurN/NX/f+7tPH7fRts//29btbLEWe
+        GLR5QMXPrImizltkQ+4Iq4CSManOVuV8/mpaLsoB6EijTbTGc1FS0RlnipvpTVlMV8Xs9sRuySiM
+        Yg0/MgCAp+GbfDqNO7GGaf5c6TBG2aBYn5sARCCbKkLGaCJLxyIfQUWO0Q3WvxA06DBIRogcesV9
+        QA0tSu2IMUJNASQo6gODkhFz+ACP1FsNDlFD9KhMbRRoZGlsBAqAO4XBc4Q6UAfc4kAExh2D4Yi2
+        nsBni6nmA22NxqEpoMWtdAwRVYpx0JIQ+66TYQ9Un6VykE4nH8ZaOOY8YNeu99RPLqcOWPdRpuRd
+        b+0FIJ0jlsOTKe/7E3I4J2yp8YE28Q+qqI0zsa0CykgupRmZvBjQQwZwP2yyv1qO8IE6zxXTTxye
+        W94e5cR4PyNYLk8gE0s71mezMn9Brjot4eIUhJKqRT1Sx7uRvTZ0AWQXQ//t5iXt4+DGNf8jPwJK
+        oWfUlQ+ojbqeeGwLmH6vf7WdQx4Mi4hhaxRWbDCkRWisZW+PRy/iPjJ2VW1cg8EHc7z82leb+Wqp
+        681GL0R2yH4DAAD//wMAxpYgRgcEAAA=
+    headers:
+      CF-RAY:
+      - 928ca3223b8addad-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 03:07:34 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '694'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999925'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_08f9792ba2e61a934dcaa5ff43ae3323
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are an expert litigator. Categorize
+      the provided court case into relevant black letter law topics. Provide a concise
+      list of applicable legal categories or doctrines in markdown bullet points."},{"role":"user","content":"Case
+      Text:\nFull text of the court case."}],"model":"gpt-4o-mini","stream":false,"temperature":0.1}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '365'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=o5g2jCf8JaVbhpn4jpPEvzZpS9_6Z6kxPFSa4kt00wY-1743390454-1.0.1.1-Fh8lT0XHsV8rzsvnMklqYdpcugA3pHaGlz0NHOUKTNwEsd.4BMF6DFO_DSdUfEX.q4oM_DjdSVpiEJ7HW6UOZij70MHJVQQ10vLHolbx8dc;
+        _cfuvid=x9ROxRLW1f5.ZHSCLh3vUA.__16_6FiKvsMUSfnPDZM-1743390454084-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.65.4
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.65.4
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFTbbhtHDH3XV7D7aEiGLMt2orcmSOqgBWqgQdOLA4Ga4a6mnhkOOFzZ
+        cmCgv9Hf65cUs7Kk3ToF+rLA8pCHh8PLlxFA5Wy1gMqsUU1IfvLmu8eQarP99TH/9Mtv32u4+fm6
+        mU9/XL3+pK+qcYng1R9kdB91ajgkT+o47mAjhEqF9exqfn7+ejq/uOiAwJZ8CWuSTuY8CS66yWw6
+        m0+mV5OzZ3KzZmcoVwv4fQQA8KX7Fp3R0kO1gOl4bwmUMzZULQ5OAJWwL5YKc3ZZMWo1PoKGo1Ls
+        pH9kMKjUsLhHAl0TJOGNs2TBcCsKBjOBi8og5GmDUWHl0dyBJ1US8HgPysmZPIYPcM+ttxCJLORE
+        xtXOgCVF5zOwAD0YkqQZauHQZevolR70FK75njYkhcZg3OsAhIYiCXpQCsmjEnANnhr0B+mUQdeo
+        gEJgOASOfguYkncGV77o71WTT+HGU8m7TzEQUnTe0fYgu2YBhMBCUAwsZEEoJ46ZTuE23sZrEvr7
+        z79yT6p3WYvMnoYXilnAslFxkfKi8Ezg5OQtRxU0Cj/g/cnJzvaRZfB/I5xIdNu3vRUXXEQ/sHHM
+        6rQtMzlEvrVl6LIKqtvQIMZtnIcbYUO2Fdqb35V3iubw/x6D8wMBH6KS92S0xS7+hcJ3IXneBoqD
+        Wt5gvJM2qRn6xo0TjsV5KLxkkYgvKyq1toGkpFYyxWEP38b3RB5qIQLlQ9O7jrpYs4SO77nRh7E9
+        rEWHftPfH6G6zVh2OLbe9wCMkbXz7zb38zPydNhVz00SXuV/hVZ1acd6KYSZY9nLrJyqDn0aAXzu
+        bkI7WPMqCYekS+U76tJdXO7oquMlOoJnl3tUWdEfgdlsNv4K3/J5/HtXpTJo1mSPoccThK113ANG
+        vapfyvka965yF5v/Q38EjKGkZJdJyDozLPnoJlQu9X+5HV65E1xlko0ztFRHUjphqcbW7+5nlbdZ
+        KSxrFxuSJG53ROu0XJ1fXdp6tbIX1ehp9A8AAAD//wMAVgKTSVIGAAA=
+    headers:
+      CF-RAY:
+      - 928ca3274eccddad-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 03:07:37 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '2643'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999938'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_f63b61889ced3880d8dac3c1cfdc6f2f
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are an expert legal researcher.
+      Provide a concise summary of the provided court case, including the parties
+      involved, key facts, procedural posture, holding, and reasoning. Write clearly
+      and succinctly in markdown."},{"role":"user","content":"Case Text:\nFull text
+      of the court case."}],"model":"gpt-4o-mini","stream":false,"temperature":0.1}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '387'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=o5g2jCf8JaVbhpn4jpPEvzZpS9_6Z6kxPFSa4kt00wY-1743390454-1.0.1.1-Fh8lT0XHsV8rzsvnMklqYdpcugA3pHaGlz0NHOUKTNwEsd.4BMF6DFO_DSdUfEX.q4oM_DjdSVpiEJ7HW6UOZij70MHJVQQ10vLHolbx8dc;
+        _cfuvid=x9ROxRLW1f5.ZHSCLh3vUA.__16_6FiKvsMUSfnPDZM-1743390454084-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.65.4
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.65.4
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNNb9swDL3nVxA620E+nKTLbblsuww7BOiAoTAUiY65yqIgyVnTov99
+        kO3E6dYBu/igx/f4+Ei/TAAEabEFoWoZVeNMvvv03PjVZ3d3v2u/7ovvH+MZaVUtd/d2X4ssMfjw
+        E1W8sKaKG2cwEtseVh5lxKQ63xTL5YdZsdp0QMMaTaIdXcwLzhuylC9miyKfbfL53cCumRQGsYUf
+        EwCAl+6bfFqNT2ILs+zy0mAI8ohiey0CEJ5NehEyBApR2iiyEVRsI9rO+p7BeT6RRpAQ2qaR/gxc
+        QawRFLc+gpIBM/gCv7g1Giyi7sDgUFFFCjRGSSYAe4j4FK9kGRDO3A48Q4846NMz6il8M5gqLs0T
+        xaPBk7QRyFbsG5myvMhmIK1OLsgY6KMFCYqtooBX4xX71HN6O6zHqg0yBW5bY24AaS3HrkkX88OA
+        vF6DNXx0ng/hD6qoyFKoS48ysE0hhshOdOjrBOChW2D7ZifCeW5cLCM/YtduvejlxHg2I1gUAxg5
+        SjO+z2fr7B25cljBzQUIJVWNeqSO5yJbTXwDTG6G/tvNe9r94GSP/yM/Akqhi6hL51GTejvxWOYx
+        /VX/KruG3BkWAf2JFJaR0KdFaKxka/pbF+EcIjZlRfaI3nnqD75y5WG5WevqcNArMXmd/AYAAP//
+        AwDYcGb2/gMAAA==
+    headers:
+      CF-RAY:
+      - 928ca3387e22ddad-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 03:07:38 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '945'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999931'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_5eb75e167a1ece7d638235332c6cc83e
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a legal knowledge management
+      specialist. Create a concise 2-3 sentence summary of the provided case summary,
+      optimized for quick searchability. Include party names, key legal issues, and
+      the court''s holding."},{"role":"user","content":"Detailed Case Summary:\nTo
+      provide a summary of the court case, I would need the specific details or text
+      of the case you would like summarized. Please provide the relevant information
+      or text, and I will create a concise summary for you."}],"model":"gpt-4o-mini","stream":false,"temperature":0.1}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '582'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=o5g2jCf8JaVbhpn4jpPEvzZpS9_6Z6kxPFSa4kt00wY-1743390454-1.0.1.1-Fh8lT0XHsV8rzsvnMklqYdpcugA3pHaGlz0NHOUKTNwEsd.4BMF6DFO_DSdUfEX.q4oM_DjdSVpiEJ7HW6UOZij70MHJVQQ10vLHolbx8dc;
+        _cfuvid=x9ROxRLW1f5.ZHSCLh3vUA.__16_6FiKvsMUSfnPDZM-1743390454084-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.65.4
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.65.4
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJPb9swDMXv/hSEznFhu17S5rgB+wNswIABuwyFoUp0wlYWBUlOkxb5
+        7oPsJHa3DtjFB/34nslHvmQAgrRYg1BbGVXnTP7+03MXsPx8+EZl+VNXH2sZfnzYf31Yql0tFknB
+        9w+o4ll1pbhzBiOxHbHyKCMm13JVX1/fFvW7mwF0rNEk2cbFvOa8I0t5VVR1Xqzy8uak3jIpDGIN
+        vzIAgJfhm/q0GvdiDcXi/NJhCHKDYn0pAhCeTXoRMgQKUdooFhNUbCPaofXvBmVAcJ53pBHiFiE4
+        VNSSAo1RkgnAHiLuI3A7cJUEB+7hiXujwdAjQui7Tnp6Rr0AaTV8gScyBsYMQIJiqyic6w7Qsk8W
+        V/OuPLZ9kCkZ2xszA9JajjIlO+RxdyLHSwKGN87zffhDKlqyFLaNRxnYpmlDZCcGeswA7oak+1fh
+        Cee5c7GJ/IjD78qiHP3EtOCJVssTjBylmamq1eINv+YU6WxXQkm1RT1Jp8XKXhPPQDab+u9u3vIe
+        Jye7+R/7CSiFLqJunEdN6vXEU5nHdP//KrukPDQsAvodKWwioU+b0NjK3oxXKcIhROyaluwGvfM0
+        nmbrmpulLqrboi5LkR2z3wAAAP//AwBu4Y8yqAMAAA==
+    headers:
+      CF-RAY:
+      - 928ca33eecefddad-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 03:07:39 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '527'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999884'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_78b338aa6d2f62ff47c76873ea7ca290
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "To generate structured headnotes for a court case, I would need
+      specific details or excerpts from the case text itself. Please provide the relevant
+      sections or a summary of the case, and I will create the headnotes for you."}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '235'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[-0.016673147678375244,0.0715353935956955,-0.029785217717289925,-0.09161434322595596,-0.060780711472034454,0.013357159681618214,-0.06540137529373169,0.0032814231235533953,-0.004212759900838137,-0.023903656750917435,0.007781863212585449,-0.027310656383633614,0.018421659246087074,-0.05652277171611786,-0.004518015775829554,0.00717127975076437,-0.023890631273388863,0.0589732863008976,-0.051154814660549164,0.048852626234292984,0.038324303925037384,0.05134639889001846,-0.008807118982076645,0.04105430468916893,-0.019144203513860703,0.03356260433793068,0.004057053942233324,-0.02862824685871601,0.04245550185441971,0.0342947393655777,0.08146780729293823,0.010267948731780052,-0.012196778319776058,-0.03754562512040138,0.03536860644817352,0.02270594984292984,0.001731922384351492,0.0470842607319355,0.022945785894989967,-0.007799204438924789,-0.02055186592042446,0.07065444439649582,-0.02347698248922825,0.05688299238681793,-0.0036514815874397755,-0.04516199976205826,-0.0370277538895607,0.05270599201321602,-0.052750952541828156,0.04544030502438545,-0.06708431988954544,-0.027272295206785202,0.06618582457304001,-0.038781534880399704,-0.04448102414608002,0.04511646181344986,-0.004962489474564791,0.025424163788557053,-0.040703557431697845,-0.03980044275522232,-0.048209741711616516,0.01174104306846857,0.02172163501381874,0.019243711605668068,0.006573655642569065,0.10780952125787735,-0.005233850330114365,0.11527631431818008,0.025982731953263283,0.0015562628395855427,-0.00850584451109171,-0.06422562897205353,0.02519393153488636,-0.06410671025514603,-0.02771768532693386,0.0023686555214226246,-0.05082576349377632,-0.10342877358198166,-0.015664683654904366,0.001078273868188262,-0.02092570997774601,0.03792387247085571,0.038264334201812744,-0.02906608022749424,-0.031064672395586967,-0.03264179080724716,0.09756400436162949,-0.008878111839294434,-0.06594476848840714,0.08461501449346542,0.018117954954504967,-0.0555545873939991,-0.0014273275155574083,-0.06275871396064758,0.0665343627333641,0.029283542186021805,-0.04027872160077095,-0.051521945744752884,0.15708959102630615,-0.025221865624189377,0.10299039632081985,0.024594483897089958,0.03870116546750069,-0.04239695519208908,0.004166230093687773,0.003942729439586401,-0.06737479567527771,0.00023009591677691787,-0.05495036020874977,-0.0349721759557724,0.024682262912392616,0.04856168478727341,0.03814207389950752,-0.07429498434066772,-0.05380679666996002,-0.01715528592467308,-0.002449231455102563,-0.039935071021318436,0.012585525400936604,-0.0362868569791317,0.07132791727781296,0.04716977849602699,-0.03997178375720978,-0.007167233154177666,-0.01957070082426071,-0.022451380267739296,-0.0760960802435875,-4.435822442573708e-31,0.08275550603866577,0.006783859804272652,-0.02603132836520672,0.026222852990031242,-0.03598938509821892,-0.0021306639537215233,0.015646453946828842,-0.01750303991138935,-0.10434035211801529,-0.021939672529697418,0.051066718995571136,0.012090956792235374,0.007903624325990677,0.02445348910987377,-0.12506963312625885,-0.0433286651968956,-0.014762130565941334,0.010042164474725723,-0.04463242366909981,-0.025958828628063202,0.01758488267660141,-0.018536321818828583,0.050375089049339294,-0.06647488474845886,-0.025655481964349747,0.0996008887887001,0.03457675129175186,0.009985328651964664,-0.030152447521686554,-0.022921109572052956,-0.018863409757614136,-0.0098548773676157,0.05418483540415764,-0.018648609519004822,0.05593792721629143,0.03985245153307915,-0.027796456590294838,-0.06588103622198105,0.06366071105003357,-0.01645081304013729,0.026792386546730995,0.013476732186973095,0.07241304218769073,-0.02445448376238346,-0.055059414356946945,0.08914683014154434,-0.07034029811620712,-0.022113783285021782,0.1034112200140953,0.0029256159905344248,0.006673628464341164,-0.041151583194732666,-0.06632420420646667,0.054419491440057755,0.027121396735310555,-0.016342826187610626,-0.0644049122929573,0.02589399181306362,0.04665820673108101,-0.012027228251099586,-0.025087149813771248,0.08690544217824936,-0.03183111175894737,-0.0026255559641867876,-0.06354027986526489,-0.03336550295352936,-0.06362421065568924,-0.022861069068312645,0.010639822110533714,-0.09921597689390182,0.016568360850214958,0.011934371665120125,0.05710214748978615,0.010278432630002499,-0.006769372615963221,0.0313565619289875,0.053150881081819534,-0.06540991365909576,-0.046289145946502686,-0.011373462155461311,0.0028755294624716043,0.033691372722387314,0.05515067279338837,0.00843808613717556,0.020999183878302574,0.011526170186698437,0.03892916068434715,-0.07666780799627304,-0.07520943135023117,-0.0754791796207428,0.012979300692677498,0.011086517944931984,-0.02224798873066902,-0.022891361266374588,-0.025195913389325142,-5.262752126136707e-33,0.038355160504579544,-0.04663587361574173,-0.07439763844013214,-0.044687800109386444,0.012809482403099537,0.005426706746220589,-0.043970897793769836,-0.051908496767282486,-0.009083639830350876,-0.02751840464770794,-0.08726663142442703,0.012025092728435993,0.03805142268538475,0.013888019137084484,-0.1495361328125,-0.0006847633048892021,0.006961714942008257,0.0484880693256855,0.05326336249709129,0.055344875901937485,0.018098484724760056,-0.10669166594743729,-0.0177997387945652,0.042611170560121536,0.0829489529132843,-0.05369814112782478,-0.04078381508588791,-0.08188579231500626,0.007615603506565094,0.07024779915809631,0.026631534099578857,-0.0825028046965599,-0.010338458232581615,0.004989761393517256,-0.07922083139419556,-0.05230635777115822,0.0833049938082695,-0.01790684089064598,0.06569056957960129,0.05803244188427925,-8.208951840060763e-06,0.011063046753406525,0.05529502406716347,-0.05959194898605347,0.02535674162209034,0.022648774087429047,-0.06659752875566483,0.08845396339893341,0.02792307920753956,0.014656398445367813,-0.026908069849014282,0.008817367255687714,-0.036918580532073975,0.025329941883683205,-0.05940261855721474,-0.002695593750104308,0.053323473781347275,-0.09686475247144699,0.014118203893303871,-0.045118849724531174,-0.08614303916692734,0.07270708680152893,-0.08924160897731781,0.05279674753546715,0.013470031321048737,-0.05063104256987572,-0.032229140400886536,-0.07684002816677094,-0.10265740752220154,-0.02296191267669201,-0.14111748337745667,-0.014722521416842937,0.02820141240954399,0.03005209006369114,0.08589160442352295,0.12289302796125412,-0.07046368718147278,0.00022437535517383367,0.05914798006415367,-0.0033256083261221647,0.07449723780155182,0.004892848897725344,0.04179920256137848,0.05947716534137726,0.04182519391179085,0.01766340807080269,-0.0038045975379645824,0.03522641211748123,-0.035904254764318466,0.02824944630265236,-0.041864026337862015,-0.007798497565090656,0.06850768625736237,0.1420339047908783,0.07585737109184265,-1.4580290098172322e-33,-0.05420652776956558,-0.012297233566641808,-0.05390719696879387,0.0008922467241063714,-0.10871315002441406,0.007698835339397192,0.00881819799542427,-0.021360954269766808,0.0180265624076128,-0.06503812968730927,-0.03175916522741318,-0.009782513603568077,-0.1720065474510193,-0.014670779928565025,-0.07452109456062317,0.02324618212878704,0.027389153838157654,0.043106477707624435,-0.024563729763031006,-0.06615658849477768,0.011634581722319126,0.019787512719631195,-0.02677510678768158,-0.05462726950645447,0.005580449476838112,0.03961192071437836,0.04043791815638542,0.010408850386738777,-0.04467719420790672,-0.023867063224315643,0.009561075828969479,0.09687793999910355,-0.013143823482096195,-0.05876483768224716,0.0913323238492012,0.09961706399917603,-0.08869148790836334,0.08431094884872437,0.044185858219861984,-0.007916509173810482,-0.024820007383823395,0.07906274497509003,-0.07220631092786789,-0.03522321209311485,0.07745014131069183,-0.022648440673947334,-0.030820781365036964,0.09314851462841034,-0.06300248950719833,-0.02170666866004467,0.036471717059612274,-0.031849205493927,0.02492152899503708,-0.008639027364552021,0.045837368816137314,0.09018363058567047,0.04120703786611557,0.07063530385494232,0.030928026884794235,-0.08776932954788208,0.04971360042691231,0.10855939239263535,0.054729778319597244,0.000497729517519474]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8060'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 03:07:39 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "To categorize the provided court case into relevant black letter
+      law topics, I would need specific details or excerpts from the case text. However,
+      I can provide a general template of legal categories that are commonly applicable
+      in court cases. Please provide the case text or key details for a more tailored
+      response. \n\nHere\u2019s a general list of applicable legal categories or doctrines:\n\n-
+      **Contract Law**\n- **Tort Law**\n- **Property Law**\n- **Criminal Law**\n-
+      **Constitutional Law**\n- **Administrative Law**\n- **Civil Procedure**\n- **Evidence**\n-
+      **Family Law**\n- **Intellectual Property Law**\n- **Employment Law**\n- **Bankruptcy
+      Law**\n- **Environmental Law**\n- **International Law**\n- **Consumer Protection
+      Law**\n\nFeel free to provide more information for a specific categorization!"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '824'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[0.020589366555213928,0.04884079471230507,-0.10999733954668045,-0.04693169519305229,-0.05511549860239029,0.09206484258174896,-0.08768892288208008,-0.022974643856287003,-0.011764511466026306,0.011242070235311985,-0.06403850764036179,-0.042199037969112396,-0.028008179739117622,0.009456411004066467,0.0159284770488739,0.031149622052907944,0.014748095534741879,0.015039319172501564,-0.050468795001506805,-0.028773978352546692,-0.001024318509735167,0.07105186581611633,-0.018453456461429596,-0.030934562906622887,-0.06348813325166702,-0.03304397687315941,-0.009967733174562454,-0.06572505831718445,-0.03175574168562889,-0.011258970014750957,-0.024173295125365257,0.031225962564349174,0.031251758337020874,0.02128836140036583,0.050009459257125854,-0.08821097761392593,-0.06827715784311295,0.03838536888360977,-0.02813773602247238,0.025382323190569878,-0.04973795637488365,0.05324925482273102,-0.02101675420999527,0.0735464096069336,-0.0175926573574543,-0.011467166244983673,0.0468696765601635,-0.0100715896114707,-0.05896548181772232,-0.026154715567827225,-0.0754329040646553,-0.025766633450984955,-0.011671814136207104,0.05314476788043976,-0.06085560843348503,-0.057136185467243195,0.010676627047359943,-0.032129883766174316,-0.06337962299585342,-0.14747385680675507,-0.0309186652302742,0.034598398953676224,-0.011309472844004631,-0.04245039075613022,0.01031810138374567,0.09869067370891571,-0.07465725392103195,0.1038922592997551,0.0016126767732203007,0.01721029542386532,-0.009955408051609993,0.016037259250879288,-0.015207625925540924,0.00909601803869009,-0.04068164899945259,0.012556733563542366,0.033588796854019165,0.0039029770996421576,0.022259866818785667,-0.0492834597826004,-0.016764843836426735,0.03370009735226631,-0.04271181300282478,-0.03414185345172882,-0.000544897629879415,0.042274489998817444,0.003728290554136038,0.05803302302956581,-0.10103332996368408,0.07640595734119415,0.04533948004245758,-0.00677858293056488,0.09393773227930069,-0.04132738709449768,-0.06323067843914032,0.009539355523884296,0.018833650276064873,-0.03925672918558121,0.09939274191856384,-0.042043961584568024,0.01848812960088253,-0.061238840222358704,0.04265189170837402,0.020450841635465622,0.0470791794359684,0.059706009924411774,0.004799883347004652,0.004630567971616983,-0.01554756797850132,-0.03727283328771591,0.03137602657079697,0.014680048450827599,-0.0022327022161334753,-0.17233078181743622,-0.09032861888408661,0.012172365561127663,0.0428415946662426,0.06101326644420624,0.05507979914546013,0.05447686091065407,-0.006959920283406973,0.033897049725055695,-0.02771606110036373,0.019476251676678658,-0.04527578130364418,0.038731202483177185,-0.10296344757080078,-1.2262978060716058e-30,0.017027024179697037,-0.04473123699426651,-0.014924077317118645,0.017468610778450966,0.07466717809438705,0.029797058552503586,-0.02288627251982689,0.03151879087090492,-0.030101977288722992,0.09162937104701996,-0.0013836733996868134,0.025639798492193222,-0.008399895392358303,-0.0340774767100811,-0.0044556716457009315,0.03205045685172081,-0.0160681065171957,-0.061709925532341,-0.1132340207695961,-0.048838287591934204,0.0229914840310812,0.024040991440415382,0.04553184285759926,-0.026059089228510857,-0.0815347284078598,0.03714983910322189,0.03358897939324379,-0.03382928669452667,-0.024918626993894577,-0.03113340213894844,0.007937011308968067,0.03560980036854744,0.016713308170437813,-0.020391933619976044,0.010124972090125084,0.06194308400154114,-0.05750443413853645,0.00041454622987657785,0.03545839339494705,-0.00027238731854595244,-0.04184168949723244,-0.041018906980752945,-0.00045318767661228776,0.0041715046390891075,0.014011804014444351,0.04920206218957901,-0.03502082824707031,-0.11008364707231522,0.11268484592437744,0.024718711152672768,0.03404203802347183,-0.0807848647236824,0.04576018825173378,0.016041016206145287,-0.00799686461687088,-0.011345227248966694,-0.06874184310436249,0.019505763426423073,0.005237481091171503,0.05942869558930397,-0.06893645226955414,0.08356257528066635,0.060910310596227646,-0.05083869397640228,-0.0729023739695549,-0.0935254693031311,-0.09046393632888794,-0.029886672273278236,0.001591039472259581,-0.1025981456041336,0.007945355959236622,0.06419557332992554,0.036748502403497696,-0.003460233099758625,-0.01184155698865652,0.04083532094955444,0.05636654421687126,-0.06803048402070999,0.022204753011465073,-0.032018471509218216,-0.09765734523534775,0.03075377643108368,0.10832107812166214,0.04699091613292694,-0.04877334088087082,0.044992394745349884,0.028525110334157944,-0.04589550197124481,-0.0373200923204422,-0.01573759689927101,-0.1048942506313324,-0.030748579651117325,-0.11831555515527725,0.054762184619903564,0.14492353796958923,-6.946796924535395e-33,0.021607780829072,-0.027605200186371803,-0.01635788008570671,-0.048919931054115295,-0.036555204540491104,0.00810545776039362,-0.02643209509551525,-0.0022028491366654634,0.03633967414498329,-0.022127965465188026,-0.04893835633993149,0.033699892461299896,0.04172681272029877,0.024924395605921745,-0.028132827952504158,-0.046008843928575516,-0.048024848103523254,-0.010963610373437405,0.02797907404601574,0.1314527541399002,0.022468145936727524,-0.05760752037167549,-0.09121997654438019,0.061543937772512436,0.04408501461148262,-0.046574220061302185,-0.03511960059404373,-0.06171269714832306,0.07426802814006805,0.032751571387052536,0.02497158944606781,0.0063383872620761395,0.06432826817035675,-0.01753329485654831,-0.11090703308582306,-0.04564350098371506,0.0847097709774971,0.02982896752655506,0.061018239706754684,-0.024718916043639183,-0.014038875699043274,0.008855852298438549,0.01946403458714485,-0.08317437022924423,0.036551669239997864,0.017097776755690575,-0.019888902083039284,0.03910864144563675,0.10100717097520828,-0.06543060392141342,-0.020705554634332657,-0.06396931409835815,0.034143365919589996,0.059199366718530655,0.009460875764489174,-0.031733933836221695,0.0009224381064996123,-0.1205466017127037,-0.03987647593021393,0.027134504169225693,-0.008733234368264675,0.10273391753435135,0.011285645887255669,0.05504995584487915,0.03488314151763916,-0.07243479788303375,-0.056458812206983566,-0.09991138428449631,0.002092600567266345,-0.09290295094251633,-0.0914294421672821,-0.014977589249610901,-0.10542777180671692,0.05513542890548706,0.05330587923526764,-0.019891995936632156,0.028039684519171715,0.007409521844238043,-0.017170213162899017,0.018775664269924164,0.094472236931324,-0.03148413822054863,0.023027537390589714,0.08477982878684998,-0.02107277512550354,0.07962340861558914,0.03634760156273842,0.02850445732474327,0.01326370146125555,0.018525348976254463,-0.040084775537252426,0.06713688373565674,0.05280359089374542,0.009404757991433144,0.035585809499025345,9.314438730670149e-35,-0.01974371448159218,0.059876903891563416,0.06645222753286362,0.011130956932902336,-0.06427349895238876,0.01918589323759079,-0.029345139861106873,-0.010231154970824718,-0.0215433482080698,0.02894868142902851,-0.16454683244228363,0.03463559225201607,-0.062094442546367645,-0.017872845754027367,-0.09081395715475082,0.10609722137451172,0.015115550719201565,-0.042498279362916946,0.043529897928237915,0.0738878920674324,-0.021376950666308403,-0.0026617117691785097,-0.010093539953231812,-0.016770515590906143,-0.0007236546371132135,0.017609739676117897,0.017105862498283386,-0.05284925177693367,0.050919484347105026,0.04070054367184639,-0.009948255494236946,0.025411859154701233,0.029526744037866592,-0.0018978569423779845,0.014624343253672123,0.023727942258119583,0.025177592411637306,0.03381388634443283,0.05351213365793228,0.005918577313423157,0.033497560769319534,0.024034444242715836,0.01252477616071701,-0.07754386961460114,-0.022777264937758446,-0.038228292018175125,-0.07037171721458435,0.03958400338888168,-0.02367689087986946,0.004167708568274975,0.0029254641849547625,-0.024937698617577553,-0.0643608495593071,0.030257247388362885,-0.003988316282629967,0.07060905545949936,0.04529641941189766,0.001602694159373641,-0.004702214151620865,-0.08756862580776215,0.10315428674221039,-0.021704277023673058,-0.04367593303322792,0.05574323609471321]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8060'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 03:07:40 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+version: 1

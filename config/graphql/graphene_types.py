@@ -38,7 +38,6 @@ from opencontractserver.pipeline.base.file_types import (
 from opencontractserver.pipeline.utils import get_components_by_mimetype
 from opencontractserver.shared.resolvers import resolve_oc_model_queryset
 from opencontractserver.users.models import Assignment, UserExport, UserImport
-from opencontractserver.users.schema import UserType
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -768,6 +767,7 @@ class UserExportType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
 class BulkDocumentUploadStatusType(graphene.ObjectType):
     """Type for checking the status of a bulk document upload job"""
+
     job_id = graphene.String()
     success = graphene.Boolean()
     total_files = graphene.Int()

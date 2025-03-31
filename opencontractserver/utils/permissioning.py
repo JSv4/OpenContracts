@@ -183,19 +183,22 @@ def get_users_permissions_for_obj(
 ) -> set[str]:
 
     model_name = instance._meta.model_name
-    # logger.info(
-    #     f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name}"
-    # )
+    logger.info(
+        f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name}"
+    )
 
-    # app_label = instance._meta.app_label
-    # logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
+    app_label = instance._meta.app_label
+    logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
 
     this_user_perms = getattr(instance, f"{model_name}userobjectpermission_set")
-    # logger.info(f"get_users_permissions_for_obj - this_user_perms: {this_user_perms}")
+
+    logger.info(f"get_users_permissions_for_obj - this_user_perms: {this_user_perms}")
     permission_id_to_name_map = get_permission_id_to_name_map_for_model(
         instance=instance
     )
-    # logger.info(f"get_users_permissions_for_obj - permission_id_to_name_map: {permission_id_to_name_map}")
+    logger.info(
+        f"get_users_permissions_for_obj - permission_id_to_name_map: {permission_id_to_name_map}"
+    )
 
     # Build list of permission names from the permission type ids
     model_permissions_for_user = {
@@ -212,13 +215,15 @@ def get_users_permissions_for_obj(
         this_users_group_perms = getattr(
             instance, f"{model_name}groupobjectpermission_set"
         ).filter(group_id__in=get_users_group_ids(user_instance=user))
-        # logger.info(f"get_users_permissions_for_obj - this_users_group_perms: {this_users_group_perms}")
+        logger.info(
+            f"get_users_permissions_for_obj - this_users_group_perms: {this_users_group_perms}"
+        )
         for perm in this_users_group_perms:
             model_permissions_for_user.add(
                 permission_id_to_name_map[perm.permission_id]
             )
 
-    # logger.info(f"Final permissions: {model_permissions_for_user}")
+    logger.info(f"Final permissions: {model_permissions_for_user}")
 
     return model_permissions_for_user
 
@@ -242,22 +247,23 @@ def user_has_permission_for_obj(
         user = user_val
 
     model_name = instance._meta.model_name
-    # logger.info(
-    #     f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name} for
-    #     permission {permission}"
-    # )
+    logger.info(
+        f"get_users_permissions_for_obj() - Starting check for {user.username} with model type {model_name} for"
+        f"permission {permission}"
+    )
 
-    # app_label = instance._meta.app_label
-    # logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
+    app_label = instance._meta.app_label
+    logger.info(f"get_users_permissions_for_obj - App name: {app_label}")
 
     model_permissions_for_user = get_users_permissions_for_obj(
         user=user,
         instance=instance,
         include_group_permissions=include_group_permissions,
     )
-    # logger.info(
-    #     f"user_has_permission_for_obj - user {user} has model_permissions: {model_permissions_for_user}"
-    # )
+    logger.info(
+        f"user_has_permission_for_obj - user {user} has model_permissions: {model_permissions_for_user}"
+    )
+    logger.info(f"user_has_permission_for_obj - permission: {permission}")
 
     if permission == PermissionTypes.READ:
         return len(model_permissions_for_user.intersection({f"read_{model_name}"})) > 0
@@ -265,7 +271,7 @@ def user_has_permission_for_obj(
         return (
             len(model_permissions_for_user.intersection({f"create_{model_name}"})) > 0
         )
-    elif permission == PermissionTypes.UPDATE:
+    elif permission == PermissionTypes.UPDATE or permission == PermissionTypes.EDIT:
         return (
             len(model_permissions_for_user.intersection({f"update_{model_name}"})) > 0
         )

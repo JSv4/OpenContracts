@@ -5,7 +5,11 @@ from .doc_tasks import burn_doc_annotations
 from .export_tasks import package_annotated_docs
 from .extract_orchestrator_tasks import run_extract
 from .fork_tasks import fork_corpus
-from .import_tasks import import_corpus, import_document_to_corpus, process_documents_zip
+from .import_tasks import (
+    import_corpus,
+    import_document_to_corpus,
+    process_documents_zip,
+)
 from .lookup_tasks import build_label_lookups_task
 from .permissioning_tasks import make_analysis_public_task, make_corpus_public_task
 

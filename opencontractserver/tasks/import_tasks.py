@@ -1,13 +1,14 @@
 import base64
 import json
 import logging
+import pathlib
 import zipfile
 from typing import Optional
 
 import filetype
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile, File
-from django.conf import settings
 
 from config import celery_app
 from opencontractserver.annotations.models import (
@@ -29,7 +30,6 @@ from opencontractserver.utils.packaging import (
     unpack_label_set_from_export,
 )
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
-from opencontractserver.utils.text import is_plaintext_content
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -370,7 +370,7 @@ def process_documents_zip(
     """
     Process a zip file containing documents, extract each file, and create Document objects
     for files with allowed MIME types.
-    
+
     Args:
         temporary_file_handle_id: ID of the temporary file containing the zip
         user_id: ID of the user who uploaded the zip
@@ -380,13 +380,14 @@ def process_documents_zip(
         custom_meta: Optional metadata to apply to all documents
         make_public: Whether the documents should be public
         corpus_id: Optional ID of corpus to link documents to
-        
+
     Returns:
         Dictionary with summary of processing results
     """
     results = {
         "job_id": job_id,
         "success": False,
+        "completed": False,  # Will be set to True on successful completion
         "total_files": 0,
         "processed_files": 0,
         "skipped_files": 0,
@@ -394,89 +395,122 @@ def process_documents_zip(
         "document_ids": [],
         "errors": [],
     }
-    
+
     try:
         logger.info(f"process_documents_zip() - Processing started for job: {job_id}")
-        
+
         # Get the temporary file and user objects
-        temporary_file_handle = TemporaryFileHandle.objects.get(id=temporary_file_handle_id)
+        temporary_file_handle = TemporaryFileHandle.objects.get(
+            id=temporary_file_handle_id
+        )
         user_obj = User.objects.get(id=user_id)
-        
+
         # Check for corpus if needed
         corpus_obj = None
         if corpus_id:
             corpus_obj = Corpus.objects.get(id=corpus_id)
-            
+
         # Calculate user doc limit if capped
         if user_obj.is_usage_capped:
             current_doc_count = user_obj.document_set.count()
-            remaining_quota = settings.USAGE_CAPPED_USER_DOC_CAP_COUNT - current_doc_count
+            remaining_quota = (
+                settings.USAGE_CAPPED_USER_DOC_CAP_COUNT - current_doc_count
+            )
             if remaining_quota <= 0:
                 results["success"] = False
+                results["completed"] = True  # Task completed but failed
                 results["errors"].append(
                     f"User has reached maximum document limit of {settings.USAGE_CAPPED_USER_DOC_CAP_COUNT}"
                 )
                 return results
-        
+
         # Process the zip file
         with temporary_file_handle.file.open("rb") as import_file, zipfile.ZipFile(
             import_file, mode="r"
         ) as import_zip:
             logger.info(f"process_documents_zip() - Opened zip file for job: {job_id}")
-            
+
             # Get list of files in the zip
             files = import_zip.namelist()
             logger.info(f"process_documents_zip() - Found {len(files)} files in zip")
             results["total_files"] = len(files)
-            
+
             # Process each file in the zip
             for filename in files:
                 # Skip directories and hidden files
-                if filename.endswith('/') or filename.startswith('.') or '/__MACOSX/' in filename:
+                if (
+                    filename.endswith("/")
+                    or filename.startswith(".")
+                    or "/__MACOSX/" in filename
+                ):
                     results["skipped_files"] += 1
                     continue
-                    
+
                 try:
                     # Check if we've hit the user cap
                     if user_obj.is_usage_capped:
                         current_doc_count = user_obj.document_set.count()
-                        if current_doc_count >= settings.USAGE_CAPPED_USER_DOC_CAP_COUNT:
-                            results["errors"].append("User document limit reached during processing")
+                        if (
+                            current_doc_count
+                            >= settings.USAGE_CAPPED_USER_DOC_CAP_COUNT
+                        ):
+                            results["errors"].append(
+                                "User document limit reached during processing"
+                            )
                             break
-                    
+
                     # Extract the file from the zip
                     with import_zip.open(filename) as file_handle:
                         file_bytes = file_handle.read()
-                        
+
                         # Check file type
                         kind = filetype.guess(file_bytes)
                         if kind is None:
-                            # Try to detect plaintext
-                            if is_plaintext_content(file_bytes):
+                            # If filetype cannot guess, check for common text extensions
+                            # before falling back to content check, to avoid misidentifying binary files.
+                            if filename.lower().endswith(
+                                (
+                                    ".txt",
+                                    ".md",
+                                    ".csv",
+                                    ".json",
+                                    ".xml",
+                                    ".html",
+                                    ".css",
+                                    ".js",
+                                    ".rtf",
+                                )
+                            ):
                                 kind = "text/plain"
-                            else:
-                                logger.info(f"process_documents_zip() - Skipping file with unknown type: {filename}")
+                            else:  # Truly unknown/binary - Skip
+                                logger.info(
+                                    f"process_documents_zip() - Skipping file with unknown type: {filename}"
+                                )
                                 results["skipped_files"] += 1
                                 continue
                         else:
                             kind = kind.mime
-                            
+
                         # Skip files with unsupported types
                         if kind not in settings.ALLOWED_DOCUMENT_MIMETYPES:
-                            logger.info(f"process_documents_zip() - Skipping file with unsupported type: {filename}, type: {kind}")
                             results["skipped_files"] += 1
                             continue
-                        
+
                         # Prepare document attributes
-                        doc_title = filename
+                        # Use only the filename part, discarding the path within the zip
+                        base_filename = pathlib.Path(filename).name
+                        doc_title = base_filename
                         if title_prefix:
-                            doc_title = f"{title_prefix} - {filename}"
-                            
-                        doc_description = description or f"Uploaded as part of batch upload (job: {job_id})"
-                        
+                            doc_title = f"{title_prefix} - {base_filename}"
+
+                        doc_description = (
+                            description
+                            or f"Uploaded as part of batch upload (job: {job_id})"
+                        )
+
                         # Create the document based on file type
                         document = None
-                        
+
                         if kind in [
                             "application/pdf",
                             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -508,34 +542,44 @@ def process_documents_zip(
                                 file_type=kind,
                             )
                             document.save()
-                            
+
                         if document:
                             # Set permissions for the document
-                            set_permissions_for_obj_to_user(user_obj, document, [PermissionTypes.CRUD])
-                            
+                            set_permissions_for_obj_to_user(
+                                user_obj, document, [PermissionTypes.CRUD]
+                            )
+
                             # Add to corpus if needed
                             if corpus_obj:
                                 corpus_obj.documents.add(document)
-                                
+
                             # Update results
                             results["processed_files"] += 1
                             results["document_ids"].append(str(document.id))
-                            logger.info(f"process_documents_zip() - Created document: {document.id} for file: {filename}")
-                            
+                            logger.info(
+                                f"process_documents_zip() - Created document: {document.id} for file: {filename}"
+                            )
+
                 except Exception as e:
-                    logger.error(f"process_documents_zip() - Error processing file {filename}: {str(e)}")
+                    logger.error(
+                        f"process_documents_zip() - Error processing file {filename}: {str(e)}"
+                    )
                     results["error_files"] += 1
                     results["errors"].append(f"Error processing {filename}: {str(e)}")
-        
+
         # Clean up the temporary file
         temporary_file_handle.delete()
-        
+
         results["success"] = True
-        logger.info(f"process_documents_zip() - Completed job: {job_id}, processed: {results['processed_files']}")
-    
+        results["completed"] = True  # Task completed successfully
+        logger.info(
+            f"process_documents_zip() - Completed job: {job_id}, processed: {results['processed_files']}"
+        )
+
     except Exception as e:
         logger.error(f"process_documents_zip() - Job failed with error: {str(e)}")
         results["success"] = False
+        results["completed"] = True  # Task completed but failed
         results["errors"].append(f"Job failed: {str(e)}")
-        
+
     return results

@@ -6,8 +6,10 @@ from opencontractserver.analyzer.models import Analysis, Analyzer
 from opencontractserver.annotations.models import Note
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.tasks.doc_analysis_tasks import build_contract_knowledge_base
-from opencontractserver.tasks.doc_analysis_tasks import build_case_law_knowledge_base
+from opencontractserver.tasks.doc_analysis_tasks import (
+    build_case_law_knowledge_base,
+    build_contract_knowledge_base,
+)
 from opencontractserver.tests.base import BaseFixtureTestCase
 
 
@@ -122,7 +124,7 @@ class TestBuildCaseLawKnowledgeBaseTask(BaseFixtureTestCase):
 
         # Create or fetch our test Document, linking it to a newly created Corpus
         test_corpus = Corpus.objects.create(title="CaseLaw Corpus", creator=self.user)
-       
+
         # Create an analyzer and an analysis object
         self.task_name_analyzer = Analyzer.objects.create(
             id="test.analyzer.2",
@@ -163,7 +165,9 @@ class TestBuildCaseLawKnowledgeBaseTask(BaseFixtureTestCase):
         )
 
         # Check that the relevant notes (headnotes, black letter law) have been created
-        headnotes_note = Note.objects.filter(document=self.doc, title="Headnotes").first()
+        headnotes_note = Note.objects.filter(
+            document=self.doc, title="Headnotes"
+        ).first()
         black_letter_note = Note.objects.filter(
             document=self.doc, title="Black Letter Law Categories"
         ).first()
@@ -196,7 +200,9 @@ class TestBuildCaseLawKnowledgeBaseTask(BaseFixtureTestCase):
             creator=self.user,
             title="NotACaseDoc",
             description="Initial non-case description",
-            pdf_file=ContentFile(b"Some random text that is not a court case", name="test_file.pdf"),
+            pdf_file=ContentFile(
+                b"Some random text that is not a court case", name="test_file.pdf"
+            ),
             backend_lock=True,
         )
 
@@ -231,7 +237,8 @@ class TestBuildCaseLawKnowledgeBaseTask(BaseFixtureTestCase):
 
         # The doc should not have a summary file
         self.assertIsNone(
-            doc.md_summary_file, "Expected no md_summary_file to be created for non-cases."
+            doc.md_summary_file,
+            "Expected no md_summary_file to be created for non-cases.",
         )
         # The doc description should remain unchanged
         self.assertEqual(
@@ -255,4 +262,6 @@ class TestBuildCaseLawKnowledgeBaseTask(BaseFixtureTestCase):
             "Did not expect a 'Black Letter Law Categories' note for a non-case document.",
         )
 
-        print("build_case_law_knowledge_base (not a court case) test completed successfully.")
+        print(
+            "build_case_law_knowledge_base (not a court case) test completed successfully."
+        )

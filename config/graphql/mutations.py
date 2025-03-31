@@ -95,7 +95,6 @@ from opencontractserver.utils.files import is_plaintext_content
 from opencontractserver.utils.permissioning import (
     set_permissions_for_obj_to_user,
     user_has_permission_for_obj,
-    has_permission_on_obj,
 )
 
 logger = logging.getLogger(__name__)
@@ -827,7 +826,7 @@ class UploadCorpusImportZip(graphene.Mutation):
 
             # Store our corpus in a temporary file handler which lets us rely on
             # django-wide selection of S3 or local storage in django container
-            base64_img_bytes = base64_file_string.encode("utf-8")
+            base64_img_bytes = base_64_file_string.encode("utf-8")
             decoded_file_data = base64.decodebytes(base64_img_bytes)
 
             with transaction.atomic():
@@ -1023,6 +1022,7 @@ class UploadDocumentsZip(graphene.Mutation):
     The zip is stored as a temporary file and processed asynchronously.
     Only files with allowed MIME types will be created as documents.
     """
+
     class Arguments:
         base64_file_string = graphene.String(
             required=True,
@@ -1030,15 +1030,14 @@ class UploadDocumentsZip(graphene.Mutation):
         )
         title_prefix = graphene.String(
             required=False,
-            description="Optional prefix for document titles (will be combined with filename)"
+            description="Optional prefix for document titles (will be combined with filename)",
         )
         description = graphene.String(
             required=False,
             description="Optional description to apply to all documents",
         )
         custom_meta = GenericScalar(
-            required=False, 
-            description="Optional metadata to apply to all documents"
+            required=False, description="Optional metadata to apply to all documents"
         )
         add_to_corpus_id = graphene.ID(
             required=False,
@@ -1076,16 +1075,14 @@ class UploadDocumentsZip(graphene.Mutation):
             )
 
         try:
-            logger.info(
-                "UploadDocumentsZip.mutate() - Received zip upload request..."
-            )
-            
+            logger.info("UploadDocumentsZip.mutate() - Received zip upload request...")
+
             # Store zip in a temporary file
             base64_img_bytes = base64_file_string.encode("utf-8")
             decoded_file_data = base64.decodebytes(base64_img_bytes)
-            
+
             job_id = str(uuid.uuid4())
-            
+
             with transaction.atomic():
                 temporary_file = TemporaryFileHandle.objects.create()
                 temporary_file.file = ContentFile(
@@ -1094,15 +1091,21 @@ class UploadDocumentsZip(graphene.Mutation):
                 )
                 temporary_file.save()
                 logger.info("UploadDocumentsZip.mutate() - temporary file created.")
-                
+
                 # Check if we need to link to a corpus
                 corpus_id = None
                 if add_to_corpus_id is not None:
                     try:
-                        corpus = Corpus.objects.get(id=from_global_id(add_to_corpus_id)[1])
+                        corpus = Corpus.objects.get(
+                            id=from_global_id(add_to_corpus_id)[1]
+                        )
                         # Check if user has permission on this corpus
-                        if not has_permission_on_obj(info.context.user, corpus, ["update_corpus"]):
-                            raise PermissionError("You don't have permission to add documents to this corpus")
+                        if not user_has_permission_for_obj(
+                            info.context.user, corpus, PermissionTypes.EDIT
+                        ):
+                            raise PermissionError(
+                                "You don't have permission to add documents to this corpus"
+                            )
                         corpus_id = corpus.id
                     except Exception as e:
                         logger.error(f"Error validating corpus: {e}")
@@ -1113,11 +1116,11 @@ class UploadDocumentsZip(graphene.Mutation):
                         )
 
             # Launch async task to process the zip file
-            transaction.on_commit(
-                lambda: chain(
+            if settings.CELERY_TASK_ALWAYS_EAGER:
+                chain(
                     process_documents_zip.s(
-                        temporary_file.id, 
-                        info.context.user.id, 
+                        temporary_file.id,
+                        info.context.user.id,
                         job_id,
                         title_prefix,
                         description,
@@ -1126,12 +1129,26 @@ class UploadDocumentsZip(graphene.Mutation):
                         corpus_id,
                     )
                 ).apply_async()
-            )
+            else:
+                transaction.on_commit(
+                    lambda: chain(
+                        process_documents_zip.s(
+                            temporary_file.id,
+                            info.context.user.id,
+                            job_id,
+                            title_prefix,
+                            description,
+                            custom_meta,
+                            make_public,
+                            corpus_id,
+                        )
+                    ).apply_async()
+                )
             logger.info("UploadDocumentsZip.mutate() - Async task launched...")
 
             ok = True
             message = f"Upload started. Job ID: {job_id}"
-            
+
         except Exception as e:
             ok = False
             message = f"Could not start document upload job due to error: {e}"

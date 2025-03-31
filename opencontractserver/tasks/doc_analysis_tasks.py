@@ -629,8 +629,15 @@ def build_case_law_knowledge_base(*args, pdf_text_extract=None, **kwargs):
         return get_markdown_response(system_prompt, user_prompt) or ""
 
     try:
+        logger.info(f"build_case_law_knowledge_base starting for doc_id: {doc_id}")
+        logger.info(
+            f"Initial pdf_text_extract (first 500 chars): {pdf_text_extract[:500]}..."
+        )
+
         # Determine if doc is a court case:
-        if not is_court_case(pdf_text_extract):
+        is_case = is_court_case(pdf_text_extract)
+        logger.info(f"Result of is_court_case: {is_case}")
+        if not is_case:
             logger.info("Document is not a court case. Skipping further analysis.")
             return (
                 [],
@@ -643,24 +650,33 @@ def build_case_law_knowledge_base(*args, pdf_text_extract=None, **kwargs):
         # Retrieve the Document
         logger.info(f"Retrieving document with ID: {doc_id}")
         doc = Document.objects.get(id=doc_id)
-        logger.info(f"Document content: {pdf_text_extract[:500]}...")
+        # logger.info(f"Document content: {pdf_text_extract[:500]}...") # Already logged above
 
         # Generate content
         logger.info(f"Generating headnotes for document: {doc_id}")
         headnotes = generate_headnotes(pdf_text_extract)
-        logger.info(f"Headnotes: {headnotes}")
+        logger.info(
+            f"Generated Headnotes: {headnotes[:500]}..."
+        )  # Log truncated output
 
         logger.info(f"Generating black letter law categories for document: {doc_id}")
         black_letter_categories = categorize_black_letter_law(pdf_text_extract)
-        logger.info(f"Black letter categories: {black_letter_categories}")
+        logger.info(
+            f"Generated Black letter categories: {black_letter_categories[:500]}..."
+        )  # Log truncated output
 
         logger.info(f"Generating case summary for document: {doc_id}")
         case_summary = generate_case_summary(pdf_text_extract)
-        logger.info(f"Case summary: {case_summary}")
+        logger.info(
+            f"Generated Case summary: {case_summary[:500]}..."
+        )  # Log truncated output
 
         logger.info(f"Creating searchable summary for document: {doc_id}")
+        logger.info(
+            f"Input to create_searchable_summary (case_summary, first 500 chars): {case_summary[:500]}..."
+        )
         searchable_summary = create_searchable_summary(case_summary)
-        logger.info(f"Searchable summary: {searchable_summary}")
+        logger.info(f"Generated Searchable summary: {searchable_summary}")
 
         # Attach content to the Document
         logger.info(f"Attaching generated content to document: {doc_id}")

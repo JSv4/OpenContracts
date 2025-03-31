@@ -516,7 +516,7 @@ def build_case_law_knowledge_base(*args, pdf_text_extract=None, **kwargs):
         logger.error("doc_id is required for build_case_law_knowledge_base task")
         return [], [], [], False, "Missing doc_id"
 
-    # If pdf_text_extract is None or empty, it's impossible to proceed. 
+    # If pdf_text_extract is None or empty, it's impossible to proceed.
     if not pdf_text_extract:
         # The tests expect a "Not a court case" when the system doesn't see actual court text
         logger.info("No extracted PDF text found. Treating as 'not a court case'.")
@@ -558,7 +558,10 @@ def build_case_law_knowledge_base(*args, pdf_text_extract=None, **kwargs):
         Uses the LLM to decide if this text is from a court case. If LLM fails or returns no
         content, default to 'NO' (False).
         """
-        system_prompt = "You are an expert legal researcher. Determine if the provided document is a court case. Respond ONLY with 'YES' or 'NO'."
+        system_prompt = (
+            "You are an expert legal researcher. Determine if the provided document is a court "
+            "case. Respond ONLY with 'YES' or 'NO'."
+        )
         # Truncate text so we don't exceed token limits in LLM calls
         user_prompt = f"Document Text:\n{pdf_text[:3000]}"
 
@@ -629,7 +632,13 @@ def build_case_law_knowledge_base(*args, pdf_text_extract=None, **kwargs):
         # Determine if doc is a court case:
         if not is_court_case(pdf_text_extract):
             logger.info("Document is not a court case. Skipping further analysis.")
-            return ([], [], [{"data": {"reason": "Not a court case"}}], True, "No Return Message")
+            return (
+                [],
+                [],
+                [{"data": {"reason": "Not a court case"}}],
+                True,
+                "No Return Message",
+            )
 
         # Retrieve the Document
         logger.info(f"Retrieving document with ID: {doc_id}")
@@ -655,7 +664,9 @@ def build_case_law_knowledge_base(*args, pdf_text_extract=None, **kwargs):
 
         # Attach content to the Document
         logger.info(f"Attaching generated content to document: {doc_id}")
-        doc.md_summary_file = ContentFile(case_summary.encode("utf-8"), name="case_summary.md")
+        doc.md_summary_file = ContentFile(
+            case_summary.encode("utf-8"), name="case_summary.md"
+        )
         doc.description = searchable_summary
         doc.save()
         logger.info(f"Successfully saved document: {doc_id} with generated content")
@@ -682,7 +693,9 @@ def build_case_law_knowledge_base(*args, pdf_text_extract=None, **kwargs):
     except Exception as e:
         # Catch any unexpected errors and return them in the format our test harness expects
         error_message = f"{e}"
-        logger.error(f"build_case_law_knowledge_base encountered an error: {error_message}")
+        logger.error(
+            f"build_case_law_knowledge_base encountered an error: {error_message}"
+        )
         return (
             [],
             [],

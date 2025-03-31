@@ -265,6 +265,10 @@ def is_plaintext_content(
     if not sample:
         return False  # Empty content is not considered plaintext
 
+    # Check for null bytes - a strong indicator of binary data
+    if b"\x00" in sample:
+        return False
+
     printable_count = sum(1 for byte in sample if chr(byte) in string.printable)
     printable_ratio = printable_count / len(sample)
 

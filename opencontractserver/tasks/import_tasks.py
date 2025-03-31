@@ -24,6 +24,7 @@ from opencontractserver.types.dicts import (
     OpenContractsExportDataJsonPythonType,
 )
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.files import is_plaintext_content
 from opencontractserver.utils.importing import import_annotations, load_or_create_labels
 from opencontractserver.utils.packaging import (
     unpack_corpus_from_export,
@@ -466,23 +467,10 @@ def process_documents_zip(
                         # Check file type
                         kind = filetype.guess(file_bytes)
                         if kind is None:
-                            # If filetype cannot guess, check for common text extensions
-                            # before falling back to content check, to avoid misidentifying binary files.
-                            if filename.lower().endswith(
-                                (
-                                    ".txt",
-                                    ".md",
-                                    ".csv",
-                                    ".json",
-                                    ".xml",
-                                    ".html",
-                                    ".css",
-                                    ".js",
-                                    ".rtf",
-                                )
-                            ):
+                            # Try to detect plaintext using the improved utility
+                            if is_plaintext_content(file_bytes):
                                 kind = "text/plain"
-                            else:  # Truly unknown/binary - Skip
+                            else:  # Truly unknown/binary
                                 logger.info(
                                     f"process_documents_zip() - Skipping file with unknown type: {filename}"
                                 )

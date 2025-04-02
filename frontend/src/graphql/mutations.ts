@@ -55,6 +55,7 @@ export const LOGIN_MUTATION = gql`
         email
         name
         username
+        isUsageCapped
       }
     }
   }

@@ -824,6 +824,7 @@ export type UserType = Node & {
   id?: Scalars["ID"];
   password?: Scalars["String"];
   lastLogin?: Maybe<Scalars["DateTime"]>;
+  isUsageCapped?: Scalars["Boolean"];
   isSuperuser?: Scalars["Boolean"];
   username?: Scalars["String"];
   email: Scalars["String"];

@@ -1116,7 +1116,7 @@ class UploadDocumentsZip(graphene.Mutation):
                         )
 
             # Launch async task to process the zip file
-            if settings.CELERY_TASK_ALWAYS_EAGER:
+            if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
                 chain(
                     process_documents_zip.s(
                         temporary_file.id,

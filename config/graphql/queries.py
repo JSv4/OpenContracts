@@ -64,6 +64,7 @@ from config.graphql.graphene_types import (
     RelationshipType,
     UserExportType,
     UserImportType,
+    UserType
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -94,6 +95,12 @@ logger = logging.getLogger(__name__)
 
 
 class Query(graphene.ObjectType):
+
+    # USER RESOLVERS #####################################
+    me = graphene.Field(UserType)
+
+    def resolve_me(self, info):
+        return info.context.user
 
     # ANNOTATION RESOLVERS #####################################
     annotations = DjangoConnectionField(

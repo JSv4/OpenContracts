@@ -21,6 +21,7 @@ import {
   ConversationTypeConnection,
   PipelineComponentType,
   ChatMessageType,
+  UserType,
 } from "../types/graphql-api";
 import { ExportObject } from "../types/graphql-api";
 import { WebSocketSources } from "../components/knowledge_base/document/right_tray/ChatTray";
@@ -2372,3 +2373,25 @@ export interface GetCorpusChatMessagesOutputs {
     }>;
   };
 }
+
+export const GET_ME = gql`
+  query GetMe {
+    me {
+      id
+      username
+      # Add any other user fields you need globally
+      isUsageCapped # Crucially, fetch this field
+      # email
+      # firstName
+      # lastName
+    }
+  }
+`;
+
+// Define interfaces for the query output
+export interface GetMeOutputs {
+  me: UserType | null; // It can be null if not logged in
+}
+
+// No inputs needed for this query
+export interface GetMeInputs {}

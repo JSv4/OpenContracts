@@ -19,6 +19,7 @@ import {
   ColumnType,
   CorpusQueryType,
   LabelType,
+  UserType,
 } from "../types/graphql-api";
 import { ViewState } from "../components/types";
 import { FileUploadPackageProps } from "../components/widgets/modals/DocumentUploadModal";
@@ -302,3 +303,7 @@ export const userObj = makeVar<User | null>(null);
 export const authToken = makeVar<string>("");
 
 export const uploadModalPreloadedFiles = makeVar<FileUploadPackageProps[]>([]);
+
+export const showBulkUploadModal = makeVar<boolean>(false);
+
+export const backendUserObj = makeVar<UserType | null>(null);

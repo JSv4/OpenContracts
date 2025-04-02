@@ -41,7 +41,7 @@ def get_http_authorization(request):
     logger.debug(f"Expected prefix: {prefix}")
 
     if len(auth) != 2 or auth[0].lower() != prefix.lower():
-        logger.warning(
+        logger.debug(
             f"Invalid authorization format - got {len(auth)} parts with prefix '{auth[0] if auth else None}'"
         )
         return None

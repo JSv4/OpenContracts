@@ -89,6 +89,7 @@ export interface UpdateCorpusInputs {
   description?: string;
   icon?: string;
   filename?: string;
+  preferredEmbedder?: string;
 }
 
 export interface UpdateCorpusOutputs {
@@ -105,6 +106,7 @@ export const UPDATE_CORPUS = gql`
     $description: String
     $labelSet: String
     $title: String
+    $preferredEmbedder: String
   ) {
     updateCorpus(
       id: $id
@@ -112,6 +114,7 @@ export const UPDATE_CORPUS = gql`
       description: $description
       labelSet: $labelSet
       title: $title
+      preferredEmbedder: $preferredEmbedder
     ) {
       ok
       message
@@ -125,6 +128,7 @@ export interface CreateCorpusInputs {
   icon?: string;
   filename?: string;
   labelSet?: string;
+  preferredEmbedder?: string;
 }
 
 export interface CreateCorpusOutputs {
@@ -140,12 +144,14 @@ export const CREATE_CORPUS = gql`
     $icon: String
     $labelSet: String
     $title: String
+    $preferredEmbedder: String
   ) {
     createCorpus(
       description: $description
       icon: $icon
       labelSet: $labelSet
       title: $title
+      preferredEmbedder: $preferredEmbedder
     ) {
       ok
       message

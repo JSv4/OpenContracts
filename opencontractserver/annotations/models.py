@@ -1,9 +1,7 @@
 import uuid
-from typing import Optional
 
 import django
 from django.contrib.auth import get_user_model
-from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -14,7 +12,6 @@ from django.utils.translation import gettext_lazy as _
 # have a simple structure and query anyway, using django-cte here. Can migrate models
 # using django-tree-queries down the road but shouldn't affect each other on
 # separate models.
-from django_cte import CTEManager, CTEQuerySet
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from pgvector.django import VectorField
 
@@ -24,8 +21,15 @@ from opencontractserver.shared.defaults import (
     jsonfield_empty_array,
 )
 from opencontractserver.shared.fields import NullableJSONField
+
+# Import your new managers
+from opencontractserver.shared.Managers import (
+    AnnotationManager,
+    EmbeddingManager,
+    NoteManager,
+)
+from opencontractserver.shared.mixins import HasEmbeddingMixin
 from opencontractserver.shared.Models import BaseOCModel
-from opencontractserver.shared.QuerySets import PermissionQuerySet
 from opencontractserver.shared.utils import calc_oc_file_path
 
 User = get_user_model()
@@ -43,6 +47,19 @@ LABEL_TYPES = [
     (TOKEN_LABEL, _("Token-level labels for token-based labeling")),
     (SPAN_LABEL, _("Span labels for span-based labeling")),
     (METADATA_LABEL, _("Metadata label for manual entry field")),
+]
+
+# Define embedding dimensions constants
+EMBEDDING_DIM_384 = 384
+EMBEDDING_DIM_768 = 768
+EMBEDDING_DIM_1536 = 1536
+EMBEDDING_DIM_3072 = 3072
+
+EMBEDDING_DIMENSIONS = [
+    (EMBEDDING_DIM_384, "384"),
+    (EMBEDDING_DIM_768, "768"),
+    (EMBEDDING_DIM_1536, "1536"),
+    (EMBEDDING_DIM_3072, "3072"),
 ]
 
 
@@ -254,44 +271,116 @@ class RelationshipGroupObjectPermission(GroupObjectPermissionBase):
     # enabled = False
 
 
-class AnnotationQuerySet(CTEQuerySet, PermissionQuerySet):
+class Embedding(BaseOCModel):
     """
-    Custom QuerySet for the Annotation model combining CTEQuerySet and PermissionQuerySet functionalities.
+    The Embedding model stores a single vector embedding (or multiple dimension-specific
+    embeddings) that references exactly one parent object, such as a Document, Annotation, or Note.
+
+    By having foreign keys to each model, you can store embeddings in a single table
+    and link them back to whichever model they belong to.
+
+    Attributes:
+        document (Optional[Document]): A reference to an associated Document, if applicable.
+        annotation (Optional[Annotation]): A reference to an associated Annotation, if applicable.
+        note (Optional[Note]): A reference to an associated Note, if applicable.
+        embedder_path (str): A field storing the embedder or model path used to generate this embedding.
+        vector_384 (VectorField): A 384-dimensional embedding vector, if used.
+        vector_768 (VectorField): A 768-dimensional embedding vector, if used.
+        vector_1536 (VectorField): A 1536-dimensional embedding vector, if used.
+        vector_3072 (VectorField): A 3072-dimensional embedding vector, if used.
+        created (datetime): Timestamp when this embedding record was created.
+        modified (datetime): Timestamp when this embedding record was last updated.
     """
 
-    pass
+    objects = EmbeddingManager()
 
+    # One of these will be non-null if the embedding belongs to that model.
+    document = django.db.models.ForeignKey(
+        "documents.Document",
+        related_name="embedding_set",
+        on_delete=django.db.models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="References the Document that this embedding belongs to (if any).",
+    )
+    annotation = django.db.models.ForeignKey(
+        "annotations.Annotation",
+        related_name="embedding_set",
+        on_delete=django.db.models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="References the Annotation that this embedding belongs to (if any).",
+    )
+    note = django.db.models.ForeignKey(
+        "annotations.Note",
+        related_name="embedding_set",
+        on_delete=django.db.models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="References the Note that this embedding belongs to (if any).",
+    )
 
-class AnnotationManager(CTEManager.from_queryset(AnnotationQuerySet)):
-    """
-    Custom Manager for the Annotation model that uses the combined AnnotationQuerySet
-    and includes permissioning methods.
-    """
+    # The name/path of the model used to generate this embedding
+    embedder_path: str = django.db.models.CharField(
+        max_length=256,
+        null=True,
+        blank=True,
+        help_text="Identifier for the embedding model or pipeline used (e.g. 'openai/text-embedding-ada-002').",
+    )
 
-    def get_queryset(self) -> AnnotationQuerySet:
+    # Multiple dimension-specific embeddings
+    vector_384 = VectorField(dimensions=EMBEDDING_DIM_384, null=True, blank=True)
+    vector_768 = VectorField(dimensions=EMBEDDING_DIM_768, null=True, blank=True)
+    vector_1536 = VectorField(dimensions=EMBEDDING_DIM_1536, null=True, blank=True)
+    vector_3072 = VectorField(dimensions=EMBEDDING_DIM_3072, null=True, blank=True)
+
+    # Metadata
+    created = django.db.models.DateTimeField(default=timezone.now, blank=True)
+    modified = django.db.models.DateTimeField(default=timezone.now, blank=True)
+
+    def save(self, *args, **kwargs) -> None:
         """
-        Returns the custom AnnotationQuerySet.
+        Overridden save method:
+          - ensures modified timestamp is updated
+          - optionally you can validate that exactly one of (document, annotation, note) is set
         """
-        return AnnotationQuerySet(self.model, using=self._db)
+        self.modified = timezone.now()
+        super().save(*args, **kwargs)
 
-    def for_user(
-        self, user: User, perm: str, extra_conditions: Optional[Q] = None
-    ) -> AnnotationQuerySet:
+    def clean(self) -> None:
         """
-        Filters the queryset based on user permissions.
-
-        Args:
-            user: The user for whom permissions are checked.
-            perm: The permission string.
-            extra_conditions: Additional conditions for filtering.
-
-        Returns:
-            A filtered AnnotationQuerySet.
+        Optionally enforce that exactly one of document, annotation, or note is non-null,
+        if that is a business rule for your app.
         """
-        return self.get_queryset().for_user(user, perm, extra_conditions)
+        super().clean()
+
+        parent_references = sum(
+            [
+                bool(self.document),
+                bool(self.annotation),
+                bool(self.note),
+            ]
+        )
+        if parent_references == 0:
+            raise ValueError(
+                "Embedding must reference at least one of Document, Annotation, or Note."
+            )
+        # If you want to enforce "exactly one," just check parent_references != 1
+
+    class Meta:
+        indexes = [
+            django.db.models.Index(fields=["embedder_path"]),
+            django.db.models.Index(fields=["created"]),
+            django.db.models.Index(fields=["modified"]),
+        ]
+        verbose_name = "Embedding"
+        verbose_name_plural = "Embeddings"
+
+    def __str__(self):
+        return f"Embedding (ID={self.pk}) [{self.embedder_path or 'Unknown Model'}]"
 
 
-class Annotation(BaseOCModel):
+class Annotation(BaseOCModel, HasEmbeddingMixin):
     """
     The Annotation model represents annotations within documents.
     """
@@ -344,8 +433,17 @@ class Annotation(BaseOCModel):
         related_name="annotations",
     )
 
-    # Vector for vector search
-    embedding = VectorField(dimensions=384, null=True)
+    # Vector for vector search - legacy field, will be deprecated
+    embedding = VectorField(dimensions=384, null=True, blank=True)
+
+    # New relationship to the Embedding model
+    embeddings = django.db.models.ForeignKey(
+        "annotations.Embedding",
+        null=True,
+        blank=True,
+        on_delete=django.db.models.SET_NULL,
+        related_name="annotations",
+    )
 
     # If this annotation was created as part of an analysis... track that.
     analysis = django.db.models.ForeignKey(
@@ -373,6 +471,9 @@ class Annotation(BaseOCModel):
         "Creation Date and Time", default=timezone.now
     )
     modified = django.db.models.DateTimeField(default=timezone.now, blank=True)
+
+    def get_embedding_reference_kwargs(self) -> dict:
+        return {"annotation_id": self.pk}
 
     class Meta:
         permissions = (
@@ -493,44 +594,7 @@ class LabelSetGroupObjectPermission(GroupObjectPermissionBase):
     # enabled = False
 
 
-class NoteQuerySet(CTEQuerySet, PermissionQuerySet):
-    """
-    Custom QuerySet for the Note model combining CTEQuerySet and PermissionQuerySet functionalities.
-    """
-
-    pass
-
-
-class NoteManager(CTEManager.from_queryset(NoteQuerySet)):
-    """
-    Custom Manager for the Note model that uses the combined NoteQuerySet
-    and includes permissioning methods.
-    """
-
-    def get_queryset(self) -> NoteQuerySet:
-        """
-        Returns the custom NoteQuerySet.
-        """
-        return NoteQuerySet(self.model, using=self._db)
-
-    def for_user(
-        self, user: User, perm: str, extra_conditions: Optional[Q] = None
-    ) -> NoteQuerySet:
-        """
-        Filters the queryset based on user permissions.
-
-        Args:
-            user: The user for whom permissions are checked.
-            perm: The permission string.
-            extra_conditions: Additional conditions for filtering.
-
-        Returns:
-            A filtered NoteQuerySet.
-        """
-        return self.get_queryset().for_user(user, perm, extra_conditions)
-
-
-class Note(BaseOCModel):
+class Note(BaseOCModel, HasEmbeddingMixin):
     """
     Notes model for attaching hierarchical comments/notes to documents.
     Uses django_cte for hierarchical relationships.
@@ -542,8 +606,17 @@ class Note(BaseOCModel):
     title = django.db.models.CharField(max_length=1024, db_index=True)
     content = django.db.models.TextField(default="", blank=True)
 
-    # Vector for vector search
-    embedding = VectorField(dimensions=384, null=True)
+    # Vector for vector search - legacy field, will be deprecated
+    embedding = VectorField(dimensions=384, null=True, blank=True)
+
+    # New relationship to the Embedding model
+    embeddings = django.db.models.ForeignKey(
+        "annotations.Embedding",
+        null=True,
+        blank=True,
+        on_delete=django.db.models.SET_NULL,
+        related_name="notes",
+    )
 
     # Hierarchical relationship
     parent = django.db.models.ForeignKey(
@@ -590,6 +663,9 @@ class Note(BaseOCModel):
     # Timing variables
     created = django.db.models.DateTimeField(default=timezone.now)
     modified = django.db.models.DateTimeField(default=timezone.now, blank=True)
+
+    def get_embedding_reference_kwargs(self) -> dict:
+        return {"note_id": self.pk}
 
     class Meta:
         permissions = (

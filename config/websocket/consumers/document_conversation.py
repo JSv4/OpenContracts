@@ -4,6 +4,8 @@ import uuid
 
 from django.conf import settings
 
+from opencontractserver.corpuses.models import Corpus
+
 """
 DocumentQueryConsumer
 
@@ -58,7 +60,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.consumer_id = uuid.uuid4()  # Unique identifier for this instance
-        logger.debug(f"[Consumer {self.consumer_id}] __init__ called.")
+        logger.info(f"[Consumer {self.consumer_id}] __init__ called.")
 
     async def connect(self) -> None:
         """
@@ -68,7 +70,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         - Accepts the connection and logs the session_id for debugging.
         """
         self.session_id = str(uuid.uuid4())
-        logger.debug(
+        logger.info(
             f"[Consumer {self.consumer_id} | Session {self.session_id}] connect() called. Scope: {self.scope}"
         )
 
@@ -83,16 +85,39 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             # Extract a numeric Document ID from path
             graphql_doc_id = extract_websocket_path_id(self.scope["path"], "document")
             self.document_id = int(from_global_id(graphql_doc_id)[1])
-            logger.debug(
+            logger.info(
                 f"[Session {self.session_id}] Extracted document_id: {self.document_id}"
             )
+
+            # Try to extract optional corpus_id
+            try:
+                # Check if "corpus" is in the path, if so, try to extract it
+                if "/corpus/" in self.scope["path"]:
+                    graphql_corpus_id = extract_websocket_path_id(
+                        self.scope["path"], "corpus"
+                    )
+                    self.corpus_id = int(from_global_id(graphql_corpus_id)[1])
+                    self.corpus = await Corpus.objects.aget(id=self.corpus_id)
+                    logger.info(
+                        f"[Session {self.session_id}] Extracted corpus_id: {self.corpus_id}"
+                    )
+                else:
+                    self.corpus_id = None
+                    self.corpus = None
+                    logger.info(f"[Session {self.session_id}] No corpus_id in path")
+            except ValueError:
+                # If there's an error extracting corpus_id, it's not there
+                self.corpus_id = None
+                logger.info(
+                    f"[Session {self.session_id}] No valid corpus_id found in path"
+                )
 
             # Load the Document from DB
             self.document = await Document.objects.aget(id=self.document_id)
 
-            logger.debug(f"[Session {self.session_id}] Accepting WebSocket connection.")
+            logger.info(f"[Session {self.session_id}] Accepting WebSocket connection.")
             await self.accept()
-            logger.debug(f"[Session {self.session_id}] Connection accepted.")
+            logger.info(f"[Session {self.session_id}] Connection accepted.")
 
         except ValueError as v_err:
             logger.error(f"[Session {self.session_id}] Invalid document path: {v_err}")
@@ -131,7 +156,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         """
         Handles the WebSocket disconnection event, logs the session_id and close_code.
         """
-        logger.debug(
+        logger.info(
             f"[Consumer {self.consumer_id} | Session {self.session_id}] disconnect() called."
         )
         self.conversation = None
@@ -202,7 +227,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         Returns:
             None
         """
-        logger.debug(
+        logger.info(
             f"[Session {self.session_id}] receive() called with text_data: {text_data}"
         )
 
@@ -286,6 +311,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                     user_id=self.scope["user"].id,
                     loaded_messages=prefix_messages if prefix_messages else None,
                     override_conversation=self.conversation,
+                    embedder_path=self.corpus.preferred_embedder,
                 )
 
                 # Initialize our custom agent
@@ -320,14 +346,34 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
             # Then create a placeholder for the LLM's message
             message_id = await self.agent.store_llm_message("")
-
-            # Then call the agent to generate a response, ensure NOT to resave user message (this
-            # is super kludgy, yes, I know)
-            response = await self.agent.astream_chat(
-                user_query, store_user_message=False
+            logger.info(
+                f"[Session {self.session_id}] Created placeholder message with ID: {message_id}"
             )
 
+            # Then call the agent to generate a response, ensure NOT to resave user message
+            logger.info(
+                f"[Session {self.session_id}] Calling agent.astream_chat with query: '{user_query}'"
+            )
+
+            try:
+                response = await self.agent.astream_chat(
+                    user_query, store_user_message=False
+                )
+                logger.info(
+                    f"[Session {self.session_id}] Got initial response of type: {type(response)}"
+                )
+            except Exception as api_error:
+                logger.error(
+                    f"[Session {self.session_id}] Error during OpenAI API call: {str(api_error)}",
+                    exc_info=True,
+                )
+                # Re-raise to be caught by outer exception handler
+                raise
+
             if isinstance(response, StreamingAgentChatResponse):
+                logger.info(
+                    f"[Session {self.session_id}] Processing StreamingAgentChatResponse"
+                )
 
                 await self.send_standard_message(
                     msg_type="ASYNC_START",
@@ -337,29 +383,64 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 llm_response_buffer = ""
                 token_count = 0
 
-                async for token in response.async_response_gen():
-                    token_count += 1
-                    llm_response_buffer += token
-                    await self.send_standard_message(
-                        msg_type="ASYNC_CONTENT",
-                        content=token,
-                        data={"message_id": message_id},
+                try:
+                    logger.info(
+                        f"[Session {self.session_id}] Starting to iterate through streaming tokens"
                     )
+                    async for token in response.async_response_gen():
+                        token_count += 1
+                        if (
+                            token_count % 50 == 0
+                        ):  # Log every 50 tokens to avoid excessive logging
+                            logger.info(
+                                f"[Session {self.session_id}] Received {token_count} tokens so far"
+                            )
+
+                        llm_response_buffer += token
+                        await self.send_standard_message(
+                            msg_type="ASYNC_CONTENT",
+                            content=token,
+                            data={"message_id": message_id},
+                        )
+                    logger.info(
+                        f"[Session {self.session_id}] Completed token streaming, received {token_count} tokens total"
+                    )
+                except Exception as stream_error:
+                    logger.error(
+                        f"[Session {self.session_id}] Error during token streaming: {str(stream_error)}",
+                        exc_info=True,
+                    )
+                    raise
 
                 # Gather final sources (if any)
                 sources = {}
+
+                # Log response sources
+                logger.info(
+                    f"[Session {self.session_id}] Response has sources: {bool(response.sources)}"
+                )
+                logger.info(
+                    f"[Session {self.session_id}] Response has source_nodes: {bool(response.source_nodes)}"
+                )
+
                 if response.sources:
-                    for source in response.sources:
+                    for idx, source in enumerate(response.sources):
                         raw_output = source.raw_output
                         if hasattr(raw_output, "source_nodes"):
-                            for sn in raw_output.source_nodes:
+                            for sn_idx, sn in enumerate(raw_output.source_nodes):
                                 sources[sn.metadata["annotation_id"]] = {
                                     **sn.metadata,
                                     "rawText": sn.text,
                                 }
 
                 if response.source_nodes:
-                    for sn in response.source_nodes:
+                    logger.info(
+                        f"[Session {self.session_id}] Response has source_nodes: {bool(response.source_nodes)}"
+                    )
+                    for sn_idx, sn in enumerate(response.source_nodes):
+                        logger.info(
+                            f"[Session {self.session_id}] Source node {sn_idx}: {sn.metadata}"
+                        )
                         sources[sn.metadata["annotation_id"]] = {
                             **sn.metadata,
                             "rawText": sn.text,
@@ -367,10 +448,14 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
                 data = {"sources": list(sources.values()), "message_id": message_id}
 
+                logger.info(
+                    f"[Session {self.session_id}] Updating message {message_id} with final content"
+                )
                 await self.agent.update_message(
                     llm_response_buffer, message_id, data=data
                 )
 
+                logger.info(f"[Session {self.session_id}] Sending ASYNC_FINISH message")
                 await self.send_standard_message(
                     msg_type="ASYNC_FINISH",
                     content=llm_response_buffer,
@@ -378,7 +463,13 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 )
 
             else:
+                logger.info(
+                    f"[Session {self.session_id}] Processing non-streaming response of type: {type(response)}"
+                )
                 final_text: str = getattr(response, "response", "")
+                logger.info(
+                    f"[Session {self.session_id}] Got response text of length: {len(final_text)}"
+                )
                 await self.agent.update_message(final_text, message_id)
 
                 await self.send_standard_message(

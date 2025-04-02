@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
+import nest_asyncio
 from django.conf import settings
 from llama_cloud import MessageRole
 from llama_index.agent.openai import OpenAIAgent
@@ -14,12 +15,16 @@ from llama_index.core.chat_engine.types import (
 )
 from llama_index.core.objects import ObjectIndex
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+
+# from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
 
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.llms.custom_pipeline_embedding import (
+    OpenContractsPipelineEmbedding,
+)
 from opencontractserver.llms.tools import (
     get_md_summary_token_length_tool,
     get_note_content_token_length_tool,
@@ -28,6 +33,10 @@ from opencontractserver.llms.tools import (
     load_document_md_summary_tool,
 )
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
+
+# Apply nest_asyncio to enable nested event loops
+# I HATE this, but it's llama_index internals keep changing and causing issues
+nest_asyncio.apply()
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +148,7 @@ async def create_openai_document_agent(
     user_id: int | None = None,
     override_system_prompt: str | None = None,
     loaded_messages: list[ChatMessage] | None = None,
+    embedder_path: str | None = None,
 ) -> OpenAIAgent:
 
     """Create an OpenAI agent for a document with vector search capabilities.
@@ -160,8 +170,11 @@ async def create_openai_document_agent(
         document = await Document.objects.aget(id=document)
 
     logger.debug("Creating embedding model...")
-    embed_model = HuggingFaceEmbedding(
-        "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    # embed_model = HuggingFaceEmbedding(
+    #     "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    # )
+    embed_model = OpenContractsPipelineEmbedding(
+        embedder_path=embedder_path,
     )
     Settings.embed_model = embed_model
 
@@ -175,7 +188,7 @@ async def create_openai_document_agent(
 
     logger.debug("Building vector store and index...")
     vector_store = DjangoAnnotationVectorStore.from_params(
-        user_id=user_id, document_id=document.id
+        user_id=user_id, document_id=document.id, embedder_path=embedder_path
     )
     index = VectorStoreIndex.from_vector_store(
         vector_store=vector_store,
@@ -186,6 +199,7 @@ async def create_openai_document_agent(
     doc_engine = index.as_query_engine(similarity_top_k=10, streaming=False)
 
     logger.debug("Initializing query engine tools...")
+    # We're using nest_asyncio to handle nested event loops, so we can use the original tools directly
     query_engine_tools = [
         QueryEngineTool(
             query_engine=doc_engine,
@@ -222,7 +236,7 @@ async def create_openai_document_agent(
                     role=MessageRole.ASSISTANT
                     if msg.msg_type.lower() == "llm"
                     else MessageRole.USER,
-                    content=msg.content,
+                    content=msg.content if isinstance(msg.content, str) else "",
                 )
             )
 
@@ -231,6 +245,7 @@ async def create_openai_document_agent(
         query_engine_tools,
         verbose=True,
         chat_history=prefix_messages,
+        use_async=True,
     )
     return underlying_llama_agent
 
@@ -241,6 +256,7 @@ async def create_document_agent(
     override_conversation: Conversation | None = None,
     override_system_prompt: str | None = None,
     loaded_messages: list[ChatMessage] | None = None,
+    embedder_path: str | None = None,
 ) -> OpenContractDbAgent:
     """
     Factory function to construct an OpenContractDbAgent for a given Document.
@@ -262,6 +278,7 @@ async def create_document_agent(
         user_id=user_id,
         override_system_prompt=override_system_prompt,
         loaded_messages=loaded_messages,
+        embedder_path=embedder_path,
     )
 
     logger.debug("Creating Conversation record...")
@@ -311,16 +328,22 @@ async def create_corpus_agent(
     )
     Settings.llm = llm
 
+    corpus = await Corpus.objects.aget(id=corpus_id)
+
     logger.debug("Creating embedding model...")
-    embed_model = HuggingFaceEmbedding(
-        "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    # embed_model = HuggingFaceEmbedding(
+    #     "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+    # )
+    embed_model = OpenContractsPipelineEmbedding(
+        corpus_id=corpus.id,
+        embedder_path=corpus.preferred_embedder,
     )
     Settings.embed_model = embed_model
 
-    corpus = await Corpus.objects.aget(id=corpus_id)
     logger.debug(f"Fetched corpus: {corpus.title}")
 
-    all_tools = []
+    # We're using nest_asyncio to handle nested event loops, so we can use the original tools directly
+    query_engine_tools = []
     async for doc in corpus.documents.all():
         logger.debug(f"Building agent for document: {doc.title}")
         doc_agent = await create_openai_document_agent(doc, user_id)
@@ -341,10 +364,21 @@ async def create_corpus_agent(
                 description=doc_summary,
             ),
         )
-        all_tools.append(doc_tool)
+        query_engine_tools.append(doc_tool)
+
+    # Add our async wrapped tools
+    query_engine_tools.extend(
+        [
+            load_document_md_summary_tool,
+            get_md_summary_token_length_tool,
+            get_notes_for_document_corpus_tool,
+            get_note_content_token_length_tool,
+            get_partial_note_content_tool,
+        ]
+    )
 
     logger.debug("Building ObjectIndex over document agents...")
-    obj_index = ObjectIndex.from_objects(all_tools, index_cls=VectorStoreIndex)
+    obj_index = ObjectIndex.from_objects(query_engine_tools, index_cls=VectorStoreIndex)
 
     system_prompt = (
         "You are an agent designed to answer queries about documents in collection of documents "
@@ -365,7 +399,7 @@ async def create_corpus_agent(
                     role=MessageRole.ASSISTANT
                     if msg.msg_type.lower() == "llm"
                     else MessageRole.USER,
-                    content=msg.content,
+                    content=msg.content if isinstance(msg.content, str) else "",
                 )
             )
 

@@ -7,14 +7,18 @@ from pgvector.django import VectorField
 
 from opencontractserver.shared.defaults import jsonfield_default_value
 from opencontractserver.shared.fields import NullableJSONField
+from opencontractserver.shared.Managers import DocumentManager
+from opencontractserver.shared.mixins import HasEmbeddingMixin
 from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.utils import calc_oc_file_path
 
 
-class Document(BaseOCModel):
+class Document(BaseOCModel, HasEmbeddingMixin):
     """
     Document
     """
+
+    objects = DocumentManager()
 
     # Key fields
     title = django.db.models.CharField(max_length=1024, null=True, blank=True)
@@ -69,7 +73,6 @@ class Document(BaseOCModel):
 
     # Vector for vector search
     embedding = VectorField(dimensions=384, null=True, blank=True)
-    description_embedding = VectorField(dimensions=384, null=True, blank=True)
 
     class Meta:
         permissions = (
@@ -87,6 +90,9 @@ class Document(BaseOCModel):
             django.db.models.Index(fields=["created"]),
             django.db.models.Index(fields=["modified"]),
         ]
+
+    def get_embedding_reference_kwargs(self) -> dict:
+        return {"document_id": self.pk}
 
     def __str__(self):
         """

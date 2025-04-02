@@ -1,4 +1,6 @@
+import logging
 import uuid
+from typing import Optional
 
 import django
 from django.contrib.auth import get_user_model
@@ -11,6 +13,9 @@ from opencontractserver.annotations.models import Annotation
 from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.QuerySets import PermissionedTreeQuerySet
 from opencontractserver.shared.utils import calc_oc_file_path
+from opencontractserver.utils.embeddings import generate_embeddings_from_text
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_icon_filepath(instance, filename):
@@ -72,6 +77,14 @@ class Corpus(TreeNode):
         default=list,
         blank=True,
         help_text="List of fully qualified Python paths to post-processor functions",
+    )
+
+    # Embedder configuration
+    preferred_embedder = django.db.models.CharField(
+        max_length=1024,
+        null=True,
+        blank=True,
+        help_text="Fully qualified Python path to the embedder class to use for this corpus",
     )
 
     # Sharing
@@ -152,6 +165,18 @@ class Corpus(TreeNode):
                 raise ValidationError(
                     {"post_processors": f"Invalid Python path: {processor}"}
                 )
+
+    def embed_text(self, text: str) -> tuple[Optional[str], Optional[list[float]]]:
+        """
+        Use a unified embeddings function from utils to create embeddings for the text.
+
+        Args:
+            text (str): The text to embed
+
+        Returns:
+            A tuple of (embedder path, embeddings list), or (None, None) on failure.
+        """
+        return generate_embeddings_from_text(text, corpus_id=self.pk)
 
 
 # Model for Django Guardian permissions... trying to improve performance...

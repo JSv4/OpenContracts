@@ -149,7 +149,7 @@ class DRFMutation(graphene.Mutation):
                 logger.info("No user")
                 raise ValueError("No user in this request...")
 
-            # logger.info(f"DRFMutation - kwargs: {kwargs}")
+            logger.info(f"DRFMutation - kwargs: {kwargs}")
             serializer = cls.IOSettings.serializer
 
             if hasattr(cls.IOSettings, "pk_fields"):
@@ -166,7 +166,14 @@ class DRFMutation(graphene.Mutation):
                             pk_value = from_global_id(kwargs.get(pk_field, None))[1]
                         kwargs[pk_field] = pk_value
 
-            if cls.IOSettings.lookup_field in kwargs:
+            # Check if lookup_field exists in IOSettings and if it's in kwargs
+            # This allows create mutations to work without requiring lookup_field
+            is_update = (
+                hasattr(cls.IOSettings, "lookup_field")
+                and cls.IOSettings.lookup_field in kwargs
+            )
+
+            if is_update:
                 logger.info("Lookup_field specified - update")
                 obj = cls.IOSettings.model.objects.get(
                     pk=from_global_id(kwargs.get(cls.IOSettings.lookup_field, None))[1]
@@ -211,19 +218,19 @@ class DRFMutation(graphene.Mutation):
                 logger.info("Succeeded updating obj")
 
             else:
-                # logger.info(
-                #     f"No lookup field specified... create obj with kwargs: {kwargs}"
-                # )
+                # Create operation
+                logger.info("No lookup_field specified or not in kwargs - create")
+                logger.info(f"Obj kwargs: {kwargs}")
                 obj_serializer = serializer(data=kwargs)
                 obj_serializer.is_valid(raise_exception=True)
                 obj = obj_serializer.save()
-                # logger.info(f"Created obj for: {info.context.user}")
+                logger.info(f"Created obj with id: {obj.id}")
 
                 # If we created new obj... give user proper permissions
                 set_permissions_for_obj_to_user(
-                    info.context.user, obj, [PermissionTypes.ALL]
+                    info.context.user, obj, [PermissionTypes.CRUD]
                 )
-                # logger.info("Permissioned obj")
+                logger.info(f"Permissioned obj for user: {info.context.user.id}")
 
                 ok = True
                 message = "Success"

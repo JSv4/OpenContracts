@@ -416,13 +416,71 @@ async def oc_llama_index_doc_query(
         from pgvector.django import CosineDistance
 
         from opencontractserver.annotations.models import Annotation
+        from opencontractserver.documents.models import Document
+        from opencontractserver.tasks.embeddings_task import get_embedder
 
-        queryset = (
-            Annotation.objects.filter(document_id=document_id)
-            .order_by(CosineDistance("embedding", avg_embedding))
-            .annotate(similarity=CosineDistance("embedding", avg_embedding))
-            .select_related("annotation_label")
-        )[:similarity_top_k]
+        # Get the document to find its corpus
+        document = Document.objects.get(id=document_id)
+        corpus_id = None
+        embed_dim = 384  # Default dimension
+
+        # Check if the document is part of any corpus and use that corpus's embedder
+        corpus_set = document.corpus_set.all()
+        if corpus_set.exists():
+            # Use the first corpus for now - could be enhanced to handle multiple corpuses
+            corpus_id = corpus_set.first().id
+
+            # Get the embedder for the corpus, passing the document's file type
+            embedder_class, _ = get_embedder(corpus_id, document.file_type)
+            if embedder_class and hasattr(embedder_class, "vector_size"):
+                # Get the dimension from the embedder class
+                embed_dim = embedder_class.vector_size
+
+        # Determine which embedding field to use based on dimension
+        if embed_dim == 384:
+            embedding_field, legacy_field = "embeddings__vector_384", "embedding"
+        elif embed_dim == 768:
+            embedding_field, legacy_field = "embeddings__vector_768", None
+        elif embed_dim == 1536:
+            embedding_field, legacy_field = "embeddings__vector_1536", None
+        elif embed_dim == 3072:
+            embedding_field, legacy_field = "embeddings__vector_3072", None
+        else:
+            # Default to 384 for backward compatibility
+            embedding_field, legacy_field = "embeddings__vector_384", "embedding"
+
+        # Try the new embedding model first
+        queryset = Annotation.objects.filter(document_id=document_id)
+        new_embedding_queryset = queryset.filter(
+            **{f"{embedding_field}__isnull": False}
+        )
+
+        if new_embedding_queryset.exists():
+            # Use the new embedding model
+            queryset = (
+                new_embedding_queryset.order_by(
+                    CosineDistance(embedding_field, avg_embedding)
+                )
+                .annotate(similarity=CosineDistance(embedding_field, avg_embedding))
+                .select_related("annotation_label")
+            )[:similarity_top_k]
+        elif legacy_field and embed_dim == 384:
+            # Fall back to legacy embedding field for 384-dim only
+            legacy_queryset = queryset.filter(**{f"{legacy_field}__isnull": False})
+            if legacy_queryset.exists():
+                queryset = (
+                    legacy_queryset.order_by(
+                        CosineDistance(legacy_field, avg_embedding)
+                    )
+                    .annotate(similarity=CosineDistance(legacy_field, avg_embedding))
+                    .select_related("annotation_label")
+                )[:similarity_top_k]
+            else:
+                # No embeddings found, return empty list
+                return []
+        else:
+            # No embeddings found, return empty list
+            return []
 
         # Force evaluation by converting to list if you need the actual rows now:
         return list(queryset)
@@ -600,8 +658,17 @@ async def oc_llama_index_doc_query(
             examples = [ex for ex in search_text.split("|||") if ex.strip()]
             embeddings: list[list[float | int]] = []
 
+            # Get corpus_id if the document is in a corpus
+            corpus_id = None
+            corpus_set = document.corpus_set.all()
+            if corpus_set.exists():
+                corpus_id = corpus_set.first().id
+
             for example in examples:
-                vector = calculate_embedding_for_text(example)
+                # Pass both corpus_id and document file_type
+                vector = calculate_embedding_for_text(
+                    example, corpus_id=corpus_id, mimetype=document.file_type
+                )
                 if vector is not None:
                     embeddings.append(vector)
 

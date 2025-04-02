@@ -86,6 +86,7 @@ export const GET_DOCUMENTS = gql`
                 corpus {
                   title
                   icon
+                  preferredEmbedder
                 }
               }
             }
@@ -443,6 +444,7 @@ export const GET_CORPUSES = gql`
             email
           }
           description
+          preferredEmbedder
           appliedAnalyzerIds
           isPublic
           is_selected @client
@@ -650,6 +652,7 @@ export const GET_ANNOTATIONS = gql`
             icon
             title
             description
+            preferredEmbedder
             __typename
           }
           document {
@@ -1959,6 +1962,33 @@ export const GET_POST_PROCESSORS = gql`
         author
         componentType
         inputSchema
+      }
+    }
+  }
+`;
+
+/** Input type for the getPostprocessors query. */
+export interface GetEmbeddersInput {}
+/** Output type for the getPostprocessors query. */
+export interface GetEmbeddersOutput {
+  pipelineComponents: {
+    /** List of available post-processors. */
+    embedders: Array<PipelineComponentType>;
+  };
+}
+export const GET_EMBEDDERS = gql`
+  query {
+    pipelineComponents {
+      embedders {
+        name
+        moduleName
+        title
+        description
+        author
+        componentType
+        inputSchema
+        vectorSize
+        className
       }
     }
   }

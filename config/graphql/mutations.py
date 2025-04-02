@@ -18,6 +18,7 @@ from graphql import GraphQLError
 from graphql_jwt.decorators import login_required, user_passes_test
 from graphql_relay import from_global_id, to_global_id
 
+from config.graphql.annotation_serializers import AnnotationLabelSerializer
 from config.graphql.base import DRFDeletion, DRFMutation
 from config.graphql.graphene_types import (
     AnalysisType,
@@ -39,7 +40,6 @@ from config.graphql.graphene_types import (
     UserType,
 )
 from config.graphql.serializers import (
-    AnnotationLabelSerializer,
     AnnotationSerializer,
     CorpusSerializer,
     DocumentSerializer,
@@ -1452,7 +1452,6 @@ class DeleteMultipleLabelMutation(graphene.Mutation):
 
 class CreateCorpusMutation(DRFMutation):
     class IOSettings:
-        lookup_field = "id"
         pk_fields = ["label_set"]
         serializer = CorpusSerializer
         model = Corpus
@@ -1463,6 +1462,7 @@ class CreateCorpusMutation(DRFMutation):
         description = graphene.String(required=False)
         icon = graphene.String(required=False)
         label_set = graphene.String(required=False)
+        preferred_embedder = graphene.String(required=False)
 
 
 class UpdateCorpusMutation(DRFMutation):
@@ -1479,6 +1479,7 @@ class UpdateCorpusMutation(DRFMutation):
         description = graphene.String(required=False)
         icon = graphene.String(required=False)
         label_set = graphene.String(required=False)
+        preferred_embedder = graphene.String(required=False)
 
 
 class DeleteCorpusMutation(DRFDeletion):

@@ -173,7 +173,7 @@ AUTHENTICATION_BACKENDS = [
 
 # AUTH0
 USE_AUTH0 = env.bool("USE_AUTH0", False)
-USE_API_KEY_AUTH = env.bool("ALLOW_API_KEYS", True)
+USE_API_KEY_AUTH = env.bool("ALLOW_API_KEYS", False)
 
 if USE_AUTH0:
 
@@ -570,17 +570,41 @@ ANNOTATION_LABELS = {
     "text/markdown": "SPAN_LABEL",
     "text/x-python": "SPAN_LABEL",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "SPAN_LABEL",  # noqa
-    "text/html": "SPAN_LABEL",
+    # "text/html": "SPAN_LABEL",  # Removed as we don't support HTML
     # Add other MIME types as needed
 }
 
-# Preferred embedders for each MIME type
+# Map of MIME types to label types
+MIMETYPE_TO_LABEL_TYPE = {
+    "application/pdf": "SPAN_LABEL",
+    "text/plain": "SPAN_LABEL",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "SPAN_LABEL",
+    # "text/html": "SPAN_LABEL",  # Removed as we don't support HTML
+}
+
+# Map of MIME types to preferred embedders
 PREFERRED_EMBEDDERS = {
+    "application/pdf": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # noqa:
+    "text/plain": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # noqa:
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # noqa:
+    # "text/html": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # Removed as we don't support HTML  # noqa:
+}
+
+# Default embedder to use if no preferred embedder is found
+DEFAULT_EMBEDDER = "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"
+
+# Default embedding dimension to use if no dimension is specified
+DEFAULT_EMBEDDING_DIMENSION = 768
+
+# Map of MIME types to default embedders for different dimensions
+DEFAULT_EMBEDDERS_BY_FILETYPE = {
     "application/pdf": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
     "text/plain": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",  # noqa
-    # Add more MIME types as needed
 }
+
+# Default runner
+TEST_RUNNER = "opencontractserver.tests.runner.TerminateConnectionsTestRunner"
 
 PARSER_KWARGS = {
     "opencontractserver.pipeline.parsers.docling_parser.DoclingParser": {
@@ -603,8 +627,10 @@ ANALYZER_KWARGS = {
     },
 }
 
-# Default embedder
-DEFAULT_EMBEDDER = "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"
-
-# Default runner
-TEST_RUNNER = "opencontractserver.tests.runner.TerminateConnectionsTestRunner"
+# Minnesota Case Law ModernBERT embedder settings
+MINN_MODERNBERT_EMBEDDERS = {
+    "application/pdf": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
+    "text/plain": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
+    "text/html": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",  # noqa
+}

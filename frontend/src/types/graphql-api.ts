@@ -234,6 +234,7 @@ export type CorpusType = Node & {
   icon?: Maybe<Scalars["String"]>;
   documents?: DocumentTypeConnection;
   labelSet?: Maybe<LabelSetType>;
+  preferredEmbedder?: Maybe<Scalars["String"]>;
   creator?: UserType;
   parent?: CorpusType;
   backendLock?: Scalars["Boolean"];
@@ -1575,6 +1576,7 @@ export type PipelineComponentType = {
   dependencies?: string[];
   /** Vector size for embedders. */
   vectorSize?: number;
+  className?: string;
   /** Module name for the component. */
   moduleName?: string;
   /** List of supported file types. */

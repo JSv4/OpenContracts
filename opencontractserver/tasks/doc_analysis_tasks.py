@@ -4,7 +4,6 @@ from typing import Any
 import marvin
 from django.conf import settings
 
-from opencontractserver.pipeline.utils import get_preferred_embedder
 from opencontractserver.shared.decorators import doc_analyzer_task
 from opencontractserver.types.dicts import TextSpan
 
@@ -452,15 +451,6 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
     searchable_summary = create_searchable_summary(summary)
 
     # Generate embeddings for the searchable summary
-    try:
-        embedder_class = get_preferred_embedder(doc.file_type)
-        if embedder_class:
-            embedder = embedder_class()
-            description_embeddings = embedder.embed_text(searchable_summary)
-            doc.description_embedding = description_embeddings
-    except Exception as e:
-        logger.error(f"Failed to generate description embeddings: {e}")
-
     doc.md_summary_file = ContentFile(summary.encode("utf-8"), name="summary.md")
     doc.description = searchable_summary
     doc.save()

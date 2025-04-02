@@ -2,7 +2,8 @@ import importlib
 import logging
 import os
 import unittest
-from unittest import TestCase
+
+from django.test import TestCase, override_settings
 
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
@@ -16,6 +17,8 @@ from opencontractserver.pipeline.utils import (
     get_all_thumbnailers,
     get_component_by_name,
     get_components_by_mimetype,
+    get_default_embedder_for_filetype,
+    get_dimension_from_embedder,
     get_metadata_by_component_name,
     get_metadata_for_component,
     run_post_processors,
@@ -58,6 +61,7 @@ class TestParser(BaseParser):
 
         cls.embedder_code = '''
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
+from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from typing import Optional, List
 
 class TestEmbedder(BaseEmbedder):
@@ -70,6 +74,39 @@ class TestEmbedder(BaseEmbedder):
     author: str = "Test Author"
     dependencies: List[str] = []
     vector_size: int = 128
+    supported_file_types = [FileTypeEnum.PDF, FileTypeEnum.TXT]
+
+    def embed_text(self, text: str) -> Optional[List[float]]:
+        # Return a dummy embedding vector
+        return [0.0] * self.vector_size
+
+class TestEmbedder384(BaseEmbedder):
+    """
+    A test embedder with 384 dimensions.
+    """
+
+    title: str = "Test Embedder 384"
+    description: str = "A test embedder with 384 dimensions."
+    author: str = "Test Author"
+    dependencies: List[str] = []
+    vector_size: int = 384
+    supported_file_types = [FileTypeEnum.PDF]
+
+    def embed_text(self, text: str) -> Optional[List[float]]:
+        # Return a dummy embedding vector
+        return [0.0] * self.vector_size
+
+class TestEmbedder768(BaseEmbedder):
+    """
+    A test embedder with 768 dimensions.
+    """
+
+    title: str = "Test Embedder 768"
+    description: str = "A test embedder with 768 dimensions."
+    author: str = "Test Author"
+    dependencies: List[str] = []
+    vector_size: int = 768
+    supported_file_types = [FileTypeEnum.TXT]
 
     def embed_text(self, text: str) -> Optional[List[float]]:
         # Return a dummy embedding vector
@@ -140,7 +177,7 @@ class TestPostProcessor(BasePostProcessor):
             os.path.dirname(__file__), "..", "pipeline", "parsers", "test_parser.py"
         )
         cls.embedder_path = os.path.join(
-            os.path.dirname(__file__), "..", "pipeline", "embedders", "test_embedder.py"
+            os.path.dirname(__file__), "..", "pipeline", "embedders", "temp_embedder.py"
         )
         cls.thumbnailer_path = os.path.join(
             os.path.dirname(__file__),
@@ -180,6 +217,14 @@ class TestPostProcessor(BasePostProcessor):
 
         # Reload the importlib caches and modules
         importlib.invalidate_caches()
+
+        # Force a direct import of the test modules to ensure they're loaded
+        import sys
+
+        if cls.parser_path not in sys.path:
+            sys.path.insert(0, os.path.dirname(os.path.dirname(cls.parser_path)))
+
+        # Reload and then directly import the modules to force discovery
         importlib.reload(importlib.import_module("opencontractserver.pipeline.parsers"))
         importlib.reload(
             importlib.import_module("opencontractserver.pipeline.embedders")
@@ -190,6 +235,32 @@ class TestPostProcessor(BasePostProcessor):
         importlib.reload(
             importlib.import_module("opencontractserver.pipeline.post_processors")
         )
+
+        # Force import the new modules directly
+        try:
+            from opencontractserver.pipeline.embedders.temp_embedder import (  # noqa
+                TestEmbedder,
+                TestEmbedder384,
+                TestEmbedder768,
+            )
+            from opencontractserver.pipeline.parsers.test_parser import (  # noqa
+                TestParser,
+            )
+            from opencontractserver.pipeline.post_processors.test_post_processor import (  # noqa
+                TestPostProcessor,
+            )
+            from opencontractserver.pipeline.thumbnailers.test_thumbnailer import (  # noqa
+                TestThumbnailer,
+            )
+
+            logger.info("Successfully imported test classes after reloading")
+        except ImportError as e:
+            logger.error(f"Failed to import test classes: {e}")
+
+        # Verify the embedders were loaded correctly
+        embedders = get_all_embedders()
+        embedder_titles = [embedder.title for embedder in embedders]
+        logger.info(f"Available embedder titles after reload: {embedder_titles}")
 
     @classmethod
     def tearDownClass(cls):
@@ -214,6 +285,14 @@ class TestPostProcessor(BasePostProcessor):
         importlib.reload(
             importlib.import_module("opencontractserver.pipeline.post_processors")
         )
+
+        # Force direct import
+        try:
+            from opencontractserver.pipeline.post_processors.test_post_processor import (  # noqa
+                TestPostProcessor,
+            )
+        except ImportError as e:
+            logger.error(f"Failed to import TestPostProcessor in setUp: {e}")
 
     def test_get_all_subclasses(self):
         """
@@ -337,8 +416,8 @@ class TestPostProcessor(BasePostProcessor):
         self.assertEqual(component, TestParser)
 
         # Test embedder component
-        component = get_component_by_name("test_embedder")
-        from opencontractserver.pipeline.embedders.test_embedder import (
+        component = get_component_by_name("temp_embedder")
+        from opencontractserver.pipeline.embedders.temp_embedder import (
             TestEmbedder,  # type: ignore; type: ignore
         )
 
@@ -422,6 +501,121 @@ class TestPostProcessor(BasePostProcessor):
         post_processors = get_all_post_processors()
         post_processor_titles = [processor.title for processor in post_processors]
         self.assertIn("Test PostProcessor", post_processor_titles)
+
+    def test_get_dimension_from_embedder(self):
+        """
+        Test get_dimension_from_embedder function to ensure it correctly extracts dimensions.
+        """
+        # Get the test embedder class
+        embedders = get_all_embedders()
+        temp_embedder = next((e for e in embedders if e.title == "Test Embedder"), None)
+        temp_embedder_384 = next(
+            (e for e in embedders if e.title == "Test Embedder 384"), None
+        )
+
+        # Test with class
+        self.assertEqual(get_dimension_from_embedder(temp_embedder), 128)
+        self.assertEqual(get_dimension_from_embedder(temp_embedder_384), 384)
+
+        self.assertEqual(
+            get_dimension_from_embedder(
+                "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder"
+            ),
+            128,
+        )
+        self.assertEqual(
+            get_dimension_from_embedder(
+                "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder384"
+            ),
+            384,
+        )
+
+        with override_settings(DEFAULT_EMBEDDING_DIMENSION=768):
+            self.assertEqual(get_dimension_from_embedder("non.existent.Embedder"), 768)
+
+    @override_settings(
+        DEFAULT_EMBEDDERS_BY_FILETYPE={
+            "application/pdf": "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder384",
+            "text/plain": "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder768",
+        }
+    )
+    def test_get_default_embedder_for_filetype(self) -> None:
+
+        # Test getting embedder for PDF with dimension 384
+        embedder = get_default_embedder_for_filetype("application/pdf")
+        self.assertEqual(embedder.title, "Test Embedder 384")
+
+        # Test getting embedder for TXT with dimension 768
+        embedder = get_default_embedder_for_filetype("text/plain")
+        self.assertEqual(embedder.title, "Test Embedder 768")
+
+        # Test getting embedder for non-existent mimetype
+        embedder = get_default_embedder_for_filetype("application/json")
+        self.assertIsNone(embedder)
+
+    @override_settings(
+        PREFERRED_EMBEDDERS={
+            "application/pdf": "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder384",
+            "text/plain": "opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder768",
+        },
+        DEFAULT_EMBEDDER="opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder",
+    )
+    def test_find_embedder_for_filetype(self) -> None:
+        """
+        Test find_embedder_for_filetype function with different input types and scenarios.
+        """
+        from opencontractserver.pipeline.base.file_types import FileTypeEnum
+        from opencontractserver.pipeline.utils import (
+            find_embedder_for_filetype,
+            get_default_embedder,
+        )
+
+        # Get the default embedder for comparison
+        default_embedder = get_default_embedder()
+        self.assertIsNotNone(default_embedder)
+        self.assertEqual(default_embedder.title, "Test Embedder")
+
+        # Test with mimetype string
+        embedder = find_embedder_for_filetype("application/pdf")
+        self.assertEqual(embedder.title, "Test Embedder 384")
+
+        embedder = find_embedder_for_filetype("text/plain")
+        self.assertEqual(embedder.title, "Test Embedder 768")
+
+        # Test with FileTypeEnum
+        embedder = find_embedder_for_filetype(FileTypeEnum.PDF)
+        self.assertEqual(embedder.title, "Test Embedder 384")
+
+        embedder = find_embedder_for_filetype(FileTypeEnum.TXT)
+        self.assertEqual(embedder.title, "Test Embedder 768")
+
+        # Test with unknown mimetype (should return None from get_preferred_embedder)
+        embedder = find_embedder_for_filetype("application/unknown")
+        self.assertIsNone(
+            embedder
+        )  # None because no preferred embedder for this mimetype
+
+        # Test with DOCX FileTypeEnum (which should map to a known mimetype)
+        embedder = find_embedder_for_filetype(FileTypeEnum.DOCX)
+        self.assertIsNone(
+            embedder
+        )  # None because no preferred embedder for this mimetype
+
+    @override_settings(
+        PREFERRED_EMBEDDERS={
+            "application/pdf": "non.existent.EmbedderClass",
+        },
+        DEFAULT_EMBEDDER="opencontractserver.pipeline.embedders.temp_embedder.TestEmbedder",
+    )
+    def test_find_embedder_for_filetype_error_handling(self) -> None:
+        """
+        Test find_embedder_for_filetype error handling when embedder path can't be loaded.
+        """
+        from opencontractserver.pipeline.utils import find_embedder_for_filetype
+
+        # When a preferred embedder can't be loaded, the function should return None
+        embedder = find_embedder_for_filetype("application/pdf")
+        self.assertIsNone(embedder)
 
 
 if __name__ == "__main__":

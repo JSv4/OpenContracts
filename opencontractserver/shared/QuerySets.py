@@ -1,12 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.db import models
-
-# from guardian.models import UserObjectPermission, GroupObjectPermission
 from django.db.models import Exists, OuterRef, Q
-
-# from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
+from django_cte import CTEQuerySet
 from tree_queries.query import TreeQuerySet
+
+from opencontractserver.shared.mixins import VectorSearchViaEmbeddingMixin
 
 User = get_user_model()
 
@@ -143,3 +142,43 @@ class PermissionQuerySet(models.QuerySet):
         #     permission_filter &= Q(creator=user)
 
         return self.filter(permission_filter).distinct()
+
+
+class DocumentQuerySet(PermissionQuerySet, VectorSearchViaEmbeddingMixin):
+    """
+    Custom QuerySet for Document that includes both permission filtering
+    (PermissionQuerySet) and vector-based search (VectorSearchViaEmbeddingMixin).
+    """
+
+    # If your Embedding related_name on Document is not "embeddings",
+    # override the Mixin attribute here:
+    # EMBEDDING_RELATED_NAME = "my_custom_related_name"
+    pass
+
+
+class AnnotationQuerySet(
+    CTEQuerySet, PermissionQuerySet, VectorSearchViaEmbeddingMixin
+):
+    """
+    Custom QuerySet for Annotation model, combining:
+      - CTEQuerySet for recursive common table expressions
+      - PermissionQuerySet for permission-based filtering
+      - VectorSearchViaEmbeddingMixin for vector-based search
+
+    Example:
+        class AnnotationQuerySet(CTEQuerySet, PermissionQuerySet, VectorSearchViaEmbeddingMixin):
+            EMBEDDING_RELATED_NAME = "embeddings"  # or whatever your FK related_name is
+    """
+
+    pass
+
+
+class NoteQuerySet(CTEQuerySet, PermissionQuerySet, VectorSearchViaEmbeddingMixin):
+    """
+    Custom QuerySet for Note model, combining:
+      - CTEQuerySet
+      - PermissionQuerySet
+      - VectorSearchViaEmbeddingMixin
+    """
+
+    pass

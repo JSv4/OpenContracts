@@ -31,6 +31,20 @@ interface CorpusSettingsProps {
     title: string;
     description: string;
     allowComments: boolean;
+    preferredEmbedder?: string | null;
+    creator?: {
+      email: string;
+      username?: string;
+    };
+    created?: string;
+    modified?: string;
+    isPublic?: boolean;
+    documents?: {
+      totalCount: number;
+    };
+    annotations?: {
+      totalCount: number;
+    };
   };
 }
 
@@ -84,197 +98,199 @@ const ActionFlow = styled.div`
 
 const PageContainer = styled(Container)`
   padding: 2rem;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 0.8) 0%,
-    rgba(255, 255, 255, 1) 100%
-  );
-  border-radius: 16px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+  max-width: 1200px !important;
 `;
 
-const HeaderContainer = styled.div`
-  background: linear-gradient(to right, #ffffff, #f8fafc);
-  padding: 3rem 2rem 2rem 2rem;
-  margin: 1rem -1rem 2rem -1rem;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-`;
-
-const TopMetadataBar = styled.div`
+const CorpusHeader = styled.div`
   display: flex;
-  gap: 1.5rem;
-  padding: 0.75rem 1.5rem;
-  margin: 0.5rem 0 1.5rem 0;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  border: 1px solid #f1f5f9;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+`;
 
-  .icon {
+const TitleArea = styled.div`
+  flex: 1;
+`;
+
+const CorpusTitle = styled.h1`
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.02em;
+`;
+
+const CorpusDescription = styled.p`
+  color: #4a5568;
+  font-size: 1rem;
+  margin: 0;
+  max-width: 600px;
+`;
+
+const EditButton = styled(Button)`
+  &&& {
+    background: white;
     color: #3b82f6;
-    margin-right: 0.5rem;
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    margin-left: 1rem;
+
+    &:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      background: #f9fafb;
+    }
+
+    .icon {
+      margin-right: 0.5rem !important;
+      opacity: 0.8;
+    }
   }
 `;
 
-const TopMetadataItem = styled.div`
+const InfoSection = styled.div`
+  margin-bottom: 3.5rem;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  overflow: hidden;
+`;
+
+const SectionHeader = styled.div`
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
   display: flex;
   align-items: center;
-  color: #475569;
-  font-size: 0.95rem;
-  font-weight: 500;
+`;
 
-  &:not(:last-child) {
-    padding-right: 1.5rem;
-    border-right: 1px solid #e2e8f0;
+const SectionTitle = styled.h2`
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin: 0;
+  display: flex;
+  align-items: center;
+
+  &:before {
+    content: "";
+    width: 4px;
+    height: 1rem;
+    background: #3b82f6;
+    margin-right: 0.75rem;
+    border-radius: 2px;
   }
 `;
 
-const MetadataBar = styled.div`
-  display: flex;
+const MetadataContent = styled.div`
+  padding: 1.5rem;
+`;
+
+const MetadataGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 2rem;
-  padding: 1.25rem 1.5rem;
-  margin: -1rem 0 2rem 0;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
-  border: 1px solid #f1f5f9;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const MetadataItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #475569;
-  font-weight: 500;
+  .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
 
-  .icon {
-    background: #f8fafc;
-    padding: 0.5rem;
-    border-radius: 8px;
-    color: #3b82f6;
+  .value {
+    font-size: 1rem;
+    color: #1e293b;
+    font-weight: 500;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+
+    &.private {
+      background-color: #f1f5f9;
+      color: #475569;
+    }
+
+    &.public {
+      background-color: #ecfdf5;
+      color: #10b981;
+    }
+
+    .icon {
+      margin-right: 0.25rem;
+      font-size: 0.75rem;
+    }
   }
 `;
 
-const ActionSectionHeader = styled.div`
+const ActionHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 2rem 0;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #f1f5f9;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+`;
 
-  h2 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0;
-  }
+const ActionContent = styled.div`
+  padding: 1.5rem;
 `;
 
 const AddActionButton = styled(Button)`
   &&& {
     background: #3b82f6;
     color: white;
-    padding: 0.75rem 1.25rem;
-    border-radius: 10px;
-    font-weight: 600;
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
-    transition: all 0.2s ease;
+    border: none;
+    padding: 0.6rem 1rem;
+    font-weight: 500;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 
     &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
       background: #2563eb;
     }
 
     .icon {
       margin-right: 0.5rem !important;
+      opacity: 0.9;
     }
   }
 `;
 
-const HeaderContent = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
-`;
-
-const TitleSection = styled.div`
-  flex: 1;
-`;
-
-const CorpusTitle = styled.h1`
-  font-size: 2.5rem;
-  font-weight: 800;
-  background: linear-gradient(120deg, #0f2b77, #2563eb);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin: 0;
-  letter-spacing: -0.02em;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-`;
-
-const CorpusDescription = styled.p`
-  color: #334155;
-  font-size: 1.1rem;
-  margin: 0.75rem 0 0 0;
-  max-width: 600px;
+const ActionNote = styled.div`
+  font-size: 0.95rem;
+  color: #4a5568;
+  margin-bottom: 2rem;
   line-height: 1.6;
-  font-weight: 450;
-`;
 
-const EditButton = styled(Button)`
-  &&& {
-    background: linear-gradient(135deg, #1e40af, #3b82f6);
-    color: white;
-    padding: 1rem 1.5rem;
+  strong {
+    color: #1e293b;
     font-weight: 600;
-    border-radius: 12px;
-    transition: all 0.2s ease;
-    border: none;
-    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(59, 130, 246, 0.3);
-      background: linear-gradient(135deg, #1e40af, #60a5fa);
-    }
-
-    .icon {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 0.5rem;
-      border-radius: 8px;
-      margin-right: 0.5rem !important;
-    }
-  }
-`;
-
-const ActionDescription = styled.div`
-  background: linear-gradient(to right, #f8fafc, #ffffff);
-  border-left: 4px solid #3b82f6;
-  padding: 1.25rem 1.5rem;
-  margin: 1rem 0 2rem 0;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-
-  p {
-    color: #475569;
-    font-size: 1.05rem;
-    line-height: 1.6;
-    margin: 0;
-
-    strong {
-      color: #1e293b;
-      font-weight: 600;
-    }
   }
 
   .highlight {
     color: #3b82f6;
-    font-weight: 500;
   }
 `;
 
@@ -334,163 +350,224 @@ export const CorpusSettings: React.FC<CorpusSettingsProps> = ({ corpus }) => {
 
   return (
     <PageContainer>
-      <HeaderContainer>
-        <HeaderContent>
-          <TitleSection>
-            <CorpusTitle>{corpus.title}</CorpusTitle>
-            <CorpusDescription>
-              {corpus.description ||
-                "No description provided yet. Add one to help your team understand this corpus better."}
-            </CorpusDescription>
-          </TitleSection>
+      <CorpusHeader>
+        <TitleArea>
+          <CorpusTitle>{corpus.title}</CorpusTitle>
+          <CorpusDescription>
+            {corpus.description || "No description provided."}
+          </CorpusDescription>
+        </TitleArea>
+        <EditButton
+          icon
+          labelPosition="left"
+          onClick={() => editingCorpus(corpus as unknown as CorpusType)}
+        >
+          <Icon name="edit outline" />
+          Edit
+        </EditButton>
+      </CorpusHeader>
 
-          <EditButton
-            icon
-            labelPosition="left"
-            onClick={() => editingCorpus(corpus as unknown as CorpusType)}
-          >
-            <Icon name="edit outline" />
-            Edit Corpus Details
-          </EditButton>
-        </HeaderContent>
-      </HeaderContainer>
+      <InfoSection>
+        <SectionHeader>
+          <SectionTitle>Corpus Information</SectionTitle>
+        </SectionHeader>
 
-      <TopMetadataBar>
-        <TopMetadataItem>
-          <Icon name="file text" />2 Actions
-        </TopMetadataItem>
-        <TopMetadataItem>
-          <Icon name="clock" />
-          Last updated 2 days ago
-        </TopMetadataItem>
-        {corpus.allowComments && (
-          <TopMetadataItem>
-            <Icon name="comments" />
-            Comments enabled
-          </TopMetadataItem>
-        )}
-      </TopMetadataBar>
+        <MetadataContent>
+          <MetadataGrid>
+            <MetadataItem>
+              <div className="label">Created by</div>
+              <div className="value">{corpus.creator?.email || "Unknown"}</div>
+            </MetadataItem>
 
-      <MetadataBar></MetadataBar>
-
-      <ActionSectionHeader>
-        <h2>Corpus Actions</h2>
-        <AddActionButton onClick={() => setIsModalOpen(true)}>
-          <Icon name="plus" />
-          Add Action
-        </AddActionButton>
-      </ActionSectionHeader>
-
-      <ActionDescription>
-        <p>
-          This system allows you to <strong>automate actions</strong> when
-          documents are
-          <span className="highlight"> added</span> or{" "}
-          <span className="highlight">edited</span> in a corpus, either running
-          extractions via <strong>fieldsets</strong> or analyses via{" "}
-          <strong>analyzers</strong>.
-        </p>
-      </ActionDescription>
-
-      <ActionFlow>
-        {actionsData?.corpusActions?.edges.map(({ node: action }) => (
-          <ActionCard key={action.id}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "1rem",
-                    alignItems: "center",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  <h3
-                    style={{
-                      margin: 0,
-                      color: "#111827",
-                      fontSize: "1.25rem",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {action.name}
-                  </h3>
-                  <TriggerBadge
-                    trigger={action.trigger as "add_document" | "edit_document"}
-                  >
-                    {action.trigger === "add_document"
-                      ? "📥 On Add"
-                      : "✏️ On Edit"}
-                  </TriggerBadge>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "2rem",
-                    color: "rgba(0,0,0,0.75)",
-                    marginTop: "1rem",
-                    fontSize: "0.95rem",
-                  }}
-                >
-                  <div>
-                    <Icon name="code" />
-                    {action.fieldset
-                      ? `Fieldset: ${action.fieldset.name}`
-                      : `Analyzer: ${action.analyzer?.name}`}
-                  </div>
-                  <div>
-                    <Icon name="user" />
-                    {action.creator.username}
-                  </div>
-                  <div>
-                    <Icon name="calendar" />
-                    {new Date(action.created).toLocaleDateString()}
-                  </div>
-                </div>
+            <MetadataItem>
+              <div className="label">Preferred Embedder</div>
+              <div className="value">
+                {corpus.preferredEmbedder || "Default"}
               </div>
+            </MetadataItem>
 
-              <div
-                style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "6px",
-                    background: action.disabled ? "#fef2f2" : "#f0fdf4",
-                    color: action.disabled ? "#dc2626" : "#16a34a",
-                    fontWeight: 600,
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                  }}
+            <MetadataItem>
+              <div className="label">Created</div>
+              <div className="value">
+                {corpus.created
+                  ? new Date(corpus.created).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : "Unknown"}
+              </div>
+            </MetadataItem>
+
+            <MetadataItem>
+              <div className="label">Last Updated</div>
+              <div className="value">
+                {corpus.modified
+                  ? new Date(corpus.modified).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : "Unknown"}
+              </div>
+            </MetadataItem>
+
+            <MetadataItem>
+              <div className="label">Visibility</div>
+              <div className="value">
+                <span
+                  className={`badge ${corpus.isPublic ? "public" : "private"}`}
                 >
                   <Icon
-                    name={action.disabled ? "pause circle" : "play circle"}
+                    name={corpus.isPublic ? "unlock" : "lock"}
+                    size="small"
                   />
-                  {action.disabled ? "Disabled" : "Active"}
-                </div>
-
-                <Button
-                  icon
-                  negative
-                  size="tiny"
-                  onClick={() => setActionToDelete(action.id)}
-                >
-                  <Icon name="trash" />
-                </Button>
+                  {corpus.isPublic ? "Public" : "Private"}
+                </span>
               </div>
-            </div>
-          </ActionCard>
-        ))}
-      </ActionFlow>
+            </MetadataItem>
+
+            {corpus.allowComments && (
+              <MetadataItem>
+                <div className="label">Comments</div>
+                <div className="value">
+                  <span className="badge public">
+                    <Icon name="comments" size="small" />
+                    Enabled
+                  </span>
+                </div>
+              </MetadataItem>
+            )}
+          </MetadataGrid>
+        </MetadataContent>
+      </InfoSection>
+
+      <InfoSection>
+        <ActionHeader>
+          <SectionTitle>Corpus Actions</SectionTitle>
+          <AddActionButton onClick={() => setIsModalOpen(true)}>
+            <Icon name="plus" />
+            Add Action
+          </AddActionButton>
+        </ActionHeader>
+
+        <ActionContent>
+          <ActionNote>
+            This system allows you to <strong>automate actions</strong> when
+            documents are
+            <span className="highlight"> added</span> or{" "}
+            <span className="highlight"> edited</span> in a corpus, either
+            running extractions via <strong>fieldsets</strong> or analyses via{" "}
+            <strong>analyzers</strong>.
+          </ActionNote>
+
+          <ActionFlow>
+            {actionsData?.corpusActions?.edges.map(({ node: action }) => (
+              <ActionCard key={action.id}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "1rem",
+                        alignItems: "center",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          margin: 0,
+                          color: "#111827",
+                          fontSize: "1.25rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {action.name}
+                      </h3>
+                      <TriggerBadge
+                        trigger={
+                          action.trigger as "add_document" | "edit_document"
+                        }
+                      >
+                        {action.trigger === "add_document"
+                          ? "📥 On Add"
+                          : "✏️ On Edit"}
+                      </TriggerBadge>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "2rem",
+                        color: "rgba(0,0,0,0.75)",
+                        marginTop: "1rem",
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      <div>
+                        <Icon name="code" />
+                        {action.fieldset
+                          ? `Fieldset: ${action.fieldset.name}`
+                          : `Analyzer: ${action.analyzer?.name}`}
+                      </div>
+                      <div>
+                        <Icon name="user" />
+                        {action.creator.username}
+                      </div>
+                      <div>
+                        <Icon name="calendar" />
+                        {new Date(action.created).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "0.5rem",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        padding: "0.5rem 1rem",
+                        borderRadius: "6px",
+                        background: action.disabled ? "#fef2f2" : "#f0fdf4",
+                        color: action.disabled ? "#dc2626" : "#16a34a",
+                        fontWeight: 600,
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <Icon
+                        name={action.disabled ? "pause circle" : "play circle"}
+                      />
+                      {action.disabled ? "Disabled" : "Active"}
+                    </div>
+
+                    <Button
+                      icon
+                      negative
+                      size="tiny"
+                      onClick={() => setActionToDelete(action.id)}
+                    >
+                      <Icon name="trash" />
+                    </Button>
+                  </div>
+                </div>
+              </ActionCard>
+            ))}
+          </ActionFlow>
+        </ActionContent>
+      </InfoSection>
 
       <CreateCorpusActionModal
         corpusId={corpus.id}

@@ -2,7 +2,7 @@ import importlib
 import inspect
 import logging
 import pkgutil
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from django.conf import settings
 
@@ -85,27 +85,41 @@ def get_all_post_processors() -> list[type[BasePostProcessor]]:
 
 
 def get_components_by_mimetype(
-    mimetype: str, detailed: bool = False
+    file_type: Optional[FileTypeEnum] = None, detailed: bool = False
 ) -> dict[str, list[Any]]:
     """
-    Given a mimetype, fetch lists of compatible parsers, embedders, and thumbnailers.
+    Given a FileTypeEnum, fetch lists of compatible parsers, embedders, and thumbnailers.
 
     Args:
-        mimetype (str): The mimetype of the file.
-        detailed (bool): If True, include title, description, and author details.
+        file_type (Optional[FileTypeEnum]): The file type enum
+        detailed (bool): If True, include title, description, and author details
 
     Returns:
-        Dict[str, List[Any]]: Dictionary with lists of compatible components.
+        Dict[str, List[Any]]: Dictionary with lists of compatible components
     """
+    # Initialize component lists
     parsers = []
     embedders = []
     thumbnailers = []
     post_processors = []
-    mimetype_enum = FileTypeEnum(mimetype)
+
+    # Handle mimetype string case for backward compatibility
+    if isinstance(file_type, str):
+        file_type = FileTypeEnum.from_mimetype(file_type)
+
+    # If file_type is None or not supported, return empty lists
+    if file_type is None:
+        logger.warning(f"Unsupported file type: {file_type}")
+        return {
+            "parsers": parsers,
+            "embedders": embedders,
+            "thumbnailers": thumbnailers,
+            "post_processors": post_processors,
+        }
 
     # Get compatible parsers
     for parser_class in get_all_parsers():
-        if mimetype_enum in parser_class.supported_file_types:
+        if file_type in parser_class.supported_file_types:
             module_name = parser_class.__module__.split(".")[-1]
             if detailed:
                 parsers.append(
@@ -141,7 +155,7 @@ def get_components_by_mimetype(
 
     # Get compatible thumbnailers
     for thumbnailer_class in get_all_thumbnailers():
-        if mimetype_enum in thumbnailer_class.supported_file_types:
+        if file_type in thumbnailer_class.supported_file_types:
             module_name = thumbnailer_class.__module__.split(".")[-1]
             if detailed:
                 thumbnailers.append(
@@ -159,7 +173,7 @@ def get_components_by_mimetype(
 
     # Get compatible post-processors
     for post_processor_class in get_all_post_processors():
-        if mimetype_enum in post_processor_class.supported_file_types:
+        if file_type in post_processor_class.supported_file_types:
             logger.info(post_processor_class)
             logger.info(dir(post_processor_class))
             module_name = post_processor_class.__module__.split(".")[-1]
@@ -207,7 +221,13 @@ def get_metadata_for_component(component_class: type) -> dict[str, Any]:
         metadata["vector_size"] = component_class.vector_size
 
     if hasattr(component_class, "supported_file_types"):
-        metadata["supported_file_types"] = component_class.supported_file_types
+        # Filter out any file types that are no longer supported (like HTML)
+        supported_types = []
+        for file_type in component_class.supported_file_types:
+            # Only include file types that are still defined in FileTypeEnum
+            if file_type in [FileTypeEnum.PDF, FileTypeEnum.TXT, FileTypeEnum.DOCX]:
+                supported_types.append(file_type)
+        metadata["supported_file_types"] = supported_types
 
     return metadata
 
@@ -325,6 +345,105 @@ def get_default_embedder() -> Optional[type[BaseEmbedder]]:
     else:
         logger.error("No default embedder specified in settings")
         return None
+
+
+def get_default_embedder_for_filetype(mimetype: str) -> Optional[type[BaseEmbedder]]:
+    """
+    Get the default embedder for a specific filetype.
+
+    Args:
+        mimetype: The MIME type of the file
+
+    Returns:
+        Optional[Type[BaseEmbedder]]: The default embedder for the specified filetype and dimension,
+        or None if not found
+    """
+    # Get the default embedders for the mimetype
+    embedder_path = settings.DEFAULT_EMBEDDERS_BY_FILETYPE.get(mimetype, {})
+
+    logger.info(
+        f"get_default_embedder_for_filetype - Default embedder path: {embedder_path}"
+    )
+
+    if embedder_path:
+        try:
+            module_path, class_name = embedder_path.rsplit(".", 1)
+            module = importlib.import_module(module_path)
+            embedder_class = getattr(module, class_name)
+            return embedder_class
+        except (ModuleNotFoundError, AttributeError) as e:
+            logger.error(f"Error loading embedder '{embedder_path}': {e}")
+            return None
+    else:
+        logger.warning(f"No default embedder found for mimetype '{mimetype}'")
+        return None
+
+
+def get_dimension_from_embedder(
+    embedder_class_or_path: Union[type[BaseEmbedder], str]
+) -> int:
+    """
+    Get the dimension from an embedder class or path.
+
+    Args:
+        embedder_class_or_path: Either an embedder class or a path to an embedder class
+
+    Returns:
+        int: The dimension of the embedder, or the default dimension if not found
+    """
+    from django.conf import settings
+
+    default_dim = getattr(settings, "DEFAULT_EMBEDDING_DIMENSION", 768)
+
+    if isinstance(embedder_class_or_path, str):
+        try:
+            embedder_class = get_component_by_name(embedder_class_or_path)
+        except ValueError:
+            logger.error(f"Could not find embedder class: {embedder_class_or_path}")
+            return default_dim
+    else:
+        embedder_class = embedder_class_or_path
+
+    if embedder_class and hasattr(embedder_class, "vector_size"):
+        return embedder_class.vector_size
+
+    return default_dim
+
+
+def find_embedder_for_filetype(
+    mimetype_or_enum: Union[str, FileTypeEnum]
+) -> Optional[type[BaseEmbedder]]:
+    """
+    Find an appropriate embedder for a specific file type and dimension.
+
+    Args:
+        mimetype_or_enum: The MIME type of the file or a FileTypeEnum
+        dimension: The desired embedding dimension (optional)
+
+    Returns:
+        Optional[Type[BaseEmbedder]]: An appropriate embedder class, or None if not found
+    """
+    # Ensure we're working with a mimetype string, not a FileTypeEnum
+    if isinstance(mimetype_or_enum, FileTypeEnum):
+        # Convert FileTypeEnum to mimetype string using a reverse mapping
+        mime_to_enum = {
+            "application/pdf": FileTypeEnum.PDF,
+            "text/plain": FileTypeEnum.TXT,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": FileTypeEnum.DOCX,
+            # "text/html": FileTypeEnum.HTML,  # Removed as we don't support HTML
+        }
+        # Create a reverse mapping
+        enum_to_mime = {v: k for k, v in mime_to_enum.items()}
+        mimetype = enum_to_mime.get(mimetype_or_enum)
+        if not mimetype:
+            logger.warning(
+                f"Could not convert FileTypeEnum {mimetype_or_enum} to mimetype"
+            )
+            return get_default_embedder()
+    else:
+        mimetype = mimetype_or_enum
+
+    return get_preferred_embedder(mimetype)
 
 
 def run_post_processors(

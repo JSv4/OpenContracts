@@ -9,6 +9,98 @@ from opencontractserver.pipeline.base.file_types import FileTypeEnum
 
 logger = logging.getLogger(__name__)
 
+class CloudMinnModernBERTEmbedder(BaseEmbedder):
+    """
+    Embedder that uses the Minnesota Case Law ModernBERT model to generate embeddings
+    by calling a Hugging Face Inference Endpoint.
+
+    This embedder does not load a local model. Instead, it sends the input text to a
+    provided endpoint for inference, returning 768-dimensional embeddings.
+    """
+
+    title = "Cloud Minnesota Case Law ModernBERT Embedder"
+    description = "Generates embeddings by calling the Minnesota Case Law ModernBERT model through a HF Inference Endpoint."
+    author = "OpenContracts"
+    dependencies = ["requests>=2.28.0"]  # Additional dependency for HTTP requests
+    vector_size = 768  # Output dimensionality of the model
+    supported_file_types = [
+        FileTypeEnum.PDF,
+        FileTypeEnum.TXT,
+        FileTypeEnum.DOCX,
+        # FileTypeEnum.HTML,  # Removed as we don't support HTML
+    ]
+
+    def __init__(self):
+        """
+        Initialize the CloudMinnModernBERTEmbedder.
+
+        Prepares API URL and headers for calling the HF Inference Endpoint.
+        """
+        import requests  # Inline import to avoid global if not already available
+        from django.conf import settings
+
+        self.requests = requests
+        self.api_url = settings.HF_EMBEDDINGS_ENDPOINT
+        hf_token = settings.HF_TOKEN  # Use the token from settings
+        self.headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {hf_token}",
+            "Content-Type": "application/json",
+        }
+
+    def _load_model(self):
+        """
+        Placeholder for compatibility with BaseEmbedder.
+
+        In this embedder, no local model is loaded; inference is done via an external API call.
+        """
+        pass
+
+    def embed_text(self, text: str, **kwargs) -> Optional[list[float]]:
+        """
+        Generate embeddings for the given text using an external HF Inference Endpoint.
+
+        Args:
+            text: The text to embed.
+            **kwargs: Additional arguments to pass along in the request payload if needed.
+
+        Returns:
+            A list of floats representing the embedding vector, or None if an error occurs.
+        """
+        try:
+            # Handle empty text
+            if not text or not text.strip():
+                logger.warning("Empty text provided for embedding")
+                return [0.0] * self.vector_size
+
+            # Prepare payload
+            payload = {
+                "inputs": text,
+                # The HF Inference API often allows "parameters" for custom settings,
+                # we include kwargs inside "parameters" as a best-effort approach:
+                "parameters": kwargs
+            }
+
+            response = self.requests.post(self.api_url, headers=self.headers, json=payload)
+            if response.status_code != 200:
+                logger.error(f"Error from HF endpoint: {response.text}")
+                return None
+
+            data = response.json()
+            logger.info(f"HF endpoint response: {data}")
+            
+            # Expecting the endpoint to return a dictionary with the embedding.
+            # Adjust accordingly if the actual HF endpoint returns differently.
+            embedding = data.get("embedding")
+            if not embedding or not isinstance(embedding, list):
+                logger.error("No valid embedding returned from HF endpoint.")
+                return None
+
+            return embedding
+
+        except Exception as e:
+            logger.error(f"Error generating embeddings via HF endpoint: {e}")
+            return None
 
 class MinnModernBERTEmbedder(BaseEmbedder):
     """

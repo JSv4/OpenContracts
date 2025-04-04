@@ -509,6 +509,8 @@ VECTOR_EMBEDDER_API_KEY = "abc123"
 OPENAI_API_KEY = env.str("OPENAI_API_KEY", default="")
 OPENAI_MODEL = env.str("OPENAI_MODEL", default="gpt-4o")
 EMBEDDINGS_MODEL = env.str("EMBEDDINGS_MODEL", default="gpt-4o")
+HF_TOKEN = env.str("HF_TOKEN", default="")
+HF_EMBEDDINGS_ENDPOINT = env.str("HF_EMBEDDINGS_ENDPOINT", default="")
 
 # CORS
 # ------------------------------------------------------------------------------

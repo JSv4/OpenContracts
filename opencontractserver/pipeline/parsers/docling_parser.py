@@ -422,9 +422,11 @@ class DoclingParser(BaseParser):
             # print_labelled_text_hierarchy(open_contracts_data['labelled_text'], "labelled_text_hierarchy.txt")
 
             return open_contracts_data
-
+        
         except Exception as e:
-            logger.error(f"Docling parser failed: {e}")
+            import traceback
+            stacktrace = traceback.format_exc()
+            logger.error(f"Docling parser failed: {e}\n{stacktrace}")
             return None
 
         finally:

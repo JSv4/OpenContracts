@@ -67,6 +67,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   ffmpeg \
   libsm6 \
   libxext6 \
+  libgl1 \
   # cleaning up unused files
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*

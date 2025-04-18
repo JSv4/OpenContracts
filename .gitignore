@@ -173,3 +173,6 @@ GitHub.sublime-settings
 /uploadfiles/
 /user_*/
 /test_media/
+
+# Temp Files
+scratch.py

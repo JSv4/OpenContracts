@@ -42,6 +42,7 @@ class CloudMinnModernBERTEmbedder(BaseEmbedder):
         self.requests = requests
         self.api_url = settings.HF_EMBEDDINGS_ENDPOINT
         hf_token = settings.HF_TOKEN  # Use the token from settings
+        
         self.headers = {
             "Accept": "application/json",
             "Authorization": f"Bearer {hf_token}",
@@ -87,11 +88,10 @@ class CloudMinnModernBERTEmbedder(BaseEmbedder):
                 return None
 
             data = response.json()
-            logger.info(f"HF endpoint response: {data}")
             
             # Expecting the endpoint to return a dictionary with the embedding.
             # Adjust accordingly if the actual HF endpoint returns differently.
-            embedding = data.get("embedding")
+            embedding = data.get("embeddings")
             if not embedding or not isinstance(embedding, list):
                 logger.error("No valid embedding returned from HF endpoint.")
                 return None

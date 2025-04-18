@@ -250,19 +250,28 @@ class DoclingParser(BaseParser):
 
         try:
             # Convert file via Docling using DocumentStream
+            logger.info("Starting Docling document conversion process...")
             result = self.doc_converter.convert(doc_stream)
+            logger.info(f"Docling conversion completed with status: {result.status}")
+            
             if result.status != ConversionStatus.SUCCESS:
+                logger.error(f"Docling conversion failed with errors: {result.errors}")
                 raise Exception(f"Conversion failed: {result.errors}")
 
+            logger.info("Initializing relationship tracking dictionaries...")
             flattened_heading_annot_id_to_children: dict[
                 Union[str, int], list[Union[str, int]]
             ] = {}
             heading_annot_id_to_children: list[
                 tuple[Union[str, int], list[Union[str, int]]]
             ] = []
+            
+            logger.info("Extracting DoclingDocument from conversion result...")
             doc: DoclingDocument = result.document
+            logger.info(f"Successfully obtained DoclingDocument with {len(doc.texts)} text elements")
 
             # 2) generate pawls/tokens/etc.
+            logger.info("Starting PAWLS content generation process...")
             (
                 pawls_pages,
                 spatial_indices_by_page,
@@ -271,17 +280,23 @@ class DoclingParser(BaseParser):
                 page_dimensions,
                 content,
             ) = self._generate_pawls_content(doc, pdf_bytes, force_ocr)
+            logger.info(f"PAWLS content generation completed. Generated {len(pawls_pages)} pages with dimensions: {page_dimensions}")
 
-            # Run the hierarchical chunker
+            logger.info("Initializing hierarchical chunker...")
             chunker = HierarchicalChunker()
+            logger.info("Running hierarchical chunking process...")
             chunks = list(chunker.chunk(dl_doc=doc))
+            logger.info(f"Hierarchical chunking completed. Generated {len(chunks)} chunks")
 
-            # 3) Build annotation JSON from doc items
+            logger.info("Starting annotation JSON building process...")
             base_annotation_lookup = {}
             text_lookup = {}
 
+            logger.info("Building text lookup from document...")
             text_lookup = build_text_lookup(doc)
-            # logger.info(f"Text lookup: {text_lookup}")
+            logger.info(f"Text lookup built with {len(text_lookup)} entries")
+
+            logger.info("Converting Docling items to annotations...")
             base_annotation_lookup = {
                 text.self_ref: convert_docling_item_to_annotation(
                     text,
@@ -292,11 +307,12 @@ class DoclingParser(BaseParser):
                 )
                 for text in doc.texts
             }
+            logger.info(f"Annotation conversion completed. Generated {len(base_annotation_lookup)} annotations")
 
             # Use Chunks to find and apply parent_ids (warning this will )
             for i, chunk in enumerate(chunks):
 
-                logger.debug(f"Chunk {i} has headings: {chunk.meta.headings}")
+                logger.info(f"Chunk {i} has headings: {chunk.meta.headings}")
 
                 # Print headers if they exist
                 if chunk.meta.headings:
@@ -305,9 +321,9 @@ class DoclingParser(BaseParser):
                             f"Docling chunk {i} has multiple headings; this is not supported yet"
                         )
                     heading = chunk.meta.headings[0]
-                    logger.debug(f"Find heading: {heading}")
+                    logger.info(f"Find heading: {heading}")
                     parent_ref = text_lookup.get(heading.strip())
-                    logger.debug(f"Found parent ref: {parent_ref}")
+                    logger.info(f"Found parent ref: {parent_ref}")
 
                     # Add parent_ref to heading_annot_id_to_children if it doesn't exist
                     if roll_up_groups:
@@ -320,7 +336,7 @@ class DoclingParser(BaseParser):
                     parent_ref = None
 
                 if hasattr(chunk.meta, "doc_items"):
-                    logger.debug(f"Number of doc_items: {len(chunk.meta.doc_items)}")
+                    logger.info(f"Number of doc_items: {len(chunk.meta.doc_items)}")
 
                     # Inspect each doc_item
                     accumulator = []
@@ -365,6 +381,7 @@ class DoclingParser(BaseParser):
             rel_counter = 0
             # If we're rolling up the groups...
             if roll_up_groups:
+                logger.info("Rolling up groups...")
                 for (
                     heading_id,
                     child_ids,
@@ -380,6 +397,7 @@ class DoclingParser(BaseParser):
                     rel_counter += 1
             # Otherwise...
             else:
+                logger.info("Building relationships from heading_annot_id_to_children...")
                 for heading_id, child_ids in heading_annot_id_to_children:
                     relationship_entry = {
                         "id": f"group-rel-{rel_counter}",

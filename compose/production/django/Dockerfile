@@ -97,6 +97,9 @@ RUN for script in ./model_preloaders/*.py; do \
 RUN python -m spacy download en_core_web_sm
 RUN python -m spacy download en_core_web_lg
 
+# Change ownership of the entire /models directory AFTER models are downloaded
+RUN chown -R django:django /models
+
 COPY --chown=django:django ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
 RUN chmod +x /entrypoint

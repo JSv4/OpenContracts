@@ -187,7 +187,7 @@ class DoclingParser(BaseParser):
 
         # TODO - expose some settings from here - like GPU acceleration
         ocr_options = EasyOcrOptions(
-            model_storage_directory=artifacts_path  # We want to preload this to avoid SLOW download at runtime
+            model_storage_directory=artifacts_path,  # We want to preload this to avoid SLOW download at runtime
         )
 
         pipeline_options = PdfPipelineOptions(

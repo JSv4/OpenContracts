@@ -253,7 +253,7 @@ class DoclingParser(BaseParser):
             logger.info("Starting Docling document conversion process...")
             result = self.doc_converter.convert(doc_stream)
             logger.info(f"Docling conversion completed with status: {result.status}")
-            
+
             if result.status != ConversionStatus.SUCCESS:
                 logger.error(f"Docling conversion failed with errors: {result.errors}")
                 raise Exception(f"Conversion failed: {result.errors}")
@@ -265,10 +265,12 @@ class DoclingParser(BaseParser):
             heading_annot_id_to_children: list[
                 tuple[Union[str, int], list[Union[str, int]]]
             ] = []
-            
+
             logger.info("Extracting DoclingDocument from conversion result...")
             doc: DoclingDocument = result.document
-            logger.info(f"Successfully obtained DoclingDocument with {len(doc.texts)} text elements")
+            logger.info(
+                f"Successfully obtained DoclingDocument with {len(doc.texts)} text elements"
+            )
 
             # 2) generate pawls/tokens/etc.
             logger.info("Starting PAWLS content generation process...")
@@ -280,13 +282,18 @@ class DoclingParser(BaseParser):
                 page_dimensions,
                 content,
             ) = self._generate_pawls_content(doc, pdf_bytes, force_ocr)
-            logger.info(f"PAWLS content generation completed. Generated {len(pawls_pages)} pages with dimensions: {page_dimensions}")
+            logger.info(
+                f"PAWLS content generation completed. Generated {len(pawls_pages)} "
+                f"pages with dimensions: {page_dimensions}"
+            )
 
             logger.info("Initializing hierarchical chunker...")
             chunker = HierarchicalChunker()
             logger.info("Running hierarchical chunking process...")
             chunks = list(chunker.chunk(dl_doc=doc))
-            logger.info(f"Hierarchical chunking completed. Generated {len(chunks)} chunks")
+            logger.info(
+                f"Hierarchical chunking completed. Generated {len(chunks)} chunks"
+            )
 
             logger.info("Starting annotation JSON building process...")
             base_annotation_lookup = {}
@@ -307,7 +314,9 @@ class DoclingParser(BaseParser):
                 )
                 for text in doc.texts
             }
-            logger.info(f"Annotation conversion completed. Generated {len(base_annotation_lookup)} annotations")
+            logger.info(
+                f"Annotation conversion completed. Generated {len(base_annotation_lookup)} annotations"
+            )
 
             # Use Chunks to find and apply parent_ids (warning this will )
             for i, chunk in enumerate(chunks):
@@ -397,7 +406,9 @@ class DoclingParser(BaseParser):
                     rel_counter += 1
             # Otherwise...
             else:
-                logger.info("Building relationships from heading_annot_id_to_children...")
+                logger.info(
+                    "Building relationships from heading_annot_id_to_children..."
+                )
                 for heading_id, child_ids in heading_annot_id_to_children:
                     relationship_entry = {
                         "id": f"group-rel-{rel_counter}",
@@ -440,9 +451,10 @@ class DoclingParser(BaseParser):
             # print_labelled_text_hierarchy(open_contracts_data['labelled_text'], "labelled_text_hierarchy.txt")
 
             return open_contracts_data
-        
+
         except Exception as e:
             import traceback
+
             stacktrace = traceback.format_exc()
             logger.error(f"Docling parser failed: {e}\n{stacktrace}")
             return None

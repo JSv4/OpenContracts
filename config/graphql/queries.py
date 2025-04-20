@@ -8,12 +8,11 @@ from django.conf import settings
 from django.db.models import Prefetch, Q
 from graphene import relay
 from graphene.types.generic import GenericScalar
+from graphene_django.debug import DjangoDebug
 from graphene_django.fields import DjangoConnectionField
 from graphene_django.filter import DjangoFilterConnectionField
 from graphql_jwt.decorators import login_required
 from graphql_relay import from_global_id
-from graphene_django.debug import DjangoDebug
-from django.shortcuts import get_object_or_404
 
 from config.graphql.base import OpenContractsNode
 from config.graphql.filters import (
@@ -66,7 +65,7 @@ from config.graphql.graphene_types import (
     RelationshipType,
     UserExportType,
     UserImportType,
-    UserType
+    UserType,
 )
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -141,14 +140,14 @@ class Query(graphene.ObjectType):
             queryset = Annotation.objects.filter(
                 Q(creator=info.context.user) | Q(is_public=True)
             )
-        
+
         queryset = queryset.select_related(
-            'annotation_label',
-            'creator',
-            'document',
-            'corpus',
-            'analysis',        
-            'analysis__analyzer'
+            "annotation_label",
+            "creator",
+            "document",
+            "corpus",
+            "analysis",
+            "analysis__analyzer",
         )
 
         # Filter by uses_label_from_labelset_id
@@ -323,20 +322,22 @@ class Query(graphene.ObjectType):
         doc_django_pk = from_global_id(document_id)[1]
         corpus_django_pk = from_global_id(corpus_id)[1]
 
-        queryset = queryset.filter(corpus_id=corpus_django_pk, document_id=doc_django_pk) # Existing filter
+        queryset = queryset.filter(
+            corpus_id=corpus_django_pk, document_id=doc_django_pk
+        )  # Existing filter
         queryset = queryset.select_related(
-            'relationship_label',
-            'corpus',
-            'document',
-            'creator',
-            'analyzer', # If needed
-            'analysis'  # If needed
+            "relationship_label",
+            "corpus",
+            "document",
+            "creator",
+            "analyzer",  # If needed
+            "analysis",  # If needed
         ).prefetch_related(
-            'source_annotations', # If RelationshipType shows source annotations
-            'target_annotations'  # If RelationshipType shows target annotations
+            "source_annotations",  # If RelationshipType shows source annotations
+            "target_annotations",  # If RelationshipType shows target annotations
         )
         return queryset
-    
+
     bulk_doc_annotations_in_corpus = graphene.Field(
         graphene.List(AnnotationType),
         corpus_id=graphene.ID(required=True),
@@ -392,18 +393,19 @@ class Query(graphene.ObjectType):
 
         logger.info(f"Filter queryset {queryset} bulk annotations: {q_objects}")
 
-        final_queryset = queryset.filter(q_objects).order_by("created", "page") # Existing filter/order
+        final_queryset = queryset.filter(q_objects).order_by(
+            "created", "page"
+        )  # Existing filter/order
         final_queryset = final_queryset.select_related(
-            'annotation_label',
-            'creator',
-            'document',
-            'corpus',
-            'analysis',
-            'analysis__analyzer'
+            "annotation_label",
+            "creator",
+            "document",
+            "corpus",
+            "analysis",
+            "analysis__analyzer"
             # 'embeddings' # If needed
         )
         return final_queryset
-
 
     page_annotations = graphene.Field(
         PageAwareAnnotationType,
@@ -427,13 +429,13 @@ class Query(graphene.ObjectType):
             # Add select_related if document creator/etc. needed later
             document = Document.objects.get(id=doc_django_pk)
         except Document.DoesNotExist:
-             # Handle error appropriately, maybe return null or raise GraphQL error
-             logger.error(f"Document with pk {doc_django_pk} not found.")
-             return None # Or raise appropriate GraphQL error
+            # Handle error appropriately, maybe return null or raise GraphQL error
+            logger.error(f"Document with pk {doc_django_pk} not found.")
+            return None  # Or raise appropriate GraphQL error
 
         # Get the base queryset first (only stuff given user CAN see)
         if info.context.user.is_superuser:
-            queryset = Annotation.objects.all() # Base queryset, ordering later
+            queryset = Annotation.objects.all()  # Base queryset, ordering later
         elif info.context.user.is_anonymous:
             queryset = Annotation.objects.filter(Q(is_public=True))
         else:
@@ -443,18 +445,20 @@ class Query(graphene.ObjectType):
 
         # Apply select_related EARLY to the base queryset
         queryset = queryset.select_related(
-            'annotation_label',
-            'creator',
-            'document', # Document already fetched, but good practice if base queryset reused
-            'corpus',
-            'analysis',
-            'analysis__analyzer'
+            "annotation_label",
+            "creator",
+            "document",  # Document already fetched, but good practice if base queryset reused
+            "corpus",
+            "analysis",
+            "analysis__analyzer",
         )
 
         # Now build query filters
         q_objects = Q(document_id=doc_django_pk)
         if corpus_id is not None:
-            corpus_pk = from_global_id(corpus_id)[1] # Get corpus_pk only if corpus_id is present
+            corpus_pk = from_global_id(corpus_id)[
+                1
+            ]  # Get corpus_pk only if corpus_id is present
             q_objects.add(Q(corpus_id=corpus_pk), Q.AND)
 
         # If for_analysis_ids is passed in, only show annotations from those analyses
@@ -466,19 +470,27 @@ class Query(graphene.ObjectType):
                     filter(lambda raw_id: len(raw_id) > 0, for_analysis_ids.split(","))
                 )
             ]
-            if analysis_pks: # Only add filter if there are valid PKs
-                logger.info(f"resolve_page_annotations - Filtering by Analysis pks: {analysis_pks}")
+            if analysis_pks:  # Only add filter if there are valid PKs
+                logger.info(
+                    f"resolve_page_annotations - Filtering by Analysis pks: {analysis_pks}"
+                )
                 q_objects.add(Q(analysis_id__in=analysis_pks), Q.AND)
             else:
-                 # Handle case maybe? Or assume UI prevents empty string if filter applied
-                 logger.warning("resolve_page_annotations - for_analysis_ids provided but resulted in empty PK list.")
+                # Handle case maybe? Or assume UI prevents empty string if filter applied
+                logger.warning(
+                    "resolve_page_annotations - for_analysis_ids provided but resulted in empty PK list."
+                )
         else:
-            logger.info("resolve_page_annotations - for_analysis_ids is None, filtering for analysis__isnull=True")
+            logger.info(
+                "resolve_page_annotations - for_analysis_ids is None, filtering for analysis__isnull=True"
+            )
             q_objects.add(Q(analysis__isnull=True), Q.AND)
 
         label_type = kwargs.get("label_type", None)
         if label_type is not None:
-            logger.info(f"resolve_page_annotations - Filtering by label_type: {label_type}")
+            logger.info(
+                f"resolve_page_annotations - Filtering by label_type: {label_type}"
+            )
             q_objects.add(Q(annotation_label__label_type=label_type), Q.AND)
 
         # Apply filters to the optimized base queryset
@@ -490,56 +502,82 @@ class Query(graphene.ObjectType):
             "page_containing_annotation_with_id", None
         )
         page_number_list = kwargs.get("page_number_list", None)
-        current_page = 1 # Default to page 1 (1-indexed)
+        current_page = 1  # Default to page 1 (1-indexed)
 
         if kwargs.get("current_page", None) is not None:
             current_page = kwargs.get("current_page")
-            logger.info(f"resolve_page_annotations - Using provided current_page: {current_page}")
+            logger.info(
+                f"resolve_page_annotations - Using provided current_page: {current_page}"
+            )
         elif page_number_list is not None:
-            if re.search(r"^(?:\d+,)*\d+$", page_number_list): # Validate format better
+            if re.search(r"^(?:\d+,)*\d+$", page_number_list):  # Validate format better
                 pages = [int(page) for page in page_number_list.split(",")]
-                current_page = pages[-1] if pages else 1 # Use last page in list, default 1 if empty
-                logger.info(f"resolve_page_annotations - Using last page from page_number_list: {current_page}")
+                current_page = (
+                    pages[-1] if pages else 1
+                )  # Use last page in list, default 1 if empty
+                logger.info(
+                    f"resolve_page_annotations - Using last page from page_number_list: {current_page}"
+                )
             else:
                 # Handle invalid format - maybe raise error or log warning and default
-                logger.warning(f"Invalid format for page_number_list: {page_number_list}")
+                logger.warning(
+                    f"Invalid format for page_number_list: {page_number_list}"
+                )
                 # Keep default current_page = 1
         elif page_containing_annotation_with_id:
             try:
-                annotation_pk = int(from_global_id(page_containing_annotation_with_id)[1])
+                annotation_pk = int(
+                    from_global_id(page_containing_annotation_with_id)[1]
+                )
                 # Optimized fetch for just the page number
-                annotation_page_zero_indexed = Annotation.objects.filter(
-                    pk=annotation_pk
-                ).values_list('page', flat=True).first() # Use first() to avoid DoesNotExist
+                annotation_page_zero_indexed = (
+                    Annotation.objects.filter(pk=annotation_pk)
+                    .values_list("page", flat=True)
+                    .first()
+                )  # Use first() to avoid DoesNotExist
 
                 if annotation_page_zero_indexed is not None:
-                    current_page = annotation_page_zero_indexed + 1 # Convert 0-indexed DB value to 1-indexed page number
-                    logger.info(f"resolve_page_annotations - Found page {current_page} for annotation pk {annotation_pk}")
+                    current_page = (
+                        annotation_page_zero_indexed + 1
+                    )  # Convert 0-indexed DB value to 1-indexed page number
+                    logger.info(
+                        f"resolve_page_annotations - Found page {current_page} for annotation pk {annotation_pk}"
+                    )
                 else:
-                    logger.warning(f"resolve_page_annotations - Annotation pk {annotation_pk} not found for page lookup.")
+                    logger.warning(
+                        f"resolve_page_annotations - Annotation pk {annotation_pk} not found for page lookup."
+                    )
                     # Keep default current_page = 1
             except (ValueError, TypeError) as e:
-                 logger.error(f"Error parsing annotation ID {page_containing_annotation_with_id}: {e}")
-                 # Keep default current_page = 1
+                logger.error(
+                    f"Error parsing annotation ID {page_containing_annotation_with_id}: {e}"
+                )
+                # Keep default current_page = 1
 
         # Convert 1-indexed current page to 0-indexed for DB filtering
-        current_page_zero_indexed = max(0, current_page - 1) # Ensure it's not negative
+        current_page_zero_indexed = max(0, current_page - 1)  # Ensure it's not negative
 
         # --- Filter annotations for the specific page(s) ---
-        if page_number_list is not None and re.search(r"^(?:\d+,)*\d+$", page_number_list):
+        if page_number_list is not None and re.search(
+            r"^(?:\d+,)*\d+$", page_number_list
+        ):
             # Use validated page list from earlier
             pages_zero_indexed = [max(0, page - 1) for page in pages]
             page_annotations = all_pages_annotations.filter(
                 page__in=pages_zero_indexed
-            ) # Order already applied
+            )  # Order already applied
         else:
-            page_annotations = all_pages_annotations.filter(page=current_page_zero_indexed) # Order already applied
+            page_annotations = all_pages_annotations.filter(
+                page=current_page_zero_indexed
+            )  # Order already applied
 
-        logger.info(f"resolve_page_annotations - final page annotations count: {page_annotations.count()}") # Use .count() carefully if queryset is large
+        logger.info(
+            f"resolve_page_annotations - final page annotations count: {page_annotations.count()}"
+        )  # Use .count() carefully if queryset is large
 
         pdf_page_info = PdfPageInfoType(
             page_count=document.page_count,
-            current_page=current_page_zero_indexed, # Return 0-indexed as per original logic? Check consumer needs. Let's keep 0-indexed based on original.
+            current_page=current_page_zero_indexed,  # Return 0-indexed as per original logic
             has_next_page=current_page_zero_indexed < document.page_count - 1,
             has_previous_page=current_page_zero_indexed > 0,
             corpus_id=corpus_id,
@@ -557,8 +595,13 @@ class Query(graphene.ObjectType):
     def resolve_annotation(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         base_queryset = Annotation.objects.select_related(
-        'annotation_label', 'creator', 'document', 'corpus', 'analysis', 'analysis__analyzer' # 'embeddings'
-    )
+            "annotation_label",
+            "creator",
+            "document",
+            "corpus",
+            "analysis",
+            "analysis__analyzer",  # 'embeddings'
+        )
         if info.context.user.is_superuser:
             return base_queryset.get(id=django_pk)
         elif info.context.user.is_anonymous:
@@ -584,10 +627,13 @@ class Query(graphene.ObjectType):
             )
 
         queryset = queryset.select_related(
-            'relationship_label', 'corpus', 'document', 'creator', 'analyzer', 'analysis'
-        ).prefetch_related(
-            'source_annotations', 'target_annotations'
-        )
+            "relationship_label",
+            "corpus",
+            "document",
+            "creator",
+            "analyzer",
+            "analysis",
+        ).prefetch_related("source_annotations", "target_annotations")
         return queryset
 
     relationship = relay.Node.Field(RelationshipType)
@@ -595,9 +641,14 @@ class Query(graphene.ObjectType):
     def resolve_relationship(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         base_queryset = Relationship.objects.select_related(
-             'relationship_label', 'corpus', 'document', 'creator', 'analyzer', 'analysis'
-        ).prefetch_related( # Prefetch might be overkill for a single object, but harmless
-             'source_annotations', 'target_annotations'
+            "relationship_label",
+            "corpus",
+            "document",
+            "creator",
+            "analyzer",
+            "analysis",
+        ).prefetch_related(  # Prefetch might be overkill for a single object, but harmless
+            "source_annotations", "target_annotations"
         )
 
         if info.context.user.is_superuser:
@@ -691,9 +742,14 @@ class Query(graphene.ObjectType):
     def resolve_document(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         base_queryset = Document.objects.select_related(
-            'creator', 'user_lock'
+            "creator", "user_lock"
         ).prefetch_related(
-            'doc_annotations', 'rows', 'source_relationships', 'target_relationships', 'notes', 'embedding_set'
+            "doc_annotations",
+            "rows",
+            "source_relationships",
+            "target_relationships",
+            "notes",
+            "embedding_set",
         )
 
         if info.context.user.is_superuser:
@@ -1227,9 +1283,19 @@ class Query(graphene.ObjectType):
     def resolve_document_relationship(self, info, **kwargs):
         django_pk = from_global_id(kwargs.get("id", None))[1]
         base_queryset = DocumentRelationship.objects.select_related(
-             'source_document', 'target_document', 'relationship_label', 'creator', 'analyzer', 'analysis'
-        ).prefetch_related( # Prefetch might be overkill for a single object, but harmless
-             'relationship_label', 'corpus', 'document', 'creator', 'analyzer', 'analysis'
+            "source_document",
+            "target_document",
+            "relationship_label",
+            "creator",
+            "analyzer",
+            "analysis",
+        ).prefetch_related(  # Prefetch might be overkill for a single object, but harmless
+            "relationship_label",
+            "corpus",
+            "document",
+            "creator",
+            "analyzer",
+            "analysis",
         )
 
         if info.context.user.is_superuser:
@@ -1572,4 +1638,4 @@ class Query(graphene.ObjectType):
 
     # DEBUG FIELD ########################################
     if settings.ALLOW_GRAPHQL_DEBUG:
-        debug = graphene.Field(DjangoDebug, name='_debug')
+        debug = graphene.Field(DjangoDebug, name="_debug")

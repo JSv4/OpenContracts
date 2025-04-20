@@ -1,7 +1,7 @@
 from .cleanup_tasks import delete_analysis_and_annotations_task
+from .corpus_tasks import *  # noqa: F403, F401
 from .data_extract_tasks import *  # noqa: F403, F401
 from .doc_analysis_tasks import *  # noqa: F403, F401
-from .corpus_tasks import *  # noqa: F403, F401
 from .doc_tasks import burn_doc_annotations
 from .export_tasks import package_annotated_docs
 from .extract_orchestrator_tasks import run_extract

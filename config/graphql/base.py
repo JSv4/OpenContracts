@@ -70,9 +70,11 @@ class CountableConnection(graphene.relay.Connection):
         # If root.iterable is already sliced, this won't work directly.
         # The key is to call .count() on the *unpaginated* queryset.
         if isinstance(root.iterable, django.db.models.QuerySet):
-            return root.iterable.model.objects.filter(pk__in=[obj.pk for obj in root.iterable]).count() # Or ideally access the original QS
+            return root.iterable.model.objects.filter(
+                pk__in=[obj.pk for obj in root.iterable]
+            ).count()  # Or ideally access the original QS
         else:
-            return len(root.iterable) # Fallback for non-queryset iterables
+            return len(root.iterable)  # Fallback for non-queryset iterables
 
 
 class DRFDeletion(graphene.Mutation):

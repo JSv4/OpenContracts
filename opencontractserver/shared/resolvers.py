@@ -34,8 +34,8 @@ def resolve_oc_model_queryset(
                 "User must be an instance of AnonymousUser, User, or an integer or string id"
             )
     except User.DoesNotExist:
-         logger.error(f"User with id {user} not found.")
-         user = None # Treat as anonymous or raise error? Defaulting to anonymous-like behavior.
+        logger.error(f"User with id {user} not found.")
+        user = None  # Treat as anonymous or raise error? Defaulting to anonymous-like behavior.
     except Exception as e:
         logger.error(
             f"Error resolving user for queryset of model {django_obj_model_type}: {e}"
@@ -46,7 +46,7 @@ def resolve_oc_model_queryset(
     app_label = django_obj_model_type._meta.app_label
 
     # Get the base queryset first (only stuff given user CAN see)
-    queryset = django_obj_model_type.objects.none() # Start with an empty queryset
+    queryset = django_obj_model_type.objects.none()  # Start with an empty queryset
     if user:
         if user.is_superuser:
             # Apply distinct later if needed after optimizations
@@ -68,35 +68,35 @@ def resolve_oc_model_queryset(
                     | Q(**{f"{permission_model_name}__in": must_have_permissions})
                 )
             except LookupError:
-                 logger.warning(f"Permission model {app_label}.{permission_model_name} not found. Falling back to creator/public check.")
-                 # Fallback if permission model doesn't exist (might happen for simpler models)
-                 queryset = django_obj_model_type.objects.filter(
-                     Q(creator=user) | Q(is_public=True)
-                 )
+                logger.warning(
+                    f"Permission model {app_label}.{permission_model_name}"
+                    " not found. Falling back to creator/public check."
+                )
+                # Fallback if permission model doesn't exist (might happen for simpler models)
+                queryset = django_obj_model_type.objects.filter(
+                    Q(creator=user) | Q(is_public=True)
+                )
 
     # --- Apply Performance Optimizations Based on Model Type ---
     if django_obj_model_type == Corpus:
         logger.debug("Applying Corpus specific optimizations")
         queryset = queryset.select_related(
-            'creator',
-            'label_set',
-            'user_lock' # If user_lock info is displayed
+            "creator", "label_set", "user_lock"  # If user_lock info is displayed
         ).prefetch_related(
-            'documents' # Very important if showing document counts or list previews
+            "documents"  # Very important if showing document counts or list previews
             # Add other prefetches if CorpusType uses them:
             # 'annotations', 'relationships', 'queries', 'actions', 'notes'
         )
     elif django_obj_model_type == Document:
         logger.debug("Applying Document specific optimizations")
         queryset = queryset.select_related(
-            'creator',
-            'user_lock' # If needed
+            "creator", "user_lock"  # If needed
         ).prefetch_related(
-            'doc_annotations',
-            'rows',
-            'source_relationships',
-            'target_relationships',
-            'notes',
+            "doc_annotations",
+            "rows",
+            "source_relationships",
+            "target_relationships",
+            "notes",
         )
     # Add elif blocks here for other models needing specific optimizations
 
@@ -124,21 +124,32 @@ def resolve_single_oc_model_from_id(
         django_pk = from_global_id(graphql_id)[1]
     except Exception as e:
         logger.error(f"Could not decode global ID {graphql_id}: {e}")
-        return None # Or raise GraphQL error
+        return None  # Or raise GraphQL error
 
     # --- Apply Performance Optimizations EARLY ---
-    base_queryset = model_type.objects.all() # Start with all for optimization
+    base_queryset = model_type.objects.all()  # Start with all for optimization
     if model_type == Corpus:
-        logger.debug(f"Applying Corpus specific optimizations for single object fetch pk={django_pk}")
+        logger.debug(
+            f"Applying Corpus specific optimizations for single object fetch pk={django_pk}"
+        )
         base_queryset = base_queryset.select_related(
-            'creator', 'label_set', 'user_lock'
-        ).prefetch_related('documents') # Prefetch less critical for single object but can be included
-    elif model_type == Document:
-        logger.debug(f"Applying Document specific optimizations for single object fetch pk={django_pk}")
-        base_queryset = base_queryset.select_related(
-            'creator', 'user_lock'
+            "creator", "label_set", "user_lock"
         ).prefetch_related(
-            'doc_annotations', 'rows', 'source_relationships', 'target_relationships', 'notes', 'embedding_set'
+            "documents"
+        )  # Prefetch less critical for single object but can be included
+    elif model_type == Document:
+        logger.debug(
+            f"Applying Document specific optimizations for single object fetch pk={django_pk}"
+        )
+        base_queryset = base_queryset.select_related(
+            "creator", "user_lock"
+        ).prefetch_related(
+            "doc_annotations",
+            "rows",
+            "source_relationships",
+            "target_relationships",
+            "notes",
+            "embedding_set",
         )
     # Add elif for other models
 
@@ -149,7 +160,9 @@ def resolve_single_oc_model_from_id(
     obj = None
     if user:
         if user.is_superuser:
-            obj = queryset.first() # Use first() instead of get() to handle potential empty result
+            obj = (
+                queryset.first()
+            )  # Use first() instead of get() to handle potential empty result
         elif user.is_anonymous:
             obj = queryset.filter(is_public=True).first()
         else:
@@ -160,18 +173,27 @@ def resolve_single_oc_model_from_id(
                     permission__codename=f"read_{model_name}", user_id=user.id
                 )
                 # Filter the already optimized queryset
-                obj = queryset.filter(
-                    Q(creator=user)
-                    | Q(is_public=True)
-                    | Q(**{f"{permission_model_name}__in": must_have_permissions})
-                ).distinct().first() # Distinct needed here due to permission join potentially
+                obj = (
+                    queryset.filter(
+                        Q(creator=user)
+                        | Q(is_public=True)
+                        | Q(**{f"{permission_model_name}__in": must_have_permissions})
+                    )
+                    .distinct()
+                    .first()
+                )  # Distinct needed here due to permission join potentially
             except LookupError:
-                 logger.warning(f"Permission model {app_label}.{permission_model_name} not found. Falling back to creator/public check for single object.")
-                 obj = queryset.filter(Q(creator=user) | Q(is_public=True)).first()
+                logger.warning(
+                    f"Permission model {app_label}.{permission_model_name} not found."
+                    " Falling back to creator/public check for single object."
+                )
+                obj = queryset.filter(Q(creator=user) | Q(is_public=True)).first()
 
     if obj is None:
-         logger.warning(f"Object {model_type.__name__} with pk {django_pk} not found or user {user} lacks permission.")
-         # Optionally raise an error or return None based on desired GraphQL behavior
-         # raise PermissionDenied(f"Access denied or object not found for {model_type.__name__} ID: {graphql_id}")
+        logger.warning(
+            f"Object {model_type.__name__} with pk {django_pk} not found or user {user} lacks permission."
+        )
+        # Optionally raise an error or return None based on desired GraphQL behavior
+        # raise PermissionDenied(f"Access denied or object not found for {model_type.__name__} ID: {graphql_id}")
 
     return obj

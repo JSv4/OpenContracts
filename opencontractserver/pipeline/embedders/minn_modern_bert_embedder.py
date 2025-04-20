@@ -9,6 +9,7 @@ from opencontractserver.pipeline.base.file_types import FileTypeEnum
 
 logger = logging.getLogger(__name__)
 
+
 class CloudMinnModernBERTEmbedder(BaseEmbedder):
     """
     Embedder that uses the Minnesota Case Law ModernBERT model to generate embeddings
@@ -19,7 +20,12 @@ class CloudMinnModernBERTEmbedder(BaseEmbedder):
     """
 
     title = "Cloud Minnesota Case Law ModernBERT Embedder"
-    description = "Generates embeddings by calling the Minnesota Case Law ModernBERT model through a HF Inference Endpoint."
+    description = (
+        "Generates embeddings by calling the Minnesota Case Law ModernBERT model "
+        "through a HF Inference Endpoint. This embedder does not load a local model. "
+        "Instead, it sends the input text to a provided endpoint for inference, "
+        "returning 768-dimensional embeddings."
+    )
     author = "OpenContracts"
     dependencies = ["requests>=2.28.0"]  # Additional dependency for HTTP requests
     vector_size = 768  # Output dimensionality of the model
@@ -42,7 +48,7 @@ class CloudMinnModernBERTEmbedder(BaseEmbedder):
         self.requests = requests
         self.api_url = settings.HF_EMBEDDINGS_ENDPOINT
         hf_token = settings.HF_TOKEN  # Use the token from settings
-        
+
         self.headers = {
             "Accept": "application/json",
             "Authorization": f"Bearer {hf_token}",
@@ -79,16 +85,18 @@ class CloudMinnModernBERTEmbedder(BaseEmbedder):
                 "inputs": text,
                 # The HF Inference API often allows "parameters" for custom settings,
                 # we include kwargs inside "parameters" as a best-effort approach:
-                "parameters": kwargs
+                "parameters": kwargs,
             }
 
-            response = self.requests.post(self.api_url, headers=self.headers, json=payload)
+            response = self.requests.post(
+                self.api_url, headers=self.headers, json=payload
+            )
             if response.status_code != 200:
                 logger.error(f"Error from HF endpoint: {response.text}")
                 return None
 
             data = response.json()
-            
+
             # Expecting the endpoint to return a dictionary with the embedding.
             # Adjust accordingly if the actual HF endpoint returns differently.
             embedding = data.get("embeddings")
@@ -101,6 +109,7 @@ class CloudMinnModernBERTEmbedder(BaseEmbedder):
         except Exception as e:
             logger.error(f"Error generating embeddings via HF endpoint: {e}")
             return None
+
 
 class MinnModernBERTEmbedder(BaseEmbedder):
     """

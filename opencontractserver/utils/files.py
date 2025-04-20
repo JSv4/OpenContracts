@@ -24,6 +24,13 @@ from PyPDF2.generic import (
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+# Define printable characters more explicitly using their byte values
+PRINTABLE_BYTES = set(
+    bytes(
+        string.ascii_letters + string.digits + string.punctuation + " \t\n\r", "ascii"
+    )
+)
+
 
 def base_64_encode_bytes(doc_bytes: bytes):
     """
@@ -257,10 +264,18 @@ def is_plaintext_content(
     if isinstance(content, str):
         if not os.path.exists(content):
             raise FileNotFoundError(f"File not found: {content}")
-        with open(content, "rb") as f:
-            sample = f.read(sample_size)
-    else:
+        try:
+            with open(content, "rb") as f:
+                sample = f.read(sample_size)
+        except OSError as e:
+            # Handle potential errors during file read more gracefully
+            print(f"Error reading file {content}: {e}")
+            return False
+    elif isinstance(content, bytes):
         sample = content[:sample_size]
+    else:
+        # Handle unexpected content types
+        return False
 
     if not sample:
         return False  # Empty content is not considered plaintext

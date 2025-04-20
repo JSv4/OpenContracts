@@ -35,6 +35,9 @@ USE_AWS = env.bool("USE_AWS", False)
 USE_ANALYZER = env.bool("USE_ANALYZER", False)
 CALLBACK_ROOT_URL_FOR_ANALYZER = env.str("CALLBACK_ROOT_URL_FOR_ANALYZER", None)
 
+# Allow Graphene Django Debug Toolbar middleware
+ALLOW_GRAPHQL_DEBUG = env.bool("ALLOW_GRAPHQL_DEBUG", default=True)
+
 # Set max file upload size to 5 GB for large corpuses
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880000
 # Local time zone. Choices are
@@ -481,6 +484,10 @@ if USE_API_KEY_AUTH:
     GRAPHENE_MIDDLEWARE.append(
         "config.graphql_api_token_auth.middleware.ApiKeyTokenMiddleware"
     )
+
+# Add Django Debug Middleware if enabled
+if ALLOW_GRAPHQL_DEBUG:
+    GRAPHENE_MIDDLEWARE.append("graphene_django.debug.DjangoDebugMiddleware")
 
 # Configure Graphene with the constructed middleware list
 GRAPHENE = {

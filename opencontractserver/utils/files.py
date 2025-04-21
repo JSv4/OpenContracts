@@ -287,7 +287,7 @@ def is_plaintext_content(
     sample_len = len(sample)
     if sample_len == 0:
         return False  # Treat genuinely empty sample as not plaintext
-    
+
     printable_ratio = printable_count / sample_len
 
     return printable_ratio >= threshold

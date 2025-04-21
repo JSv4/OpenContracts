@@ -230,15 +230,15 @@ class TestDjangoAnnotationVectorStore(TestCase):
         query = VectorStoreQuery(query_embedding=query_vec, similarity_top_k=3)
         result = self.run_sync_query(query)
         # Because the dimension is 384, we only expect anno1,2,3 to appear. Anno4 has no embedding.
-        returned_ids = {n.id_ for n in result.nodes}
+        returned_ids = {n.metadata["annotation_id"] for n in result.nodes}
         self.assertNotIn(
-            str(self.anno4.id),
+            self.anno4.id,
             returned_ids,
             "anno4 has no embedding, shouldn't appear.",
         )
-        self.assertIn(str(self.anno1.id), returned_ids)
-        self.assertIn(str(self.anno2.id), returned_ids)
-        self.assertIn(str(self.anno3.id), returned_ids)
+        self.assertIn(self.anno1.id, returned_ids)
+        self.assertIn(self.anno2.id, returned_ids)
+        self.assertIn(self.anno3.id, returned_ids)
 
     @patch("opencontractserver.utils.embeddings.generate_embeddings_from_text")
     def test_query_by_vector_similarity_generated_from_query_str(self, mock_gen_embeds):
@@ -272,12 +272,12 @@ class TestDjangoAnnotationVectorStore(TestCase):
         result = store.query(query)
 
         # 4) Assert you get the annotations you expect
-        returned_ids = {n.id_ for n in result.nodes}
+        returned_ids = {n.metadata["annotation_id"] for n in result.nodes}
 
         # Verify the expected annotations are returned
-        self.assertIn(str(self.anno1.id), returned_ids)
-        self.assertIn(str(self.anno2.id), returned_ids)
-        self.assertIn(str(self.anno3.id), returned_ids)
+        self.assertIn(self.anno1.id, returned_ids)
+        self.assertIn(self.anno2.id, returned_ids)
+        self.assertIn(self.anno3.id, returned_ids)
         self.assertNotIn(
             str(self.anno4.id), returned_ids, "Should exclude anno4 with no embedding."
         )
@@ -399,18 +399,18 @@ class TestDjangoAnnotationVectorStore(TestCase):
         query = VectorStoreQuery(query_embedding=query_vec, similarity_top_k=10)
         result = store.query(query)
 
-        returned_ids = {node.id_ for node in result.nodes}
+        returned_ids = {node.metadata["annotation_id"] for node in result.nodes}
 
         # Annotation in self.corpus should appear
         self.assertIn(
-            str(new_annotation_in_corpus.id),
+            new_annotation_in_corpus.id,
             returned_ids,
             "Expected in-corpus annotation to be retrieved.",
         )
 
         # Annotation in other_corpus should not appear
         self.assertNotIn(
-            str(annotation_other_corpus.id),
+            annotation_other_corpus.id,
             returned_ids,
             "Annotation from a different corpus must be excluded.",
         )

@@ -1,9 +1,12 @@
 import base64
 import json
 import logging
+import pathlib
 import zipfile
 from typing import Optional
 
+import filetype
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile, File
 
@@ -21,6 +24,7 @@ from opencontractserver.types.dicts import (
     OpenContractsExportDataJsonPythonType,
 )
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.files import is_plaintext_content
 from opencontractserver.utils.importing import import_annotations, load_or_create_labels
 from opencontractserver.utils.packaging import (
     unpack_corpus_from_export,
@@ -351,3 +355,225 @@ def import_document_to_corpus(
     except Exception as e:
         logger.error(f"Exception encountered in document import: {e}")
         return None
+
+
+@celery_app.task()
+def process_documents_zip(
+    temporary_file_handle_id: str | int,
+    user_id: int,
+    job_id: str,
+    title_prefix: Optional[str] = None,
+    description: Optional[str] = None,
+    custom_meta: Optional[dict] = None,
+    make_public: bool = False,
+    corpus_id: Optional[int] = None,
+) -> dict:
+    """
+    Process a zip file containing documents, extract each file, and create Document objects
+    for files with allowed MIME types.
+
+    Args:
+        temporary_file_handle_id: ID of the temporary file containing the zip
+        user_id: ID of the user who uploaded the zip
+        job_id: Unique ID for the job
+        title_prefix: Optional prefix for document titles
+        description: Optional description to apply to all documents
+        custom_meta: Optional metadata to apply to all documents
+        make_public: Whether the documents should be public
+        corpus_id: Optional ID of corpus to link documents to
+
+    Returns:
+        Dictionary with summary of processing results
+    """
+    results = {
+        "job_id": job_id,
+        "success": False,
+        "completed": False,  # Will be set to True on successful completion
+        "total_files": 0,
+        "processed_files": 0,
+        "skipped_files": 0,
+        "error_files": 0,
+        "document_ids": [],
+        "errors": [],
+    }
+
+    try:
+        logger.info(f"process_documents_zip() - Processing started for job: {job_id}")
+
+        # Get the temporary file and user objects
+        temporary_file_handle = TemporaryFileHandle.objects.get(
+            id=temporary_file_handle_id
+        )
+        user_obj = User.objects.get(id=user_id)
+
+        # Check for corpus if needed
+        corpus_obj = None
+        if corpus_id:
+            corpus_obj = Corpus.objects.get(id=corpus_id)
+
+        # Calculate user doc limit if capped
+        if user_obj.is_usage_capped:
+            current_doc_count = user_obj.document_set.count()
+            remaining_quota = (
+                settings.USAGE_CAPPED_USER_DOC_CAP_COUNT - current_doc_count
+            )
+            if remaining_quota <= 0:
+                results["success"] = False
+                results["completed"] = True  # Task completed but failed
+                results["errors"].append(
+                    f"User has reached maximum document limit of {settings.USAGE_CAPPED_USER_DOC_CAP_COUNT}"
+                )
+                return results
+
+        # Process the zip file
+        with temporary_file_handle.file.open("rb") as import_file, zipfile.ZipFile(
+            import_file, mode="r"
+        ) as import_zip:
+            logger.info(f"process_documents_zip() - Opened zip file for job: {job_id}")
+
+            # Get list of files in the zip
+            files = import_zip.namelist()
+            logger.info(f"process_documents_zip() - Found {len(files)} files in zip")
+            results["total_files"] = len(files)
+
+            # Process each file in the zip
+            for filename in files:
+                # Skip directories and hidden files
+                if (
+                    filename.endswith("/")
+                    or filename.startswith(".")
+                    or "/__MACOSX/" in filename
+                ):
+                    results["skipped_files"] += 1
+                    continue
+
+                try:
+                    # Check if we've hit the user cap
+                    if user_obj.is_usage_capped:
+                        current_doc_count = user_obj.document_set.count()
+                        if (
+                            current_doc_count
+                            >= settings.USAGE_CAPPED_USER_DOC_CAP_COUNT
+                        ):
+                            results["errors"].append(
+                                "User document limit reached during processing"
+                            )
+                            break
+
+                    # Extract the file from the zip
+                    with import_zip.open(filename) as file_handle:
+                        file_bytes = file_handle.read()
+
+                        # Check file type
+                        kind = filetype.guess(file_bytes)
+                        if kind is None:
+                            # Try to detect plaintext using the improved utility
+                            if is_plaintext_content(file_bytes):
+                                kind = "text/plain"
+                            else:  # Truly unknown/binary
+                                logger.info(
+                                    f"process_documents_zip() - Skipping file with unknown type: {filename}"
+                                )
+                                results["skipped_files"] += 1
+                                continue
+                        else:
+                            kind = kind.mime
+
+                        # Skip files with unsupported types
+                        if kind not in settings.ALLOWED_DOCUMENT_MIMETYPES:
+                            results["skipped_files"] += 1
+                            continue
+
+                        # Prepare document attributes
+                        # Use only the filename part, discarding the path within the zip
+                        base_filename = pathlib.Path(filename).name
+                        doc_title = base_filename
+                        if title_prefix:
+                            doc_title = f"{title_prefix} - {base_filename}"
+
+                        doc_description = (
+                            description
+                            or f"Uploaded as part of batch upload (job: {job_id})"
+                        )
+
+                        # Create the document based on file type
+                        document = None
+
+                        if kind in [
+                            "application/pdf",
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        ]:
+                            pdf_file = ContentFile(file_bytes, name=filename)
+                            document = Document(
+                                creator=user_obj,
+                                title=doc_title,
+                                description=doc_description,
+                                custom_meta=custom_meta,
+                                pdf_file=pdf_file,
+                                backend_lock=True,
+                                is_public=make_public,
+                                file_type=kind,
+                            )
+                            document.save()
+                        elif kind in ["text/plain", "application/txt"]:
+                            txt_extract_file = ContentFile(file_bytes, name=filename)
+                            document = Document(
+                                creator=user_obj,
+                                title=doc_title,
+                                description=doc_description,
+                                custom_meta=custom_meta,
+                                txt_extract_file=txt_extract_file,
+                                backend_lock=True,
+                                is_public=make_public,
+                                file_type=kind,
+                            )
+                            document.save()
+
+                        if document:
+                            # Set permissions for the document
+                            set_permissions_for_obj_to_user(
+                                user_obj, document, [PermissionTypes.CRUD]
+                            )
+
+                            # Add to corpus if needed
+                            if corpus_obj:
+                                corpus_obj.documents.add(document)
+
+                            # Update results
+                            results["processed_files"] += 1
+                            results["document_ids"].append(str(document.id))
+                            logger.info(
+                                f"process_documents_zip() - Created document: {document.id} for file: {filename}"
+                            )
+
+                except Exception as e:
+                    logger.error(
+                        f"process_documents_zip() - Error processing file {filename}: {str(e)}"
+                    )
+                    results["error_files"] += 1
+                    results["errors"].append(f"Error processing {filename}: {str(e)}")
+
+        # Check if processing was stopped early due to user cap
+        user_cap_reached_mid_processing = any(
+            "User document limit reached during processing" in error
+            for error in results["errors"]
+        )
+
+        # Clean up the temporary file
+        temporary_file_handle.delete()
+
+        results["success"] = not user_cap_reached_mid_processing
+        results["completed"] = True  # Task completed, success depends on errors/cap
+        logger.info(
+            f"process_documents_zip() - Completed job: {job_id}, processed: {results['processed_files']}"
+        )
+
+    except Exception as e:
+        logger.error(f"process_documents_zip() - Job failed with error: {str(e)}")
+        results["success"] = False
+        results["completed"] = True  # Task completed but failed
+        results["errors"].append(f"Job failed: {str(e)}")
+
+    return results

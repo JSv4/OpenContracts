@@ -16,9 +16,32 @@ interface CorpusOption {
   value: string;
 }
 
-export const CorpusDropdown: React.FC = () => {
+/**
+ * Props for the CorpusDropdown component.
+ */
+interface CorpusDropdownProps {
+  /** Optional controlled value (corpus ID). */
+  value?: string | null;
+  /** Optional callback when the selection changes. If provided, the global state is not updated. */
+  onChange?: (corpus: CorpusType | null) => void;
+  /** Optional flag to allow clearing the selection. Defaults to true. */
+  clearable?: boolean;
+  /** Optional placeholder text. */
+  placeholder?: string;
+  /** Optional flag for fluid width. Defaults to true. */
+  fluid?: boolean;
+}
+
+export const CorpusDropdown: React.FC<CorpusDropdownProps> = ({
+  value,
+  onChange,
+  clearable = true,
+  placeholder = "Select Corpus",
+  fluid = true,
+}) => {
   const [searchQuery, setSearchQuery] = useState<string>();
-  const selected_corpus = useReactiveVar(selectedCorpus);
+  // Use global selectedCorpus only if the component is not controlled
+  const global_selected_corpus = useReactiveVar(selectedCorpus);
 
   const { loading, error, data, refetch } = useQuery<
     GetCorpusesOutputs,
@@ -29,21 +52,25 @@ export const CorpusDropdown: React.FC = () => {
           textSearch: searchQuery,
         }
       : {},
+    fetchPolicy: "cache-and-network", // Ensure fresh data but use cache initially
   });
 
-  // If the searchQuery changes... refetch corpuses.
+  // Refetch when search query changes
   useEffect(() => {
+    // Debounce refetching on search query change if needed, but direct refetch is often fine here
     refetch({ textSearch: searchQuery });
-  }, [searchQuery]);
+  }, [searchQuery, refetch]);
 
   const corpuses = data?.corpuses.edges
-    ? data.corpuses.edges.map((edge) => edge.node)
+    ? data.corpuses.edges
+        .map((edge) => edge.node)
+        .filter((c): c is CorpusType => !!c) // Ensure nodes are not null/undefined and type guard
     : [];
 
   const debouncedSetSearchQuery = useCallback(
     _.debounce((query: string) => {
       setSearchQuery(query);
-    }, 500),
+    }, 300), // Slightly shorter debounce
     []
   );
 
@@ -58,47 +85,49 @@ export const CorpusDropdown: React.FC = () => {
     event: SyntheticEvent<HTMLElement, Event>,
     data: DropdownProps
   ) => {
-    const selected = _.find(corpuses, { id: data.value });
-    if (selected) {
-      selectedCorpus(selected as CorpusType);
+    const selected = _.find(corpuses, { id: data.value as string });
+    const resultCorpus = selected ? (selected as CorpusType) : null;
+
+    // If onChange prop is provided, use it (controlled component behavior)
+    if (onChange) {
+      onChange(resultCorpus);
     } else {
-      selectedCorpus(null);
+      // Otherwise, update the global reactive variable (uncontrolled behavior)
+      selectedCorpus(resultCorpus);
     }
   };
 
   const getDropdownOptions = (): CorpusOption[] => {
-    if (data && data.corpuses.edges) {
-      return data.corpuses.edges
-        .filter(({ node }) => node !== undefined)
-        .map(({ node }) => ({
-          key: node ? node.id : "",
-          text: node?.title ? node.title : "",
-          value: node ? node.id : "",
-        }));
-    }
-    return [];
+    return corpuses.map((node) => ({
+      key: node.id,
+      text: node.title ?? "Untitled Corpus", // Provide fallback for potentially null/undefined title
+      value: node.id,
+    }));
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  // Determine the value to display: controlled value first, then global state
+  const displayValue =
+    value !== undefined ? value : global_selected_corpus?.id ?? undefined;
 
   if (error) {
-    return <div>Error: {error.message}</div>;
+    // Consider a more user-friendly error display, maybe a disabled dropdown with an error message
+    console.error("Error loading corpuses:", error);
+    return <Dropdown placeholder="Error loading corpuses" disabled error />;
   }
 
   return (
     <Dropdown
-      fluid
+      fluid={fluid}
       selection
       search
-      clearable
+      clearable={clearable}
       options={getDropdownOptions()}
-      value={selected_corpus ? selected_corpus.id : undefined}
-      placeholder="Select Corpus"
+      value={displayValue === null ? undefined : displayValue}
+      placeholder={placeholder}
       onChange={handleSelectionChange}
       onSearchChange={handleSearchChange}
       loading={loading}
+      selectOnNavigation={false} // Prevents closing dropdown on search result navigation
     />
   );
 };

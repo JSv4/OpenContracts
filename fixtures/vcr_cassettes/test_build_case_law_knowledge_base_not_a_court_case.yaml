@@ -1,0 +1,106 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are an expert legal researcher.
+      Determine if the provided document is a court case. Respond ONLY with ''YES''
+      or ''NO''."},{"role":"user","content":"Document Text:\nThis is not court text."}],"model":"gpt-4o-mini","stream":false,"temperature":0.1}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '288'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.65.4
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.65.4
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJNa9wwEIbv/hVizuuyH2422WMLDTQ0hfYQQliMLI1ttbJGSOPQJux/
+        D7I3a+ej0IsOeuYdve9oHjMhwGjYCVCtZNV5m3+6fHBffn69wnh/9XnFt5dVcW3Dw1m8+dF+g0VS
+        UPULFT+rPijqvEU25EasAkrG1HW1LTabi2VxvhpARxptkjWe84LyzjiTr5frIl9u89X5Ud2SURhh
+        J+4yIYR4HM7k02n8AzuxXDzfdBijbBB2pyIhIJBNNyBjNJGlY1hMUJFjdIP16+9zELDuo0zmXG/t
+        DEjniGUKN1jaH8nhZMJS4wNV8ZUUauNMbMuAMpJLD0YmDwM9ZELsh7D9C//gA3WeS6bfODxXbMd2
+        MI14gusjY2JpZ5qLxTvNSo0sjY2zWYGSqkU9KafByl4bmoFsFvmtl/d6j7GNa/6n/QSUQs+oSx9Q
+        G/Uy71QWMO3fv8pOIx4MQ8RwbxSWbDCkb9BYy96OWwHxb2Tsytq4BoMPZlyN2pfVZnum66rSHyE7
+        ZE8AAAD//wMAXDk5xygDAAA=
+    headers:
+      CF-RAY:
+      - 928ca3cc8d14e716-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 03:08:01 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=u16YFNuugRC6IwJWvqE4MhJcU4Oe5xt6q4jT245z7vA-1743390481-1.0.1.1-kwzMd_BSiF9Ize4iB8O97UF5O6fUjw.afGj1f.w2RS8H3D_zBfuADvfrYeSOLjd8mh6Fv8E7pATe8KDzXKDYY3Shc6tXbQfUEwOA_Vp_M.Y;
+        path=/; expires=Mon, 31-Mar-25 03:38:01 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=QQNyF9gjwvbfubmBJ8AJ7C9DB2cxDpxSjzT01IaSsLI-1743390481707-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '266'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999956'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_7562a8eb6a4c4a53f3f730d1fccd67ae
+    status:
+      code: 200
+      message: OK
+version: 1

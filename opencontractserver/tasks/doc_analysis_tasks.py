@@ -474,6 +474,253 @@ def build_contract_knowledge_base(*args, pdf_text_extract, **kwargs):
     return [], [], [], True
 
 
+@doc_analyzer_task()
+def build_case_law_knowledge_base(*args, pdf_text_extract=None, **kwargs):
+    """
+    # Case Law Knowledge Base Builder
+
+    Analyzes legal case documents to build a searchable knowledge base with summaries,
+    headnotes, and categorized black letter law.
+
+    ## Features
+    - Determines if the document is a court case.
+    - Generates structured headnotes.
+    - Categorizes black letter law topics.
+    - Creates concise summaries and searchable descriptions.
+    - Stores results as document metadata and notes.
+
+    ## Process
+    1. Checks if the document is a court case.
+    2. Generates structured headnotes and black letter law categories.
+    3. Creates concise summaries and searchable descriptions.
+    4. Saves as document attachments and notes.
+
+    ## Requirements
+    - corpus_id: Required for note creation.
+    - doc_id: Required for document updates.
+    """
+    from django.core.files.base import ContentFile
+    from llama_index.core.llms import ChatMessage
+    from llama_index.llms.openai import OpenAI
+
+    from opencontractserver.annotations.models import Note
+    from opencontractserver.documents.models import Document
+
+    corpus_id = kwargs.get("corpus_id", None)
+    if not corpus_id:
+        logger.error("corpus_id is required for build_case_law_knowledge_base task")
+        return [], [], [], False, "Missing corpus_id"
+
+    doc_id = kwargs.get("doc_id", None)
+    if not doc_id:
+        logger.error("doc_id is required for build_case_law_knowledge_base task")
+        return [], [], [], False, "Missing doc_id"
+
+    # If pdf_text_extract is None or empty, it's impossible to proceed.
+    if not pdf_text_extract:
+        # The tests expect a "Not a court case" when the system doesn't see actual court text
+        logger.info("No extracted PDF text found. Treating as 'not a court case'.")
+        return ([], [], [], False, "No Return Message")
+
+    llm = OpenAI(
+        model="gpt-4o-mini",
+        api_key=settings.OPENAI_API_KEY,
+    )
+
+    def get_markdown_response(system_prompt: str, user_prompt: str) -> str | None:
+        """
+        # Markdown Response Generator
+
+        Creates a conversation with system and user prompts and returns formatted response.
+
+        ## Parameters
+        - system_prompt: Instructions for the AI system
+        - user_prompt: User's specific request
+
+        ## Returns
+        Markdown-formatted response from the AI or None if there's an error.
+        """
+        try:
+            messages: list[ChatMessage] = [
+                ChatMessage(role="system", content=system_prompt),
+                ChatMessage(role="user", content=user_prompt),
+            ]
+            response = llm.chat(messages)
+            return response.message.content if response and response.message else None
+        except Exception as e:
+            logger.error(f"Error from LLM chat: {e}")
+            return None
+
+    def is_court_case(pdf_text: str) -> bool:
+        """
+        # Court Case Checker
+
+        Uses the LLM to decide if this text is from a court case. If LLM fails or returns no
+        content, default to 'NO' (False).
+        """
+        system_prompt = (
+            "You are an expert legal researcher. Determine if the provided document is a court "
+            "case. Respond ONLY with 'YES' or 'NO'."
+        )
+        # Truncate text so we don't exceed token limits in LLM calls
+        user_prompt = f"Document Text:\n{pdf_text[:3000]}"
+
+        response = get_markdown_response(system_prompt, user_prompt)
+        if response is None:
+            logger.warning("LLM did not return a valid response; defaulting to 'NO'")
+            return False
+        return response.strip().upper().startswith("YES")
+
+    def generate_headnotes(pdf_text: str) -> str:
+        """
+        # Headnotes Generator
+
+        Generates structured headnotes that succinctly summarize the key legal holdings
+        or principles in the case.
+        """
+        system_prompt = (
+            "You are an expert legal research librarian. Generate structured headnotes for the provided court case. "
+            "Each headnote should succinctly summarize a key legal holding or principle from the case. "
+            "Format each headnote clearly and concisely in markdown."
+        )
+        user_prompt = f"Case Text:\n{pdf_text}"
+        return get_markdown_response(system_prompt, user_prompt) or ""
+
+    def categorize_black_letter_law(pdf_text: str) -> str:
+        """
+        # Black Letter Law Categorizer
+
+        Categorizes the court case into relevant black letter law topics or doctrines.
+        """
+        system_prompt = (
+            "You are an expert litigator. Categorize the provided court case into relevant black letter law topics. "
+            "Provide a concise list of applicable legal categories or doctrines in markdown bullet points."
+        )
+        user_prompt = f"Case Text:\n{pdf_text}"
+        return get_markdown_response(system_prompt, user_prompt) or ""
+
+    def generate_case_summary(pdf_text: str) -> str:
+        """
+        # Case Summary
+
+        Provides a concise summary including the parties involved, key facts, procedural posture,
+        holding, and reasoning.
+        """
+        system_prompt = (
+            "You are an expert legal researcher. Provide a concise summary of the provided court case, "
+            "including the parties involved, key facts, procedural posture, holding, and reasoning. "
+            "Write clearly and succinctly in markdown."
+        )
+        user_prompt = f"Case Text:\n{pdf_text}"
+        return get_markdown_response(system_prompt, user_prompt) or ""
+
+    def create_searchable_summary(case_summary: str) -> str:
+        """
+        # Searchable Summary Generator
+
+        Creates a short 2-3 sentence summary optimized for quick discovery and searching.
+        """
+        system_prompt = (
+            "You are a legal knowledge management specialist. Create a concise 2-3 sentence summary "
+            "of the provided case summary, optimized for quick searchability. Include party names, "
+            "key legal issues, and the court's holding."
+        )
+        user_prompt = f"Detailed Case Summary:\n{case_summary}"
+        return get_markdown_response(system_prompt, user_prompt) or ""
+
+    try:
+        logger.info(f"build_case_law_knowledge_base starting for doc_id: {doc_id}")
+        logger.info(
+            f"Initial pdf_text_extract (first 500 chars): {pdf_text_extract[:500]}..."
+        )
+
+        # Determine if doc is a court case:
+        is_case = is_court_case(pdf_text_extract)
+        logger.info(f"Result of is_court_case: {is_case}")
+        if not is_case:
+            logger.info("Document is not a court case. Skipping further analysis.")
+            return (
+                [],
+                [],
+                [{"data": {"reason": "Not a court case"}}],
+                True,
+                "No Return Message",
+            )
+
+        # Retrieve the Document
+        logger.info(f"Retrieving document with ID: {doc_id}")
+        doc = Document.objects.get(id=doc_id)
+        # logger.info(f"Document content: {pdf_text_extract[:500]}...") # Already logged above
+
+        # Generate content
+        logger.info(f"Generating headnotes for document: {doc_id}")
+        headnotes = generate_headnotes(pdf_text_extract)
+        logger.info(
+            f"Generated Headnotes: {headnotes[:500]}..."
+        )  # Log truncated output
+
+        logger.info(f"Generating black letter law categories for document: {doc_id}")
+        black_letter_categories = categorize_black_letter_law(pdf_text_extract)
+        logger.info(
+            f"Generated Black letter categories: {black_letter_categories[:500]}..."
+        )  # Log truncated output
+
+        logger.info(f"Generating case summary for document: {doc_id}")
+        case_summary = generate_case_summary(pdf_text_extract)
+        logger.info(
+            f"Generated Case summary: {case_summary[:500]}..."
+        )  # Log truncated output
+
+        logger.info(f"Creating searchable summary for document: {doc_id}")
+        logger.info(
+            f"Input to create_searchable_summary (case_summary, first 500 chars): {case_summary[:500]}..."
+        )
+        searchable_summary = create_searchable_summary(case_summary)
+        logger.info(f"Generated Searchable summary: {searchable_summary}")
+
+        # Attach content to the Document
+        logger.info(f"Attaching generated content to document: {doc_id}")
+        doc.md_summary_file = ContentFile(
+            case_summary.encode("utf-8"), name="case_summary.md"
+        )
+        doc.description = searchable_summary
+        doc.save()
+        logger.info(f"Successfully saved document: {doc_id} with generated content")
+
+        # Create relevant Notes
+        Note.objects.create(
+            title="Headnotes",
+            document=doc,
+            content=headnotes,
+            corpus_id=corpus_id,
+            creator=doc.creator,
+        )
+        Note.objects.create(
+            title="Black Letter Law Categories",
+            document=doc,
+            content=black_letter_categories,
+            corpus_id=corpus_id,
+            creator=doc.creator,
+        )
+
+        # If everything went well:
+        return ([], [], [], True, "No Return Message")
+
+    except Exception as e:
+        # Catch any unexpected errors and return them in the format our test harness expects
+        error_message = f"{e}"
+        logger.error(
+            f"build_case_law_knowledge_base encountered an error: {error_message}"
+        )
+        return (
+            [],
+            [],
+            [{"data": {"error": error_message}}],
+            False,
+            error_message,
+        )
+
+
 @doc_analyzer_task(
     input_schema={
         "$schema": "http://json-schema.org/draft-07/schema#",

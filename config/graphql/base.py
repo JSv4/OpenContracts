@@ -63,8 +63,18 @@ class CountableConnection(graphene.relay.Connection):
 
     total_count = graphene.Int()
 
-    def resolve_total_count(root, info):
-        return len(root.iterable)  # And no, root.iterable.count() did not work for me.
+    def resolve_total_count(root, info, **kwargs):
+        # Access the original iterable/queryset BEFORE pagination/slicing
+        # This might be root.iterable if the resolver returns the full list,
+        # or you might need access to the original QuerySet object used by the resolver.
+        # If root.iterable is already sliced, this won't work directly.
+        # The key is to call .count() on the *unpaginated* queryset.
+        if isinstance(root.iterable, django.db.models.QuerySet):
+            return root.iterable.model.objects.filter(
+                pk__in=[obj.pk for obj in root.iterable]
+            ).count()  # Or ideally access the original QS
+        else:
+            return len(root.iterable)  # Fallback for non-queryset iterables
 
 
 class DRFDeletion(graphene.Mutation):

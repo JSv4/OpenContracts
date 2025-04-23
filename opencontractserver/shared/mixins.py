@@ -101,7 +101,7 @@ class HasEmbeddingMixin:
             "Subclass must implement get_embedding_reference_kwargs()"
         )
 
-    def add_embedding(self, embedder_path: str, vector: list[float]):
+    def add_embedding(self, embedder_path: str, vector: list[float] | None):
         """
         Creates or updates an Embedding for this object (Document, Annotation, Note, etc.)
         with the given embedder and vector.
@@ -115,6 +115,9 @@ class HasEmbeddingMixin:
         """
         # Late import to avoid circular import at the module level
         from opencontractserver.annotations.models import Embedding
+
+        if vector is None:
+            return None
 
         dimension = len(vector)
         kwargs = (

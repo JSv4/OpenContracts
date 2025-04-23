@@ -69,6 +69,7 @@ from opencontractserver.tasks import (
     import_corpus,
     import_document_to_corpus,
     package_annotated_docs,
+    process_documents_zip,
 )
 from opencontractserver.tasks.corpus_tasks import process_analyzer
 from opencontractserver.tasks.doc_tasks import convert_doc_to_funsd
@@ -1013,6 +1014,148 @@ class UploadDocument(graphene.Mutation):
             message = f"Error on upload: {e}"
 
         return UploadDocument(message=message, ok=ok, document=document)
+
+
+class UploadDocumentsZip(graphene.Mutation):
+    """
+    Mutation for uploading multiple documents via a zip file.
+    The zip is stored as a temporary file and processed asynchronously.
+    Only files with allowed MIME types will be created as documents.
+    """
+
+    class Arguments:
+        base64_file_string = graphene.String(
+            required=True,
+            description="Base64-encoded zip file containing documents to upload",
+        )
+        title_prefix = graphene.String(
+            required=False,
+            description="Optional prefix for document titles (will be combined with filename)",
+        )
+        description = graphene.String(
+            required=False,
+            description="Optional description to apply to all documents",
+        )
+        custom_meta = GenericScalar(
+            required=False, description="Optional metadata to apply to all documents"
+        )
+        add_to_corpus_id = graphene.ID(
+            required=False,
+            description="If provided, successfully uploaded documents will be added to corpus with specified id",
+        )
+        make_public = graphene.Boolean(
+            required=True,
+            description="If True, documents are immediately public. Defaults to False.",
+        )
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    job_id = graphene.String(description="ID to track the processing job")
+
+    @login_required
+    def mutate(
+        root,
+        info,
+        base64_file_string,
+        make_public,
+        title_prefix=None,
+        description=None,
+        custom_meta=None,
+        add_to_corpus_id=None,
+    ):
+        # Was going to user a user_passes_test decorator, but I wanted a custom error message
+        # that could be easily reflected to user in the GUI.
+        if (
+            info.context.user.is_usage_capped
+            and not settings.USAGE_CAPPED_USER_CAN_IMPORT_CORPUS
+        ):
+            raise PermissionError(
+                "By default, usage-capped users cannot bulk upload documents. "
+                "Please contact the admin to authorize your account."
+            )
+
+        try:
+            logger.info("UploadDocumentsZip.mutate() - Received zip upload request...")
+
+            # Store zip in a temporary file
+            base64_img_bytes = base64_file_string.encode("utf-8")
+            decoded_file_data = base64.decodebytes(base64_img_bytes)
+
+            job_id = str(uuid.uuid4())
+
+            with transaction.atomic():
+                temporary_file = TemporaryFileHandle.objects.create()
+                temporary_file.file = ContentFile(
+                    decoded_file_data,
+                    name=f"documents_zip_import_{job_id}.zip",
+                )
+                temporary_file.save()
+                logger.info("UploadDocumentsZip.mutate() - temporary file created.")
+
+                # Check if we need to link to a corpus
+                corpus_id = None
+                if add_to_corpus_id is not None:
+                    try:
+                        corpus = Corpus.objects.get(
+                            id=from_global_id(add_to_corpus_id)[1]
+                        )
+                        # Check if user has permission on this corpus
+                        if not user_has_permission_for_obj(
+                            info.context.user, corpus, PermissionTypes.EDIT
+                        ):
+                            raise PermissionError(
+                                "You don't have permission to add documents to this corpus"
+                            )
+                        corpus_id = corpus.id
+                    except Exception as e:
+                        logger.error(f"Error validating corpus: {e}")
+                        return UploadDocumentsZip(
+                            message=f"Error validating corpus: {e}",
+                            ok=False,
+                            job_id=job_id,
+                        )
+
+            # Launch async task to process the zip file
+            if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+                chain(
+                    process_documents_zip.s(
+                        temporary_file.id,
+                        info.context.user.id,
+                        job_id,
+                        title_prefix,
+                        description,
+                        custom_meta,
+                        make_public,
+                        corpus_id,
+                    )
+                ).apply_async()
+            else:
+                transaction.on_commit(
+                    lambda: chain(
+                        process_documents_zip.s(
+                            temporary_file.id,
+                            info.context.user.id,
+                            job_id,
+                            title_prefix,
+                            description,
+                            custom_meta,
+                            make_public,
+                            corpus_id,
+                        )
+                    ).apply_async()
+                )
+            logger.info("UploadDocumentsZip.mutate() - Async task launched...")
+
+            ok = True
+            message = f"Upload started. Job ID: {job_id}"
+
+        except Exception as e:
+            ok = False
+            message = f"Could not start document upload job due to error: {e}"
+            job_id = None
+            logger.error(message)
+
+        return UploadDocumentsZip(message=message, ok=ok, job_id=job_id)
 
 
 class DeleteDocument(DRFDeletion):
@@ -2473,6 +2616,7 @@ class Mutation(graphene.ObjectType):
     update_document = UpdateDocument.Field()
     delete_document = DeleteDocument.Field()
     delete_multiple_documents = DeleteMultipleDocuments.Field()
+    upload_documents_zip = UploadDocumentsZip.Field()  # Bulk document upload via zip
 
     # CORPUS MUTATIONS #########################################################
     fork_corpus = StartCorpusFork.Field()

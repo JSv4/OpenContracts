@@ -6,11 +6,11 @@ import { Routes, Route } from "react-router-dom";
 
 import _ from "lodash";
 
-import { Container, Dimmer, Loader } from "semantic-ui-react";
+import { Container } from "semantic-ui-react";
 
 import { toast, ToastContainer } from "react-toastify";
 
-import { useReactiveVar } from "@apollo/client";
+import { useQuery, useReactiveVar } from "@apollo/client";
 
 import {
   authToken,
@@ -33,7 +33,9 @@ import {
   uploadModalPreloadedFiles,
   showStructuralAnnotations,
   showKnowledgeBaseModal,
+  backendUserObj,
 } from "./graphql/cache";
+import { GET_ME, GetMeOutputs } from "./graphql/queries";
 
 import { NavMenu } from "./components/layout/NavMenu";
 import { Footer } from "./components/layout/Footer";
@@ -67,6 +69,7 @@ import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUplo
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
+  const auth_token = useReactiveVar(authToken);
   const show_export_modal = useReactiveVar(showExportModal);
   const show_cookie_modal = useReactiveVar(showCookieAcceptModal);
   const knowledge_base_modal = useReactiveVar(showKnowledgeBaseModal);
@@ -100,6 +103,30 @@ export const App = () => {
   const show_mobile_menu = width <= 1000;
   const banish_sidebar = width <= 1000;
 
+  const auth_user = useReactiveVar(userObj);
+  const backend_user = useReactiveVar(backendUserObj);
+
+  const {
+    data: meData,
+    loading: meLoading,
+    error: meError,
+  } = useQuery<GetMeOutputs>(GET_ME, {
+    skip: !auth_token,
+    fetchPolicy: "network-only",
+  });
+
+  useEffect(() => {
+    if (meData?.me) {
+      console.log("Setting backend user from GET_ME:", meData.me);
+      backendUserObj(meData.me);
+    } else if (!meLoading && auth_token && meError) {
+      console.error("Error fetching backend user:", meError);
+      toast.error("Could not get user details from server");
+    } else if (!auth_token) {
+      backendUserObj(null);
+    }
+  }, [meData, meLoading, meError, auth_token]);
+
   useEffect(() => {
     if (width <= 800) {
       showAnnotationLabels(LabelDisplayBehavior.ALWAYS);
@@ -118,20 +145,29 @@ export const App = () => {
           }).then((token) => {
             // console.log("Token from get access token silently...")
             if (token) {
-              // console.log("AuthToken", token);
+              console.log("Auth0 token obtained");
               authToken(token);
               userObj(user);
             } else {
               authToken("");
               userObj(null);
-              toast.error("Unable to login", {
-                position: toast.POSITION.TOP_CENTER,
-              });
+              backendUserObj(null);
+              toast.error("Unable to login");
             }
           });
         } catch (e: any) {
           console.log(e.message);
+          authToken("");
+          userObj(null);
+          backendUserObj(null);
         }
+      } else if (user === undefined) {
+        // Auth0 still loading, do nothing
+      } else {
+        // Auth0 user not found/logged out
+        authToken("");
+        userObj(null);
+        backendUserObj(null);
       }
     }
   }, [getAccessTokenSilently, REACT_APP_USE_AUTH0, user?.sub]);
@@ -209,9 +245,6 @@ export const App = () => {
               minWidth: "100vw",
             }}
           >
-            <Dimmer active={false}>
-              <Loader content="Logging in..." />
-            </Dimmer>
             {opened_corpus && (
               <SelectAnalyzerOrFieldsetModal
                 open={show_corpus_analyzer_fieldset_modal}

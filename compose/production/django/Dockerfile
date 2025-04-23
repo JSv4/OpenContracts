@@ -49,8 +49,8 @@ ENV BUILD_ENV ${BUILD_ENVIRONMENT}
 
 WORKDIR ${APP_HOME}
 
-RUN addgroup --system django \
-    && adduser --system --ingroup django django
+RUN groupadd --system django \
+    && useradd --system --gid django --no-log-init --create-home --home-dir /home/django django
 
 
 # Install required system dependencies
@@ -63,6 +63,11 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   poppler-utils \
   tesseract-ocr \
   libtesseract-dev \
+  tesseract-ocr-eng \
+  ffmpeg \
+  libsm6 \
+  libxext6 \
+  libgl1 \
   # cleaning up unused files
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*
@@ -81,6 +86,7 @@ RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
 
 # Create /models, copy model preloaders from the build context, and run them
 RUN mkdir -p /models
+RUN chown django:django /models
 COPY ./model_preloaders ./model_preloaders
 RUN for script in ./model_preloaders/*.py; do \
       echo "Running $script"; \
@@ -90,6 +96,9 @@ RUN for script in ./model_preloaders/*.py; do \
 # Download spacy models
 RUN python -m spacy download en_core_web_sm
 RUN python -m spacy download en_core_web_lg
+
+# Change ownership of the entire /models directory AFTER models are downloaded
+RUN chown -R django:django /models
 
 COPY --chown=django:django ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint

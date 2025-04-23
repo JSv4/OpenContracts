@@ -30,7 +30,10 @@ import {
   showDeleteDocumentsModal,
   viewingDocument,
   openedCorpus,
+  userObj,
+  showBulkUploadModal,
   showUploadNewDocumentsModal,
+  backendUserObj,
 } from "../graphql/cache";
 
 import { CRUDModal } from "../components/widgets/CRUD/CRUDModal";
@@ -48,11 +51,15 @@ import {
 import { FilterToLabelsetSelector } from "../components/widgets/model-filters/FilterToLabelsetSelector";
 import { FilterToCorpusSelector } from "../components/widgets/model-filters/FilterToCorpusSelector";
 import { CorpusDocumentCards } from "../components/documents/CorpusDocumentCards";
+import { BulkUploadModal } from "../components/widgets/modals/BulkUploadModal";
 
 export const Documents = () => {
   const auth_token = useReactiveVar(authToken);
+  const current_user = useReactiveVar(userObj);
+  const backend_user = useReactiveVar(backendUserObj);
   const document_to_edit = useReactiveVar(editingDocument);
   const document_to_view = useReactiveVar(viewingDocument);
+  const show_bulk_upload_modal = useReactiveVar(showBulkUploadModal);
 
   const show_upload_new_documents_modal = useReactiveVar(
     showUploadNewDocumentsModal
@@ -255,18 +262,27 @@ export const Documents = () => {
   // Build the actions for the search / context bar dropdown menu
   let document_actions: ActionDropdownItem[] = [];
 
-  if (auth_token) {
+  if (auth_token && current_user) {
     document_actions.push({
-      key: "documents_action_dropdown_0",
-      title: "Import",
-      icon: "cloud upload",
+      key: "documents_action_dropdown_import_single",
+      title: "Import Document",
+      icon: "file alternate outline",
       color: "blue",
       action_function: () =>
         showUploadNewDocumentsModal(!show_upload_new_documents_modal),
     });
+    if (backend_user && !backend_user.isUsageCapped) {
+      document_actions.push({
+        key: "documents_action_dropdown_bulk_upload",
+        title: "Bulk Upload (.zip)",
+        icon: "cloud upload",
+        color: "teal",
+        action_function: () => showBulkUploadModal(!show_bulk_upload_modal),
+      });
+    }
     if (selected_document_ids.length > 0) {
       document_actions.push({
-        key: `documents_action_dropdown_${document_actions.length}`,
+        key: `documents_action_dropdown_add_to_corpus`,
         title: "Add to Corpus",
         icon: "plus",
         color: "green",
@@ -274,7 +290,7 @@ export const Documents = () => {
           showAddDocsToCorpusModal(!show_add_docs_to_corpus_modal),
       });
       document_actions.push({
-        key: `documents_action_dropdown_${document_actions.length}`,
+        key: `documents_action_dropdown_delete`,
         title: "Delete",
         icon: "trash",
         color: "red",
@@ -294,6 +310,7 @@ export const Documents = () => {
     <CardLayout
       Modals={
         <>
+          <BulkUploadModal />
           <AddToCorpusModal
             open={show_add_docs_to_corpus_modal}
             toggleModal={() =>

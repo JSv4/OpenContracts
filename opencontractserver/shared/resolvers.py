@@ -47,35 +47,38 @@ def resolve_oc_model_queryset(
 
     # Get the base queryset first (only stuff given user CAN see)
     queryset = django_obj_model_type.objects.none()  # Start with an empty queryset
-    if user:
-        if user.is_superuser:
+
+    # Handle the case where user resolution failed explicitly
+    if user is None:
+        queryset = django_obj_model_type.objects.filter(Q(is_public=True))
+    elif user.is_superuser:
+        # Apply distinct later if needed after optimizations
+        queryset = django_obj_model_type.objects.all().order_by("created")
+    elif user.is_anonymous:
+        # This branch handles anonymous correctly
+        queryset = django_obj_model_type.objects.filter(Q(is_public=True))
+    else:  # Authenticated, non-superuser
+        permission_model_name = f"{model_name}userobjectpermission"
+        try:
+            permission_model_type = apps.get_model(app_label, permission_model_name)
+            must_have_permissions = permission_model_type.objects.filter(
+                permission__codename=f"read_{model_name}", user_id=user.id
+            )
             # Apply distinct later if needed after optimizations
-            queryset = django_obj_model_type.objects.all().order_by("created")
-        elif user.is_anonymous:
-            queryset = django_obj_model_type.objects.filter(Q(is_public=True))
-        # Finally, in all other cases, actually do the hard work
-        else:
-            permission_model_name = f"{model_name}userobjectpermission"
-            try:
-                permission_model_type = apps.get_model(app_label, permission_model_name)
-                must_have_permissions = permission_model_type.objects.filter(
-                    permission__codename=f"read_{model_name}", user_id=user.id
-                )
-                # Apply distinct later if needed after optimizations
-                queryset = django_obj_model_type.objects.filter(
-                    Q(creator=user)
-                    | Q(is_public=True)
-                    | Q(**{f"{permission_model_name}__in": must_have_permissions})
-                )
-            except LookupError:
-                logger.warning(
-                    f"Permission model {app_label}.{permission_model_name}"
-                    " not found. Falling back to creator/public check."
-                )
-                # Fallback if permission model doesn't exist (might happen for simpler models)
-                queryset = django_obj_model_type.objects.filter(
-                    Q(creator=user) | Q(is_public=True)
-                )
+            queryset = django_obj_model_type.objects.filter(
+                Q(creator=user)
+                | Q(is_public=True)
+                | Q(**{f"{permission_model_name}__in": must_have_permissions})
+            )
+        except LookupError:
+            logger.warning(
+                f"Permission model {app_label}.{permission_model_name}"
+                " not found. Falling back to creator/public check."
+            )
+            # Fallback if permission model doesn't exist (might happen for simpler models)
+            queryset = django_obj_model_type.objects.filter(
+                Q(creator=user) | Q(is_public=True)
+            )
 
     # --- Apply Performance Optimizations Based on Model Type ---
     if django_obj_model_type == Corpus:

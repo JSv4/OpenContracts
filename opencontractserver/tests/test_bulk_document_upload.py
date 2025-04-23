@@ -5,6 +5,7 @@ import zipfile
 from unittest.mock import MagicMock, patch
 from uuid import UUID
 
+import django
 from celery.result import AsyncResult
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -15,6 +16,7 @@ from graphql_relay import to_global_id
 from config.graphql.schema import schema
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.tasks.import_tasks import process_documents_zip
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
@@ -328,3 +330,224 @@ class BulkDocumentUploadTests(TestCase):
         except Exception as e:
             print(f"Exception in end-to-end test: {e}")
             raise
+
+    @override_settings(
+        CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_STORE_EAGER_RESULT=True
+    )
+    def test_user_capped_limit_reached(self):
+        """Test the case where a usage-capped user has already reached their document limit."""
+        # Create a usage-capped user who has reached their limit
+        capped_user = User.objects.create_user(
+            username="capped_user",
+            password="testpass",
+            is_usage_capped=True,
+        )
+
+        # Set a low document cap for testing
+        with override_settings(USAGE_CAPPED_USER_DOC_CAP_COUNT=1):
+            # Create a document to reach the limit
+            Document.objects.create(
+                creator=capped_user,
+                title="Existing document",
+                description="Document that fills the user's quota",
+            )
+
+            # Create a test corpus for this user
+            corpus = Corpus.objects.create(
+                title="Capped User Corpus",
+                description="Test Corpus for capped user",
+                creator=capped_user,
+            )
+            set_permissions_for_obj_to_user(capped_user, corpus, [PermissionTypes.CRUD])
+
+            # Create zip file
+            base64_zip = self.create_test_zip()
+
+            # Execute the mutation directly with process_documents_zip to check results
+            from opencontractserver.corpuses.models import TemporaryFileHandle
+
+            temp_file = TemporaryFileHandle.objects.create()
+            temp_file.file.save("test.zip", io.BytesIO(base64.b64decode(base64_zip)))
+
+            job_id = str(uuid.uuid4())
+            results = process_documents_zip(
+                temporary_file_handle_id=temp_file.id,
+                user_id=capped_user.id,
+                job_id=job_id,
+                corpus_id=corpus.id,
+            )
+
+            # Verify the task completed but failed due to user cap
+            self.assertTrue(results["completed"])
+            self.assertFalse(results["success"])
+            self.assertEqual(results["processed_files"], 0)
+            self.assertTrue(
+                any("maximum document limit" in error for error in results["errors"])
+            )
+
+    @override_settings(
+        CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_STORE_EAGER_RESULT=True
+    )
+    def test_user_capped_limit_reached_during_upload(self):
+        """Test the case where a usage-capped user reaches their limit during upload."""
+        # Create a usage-capped user who is just under their limit
+        capped_user = User.objects.create_user(
+            username="capped_user_mid",
+            password="testpass",
+            is_usage_capped=True,
+        )
+
+        # Set document cap to 1 for this test
+        with override_settings(USAGE_CAPPED_USER_DOC_CAP_COUNT=1):
+            # Create a test corpus for this user
+            corpus = Corpus.objects.create(
+                title="Capped User Corpus",
+                description="Test Corpus for capped user",
+                creator=capped_user,
+            )
+            set_permissions_for_obj_to_user(capped_user, corpus, [PermissionTypes.CRUD])
+
+            # Create a zip with multiple files to trigger mid-upload cap
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+                zip_file.writestr("doc1.pdf", self.pdf_content)
+                zip_file.writestr(
+                    "doc2.pdf", self.pdf_content
+                )  # This should be skipped
+
+            zip_buffer.seek(0)
+            base64_zip = base64.b64encode(zip_buffer.read()).decode("utf-8")
+
+            # Execute the task directly
+            from opencontractserver.corpuses.models import TemporaryFileHandle
+
+            temp_file = TemporaryFileHandle.objects.create()
+            temp_file.file.save(
+                "test_mid.zip", io.BytesIO(base64.b64decode(base64_zip))
+            )
+
+            job_id = str(uuid.uuid4())
+            results = process_documents_zip(
+                temporary_file_handle_id=temp_file.id,
+                user_id=capped_user.id,
+                job_id=job_id,
+                corpus_id=corpus.id,
+            )
+
+            # Verify only one document was processed before hitting the limit
+            self.assertTrue(results["completed"])
+            self.assertEqual(results["processed_files"], 1)
+            self.assertEqual(len(results["document_ids"]), 1)
+            self.assertTrue(
+                any(
+                    "User document limit reached during processing" in error
+                    for error in results["errors"]
+                )
+            )
+
+    @override_settings(
+        CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_STORE_EAGER_RESULT=True
+    )
+    def test_unknown_binary_file_skipped(self):
+        """Test that unknown binary files are skipped during processing."""
+        # Create a zip with an unknown binary file
+        unknown_binary = b"\x00\x01\x02\x03\xDE\xAD\xBE\xEF"  # Non-text binary data
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+            zip_file.writestr("unknown.bin", unknown_binary)
+
+        zip_buffer.seek(0)
+        base64_zip = base64.b64encode(zip_buffer.read()).decode("utf-8")
+
+        # Execute the task directly
+        from opencontractserver.corpuses.models import TemporaryFileHandle
+
+        temp_file = TemporaryFileHandle.objects.create()
+        temp_file.file.save(
+            "test_unknown.zip", io.BytesIO(base64.b64decode(base64_zip))
+        )
+
+        job_id = str(uuid.uuid4())
+        results = process_documents_zip(
+            temporary_file_handle_id=temp_file.id,
+            user_id=self.user.id,
+            job_id=job_id,
+        )
+
+        # Verify the unknown file was skipped
+        self.assertTrue(results["completed"])
+        self.assertTrue(results["success"])
+        self.assertEqual(results["total_files"], 1)
+        self.assertEqual(results["skipped_files"], 1)
+        self.assertEqual(results["processed_files"], 0)
+
+    @override_settings(
+        CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_STORE_EAGER_RESULT=True
+    )
+    def test_file_processing_error(self):
+        """Test handling of errors during file processing."""
+        # Create a normal zip file
+        base64_zip = self.create_test_zip()
+
+        from opencontractserver.corpuses.models import TemporaryFileHandle
+
+        temp_file = TemporaryFileHandle.objects.create()
+        temp_file.file.save("test_error.zip", io.BytesIO(base64.b64decode(base64_zip)))
+
+        # Mock the ContentFile constructor to raise an exception for one specific file
+        original_content_file = django.core.files.base.ContentFile
+
+        def mock_content_file(content, name=None):
+            if name and name.endswith(".pdf"):
+                raise OSError("Simulated error processing PDF file")
+            return original_content_file(content, name)
+
+        with patch(
+            "opencontractserver.tasks.import_tasks.ContentFile",
+            side_effect=mock_content_file,
+        ):
+            job_id = str(uuid.uuid4())
+            results = process_documents_zip(
+                temporary_file_handle_id=temp_file.id,
+                user_id=self.user.id,
+                job_id=job_id,
+            )
+
+        # Verify error handling
+        self.assertTrue(results["completed"])
+        self.assertGreater(results["error_files"], 0)
+        self.assertTrue(any("Error processing" in error for error in results["errors"]))
+
+    @override_settings(
+        CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_STORE_EAGER_RESULT=True
+    )
+    def test_job_level_exception(self):
+        """Test handling of a job-level exception."""
+        # Create a zip file
+        base64_zip = self.create_test_zip()
+
+        from opencontractserver.corpuses.models import TemporaryFileHandle
+
+        temp_file = TemporaryFileHandle.objects.create()
+        temp_file.file.save(
+            "test_job_error.zip", io.BytesIO(base64.b64decode(base64_zip))
+        )
+
+        # Force a job-level exception by patching the TemporaryFileHandle.objects.get method
+        with patch(
+            "opencontractserver.corpuses.models.TemporaryFileHandle.objects.get",
+            side_effect=Exception("Simulated job-level error"),
+        ):
+            job_id = str(uuid.uuid4())
+            results = process_documents_zip(
+                temporary_file_handle_id=999999,  # This ID doesn't matter due to our mock
+                user_id=self.user.id,
+                job_id=job_id,
+            )
+
+        # Verify job-level error handling
+        self.assertTrue(results["completed"])
+        self.assertFalse(results["success"])
+        self.assertEqual(results["processed_files"], 0)
+        self.assertTrue(any("Job failed" in error for error in results["errors"]))

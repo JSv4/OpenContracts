@@ -555,11 +555,17 @@ def process_documents_zip(
                     results["error_files"] += 1
                     results["errors"].append(f"Error processing {filename}: {str(e)}")
 
+        # Check if processing was stopped early due to user cap
+        user_cap_reached_mid_processing = any(
+            "User document limit reached during processing" in error
+            for error in results["errors"]
+        )
+
         # Clean up the temporary file
         temporary_file_handle.delete()
 
-        results["success"] = True
-        results["completed"] = True  # Task completed successfully
+        results["success"] = not user_cap_reached_mid_processing
+        results["completed"] = True  # Task completed, success depends on errors/cap
         logger.info(
             f"process_documents_zip() - Completed job: {job_id}, processed: {results['processed_files']}"
         )

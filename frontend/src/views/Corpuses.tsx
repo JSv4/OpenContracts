@@ -1000,7 +1000,7 @@ export const Corpuses = () => {
 
     // Currently the import capability is enabled via an env variable in case we want it disabled
     // (which we'll probably do for the public demo to cut down on attack surface and load on server)
-    if (process.env.REACT_APP_ALLOW_IMPORTS && auth_token) {
+    if (import.meta.env.REACT_APP_ALLOW_IMPORTS && auth_token) {
       corpus_actions.push({
         icon: "cloud upload",
         title: "Import Corpus",

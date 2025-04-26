@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@apollo/client";
-import { Card, Button, Header, Modal } from "semantic-ui-react";
+import { Card, Button, Header, Modal, Loader } from "semantic-ui-react";
 import {
   MessageSquare,
   FileText,
@@ -106,10 +106,16 @@ import styled from "styled-components";
 import { Icon } from "semantic-ui-react";
 import { useChatSourceState } from "../../annotator/context/ChatSourceAtom";
 
-const pdfjsLib = require("pdfjs-dist");
+import { getDocument } from "pdfjs-dist";
+import workerSrc from "pdfjs-dist/build/pdf.worker?worker&url";
+import * as pdfjs from "pdfjs-dist";
+
+// const pdfjsLib = require("pdfjs-dist");
 
 // Setting worker path to worker bundle.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
+// GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.js`;
+// GlobalWorkerOptions.workerSrc = PDFWorker.workerSrc;
+pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 interface DocumentKnowledgeBaseProps {
   documentId: string;
@@ -516,7 +522,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         data.document.fileType === "application/pdf" &&
         data.document.pdfFile
       ) {
-        const loadingTask: PDFDocumentLoadingTask = pdfjsLib.getDocument(
+        const loadingTask: PDFDocumentLoadingTask = getDocument(
           data.document.pdfFile
         );
         loadingTask.onProgress = (p: { loaded: number; total: number }) => {
@@ -989,7 +995,17 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   if (metadata.fileType === "application/pdf") {
     viewerContent = (
       <PDFContainer id="pdf-container" ref={containerRefCallback}>
-        <PDF read_only={false} containerWidth={containerWidth} />
+        {viewState === ViewState.LOADED ? (
+          <PDF read_only={false} containerWidth={containerWidth} />
+        ) : viewState === ViewState.LOADING ? (
+          <Loader active inline="centered" content="Loading PDF..." />
+        ) : (
+          <EmptyState
+            icon={<FileText size={40} />}
+            title="Error Loading PDF"
+            description="Could not load the PDF document."
+          />
+        )}
       </PDFContainer>
     );
   } else if (
@@ -997,24 +1013,38 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     metadata.fileType === "text/plain"
   ) {
     viewerContent = (
-      <PDFContainer ref={containerRefCallback}>
-        <TxtAnnotatorWrapper readOnly={true} allowInput={false} />
+      <PDFContainer id="pdf-container" ref={containerRefCallback}>
+        {viewState === ViewState.LOADED ? (
+          <TxtAnnotatorWrapper readOnly={true} allowInput={false} />
+        ) : viewState === ViewState.LOADING ? (
+          <Loader active inline="centered" content="Loading Text..." />
+        ) : (
+          <EmptyState
+            icon={<FileText size={40} />}
+            title="Error Loading Text"
+            description="Could not load the text file."
+          />
+        )}
       </PDFContainer>
     );
   } else {
     viewerContent = (
-      <div style={{ padding: "2rem" }}>
-        {viewState === ViewState.ERROR ? (
+      <div
+        style={{
+          padding: "2rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+        }}
+      >
+        {viewState === ViewState.LOADING ? (
+          <Loader active inline="centered" content="Loading Document..." />
+        ) : (
           <EmptyState
             icon={<FileText size={40} />}
             title="Unsupported File"
             description="This document type can't be displayed."
-          />
-        ) : (
-          <EmptyState
-            icon={<FileText size={40} />}
-            title="Loading..."
-            description="Please wait for the document to finish loading."
           />
         )}
       </div>

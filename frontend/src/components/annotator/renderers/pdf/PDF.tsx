@@ -1,7 +1,6 @@
 import styled from "styled-components";
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import _ from "lodash";
-import { PermissionTypes } from "../../../types";
 import { PDFPage } from "./PDFPage";
 import {
   usePages,

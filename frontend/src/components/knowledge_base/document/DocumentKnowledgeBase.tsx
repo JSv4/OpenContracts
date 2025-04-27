@@ -110,11 +110,7 @@ import { getDocument } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker?worker&url";
 import * as pdfjs from "pdfjs-dist";
 
-// const pdfjsLib = require("pdfjs-dist");
-
 // Setting worker path to worker bundle.
-// GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.js`;
-// GlobalWorkerOptions.workerSrc = PDFWorker.workerSrc;
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 interface DocumentKnowledgeBaseProps {
@@ -497,6 +493,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const {
     data: combinedData,
     loading,
+    error: queryError,
     refetch,
   } = useQuery<
     GetDocumentKnowledgeAndAnnotationsOutput,
@@ -508,20 +505,22 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       analysisId: undefined,
     },
     onCompleted: (data) => {
+      if (!data?.document) {
+        console.error("onCompleted: No document data received.");
+        setViewState(ViewState.ERROR);
+        toast.error("Failed to load document details.");
+        return;
+      }
       setDocumentType(data.document.fileType ?? "");
       setDocument(data.document);
       setPermissions(data.document.myPermissions ?? []);
-
-      // --------------------------------------------------
-      // Call our processing function here:
-      // --------------------------------------------------
       processAnnotationsData(data);
 
-      // Load PDF or TXT as needed:
       if (
         data.document.fileType === "application/pdf" &&
         data.document.pdfFile
       ) {
+        setViewState(ViewState.LOADING); // Set loading state
         const loadingTask: PDFDocumentLoadingTask = getDocument(
           data.document.pdfFile
         );
@@ -529,31 +528,64 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           setProgress(Math.round((p.loaded / p.total) * 100));
         };
 
+        const pawlsPath = data.document.pawlsParseFile || "";
+
         Promise.all([
           loadingTask.promise,
-          getPawlsLayer(data.document.pawlsParseFile || ""),
+          getPawlsLayer(pawlsPath), // Fetches PAWLS via REST
         ])
           .then(([pdfDocProxy, pawlsData]) => {
+            // --- DETAILED LOGGING FOR PAWLS DATA ---
+            if (!pawlsData) {
+              console.error(
+                "onCompleted: PAWLS data received is null or undefined!"
+              );
+            }
+            // --- END DETAILED LOGGING ---
+
+            if (!pdfDocProxy) {
+              throw new Error("PDF document proxy is null or undefined.");
+            }
             setPdfDoc(pdfDocProxy);
 
-            const loadPages: Promise<PDFPageInfo>[] = [];
+            const loadPagesPromises: Promise<PDFPageInfo>[] = [];
             for (let i = 1; i <= pdfDocProxy.numPages; i++) {
-              loadPages.push(
-                pdfDocProxy.getPage(i).then((p) => {
+              const pageNum = i; // Capture page number for logging
+              loadPagesPromises.push(
+                pdfDocProxy.getPage(pageNum).then((p) => {
                   let pageTokens: Token[] = [];
-                  if (pawlsData.length === 0) {
-                    toast.error(
-                      "Token layer isn't available for this document... annotations can't be displayed."
+                  const pageIndex = p.pageNumber - 1;
+
+                  if (
+                    !pawlsData ||
+                    !Array.isArray(pawlsData) ||
+                    pageIndex >= pawlsData.length
+                  ) {
+                    console.warn(
+                      `Page ${pageNum}: PAWLS data index out of bounds. Index: ${pageIndex}, Length: ${pawlsData.length}`
                     );
+                    pageTokens = [];
                   } else {
-                    const pageIndex = p.pageNumber - 1;
-                    pageTokens = pawlsData[pageIndex].tokens;
+                    const pageData = pawlsData[pageIndex];
+
+                    if (!pageData) {
+                      pageTokens = [];
+                    } else if (typeof pageData.tokens === "undefined") {
+                      pageTokens = [];
+                    } else if (!Array.isArray(pageData.tokens)) {
+                      console.error(
+                        `Page ${pageNum}: CRITICAL - pageData.tokens is not an array at index ${pageIndex}! Type: ${typeof pageData.tokens}`
+                      );
+                      pageTokens = [];
+                    } else {
+                      pageTokens = pageData.tokens;
+                    }
                   }
                   return new PDFPageInfo(p, pageTokens, zoomLevel);
                 }) as unknown as Promise<PDFPageInfo>
               );
             }
-            return Promise.all(loadPages);
+            return Promise.all(loadPagesPromises);
           })
           .then((loadedPages) => {
             setPages(loadedPages);
@@ -564,28 +596,52 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
               ...pageTextMaps,
             });
             setDocText(doc_text);
+            setViewState(ViewState.LOADED); // Set loaded state only after everything is done
           })
           .catch((err) => {
-            console.error("Error loading PDF document:", err);
+            // Log the specific error causing the catch
             setViewState(ViewState.ERROR);
+            toast.error(
+              `Error loading PDF details: ${
+                err instanceof Error ? err.message : String(err)
+              }`
+            );
           });
       } else if (
-        data.document.fileType === "application/txt" ||
-        data.document.fileType === "text/plain"
+        (data.document.fileType === "application/txt" ||
+          data.document.fileType === "text/plain") &&
+        data.document.txtExtractFile
       ) {
-        Promise.all([getDocumentRawText(data.document.txtExtractFile || "")])
-          .then(([txt]) => {
+        console.log("onCompleted: Loading TXT", data.document.txtExtractFile);
+        setViewState(ViewState.LOADING); // Set loading state
+        getDocumentRawText(data.document.txtExtractFile)
+          .then((txt) => {
             setDocText(txt);
             setViewState(ViewState.LOADED);
           })
           .catch((err) => {
-            console.error("Error loading TXT document:", err);
             setViewState(ViewState.ERROR);
+            toast.error(
+              `Error loading text content: ${
+                err instanceof Error ? err.message : String(err)
+              }`
+            );
           });
       } else {
-        // Unsupported or unknown file type
+        console.warn(
+          "onCompleted: Unsupported file type or missing file path.",
+          data.document.fileType
+        );
+        setViewState(ViewState.ERROR); // Treat unsupported as error
       }
     },
+    onError: (error) => {
+      console.error("GraphQL Query Error fetching document data:", error);
+      toast.error(`Failed to load document details: ${error.message}`);
+      setViewState(ViewState.ERROR);
+    },
+    fetchPolicy: "network-only",
+    nextFetchPolicy: "no-cache",
     skip: !documentId || !corpusId,
   });
 

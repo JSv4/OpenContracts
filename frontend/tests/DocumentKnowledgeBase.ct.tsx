@@ -88,6 +88,7 @@ const mockCorpusData = {
         labelType: LabelType.SpanLabel,
         color: "#FF0000",
         icon: null,
+        description: "A person entity",
       },
       {
         __typename: "AnnotationLabelType",
@@ -96,6 +97,7 @@ const mockCorpusData = {
         labelType: LabelType.RelationshipLabel,
         color: "#00FF00",
         icon: null,
+        description: "A connection relationship",
       },
       {
         __typename: "AnnotationLabelType",
@@ -104,6 +106,7 @@ const mockCorpusData = {
         labelType: LabelType.DocTypeLabel,
         color: "#0000FF",
         icon: null,
+        description: "A contract document type",
       },
     ],
   },
@@ -264,34 +267,51 @@ const LONG_TIMEOUT = 20_000;
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function registerRestMocks(page: Page): Promise<void> {
-  await page.route("**/api/pawls/*", (route) =>
+  await page.route(`**/${mockPdfDocument.pawlsParseFile}`, (route) => {
+    console.log(`[MOCK] PAWLS request for: ${route.request().url()}`);
+    // Provide mock data for **23** pages to match test.pdf
+    const mockPawlsData: {
+      page: { page_id: number; height: number; width: number };
+      tokens: Token[];
+    }[] = [];
+    for (let i = 0; i < 23; i++) {
+      let pageTokens: Token[] = [];
+      if (i === 0) {
+        pageTokens = [createMockToken(0, "Mock Page 1 Token")];
+      } else if (i === 1) {
+        pageTokens = [createMockToken(1, "Mock Page 2 Token")];
+      }
+      // For pages 2 onwards (index 2 to 22), tokens will be an empty array
+
+      mockPawlsData.push({
+        page: { page_id: i, height: 792, width: 612 }, // Example dimensions
+        tokens: pageTokens,
+      });
+    }
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify([
-        {
-          page: { page_id: 0, height: 792, width: 612 },
-          tokens: [createMockToken(0, "Mock Pawls Token")],
-        },
-      ]),
-    })
-  );
+      body: JSON.stringify(mockPawlsData),
+    });
+  });
 
-  await page.route("**/api/rawtext/*", (route) =>
+  await page.route(`**/${mockTxtDocument.txtExtractFile}`, (route) => {
+    console.log(`[MOCK] TXT request for: ${route.request().url()}`);
     route.fulfill({
       status: 200,
       contentType: "text/plain",
       body: "Mock plain text content.",
-    })
-  );
+    });
+  });
 
-  await page.route(`**/${mockPdfDocument.mdSummaryFile}`, (route) =>
+  await page.route(`**/${mockPdfDocument.mdSummaryFile}`, (route) => {
+    console.log(`[MOCK] MD request for: ${route.request().url()}`);
     route.fulfill({
       status: 200,
       contentType: "text/markdown",
       body: "# Mock Summary Title\n\nMock summary details.",
-    })
-  );
+    });
+  });
 
   await page.route(MOCK_PDF_URL, async (route) => {
     console.log(`[MOCK] PDF file request: ${route.request().url()}`);
@@ -328,50 +348,6 @@ async function registerRestMocks(page: Page): Promise<void> {
           err instanceof Error ? err.message : String(err)
         }`,
       });
-    }
-  });
-
-  await page.route(/.*pdf\.worker.*\.js(\?.*)?$/, async (route) => {
-    console.log(`[MOCK] pdf.worker.js request: ${route.request().url()}`);
-    try {
-      const workerPath = require.resolve("pdfjs-dist/build/pdf.worker.mjs");
-      if (!fs.existsSync(workerPath)) {
-        console.error(
-          `[MOCK ERROR] pdf.worker.js not found at resolved path: ${workerPath}`
-        );
-        const fallbackPath = path.join(
-          __dirname,
-          "../../node_modules/pdfjs-dist/build/pdf.worker.mjs"
-        );
-        if (!fs.existsSync(fallbackPath)) {
-          console.error(
-            `[MOCK ERROR] pdf.worker.js not found at fallback path: ${fallbackPath}`
-          );
-          return route.fulfill({ status: 404, body: "Worker not found" });
-        }
-        console.log(
-          `[MOCK] Using fallback path for pdf.worker.js: ${fallbackPath}`
-        );
-        const contents = fs.readFileSync(fallbackPath);
-        await route.fulfill({
-          status: 200,
-          contentType: "application/javascript",
-          body: contents,
-        });
-      } else {
-        console.log(`[MOCK] Found pdf.worker.js at: ${workerPath}`);
-        const contents = fs.readFileSync(workerPath);
-        await route.fulfill({
-          status: 200,
-          contentType: "application/javascript",
-          body: contents,
-          headers: { "Cache-Control": "no-cache, no-store, must-revalidate" },
-        });
-      }
-      console.log("[MOCK] Served pdf.worker.js successfully");
-    } catch (err) {
-      console.error("[MOCK ERROR] Unable to serve pdf.worker.js", err);
-      await route.fulfill({ status: 500, body: "Worker load error" });
     }
   });
 }
@@ -450,7 +426,7 @@ test("renders PDF document title and summary on initial load", async ({
   });
 });
 
-test("switches to Annotations tab and renders PDF container", async ({
+test("switches to Document layer and renders PDF container", async ({
   mount,
   page,
 }) => {
@@ -460,20 +436,29 @@ test("switches to Annotations tab and renders PDF container", async ({
     </MockedProvider>
   );
 
-  await page.getByRole("button", { name: "Annotations" }).click();
+  // 1. Hover over the LayerSwitcher button to reveal the menu
+  await page.locator(".layers-button").hover();
 
-  await page.waitForTimeout(100);
+  // 2. Click the 'Document' option in the menu
+  await page
+    .locator(".layers-menu")
+    .getByRole("button", { name: "Document" })
+    .click();
 
-  await expect(page.getByRole("button", { name: "Annotations" })).toHaveClass(
-    /active/,
-    { timeout: LONG_TIMEOUT }
-  );
+  // 3. Wait for the PDF container to be visible
   await expect(page.locator("#pdf-container")).toBeVisible({
     timeout: LONG_TIMEOUT,
   });
-  await expect(
-    page.locator("#pdf-container .react-pdf__Page__canvas")
-  ).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Wait specifically for the first canvas to render before checking count
+  const canvasLocator = page.locator("#pdf-container canvas");
+  await expect(canvasLocator.first()).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // 4. Verify the correct number of PDF pages (canvases) are rendered
+  await expect(canvasLocator).toHaveCount(23, { timeout: LONG_TIMEOUT });
+
+  // Optional: Verify at least the first canvas is visible as an extra check
+  // await expect(canvasLocator.first()).toBeVisible({ timeout: LONG_TIMEOUT });
 });
 
 test("renders TXT document and shows plain-text container with content", async ({

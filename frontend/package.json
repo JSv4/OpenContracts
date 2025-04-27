@@ -5,6 +5,7 @@
   "dependencies": {
     "@apollo/client": "^3.11.10",
     "@auth0/auth0-react": "^1.8.0",
+    "@hello-pangea/dnd": "^18.0.1",
     "@rjsf/core": "^3.2.1",
     "@rjsf/semantic-ui": "^3.2.1",
     "@rjsf/utils": "^5.24.1",
@@ -40,7 +41,6 @@
     "pdfjs-dist": "^2.13.216",
     "polished": "^4.3.1",
     "react": "18",
-    "react-beautiful-dnd": "^13.1.0",
     "react-cool-inview": "^3.0.1",
     "react-countup": "^6.5.3",
     "react-data-grid": "^7.0.0-beta.47",

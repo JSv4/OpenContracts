@@ -1,25 +1,37 @@
 import { Label, Card } from "semantic-ui-react";
 import _ from "lodash";
 import { TruncatedText } from "../widgets/data-display/TruncatedText";
-import {
-  RenderedSpanAnnotation,
-  ServerTokenAnnotation,
-} from "./types/annotations";
+import { ServerTokenAnnotation } from "./types/annotations";
 import { usePages } from "./context/DocumentAtom";
 import { usePdfAnnotations } from "./hooks/AnnotationHooks";
 
 interface AnnotationSummaryProps {
-  annotation: RenderedSpanAnnotation;
+  annotationId: string;
 }
 
-export const AnnotationSummary = ({ annotation }: AnnotationSummaryProps) => {
-  console.log("AnnotationSummary", annotation);
+export const AnnotationSummary = ({ annotationId }: AnnotationSummaryProps) => {
+  // console.log("AnnotationSummary received ID:", annotationId);
 
   const { pages } = usePages();
   const { pdfAnnotations } = usePdfAnnotations();
+
   const this_annotation = _.find(pdfAnnotations.annotations, {
-    id: annotation,
+    id: annotationId,
   }) as ServerTokenAnnotation;
+
+  if (!this_annotation) {
+    console.warn(
+      `AnnotationSummary: Annotation with ID ${annotationId} not found in context.`
+    );
+    return (
+      <Card style={{ width: "50vw", border: "1px dashed red" }}>
+        <Card.Content>
+          <Card.Header>Annotation Not Found</Card.Header>
+          <Card.Description>ID: {annotationId}</Card.Description>
+        </Card.Content>
+      </Card>
+    );
+  }
 
   if (!pages) {
     return null;

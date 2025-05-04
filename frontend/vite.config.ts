@@ -1,10 +1,34 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
+import path from "path"; // Import path module
 
 // https://vitejs.dev/config/
 export default defineConfig({
   base: "/",
   plugins: [react()],
+  // Better handling of assets in all environments
+  resolve: {
+    alias: {
+      // Standard path aliases if needed
+      "@": path.resolve(__dirname, "src"),
+    },
+  },
+  // Handle static asset imports better in tests
+  define: {
+    // Add TEST environment variable that code can check
+    // This will be false in production/development
+    "import.meta.env.TEST": JSON.stringify(false),
+  },
+  build: {
+    // Ensure proper handling of asset files
+    assetsInlineLimit: 4096, // 4kb - files smaller than this will be inlined as base64
+    rollupOptions: {
+      output: {
+        // Ensure proper handling of assets, especially for testing
+        assetFileNames: "assets/[name].[ext]",
+      },
+    },
+  },
   test: {
     globals: true,
     environment: "jsdom",

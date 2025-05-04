@@ -30,9 +30,8 @@ export default defineConfig({
     /* Port to use for Playwright component endpoint. */
     ctPort: 3100,
 
-    /* Vite config needed for component tests */
+    /* Vite config needed for component tests - JUST use the main config */
     ctViteConfig: {
-      // Resolve the vite config file relative to the playwright config file
       configFile: resolve(__dirname, "./vite.config.ts"),
     },
     /* Add this line to point to the directory containing index.tsx */

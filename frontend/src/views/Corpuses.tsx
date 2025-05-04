@@ -830,6 +830,7 @@ export const Corpuses = () => {
   }, [location]);
 
   useEffect(() => {
+    console.log("Switched opened_corpus", opened_corpus);
     setCorpus({
       selectedCorpus: opened_corpus,
     });
@@ -856,7 +857,19 @@ export const Corpuses = () => {
     ? corpus_response.corpuses.edges
     : [];
   const corpus_items = corpus_data
-    .map((edge) => (edge ? edge.node : undefined))
+    .map((edge) => {
+      if (!edge || !edge.node) return undefined;
+
+      // Create a copy of the node
+      const node = { ...edge.node };
+
+      // Convert myPermissions from string[] to PermissionTypes[] if it exists
+      if (node.myPermissions) {
+        node.myPermissions = getPermissions(node.myPermissions);
+      }
+
+      return node;
+    })
     .filter((item): item is CorpusType => !!item);
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

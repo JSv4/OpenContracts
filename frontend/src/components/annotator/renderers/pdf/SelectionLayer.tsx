@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   BoundingBox,
   PermissionTypes,
@@ -32,7 +32,7 @@ const SelectionLayer = ({
   pageNumber,
 }: SelectionLayerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { permissions: corpus_permissions } = useCorpusState();
+  const { canUpdateCorpus, myPermissions } = useCorpusState();
   const { setSelectedAnnotations } = useAnnotationSelection();
   const [, setIsCreatingAnnotation] = useAtom(isCreatingAnnotationAtom);
   const [localPageSelection, setLocalPageSelection] = useState<
@@ -143,10 +143,12 @@ const SelectionLayer = ({
       if (containerRef.current === null) {
         throw new Error("No Container");
       }
-      if (
-        !read_only &&
-        corpus_permissions.includes(PermissionTypes.CAN_UPDATE)
-      ) {
+
+      // Log the exact state of variables when mouse down occurs
+      console.log("[MouseDown] canUpdateCorpus:", canUpdateCorpus);
+      console.log("[MouseDown] read_only:", read_only);
+
+      if (!read_only && canUpdateCorpus) {
         if (!localPageSelection && event.buttons === 1) {
           setSelectedAnnotations([]); // Clear any selected annotations
           setIsCreatingAnnotation(true); // Set creating annotation state
@@ -169,15 +171,15 @@ const SelectionLayer = ({
           });
         }
       } else {
-        console.log("Not allowed to update");
-        console.log(corpus_permissions);
-        console.log(read_only);
+        console.log("[MouseDown] Not allowed to update");
+        console.log("[MouseDown] read_only:", read_only);
+        console.log("[MouseDown] canUpdateCorpus:", canUpdateCorpus);
       }
     },
     [
       containerRef,
       read_only,
-      corpus_permissions,
+      canUpdateCorpus,
       localPageSelection,
       pageNumber,
       pageInfo,

@@ -21,7 +21,12 @@ import {
   GetDocumentKnowledgeAndAnnotationsOutput,
 } from "../../../graphql/queries";
 import { getDocumentRawText, getPawlsLayer } from "../../annotator/api/rest";
-import { LabelType } from "../../../types/graphql-api";
+import {
+  CorpusType,
+  DocumentType,
+  LabelType,
+  RawDocumentType,
+} from "../../../types/graphql-api";
 import { motion, AnimatePresence } from "framer-motion";
 import { PDFContainer } from "../../annotator/display/viewer/DocumentViewer";
 import { PDFDocumentLoadingTask } from "pdfjs-dist";
@@ -45,6 +50,7 @@ import { createTokenStringSearch } from "../../annotator/utils";
 import {
   convertToDocTypeAnnotations,
   convertToServerAnnotation,
+  getPermissions,
 } from "../../../utils/transform";
 import {
   PdfAnnotations,
@@ -54,7 +60,10 @@ import {
   pdfAnnotationsAtom,
   structuralAnnotationsAtom,
 } from "../../annotator/context/AnnotationAtoms";
-import { useCorpusState } from "../../annotator/context/CorpusAtom";
+import {
+  CorpusState,
+  useCorpusState,
+} from "../../annotator/context/CorpusAtom";
 import { useAtom } from "jotai";
 import { useInitialAnnotations } from "../../annotator/hooks/AnnotationHooks";
 import { LabelSelector } from "../../annotator/labels/label_selector/LabelSelector";
@@ -348,6 +357,15 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const processAnnotationsData = (
     data: GetDocumentKnowledgeAndAnnotationsOutput
   ) => {
+    console.log("[processAnnotationsData] Received data:", data); // Log received data
+    console.log(
+      "[processAnnotationsData] Received data.corpus:",
+      JSON.stringify(data?.corpus, null, 2)
+    ); // Log corpus part specifically
+    console.log(
+      "[processAnnotationsData] Received data.corpus.myPermissions:",
+      data?.corpus?.myPermissions
+    ); // Log corpus part specifically
     if (data?.document) {
       const processedAnnotations =
         data.document.allAnnotations?.map((annotation) =>
@@ -414,7 +432,18 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       );
 
       // Update label atoms
+      let labelUpdatePayload = {};
+      if (data.corpus?.myPermissions) {
+        let rawPermissions = data.corpus.myPermissions;
+        if (data.corpus && rawPermissions !== undefined) {
+          labelUpdatePayload = {
+            myPermissions: getPermissions(rawPermissions),
+          };
+        }
+      }
+      // Update corpus state
       if (data.corpus?.labelSet) {
+        console.log("[processAnnotationsData] Processing labelSet..."); // Log entry into block
         const allLabels = data.corpus.labelSet.allAnnotationLabels ?? [];
         const filteredTokenLabels = allLabels.filter(
           (label) => label.labelType === LabelType.TokenLabel
@@ -429,13 +458,23 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           (label) => label.labelType === LabelType.DocTypeLabel
         );
 
-        setCorpus({
+        // Construct payload ONLY with labels to avoid overwriting other corpus state like permissions
+        labelUpdatePayload = {
+          ...labelUpdatePayload,
           spanLabels: filteredSpanLabels,
           humanSpanLabels: filteredSpanLabels,
           relationLabels: filteredRelationLabels,
           docTypeLabels: filteredDocTypeLabels,
           humanTokenLabels: filteredTokenLabels,
-        });
+        };
+
+        console.log(
+          "[processAnnotationsData] Corpus update payload with labels:",
+          JSON.stringify(labelUpdatePayload, null, 2)
+        );
+        console.log("[processAnnotationsData] Calling setCorpus...");
+        setCorpus(labelUpdatePayload);
+        console.log("[processAnnotationsData] setCorpus called.");
       }
     }
   };
@@ -512,7 +551,11 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         return;
       }
       setDocumentType(data.document.fileType ?? "");
-      setDocument(data.document);
+      let processedDocData = {
+        ...data.document,
+        myPermissions: getPermissions(data.document.myPermissions) ?? [],
+      };
+      setDocument(processedDocData);
       setPermissions(data.document.myPermissions ?? []);
       processAnnotationsData(data);
 
@@ -600,6 +643,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           })
           .catch((err) => {
             // Log the specific error causing the catch
+            console.error("Error during PDF/PAWLS loading Promise.all:", err);
             setViewState(ViewState.ERROR);
             toast.error(
               `Error loading PDF details: ${

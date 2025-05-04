@@ -1,0 +1,67 @@
+{
+  "data": {
+    "documentCorpusActions": {
+      "corpusActions": [
+        {
+          "id": "Q29ycHVzQWN0aW9uVHlwZToy",
+          "name": "Generate Notes",
+          "trigger": "ADD_DOCUMENT",
+          "extracts": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "hasPreviousPage": false,
+              "startCursor": null,
+              "endCursor": null,
+              "__typename": "PageInfo"
+            },
+            "edges": [],
+            "__typename": "ExtractTypeConnection"
+          },
+          "analyses": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "hasPreviousPage": false,
+              "startCursor": null,
+              "endCursor": null,
+              "__typename": "PageInfo"
+            },
+            "edges": [],
+            "__typename": "AnalysisTypeConnection"
+          },
+          "__typename": "CorpusActionType"
+        },
+        {
+          "id": "Q29ycHVzQWN0aW9uVHlwZToz",
+          "name": "Auto Redact",
+          "trigger": "ADD_DOCUMENT",
+          "extracts": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "hasPreviousPage": false,
+              "startCursor": null,
+              "endCursor": null,
+              "__typename": "PageInfo"
+            },
+            "edges": [],
+            "__typename": "ExtractTypeConnection"
+          },
+          "analyses": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "hasPreviousPage": false,
+              "startCursor": null,
+              "endCursor": null,
+              "__typename": "PageInfo"
+            },
+            "edges": [],
+            "__typename": "AnalysisTypeConnection"
+          },
+          "__typename": "CorpusActionType"
+        }
+      ],
+      "extracts": [],
+      "analysisRows": [],
+      "__typename": "DocumentCorpusActionsType"
+    }
+  }
+}

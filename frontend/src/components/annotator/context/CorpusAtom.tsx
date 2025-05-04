@@ -1,14 +1,14 @@
 import { atom, useAtom } from "jotai";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { CorpusType, AnnotationLabelType } from "../../../types/graphql-api";
 import { PermissionTypes } from "../../types";
 
 /**
  * Represents the entire corpus state stored in a single atom.
  */
-interface CorpusState {
+export interface CorpusState {
   selectedCorpus: CorpusType | null | undefined;
-  permissions: PermissionTypes[];
+  myPermissions: PermissionTypes[];
   spanLabels: AnnotationLabelType[];
   humanSpanLabels: AnnotationLabelType[];
   relationLabels: AnnotationLabelType[];
@@ -20,7 +20,7 @@ interface CorpusState {
 
 export const corpusStateAtom = atom<CorpusState>({
   selectedCorpus: null,
-  permissions: [],
+  myPermissions: [],
   spanLabels: [],
   humanSpanLabels: [],
   relationLabels: [],
@@ -43,28 +43,31 @@ export function useCorpusState() {
    * @param partial partial object to merge into the CorpusState
    */
   function setCorpus(partial: Partial<CorpusState>) {
-    setCorpusState((prev) => ({ ...prev, ...partial }));
+    console.log("[setCorpus] Setting corpus state with:", partial);
+    setCorpusState((prev) => {
+      const newState = { ...prev, ...partial };
+      console.log("[setCorpus] New corpus state:", newState);
+      return newState;
+    });
   }
-
-  // Compute permission checks as derived state
-  const canUpdateCorpus = corpusState.permissions.includes(
-    PermissionTypes.CAN_UPDATE
-  );
-  const canDeleteCorpus = corpusState.permissions.includes(
-    PermissionTypes.CAN_REMOVE
-  );
-  const canManageCorpus = corpusState.permissions.includes(
-    PermissionTypes.CAN_PERMISSION
-  );
 
   /**
    * Helper to check for a given permission type in the corpus permissions.
    *
    * @param permission a specific PermissionTypes value to be checked
+   * @returns boolean indicating if the user has the specified permission
    */
-  function hasCorpusPermission(permission: PermissionTypes): boolean {
-    return corpusState.permissions.includes(permission);
-  }
+  const hasCorpusPermission = useCallback(
+    (permission: PermissionTypes): boolean => {
+      return corpusState.myPermissions?.includes(permission) || false;
+    },
+    [corpusState.myPermissions]
+  );
+
+  // Compute permission checks as derived state
+  const canUpdateCorpus = hasCorpusPermission(PermissionTypes.CAN_UPDATE);
+  const canDeleteCorpus = hasCorpusPermission(PermissionTypes.CAN_REMOVE);
+  const canManageCorpus = hasCorpusPermission(PermissionTypes.CAN_PERMISSION);
 
   // Memoize for performance, so consumers don't re-render unnecessarily
   return useMemo(
@@ -81,6 +84,6 @@ export function useCorpusState() {
       canManageCorpus,
       hasCorpusPermission,
     }),
-    [corpusState, canUpdateCorpus, canDeleteCorpus, canManageCorpus]
+    [corpusState, hasCorpusPermission] // Only depend on corpusState and the memoized function
   );
 }

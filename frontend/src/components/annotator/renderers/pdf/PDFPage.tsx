@@ -60,7 +60,8 @@ export const PDFPage = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<PDFPageRenderer | null>(null);
   const { pdfAnnotations } = usePdfAnnotations();
-  const createAnnotation = useCreateAnnotation();
+
+  const createAnnotationHandler = useCreateAnnotation();
 
   const pageViewport = pageInfo.page.getViewport({ scale: 1 });
   const [pageBounds, setPageBounds] = useState<BoundingBox>({
@@ -387,7 +388,7 @@ export const PDFPage = ({
           pageInfo={updatedPageInfo}
           read_only={read_only}
           activeSpanLabel={activeSpanLabel ?? null}
-          createAnnotation={createAnnotation}
+          createAnnotation={createAnnotationHandler}
           pageNumber={pageInfo.page.pageNumber - 1}
         />
         {page_annotation_components}

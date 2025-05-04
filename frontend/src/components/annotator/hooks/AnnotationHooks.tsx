@@ -220,6 +220,11 @@ export function useCreateAnnotation() {
   const selectedDocument = useAtomValue(selectedDocumentAtom);
   const { selectedCorpus } = useCorpusState();
 
+  console.log("[useCreateAnnotation] Hook initialized", {
+    selectedDocumentId: selectedDocument?.id,
+    selectedCorpusId: selectedCorpus?.id,
+  });
+
   const [createAnnotation] = useMutation<
     NewAnnotationOutputType,
     NewAnnotationInputType
@@ -245,36 +250,63 @@ export function useCreateAnnotation() {
   const handleCreateAnnotation = async (
     annotation: ServerTokenAnnotation | ServerSpanAnnotation
   ) => {
+    console.log("[handleCreateAnnotation] Function called with annotation:", {
+      id: annotation.id,
+      type: annotation instanceof ServerSpanAnnotation ? "Span" : "Token",
+      page: annotation.page,
+      rawText: annotation.rawText,
+      labelId: annotation.annotationLabel.id,
+      labelName: annotation.annotationLabel.text,
+    });
+
     // *** ADDED DEPENDENCY LOGS ***
     console.log(
-      "[handleCreateAnnotation ENTRY] selectedDocument:",
-      selectedDocument ? selectedDocument.id : "null/undefined"
+      "[handleCreateAnnotation] Context check - selectedDocument:",
+      selectedDocument
+        ? {
+            id: selectedDocument.id,
+            title: selectedDocument.title,
+            fileType: selectedDocument.fileType,
+          }
+        : "null/undefined"
     );
     console.log(
-      "[handleCreateAnnotation ENTRY] selectedCorpus:",
-      selectedCorpus ? selectedCorpus.id : "null/undefined"
+      "[handleCreateAnnotation] Context check - selectedCorpus:",
+      selectedCorpus
+        ? {
+            id: selectedCorpus.id,
+            title: selectedCorpus.title,
+          }
+        : "null/undefined"
     );
 
     if (!selectedCorpus || !selectedDocument) {
+      console.warn(
+        "[handleCreateAnnotation] Missing context: No corpus or document selected"
+      );
       toast.warning("No corpus or document selected");
       return;
     }
 
     // Validation for empty annotations
     console.log(
-      "[useCreateAnnotation] Validating rawText:",
-      JSON.stringify(annotation.rawText)
+      "[handleCreateAnnotation] Validating annotation text:",
+      annotation.rawText
+        ? `"${annotation.rawText.substring(0, 50)}${
+            annotation.rawText.length > 50 ? "..." : ""
+          }"`
+        : "empty"
     );
+
     if (!annotation.rawText || annotation.rawText.trim().length === 0) {
       console.warn(
-        "[useCreateAnnotation] Validation failed: rawText is empty or whitespace. Skipping mutation."
+        "[handleCreateAnnotation] Validation failed: rawText is empty or whitespace. Skipping mutation."
       );
       return;
     }
 
-    // *** ADDED LOG 1 ***
     console.log(
-      "[useCreateAnnotation] Validation passed. Proceeding to prepare variables."
+      "[handleCreateAnnotation] Validation passed. Preparing mutation variables."
     );
 
     // Always add local annotation fallback in case mutation fails or is not called
@@ -293,53 +325,64 @@ export function useCreateAnnotation() {
             ? LabelType.SpanLabel
             : LabelType.TokenLabel,
       };
-      // *** ADDED LOG 2 ***
-      console.log("[useCreateAnnotation] Finished preparing variablesToSend.");
+
+      console.log("[handleCreateAnnotation] Mutation variables prepared:", {
+        documentId: variablesToSend.documentId,
+        corpusId: variablesToSend.corpusId,
+        annotationLabelId: variablesToSend.annotationLabelId,
+        page: variablesToSend.page,
+        annotationType: variablesToSend.annotationType,
+        textLength: variablesToSend.rawText?.length || 0,
+      });
 
       console.log(
-        "[useCreateAnnotation] Variables prepared for mutation:",
-        variablesToSend
-      );
-      console.log(
-        "[useCreateAnnotation] Detailed JSON variable:",
-        JSON.stringify(variablesToSend.json, null, 2)
-      );
-      console.log(
-        "[useCreateAnnotation] About to call GraphQL mutation with variables:",
-        JSON.stringify(variablesToSend)
-      );
-
-      console.log(
-        "Variables passed to Apollo mutate:",
-        JSON.stringify(variablesToSend, null, 2)
+        "[handleCreateAnnotation] JSON payload structure:",
+        JSON.stringify(
+          variablesToSend.json,
+          (key, value) =>
+            key === "content"
+              ? `[content with length ${value?.length || 0}]`
+              : value,
+          2
+        )
       );
 
-      // Log the type of the function before calling
-      console.log(
-        "[useCreateAnnotation] Type of createAnnotation function:",
-        typeof createAnnotation
-      );
-
+      console.log("[handleCreateAnnotation] Calling GraphQL mutation...");
       const result = await createAnnotation({
         variables: variablesToSend,
       });
-      // Log the raw result immediately after await, regardless of success
+
       console.log(
-        "[useCreateAnnotation] Raw result from awaited createAnnotation:",
+        "[handleCreateAnnotation] Mutation complete. Raw result:",
         result
       );
 
-      const data = result?.data; // Safely access data from the result
+      const data = result?.data;
       console.log(
-        "[useCreateAnnotation] Extracted data from mutation response:",
+        "[handleCreateAnnotation] Extracted data from response:",
         data
       );
 
       if (data?.addAnnotation?.annotation) {
         const createdAnnotationData = data.addAnnotation.annotation;
+        console.log(
+          "[handleCreateAnnotation] Successfully created annotation:",
+          {
+            id: createdAnnotationData.id,
+            page: createdAnnotationData.page,
+            rawText:
+              createdAnnotationData.rawText?.substring(0, 50) +
+              (createdAnnotationData.rawText?.length > 50 ? "..." : ""),
+            labelId: createdAnnotationData.annotationLabel.id,
+          }
+        );
+
         let newAnnotation: ServerTokenAnnotation | ServerSpanAnnotation;
 
         if (selectedDocument.fileType?.startsWith("text/")) {
+          console.log(
+            "[handleCreateAnnotation] Creating ServerSpanAnnotation instance"
+          );
           newAnnotation = new ServerSpanAnnotation(
             createdAnnotationData.page,
             createdAnnotationData.annotationLabel,
@@ -353,6 +396,9 @@ export function useCreateAnnotation() {
             createdAnnotationData.id
           );
         } else {
+          console.log(
+            "[handleCreateAnnotation] Creating ServerTokenAnnotation instance"
+          );
           newAnnotation = new ServerTokenAnnotation(
             createdAnnotationData.page,
             createdAnnotationData.annotationLabel,
@@ -367,25 +413,59 @@ export function useCreateAnnotation() {
           );
         }
 
+        console.log(
+          "[handleCreateAnnotation] Updating state with new annotation"
+        );
         addMultipleAnnotations([newAnnotation]);
         toast.success("Added your annotation to the database.");
         annotationAddedLocally = true;
+        console.log("[handleCreateAnnotation] State successfully updated");
+      } else {
+        console.warn(
+          "[handleCreateAnnotation] Mutation succeeded but returned no annotation data"
+        );
       }
-    } catch (error) {
-      // Log the specific error during mutation
-      console.error("[useCreateAnnotation] Mutation failed:", error);
+    } catch (error: unknown) {
+      console.error(
+        "[handleCreateAnnotation] Mutation failed with error:",
+        error
+      );
+      if (error instanceof Error) {
+        console.error("[handleCreateAnnotation] Error details:", {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        });
+      } else {
+        console.error(
+          "[handleCreateAnnotation] Unknown error format:",
+          String(error)
+        );
+      }
       toast.error(`Unable to add annotation: ${error}`);
     }
 
     // Fallback: if mutation didn't add annotation, add locally
     if (!annotationAddedLocally) {
-      console.log("[useCreateAnnotation] Fallback: adding annotation locally");
+      console.log(
+        "[handleCreateAnnotation] Using fallback: adding annotation locally only"
+      );
       addMultipleAnnotations([annotation]);
       annotationAddedLocally = true;
+      console.log("[handleCreateAnnotation] Local fallback complete");
     }
+
+    console.log("[handleCreateAnnotation] Function execution complete");
   };
 
-  return handleCreateAnnotation;
+  // Return the memoized handler function
+  // Ensure dependencies that the handler CLOSES OVER are included in the array.
+  return useCallback(handleCreateAnnotation, [
+    selectedDocument,
+    selectedCorpus,
+    createAnnotation,
+    addMultipleAnnotations,
+  ]);
 }
 
 /**

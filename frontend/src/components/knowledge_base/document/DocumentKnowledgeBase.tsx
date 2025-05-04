@@ -431,49 +431,54 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           )
       );
 
-      // Update label atoms
-      let labelUpdatePayload = {};
+      // Prepare the update payload for the corpus state atom
+      let corpusUpdatePayload: Partial<CorpusState> = {}; // Initialize as Partial<CorpusState>
+
+      // Process corpus permissions if available
       if (data.corpus?.myPermissions) {
-        let rawPermissions = data.corpus.myPermissions;
-        if (data.corpus && rawPermissions !== undefined) {
-          labelUpdatePayload = {
-            myPermissions: getPermissions(rawPermissions),
-          };
-        }
-      }
-      // Update corpus state
-      if (data.corpus?.labelSet) {
-        console.log("[processAnnotationsData] Processing labelSet..."); // Log entry into block
-        const allLabels = data.corpus.labelSet.allAnnotationLabels ?? [];
-        const filteredTokenLabels = allLabels.filter(
-          (label) => label.labelType === LabelType.TokenLabel
+        corpusUpdatePayload.myPermissions = getPermissions(
+          data.corpus.myPermissions
         );
-        const filteredSpanLabels = allLabels.filter(
+      }
+
+      // Process labels if labelSet is available
+      if (data.corpus?.labelSet) {
+        console.log("[processAnnotationsData] Processing labelSet...");
+        const allLabels = data.corpus.labelSet.allAnnotationLabels ?? [];
+        // Filter labels by type
+        corpusUpdatePayload.spanLabels = allLabels.filter(
           (label) => label.labelType === LabelType.SpanLabel
         );
-        const filteredRelationLabels = allLabels.filter(
+        corpusUpdatePayload.humanSpanLabels = corpusUpdatePayload.spanLabels; // Assuming they are the same initially
+        corpusUpdatePayload.relationLabels = allLabels.filter(
           (label) => label.labelType === LabelType.RelationshipLabel
         );
-        const filteredDocTypeLabels = allLabels.filter(
+        corpusUpdatePayload.docTypeLabels = allLabels.filter(
           (label) => label.labelType === LabelType.DocTypeLabel
         );
+        corpusUpdatePayload.humanTokenLabels = allLabels.filter(
+          (label) => label.labelType === LabelType.TokenLabel
+        );
+      }
 
-        // Construct payload ONLY with labels to avoid overwriting other corpus state like permissions
-        labelUpdatePayload = {
-          ...labelUpdatePayload,
-          spanLabels: filteredSpanLabels,
-          humanSpanLabels: filteredSpanLabels,
-          relationLabels: filteredRelationLabels,
-          docTypeLabels: filteredDocTypeLabels,
-          humanTokenLabels: filteredTokenLabels,
+      // *** ADD THE ACTUAL CORPUS OBJECT TO THE PAYLOAD ***
+      if (data.corpus) {
+        // Transform RawCorpusType to CorpusType before assigning
+        const transformedCorpus: CorpusType = {
+          ...data.corpus,
+          myPermissions: getPermissions(data.corpus.myPermissions || []),
         };
+        corpusUpdatePayload.selectedCorpus = transformedCorpus; // Assign the transformed object
+      }
 
+      // Update corpus state using the constructed payload
+      if (Object.keys(corpusUpdatePayload).length > 0) {
         console.log(
-          "[processAnnotationsData] Corpus update payload with labels:",
-          JSON.stringify(labelUpdatePayload, null, 2)
+          "[processAnnotationsData] Corpus update payload:",
+          JSON.stringify(corpusUpdatePayload, null, 2) // Log the final payload
         );
         console.log("[processAnnotationsData] Calling setCorpus...");
-        setCorpus(labelUpdatePayload);
+        setCorpus(corpusUpdatePayload); // Pass the complete payload
         console.log("[processAnnotationsData] setCorpus called.");
       }
     }

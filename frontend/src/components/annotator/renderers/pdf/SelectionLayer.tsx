@@ -90,7 +90,10 @@ const SelectionLayer = ({
         false
       );
 
-      console.log("handleCreateMultiPageAnnotation - annotation", annotation);
+      console.log(
+        "handleCreateMultiPageAnnotation - annotation",
+        JSON.stringify(annotation, null, 2)
+      );
 
       await createAnnotation(annotation);
       setMultiSelections({});
@@ -104,7 +107,10 @@ const SelectionLayer = ({
   const handleMouseUp = useCallback(
     (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
       if (localPageSelection) {
-        console.log("onMouseUp - localPageSelection", localPageSelection);
+        console.log(
+          "onMouseUp - localPageSelection",
+          JSON.stringify(localPageSelection, null, 2)
+        );
         const pageNum = pageNumber;
 
         setMultiSelections((prev) => {

@@ -114,6 +114,7 @@ import { useAnnotationSelection } from "../../annotator/hooks/useAnnotationSelec
 import styled from "styled-components";
 import { Icon } from "semantic-ui-react";
 import { useChatSourceState } from "../../annotator/context/ChatSourceAtom";
+import { useCreateAnnotation } from "../../annotator/hooks/AnnotationHooks";
 
 import { getDocument } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker?worker&url";
@@ -303,6 +304,9 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const { setTextSearchState } = useTextSearchState();
   const { activeSpanLabel, setActiveSpanLabel } = useAnnotationControls();
   const { setChatSourceState } = useChatSourceState();
+
+  // Call the hook ONCE here
+  const createAnnotationHandler = useCreateAnnotation();
 
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
   const [markdownError, setMarkdownError] = useState<boolean>(false);
@@ -1101,7 +1105,11 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     viewerContent = (
       <PDFContainer id="pdf-container" ref={containerRefCallback}>
         {viewState === ViewState.LOADED ? (
-          <PDF read_only={false} containerWidth={containerWidth} />
+          <PDF
+            read_only={false}
+            containerWidth={containerWidth}
+            createAnnotationHandler={createAnnotationHandler}
+          />
         ) : viewState === ViewState.LOADING ? (
           <Loader active inline="centered" content="Loading PDF..." />
         ) : (

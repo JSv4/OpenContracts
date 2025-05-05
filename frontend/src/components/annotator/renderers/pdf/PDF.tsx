@@ -7,6 +7,7 @@ import {
   usePdfDoc,
   useSetViewStateError,
 } from "../../context/DocumentAtom";
+import { ServerTokenAnnotation } from "../../types/annotations";
 
 export class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
@@ -60,12 +61,17 @@ export class PDFPageRenderer {
   }
 }
 
-type PDFProps = {
+interface PDFProps {
   read_only: boolean;
   containerWidth?: number | null;
-};
+  createAnnotationHandler: (annotation: ServerTokenAnnotation) => Promise<void>;
+}
 
-export const PDF = ({ read_only, containerWidth }: PDFProps) => {
+export const PDF: React.FC<PDFProps> = ({
+  read_only,
+  containerWidth,
+  createAnnotationHandler,
+}) => {
   const { pdfDoc } = usePdfDoc();
   const { pages } = usePages();
   const setViewStateError = useSetViewStateError();
@@ -88,6 +94,7 @@ export const PDF = ({ read_only, containerWidth }: PDFProps) => {
           read_only={read_only}
           onError={setViewStateError}
           containerWidth={containerWidth}
+          createAnnotationHandler={createAnnotationHandler}
         />
       ))}
     </>

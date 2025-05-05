@@ -8,10 +8,7 @@ import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
 import { Selection } from "../../display/components/Selection";
 import { SearchResult } from "../../display/components/SearchResult";
 import { BoundingBox, ServerTokenAnnotation } from "../../types/annotations";
-import {
-  useCreateAnnotation,
-  usePdfAnnotations,
-} from "../../hooks/AnnotationHooks";
+import { usePdfAnnotations } from "../../hooks/AnnotationHooks";
 import {
   scrollContainerRefAtom,
   usePages,
@@ -41,6 +38,7 @@ const CanvasWrapper = styled.div`
 
 interface PDFPageProps extends PageProps {
   containerWidth?: number | null;
+  createAnnotationHandler: (annotation: ServerTokenAnnotation) => Promise<void>;
 }
 
 /**
@@ -56,12 +54,11 @@ export const PDFPage = ({
   read_only,
   onError,
   containerWidth,
+  createAnnotationHandler,
 }: PDFPageProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<PDFPageRenderer | null>(null);
   const { pdfAnnotations } = usePdfAnnotations();
-
-  const createAnnotationHandler = useCreateAnnotation();
 
   const pageViewport = pageInfo.page.getViewport({ scale: 1 });
   const [pageBounds, setPageBounds] = useState<BoundingBox>({

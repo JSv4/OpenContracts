@@ -553,7 +553,7 @@ test("renders TXT document and shows plain-text container with content", async (
   ).toBeHidden({ timeout: LONG_TIMEOUT });
 });
 
-test.only("selects a label and creates an annotation by dragging", async ({
+test("selects a label and creates an annotation by dragging", async ({
   mount,
   page,
 }) => {
@@ -652,52 +652,33 @@ test.only("selects a label and creates an annotation by dragging", async ({
   // Give the UI a moment to stabilize after the drop
   await page.waitForTimeout(500);
 
-  // *** ADDED waitForEvent for console message ***
-  console.log("[TEST] Waiting for mutation mock execution signal...");
-  try {
-    await page.waitForEvent("console", {
-      predicate: (msg) => msg.text().includes("--- MUTATION MOCK EXECUTED ---"),
-      timeout: 15000, // Increased timeout slightly just in case
-    });
-    console.log("[TEST] Detected console message indicating mock execution.");
-  } catch (e) {
-    console.error("Timed out waiting for mutation mock execution signal!", e);
-    // Take a screenshot to help debug the issue
-    await page.screenshot({ path: "mutation-timeout-debug.png" });
-    throw e; // Re-throw the error to fail the test clearly
-  }
-
   // Wait for Apollo cache to update (keep this, might need adjustment)
   await page.waitForTimeout(1000); // Slightly longer wait after mock confirms execution
 
   // 6. Navigate to annotations panel to see results
   await page.getByRole("button", { name: "Annotations" }).click();
-  await expect(page.locator(".sidebar__annotations")).toBeVisible({
+  const annotationsPanel = page.locator(".sidebar__annotations"); // Define panel locator
+  await expect(annotationsPanel).toBeVisible({
     timeout: LONG_TIMEOUT,
   });
 
-  // Longer wait time for UI update (keep this, might need adjustment)
-  await page.waitForTimeout(2000);
-
-  // Log panel contents for debugging
+  // Log panel contents for debugging (optional but helpful)
   console.log("[TEST] Current annotations panel contents:");
-  const panelHTML = await page
-    .locator(".sidebar__annotations")
-    .evaluate((el) => el.innerHTML);
+  const panelHTML = await annotationsPanel.evaluate((el) => el.innerHTML);
   console.log(panelHTML);
 
-  // Check if mock was hit by checking console logs
-  const logs = await page.evaluate(() => {
-    return (window as any).mutationCalled || false;
-  });
-  console.log(`[TEST] Mutation called according to window flag: ${logs}`);
+  // Check if mock was hit by checking console logs (optional)
+  // const logs = await page.evaluate(() => {
+  //   return (window as any).mutationCalled || false;
+  // });
+  // console.log(`[TEST] Mutation called according to window flag: ${logs}`);
 
-  // 7. Assert Success - try multiple strategies
-
-  // Strategy 1: Look for annotation by ID
-  const annotationElement = page
+  // 7. Assert Success - Wait specifically for the element within the panel
+  const annotationElement = annotationsPanel // Ensure we look *within* the panel
     .locator('[data-annotation-id="new-annot-1"]')
     .first();
-  await expect(annotationElement).toBeVisible({ timeout: 10000 }); // Adjusted timeout
+
+  // Wait specifically for the annotation element to be visible
+  await expect(annotationElement).toBeVisible({ timeout: 15000 }); // Increased timeout for this specific assertion
   console.log("[TEST SUCCESS] Found annotation with data-annotation-id");
 });

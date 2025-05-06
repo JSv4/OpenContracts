@@ -35,19 +35,6 @@ OpenContracts is an **GPL-3** enterprise document analytics tool. It supports mu
 
 ![Corpus Dashboard](docs/assets/images/screenshots/corpus_dashboard.png)
 
-## 🗺️ Roadmap
-
-| Timeline | Milestone | Description |
-|----------|-----------|-------------|
-| 🌟 January 2025 | **Document Format Expansion** | <ul><li>LlamaParse integration for enhanced document processing</li><li>Native Markdown viewing and highlighting support</li></ul> |
-| 📊 February 2025 | **Benchmarking Suite** | <ul><li>Comprehensive benchmarks for extract features</li><li>Benchmark Tools</li></ul> |
-| 🚀 March 2025 | **Extract Enhancement** | <ul><li>Improved default data extract algorithms</li><li>Enhanced accuracy and speed</li></ul> |
-| 🌊 April 2025 | **Streaming & Filtering** | <ul><li>Real-time response streaming for chats and queries</li><li>Better UX for asking questions of entier corpus</li><li>Improved search functionality</li></ul> |
-| 📚 May 2025 | **Government Data Integration** | <ul><li>Code of Federal Regulations (CFR) integration</li><li>Additional government data sources</li></ul> |
-| 🏗️ Summer 2025 | **Enterprise DMS Features** | <ul><li>Document versioning</li><li>Intelligent file matching</li></ul> |
-
-> 💡 This roadmap represents our current plans and is subject to change based on community feedback and evolving requirements.
-
 ## Ok, now tell me more. What Does it Do?
 
 OpenContracts provides several key features:

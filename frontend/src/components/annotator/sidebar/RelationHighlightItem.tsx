@@ -2,6 +2,7 @@ import { List, Icon, Label, Button, Image } from "semantic-ui-react";
 import styled from "styled-components";
 import _ from "lodash";
 
+// Restore standard imports
 import source_icon from "../../../assets/icons/noun-bow-and-arrow-559923.png";
 import target_icon from "../../../assets/icons/noun-target-746597.png";
 
@@ -20,6 +21,15 @@ export const RelationHighlightContainer = styled.div<HasColor>(
 `
 );
 
+interface RelationHighlightItemProps {
+  annotation: ServerTokenAnnotation;
+  className?: string;
+  type: "SOURCE" | "TARGET";
+  read_only: boolean;
+  onRemoveAnnotationFromRelation?: (annotationId: string) => void;
+  onSelect: (annotationId: string) => void;
+}
+
 export const RelationHighlightItem = ({
   annotation,
   className,
@@ -27,14 +37,7 @@ export const RelationHighlightItem = ({
   read_only,
   onRemoveAnnotationFromRelation,
   onSelect,
-}: {
-  annotation: ServerTokenAnnotation;
-  className?: string;
-  type: "SOURCE" | "TARGET";
-  read_only: boolean;
-  onRemoveAnnotationFromRelation?: (annotationId: string) => void;
-  onSelect: (annotationId: string) => void;
-}) => {
+}: RelationHighlightItemProps) => {
   let prepared_className = "sidebar__relation__annotation";
   if (className) {
     prepared_className =

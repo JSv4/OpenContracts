@@ -22,6 +22,8 @@ import {
   PipelineComponentType,
   ChatMessageType,
   UserType,
+  RawCorpusType,
+  RawDocumentType,
 } from "../types/graphql-api";
 import { ExportObject } from "../types/graphql-api";
 import { WebSocketSources } from "../components/knowledge_base/document/right_tray/ChatTray";
@@ -2003,8 +2005,8 @@ export interface GetDocumentKnowledgeAndAnnotationsInput {
 }
 
 export interface GetDocumentKnowledgeAndAnnotationsOutput {
-  document: DocumentType;
-  corpus: CorpusType;
+  document: RawDocumentType;
+  corpus: RawCorpusType;
 }
 
 export const GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS = gql`
@@ -2127,6 +2129,7 @@ export const GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS = gql`
     }
     corpus(id: $corpusId) {
       id
+      myPermissions
       labelSet {
         id
         allAnnotationLabels {

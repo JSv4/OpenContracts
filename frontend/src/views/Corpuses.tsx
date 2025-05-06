@@ -830,6 +830,7 @@ export const Corpuses = () => {
   }, [location]);
 
   useEffect(() => {
+    console.log("Switched opened_corpus", opened_corpus);
     setCorpus({
       selectedCorpus: opened_corpus,
     });
@@ -856,7 +857,19 @@ export const Corpuses = () => {
     ? corpus_response.corpuses.edges
     : [];
   const corpus_items = corpus_data
-    .map((edge) => (edge ? edge.node : undefined))
+    .map((edge) => {
+      if (!edge || !edge.node) return undefined;
+
+      // Create a copy of the node
+      const node = { ...edge.node };
+
+      // Convert myPermissions from string[] to PermissionTypes[] if it exists
+      if (node.myPermissions) {
+        node.myPermissions = getPermissions(node.myPermissions);
+      }
+
+      return node;
+    })
     .filter((item): item is CorpusType => !!item);
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1000,7 +1013,7 @@ export const Corpuses = () => {
 
     // Currently the import capability is enabled via an env variable in case we want it disabled
     // (which we'll probably do for the public demo to cut down on attack surface and load on server)
-    if (process.env.REACT_APP_ALLOW_IMPORTS && auth_token) {
+    if (import.meta.env.REACT_APP_ALLOW_IMPORTS && auth_token) {
       corpus_actions.push({
         icon: "cloud upload",
         title: "Import Corpus",

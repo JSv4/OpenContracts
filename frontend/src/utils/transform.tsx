@@ -11,7 +11,6 @@ import {
   LabelType,
   ServerAnnotationType,
 } from "../types/graphql-api";
-import default_analyzer_icon from "../assets/icons/noun-quill-31093.png";
 
 // https://gist.github.com/JamieMason/0566f8412af9fe6a1d470aa1e089a752
 export function groupBy<T extends Record<string, any>, K extends keyof T>(
@@ -198,21 +197,6 @@ export function getBorderWidthFromBounds(bounds: BoundingBox): number {
     return 1;
   } else {
     return 3;
-  }
-}
-
-export function extractIconSrcFromAnalyzerManifest(
-  manifest: AnalyzerManifestType | null
-): string {
-  /**
-   * Given a Gremlin Analyzer Manifest type, extract an icon src string we can drop into an image component
-   * TODO - give the analyzer its own image field so we don't need to look into the labelsets optional image fields.
-   */
-  if (manifest?.label_set?.icon_data && manifest?.label_set?.icon_name) {
-    let icon_extension = manifest.label_set.icon_name.split(",")[1];
-    return `data:image/${icon_extension};base64,${manifest.label_set.icon_data}`;
-  } else {
-    return default_analyzer_icon;
   }
 }
 

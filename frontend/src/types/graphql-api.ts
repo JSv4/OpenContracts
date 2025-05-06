@@ -222,7 +222,7 @@ export type AssignmentTypeEdge = {
   cursor: Scalars["String"];
 };
 
-export type CorpusType = Node & {
+export type RawCorpusType = Node & {
   __typename?: "CorpusType";
   id: Scalars["ID"];
   title?: Scalars["String"];
@@ -248,8 +248,12 @@ export type CorpusType = Node & {
   allAnnotationSummaries?: ServerAnnotationType[];
   analyses: AnalysisTypeConnection;
   isPublic?: Scalars["Boolean"];
-  myPermissions?: PermissionTypes[];
+  myPermissions?: string[];
   conversations?: ConversationTypeConnection;
+};
+
+export type CorpusType = Omit<RawCorpusType, "myPermissions"> & {
+  myPermissions?: PermissionTypes[];
 };
 
 export type CorpusTypeDocumentsArgs = {
@@ -293,11 +297,11 @@ export type CorpusTypeConnection = {
 
 export type CorpusTypeEdge = {
   __typename?: "CorpusTypeEdge";
-  node?: Maybe<CorpusType>;
+  node?: Maybe<RawCorpusType>;
   cursor: Scalars["String"];
 };
 
-export type DocumentType = Node & {
+export type RawDocumentType = Node & {
   __typename?: "DocumentType";
   id: Scalars["ID"];
   title?: Maybe<Scalars["String"]>;
@@ -321,7 +325,7 @@ export type DocumentType = Node & {
   corpusSet?: CorpusTypeConnection;
   annotationSet?: AnnotationTypeConnection;
   isPublic?: Scalars["Boolean"];
-  myPermissions?: PermissionTypes[];
+  myPermissions?: string[];
   allAnnotations?: ServerAnnotationType[];
   allRelationships?: RelationshipType[];
   allDocRelationships?: DocumentRelationshipType[];
@@ -331,6 +335,10 @@ export type DocumentType = Node & {
   conversations?: ConversationTypeConnection;
   chatMessages?: ChatMessageTypeConnection;
   allNotes?: NoteType[];
+};
+
+export type DocumentType = Omit<RawDocumentType, "myPermissions"> & {
+  myPermissions?: PermissionTypes[];
 };
 
 export type DocumentTypeAssignmentSetArgs = {

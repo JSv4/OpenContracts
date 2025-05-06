@@ -57,25 +57,14 @@ export const DocTypeLabelDisplay: React.FC<DocTypeLabelDisplayProps> = ({
 
   const selected_extract = useReactiveVar(selectedExtract);
   const selected_analysis = useReactiveVar(selectedAnalysis);
-  const { permissions: corpus_permissions } = useCorpusState();
+  const { canUpdateCorpus } = useCorpusState();
   const read_only =
-    Boolean(selected_analysis) ||
-    Boolean(selected_extract) ||
-    !corpus_permissions.includes(PermissionTypes.CAN_UPDATE);
+    Boolean(selected_analysis) || Boolean(selected_extract) || !canUpdateCorpus;
 
   const { pdfAnnotations } = usePdfAnnotations();
   const { docTypeLabels } = useCorpusState();
   const deleteDocTypeAnnotation = useDeleteDocTypeAnnotation();
   const createDocTypeAnnotation = useAddDocTypeAnnotation();
-
-  // Add logging for incoming data
-  useEffect(() => {
-    console.log("DocTypeLabelDisplay - Received annotations:", {
-      docTypes: pdfAnnotations.docTypes,
-      corpus_permissions,
-      read_only,
-    });
-  }, [pdfAnnotations.docTypes, corpus_permissions, read_only]);
 
   const doc_label_choices = docTypeLabels;
   const doc_annotations = pdfAnnotations.docTypes;
@@ -210,20 +199,6 @@ export const DocTypeLabelDisplay: React.FC<DocTypeLabelDisplayProps> = ({
       (label) => !existing_labels.includes(label.id)
     );
   }, [doc_label_choices, existing_labels]);
-
-  // Add logging for permissions calculations
-  useEffect(() => {
-    if (doc_annotations.length > 0) {
-      console.log("DocType annotations permissions summary:", {
-        totalAnnotations: doc_annotations.length,
-        annotationsWithRemovePermission: doc_annotations.filter((a) =>
-          a.myPermissions.includes(PermissionTypes.CAN_REMOVE)
-        ).length,
-        readOnlyState: read_only,
-        corpusPermissions: corpus_permissions,
-      });
-    }
-  }, [doc_annotations, read_only, corpus_permissions]);
 
   React.useEffect(() => {
     return () => {

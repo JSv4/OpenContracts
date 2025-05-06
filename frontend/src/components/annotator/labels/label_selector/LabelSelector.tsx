@@ -137,6 +137,7 @@ export const LabelSelector: React.FC<LabelSelectorProps> = ({
     >
       <motion.div
         className="selector-button"
+        data-testid="label-selector-toggle-button"
         animate={{
           scale: activeSpanLabel ? 1.05 : 1,
           boxShadow: activeSpanLabel

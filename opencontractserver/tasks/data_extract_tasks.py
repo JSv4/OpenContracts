@@ -15,10 +15,12 @@ from llama_index.core.agent import (
     StructuredPlannerAgent,
 )
 from llama_index.core.tools import FunctionTool, QueryEngineTool, ToolMetadata
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
 
 from opencontractserver.extracts.models import Datacell
+from opencontractserver.llms.custom_pipeline_embedding import (
+    OpenContractsPipelineEmbedding,
+)
 from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
 from opencontractserver.shared.decorators import async_celery_task
 
@@ -545,7 +547,6 @@ async def oc_llama_index_doc_query(
     # Example: (most of your existing code can be copied in here, minus the old wrapping)
     # --------------------------------------------------------------------------------
 
-    from llama_index.embeddings.huggingface import HuggingFaceEmbedding
     from llama_index.llms.openai import OpenAI
 
     from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
@@ -568,9 +569,22 @@ async def oc_llama_index_doc_query(
 
         document = datacell.document
 
-        embed_model = HuggingFaceEmbedding(
-            "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-        )  # Using our pre-load cache path where the model was stored on container build
+        # Get corpus_id if the document is in a corpus
+        corpus_id = None
+        # Default embedder path, can be overridden by corpus preferred_embedder
+        embedder_path = settings.PREFERRED_PARSERS.get("text/plain", "") # Fallback just in case
+        corpus_set = await sync_to_async(document.corpus_set.all)()
+        if await sync_to_async(corpus_set.exists)():
+            corpus = await sync_to_async(corpus_set.first)()
+            corpus_id = corpus.id
+            if corpus.preferred_embedder: # Check if preferred_embedder is set
+                embedder_path = corpus.preferred_embedder
+
+        embed_model = OpenContractsPipelineEmbedding(
+            corpus_id=corpus_id,
+            mimetype=document.file_type,
+            embedder_path=embedder_path,
+        )
         Settings.embed_model = embed_model
 
         llm = OpenAI(
@@ -1097,9 +1111,23 @@ def llama_index_react_agent_query(cell_id):
         datacell.save()
 
         document = datacell.document
-        embed_model = HuggingFaceEmbedding(
-            "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-        )  # Using our pre-load cache path where the model was stored on container build
+
+        # Get corpus_id if the document is in a corpus
+        corpus_id = None
+        # Default embedder path, can be overridden by corpus preferred_embedder
+        embedder_path = settings.PREFERRED_PARSERS.get("text/plain", "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1") # Fallback just in case
+        corpus_set = document.corpus_set.all()
+        if corpus_set.exists():
+            corpus = corpus_set.first()
+            corpus_id = corpus.id
+            if corpus.preferred_embedder:  # Check if preferred_embedder is set
+                embedder_path = corpus.preferred_embedder
+
+        embed_model = OpenContractsPipelineEmbedding(
+            corpus_id=corpus_id,
+            mimetype=document.file_type,
+            embedder_path=embedder_path,
+        )
         Settings.embed_model = embed_model
 
         llm = OpenAI(

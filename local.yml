@@ -17,6 +17,7 @@ services:
       - redis
       - vector-embedder
       - nlm-ingestor
+      - docling-parser
     volumes:
       - .:/app:z
     env_file:
@@ -46,6 +47,10 @@ services:
     image: jscrudato/nlm-ingestor-opencontracts
     container_name: nlm-ingestor
 
+  docling-parser:
+    image: jscrudato/docsling-local
+    container_name: docling-parser
+
   vector-embedder:
     image: jscrudato/vector-embedder-microservice
     container_name: vector-embedder
@@ -58,6 +63,7 @@ services:
     depends_on:
       - redis
       - postgres
+      - docling-parser
     volumes:
       - .:/app:z
     env_file:
@@ -71,6 +77,7 @@ services:
     depends_on:
       - redis
       - postgres
+      - docling-parser
     volumes:
       - .:/app:z
     env_file:

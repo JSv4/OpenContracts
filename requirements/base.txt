@@ -51,7 +51,6 @@ tiktoken==0.8.0  # https://github.com/openai/tiktoken
 openai==1.65.4  # https://github.com/openai/openai-python
 llama-index==0.12.9
 llama-index-agent-openai==0.4.1
-llama-index-embeddings-huggingface==0.4.0
 llama-index-llms-openai==0.3.12
 
 # Data Processing Tools

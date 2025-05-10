@@ -572,12 +572,14 @@ async def oc_llama_index_doc_query(
         # Get corpus_id if the document is in a corpus
         corpus_id = None
         # Default embedder path, can be overridden by corpus preferred_embedder
-        embedder_path = settings.PREFERRED_PARSERS.get("text/plain", "") # Fallback just in case
+        embedder_path = settings.PREFERRED_PARSERS.get(
+            "text/plain", ""
+        )  # Fallback just in case
         corpus_set = await sync_to_async(document.corpus_set.all)()
         if await sync_to_async(corpus_set.exists)():
             corpus = await sync_to_async(corpus_set.first)()
             corpus_id = corpus.id
-            if corpus.preferred_embedder: # Check if preferred_embedder is set
+            if corpus.preferred_embedder:  # Check if preferred_embedder is set
                 embedder_path = corpus.preferred_embedder
 
         embed_model = OpenContractsPipelineEmbedding(
@@ -1115,7 +1117,9 @@ def llama_index_react_agent_query(cell_id):
         # Get corpus_id if the document is in a corpus
         corpus_id = None
         # Default embedder path, can be overridden by corpus preferred_embedder
-        embedder_path = settings.PREFERRED_PARSERS.get("text/plain", "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1") # Fallback just in case
+        embedder_path = settings.PREFERRED_PARSERS.get(
+            "text/plain", "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        )  # Fallback just in case
         corpus_set = document.corpus_set.all()
         if corpus_set.exists():
             corpus = corpus_set.first()

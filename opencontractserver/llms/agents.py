@@ -15,7 +15,6 @@ from llama_index.core.chat_engine.types import (
 )
 from llama_index.core.objects import ObjectIndex
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
-
 from llama_index.llms.openai import OpenAI
 
 from opencontractserver.conversations.models import ChatMessage, Conversation

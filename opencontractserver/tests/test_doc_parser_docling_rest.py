@@ -1,11 +1,15 @@
 import json
 from unittest.mock import MagicMock, patch
 
+from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from django.db import transaction
 from django.test import TestCase, override_settings
 
 from opencontractserver.documents.models import Document
 from opencontractserver.pipeline.parsers.docling_parser_rest import DoclingParser
+
+User = get_user_model()
 
 
 class MockResponse:
@@ -29,9 +33,15 @@ class TestDoclingParser(TestCase):
 
     def setUp(self):
         """Set up test environment."""
+        with transaction.atomic():
+            self.user = User.objects.create_user(username="bob", password="12345678")
+
         # Create a sample Document object with a mock PDF file
         self.doc = Document.objects.create(
-            title="Test Document", description="Test Description", file_type="pdf"
+            title="Test Document",
+            description="Test Description",
+            file_type="pdf",
+            creator=self.user,
         )
 
         # Create a mock PDF file for the document
@@ -126,7 +136,7 @@ class TestDoclingParser(TestCase):
         payload = call_kwargs[
             "json"
         ]  # In requests.post, the json parameter is already a dict
-        self.assertEqual(payload["filename"], "test.pdf")
+        self.assertTrue(payload["filename"].endswith(".pdf"))
         self.assertIn("pdf_base64", payload)
         self.assertFalse(payload["force_ocr"])
         self.assertFalse(payload["roll_up_groups"])

@@ -141,7 +141,9 @@ class MockParser(BaseParser):
                 )
                 _, call_kwargs = mock_parse.call_args
                 self.assertIn(
-                    "test_key", call_kwargs, "Should pass 'test_key' to _parse_document_impl."
+                    "test_key",
+                    call_kwargs,
+                    "Should pass 'test_key' to _parse_document_impl.",
                 )
                 self.assertEqual(
                     call_kwargs["test_key"],

@@ -60,14 +60,18 @@ class DoclingParser(BaseParser):
             Optional[OpenContractDocExport]: A dictionary containing the doc metadata,
             annotations ("labelled_text"), and relationships (including grouped relationships).
         """
-        logger.info(f"DoclingParser - Parsing doc {doc_id} for user {user_id} with effective kwargs: {all_kwargs}")
+        logger.info(
+            f"DoclingParser - Parsing doc {doc_id} for user {user_id} with effective kwargs: {all_kwargs}"
+        )
 
         document = Document.objects.get(pk=doc_id)
         doc_path = document.pdf_file.name
 
         # Get settings from all_kwargs (which includes PIPELINE_SETTINGS and direct_kwargs)
         force_ocr = all_kwargs.get("force_ocr", False)
-        roll_up_groups = all_kwargs.get("roll_up_groups", True) # Defaulting to True as per original PARSER_KWARGS
+        roll_up_groups = all_kwargs.get(
+            "roll_up_groups", True
+        )  # Defaulting to True as per original PARSER_KWARGS
         llm_enhanced_hierarchy = all_kwargs.get("llm_enhanced_hierarchy", False)
 
         if force_ocr:

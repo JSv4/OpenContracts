@@ -25,10 +25,7 @@ class PdfThumbnailGenerator(BaseThumbnailGenerator):
         logger.info("PdfThumbnailGenerator initialized.")
 
     def _generate_thumbnail_impl(
-        self,
-        txt_content: Optional[str],
-        pdf_bytes: Optional[bytes],
-        **all_kwargs
+        self, txt_content: Optional[str], pdf_bytes: Optional[bytes], **all_kwargs
     ) -> Optional[tuple[bytes, str]]:
         """
         Generate a thumbnail from bytes.
@@ -44,7 +41,9 @@ class PdfThumbnailGenerator(BaseThumbnailGenerator):
         """
         height = all_kwargs.get("height", 300)
         width = all_kwargs.get("width", 300)
-        logger.debug(f"PdfThumbnailGenerator generating with height={height}, width={width}. All kwargs: {all_kwargs}")
+        logger.debug(
+            f"PdfThumbnailGenerator generating with height={height}, width={width}. All kwargs: {all_kwargs}"
+        )
 
         try:
             # Determine desired dimensions

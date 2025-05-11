@@ -47,11 +47,15 @@ class CloudMinnModernBERTEmbedder(BaseEmbedder):
         from django.conf import settings
 
         self.requests = requests
-        
+
         # Get settings from component_settings or use Django settings as fallback
         component_settings = self.get_component_settings()
-        self.api_url = component_settings.get("hf_embeddings_endpoint", settings.HF_EMBEDDINGS_ENDPOINT)
-        hf_token = component_settings.get("hf_token", settings.HF_TOKEN)  # Use the token from settings
+        self.api_url = component_settings.get(
+            "hf_embeddings_endpoint", settings.HF_EMBEDDINGS_ENDPOINT
+        )
+        hf_token = component_settings.get(
+            "hf_token", settings.HF_TOKEN
+        )  # Use the token from settings
 
         self.headers = {
             "Accept": "application/json",
@@ -78,7 +82,9 @@ class CloudMinnModernBERTEmbedder(BaseEmbedder):
         Returns:
             A list of floats representing the embedding vector, or None if an error occurs.
         """
-        logger.debug(f"CloudMinnModernBERTEmbedder received text for embedding. Effective kwargs: {all_kwargs}")
+        logger.debug(
+            f"CloudMinnModernBERTEmbedder received text for embedding. Effective kwargs: {all_kwargs}"
+        )
         try:
             # Handle empty text
             if not text or not text.strip():
@@ -140,10 +146,12 @@ class MinnModernBERTEmbedder(BaseEmbedder):
         """Initialize the Minnesota Case Law ModernBERT embedder."""
         super().__init__(**kwargs_super)
         self.model = None
-        
+
         # Get settings from component_settings or use defaults
         component_settings = self.get_component_settings()
-        self.model_name = component_settings.get("model_name", "conceptofmind/teraflop-minn-caselaw")
+        self.model_name = component_settings.get(
+            "model_name", "conceptofmind/teraflop-minn-caselaw"
+        )
         self.cache_dir = component_settings.get("cache_dir", "/models")
         # Adjust vector_size if provided in settings, otherwise keep the class default
         self.vector_size = component_settings.get("vector_size", self.vector_size)
@@ -153,7 +161,9 @@ class MinnModernBERTEmbedder(BaseEmbedder):
         self.model_path = os.path.join(
             self.cache_dir, "sentence-transformers", model_name_suffix
         )
-        logger.info(f"MinnModernBERTEmbedder initialized. Model: {self.model_name}, Cache: {self.cache_dir}, Vector Size: {self.vector_size}")
+        logger.info(
+            f"MinnModernBERTEmbedder initialized. Model: {self.model_name}, Cache: {self.cache_dir}, Vector Size: {self.vector_size}"  # noqa: E501
+        )
 
     def _load_model(self):
         """Load the sentence transformer model if not already loaded."""
@@ -188,7 +198,9 @@ class MinnModernBERTEmbedder(BaseEmbedder):
         Returns:
             A list of floats representing the embedding vector, or None if an error occurs
         """
-        logger.debug(f"MinnModernBERTEmbedder received text for embedding. Effective kwargs: {all_kwargs}")
+        logger.debug(
+            f"MinnModernBERTEmbedder received text for embedding. Effective kwargs: {all_kwargs}"
+        )
         try:
             # Load the model if not already loaded
             self._load_model()

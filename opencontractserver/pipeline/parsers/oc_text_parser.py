@@ -47,7 +47,9 @@ class TxtParser(BaseParser):
         Returns:
             Optional[OpenContractDocExport]: The parsed document data, or None if parsing failed.
         """
-        logger.info(f"TxtParser - Parsing doc {doc_id} for user {user_id} with effective kwargs: {all_kwargs}")
+        logger.info(
+            f"TxtParser - Parsing doc {doc_id} for user {user_id} with effective kwargs: {all_kwargs}"
+        )
 
         document = Document.objects.get(pk=doc_id)
 

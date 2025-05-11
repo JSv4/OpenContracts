@@ -48,13 +48,17 @@ class NLMIngestParser(BaseParser):
             Optional[OpenContractDocExport]: The parsed document data,
             or None if parsing failed.
         """
-        logger.info(f"NLMIngestParser - Parsing doc {doc_id} for user {user_id} with effective kwargs: {all_kwargs}")
+        logger.info(
+            f"NLMIngestParser - Parsing doc {doc_id} for user {user_id} with effective kwargs: {all_kwargs}"
+        )
 
         # Retrieve config from all_kwargs or fallback to defaults
         # Defaults are based on previous PARSER_KWARGS values
         endpoint = all_kwargs.get("endpoint", "http://nlm-ingestor:5001")
-        api_key = all_kwargs.get("api_key", "") # Default was empty string
-        use_ocr_config = all_kwargs.get("use_ocr", True) # Default was True in PARSER_KWARGS
+        api_key = all_kwargs.get("api_key", "")  # Default was empty string
+        use_ocr_config = all_kwargs.get(
+            "use_ocr", True
+        )  # Default was True in PARSER_KWARGS
 
         # Retrieve the document
         document = Document.objects.get(pk=doc_id)

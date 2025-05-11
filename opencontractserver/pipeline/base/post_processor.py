@@ -1,13 +1,15 @@
 """Base class for post-processors that can modify export data before it is packaged."""
 
-from abc import ABC, abstractmethod
-from typing import Mapping, Tuple
 import logging
+from abc import ABC, abstractmethod
+from typing import Mapping
 
 from opencontractserver.types.dicts import OpenContractsExportDataJsonPythonType
+
 from .base_component import PipelineComponentBase
 
 logger = logging.getLogger(__name__)
+
 
 class BasePostProcessor(PipelineComponentBase, ABC):
     """
@@ -36,8 +38,8 @@ class BasePostProcessor(PipelineComponentBase, ABC):
         self,
         zip_bytes: bytes,
         export_data: OpenContractsExportDataJsonPythonType,
-        **all_kwargs
-    ) -> Tuple[bytes, OpenContractsExportDataJsonPythonType]:
+        **all_kwargs,
+    ) -> tuple[bytes, OpenContractsExportDataJsonPythonType]:
         """
         Abstract internal method to process the export data and return modified versions.
         Concrete subclasses must implement this method.
@@ -59,8 +61,8 @@ class BasePostProcessor(PipelineComponentBase, ABC):
         self,
         zip_bytes: bytes,
         export_data: OpenContractsExportDataJsonPythonType,
-        **direct_kwargs
-    ) -> Tuple[bytes, OpenContractsExportDataJsonPythonType]:
+        **direct_kwargs,
+    ) -> tuple[bytes, OpenContractsExportDataJsonPythonType]:
         """
         Processes the export data, automatically injecting settings from PIPELINE_SETTINGS.
 
@@ -77,7 +79,5 @@ class BasePostProcessor(PipelineComponentBase, ABC):
                 - Modified export data dictionary
         """
         merged_kwargs = {**self.get_component_settings(), **direct_kwargs}
-        logger.info(
-            f"Calling _process_export_impl with merged kwargs: {merged_kwargs}"
-        )
+        logger.info(f"Calling _process_export_impl with merged kwargs: {merged_kwargs}")
         return self._process_export_impl(zip_bytes, export_data, **merged_kwargs)

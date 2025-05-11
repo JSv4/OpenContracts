@@ -1,8 +1,10 @@
 import logging
 from abc import ABC
+
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
 
 class PipelineComponentBase(ABC):
     """
@@ -22,6 +24,7 @@ class PipelineComponentBase(ABC):
         # ...
     }
     """
+
     def __init__(self, **kwargs):
         """
         Initializes the PipelineComponentBase.
@@ -37,7 +40,7 @@ class PipelineComponentBase(ABC):
         Loads settings for this component from Django settings.
         """
         full_class_path = f"{self.__class__.__module__}.{self.__class__.__name__}"
-        
+
         # Ensure settings are loaded, especially in non-Django managed scripts or tests
         if not settings.configured:
             logger.warning(
@@ -48,7 +51,7 @@ class PipelineComponentBase(ABC):
             # In a typical Django app flow, settings would be configured.
             # Consider if `settings.configure()` needs to be called in specific entry points
             # if this code runs outside the standard manage.py/WSGI/ASGI flow.
-            
+
         pipeline_settings_dict = getattr(settings, "PIPELINE_SETTINGS", {})
 
         if not isinstance(pipeline_settings_dict, dict):
@@ -64,10 +67,12 @@ class PipelineComponentBase(ABC):
                 f"Loaded settings for {full_class_path}: {self._component_settings}"
             )
         else:
-            logger.debug(f"No specific settings found for {full_class_path} in PIPELINE_SETTINGS.")
+            logger.debug(
+                f"No specific settings found for {full_class_path} in PIPELINE_SETTINGS."
+            )
 
     def get_component_settings(self) -> dict:
         """
         Returns a copy of the settings loaded for this component.
         """
-        return self._component_settings.copy() 
+        return self._component_settings.copy()

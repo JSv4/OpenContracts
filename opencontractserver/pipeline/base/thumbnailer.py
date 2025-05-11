@@ -1,13 +1,15 @@
-from abc import ABC, abstractmethod
-from typing import Mapping, Optional, Tuple
 import logging
+from abc import ABC, abstractmethod
+from typing import Mapping, Optional
 
 from django.core.files.base import File
 
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
+
 from .base_component import PipelineComponentBase
 
 logger = logging.getLogger(__name__)
+
 
 class BaseThumbnailGenerator(PipelineComponentBase, ABC):
     """
@@ -33,11 +35,8 @@ class BaseThumbnailGenerator(PipelineComponentBase, ABC):
 
     @abstractmethod
     def _generate_thumbnail_impl(
-        self,
-        txt_content: Optional[str],
-        pdf_bytes: Optional[bytes],
-        **all_kwargs
-    ) -> Optional[Tuple[bytes, str]]:
+        self, txt_content: Optional[str], pdf_bytes: Optional[bytes], **all_kwargs
+    ) -> Optional[tuple[bytes, str]]:
         """
         Abstract internal method to generate a thumbnail from txt content and pdf bytes.
         Concrete subclasses must implement this method.
@@ -92,11 +91,13 @@ class BaseThumbnailGenerator(PipelineComponentBase, ABC):
 
             # Merge order: defaults, then PIPELINE_SETTINGS, then direct_kwargs
             merged_kwargs = {**default_dimensions, **component_settings, **kwargs}
-            
+
             logger.info(
                 f"Calling _generate_thumbnail_impl with merged kwargs: {merged_kwargs}"
             )
-            result = self._generate_thumbnail_impl(txt_content, pdf_bytes, **merged_kwargs)
+            result = self._generate_thumbnail_impl(
+                txt_content, pdf_bytes, **merged_kwargs
+            )
 
             if result:
                 thumbnail_bytes, extension = result

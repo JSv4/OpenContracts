@@ -54,7 +54,7 @@ class TestParser(BaseParser):
     dependencies: List[str] = []
     supported_file_types: List[FileTypeEnum] = [FileTypeEnum.PDF]
 
-    def parse_document(self, user_id: int, doc_id: int) -> Optional[OpenContractDocExport]:
+    def _parse_document_impl(self, user_id: int, doc_id: int) -> Optional[OpenContractDocExport]:
         # Return None or a dummy OpenContractDocExport for testing purposes
         return None
 '''
@@ -76,7 +76,7 @@ class TestEmbedder(BaseEmbedder):
     vector_size: int = 128
     supported_file_types = [FileTypeEnum.PDF, FileTypeEnum.TXT]
 
-    def embed_text(self, text: str) -> Optional[List[float]]:
+    def _embed_text_impl(self, text: str) -> Optional[List[float]]:
         # Return a dummy embedding vector
         return [0.0] * self.vector_size
 
@@ -92,7 +92,7 @@ class TestEmbedder384(BaseEmbedder):
     vector_size: int = 384
     supported_file_types = [FileTypeEnum.PDF]
 
-    def embed_text(self, text: str) -> Optional[List[float]]:
+    def _embed_text_impl(self, text: str) -> Optional[List[float]]:
         # Return a dummy embedding vector
         return [0.0] * self.vector_size
 
@@ -108,7 +108,7 @@ class TestEmbedder768(BaseEmbedder):
     vector_size: int = 768
     supported_file_types = [FileTypeEnum.TXT]
 
-    def embed_text(self, text: str) -> Optional[List[float]]:
+    def _embed_text_impl(self, text: str) -> Optional[List[float]]:
         # Return a dummy embedding vector
         return [0.0] * self.vector_size
 '''
@@ -130,7 +130,7 @@ class TestThumbnailer(BaseThumbnailGenerator):
     dependencies: List[str] = []
     supported_file_types: List[FileTypeEnum] = [FileTypeEnum.PDF]
 
-    def generate_thumbnail(self, file_bytes: bytes) -> Optional[File]:
+    def _generate_thumbnail_impl(self, file_bytes: bytes) -> Optional[File]:
         # Return None or a dummy File object for testing purposes
         return None
 '''
@@ -155,7 +155,7 @@ class TestPostProcessor(BasePostProcessor):
     dependencies: List[str] = []
     supported_file_types: List[FileTypeEnum] = [FileTypeEnum.PDF]
 
-    def process_export(
+    def _process_export_impl(
         self,
         zip_bytes: bytes,
         export_data: OpenContractsExportDataJsonPythonType,

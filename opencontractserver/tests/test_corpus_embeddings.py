@@ -21,7 +21,7 @@ class TestEmbedder(BaseEmbedder):
     dependencies = []
     vector_size = 768
 
-    def embed_text(self, text: str, **kwargs) -> list[float]:
+    def _embed_text_impl(self, text: str, **kwargs) -> list[float]:
         """Return a dummy embedding vector."""
         return [0.1] * self.vector_size
 

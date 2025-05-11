@@ -32,14 +32,25 @@ class ModernBERTEmbedder(BaseEmbedder):
         # FileTypeEnum.HTML,  # Removed as we don't support HTML
     ]
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """Initialize the ModernBERT embedder."""
+        super().__init__(**kwargs)
         self.model = None
-        self.model_name = "answerdotai/ModernBERT-base"
-        self.cache_dir = "/models"
+        
+        # Get settings from component_settings or use defaults
+        component_settings = self.get_component_settings()
+        self.model_name = component_settings.get("model_name", "answerdotai/ModernBERT-base")
+        self.cache_dir = component_settings.get("cache_dir", "/models")
+        # Adjust vector_size if provided in settings, otherwise keep the class default
+        self.vector_size = component_settings.get("vector_size", self.vector_size) 
+
+        # model_path is derived from cache_dir and a fixed subdir for sentence-transformers structure
+        # The part 'ModernBERT-base' should ideally match the last part of self.model_name
+        model_name_suffix = self.model_name.split("/")[-1]
         self.model_path = os.path.join(
-            self.cache_dir, "sentence-transformers", "ModernBERT-base"
+            self.cache_dir, "sentence-transformers", model_name_suffix 
         )
+        logger.info(f"ModernBERTEmbedder initialized. Model: {self.model_name}, Cache: {self.cache_dir}, Vector Size: {self.vector_size}")
 
     def _load_model(self):
         """Load the sentence transformer model if not already loaded."""
@@ -63,17 +74,18 @@ class ModernBERTEmbedder(BaseEmbedder):
                 logger.error(f"Error loading ModernBERT model: {e}")
                 raise
 
-    def embed_text(self, text: str, **kwargs) -> Optional[list[float]]:
+    def _embed_text_impl(self, text: str, **all_kwargs) -> Optional[list[float]]:
         """
         Generate embeddings for the given text using the ModernBERT model.
 
         Args:
             text: The text to embed
-            **kwargs: Additional arguments to pass to the model
+            **all_kwargs: Additional arguments to pass to the model, potentially from PIPELINE_SETTINGS.
 
         Returns:
             A list of floats representing the embedding vector, or None if an error occurs
         """
+        logger.debug(f"ModernBERTEmbedder received text for embedding. Effective kwargs: {all_kwargs}")
         try:
             # Load the model if not already loaded
             self._load_model()
@@ -84,7 +96,7 @@ class ModernBERTEmbedder(BaseEmbedder):
                 return [0.0] * self.vector_size
 
             # Generate embeddings
-            embedding = self.model.encode(text, **kwargs)
+            embedding = self.model.encode(text, **all_kwargs)
 
             # Convert to list of floats
             return embedding.tolist()

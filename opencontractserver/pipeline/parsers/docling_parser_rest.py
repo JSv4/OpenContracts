@@ -30,6 +30,7 @@ class DoclingParser(BaseParser):
 
     def __init__(self):
         """Initialize the Docling REST parser with service URL from settings."""
+        super().__init__()  # Call to superclass __init__
         # Default to http://docling-parser:8000/parse/ if not specified in settings
         self.service_url = getattr(
             settings, "DOCLING_PARSER_SERVICE_URL", "http://docling-parser:8000/parse/"
@@ -40,8 +41,8 @@ class DoclingParser(BaseParser):
         )  # 5 minutes default
         logger.info(f"DoclingParser initialized with service URL: {self.service_url}")
 
-    def parse_document(
-        self, user_id: int, doc_id: int, **kwargs
+    def _parse_document_impl(
+        self, user_id: int, doc_id: int, **all_kwargs
     ) -> Optional[OpenContractDocExport]:
         """
         Delegates document parsing to the Docling microservice.
@@ -49,7 +50,8 @@ class DoclingParser(BaseParser):
         Args:
             user_id (int): The ID of the user parsing the document.
             doc_id (int): The ID of the target Document in the database.
-            **kwargs: Additional optional arguments (e.g. "force_ocr", "llm_enhanced_hierarchy", etc.)
+            **all_kwargs: Additional optional arguments (e.g. "force_ocr", "llm_enhanced_hierarchy", etc.)
+                These can come from PIPELINE_SETTINGS or be passed directly.
                 - force_ocr (bool): Force OCR processing even if text is detectable
                 - roll_up_groups (bool): Roll up items under the same heading into single relationships
                 - llm_enhanced_hierarchy (bool): Apply experimental LLM-based hierarchy enhancement
@@ -58,14 +60,15 @@ class DoclingParser(BaseParser):
             Optional[OpenContractDocExport]: A dictionary containing the doc metadata,
             annotations ("labelled_text"), and relationships (including grouped relationships).
         """
-        logger.info(f"DoclingParser - Parsing doc {doc_id} for user {user_id}")
+        logger.info(f"DoclingParser - Parsing doc {doc_id} for user {user_id} with effective kwargs: {all_kwargs}")
 
         document = Document.objects.get(pk=doc_id)
         doc_path = document.pdf_file.name
 
-        force_ocr = kwargs.get("force_ocr", False)
-        roll_up_groups = kwargs.get("roll_up_groups", False)
-        llm_enhanced_hierarchy = kwargs.get("llm_enhanced_hierarchy", False)
+        # Get settings from all_kwargs (which includes PIPELINE_SETTINGS and direct_kwargs)
+        force_ocr = all_kwargs.get("force_ocr", False)
+        roll_up_groups = all_kwargs.get("roll_up_groups", True) # Defaulting to True as per original PARSER_KWARGS
+        llm_enhanced_hierarchy = all_kwargs.get("llm_enhanced_hierarchy", False)
 
         if force_ocr:
             logger.info(

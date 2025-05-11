@@ -25,30 +25,36 @@ class NLMIngestParser(BaseParser):
     dependencies = []
     supported_file_types = [FileTypeEnum.PDF]
 
-    def parse_document(
-        self, user_id: int, doc_id: int, **kwargs
+    def __init__(self, **kwargs):
+        """Initializes the NLMIngestParser."""
+        super().__init__(**kwargs)
+        logger.info("NLMIngestParser initialized.")
+
+    def _parse_document_impl(
+        self, user_id: int, doc_id: int, **all_kwargs
     ) -> Optional[OpenContractDocExport]:
         """
         Parses a document using the NLM ingest service and ensures that all annotations
-        have 'structural' set to True and 'annotation_type' set to SPAN_LABEL.
+        have 'structural' set to True and 'annotation_type' set to TOKEN_LABEL.
 
-        Now, we load configuration from **kwargs, falling back to Django settings if not provided.
+        Configuration is loaded from **all_kwargs (merged from PIPELINE_SETTINGS and direct call args).
 
         Args:
             user_id (int): ID of the user.
             doc_id (int): ID of the document to parse.
-            **kwargs: Parser configuration arguments such as 'endpoint', 'api_key', and 'use_ocr'.
+            **all_kwargs: Parser configuration arguments such as 'endpoint', 'api_key', and 'use_ocr'.
 
         Returns:
             Optional[OpenContractDocExport]: The parsed document data,
             or None if parsing failed.
         """
-        logger.info(f"NLMIngestParser - Parsing doc {doc_id} for user {user_id}")
+        logger.info(f"NLMIngestParser - Parsing doc {doc_id} for user {user_id} with effective kwargs: {all_kwargs}")
 
-        # Retrieve config from kwargs or fallback to settings
-        endpoint = kwargs.get("endpoint", "http://nlm-ingestor:5001")
-        api_key = kwargs.get("api_key", "")
-        use_ocr_config = kwargs.get("use_ocr", False)
+        # Retrieve config from all_kwargs or fallback to defaults
+        # Defaults are based on previous PARSER_KWARGS values
+        endpoint = all_kwargs.get("endpoint", "http://nlm-ingestor:5001")
+        api_key = all_kwargs.get("api_key", "") # Default was empty string
+        use_ocr_config = all_kwargs.get("use_ocr", True) # Default was True in PARSER_KWARGS
 
         # Retrieve the document
         document = Document.objects.get(pk=doc_id)
@@ -98,7 +104,7 @@ class NLMIngestParser(BaseParser):
             logger.error("No 'opencontracts_data' found in NLM ingest service response")
             return None
 
-        # Ensure all annotations have 'structural' set to True and 'annotation_type' set to SPAN_LABEL
+        # Ensure all annotations have 'structural' set to True and 'annotation_type' set to TOKEN_LABEL
         if "labelled_text" in open_contracts_data:
             for annotation in open_contracts_data["labelled_text"]:
                 annotation["structural"] = True

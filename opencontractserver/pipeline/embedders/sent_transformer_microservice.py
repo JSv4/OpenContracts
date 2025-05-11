@@ -29,22 +29,39 @@ class MicroserviceEmbedder(BaseEmbedder):
         # Add more as needed
     ]
 
-    def embed_text(self, text: str) -> Optional[list[float]]:
+    def __init__(self, **kwargs):
+        """Initializes the MicroserviceEmbedder."""
+        super().__init__(**kwargs)
+        logger.info("MicroserviceEmbedder initialized.")
+        # Potentially load EMBEDDINGS_MICROSERVICE_URL and VECTOR_EMBEDDER_API_KEY from self.get_component_settings() here
+        # if they are to be configured via PIPELINE_SETTINGS. For now, they are read from django.conf.settings directly.
+
+    def _embed_text_impl(self, text: str, **all_kwargs) -> Optional[list[float]]:
         """
         Generates embeddings from text using the microservice.
 
         Args:
             text (str): The text content to embed.
+            **all_kwargs: Additional keyword arguments. Currently unused by this specific embedder
+                          but included for consistency with the base class. Potential settings
+                          like microservice URL or API key could be passed here if desired.
 
         Returns:
             Optional[List[float]]: The embeddings as a list of floats,
             or None if an error occurs.
         """
+        logger.debug(f"MicroserviceEmbedder received text for embedding. Effective kwargs: {all_kwargs}")
         try:
+            # Settings like EMBEDDINGS_MICROSERVICE_URL and VECTOR_EMBEDDER_API_KEY are currently
+            # sourced from django.conf.settings directly. They could be made configurable
+            # via all_kwargs if needed by modifying the lines below.
+            service_url = all_kwargs.get("embeddings_microservice_url", settings.EMBEDDINGS_MICROSERVICE_URL)
+            api_key = all_kwargs.get("vector_embedder_api_key", settings.VECTOR_EMBEDDER_API_KEY)
+
             response = requests.post(
-                f"{settings.EMBEDDINGS_MICROSERVICE_URL}/embeddings",
+                f"{service_url}/embeddings",
                 json={"text": text},
-                headers={"X-API-Key": settings.VECTOR_EMBEDDER_API_KEY},
+                headers={"X-API-Key": api_key},
             )
 
             if response.status_code == 200:

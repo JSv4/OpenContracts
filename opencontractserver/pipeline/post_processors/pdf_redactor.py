@@ -37,19 +37,25 @@ class PDFRedactor(BasePostProcessor):
     }
     supported_file_types = [FileTypeEnum.PDF]
 
-    def process_export(
+    def __init__(self, **kwargs_super):
+        """Initializes the PDFRedactor post-processor."""
+        super().__init__(**kwargs_super)
+        logger.info("PDFRedactor initialized.")
+
+    def _process_export_impl(
         self,
         zip_bytes: bytes,
         export_data: OpenContractsExportDataJsonPythonType,
-        **kwargs,
+        **all_kwargs,
     ) -> tuple[bytes, OpenContractsExportDataJsonPythonType]:
         """
         Read a ZIP that contains PDFs and annotation data, produce a new ZIP
         with redacted PDFs.
+        Settings (like 'labels_to_redact') are sourced from all_kwargs.
         """
-
+        logger.debug(f"PDFRedactor processing export. Effective kwargs: {all_kwargs}")
         try:
-            labels_to_redact = kwargs.get("labels_to_redact", [])
+            labels_to_redact = all_kwargs.get("labels_to_redact", [])
 
             output_zip_bytes = io.BytesIO()
             input_zip_bytes = io.BytesIO(zip_bytes)

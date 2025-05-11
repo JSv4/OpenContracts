@@ -54,35 +54,62 @@ class BaseThumbnailGenerator(PipelineComponentBase, ABC):
         """
         pass
 
-    def generate_thumbnail(
-        self, 
-        txt_content: Optional[str], 
-        pdf_bytes: Optional[bytes], 
-        **direct_kwargs
-    ) -> Optional[Tuple[bytes, str]]:
+    def generate_thumbnail(self, doc_id: str | int, **kwargs) -> Optional[File]:
         """
-        Generates a thumbnail from txt content and pdf bytes, injecting settings.
-        The caller is responsible for saving the returned bytes as a file.
+        Generate a thumbnail for the given document ID by processing its text and PDF files.
 
         Args:
-            txt_content (Optional[str]): The content of the text file.
-            pdf_bytes (Optional[bytes]): The bytes of the PDF file.
-            **direct_kwargs: Arbitrary keyword arguments that may be provided
-                             for specific thumbnailer functionalities at call time.
-                             These will override settings from PIPELINE_SETTINGS (e.g. height, width).
+            doc_id (str | int): The ID of the document.
 
         Returns:
-            Optional[Tuple[bytes, str]]: A tuple containing the thumbnail image bytes and file extension,
-                                         or None if an error occurs.
+            Optional[File]: A Django File instance containing the thumbnail image, or None if an error occurs.
         """
-        # Default height and width can be part of component_settings or direct_kwargs
-        default_dimensions = {"height": 300, "width": 300}
-        component_settings = self.get_component_settings()
+        from django.core.files.base import ContentFile
 
-        # Merge order: defaults, then PIPELINE_SETTINGS, then direct_kwargs
-        merged_kwargs = {**default_dimensions, **component_settings, **direct_kwargs}
-        
-        logger.info(
-            f"Calling _generate_thumbnail_impl with merged kwargs: {merged_kwargs}"
-        )
-        return self._generate_thumbnail_impl(txt_content, pdf_bytes, **merged_kwargs)
+        from opencontractserver.documents.models import Document
+
+        try:
+            # Load the Document instance
+            document = Document.objects.get(id=doc_id)
+
+            # Initialize variables
+            txt_content: Optional[str] = None
+            pdf_bytes: Optional[bytes] = None
+
+            # Load the txt file content if available
+            if document.txt_extract_file:
+                with document.txt_extract_file.open("r") as txt_file:
+                    txt_content = txt_file.read()
+
+            # Load the pdf file bytes if available
+            if document.pdf_file:
+                with document.pdf_file.open("rb") as pdf_file:
+                    pdf_bytes = pdf_file.read()
+
+            # Default height and width can be part of component_settings or direct_kwargs
+            default_dimensions = {"height": 300, "width": 300}
+            component_settings = self.get_component_settings()
+
+            # Merge order: defaults, then PIPELINE_SETTINGS, then direct_kwargs
+            merged_kwargs = {**default_dimensions, **component_settings, **kwargs}
+            
+            logger.info(
+                f"Calling _generate_thumbnail_impl with merged kwargs: {merged_kwargs}"
+            )
+            result = self._generate_thumbnail_impl(txt_content, pdf_bytes, **merged_kwargs)
+
+            if result:
+                thumbnail_bytes, extension = result
+                thumbnail_file = ContentFile(thumbnail_bytes)
+                thumb_filename = f"thumbnail_{doc_id}.{extension}"
+                # Save thumbnail to document's icon field
+                document.icon.save(thumb_filename, thumbnail_file)
+                document.save()
+                return thumbnail_file
+
+            # If no thumbnail generated
+            return None
+
+        except Document.DoesNotExist:
+            print(f"Document with id {doc_id} does not exist.")
+            return None

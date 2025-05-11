@@ -139,7 +139,7 @@ class TestDoclingParser(TestCase):
         self.assertTrue(payload["filename"].endswith(".pdf"))
         self.assertIn("pdf_base64", payload)
         self.assertFalse(payload["force_ocr"])
-        self.assertFalse(payload["roll_up_groups"])
+        self.assertTrue(payload["roll_up_groups"])
         self.assertFalse(payload["llm_enhanced_hierarchy"])
 
     @patch("opencontractserver.pipeline.parsers.docling_parser_rest.requests.post")

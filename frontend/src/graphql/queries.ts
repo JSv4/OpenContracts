@@ -2026,7 +2026,7 @@ export const GET_DOCUMENT_DETAILS = gql`
 
 export interface GetDocumentKnowledgeAndAnnotationsInput {
   documentId: string;
-  corpusId?: string;
+  corpusId: string;
   analysisId?: string;
 }
 
@@ -2038,7 +2038,7 @@ export interface GetDocumentKnowledgeAndAnnotationsOutput {
 export const GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS = gql`
   query GetDocumentKnowledgeAndAnnotations(
     $documentId: String!
-    $corpusId: ID
+    $corpusId: ID!
     $analysisId: ID
   ) {
     document(id: $documentId) {

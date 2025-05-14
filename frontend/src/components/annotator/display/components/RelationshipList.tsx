@@ -1,16 +1,22 @@
 import { Card } from "semantic-ui-react";
+import { useMemo } from "react";
 
 import { RelationItem } from "../../sidebar/RelationItem";
 
 import "../../sidebar/AnnotatorSidebar.css";
 import { PlaceholderCard } from "../../../placeholders/PlaceholderCard";
-import { RelationGroup } from "../../types/annotations";
+import {
+  RelationGroup,
+  ServerSpanAnnotation,
+  ServerTokenAnnotation,
+} from "../../types/annotations";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
 import { useAnnotationSelection } from "../../context/UISettingsAtom";
 import {
   usePdfAnnotations,
   useRemoveAnnotationFromRelationship,
   useRemoveRelationship,
+  useStructuralAnnotations,
 } from "../../hooks/AnnotationHooks";
 import _ from "lodash";
 
@@ -26,7 +32,18 @@ export const RelationshipList = ({ read_only }: { read_only: boolean }) => {
 
   const { annotationElementRefs } = useAnnotationRefs();
   const { pdfAnnotations } = usePdfAnnotations();
-  const annotations = pdfAnnotations.annotations;
+  const { structuralAnnotations } = useStructuralAnnotations();
+
+  // Combine regular and structural annotations
+  const allAnnotations = useMemo(() => {
+    const regularAnnotations = pdfAnnotations.annotations || [];
+    const structural = structuralAnnotations || [];
+    return [...regularAnnotations, ...structural] as (
+      | ServerSpanAnnotation
+      | ServerTokenAnnotation
+    )[];
+  }, [pdfAnnotations.annotations, structuralAnnotations]);
+
   const relations = pdfAnnotations.relations;
 
   // If we have search results pane open... set index to last index
@@ -93,10 +110,10 @@ export const RelationshipList = ({ read_only }: { read_only: boolean }) => {
             relation={relation}
             read_only={read_only}
             selected={selectedRelations.includes(relation)}
-            source_annotations={annotations.filter((a) =>
+            source_annotations={allAnnotations.filter((a) =>
               relation.sourceIds.includes(a.id)
             )}
-            target_annotations={annotations.filter((a) =>
+            target_annotations={allAnnotations.filter((a) =>
               relation.targetIds.includes(a.id)
             )}
             onSelectAnnotation={toggleSelectedAnnotation}

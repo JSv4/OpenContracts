@@ -98,6 +98,14 @@ export const App = () => {
 
   const { getAccessTokenSilently, user } = useAuth0();
 
+  const handleKnowledgeBaseModalClose = useCallback(() => {
+    showKnowledgeBaseModal({
+      isOpen: false,
+      documentId: null,
+      corpusId: null,
+    });
+  }, []);
+
   // For now, our responsive layout is a bit hacky, but it's working well enough to
   // provide a passable UI on mobile. Your results not guaranteed X-)
   const { width } = useWindowDimensions();
@@ -207,35 +215,24 @@ export const App = () => {
       ) : (
         <></>
       )}
-      {show_cookie_modal ? <CookieConsentDialog /> : <></>}
-      {knowledge_base_modal.isOpen && knowledge_base_modal.documentId ? (
-        knowledge_base_modal.corpusId ? (
+      {knowledge_base_modal.isOpen &&
+        knowledge_base_modal.documentId &&
+        knowledge_base_modal.corpusId && (
           <DocumentKnowledgeBase
-            documentId={knowledge_base_modal.documentId!}
-            corpusId={knowledge_base_modal.corpusId!}
-            onClose={() =>
-              showKnowledgeBaseModal({
-                isOpen: false,
-                documentId: null,
-                corpusId: null,
-              })
-            }
+            documentId={knowledge_base_modal.documentId}
+            corpusId={knowledge_base_modal.corpusId}
+            onClose={handleKnowledgeBaseModalClose}
           />
-        ) : (
+        )}
+      {knowledge_base_modal.isOpen &&
+        knowledge_base_modal.documentId &&
+        !knowledge_base_modal.corpusId && (
           <DocumentViewer
             documentId={knowledge_base_modal.documentId}
-            onClose={() =>
-              showKnowledgeBaseModal({
-                isOpen: false,
-                documentId: null,
-                corpusId: null,
-              })
-            }
+            onClose={handleKnowledgeBaseModalClose}
           />
-        )
-      ) : (
-        <></>
-      )}
+        )}
+      {show_cookie_modal ? <CookieConsentDialog /> : <></>}
       <ThemeProvider>
         <div
           style={{

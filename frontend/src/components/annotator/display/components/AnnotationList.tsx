@@ -14,11 +14,16 @@ import {
 import {
   useDeleteAnnotation,
   usePdfAnnotations,
+  useStructuralAnnotations,
 } from "../../hooks/AnnotationHooks";
 import { HighlightItem } from "../../sidebar/HighlightItem";
 import { ViewSettingsPopup } from "../../../widgets/popups/ViewSettingsPopup";
 import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import styled from "styled-components";
+import {
+  ServerSpanAnnotation,
+  ServerTokenAnnotation,
+} from "../../types/annotations";
 
 interface AnnotationListProps {
   /**
@@ -74,40 +79,67 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
   fetchMore,
 }): JSX.Element => {
   const { pdfAnnotations } = usePdfAnnotations();
+  const { structuralAnnotations } = useStructuralAnnotations();
   const { selectedAnnotations, setSelectedAnnotations } =
     useAnnotationSelection();
   const { annotationElementRefs } = useAnnotationRefs();
   const handleDeleteAnnotation = useDeleteAnnotation();
 
   // Controls how annotations are displayed (e.g., hide structural or show certain labels only).
-  const { showStructural } = useAnnotationDisplay();
+  const { showStructural /*, showSelectedOnly */ } = useAnnotationDisplay();
   const { spanLabelsToView } = useAnnotationControls();
-  const { annotations, relations } = pdfAnnotations;
 
-  // Add debug logging
-  console.log("AnnotationList received annotations:", annotations.length);
+  const allAnnotations = useMemo(() => {
+    const regularAnnotations = pdfAnnotations.annotations || [];
+    const structural = structuralAnnotations || [];
+    console.log(
+      "AnnotationList - Combining annotations. Regular count:",
+      regularAnnotations.length,
+      "Structural count:",
+      structural.length
+    );
+    return [...regularAnnotations, ...structural] as (
+      | ServerSpanAnnotation
+      | ServerTokenAnnotation
+    )[];
+  }, [pdfAnnotations.annotations, structuralAnnotations]);
+
+  console.log(
+    "AnnotationList received total annotations (regular + structural):",
+    allAnnotations.length
+  );
 
   /**
    * Filter out structural annotations (if hidden),
    * and filter by user-selected labels if any.
    */
   const filteredAnnotations = useMemo(() => {
-    // Add debug logging
-    console.log("Filtering annotations, count before:", annotations.length);
-
-    const returnAnnotations = annotations.filter(
-      (annotation) =>
-        (showStructural || !annotation.structural) &&
-        (!spanLabelsToView?.length ||
-          spanLabelsToView.some(
-            (label) => label.id === annotation.annotationLabel.id
-          ))
+    console.log(
+      "Filtering annotations. Combined count before filtering:",
+      allAnnotations.length,
+      "Show structural flag:",
+      showStructural
     );
 
-    // Add debug logging
+    const returnAnnotations = allAnnotations.filter((annotation) => {
+      if (annotation.structural) {
+        // If it's a structural annotation, only consider the showStructural flag.
+        // It bypasses the spanLabelsToView filter.
+        return showStructural;
+      } else {
+        // For non-structural annotations, always apply the spanLabelsToView filter.
+        return (
+          !spanLabelsToView?.length ||
+          spanLabelsToView.some(
+            (label) => label.id === annotation.annotationLabel.id
+          )
+        );
+      }
+    });
+
     console.log("Filtered annotations, count after:", returnAnnotations.length);
     return returnAnnotations;
-  }, [annotations, showStructural, spanLabelsToView]);
+  }, [allAnnotations, showStructural, spanLabelsToView]);
 
   /**
    * Deletes an annotation by ID.
@@ -160,7 +192,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
    */
   const AnnotationItems: React.FC<{
     readonly annotations: typeof filteredAnnotations;
-    readonly relations: typeof relations;
+    readonly relations: typeof pdfAnnotations.relations;
     readonly read_only: boolean;
     readonly onSelect: (id: string) => void;
     readonly onDelete: (id: string) => void;
@@ -217,7 +249,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
           {filteredAnnotations.length > 0 ? (
             <AnnotationItems
               annotations={filteredAnnotations}
-              relations={relations}
+              relations={pdfAnnotations.relations}
               read_only={read_only}
               onSelect={toggleSelectedAnnotation}
               onDelete={onDeleteAnnotation}

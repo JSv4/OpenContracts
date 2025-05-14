@@ -66,6 +66,7 @@ import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/Selec
 import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 import { DocumentUploadModal } from "./components/widgets/modals/DocumentUploadModal";
 import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUploadModal";
+import { DocumentViewer } from "./components/documents/Viewer";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
@@ -207,19 +208,34 @@ export const App = () => {
         <></>
       )}
       {show_cookie_modal ? <CookieConsentDialog /> : <></>}
-      {knowledge_base_modal.isOpen ? (
-        <DocumentKnowledgeBase
-          documentId={knowledge_base_modal.documentId!}
-          corpusId={knowledge_base_modal.corpusId!}
-          onClose={() =>
-            showKnowledgeBaseModal({
-              isOpen: false,
-              documentId: null,
-              corpusId: null,
-            })
-          }
-        />
-      ) : null}
+      {knowledge_base_modal.isOpen && knowledge_base_modal.documentId ? (
+        knowledge_base_modal.corpusId ? (
+          <DocumentKnowledgeBase
+            documentId={knowledge_base_modal.documentId!}
+            corpusId={knowledge_base_modal.corpusId!}
+            onClose={() =>
+              showKnowledgeBaseModal({
+                isOpen: false,
+                documentId: null,
+                corpusId: null,
+              })
+            }
+          />
+        ) : (
+          <DocumentViewer
+            documentId={knowledge_base_modal.documentId}
+            onClose={() =>
+              showKnowledgeBaseModal({
+                isOpen: false,
+                documentId: null,
+                corpusId: null,
+              })
+            }
+          />
+        )
+      ) : (
+        <></>
+      )}
       <ThemeProvider>
         <div
           style={{

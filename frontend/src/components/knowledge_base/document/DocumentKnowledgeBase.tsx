@@ -21,12 +21,7 @@ import {
   GetDocumentKnowledgeAndAnnotationsOutput,
 } from "../../../graphql/queries";
 import { getDocumentRawText, getPawlsLayer } from "../../annotator/api/rest";
-import {
-  CorpusType,
-  DocumentType,
-  LabelType,
-  RawDocumentType,
-} from "../../../types/graphql-api";
+import { CorpusType, LabelType } from "../../../types/graphql-api";
 import { motion, AnimatePresence } from "framer-motion";
 import { PDFContainer } from "../../annotator/display/viewer/DocumentViewer";
 import { PDFDocumentLoadingTask } from "pdfjs-dist";
@@ -117,7 +112,7 @@ import { useChatSourceState } from "../../annotator/context/ChatSourceAtom";
 import { useCreateAnnotation } from "../../annotator/hooks/AnnotationHooks";
 
 import { getDocument } from "pdfjs-dist";
-import workerSrc from "pdfjs-dist/build/pdf.worker?worker&url";
+import workerSrc from "pdfjs-dist/build/pdf.worker.js?url";
 import * as pdfjs from "pdfjs-dist";
 
 // Setting worker path to worker bundle.
@@ -158,7 +153,10 @@ const RelationsPanel: React.FC = () => {
   const { selectedExtract } = useAnalysisSelection();
 
   return (
-    <div className="sidebar__relation__annotation" style={{ padding: "1rem" }}>
+    <div
+      className="sidebar__relation__annotation"
+      style={{ padding: "1rem", overflowY: "hidden" }}
+    >
       {selectedAnalysis && (
         <SourceIndicator>
           Showing relationships from analysis: {selectedAnalysis.analyzer.id}

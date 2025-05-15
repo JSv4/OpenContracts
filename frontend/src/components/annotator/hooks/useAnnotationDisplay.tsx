@@ -5,9 +5,11 @@ import {
   showStructuralAnnotationsAtom,
   showSelectedAnnotationOnlyAtom,
   hideLabelsAtom,
+  showStructuralRelationshipsAtom,
 } from "../context/UISettingsAtom";
 import { LabelDisplayBehavior } from "../../../types/graphql-api";
 import { useCallback } from "react";
+import { atom } from "jotai"; // Added for conceptual atom definition
 
 /**
  * Hook to manage annotation display settings.
@@ -17,49 +19,70 @@ export function useAnnotationDisplay() {
     showAnnotationBoundingBoxesAtom
   );
   const [labelDisplay, setLabelDisplay] = useAtom(showAnnotationLabelsAtom);
-  const [structuralAnnotations, setStructuralAnnotations] = useAtom(
+  const [structuralAnnotationsView, setStructuralAnnotationsView] = useAtom(
+    // Renamed for clarity
     showStructuralAnnotationsAtom
   );
   const [selectedOnly, setSelectedOnly] = useAtom(
     showSelectedAnnotationOnlyAtom
   );
-  const [hideLabels, setHideLabels] = useAtom(hideLabelsAtom);
+  const [hideLabelsFlag, setHideLabelsFlag] = useAtom(hideLabelsAtom); // Renamed to avoid conflict
+
+  // New state for structural relationships
+  const [structuralRelationshipsView, setStructuralRelationshipsView] = useAtom(
+    // Renamed for clarity
+    showStructuralRelationshipsAtom
+  );
 
   // Toggles
   const toggleBoundingBoxes = useCallback(() => {
     setBoundingBoxes((prev) => !prev);
   }, [setBoundingBoxes]);
 
-  const toggleLabelDisplay = useCallback(() => {
-    setLabelDisplay((behavior: LabelDisplayBehavior) => behavior);
-  }, [setLabelDisplay]);
+  // setLabelDisplay is used directly by ViewSettingsPopup
 
   const toggleStructuralAnnotations = useCallback(() => {
-    setStructuralAnnotations((prev) => !prev);
-  }, [setStructuralAnnotations]);
+    setStructuralAnnotationsView((prev) => !prev);
+  }, [setStructuralAnnotationsView]);
 
   const toggleSelectedOnly = useCallback(() => {
     setSelectedOnly((prev) => !prev);
   }, [setSelectedOnly]);
 
   const toggleHideLabels = useCallback(() => {
-    setHideLabels((prev) => !prev);
-  }, [setHideLabels]);
+    setHideLabelsFlag((prev) => !prev);
+  }, [setHideLabelsFlag]);
+
+  // New toggle for structural relationships
+  const toggleStructuralRelationships = useCallback(() => {
+    setStructuralRelationshipsView((prev) => !prev);
+  }, [setStructuralRelationshipsView]);
 
   return {
-    states: {
-      showBoundingBoxes: boundingBoxes,
-      showAnnotationLabels: labelDisplay,
-      showStructuralAnnotations: structuralAnnotations,
-      showSelectedAnnotationOnly: selectedOnly,
-      hideLabels,
-    },
-    toggles: {
-      toggleBoundingBoxes,
-      toggleLabelDisplay,
-      toggleStructuralAnnotations,
-      toggleSelectedOnly,
-      toggleHideLabels,
-    },
+    // States (matching pattern used by ViewSettingsPopup if applicable)
+    showBoundingBoxes: boundingBoxes,
+    showLabels: labelDisplay, // Corresponds to 'showAnnotationLabels' in ViewSettingsPopup
+    showStructural: structuralAnnotationsView, // General structural annotations visibility
+    showSelectedOnly: selectedOnly,
+    hideLabels: hideLabelsFlag, // Used in ViewSettingsPopup
+
+    // Setters (for ViewSettingsPopup style handlers)
+    setShowBoundingBoxes: setBoundingBoxes,
+    setShowLabels: setLabelDisplay,
+    setShowStructural: setStructuralAnnotationsView,
+    setShowSelectedOnly: setSelectedOnly,
+    setHideLabels: setHideLabelsFlag,
+
+    // New properties for structural relationships
+    showStructuralRelationships: structuralRelationshipsView,
+    setShowStructuralRelationships: setStructuralRelationshipsView, // Expose setter
+
+    // Toggles (can be used directly if preferred)
+    // Keeping the original structure of returning state values and setters primarily
+    // toggleBoundingBoxes,
+    // toggleStructuralAnnotations,
+    // toggleSelectedOnly,
+    // toggleHideLabels,
+    toggleStructuralRelationships, // Make this available if needed
   };
 }

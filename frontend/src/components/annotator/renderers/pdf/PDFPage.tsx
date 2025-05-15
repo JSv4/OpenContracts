@@ -8,10 +8,7 @@ import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
 import { Selection } from "../../display/components/Selection";
 import { SearchResult } from "../../display/components/SearchResult";
 import { BoundingBox, ServerTokenAnnotation } from "../../types/annotations";
-import {
-  usePdfAnnotations,
-  useStructuralAnnotations,
-} from "../../hooks/AnnotationHooks";
+import { usePdfAnnotations } from "../../hooks/AnnotationHooks";
 import {
   scrollContainerRefAtom,
   usePages,
@@ -29,6 +26,7 @@ import { PDFPageInfo } from "../../types/pdf";
 import { chatSourcesAtom } from "../../context/ChatSourceAtom";
 import { useCorpusState } from "../../context/CorpusAtom";
 import { ChatSourceResult } from "../../display/components/ChatSourceResult";
+import { usePageAnnotations } from "../../hooks/usePageAnnotations";
 
 /**
  * This wrapper is inline-block (shrink-wrapped) and position:relative
@@ -62,7 +60,6 @@ export const PDFPage = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<PDFPageRenderer | null>(null);
   const { pdfAnnotations } = usePdfAnnotations();
-  const { structuralAnnotations } = useStructuralAnnotations();
 
   const pageViewport = pageInfo.page.getViewport({ scale: 1 });
   const [pageBounds, setPageBounds] = useState<BoundingBox>({
@@ -74,7 +71,7 @@ export const PDFPage = ({
   const [hasPdfPageRendered, setPdfPageRendered] = useState(false);
   const [initialZoomSet, setInitialZoomSet] = useState(false);
 
-  const { showStructural, showStructuralRelationships } =
+  const { showStructural, showSelectedOnly, showStructuralRelationships } =
     useAnnotationDisplay();
   const { zoomLevel, setZoomLevel } = useZoomLevel();
   const { selectedAnnotations, selectedRelations } = useAnnotationSelection();
@@ -83,11 +80,8 @@ export const PDFPage = ({
     useAnnotationRefs();
   const pageContainerRef = useRef<HTMLDivElement>(null);
 
-  const allRawAnnotations = useMemo(() => {
-    const regular = pdfAnnotations?.annotations || [];
-    const structural = structuralAnnotations || [];
-    return [...regular, ...structural];
-  }, [pdfAnnotations?.annotations, structuralAnnotations]);
+  // O(1) – already grouped
+  const allRawAnnotations = usePageAnnotations(pageInfo.page.pageNumber - 1);
 
   const [scrollContainerRef] = useAtom(scrollContainerRefAtom);
   const { pages, setPages } = usePages();
@@ -363,28 +357,34 @@ export const PDFPage = ({
     pdfAnnotations?.relations,
   ]);
 
-  const page_annotation_components = useMemo(() => {
-    if (!hasPdfPageRendered || !zoomLevel || !pageBounds || !allRawAnnotations)
-      return [];
+  const pageAnnotationComponents = useMemo(() => {
+    if (!hasPdfPageRendered || !zoomLevel || !pageBounds) return [];
 
-    return annots_to_render.map((annotation) => (
-      <Selection
-        key={annotation.id}
-        selected={selectedAnnotations.includes(annotation.id)}
-        pageInfo={updatedPageInfo}
-        annotation={annotation}
-        approved={annotation.approved}
-        rejected={annotation.rejected}
-        allowFeedback={selectedCorpus?.allowComments}
-        scrollIntoView={selectedAnnotations[0] === annotation.id}
-      />
-    ));
+    const isVisible = (annot: ServerTokenAnnotation): boolean => {
+      if (showSelectedOnly) {
+        return selectedAnnotations.includes(annot.id);
+      }
+      return true; // existing checks (labels, structural, …) stay here
+    };
+
+    return annots_to_render
+      .filter(isVisible) // <-- skip invisible ones entirely
+      .map((annotation) => (
+        <Selection
+          key={annotation.id}
+          selected={selectedAnnotations.includes(annotation.id)}
+          pageInfo={pageInfo}
+          annotation={annotation}
+          /* showInfo, approved … */
+        />
+      ));
   }, [
+    annots_to_render,
+    showSelectedOnly,
+    selectedAnnotations,
+    hasPdfPageRendered,
     zoomLevel,
     pageBounds,
-    allRawAnnotations,
-    annots_to_render,
-    selectedAnnotations,
   ]);
 
   /**
@@ -423,6 +423,21 @@ export const PDFPage = ({
     chatSourceElementRefs,
   ]);
 
+  /* ---------------------------------------------------------------
+     After the page has rendered, scroll the selected annotation
+     itself into view (works even if this page was virtualised and
+     only just got mounted).                                         */
+  useEffect(() => {
+    if (!hasPdfPageRendered) return;
+    if (selectedAnnotations.length === 0) return;
+
+    const id = selectedAnnotations[0];
+    const el = annotationElementRefs.current[id];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [hasPdfPageRendered, selectedAnnotations, annotationElementRefs]);
+
   return (
     <PageAnnotationsContainer
       className="PageAnnotationsContainer"
@@ -438,7 +453,7 @@ export const PDFPage = ({
           createAnnotation={createAnnotationHandler}
           pageNumber={pageInfo.page.pageNumber - 1}
         />
-        {page_annotation_components}
+        {pageAnnotationComponents}
 
         {zoomLevel &&
           pageBounds &&

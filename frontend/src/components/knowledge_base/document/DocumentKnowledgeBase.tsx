@@ -110,6 +110,7 @@ import styled from "styled-components";
 import { Icon } from "semantic-ui-react";
 import { useChatSourceState } from "../../annotator/context/ChatSourceAtom";
 import { useCreateAnnotation } from "../../annotator/hooks/AnnotationHooks";
+import { useScrollContainerRef } from "../../annotator/context/DocumentAtom";
 
 import { getDocument } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.js?url";
@@ -489,31 +490,31 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   // We'll store the measured containerWidth here
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
 
-  // Our PDFContainer callback ref
-  const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
-    if (node) {
-      // Measure the node's width now
-      const width = node.getBoundingClientRect().width;
-      setContainerWidth(width);
+  /**
+   * 1. store container width (existing behaviour)
+   * 2. publish the same element to scrollContainerRefAtom
+   */
+  const { setScrollContainerRef } = useScrollContainerRef();
+  const pdfContainerRef = useRef<HTMLDivElement | null>(null);
 
-      // If you need to store this node for scrolling, you can still do so:
-      // scrollContainerRef.current = node;
-      // registerRef("scrollContainer", scrollContainerRef);
-    }
-  }, []);
+  const containerRefCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      pdfContainerRef.current = node;
 
-  // Whenever the window resizes, re-measure that container
-  useEffect(() => {
-    function handleResize() {
-      const node = document.getElementById("pdf-container");
-      if (!node) return;
-      const width = node.getBoundingClientRect().width;
-      setContainerWidth(width);
-    }
+      if (node) {
+        // ① width for initial zoom calc
+        setContainerWidth(node.getBoundingClientRect().width);
+        // ② virtual-window needs this ref
+        setScrollContainerRef(pdfContainerRef);
+      } else {
+        setScrollContainerRef(null);
+      }
+    },
+    [setContainerWidth, setScrollContainerRef]
+  );
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  /* clear on unmount so stale refs are never used */
+  useEffect(() => () => setScrollContainerRef(null), [setScrollContainerRef]);
 
   const handleKeyUpPress = useCallback(
     (event: { keyCode: any }) => {

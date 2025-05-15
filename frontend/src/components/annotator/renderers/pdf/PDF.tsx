@@ -1,13 +1,20 @@
 import styled from "styled-components";
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
-import _ from "lodash";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { PDFPage } from "./PDFPage";
 import {
   usePages,
   usePdfDoc,
   useSetViewStateError,
+  scrollContainerRefAtom,
 } from "../../context/DocumentAtom";
 import { ServerTokenAnnotation } from "../../types/annotations";
+import { useAtomValue } from "jotai";
+import {
+  useZoomLevel,
+  useAnnotationSelection,
+} from "../../context/UISettingsAtom";
+import { usePdfAnnotations } from "../../hooks/AnnotationHooks";
 
 export class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
@@ -72,32 +79,165 @@ export const PDF: React.FC<PDFProps> = ({
   containerWidth,
   createAnnotationHandler,
 }) => {
-  const { pdfDoc } = usePdfDoc();
   const { pages } = usePages();
   const setViewStateError = useSetViewStateError();
+  const { zoomLevel } = useZoomLevel();
+  const { selectedAnnotations } = useAnnotationSelection();
+  const { pdfAnnotations } = usePdfAnnotations();
+  const scrollContainerRef = useAtomValue(scrollContainerRefAtom);
 
-  if (!pdfDoc) {
-    // fallback if doc not loaded
-    return null;
-  }
-  if (!pages) {
-    // fallback if pages not defined
-    return <div>No pages available.</div>;
-  }
+  /* ---------- build index & heights ---------------------------------- */
+  const pageInfos = useMemo(
+    () =>
+      Object.values(pages).sort(
+        (a, b) => a.page.pageNumber - b.page.pageNumber
+      ),
+    [pages]
+  );
+
+  const pageHeights = useMemo(
+    () =>
+      pageInfos.map(
+        (p) => p.page.getViewport({ scale: zoomLevel }).height + 32
+      ), // +margin
+    [pageInfos, zoomLevel]
+  );
+
+  /* prefix sums for quick offset lookup */
+  const cumulative = useMemo(() => {
+    const out: number[] = [0];
+    for (let i = 0; i < pageHeights.length; i++) {
+      out.push(out[i] + pageHeights[i]);
+    }
+    return out; // length = pageCount + 1
+  }, [pageHeights]);
+
+  /* ------------------------------------------------------------------ */
+  /* utility: pick the element that actually scrolls ------------------- */
+  const getScrollElement = (): HTMLElement | Window => {
+    const el = scrollContainerRef?.current;
+    if (el && el.scrollHeight > el.clientHeight) return el;
+    // fallback – the page itself scrolls
+    return window;
+  };
+
+  /* ---------- visible window tracking -------------------------------- */
+  const [range, setRange] = useState<[number, number]>([0, 0]); // [startIdx, endIdx]
+
+  const calcRange = useCallback(() => {
+    const el = getScrollElement();
+    const scroll =
+      el instanceof Window
+        ? window.scrollY || document.documentElement.scrollTop
+        : el.scrollTop;
+    const viewH = el instanceof Window ? window.innerHeight : el.clientHeight;
+
+    // binary search for first page whose bottom >= scrollTop
+    let lo = 0,
+      hi = cumulative.length - 1;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (cumulative[mid + 1] < scroll) lo = mid + 1;
+      else hi = mid;
+    }
+    const first = lo;
+
+    // find last page whose top <= scrollTop + viewH
+    lo = first;
+    hi = cumulative.length - 2;
+    const limit = scroll + viewH;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (cumulative[mid] <= limit) lo = mid;
+      else hi = mid - 1;
+    }
+    const last = lo;
+
+    const overscan = 2;
+    setRange([
+      Math.max(0, first - overscan),
+      Math.min(pageInfos.length - 1, last + overscan),
+    ]);
+  }, [scrollContainerRef, cumulative, pageInfos.length]);
+
+  /* attach / detach scroll listener(s) */
+  useEffect(() => {
+    const elWindow = window;
+    const elContainer = scrollContainerRef?.current;
+    calcRange(); // initial
+    const onScroll = () => requestAnimationFrame(calcRange);
+    elWindow.addEventListener("scroll", onScroll, { passive: true });
+    elContainer?.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      elWindow.removeEventListener("scroll", onScroll);
+      elContainer?.removeEventListener("scroll", onScroll);
+    };
+  }, [scrollContainerRef, calcRange]);
+
+  /* update window when zoom changes */
+  useEffect(calcRange, [zoomLevel, calcRange]);
+
+  /* ---------- jump-to-annotation ------------------------------------- */
+  useEffect(() => {
+    if (selectedAnnotations.length === 0) return;
+    const id = selectedAnnotations[0];
+    const annot = pdfAnnotations.annotations.find((a) => a.id === id);
+    if (!annot) return;
+
+    const el = getScrollElement();
+
+    /* both HTMLElement and Window implement scrollTo ------------------ */
+    el.scrollTo({
+      top: cumulative[annot.page],
+      behavior: "smooth",
+    });
+
+    // Ensure the virtual-window recalculates even if no 'scroll' event fires
+    requestAnimationFrame(calcRange);
+  }, [
+    selectedAnnotations,
+    pdfAnnotations,
+    cumulative,
+    scrollContainerRef,
+    calcRange,
+  ]);
+
+  /* ---------- render -------------------------------------------------- */
+  if (pageInfos.length === 0) return null;
 
   return (
-    <>
-      {Object.values(pages).map((p) => (
-        <PDFPage
-          key={p.page.pageNumber}
-          pageInfo={p}
-          read_only={read_only}
-          onError={setViewStateError}
-          containerWidth={containerWidth}
-          createAnnotationHandler={createAnnotationHandler}
-        />
-      ))}
-    </>
+    <div style={{ position: "relative" }}>
+      {pageInfos.map((pInfo, idx) => {
+        const top = cumulative[idx];
+        const height = pageHeights[idx];
+        const visible = idx >= range[0] && idx <= range[1];
+
+        return (
+          <div
+            key={pInfo.page.pageNumber}
+            style={{
+              position: "absolute",
+              top,
+              height,
+              width: "100%",
+            }}
+          >
+            {visible && (
+              <PDFPage
+                pageInfo={pInfo}
+                read_only={read_only}
+                onError={setViewStateError}
+                containerWidth={containerWidth}
+                createAnnotationHandler={createAnnotationHandler}
+              />
+            )}
+          </div>
+        );
+      })}
+      {/* spacer so the scroll container has correct total height */}
+      <div style={{ height: cumulative[cumulative.length - 1] }} />
+    </div>
   );
 };
 

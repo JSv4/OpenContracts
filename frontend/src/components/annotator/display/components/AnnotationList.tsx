@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 
 import _ from "lodash";
 
@@ -6,6 +6,7 @@ import "../../sidebar/AnnotatorSidebar.css";
 import { FetchMoreOnVisible } from "../../../widgets/infinite_scroll/FetchMoreOnVisible";
 import { PlaceholderCard } from "../../../placeholders/PlaceholderCard";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
+import { useAllAnnotations } from "../../hooks/useAllAnnotations";
 import {
   useAnnotationControls,
   useAnnotationDisplay,
@@ -89,20 +90,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
   const { showStructural /*, showSelectedOnly */ } = useAnnotationDisplay();
   const { spanLabelsToView } = useAnnotationControls();
 
-  const allAnnotations = useMemo(() => {
-    const regularAnnotations = pdfAnnotations.annotations || [];
-    const structural = structuralAnnotations || [];
-    console.log(
-      "AnnotationList - Combining annotations. Regular count:",
-      regularAnnotations.length,
-      "Structural count:",
-      structural.length
-    );
-    return [...regularAnnotations, ...structural] as (
-      | ServerSpanAnnotation
-      | ServerTokenAnnotation
-    )[];
-  }, [pdfAnnotations.annotations, structuralAnnotations]);
+  const allAnnotations = useAllAnnotations();
 
   console.log(
     "AnnotationList received total annotations (regular + structural):",

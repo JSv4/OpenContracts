@@ -90,7 +90,6 @@ export const PDF: React.FC<PDFProps> = ({
   const setPendingScrollId = useSetAtom(pendingScrollAnnotationIdAtom);
   const { pdfDoc } = usePdfDoc();
   const [pageHeights, setPageHeights] = useState<number[]>([]);
-  const lastJumpedFor = useRef<string | null>(null);
 
   /* ---------- build index & heights ---------------------------------- */
   const pageInfos = useMemo(
@@ -101,7 +100,10 @@ export const PDF: React.FC<PDFProps> = ({
     [pages]
   );
 
-  /* selected page (0-based) ******************************************/
+  /**
+   * Returns the zero-based page index of the first selected annotation, or undefined if
+   * no annotation is selected or the annotation cannot be found.
+   */
   const selectedPageIdx = useMemo(() => {
     if (selectedAnnotations.length === 0) return undefined;
     const annot = pdfAnnotations.annotations.find(
@@ -134,12 +136,12 @@ export const PDF: React.FC<PDFProps> = ({
 
   /* ------------------------------------------------------------------ */
   /* utility: pick the element that actually scrolls ------------------- */
-  const getScrollElement = (): HTMLElement | Window => {
+  const getScrollElement = useCallback((): HTMLElement | Window => {
     const el = scrollContainerRef?.current;
     if (el && el.scrollHeight > el.clientHeight) return el;
     // fallback – the page itself scrolls
     return window;
-  };
+  }, [scrollContainerRef]);
 
   /* ---------- visible window tracking -------------------------------- */
   const [range, setRange] = useState<[number, number]>([0, 0]); // [startIdx, endIdx]
@@ -184,12 +186,7 @@ export const PDF: React.FC<PDFProps> = ({
     }
 
     setRange([start, end]);
-  }, [
-    scrollContainerRef,
-    cumulative,
-    pageInfos.length,
-    selectedPageIdx, // <- depend on it
-  ]);
+  }, [getScrollElement, cumulative, pageInfos.length, selectedPageIdx]);
 
   /* attach / detach scroll listener(s) */
   useEffect(() => {
@@ -209,30 +206,36 @@ export const PDF: React.FC<PDFProps> = ({
   /* update window when zoom changes */
   useEffect(calcRange, [zoomLevel, calcRange]);
 
-  /* ---------- jump to the page once heights are known -------------- */
+  /**
+   * Scroll to the selected annotation's page whenever:
+   * 1. A new annotation is selected, OR
+   * 2. The page heights become available, OR
+   * 3. The zoom level changes (which affects page positions)
+   *
+   * This effect handles the first part of the scroll-to-annotation process:
+   * - Scroll the container so the correct PAGE is visible
+   * - Set pendingScrollId so the PDFPage component can center the specific annotation
+   */
   useEffect(() => {
-    if (
-      selectedPageIdx === undefined ||
-      pageHeights.length === 0 // cache not ready yet
-    )
-      return;
+    // No selection or no height data yet - can't scroll properly
+    if (selectedAnnotations.length === 0 || pageHeights.length === 0) return;
+    if (selectedPageIdx === undefined) return;
 
-    /* avoid repeating the same jump during minor re-renders */
-    const annotId = selectedAnnotations[0];
-    if (lastJumpedFor.current === annotId) return;
-    lastJumpedFor.current = annotId;
+    const targetId = selectedAnnotations[0];
 
-    getScrollElement().scrollTo({
-      top: Math.max(0, cumulative[selectedPageIdx] - 32),
-      behavior: "smooth",
-    });
-    setPendingScrollId(annotId);
+    // 1. Scroll the container/window so the target page is visible
+    const topOffset = Math.max(0, cumulative[selectedPageIdx] - 32);
+    getScrollElement().scrollTo({ top: topOffset, behavior: "smooth" });
+
+    // 2. Tell the PDFPage components to look for and center this annotation
+    setPendingScrollId(targetId);
   }, [
-    selectedPageIdx,
-    cumulative,
-    pageHeights,
-    getScrollElement,
     selectedAnnotations,
+    selectedPageIdx,
+    pageHeights,
+    cumulative,
+    zoomLevel,
+    getScrollElement,
     setPendingScrollId,
   ]);
 

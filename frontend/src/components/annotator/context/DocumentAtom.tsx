@@ -79,6 +79,7 @@ export const pageSelectionQueueAtom = atom<Record<number, BoundingBox[]>>({});
 export const scrollContainerRefAtom = atom<RefObject<HTMLDivElement> | null>(
   null
 );
+export const pendingScrollAnnotationIdAtom = atom<string | null>(null);
 
 /**
  * Text Search Atoms.

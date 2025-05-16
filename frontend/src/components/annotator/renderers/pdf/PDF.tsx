@@ -7,14 +7,16 @@ import {
   usePdfDoc,
   useSetViewStateError,
   scrollContainerRefAtom,
+  pendingScrollAnnotationIdAtom,
 } from "../../context/DocumentAtom";
-import { ServerTokenAnnotation } from "../../types/annotations";
-import { useAtomValue } from "jotai";
+import { ServerTokenAnnotation, BoundingBox } from "../../types/annotations";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
   useZoomLevel,
   useAnnotationSelection,
 } from "../../context/UISettingsAtom";
 import { usePdfAnnotations } from "../../hooks/AnnotationHooks";
+import { MultipageAnnotationJson } from "../../../types";
 
 export class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
@@ -85,6 +87,10 @@ export const PDF: React.FC<PDFProps> = ({
   const { selectedAnnotations } = useAnnotationSelection();
   const { pdfAnnotations } = usePdfAnnotations();
   const scrollContainerRef = useAtomValue(scrollContainerRefAtom);
+  const setPendingScrollId = useSetAtom(pendingScrollAnnotationIdAtom);
+  const { pdfDoc } = usePdfDoc();
+  const [pageHeights, setPageHeights] = useState<number[]>([]);
+  const lastJumpedFor = useRef<string | null>(null);
 
   /* ---------- build index & heights ---------------------------------- */
   const pageInfos = useMemo(
@@ -95,13 +101,27 @@ export const PDF: React.FC<PDFProps> = ({
     [pages]
   );
 
-  const pageHeights = useMemo(
-    () =>
-      pageInfos.map(
-        (p) => p.page.getViewport({ scale: zoomLevel }).height + 32
-      ), // +margin
-    [pageInfos, zoomLevel]
-  );
+  /* selected page (0-based) ******************************************/
+  const selectedPageIdx = useMemo(() => {
+    if (selectedAnnotations.length === 0) return undefined;
+    const annot = pdfAnnotations.annotations.find(
+      (a) => a.id === selectedAnnotations[0]
+    );
+    return annot?.page; // undefined if not found
+  }, [selectedAnnotations, pdfAnnotations]);
+
+  /* build the cache once per zoom level */
+  useEffect(() => {
+    if (!pdfDoc) return;
+    (async () => {
+      const h: number[] = [];
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        h.push(page.getViewport({ scale: zoomLevel }).height + 32);
+      }
+      setPageHeights(h); // updates state → re-render
+    })();
+  }, [pdfDoc, zoomLevel]);
 
   /* prefix sums for quick offset lookup */
   const cumulative = useMemo(() => {
@@ -154,11 +174,22 @@ export const PDF: React.FC<PDFProps> = ({
     const last = lo;
 
     const overscan = 2;
-    setRange([
-      Math.max(0, first - overscan),
-      Math.min(pageInfos.length - 1, last + overscan),
-    ]);
-  }, [scrollContainerRef, cumulative, pageInfos.length]);
+    let start = Math.max(0, first - overscan);
+    let end = Math.min(pageInfos.length - 1, last + overscan);
+
+    /* ensure the page that owns the selection is mounted */
+    if (selectedPageIdx !== undefined) {
+      start = Math.min(start, selectedPageIdx);
+      end = Math.max(end, selectedPageIdx);
+    }
+
+    setRange([start, end]);
+  }, [
+    scrollContainerRef,
+    cumulative,
+    pageInfos.length,
+    selectedPageIdx, // <- depend on it
+  ]);
 
   /* attach / detach scroll listener(s) */
   useEffect(() => {
@@ -178,29 +209,31 @@ export const PDF: React.FC<PDFProps> = ({
   /* update window when zoom changes */
   useEffect(calcRange, [zoomLevel, calcRange]);
 
-  /* ---------- jump-to-annotation ------------------------------------- */
+  /* ---------- jump to the page once heights are known -------------- */
   useEffect(() => {
-    if (selectedAnnotations.length === 0) return;
-    const id = selectedAnnotations[0];
-    const annot = pdfAnnotations.annotations.find((a) => a.id === id);
-    if (!annot) return;
+    if (
+      selectedPageIdx === undefined ||
+      pageHeights.length === 0 // cache not ready yet
+    )
+      return;
 
-    const el = getScrollElement();
+    /* avoid repeating the same jump during minor re-renders */
+    const annotId = selectedAnnotations[0];
+    if (lastJumpedFor.current === annotId) return;
+    lastJumpedFor.current = annotId;
 
-    /* both HTMLElement and Window implement scrollTo ------------------ */
-    el.scrollTo({
-      top: cumulative[annot.page],
+    getScrollElement().scrollTo({
+      top: Math.max(0, cumulative[selectedPageIdx] - 32),
       behavior: "smooth",
     });
-
-    // Ensure the virtual-window recalculates even if no 'scroll' event fires
-    requestAnimationFrame(calcRange);
+    setPendingScrollId(annotId);
   }, [
-    selectedAnnotations,
-    pdfAnnotations,
+    selectedPageIdx,
     cumulative,
-    scrollContainerRef,
-    calcRange,
+    pageHeights,
+    getScrollElement,
+    selectedAnnotations,
+    setPendingScrollId,
   ]);
 
   /* ---------- render -------------------------------------------------- */

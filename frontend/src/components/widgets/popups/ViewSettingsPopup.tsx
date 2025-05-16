@@ -73,6 +73,7 @@ export const ViewSettingsPopup: React.FC<ViewSettingsPopupProps> = ({
 
   return (
     <Popup
+      id="view-settings-popup"
       className="SettingsPopup"
       on="click"
       trigger={

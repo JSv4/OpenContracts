@@ -27,6 +27,7 @@ import { chatSourcesAtom } from "../../context/ChatSourceAtom";
 import { useCorpusState } from "../../context/CorpusAtom";
 import { ChatSourceResult } from "../../display/components/ChatSourceResult";
 import { usePageAnnotations } from "../../hooks/usePageAnnotations";
+import { pendingScrollAnnotationIdAtom } from "../../context/DocumentAtom";
 
 /**
  * This wrapper is inline-block (shrink-wrapped) and position:relative
@@ -109,6 +110,12 @@ export const PDFPage = ({
     );
   }, [pageInfo.page, pageInfo.tokens, zoomLevel, pageBounds]);
 
+  const [pendingScrollId, setPendingScrollId] = useAtom(
+    pendingScrollAnnotationIdAtom
+  );
+
+  const lastRenderedZoom = useRef<number | null>(null);
+
   useEffect(() => {
     setPages((prevPages) => ({
       ...prevPages,
@@ -144,14 +151,15 @@ export const PDFPage = ({
    * Handles resizing of the PDF page canvas.
    */
   const handleResize = () => {
-    if (canvasRef.current === null || rendererRef.current === null) {
-      onError(new Error("Canvas or renderer not available."));
-      return;
-    }
+    if (!canvasRef.current || !rendererRef.current) return;
+    if (lastRenderedZoom.current === zoomLevel) return;
+
     const viewport = pageInfo.page.getViewport({ scale: zoomLevel });
     canvasRef.current.width = viewport.width;
     canvasRef.current.height = viewport.height;
+
     rendererRef.current.rescaleAndRender(zoomLevel);
+    lastRenderedZoom.current = zoomLevel;
   };
 
   useEffect(() => {
@@ -234,7 +242,7 @@ export const PDFPage = ({
     ) {
       handleResize();
     }
-  }, [hasPdfPageRendered, zoomLevel, onError, pageInfo.page]);
+  }, [zoomLevel, onError, pageInfo.page]);
 
   // Register and unregister the page container ref
   useEffect(() => {
@@ -243,31 +251,6 @@ export const PDFPage = ({
       unregisterRef("pdfPageContainer", pageInfo.page.pageNumber);
     };
   }, [registerRef, unregisterRef, pageInfo.page.pageNumber]);
-
-  /**
-   * Scrolls to the selected annotation when there is exactly one selected.
-   */
-  useLayoutEffect(() => {
-    const selectedId = selectedAnnotations[0];
-    if (
-      selectedAnnotations.length === 1 &&
-      annotationElementRefs.current[selectedId]
-    ) {
-      annotationElementRefs.current[selectedId]?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }
-  }, [selectedAnnotations, annotationElementRefs]);
-
-  useEffect(() => {
-    if (hasPdfPageRendered && selectedAnnotations.length === 1) {
-      annotationElementRefs.current[selectedAnnotations[0]]?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }
-  }, [hasPdfPageRendered, selectedAnnotations, annotationElementRefs]);
 
   /**
    * Determines the annotations to render, including ensuring that any annotation
@@ -368,14 +351,13 @@ export const PDFPage = ({
     };
 
     return annots_to_render
-      .filter(isVisible) // <-- skip invisible ones entirely
+      .filter(isVisible)
       .map((annotation) => (
         <Selection
           key={annotation.id}
           selected={selectedAnnotations.includes(annotation.id)}
           pageInfo={pageInfo}
           annotation={annotation}
-          /* showInfo, approved … */
         />
       ));
   }, [
@@ -423,20 +405,59 @@ export const PDFPage = ({
     chatSourceElementRefs,
   ]);
 
-  /* ---------------------------------------------------------------
-     After the page has rendered, scroll the selected annotation
-     itself into view (works even if this page was virtualised and
-     only just got mounted).                                         */
+  /**
+   * After the canvas is rendered keep trying to find the element that
+   * belongs to `pendingScrollId`.  As soon as we get it, centre it and
+   * clear the atom so other pages stop looking.
+   */
   useEffect(() => {
-    if (!hasPdfPageRendered) return;
-    if (selectedAnnotations.length === 0) return;
+    if (!hasPdfPageRendered || !pendingScrollId) return;
 
-    const id = selectedAnnotations[0];
-    const el = annotationElementRefs.current[id];
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const pageHasTarget = annots_to_render.some(
+      (a) => a.id === pendingScrollId
+    );
+    if (!pageHasTarget) return;
+
+    let cancelled = false;
+
+    const tryScroll = () => {
+      if (cancelled) return;
+
+      const el = annotationElementRefs.current[pendingScrollId];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setPendingScrollId(null); // done – clear atom
+      } else {
+        requestAnimationFrame(tryScroll); // keep waiting
+      }
+    };
+
+    tryScroll();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    hasPdfPageRendered,
+    pendingScrollId,
+    annots_to_render,
+    annotationElementRefs,
+    setPendingScrollId,
+  ]);
+
+  useEffect(() => {
+    if (!hasPdfPageRendered) return; // page not visible yet
+    if (!canvasRef.current || !rendererRef.current) return;
+
+    /* only rerender if zoom actually changed */
+    if (lastRenderedZoom.current !== zoomLevel) {
+      const viewport = pageInfo.page.getViewport({ scale: zoomLevel });
+      canvasRef.current.width = viewport.width;
+      canvasRef.current.height = viewport.height;
+
+      rendererRef.current.rescaleAndRender(zoomLevel);
+      lastRenderedZoom.current = zoomLevel;
     }
-  }, [hasPdfPageRendered, selectedAnnotations, annotationElementRefs]);
+  }, [zoomLevel, hasPdfPageRendered, pageInfo.page]);
 
   return (
     <PageAnnotationsContainer

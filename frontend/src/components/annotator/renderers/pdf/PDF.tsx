@@ -15,8 +15,7 @@ import {
   useZoomLevel,
   useAnnotationSelection,
 } from "../../context/UISettingsAtom";
-import { usePdfAnnotations } from "../../hooks/AnnotationHooks";
-import { MultipageAnnotationJson } from "../../../types";
+import { useAllAnnotations } from "../../hooks/useAllAnnotations";
 
 export class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
@@ -85,11 +84,15 @@ export const PDF: React.FC<PDFProps> = ({
   const setViewStateError = useSetViewStateError();
   const { zoomLevel } = useZoomLevel();
   const { selectedAnnotations } = useAnnotationSelection();
-  const { pdfAnnotations } = usePdfAnnotations();
-  const scrollContainerRef = useAtomValue(scrollContainerRefAtom);
-  const setPendingScrollId = useSetAtom(pendingScrollAnnotationIdAtom);
   const { pdfDoc } = usePdfDoc();
+  /* ------------------------------------------------------------------ */
+  /* reference to the scrolling element                                 */
+  const scrollContainerRef = useAtomValue(scrollContainerRefAtom);
   const [pageHeights, setPageHeights] = useState<number[]>([]);
+  const allAnnotations = useAllAnnotations();
+
+  /* tell PDFPage which annotation must be centred after page-scroll */
+  const setPendingScrollId = useSetAtom(pendingScrollAnnotationIdAtom);
 
   /* ---------- build index & heights ---------------------------------- */
   const pageInfos = useMemo(
@@ -106,11 +109,9 @@ export const PDF: React.FC<PDFProps> = ({
    */
   const selectedPageIdx = useMemo(() => {
     if (selectedAnnotations.length === 0) return undefined;
-    const annot = pdfAnnotations.annotations.find(
-      (a) => a.id === selectedAnnotations[0]
-    );
+    const annot = allAnnotations.find((a) => a.id === selectedAnnotations[0]);
     return annot?.page; // undefined if not found
-  }, [selectedAnnotations, pdfAnnotations]);
+  }, [selectedAnnotations, allAnnotations]);
 
   /* build the cache once per zoom level */
   useEffect(() => {

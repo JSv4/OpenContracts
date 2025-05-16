@@ -9,21 +9,19 @@ import styled from "styled-components";
 
 import "../../sidebar/AnnotatorSidebar.css";
 import { useAnnotationRefs } from "../../hooks/useAnnotationRefs";
-import { useAllAnnotations } from "../../hooks/useAllAnnotations";
+import { usePdfAnnotations } from "../../hooks/AnnotationHooks";
 import {
   useAnnotationControls,
   useAnnotationDisplay,
   useAnnotationSelection,
 } from "../../context/UISettingsAtom";
-import {
-  useDeleteAnnotation,
-  usePdfAnnotations,
-} from "../../hooks/AnnotationHooks";
+import { useDeleteAnnotation } from "../../hooks/AnnotationHooks";
 import { HighlightItem } from "../../sidebar/HighlightItem";
 import { ViewSettingsPopup } from "../../../widgets/popups/ViewSettingsPopup";
 import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { FetchMoreOnVisible } from "../../../widgets/infinite_scroll/FetchMoreOnVisible";
 import { PlaceholderCard } from "../../../placeholders/PlaceholderCard";
+import { useVisibleAnnotations } from "../../hooks/useVisibleAnnotations";
 
 interface AnnotationListProps {
   /** read-only mode flag */
@@ -70,20 +68,9 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
   const { showStructural } = useAnnotationDisplay();
   const { spanLabelsToView } = useAnnotationControls();
 
-  const allAnnotations = useAllAnnotations();
+  const visibleAnnotations = useVisibleAnnotations();
 
-  const filteredAnnotations = useMemo(() => {
-    return allAnnotations.filter((a) => {
-      if (a.structural) return showStructural;
-      return (
-        !spanLabelsToView ||
-        spanLabelsToView.length === 0 ||
-        spanLabelsToView.some((l) => l.id === a.annotationLabel.id)
-      );
-    });
-  }, [allAnnotations, showStructural, spanLabelsToView]);
-
-  const rowCount = filteredAnnotations.length + (fetchMore ? 1 : 0);
+  const rowCount = visibleAnnotations.length + (fetchMore ? 1 : 0);
 
   /* ------------ size bookkeeping ------------------------------------- */
   const [rowHeights, setRowHeights] = useState<number[]>(
@@ -168,7 +155,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
       setSelectedAnnotations(selectedAnnotations.filter((x) => x !== id));
     } else {
       setSelectedAnnotations([...selectedAnnotations, id]);
-      const idx = filteredAnnotations.findIndex((a) => a.id === id);
+      const idx = visibleAnnotations.findIndex((a) => a.id === id);
       if (idx !== -1) scrollToRow(idx);
     }
   };
@@ -176,13 +163,13 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
   /* ------------ row component ---------------------------------------- */
   const Row: React.FC<{ index: number }> = ({ index }) => {
     /* infinite-scroll sentinel */
-    if (index === filteredAnnotations.length && fetchMore) {
+    if (index === visibleAnnotations.length && fetchMore) {
       return (
         <FetchMoreOnVisible fetchNextPage={fetchMore} fetchWithoutMotion />
       );
     }
 
-    const annotation = filteredAnnotations[index];
+    const annotation = visibleAnnotations[index];
 
     const ref = useCallback(
       (el: HTMLLIElement | null) => {
@@ -244,7 +231,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
 
       <ListViewport ref={viewportRef}>
         {/* ---------------- case: no matching annotations --------------- */}
-        {filteredAnnotations.length === 0 ? (
+        {visibleAnnotations.length === 0 ? (
           <PlaceholderCard
             style={{ margin: "1rem" }}
             title="No Matching Annotations Found"

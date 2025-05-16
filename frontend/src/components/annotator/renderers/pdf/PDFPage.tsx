@@ -2,7 +2,6 @@ import { useRef, useState, useEffect, useMemo, useLayoutEffect } from "react";
 import styled from "styled-components";
 import { useAtom } from "jotai";
 import { useAtomValue } from "jotai";
-import _ from "lodash";
 import { PageProps, TextSearchTokenResult } from "../../../types";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
 import { Selection } from "../../display/components/Selection";
@@ -26,7 +25,7 @@ import { PDFPageInfo } from "../../types/pdf";
 import { chatSourcesAtom } from "../../context/ChatSourceAtom";
 import { useCorpusState } from "../../context/CorpusAtom";
 import { ChatSourceResult } from "../../display/components/ChatSourceResult";
-import { usePageAnnotations } from "../../hooks/usePageAnnotations";
+import { useVisibleAnnotations } from "../../hooks/useVisibleAnnotations";
 import { pendingScrollAnnotationIdAtom } from "../../context/DocumentAtom";
 
 /**
@@ -72,8 +71,7 @@ export const PDFPage = ({
   const [hasPdfPageRendered, setPdfPageRendered] = useState(false);
   const [initialZoomSet, setInitialZoomSet] = useState(false);
 
-  const { showStructural, showSelectedOnly, showStructuralRelationships } =
-    useAnnotationDisplay();
+  const { showSelectedOnly } = useAnnotationDisplay();
   const { zoomLevel, setZoomLevel } = useZoomLevel();
   const { selectedAnnotations, selectedRelations } = useAnnotationSelection();
 
@@ -81,8 +79,8 @@ export const PDFPage = ({
     useAnnotationRefs();
   const pageContainerRef = useRef<HTMLDivElement>(null);
 
-  // O(1) – already grouped
-  const allRawAnnotations = usePageAnnotations(pageInfo.page.pageNumber - 1);
+  /* visible annotations (global) */
+  const visibleAnnotations = useVisibleAnnotations();
 
   const [scrollContainerRef] = useAtom(scrollContainerRefAtom);
   const { pages, setPages } = usePages();
@@ -256,89 +254,17 @@ export const PDFPage = ({
    * Determines the annotations to render, including ensuring that any annotation
    * involved in a currently selected relation is visible, regardless of other filters.
    */
+  const pageIndex = pageInfo.page.pageNumber - 1;
+
   const annots_to_render = useMemo(() => {
-    // Gather all annotations for current page and ensure they are drawable by <Selection>
-    let defined_annotations = _.uniqBy(
-      allRawAnnotations.filter((annot) => {
-        // All annotations (structural or not) to be rendered by <Selection>
-        // must have the necessary page-specific data and bounds.
-        // We assume ServerTokenAnnotation is the primary carrier of this via its .json property.
-        // Structural annotations, if they are to be rendered by Selection.tsx,
-        // must either conform to this or have a separate rendering path.
-        if (annot instanceof ServerTokenAnnotation) {
-          const pageData = (annot as ServerTokenAnnotation).json[
-            pageInfo.page.pageNumber - 1
-          ];
-          // Explicitly check for bounds, as this is what Selection.tsx likely needs.
-          // Adjust `pageData.bounds` if the actual path to bounds is different.
-          return pageData && pageData.bounds;
-        }
-        // If structural annotations have a *different* but valid structure for <Selection>
-        // add that check here. For now, we assume only ServerTokenAnnotations with bounds are drawable.
-        // e.g. if (annot.structural && annot.page === pageInfo.page.pageNumber -1 && annot.bounds) return true;
-        return false; // Filter out if not a ServerTokenAnnotation with page-specific bounds
-      }),
-      "id"
-    );
-
-    // Collect IDs for annotations involved in the *currently selected* relations to ensure they're forced visible
-    const forcedBySelectedRelationIds = new Set(
-      selectedRelations.flatMap((rel) => [...rel.sourceIds, ...rel.targetIds])
-    );
-
-    // If showing structural relationships, identify all annotations part of *any* structural relationship
-    // (or any relationship if showStructuralRelationships also implies showing non-structural ones clearly)
-    let annotationsToForceVisibleForRelationships = new Set<string>();
-    if (showStructuralRelationships) {
-      // We need access to all relations, not just selected ones here.
-      // Assuming pdfAnnotations.relations contains all relations for the document.
-      const allDocumentRelations = pdfAnnotations?.relations || [];
-      allDocumentRelations.forEach((relation) => {
-        relation.sourceIds.forEach((id) =>
-          annotationsToForceVisibleForRelationships.add(id)
-        );
-        relation.targetIds.forEach((id) =>
-          annotationsToForceVisibleForRelationships.add(id)
-        );
-      });
-    }
-
-    // Combine both sets of forced IDs
-    const allForcedIds = new Set([
-      ...forcedBySelectedRelationIds,
-      ...annotationsToForceVisibleForRelationships,
-    ]);
-
-    // Filter logic:
-    let filtered_annotations = defined_annotations.filter((annotation) => {
-      if (allForcedIds.has(annotation.id)) {
-        return true; // Always show if part of a selected relation or a visible structural relationship context
-      }
-      if (annotation.structural) {
-        return showStructural; // Show other structural annotations based on the general toggle
-      }
-      return true; // Non-structural, not forced, initially visible (label filter applies next)
+    return visibleAnnotations.filter((annot) => {
+      /* Selection layer renders only token annotations with bounds
+         on the current page                                       */
+      if (!(annot instanceof ServerTokenAnnotation)) return false;
+      const pageData = annot.json[pageIndex];
+      return pageData && pageData.bounds;
     });
-
-    // Filter by specified labels unless the annotation is forced by selection/relationship context
-    return spanLabelsToView && spanLabelsToView.length > 0
-      ? filtered_annotations.filter(
-          (annot) =>
-            allForcedIds.has(annot.id) || // Keep if forced
-            spanLabelsToView!.some(
-              (label) => label.id === annot.annotationLabel.id
-            )
-        )
-      : filtered_annotations;
-  }, [
-    allRawAnnotations,
-    pageInfo.page.pageNumber,
-    showStructural,
-    showStructuralRelationships,
-    spanLabelsToView,
-    selectedRelations,
-    pdfAnnotations?.relations,
-  ]);
+  }, [visibleAnnotations, pageIndex]);
 
   const pageAnnotationComponents = useMemo(() => {
     if (!hasPdfPageRendered || !zoomLevel || !pageBounds) return [];

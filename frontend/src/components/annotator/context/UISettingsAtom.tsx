@@ -73,7 +73,7 @@ export const showAnnotationBoundingBoxesAtom = atom<boolean>(true);
 export const showAnnotationLabelsAtom = atom<LabelDisplayBehavior>(
   LabelDisplayBehavior.ON_HOVER
 );
-export const showStructuralAnnotationsAtom = atom<boolean>(true);
+export const showStructuralAnnotationsAtom = atom<boolean>(false);
 export const showSelectedAnnotationOnlyAtom = atom<boolean>(false);
 export const hideLabelsAtom = atom<boolean>(false);
 

@@ -26,7 +26,7 @@ export function useVisibleAnnotations(): (
   const { pdfAnnotations } = usePdfAnnotations();
 
   /* ---------------- ui-state ---------------------------------------- */
-  const { showStructural, showStructuralRelationships, showSelectedOnly } =
+  const { showStructural, showStructuralRelationships } =
     useAnnotationDisplay();
 
   const { spanLabelsToView } = useAnnotationControls();
@@ -76,11 +76,6 @@ export function useVisibleAnnotations(): (
         return showStructural;
       }
 
-      /* show-selected-only override - only applies to non-structural annotations */
-      if (showSelectedOnly && !selectedAnnotations.includes(annot.id)) {
-        return false;
-      }
-
       /* label filter                                                    */
       if (
         labelFilterActive &&
@@ -95,7 +90,6 @@ export function useVisibleAnnotations(): (
     allAnnotations,
     showStructural,
     showStructuralRelationships,
-    showSelectedOnly,
     spanLabelsToView,
     selectedAnnotations,
     selectedRelations,

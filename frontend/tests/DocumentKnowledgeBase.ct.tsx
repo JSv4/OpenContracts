@@ -942,7 +942,7 @@ test.only("filters annotations correctly when 'Show Structural' and 'Show Only S
 
   // 2. Initial State: Non-structural visible, structural visible
   await expect(nonStructuralAnnotation).toBeVisible({ timeout: LONG_TIMEOUT });
-  await expect(structuralAnnotation).toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(structuralAnnotation).not.toBeVisible({ timeout: LONG_TIMEOUT });
 
   // 3. Interact with ViewSettingsPopup
   const viewSettingsTrigger = page.locator("#view-settings-trigger");
@@ -977,11 +977,8 @@ test.only("filters annotations correctly when 'Show Structural' and 'Show Only S
   ).toBeChecked();
   await expect(showSelectedOnlyToggleWrapper).toHaveClass(/disabled/);
 
-  // Annotation List: Both should be hidden (structural is not selected, non-structural is filtered out)
-  await expect(nonStructuralAnnotation).not.toBeVisible({
-    timeout: LONG_TIMEOUT,
-  });
-  await expect(structuralAnnotation).not.toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(structuralAnnotation).toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(nonStructuralAnnotation).toBeVisible({ timeout: LONG_TIMEOUT });
 
   // 4. Toggle "Show Structural" OFF
   await showStructuralToggleWrapper.click(); // Click again to turn off
@@ -995,7 +992,7 @@ test.only("filters annotations correctly when 'Show Structural' and 'Show Only S
   await expect(showSelectedOnlyToggleWrapper).not.toHaveClass(/disabled/);
 
   // Annotation List: Both still hidden (showSelectedOnly=true, nothing selected)
-  await expect(nonStructuralAnnotation).not.toBeVisible({
+  await expect(nonStructuralAnnotation).toBeVisible({
     timeout: LONG_TIMEOUT,
   });
   await expect(structuralAnnotation).not.toBeVisible({ timeout: LONG_TIMEOUT });

@@ -1,0 +1,136 @@
+---
+description: When testing <DocumentKnowledgeBase/> or our pdf.js annotations
+globs: *.ct.tsx
+---
+# Testing `DocumentKnowledgeBase`
+
+This document records the **canonical approach** for component–testing `DocumentKnowledgeBase` with Playwright-CT, Apollo Client mocks and Jotai atoms.  
+The component depends on many React-contexts, GraphQL queries, REST calls and external assets – missing any of them will usually surface as *silent timeouts* or *stack-overflows*.  
+Follow the checklist below and copy / adapt the helpers that already live in this directory.
+
+---
+
+## 1.  Always mount through `DocumentKnowledgeBaseTestWrapper`
+
+`DocumentKnowledgeBaseTestWrapper.tsx` encapsulates **everything the component needs**:
+
+* `MockedProvider` with
+  * a minimal but **type-policy aware** `InMemoryCache`
+  * an `ApolloLink` that  
+    • delegates normal requests to `MockLink`  
+    • intercepts **wild-card** `addAnnotation` mutations, returning a canned payload
+* Jotai’s global `<Provider>` so every `…Atom` used inside the component is satisfied
+* The optional `CorpusStateDebugger` that prints the corpus atom whenever it changes
+
+Never mount `DocumentKnowledgeBase` directly in tests – you will miss at least one of the above.
+
+Example:
+
+```tsx
+await mount(
+<DocumentKnowledgeBaseTestWrapper
+mocks={graphqlMocks}
+documentId={PDF_DOC_ID}
+corpusId={CORPUS_ID}
+/>
+);
+```
+
+
+---
+
+## 2.  GraphQL mocks – common pitfalls
+
+`DocumentKnowledgeBase` renders **before** it knows which tab / layer the user will pick, therefore a *surprisingly large* set of queries executes immediately.
+
+1. `GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS`
+2. `GET_DOCUMENT_ANALYSES_AND_EXTRACTS`
+3. `GET_CONVERSATIONS`
+
+Extra `refetch` calls are triggered when:
+* the user selects an analysis (`analysisId` set)
+* the user selects an extract (`analysisId` replaced by the extract id)
+
+### Mandatory mocks
+
+The test file `DocumentKnowledgeBase.ct.tsx` already includes a *complete* list that works for:
+* a PDF document (`PDF_DOC_ID`)
+* a TXT document (`TXT_DOC_ID`)
+* the **unexpected** boot call where `documentId === ""`
+
+When adding new tests, start by copying this array and trimming what you do not need – **never** delete the empty-string variant unless you are 100 % sure no component code path calls it.
+
+### “Why do I see `Unhandled GraphQL request`?”
+
+1. Variables mismatch – Playwright’s mock-matcher must equal the variables *exactly* (including `undefined` vs missing keys).
+2. A second refetch for the same query – add the mock **again** (MockLink does *not* reuse responses).
+
+---
+
+## 3.  Asset & REST mocking
+
+The component loads:
+
+* `pawlsParseFile` (JSON)
+* `pdfFile`    (binary)
+* `txtExtractFile` (plain-text)
+* `mdSummaryFile`  (markdown)
+
+`DocumentKnowledgeBase.ct.tsx → registerRestMocks` has route handlers for all of them.  
+If you add a different document, remember to update the paths and ensure the asset exists inside `frontend/test-assets`.
+
+---
+
+## 4.  Playwright test guidelines
+
+1. Increase the default timeout – PDF rendering in Chromium under Playwright is slow:
+   ```ts
+   const LONG_TIMEOUT = 20_000;
+   ```
+2. Wait for *visible evidence* instead of raw network-idle:
+   * Heading with the document title
+   * The “Summary” button with `.active` class
+3. When interacting with the PDF canvas use **page.mouse** not **locator.dragTo** – the selection layer is an overlaid div, not the canvas element itself.
+4. After synthetic drag operations, give the UI time to flush:
+   ```ts
+   await page.waitForTimeout(500);        // UI settle
+   await page.waitForTimeout(1_000);      // Apollo cache settle
+   ```
+5. Assertions that depend on Apollo mutation results must target the **id returned by the mutation mock**:
+   ```ts
+   const annotationElement = annotationsPanel.locator(
+     '[data-annotation-id="new-annot-1"]'
+   );
+   await expect(annotationElement).toBeVisible({ timeout: 15_000 });
+   ```
+
+---
+
+## 5.  Minimal In-Memory cache
+
+`mergeArrayByIdFieldPolicy` and `relayStylePagination()` are the only custom read/merge helpers retained.  
+Every policy that used external reactive variables was **purged** to avoid evaluation during Playwright’s serialisation (§ see 14681).
+
+If your new test needs another root field (e.g. `fieldsets`) add it with *simple* `relayStylePagination()`.
+
+---
+
+## 6.  Troubleshooting checklist
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| `Maximum call stack size exceeded` inside Playwright | Entire `InMemoryCache` serialised in the test | Keep cache definition inside the wrapper, **not** the test |
+| `Unhandled GraphQL request` | Missing / mismatched mock | Add the mock with *exact* variables, duplicate for refetches |
+| PDF never finishes loading | PDF asset missing | Ensure `test-assets/test.pdf` exists and `page.route` handler returns it |
+| Annotation never appears | Drag did not produce selection, mutation not fired | Check drag co-ordinates, verify console log “REQUEST_ADD_ANNOTATION” |
+
+---
+
+## 7.  When changing component behaviour
+
+1. Update the mock list – new queries, new variables.
+2. Extend the custom ApolloLink if you introduce more wildcard mutations.
+3. Add any new REST asset routes to `registerRestMocks`.
+4. If you introduce new atoms, wrap them in the test `<Provider>` hierarchy.
+
+Keep this read-me up-to-date; flaky tests usually trace back to one of the steps above.

@@ -27,16 +27,20 @@ import {
   GET_CONVERSATIONS,
   GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
 } from "../src/graphql/queries";
-import { REQUEST_ADD_ANNOTATION } from "../src/graphql/mutations";
 
 // Keep type imports
-import type { RawDocumentType } from "../src/types/graphql-api";
-import { PermissionTypes } from "../src/components/types";
+import type {
+  RawDocumentType,
+  RawServerAnnotationType,
+  ServerAnnotationType,
+} from "../src/types/graphql-api";
 import { Page } from "@playwright/test";
 import { LabelType } from "../src/components/annotator/types/enums";
 
 // Import the new Wrapper component
 import { DocumentKnowledgeBaseTestWrapper } from "./DocumentKnowledgeBaseTestWrapper";
+// Required for mock annotation permissions
+import { PermissionTypes } from "../src/components/types";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // │                               Test Data                                   │
@@ -46,6 +50,10 @@ const PDF_DOC_ID = "pdf-doc-1";
 const TXT_DOC_ID = "txt-doc-1";
 const CORPUS_ID = "corpus-1";
 const MOCK_PDF_URL = `/mock-pdf/${PDF_DOC_ID}/test.pdf`;
+
+// New Document ID for structural annotation test
+const PDF_DOC_ID_FOR_STRUCTURAL_TEST = "pdf-doc-structural-test";
+const MOCK_PDF_URL_FOR_STRUCTURAL_TEST = `/mock-pdf/${PDF_DOC_ID_FOR_STRUCTURAL_TEST}/test.pdf`;
 
 const TEST_PDF_PATH = path.resolve(
   __dirname,
@@ -108,6 +116,120 @@ const mockPdfDocument: RawDocumentType = {
   allNotes: [],
 };
 
+// Mock Annotations for Structural Test based on provided examples
+const mockAnnotationStructural1: RawServerAnnotationType = {
+  // Fields present in the provided example
+  id: "QW5ub3RhdGlvblR5cGU6MQ==", // Example ID
+  page: 0,
+  parent: null,
+  annotationLabel: {
+    __typename: "AnnotationLabelType",
+    id: "QW5ub3RhdGlvbkxhYmVsVHlwZTo0MQ==", // Example ID
+    text: "page_header",
+    color: "grey",
+    icon: "expand" as any, // Cast to any if 'expand' is not a valid SemanticICON
+    description: "Parser Structural Label",
+    labelType: LabelType.TokenLabel, // Assuming "TOKEN_LABEL" maps to this // Example
+  },
+  annotationType: LabelType.TokenLabel, // Assuming "TOKEN_LABEL" maps to this
+  rawText: "Exhibit 10.1",
+  json: {
+    "0": {
+      bounds: {
+        top: 52.19200000000001,
+        left: 503.919,
+        right: 544.95,
+        bottom: 59.35000000000002,
+        // page is often part of bounds in other systems, but not in example. Add if needed.
+      },
+      rawText: "Exhibit 10.1",
+      tokensJsons: [
+        { pageIndex: 0, tokenIndex: 0 },
+        { pageIndex: 0, tokenIndex: 1 },
+      ],
+    },
+  },
+  isPublic: true,
+  myPermissions: [
+    "update_annotation",
+    "create_annotation",
+    "remove_annotation",
+    "publish_annotation",
+    "read_annotation",
+  ],
+  structural: true,
+  __typename: "AnnotationType",
+  // annotation_created was in example, created/modified is in ServerAnnotationType
+};
+
+const mockAnnotationNonStructural1: RawServerAnnotationType = {
+  // Fields present in the provided example
+  id: "QW5ub3RhdasfasdasdfcGU6MQ==", // Example ID
+  page: 0,
+  parent: null,
+  annotationLabel: {
+    __typename: "AnnotationLabelType",
+    id: "QW5ub3RhdGlvbkxhYmVsVHlwZTo0MQ==", // Example ID
+    text: "page_header",
+    color: "grey",
+    icon: "expand" as any, // Cast to any if 'expand' is not a valid SemanticICON
+    description: "Parser Structural Label",
+    labelType: LabelType.TokenLabel, // Assuming "TOKEN_LABEL" maps to this // Example
+  },
+  annotationType: LabelType.TokenLabel, // Assuming "TOKEN_LABEL" maps to this
+  rawText: "Exhibit 10.1",
+  json: {
+    "0": {
+      bounds: {
+        top: 52.19200000000001,
+        left: 503.919,
+        right: 544.95,
+        bottom: 59.35000000000002,
+        // page is often part of bounds in other systems, but not in example. Add if needed.
+      },
+      rawText: "Exhibit 10.1",
+      tokensJsons: [
+        { pageIndex: 0, tokenIndex: 0 },
+        { pageIndex: 0, tokenIndex: 1 },
+      ],
+    },
+  },
+  myPermissions: [
+    "update_annotation",
+    "create_annotation",
+    "remove_annotation",
+    "publish_annotation",
+    "read_annotation",
+  ],
+  isPublic: true,
+  structural: false,
+  __typename: "AnnotationType",
+};
+
+const mockPdfDocumentForStructuralTest: RawDocumentType = {
+  id: PDF_DOC_ID,
+  __typename: "DocumentType",
+  title: "Test PDF Document",
+  fileType: "application/pdf",
+  pdfFile: MOCK_PDF_URL,
+  pawlsParseFile: "test.pawls",
+  txtExtractFile: null,
+  mdSummaryFile: "dummy-summary.md",
+  creator: { __typename: "UserType", id: "user-1", email: "test@test.com" },
+  created: new Date("2023-10-26T10:00:00.000Z").toISOString(),
+  myPermissions: [
+    "read_document",
+    "create_document",
+    "update_document",
+    "remove_document",
+  ],
+  allAnnotations: [mockAnnotationNonStructural1, mockAnnotationStructural1],
+  allStructuralAnnotations: [mockAnnotationStructural1],
+  allRelationships: [],
+  allDocRelationships: [],
+  allNotes: [],
+};
+
 const mockTxtDocument: RawDocumentType = {
   ...mockPdfDocument,
   id: TXT_DOC_ID,
@@ -139,7 +261,7 @@ const mockCorpusData = {
         text: "Person",
         labelType: LabelType.TokenLabel,
         color: "#FF0000",
-        icon: null,
+        icon: undefined,
         description: "A person entity",
       },
       {
@@ -148,7 +270,7 @@ const mockCorpusData = {
         text: "Connects",
         labelType: LabelType.RelationshipLabel,
         color: "#00FF00",
-        icon: null,
+        icon: undefined,
         description: "A connection relationship",
       },
       {
@@ -157,7 +279,7 @@ const mockCorpusData = {
         text: "Contract",
         labelType: LabelType.DocTypeLabel,
         color: "#0000FF",
-        icon: null,
+        icon: undefined,
         description: "A contract document type",
       },
     ],
@@ -330,6 +452,83 @@ const graphqlMocks: ReadonlyArray<MockedResponse> = [
       },
     },
   },
+  // --- Mocks for Structural Annotation Test Document ---
+  {
+    request: {
+      query: GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
+      variables: {
+        documentId: PDF_DOC_ID_FOR_STRUCTURAL_TEST,
+        corpusId: CORPUS_ID,
+        analysisId: undefined,
+      },
+    },
+    result: {
+      data: {
+        document: mockPdfDocumentForStructuralTest,
+        corpus: mockCorpusData,
+      },
+    },
+  },
+  // Duplicate for potential refetch
+  {
+    request: {
+      query: GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
+      variables: {
+        documentId: PDF_DOC_ID_FOR_STRUCTURAL_TEST,
+        corpusId: CORPUS_ID,
+        analysisId: undefined,
+      },
+    },
+    result: {
+      data: {
+        document: mockPdfDocumentForStructuralTest,
+        corpus: mockCorpusData,
+      },
+    },
+  },
+  // Analyses/Extracts for Structural Test Document
+  {
+    request: {
+      query: GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
+      variables: {
+        documentId: PDF_DOC_ID_FOR_STRUCTURAL_TEST,
+        corpusId: CORPUS_ID,
+      },
+    },
+    result: {
+      data: {
+        documentCorpusActions: {
+          __typename: "DocumentCorpusActionsType",
+          corpusActions: [],
+          extracts: [],
+          analysisRows: [],
+        },
+      },
+    },
+  },
+  // Conversations for Structural Test Document
+  {
+    request: {
+      query: GET_CONVERSATIONS,
+      variables: {
+        documentId: PDF_DOC_ID_FOR_STRUCTURAL_TEST,
+        limit: undefined,
+        cursor: undefined,
+        title_Contains: undefined,
+        createdAt_Gte: undefined,
+        createdAt_Lte: undefined,
+      },
+    },
+    result: {
+      data: {
+        conversations: {
+          __typename: "ConversationTypeConnection",
+          edges: [],
+          pageInfo: createPageInfo(),
+        },
+      },
+    },
+  },
 ];
 
 const LONG_TIMEOUT = 20_000;
@@ -368,6 +567,29 @@ async function registerRestMocks(page: Page): Promise<void> {
   );
   await page.route(MOCK_PDF_URL, async (route) => {
     console.log(`[MOCK] PDF file request: ${route.request().url()}`);
+    if (!fs.existsSync(TEST_PDF_PATH)) {
+      console.error(
+        `[MOCK ERROR] Test PDF file not found at: ${TEST_PDF_PATH}`
+      );
+      return route.fulfill({ status: 404, body: "Test PDF not found" });
+    }
+    const buffer = fs.readFileSync(TEST_PDF_PATH);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/pdf",
+      body: buffer,
+      headers: {
+        "Content-Length": String(buffer.length),
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      },
+    });
+  });
+  // Add route for the new test PDF URL, can reuse the same physical file
+  await page.route(MOCK_PDF_URL_FOR_STRUCTURAL_TEST, async (route) => {
+    console.log(
+      `[MOCK] PDF file request (structural test): ${route.request().url()}`
+    );
     if (!fs.existsSync(TEST_PDF_PATH)) {
       console.error(
         `[MOCK ERROR] Test PDF file not found at: ${TEST_PDF_PATH}`
@@ -681,4 +903,114 @@ test("selects a label and creates an annotation by dragging", async ({
   // Wait specifically for the annotation element to be visible
   await expect(annotationElement).toBeVisible({ timeout: 15000 }); // Increased timeout for this specific assertion
   console.log("[TEST SUCCESS] Found annotation with data-annotation-id");
+});
+
+test.only("filters annotations correctly when 'Show Structural' and 'Show Only Selected' are toggled", async ({
+  mount,
+  page,
+}) => {
+  await mount(
+    <DocumentKnowledgeBaseTestWrapper
+      mocks={graphqlMocks}
+      documentId={PDF_DOC_ID_FOR_STRUCTURAL_TEST}
+      corpusId={CORPUS_ID}
+    />
+  );
+
+  // Wait for initial summary render to ensure component is ready
+  await expect(
+    page.getByRole("heading", {
+      name: mockPdfDocumentForStructuralTest.title ?? "",
+    })
+  ).toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(page.getByRole("button", { name: "Summary" })).toHaveClass(
+    /active/,
+    { timeout: LONG_TIMEOUT }
+  );
+
+  // 1. Navigate to Annotations sidebar
+  await page.getByRole("button", { name: "Annotations" }).click();
+  const annotationsPanel = page.locator(".sidebar__annotations");
+  await expect(annotationsPanel).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  const nonStructuralAnnotation = annotationsPanel.locator(
+    `[data-annotation-id="${mockAnnotationNonStructural1.id}"]`
+  );
+  const structuralAnnotation = annotationsPanel.locator(
+    `[data-annotation-id="${mockAnnotationStructural1.id}"]`
+  );
+
+  // 2. Initial State: Non-structural visible, structural visible
+  await expect(nonStructuralAnnotation).toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(structuralAnnotation).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // 3. Interact with ViewSettingsPopup
+  const viewSettingsTrigger = page.locator("#view-settings-trigger");
+  await viewSettingsTrigger.click();
+  const viewSettingsPopup = page.locator("#view-settings-popup-grid"); // More specific to the popup content
+  await expect(viewSettingsPopup).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  const showSelectedOnlyToggleWrapper = viewSettingsPopup.locator(
+    "div.column:has(i.icon.user.outline) .ui.checkbox"
+  );
+  const showStructuralToggleWrapper = viewSettingsPopup.locator(
+    '[data-testid="toggle-show-structural"].ui.checkbox'
+  );
+
+  // Verify initial state of toggles within popup
+  await expect(
+    showSelectedOnlyToggleWrapper.locator('input[type="checkbox"]')
+  ).not.toBeChecked();
+  await expect(showSelectedOnlyToggleWrapper).not.toHaveClass(/disabled/); // Should be enabled
+  await expect(
+    showStructuralToggleWrapper.locator('input[type="checkbox"]')
+  ).not.toBeChecked();
+
+  // 3a. Toggle "Show Structural" ON
+  await showStructuralToggleWrapper.click();
+  await expect(
+    showStructuralToggleWrapper.locator('input[type="checkbox"]')
+  ).toBeChecked();
+  // "Show Only Selected" should become checked and disabled
+  await expect(
+    showSelectedOnlyToggleWrapper.locator('input[type="checkbox"]')
+  ).toBeChecked();
+  await expect(showSelectedOnlyToggleWrapper).toHaveClass(/disabled/);
+
+  // Annotation List: Both should be hidden (structural is not selected, non-structural is filtered out)
+  await expect(nonStructuralAnnotation).not.toBeVisible({
+    timeout: LONG_TIMEOUT,
+  });
+  await expect(structuralAnnotation).not.toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // 4. Toggle "Show Structural" OFF
+  await showStructuralToggleWrapper.click(); // Click again to turn off
+  await expect(
+    showStructuralToggleWrapper.locator('input[type="checkbox"]')
+  ).not.toBeChecked();
+  // "Show Only Selected" should remain checked but become enabled
+  await expect(
+    showSelectedOnlyToggleWrapper.locator('input[type="checkbox"]')
+  ).toBeChecked();
+  await expect(showSelectedOnlyToggleWrapper).not.toHaveClass(/disabled/);
+
+  // Annotation List: Both still hidden (showSelectedOnly=true, nothing selected)
+  await expect(nonStructuralAnnotation).not.toBeVisible({
+    timeout: LONG_TIMEOUT,
+  });
+  await expect(structuralAnnotation).not.toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // 5. Manually Toggle "Show Only Selected" OFF (while "Show Structural" is OFF)
+  await showSelectedOnlyToggleWrapper.click(); // Click to uncheck
+  await expect(
+    showSelectedOnlyToggleWrapper.locator('input[type="checkbox"]')
+  ).not.toBeChecked();
+  await expect(showSelectedOnlyToggleWrapper).not.toHaveClass(/disabled/); // Should remain enabled
+
+  // Annotation List: Back to initial state
+  await expect(nonStructuralAnnotation).toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(structuralAnnotation).not.toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Close popup (optional, good practice)
+  await page.locator("body").click({ force: true, position: { x: 0, y: 0 } }); // Click outside to close
 });

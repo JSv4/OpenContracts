@@ -7,9 +7,7 @@ import {
   hideLabelsAtom,
   showStructuralRelationshipsAtom,
 } from "../context/UISettingsAtom";
-import { LabelDisplayBehavior } from "../../../types/graphql-api";
 import { useCallback } from "react";
-import { atom } from "jotai"; // Added for conceptual atom definition
 
 /**
  * Hook to manage annotation display settings.

@@ -63,12 +63,24 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
 }) => {
   /* ------------ data -------------------------------------------------- */
   const { pdfAnnotations } = usePdfAnnotations();
+  console.log(
+    "[AnnotationList] pdfAnnotations raw:",
+    JSON.stringify(pdfAnnotations, null, 2)
+  );
   const { selectedAnnotations, setSelectedAnnotations } =
     useAnnotationSelection();
   const { showStructural } = useAnnotationDisplay();
   const { spanLabelsToView } = useAnnotationControls();
 
   const visibleAnnotations = useVisibleAnnotations();
+  console.log(
+    "[AnnotationList] visibleAnnotations:",
+    JSON.stringify(visibleAnnotations, null, 2)
+  );
+  console.log(
+    "[AnnotationList] visibleAnnotations.length:",
+    visibleAnnotations.length
+  );
 
   const rowCount = visibleAnnotations.length + (fetchMore ? 1 : 0);
 
@@ -242,6 +254,12 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
           <div style={{ position: "relative", height: containerHeight }}>
             {Array.from({ length: range[1] - range[0] + 1 }, (_, i) => {
               const rowIdx = range[0] + i;
+              if (
+                rowIdx >= visibleAnnotations.length &&
+                !(rowIdx === visibleAnnotations.length && fetchMore)
+              ) {
+                return null;
+              }
               return (
                 <div
                   key={rowIdx}

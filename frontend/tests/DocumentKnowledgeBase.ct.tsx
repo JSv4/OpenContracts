@@ -905,7 +905,7 @@ test("selects a label and creates an annotation by dragging", async ({
   console.log("[TEST SUCCESS] Found annotation with data-annotation-id");
 });
 
-test.only("filters annotations correctly when 'Show Structural' and 'Show Only Selected' are toggled", async ({
+test("filters annotations correctly when 'Show Structural' and 'Show Only Selected' are toggled", async ({
   mount,
   page,
 }) => {

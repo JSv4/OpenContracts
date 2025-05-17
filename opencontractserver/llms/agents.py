@@ -15,8 +15,6 @@ from llama_index.core.chat_engine.types import (
 )
 from llama_index.core.objects import ObjectIndex
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
-
-# from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
 
 from opencontractserver.conversations.models import ChatMessage, Conversation
@@ -170,9 +168,6 @@ async def create_openai_document_agent(
         document = await Document.objects.aget(id=document)
 
     logger.debug("Creating embedding model...")
-    # embed_model = HuggingFaceEmbedding(
-    #     "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-    # )
     embed_model = OpenContractsPipelineEmbedding(
         embedder_path=embedder_path,
     )
@@ -331,9 +326,6 @@ async def create_corpus_agent(
     corpus = await Corpus.objects.aget(id=corpus_id)
 
     logger.debug("Creating embedding model...")
-    # embed_model = HuggingFaceEmbedding(
-    #     "/models/sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
-    # )
     embed_model = OpenContractsPipelineEmbedding(
         corpus_id=corpus.id,
         embedder_path=corpus.preferred_embedder,

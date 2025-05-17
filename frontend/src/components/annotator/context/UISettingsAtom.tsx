@@ -73,9 +73,14 @@ export const showAnnotationBoundingBoxesAtom = atom<boolean>(true);
 export const showAnnotationLabelsAtom = atom<LabelDisplayBehavior>(
   LabelDisplayBehavior.ON_HOVER
 );
-export const showStructuralAnnotationsAtom = atom<boolean>(true);
+export const showStructuralAnnotationsAtom = atom<boolean>(false);
 export const showSelectedAnnotationOnlyAtom = atom<boolean>(false);
 export const hideLabelsAtom = atom<boolean>(false);
+
+/**
+ * Relationship Display Atoms
+ */
+export const showStructuralRelationshipsAtom = atom<boolean>(true);
 
 /**
  * Atom for onSidebarToggle callback.
@@ -238,8 +243,7 @@ export function useAnnotationControls() {
     if (!initialized.current && selectedDocument) {
       const isTextFile =
         selectedDocument.fileType?.startsWith("text/") ?? false;
-      const isPdfFile =
-        selectedDocument.fileType === "application/pdf" ?? false;
+      const isPdfFile = selectedDocument.fileType === "application/pdf";
 
       if (isTextFile && humanSpanLabelChoices.length > 0 && !activeSpanLabel) {
         setActiveSpanLabel(humanSpanLabelChoices[0]);
@@ -291,6 +295,9 @@ export function useAnnotationDisplay() {
   const [showBoundingBoxes, setShowBoundingBoxes] = useAtom(
     showAnnotationBoundingBoxesAtom
   );
+  const [showStructuralRelationships, setShowStructuralRelationships] = useAtom(
+    showStructuralRelationshipsAtom
+  );
   const [showLabels, setShowLabels] = useAtom(showAnnotationLabelsAtom);
   const [showStructural, setShowStructural] = useAtom(
     showStructuralAnnotationsAtom
@@ -311,6 +318,8 @@ export function useAnnotationDisplay() {
     setShowSelectedOnly,
     hideLabels,
     setHideLabels,
+    showStructuralRelationships,
+    setShowStructuralRelationships,
   };
 }
 

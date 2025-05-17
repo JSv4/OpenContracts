@@ -140,6 +140,8 @@ export const HighlightItem: React.FC<HighlightItemProps> = ({
   onDelete,
   onSelect,
 }) => {
+  console.log(JSON.stringify(annotation, null, 2));
+
   const { selectedAnnotations, handleAnnotationSelect } =
     useAnnotationSelection();
   const { annotationElementRefs } = useAnnotationRefs();

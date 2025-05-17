@@ -76,10 +76,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 COPY --from=python-build-stage /usr/src/app/wheels /wheels/
 RUN pip install --upgrade pip
 
-# Install CPU-less requirements
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-RUN pip install sentence-transformers
-
 # Install the remaining Python dependencies from wheels
 RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
     && rm -rf /wheels/

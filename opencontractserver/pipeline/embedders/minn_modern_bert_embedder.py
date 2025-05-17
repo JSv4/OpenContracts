@@ -36,18 +36,26 @@ class CloudMinnModernBERTEmbedder(BaseEmbedder):
         # FileTypeEnum.HTML,  # Removed as we don't support HTML
     ]
 
-    def __init__(self):
+    def __init__(self, **kwargs_super):
         """
         Initialize the CloudMinnModernBERTEmbedder.
 
         Prepares API URL and headers for calling the HF Inference Endpoint.
         """
+        super().__init__(**kwargs_super)
         import requests  # Inline import to avoid global if not already available
         from django.conf import settings
 
         self.requests = requests
-        self.api_url = settings.HF_EMBEDDINGS_ENDPOINT
-        hf_token = settings.HF_TOKEN  # Use the token from settings
+
+        # Get settings from component_settings or use Django settings as fallback
+        component_settings = self.get_component_settings()
+        self.api_url = component_settings.get(
+            "hf_embeddings_endpoint", settings.HF_EMBEDDINGS_ENDPOINT
+        )
+        hf_token = component_settings.get(
+            "hf_token", settings.HF_TOKEN
+        )  # Use the token from settings
 
         self.headers = {
             "Accept": "application/json",
@@ -63,17 +71,20 @@ class CloudMinnModernBERTEmbedder(BaseEmbedder):
         """
         pass
 
-    def embed_text(self, text: str, **kwargs) -> Optional[list[float]]:
+    def _embed_text_impl(self, text: str, **all_kwargs) -> Optional[list[float]]:
         """
         Generate embeddings for the given text using an external HF Inference Endpoint.
 
         Args:
             text: The text to embed.
-            **kwargs: Additional arguments to pass along in the request payload if needed.
+            **all_kwargs: Additional arguments to pass along in the request payload if needed.
 
         Returns:
             A list of floats representing the embedding vector, or None if an error occurs.
         """
+        logger.debug(
+            f"CloudMinnModernBERTEmbedder received text for embedding. Effective kwargs: {all_kwargs}"
+        )
         try:
             # Handle empty text
             if not text or not text.strip():
@@ -84,8 +95,8 @@ class CloudMinnModernBERTEmbedder(BaseEmbedder):
             payload = {
                 "inputs": text,
                 # The HF Inference API often allows "parameters" for custom settings,
-                # we include kwargs inside "parameters" as a best-effort approach:
-                "parameters": kwargs,
+                # we include all_kwargs inside "parameters" as a best-effort approach:
+                "parameters": all_kwargs,
             }
 
             response = self.requests.post(
@@ -131,13 +142,27 @@ class MinnModernBERTEmbedder(BaseEmbedder):
         # FileTypeEnum.HTML,  # Removed as we don't support HTML
     ]
 
-    def __init__(self):
+    def __init__(self, **kwargs_super):
         """Initialize the Minnesota Case Law ModernBERT embedder."""
+        super().__init__(**kwargs_super)
         self.model = None
-        self.model_name = "conceptofmind/teraflop-minn-caselaw"
-        self.cache_dir = "/models"
+
+        # Get settings from component_settings or use defaults
+        component_settings = self.get_component_settings()
+        self.model_name = component_settings.get(
+            "model_name", "conceptofmind/teraflop-minn-caselaw"
+        )
+        self.cache_dir = component_settings.get("cache_dir", "/models")
+        # Adjust vector_size if provided in settings, otherwise keep the class default
+        self.vector_size = component_settings.get("vector_size", self.vector_size)
+
+        # model_path is derived from cache_dir and a fixed subdir for sentence-transformers structure
+        model_name_suffix = self.model_name.split("/")[-1]
         self.model_path = os.path.join(
-            self.cache_dir, "sentence-transformers", "teraflop-minn-caselaw"
+            self.cache_dir, "sentence-transformers", model_name_suffix
+        )
+        logger.info(
+            f"MinnModernBERTEmbedder initialized. Model: {self.model_name}, Cache: {self.cache_dir}, Vector Size: {self.vector_size}"  # noqa: E501
         )
 
     def _load_model(self):
@@ -162,17 +187,20 @@ class MinnModernBERTEmbedder(BaseEmbedder):
                 logger.error(f"Error loading Minnesota Case Law ModernBERT model: {e}")
                 raise
 
-    def embed_text(self, text: str, **kwargs) -> Optional[list[float]]:
+    def _embed_text_impl(self, text: str, **all_kwargs) -> Optional[list[float]]:
         """
         Generate embeddings for the given text using the Minnesota Case Law ModernBERT model.
 
         Args:
             text: The text to embed
-            **kwargs: Additional arguments to pass to the model
+            **all_kwargs: Additional arguments to pass to the model, potentially from PIPELINE_SETTINGS.
 
         Returns:
             A list of floats representing the embedding vector, or None if an error occurs
         """
+        logger.debug(
+            f"MinnModernBERTEmbedder received text for embedding. Effective kwargs: {all_kwargs}"
+        )
         try:
             # Load the model if not already loaded
             self._load_model()
@@ -183,7 +211,8 @@ class MinnModernBERTEmbedder(BaseEmbedder):
                 return [0.0] * self.vector_size
 
             # Generate embeddings
-            embedding = self.model.encode(text, **kwargs)
+            # Pass all_kwargs, which might include specific encoding parameters like batch_size, show_progress_bar etc.
+            embedding = self.model.encode(text, **all_kwargs)
 
             # Convert to list of floats
             return embedding.tolist()

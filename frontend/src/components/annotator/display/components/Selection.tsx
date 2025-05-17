@@ -117,7 +117,7 @@ export const Selection: React.FC<SelectionProps> = ({
   approved,
   rejected,
   allowFeedback,
-  scrollIntoView,
+  scrollIntoView = false,
   showInfo = true,
 }) => {
   const auth_token = useReactiveVar(authToken);

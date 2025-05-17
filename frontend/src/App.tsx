@@ -66,6 +66,7 @@ import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/Selec
 import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 import { DocumentUploadModal } from "./components/widgets/modals/DocumentUploadModal";
 import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUploadModal";
+import { DocumentViewer } from "./components/documents/Viewer";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
@@ -96,6 +97,14 @@ export const App = () => {
   );
 
   const { getAccessTokenSilently, user } = useAuth0();
+
+  const handleKnowledgeBaseModalClose = useCallback(() => {
+    showKnowledgeBaseModal({
+      isOpen: false,
+      documentId: null,
+      corpusId: null,
+    });
+  }, []);
 
   // For now, our responsive layout is a bit hacky, but it's working well enough to
   // provide a passable UI on mobile. Your results not guaranteed X-)
@@ -206,20 +215,24 @@ export const App = () => {
       ) : (
         <></>
       )}
+      {knowledge_base_modal.isOpen &&
+        knowledge_base_modal.documentId &&
+        knowledge_base_modal.corpusId && (
+          <DocumentKnowledgeBase
+            documentId={knowledge_base_modal.documentId}
+            corpusId={knowledge_base_modal.corpusId}
+            onClose={handleKnowledgeBaseModalClose}
+          />
+        )}
+      {knowledge_base_modal.isOpen &&
+        knowledge_base_modal.documentId &&
+        !knowledge_base_modal.corpusId && (
+          <DocumentViewer
+            documentId={knowledge_base_modal.documentId}
+            onClose={handleKnowledgeBaseModalClose}
+          />
+        )}
       {show_cookie_modal ? <CookieConsentDialog /> : <></>}
-      {knowledge_base_modal.isOpen ? (
-        <DocumentKnowledgeBase
-          documentId={knowledge_base_modal.documentId!}
-          corpusId={knowledge_base_modal.corpusId!}
-          onClose={() =>
-            showKnowledgeBaseModal({
-              isOpen: false,
-              documentId: null,
-              corpusId: null,
-            })
-          }
-        />
-      ) : null}
       <ThemeProvider>
         <div
           style={{

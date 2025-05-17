@@ -52,7 +52,7 @@ class MockParser(BaseParser):
     author: str = "Integration Test"
     dependencies: list[str] = []
 
-    def parse_document(self, user_id: int, doc_id: int, **kwargs) -> Optional[OpenContractDocExport]:
+    def _parse_document_impl(self, user_id: int, doc_id: int, **kwargs) -> Optional[OpenContractDocExport]:
         logger.info(f"MockParser.parse_document called with kwargs: {kwargs}")
         return None
 """
@@ -129,7 +129,7 @@ class MockParser(BaseParser):
             # We'll patch the ephemeral parser's parse_document, verifying that it
             # indeed receives the "test_key" kwarg.
             with patch(
-                "opencontractserver.pipeline.parsers.mock_parser.MockParser.parse_document",
+                "opencontractserver.pipeline.parsers.mock_parser.MockParser._parse_document_impl",
                 return_value=None,
             ) as mock_parse:
                 # Now call our Celery-based ingest_doc as a task signature
@@ -137,16 +137,18 @@ class MockParser(BaseParser):
 
                 self.assertTrue(
                     mock_parse.called,
-                    "MockParser.parse_document should have been called by ingest_doc.",
+                    "MockParser._parse_document_impl should have been called by ingest_doc.",
                 )
                 _, call_kwargs = mock_parse.call_args
                 self.assertIn(
-                    "test_key", call_kwargs, "Should pass 'test_key' to parse_document."
+                    "test_key",
+                    call_kwargs,
+                    "Should pass 'test_key' to _parse_document_impl.",
                 )
                 self.assertEqual(
                     call_kwargs["test_key"],
                     "test_value",
-                    "Kwargs from settings should match the ones parse_document receives.",
+                    "Kwargs from settings should match the ones _parse_document_impl receives.",
                 )
 
     def test_mock_parser_relationship_import(self):
@@ -163,7 +165,7 @@ class MockParser(BaseParser):
             an OpenContractDocExport with both annotations and relationships.
             """
 
-            def parse_document(
+            def _parse_document_impl(
                 self, user_id: int, doc_id: int, **kwargs
             ) -> Optional[OpenContractDocExport]:
                 annotation_data: list[OpenContractsAnnotationPythonType] = [

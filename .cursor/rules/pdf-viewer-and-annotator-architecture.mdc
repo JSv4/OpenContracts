@@ -1,0 +1,105 @@
+---
+description: When working on pdf annotations or pdf rendering, consult this high level overview
+globs: *DocumentKnowledgeBase*,**/knowledge_base/**/*,**/annotator/**/*
+---
+# Understanding the PDF Annotation System Architecture
+
+## Admin Tasks if you Edit PDF-related frontend code
+1. When working on document knowledge base and pdf-related frontend functionality, ensure you update our cursor rule here [pdf-viewer-and-annotator-architecture.mdc](mdc:.cursor/rules/pdf-viewer-and-annotator-architecture.mdc) such that it captures any material changes to our existing setup.
+
+## Context: Document Knowledge Base
+
+The `DocumentKnowledgeBase` component serves as the main container for viewing and interacting with documents, particularly PDFs. It provides a comprehensive interface that combines document viewing with annotation capabilities, search functionality, and knowledge extraction features.
+
+The system uses a virtualized rendering approach for PDFs, where only visible pages are rendered to improve performance with large documents. This is coupled with a sophisticated annotation management system that allows users to view, filter, and interact with annotations overlaid on the document.
+
+## Intent: Efficient Document Rendering with Annotation Management
+
+The architecture aims to:
+
+1. Efficiently render large PDF documents by only processing visible pages
+2. Provide a flexible annotation system that can display/hide annotations based on user preferences
+3. Support various annotation types (spans, tokens, structural elements)
+4. Enable real-time filtering and selection of annotations
+5. Maintain consistent state across the entire application
+
+## Component Interactions
+
+### State Management with Jotai
+
+The system uses Jotai atoms to manage global state:
+
+```
+AnnotationAtoms.tsx
+├── pdfAnnotationsAtom - Core annotation state
+├── structuralAnnotationsAtom - Structural annotations
+├── allAnnotationsAtom - Computed, de-duplicated list
+└── perPageAnnotationsAtom - Page-indexed annotation map
+```
+
+This approach provides:
+- Centralized state management
+- Computed derivations that automatically update
+- Efficient re-rendering when only relevant state changes
+
+### PDF Rendering Pipeline
+
+1. **DocumentKnowledgeBase** initializes the document view and loads annotation data
+2. **PDF** component manages the virtualized rendering of pages:
+   - Calculates which pages are visible in the viewport
+   - Only renders PDFPage components for visible pages
+   - Handles zoom level changes and page positioning
+   - Manages scroll position and annotation selection
+
+3. **PDFPage** renders individual pages with their annotations:
+   - Creates a canvas for the PDF content
+   - Overlays annotation components on top of the canvas
+   - Handles user interactions for creating/selecting annotations
+   - Filters which annotations to display based on visibility settings
+
+### Annotation Visibility System
+
+The annotation visibility system works through several interconnected components:
+
+1. **ViewSettingsPopup** provides UI controls for filtering annotations:
+   - Toggle for showing only selected annotations
+   - Toggle for showing structural annotations
+   - Toggle for showing bounding boxes
+   - Label filter selection
+
+2. **useAnnotationDisplay** hook manages display preferences:
+   - Stores user preferences about which annotations to show
+   - Provides setters to update these preferences
+
+3. **useVisibleAnnotations** hook applies filtering logic:
+   - Takes the complete annotation list from `useAllAnnotations`
+   - Applies filters based on settings from `useAnnotationDisplay`
+   - Returns only the annotations that should be visible
+   - Handles special cases like forcing visibility of selected annotations
+
+4. **PDFPage** and other components consume the filtered list:
+   - Render only the annotations returned by `useVisibleAnnotations`
+   - Apply additional page-specific filtering
+
+### Data Flow for Annotation Updates
+
+When annotations are updated (added, modified, or filtered):
+
+1. Changes are made to `pdfAnnotationsAtom` via `usePdfAnnotations().setPdfAnnotations`
+2. `allAnnotationsAtom` automatically recomputes to include the changes
+3. `useVisibleAnnotations` applies current filters to the updated list
+4. Components consuming `useVisibleAnnotations` re-render with the new filtered list
+
+## Key Technical Aspects
+
+1. **Virtualization**: Only visible PDF pages are rendered, significantly improving performance for large documents.
+
+2. **Computed Derivations**: `allAnnotationsAtom` and `perPageAnnotationsAtom` are derived states that automatically update when their dependencies change.
+
+3. **Centralized Filtering**: The `useVisibleAnnotations` hook centralizes filtering logic so it's consistent across all components.
+
+4. **Forced Visibility**: Some annotations (selected ones, those in relationships) are forced to be visible regardless of filter settings.
+
+5. **Efficient Rendering**: Components only re-render when their specific dependencies change, not on every state update.
+
+This architecture creates a flexible, performant system for displaying and interacting with annotations on PDF documents, with centralized state management and consistent filtering logic across the application.

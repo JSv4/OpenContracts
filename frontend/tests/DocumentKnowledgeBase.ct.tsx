@@ -896,7 +896,7 @@ test("renders TXT document and shows plain-text container with content", async (
   ).toBeHidden({ timeout: LONG_TIMEOUT });
 });
 
-test.only("selects a label and creates an annotation by dragging", async ({
+test("selects a label and creates an annotation by dragging", async ({
   mount,
   page,
 }) => {

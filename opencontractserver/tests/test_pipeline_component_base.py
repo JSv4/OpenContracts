@@ -1,7 +1,4 @@
-import logging
-from django.test import TestCase, override_settings
-from django.conf import settings as django_settings  # Use alias to avoid confusion
-from unittest.mock import patch
+from django.test import TestCase
 
 from opencontractserver.pipeline.base.base_component import PipelineComponentBase
 
@@ -11,6 +8,7 @@ BASE_COMPONENT_LOGGER = "opencontractserver.pipeline.base.base_component"
 
 class DummyComponent(PipelineComponentBase):
     """A simple component for testing settings loading."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -30,7 +28,9 @@ class TestPipelineComponentBaseSettings(TestCase):
         expected_settings = {"key_simple": "value_from_simple_name"}
         pipeline_settings_override = {
             "DummyComponent": expected_settings,
-            self.get_dummy_component_full_path(): {"key_full": "value_from_full_path_ignored"}
+            self.get_dummy_component_full_path(): {
+                "key_full": "value_from_full_path_ignored"
+            },
         }
         with self.settings(PIPELINE_SETTINGS=pipeline_settings_override):
             component = DummyComponent()
@@ -40,8 +40,10 @@ class TestPipelineComponentBaseSettings(TestCase):
         """Ensures settings are loaded by full path if simple name is not found."""
         expected_settings = {"key_full": "value_from_full_path"}
         pipeline_settings_override = {
-            "AnotherComponent": {"key_other": "other_value"}, # Ensure simple name key is different
-            self.get_dummy_component_full_path(): expected_settings
+            "AnotherComponent": {
+                "key_other": "other_value"
+            },  # Ensure simple name key is different
+            self.get_dummy_component_full_path(): expected_settings,
         }
         with self.settings(PIPELINE_SETTINGS=pipeline_settings_override):
             component = DummyComponent()
@@ -52,7 +54,9 @@ class TestPipelineComponentBaseSettings(TestCase):
         expected_settings = {"key_simple_precedence": "simple_name_wins"}
         pipeline_settings_override = {
             "DummyComponent": expected_settings,
-            self.get_dummy_component_full_path(): {"key_full_precedence": "full_path_loses"}
+            self.get_dummy_component_full_path(): {
+                "key_full_precedence": "full_path_loses"
+            },
         }
         with self.settings(PIPELINE_SETTINGS=pipeline_settings_override):
             component = DummyComponent()
@@ -79,28 +83,34 @@ class TestPipelineComponentBaseSettings(TestCase):
         # This is tricky with override_settings as it restores.
         # The component's `getattr(settings, "PIPELINE_SETTINGS", {})` handles this.
         # If `PIPELINE_SETTINGS` isn't in `django_settings`, `getattr` will use its default.
-        
+
         # To robustly test getattr's default, we'd ideally remove the attribute.
         # This is fragile in tests. We rely on `override_settings(PIPELINE_SETTINGS={})` and
         # knowing `getattr` in the component works.
         # A direct test of getattr is implicit.
         # The following simulates it being empty.
-        with self.settings(PIPELINE_SETTINGS={}): # No settings for any component
+        with self.settings(PIPELINE_SETTINGS={}):  # No settings for any component
             component = DummyComponent()
-            self.assertEqual(component.get_component_settings(), {}, "Should be empty if PIPELINE_SETTINGS is empty.")
+            self.assertEqual(
+                component.get_component_settings(),
+                {},
+                "Should be empty if PIPELINE_SETTINGS is empty.",
+            )
 
         # To truly test it being undefined, you might need to mock settings object,
         # but PipelineComponentBase already uses getattr with a default.
 
     def test_pipeline_settings_is_not_a_dictionary(self):
         """Tests that a warning is logged if PIPELINE_SETTINGS is not a dict."""
-        with self.assertLogs(logger=BASE_COMPONENT_LOGGER, level='WARNING') as cm:
+        with self.assertLogs(logger=BASE_COMPONENT_LOGGER, level="WARNING") as cm:
             # The override_settings context manager will apply this setting
             with self.settings(PIPELINE_SETTINGS="this_is_not_a_dictionary"):
                 component = DummyComponent()
-        
+
         self.assertEqual(component.get_component_settings(), {})
-        self.assertIn("PIPELINE_SETTINGS is defined but is not a dictionary", cm.output[0])
+        self.assertIn(
+            "PIPELINE_SETTINGS is defined but is not a dictionary", cm.output[0]
+        )
 
     def test_component_setting_is_not_a_dictionary_simple_name_fallback(self):
         """
@@ -109,7 +119,7 @@ class TestPipelineComponentBaseSettings(TestCase):
         expected_settings = {"key_full_fallback": "value_full_fallback_succeeded"}
         pipeline_settings_override = {
             "DummyComponent": "not_a_dictionary_for_simple_name",
-            self.get_dummy_component_full_path(): expected_settings
+            self.get_dummy_component_full_path(): expected_settings,
         }
         with self.settings(PIPELINE_SETTINGS=pipeline_settings_override):
             component = DummyComponent()
@@ -120,13 +130,13 @@ class TestPipelineComponentBaseSettings(TestCase):
         Tests that settings are empty if full path's value (after simple name check) isn't a dict.
         """
         pipeline_settings_override = {
-            "DummyComponent": "not_a_dictionary_either", # Simple name is not a dict
-            self.get_dummy_component_full_path(): "also_not_a_dictionary_for_full_path"
+            "DummyComponent": "not_a_dictionary_either",  # Simple name is not a dict
+            self.get_dummy_component_full_path(): "also_not_a_dictionary_for_full_path",
         }
         with self.settings(PIPELINE_SETTINGS=pipeline_settings_override):
             component = DummyComponent()
             self.assertEqual(component.get_component_settings(), {})
-            
+
     def test_empty_dict_for_simple_name_falls_back_to_full_path(self):
         """
         If simple name maps to an empty dict, it should be treated as 'no settings'
@@ -135,7 +145,7 @@ class TestPipelineComponentBaseSettings(TestCase):
         expected_settings = {"key_full_after_empty_simple": "full_path_prevails_here"}
         pipeline_settings_override = {
             "DummyComponent": {},  # Empty dict for simple name
-            self.get_dummy_component_full_path(): expected_settings
+            self.get_dummy_component_full_path(): expected_settings,
         }
         with self.settings(PIPELINE_SETTINGS=pipeline_settings_override):
             component = DummyComponent()

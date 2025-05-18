@@ -493,7 +493,7 @@ if ALLOW_GRAPHQL_DEBUG:
 GRAPHENE = {
     "SCHEMA": "config.graphql.schema.schema",
     "MIDDLEWARE": GRAPHENE_MIDDLEWARE,
-    "RELAY_CONNECTION_MAX_LIMIT": 10
+    "RELAY_CONNECTION_MAX_LIMIT": 10,
 }
 
 GRAPHQL_JWT = {
@@ -654,6 +654,5 @@ PIPELINE_SETTINGS = {
     "opencontractserver.pipeline.parsers.docling_parser_rest.DoclingParser": {
         "DOCLING_PARSER_SERVICE_URL": "http://docling-parser:8000",
         "DOCLING_PARSER_TIMEOUT": None,
-    }
+    },
 }
-

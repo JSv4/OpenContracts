@@ -563,13 +563,13 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         self, info, corpus_id=None, analysis_id=None, is_structural=None
     ):
         try:
-            
+
             if corpus_id is None:
                 annotations = self.doc_annotations.filter(structural=True)
             else:
                 corpus_pk = from_global_id(corpus_id)[1]
                 annotations = self.doc_annotations.filter(corpus_id=corpus_pk)
-                
+
                 if is_structural is not None:
                     annotations = annotations.filter(structural=is_structural)
 
@@ -668,13 +668,11 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
         # Start with a base queryset of all Notes the user can see
         base_qs = resolve_oc_model_queryset(django_obj_model_type=Note, user=user)
-        
+
         if corpus_id is None:
             corpus_pk = None
-            return base_qs.filter(
-                id__in=self.notes.values_list("id", flat=True)
-            )
-            
+            return base_qs.filter(id__in=self.notes.values_list("id", flat=True))
+
         else:
             corpus_pk = from_global_id(corpus_id)[1]
             # Then intersect with this Document's related notes, filtering by the given corpus_id

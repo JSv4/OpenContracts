@@ -4,8 +4,8 @@ globs: *.ct.tsx
 ---
 # Testing `DocumentKnowledgeBase`
 
-This document records the **canonical approach** for component–testing `DocumentKnowledgeBase` with Playwright-CT, Apollo Client mocks and Jotai atoms.  
-The component depends on many React-contexts, GraphQL queries, REST calls and external assets – missing any of them will usually surface as *silent timeouts* or *stack-overflows*.  
+This document records the **canonical approach** for component–testing `DocumentKnowledgeBase` with Playwright-CT, Apollo Client mocks and Jotai atoms.
+The component depends on many React-contexts, GraphQL queries, REST calls and external assets – missing any of them will usually surface as *silent timeouts* or *stack-overflows*.
 Follow the checklist below and copy / adapt the helpers that already live in this directory.
 
 ---
@@ -16,8 +16,8 @@ Follow the checklist below and copy / adapt the helpers that already live in thi
 
 * `MockedProvider` with
   * a minimal but **type-policy aware** `InMemoryCache`
-  * an `ApolloLink` that  
-    • delegates normal requests to `MockLink`  
+  * an `ApolloLink` that
+    • delegates normal requests to `MockLink`
     • intercepts **wild-card** `addAnnotation` mutations, returning a canned payload
 * Jotai’s global `<Provider>` so every `…Atom` used inside the component is satisfied
 * The optional `CorpusStateDebugger` that prints the corpus atom whenever it changes
@@ -76,7 +76,7 @@ The component loads:
 * `txtExtractFile` (plain-text)
 * `mdSummaryFile`  (markdown)
 
-`DocumentKnowledgeBase.ct.tsx → registerRestMocks` has route handlers for all of them.  
+`DocumentKnowledgeBase.ct.tsx → registerRestMocks` has route handlers for all of them.
 If you add a different document, remember to update the paths and ensure the asset exists inside `frontend/test-assets`.
 
 ---
@@ -108,7 +108,7 @@ If you add a different document, remember to update the paths and ensure the ass
 
 ## 5.  Minimal In-Memory cache
 
-`mergeArrayByIdFieldPolicy` and `relayStylePagination()` are the only custom read/merge helpers retained.  
+`mergeArrayByIdFieldPolicy` and `relayStylePagination()` are the only custom read/merge helpers retained.
 Every policy that used external reactive variables was **purged** to avoid evaluation during Playwright’s serialisation (§ see 14681).
 
 If your new test needs another root field (e.g. `fieldsets`) add it with *simple* `relayStylePagination()`.

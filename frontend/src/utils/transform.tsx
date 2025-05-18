@@ -9,6 +9,7 @@ import {
 import {
   AnalyzerManifestType,
   LabelType,
+  RawServerAnnotationType,
   ServerAnnotationType,
 } from "../types/graphql-api";
 
@@ -85,7 +86,7 @@ export function getPermissions(
 }
 
 export function convertToDocTypeAnnotation(
-  serverAnnotation: ServerAnnotationType
+  serverAnnotation: RawServerAnnotationType
 ): DocTypeAnnotation {
   // Check if the annotation is of the correct type
   if (serverAnnotation.annotationLabel.labelType !== "DOC_TYPE_LABEL") {
@@ -104,7 +105,7 @@ export function convertToDocTypeAnnotation(
 }
 
 export function convertToDocTypeAnnotations(
-  annotations: ServerAnnotationType[]
+  annotations: RawServerAnnotationType[]
 ): DocTypeAnnotation[] {
   return annotations
     .filter((ann) => ann.annotationLabel.labelType === LabelType.DocTypeLabel)
@@ -112,7 +113,7 @@ export function convertToDocTypeAnnotations(
 }
 
 export function convertToServerAnnotation(
-  annotation: ServerAnnotationType,
+  annotation: RawServerAnnotationType,
   allowComments?: boolean
 ): ServerTokenAnnotation | ServerSpanAnnotation {
   // Process permissions using getPermissions

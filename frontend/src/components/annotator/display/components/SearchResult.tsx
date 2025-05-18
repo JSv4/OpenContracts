@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import _ from "lodash";
 import { VerticallyJustifiedEndDiv } from "../../sidebar/common";
@@ -21,7 +21,7 @@ interface SearchResultProps {
   scrollIntoView?: boolean;
 }
 
-export const SearchResult = ({
+export const SearchResult: React.FC<SearchResultProps> = ({
   total_results,
   showBoundingBox,
   hidden,
@@ -29,17 +29,30 @@ export const SearchResult = ({
   match,
   showInfo = true,
   scrollIntoView = false,
-}: SearchResultProps) => {
+}) => {
   const { showLabels, hideLabels } = useAnnotationDisplay();
 
   const color = "#ffff00";
   const [hovered, setHovered] = useState(false);
 
-  const bounds = pageInfo.getScaledBounds(
-    match.bounds[pageInfo.page.pageNumber - 1]
-  );
+  const pageIdx = pageInfo.page.pageNumber - 1;
 
-  const border = getBorderWidthFromBounds(bounds);
+  /* Compute the (scaled) bbox only when we really need it */
+  const scaledBounds = useMemo<BoundingBox | null>(() => {
+    const tokensOnPage = match.tokens[pageIdx];
+    if (!tokensOnPage?.length) return null;
+
+    // lazily fill match.bounds so future renders are faster
+    if (!match.bounds) match.bounds = {};
+    if (!match.bounds[pageIdx]) {
+      const raw = pageInfo.getBoundsForTokens(tokensOnPage);
+      if (raw) match.bounds[pageIdx] = raw;
+    }
+
+    return match.bounds
+      ? pageInfo.getScaledBounds(match.bounds[pageIdx])
+      : null;
+  }, [match, pageIdx, pageInfo]);
 
   useEffect(() => {
     console.log("SearchResult: Hidden prop changed", {
@@ -50,6 +63,8 @@ export const SearchResult = ({
     });
   }, [hidden, match.id, pageInfo.page.pageNumber]);
 
+  if (!scaledBounds) return null;
+
   return (
     <>
       <ResultBoundary
@@ -57,15 +72,15 @@ export const SearchResult = ({
         hidden={hidden}
         showBoundingBox={showBoundingBox}
         color={color}
-        bounds={bounds}
+        bounds={scaledBounds}
         selected={false}
         onHover={setHovered}
         scrollIntoView={Boolean(scrollIntoView)}
       >
         {showInfo && !hideLabels ? (
           <SelectionInfo
-            bounds={bounds}
-            border={border}
+            bounds={scaledBounds}
+            border={getBorderWidthFromBounds(scaledBounds)}
             color={color}
             showBoundingBox={showBoundingBox}
           >

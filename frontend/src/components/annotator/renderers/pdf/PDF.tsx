@@ -8,6 +8,7 @@ import {
   useSetViewStateError,
   scrollContainerRefAtom,
   pendingScrollAnnotationIdAtom,
+  useTextSearchState,
 } from "../../context/DocumentAtom";
 import { ServerTokenAnnotation, BoundingBox } from "../../types/annotations";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -16,6 +17,8 @@ import {
   useAnnotationSelection,
 } from "../../context/UISettingsAtom";
 import { useAllAnnotations } from "../../hooks/useAllAnnotations";
+import { pendingScrollSearchResultIdAtom } from "../../context/DocumentAtom";
+import { TextSearchTokenResult } from "../../../types";
 
 export class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
@@ -85,14 +88,15 @@ export const PDF: React.FC<PDFProps> = ({
   const { zoomLevel } = useZoomLevel();
   const { selectedAnnotations } = useAnnotationSelection();
   const { pdfDoc } = usePdfDoc();
+  const { textSearchMatches, selectedTextSearchMatchIndex } =
+    useTextSearchState();
+  const setPendingScrollId = useSetAtom(pendingScrollAnnotationIdAtom);
+  const setPendingScrollSearchId = useSetAtom(pendingScrollSearchResultIdAtom);
   /* ------------------------------------------------------------------ */
   /* reference to the scrolling element                                 */
   const scrollContainerRef = useAtomValue(scrollContainerRefAtom);
   const [pageHeights, setPageHeights] = useState<number[]>([]);
   const allAnnotations = useAllAnnotations();
-
-  /* tell PDFPage which annotation must be centred after page-scroll */
-  const setPendingScrollId = useSetAtom(pendingScrollAnnotationIdAtom);
 
   /* ---------- build index & heights ---------------------------------- */
   const pageInfos = useMemo(
@@ -112,6 +116,15 @@ export const PDF: React.FC<PDFProps> = ({
     const annot = allAnnotations.find((a) => a.id === selectedAnnotations[0]);
     return annot?.page; // undefined if not found
   }, [selectedAnnotations, allAnnotations]);
+
+  /* page index that owns the selected match */
+  const selectedSearchPageIdx = useMemo(() => {
+    const hit = textSearchMatches.find(
+      (m) => m.id === selectedTextSearchMatchIndex
+    ) as TextSearchTokenResult;
+    if (!hit) return undefined;
+    return hit.start_page; // first page of the match
+  }, [textSearchMatches, selectedTextSearchMatchIndex]);
 
   /* build the cache once per zoom level */
   useEffect(() => {
@@ -186,8 +199,20 @@ export const PDF: React.FC<PDFProps> = ({
       end = Math.max(end, selectedPageIdx);
     }
 
+    /* 1. virtual-window must keep that page mounted */
+    if (selectedSearchPageIdx !== undefined) {
+      start = Math.min(start, selectedSearchPageIdx);
+      end = Math.max(end, selectedSearchPageIdx);
+    }
+
     setRange([start, end]);
-  }, [getScrollElement, cumulative, pageInfos.length, selectedPageIdx]);
+  }, [
+    getScrollElement,
+    cumulative,
+    pageInfos.length,
+    selectedPageIdx,
+    selectedSearchPageIdx,
+  ]);
 
   /* attach / detach scroll listener(s) */
   useEffect(() => {
@@ -238,6 +263,28 @@ export const PDF: React.FC<PDFProps> = ({
     zoomLevel,
     getScrollElement,
     setPendingScrollId,
+  ]);
+
+  /* 2. scroll container & notify pages (mirrors annotation logic) */
+  useEffect(() => {
+    if (
+      selectedSearchPageIdx === undefined ||
+      pageHeights.length === 0 ||
+      selectedTextSearchMatchIndex === null
+    )
+      return;
+
+    const topOffset = Math.max(0, cumulative[selectedSearchPageIdx] - 32);
+    getScrollElement().scrollTo({ top: topOffset, behavior: "smooth" });
+
+    setPendingScrollSearchId(String(selectedTextSearchMatchIndex));
+  }, [
+    selectedSearchPageIdx,
+    selectedTextSearchMatchIndex,
+    pageHeights,
+    cumulative,
+    getScrollElement,
+    setPendingScrollSearchId,
   ]);
 
   /* ---------- render -------------------------------------------------- */

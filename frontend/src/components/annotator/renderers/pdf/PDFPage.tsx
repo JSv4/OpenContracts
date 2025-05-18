@@ -27,6 +27,7 @@ import { useCorpusState } from "../../context/CorpusAtom";
 import { ChatSourceResult } from "../../display/components/ChatSourceResult";
 import { useVisibleAnnotations } from "../../hooks/useVisibleAnnotations";
 import { pendingScrollAnnotationIdAtom } from "../../context/DocumentAtom";
+import { pendingScrollSearchResultIdAtom } from "../../context/DocumentAtom";
 
 /**
  * This wrapper is inline-block (shrink-wrapped) and position:relative
@@ -110,6 +111,10 @@ export const PDFPage = ({
 
   const [pendingScrollId, setPendingScrollId] = useAtom(
     pendingScrollAnnotationIdAtom
+  );
+
+  const [pendingScrollSearchId, setPendingScrollSearchId] = useAtom(
+    pendingScrollSearchResultIdAtom
   );
 
   const lastRenderedZoom = useRef<number | null>(null);
@@ -331,42 +336,76 @@ export const PDFPage = ({
     chatSourceElementRefs,
   ]);
 
-  /**
-   * After the canvas is rendered keep trying to find the element that
-   * belongs to `pendingScrollId`.  As soon as we get it, centre it and
-   * clear the atom so other pages stop looking.
-   */
+  /* ---------- centre search-result OR annotation ---------------------- */
   useEffect(() => {
-    if (!hasPdfPageRendered || !pendingScrollId) return;
+    if (!hasPdfPageRendered) return;
 
-    const pageHasTarget = annots_to_render.some(
-      (a) => a.id === pendingScrollId
+    /* --- 1️⃣  Handle pending search result first --------------------- */
+    if (pendingScrollSearchId) {
+      const pageOwnsResult = searchResults
+        .filter((m): m is TextSearchTokenResult => "tokens" in m)
+        .some(
+          (m) =>
+            String(m.id) === pendingScrollSearchId &&
+            m.tokens[pageInfo.page.pageNumber - 1] !== undefined
+        );
+      if (!pageOwnsResult) return;
+
+      let cancelled = false;
+      const tryScrollSearch = () => {
+        if (cancelled) return;
+        const el = document.getElementById(
+          `SEARCH_RESULT_${pendingScrollSearchId}`
+        );
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          setPendingScrollSearchId(null); // done
+        } else {
+          requestAnimationFrame(tryScrollSearch);
+        }
+      };
+      tryScrollSearch();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    /* --- 2️⃣  No search jump – maybe an annotation jump -------------- */
+    if (!pendingScrollId) return;
+
+    const pageOwnsAnnotation = visibleAnnotations.some(
+      (a) =>
+        a instanceof ServerTokenAnnotation &&
+        a.id === pendingScrollId &&
+        a.json[pageIndex] !== undefined
     );
-    if (!pageHasTarget) return;
+    if (!pageOwnsAnnotation) return;
 
     let cancelled = false;
-
-    const tryScroll = () => {
+    const tryScrollAnnot = () => {
       if (cancelled) return;
-
-      const el = annotationElementRefs.current[pendingScrollId];
+      const el = document.querySelector(
+        `.selection_${pendingScrollId}`
+      ) as HTMLElement | null;
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
-        setPendingScrollId(null); // done – clear atom
+        setPendingScrollId(null); // done
       } else {
-        requestAnimationFrame(tryScroll); // keep waiting
+        requestAnimationFrame(tryScrollAnnot);
       }
     };
-
-    tryScroll();
+    tryScrollAnnot();
     return () => {
       cancelled = true;
     };
   }, [
     hasPdfPageRendered,
+    pendingScrollSearchId,
     pendingScrollId,
-    annots_to_render,
-    annotationElementRefs,
+    searchResults,
+    visibleAnnotations,
+    pageIndex,
+    setPendingScrollSearchId,
     setPendingScrollId,
   ]);
 

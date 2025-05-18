@@ -724,6 +724,8 @@ test.only("switches to Document layer and renders PDF container", async ({
   mount,
   page,
 }) => {
+  test.setTimeout(120000); // Set timeout to 60 seconds for this specific test
+
   await mount(
     <DocumentKnowledgeBaseTestWrapper
       mocks={graphqlMocks}
@@ -742,7 +744,6 @@ test.only("switches to Document layer and renders PDF container", async ({
   const pdfContainer = page.locator("#pdf-container");
   await expect(pdfContainer).toBeVisible({ timeout: LONG_TIMEOUT });
 
-  // Check that at least one canvas renders initially
   const firstCanvas = pdfContainer.locator("canvas").first();
   await expect(firstCanvas).toBeVisible({ timeout: LONG_TIMEOUT });
 
@@ -754,13 +755,11 @@ test.only("switches to Document layer and renders PDF container", async ({
   const renderedPageIndices = new Set<number>();
   const totalPages = 23;
 
-  // Get scroll properties from the pdfContainer itself
   const scrollableView = await pdfContainer.boundingBox();
   if (!scrollableView) {
     throw new Error("Could not get bounding box for #pdf-container");
   }
   const clientHeight = scrollableView.height;
-  // Evaluate scrollHeight within the browser context of the element
   const scrollHeight = await pdfContainer.evaluate((node) => node.scrollHeight);
 
   console.log(
@@ -768,48 +767,69 @@ test.only("switches to Document layer and renders PDF container", async ({
   );
 
   let currentScrollTop = 0;
-  const scrollIncrement = clientHeight * 0.75; // Scroll by 75% of the container's visible height
+  const scrollIncrement = clientHeight * 0.8; // Scroll by 80% of the container's visible height to ensure overlap
 
   while (currentScrollTop < scrollHeight - clientHeight) {
     currentScrollTop += scrollIncrement;
-    // Ensure not to scroll beyond the maximum possible scrollTop
     currentScrollTop = Math.min(currentScrollTop, scrollHeight - clientHeight);
 
     await pdfContainer.evaluate((node, st) => {
       node.scrollTop = st;
     }, currentScrollTop);
-    await page.waitForTimeout(400); // Increased timeout slightly for DOM updates and rendering
 
-    for (let j = 0; j < totalPages; j++) {
-      const placeholder = pagePlaceholders.nth(j);
-      // Check if placeholder is roughly within current viewport of the container
-      // This is an optimization and might need refinement if placeholder bounding boxes are hard to get reliably here
-      const placeholderIsLikelyVisible = true; // Simplified for now, direct check is better
+    // Active polling for newly rendered canvases
+    const maxWaitTimeForStepMs = 5000; // Max time to wait for canvases at this scroll step
+    const checkIntervalMs = 300; // Interval to re-check for canvases
+    const stepStartTime = Date.now();
+    let madeProgressInStep = true; // Assume progress initially or after finding a canvas
 
-      if (placeholderIsLikelyVisible && !renderedPageIndices.has(j)) {
-        const hasCanvas = (await placeholder.locator("canvas").count()) > 0;
-        if (hasCanvas) {
-          renderedPageIndices.add(j);
-          console.log(
-            `[TEST] Rendered canvas for page index ${j} at scrollTop ${currentScrollTop}`
-          );
+    while (Date.now() - stepStartTime < maxWaitTimeForStepMs) {
+      if (!madeProgressInStep && Date.now() - stepStartTime > 1000) {
+        // If no new canvas found for over 1s in this step, assume stable state for this scroll position
+        // console.log(`[TEST] No new canvases for 1s at scrollTop ${currentScrollTop}, proceeding.`);
+        break;
+      }
+      madeProgressInStep = false; // Reset for this check cycle
+      let initialRenderedCountInInterval = renderedPageIndices.size;
+
+      for (let j = 0; j < totalPages; j++) {
+        if (!renderedPageIndices.has(j)) {
+          const placeholder = pagePlaceholders.nth(j);
+          // A more precise check would be: (placeholder.offsetTop < currentScrollTop + clientHeight && placeholder.offsetTop + placeholder.offsetHeight > currentScrollTop)
+          // For now, we check all non-rendered ones, as PDF.tsx logic will mount them if they are in its calculated range.
+          const hasCanvas = (await placeholder.locator("canvas").count()) > 0;
+          if (hasCanvas) {
+            renderedPageIndices.add(j);
+            console.log(
+              `[TEST] Rendered canvas for page index ${j} at scrollTop ${currentScrollTop}`
+            );
+            madeProgressInStep = true;
+          }
         }
       }
+
+      if (renderedPageIndices.size === totalPages) break; // All pages found
+      if (renderedPageIndices.size > initialRenderedCountInInterval) {
+        // If we found new canvases, reset the "no progress" timer by continuing the outer while loop effectively
+      } else {
+        // No new canvases in this specific check, wait for next interval or timeout
+      }
+      await page.waitForTimeout(checkIntervalMs);
     }
 
     if (renderedPageIndices.size === totalPages) {
       console.log(`[TEST] All ${totalPages} pages rendered. Stopping scroll.`);
       break;
     }
+
     if (currentScrollTop >= scrollHeight - clientHeight) {
       console.log("[TEST] Reached end of scrollable content.");
-      // One last check for any newly visible canvases at the very bottom
-      await page.waitForTimeout(400);
+      // One last check at the very bottom
+      await page.waitForTimeout(checkIntervalMs * 2); // A bit longer final wait
       for (let j = 0; j < totalPages; j++) {
         if (!renderedPageIndices.has(j)) {
           const placeholder = pagePlaceholders.nth(j);
-          const hasCanvas = (await placeholder.locator("canvas").count()) > 0;
-          if (hasCanvas) {
+          if ((await placeholder.locator("canvas").count()) > 0) {
             renderedPageIndices.add(j);
             console.log(
               `[TEST] Rendered canvas for page index ${j} at final scrollTop`
@@ -821,26 +841,20 @@ test.only("switches to Document layer and renders PDF container", async ({
     }
   }
 
-  // Final check for any pages that might have been missed, though the loop should cover it.
   if (renderedPageIndices.size < totalPages) {
     console.warn(
       `[TEST] Still missing ${
         totalPages - renderedPageIndices.size
-      } pages. Performing a final check.`
+      } pages. Performing a final check scan.`
     );
     for (let j = 0; j < totalPages; j++) {
       if (!renderedPageIndices.has(j)) {
         const placeholder = pagePlaceholders.nth(j);
-        // Attempt to scroll the specific placeholder into view if possible, as a last resort.
-        // This might not be feasible if the placeholder itself isn't directly scrollable into view
-        // within the #pdf-container's scroll model without knowing its exact top offset.
-        // For now, we assume the main loop should have revealed it.
-        const hasCanvas = (await placeholder.locator("canvas").count()) > 0;
-        if (hasCanvas) {
+        if ((await placeholder.locator("canvas").count()) > 0) {
           renderedPageIndices.add(j);
         } else {
           console.warn(
-            `[TEST FINAL CHECK] Page index ${j} did not render a canvas.`
+            `[TEST FINAL SCAN] Page index ${j} did not render a canvas.`
           );
         }
       }

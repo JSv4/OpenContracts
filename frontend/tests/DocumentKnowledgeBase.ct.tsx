@@ -1124,7 +1124,7 @@ test("filters annotations correctly when 'Show Structural' and 'Show Only Select
 /* --------------------------------------------------------------------- */
 /* search bar – jump to first match                                      */
 /* --------------------------------------------------------------------- */
-test.only("DocNavigation search jumps to first 'Transfer Taxes' hit on page 4", async ({
+test("DocNavigation search jumps to first 'Transfer Taxes' hit on page 4", async ({
   mount,
   page,
 }) => {

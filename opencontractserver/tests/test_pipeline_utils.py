@@ -159,6 +159,7 @@ class TestPostProcessor(BasePostProcessor):
         self,
         zip_bytes: bytes,
         export_data: OpenContractsExportDataJsonPythonType,
+        **all_kwargs,
     ) -> Tuple[bytes, OpenContractsExportDataJsonPythonType]:
         # Add logging to debug the process
         logger.info("TestPostProcessor.process_export called")

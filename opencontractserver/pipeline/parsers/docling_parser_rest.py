@@ -90,8 +90,6 @@ class DoclingParser(BaseParser):
 
             # Extract filename from path
             filename = doc_path.split("/")[-1]
-            if "\\" in filename:  # Handle Windows paths
-                filename = filename.split("\\")[-1]
 
             # Prepare the request payload
             payload = {

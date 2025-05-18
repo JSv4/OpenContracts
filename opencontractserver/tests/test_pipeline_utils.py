@@ -1,7 +1,9 @@
 import importlib
 import logging
 import os
+import sys
 import unittest
+import inspect, abc
 
 from django.test import TestCase, override_settings
 
@@ -220,8 +222,6 @@ class TestPostProcessor(BasePostProcessor):
         importlib.invalidate_caches()
 
         # Force a direct import of the test modules to ensure they're loaded
-        import sys
-
         if cls.parser_path not in sys.path:
             sys.path.insert(0, os.path.dirname(os.path.dirname(cls.parser_path)))
 
@@ -262,6 +262,15 @@ class TestPostProcessor(BasePostProcessor):
         embedders = get_all_embedders()
         embedder_titles = [embedder.title for embedder in embedders]
         logger.info(f"Available embedder titles after reload: {embedder_titles}")
+
+        # make sure the package directory is importable
+        sys.modules.pop(
+            "opencontractserver.pipeline.post_processors.test_post_processor", None
+        )
+        importlib.invalidate_caches()
+        importlib.import_module(
+            "opencontractserver.pipeline.post_processors.test_post_processor"
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -478,6 +487,23 @@ class TestPostProcessor(BasePostProcessor):
         logger.info("Before running post-processors")
         logger.info(f"Initial export data: {test_export_data}")
 
+        # Force reload of the module to ensure we're using the freshly written version
+        import importlib
+        module = importlib.import_module(
+            "opencontractserver.pipeline.post_processors.test_post_processor"
+        )
+        importlib.reload(module)
+        
+        # Add temporary assertions to debug
+        import inspect, abc
+        processor_class = get_component_by_name(
+            "opencontractserver.pipeline.post_processors.test_post_processor.TestPostProcessor"
+        )
+        logger.info("Loaded %s from %s",
+                    processor_class, inspect.getfile(processor_class))
+        logger.info("abstract? %s", abc.isabstract(processor_class))
+        logger.info("source:\n%s", inspect.getsource(processor_class))
+
         modified_zip_bytes, modified_export_data = run_post_processors(
             processor_paths, test_zip_bytes, test_export_data
         )
@@ -488,6 +514,7 @@ class TestPostProcessor(BasePostProcessor):
 
         # Verify post-processor was applied
         self.assertEqual(modified_zip_bytes, test_zip_bytes)  # Zip bytes unchanged
+        self.assertEqual(modified_export_data.get("test_field"), "test_value")  # New field added
 
         # Test with invalid processor path
         with self.assertRaises(ValueError):

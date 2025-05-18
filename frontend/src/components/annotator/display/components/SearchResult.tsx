@@ -68,7 +68,7 @@ export const SearchResult: React.FC<SearchResultProps> = ({
   return (
     <>
       <ResultBoundary
-        id={match.id}
+        id={`SEARCH_RESULT_${match.id}`}
         hidden={hidden}
         showBoundingBox={showBoundingBox}
         color={color}

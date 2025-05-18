@@ -1120,3 +1120,72 @@ test("filters annotations correctly when 'Show Structural' and 'Show Only Select
   // Close popup (optional, good practice)
   await page.locator("body").click({ force: true, position: { x: 0, y: 0 } }); // Click outside to close
 });
+
+/* --------------------------------------------------------------------- */
+/* search bar – jump to first match                                      */
+/* --------------------------------------------------------------------- */
+test.only("DocNavigation search jumps to first 'Transfer Taxes' hit on page 4", async ({
+  mount,
+  page,
+}) => {
+  /* 1️⃣  mount the wrapper */
+  await mount(
+    <DocumentKnowledgeBaseTestWrapper
+      mocks={graphqlMocks}
+      documentId={PDF_DOC_ID}
+      corpusId={CORPUS_ID}
+    />
+  );
+
+  /* 2️⃣  wait until the Summary tab rendered – component ready */
+  await expect(
+    page.getByRole("heading", { name: "Mock Summary Title" })
+  ).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  /* 3️⃣  switch to Document layer (PDF) */
+  await page.locator(".layers-button").hover();
+  await page
+    .locator(".layers-menu")
+    .getByRole("button", { name: "Document" })
+    .click();
+
+  /* 4️⃣  open the DocNavigation search panel (desktop = hover) */
+  const nav = page.locator("#doc-navigation .search-container");
+  await nav.hover();
+
+  /* 5️⃣  fill query + press ENTER */
+  const searchInput = nav.getByPlaceholder("Search document...");
+  await expect(searchInput).toBeVisible({ timeout: LONG_TIMEOUT });
+  await searchInput.fill("Transfer Taxes");
+  await searchInput.press("Enter");
+
+  /* 6️⃣  wait for ANY highlight to become visible -------------------- */
+  const highlight = page.locator("[id^='SEARCH_RESULT_']").first();
+  await expect(highlight).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  /* 6b️⃣  wait until the container finished scrolling so the highlight
+         lies fully within the viewport                                */
+  await page.waitForFunction(
+    ([hl, container]) => {
+      if (!hl || !container) return false;
+      const h = hl.getBoundingClientRect();
+      const c = container.getBoundingClientRect();
+      return h.top >= c.top && h.bottom <= c.bottom;
+    },
+    [
+      await highlight.elementHandle(),
+      await page.locator("#pdf-container").elementHandle(),
+    ],
+    { timeout: LONG_TIMEOUT }
+  );
+
+  /* 7️⃣  now we can safely assert with bounding-boxes (almost instant) */
+  const pdfBox = await page.locator("#pdf-container").boundingBox();
+  const hlBox = await highlight.boundingBox();
+  expect(pdfBox && hlBox, "bounding boxes must exist").toBeTruthy();
+  if (pdfBox && hlBox) {
+    const within =
+      hlBox.y >= pdfBox.y && hlBox.y + hlBox.height <= pdfBox.y + pdfBox.height;
+    expect(within).toBe(true);
+  }
+});

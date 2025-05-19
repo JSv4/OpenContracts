@@ -9,6 +9,7 @@ import {
   scrollContainerRefAtom,
   pendingScrollAnnotationIdAtom,
   useTextSearchState,
+  pendingScrollChatSourceKeyAtom,
 } from "../../context/DocumentAtom";
 import { ServerTokenAnnotation, BoundingBox } from "../../types/annotations";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -19,6 +20,7 @@ import {
 import { useAllAnnotations } from "../../hooks/useAllAnnotations";
 import { pendingScrollSearchResultIdAtom } from "../../context/DocumentAtom";
 import { TextSearchTokenResult } from "../../../types";
+import { chatSourcesAtom } from "../../context/ChatSourceAtom";
 
 export class PDFPageRenderer {
   private currentRenderTask?: ReturnType<PDFPageProxy["render"]>;
@@ -92,6 +94,11 @@ export const PDF: React.FC<PDFProps> = ({
     useTextSearchState();
   const setPendingScrollId = useSetAtom(pendingScrollAnnotationIdAtom);
   const setPendingScrollSearchId = useSetAtom(pendingScrollSearchResultIdAtom);
+  const chatState = useAtomValue(chatSourcesAtom);
+  const setPendingScrollChatSourceId = useSetAtom(
+    pendingScrollChatSourceKeyAtom
+  );
+  const { messages, selectedMessageId, selectedSourceIndex } = chatState;
   /* ------------------------------------------------------------------ */
   /* reference to the scrolling element                                 */
   const scrollContainerRef = useAtomValue(scrollContainerRefAtom);
@@ -125,6 +132,14 @@ export const PDF: React.FC<PDFProps> = ({
     if (!hit) return undefined;
     return hit.start_page; // first page of the match
   }, [textSearchMatches, selectedTextSearchMatchIndex]);
+
+  const selectedChatSourcePageIdx = useMemo(() => {
+    if (!selectedMessageId || selectedSourceIndex === null) return undefined;
+    const message = messages.find((m) => m.messageId === selectedMessageId);
+    const source = message?.sources?.[selectedSourceIndex ?? -1];
+    if (!source) return undefined;
+    return Math.min(...Object.keys(source.boundsByPage).map(Number));
+  }, [messages, selectedMessageId, selectedSourceIndex]);
 
   /* build the cache once per zoom level */
   useEffect(() => {
@@ -205,6 +220,12 @@ export const PDF: React.FC<PDFProps> = ({
       end = Math.max(end, selectedSearchPageIdx);
     }
 
+    /* 🪟 ensure the page is mounted */
+    if (selectedChatSourcePageIdx !== undefined) {
+      start = Math.min(start, selectedChatSourcePageIdx);
+      end = Math.max(end, selectedChatSourcePageIdx);
+    }
+
     setRange([start, end]);
   }, [
     getScrollElement,
@@ -212,6 +233,7 @@ export const PDF: React.FC<PDFProps> = ({
     pageInfos.length,
     selectedPageIdx,
     selectedSearchPageIdx,
+    selectedChatSourcePageIdx,
   ]);
 
   /* attach / detach scroll listener(s) */
@@ -285,6 +307,29 @@ export const PDF: React.FC<PDFProps> = ({
     cumulative,
     getScrollElement,
     setPendingScrollSearchId,
+  ]);
+
+  /* 🚚 scroll the container and set the pending-scroll atom */
+  useEffect(() => {
+    if (
+      selectedChatSourcePageIdx === undefined ||
+      pageHeights.length === 0 ||
+      selectedSourceIndex === null
+    )
+      return;
+
+    const topOffset = Math.max(0, cumulative[selectedChatSourcePageIdx] - 32);
+    getScrollElement().scrollTo({ top: topOffset, behavior: "smooth" });
+
+    setPendingScrollChatSourceId(`${selectedMessageId}.${selectedSourceIndex}`);
+  }, [
+    selectedChatSourcePageIdx,
+    selectedMessageId,
+    selectedSourceIndex,
+    pageHeights,
+    cumulative,
+    getScrollElement,
+    setPendingScrollChatSourceId,
   ]);
 
   /* ---------- render -------------------------------------------------- */

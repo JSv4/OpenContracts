@@ -28,6 +28,7 @@ import { ChatSourceResult } from "../../display/components/ChatSourceResult";
 import { useVisibleAnnotations } from "../../hooks/useVisibleAnnotations";
 import { pendingScrollAnnotationIdAtom } from "../../context/DocumentAtom";
 import { pendingScrollSearchResultIdAtom } from "../../context/DocumentAtom";
+import { pendingScrollChatSourceKeyAtom } from "../../context/DocumentAtom";
 
 /**
  * This wrapper is inline-block (shrink-wrapped) and position:relative
@@ -115,6 +116,10 @@ export const PDFPage = ({
 
   const [pendingScrollSearchId, setPendingScrollSearchId] = useAtom(
     pendingScrollSearchResultIdAtom
+  );
+
+  const [pendingScrollChatSourceKey, setPendingScrollChatSourceKey] = useAtom(
+    pendingScrollChatSourceKeyAtom
   );
 
   const lastRenderedZoom = useRef<number | null>(null);
@@ -336,11 +341,11 @@ export const PDFPage = ({
     chatSourceElementRefs,
   ]);
 
-  /* ---------- centre search-result OR annotation ---------------------- */
+  /* ——— single effect that centres whichever item has precedence ——— */
   useEffect(() => {
     if (!hasPdfPageRendered) return;
 
-    /* --- 1️⃣  Handle pending search result first --------------------- */
+    /* 1️⃣  SEARCH (highest priority) */
     if (pendingScrollSearchId) {
       const pageOwnsResult = searchResults
         .filter((m): m is TextSearchTokenResult => "tokens" in m)
@@ -365,48 +370,56 @@ export const PDFPage = ({
         }
       };
       tryScrollSearch();
-      return () => {
-        cancelled = true;
-      };
+      return;
     }
 
-    /* --- 2️⃣  No search jump – maybe an annotation jump -------------- */
-    if (!pendingScrollId) return;
-
-    const pageOwnsAnnotation = visibleAnnotations.some(
-      (a) =>
-        a instanceof ServerTokenAnnotation &&
-        a.id === pendingScrollId &&
-        a.json[pageIndex] !== undefined
-    );
-    if (!pageOwnsAnnotation) return;
-
-    let cancelled = false;
-    const tryScrollAnnot = () => {
-      if (cancelled) return;
-      const el = document.querySelector(
-        `.selection_${pendingScrollId}`
-      ) as HTMLElement | null;
+    /* 2️⃣  CHAT SOURCE */
+    if (pendingScrollChatSourceKey) {
+      const el = chatSourceElementRefs.current[pendingScrollChatSourceKey];
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
-        setPendingScrollId(null); // done
-      } else {
-        requestAnimationFrame(tryScrollAnnot);
+        setPendingScrollChatSourceKey(null);
       }
-    };
-    tryScrollAnnot();
-    return () => {
-      cancelled = true;
-    };
+      return;
+    }
+
+    /* 3️⃣  NORMAL ANNOTATION */
+    if (pendingScrollId) {
+      const pageOwnsAnnotation = visibleAnnotations.some(
+        (a) =>
+          a instanceof ServerTokenAnnotation &&
+          a.id === pendingScrollId &&
+          a.json[pageIndex] !== undefined
+      );
+      if (!pageOwnsAnnotation) return;
+
+      let cancelled = false;
+      const tryScrollAnnot = () => {
+        if (cancelled) return;
+        const el = document.querySelector(
+          `.selection_${pendingScrollId}`
+        ) as HTMLElement | null;
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          setPendingScrollId(null); // done
+        } else {
+          requestAnimationFrame(tryScrollAnnot);
+        }
+      };
+      tryScrollAnnot();
+    }
   }, [
     hasPdfPageRendered,
     pendingScrollSearchId,
+    pendingScrollChatSourceKey,
     pendingScrollId,
     searchResults,
     visibleAnnotations,
     pageIndex,
     setPendingScrollSearchId,
+    setPendingScrollChatSourceKey,
     setPendingScrollId,
+    chatSourceElementRefs.current,
   ]);
 
   useEffect(() => {

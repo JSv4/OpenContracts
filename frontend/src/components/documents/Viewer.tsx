@@ -67,7 +67,7 @@ import { useChatSourceState } from "../annotator/context/ChatSourceAtom";
 import { useCreateAnnotation } from "../annotator/hooks/AnnotationHooks";
 
 import { getDocument } from "pdfjs-dist";
-import workerSrc from "pdfjs-dist/build/pdf.worker.js?url";
+import workerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
 import * as pdfjs from "pdfjs-dist";
 import { SafeMarkdown } from "../knowledge_base/markdown/SafeMarkdown";
 

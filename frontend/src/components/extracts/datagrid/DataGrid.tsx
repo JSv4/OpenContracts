@@ -7,7 +7,8 @@ import React, {
   useEffect,
   useImperativeHandle,
 } from "react";
-import DataGrid, {
+import {
+  DataGrid,
   RowsChangeData,
   CopyEvent,
   PasteEvent,

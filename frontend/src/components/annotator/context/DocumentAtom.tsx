@@ -81,6 +81,7 @@ export const scrollContainerRefAtom = atom<RefObject<HTMLDivElement> | null>(
 );
 export const pendingScrollAnnotationIdAtom = atom<string | null>(null);
 export const pendingScrollSearchResultIdAtom = atom<string | null>(null);
+export const pendingScrollChatSourceKeyAtom = atom<string | null>(null);
 
 /**
  * Text Search Atoms.

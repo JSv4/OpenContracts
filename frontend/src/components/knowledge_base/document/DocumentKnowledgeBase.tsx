@@ -64,7 +64,6 @@ import { useInitialAnnotations } from "../../annotator/hooks/AnnotationHooks";
 import { LabelSelector } from "../../annotator/labels/label_selector/LabelSelector";
 import { PDF } from "../../annotator/renderers/pdf/PDF";
 import TxtAnnotatorWrapper from "../../annotator/components/wrappers/TxtAnnotatorWrapper";
-import { useAnnotationRefs } from "../../annotator/hooks/useAnnotationRefs";
 import { DocTypeLabelDisplay } from "../../annotator/labels/doc_types/DocTypeLabelDisplay";
 import { useAnnotationControls } from "../../annotator/context/UISettingsAtom";
 import { RelationshipList } from "../../annotator/display/components/RelationshipList";
@@ -113,7 +112,7 @@ import { useCreateAnnotation } from "../../annotator/hooks/AnnotationHooks";
 import { useScrollContainerRef } from "../../annotator/context/DocumentAtom";
 
 import { getDocument } from "pdfjs-dist";
-import workerSrc from "pdfjs-dist/build/pdf.worker.js?url";
+import workerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
 import * as pdfjs from "pdfjs-dist";
 
 // Setting worker path to worker bundle.

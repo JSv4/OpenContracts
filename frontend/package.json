@@ -20,7 +20,6 @@
     "@types/react": "18",
     "@types/react-color": "^3.0.6",
     "@types/react-dom": "18",
-    "@types/react-pdf": "^5.0.9",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/react-textfit": "^1.1.0",
     "@uiw/react-color": "^2.3.2",

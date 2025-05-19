@@ -373,9 +373,11 @@ export const PDFPage = ({
       return;
     }
 
-    /* 2️⃣  CHAT SOURCE */
+    /* 2️⃣  CHAT SOURCE ------------------------------------------------- */
     if (pendingScrollChatSourceKey) {
-      const el = chatSourceElementRefs.current[pendingScrollChatSourceKey];
+      const el = document.getElementById(
+        `CHAT_SOURCE_${pendingScrollChatSourceKey}`
+      );
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         setPendingScrollChatSourceKey(null);

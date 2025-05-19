@@ -78,7 +78,7 @@ export const ChatSourceResult = ({
   return (
     <div ref={containerRef}>
       <ResultBoundary
-        id={source.id}
+        id={`CHAT_SOURCE_${refKey}`}
         hidden={hidden}
         showBoundingBox={showBoundingBox}
         color={color}

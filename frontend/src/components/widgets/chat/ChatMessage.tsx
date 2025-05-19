@@ -577,6 +577,16 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   isSelected,
   onSelect,
 }) => {
+  console.log("[ChatMessage] Rendering with props:", {
+    messageId,
+    user,
+    content,
+    timestamp,
+    isAssistant,
+    sources,
+    hasSources,
+    isSelected,
+  });
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<
     number | undefined
   >();
@@ -594,6 +604,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   };
 
+  console.log("[ChatMessage] About to render. Content:", content);
   return (
     <MessageContainer
       $isAssistant={isAssistant}

@@ -5025,13 +5025,21 @@ test.only("Chat source chip centres its highlight in the PDF viewer", async ({
   await expect(convCard).toBeVisible({ timeout: LONG_TIMEOUT });
   await convCard.click();
 
-  // Click "Source 1" inside the assistant message
-  const sourceChip = page.getByRole("button", { name: /^Source 1$/ }).first();
+  // Expand sources in assistant message
+  const sourceChip = page.locator(".source-preview-container").first();
   await expect(sourceChip).toBeVisible({ timeout: LONG_TIMEOUT });
   await sourceChip.click();
 
+  // Click source child 1 in the expanded sources list
+  const sourceChild1 = page.locator(".source-chip").first();
+  await expect(sourceChild1).toBeVisible({ timeout: LONG_TIMEOUT });
+  await sourceChild1.click();
+
   // Wait for highlight to be in the DOM & scrolled into view
-  const highlight = page.locator("[id^='CHAT_SOURCE_']").first();
+  const messageId = "TWVzc2FnZVR5cGU6Ng=="; // base-64 id used by the UI
+  const highlight = page.locator(
+    `[id="CHAT_SOURCE_${messageId}.0"]` // an attribute selector needs no escaping
+  );
   await expect(highlight).toBeVisible({ timeout: LONG_TIMEOUT });
 
   // Verify the highlight is fully visible in the viewport

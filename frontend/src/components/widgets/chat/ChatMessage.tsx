@@ -407,7 +407,11 @@ const SourceItem: React.FC<SourceItemProps> = ({
   };
 
   return (
-    <SourceChip $isSelected={isSelected} onClick={onClick}>
+    <SourceChip
+      className="source-chip"
+      $isSelected={isSelected}
+      onClick={onClick}
+    >
       <SourceHeader>
         <SourceTitle $isSelected={isSelected}>
           <Pin size={12} />
@@ -454,6 +458,7 @@ const SourcePreview: React.FC<SourcePreviewProps> = ({
 
   return (
     <SourcePreviewContainer
+      className="source-preview-container"
       onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
     >
       <SourcePreviewHeader onClick={handleHeaderClick}>

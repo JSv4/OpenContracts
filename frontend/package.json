@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@apollo/client": "^3.11.10",
+    "@apollo/client": "^3.13.8",
     "@auth0/auth0-react": "^1.8.0",
     "@hello-pangea/dnd": "^18.0.1",
     "@rjsf/core": "^3.2.1",

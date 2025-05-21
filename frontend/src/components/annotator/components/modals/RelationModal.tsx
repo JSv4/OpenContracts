@@ -14,12 +14,25 @@ interface RelationModalProps {
   onClose?: () => void;
 }
 
+/* ------------------------------------------------------------------ */
+/*     NEW  —  theme-aware label                                      */
+/* ------------------------------------------------------------------ */
+const RelationLabel = styled(Label)<{ $selected: boolean }>`
+  &&& {
+    cursor: pointer;
+    background-color: ${(props): string =>
+      props.$selected ? props.theme.color.G6 : props.theme.color.N6};
+    color: ${(props): string =>
+      props.$selected ? props.theme.color.N1 : props.theme.color.N10};
+  }
+`;
+
 export const RelationModal = ({
   visible,
   source,
   label,
   onClose,
-}: RelationModalProps) => {
+}: RelationModalProps): JSX.Element => {
   const [targetKeys, setTargetKeys] = useState<string[]>([]);
   const createRelationship = useCreateRelationship();
   const { relationLabels } = useCorpusState();
@@ -55,24 +68,18 @@ export const RelationModal = ({
       </Modal.Header>
       <Modal.Content>
         {relationLabels.map((relation) => (
-          <Label
-            as="a"
+          <RelationLabel
             key={relation.text}
+            $selected={relation.id === label.id}
             onClick={() => {
-              // TODO: Handle relation label selection
-              // This functionality needs to be lifted up to the parent component
-              // or handled through a separate atom for active relation label
-            }}
-            style={{
-              backgroundColor: relation.id === label.id ? "green" : "gray",
+              /* TODO: lift active-label state */
             }}
           >
-            <Icon name={relation.icon ? relation.icon : "tag"} />
+            <Icon name={relation.icon ?? "tag"} />
             {relation.text}
-          </Label>
+          </RelationLabel>
         ))}
-        <br />
-        <hr />
+        <Divider />
         <TransferContainer>
           <SemanticTransfer
             dataSource={transferSource}
@@ -93,11 +100,15 @@ export const RelationModal = ({
   );
 };
 
-const TransferContainer = styled.div(
-  ({ theme }) => `
-      padding: ${theme.spacing.sm};
-      display: flex;
-      flex-direction: row;
-      justify-content: center;
-  `
-);
+/* ----------------------- helpers & layout -------------------------- */
+const Divider = styled.hr`
+  border: none;
+  border-top: 1px solid ${({ theme }) => theme.color.N4};
+  margin: ${({ theme }) => `${theme.spacing.sm} 0`};
+`;
+
+const TransferContainer = styled.div`
+  padding: ${({ theme }) => theme.spacing.sm};
+  display: flex;
+  justify-content: center;
+`;

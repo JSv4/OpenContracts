@@ -10,10 +10,11 @@ import React, {
 import {
   DataGrid,
   RowsChangeData,
-  CopyEvent,
-  PasteEvent,
+  CellCopyEvent,
+  CellPasteEvent,
   SelectColumn,
   SortColumn,
+  CalculatedColumn,
 } from "react-data-grid";
 import { useMutation } from "@apollo/client";
 import { toast } from "react-toastify";
@@ -971,53 +972,117 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
       [localCells, handleEditDatacell, onUpdateRow]
     );
 
-    const handleCopy = useCallback((args: CopyEvent<ExtractGridRow>): void => {
-      const { sourceRow, sourceColumnKey } = args;
-      const value = sourceRow[sourceColumnKey as keyof ExtractGridRow];
-      if (window.isSecureContext) {
-        // Serialize value to string
-        const textToCopy =
-          typeof value === "object" ? JSON.stringify(value) : String(value);
-        navigator.clipboard.writeText(textToCopy);
-      }
-    }, []);
+    // Copy / paste helpers
+    /**
+     * React-Data-Grid compatible "copied cell" handle.
+     * When non-null it stores the source cell that was copied so that a
+     * subsequent paste can grab its value (CTRL-C → CTRL-V behaviour).
+     */
+    const [copiedCell, setCopiedCell] = useState<{
+      readonly row: ExtractGridRow;
+      readonly column: CalculatedColumn<ExtractGridRow>;
+    } | null>(null);
 
-    const handlePaste = useCallback(
-      (args: PasteEvent<ExtractGridRow>): ExtractGridRow => {
-        const { sourceColumnKey, sourceRow, targetColumnKey, targetRow } = args;
-        const sourceValue = sourceRow[sourceColumnKey as keyof ExtractGridRow];
+    /**
+     * Convert a raw clipboard/string value into the best-guess type for the
+     * destination column (number, boolean, list, object, …).
+     */
+    const parsePastedValue = useCallback(
+      (raw: unknown, targetColumnKey: string): unknown => {
+        const col = columns.find((c) => c.id === targetColumnKey);
+        if (!col) return raw;
 
-        // Retrieve the target column to get its outputType and schema
-        const targetColumn = columns.find((col) => col.id === targetColumnKey);
-        if (!targetColumn) return targetRow;
-
-        let parsedValue = sourceValue;
-
-        // Parse the pasted value based on the target column's outputType
         try {
-          const schema = parseOutputType(targetColumn.outputType);
+          const schema = parseOutputType(col.outputType);
 
-          if (schema.type === "number") {
-            parsedValue = Number(sourceValue);
-          } else if (schema.type === "boolean") {
-            parsedValue = sourceValue === "true";
-          } else if (schema.type === "object" || targetColumn.extractIsList) {
-            parsedValue = JSON.parse(sourceValue);
-          } else {
-            parsedValue = String(sourceValue);
+          switch (schema.type) {
+            case "number":
+              return Number(raw);
+            case "boolean":
+              if (typeof raw === "string") {
+                return raw.toLowerCase() === "true";
+              }
+              return Boolean(raw);
+            case "object":
+              return typeof raw === "string" ? JSON.parse(raw) : raw;
+            default:
+              // Lists are stored as JSON strings
+              if (col.extractIsList && typeof raw === "string") {
+                return JSON.parse(raw);
+              }
+              return String(raw);
           }
-        } catch (error) {
-          console.error("Failed to parse pasted value:", error);
-          parsedValue = sourceValue;
+        } catch {
+          // Fallback – just return what we were given
+          return raw;
         }
-
-        // Return the updated row
-        return {
-          ...targetRow,
-          [targetColumnKey]: parsedValue,
-        };
       },
       [columns]
+    );
+
+    /**
+     * Handle CTRL-C / ⌘-C on a cell.
+     */
+    const handleCellCopy = useCallback(
+      (
+        { row, column }: CellCopyEvent<ExtractGridRow>,
+        event: React.ClipboardEvent<HTMLDivElement>
+      ): void => {
+        // If the user is selecting text inside the cell we do not treat it as a
+        // grid copy operation.
+        if (window.getSelection()?.isCollapsed === false) {
+          setCopiedCell(null);
+          return;
+        }
+
+        setCopiedCell({ row, column });
+
+        const value = row[column.key as keyof ExtractGridRow];
+        const text =
+          typeof value === "object"
+            ? JSON.stringify(value)
+            : String(value ?? "");
+
+        event.clipboardData.setData("text/plain", text);
+        event.preventDefault();
+      },
+      []
+    );
+
+    /**
+     * Handle CTRL-V / ⌘-V on a cell.
+     */
+    const handleCellPaste = useCallback(
+      (
+        { row, column }: CellPasteEvent<ExtractGridRow>,
+        event: React.ClipboardEvent<HTMLDivElement>
+      ): ExtractGridRow => {
+        const targetColumnKey = column.key;
+
+        /* ───── 1️⃣ Copy-from-grid → grid  ───── */
+        if (copiedCell !== null) {
+          const sourceValue =
+            copiedCell.row[copiedCell.column.key as keyof ExtractGridRow];
+
+          return {
+            ...row,
+            [targetColumnKey]: parsePastedValue(sourceValue, targetColumnKey),
+          };
+        }
+
+        /* ───── 2️⃣ Copy-from-clipboard → grid ───── */
+        const clipboardText = event.clipboardData.getData("text/plain");
+        if (clipboardText !== "") {
+          return {
+            ...row,
+            [targetColumnKey]: parsePastedValue(clipboardText, targetColumnKey),
+          };
+        }
+
+        /* Nothing to paste */
+        return row;
+      },
+      [copiedCell, parsePastedValue]
     );
 
     const [updateColumnMutation] = useMutation<
@@ -1371,8 +1436,8 @@ export const ExtractDataGrid = forwardRef<ExtractDataGridHandle, DataGridProps>(
             }
             className="custom-data-grid"
             onRowsChange={!loading ? onRowsChange : undefined}
-            onCopy={!loading ? handleCopy : undefined}
-            onPaste={!loading ? handlePaste : undefined}
+            onCellCopy={!loading ? handleCellCopy : undefined}
+            onCellPaste={!loading ? handleCellPaste : undefined}
             headerRowHeight={56}
             defaultColumnOptions={{ sortable: true }}
             sortColumns={sortColumns}

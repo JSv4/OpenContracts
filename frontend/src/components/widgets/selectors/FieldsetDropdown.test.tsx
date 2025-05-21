@@ -1,5 +1,11 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { MockedProvider } from "@apollo/client/testing";
 import { FieldsetDropdown } from "./FieldsetDropdown";
 import { GET_FIELDSETS } from "../../../graphql/queries";
@@ -45,24 +51,29 @@ describe("FieldsetDropdown", () => {
 
     // Wait for the loading state to finish
     await waitFor(() => {
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
     });
 
     // Open the dropdown
-    fireEvent.click(screen.getByText("Select Fieldset"));
+    const dropdownElement = screen.getByRole("combobox");
+    fireEvent.click(dropdownElement);
 
-    // Verify the fieldset options are rendered
-    expect(screen.getByText("Fieldset 1")).toBeInTheDocument();
-    expect(screen.getByText("Fieldset 2")).toBeInTheDocument();
+    // Verify the fieldset options are rendered within the listbox
+    const listbox = await screen.findByRole("listbox");
+    expect(within(listbox).getByText("Fieldset 1")).toBeInTheDocument();
+    expect(within(listbox).getByText("Fieldset 2")).toBeInTheDocument();
 
-    // Select a fieldset option
-    fireEvent.click(screen.getByText("Fieldset 1"));
+    // Select a fieldset option from the listbox
+    fireEvent.click(within(listbox).getByText("Fieldset 1"));
 
     // Verify the selected fieldset is updated in the cache
-    expect(selectedFieldset()).toEqual({
-      id: "1",
-      name: "Fieldset 1",
-      description: "Description 1",
+    await waitFor(() => {
+      expect(selectedFieldset()).toEqual({
+        id: "1",
+        name: "Fieldset 1",
+        description: "Description 1",
+      });
+      expect(screen.getByRole("combobox")).toHaveTextContent("Fieldset 1");
     });
   });
 

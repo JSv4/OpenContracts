@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import styled from "styled-components";
-import { FiCode, FiCheck, FiX, FiEye, FiEdit, FiEyeOff } from "react-icons/fi"; // Import icons you need
+import { Code, Check, X, Eye, Edit3, EyeOff } from "lucide-react";
 import { Dimmer, Loader } from "semantic-ui-react";
 import { CellEditor } from "./CellEditor";
 import {
@@ -41,7 +41,7 @@ interface SingleDocumentExtractResultsProps {
 }
 
 /**
- * SingleDocumentExtractResults component displays the extraction results for a single document.
+ * SingleDocumentExtractResults component displays the extraction results forss a single document.
  * It renders a table with columns and their extracted data, along with any associated annotations.
  */
 export const SingleDocumentExtractResults: React.FC<
@@ -202,7 +202,7 @@ export const SingleDocumentExtractResults: React.FC<
                 setIsModalOpen(true);
               }}
             >
-              <FiCode />
+              <Code />
               <span>View JSON</span>
             </JsonViewButton>
           ) : (
@@ -226,7 +226,7 @@ export const SingleDocumentExtractResults: React.FC<
               setActiveCellId(cell.id);
             }}
           >
-            <FiEdit />
+            <Edit3 />
           </ActionButton>
           <ActionButton
             className="approve"
@@ -236,7 +236,7 @@ export const SingleDocumentExtractResults: React.FC<
             }}
             disabled={Boolean(cell.approvedBy)}
           >
-            <FiCheck />
+            <Check />
           </ActionButton>
           <ActionButton
             className="reject"
@@ -246,7 +246,7 @@ export const SingleDocumentExtractResults: React.FC<
             }}
             disabled={Boolean(cell.rejectedBy)}
           >
-            <FiX />
+            <X />
           </ActionButton>
         </div>
       </DataCell>
@@ -342,9 +342,9 @@ export const SingleDocumentExtractResults: React.FC<
                                 }}
                               >
                                 {annotationVisibility[cell.id] ? (
-                                  <FiEye />
+                                  <Eye />
                                 ) : (
-                                  <FiEyeOff />
+                                  <EyeOff />
                                 )}
                                 {cell.fullSourceList.length} Annotation
                                 {cell.fullSourceList.length !== 1 ? "s" : ""}
@@ -353,9 +353,9 @@ export const SingleDocumentExtractResults: React.FC<
                         </div>
                         {cell && (
                           <CellStatus>
-                            {cell.approvedBy && <FiCheck color="green" />}
-                            {cell.rejectedBy && <FiX color="red" />}
-                            {cell.correctedData && <FiCode color="blue" />}
+                            {cell.approvedBy && <Check color="green" />}
+                            {cell.rejectedBy && <X color="red" />}
+                            {cell.correctedData && <Code color="blue" />}
                           </CellStatus>
                         )}
                       </CellContent>

@@ -21,60 +21,61 @@ import DocumentKnowledgeBase from "../src/components/knowledge_base/document/Doc
 // Create a minimal cache configuration for testing based on the real cache.
 // This includes essential type policies for annotations but avoids problematic
 // read functions that rely on external reactive variables.
-const testCache = new InMemoryCache({
-  typePolicies: {
-    Query: {
-      fields: {
-        // Use simple pagination for annotations in tests
-        annotations: relayStylePagination(),
-        // Include other paginated fields if needed by the component, using simple pagination
-        userFeedback: relayStylePagination(),
-        pageAnnotations: { keyArgs: false, merge: true }, // Simplest merge strategy
-        documents: relayStylePagination(),
-        corpuses: relayStylePagination(),
-        userexports: relayStylePagination(),
-        labelsets: relayStylePagination(),
-        annotationLabels: relayStylePagination(),
-        relationshipLabels: relayStylePagination(),
-        extracts: relayStylePagination(),
-        columns: relayStylePagination(),
+const createTestCache = () =>
+  new InMemoryCache({
+    typePolicies: {
+      Query: {
+        fields: {
+          // Use simple pagination for annotations in tests
+          annotations: relayStylePagination(),
+          // Include other paginated fields if needed by the component, using simple pagination
+          userFeedback: relayStylePagination(),
+          pageAnnotations: { keyArgs: false, merge: true }, // Simplest merge strategy
+          documents: relayStylePagination(),
+          corpuses: relayStylePagination(),
+          userexports: relayStylePagination(),
+          labelsets: relayStylePagination(),
+          annotationLabels: relayStylePagination(),
+          relationshipLabels: relayStylePagination(),
+          extracts: relayStylePagination(),
+          columns: relayStylePagination(),
+        },
+      },
+      // Define keyFields for core types, but NO read functions
+      DocumentType: {
+        keyFields: ["id"],
+      },
+      CorpusType: {
+        keyFields: ["id"],
+      },
+      LabelSetType: {
+        keyFields: ["id"],
+      },
+      AnnotationType: {
+        // Assuming AnnotationType is the primary type for annotations
+        keyFields: ["id"],
+      },
+      ServerAnnotationType: {
+        // Include if used distinctly
+        keyFields: ["id"],
+        fields: {
+          // Keep simple merge policies if necessary
+          userFeedback: mergeArrayByIdFieldPolicy,
+        },
+      },
+      UserFeedbackType: {
+        keyFields: ["id"],
+      },
+      DatacellType: {
+        keyFields: ["id"],
+      },
+      PageAwareAnnotationType: {
+        fields: {
+          pageAnnotations: { keyArgs: false, merge: true },
+        },
       },
     },
-    // Define keyFields for core types, but NO read functions
-    DocumentType: {
-      keyFields: ["id"],
-    },
-    CorpusType: {
-      keyFields: ["id"],
-    },
-    LabelSetType: {
-      keyFields: ["id"],
-    },
-    AnnotationType: {
-      // Assuming AnnotationType is the primary type for annotations
-      keyFields: ["id"],
-    },
-    ServerAnnotationType: {
-      // Include if used distinctly
-      keyFields: ["id"],
-      fields: {
-        // Keep simple merge policies if necessary
-        userFeedback: mergeArrayByIdFieldPolicy,
-      },
-    },
-    UserFeedbackType: {
-      keyFields: ["id"],
-    },
-    DatacellType: {
-      keyFields: ["id"],
-    },
-    PageAwareAnnotationType: {
-      fields: {
-        pageAnnotations: { keyArgs: false, merge: true },
-      },
-    },
-  },
-});
+  });
 // --- End Cache Definition ---
 
 export const CONVERSATIONS_MOCK = {};
@@ -3991,7 +3992,7 @@ export const DocumentKnowledgeBaseTestWrapper: React.FC<WrapperProps> = ({
       <MockedProvider
         // Use our custom link instead of relying on default mocks matching
         link={link}
-        cache={testCache}
+        cache={createTestCache()}
         addTypename={true}
         defaultOptions={{
           watchQuery: { errorPolicy: "all" },

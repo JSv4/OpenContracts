@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  MutableRefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import styled from "styled-components";
 
@@ -10,8 +16,6 @@ import {
 } from "../../../../types/graphql-api";
 
 import _ from "lodash";
-
-import * as listeners from "../../listeners";
 
 import AnnotatorSidebar from "../../sidebar/AnnotatorSidebar";
 import { SidebarContainer } from "../../../common";
@@ -170,18 +174,21 @@ export const DocumentViewer = ({
   // TODO - move this to <SelectionLayer/>
   const handleCreateRelationship = useCreateRelationship();
 
-  const { scrollContainerRef, annotationElementRefs, registerRef } =
-    useAnnotationRefs();
+  const { annotationElementRefs, registerRef } = useAnnotationRefs();
+
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const containerRefCallback = useCallback(
     (node: HTMLDivElement | null) => {
-      // console.log("Started Annotation Renderer");
-      if (node !== null) {
+      if (node) {
         scrollContainerRef.current = node;
-        registerRef("scrollContainer", scrollContainerRef);
+        registerRef(
+          "scrollContainer",
+          scrollContainerRef as MutableRefObject<HTMLElement | null>
+        );
       }
     },
-    [scrollContainerRef, registerRef]
+    [registerRef]
   );
 
   const handleKeyUpPress = useCallback(
@@ -294,9 +301,23 @@ export const DocumentViewer = ({
   }
 
   if (selectedDocument) {
+    type AnyAnnotation = ServerSpanAnnotation | ServerTokenAnnotation;
+
+    const createAnnotationHandler = useCallback(
+      async (_annotation: AnyAnnotation): Promise<void> => {
+        /* no-op */
+      },
+      []
+    );
+
     switch (selectedDocument.fileType) {
       case "application/pdf":
-        view_components = <PDF read_only={readOnly} />;
+        view_components = (
+          <PDF
+            read_only={readOnly}
+            createAnnotationHandler={createAnnotationHandler}
+          />
+        );
         break;
       case "application/txt":
       case "text/plain":

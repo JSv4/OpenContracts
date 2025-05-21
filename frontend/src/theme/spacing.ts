@@ -19,16 +19,16 @@ export interface SpacingMap {
   [foo: string]: Spacing;
 }
 
-export const spacing: SpacingMap = {
-  xxs: Spacing.fromPixels(4),
-  xs2: Spacing.fromPixels(4),
-  xs: Spacing.fromPixels(8),
-  sm: Spacing.fromPixels(12),
-  md: Spacing.fromPixels(16),
-  lg: Spacing.fromPixels(24),
-  xl: Spacing.fromPixels(36),
-  xl2: Spacing.fromPixels(48),
-  xl3: Spacing.fromPixels(64),
-  xl4: Spacing.fromPixels(96),
-  xl5: Spacing.fromPixels(128),
+export const spacing: Record<string, string> = {
+  xxs: "4px",
+  xs2: "4px",
+  xs: "8px",
+  sm: "12px",
+  md: "16px",
+  lg: "24px",
+  xl: "36px",
+  xl2: "48px",
+  xl3: "64px",
+  xl4: "96px",
+  xl5: "128px",
 };

@@ -218,10 +218,10 @@ export const DocumentAnnotator = ({
       const corpus_permissions = getPermissions(opened_corpus.myPermissions);
       setCorpus({
         selectedCorpus: opened_corpus,
-        permissions: corpus_permissions,
+        myPermissions: corpus_permissions,
       });
     }
-  }, [opened_document, opened_corpus]);
+  }, [opened_document, opened_corpus, setSelectedDocument, setCorpus]);
 
   // Process annotations when data is loaded
   useEffect(() => {

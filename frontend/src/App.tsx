@@ -19,19 +19,11 @@ import {
   userObj,
   showCookieAcceptModal,
   openedDocument,
-  selectedAnalysesIds,
-  selectedAnalyses,
-  selectedExtract,
-  selectedExtractIds,
-  onlyDisplayTheseAnnotations,
   openedCorpus,
-  showSelectedAnnotationOnly,
-  showAnnotationBoundingBoxes,
   openedExtract,
   showSelectCorpusAnalyzerOrFieldsetModal,
   showUploadNewDocumentsModal,
   uploadModalPreloadedFiles,
-  showStructuralAnnotations,
   showKnowledgeBaseModal,
   backendUserObj,
 } from "./graphql/cache";
@@ -63,7 +55,6 @@ import { Extracts } from "./views/Extracts";
 import { useEnv } from "./components/hooks/UseEnv";
 import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
 import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
-import { DocumentAnnotator } from "./components/annotator/DocumentAnnotator";
 import { DocumentUploadModal } from "./components/widgets/modals/DocumentUploadModal";
 import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUploadModal";
 import { DocumentViewer } from "./components/documents/Viewer";
@@ -74,24 +65,12 @@ export const App = () => {
   const show_export_modal = useReactiveVar(showExportModal);
   const show_cookie_modal = useReactiveVar(showCookieAcceptModal);
   const knowledge_base_modal = useReactiveVar(showKnowledgeBaseModal);
-  const only_display_these_annotations = useReactiveVar(
-    onlyDisplayTheseAnnotations
-  );
-  const selected_analyes = useReactiveVar(selectedAnalyses);
   const opened_corpus = useReactiveVar(openedCorpus);
   const opened_extract = useReactiveVar(openedExtract);
   const opened_document = useReactiveVar(openedDocument);
-  const show_selected_annotation_only = useReactiveVar(
-    showSelectedAnnotationOnly
-  );
-  const show_structural_annotations = useReactiveVar(showStructuralAnnotations);
-  const show_annotation_bounding_boxes = useReactiveVar(
-    showAnnotationBoundingBoxes
-  );
   const show_corpus_analyzer_fieldset_modal = useReactiveVar(
     showSelectCorpusAnalyzerOrFieldsetModal
   );
-  const show_annotation_labels = useReactiveVar(showAnnotationLabels);
   const show_upload_new_documents_modal = useReactiveVar(
     showUploadNewDocumentsModal
   );
@@ -110,10 +89,6 @@ export const App = () => {
   // provide a passable UI on mobile. Your results not guaranteed X-)
   const { width } = useWindowDimensions();
   const show_mobile_menu = width <= 1000;
-  const banish_sidebar = width <= 1000;
-
-  const auth_user = useReactiveVar(userObj);
-  const backend_user = useReactiveVar(backendUserObj);
 
   const {
     data: meData,
@@ -273,27 +248,6 @@ export const App = () => {
                 toggleModal={() => openedExtract(null)}
               />
             )}
-            <DocumentAnnotator
-              open={Boolean(opened_document)}
-              onClose={() => {
-                const resetStates = () => {
-                  openedDocument(null);
-                  selectedExtract(null);
-                  selectedAnalysesIds([]);
-                  selectedExtractIds([]);
-                  selectedAnalyses([]);
-                  onlyDisplayTheseAnnotations(undefined);
-                };
-                resetStates();
-              }}
-              opened_corpus={opened_corpus === null ? undefined : opened_corpus}
-              opened_document={opened_document}
-              read_only={selected_analyes.length > 0 || banish_sidebar}
-              show_structural_annotations={show_structural_annotations}
-              show_selected_annotation_only={show_selected_annotation_only}
-              show_annotation_bounding_boxes={show_annotation_bounding_boxes}
-              show_annotation_labels={show_annotation_labels}
-            />
             <DocumentUploadModal
               refetch={() => {
                 showUploadNewDocumentsModal(false);

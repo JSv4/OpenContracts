@@ -58,3 +58,32 @@ jobs:
 
       - name: Run Playwright Component Tests
         run: yarn run test-ct
+
+  unit-test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
+      - name: Install Yarn
+        run: npm install -g yarn
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+      - name: Run Unit Tests
+        run: yarn run test:unit
+
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+      - name: Build Docker Image
+        run: docker build -t opencontracts-frontend .

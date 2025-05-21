@@ -57,7 +57,7 @@ jobs:
         run: yarn playwright install --with-deps
 
       - name: Run Playwright Component Tests
-        run: yarn run test-ct
+        run: yarn run test:ct
 
   unit-test:
     name: Unit Tests

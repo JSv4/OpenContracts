@@ -1,0 +1,53 @@
+name: Manual Release
+
+# 1) switch to a manual trigger…
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (e.g. v1.2.3)'
+        required: true
+
+# 2) allow us to write tags & commits
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 📥 check out your code
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 🖊️ bump the in-app constant to the inputted tag
+      - name: Update VERSION_TAG
+        run: |
+          TAG=${{ github.event.inputs.tag }}
+          sed -i "s|^export const VERSION_TAG = .*|export const VERSION_TAG = \"${TAG}\";|" \
+            frontend/src/assets/configurations/constants.ts
+
+      # 💾 commit, tag & push everything back up
+      - name: Commit, tag & push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/assets/configurations/constants.ts
+          git commit -m "chore: bump VERSION_TAG → ${TAG}"
+          git tag "${TAG}"
+          git push --follow-tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 🏷️ publish a GitHub release for that tag
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        with:
+          tag_name:    ${{ github.event.inputs.tag }}
+          release_name: ${{ github.event.inputs.tag }}
+          draft:        false
+          prerelease:   false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

@@ -1,5 +1,5 @@
 # => Build Container
-FROM node:18-alpine as builder
+FROM node:20-alpine as builder
 
 WORKDIR /app
 COPY package.json .
@@ -9,7 +9,7 @@ COPY . .
 RUN yarn build
 
 # => Run container
-FROM nginx:1.27.4-alpine
+FROM nginx:1.27.5-alpine
 
 LABEL version="1.0"
 LABEL description="Base docker image for Open Contracts GUI"

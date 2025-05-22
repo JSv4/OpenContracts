@@ -1,5 +1,6 @@
 import { atom } from "jotai";
 import { PDFPageRenderer } from "../renderers/pdf/PDF";
+import { scrollContainerRefAtom } from "./DocumentAtom";
 
 export type RefType =
   | "selection"
@@ -15,7 +16,7 @@ export type RefType =
 /**
  * Atom for the scroll container reference
  */
-export const scrollContainerRefAtom = atom<HTMLDivElement | null>(null);
+export { scrollContainerRefAtom } from "./DocumentAtom";
 
 /**
  * Atom for the PDF page canvas reference

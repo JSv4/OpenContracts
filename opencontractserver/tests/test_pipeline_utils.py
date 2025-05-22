@@ -1,6 +1,8 @@
 import importlib
+import inspect
 import logging
 import os
+import sys
 import unittest
 
 from django.test import TestCase, override_settings
@@ -54,7 +56,7 @@ class TestParser(BaseParser):
     dependencies: List[str] = []
     supported_file_types: List[FileTypeEnum] = [FileTypeEnum.PDF]
 
-    def parse_document(self, user_id: int, doc_id: int) -> Optional[OpenContractDocExport]:
+    def _parse_document_impl(self, user_id: int, doc_id: int) -> Optional[OpenContractDocExport]:
         # Return None or a dummy OpenContractDocExport for testing purposes
         return None
 '''
@@ -76,7 +78,7 @@ class TestEmbedder(BaseEmbedder):
     vector_size: int = 128
     supported_file_types = [FileTypeEnum.PDF, FileTypeEnum.TXT]
 
-    def embed_text(self, text: str) -> Optional[List[float]]:
+    def _embed_text_impl(self, text: str) -> Optional[List[float]]:
         # Return a dummy embedding vector
         return [0.0] * self.vector_size
 
@@ -92,7 +94,7 @@ class TestEmbedder384(BaseEmbedder):
     vector_size: int = 384
     supported_file_types = [FileTypeEnum.PDF]
 
-    def embed_text(self, text: str) -> Optional[List[float]]:
+    def _embed_text_impl(self, text: str) -> Optional[List[float]]:
         # Return a dummy embedding vector
         return [0.0] * self.vector_size
 
@@ -108,7 +110,7 @@ class TestEmbedder768(BaseEmbedder):
     vector_size: int = 768
     supported_file_types = [FileTypeEnum.TXT]
 
-    def embed_text(self, text: str) -> Optional[List[float]]:
+    def _embed_text_impl(self, text: str) -> Optional[List[float]]:
         # Return a dummy embedding vector
         return [0.0] * self.vector_size
 '''
@@ -130,7 +132,7 @@ class TestThumbnailer(BaseThumbnailGenerator):
     dependencies: List[str] = []
     supported_file_types: List[FileTypeEnum] = [FileTypeEnum.PDF]
 
-    def generate_thumbnail(self, file_bytes: bytes) -> Optional[File]:
+    def _generate_thumbnail_impl(self, file_bytes: bytes) -> Optional[File]:
         # Return None or a dummy File object for testing purposes
         return None
 '''
@@ -155,10 +157,11 @@ class TestPostProcessor(BasePostProcessor):
     dependencies: List[str] = []
     supported_file_types: List[FileTypeEnum] = [FileTypeEnum.PDF]
 
-    def process_export(
+    def _process_export_impl(
         self,
         zip_bytes: bytes,
         export_data: OpenContractsExportDataJsonPythonType,
+        **all_kwargs,
     ) -> Tuple[bytes, OpenContractsExportDataJsonPythonType]:
         # Add logging to debug the process
         logger.info("TestPostProcessor.process_export called")
@@ -219,8 +222,6 @@ class TestPostProcessor(BasePostProcessor):
         importlib.invalidate_caches()
 
         # Force a direct import of the test modules to ensure they're loaded
-        import sys
-
         if cls.parser_path not in sys.path:
             sys.path.insert(0, os.path.dirname(os.path.dirname(cls.parser_path)))
 
@@ -261,6 +262,15 @@ class TestPostProcessor(BasePostProcessor):
         embedders = get_all_embedders()
         embedder_titles = [embedder.title for embedder in embedders]
         logger.info(f"Available embedder titles after reload: {embedder_titles}")
+
+        # make sure the package directory is importable
+        sys.modules.pop(
+            "opencontractserver.pipeline.post_processors.test_post_processor", None
+        )
+        importlib.invalidate_caches()
+        importlib.import_module(
+            "opencontractserver.pipeline.post_processors.test_post_processor"
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -477,6 +487,23 @@ class TestPostProcessor(BasePostProcessor):
         logger.info("Before running post-processors")
         logger.info(f"Initial export data: {test_export_data}")
 
+        # Force reload of the module to ensure we're using the freshly written version
+        import importlib
+
+        module = importlib.import_module(
+            "opencontractserver.pipeline.post_processors.test_post_processor"
+        )
+        importlib.reload(module)
+
+        processor_class = get_component_by_name(
+            "opencontractserver.pipeline.post_processors.test_post_processor.TestPostProcessor"
+        )
+        logger.info(
+            "Loaded %s from %s", processor_class, inspect.getfile(processor_class)
+        )
+        logger.info("abstract? %s", inspect.isabstract(processor_class))
+        logger.info("source:\n%s", inspect.getsource(processor_class))
+
         modified_zip_bytes, modified_export_data = run_post_processors(
             processor_paths, test_zip_bytes, test_export_data
         )
@@ -487,6 +514,9 @@ class TestPostProcessor(BasePostProcessor):
 
         # Verify post-processor was applied
         self.assertEqual(modified_zip_bytes, test_zip_bytes)  # Zip bytes unchanged
+        self.assertEqual(
+            modified_export_data.get("test_field"), "test_value"
+        )  # New field added
 
         # Test with invalid processor path
         with self.assertRaises(ValueError):

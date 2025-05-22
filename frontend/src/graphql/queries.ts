@@ -1997,7 +1997,33 @@ export const GET_EMBEDDERS = gql`
   }
 `;
 
-// First, we'll define a new combined query that gets everything we need:
+export interface GetDocumentDetailsInput {
+  documentId: string;
+}
+
+export interface GetDocumentDetailsOutput {
+  document: RawDocumentType;
+}
+
+export const GET_DOCUMENT_DETAILS = gql`
+  query GetDocumentDetails($documentId: String!) {
+    document(id: $documentId) {
+      id
+      title
+      fileType
+      creator {
+        email
+      }
+      created
+      mdSummaryFile
+      pdfFile
+      txtExtractFile
+      pawlsParseFile
+      myPermissions
+    }
+  }
+`;
+
 export interface GetDocumentKnowledgeAndAnnotationsInput {
   documentId: string;
   corpusId: string;

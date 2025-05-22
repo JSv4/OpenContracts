@@ -189,7 +189,12 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   // Lazy query for loading messages of a specific conversation
   const [
     fetchChatMessages,
-    { data: msgData, fetchMore: fetchMoreMessages, loading: loadingMessages },
+    {
+      data: msgData,
+      fetchMore: fetchMoreMessages,
+      loading: loadingMessages,
+      error: messagesError,
+    },
   ] = useLazyQuery<GetChatMessagesOutputs, GetChatMessagesInputs>(
     GET_CHAT_MESSAGES
   );
@@ -199,8 +204,22 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
    * also store any 'sources' in the chatSourcesAtom (so pins and selection work).
    */
   useEffect(() => {
-    if (!msgData?.chatMessages) return;
+    console.log("[ChatTray] GET_CHAT_MESSAGES useLazyQuery state:", {
+      loading: loadingMessages,
+      error: messagesError,
+      data: JSON.stringify(msgData),
+    });
+    if (!msgData?.chatMessages) {
+      if (msgData) {
+        console.log(
+          "[ChatTray] msgData is present but msgData.chatMessages is not:",
+          msgData
+        );
+      }
+      return;
+    }
     const messages = msgData.chatMessages;
+    console.log("[ChatTray] msgData.chatMessages received:", messages);
 
     // First, register them in our chatSourcesAtom if they have sources
     messages.forEach((srvMsg) => {
@@ -509,6 +528,10 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     setChat([]);
     setServerMessages([]);
 
+    console.log("[ChatTray] Calling fetchChatMessages with variables:", {
+      conversationId,
+      limit: 10,
+    });
     // Fetch messages with proper variables
     fetchChatMessages({
       variables: {

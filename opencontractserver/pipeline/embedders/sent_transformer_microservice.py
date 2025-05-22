@@ -29,22 +29,61 @@ class MicroserviceEmbedder(BaseEmbedder):
         # Add more as needed
     ]
 
-    def embed_text(self, text: str) -> Optional[list[float]]:
+    def __init__(self, **kwargs):
+        """Initializes the MicroserviceEmbedder."""
+        super().__init__(**kwargs)
+        logger.info("MicroserviceEmbedder initialized.")
+        # Configuration for EMBEDDINGS_MICROSERVICE_URL and VECTOR_EMBEDDER_API_KEY
+        # is determined within the _embed_text_impl method.
+        # The order of precedence is:
+        # 1. Direct keyword arguments passed to the embed_text() method (via all_kwargs).
+        # 2. Settings from PIPELINE_SETTINGS for this specific component (via component_settings, then all_kwargs).
+        # 3. Global Django settings (e.g., settings.EMBEDDINGS_MICROSERVICE_URL) as a final fallback.
+
+    def _embed_text_impl(self, text: str, **all_kwargs) -> Optional[list[float]]:
         """
         Generates embeddings from text using the microservice.
 
         Args:
             text (str): The text content to embed.
+            all_kwargs: All keyword arguments, including those from
+                          PIPELINE_SETTINGS (via self.get_component_settings())
+                          and direct call-time arguments passed to embed_text().
+                          Direct call-time arguments take precedence.
 
         Returns:
             Optional[List[float]]: The embeddings as a list of floats,
             or None if an error occurs.
         """
+        logger.debug(
+            f"MicroserviceEmbedder received text for embedding. Effective kwargs: {all_kwargs}"
+        )
         try:
+            component_specific_settings = self.get_component_settings()
+
+            # Determine the fallback for service_url:
+            # 1. Check component-specific settings from PIPELINE_SETTINGS.
+            # 2. If not found, use the global Django setting.
+            service_url_fallback = component_specific_settings.get(
+                "embeddings_microservice_url", settings.EMBEDDINGS_MICROSERVICE_URL
+            )
+            # `all_kwargs` (which is {**component_settings, **direct_kwargs}) is checked first.
+            # If the key is present in `all_kwargs` (from direct_kwargs or component_settings), that value is used.
+            # Otherwise, the calculated `service_url_fallback` is used.
+            service_url = all_kwargs.get(
+                "embeddings_microservice_url", service_url_fallback
+            )
+
+            # Determine the fallback for api_key similarly:
+            api_key_fallback = component_specific_settings.get(
+                "vector_embedder_api_key", settings.VECTOR_EMBEDDER_API_KEY
+            )
+            api_key = all_kwargs.get("vector_embedder_api_key", api_key_fallback)
+
             response = requests.post(
-                f"{settings.EMBEDDINGS_MICROSERVICE_URL}/embeddings",
+                f"{service_url}/embeddings",
                 json={"text": text},
-                headers={"X-API-Key": settings.VECTOR_EMBEDDER_API_KEY},
+                headers={"X-API-Key": api_key},
             )
 
             if response.status_code == 200:

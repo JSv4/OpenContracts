@@ -30,10 +30,11 @@ class TxtParser(BaseParser):
 
     def __init__(self):
         """Initialize the spaCy language model."""
+        super().__init__()
         self.nlp = spacy.load("en_core_web_lg")
 
-    def parse_document(
-        self, user_id: int, doc_id: int
+    def _parse_document_impl(
+        self, user_id: int, doc_id: int, **all_kwargs
     ) -> Optional[OpenContractDocExport]:
         """
         Parses a text document.
@@ -41,11 +42,14 @@ class TxtParser(BaseParser):
         Args:
             user_id (int): ID of the user.
             doc_id (int): ID of the document to parse.
+            **all_kwargs: Not used by this parser but included for consistency.
 
         Returns:
             Optional[OpenContractDocExport]: The parsed document data, or None if parsing failed.
         """
-        logger.info(f"TxtParser - Parsing doc {doc_id} for user {user_id}")
+        logger.info(
+            f"TxtParser - Parsing doc {doc_id} for user {user_id} with effective kwargs: {all_kwargs}"
+        )
 
         document = Document.objects.get(pk=doc_id)
 

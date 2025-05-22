@@ -493,6 +493,7 @@ if ALLOW_GRAPHQL_DEBUG:
 GRAPHENE = {
     "SCHEMA": "config.graphql.schema.schema",
     "MIDDLEWARE": GRAPHENE_MIDDLEWARE,
+    "RELAY_CONNECTION_MAX_LIMIT": 10,
 }
 
 GRAPHQL_JWT = {
@@ -554,12 +555,12 @@ SENTENCE_TRANSFORMER_MODELS_PATH = env.str(
 
 # Preferred parsers for each MIME type
 PREFERRED_PARSERS = {
-    "application/pdf": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",
+    "application/pdf": "opencontractserver.pipeline.parsers.docling_parser_rest.DoclingParser",
     "text/plain": "opencontractserver.pipeline.parsers.oc_text_parser.TxtParser",
     "application/txt": "opencontractserver.pipeline.parsers.oc_text_parser.TxtParser",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",  # noqa
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",  # noqa
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "opencontractserver.pipeline.parsers.docling_parser.DoclingParser",  # noqa
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.parsers.docling_parser_rest.DoclingParser",  # noqa
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "opencontractserver.pipeline.parsers.docling_parser_rest.DoclingParser",  # noqa
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "opencontractserver.pipeline.parsers.docling_parser_rest.DoclingParser",  # noqa
 }
 
 # Thumbnail extraction tasks
@@ -642,4 +643,16 @@ MINN_MODERNBERT_EMBEDDERS = {
     "text/plain": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
     "text/html": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.embedders.minn_modern_bert_embedder.MinnModernBERTEmbedder768",  # noqa
+}
+
+
+PIPELINE_SETTINGS = {
+    "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder": {
+        "embeddings_microservice_url": "http://vector-embedder:8000",
+        "vector_embedder_api_key": "abc123",
+    },
+    "opencontractserver.pipeline.parsers.docling_parser_rest.DoclingParser": {
+        "DOCLING_PARSER_SERVICE_URL": "http://docling-parser:8000",
+        "DOCLING_PARSER_TIMEOUT": None,
+    },
 }

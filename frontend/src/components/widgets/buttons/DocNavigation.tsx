@@ -375,7 +375,11 @@ export const DocNavigation: React.FC<DocNavigationProps> = ({
   }, [textSearchMatches, selectedTextSearchMatchIndex]);
 
   return (
-    <StyledNavigation isExpanded={isExpanded} className={className}>
+    <StyledNavigation
+      id="doc-navigation"
+      isExpanded={isExpanded}
+      className={className}
+    >
       <div className="zoom-group">
         <div className="zoom-controls">
           <button onClick={onZoomOut} title="Zoom Out">

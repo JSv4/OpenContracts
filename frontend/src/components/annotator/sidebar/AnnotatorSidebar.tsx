@@ -314,7 +314,7 @@ export const AnnotatorSidebar = ({
   const handleRemoveRelationship = useRemoveRelationship();
   const handleDeleteAnnotation = useDeleteAnnotation();
   const removeAnnotationFromRelation = useRemoveAnnotationFromRelationship();
-  const { permissions: corpus_permissions } = useCorpusState();
+  const { myPermissions: corpus_permissions } = useCorpusState();
   const {
     selectedAnnotations,
     selectedRelations,

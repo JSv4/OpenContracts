@@ -13,8 +13,8 @@ const getWebSocketUrl = (
 ): string => {
   // Use environment variables or fallback to window.location for production
   const wsBaseUrl =
-    process.env.REACT_APP_WS_URL ||
-    process.env.REACT_APP_API_URL ||
+    import.meta.env.VITE_WS_URL ||
+    import.meta.env.VITE_API_URL ||
     `${window.location.protocol === "https:" ? "wss" : "ws"}://${
       window.location.host
     }`;

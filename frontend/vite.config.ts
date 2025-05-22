@@ -47,6 +47,12 @@ export default defineConfig({
       ".git",
       ".cache",
     ],
+    alias: {
+      "^.+\\.(css|less|scss|sass|png|jpg|jpeg|gif|svg|webp)$": path.resolve(
+        __dirname,
+        "src/__mocks__/fileMock.ts"
+      ),
+    },
     coverage: {
       reporter: ["text", "json", "html"],
       // Adjust coverage include/exclude if needed, based on the new test patterns

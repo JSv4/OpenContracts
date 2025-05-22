@@ -2,7 +2,6 @@ import { useRef, useState, useEffect, useMemo, useLayoutEffect } from "react";
 import styled from "styled-components";
 import { useAtom } from "jotai";
 import { useAtomValue } from "jotai";
-import _ from "lodash";
 import { PageProps, TextSearchTokenResult } from "../../../types";
 import { PDFPageRenderer, PageAnnotationsContainer, PageCanvas } from "./PDF";
 import { Selection } from "../../display/components/Selection";
@@ -26,6 +25,10 @@ import { PDFPageInfo } from "../../types/pdf";
 import { chatSourcesAtom } from "../../context/ChatSourceAtom";
 import { useCorpusState } from "../../context/CorpusAtom";
 import { ChatSourceResult } from "../../display/components/ChatSourceResult";
+import { useVisibleAnnotations } from "../../hooks/useVisibleAnnotations";
+import { pendingScrollAnnotationIdAtom } from "../../context/DocumentAtom";
+import { pendingScrollSearchResultIdAtom } from "../../context/DocumentAtom";
+import { pendingScrollChatSourceKeyAtom } from "../../context/DocumentAtom";
 
 /**
  * This wrapper is inline-block (shrink-wrapped) and position:relative
@@ -70,7 +73,7 @@ export const PDFPage = ({
   const [hasPdfPageRendered, setPdfPageRendered] = useState(false);
   const [initialZoomSet, setInitialZoomSet] = useState(false);
 
-  const { showStructural } = useAnnotationDisplay();
+  const { showSelectedOnly } = useAnnotationDisplay();
   const { zoomLevel, setZoomLevel } = useZoomLevel();
   const { selectedAnnotations, selectedRelations } = useAnnotationSelection();
 
@@ -78,7 +81,8 @@ export const PDFPage = ({
     useAnnotationRefs();
   const pageContainerRef = useRef<HTMLDivElement>(null);
 
-  const annotations = pdfAnnotations.annotations;
+  /* visible annotations (global) */
+  const visibleAnnotations = useVisibleAnnotations();
 
   const [scrollContainerRef] = useAtom(scrollContainerRefAtom);
   const { pages, setPages } = usePages();
@@ -105,6 +109,20 @@ export const PDFPage = ({
       pageBounds
     );
   }, [pageInfo.page, pageInfo.tokens, zoomLevel, pageBounds]);
+
+  const [pendingScrollId, setPendingScrollId] = useAtom(
+    pendingScrollAnnotationIdAtom
+  );
+
+  const [pendingScrollSearchId, setPendingScrollSearchId] = useAtom(
+    pendingScrollSearchResultIdAtom
+  );
+
+  const [pendingScrollChatSourceKey, setPendingScrollChatSourceKey] = useAtom(
+    pendingScrollChatSourceKeyAtom
+  );
+
+  const lastRenderedZoom = useRef<number | null>(null);
 
   useEffect(() => {
     setPages((prevPages) => ({
@@ -141,14 +159,15 @@ export const PDFPage = ({
    * Handles resizing of the PDF page canvas.
    */
   const handleResize = () => {
-    if (canvasRef.current === null || rendererRef.current === null) {
-      onError(new Error("Canvas or renderer not available."));
-      return;
-    }
+    if (!canvasRef.current || !rendererRef.current) return;
+    if (lastRenderedZoom.current === zoomLevel) return;
+
     const viewport = pageInfo.page.getViewport({ scale: zoomLevel });
     canvasRef.current.width = viewport.width;
     canvasRef.current.height = viewport.height;
+
     rendererRef.current.rescaleAndRender(zoomLevel);
+    lastRenderedZoom.current = zoomLevel;
   };
 
   useEffect(() => {
@@ -231,7 +250,7 @@ export const PDFPage = ({
     ) {
       handleResize();
     }
-  }, [hasPdfPageRendered, zoomLevel, onError, pageInfo.page]);
+  }, [zoomLevel, onError, pageInfo.page]);
 
   // Register and unregister the page container ref
   useEffect(() => {
@@ -242,99 +261,48 @@ export const PDFPage = ({
   }, [registerRef, unregisterRef, pageInfo.page.pageNumber]);
 
   /**
-   * Scrolls to the selected annotation when there is exactly one selected.
-   */
-  useLayoutEffect(() => {
-    const selectedId = selectedAnnotations[0];
-    if (
-      selectedAnnotations.length === 1 &&
-      annotationElementRefs.current[selectedId]
-    ) {
-      annotationElementRefs.current[selectedId]?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }
-  }, [selectedAnnotations, annotationElementRefs]);
-
-  useEffect(() => {
-    if (hasPdfPageRendered && selectedAnnotations.length === 1) {
-      annotationElementRefs.current[selectedAnnotations[0]]?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }
-  }, [hasPdfPageRendered, selectedAnnotations, annotationElementRefs]);
-
-  /**
    * Determines the annotations to render, including ensuring that any annotation
    * involved in a currently selected relation is visible, regardless of other filters.
    */
+  const pageIndex = pageInfo.page.pageNumber - 1;
+
   const annots_to_render = useMemo(() => {
-    // Gather all annotations for current page
-    const defined_annotations = _.uniqBy(
-      annotations
-        .filter((annot) => annot instanceof ServerTokenAnnotation)
-        .filter(
-          (a) =>
-            (a as ServerTokenAnnotation).json[pageInfo.page.pageNumber - 1] !==
-            undefined
-        ),
-      "id"
-    );
+    return visibleAnnotations.filter((annot) => {
+      /* Selection layer renders only token annotations with bounds
+         on the current page                                       */
+      if (!(annot instanceof ServerTokenAnnotation)) return false;
+      const pageData = annot.json[pageIndex];
+      return pageData && pageData.bounds;
+    });
+  }, [visibleAnnotations, pageIndex]);
 
-    // Collect IDs for annotations involved in the selectedRelations to ensure they're forced visible
-    const forcedRelationIds = new Set(
-      selectedRelations.flatMap((rel) => [...rel.sourceIds, ...rel.targetIds])
-    );
+  const pageAnnotationComponents = useMemo(() => {
+    if (!hasPdfPageRendered || !zoomLevel || !pageBounds) return [];
 
-    // If not showing structural, hide structural unless the annotation is forced
-    const filtered_by_structural = !showStructural
-      ? defined_annotations.filter(
-          (annot) => !annot.structural || forcedRelationIds.has(annot.id)
-        )
-      : defined_annotations;
+    const isVisible = (annot: ServerTokenAnnotation): boolean => {
+      if (showSelectedOnly) {
+        return selectedAnnotations.includes(annot.id);
+      }
+      return true; // existing checks (labels, structural, …) stay here
+    };
 
-    // Filter by specified labels unless the annotation is forced
-    return spanLabelsToView && spanLabelsToView.length > 0
-      ? filtered_by_structural.filter(
-          (annot) =>
-            forcedRelationIds.has(annot.id) ||
-            spanLabelsToView!.some(
-              (label) => label.id === annot.annotationLabel.id
-            )
-        )
-      : filtered_by_structural;
+    return annots_to_render
+      .filter(isVisible)
+      .map((annotation) => (
+        <Selection
+          key={annotation.id}
+          selected={selectedAnnotations.includes(annotation.id)}
+          pageInfo={pageInfo}
+          annotation={annotation}
+        />
+      ));
   }, [
-    annotations,
-    pageInfo.page.pageNumber,
-    showStructural,
-    spanLabelsToView,
-    selectedRelations,
-  ]);
-
-  const page_annotation_components = useMemo(() => {
-    if (!hasPdfPageRendered || !zoomLevel || !pageBounds || !annotations)
-      return [];
-
-    return annots_to_render.map((annotation) => (
-      <Selection
-        key={annotation.id}
-        selected={selectedAnnotations.includes(annotation.id)}
-        pageInfo={updatedPageInfo}
-        annotation={annotation}
-        approved={annotation.approved}
-        rejected={annotation.rejected}
-        allowFeedback={selectedCorpus?.allowComments}
-        scrollIntoView={selectedAnnotations[0] === annotation.id}
-      />
-    ));
-  }, [
+    annots_to_render,
+    showSelectedOnly,
+    selectedAnnotations,
+    hasPdfPageRendered,
     zoomLevel,
     pageBounds,
-    annotations,
-    annots_to_render,
-    selectedAnnotations,
   ]);
 
   /**
@@ -373,6 +341,104 @@ export const PDFPage = ({
     chatSourceElementRefs,
   ]);
 
+  /* ——— single effect that centres whichever item has precedence ——— */
+  useEffect(() => {
+    if (!hasPdfPageRendered) return;
+
+    /* 1️⃣  SEARCH (highest priority) */
+    if (pendingScrollSearchId) {
+      const pageOwnsResult = searchResults
+        .filter((m): m is TextSearchTokenResult => "tokens" in m)
+        .some(
+          (m) =>
+            String(m.id) === pendingScrollSearchId &&
+            m.tokens[pageInfo.page.pageNumber - 1] !== undefined
+        );
+      if (!pageOwnsResult) return;
+
+      let cancelled = false;
+      const tryScrollSearch = () => {
+        if (cancelled) return;
+        const el = document.getElementById(
+          `SEARCH_RESULT_${pendingScrollSearchId}`
+        );
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          setPendingScrollSearchId(null); // done
+        } else {
+          requestAnimationFrame(tryScrollSearch);
+        }
+      };
+      tryScrollSearch();
+      return;
+    }
+
+    /* 2️⃣  CHAT SOURCE ------------------------------------------------- */
+    if (pendingScrollChatSourceKey) {
+      const el = document.getElementById(
+        `CHAT_SOURCE_${pendingScrollChatSourceKey}`
+      );
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setPendingScrollChatSourceKey(null);
+      }
+      return;
+    }
+
+    /* 3️⃣  NORMAL ANNOTATION */
+    if (pendingScrollId) {
+      const pageOwnsAnnotation = visibleAnnotations.some(
+        (a) =>
+          a instanceof ServerTokenAnnotation &&
+          a.id === pendingScrollId &&
+          a.json[pageIndex] !== undefined
+      );
+      if (!pageOwnsAnnotation) return;
+
+      let cancelled = false;
+      const tryScrollAnnot = () => {
+        if (cancelled) return;
+        const el = document.querySelector(
+          `.selection_${pendingScrollId}`
+        ) as HTMLElement | null;
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          setPendingScrollId(null); // done
+        } else {
+          requestAnimationFrame(tryScrollAnnot);
+        }
+      };
+      tryScrollAnnot();
+    }
+  }, [
+    hasPdfPageRendered,
+    pendingScrollSearchId,
+    pendingScrollChatSourceKey,
+    pendingScrollId,
+    searchResults,
+    visibleAnnotations,
+    pageIndex,
+    setPendingScrollSearchId,
+    setPendingScrollChatSourceKey,
+    setPendingScrollId,
+    chatSourceElementRefs.current,
+  ]);
+
+  useEffect(() => {
+    if (!hasPdfPageRendered) return; // page not visible yet
+    if (!canvasRef.current || !rendererRef.current) return;
+
+    /* only rerender if zoom actually changed */
+    if (lastRenderedZoom.current !== zoomLevel) {
+      const viewport = pageInfo.page.getViewport({ scale: zoomLevel });
+      canvasRef.current.width = viewport.width;
+      canvasRef.current.height = viewport.height;
+
+      rendererRef.current.rescaleAndRender(zoomLevel);
+      lastRenderedZoom.current = zoomLevel;
+    }
+  }, [zoomLevel, hasPdfPageRendered, pageInfo.page]);
+
   return (
     <PageAnnotationsContainer
       className="PageAnnotationsContainer"
@@ -388,7 +454,7 @@ export const PDFPage = ({
           createAnnotation={createAnnotationHandler}
           pageNumber={pageInfo.page.pageNumber - 1}
         />
-        {page_annotation_components}
+        {pageAnnotationComponents}
 
         {zoomLevel &&
           pageBounds &&

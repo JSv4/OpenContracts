@@ -158,8 +158,8 @@ export const TabButton = styled(Button)<TabButtonProps>`
     /* Increased icon sizes in both states */
     svg {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      width: ${(props) => (props.collapsed ? "28px" : "22px")};
-      height: ${(props) => (props.collapsed ? "28px" : "22px")};
+      width: ${(props) => (props.collapsed ? "22px" : "28px")};
+      height: ${(props) => (props.collapsed ? "22px" : "28px")};
       color: ${(props) => iconColorMap[props.tabKey] || iconColorMap.default};
       opacity: ${(props) => (props.active ? 1 : 0.75)};
       flex-shrink: 0; /* Prevent icon from shrinking */

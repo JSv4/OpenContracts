@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import graphene
 import graphene.types.json
@@ -553,17 +554,24 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     # Updated field and resolver for all annotations with enhanced filtering
     all_annotations = graphene.List(
         AnnotationType,
-        corpus_id=graphene.ID(required=True),
+        corpus_id=graphene.ID(),
         analysis_id=graphene.ID(),
         is_structural=graphene.Boolean(),
     )
 
     def resolve_all_annotations(
-        self, info, corpus_id, analysis_id=None, is_structural=None
+        self, info, corpus_id=None, analysis_id=None, is_structural=None
     ):
         try:
-            corpus_pk = from_global_id(corpus_id)[1]
-            annotations = self.doc_annotations.filter(corpus_id=corpus_pk)
+
+            if corpus_id is None:
+                annotations = self.doc_annotations.filter(structural=True)
+            else:
+                corpus_pk = from_global_id(corpus_id)[1]
+                annotations = self.doc_annotations.filter(corpus_id=corpus_pk)
+
+                if is_structural is not None:
+                    annotations = annotations.filter(structural=is_structural)
 
             if analysis_id is not None:
                 if analysis_id == "__none__":
@@ -571,9 +579,6 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
                 else:
                     analysis_pk = from_global_id(analysis_id)[1]
                     annotations = annotations.filter(analysis_id=analysis_pk)
-
-            if is_structural is not None:
-                annotations = annotations.filter(structural=is_structural)
 
             return annotations.distinct()
         except Exception as e:
@@ -586,17 +591,20 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     # New field and resolver for all relationships
     all_relationships = graphene.List(
         RelationshipType,
-        corpus_id=graphene.ID(required=True),
+        corpus_id=graphene.ID(),
         analysis_id=graphene.ID(),
     )
 
-    def resolve_all_relationships(self, info, corpus_id, analysis_id=None):
+    def resolve_all_relationships(self, info, corpus_id=None, analysis_id=None):
         try:
             # Want to limit to strucutural relationships or corpus relationships
-            corpus_pk = from_global_id(corpus_id)[1]
-            relationships = self.relationships.filter(
-                Q(corpus_id=corpus_pk) | Q(structural=True)
-            )
+            if corpus_id is None:
+                relationships = self.relationships.filter(structural=True)
+            else:
+                corpus_pk = from_global_id(corpus_id)[1]
+                relationships = self.relationships.filter(
+                    Q(corpus_id=corpus_pk) | Q(structural=True)
+                )
 
             if analysis_id == "__none__":
                 relationships = relationships.filter(analysis__isnull=True)
@@ -615,17 +623,23 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     # New field for document relationships
     all_doc_relationships = graphene.List(
         DocumentRelationshipType,
-        corpus_id=graphene.ID(required=True),
+        corpus_id=graphene.ID(),
     )
 
-    def resolve_all_doc_relationships(self, info, corpus_id):
+    def resolve_all_doc_relationships(self, info, corpus_id=None):
         try:
-            corpus_pk = from_global_id(corpus_id)[1]
-            # Get relationships where this document is either source or target
-            relationships = DocumentRelationship.objects.filter(
-                (Q(source_document=self) | Q(target_document=self))
-                & Q(corpus_id=corpus_pk)
-            ).distinct()
+            if corpus_id is None:
+                relationships = DocumentRelationship.objects.filter(
+                    (Q(source_document=self) | Q(target_document=self))
+                    & Q(structural=True)
+                ).distinct()
+            else:
+                corpus_pk = from_global_id(corpus_id)[1]
+                # Get relationships where this document is either source or target
+                relationships = DocumentRelationship.objects.filter(
+                    (Q(source_document=self) | Q(target_document=self))
+                    & Q(corpus_id=corpus_pk)
+                ).distinct()
 
             return relationships
         except Exception as e:
@@ -638,10 +652,10 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
     all_notes = graphene.List(
         NoteType,
-        corpus_id=graphene.ID(required=True),
+        corpus_id=graphene.ID(),
     )
 
-    def resolve_all_notes(self, info, corpus_id: str):
+    def resolve_all_notes(self, info, corpus_id: Optional[str] = None):
         """
         Return the set of Note objects related to this Document instance that the user can see,
         filtered by corpus_id. This approach uses resolve_oc_model_queryset to apply the same
@@ -654,13 +668,19 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
         # Start with a base queryset of all Notes the user can see
         base_qs = resolve_oc_model_queryset(django_obj_model_type=Note, user=user)
-        corpus_pk = from_global_id(corpus_id)[1]
-        # Then intersect with this Document's related notes, filtering by the given corpus_id
-        # This ensures we only query notes that are both visible to the user and belong to
-        # this specific Document (through the related manager self.notes).
-        return base_qs.filter(
-            id__in=self.notes.values_list("id", flat=True), corpus_id=corpus_pk
-        )
+
+        if corpus_id is None:
+            corpus_pk = None
+            return base_qs.filter(id__in=self.notes.values_list("id", flat=True))
+
+        else:
+            corpus_pk = from_global_id(corpus_id)[1]
+            # Then intersect with this Document's related notes, filtering by the given corpus_id
+            # This ensures we only query notes that are both visible to the user and belong to
+            # this specific Document (through the related manager self.notes).
+            return base_qs.filter(
+                id__in=self.notes.values_list("id", flat=True), corpus_id=corpus_pk
+            )
 
     class Meta:
         model = Document

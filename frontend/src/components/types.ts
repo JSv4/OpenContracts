@@ -213,7 +213,7 @@ export type SinglePageAnnotationJson = {
 export type TextSearchTokenResult = {
   id: number;
   tokens: Record<number, TokenId[]>;
-  bounds: Record<number, BoundingBox>;
+  bounds?: Record<number, BoundingBox>;
   fullContext: ReactElement | null;
   start_page: number;
   end_page: number;

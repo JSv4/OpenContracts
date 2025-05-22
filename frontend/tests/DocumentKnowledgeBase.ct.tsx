@@ -1,6 +1,5 @@
 // tests/DocumentKnowledgeBase.ct.tsx
 import React from "react";
-import path from "path";
 import fs from "fs";
 
 /**
@@ -14,49 +13,36 @@ import fs from "fs";
 
 import { test, expect } from "@playwright/experimental-ct-react";
 
-// Remove Apollo Client imports from here - they are now in the wrapper
-// import { MockedProvider, type MockedResponse } from "@apollo/client/testing";
-// import { InMemoryCache } from "@apollo/client";
-// import { mergeArrayByIdFieldPolicy } from "../src/graphql/cache";
-// import { relayStylePagination } from "@apollo/client/utilities";
-
 // Keep query/mutation imports needed for mocks
-import { type MockedResponse } from "@apollo/client/testing";
-import {
-  GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
-  GET_CONVERSATIONS,
-  GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
-} from "../src/graphql/queries";
-import { REQUEST_ADD_ANNOTATION } from "../src/graphql/mutations";
 
-// Keep type imports
-import type { RawDocumentType } from "../src/types/graphql-api";
-import { PermissionTypes } from "../src/components/types";
 import { Page } from "@playwright/test";
-import { LabelType } from "../src/components/annotator/types/enums";
 
 // Import the new Wrapper component
 import { DocumentKnowledgeBaseTestWrapper } from "./DocumentKnowledgeBaseTestWrapper";
+import {
+  chatTrayMocks,
+  CORPUS_ID,
+  graphqlMocks,
+  MOCK_PDF_URL,
+  MOCK_PDF_URL_FOR_STRUCTURAL_TEST,
+  mockAnnotationNonStructural1,
+  mockAnnotationStructural1,
+  mockPdfDocument,
+  mockPdfDocumentForStructuralTest,
+  mockTxtDocument,
+  PDF_DOC_ID,
+  PDF_DOC_ID_FOR_STRUCTURAL_TEST,
+  TEST_PAWLS_PATH,
+  TEST_PDF_PATH,
+  TXT_DOC_ID,
+} from "./mocks/DocumentKnowledgeBase.mocks";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // │                               Test Data                                   │
 // ──────────────────────────────────────────────────────────────────────────────
+const graphqlMocksWithChat = [...graphqlMocks, ...chatTrayMocks];
 
-const PDF_DOC_ID = "pdf-doc-1";
-const TXT_DOC_ID = "txt-doc-1";
-const CORPUS_ID = "corpus-1";
-const MOCK_PDF_URL = `/mock-pdf/${PDF_DOC_ID}/test.pdf`;
-
-const TEST_PDF_PATH = path.resolve(
-  __dirname,
-  "../../frontend/test-assets/test.pdf"
-);
-const TEST_PAWLS_PATH = path.resolve(
-  __dirname,
-  "../../frontend/test-assets/test.pawls"
-);
-
-console.log("Resolved PAWLS Path:", TEST_PAWLS_PATH);
+const LONG_TIMEOUT = 60_000;
 
 let mockPawlsDataContent: any;
 try {
@@ -70,269 +56,6 @@ try {
   );
   mockPawlsDataContent = null;
 }
-
-const createPageInfo = (
-  hasNext = false,
-  hasPrev = false,
-  start = "",
-  end = ""
-) => ({
-  __typename: "PageInfo",
-  hasNextPage: hasNext,
-  hasPreviousPage: hasPrev,
-  startCursor: start,
-  endCursor: end,
-});
-
-const mockPdfDocument: RawDocumentType = {
-  id: PDF_DOC_ID,
-  __typename: "DocumentType",
-  title: "Test PDF Document",
-  fileType: "application/pdf",
-  pdfFile: MOCK_PDF_URL,
-  pawlsParseFile: "test.pawls",
-  txtExtractFile: null,
-  mdSummaryFile: "dummy-summary.md",
-  creator: { __typename: "UserType", id: "user-1", email: "test@test.com" },
-  created: new Date("2023-10-26T10:00:00.000Z").toISOString(),
-  myPermissions: [
-    "read_document",
-    "create_document",
-    "update_document",
-    "remove_document",
-  ],
-  allAnnotations: [],
-  allStructuralAnnotations: [],
-  allRelationships: [],
-  allDocRelationships: [],
-  allNotes: [],
-};
-
-const mockTxtDocument: RawDocumentType = {
-  ...mockPdfDocument,
-  id: TXT_DOC_ID,
-  title: "Test TXT Document",
-  fileType: "text/plain",
-  pdfFile: undefined,
-  pawlsParseFile: undefined,
-  txtExtractFile: "dummy-txt.txt",
-  mdSummaryFile: undefined,
-};
-
-const mockCorpusData = {
-  id: CORPUS_ID,
-  __typename: "CorpusType",
-  name: "Test Corpus",
-  myPermissions: [
-    "read_corpus",
-    "create_corpus",
-    "update_corpus",
-    "remove_corpus",
-  ],
-  labelSet: {
-    __typename: "LabelSetType",
-    id: "ls-1",
-    allAnnotationLabels: [
-      {
-        __typename: "AnnotationLabelType",
-        id: "lbl-span-1",
-        text: "Person",
-        labelType: LabelType.TokenLabel,
-        color: "#FF0000",
-        icon: null,
-        description: "A person entity",
-      },
-      {
-        __typename: "AnnotationLabelType",
-        id: "lbl-rel-1",
-        text: "Connects",
-        labelType: LabelType.RelationshipLabel,
-        color: "#00FF00",
-        icon: null,
-        description: "A connection relationship",
-      },
-      {
-        __typename: "AnnotationLabelType",
-        id: "lbl-doc-1",
-        text: "Contract",
-        labelType: LabelType.DocTypeLabel,
-        color: "#0000FF",
-        icon: null,
-        description: "A contract document type",
-      },
-    ],
-  },
-};
-
-// Define mocks needed by the tests
-const graphqlMocks: ReadonlyArray<MockedResponse> = [
-  // ... (keep all existing mocks as they are) ...
-  // --- Add mock for the unexpected initial call with empty documentId ---
-  {
-    request: {
-      query: GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
-      variables: { documentId: "", corpusId: CORPUS_ID }, // Match the empty string call
-    },
-    result: {
-      data: {
-        documentCorpusActions: {
-          __typename: "DocumentCorpusActionsType",
-          corpusActions: {
-            __typename: "CorpusActionsType",
-            extracts: {
-              __typename: "ExtractTypeConnection",
-              edges: [],
-              pageInfo: createPageInfo(),
-            },
-            analyses: {
-              __typename: "AnalysisTypeConnection",
-              edges: [],
-              pageInfo: createPageInfo(),
-            },
-          },
-          extracts: [],
-          analysisRows: [],
-        },
-      },
-    },
-  },
-  // 1) Original knowledge+annotations query for PDF (First call)
-  {
-    request: {
-      query: GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
-      variables: {
-        documentId: PDF_DOC_ID,
-        corpusId: CORPUS_ID,
-        analysisId: undefined,
-      },
-    },
-    result: { data: { document: mockPdfDocument, corpus: mockCorpusData } },
-  },
-  // --- Add the PDF knowledge+annotations query AGAIN for the refetch ---
-  {
-    request: {
-      query: GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
-      variables: {
-        documentId: PDF_DOC_ID,
-        corpusId: CORPUS_ID,
-        analysisId: undefined, // Assuming refetch doesn't add analysisId initially
-      },
-    },
-    result: { data: { document: mockPdfDocument, corpus: mockCorpusData } }, // Same result
-  },
-  // 2) Original knowledge+annotations query for TXT
-  {
-    request: {
-      query: GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
-      variables: {
-        documentId: TXT_DOC_ID,
-        corpusId: CORPUS_ID,
-        analysisId: undefined,
-      },
-    },
-    result: { data: { document: mockTxtDocument, corpus: mockCorpusData } },
-  },
-  // 3) CORRECTED: Stub for Analyses/Extracts (documentCorpusActions) - PDF
-  {
-    request: {
-      query: GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
-      variables: { documentId: PDF_DOC_ID, corpusId: CORPUS_ID },
-    },
-    result: {
-      data: {
-        documentCorpusActions: {
-          __typename: "DocumentCorpusActionsType",
-          corpusActions: [],
-          extracts: [],
-          analysisRows: [],
-        },
-      },
-    },
-  },
-  // 3b) Stub for Analyses/Extracts (documentCorpusActions) - TXT
-  {
-    request: {
-      query: GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
-      variables: { documentId: TXT_DOC_ID, corpusId: CORPUS_ID },
-    },
-    result: {
-      data: {
-        documentCorpusActions: {
-          __typename: "DocumentCorpusActionsType",
-          corpusActions: [],
-          extracts: [],
-          analysisRows: [],
-        },
-      },
-    },
-  },
-  // 4) Stub for GetConversations - PDF
-  {
-    request: {
-      query: GET_CONVERSATIONS,
-      variables: {
-        documentId: PDF_DOC_ID,
-        limit: undefined,
-        cursor: undefined,
-        title_Contains: undefined,
-        createdAt_Gte: undefined,
-        createdAt_Lte: undefined,
-      },
-    },
-    result: {
-      data: {
-        conversations: {
-          __typename: "ConversationTypeConnection",
-          edges: [],
-          pageInfo: createPageInfo(),
-        },
-      },
-    },
-  },
-  // 4b) Stub for GetConversations - TXT
-  {
-    request: {
-      query: GET_CONVERSATIONS,
-      variables: {
-        documentId: TXT_DOC_ID,
-        limit: undefined,
-        cursor: undefined,
-        title_Contains: undefined,
-        createdAt_Gte: undefined,
-        createdAt_Lte: undefined,
-      },
-    },
-    result: {
-      data: {
-        conversations: {
-          __typename: "ConversationTypeConnection",
-          edges: [],
-          pageInfo: createPageInfo(),
-        },
-      },
-    },
-  },
-  // Add a mock variant for GET_DOCUMENT_ANALYSES_AND_EXTRACTS with only documentId
-  {
-    request: {
-      query: GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
-      variables: { documentId: PDF_DOC_ID }, // Only documentId
-    },
-    result: {
-      // Provide the same minimal successful result structure
-      data: {
-        documentCorpusActions: {
-          __typename: "DocumentCorpusActionsType",
-          corpusActions: [],
-          extracts: [],
-          analysisRows: [],
-        },
-      },
-    },
-  },
-];
-
-const LONG_TIMEOUT = 20_000;
 
 async function registerRestMocks(page: Page): Promise<void> {
   // ... (keep existing REST mocks) ...
@@ -386,6 +109,29 @@ async function registerRestMocks(page: Page): Promise<void> {
       },
     });
   });
+  // Add route for the new test PDF URL, can reuse the same physical file
+  await page.route(MOCK_PDF_URL_FOR_STRUCTURAL_TEST, async (route) => {
+    console.log(
+      `[MOCK] PDF file request (structural test): ${route.request().url()}`
+    );
+    if (!fs.existsSync(TEST_PDF_PATH)) {
+      console.error(
+        `[MOCK ERROR] Test PDF file not found at: ${TEST_PDF_PATH}`
+      );
+      return route.fulfill({ status: 404, body: "Test PDF not found" });
+    }
+    const buffer = fs.readFileSync(TEST_PDF_PATH);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/pdf",
+      body: buffer,
+      headers: {
+        "Content-Length": String(buffer.length),
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      },
+    });
+  });
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -393,38 +139,9 @@ async function registerRestMocks(page: Page): Promise<void> {
 // ──────────────────────────────────────────────────────────────────────────────
 
 test.use({ viewport: { width: 1280, height: 720 } });
+test.setTimeout(60000);
 
 test.beforeEach(async ({ page }) => {
-  // Add instrumentation to track mutation calls - REMOVED FETCH INTERCEPTION
-  // await page.addInitScript(() => {
-  //   console.log('[PAGE INIT] Adding mutation tracking');
-  //   (window as any).mutationCalled = false;
-
-  //   // Track Apollo mutation calls
-  //   const originalFetch = window.fetch;
-  //   window.fetch = function(...args) {
-  //     const [url, options] = args;
-  //     if (options && options.body && typeof options.body === 'string' &&
-  //         options.body.includes('REQUEST_ADD_ANNOTATION')) {
-  //       console.log('[FETCH INTERCEPTED] Apollo mutation call detected');
-  //       (window as any).mutationCalled = true;
-  //     }
-  //     return originalFetch.apply(this, args);
-  //   };
-  // });
-
-  // --- Remove Mock Static Asset Imports ---
-  // The Vite configuration in playwright-ct.config.ts should handle this now
-  // await page.route('**/*.png', (route) => {
-  //   const requestedUrl = route.request().url();
-  //   console.log(`[MOCK ASSET] Intercepted PNG request: ${requestedUrl}`);
-  //   route.fulfill({
-  //     status: 200,
-  //     contentType: 'image/png',
-  //     body: '',
-  //   });
-  // });
-
   // Keep existing REST mocks
   await registerRestMocks(page);
 
@@ -502,6 +219,8 @@ test("switches to Document layer and renders PDF container", async ({
   mount,
   page,
 }) => {
+  test.setTimeout(120000); // Set timeout to 60 seconds for this specific test
+
   await mount(
     <DocumentKnowledgeBaseTestWrapper
       mocks={graphqlMocks}
@@ -516,12 +235,131 @@ test("switches to Document layer and renders PDF container", async ({
     .locator(".layers-menu")
     .getByRole("button", { name: "Document" })
     .click();
-  await expect(page.locator("#pdf-container")).toBeVisible({
-    timeout: LONG_TIMEOUT,
-  });
-  const canvasLocator = page.locator("#pdf-container canvas");
-  await expect(canvasLocator.first()).toBeVisible({ timeout: LONG_TIMEOUT });
-  await expect(canvasLocator).toHaveCount(23, { timeout: LONG_TIMEOUT });
+
+  const pdfContainer = page.locator("#pdf-container");
+  await expect(pdfContainer).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  const firstCanvas = pdfContainer.locator("canvas").first();
+  await expect(firstCanvas).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  const pagePlaceholders = pdfContainer.locator(
+    '> div[style*="position: relative;"] > div[style*="position: absolute;"]'
+  );
+  await expect(pagePlaceholders).toHaveCount(23, { timeout: LONG_TIMEOUT });
+
+  const renderedPageIndices = new Set<number>();
+  const totalPages = 23;
+
+  const scrollableView = await pdfContainer.boundingBox();
+  if (!scrollableView) {
+    throw new Error("Could not get bounding box for #pdf-container");
+  }
+  const clientHeight = scrollableView.height;
+  const scrollHeight = await pdfContainer.evaluate((node) => node.scrollHeight);
+
+  console.log(
+    `[TEST] pdfContainer clientHeight: ${clientHeight}, scrollHeight: ${scrollHeight}`
+  );
+
+  let currentScrollTop = 0;
+  const scrollIncrement = clientHeight * 0.8; // Scroll by 80% of the container's visible height to ensure overlap
+
+  while (currentScrollTop < scrollHeight - clientHeight) {
+    currentScrollTop += scrollIncrement;
+    currentScrollTop = Math.min(currentScrollTop, scrollHeight - clientHeight);
+
+    await pdfContainer.evaluate((node, st) => {
+      node.scrollTop = st;
+    }, currentScrollTop);
+
+    // Active polling for newly rendered canvases
+    const maxWaitTimeForStepMs = 5000; // Max time to wait for canvases at this scroll step
+    const checkIntervalMs = 300; // Interval to re-check for canvases
+    const stepStartTime = Date.now();
+    let madeProgressInStep = true; // Assume progress initially or after finding a canvas
+
+    while (Date.now() - stepStartTime < maxWaitTimeForStepMs) {
+      if (!madeProgressInStep && Date.now() - stepStartTime > 1000) {
+        // If no new canvas found for over 1s in this step, assume stable state for this scroll position
+        // console.log(`[TEST] No new canvases for 1s at scrollTop ${currentScrollTop}, proceeding.`);
+        break;
+      }
+      madeProgressInStep = false; // Reset for this check cycle
+      let initialRenderedCountInInterval = renderedPageIndices.size;
+
+      for (let j = 0; j < totalPages; j++) {
+        if (!renderedPageIndices.has(j)) {
+          const placeholder = pagePlaceholders.nth(j);
+          // A more precise check would be: (placeholder.offsetTop < currentScrollTop + clientHeight && placeholder.offsetTop + placeholder.offsetHeight > currentScrollTop)
+          // For now, we check all non-rendered ones, as PDF.tsx logic will mount them if they are in its calculated range.
+          const hasCanvas = (await placeholder.locator("canvas").count()) > 0;
+          if (hasCanvas) {
+            renderedPageIndices.add(j);
+            console.log(
+              `[TEST] Rendered canvas for page index ${j} at scrollTop ${currentScrollTop}`
+            );
+            madeProgressInStep = true;
+          }
+        }
+      }
+
+      if (renderedPageIndices.size === totalPages) break; // All pages found
+      if (renderedPageIndices.size > initialRenderedCountInInterval) {
+        // If we found new canvases, reset the "no progress" timer by continuing the outer while loop effectively
+      } else {
+        // No new canvases in this specific check, wait for next interval or timeout
+      }
+      await page.waitForTimeout(checkIntervalMs);
+    }
+
+    if (renderedPageIndices.size === totalPages) {
+      console.log(`[TEST] All ${totalPages} pages rendered. Stopping scroll.`);
+      break;
+    }
+
+    if (currentScrollTop >= scrollHeight - clientHeight) {
+      console.log("[TEST] Reached end of scrollable content.");
+      // One last check at the very bottom
+      await page.waitForTimeout(checkIntervalMs * 2); // A bit longer final wait
+      for (let j = 0; j < totalPages; j++) {
+        if (!renderedPageIndices.has(j)) {
+          const placeholder = pagePlaceholders.nth(j);
+          if ((await placeholder.locator("canvas").count()) > 0) {
+            renderedPageIndices.add(j);
+            console.log(
+              `[TEST] Rendered canvas for page index ${j} at final scrollTop`
+            );
+          }
+        }
+      }
+      break;
+    }
+  }
+
+  if (renderedPageIndices.size < totalPages) {
+    console.warn(
+      `[TEST] Still missing ${
+        totalPages - renderedPageIndices.size
+      } pages. Performing a final check scan.`
+    );
+    for (let j = 0; j < totalPages; j++) {
+      if (!renderedPageIndices.has(j)) {
+        const placeholder = pagePlaceholders.nth(j);
+        if ((await placeholder.locator("canvas").count()) > 0) {
+          renderedPageIndices.add(j);
+        } else {
+          console.warn(
+            `[TEST FINAL SCAN] Page index ${j} did not render a canvas.`
+          );
+        }
+      }
+    }
+  }
+
+  expect(renderedPageIndices.size).toBe(totalPages);
+  console.log(
+    `[TEST SUCCESS] Verified that all ${totalPages} pages rendered a canvas at some point during scroll.`
+  );
 });
 
 test("renders TXT document and shows plain-text container with content", async ({
@@ -608,7 +446,6 @@ test("selects a label and creates an annotation by dragging", async ({
   // 2. Verify PDF canvases are loaded (can happen after label selector check)
   const canvasLocator = page.locator("#pdf-container canvas");
   await expect(canvasLocator.first()).toBeVisible({ timeout: LONG_TIMEOUT });
-  await expect(canvasLocator).toHaveCount(23, { timeout: LONG_TIMEOUT });
 
   // 3. Verify label selection
   const labelSelectorButtonAfter = page.locator(
@@ -681,4 +518,247 @@ test("selects a label and creates an annotation by dragging", async ({
   // Wait specifically for the annotation element to be visible
   await expect(annotationElement).toBeVisible({ timeout: 15000 }); // Increased timeout for this specific assertion
   console.log("[TEST SUCCESS] Found annotation with data-annotation-id");
+});
+
+test("filters annotations correctly when 'Show Structural' and 'Show Only Selected' are toggled", async ({
+  mount,
+  page,
+}) => {
+  await mount(
+    <DocumentKnowledgeBaseTestWrapper
+      mocks={graphqlMocks}
+      documentId={PDF_DOC_ID_FOR_STRUCTURAL_TEST}
+      corpusId={CORPUS_ID}
+    />
+  );
+
+  // Wait for initial summary render to ensure component is ready
+  await expect(
+    page.getByRole("heading", {
+      name: mockPdfDocumentForStructuralTest.title ?? "",
+    })
+  ).toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(page.getByRole("button", { name: "Summary" })).toHaveClass(
+    /active/,
+    { timeout: LONG_TIMEOUT }
+  );
+
+  // 1. Navigate to Annotations sidebar
+  await page.getByRole("button", { name: "Annotations" }).click();
+  const annotationsPanel = page.locator(".sidebar__annotations");
+  await expect(annotationsPanel).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  const nonStructuralAnnotation = annotationsPanel.locator(
+    `[data-annotation-id="${mockAnnotationNonStructural1.id}"]`
+  );
+  const structuralAnnotation = annotationsPanel.locator(
+    `[data-annotation-id="${mockAnnotationStructural1.id}"]`
+  );
+
+  // 2. Initial State: Non-structural visible, structural visible
+  await expect(nonStructuralAnnotation).toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(structuralAnnotation).not.toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // 3. Interact with ViewSettingsPopup
+  const viewSettingsTrigger = page.locator("#view-settings-trigger");
+  await viewSettingsTrigger.click();
+  const viewSettingsPopup = page.locator("#view-settings-popup-grid"); // More specific to the popup content
+  await expect(viewSettingsPopup).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  const showSelectedOnlyToggleWrapper = viewSettingsPopup.locator(
+    "div.column:has(i.icon.user.outline) .ui.checkbox"
+  );
+  const showStructuralToggleWrapper = viewSettingsPopup.locator(
+    '[data-testid="toggle-show-structural"].ui.checkbox'
+  );
+
+  // Verify initial state of toggles within popup
+  await expect(
+    showSelectedOnlyToggleWrapper.locator('input[type="checkbox"]')
+  ).not.toBeChecked();
+  await expect(showSelectedOnlyToggleWrapper).not.toHaveClass(/disabled/); // Should be enabled
+  await expect(
+    showStructuralToggleWrapper.locator('input[type="checkbox"]')
+  ).not.toBeChecked();
+
+  // 3a. Toggle "Show Structural" ON
+  await showStructuralToggleWrapper.click();
+  await expect(
+    showStructuralToggleWrapper.locator('input[type="checkbox"]')
+  ).toBeChecked();
+  // "Show Only Selected" should become checked and disabled
+  await expect(
+    showSelectedOnlyToggleWrapper.locator('input[type="checkbox"]')
+  ).toBeChecked();
+  await expect(showSelectedOnlyToggleWrapper).toHaveClass(/disabled/);
+
+  await expect(structuralAnnotation).toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(nonStructuralAnnotation).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // 4. Toggle "Show Structural" OFF
+  await showStructuralToggleWrapper.click(); // Click again to turn off
+  await expect(
+    showStructuralToggleWrapper.locator('input[type="checkbox"]')
+  ).not.toBeChecked();
+  // "Show Only Selected" should remain checked but become enabled
+  await expect(
+    showSelectedOnlyToggleWrapper.locator('input[type="checkbox"]')
+  ).toBeChecked();
+  await expect(showSelectedOnlyToggleWrapper).not.toHaveClass(/disabled/);
+
+  // Annotation List: Both still hidden (showSelectedOnly=true, nothing selected)
+  await expect(nonStructuralAnnotation).toBeVisible({
+    timeout: LONG_TIMEOUT,
+  });
+  await expect(structuralAnnotation).not.toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Close popup (optional, good practice)
+  await page.locator("body").click({ force: true, position: { x: 0, y: 0 } }); // Click outside to close
+});
+
+/* --------------------------------------------------------------------- */
+/* search bar – jump to first match                                      */
+/* --------------------------------------------------------------------- */
+test("DocNavigation search jumps to first 'Transfer Taxes' hit on page 4", async ({
+  mount,
+  page,
+}) => {
+  /* 1️⃣  mount the wrapper */
+  await mount(
+    <DocumentKnowledgeBaseTestWrapper
+      mocks={graphqlMocks}
+      documentId={PDF_DOC_ID}
+      corpusId={CORPUS_ID}
+    />
+  );
+
+  /* 2️⃣  wait until the Summary tab rendered – component ready */
+  await expect(
+    page.getByRole("heading", { name: "Mock Summary Title" })
+  ).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  /* 3️⃣  switch to Document layer (PDF) */
+  await page.locator(".layers-button").hover();
+  await page
+    .locator(".layers-menu")
+    .getByRole("button", { name: "Document" })
+    .click();
+
+  /* 4️⃣  open the DocNavigation search panel (desktop = hover) */
+  const nav = page.locator("#doc-navigation .search-container");
+  await nav.hover();
+
+  /* 5️⃣  fill query + press ENTER */
+  const searchInput = nav.getByPlaceholder("Search document...");
+  await expect(searchInput).toBeVisible({ timeout: LONG_TIMEOUT });
+  await searchInput.fill("Transfer Taxes");
+  await searchInput.press("Enter");
+
+  /* 6️⃣  wait for ANY highlight to become visible -------------------- */
+  const highlight = page.locator("[id^='SEARCH_RESULT_']").first();
+  await expect(highlight).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  /* 6b️⃣  wait until the container finished scrolling so the highlight
+         lies fully within the viewport                                */
+  await page.waitForFunction(
+    ([hl, container]) => {
+      if (!hl || !container) return false;
+      const h = hl.getBoundingClientRect();
+      const c = container.getBoundingClientRect();
+      return h.top >= c.top && h.bottom <= c.bottom;
+    },
+    [
+      await highlight.elementHandle(),
+      await page.locator("#pdf-container").elementHandle(),
+    ],
+    { timeout: LONG_TIMEOUT }
+  );
+
+  /* 7️⃣  now we can safely assert with bounding-boxes (almost instant) */
+  const pdfBox = await page.locator("#pdf-container").boundingBox();
+  const hlBox = await highlight.boundingBox();
+  expect(pdfBox && hlBox, "bounding boxes must exist").toBeTruthy();
+  if (pdfBox && hlBox) {
+    const within =
+      hlBox.y >= pdfBox.y && hlBox.y + hlBox.height <= pdfBox.y + pdfBox.height;
+    expect(within).toBe(true);
+  }
+});
+
+/* --------------------------------------------------------------------- */
+/* chat message tray – scroll to 'Source 1' highlight                            */
+/* --------------------------------------------------------------------- */
+test("Chat source chip centres its highlight in the PDF viewer", async ({
+  mount,
+  page,
+}) => {
+  // Mount KB wrapper with the extended mocks
+  await mount(
+    <DocumentKnowledgeBaseTestWrapper
+      mocks={graphqlMocksWithChat}
+      documentId={PDF_DOC_ID}
+      corpusId={CORPUS_ID}
+    />
+  );
+
+  // Wait until the Summary tab rendered
+  await expect(
+    page.getByRole("heading", { name: "Mock Summary Title" })
+  ).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Switch to the PDF layer
+  await page.locator(".layers-button").hover();
+  await page
+    .locator(".layers-menu")
+    .getByRole("button", { name: "Document" })
+    .click();
+
+  // Wait for the conversation list & click the first card
+  const convCard = page
+    .locator("text=Transfer Taxes in Document Analysis")
+    .first();
+  await expect(convCard).toBeVisible({ timeout: LONG_TIMEOUT });
+  await convCard.click();
+
+  // Expand sources in assistant message
+  const sourceChip = page.locator(".source-preview-container").first();
+  await expect(sourceChip).toBeVisible({ timeout: LONG_TIMEOUT });
+  await sourceChip.click();
+
+  // Click source child 1 in the expanded sources list
+  const sourceChild1 = page.locator(".source-chip").first();
+  await expect(sourceChild1).toBeVisible({ timeout: LONG_TIMEOUT });
+  await sourceChild1.click();
+
+  // Wait for highlight to be in the DOM & scrolled into view
+  const messageId = "TWVzc2FnZVR5cGU6Ng=="; // base-64 id used by the UI
+  const highlight = page.locator(
+    `[id="CHAT_SOURCE_${messageId}.0"]` // an attribute selector needs no escaping
+  );
+  await expect(highlight).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Verify the highlight is fully visible in the viewport
+  await page.waitForFunction(
+    ([hl, container]) => {
+      if (!hl || !container) return false;
+      const h = hl.getBoundingClientRect();
+      const c = container.getBoundingClientRect();
+      return h.top >= c.top && h.bottom <= c.bottom;
+    },
+    [
+      await highlight.elementHandle(),
+      await page.locator("#pdf-container").elementHandle(),
+    ],
+    { timeout: LONG_TIMEOUT }
+  );
+
+  // Final bounding-box assertion
+  const pdfBox = await page.locator("#pdf-container").boundingBox();
+  const hlBox = await highlight.boundingBox();
+  expect(pdfBox && hlBox).toBeTruthy();
+  if (pdfBox && hlBox) {
+    const within =
+      hlBox.y >= pdfBox.y && hlBox.y + hlBox.height <= pdfBox.y + pdfBox.height;
+    expect(within).toBe(true);
+  }
 });

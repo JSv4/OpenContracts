@@ -150,19 +150,6 @@ export const useTextSearch = () => {
           ""
         );
 
-        // Determine bounds for the results
-        const bounds: Record<number, BoundingBox> = {};
-        for (const [key, value] of Object.entries(grouped_tokens)) {
-          const pageIndex = parseInt(key);
-
-          if (pages[pageIndex] !== undefined) {
-            const page_bounds = pages[pageIndex].getBoundsForTokens(value);
-            if (page_bounds) {
-              bounds[pageIndex] = page_bounds;
-            }
-          }
-        }
-
         const fullContext = (
           <span>
             <i>{lead_in_text}</i> <b>{searchText}</b> <i>{lead_out_text}</i>
@@ -171,10 +158,9 @@ export const useTextSearch = () => {
         searchHits.push({
           id: i,
           tokens: grouped_tokens,
-          bounds,
-          fullContext,
-          end_page,
           start_page,
+          end_page,
+          fullContext,
         } as TextSearchTokenResult);
       }
     }

@@ -37,12 +37,12 @@ export const ViewSettingsPopup: React.FC<ViewSettingsPopupProps> = ({
     useState(showBoundingBoxes);
   const [localLabelBehavior, setLocalLabelBehavior] = useState(showLabels);
 
-  useEffect(() => {
-    setShowSelectedOnly(showSelectedOnly);
-    setShowStructural(showStructural);
-    setShowBoundingBoxes(showBoundingBoxes);
-    setShowLabels(showLabels);
-  }, [showLabels, showStructural, showBoundingBoxes, showSelectedOnly]);
+  // useEffect(() => {
+  //   setShowSelectedOnly(showSelectedOnly);
+  //   setShowStructural(showStructural);
+  //   setShowBoundingBoxes(showBoundingBoxes);
+  //   setShowLabels(showLabels);
+  // }, [showLabels, showStructural, showBoundingBoxes, showSelectedOnly]);
 
   const handleShowSelectedChange = (checked: boolean) => {
     setLocalShowSelected(checked);
@@ -73,14 +73,22 @@ export const ViewSettingsPopup: React.FC<ViewSettingsPopupProps> = ({
 
   return (
     <Popup
+      id="view-settings-popup"
       className="SettingsPopup"
       on="click"
       trigger={
-        <Label as="a" corner="left" icon="sliders horizontal" color="violet" />
+        <Label
+          id="view-settings-trigger"
+          as="a"
+          corner="left"
+          icon="sliders horizontal"
+          color="violet"
+        />
       }
       style={{ padding: "1em", zIndex: "2100 !important" }}
     >
       <Grid
+        id="view-settings-popup-grid"
         celled="internally"
         columns="equal"
         style={{
@@ -128,6 +136,7 @@ export const ViewSettingsPopup: React.FC<ViewSettingsPopupProps> = ({
               Show Structural
             </Header>
             <Checkbox
+              data-testid="toggle-show-structural"
               toggle
               onChange={handleShowStructuralChange}
               checked={localShowStructural}

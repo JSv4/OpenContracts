@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useSetAtom } from "jotai";
+import { chatSourcesAtom } from "../../annotator/context/ChatSourceAtom";
 
 export interface ChatMessageProps {
   messageId?: string; // Optional because some messages (like streaming ones) might not have an ID yet
@@ -148,6 +150,7 @@ const MessageContent = styled.div<{ $isAssistant: boolean }>`
         : "rgba(247, 248, 249, 0.3)"};
   word-wrap: break-word;
   overflow-wrap: break-word;
+  word-break: break-all;
 
   &::before {
     content: "";
@@ -404,7 +407,11 @@ const SourceItem: React.FC<SourceItemProps> = ({
   };
 
   return (
-    <SourceChip $isSelected={isSelected} onClick={onClick}>
+    <SourceChip
+      className="source-chip"
+      $isSelected={isSelected}
+      onClick={onClick}
+    >
       <SourceHeader>
         <SourceTitle $isSelected={isSelected}>
           <Pin size={12} />
@@ -451,6 +458,7 @@ const SourcePreview: React.FC<SourcePreviewProps> = ({
 
   return (
     <SourcePreviewContainer
+      className="source-preview-container"
       onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
     >
       <SourcePreviewHeader onClick={handleHeaderClick}>
@@ -574,15 +582,34 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   isSelected,
   onSelect,
 }) => {
+  console.log("[ChatMessage] Rendering with props:", {
+    messageId,
+    user,
+    content,
+    timestamp,
+    isAssistant,
+    sources,
+    hasSources,
+    isSelected,
+  });
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<
     number | undefined
   >();
 
+  const setChatState = useSetAtom(chatSourcesAtom);
+
   const handleSourceSelect = (index: number) => {
-    console.log("XOXO - handleSourceSelect index", index);
     setSelectedSourceIndex(index === selectedSourceIndex ? undefined : index);
+    if (messageId !== undefined) {
+      setChatState((prev) => ({
+        ...prev,
+        selectedMessageId: messageId,
+        selectedSourceIndex: index === prev.selectedSourceIndex ? null : index,
+      }));
+    }
   };
 
+  console.log("[ChatMessage] About to render. Content:", content);
   return (
     <MessageContainer
       $isAssistant={isAssistant}

@@ -21,12 +21,7 @@ import {
   GetDocumentKnowledgeAndAnnotationsOutput,
 } from "../../../graphql/queries";
 import { getDocumentRawText, getPawlsLayer } from "../../annotator/api/rest";
-import {
-  CorpusType,
-  DocumentType,
-  LabelType,
-  RawDocumentType,
-} from "../../../types/graphql-api";
+import { CorpusType, LabelType } from "../../../types/graphql-api";
 import { motion, AnimatePresence } from "framer-motion";
 import { PDFContainer } from "../../annotator/display/viewer/DocumentViewer";
 import { PDFDocumentLoadingTask } from "pdfjs-dist";
@@ -69,7 +64,6 @@ import { useInitialAnnotations } from "../../annotator/hooks/AnnotationHooks";
 import { LabelSelector } from "../../annotator/labels/label_selector/LabelSelector";
 import { PDF } from "../../annotator/renderers/pdf/PDF";
 import TxtAnnotatorWrapper from "../../annotator/components/wrappers/TxtAnnotatorWrapper";
-import { useAnnotationRefs } from "../../annotator/hooks/useAnnotationRefs";
 import { DocTypeLabelDisplay } from "../../annotator/labels/doc_types/DocTypeLabelDisplay";
 import { useAnnotationControls } from "../../annotator/context/UISettingsAtom";
 import { RelationshipList } from "../../annotator/display/components/RelationshipList";
@@ -115,13 +109,13 @@ import styled from "styled-components";
 import { Icon } from "semantic-ui-react";
 import { useChatSourceState } from "../../annotator/context/ChatSourceAtom";
 import { useCreateAnnotation } from "../../annotator/hooks/AnnotationHooks";
+import { useScrollContainerRef } from "../../annotator/context/DocumentAtom";
 
-import { getDocument } from "pdfjs-dist";
-import workerSrc from "pdfjs-dist/build/pdf.worker?worker&url";
-import * as pdfjs from "pdfjs-dist";
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
+import workerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
 
 // Setting worker path to worker bundle.
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+GlobalWorkerOptions.workerSrc = workerSrc;
 
 interface DocumentKnowledgeBaseProps {
   documentId: string;
@@ -158,7 +152,10 @@ const RelationsPanel: React.FC = () => {
   const { selectedExtract } = useAnalysisSelection();
 
   return (
-    <div className="sidebar__relation__annotation" style={{ padding: "1rem" }}>
+    <div
+      className="sidebar__relation__annotation"
+      style={{ padding: "1rem", overflowY: "hidden" }}
+    >
       {selectedAnalysis && (
         <SourceIndicator>
           Showing relationships from analysis: {selectedAnalysis.analyzer.id}
@@ -491,31 +488,31 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   // We'll store the measured containerWidth here
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
 
-  // Our PDFContainer callback ref
-  const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
-    if (node) {
-      // Measure the node's width now
-      const width = node.getBoundingClientRect().width;
-      setContainerWidth(width);
+  /**
+   * 1. store container width (existing behaviour)
+   * 2. publish the same element to scrollContainerRefAtom
+   */
+  const { setScrollContainerRef } = useScrollContainerRef();
+  const pdfContainerRef = useRef<HTMLDivElement | null>(null);
 
-      // If you need to store this node for scrolling, you can still do so:
-      // scrollContainerRef.current = node;
-      // registerRef("scrollContainer", scrollContainerRef);
-    }
-  }, []);
+  const containerRefCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      pdfContainerRef.current = node;
 
-  // Whenever the window resizes, re-measure that container
-  useEffect(() => {
-    function handleResize() {
-      const node = document.getElementById("pdf-container");
-      if (!node) return;
-      const width = node.getBoundingClientRect().width;
-      setContainerWidth(width);
-    }
+      if (node) {
+        // ① width for initial zoom calc
+        setContainerWidth(node.getBoundingClientRect().width);
+        // ② virtual-window needs this ref
+        setScrollContainerRef(pdfContainerRef);
+      } else {
+        setScrollContainerRef(null);
+      }
+    },
+    [setContainerWidth, setScrollContainerRef]
+  );
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  /* clear on unmount so stale refs are never used */
+  useEffect(() => () => setScrollContainerRef(null), [setScrollContainerRef]);
 
   const handleKeyUpPress = useCallback(
     (event: { keyCode: any }) => {

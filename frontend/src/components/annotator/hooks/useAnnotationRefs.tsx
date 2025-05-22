@@ -49,13 +49,13 @@ export const useAnnotationRefs = () => {
   );
 
   return {
-    scrollContainerRef: { current: refs.scrollContainerRef },
-    PDFPageCanvasRef: { current: refs.PDFPageCanvasRef },
-    PDFPageRendererRef: { current: refs.PDFPageRendererRef },
-    PDFPageContainerRefs: { current: refs.PDFPageContainerRefs },
     annotationElementRefs: { current: refs.annotationElementRefs },
     textSearchElementRefs: { current: refs.textSearchElementRefs },
     chatSourceElementRefs: { current: refs.chatSourceElementRefs },
+    PDFPageCanvasRef: { current: refs.PDFPageCanvasRef },
+    PDFPageRendererRef: { current: refs.PDFPageRendererRef },
+    PDFPageContainerRefs: { current: refs.PDFPageContainerRefs },
+    scrollContainerRef: { current: refs.scrollContainerRef },
     registerRef,
     unregisterRef,
   };

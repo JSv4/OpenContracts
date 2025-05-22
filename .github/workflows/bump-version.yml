@@ -31,6 +31,9 @@ jobs:
 
       # 💾 commit, tag & push everything back up
       - name: Commit, tag & push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -38,8 +41,6 @@ jobs:
           git commit -m "chore: bump VERSION_TAG → ${TAG}"
           git tag "${TAG}"
           git push --follow-tags
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # 🏷️ publish a GitHub release for that tag
       - name: Create GitHub Release

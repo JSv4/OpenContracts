@@ -65,7 +65,7 @@ django-guardian
 
 # GraphQL
 # ------------------------------------------------------------------------------
-graphene-django==3.2.2  # TODO - upgrade at some point. Will require some refactoring.
+graphene-django==3.2.3  # TODO - upgrade at some point. Will require some refactoring.
 django-graphql-jwt==0.4.0
 
 # Not directly required, pinned by Snyk to avoid a vulnerability

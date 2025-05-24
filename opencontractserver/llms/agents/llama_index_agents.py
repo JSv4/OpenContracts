@@ -1,10 +1,11 @@
 """LlamaIndex-specific agent implementations using our core functionality."""
 
 import logging
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, List
 
 import nest_asyncio
 from llama_cloud import MessageRole
+from llama_index.core.tools.function_tool import FunctionTool
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.base.llms.types import ChatMessage as LlamaChatMessage
@@ -27,14 +28,14 @@ from opencontractserver.llms.agents.core_agents import (
     CorpusAgentContext,
 )
 from opencontractserver.llms.embedders.custom_pipeline_embedding import OpenContractsPipelineEmbedding
-from opencontractserver.llms.tools.core_tools import (
-    get_md_summary_token_length,
+from opencontractserver.llms.tools.llama_index_tools import (
+    get_md_summary_token_length_tool,
     get_note_content_token_length_tool,
     get_notes_for_document_corpus_tool,
     get_partial_note_content_tool,
     load_document_md_summary_tool,
 )
-from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
+from opencontractserver.llms.vector_stores.llama_index_vector_stores import DjangoAnnotationVectorStore
 
 # Apply nest_asyncio to enable nested event loops
 nest_asyncio.apply()
@@ -61,6 +62,7 @@ class LlamaIndexDocumentAgent(CoreAgent):
         cls,
         document: Union[str, int, Document],
         config: AgentConfig,
+        tools: Optional[List[FunctionTool]] = None,
     ) -> "LlamaIndexDocumentAgent":
         """Create a LlamaIndex document agent using core functionality."""
         # Create context using core factory
@@ -98,7 +100,8 @@ class LlamaIndexDocumentAgent(CoreAgent):
             streaming=False,
         )
 
-        query_engine_tools = [
+        # Start with standard document tools
+        current_tools: List[FunctionTool] = [
             QueryEngineTool(
                 query_engine=doc_engine,
                 metadata=ToolMetadata(
@@ -113,6 +116,10 @@ class LlamaIndexDocumentAgent(CoreAgent):
             get_partial_note_content_tool,
         ]
 
+        # Add any tools passed from the factory
+        if tools:
+            current_tools.extend(tools)
+
         # Convert loaded messages to LlamaIndex format
         prefix_messages = [LlamaChatMessage(role="system", content=config.system_prompt)]
         if config.loaded_messages:
@@ -126,7 +133,7 @@ class LlamaIndexDocumentAgent(CoreAgent):
 
         # Create OpenAI agent
         underlying_agent = OpenAIAgent.from_tools(
-            query_engine_tools,
+            current_tools,
             verbose=config.verbose,
             chat_history=prefix_messages,
             use_async=True,

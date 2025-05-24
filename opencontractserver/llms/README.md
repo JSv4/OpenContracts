@@ -1,8 +1,6 @@
 # OpenContracts LLM Framework
 
-> *"Simplicity is the ultimate sophistication."* - Leonardo da Vinci
-
-A beautiful, framework-agnostic API for creating document and corpus agents that would make a seasoned greybeard tear up with joy.
+OpenContract's API for creating document and corpus agents.
 
 ## Philosophy
 
@@ -26,6 +24,16 @@ response = await agent.chat("What is this document about?")
 
 That's it. No boilerplate, no configuration hell, no framework lock-in.
 
+## Dependencies
+
+Key dependencies automatically handled:
+- `nest_asyncio` - For nested event loop support
+- `llama_index` - LlamaIndex framework (if using)
+- `pydantic_ai` - PydanticAI framework (if using)
+- `django` - Database models and ORM
+
+The framework automatically applies `nest_asyncio.apply()` for compatibility.
+
 ## Core API
 
 ### Document Agents
@@ -38,13 +46,17 @@ response = await agent.chat("Summarize this document")
 # Advanced configuration
 agent = await agents.for_document(
     document=my_doc,  # Can be an ID, path, or Document object
-    framework="pydantic_ai",  # Or "llama_index"
+    framework="pydantic_ai",  # Or "llama_index", or AgentFramework enum
     model="gpt-4o-mini",  # Specify the LLM model
     system_prompt="You are a legal expert specializing in contract review.",
-    tools=["summarize", "extract_entities"], # Built-in or custom tools
+    tools=["load_md_summary", "get_notes"], # Built-in or custom tools
     user_id=456, # Optional user ID for conversation tracking
     streaming=True # Enable streaming responses
 )
+
+# Framework specification - these are equivalent
+agent = await agents.for_document(123, framework="llama_index")
+agent = await agents.for_document(123, framework=AgentFramework.LLAMA_INDEX)
 ```
 
 ### Corpus Agents
@@ -77,9 +89,50 @@ embedder_path, vector = embeddings.generate("Text to be embedded.")
 embedder_path, vector = embeddings.generate(
     "Some legal text from a PDF document.",
     corpus_id=123,
-    mimetype="application/pdf"
-    # embedder="custom_embedder_path" # Optionally specify a custom embedder
+    mimetype="application/pdf",
+    embedder_path="custom/model"  # Optionally specify a custom embedder
 )
+```
+
+### Vector Stores
+
+```python
+from opencontractserver.llms import vector_stores
+
+# Basic vector store
+store = vector_stores.create(framework="llama_index")
+
+# Full configuration
+store = vector_stores.create(
+    framework="llama_index",
+    user_id=1,
+    corpus_id=456,
+    document_id=123,  # Optional: restrict to specific document
+    embedder_path="custom/embedder",
+    must_have_text="required_text",
+    embed_dim=768,
+    # Framework-specific options
+    **kwargs
+)
+
+# Query the store
+results = store.query("search text")
+```
+
+#### Response Types
+
+Vector stores return framework-specific response types:
+
+```python
+# LlamaIndex
+results = store.query("search text")  # Returns VectorStoreQueryResult
+
+# PydanticAI  
+results = await store.search_annotations("search text")  # Returns PydanticAIVectorSearchResponse
+
+# Core (framework-agnostic)
+core_store = vector_stores.create_core_vector_store()
+results = core_store.search(query)  # Returns List[VectorSearchResult]
 ```
 
 ### Custom Tools
@@ -99,7 +152,7 @@ clause_extraction_tool = tools.from_function(extract_clause_references)
 # Use with agent
 agent = await agents.for_document(
     document=789,
-    tools=["summarize", clause_extraction_tool] # Can mix built-in tool names and custom tool objects
+    tools=["load_md_summary", clause_extraction_tool] # Can mix built-in tool names and custom tool objects
 )
 ```
 
@@ -110,8 +163,10 @@ The same API works seamlessly across multiple frameworks:
 | Framework | Status | Notes |
 |-----------|--------|-------|
 | LlamaIndex | ✅ Full Support | Default framework |
-| Pydantic AI | ✅ Full Support | Modern, type-safe |
+| Pydantic AI | 🚧 Experimental | Under active development |
 | LangChain | 🚧 Planned | Coming soon |
+
+> **Note**: PydanticAI support is currently experimental and under active development. Some features may not be fully implemented yet.
 
 Switch frameworks with a single parameter:
 
@@ -153,7 +208,7 @@ This framework uses a layered architecture that separates concerns:
 
 - **Core Layer**: Framework-agnostic business logic, type definitions, and base configurations.
 - **Adapter Layer**: Thin wrappers (e.g., `LlamaIndexDocumentAgent`) for specific LLM frameworks. These implement the `CoreAgent` protocol.
-- **API Layer**: The beautiful, simple interface (`agents.for_document`, `embeddings.generate`, etc.) exposed in `opencontractserver.llms.api`.
+- **API Layer**: The simple interface (`agents.for_document`, `embeddings.generate`, etc.) exposed in `opencontractserver.llms.api`.
 - **Tool System**: A unified way to define (`CoreTool`) and adapt (`UnifiedToolFactory`) tools for use across different LLM frameworks.
 - **Vector Stores**: Support for various vector stores, integrated with Django models.
 - **Unified Agent Factory**: (`agents/agent_factory.py`) A central factory that instantiates the correct framework adapter based on user input.
@@ -215,38 +270,79 @@ Rich set of document tools available by name:
 agent = await agents.for_document(
     document=123,
     tools=[
-        "summarize",      # Load document summary
-        "notes",          # Get document notes  
-        "md_summary_length",  # Get summary token count
-        "partial_note",   # Get partial note content
+        "load_md_summary",              # Load document summary
+        "load_document_md_summary",     # Alias for load_md_summary
+        "get_notes",                    # Get document notes  
+        "get_notes_for_document_corpus", # Alias for get_notes
+        "md_summary_length",            # Get summary token count
+        "get_md_summary_token_length",  # Alias for md_summary_length
+        "note_content_length",          # Get note token count
+        "get_note_content_token_length", # Alias for note_content_length
+        "partial_note_content",         # Get partial note content
+        "get_partial_note_content",     # Alias for partial_note_content
     ]
 )
 ```
 
-### Error Handling
+### Async Tool Variants
 
-Graceful error handling with meaningful messages:
+Most core tools have async equivalents with an `a` prefix:
 
 ```python
+# Async versions available for:
+# - aload_document_md_summary()
+# - aget_notes_for_document_corpus()
+# - aget_note_content_token_length()
+# - aget_partial_note_content()
+```
+
+### Configuration Options
+
+Full configuration using `AgentConfig`:
+
+```python
+from opencontractserver.llms.agents import AgentConfig
+
+config = AgentConfig(
+    model="gpt-4o-mini",
+    temperature=0.7,
+    max_tokens=4000,
+    system_prompt="Custom prompt",
+    conversation=existing_conversation,  # Continue existing conversation
+    embedder_path="custom/embedder",     # Custom embedding model
+    tools=[custom_tool],
+    streaming=True
+)
+
+agent = await agents.for_document(123, config=config)
+```
+
+## Error Handling
+
+The framework provides structured error handling:
+
+```python
+from opencontractserver.llms import agents
+
 try:
-    agent = await agents.for_document(99999)  # Non-existent
-except DocumentNotFoundError as e:
-    # Handle gracefully
-    agent = await agents.for_document(fallback_doc_id)
+    agent = await agents.for_document(999999)  # Non-existent document
+except ValueError as e:
+    print(f"Document not found: {e}")
+
+try:
+    response = await agent.chat("Hello")
+except NotImplementedError as e:
+    print(f"Feature not implemented: {e}")
+except FileNotFoundError as e:
+    print(f"Missing document file or summary: {e}")
+except Exception as e:
+    print(f"Unexpected error: {e}")
 ```
 
-### Type Safety
-
-Full type hints for excellent IDE support:
-
-```python
-from opencontractserver.llms import agents # Entry point for agent creation
-from opencontractserver.llms.agents.core_agents import CoreAgent # Protocol for agent instances
-
-# Type-safe agent creation using the API
-agent: CoreAgent = await agents.for_document(123) # agents.for_document is part of the AgentAPI class
-response: str = await agent.chat("Hello")
-```
+Common exceptions:
+- `ValueError`: Invalid document/corpus IDs, configuration errors
+- `NotImplementedError`: Unsupported framework features
+- `FileNotFoundError`: Missing document files or summaries
 
 ## Examples
 
@@ -260,57 +356,53 @@ See `examples.py` for comprehensive usage examples:
 - Multi-document analysis
 - Error handling
 
-## Migration Guide
+## Migration from Legacy API
 
-### From Old API
-
-If you were previously using framework-specific agent creation methods or the older `create_document_agent` directly, migrating to the new unified API is straightforward.
+### Old Agent Creation
 
 ```python
-# Old way (example: LlamaIndex specific, or older generic factory)
-# from opencontractserver.llms.agents.llama_index_agents import LlamaIndexDocumentAgent
-# from opencontractserver.llms.agents.core_agents import AgentConfig
-# from opencontractserver.llms.agents import create_document_agent # Older factory
+# Old way (still works)
+from opencontractserver.llms.agents import create_document_agent, create_corpus_agent
+agent = await create_document_agent(doc_id)
+corpus_agent = await create_corpus_agent(corpus_id)
 
-# config = AgentConfig(
-#     user_id=123,
-#     model_name="gpt-4", # Old parameter name
-#     system_prompt="Custom prompt",
-#     streaming=True
-# )
-# agent = await LlamaIndexDocumentAgent.create(document_id, config, tools)
-# OR
-# agent = await create_document_agent(document_id, config, tools) # Old generic factory call
-
-# New way (elegant, framework-agnostic via the new API)
+# New way (recommended)
 from opencontractserver.llms import agents
+agent = await agents.for_document(doc_id)
+corpus_agent = await agents.for_corpus(corpus_id)
+```
 
+### Legacy Vector Stores
+
+```python
+# Old way
+from opencontractserver.llms.vector_stores.vector_stores import DjangoAnnotationVectorStore
+
+# New way
+from opencontractserver.llms import vector_stores
+store = vector_stores.create(framework="llama_index")
+```
+
+### Parameter Changes
+
+```python
+# Old configuration style
+config = AgentConfig(
+    model_name="gpt-4",  # Old parameter name
+    # ... other config
+)
+
+# New configuration style
 agent = await agents.for_document(
-    document=document_id, # 'document' can be ID, path, or Document object
-    user_id=123,
-    model="gpt-4", # New parameter name 'model'
-    system_prompt="Custom prompt",
-    tools=tools, # List of tool names or CoreTool objects
-    streaming=True # streaming is a direct parameter
-    # framework="llama_index" # Optional, defaults to llama_index
+    document=document_id,
+    model="gpt-4",  # New parameter name
+    # ... other params
 )
 ```
 
 ### Backward Compatibility
 
-The previous `create_document_agent` and `create_corpus_agent` functions (now found in `opencontractserver.llms.agents`) are still available for backward compatibility. They have been refactored to use the new `UnifiedAgentFactory` internally, defaulting to LlamaIndex.
-
-```python
-# Still works (uses the old function now pointing to the new factory with LlamaIndex default)
-from opencontractserver.llms.agents import create_document_agent 
-agent = await create_document_agent(document_id=document_id) 
-
-# But this is the recommended new API:
-from opencontractserver.llms import agents # Import the API module
-agent = await agents.for_document(document=document_id)
-```
-
-The new `agents.for_document()` and `agents.for_corpus()` methods in `opencontractserver.llms.api` (exposed via `opencontractserver.llms.agents`) provide a more streamlined and flexible interface, and are the preferred way to create agents.
+The previous `create_document_agent` and `create_corpus_agent` functions are still available for backward compatibility. They have been refactored to use the new `UnifiedAgentFactory` internally, defaulting to LlamaIndex.
 
 ## Performance
 
@@ -453,28 +545,4 @@ Here's a step-by-step guide to integrate a new LLM framework into OpenContracts:
 
 By following these steps, you can extend the OpenContracts LLM framework to support a wider range of LLM technologies while maintaining a consistent and simple API for users.
 
-## Design Principles
-
-This framework follows these principles:
-
-1. **Convention over Configuration**: Sensible defaults
-2. **Explicit over Implicit**: Clear, readable code
-3. **Simple over Complex**: Minimal cognitive load
-4. **Consistent over Clever**: Predictable patterns
-5. **Extensible over Rigid**: Easy to extend
-
-## Why This API is Beautiful
-
-- **One-liner creation**: `agent = await agents.for_document(123)`
-- **Framework agnostic**: Same code, different engines
-- **Type safe**: Full IDE support with hints
-- **Self-documenting**: Clear, descriptive method names
-- **Composable**: Mix and match tools, frameworks, configs
-- **Testable**: Easy to mock and test
-- **Maintainable**: Clear separation of concerns
-
-This is what elegant software looks like. Simple on the surface, sophisticated underneath.
-
 ---
-
-*"Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away."* - Antoine de Saint-Exupéry 

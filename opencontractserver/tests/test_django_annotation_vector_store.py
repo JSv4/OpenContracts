@@ -255,7 +255,7 @@ class TestCoreAnnotationVectorStore(TestCase):
         self.assertIn(self.anno2.id, returned_ids)
         self.assertIn(self.anno3.id, returned_ids)
 
-    @patch("opencontractserver.utils.embeddings.generate_embeddings_from_text")
+    @patch("opencontractserver.llms.vector_stores.core_vector_stores.generate_embeddings_from_text")
     def test_search_by_vector_similarity_generated_from_query_text(self, mock_gen_embeds):
         """
         Provide query_text instead of explicit embedding. The vector store should
@@ -309,7 +309,7 @@ class TestCoreAnnotationVectorStore(TestCase):
         self.assertTrue(any("first annotation text" in txt for txt in returned_texts))
         self.assertTrue(any("doc2, important label" in txt for txt in returned_texts))
 
-    @patch("opencontractserver.utils.embeddings.generate_embeddings_from_text")
+    @patch("opencontractserver.llms.vector_stores.core_vector_stores.generate_embeddings_from_text")
     def test_search_query_text_fallback_when_no_embedding(self, mock_gen_embeds):
         """
         If a user calls a search with query_text but the dimension is unsupported or generate_embeddings

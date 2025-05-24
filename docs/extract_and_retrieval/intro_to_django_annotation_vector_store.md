@@ -1,95 +1,244 @@
-# Making a Django Application Compatible with LlamaIndex using a Custom Vector Store
+# Making a Django Application Compatible with Multiple Agent Frameworks using Layered Vector Store Architecture
 
 ## Introduction
 
-In this walkthrough, we'll explore how the custom `DjangoAnnotationVectorStore` makes a Django application compatible with LlamaIndex, enabling powerful vector search capabilities within the application's structured annotation store. By leveraging the `BasePydanticVectorStore` class provided by LlamaIndex and integrating it with Django's ORM and the `pg-vector` extension for PostgreSQL, we can achieve efficient and scalable vector search functionality.
+This document explores how we've designed a flexible vector store architecture that makes our Django annotation system compatible with multiple agent frameworks (LlamaIndex, Pydantic AI, etc.) while maintaining a clean separation between business logic and framework-specific adapters.
 
-## Understanding the `DjangoAnnotationVectorStore`
+Our approach uses a **two-layer architecture**:
+1. **Core Layer**: Framework-agnostic business logic (`CoreAnnotationVectorStore`)
+2. **Adapter Layer**: Thin wrappers for specific frameworks (`DjangoAnnotationVectorStore` for LlamaIndex)
 
-The `DjangoAnnotationVectorStore` is a custom implementation of LlamaIndex's `BasePydanticVectorStore` class, tailored specifically for a Django application. It allows the application to store and retrieve granular, visually-locatable annotations (x-y blocks) from PDF pages using vector search.
+This design enables efficient vector search across granular, visually-locatable annotations (x-y blocks) from PDF pages while supporting multiple agent frameworks through a single, well-tested codebase.
 
-Let's break down the key components and features of the `DjangoAnnotationVectorStore`:
+## Architecture Overview
 
-### 1. Inheritance from `BasePydanticVectorStore`
+### Core Layer: `CoreAnnotationVectorStore`
+
+The core layer contains all business logic for vector search operations, independent of any specific agent framework:
+
+```python
+from opencontractserver.llms.core_vector_stores import (
+    CoreAnnotationVectorStore,
+    VectorSearchQuery,
+    VectorSearchResult,
+)
+
+# Initialize core store with filtering parameters
+core_store = CoreAnnotationVectorStore(
+    corpus_id=123,
+    user_id=456,
+    embedder_path="sentence-transformers/all-MiniLM-L6-v2",
+    embed_dim=384,
+)
+
+# Create framework-agnostic query
+query = VectorSearchQuery(
+    query_text="What are the key findings?",
+    similarity_top_k=10,
+    filters={"label": "conclusion"}
+)
+
+# Execute search
+results = core_store.search(query)
+
+# Access results
+for result in results:
+    annotation = result.annotation  # Django Annotation model
+    score = result.similarity_score  # Similarity score (0.0-1.0)
+```
+
+Key features of the core layer:
+
+1. **Framework Independence**: No dependencies on LlamaIndex, Pydantic AI, or other frameworks
+2. **Django Integration**: Direct use of Django ORM and the `VectorSearchViaEmbeddingMixin`
+3. **Flexible Filtering**: Support for corpus, document, user, and metadata filters
+4. **Embedding Generation**: Automatic text-to-vector conversion using `generate_embeddings_from_text`
+5. **pgvector Integration**: Efficient vector similarity search using PostgreSQL's pgvector extension
+
+### Adapter Layer: Framework-Specific Wrappers
+
+Framework adapters are lightweight classes that translate between the core API and specific framework interfaces.
+
+#### LlamaIndex Adapter Example
 
 ```python
 class DjangoAnnotationVectorStore(BasePydanticVectorStore):
-    ...
-```
-
-By inheriting from `BasePydanticVectorStore`, the `DjangoAnnotationVectorStore` gains access to the base functionality and interfaces provided by LlamaIndex for vector stores. This ensures compatibility with LlamaIndex's query engines and retrieval methods.
-
-### 2. Integration with Django's ORM
-
-The `DjangoAnnotationVectorStore` leverages Django's Object-Relational Mapping (ORM) to interact with the application's database. It defines methods like `_get_annotation_queryset()` and `_build_filter_query()` to retrieve annotations from the database using Django's queryset API.
-
-```python
-def _get_annotation_queryset(self) -> QuerySet:
-    queryset = Annotation.objects.all()
-    if self.corpus_id is not None:
-        queryset = queryset.filter(
-            Q(corpus_id=self.corpus_id) | Q(document__corpus=self.corpus_id)
+    """LlamaIndex adapter for Django Annotation Vector Store.
+    
+    This is a thin wrapper around CoreAnnotationVectorStore that implements
+    the LlamaIndex BasePydanticVectorStore interface.
+    """
+    
+    def __init__(self, corpus_id=None, user_id=None, **kwargs):
+        super().__init__(stores_text=True, flat_metadata=False)
+        
+        # Initialize our core vector store
+        self._core_store = CoreAnnotationVectorStore(
+            corpus_id=corpus_id,
+            user_id=user_id,
+            **kwargs
         )
-    if self.document_id is not None:
-        queryset = queryset.filter(document=self.document_id)
-    if self.must_have_text is not None:
-        queryset = queryset.filter(raw_text__icontains=self.must_have_text)
-    return queryset.distinct()
+    
+    def query(self, query: VectorStoreQuery) -> VectorStoreQueryResult:
+        """Execute a vector search query using our core store."""
+        # Convert LlamaIndex query to our internal format
+        search_query = VectorSearchQuery(
+            query_text=query.query_str,
+            query_embedding=query.query_embedding,
+            similarity_top_k=query.similarity_top_k or 100,
+            filters=self._convert_metadata_filters(query.filters),
+        )
+
+        # Execute search using core store
+        results = self._core_store.search(search_query)
+        
+        # Convert results to LlamaIndex format
+        nodes = self._convert_to_text_nodes(results)
+        similarities = [result.similarity_score for result in results]
+        ids = [str(result.annotation.id) for result in results]
+
+        return VectorStoreQueryResult(
+            nodes=nodes,
+            similarities=similarities,
+            ids=ids
+        )
 ```
 
-This integration allows seamless retrieval of annotations from the Django application's database, making it compatible with LlamaIndex's querying and retrieval mechanisms.
-
-### 3. Utilization of `pg-vector` for Vector Search
-
-The `DjangoAnnotationVectorStore` utilizes the `pg-vector` extension for PostgreSQL to perform efficient vector search operations. `pg-vector` adds support for vector data types and provides optimized indexing and similarity search capabilities.
+Usage with LlamaIndex:
 
 ```python
-queryset = (
-    queryset.order_by(
-        CosineDistance("embedding", query.query_embedding)
-    ).annotate(
-        similarity=CosineDistance("embedding", query.query_embedding)
-    )
-)[: query.similarity_top_k]
+# Create LlamaIndex-compatible vector store
+vector_store = DjangoAnnotationVectorStore(
+    corpus_id=123,
+    user_id=456,
+    embed_dim=384
+)
+
+# Use with LlamaIndex query engine
+index = VectorStoreIndex.from_vector_store(vector_store)
+query_engine = index.as_query_engine()
+
+# Query using LlamaIndex interface
+response = query_engine.query("What are the main conclusions?")
 ```
 
-In the code above, the `CosineDistance` function from `pg-vector` is used to calculate the cosine similarity between the query embedding and the annotation embeddings stored in the database. This allows for fast and accurate retrieval of relevant annotations based on vector similarity.
+## Technical Deep Dive
 
-### 4. Customization and Filtering Options
+### 1. Vector Search Pipeline
 
-The `DjangoAnnotationVectorStore` provides various customization and filtering options to fine-tune the vector search process. It allows filtering annotations based on criteria such as `corpus_id`, `document_id`, and `must_have_text`.
+The search process follows this pipeline:
+
+1. **Query Reception**: Framework adapter receives query in framework-specific format
+2. **Query Translation**: Adapter converts to `VectorSearchQuery`
+3. **Core Processing**: 
+   - Build base Django queryset with instance filters (corpus, document, user)
+   - Apply metadata filters (labels, etc.)
+   - Generate embeddings from text if needed using `generate_embeddings_from_text`
+   - Execute vector similarity search via `search_by_embedding` mixin
+4. **Result Translation**: Adapter converts `VectorSearchResult` back to framework format
+
+### 2. Integration with Django ORM and pgvector
+
+The core store leverages Django's powerful ORM features combined with pgvector:
 
 ```python
-def _build_filter_query(self, filters: Optional[MetadataFilters]) -> QuerySet:
-    queryset = self._get_annotation_queryset()
-
-    if filters is None:
-        return queryset
-
-    for filter_ in filters.filters:
-        if filter_.key == "label":
-            queryset = queryset.filter(annotation_label__text__iexact=filter_.value)
-        else:
-            raise ValueError(f"Unsupported filter key: {filter_.key}")
-
-    return queryset
+def search(self, query: VectorSearchQuery) -> list[VectorSearchResult]:
+    """Execute vector search using Django ORM and pgvector."""
+    # Build filtered queryset
+    queryset = self._build_base_queryset()
+    queryset = self._apply_metadata_filters(queryset, query.filters)
+    
+    # Perform vector search using mixin
+    if vector is not None:
+        queryset = queryset.search_by_embedding(
+            query_vector=vector,
+            embedder_path=self.embedder_path,
+            top_k=query.similarity_top_k
+        )
+    
+    # Convert to results
+    return [VectorSearchResult(annotation=ann, similarity_score=getattr(ann, 'similarity_score', 1.0)) 
+            for ann in queryset]
 ```
 
-This flexibility enables targeted retrieval of annotations based on specific metadata filters, enhancing the search capabilities of the application.
+Under the hood, this uses pgvector's `CosineDistance` for efficient similarity computation:
 
-## Benefits of Integrating LlamaIndex with Django
+```python
+# From VectorSearchViaEmbeddingMixin.search_by_embedding
+queryset = queryset.annotate(
+    similarity_score=CosineDistance(vector_field, query_vector)
+).order_by('similarity_score')[:top_k]
+```
 
-Integrating LlamaIndex with a Django application using the `DjangoAnnotationVectorStore` offers several benefits:
+### 3. Embedding Management
 
-1. **Structured Annotation Storage**: The Django application's annotation store provides a structured and organized way to store and manage granular annotations extracted from PDF pages. Each annotation is associated with metadata such as page number, bounding box coordinates, and labels, allowing for precise retrieval and visualization.
-2. **Efficient Vector Search**: By leveraging the `pg-vector` extension for PostgreSQL, the `DjangoAnnotationVectorStore` enables efficient vector search operations within the Django application. This allows for fast and accurate retrieval of relevant annotations based on their vector embeddings, improving the overall performance of the application.
-3. **Compatibility with LlamaIndex**: The `DjangoAnnotationVectorStore` is designed to be compatible with LlamaIndex's query engines and retrieval methods. This compatibility allows the Django application to benefit from the powerful natural language processing capabilities provided by LlamaIndex, such as semantic search, question answering, and document summarization.
-4. **Customization and Extensibility**: The `DjangoAnnotationVectorStore` provides a flexible and extensible foundation for building custom vector search functionality within a Django application. It can be easily adapted and extended to meet specific application requirements, such as adding new filtering options or incorporating additional metadata fields.
+The system automatically handles embedding generation and retrieval:
+
+- **Text Queries**: Automatically converted to embeddings using corpus-configured embedders
+- **Embedding Queries**: Used directly for similarity search  
+- **Multi-dimensional Support**: Supports 384, 768, 1536, and 3072 dimensional embeddings
+- **Embedder Detection**: Automatic detection of corpus-specific embedder configurations
+
+## Benefits of the Layered Architecture
+
+### 1. **Framework Flexibility**
+- Support multiple agent frameworks through simple adapters
+- Business logic remains consistent across frameworks
+- Easy migration between frameworks
+
+### 2. **Maintainability**
+- Single source of truth for search logic
+- Framework-specific code is minimal and focused
+- Bug fixes and improvements benefit all frameworks
+
+### 3. **Performance**
+- Direct Django ORM integration
+- Efficient pgvector similarity search
+- Optimized queryset construction with proper filtering
+
+### 4. **Extensibility**
+- Easy to add new metadata filters
+- Simple to support additional frameworks
+- Flexible configuration options
+
+### 5. **Testing**
+- Core logic can be tested independently
+- Framework adapters have minimal, focused tests
+- Clear separation of concerns
+
+## Example: Adding a New Framework Adapter
+
+To add support for a new framework, you would:
+
+1. **Create the adapter class**:
+```python
+class MyFrameworkAnnotationVectorStore(MyFrameworkBaseVectorStore):
+    def __init__(self, **kwargs):
+        self._core_store = CoreAnnotationVectorStore(**kwargs)
+    
+    def search(self, framework_query):
+        # Convert framework query to VectorSearchQuery
+        core_query = self._convert_query(framework_query)
+        
+        # Use core store
+        results = self._core_store.search(core_query)
+        
+        # Convert results back to framework format
+        return self._convert_results(results)
+```
+
+2. **Implement conversion methods** between framework types and core types
+3. **Test the adapter** with your framework's test suite
+
+The core business logic remains unchanged, ensuring consistency across all supported frameworks.
 
 ## Conclusion
 
-By implementing the `DjangoAnnotationVectorStore` and integrating it with LlamaIndex, a Django application can achieve powerful vector search capabilities within its structured annotation store. The custom vector store leverages Django's ORM and the `pg-vector` extension for PostgreSQL to enable efficient retrieval of granular annotations based on vector similarity.
+This layered architecture provides a robust foundation for vector search capabilities within Django applications while maintaining compatibility with multiple agent frameworks. By separating core business logic from framework-specific adapters, we achieve:
 
-This integration opens up new possibilities for building intelligent and interactive applications that can process and analyze large volumes of annotated data. With the combination of Django's robust web framework and LlamaIndex's advanced natural language processing capabilities, developers can create sophisticated applications that deliver enhanced user experiences and insights.
+- **Consistency**: Same search behavior across all frameworks
+- **Maintainability**: Single codebase for core functionality  
+- **Flexibility**: Easy addition of new framework support
+- **Performance**: Direct integration with Django ORM and pgvector
 
-The `DjangoAnnotationVectorStore` serves as a bridge between the Django ecosystem and the powerful tools provided by LlamaIndex, enabling developers to harness the best of both worlds in their applications.
+This design pattern can be applied to other components (agents, tools, etc.) to create a comprehensive, framework-agnostic foundation for AI-powered Django applications.

@@ -18,10 +18,11 @@ from llama_index.core.tools import FunctionTool, QueryEngineTool, ToolMetadata
 from llama_index.llms.openai import OpenAI
 
 from opencontractserver.extracts.models import Datacell
-from opencontractserver.llms.custom_pipeline_embedding import (
+from opencontractserver.llms.embeddings.custom_pipeline_embedding import (
     OpenContractsPipelineEmbedding,
 )
-from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
+from opencontractserver.llms.vector_stores.vector_store_factory import UnifiedVectorStoreFactory
+from opencontractserver.llms.types import AgentFramework
 from opencontractserver.shared.decorators import async_celery_task
 
 logger = logging.getLogger(__name__)
@@ -549,7 +550,7 @@ async def oc_llama_index_doc_query(
 
     from llama_index.llms.openai import OpenAI
 
-    from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
+    from opencontractserver.llms.vector_stores.vector_store_factory import UnifiedVectorStoreFactory
 
     # Retrieve Datacell
     logger.info(f"Starting oc_llama_index_doc_query for cell_id={cell_id}")
@@ -604,9 +605,10 @@ async def oc_llama_index_doc_query(
         # Get user_id with sync_to_async to properly resolve the related field
         user_id = await sync_to_async(lambda: document.creator.id)()
 
-        vector_store = DjangoAnnotationVectorStore.from_params(
+        vector_store = UnifiedVectorStoreFactory.create_vector_store(
+            framework=AgentFramework.LLAMA_INDEX,
+            user_id=document.creator.id,
             document_id=document.id,
-            user_id=user_id,
             must_have_text=await sync_to_async(
                 lambda: datacell.column.must_contain_text
             )(),
@@ -1101,7 +1103,7 @@ Context provided (combined_text):
 @shared_task
 def llama_index_react_agent_query(cell_id):
     """
-    Use our DjangoAnnotationVectorStore + LlamaIndex REACT Agent to retrieve text. This is from our tutorial and does
+    Use our modern vector store factory with LlamaIndex REACT Agent to retrieve text. This is from our tutorial and does
     NOT structure data. It simply returns the response to your query as text.
     """
 
@@ -1141,7 +1143,8 @@ def llama_index_react_agent_query(cell_id):
         )
         Settings.llm = llm
 
-        vector_store = DjangoAnnotationVectorStore.from_params(
+        vector_store = UnifiedVectorStoreFactory.create_vector_store(
+            framework=AgentFramework.LLAMA_INDEX,
             user_id=document.creator.id,
             document_id=document.id,
             must_have_text=datacell.column.must_contain_text,

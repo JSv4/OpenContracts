@@ -9,7 +9,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from llama_index.core.callbacks import CallbackManager
 
-from opencontractserver.llms.custom_pipeline_embedding import (
+from opencontractserver.llms.embeddings.custom_pipeline_embedding import (
     OpenContractsPipelineEmbedding,
 )
 

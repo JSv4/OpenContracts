@@ -21,54 +21,106 @@
        ```python
        instance.add_embeddings("my-embedder", [...multiple_vectors...])
        ```
-   - This is the “write” step—saving the vectors to your database.
+   - This is the "write" step—saving the vectors to your database.
 
-### Searching Embeddings (via Django ORM)
+### Searching Embeddings
 
-1. **`search_by_embedding` Mixin**
-   - All QuerySets that inherit from **`VectorSearchViaEmbeddingMixin`** (e.g., `AnnotationQuerySet`, `DocumentQuerySet`, `NoteQuerySet`) automatically gain the method:
+Our search architecture is designed with two layers: a **core API** that contains our business logic, and **framework adapters** that provide compatibility with different agent frameworks.
+
+#### Core Search API
+
+1. **`CoreAnnotationVectorStore`** - Framework-Agnostic Business Logic
+   - Located in `opencontractserver/llms/core_vector_stores.py`
+   - Contains all the business logic for vector search without dependencies on specific agent frameworks
+   - Key components:
      ```python
-     search_by_embedding(
-         query_vector: list[float],
-         embedder_path: str,
-         top_k: int = 10,
-     ) -> QuerySet
-     ```
-   - Usage example:
-     ```python
-     results = Annotation.objects.search_by_embedding(
-         query_vector=[...],
-         embedder_path="my-embedder",
-         top_k=10,
+     from opencontractserver.llms.core_vector_stores import (
+         CoreAnnotationVectorStore,
+         VectorSearchQuery,
+         VectorSearchResult,
      )
+     
+     # Initialize the core store
+     store = CoreAnnotationVectorStore(
+         corpus_id=my_corpus_id,
+         user_id=my_user_id,
+         embedder_path="my-embedder",
+         embed_dim=384,
+     )
+     
+     # Create a search query
+     query = VectorSearchQuery(
+         query_text="What is the main topic?",
+         similarity_top_k=10,
+         filters={"label": "important"}
+     )
+     
+     # Execute search
+     results = store.search(query)
+     
+     # Access results
+     for result in results:
+         annotation = result.annotation
+         similarity = result.similarity_score
      ```
-   - Under the hood:
-     - It uses `CosineDistance` from **pgvector**
-     - Filters only embeddings with a matching `embedder_path`
-     - Orders the results by ascending cosine distance (i.e. nearest first)
-     - Returns a truncated QuerySet with at most `top_k` results.
 
-### How This Works in the Vector Store
+2. **Framework-Agnostic Data Structures**
+   - `VectorSearchQuery`: Contains query text/embedding, filters, and search parameters
+   - `VectorSearchResult`: Contains the annotation and similarity score
+   - These structures can be easily converted to/from any framework's format
 
-1. **`generate_embeddings_from_text` for Query Vectors**
-   - When you are using the **`DjangoAnnotationVectorStore`**, you have two primary scenarios for searching:
-     **(a) `query.query_embedding`** is provided by the caller.
-     **(b) `query.query_str`** is provided and needs to be turned into an embedding.
+#### Framework Adapters
 
-   - In scenario (b), the store calls `generate_embeddings_from_text(...)` to convert that string into `(embedder_path, vector).`
+Framework adapters are thin wrappers that translate between the core API and specific agent frameworks:
 
-2. **Delegation to `search_by_embedding`**
-   - Once the vector is obtained (either directly or generated), the vector store *delegates* the actual similarity search to:
+1. **LlamaIndex Adapter** - `DjangoAnnotationVectorStore`
+   - Located in `opencontractserver/llms/vector_stores.py`
+   - Implements LlamaIndex's `BasePydanticVectorStore` interface
+   - Converts between LlamaIndex types and our core types:
      ```python
-     Annotation.objects.search_by_embedding(query_vector=vector, embedder_path=embedder_path, top_k=top_k)
+     # LlamaIndex usage
+     from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
+     
+     vector_store = DjangoAnnotationVectorStore(
+         corpus_id=my_corpus_id,
+         user_id=my_user_id,
+     )
+     
+     # Used with LlamaIndex query engines
+     query_engine = index.as_query_engine(vector_store=vector_store)
+     response = query_engine.query("What is the main topic?")
      ```
-   - This ensures dimensional mapping (to `vector_384`, `vector_768`, etc.) is handled entirely by the Mixin, so we do *not* need to manually annotate or worry about which embedding field is used.
 
-3. **Handling Metadata and Extra Filters**
-   - The vector store also allows additional pre-filtering (by `corpus_id`, `document_id`, `user_id`, label text, etc.) before performing the vector search.
-   - That way, only the relevant subset of records is considered for the similarity ordering.
+2. **Future Framework Adapters**
+   - Pydantic AI adapter (planned)
+   - LangChain adapter (if needed)
+   - Custom framework adapters
 
-4. **Returning Results**
-   - The vector store then fetches the top-k results (as Django model instances) and wraps them in a `VectorStoreQueryResult` object. For example, each `Annotation` is turned into a `TextNode` that includes the annotation’s text and selected metadata.
+### How This Works in Practice
 
-By following these steps, you gain a simple, consistent approach to both *create* embeddings (using `.add_embedding(...)` on the model instance after generating the vector) and *search* for them (using the Mixin’s `.search_by_embedding(...)` or the `DjangoAnnotationVectorStore`’s `.query()` method).
+1. **Query Processing**
+   - Framework adapter receives a query in framework-specific format
+   - Adapter converts to `VectorSearchQuery`
+   - Core store processes the query using our business logic
+
+2. **Vector Generation** 
+   - If `query.query_text` is provided, core store calls `generate_embeddings_from_text(...)`
+   - If `query.query_embedding` is provided, uses it directly
+
+3. **Database Search**
+   - Core store builds Django queryset with filters (corpus, document, user, metadata)
+   - Uses `.search_by_embedding(...)` from `VectorSearchViaEmbeddingMixin` for similarity search
+   - Returns `VectorSearchResult` objects with annotations and similarity scores
+
+4. **Result Conversion**
+   - Framework adapter converts `VectorSearchResult` objects to framework-specific format
+   - For LlamaIndex: Creates `TextNode` objects with annotation data and metadata
+
+This architecture provides:
+- **Reusability**: Core logic works with any framework
+- **Maintainability**: Business logic changes in one place
+- **Extensibility**: Easy to add new framework adapters
+- **Type Safety**: Clear interfaces between layers
+- **Testing**: Core functionality can be tested independently
+
+By following this pattern, you can use the same underlying search capabilities across different agent frameworks while maintaining consistency and avoiding code duplication.

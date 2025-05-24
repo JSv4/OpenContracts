@@ -1,8 +1,9 @@
+"""LlamaIndex-specific vector store implementations."""
+
 import logging
 from typing import Any, Optional
 
 from channels.db import database_sync_to_async
-from django.db.models import Q, QuerySet
 from llama_index.core.schema import BaseNode, TextNode
 from llama_index.core.vector_stores.types import (
     BasePydanticVectorStore,
@@ -11,22 +12,15 @@ from llama_index.core.vector_stores.types import (
     VectorStoreQuery,
     VectorStoreQueryResult,
 )
-
-from opencontractserver.annotations.models import Annotation
-from opencontractserver.shared.resolvers import resolve_oc_model_queryset
-from opencontractserver.utils.embeddings import (
-    generate_embeddings_from_text,
-    get_embedder,
-)
-from opencontractserver.llms.core_vector_stores import (
+from opencontractserver.llms.vector_stores.core_vector_stores import (
     CoreAnnotationVectorStore,
     VectorSearchQuery,
 )
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
-class DjangoAnnotationVectorStore(BasePydanticVectorStore):
+class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
     """LlamaIndex adapter for Django Annotation Vector Store.
 
     This is a thin wrapper around CoreAnnotationVectorStore that implements
@@ -59,6 +53,22 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         debug: bool = False,
         use_jsonb: bool = False,
     ):
+        """Initialize the LlamaIndex vector store.
+        
+        Args:
+            user_id: Filter by user ID
+            corpus_id: Filter by corpus ID
+            document_id: Filter by document ID
+            embedder_path: Path to embedder model to use
+            must_have_text: Filter by text content
+            hybrid_search: Enable hybrid search (not implemented)
+            text_search_config: Text search configuration
+            embed_dim: Embedding dimension to use
+            cache_ok: Enable caching (not implemented)
+            perform_setup: Perform setup operations
+            debug: Enable debug mode
+            use_jsonb: Use JSONB for metadata (not implemented)
+        """
         # Initialize the Pydantic model
         super().__init__(
             stores_text=True,
@@ -82,7 +92,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     @classmethod
     def class_name(cls) -> str:
         """Return the class name."""
-        return "DjangoAnnotationVectorStore"
+        return "LlamaIndexAnnotationVectorStore"
 
     @classmethod
     def from_params(
@@ -99,7 +109,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
         debug: bool = False,
         use_jsonb: bool = False,
         embedder_path: str | None = None,
-    ) -> "DjangoAnnotationVectorStore":
+    ) -> "LlamaIndexAnnotationVectorStore":
         """Create instance from parameters."""
         return cls(
             user_id=user_id,
@@ -162,6 +172,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
 
     def add(self, nodes: list[BaseNode], **add_kwargs: Any) -> list[str]:
         """We don't support adding nodes via LlamaIndex."""
+        logger.warning("Adding nodes via LlamaIndex interface is not supported")
         return []
 
     async def async_add(self, nodes: list[BaseNode], **kwargs: Any) -> list[str]:
@@ -170,6 +181,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
 
     def delete(self, doc_id: str, **delete_kwargs: Any) -> None:
         """We don't support deletion via LlamaIndex."""
+        logger.warning("Deleting nodes via LlamaIndex interface is not supported")
         pass
 
     def query(self, query: VectorStoreQuery) -> VectorStoreQueryResult:
@@ -201,3 +213,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     ) -> VectorStoreQueryResult:
         """Asynchronous query wrapper."""
         return await database_sync_to_async(self.query)(query, **kwargs)
+
+
+# Backward compatibility alias
+DjangoAnnotationVectorStore = LlamaIndexAnnotationVectorStore 

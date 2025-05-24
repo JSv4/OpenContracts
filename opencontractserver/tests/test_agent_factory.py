@@ -37,7 +37,7 @@ class TestAgentFactorySetup(TestCase):
         cls.doc1 = Document.objects.create(title="Factory Test Doc 1", corpus=cls.corpus1, creator=cls.user)
 
         def dummy_callable_tool(q: str) -> str: return f"called: {q}"
-        cls.callable_tool = staticmethod(dummy_callable_tool)
+        cls.callable_tool = dummy_callable_tool # Store raw function
         cls.core_tool_instance = CoreTool.from_function(cls.callable_tool, name="dummy_core_from_callable")
 
 
@@ -60,7 +60,14 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
             model_name="test_model"
         )
 
-        mock_get_config.assert_called_once_with(user_id=self.user.id, model_name="test_model")
+        mock_get_config.assert_called_once_with(
+            user_id=self.user.id, 
+            system_prompt=None, 
+            conversation=None, 
+            loaded_messages=None, 
+            embedder_path=None, 
+            model_name="test_model"
+        )
         MockLlamaDocAgent.create.assert_called_once_with(self.doc1, mock_config, []) # Assumes no tools passed
         self.assertIs(agent, mock_agent_instance)
 
@@ -153,23 +160,21 @@ class TestConvertToolsForFramework(TestAgentFactorySetup):
         self.assertEqual(result, final_framework_tools)
 
     @patch(f'{CoreUnifiedToolFactory.__module__}.{CoreUnifiedToolFactory.__name__}.create_tools')
-    @patch('logging.getLogger') # To check logger.warning
-    def test_ignores_invalid_tool_type(self, mock_get_logger: MagicMock, mock_core_create_tools: MagicMock):
-        mock_logger = MagicMock()
-        mock_get_logger.return_value = mock_logger
+    def test_ignores_invalid_tool_type(self, mock_core_create_tools: MagicMock):
         mock_core_create_tools.return_value = []
 
         invalid_tool = 123 # Not a callable or CoreTool
         tools_input = [self.callable_tool, invalid_tool, self.core_tool_instance]
         target_framework = AgentFramework.PYDANTIC_AI
 
-        _convert_tools_for_framework(tools_input, target_framework)
+        logger_name = 'opencontractserver.llms.agents.agent_factory'
+        with self.assertLogs(logger_name, level='WARNING') as cm:
+            _convert_tools_for_framework(tools_input, target_framework)
         
-        mock_logger.warning.assert_called_once_with(f"Ignoring invalid tool: {invalid_tool}")
+        self.assertIn(f"WARNING:{logger_name}:Ignoring invalid tool: {invalid_tool}", cm.output)
+        
         # Ensure that create_tools was called only with the valid CoreTool instances
         # (after callable is converted)
-        # This requires CoreTool.from_function to be unmocked or properly mocked for this specific call.
-        # For simplicity, we check that it's called, and the number of valid tools.
         self.assertTrue(mock_core_create_tools.called)
         args, _ = mock_core_create_tools.call_args
         passed_core_tools_list = args[0]

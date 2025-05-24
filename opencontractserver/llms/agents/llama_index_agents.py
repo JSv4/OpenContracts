@@ -26,7 +26,7 @@ from opencontractserver.llms.agents.core_agents import (
     DocumentAgentContext,
     CorpusAgentContext,
 )
-from opencontractserver.llms.embeddings.custom_pipeline_embedding import OpenContractsPipelineEmbedding
+from opencontractserver.llms.embedders.custom_pipeline_embedding import OpenContractsPipelineEmbedding
 from opencontractserver.llms.tools.core_tools import (
     get_md_summary_token_length,
     get_note_content_token_length_tool,

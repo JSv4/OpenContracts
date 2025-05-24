@@ -18,7 +18,7 @@ from llama_index.core.tools import FunctionTool, QueryEngineTool, ToolMetadata
 from llama_index.llms.openai import OpenAI
 
 from opencontractserver.extracts.models import Datacell
-from opencontractserver.llms.embeddings.custom_pipeline_embedding import (
+from opencontractserver.llms.embedders.custom_pipeline_embedding import (
     OpenContractsPipelineEmbedding,
 )
 from opencontractserver.llms.vector_stores.vector_store_factory import UnifiedVectorStoreFactory

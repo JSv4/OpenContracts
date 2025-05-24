@@ -5,11 +5,6 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.test import TestCase, override_settings
-from llama_index.core.vector_stores import (
-    MetadataFilter,
-    MetadataFilters,
-    VectorStoreQuery,
-)
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus

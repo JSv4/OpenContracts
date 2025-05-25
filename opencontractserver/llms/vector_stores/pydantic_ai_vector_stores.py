@@ -2,6 +2,8 @@
 
 import logging
 from typing import List, Optional, Union, Any, Dict
+import asyncio
+from channels.db import database_sync_to_async
 
 from pydantic import BaseModel
 from pydantic_ai import RunContext
@@ -45,20 +47,47 @@ class PydanticAIVectorSearchResponse(BaseModel):
         for result in results:
             formatted_result = {
                 "annotation_id": result.annotation.id,
-                "content": result.annotation.content,
+                "content": result.annotation.raw_text,
                 "document_id": result.annotation.document_id,
                 "corpus_id": result.annotation.corpus_id,
                 "similarity_score": result.similarity_score,
                 "annotation_label": result.annotation.annotation_label.text if result.annotation.annotation_label else None,
                 "page": result.annotation.page,
-                "bounds": {
-                    "top": result.annotation.bounding_box.top if result.annotation.bounding_box else None,
-                    "bottom": result.annotation.bounding_box.bottom if result.annotation.bounding_box else None,
-                    "left": result.annotation.bounding_box.left if result.annotation.bounding_box else None,
-                    "right": result.annotation.bounding_box.right if result.annotation.bounding_box else None,
-                } if result.annotation.bounding_box else None,
             }
             formatted_results.append(formatted_result)
+        
+        return cls(
+            results=formatted_results,
+            total_results=len(formatted_results)
+        )
+
+    @classmethod
+    async def async_from_core_results(cls, results: List[VectorSearchResult]) -> "PydanticAIVectorSearchResponse":
+        """Async version that safely accesses Django model attributes.
+        
+        Args:
+            results: List of VectorSearchResult instances
+            
+        Returns:
+            PydanticAIVectorSearchResponse instance
+        """
+        @database_sync_to_async
+        def extract_annotation_data(annotation) -> Dict[str, Any]:
+            """Extract annotation data safely in async context."""
+            return {
+                "annotation_id": annotation.id,
+                "content": annotation.raw_text,
+                "document_id": annotation.document_id,
+                "corpus_id": annotation.corpus_id,
+                "page": annotation.page,
+                "annotation_label": annotation.annotation_label.text if annotation.annotation_label else None,
+            }
+        
+        formatted_results = []
+        for result in results:
+            annotation_data = await extract_annotation_data(result.annotation)
+            annotation_data["similarity_score"] = result.similarity_score
+            formatted_results.append(annotation_data)
         
         return cls(
             results=formatted_results,
@@ -116,7 +145,7 @@ class PydanticAIAnnotationVectorStore:
         similarity_top_k: int = 10,
         filters: Optional[Dict[str, Any]] = None
     ) -> PydanticAIVectorSearchResponse:
-        """Async search method for PydanticAI compatibility.
+        """Search annotations using vector similarity.
         
         Args:
             query_text: Text query for semantic search
@@ -137,13 +166,13 @@ class PydanticAIAnnotationVectorStore:
             filters=filters
         )
         
-        # Execute search using core store
-        results = self.core_store.search(search_query)
+        # Execute search using core store's async method
+        results = await self.core_store.async_search(search_query)
         
         logger.info(f"Found {len(results)} annotations")
         
-        # Convert to PydanticAI response format
-        return PydanticAIVectorSearchResponse.from_core_results(results)
+        # Convert to PydanticAI response format using async method
+        return await PydanticAIVectorSearchResponse.async_from_core_results(results)
 
     def search_sync(
         self,

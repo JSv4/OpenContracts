@@ -5,6 +5,7 @@ from typing import Any, Optional, Union, List, AsyncGenerator
 from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
+from pydantic_ai import Agent
 
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.agents.core_agents import (

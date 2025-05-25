@@ -47,6 +47,16 @@ class PydanticAIToolWrapper:
         # Create a properly typed wrapper function for PydanticAI
         self._wrapped_function = self._create_pydantic_ai_compatible_function()
 
+    def to_dict(self) -> dict:
+       return {
+           "function": {
+               "name": self.name,
+               "description": self.description,
+           },
+           "name": self.name,
+           "description": self.description
+       }
+
     def _create_pydantic_ai_compatible_function(self) -> Callable:
         """Create a PydanticAI-compatible async function with RunContext as first parameter."""
         original_func = self.core_tool.function

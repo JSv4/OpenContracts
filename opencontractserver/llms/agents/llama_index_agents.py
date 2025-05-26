@@ -368,6 +368,7 @@ class LlamaIndexCorpusAgent(CoreAgent):
         cls,
         corpus_id: Union[str, int],
         config: AgentConfig,
+        tools: Optional[List[FunctionTool]] = None,
     ) -> "LlamaIndexCorpusAgent":
         """Create a LlamaIndex corpus agent using core functionality."""
         # Create context using core factory
@@ -426,14 +427,17 @@ class LlamaIndexCorpusAgent(CoreAgent):
             )
             query_engine_tools.append(doc_tool)
 
-        # Add additional tools
-        query_engine_tools.extend([
-            load_document_md_summary_tool,
-            get_md_summary_token_length_tool,
-            get_notes_for_document_corpus_tool,
-            get_note_content_token_length_tool,
-            get_partial_note_content_tool,
-        ])
+        # Add tools passed from the factory, if any
+        if tools:
+            query_engine_tools.extend(tools)
+        elif not query_engine_tools: # If no doc-specific tools and no factory tools, add defaults
+            query_engine_tools.extend([
+                load_document_md_summary_tool,
+                get_md_summary_token_length_tool,
+                get_notes_for_document_corpus_tool,
+                get_note_content_token_length_tool,
+                get_partial_note_content_tool,
+            ])
 
         # Create object index
         obj_index = ObjectIndex.from_objects(query_engine_tools, index_cls=VectorStoreIndex)

@@ -1,21 +1,21 @@
 """Tests for LlamaIndex agent implementations following modern patterns."""
 
 import random
-from typing import Optional, List, AsyncGenerator
+from typing import Optional, List
 from unittest.mock import patch, MagicMock, AsyncMock
-from dataclasses import dataclass
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.test import TestCase, override_settings
+from asgiref.sync import sync_to_async
 
 from llama_index.core.tools.function_tool import FunctionTool
-from llama_index.core.chat_engine.types import AgentChatResponse, StreamingAgentChatResponse
+from llama_index.core.chat_engine.types import StreamingAgentChatResponse
 from llama_index.core.base.llms.types import ChatMessage as LlamaChatMessage
 from llama_index.core.schema import NodeWithScore, TextNode
-from llama_index.agent.openai import OpenAIAgent
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
+from opencontractserver.conversations.models import Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.types import AgentFramework
@@ -310,20 +310,29 @@ class TestLlamaIndexAgents(TestCase):
         mock_index_instance.as_query_engine.return_value = MagicMock()
         
         # Mock streaming response
-        mock_streaming_response = MockStreamingResponse(
-            "This is a streaming response test",
-            source_nodes=[
-                NodeWithScore(
-                    node=TextNode(
-                        text="Streaming source",
-                        metadata={"annotation_id": self.anno2.id}
-                    ),
-                    score=0.8
-                )
-            ]
-        )
+        mock_content = "This is a streaming response test"
+        mock_source_nodes = [
+            NodeWithScore(
+                node=TextNode(
+                    text="Streaming source",
+                    metadata={"annotation_id": self.anno2.id}
+                ),
+                score=0.8
+            )
+        ]
+
+        async def mock_async_gen():
+            for word in mock_content.split():
+                yield word + " "
+
+        # Create a proper mock for StreamingAgentChatResponse
+        mock_streaming_chat_response = MagicMock(spec=StreamingAgentChatResponse)
+        mock_streaming_chat_response.async_response_gen = mock_async_gen
+        mock_streaming_chat_response.source_nodes = mock_source_nodes
+        mock_streaming_chat_response.response = mock_content
+
         mock_agent_instance = MagicMock()
-        mock_agent_instance.astream_chat = AsyncMock(return_value=mock_streaming_response)
+        mock_agent_instance.astream_chat = AsyncMock(return_value=mock_streaming_chat_response)
         mock_openai_agent.from_tools.return_value = mock_agent_instance
         
         # Create and test agent
@@ -392,7 +401,12 @@ class TestLlamaIndexAgents(TestCase):
         
         # Verify corpus-specific setup
         mock_object_index.from_objects.assert_called_once()
-        mock_openai_agent.from_tools.assert_called_once()
+        # mock_openai_agent.from_tools.assert_called_once() # Original failing line
+        # Expect 1 call for each document + 1 for the aggregator agent
+        # Use sync_to_async to safely access the ManyToMany relationship
+        corpus_documents = await sync_to_async(list)(self.corpus.documents.all())
+        expected_call_count = len(corpus_documents) + 1 
+        self.assertEqual(mock_openai_agent.from_tools.call_count, expected_call_count)
 
     def test_llama_index_vector_store_creation(self) -> None:
         """Test creating LlamaIndex vector store through factory."""
@@ -573,21 +587,21 @@ class TestLlamaIndexAgents(TestCase):
         # Create a conversation with existing messages
         conversation = await Conversation.objects.acreate(
             title="Test Conversation",
-            user=self.user
+            creator=self.user
         )
         
         user_msg = await ChatMessage.objects.acreate(
             conversation=conversation,
             content="Previous user message",
             msg_type="USER",
-            user=self.user
+            creator=self.user
         )
         
         llm_msg = await ChatMessage.objects.acreate(
             conversation=conversation,
             content="Previous LLM response",
             msg_type="LLM",
-            user=self.user
+            creator=self.user
         )
         
         # Create agent with existing conversation
@@ -614,11 +628,14 @@ class TestLlamaIndexAgents(TestCase):
     def test_legacy_compatibility_interface(self) -> None:
         """Test backward compatibility with legacy OpenContractDbAgent interface."""
         from opencontractserver.llms.agents.llama_index_agents import OpenContractDbAgent
-        from opencontractserver.llms.agents.core_agents import CoreAgent
+        from opencontractserver.llms.agents.core_agents import CoreAgent, CoreConversationManager
         
         # Create a mock CoreAgent
         mock_core_agent = MagicMock(spec=CoreAgent)
-        mock_core_agent.conversation_manager.conversation = MagicMock()
+        
+        # Setup the conversation_manager attribute on the mock_core_agent
+        mock_core_agent.conversation_manager = MagicMock(spec=CoreConversationManager)
+        mock_core_agent.conversation_manager.conversation = MagicMock(spec=Conversation) # If Conversation is a Django model
         mock_core_agent.conversation_manager.user_id = self.user.id
         
         # Create legacy wrapper

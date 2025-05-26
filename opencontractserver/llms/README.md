@@ -20,6 +20,8 @@ from opencontractserver.llms import agents
 # Create a document agent with one line
 agent = await agents.for_document(123)
 response = await agent.chat("What is this document about?")
+print(response.content)  # Access the response content
+print(response.sources)  # View sources used for the response
 ```
 
 That's it. No boilerplate, no configuration hell, no framework lock-in.
@@ -43,7 +45,7 @@ The framework automatically applies `nest_asyncio.apply()` for compatibility.
 agent = await agents.for_document(123)
 response = await agent.chat("Summarize this document")
 
-# Advanced configuration
+# Advanced configuration with conversation management
 agent = await agents.for_document(
     document=my_doc,  # Can be an ID, path, or Document object
     framework="pydantic_ai",  # Or "llama_index", or AgentFramework enum
@@ -51,12 +53,131 @@ agent = await agents.for_document(
     system_prompt="You are a legal expert specializing in contract review.",
     tools=["load_md_summary", "get_notes"], # Built-in or custom tools
     user_id=456, # Optional user ID for conversation tracking
+    conversation_id=789,  # Continue existing conversation
     streaming=True # Enable streaming responses
 )
 
 # Framework specification - these are equivalent
 agent = await agents.for_document(123, framework="llama_index")
 agent = await agents.for_document(123, framework=AgentFramework.LLAMA_INDEX)
+```
+
+### Response Types
+
+The framework now returns structured response objects with rich metadata:
+
+```python
+# Chat responses include content, sources, and message tracking
+response = await agent.chat("What is this about?")
+print(response.content)           # The LLM's response text
+print(response.sources)           # List of SourceNode objects with annotations
+print(response.user_message_id)   # ID of stored user message
+print(response.llm_message_id)    # ID of stored LLM response
+print(response.metadata)          # Additional metadata (framework info, etc.)
+
+# Streaming responses provide real-time updates
+async for chunk in agent.stream("Analyze this document"):
+    print(chunk.content, end="")           # Current chunk
+    print(f"Total: {chunk.accumulated_content}")  # Full response so far
+    if chunk.is_complete:
+        print(f"Sources: {chunk.sources}")  # Final sources when complete
+```
+
+### Enhanced Conversation Management
+
+The framework provides sophisticated conversation continuity and message management:
+
+```python
+# Anonymous conversations (ephemeral, not stored in database)
+agent = await agents.for_document(123)  # No user_id = anonymous
+response1 = await agent.chat("What is this document about?")
+response2 = await agent.chat("Can you elaborate on section 2?")  # Context maintained in memory
+
+# Anonymous conversations are session-only and not persisted
+conversation_id = agent.get_conversation_id()  # Returns None for anonymous
+conversation_info = agent.get_conversation_info()  # Returns basic info with no persistence
+
+# Important: Anonymous conversations cannot be restored later
+# new_agent = await agents.for_document(123, conversation_id=None)  # Will start fresh
+
+# User-tracked conversations (recommended for production - fully persistent)
+agent = await agents.for_document(
+    document=555,
+    user_id=123,  # Required for persistence
+    conversation_id=456  # Continue from specific conversation
+)
+
+# Continue the same conversation later (only works with user_id)
+new_agent = await agents.for_document(555, user_id=123, conversation_id=456)
+response3 = await new_agent.chat("What about section 3?")  # Continues from database
+
+# Load existing messages for context (only for authenticated users)
+existing_messages = await ChatMessage.objects.filter(conversation_id=456).all()
+agent = await agents.for_document(
+    document=555,
+    user_id=123,
+    messages=existing_messages  # Pre-load conversation history
+)
+
+# Access conversation history programmatically (only for persistent conversations)
+messages = await agent.get_conversation_messages()  # Empty list for anonymous
+for msg in messages:
+    print(f"{msg.msg_type}: {msg.content}")
+```
+
+### Conversation Persistence Models
+
+The framework supports two distinct conversation models:
+
+```python
+# 1. Anonymous/Ephemeral Conversations (Session-only)
+# - No database storage
+# - No conversation continuity across sessions  
+# - Perfect for testing, demos, or privacy-sensitive scenarios
+agent = await agents.for_document(123)  # user_id=None
+response = await agent.chat("Quick question")
+# conversation_id will be None - nothing stored
+
+# 2. Persistent Conversations (Database-stored)
+# - Full conversation history stored
+# - Can be continued across sessions
+# - Message tracking and state management
+# - Requires user authentication
+agent = await agents.for_document(123, user_id=456)
+response = await agent.chat("Important discussion")
+conversation_id = agent.get_conversation_id()  # Real ID for restoration
+
+# Later session - restore conversation
+agent = await agents.for_document(123, user_id=456, conversation_id=conversation_id)
+response = await agent.chat("Continue where we left off")
+```
+
+### Long Conversation Sessions
+
+The API handles long conversations differently based on persistence model:
+
+```python
+# Anonymous sessions - context maintained in memory only
+agent = await agents.for_document(123)  # No storage
+response1 = await agent.chat("What is this document about?")
+response2 = await agent.chat("What are the key risks mentioned?")
+response3 = await agent.chat("How do these risks compare?")
+# Context flows between messages within the same session but is lost when session ends
+
+# Persistent sessions - full database storage
+agent = await agents.for_document(123, user_id=456)  # With storage
+response1 = await agent.chat("What is this document about?")
+response2 = await agent.chat("What are the key risks mentioned?")
+response3 = await agent.chat("How do these risks compare?")
+
+# All messages are stored and can be retrieved
+conversation_id = agent.get_conversation_id()
+print(f"Conversation {conversation_id} has {len(await agent.get_conversation_messages())} messages")
+
+# Continue later in a new session
+later_agent = await agents.for_document(123, user_id=456, conversation_id=conversation_id)
+response4 = await later_agent.chat("Can you summarize our entire discussion?")
+# Full context from database
 ```
 
 ### Corpus Agents
@@ -71,10 +192,11 @@ agent = await agents.for_corpus(
     corpus_id=456, 
     framework="pydantic_ai",
     model="claude-3-sonnet",
-    streaming=True
+    streaming=True,
+    conversation_id=123  # Continue existing conversation
 )
 async for chunk in agent.stream("Summarize findings from all documents"):
-    print(chunk, end="")
+    print(chunk.content, end="")
 ```
 
 ### Embeddings
@@ -163,10 +285,10 @@ The same API works seamlessly across multiple frameworks:
 | Framework | Status | Notes |
 |-----------|--------|-------|
 | LlamaIndex | ✅ Full Support | Default framework |
-| Pydantic AI | 🚧 Experimental | Under active development |
+| Pydantic AI | ✅ Production Ready | Full conversation management, streaming, sources |
 | LangChain | 🚧 Planned | Coming soon |
 
-> **Note**: PydanticAI support is currently experimental and under active development. Some features may not be fully implemented yet.
+> **Note**: PydanticAI support is now production ready with full conversation management, streaming responses, and source tracking.
 
 Switch frameworks with a single parameter:
 
@@ -212,6 +334,7 @@ This framework uses a layered architecture that separates concerns:
 - **Tool System**: A unified way to define (`CoreTool`) and adapt (`UnifiedToolFactory`) tools for use across different LLM frameworks.
 - **Vector Stores**: Support for various vector stores, integrated with Django models.
 - **Unified Agent Factory**: (`agents/agent_factory.py`) A central factory that instantiates the correct framework adapter based on user input.
+- **Message Management**: Sophisticated conversation and message lifecycle management with state tracking.
 
 ## How It Works: Behind the Scenes
 
@@ -223,7 +346,7 @@ Understanding the flow from an API call to an LLM interaction can be helpful:
 
 2.  **Unified Agent Factory (`agents/agent_factory.py`)**:
     *   Receives the request (e.g., document ID, desired `framework`, model name, tools).
-    *   Constructs a standardized `AgentConfig` object using `get_default_config()` from `core_agents.py`, populating it with user overrides and sensible defaults. This config includes things like `user_id`, `system_prompt`, `model_name`, `streaming` flags, etc.
+    *   Constructs a standardized `AgentConfig` object using `get_default_config()` from `core_agents.py`, populating it with user overrides and sensible defaults. This config includes things like `user_id`, `system_prompt`, `model_name`, `streaming` flags, conversation management, etc.
     *   **Tool Processing**: If tools are provided (as strings, functions, or `CoreTool` objects):
         *   Functions are first converted to `CoreTool` instances.
         *   `UnifiedToolFactory.create_tools()` (from `tools/tool_factory.py`) is called. This factory is responsible for converting the list of `CoreTool` objects into the specific format expected by the target LLM framework (e.g., LlamaIndex `ToolMetadata` objects, Pydantic AI compatible functions).
@@ -238,28 +361,146 @@ Understanding the flow from an API call to an LLM interaction can be helpful:
 4.  **CoreAgent Protocol (`agents/core_agents.py`)**:
     *   The returned agent object (e.g., an instance of `LlamaIndexDocumentAgent`) implements methods like `async def chat(self, message: str)` and `async def stream(self, message: str)`.
     *   When you call `await agent.chat("Your query")`, you're calling the adapter's implementation, which in turn interacts with the underlying LLM SDK (e.g., makes a query to a LlamaIndex engine).
+    *   The framework now returns rich `UnifiedChatResponse` and `UnifiedStreamResponse` objects with sources, metadata, and message tracking.
 
-5.  **Interaction & Response**:
-    *   The framework adapter handles the interaction with the LLM, including managing conversation history (often by passing messages from the `Conversation` object in the `AgentConfig`).
-    *   It returns the response (string or async stream) as defined by the `CoreAgent` protocol.
+5.  **Conversation Management**:
+    *   The `CoreConversationManager` handles sophisticated message lifecycle management.
+    *   Messages are stored with state tracking (`IN_PROGRESS`, `COMPLETED`, `CANCELLED`, `ERROR`).
+    *   Source annotations are properly tracked and stored with responses.
+    *   Conversation continuity is maintained across interactions.
 
-This layered approach ensures that the top-level API remains simple and consistent, while allowing for different LLM technologies to be plugged in underneath.
+6.  **Interaction & Response**:
+    *   The framework adapter handles the interaction with the LLM, including managing conversation history from the `Conversation` object in the `AgentConfig`.
+    *   It returns structured response objects with content, sources, and metadata as defined by the enhanced `CoreAgent` protocol.
+
+This layered approach ensures that the top-level API remains simple and consistent, while providing rich functionality and allowing for different LLM technologies to be plugged in underneath.
 
 ## Advanced Features
 
-### Conversation Continuity
+### Enhanced Conversation Management
 
-Conversations are automatically managed when `user_id` is provided:
+The framework provides sophisticated conversation continuity and message management:
 
 ```python
-agent = await agents.for_document(555, user_id=123)
+# Anonymous conversations (ephemeral, not stored in database)
+agent = await agents.for_document(123)  # No user_id = anonymous
+response1 = await agent.chat("What is this document about?")
+response2 = await agent.chat("Can you elaborate on section 2?")  # Context maintained in memory
 
-# First interaction
-response1 = await agent.chat("What is the main topic of this contract?")
+# Anonymous conversations are session-only and not persisted
+conversation_id = agent.get_conversation_id()  # Returns None for anonymous
+conversation_info = agent.get_conversation_info()  # Returns basic info with no persistence
 
-# Follow-up, context is automatically maintained for this user and document
-response2 = await agent.chat("Can you elaborate on section 2.1?")
-# Agent remembers the previous conversation associated with user_id and document context
+# Important: Anonymous conversations cannot be restored later
+# new_agent = await agents.for_document(123, conversation_id=None)  # Will start fresh
+
+# User-tracked conversations (recommended for production - fully persistent)
+agent = await agents.for_document(
+    document=555,
+    user_id=123,  # Required for persistence
+    conversation_id=456  # Continue from specific conversation
+)
+
+# Continue the same conversation later (only works with user_id)
+new_agent = await agents.for_document(555, user_id=123, conversation_id=456)
+response3 = await new_agent.chat("What about section 3?")  # Continues from database
+
+# Load existing messages for context (only for authenticated users)
+existing_messages = await ChatMessage.objects.filter(conversation_id=456).all()
+agent = await agents.for_document(
+    document=555,
+    user_id=123,
+    messages=existing_messages  # Pre-load conversation history
+)
+
+# Access conversation history programmatically (only for persistent conversations)
+messages = await agent.get_conversation_messages()  # Empty list for anonymous
+for msg in messages:
+    print(f"{msg.msg_type}: {msg.content}")
+```
+
+### Conversation Persistence Models
+
+The framework supports two distinct conversation models:
+
+```python
+# 1. Anonymous/Ephemeral Conversations (Session-only)
+# - No database storage
+# - No conversation continuity across sessions  
+# - Perfect for testing, demos, or privacy-sensitive scenarios
+agent = await agents.for_document(123)  # user_id=None
+response = await agent.chat("Quick question")
+# conversation_id will be None - nothing stored
+
+# 2. Persistent Conversations (Database-stored)
+# - Full conversation history stored
+# - Can be continued across sessions
+# - Message tracking and state management
+# - Requires user authentication
+agent = await agents.for_document(123, user_id=456)
+response = await agent.chat("Important discussion")
+conversation_id = agent.get_conversation_id()  # Real ID for restoration
+
+# Later session - restore conversation
+agent = await agents.for_document(123, user_id=456, conversation_id=conversation_id)
+response = await agent.chat("Continue where we left off")
+```
+
+### Long Conversation Sessions
+
+The API handles long conversations differently based on persistence model:
+
+```python
+# Anonymous sessions - context maintained in memory only
+agent = await agents.for_document(123)  # No storage
+response1 = await agent.chat("What is this document about?")
+response2 = await agent.chat("What are the key risks mentioned?")
+response3 = await agent.chat("How do these risks compare?")
+# Context flows between messages within the same session but is lost when session ends
+
+# Persistent sessions - full database storage
+agent = await agents.for_document(123, user_id=456)  # With storage
+response1 = await agent.chat("What is this document about?")
+response2 = await agent.chat("What are the key risks mentioned?")
+response3 = await agent.chat("How do these risks compare?")
+
+# All messages are stored and can be retrieved
+conversation_id = agent.get_conversation_id()
+print(f"Conversation {conversation_id} has {len(await agent.get_conversation_messages())} messages")
+
+# Continue later in a new session
+later_agent = await agents.for_document(123, user_id=456, conversation_id=conversation_id)
+response4 = await later_agent.chat("Can you summarize our entire discussion?")
+# Full context from database
+```
+
+### Message State Tracking
+
+All messages are tracked with detailed state information:
+
+```python
+response = await agent.chat("Analyze this document")
+
+# Access message metadata
+print(f"User message ID: {response.user_message_id}")
+print(f"LLM message ID: {response.llm_message_id}")
+
+# Messages have states: IN_PROGRESS, COMPLETED, CANCELLED, ERROR
+# Automatically managed during the conversation lifecycle
+```
+
+### Source Tracking and Citations
+
+Responses include detailed source information:
+
+```python
+response = await agent.chat("What are the key points in this document?")
+
+for source in response.sources:
+    print(f"Annotation ID: {source.annotation_id}")
+    print(f"Content: {source.content}")
+    print(f"Similarity Score: {source.similarity_score}")
+    print(f"Metadata: {source.metadata}")
 ```
 
 ### Built-in Tools
@@ -301,17 +542,21 @@ Most core tools have async equivalents with an `a` prefix:
 Full configuration using `AgentConfig`:
 
 ```python
-from opencontractserver.llms.agents import AgentConfig
+from opencontractserver.llms.agents.core_agents import AgentConfig
 
 config = AgentConfig(
-    model="gpt-4o-mini",
+    model_name="gpt-4o-mini",
     temperature=0.7,
     max_tokens=4000,
     system_prompt="Custom prompt",
     conversation=existing_conversation,  # Continue existing conversation
+    conversation_id=456,                 # Or specify by ID
+    loaded_messages=existing_messages,   # Pre-load message history
     embedder_path="custom/embedder",     # Custom embedding model
     tools=[custom_tool],
-    streaming=True
+    streaming=True,
+    store_user_messages=True,            # Control message storage
+    store_llm_messages=True,
 )
 
 agent = await agents.for_document(123, config=config)
@@ -331,8 +576,6 @@ except ValueError as e:
 
 try:
     response = await agent.chat("Hello")
-except NotImplementedError as e:
-    print(f"Feature not implemented: {e}")
 except FileNotFoundError as e:
     print(f"Missing document file or summary: {e}")
 except Exception as e:
@@ -341,8 +584,25 @@ except Exception as e:
 
 Common exceptions:
 - `ValueError`: Invalid document/corpus IDs, configuration errors
-- `NotImplementedError`: Unsupported framework features
 - `FileNotFoundError`: Missing document files or summaries
+- Database connection errors are handled gracefully with proper async ORM usage
+
+## Testing
+
+```python
+import pytest
+from opencontractserver.llms import agents
+from opencontractserver.llms.agents.core_agents import UnifiedChatResponse
+
+@pytest.mark.asyncio
+async def test_document_agent():
+    agent = await agents.for_document(test_document_id)
+    response = await agent.chat("Test query")
+    assert isinstance(response, UnifiedChatResponse)
+    assert len(response.content) > 0
+    assert response.user_message_id is not None
+    assert response.llm_message_id is not None
+```
 
 ## Examples
 
@@ -350,10 +610,11 @@ See `examples.py` for comprehensive usage examples:
 
 - Simple document chat
 - Advanced configuration
-- Streaming responses
+- Streaming responses with source tracking
 - Custom tools
 - Framework comparison
 - Multi-document analysis
+- Conversation management
 - Error handling
 
 ## Migration from Legacy API
@@ -370,6 +631,20 @@ corpus_agent = await create_corpus_agent(corpus_id)
 from opencontractserver.llms import agents
 agent = await agents.for_document(doc_id)
 corpus_agent = await agents.for_corpus(corpus_id)
+```
+
+### Response Type Changes
+
+```python
+# Old way - simple string responses
+response = await agent.chat("Hello")  # Returns str
+print(response)
+
+# New way - structured response objects
+response = await agent.chat("Hello")  # Returns UnifiedChatResponse
+print(response.content)  # Access content
+print(response.sources)  # Access sources
+print(response.metadata)  # Access metadata
 ```
 
 ### Legacy Vector Stores
@@ -404,27 +679,17 @@ agent = await agents.for_document(
 
 The previous `create_document_agent` and `create_corpus_agent` functions are still available for backward compatibility. They have been refactored to use the new `UnifiedAgentFactory` internally, defaulting to LlamaIndex.
 
+Legacy `.stream_chat()` methods are still available but return the new structured response objects.
+
 ## Performance
 
 - **Lazy Loading**: Components loaded only when needed
 - **Connection Pooling**: Efficient database connections
 - **Vector Optimization**: pgvector for fast similarity search
-- **Streaming**: Real-time response streaming
+- **Streaming**: Real-time response streaming with proper async handling
 - **Caching**: Intelligent caching of embeddings and responses
-
-## Testing
-
-```python
-import pytest
-from opencontractserver.llms import agents
-
-@pytest.mark.asyncio
-async def test_document_agent():
-    agent = await agents.for_document(test_document_id)
-    response = await agent.chat("Test query")
-    assert isinstance(response, str)
-    assert len(response) > 0
-```
+- **Message Lifecycle**: Optimized message storage with atomic operations
+- **Async ORM**: Proper async database operations throughout
 
 ## Contributing
 
@@ -451,98 +716,81 @@ Here's a step-by-step guide to integrate a new LLM framework into OpenContracts:
     *   Create a new Python file in the `opencontractserver/llms/agents/` directory. Name it descriptively, e.g., `my_new_framework_agents.py`.
     *   Inside this file, define classes for your document and/or corpus agents. These classes **must** inherit from `CoreAgent` (from `opencontractserver.llms.agents.core_agents.py`).
         ```python
-        from opencontractserver.llms.agents.core_agents import CoreAgent, AgentConfig
-        from opencontractserver.documents.models import Document # If creating document agent
-        # Import any types your new framework needs
+        from opencontractserver.llms.agents.core_agents import (
+            CoreAgent, AgentConfig, UnifiedChatResponse, UnifiedStreamResponse,
+            CoreConversationManager, DocumentAgentContext
+        )
+        from opencontractserver.documents.models import Document
 
         class MyNewFrameworkDocumentAgent(CoreAgent):
-            def __init__(self, framework_specific_engine, config: AgentConfig, tools: list):
-                super().__init__(config=config)
-                self.engine = framework_specific_engine 
-                self.framework_tools = tools
-                # ... other initializations ...
+            def __init__(self, context: DocumentAgentContext, conversation_manager: CoreConversationManager, config: AgentConfig):
+                self.context = context
+                self.conversation_manager = conversation_manager 
+                self.config = config
+                # Initialize your framework components
 
             @classmethod
             async def create(cls, document: Document, config: AgentConfig, tools: list) -> "MyNewFrameworkDocumentAgent":
-                # Initialize your framework's engine/client here
-                # Use document, config (config.model_name, config.system_prompt, etc.), and tools
-                # Example:
-                # framework_engine = await setup_my_new_framework_engine(
-                #     document_content=document.text_content,
-                #     model=config.model_name,
-                #     system_prompt=config.system_prompt,
-                #     framework_specific_tools=tools 
-                # )
-                # return cls(framework_engine, config, tools)
-                pass # Replace with actual implementation
+                # Create context and conversation manager
+                context = await CoreDocumentAgentFactory.create_context(document, config)
+                conversation_manager = await CoreConversationManager.create_for_document(
+                    context.document, config.user_id, config
+                )
+                return cls(context, conversation_manager, config)
 
-            async def chat(self, message: str, **kwargs) -> str:
-                # Implement chat logic using self.engine and self.framework_tools
-                # Manage conversation history using self.config.conversation
-                # Return the string response
-                pass # Replace with actual implementation
+            async def chat(self, message: str, store_messages: bool = True) -> UnifiedChatResponse:
+                # Implement using the enhanced conversation management pattern
+                user_msg_id = None
+                llm_msg_id = None
+                
+                try:
+                    if store_messages and self.conversation_manager.config.store_user_messages:
+                        user_msg_id = await self.conversation_manager.store_user_message(message)
 
-            async def stream(self, message: str, **kwargs):
-                # Implement streaming logic
-                # Yield chunks of the response
-                pass # Replace with actual implementation
-            
-            # ... implement other required CoreAgent methods ...
-            # (e.g., get_conversation_messages, add_user_message, add_assistant_message)
+                    if store_messages and self.conversation_manager.config.store_llm_messages:
+                        llm_msg_id = await self.conversation_manager.create_placeholder_message("LLM")
 
-        # Optionally, create a MyNewFrameworkCorpusAgent similarly
+                    # Your framework logic here
+                    content = "Your response"
+                    sources = []  # List of SourceNode objects
+
+                    if llm_msg_id:
+                        await self.conversation_manager.complete_message(
+                            llm_msg_id, content, sources, {"framework": "my_framework"}
+                        )
+
+                    return UnifiedChatResponse(
+                        content=content,
+                        sources=sources,
+                        user_message_id=user_msg_id,
+                        llm_message_id=llm_msg_id,
+                        metadata={"framework": "my_framework"}
+                    )
+                except Exception as e:
+                    if llm_msg_id:
+                        await self.conversation_manager.cancel_message(llm_msg_id, f"Error: {str(e)}")
+                    raise
+
+            async def stream(self, message: str, store_messages: bool = True) -> AsyncGenerator[UnifiedStreamResponse, None]:
+                # Implement streaming with the same pattern
+                # Return UnifiedStreamResponse objects
+                pass
+
+            # Implement other required CoreAgent methods...
         ```
-    *   Ensure your `create` method handles all necessary setup for your framework and returns an instance of your agent class.
-    *   Implement all abstract methods defined in `CoreAgent`.
 
 3. **Integrate into `UnifiedAgentFactory`**:
     *   Open `opencontractserver/llms/agents/agent_factory.py`.
-    *   Import your new agent adapter class(es) at the top of the file.
-        ```python
-        # Example import
-        # from opencontractserver.llms.agents.my_new_framework_agents import MyNewFrameworkDocumentAgent 
-        ```
-    *   In the `UnifiedAgentFactory.create_document_agent` method (and `create_corpus_agent` if applicable), add an `elif` block to handle your new framework:
-        ```python
-        # Inside create_document_agent method:
-        if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.agents.llama_index_agents import LlamaIndexDocumentAgent
-            return await LlamaIndexDocumentAgent.create(document, config, framework_tools)
-        elif framework == AgentFramework.PYDANTIC_AI:
-            from opencontractserver.llms.agents.pydantic_ai_agents import PydanticAIDocumentAgent
-            return await PydanticAIDocumentAgent.create(document, config, framework_tools)
-        elif framework == AgentFramework.MY_NEW_FRAMEWORK: # Your new block
-            from opencontractserver.llms.agents.my_new_framework_agents import MyNewFrameworkDocumentAgent # Ensure this import is here or at top
-            return await MyNewFrameworkDocumentAgent.create(document, config, framework_tools)
-        else:
-            raise ValueError(f"Unsupported framework: {framework}")
-        ```
+    *   Add your framework to the factory's dispatch logic.
 
-4. **Implement Tool Conversion (If Needed)**:
-    *   The `_convert_tools_for_framework` function in `agent_factory.py` calls `UnifiedToolFactory.create_tools` (from `tools/tool_factory.py`).
-    *   If your new framework requires tools in a unique format not already handled by `UnifiedToolFactory`:
-        *   Open `opencontractserver/llms/tools/tool_factory.py`.
-        *   Modify `UnifiedToolFactory.create_tools` to add a condition for your `AgentFramework.MY_NEW_FRAMEWORK`.
-        *   In this condition, convert the list of `CoreTool` objects into the format expected by your framework.
-        ```python
-        # Inside UnifiedToolFactory.create_tools
-        # ...
-        if framework == AgentFramework.MY_NEW_FRAMEWORK:
-            # Convert each core_tool in core_tools to your framework's format
-            # Example: framework_specific_tools.append(convert_to_my_format(core_tool))
-            pass # Replace with actual implementation
-        # ...
-        ```
+4. **Update Documentation**:
+    *   Update the "Framework Support" table in this README.
+    *   Add examples and usage patterns specific to your framework.
 
-5. **Documentation & Examples**:
-    *   Update the "Framework Support" table in this `README.md` file to include your new framework, its status, and any relevant notes.
-    *   If your framework has unique setup steps or common usage patterns, consider adding examples to `examples.py` or a dedicated documentation section.
+5. **Testing**:
+    *   Create comprehensive tests following the patterns in `test_pydantic_ai_agents.py`.
+    *   Test all CoreAgent protocol methods, conversation management, and error handling.
 
-6. **Testing**:
-    *   Thoroughly test your new integration. Write unit tests for your agent adapter class(es) in `opencontractserver/tests/llms/agents/`.
-    *   Ensure your adapter correctly implements all aspects of the `CoreAgent` protocol and interacts with your chosen LLM framework as expected.
-    *   Test tool usage, conversation history, streaming, and error handling.
-
-By following these steps, you can extend the OpenContracts LLM framework to support a wider range of LLM technologies while maintaining a consistent and simple API for users.
+By following these steps, you can extend the OpenContracts LLM framework to support new LLM technologies while maintaining the consistent, rich API with conversation management, source tracking, and structured responses.
 
 ---

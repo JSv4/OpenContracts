@@ -54,7 +54,7 @@ class AgentAPI:
         Args:
             document: Document ID, instance, or path
             framework: "llama_index" or "pydantic_ai" 
-            user_id: User ID for message attribution
+            user_id: User ID for message attribution (None = anonymous/ephemeral session)
             model: LLM model name (e.g., "gpt-4", "claude-3-sonnet")
             system_prompt: Custom system prompt (auto-generated if None)
             conversation: Existing conversation object to continue
@@ -72,17 +72,22 @@ class AgentAPI:
             CoreAgent: Ready-to-use agent implementing the CoreAgent protocol
             
         Examples:
-            # Minimal usage
+            # Anonymous conversation (ephemeral, not stored)
             agent = await agents.for_document(123)
             response = await agent.chat("What is this about?")
+            # conversation_id will be None - nothing persisted
             
-            # With conversation management
+            # Persistent conversation with user tracking
             agent = await agents.for_document(
                 document=my_doc,
-                user_id=456,
+                user_id=456,  # Required for persistence
                 conversation_id=789,  # Continue existing conversation
                 framework="pydantic_ai"
             )
+            
+            # Continue persistent conversation later
+            conversation_id = agent.get_conversation_id()  # Real ID if user_id provided
+            new_agent = await agents.for_document(123, user_id=456, conversation_id=conversation_id)
             
             # With custom configuration
             agent = await agents.for_document(
@@ -92,7 +97,7 @@ class AgentAPI:
                 temperature=0.3,
                 system_prompt="You are a legal expert...",
                 tools=["summarize", "extract_entities"],
-                user_id=456
+                user_id=456  # Include for persistence
             )
         """
         # Normalize framework
@@ -145,7 +150,7 @@ class AgentAPI:
         Args:
             corpus_id: Corpus ID
             framework: "llama_index" or "pydantic_ai"
-            user_id: User ID for message attribution
+            user_id: User ID for message attribution (None = anonymous/ephemeral session)
             model: LLM model name (e.g., "gpt-4", "claude-3-sonnet")
             system_prompt: Custom system prompt (auto-generated if None)
             conversation: Existing conversation object to continue
@@ -163,16 +168,21 @@ class AgentAPI:
             CoreAgent: Ready-to-use agent implementing the CoreAgent protocol
             
         Examples:
-            # Minimal usage
+            # Anonymous conversation (ephemeral, not stored)
             agent = await agents.for_corpus(456)
             response = await agent.chat("What are the key themes?")
+            # conversation_id will be None - nothing persisted
             
-            # With conversation management
+            # Persistent conversation with user tracking
             agent = await agents.for_corpus(
                 corpus_id=456,
-                user_id=123,
+                user_id=123,  # Required for persistence
                 conversation_id=789  # Continue existing conversation
             )
+            
+            # Continue persistent conversation later
+            conversation_id = agent.get_conversation_id()  # Real ID if user_id provided
+            new_agent = await agents.for_corpus(456, user_id=123, conversation_id=conversation_id)
             
             # With streaming and custom model
             agent = await agents.for_corpus(
@@ -180,7 +190,8 @@ class AgentAPI:
                 framework="pydantic_ai",
                 model="claude-3-sonnet",
                 temperature=0.5,
-                streaming=True
+                streaming=True,
+                user_id=123  # Include for persistence
             )
             async for chunk in agent.stream("Summarize findings"):
                 print(chunk.content, end="")

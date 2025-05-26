@@ -180,6 +180,19 @@ class CoreAgent(Protocol):
         """Store an LLM message in the conversation."""
         ...
     
+    # Conversation metadata methods
+    def get_conversation_id(self) -> Optional[int]:
+        """Get the current conversation ID for session continuity."""
+        ...
+    
+    def get_conversation_info(self) -> Dict[str, Any]:
+        """Get conversation metadata including ID, title, and user info."""
+        ...
+    
+    async def get_conversation_messages(self) -> List[ChatMessage]:
+        """Get all messages in the current conversation."""
+        ...
+    
     # Legacy compatibility methods
     async def stream_chat(self, message: str, **kwargs) -> AsyncGenerator[UnifiedStreamResponse, None]:
         """Legacy method - delegates to stream()."""
@@ -224,6 +237,28 @@ class CoreAgentBase(ABC):
     async def store_llm_message(self, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> int:
         """Store an LLM message in the conversation."""
         return await self.conversation_manager.store_llm_message(content, sources, metadata)
+    
+    def get_conversation_id(self) -> Optional[int]:
+        """Get the current conversation ID for session continuity."""
+        return self.conversation_manager.conversation.id if self.conversation_manager.conversation else None
+    
+    def get_conversation_info(self) -> Dict[str, Any]:
+        """Get conversation metadata including ID, title, and user info."""
+        if not self.conversation_manager.conversation:
+            return {"conversation_id": None, "title": None, "user_id": None}
+        
+        conv = self.conversation_manager.conversation
+        return {
+            "conversation_id": conv.id,
+            "title": conv.title,
+            "user_id": self.conversation_manager.user_id,
+            "created": conv.created.isoformat() if conv.created else None,
+            "description": conv.description,
+        }
+    
+    async def get_conversation_messages(self) -> List[ChatMessage]:
+        """Get all messages in the current conversation."""
+        return await self.conversation_manager.get_conversation_messages()
     
     # Legacy compatibility methods
     async def stream_chat(self, message: str, **kwargs) -> AsyncGenerator[UnifiedStreamResponse, None]:
@@ -354,6 +389,16 @@ class CoreConversationManager:
         """Create conversation manager for document agent with enhanced options."""
         conversation = None
         
+        # For anonymous users (user_id is None), do NOT create or store conversations
+        if user_id is None:
+            logger.info(f"Creating ephemeral (non-stored) conversation for anonymous user on document {document.id}")
+            # Override config to ensure no message storage for anonymous conversations
+            config.store_user_messages = False
+            config.store_llm_messages = False
+            # Return manager with no conversation - everything will be in-memory only
+            return cls(None, None, config)
+        
+        # For authenticated users, handle conversation persistence normally
         if override_conversation:
             conversation = override_conversation
         elif config.conversation:
@@ -366,20 +411,21 @@ class CoreConversationManager:
                 logger.warning(f"Conversation {cid} not found, creating new one")
         
         if not conversation:
-            # Create new conversation for this document
+            # Create new conversation for authenticated user
             conversation = await Conversation.objects.acreate(
                 title=f"Chat about {document.title}",
                 description=f"Conversation about document: {document.title}",
                 creator_id=user_id,
                 chat_with_document=document,
             )
+            logger.info(f"Created new conversation {conversation.id} for document {document.id} (user: {user_id})")
         
         manager = cls(conversation, user_id, config)
         
         # Load existing messages if provided
         if loaded_messages or config.loaded_messages:
             messages = loaded_messages or config.loaded_messages
-            logger.info(f"Loaded {len(messages)} existing messages for conversation")
+            logger.info(f"Loaded {len(messages)} existing messages for conversation {conversation.id}")
         
         return manager
     
@@ -396,6 +442,16 @@ class CoreConversationManager:
         """Create conversation manager for corpus agent with enhanced options."""
         conversation = None
         
+        # For anonymous users (user_id is None), do NOT create or store conversations
+        if user_id is None:
+            logger.info(f"Creating ephemeral (non-stored) conversation for anonymous user on corpus {corpus.id}")
+            # Override config to ensure no message storage for anonymous conversations
+            config.store_user_messages = False
+            config.store_llm_messages = False
+            # Return manager with no conversation - everything will be in-memory only
+            return cls(None, None, config)
+        
+        # For authenticated users, handle conversation persistence normally
         if override_conversation:
             conversation = override_conversation
         elif config.conversation:
@@ -408,24 +464,26 @@ class CoreConversationManager:
                 logger.warning(f"Conversation {cid} not found, creating new one")
         
         if not conversation:
-            # Create new conversation for this corpus
+            # Create new conversation for authenticated user
             conversation = await Conversation.objects.acreate(
                 title=f"Chat about {corpus.title}",
                 description=f"Conversation about corpus: {corpus.title}",
                 creator_id=user_id,
             )
+            logger.info(f"Created new conversation {conversation.id} for corpus {corpus.id} (user: {user_id})")
         
         manager = cls(conversation, user_id, config)
         
         # Load existing messages if provided
         if loaded_messages or config.loaded_messages:
             messages = loaded_messages or config.loaded_messages
-            logger.info(f"Loaded {len(messages)} existing messages for conversation")
+            logger.info(f"Loaded {len(messages)} existing messages for conversation {conversation.id}")
         
         return manager
     
     async def get_conversation_messages(self) -> List[ChatMessage]:
         """Get all messages in the conversation."""
+        # For anonymous conversations, return empty list since nothing is stored
         if not self.conversation:
             return []
         
@@ -437,6 +495,10 @@ class CoreConversationManager:
     
     async def create_placeholder_message(self, msg_type: str = "LLM") -> int:
         """Create a placeholder message with state tracking."""
+        # For anonymous conversations, don't store messages
+        if not self.conversation:
+            return 0  # Return a placeholder ID for anonymous conversations
+        
         message = await ChatMessage.objects.acreate(
             conversation=self.conversation,
             content="",
@@ -451,12 +513,20 @@ class CoreConversationManager:
     
     async def update_message_content(self, message_id: int, content: str) -> None:
         """Update only the content of a message."""
+        # For anonymous conversations, don't store messages
+        if not self.conversation or message_id == 0:
+            return
+        
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = content
         await message.asave(update_fields=['content'])
     
     async def update_message_sources(self, message_id: int, sources: List[SourceNode]) -> None:
         """Update only the sources of a message."""
+        # For anonymous conversations, don't store messages
+        if not self.conversation or message_id == 0:
+            return
+        
         message = await ChatMessage.objects.aget(id=message_id)
         if not message.data:
             message.data = {}
@@ -465,6 +535,10 @@ class CoreConversationManager:
     
     async def set_message_state(self, message_id: int, state: str) -> None:
         """Update the state of a message."""
+        # For anonymous conversations, don't store messages
+        if not self.conversation or message_id == 0:
+            return
+        
         message = await ChatMessage.objects.aget(id=message_id)
         if not message.data:
             message.data = {}
@@ -474,6 +548,10 @@ class CoreConversationManager:
     
     async def complete_message(self, message_id: int, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> None:
         """Complete a message with content, sources, and metadata in one operation."""
+        # For anonymous conversations, don't store messages
+        if not self.conversation or message_id == 0:
+            return
+        
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = content
         
@@ -491,6 +569,10 @@ class CoreConversationManager:
     
     async def cancel_message(self, message_id: int, reason: str = "Cancelled") -> None:
         """Cancel a placeholder message."""
+        # For anonymous conversations, don't store messages
+        if not self.conversation or message_id == 0:
+            return
+        
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = reason
         data = message.data or {}
@@ -501,6 +583,10 @@ class CoreConversationManager:
     
     async def store_user_message(self, content: str) -> int:
         """Store a user message in the conversation."""
+        # For anonymous conversations, don't store messages
+        if not self.conversation:
+            return 0  # Return a placeholder ID for anonymous conversations
+        
         message = await ChatMessage.objects.acreate(
             conversation=self.conversation,
             content=content,
@@ -515,6 +601,10 @@ class CoreConversationManager:
     
     async def store_llm_message(self, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> int:
         """Store an LLM message in the conversation."""
+        # For anonymous conversations, don't store messages
+        if not self.conversation:
+            return 0  # Return a placeholder ID for anonymous conversations
+        
         data = {
             "state": MessageState.COMPLETED,
             "created_at": timezone.now().isoformat()
@@ -536,6 +626,10 @@ class CoreConversationManager:
     
     async def update_message(self, message_id: int, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> None:
         """Update an existing message with content, sources, and metadata."""
+        # For anonymous conversations, don't store messages
+        if not self.conversation or message_id == 0:
+            return
+        
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = content
         

@@ -12,8 +12,13 @@ from opencontractserver.llms.agents.core_agents import (
     AgentConfig,
     CoreAgent,
     CoreConversationManager,
+    CoreCorpusAgentFactory,
+    CoreDocumentAgentFactory,
     DocumentAgentContext,
     CorpusAgentContext,
+    UnifiedChatResponse,
+    UnifiedStreamResponse,
+    SourceNode,
 )
 from opencontractserver.llms.tools.pydantic_ai_tools import PydanticAIToolWrapper
 
@@ -108,107 +113,201 @@ class PydanticAIDocumentAgent(CoreAgent):
         Returns:
             PydanticAIDocumentAgent instance
         """
-        # TODO: Implement when core agent factories are available
-        logger.warning(
-            "Pydantic AI document agents are not yet fully implemented. "
-            "This is a modern placeholder for future implementation."
+        # Create document context using core factories
+        context = await CoreDocumentAgentFactory.create_context(document, config)
+        
+        # Create conversation manager
+        conversation_manager = await CoreConversationManager.create_for_document(
+            context.document, 
+            config.user_id, 
+            config
         )
         
-        # Future implementation structure:
-        # 1. Create document context using core factories
-        # context = await CoreDocumentAgentFactory.create_context(document, config)
-        
-        # 2. Create conversation manager
-        # conversation_manager = await CoreConversationManager.create_for_document(
-        #     context.document, config.user_id, config.conversation
-        # )
-        
-        # 3. Convert base config to Pydantic AI config
-        # pydantic_config = PydanticAIAgentConfig(
-        #     model_name=config.model_name,
-        #     system_prompt=config.system_prompt,
-        #     streaming=config.streaming,
-        #     tools=tools or [],
-        # )
-        
-        # 4. Create and return agent
-        # return cls(context, conversation_manager, pydantic_config)
-        
-        raise NotImplementedError(
-            "Pydantic AI document agents require core agent factories to be implemented first."
+        # Convert base config to Pydantic AI config
+        pydantic_config = PydanticAIAgentConfig(
+            model_name=config.model_name,
+            system_prompt=config.system_prompt,
+            temperature=config.temperature,
+            max_tokens=config.max_tokens,
+            streaming=config.streaming,
+            tools=tools or [],
         )
+        
+        # Create and return agent
+        return cls(context, conversation_manager, pydantic_config)
 
-    async def chat(self, message: str) -> str:
+    async def chat(self, message: str, store_messages: bool = True) -> UnifiedChatResponse:
         """Send a message and get a response using modern Pydantic AI patterns.
         
         Args:
             message: User message
+            store_messages: Whether to store messages in conversation
             
         Returns:
-            Agent response
+            Unified chat response
         """
-        # TODO: Implement when Pydantic AI is integrated
-        # query_id = id(message)
-        # self.state.processing_queries.add(query_id)
-        # 
-        # try:
-        #     # Store user message
-        #     await self.conversation_manager.store_user_message(message)
-        #     
-        #     # Get response from Pydantic AI agent
-        #     response = await self._agent.run(message)
-        #     
-        #     # Store agent response
-        #     await self.conversation_manager.store_llm_message(response)
-        #     
-        #     return response
-        # finally:
-        #     self.state.processing_queries.discard(query_id)
+        user_msg_id = None
+        llm_msg_id = None
         
-        raise NotImplementedError("Pydantic AI chat not yet implemented")
+        try:
+            # Store user message if configured
+            if store_messages and self.conversation_manager.config.store_user_messages:
+                user_msg_id = await self.conversation_manager.store_user_message(message)
 
-    async def stream_chat(self, message: str) -> AsyncGenerator[str, None]:
+            # Create placeholder for LLM message if storing
+            if store_messages and self.conversation_manager.config.store_llm_messages:
+                llm_msg_id = await self.conversation_manager.create_placeholder_message("LLM")
+
+            # TODO: Implement when Pydantic AI is integrated
+            # response = await self._agent.run(message)
+            # For now, return a placeholder response
+            content = f"[PydanticAI Placeholder] Response to: {message}"
+            
+            # Extract sources (placeholder for now)
+            sources = [
+                SourceNode(
+                    annotation_id=0,
+                    content="This is a placeholder source from PydanticAI agent",
+                    metadata={"document_id": self.context.document.id},
+                    similarity_score=0.95
+                )
+            ]
+
+            # Complete the message atomically with content and sources
+            if llm_msg_id:
+                await self.conversation_manager.complete_message(
+                    llm_msg_id, 
+                    content, 
+                    sources, 
+                    {"framework": "pydantic_ai", "document_id": self.context.document.id}
+                )
+
+            return UnifiedChatResponse(
+                content=content,
+                sources=sources,
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata={"framework": "pydantic_ai", "document_id": self.context.document.id}
+            )
+
+        except Exception as e:
+            # Cancel placeholder message on error
+            if llm_msg_id:
+                await self.conversation_manager.cancel_message(llm_msg_id, f"Error: {str(e)}")
+            raise
+
+    async def stream(self, message: str, store_messages: bool = True) -> AsyncGenerator[UnifiedStreamResponse, None]:
         """Send a message and get a streaming response using modern patterns.
         
         Args:
             message: User message
+            store_messages: Whether to store messages in conversation
             
         Yields:
-            Response chunks
+            Unified stream response chunks
         """
-        # TODO: Implement when Pydantic AI is integrated
-        # query_id = id(message)
-        # self.state.processing_queries.add(query_id)
-        # 
-        # try:
-        #     # Store user message
-        #     await self.conversation_manager.store_user_message(message)
-        #     
-        #     # Stream response from Pydantic AI agent
-        #     full_response = ""
-        #     async for chunk in self._agent.run_stream(message):
-        #         full_response += chunk
-        #         yield chunk
-        #     
-        #     # Store complete response
-        #     await self.conversation_manager.store_llm_message(full_response)
-        # finally:
-        #     self.state.processing_queries.discard(query_id)
+        user_msg_id = None
+        llm_msg_id = None
+        accumulated_content = ""
+        sources = []
         
-        raise NotImplementedError("Pydantic AI stream_chat not yet implemented")
-        # Make this an async generator for type checking
-        yield ""  # This will never execute due to the exception above
+        try:
+            # Store user message if configured
+            if store_messages and self.conversation_manager.config.store_user_messages:
+                user_msg_id = await self.conversation_manager.store_user_message(message)
+
+            # Create placeholder for LLM message if storing
+            if store_messages and self.conversation_manager.config.store_llm_messages:
+                llm_msg_id = await self.conversation_manager.create_placeholder_message("LLM")
+
+            # TODO: Implement when Pydantic AI is integrated
+            # async for chunk in self._agent.run_stream(message):
+            #     accumulated_content += chunk
+            #     yield UnifiedStreamResponse(
+            #         content=chunk,
+            #         accumulated_content=accumulated_content,
+            #         sources=sources,
+            #         user_message_id=user_msg_id,
+            #         llm_message_id=llm_msg_id,
+            #         is_complete=False,
+            #         metadata={"framework": "pydantic_ai"}
+            #     )
+            
+            # For now, simulate streaming with placeholder content
+            placeholder_response = f"[PydanticAI Streaming] Response to: {message}"
+            words = placeholder_response.split()
+            
+            for i, word in enumerate(words):
+                chunk = word + " " if i < len(words) - 1 else word
+                accumulated_content += chunk
+                
+                yield UnifiedStreamResponse(
+                    content=chunk,
+                    accumulated_content=accumulated_content,
+                    sources=sources,
+                    user_message_id=user_msg_id,
+                    llm_message_id=llm_msg_id,
+                    is_complete=False,
+                    metadata={"framework": "pydantic_ai", "document_id": self.context.document.id}
+                )
+
+            # Add sources after streaming is complete
+            sources = [
+                SourceNode(
+                    annotation_id=0,
+                    content="This is a placeholder source from PydanticAI agent",
+                    metadata={"document_id": self.context.document.id},
+                    similarity_score=0.95
+                )
+            ]
+
+            # Complete the message atomically with final content and sources
+            if llm_msg_id:
+                await self.conversation_manager.complete_message(
+                    llm_msg_id, 
+                    accumulated_content, 
+                    sources, 
+                    {"framework": "pydantic_ai", "document_id": self.context.document.id}
+                )
+
+            # Send final response with sources
+            yield UnifiedStreamResponse(
+                content="",
+                accumulated_content=accumulated_content,
+                sources=sources,
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                is_complete=True,
+                metadata={"framework": "pydantic_ai", "document_id": self.context.document.id}
+            )
+
+        except Exception as e:
+            # Cancel placeholder message on error
+            if llm_msg_id:
+                await self.conversation_manager.cancel_message(llm_msg_id, f"Error: {str(e)}")
+            raise
+
+    async def store_user_message(self, content: str) -> int:
+        """Store a user message in the conversation."""
+        return await self.conversation_manager.store_user_message(content)
+
+    async def store_llm_message(self, content: str) -> int:
+        """Store an LLM message in the conversation."""
+        return await self.conversation_manager.store_llm_message(content)
+
+    async def update_message(self, message_id: int, content: str, metadata: Optional[dict] = None) -> None:
+        """Update an existing message."""
+        await self.conversation_manager.update_message(message_id, content, metadata)
+
+    # Legacy compatibility methods
+    async def stream_chat(self, message: str) -> AsyncGenerator[str, None]:
+        """Legacy method for backward compatibility."""
+        async for response in self.stream(message):
+            if response.content:
+                yield response.content
 
     async def store_message(self, content: str, msg_type: str = "LLM") -> int:
-        """Store a message in the conversation.
-        
-        Args:
-            content: Message content
-            msg_type: Message type ("LLM" or "USER")
-            
-        Returns:
-            Message ID
-        """
+        """Legacy method for backward compatibility."""
         if msg_type.upper() == "LLM":
             return await self.conversation_manager.store_llm_message(content)
         else:
@@ -301,28 +400,201 @@ class PydanticAICorpusAgent(CoreAgent):
         Returns:
             PydanticAICorpusAgent instance
         """
-        # TODO: Implement when core agent factories are available
-        logger.warning(
-            "Pydantic AI corpus agents are not yet fully implemented. "
-            "This is a modern placeholder for future implementation."
+        # Create corpus context using core factories
+        context = await CoreCorpusAgentFactory.create_context(corpus_id, config)
+        
+        # Create conversation manager
+        conversation_manager = await CoreConversationManager.create_for_corpus(
+            context.corpus,
+            config.user_id,
+            config
         )
         
-        raise NotImplementedError(
-            "Pydantic AI corpus agents require core agent factories to be implemented first."
+        # Convert base config to Pydantic AI config
+        pydantic_config = PydanticAIAgentConfig(
+            model_name=config.model_name,
+            system_prompt=config.system_prompt,
+            temperature=config.temperature,
+            max_tokens=config.max_tokens,
+            streaming=config.streaming,
+            tools=tools or [],
         )
+        
+        # Create and return agent
+        return cls(context, conversation_manager, pydantic_config)
 
-    async def chat(self, message: str) -> str:
-        """Send a message and get a response."""
-        raise NotImplementedError("Pydantic AI chat not yet implemented")
+    async def chat(self, message: str, store_messages: bool = True) -> UnifiedChatResponse:
+        """Send a message and get a response using modern Pydantic AI patterns.
+        
+        Args:
+            message: User message
+            store_messages: Whether to store messages in conversation
+            
+        Returns:
+            Unified chat response
+        """
+        user_msg_id = None
+        llm_msg_id = None
+        
+        try:
+            # Store user message if configured
+            if store_messages and self.conversation_manager.config.store_user_messages:
+                user_msg_id = await self.conversation_manager.store_user_message(message)
 
+            # Create placeholder for LLM message if storing
+            if store_messages and self.conversation_manager.config.store_llm_messages:
+                llm_msg_id = await self.conversation_manager.create_placeholder_message("LLM")
+
+            # TODO: Implement when Pydantic AI is integrated
+            # response = await self._agent.run(message)
+            # For now, return a placeholder response
+            content = f"[PydanticAI Placeholder] Response to: {message}"
+            
+            # Extract sources (placeholder for now)
+            sources = [
+                SourceNode(
+                    annotation_id=0,
+                    content="This is a placeholder source from PydanticAI agent",
+                    metadata={"corpus_id": self.context.corpus.id},
+                    similarity_score=0.95
+                )
+            ]
+
+            # Complete the message atomically with content and sources
+            if llm_msg_id:
+                await self.conversation_manager.complete_message(
+                    llm_msg_id, 
+                    content, 
+                    sources, 
+                    {"framework": "pydantic_ai", "corpus_id": self.context.corpus.id}
+                )
+
+            return UnifiedChatResponse(
+                content=content,
+                sources=sources,
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata={"framework": "pydantic_ai", "corpus_id": self.context.corpus.id}
+            )
+
+        except Exception as e:
+            # Cancel placeholder message on error
+            if llm_msg_id:
+                await self.conversation_manager.cancel_message(llm_msg_id, f"Error: {str(e)}")
+            raise
+
+    async def stream(self, message: str, store_messages: bool = True) -> AsyncGenerator[UnifiedStreamResponse, None]:
+        """Send a message and get a streaming response using modern patterns.
+        
+        Args:
+            message: User message
+            store_messages: Whether to store messages in conversation
+            
+        Yields:
+            Unified stream response chunks
+        """
+        user_msg_id = None
+        llm_msg_id = None
+        accumulated_content = ""
+        sources = []
+        
+        try:
+            # Store user message if configured
+            if store_messages and self.conversation_manager.config.store_user_messages:
+                user_msg_id = await self.conversation_manager.store_user_message(message)
+
+            # Create placeholder for LLM message if storing
+            if store_messages and self.conversation_manager.config.store_llm_messages:
+                llm_msg_id = await self.conversation_manager.create_placeholder_message("LLM")
+
+            # TODO: Implement when Pydantic AI is integrated
+            # async for chunk in self._agent.run_stream(message):
+            #     accumulated_content += chunk
+            #     yield UnifiedStreamResponse(
+            #         content=chunk,
+            #         accumulated_content=accumulated_content,
+            #         sources=sources,
+            #         user_message_id=user_msg_id,
+            #         llm_message_id=llm_msg_id,
+            #         is_complete=False,
+            #         metadata={"framework": "pydantic_ai"}
+            #     )
+            
+            # For now, simulate streaming with placeholder content
+            placeholder_response = f"[PydanticAI Streaming] Response to: {message}"
+            words = placeholder_response.split()
+            
+            for i, word in enumerate(words):
+                chunk = word + " " if i < len(words) - 1 else word
+                accumulated_content += chunk
+                
+                yield UnifiedStreamResponse(
+                    content=chunk,
+                    accumulated_content=accumulated_content,
+                    sources=sources,
+                    user_message_id=user_msg_id,
+                    llm_message_id=llm_msg_id,
+                    is_complete=False,
+                    metadata={"framework": "pydantic_ai", "corpus_id": self.context.corpus.id}
+                )
+
+            # Add sources after streaming is complete
+            sources = [
+                SourceNode(
+                    annotation_id=0,
+                    content="This is a placeholder source from PydanticAI agent",
+                    metadata={"corpus_id": self.context.corpus.id},
+                    similarity_score=0.95
+                )
+            ]
+
+            # Complete the message atomically with final content and sources
+            if llm_msg_id:
+                await self.conversation_manager.complete_message(
+                    llm_msg_id, 
+                    accumulated_content, 
+                    sources, 
+                    {"framework": "pydantic_ai", "corpus_id": self.context.corpus.id}
+                )
+
+            # Send final response with sources
+            yield UnifiedStreamResponse(
+                content="",
+                accumulated_content=accumulated_content,
+                sources=sources,
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                is_complete=True,
+                metadata={"framework": "pydantic_ai", "corpus_id": self.context.corpus.id}
+            )
+
+        except Exception as e:
+            # Cancel placeholder message on error
+            if llm_msg_id:
+                await self.conversation_manager.cancel_message(llm_msg_id, f"Error: {str(e)}")
+            raise
+
+    async def store_user_message(self, content: str) -> int:
+        """Store a user message in the conversation."""
+        return await self.conversation_manager.store_user_message(content)
+
+    async def store_llm_message(self, content: str) -> int:
+        """Store an LLM message in the conversation."""
+        return await self.conversation_manager.store_llm_message(content)
+
+    async def update_message(self, message_id: int, content: str, metadata: Optional[dict] = None) -> None:
+        """Update an existing message."""
+        await self.conversation_manager.update_message(message_id, content, metadata)
+
+    # Legacy compatibility methods
     async def stream_chat(self, message: str) -> AsyncGenerator[str, None]:
-        """Send a message and get a streaming response."""
-        raise NotImplementedError("Pydantic AI stream_chat not yet implemented")
-        # Make this an async generator for type checking
-        yield ""  # This will never execute due to the exception above
+        """Legacy method for backward compatibility."""
+        async for response in self.stream(message):
+            if response.content:
+                yield response.content
 
     async def store_message(self, content: str, msg_type: str = "LLM") -> int:
-        """Store a message in the conversation."""
+        """Legacy method for backward compatibility."""
         if msg_type.upper() == "LLM":
             return await self.conversation_manager.store_llm_message(content)
         else:

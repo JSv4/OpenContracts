@@ -1,8 +1,10 @@
 """Core agent functionality independent of any specific agent framework."""
 
 import logging
-from typing import Any, Optional, Union, Protocol, runtime_checkable
-from dataclasses import dataclass
+from typing import Any, Optional, Union, Protocol, runtime_checkable, AsyncGenerator, List, Dict
+from dataclasses import dataclass, field
+from abc import ABC, abstractmethod
+from django.utils import timezone
 
 from django.conf import settings
 
@@ -14,10 +16,78 @@ from opencontractserver.llms.vector_stores.core_vector_stores import CoreAnnotat
 logger = logging.getLogger(__name__)
 
 
+class MessageState:
+    """Constants for message states."""
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    ERROR = "error"
+    CANCELLED = "cancelled"
+
+
+@dataclass
+class SourceNode:
+    """Framework-agnostic representation of a source node with metadata."""
+    
+    annotation_id: int
+    content: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    similarity_score: float = 1.0
+    
+    @classmethod
+    def from_annotation(cls, annotation, similarity_score: float = 1.0) -> "SourceNode":
+        """Create a SourceNode from an Annotation object."""
+        return cls(
+            annotation_id=annotation.id,
+            content=annotation.raw_text,
+            metadata={
+                "annotation_id": annotation.id,
+                "document_id": annotation.document_id,
+                "corpus_id": annotation.corpus_id,
+                "page": annotation.page,
+                "annotation_label": annotation.annotation_label.text if annotation.annotation_label else None,
+            },
+            similarity_score=similarity_score
+        )
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for storage in message data."""
+        return {
+            "annotation_id": self.annotation_id,
+            "content": self.content,
+            "metadata": self.metadata,
+            "similarity_score": self.similarity_score,
+        }
+
+
+@dataclass
+class UnifiedChatResponse:
+    """Framework-agnostic chat response with sources and metadata."""
+    
+    content: str
+    sources: List[SourceNode] = field(default_factory=list)
+    user_message_id: Optional[int] = None
+    llm_message_id: Optional[int] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class UnifiedStreamResponse:
+    """Framework-agnostic streaming response chunk."""
+    
+    content: str
+    accumulated_content: str = ""
+    sources: List[SourceNode] = field(default_factory=list)
+    user_message_id: Optional[int] = None
+    llm_message_id: Optional[int] = None
+    is_complete: bool = False
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
 @dataclass
 class AgentConfig:
-    """Framework-agnostic agent configuration."""
+    """Framework-agnostic agent configuration with enhanced conversation management."""
     
+    # Basic configuration
     user_id: Optional[int] = None
     model_name: str = "gpt-4o-mini"
     api_key: Optional[str] = None
@@ -26,8 +96,18 @@ class AgentConfig:
     streaming: bool = True
     verbose: bool = True
     system_prompt: Optional[str] = None
+    temperature: float = 0.7
+    max_tokens: Optional[int] = None
+    
+    # Enhanced conversation management
     conversation: Optional[Conversation] = None
-    loaded_messages: Optional[list[ChatMessage]] = None
+    conversation_id: Optional[int] = None
+    loaded_messages: Optional[List[ChatMessage]] = None
+    store_user_messages: bool = True
+    store_llm_messages: bool = True
+    
+    # Tool configuration
+    tools: List[Any] = field(default_factory=list)
 
 
 @dataclass 
@@ -54,7 +134,7 @@ class CorpusAgentContext:
     
     corpus: Corpus
     config: AgentConfig
-    documents: Optional[list[Document]] = None
+    documents: Optional[List[Document]] = None
     
     async def __post_init__(self):
         """Initialize documents list if not provided."""
@@ -64,19 +144,99 @@ class CorpusAgentContext:
 
 @runtime_checkable
 class CoreAgent(Protocol):
-    """Protocol defining the interface for framework-agnostic agents."""
+    """Enhanced protocol defining the interface for framework-agnostic agents."""
     
-    async def chat(self, message: str) -> str:
-        """Send a message and get a complete response."""
+    # Core conversation methods
+    async def chat(self, message: str, **kwargs) -> UnifiedChatResponse:
+        """Send a message and get a complete response with sources."""
         ...
     
-    async def stream_chat(self, message: str) -> Any:
-        """Send a message and get a streaming response."""
+    async def stream(self, message: str, **kwargs) -> AsyncGenerator[UnifiedStreamResponse, None]:
+        """Send a message and get a streaming response with sources."""
         ...
+    
+    # Message management methods
+    async def create_placeholder_message(self, msg_type: str = "LLM") -> int:
+        """Create a placeholder message and return its ID."""
+        ...
+    
+    async def update_message(self, message_id: int, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> None:
+        """Update a stored message with content, sources, and metadata."""
+        ...
+    
+    async def complete_message(self, message_id: int, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> None:
+        """Complete a message atomically with content, sources, and metadata."""
+        ...
+    
+    async def cancel_message(self, message_id: int, reason: str = "Cancelled") -> None:
+        """Cancel a placeholder message."""
+        ...
+    
+    async def store_user_message(self, content: str) -> int:
+        """Store a user message in the conversation."""
+        ...
+    
+    async def store_llm_message(self, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> int:
+        """Store an LLM message in the conversation."""
+        ...
+    
+    # Legacy compatibility methods
+    async def stream_chat(self, message: str, **kwargs) -> AsyncGenerator[UnifiedStreamResponse, None]:
+        """Legacy method - delegates to stream()."""
+        async for chunk in self.stream(message, **kwargs):
+            yield chunk
     
     async def store_message(self, content: str, msg_type: str = "LLM") -> int:
-        """Store a message in the conversation history."""
-        ...
+        """Legacy method - delegates to appropriate store method."""
+        if msg_type.upper() == "USER":
+            return await self.store_user_message(content)
+        else:
+            return await self.store_llm_message(content)
+
+
+class CoreAgentBase(ABC):
+    """Base implementation of CoreAgent with common functionality."""
+    
+    def __init__(self, config: AgentConfig, conversation_manager: "CoreConversationManager"):
+        self.config = config
+        self.conversation_manager = conversation_manager
+    
+    async def create_placeholder_message(self, msg_type: str = "LLM") -> int:
+        """Create a placeholder message and return its ID."""
+        return await self.conversation_manager.create_placeholder_message(msg_type)
+    
+    async def update_message(self, message_id: int, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> None:
+        """Update a stored message with content, sources, and metadata."""
+        await self.conversation_manager.update_message(message_id, content, sources, metadata)
+    
+    async def complete_message(self, message_id: int, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> None:
+        """Complete a message atomically with content, sources, and metadata."""
+        await self.conversation_manager.complete_message(message_id, content, sources, metadata)
+    
+    async def cancel_message(self, message_id: int, reason: str = "Cancelled") -> None:
+        """Cancel a placeholder message."""
+        await self.conversation_manager.cancel_message(message_id, reason)
+    
+    async def store_user_message(self, content: str) -> int:
+        """Store a user message in the conversation."""
+        return await self.conversation_manager.store_user_message(content)
+    
+    async def store_llm_message(self, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> int:
+        """Store an LLM message in the conversation."""
+        return await self.conversation_manager.store_llm_message(content, sources, metadata)
+    
+    # Legacy compatibility methods
+    async def stream_chat(self, message: str, **kwargs) -> AsyncGenerator[UnifiedStreamResponse, None]:
+        """Legacy method - delegates to stream()."""
+        async for chunk in self.stream(message, **kwargs):
+            yield chunk
+    
+    async def store_message(self, content: str, msg_type: str = "LLM") -> int:
+        """Legacy method - delegates to appropriate store method."""
+        if msg_type.upper() == "USER":
+            return await self.store_user_message(content)
+        else:
+            return await self.store_llm_message(content)
 
 
 class CoreDocumentAgentFactory:
@@ -93,7 +253,7 @@ class CoreDocumentAgentFactory:
         )
     
     @staticmethod
-    def get_tool_descriptions(document: Document) -> list[dict[str, str]]:
+    def get_tool_descriptions(document: Document) -> List[Dict[str, str]]:
         """Get standardized tool descriptions for document agents."""
         return [
             {
@@ -174,79 +334,220 @@ class CoreCorpusAgentFactory:
 
 
 class CoreConversationManager:
-    """Manages conversations and message storage independent of agent framework."""
+    """Enhanced conversation manager with full message lifecycle support and atomic operations."""
     
-    def __init__(self, conversation: Optional[Conversation], user_id: Optional[int]):
+    def __init__(self, conversation: Optional[Conversation], user_id: Optional[int], config: AgentConfig):
         self.conversation = conversation
         self.user_id = user_id
+        self.config = config
     
     @classmethod
     async def create_for_document(
         cls,
         document: Document,
         user_id: Optional[int],
+        config: AgentConfig,
         override_conversation: Optional[Conversation] = None,
+        conversation_id: Optional[int] = None,
+        loaded_messages: Optional[List[ChatMessage]] = None,
     ) -> "CoreConversationManager":
-        """Create conversation manager for document agent."""
+        """Create conversation manager for document agent with enhanced options."""
+        conversation = None
+        
         if override_conversation:
             conversation = override_conversation
-        else:
+        elif config.conversation:
+            conversation = config.conversation
+        elif conversation_id or config.conversation_id:
+            cid = conversation_id or config.conversation_id
+            try:
+                conversation = await Conversation.objects.aget(id=cid)
+            except Conversation.DoesNotExist:
+                logger.warning(f"Conversation {cid} not found, creating new one")
+        
+        if not conversation:
             # Create new conversation for this document
             conversation = await Conversation.objects.acreate(
                 title=f"Chat about {document.title}",
                 description=f"Conversation about document: {document.title}",
-                user_id=user_id,
+                creator_id=user_id,
+                chat_with_document=document,
             )
         
-        return cls(conversation, user_id)
+        manager = cls(conversation, user_id, config)
+        
+        # Load existing messages if provided
+        if loaded_messages or config.loaded_messages:
+            messages = loaded_messages or config.loaded_messages
+            logger.info(f"Loaded {len(messages)} existing messages for conversation")
+        
+        return manager
     
     @classmethod
     async def create_for_corpus(
         cls,
         corpus: Corpus,
         user_id: Optional[int],
+        config: AgentConfig,
         override_conversation: Optional[Conversation] = None,
+        conversation_id: Optional[int] = None,
+        loaded_messages: Optional[List[ChatMessage]] = None,
     ) -> "CoreConversationManager":
-        """Create conversation manager for corpus agent."""
+        """Create conversation manager for corpus agent with enhanced options."""
+        conversation = None
+        
         if override_conversation:
             conversation = override_conversation
-        else:
+        elif config.conversation:
+            conversation = config.conversation
+        elif conversation_id or config.conversation_id:
+            cid = conversation_id or config.conversation_id
+            try:
+                conversation = await Conversation.objects.aget(id=cid)
+            except Conversation.DoesNotExist:
+                logger.warning(f"Conversation {cid} not found, creating new one")
+        
+        if not conversation:
             # Create new conversation for this corpus
             conversation = await Conversation.objects.acreate(
                 title=f"Chat about {corpus.title}",
                 description=f"Conversation about corpus: {corpus.title}",
-                user_id=user_id,
+                creator_id=user_id,
             )
         
-        return cls(conversation, user_id)
+        manager = cls(conversation, user_id, config)
+        
+        # Load existing messages if provided
+        if loaded_messages or config.loaded_messages:
+            messages = loaded_messages or config.loaded_messages
+            logger.info(f"Loaded {len(messages)} existing messages for conversation")
+        
+        return manager
+    
+    async def get_conversation_messages(self) -> List[ChatMessage]:
+        """Get all messages in the conversation."""
+        if not self.conversation:
+            return []
+        
+        return [
+            msg async for msg in ChatMessage.objects.filter(
+                conversation=self.conversation
+            ).order_by("created")
+        ]
+    
+    async def create_placeholder_message(self, msg_type: str = "LLM") -> int:
+        """Create a placeholder message with state tracking."""
+        message = await ChatMessage.objects.acreate(
+            conversation=self.conversation,
+            content="",
+            msg_type=msg_type,
+            creator_id=self.user_id,
+            data={
+                "state": MessageState.IN_PROGRESS,
+                "created_at": timezone.now().isoformat()
+            }
+        )
+        return message.id
+    
+    async def update_message_content(self, message_id: int, content: str) -> None:
+        """Update only the content of a message."""
+        message = await ChatMessage.objects.aget(id=message_id)
+        message.content = content
+        await message.asave(update_fields=['content'])
+    
+    async def update_message_sources(self, message_id: int, sources: List[SourceNode]) -> None:
+        """Update only the sources of a message."""
+        message = await ChatMessage.objects.aget(id=message_id)
+        if not message.data:
+            message.data = {}
+        message.data["sources"] = [source.to_dict() for source in sources]
+        await message.asave(update_fields=['data'])
+    
+    async def set_message_state(self, message_id: int, state: str) -> None:
+        """Update the state of a message."""
+        message = await ChatMessage.objects.aget(id=message_id)
+        if not message.data:
+            message.data = {}
+        message.data["state"] = state
+        message.data["updated_at"] = timezone.now().isoformat()
+        await message.asave(update_fields=['data'])
+    
+    async def complete_message(self, message_id: int, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> None:
+        """Complete a message with content, sources, and metadata in one operation."""
+        message = await ChatMessage.objects.aget(id=message_id)
+        message.content = content
+        
+        data = message.data or {}
+        data["state"] = MessageState.COMPLETED
+        data["completed_at"] = timezone.now().isoformat()
+        
+        if sources:
+            data["sources"] = [source.to_dict() for source in sources]
+        if metadata:
+            data.update(metadata)
+        
+        message.data = data
+        await message.asave()
+    
+    async def cancel_message(self, message_id: int, reason: str = "Cancelled") -> None:
+        """Cancel a placeholder message."""
+        message = await ChatMessage.objects.aget(id=message_id)
+        message.content = reason
+        data = message.data or {}
+        data["state"] = MessageState.CANCELLED
+        data["cancelled_at"] = timezone.now().isoformat()
+        message.data = data
+        await message.asave()
     
     async def store_user_message(self, content: str) -> int:
         """Store a user message in the conversation."""
         message = await ChatMessage.objects.acreate(
             conversation=self.conversation,
             content=content,
-            msg_type="USER",
-            user_id=self.user_id,
+            msg_type="HUMAN",
+            creator_id=self.user_id,
+            data={
+                "state": MessageState.COMPLETED,
+                "created_at": timezone.now().isoformat()
+            }
         )
         return message.id
     
-    async def store_llm_message(self, content: str, data: Optional[dict] = None) -> int:
+    async def store_llm_message(self, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> int:
         """Store an LLM message in the conversation."""
+        data = {
+            "state": MessageState.COMPLETED,
+            "created_at": timezone.now().isoformat()
+        }
+        
+        if sources:
+            data["sources"] = [source.to_dict() for source in sources]
+        if metadata:
+            data.update(metadata)
+        
         message = await ChatMessage.objects.acreate(
             conversation=self.conversation,
             content=content,
             msg_type="LLM",
-            user_id=self.user_id,
-            data=data or {},
+            creator_id=self.user_id,
+            data=data,
         )
         return message.id
     
-    async def update_message(self, message_id: int, content: str, data: Optional[dict] = None) -> None:
-        """Update an existing message."""
+    async def update_message(self, message_id: int, content: str, sources: List[SourceNode] = None, metadata: Dict[str, Any] = None) -> None:
+        """Update an existing message with content, sources, and metadata."""
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = content
-        if data:
-            message.data = data
+        
+        data = message.data or {}
+        data["updated_at"] = timezone.now().isoformat()
+        
+        if sources:
+            data["sources"] = [source.to_dict() for source in sources]
+        if metadata:
+            data.update(metadata)
+        
+        message.data = data
         await message.asave()
 
 
@@ -258,6 +559,7 @@ def get_default_config(**overrides) -> AgentConfig:
         "similarity_top_k": 10,
         "streaming": True,
         "verbose": True,
+        "temperature": 0.7,
     }
     defaults.update(overrides)
     return AgentConfig(**defaults) 

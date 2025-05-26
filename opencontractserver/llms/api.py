@@ -38,10 +38,13 @@ class AgentAPI:
         model: str = "gpt-4o-mini",
         system_prompt: Optional[str] = None,
         conversation: Optional[Conversation] = None,
+        conversation_id: Optional[int] = None,
         messages: Optional[List[ChatMessage]] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+        streaming: bool = True,
         tools: Optional[List[ToolType]] = None,
         embedder: Optional[str] = None,
-        streaming: bool = True,
         verbose: bool = False,
         **kwargs
     ) -> CoreAgent:
@@ -54,11 +57,14 @@ class AgentAPI:
             user_id: User ID for message attribution
             model: LLM model name (e.g., "gpt-4", "claude-3-sonnet")
             system_prompt: Custom system prompt (auto-generated if None)
-            conversation: Existing conversation to continue
+            conversation: Existing conversation object to continue
+            conversation_id: Existing conversation ID to load
             messages: Pre-loaded chat messages
+            temperature: Temperature for response generation (0.0-2.0)
+            max_tokens: Maximum tokens in response
+            streaming: Enable streaming responses
             tools: List of tool names, CoreTool instances, or functions
             embedder: Custom embedder path
-            streaming: Enable streaming responses
             verbose: Enable verbose logging
             **kwargs: Additional framework-specific options
             
@@ -70,11 +76,20 @@ class AgentAPI:
             agent = await agents.for_document(123)
             response = await agent.chat("What is this about?")
             
+            # With conversation management
+            agent = await agents.for_document(
+                document=my_doc,
+                user_id=456,
+                conversation_id=789,  # Continue existing conversation
+                framework="pydantic_ai"
+            )
+            
             # With custom configuration
             agent = await agents.for_document(
                 document=my_doc,
                 framework="pydantic_ai",
                 model="gpt-4",
+                temperature=0.3,
                 system_prompt="You are a legal expert...",
                 tools=["summarize", "extract_entities"],
                 user_id=456
@@ -91,13 +106,16 @@ class AgentAPI:
             document=document,
             framework=framework,
             user_id=user_id,
-            override_conversation=conversation,
-            override_system_prompt=system_prompt,
+            conversation=conversation,
+            conversation_id=conversation_id,
             loaded_messages=messages,
+            model=model,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            streaming=streaming,
             embedder_path=embedder,
             tools=resolved_tools,
-            model_name=model,
-            streaming=streaming,
             verbose=verbose,
             **kwargs
         )
@@ -111,10 +129,13 @@ class AgentAPI:
         model: str = "gpt-4o-mini",
         system_prompt: Optional[str] = None,
         conversation: Optional[Conversation] = None,
+        conversation_id: Optional[int] = None,
         messages: Optional[List[ChatMessage]] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+        streaming: bool = True,
         tools: Optional[List[ToolType]] = None,
         embedder: Optional[str] = None,
-        streaming: bool = True,
         verbose: bool = False,
         **kwargs
     ) -> CoreAgent:
@@ -127,11 +148,14 @@ class AgentAPI:
             user_id: User ID for message attribution
             model: LLM model name (e.g., "gpt-4", "claude-3-sonnet")
             system_prompt: Custom system prompt (auto-generated if None)
-            conversation: Existing conversation to continue
+            conversation: Existing conversation object to continue
+            conversation_id: Existing conversation ID to load
             messages: Pre-loaded chat messages
+            temperature: Temperature for response generation (0.0-2.0)
+            max_tokens: Maximum tokens in response
+            streaming: Enable streaming responses
             tools: List of tool names, CoreTool instances, or functions
             embedder: Custom embedder path (uses corpus default if None)
-            streaming: Enable streaming responses
             verbose: Enable verbose logging
             **kwargs: Additional framework-specific options
             
@@ -143,10 +167,23 @@ class AgentAPI:
             agent = await agents.for_corpus(456)
             response = await agent.chat("What are the key themes?")
             
-            # With streaming
-            agent = await agents.for_corpus(456, framework="pydantic_ai")
+            # With conversation management
+            agent = await agents.for_corpus(
+                corpus_id=456,
+                user_id=123,
+                conversation_id=789  # Continue existing conversation
+            )
+            
+            # With streaming and custom model
+            agent = await agents.for_corpus(
+                corpus_id=456, 
+                framework="pydantic_ai",
+                model="claude-3-sonnet",
+                temperature=0.5,
+                streaming=True
+            )
             async for chunk in agent.stream("Summarize findings"):
-                print(chunk, end="")
+                print(chunk.content, end="")
         """
         # Normalize framework
         if isinstance(framework, str):
@@ -159,12 +196,16 @@ class AgentAPI:
             corpus_id=corpus_id,
             framework=framework,
             user_id=user_id,
-            override_conversation=conversation,
-            override_system_prompt=system_prompt,
+            conversation=conversation,
+            conversation_id=conversation_id,
             loaded_messages=messages,
-            tools=resolved_tools,
-            model_name=model,
+            model=model,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
             streaming=streaming,
+            embedder_path=embedder,
+            tools=resolved_tools,
             verbose=verbose,
             **kwargs
         )

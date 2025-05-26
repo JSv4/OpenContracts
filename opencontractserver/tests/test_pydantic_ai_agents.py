@@ -35,6 +35,9 @@ from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import (
     PydanticAIAnnotationVectorStore,
     PydanticAIVectorSearchRequest,
 )
+from opencontractserver.llms.agents.core_agents import (
+    UnifiedChatResponse,
+)
 
 User = get_user_model()
 
@@ -172,13 +175,18 @@ class TestPydanticAIAgents(TestCase):
         )
         
         # Create agent instance directly (since factory method raises NotImplementedError)
-        from opencontractserver.llms.agents.core_agents import DocumentAgentContext, CoreConversationManager
+        from opencontractserver.llms.agents.core_agents import DocumentAgentContext, CoreConversationManager, AgentConfig
         
         # Mock the context and conversation manager
         mock_context = MagicMock(spec=DocumentAgentContext)
         mock_context.document = self.doc1
         
         mock_conv_manager = MagicMock(spec=CoreConversationManager)
+        # Add the required config attribute with message storage flags
+        mock_config = MagicMock(spec=AgentConfig)
+        mock_config.store_user_messages = True
+        mock_config.store_llm_messages = True
+        mock_conv_manager.config = mock_config
         
         agent = PydanticAIDocumentAgent(
             context=mock_context,
@@ -385,15 +393,59 @@ class TestPydanticAIAgents(TestCase):
         self.assertIsInstance(result.data.name, str)
         self.assertIsInstance(result.data.interests, list)
 
+    async def test_pydantic_ai_error_handling(self) -> None:
+        """Test error handling in PydanticAI agent implementations."""
+        from opencontractserver.llms.agents.core_agents import DocumentAgentContext, CoreConversationManager, AgentConfig
+        
+        # Create agent with invalid configuration
+        config = PydanticAIAgentConfig(
+            model_name="",  # Invalid model name
+            system_prompt="Test prompt",
+        )
+        
+        mock_context = MagicMock(spec=DocumentAgentContext)
+        mock_context.document = self.doc1
+        
+        mock_conv_manager = MagicMock(spec=CoreConversationManager)
+        # Add the required config attribute with message storage flags
+        mock_config = MagicMock(spec=AgentConfig)
+        mock_config.store_user_messages = True
+        mock_config.store_llm_messages = True
+        mock_conv_manager.config = mock_config
+        
+        agent = PydanticAIDocumentAgent(
+            context=mock_context,
+            conversation_manager=mock_conv_manager,
+            config=config,
+        )
+        
+        # Test that agent responds with placeholder content (not NotImplementedError)
+        response = await agent.chat("test message")
+        self.assertIsInstance(response, UnifiedChatResponse)
+        self.assertIn("PydanticAI Placeholder", response.content)
+        
+        # Test streaming also works with placeholder content
+        response_chunks = []
+        async for chunk in agent.stream("test message"):
+            response_chunks.append(chunk)
+        self.assertGreater(len(response_chunks), 0)
+
     async def test_pydantic_ai_agent_factory_integration(self) -> None:
         """Test creating PydanticAI agents through the unified factory."""
-        # Test that NotImplementedError is raised for unimplemented functionality
-        with self.assertRaises(NotImplementedError):
-            await UnifiedAgentFactory.create_document_agent(
-                document=self.doc1,
-                framework=AgentFramework.PYDANTIC_AI,
-                user_id=self.user.id,
-            )
+        # Test that PydanticAI agents can now be created (no longer NotImplementedError)
+        agent = await UnifiedAgentFactory.create_document_agent(
+            document=self.doc1,
+            framework=AgentFramework.PYDANTIC_AI,
+            user_id=self.user.id,
+        )
+        
+        # Verify we get a PydanticAI agent
+        self.assertIsInstance(agent, PydanticAIDocumentAgent)
+        
+        # Test basic functionality
+        response = await agent.chat("What is this document about?")
+        self.assertIsInstance(response, UnifiedChatResponse)
+        self.assertIn("PydanticAI Placeholder", response.content)
 
     @override_settings(
         OPENAI_API_KEY="test-key",
@@ -461,33 +513,6 @@ class TestPydanticAIAgents(TestCase):
         self.assertIn("function", tool_dict)
         self.assertIn("name", tool_dict)
         self.assertIn("description", tool_dict)
-
-    async def test_pydantic_ai_error_handling(self) -> None:
-        """Test error handling in PydanticAI agent implementations."""
-        from opencontractserver.llms.agents.core_agents import DocumentAgentContext, CoreConversationManager
-        
-        # Create agent with invalid configuration
-        config = PydanticAIAgentConfig(
-            model_name="",  # Invalid model name
-            system_prompt="Test prompt",
-        )
-        
-        mock_context = MagicMock(spec=DocumentAgentContext)
-        mock_conv_manager = MagicMock(spec=CoreConversationManager)
-        
-        agent = PydanticAIDocumentAgent(
-            context=mock_context,
-            conversation_manager=mock_conv_manager,
-            config=config,
-        )
-        
-        # Test that unimplemented methods raise appropriate errors
-        with self.assertRaises(NotImplementedError):
-            await agent.chat("test message")
-        
-        with self.assertRaises(NotImplementedError):
-            async for _ in agent.stream_chat("test message"):
-                pass
 
     def test_pydantic_ai_agent_state_management(self) -> None:
         """Test PydanticAI agent state management."""

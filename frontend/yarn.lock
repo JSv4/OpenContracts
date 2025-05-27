@@ -1870,6 +1870,11 @@
   resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.17.16.tgz#94ae78fab4a38d73086e962d0b65c30d816bfb0a"
   integrity sha512-HX7Em5NYQAXKW+1T+FiuG27NGwzJfCX3s1GjOa7ujxZa52kjJLOr4FUxT+giF6Tgxv1e+/czV/iTtBw27WTU9g==
 
+"@types/lodash@^4.17.15":
+  version "4.17.17"
+  resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.17.17.tgz#fb85a04f47e9e4da888384feead0de05f7070355"
+  integrity sha512-RRVJ+J3J+WmyOTqnz3PiBLA501eKwXl2noseKOrNo/6+XEHjTAxO4xHvxQB6QuNm+s4WRbn6rSiap8+EA+ykFQ==
+
 "@types/mdast@^4.0.0":
   version "4.0.4"
   resolved "https://registry.yarnpkg.com/@types/mdast/-/mdast-4.0.4.tgz#7ccf72edd2f1aa7dd3437e180c64373585804dd6"
@@ -5925,12 +5930,12 @@ react-is@^17.0.1:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-17.0.2.tgz#e691d4a8e9c789365655539ab372762b0efb54f0"
   integrity sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==
 
-react-json-tree@^0.19.0:
-  version "0.19.0"
-  resolved "https://registry.yarnpkg.com/react-json-tree/-/react-json-tree-0.19.0.tgz#655b59f1ee31a1d0a81221478dfae2ee9d6da3a6"
-  integrity sha512-PqT1WRVcWP+RROsZPQfNEKIC1iM/ZMfY4g5jN6oDnXp5593PPRAYgoHcgYCDjflAHQMtxl8XGdlTwIBdEGUXvw==
+react-json-tree@^0.20.0:
+  version "0.20.0"
+  resolved "https://registry.yarnpkg.com/react-json-tree/-/react-json-tree-0.20.0.tgz#1e7fd26f093bd49d733f80dd9b6d40142e09f7c9"
+  integrity sha512-h+f9fUNAxzBx1rbrgUF7+zSWKGHDtt2VPYLErIuB0JyKGnWgFMM21ksqQyb3EXwXNnoMW2rdE5kuAaubgGOx2Q==
   dependencies:
-    "@types/lodash" "^4.17.0"
+    "@types/lodash" "^4.17.15"
     react-base16-styling "^0.10.0"
 
 react-json-view@^1.21.3:

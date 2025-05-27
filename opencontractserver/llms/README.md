@@ -17,7 +17,7 @@ OpenContract's API for creating document and corpus agents.
 from opencontractserver.llms import agents
 
 # Create a document agent
-agent = await agents.for_document(123)
+agent = await agents.for_document(document=123)
 
 # Chat with rich responses
 response = await agent.chat("What are the key terms in this contract?")
@@ -121,7 +121,7 @@ print(f"Conversation has {conversation_info['message_count']} messages")
 
 ```python
 # Anonymous sessions - context maintained in memory only
-agent = await agents.for_document(123)  # No user_id
+agent = await agents.for_document(document=123)  # No user_id
 response1 = await agent.chat("What is this document about?")
 response2 = await agent.chat("Can you elaborate on section 2?")  # Context maintained in memory
 
@@ -236,23 +236,26 @@ async for chunk in agent.stream("Temporary query", store_messages=False):
 
 ### Embeddings
 
-The framework provides a simple embeddings API:
+The framework provides both sync and async embeddings APIs:
 
 ```python
 from opencontractserver.llms import embeddings
 
-# Generate embeddings (returns numpy array)
-embedder_path, vector = embeddings.generate("Contract analysis text")
+# Async version (recommended)
+embedder_path, vector = await embeddings.agenerate("Contract analysis text")
 print(f"Using embedder: {embedder_path}")
 print(f"Vector dimension: {len(vector)}")
 print(f"Vector type: {type(vector)}")  # numpy.ndarray
+
+# Sync version (for compatibility)
+embedder_path, vector = embeddings.generate("Contract analysis text")
 
 # The embeddings integrate with the vector stores for document search
 ```
 
 ### Vector Stores
 
-Vector stores enable semantic search across document annotations:
+Vector stores provide both sync and async search methods:
 
 ```python
 from opencontractserver.llms import vector_stores
@@ -271,7 +274,12 @@ query = VectorSearchQuery(
     similarity_top_k=10
 )
 
+# Async search (recommended)
 results = await store.async_search(query)
+
+# Sync search (for compatibility)
+results = store.search(query)
+
 for result in results:
     print(f"Score: {result.similarity_score}")
     print(f"Text: {result.annotation.raw_text[:100]}...")
@@ -301,7 +309,7 @@ The framework follows a layered architecture that separates concerns and enables
 ### How It Works
 
 1. **Beautiful API (`api.py`)**:
-   - `agents.for_document(123)` provides the elegant entry point
+   - `agents.for_document(document=123)` provides the elegant entry point
    - Handles parameter validation, type conversion, and defaults
    - Routes to the appropriate factory based on framework choice
 
@@ -381,7 +389,7 @@ config = AgentConfig(
     verbose=True
 )
 
-agent = await agents.for_document(123, config=config)
+agent = await agents.for_document(document=123, config=config)
 ```
 
 ### Conversation Patterns
@@ -410,7 +418,7 @@ print(f"Analyzed contract in {info['message_count']} messages")
 
 ```python
 # Anonymous sessions - context maintained in memory only
-agent = await agents.for_document(123)  # No storage
+agent = await agents.for_document(document=123)  # No storage
 response1 = await agent.chat("What is this document about?")
 response2 = await agent.chat("What are the key risks mentioned?")
 response3 = await agent.chat("How do these risks compare?")
@@ -567,7 +575,7 @@ config.model = "gpt-4-turbo"
 config.temperature = 0.1
 config.system_prompt = "You are a specialized contract analyzer..."
 
-agent = await agents.for_document(123, config=config)
+agent = await agents.for_document(document=123, config=config)
 ```
 
 ## Error Handling
@@ -672,7 +680,7 @@ import asyncio
 
 async def analyze_documents(document_ids):
     agents = [
-        await agents.for_document(doc_id)
+        await agents.for_document(document=doc_id)
         for doc_id in document_ids
     ]
     

@@ -1,9 +1,7 @@
 """
 Elegant top-level API for OpenContracts LLM framework.
 
-This module provides the beautiful, simple interface that makes creating
-document and corpus agents a joy to use. It acts as a thin wrapper around
-the underlying factories.
+This module provides a simple interface for creating document or corpus agents.
 """
 
 import logging
@@ -29,7 +27,7 @@ ToolType = Union[str, CoreTool, callable]
 
 
 class AgentAPI:
-    """Beautiful, simple API for creating document and corpus agents."""
+    """Simple API for creating document and corpus agents."""
     
     @staticmethod
     async def for_document(
@@ -418,7 +416,7 @@ def _resolve_tools(tools: List[ToolType]) -> List[CoreTool]:
     return resolved
 
 
-# Create singleton instances for the beautiful API
+# Create singleton instances for the agent API
 agents = AgentAPI()
 embeddings = EmbeddingAPI()
 tools = ToolAPI()

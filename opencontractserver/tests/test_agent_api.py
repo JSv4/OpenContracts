@@ -1,8 +1,5 @@
 """
-Tests for the beautiful OpenContracts LLM API.
-
-These tests ensure the elegant API works correctly and maintains
-its promise of simplicity and reliability.
+Tests for the OpenContracts LLM API.
 """
 
 import asyncio
@@ -20,7 +17,6 @@ User = get_user_model()
 
 
 class TestAgentAPI(TestCase):
-    """Test the beautiful agent API."""
     
     def setUp(self):
         """Set up test data."""
@@ -36,7 +32,6 @@ class TestAgentAPI(TestCase):
             mock_agent = AsyncMock(spec=CoreAgent)
             mock_create.return_value = mock_agent
             
-            # The beautiful one-liner - run in async context
             async def test_async():
                 agent = await agents.for_document(123)
                 

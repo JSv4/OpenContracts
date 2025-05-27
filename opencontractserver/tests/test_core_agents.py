@@ -1,13 +1,10 @@
 """
 Tests for core agent components: AgentConfig, Contexts, and CoreConversationManager.
 """
-
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
-from django.conf import settings as django_settings
 
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
@@ -15,10 +12,9 @@ from opencontractserver.conversations.models import Conversation, ChatMessage
 from opencontractserver.llms.agents.core_agents import (
     AgentConfig,
     DocumentAgentContext,
-    CorpusAgentContext,
     CoreConversationManager,
-    CoreDocumentAgentFactory, # For default prompts
-    CoreCorpusAgentFactory,   # For default prompts
+    CoreDocumentAgentFactory,
+    CoreCorpusAgentFactory,
     get_default_config
 )
 from opencontractserver.llms.vector_stores.core_vector_stores import CoreAnnotationVectorStore
@@ -60,25 +56,22 @@ class TestAgentContexts(TestCoreAgentComponentsSetup):
     @patch(f'{CoreAnnotationVectorStore.__module__}.CoreAnnotationVectorStore.__init__', return_value=None) # Mock __init__ to prevent DB/embedder calls
     def test_document_agent_context_init_minimal(self, mock_vector_store_init: MagicMock):
         config = AgentConfig(user_id=self.user.id, embedder_path="test/embedder/doc_specific")
-        context = DocumentAgentContext(document=self.doc1, config=config)
+        context = DocumentAgentContext(self.corpus1, self.doc1, config)
         
         self.assertIs(context.document, self.doc1)
         self.assertIs(context.config, config)
         mock_vector_store_init.assert_called_once_with(
             user_id=self.user.id,
             document_id=self.doc1.id,
+            corpus_id=self.corpus1.id,
             embedder_path="test/embedder/doc_specific",
         )
-        # context.vector_store is created in __post_init__ by calling the CoreAnnotationVectorStore constructor
-        # Since we mocked __init__ to return None, the instance will be None here. 
-        # If we want to check if it *would* be an instance, we'd need a more complex mock.
-        # For now, verifying __init__ call is sufficient.
 
     @patch(f'{CoreAnnotationVectorStore.__module__}.CoreAnnotationVectorStore.__init__', return_value=None)
     def test_document_agent_context_with_explicit_vector_store(self, mock_vector_store_init: MagicMock):
         mock_vs = MagicMock(spec=CoreAnnotationVectorStore)
         config = AgentConfig()
-        context = DocumentAgentContext(document=self.doc1, config=config, vector_store=mock_vs)
+        context = DocumentAgentContext(self.corpus1, self.doc1, config, vector_store=mock_vs)
         self.assertIs(context.vector_store, mock_vs)
         mock_vector_store_init.assert_not_called() # Should not init a new one
 
@@ -140,9 +133,10 @@ class TestCoreConversationManager(TestCoreAgentComponentsSetup):
         initial_convo_count = await Conversation.objects.acount()
         config = AgentConfig(user_id=self.user.id)
         manager = await CoreConversationManager.create_for_document(
-            document=self.doc1, 
-            user_id=self.user.id,
-            config=config
+            self.corpus1,
+            self.doc1, 
+            self.user.id,
+            config
         )
         
         self.assertIsNotNone(manager.conversation)
@@ -154,9 +148,10 @@ class TestCoreConversationManager(TestCoreAgentComponentsSetup):
         initial_convo_count = await Conversation.objects.acount()
         config = AgentConfig(user_id=self.user.id, conversation=self.conversation1)
         manager = await CoreConversationManager.create_for_document(
-            document=self.doc1, 
-            user_id=self.user.id,
-            config=config
+            self.corpus1,
+            self.doc1, 
+            self.user.id,
+            config
         )
         self.assertIs(manager.conversation, self.conversation1)
         self.assertEqual(await Conversation.objects.acount(), initial_convo_count) # No new convo
@@ -165,9 +160,9 @@ class TestCoreConversationManager(TestCoreAgentComponentsSetup):
         initial_convo_count = await Conversation.objects.acount()
         config = AgentConfig(user_id=self.user.id)
         manager = await CoreConversationManager.create_for_corpus(
-            corpus=self.corpus1, 
-            user_id=self.user.id,
-            config=config
+            self.corpus1, 
+            self.user.id,
+            config
         )
 
         self.assertIsNotNone(manager.conversation)
@@ -178,9 +173,9 @@ class TestCoreConversationManager(TestCoreAgentComponentsSetup):
     async def test_create_for_corpus_existing_conversation(self):
         config = AgentConfig(user_id=self.user.id, conversation=self.conversation1)
         manager = await CoreConversationManager.create_for_corpus(
-            corpus=self.corpus1, 
-            user_id=self.user.id,
-            config=config
+            self.corpus1, 
+            self.user.id,
+            config
         )
         self.assertIs(manager.conversation, self.conversation1)
 
@@ -230,7 +225,7 @@ class TestCoreAgentFactoriesDefaults(TestCoreAgentComponentsSetup):
         mock_get_prompt.return_value = "Mocked default prompt"
         config = AgentConfig(system_prompt=None) # Ensure it's None to trigger default
         
-        context = await CoreDocumentAgentFactory.create_context(self.doc1, config)
+        context = await CoreDocumentAgentFactory.create_context(self.doc1, self.corpus1, config)
         
         mock_get_prompt.assert_called_once_with(self.doc1)
         self.assertEqual(context.config.system_prompt, "Mocked default prompt")
@@ -238,7 +233,7 @@ class TestCoreAgentFactoriesDefaults(TestCoreAgentComponentsSetup):
     async def test_create_document_context_uses_override_prompt(self):
         override_prompt = "My custom prompt for docs"
         config = AgentConfig(system_prompt=override_prompt)
-        context = await CoreDocumentAgentFactory.create_context(self.doc1, config)
+        context = await CoreDocumentAgentFactory.create_context(self.doc1, self.corpus1, config)
         self.assertEqual(context.config.system_prompt, override_prompt)
 
     # Similar tests for CoreCorpusAgentFactory and its prompt logic can be added. 

@@ -1,7 +1,7 @@
 """
 OpenContracts LLM Framework
 
-A beautiful, framework-agnostic API for creating document and corpus agents.
+Framework-agnostic API for creating document and corpus agents.
 
 Examples:
     # Simple document agent

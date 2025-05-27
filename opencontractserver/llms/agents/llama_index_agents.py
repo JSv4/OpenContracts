@@ -110,9 +110,10 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
 
         # Create conversation manager with basic constructor
         conversation_manager = await CoreConversationManager.create_for_document(
-            document=context.document,
-            user_id=config.user_id,
-            config=config,
+            context.corpus,
+            context.document,
+            config.user_id,
+            config,
             override_conversation=conversation
         )
         
@@ -121,7 +122,7 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
 
         # Set up LlamaIndex-specific components
         embed_model = OpenContractsPipelineEmbedding(
-            corpus_id=corpus.id,
+            corpus_id=context.corpus.id,
             embedder_path=config.embedder_path,
         )
         Settings.embed_model = embed_model
@@ -138,7 +139,7 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
         # Create vector store and index
         vector_store = DjangoAnnotationVectorStore.from_params(
             user_id=config.user_id,
-            corpus_id=corpus.id,
+            corpus_id=context.corpus.id,
             document_id=context.document.id,
             embedder_path=config.embedder_path,
         )
@@ -448,8 +449,8 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
             )
             doc_agent = await LlamaIndexDocumentAgent.create(
                 doc,
+                corpus,
                 doc_config,
-                corpus_id=context.corpus.id,
             )
 
             tool_name = f"doc_{doc.id}"

@@ -232,7 +232,8 @@ class TestLlamaIndexAgents(TestCase):
         
         # Create agent
         agent = await LlamaIndexDocumentAgent.create(
-            document=self.doc1,
+            self.doc1,
+            self.corpus,
             config=config,
         )
         
@@ -282,7 +283,7 @@ class TestLlamaIndexAgents(TestCase):
         
         # Create and test agent
         config = AgentConfig(user_id=self.user.id, model_name="gpt-4o-mini")
-        agent = await LlamaIndexDocumentAgent.create(self.doc1, config)
+        agent = await LlamaIndexDocumentAgent.create(self.doc1, self.corpus, config)
         
         response = await agent.chat("What is this document about?")
         
@@ -337,7 +338,7 @@ class TestLlamaIndexAgents(TestCase):
         
         # Create and test agent
         config = AgentConfig(user_id=self.user.id, model_name="gpt-4o-mini", streaming=True)
-        agent = await LlamaIndexDocumentAgent.create(self.doc1, config)
+        agent = await LlamaIndexDocumentAgent.create(self.doc1, self.corpus, config)
         
         # Collect streaming responses
         responses = []
@@ -390,8 +391,8 @@ class TestLlamaIndexAgents(TestCase):
         
         # Create corpus agent
         agent = await LlamaIndexCorpusAgent.create(
-            corpus_id=self.corpus.id,
-            config=config,
+            self.corpus.id,
+            config,
         )
         
         # Verify initialization
@@ -414,6 +415,7 @@ class TestLlamaIndexAgents(TestCase):
             framework=AgentFramework.LLAMA_INDEX,
             user_id=self.user.id,
             document_id=self.doc1.id,
+            corpus_id=self.corpus.id,
         )
         
         self.assertIsInstance(vector_store, DjangoAnnotationVectorStore)
@@ -449,7 +451,7 @@ class TestLlamaIndexAgents(TestCase):
         
         # Create agent
         config = AgentConfig(user_id=self.user.id, model_name="gpt-4o-mini")
-        agent = await LlamaIndexDocumentAgent.create(self.doc1, config)
+        agent = await LlamaIndexDocumentAgent.create(self.doc1, self.corpus, config)
         
         # Test that exceptions are properly handled
         with self.assertRaises(Exception) as cm:
@@ -483,7 +485,7 @@ class TestLlamaIndexAgents(TestCase):
             store_user_messages=False,
             store_llm_messages=False,
         )
-        agent = await LlamaIndexDocumentAgent.create(self.doc1, config)
+        agent = await LlamaIndexDocumentAgent.create(self.doc1, self.corpus, config)
         
         # Test chat without message storage
         response = await agent.chat("Test query", store_messages=False)
@@ -496,7 +498,8 @@ class TestLlamaIndexAgents(TestCase):
         """Test creating LlamaIndex agents through the unified factory."""
         # Test document agent creation
         agent = await UnifiedAgentFactory.create_document_agent(
-            document=self.doc1,
+            self.doc1,
+            self.corpus,
             framework=AgentFramework.LLAMA_INDEX,
             user_id=self.user.id,
         )
@@ -506,7 +509,7 @@ class TestLlamaIndexAgents(TestCase):
         
         # Test corpus agent creation
         corpus_agent = await UnifiedAgentFactory.create_corpus_agent(
-            corpus_id=self.corpus.id,
+            self.corpus,
             framework=AgentFramework.LLAMA_INDEX,
             user_id=self.user.id,
         )
@@ -544,7 +547,8 @@ class TestLlamaIndexAgents(TestCase):
         # Create agent with custom tools
         config = AgentConfig(user_id=self.user.id, model_name="gpt-4o-mini")
         agent = await LlamaIndexDocumentAgent.create(
-            document=self.doc1,
+            self.doc1,
+            self.corpus,
             config=config,
             tools=[custom_tool]
         )
@@ -612,7 +616,7 @@ class TestLlamaIndexAgents(TestCase):
             loaded_messages=[user_msg, llm_msg]
         )
         
-        agent = await LlamaIndexDocumentAgent.create(self.doc1, config)
+        agent = await LlamaIndexDocumentAgent.create(self.doc1, self.corpus, config)
         
         # Verify that chat history was passed to OpenAI agent
         call_kwargs = mock_openai_agent.from_tools.call_args[1]

@@ -2,8 +2,7 @@
 
 import inspect
 import logging
-from typing import Any, Callable, Dict, List, Optional, Union, get_type_hints
-from functools import wraps
+from typing import Any, Callable, Dict, List, Optional, get_type_hints
 
 from pydantic import BaseModel, Field
 from pydantic_ai import RunContext
@@ -21,11 +20,17 @@ class PydanticAIToolMetadata(BaseModel):
 
 
 class PydanticAIDependencies(BaseModel):
-    """Base dependencies class for PydanticAI tools."""
+    """
+    Default dependencies for PydanticAI tools and agents.
+    This class is used as the `deps_type` for PydanticAI Agents
+    and for typing the `RunContext` in tools.
+    """
     
-    user_id: Optional[int] = None
-    document_id: Optional[int] = None
-    corpus_id: Optional[int] = None
+    user_id: Optional[int] = Field(default=None, description="Current user ID")
+    document_id: Optional[int] = Field(default=None, description="Current document ID")
+    corpus_id: Optional[int] = Field(default=None, description="Current corpus ID")
+    # Add other common dependencies here if needed, e.g., a vector store instance
+    # vector_store: Optional[Any] = Field(default=None, description="Vector store instance")
 
 
 class PydanticAIToolWrapper:
@@ -46,6 +51,11 @@ class PydanticAIToolWrapper:
         
         # Create a properly typed wrapper function for PydanticAI
         self._wrapped_function = self._create_pydantic_ai_compatible_function()
+
+    @property
+    def callable_function(self) -> Callable:
+        """The PydanticAI-compatible callable tool function."""
+        return self._wrapped_function
 
     def to_dict(self) -> dict:
        return {
@@ -86,9 +96,8 @@ class PydanticAIToolWrapper:
             async def async_wrapper(ctx: RunContext[PydanticAIDependencies], *args, **kwargs):
                 """Async wrapper for PydanticAI tools."""
                 try:
-                    # Extract dependencies if needed
-                    # For now, we'll pass through the original args/kwargs
-                    # In the future, we can inject dependencies here
+                    # Dependencies from ctx.deps can be accessed here if original_func needs them
+                    # For now, CoreTool functions are generic and don't use ctx.
                     return await original_func(*args, **kwargs)
                 except Exception as e:
                     logger.error(f"Error in tool {func_name}: {e}")
@@ -106,6 +115,7 @@ class PydanticAIToolWrapper:
             async def sync_to_async_wrapper(ctx: RunContext[PydanticAIDependencies], *args, **kwargs):
                 """Sync to async wrapper for PydanticAI tools."""
                 try:
+                    # Dependencies from ctx.deps can be accessed here if original_func needs them
                     return original_func(*args, **kwargs)
                 except Exception as e:
                     logger.error(f"Error in tool {func_name}: {e}")
@@ -134,11 +144,6 @@ class PydanticAIToolWrapper:
         """Get the tool metadata."""
         return self._metadata
 
-    @property
-    def function(self) -> Callable:
-        """Get the wrapped function that's compatible with PydanticAI."""
-        return self._wrapped_function
-
     def __call__(self, *args, **kwargs) -> Any:
         """Make the wrapper callable."""
         return self._wrapped_function(*args, **kwargs)
@@ -164,28 +169,28 @@ class PydanticAIToolFactory:
     """Modern factory for creating Pydantic AI compatible tools."""
 
     @staticmethod
-    def create_tools(core_tools: List[CoreTool]) -> List[PydanticAIToolWrapper]:
-        """Convert a list of CoreTools to modern Pydantic AI tools.
+    def create_tools(core_tools: List[CoreTool]) -> List[Callable]:
+        """Convert a list of CoreTools to modern Pydantic AI callable tools.
         
         Args:
             core_tools: List of CoreTool instances
             
         Returns:
-            List of PydanticAIToolWrapper instances
+            List of PydanticAI-compatible callable functions
         """
         return [PydanticAIToolFactory.create_tool(tool) for tool in core_tools]
 
     @staticmethod
-    def create_tool(core_tool: CoreTool) -> PydanticAIToolWrapper:
-        """Convert a single CoreTool to modern Pydantic AI tool.
+    def create_tool(core_tool: CoreTool) -> Callable:
+        """Convert a single CoreTool to a modern Pydantic AI callable tool.
         
         Args:
             core_tool: CoreTool instance
             
         Returns:
-            PydanticAIToolWrapper instance
+            PydanticAI-compatible callable function
         """
-        return PydanticAIToolWrapper(core_tool)
+        return PydanticAIToolWrapper(core_tool).callable_function
 
     @staticmethod
     def from_function(
@@ -193,8 +198,8 @@ class PydanticAIToolFactory:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parameter_descriptions: Optional[Dict[str, str]] = None
-    ) -> PydanticAIToolWrapper:
-        """Create a Pydantic AI tool wrapper from a function.
+    ) -> Callable:
+        """Create a PydanticAI-compatible callable tool directly from a Python function.
         
         Args:
             func: Python function to wrap
@@ -203,7 +208,7 @@ class PydanticAIToolFactory:
             parameter_descriptions: Optional parameter descriptions
             
         Returns:
-            PydanticAIToolWrapper instance
+            PydanticAI-compatible callable function
         """
         core_tool = CoreTool.from_function(
             func=func,
@@ -211,27 +216,27 @@ class PydanticAIToolFactory:
             description=description,
             parameter_descriptions=parameter_descriptions
         )
-        return PydanticAIToolWrapper(core_tool)
+        return PydanticAIToolWrapper(core_tool).callable_function
 
     @staticmethod
-    def create_tool_registry(core_tools: List[CoreTool]) -> Dict[str, PydanticAIToolWrapper]:
-        """Create a registry of tools by name following modern patterns.
+    def create_tool_registry(core_tools: List[CoreTool]) -> Dict[str, Callable]:
+        """Create a registry of PydanticAI-compatible callable tools by name.
         
         Args:
             core_tools: List of CoreTool instances
             
         Returns:
-            Dictionary mapping tool names to PydanticAIToolWrapper instances
+            Dictionary mapping tool names to PydanticAI-compatible callable functions
         """
-        return {tool.name: PydanticAIToolWrapper(tool) for tool in core_tools}
+        return {tool.name: PydanticAIToolFactory.create_tool(tool) for tool in core_tools}
 
     @staticmethod
     def create_typed_tool_from_function(
         func: Callable,
         name: Optional[str] = None,
         description: Optional[str] = None,
-    ) -> PydanticAIToolWrapper:
-        """Create a fully typed Pydantic AI tool using function annotations.
+    ) -> Callable:
+        """Create a fully typed Pydantic AI callable tool using function annotations.
         
         This method leverages Python type hints to create better tool schemas.
         
@@ -241,7 +246,7 @@ class PydanticAIToolFactory:
             description: Optional custom description
             
         Returns:
-            PydanticAIToolWrapper instance with enhanced type information
+            PydanticAI-compatible callable function with enhanced type information
         """
         # Extract type hints
         type_hints = get_type_hints(func)
@@ -266,8 +271,8 @@ def pydantic_ai_tool(
     name: Optional[str] = None,
     description: Optional[str] = None,
     parameter_descriptions: Optional[Dict[str, str]] = None
-) -> Callable:
-    """Decorator to create Pydantic AI tools following modern patterns.
+) -> Callable[[Callable], Callable]:
+    """Decorator to create Pydantic AI compatible callable tools.
     
     Args:
         name: Optional custom name for the tool
@@ -275,16 +280,17 @@ def pydantic_ai_tool(
         parameter_descriptions: Optional parameter descriptions
         
     Returns:
-        Decorator function
+        Decorator function that transforms a function into a PydanticAI-compatible callable tool
         
     Example:
         @pydantic_ai_tool(description="Extract dates from text")
-        async def extract_dates(ctx: RunContext[PydanticAIDependencies], text: str) -> List[str]:
+        async def extract_dates(text: str) -> List[str]: # Note: ctx is added by the wrapper
             '''Extract all dates from the given text.'''
             # Implementation here
             return ["2024-01-01", "2024-12-31"]
     """
-    def decorator(func: Callable) -> PydanticAIToolWrapper:
+    def decorator(func: Callable) -> Callable:
+        """Inner decorator that wraps the function."""
         return PydanticAIToolFactory.from_function(
             func=func,
             name=name,
@@ -294,13 +300,13 @@ def pydantic_ai_tool(
     return decorator
 
 
-def create_pydantic_ai_tool(
+def create_pydantic_ai_tool_from_func(
     func: Callable,
     name: Optional[str] = None,
     description: Optional[str] = None,
     parameter_descriptions: Optional[Dict[str, str]] = None
-) -> PydanticAIToolWrapper:
-    """Create a modern Pydantic AI tool from a function.
+) -> Callable:
+    """Create a PydanticAI-compatible callable tool from a function.
     
     Args:
         func: Python function to wrap
@@ -309,7 +315,7 @@ def create_pydantic_ai_tool(
         parameter_descriptions: Optional parameter descriptions
         
     Returns:
-        PydanticAIToolWrapper instance
+        PydanticAI-compatible callable function
     """
     return PydanticAIToolFactory.from_function(
         func=func,
@@ -319,13 +325,13 @@ def create_pydantic_ai_tool(
     )
 
 
-def create_typed_pydantic_ai_tool(func: Callable) -> PydanticAIToolWrapper:
-    """Create a fully typed Pydantic AI tool using function type hints.
+def create_typed_pydantic_ai_tool(func: Callable) -> Callable:
+    """Create a fully typed Pydantic AI callable tool using function type hints.
     
     Args:
         func: Python function with proper type annotations
         
     Returns:
-        PydanticAIToolWrapper instance with enhanced type information
+        PydanticAI-compatible callable function with enhanced type information
     """
     return PydanticAIToolFactory.create_typed_tool_from_function(func) 

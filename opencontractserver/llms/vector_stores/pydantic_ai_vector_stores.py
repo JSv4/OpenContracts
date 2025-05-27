@@ -2,10 +2,10 @@
 
 import logging
 from typing import List, Optional, Union, Any, Dict
-import asyncio
 from channels.db import database_sync_to_async
 
 from pydantic import BaseModel
+from opencontractserver.llms.tools.pydantic_ai_tools import PydanticAIDependencies
 from pydantic_ai import RunContext
 
 from opencontractserver.llms.vector_stores.core_vector_stores import (
@@ -13,7 +13,6 @@ from opencontractserver.llms.vector_stores.core_vector_stores import (
     VectorSearchQuery,
     VectorSearchResult,
 )
-from opencontractserver.annotations.models import Annotation
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +52,12 @@ class PydanticAIVectorSearchResponse(BaseModel):
                 "similarity_score": result.similarity_score,
                 "annotation_label": result.annotation.annotation_label.text if result.annotation.annotation_label else None,
                 "page": result.annotation.page,
+                "bounds": {
+                    "top": result.annotation.bounding_box.top if result.annotation.bounding_box else None,
+                    "bottom": result.annotation.bounding_box.bottom if result.annotation.bounding_box else None,
+                    "left": result.annotation.bounding_box.left if result.annotation.bounding_box else None,
+                    "right": result.annotation.bounding_box.right if result.annotation.bounding_box else None,
+                } if result.annotation.bounding_box else None,
             }
             formatted_results.append(formatted_result)
         
@@ -81,6 +86,12 @@ class PydanticAIVectorSearchResponse(BaseModel):
                 "corpus_id": annotation.corpus_id,
                 "page": annotation.page,
                 "annotation_label": annotation.annotation_label.text if annotation.annotation_label else None,
+                "bounds": {
+                    "top": _bb_value(annotation.bounding_box, "top"),
+                    "bottom": _bb_value(annotation.bounding_box, "bottom"),
+                    "left": _bb_value(annotation.bounding_box, "left"),
+                    "right": _bb_value(annotation.bounding_box, "right"),
+                } if annotation.bounding_box else None,
             }
         
         formatted_results = []
@@ -227,7 +238,7 @@ class PydanticAIAnnotationVectorStore:
             Async function that can be used as a PydanticAI tool
         """
         async def vector_search_tool(
-            ctx: Any,  # RunContext will be properly typed when used
+            ctx: RunContext[PydanticAIDependencies],  # Updated annotation
             query_text: str,
             similarity_top_k: int = 10,
             filters: Optional[Dict[str, Any]] = None
@@ -235,7 +246,7 @@ class PydanticAIAnnotationVectorStore:
             """Search annotations using vector similarity.
             
             Args:
-                ctx: PydanticAI run context
+                ctx: PydanticAI run context. Provides access to dependencies via ctx.deps.
                 query_text: Text query for semantic search
                 similarity_top_k: Maximum number of results to return
                 filters: Additional metadata filters
@@ -294,4 +305,21 @@ async def create_vector_search_tool(
         **kwargs
     )
     
-    return await vector_store.create_vector_search_tool() 
+    return await vector_store.create_vector_search_tool()
+
+
+# --------------------------------------------------------------------------- #
+# Helpers                                                                     #
+# --------------------------------------------------------------------------- #
+
+def _bb_value(bb: object | None, key: str):
+    """
+    Robustly extract a single coordinate from a bounding-box that may be a
+    plain dict **or** an object with attributes.
+    """
+    if bb is None:
+        return None
+    if isinstance(bb, dict):
+        return bb.get(key)
+    # Fall-back to attribute access
+    return getattr(bb, key, None) 

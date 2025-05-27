@@ -17,10 +17,11 @@ from llama_index.core.objects import ObjectIndex
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.llms.openai import OpenAI
 
+from opencontractserver.conversations.models import Conversation
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.agents.core_agents import (
     AgentConfig,
-    CoreAgent,
+    CoreAgentBase,
     CoreConversationManager,
     CoreCorpusAgentFactory,
     CoreDocumentAgentFactory,
@@ -67,17 +68,18 @@ def _convert_llama_index_node_to_source_node(node, similarity_score: float = 1.0
     )
 
 
-class LlamaIndexDocumentAgent(CoreAgent):
+class LlamaIndexDocumentAgent(CoreAgentBase):
     """LlamaIndex implementation of document agent using core functionality."""
 
     def __init__(
         self,
         context: DocumentAgentContext,
+        config: AgentConfig,
         conversation_manager: CoreConversationManager,
         agent: OpenAIAgent,
     ):
+        super().__init__(config, conversation_manager)
         self.context = context
-        self.conversation_manager = conversation_manager
         self._agent = agent
         self._processing_queries = set()
 
@@ -87,17 +89,24 @@ class LlamaIndexDocumentAgent(CoreAgent):
         document: Union[str, int, Document],
         config: AgentConfig,
         tools: Optional[List[FunctionTool]] = None,
+        conversation: Optional[Conversation] = None, # Add conversation override
     ) -> "LlamaIndexDocumentAgent":
         """Create a LlamaIndex document agent using core functionality."""
-        # Create context using core factory
+        if config is None:
+            config = get_default_config()
+
         context = await CoreDocumentAgentFactory.create_context(document, config)
 
-        # Create conversation manager
+        # Create conversation manager with basic constructor
         conversation_manager = await CoreConversationManager.create_for_document(
-            context.document,
-            config.user_id,
-            config,
+            document=context.document,
+            user_id=config.user_id,
+            config=config,
+            override_conversation=conversation
         )
+        
+        # Ensure the agent's config has the potentially newly created/loaded conversation
+        config.conversation = conversation_manager.conversation
 
         # Set up LlamaIndex-specific components
         embed_model = OpenContractsPipelineEmbedding(embedder_path=config.embedder_path)
@@ -165,7 +174,12 @@ class LlamaIndexDocumentAgent(CoreAgent):
             use_async=True,
         )
 
-        return cls(context, conversation_manager, underlying_agent)
+        return cls(
+            context=context,
+            config=config,
+            conversation_manager=conversation_manager,
+            agent=underlying_agent,
+        )
 
     async def chat(self, message: str, store_messages: bool = True) -> UnifiedChatResponse:
         """Send a message and get a complete response."""
@@ -349,17 +363,18 @@ class LlamaIndexDocumentAgent(CoreAgent):
             return await self.conversation_manager.store_user_message(content)
 
 
-class LlamaIndexCorpusAgent(CoreAgent):
+class LlamaIndexCorpusAgent(CoreAgentBase):
     """LlamaIndex implementation of corpus agent using core functionality."""
 
     def __init__(
         self,
         context: CorpusAgentContext,
+        config: AgentConfig,
         conversation_manager: CoreConversationManager,
         agent: OpenAIAgent,
     ):
+        super().__init__(config, conversation_manager)
         self.context = context
-        self.conversation_manager = conversation_manager
         self._agent = agent
         self._processing_queries = set()
 
@@ -369,17 +384,24 @@ class LlamaIndexCorpusAgent(CoreAgent):
         corpus_id: Union[str, int],
         config: AgentConfig,
         tools: Optional[List[FunctionTool]] = None,
+        conversation: Optional[Conversation] = None, # Add conversation override
     ) -> "LlamaIndexCorpusAgent":
+        
         """Create a LlamaIndex corpus agent using core functionality."""
-        # Create context using core factory
+        if config is None:
+            config = get_default_config()
+
         context = await CoreCorpusAgentFactory.create_context(corpus_id, config)
 
-        # Create conversation manager
+        # Use the CoreConversationManager factory method
         conversation_manager = await CoreConversationManager.create_for_corpus(
-            context.corpus,
-            config.user_id,
-            config,
+            corpus=context.corpus,
+            user_id=config.user_id,
+            config=config,
+            override_conversation=conversation
         )
+        # Ensure the agent's config has the potentially newly created/loaded conversation
+        config.conversation = conversation_manager.conversation
 
         # Set up LlamaIndex-specific components
         llm = OpenAI(
@@ -461,7 +483,12 @@ class LlamaIndexCorpusAgent(CoreAgent):
             chat_history=prefix_messages,
         )
 
-        return cls(context, conversation_manager, aggregator_agent)
+        return cls(
+            context=context,
+            config=config,
+            conversation_manager=conversation_manager,
+            agent=aggregator_agent,
+        )
 
     async def chat(self, message: str, store_messages: bool = True) -> UnifiedChatResponse:
         """Send a message and get a complete response."""
@@ -649,7 +676,7 @@ class LlamaIndexCorpusAgent(CoreAgent):
 class OpenContractDbAgent:
     """Backward compatibility wrapper for the original OpenContractDbAgent interface."""
 
-    def __init__(self, agent: CoreAgent):
+    def __init__(self, agent: CoreAgentBase):
         self._agent = agent
         self.conversation = agent.conversation_manager.conversation
         self.user_id = agent.conversation_manager.user_id

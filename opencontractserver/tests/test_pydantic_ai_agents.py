@@ -20,9 +20,6 @@ from opencontractserver.llms.types import AgentFramework
 from opencontractserver.llms.agents.agent_factory import UnifiedAgentFactory
 from opencontractserver.llms.agents.pydantic_ai_agents import (
     PydanticAIDocumentAgent,
-    PydanticAICorpusAgent,
-    PydanticAIAgentConfig,
-    PydanticAIAgentState,
 )
 from opencontractserver.llms.tools.tool_factory import CoreTool, create_document_tools
 from opencontractserver.llms.tools.pydantic_ai_tools import (
@@ -68,6 +65,38 @@ class UserProfile(BaseModel):
     
     name: str
     interests: list[str]
+
+
+class _DummyRunResult:
+    """Mock run result for testing."""
+    
+    def __init__(self, data: str):
+        self.data = data
+        self.sources = []
+
+    def usage(self):
+        return None
+
+
+class _DummyStreamResult:
+    """Mock stream result for testing."""
+    
+    def __init__(self, data: str):
+        self.data = data
+        self.sources = []
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_):
+        return False
+
+    async def stream_text(self, delta: bool = True):
+        for ch in self.data:
+            yield ch
+
+    def usage(self):
+        return None
 
 
 class TestPydanticAIAgents(TestCase):
@@ -159,47 +188,47 @@ class TestPydanticAIAgents(TestCase):
             corpus_id=self.corpus.id,
         )
 
-    @patch('opencontractserver.llms.agents.pydantic_ai_agents.Agent')
-    def test_pydantic_ai_document_agent_creation(self, mock_agent_class: MagicMock) -> None:
-        """Test creating a PydanticAI document agent through the factory."""
-        # Mock the Agent creation
-        mock_agent_instance = MagicMock()
-        mock_agent_class.return_value = mock_agent_instance
-        
-        # Create configuration
-        config = PydanticAIAgentConfig(
-            model_name="test-model",
-            system_prompt="You are a helpful document assistant.",
-            temperature=0.7,
-            max_tokens=1000,
-        )
-        
-        # Create agent instance directly (since factory method raises NotImplementedError)
-        from opencontractserver.llms.agents.core_agents import DocumentAgentContext, CoreConversationManager, AgentConfig
-        
-        # Mock the context and conversation manager
-        mock_context = MagicMock(spec=DocumentAgentContext)
-        mock_context.document = self.doc1
-        
-        mock_conv_manager = MagicMock(spec=CoreConversationManager)
-        # Add the required config attribute with message storage flags
-        mock_config = MagicMock(spec=AgentConfig)
-        mock_config.store_user_messages = True
-        mock_config.store_llm_messages = True
-        mock_conv_manager.config = mock_config
-        
-        agent = PydanticAIDocumentAgent(
-            context=mock_context,
-            conversation_manager=mock_conv_manager,
-            config=config,
-        )
-        
-        # Verify initialization
-        self.assertEqual(agent.config, config)
-        self.assertIsInstance(agent.state, PydanticAIAgentState)
-        self.assertEqual(agent.context, mock_context)
+    @patch('opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIAgent')
+    def test_pydantic_ai_document_agent_creation(
+        self,
+        mock_pyd_ai_cls: MagicMock,
+    ) -> None:
+        """Ensure we can build a document agent with mocked internals."""
+        # Produce the mock `PydanticAIAgent` instance
+        mock_pyd_ai_instance = MagicMock()
+        mock_pyd_ai_cls.return_value = mock_pyd_ai_instance
 
-    @patch('opencontractserver.llms.agents.pydantic_ai_agents.Agent')
+        # Fake context & conversation-manager
+        from opencontractserver.llms.agents.core_agents import (
+            AgentConfig,
+            DocumentAgentContext,
+            CoreConversationManager,
+        )
+
+        cfg = MagicMock(spec=AgentConfig)
+        cfg.store_user_messages = True
+        cfg.store_llm_messages = True
+
+        mock_ctx = MagicMock(spec=DocumentAgentContext)
+        mock_ctx.document = self.doc1
+        mock_ctx.config = cfg
+
+        mock_conv_mgr = MagicMock(spec=CoreConversationManager)
+
+        # Build the agent
+        agent = PydanticAIDocumentAgent(
+            context=mock_ctx,
+            conversation_manager=mock_conv_mgr,
+            pydantic_ai_agent=mock_pyd_ai_instance,
+            agent_deps=MagicMock(),  # dependencies object
+        )
+
+        # Basic sanity checks
+        self.assertIs(agent.context, mock_ctx)
+        self.assertIs(agent.conversation_manager, mock_conv_mgr)
+        self.assertIs(agent.pydantic_ai_agent, mock_pyd_ai_instance)
+
+    @patch('opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIAgent')
     def test_pydantic_ai_agent_with_test_model(self, mock_agent_class: MagicMock) -> None:
         """Test PydanticAI agent using TestModel for testing."""
         # Create a real PydanticAI agent with TestModel for testing
@@ -216,45 +245,46 @@ class TestPydanticAIAgents(TestCase):
             self.assertTrue(len(result.data) > 0)
 
     def test_pydantic_ai_tool_wrapper_creation(self) -> None:
-        """Test creating PydanticAI tool wrappers from core tools."""
-        # Create core tools
-        core_tools = create_document_tools()
+        """Test PydanticAIToolWrapper creation and factory behavior."""
+        from opencontractserver.llms.tools.core_tools import get_md_summary_token_length # Assuming this function exists
         
-        # Convert to PydanticAI tools
-        pydantic_tools = PydanticAIToolFactory.create_tools(core_tools)
+        core_tool = CoreTool.from_function(get_md_summary_token_length)
         
-        self.assertGreater(len(pydantic_tools), 0)
-        
-        for tool in pydantic_tools:
-            self.assertIsInstance(tool, PydanticAIToolWrapper)
-            self.assertTrue(hasattr(tool, 'name'))
-            self.assertTrue(hasattr(tool, 'description'))
-            self.assertTrue(callable(tool.function))
+        # Instantiate the wrapper directly
+        wrapper = PydanticAIToolWrapper(core_tool)
 
-    def test_pydantic_ai_tool_function_signature(self) -> None:
-        """Test that PydanticAI tool functions have correct RunContext signature."""
-        from opencontractserver.llms.tools.core_tools import load_document_md_summary
+        # --- Assertions for the PydanticAIToolWrapper instance ---
+        # Check name: assuming func.__name__ is used and is "get_md_summary_token_length"
+        self.assertEqual(wrapper.name, "get_md_summary_token_length", 
+                         f"Wrapper name mismatch. Expected 'get_md_summary_token_length', got '{wrapper.name}'")
         
-        # Create core tool
-        core_tool = CoreTool.from_function(
-            load_document_md_summary,
-            description="Load document markdown summary",
-        )
-        
-        # Wrap for PydanticAI
-        pydantic_tool = PydanticAIToolWrapper(core_tool)
-        
-        # Check function signature
+        # Check description: assuming it exists and contains specific text
+        self.assertIsNotNone(wrapper.description, "Tool description should not be None.")
+        # This assertion implies 'get_md_summary_token_length' has a docstring containing "token length"
+        self.assertIn("token length", wrapper.description.lower(), 
+                      "Tool description does not contain expected text 'token length'.")
+
+        # Check the to_dict() method of the wrapper
+        tool_dict = wrapper.to_dict()
+        expected_keys = {"function", "name", "description"}
+        self.assertSetEqual(set(tool_dict.keys()), expected_keys,
+                            f"wrapper.to_dict() keys mismatch. Expected {expected_keys}, got {set(tool_dict.keys())}")
+
+        # --- Assertions for the PydanticAIToolFactory ---
+        # Factory should return a callable function
+        callable_tool = PydanticAIToolFactory.create_tool(core_tool)
+        self.assertTrue(callable(callable_tool), 
+                        "PydanticAIToolFactory.create_tool() should return a callable function.")
+
+        # The callable function's signature should start with 'ctx'
         import inspect
-        sig = inspect.signature(pydantic_tool.function)
-        params = list(sig.parameters.keys())
-        
-        # First parameter should be 'ctx' for RunContext
-        self.assertEqual(params[0], 'ctx')
-        self.assertEqual(
-            sig.parameters['ctx'].annotation,
-            RunContext[PydanticAIDependencies]
-        )
+        sig = inspect.signature(callable_tool)
+        try:
+            first_param_name = next(iter(sig.parameters.keys()))
+            self.assertEqual(first_param_name, "ctx",
+                             f"First parameter of the callable tool should be 'ctx', got '{first_param_name}'.")
+        except StopIteration:
+            self.fail("Callable tool has no parameters, expected 'ctx' as the first.")
 
     @patch('opencontractserver.llms.tools.core_tools.Document.objects.get')
     async def test_pydantic_ai_tool_with_agent(self, mock_doc_get: MagicMock) -> None:
@@ -393,59 +423,92 @@ class TestPydanticAIAgents(TestCase):
         self.assertIsInstance(result.data.name, str)
         self.assertIsInstance(result.data.interests, list)
 
-    async def test_pydantic_ai_error_handling(self) -> None:
-        """Test error handling in PydanticAI agent implementations."""
-        from opencontractserver.llms.agents.core_agents import DocumentAgentContext, CoreConversationManager, AgentConfig
-        
-        # Create agent with invalid configuration
-        config = PydanticAIAgentConfig(
-            model_name="",  # Invalid model name
-            system_prompt="Test prompt",
+    @patch('opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIAgent')
+    async def test_pydantic_ai_error_handling(
+        self,
+        mock_pyd_ai_cls: MagicMock,
+    ) -> None:
+        """`chat` and `stream` should succeed even if the LLM is mocked."""
+        # Configure mock agent
+        mock_llm = MagicMock()
+        mock_llm.run = AsyncMock(
+            return_value=_DummyRunResult('PydanticAI Placeholder'),
         )
-        
-        mock_context = MagicMock(spec=DocumentAgentContext)
-        mock_context.document = self.doc1
-        
-        mock_conv_manager = MagicMock(spec=CoreConversationManager)
-        # Add the required config attribute with message storage flags
-        mock_config = MagicMock(spec=AgentConfig)
-        mock_config.store_user_messages = True
-        mock_config.store_llm_messages = True
-        mock_conv_manager.config = mock_config
-        
-        agent = PydanticAIDocumentAgent(
-            context=mock_context,
-            conversation_manager=mock_conv_manager,
-            config=config,
+        mock_llm.run_stream = MagicMock(
+            return_value=_DummyStreamResult('PydanticAI Placeholder'),
         )
-        
-        # Test that agent responds with placeholder content (not NotImplementedError)
-        response = await agent.chat("test message")
-        self.assertIsInstance(response, UnifiedChatResponse)
-        self.assertIn("PydanticAI Placeholder", response.content)
-        
-        # Test streaming also works with placeholder content
-        response_chunks = []
-        async for chunk in agent.stream("test message"):
-            response_chunks.append(chunk)
-        self.assertGreater(len(response_chunks), 0)
+        mock_pyd_ai_cls.return_value = mock_llm
 
-    async def test_pydantic_ai_agent_factory_integration(self) -> None:
-        """Test creating PydanticAI agents through the unified factory."""
-        # Test that PydanticAI agents can now be created (no longer NotImplementedError)
+        # Build minimal context & manager
+        from opencontractserver.llms.agents.core_agents import (
+            AgentConfig,
+            DocumentAgentContext,
+            CoreConversationManager,
+        )
+
+        cfg = MagicMock(spec=AgentConfig)
+        cfg.store_user_messages = cfg.store_llm_messages = True
+        cfg.user_id = self.user.id
+
+        ctx = MagicMock(spec=DocumentAgentContext)
+        ctx.document = self.doc1
+        ctx.config = cfg
+
+        conv_mgr = MagicMock(spec=CoreConversationManager)
+        conv_mgr.get_conversation_messages = AsyncMock(return_value=[])
+
+        agent = PydanticAIDocumentAgent(
+            context=ctx,
+            conversation_manager=conv_mgr,
+            pydantic_ai_agent=mock_llm,
+            agent_deps=MagicMock(),
+        )
+
+        # Patch I/O helpers to avoid touching the DB
+        agent.store_user_message = AsyncMock(return_value='user-1')
+        agent.store_llm_message = AsyncMock(return_value='llm-1')
+        agent.update_message = AsyncMock()
+
+        # Chat
+        chat_resp = await agent.chat('test')
+        self.assertIsInstance(chat_resp, UnifiedChatResponse)
+        self.assertIn('PydanticAI Placeholder', chat_resp.content)
+
+        # Stream
+        streamed = [chunk async for chunk in agent.stream('test')]
+        self.assertTrue(any(c.is_complete for c in streamed))
+
+    @patch('opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIAgent')
+    async def test_pydantic_ai_agent_factory_integration(
+        self,
+        mock_pyd_ai_cls: MagicMock,
+    ) -> None:
+        """UnifiedAgentFactory should return a working PydanticAI agent."""
+        # Mock LLM behaviour
+        dummy = MagicMock()
+        dummy.run = AsyncMock(return_value=_DummyRunResult('PydanticAI Placeholder'))
+        mock_pyd_ai_cls.return_value = dummy
+
+        # Build agent via factory
         agent = await UnifiedAgentFactory.create_document_agent(
             document=self.doc1,
             framework=AgentFramework.PYDANTIC_AI,
             user_id=self.user.id,
         )
-        
-        # Verify we get a PydanticAI agent
         self.assertIsInstance(agent, PydanticAIDocumentAgent)
-        
-        # Test basic functionality
-        response = await agent.chat("What is this document about?")
-        self.assertIsInstance(response, UnifiedChatResponse)
-        self.assertIn("PydanticAI Placeholder", response.content)
+
+        # Monkey-patch message helpers
+        agent.store_user_message = AsyncMock(return_value='u-id')
+        agent.store_llm_message = AsyncMock(return_value='l-id')
+        agent.update_message = AsyncMock()
+        agent.conversation_manager.get_conversation_messages = AsyncMock(
+            return_value=[],
+        )
+
+        # Verify `chat`
+        resp = await agent.chat('What is this document about?')
+        self.assertIsInstance(resp, UnifiedChatResponse)
+        self.assertIn('PydanticAI Placeholder', resp.content)
 
     @override_settings(
         OPENAI_API_KEY="test-key",
@@ -493,42 +556,3 @@ class TestPydanticAIAgents(TestCase):
         
         self.assertIsNone(embedding_request.query_text)
         self.assertEqual(len(embedding_request.query_embedding), 384)
-
-    def test_pydantic_ai_tool_metadata_extraction(self) -> None:
-        """Test that tool metadata is properly extracted for PydanticAI."""
-        from opencontractserver.llms.tools.core_tools import get_md_summary_token_length
-        
-        # Create core tool
-        core_tool = CoreTool.from_function(get_md_summary_token_length)
-        
-        # Wrap for PydanticAI
-        pydantic_tool = PydanticAIToolWrapper(core_tool)
-        
-        # Check metadata
-        self.assertEqual(pydantic_tool.name, "get_md_summary_token_length")
-        self.assertIn("token length", pydantic_tool.description.lower())
-        
-        # Check parameter schema
-        tool_dict = pydantic_tool.to_dict()
-        self.assertIn("function", tool_dict)
-        self.assertIn("name", tool_dict)
-        self.assertIn("description", tool_dict)
-
-    def test_pydantic_ai_agent_state_management(self) -> None:
-        """Test PydanticAI agent state management."""
-        state = PydanticAIAgentState(
-            conversation_id="test_conv_123",
-            last_message_id=42,
-        )
-        
-        self.assertEqual(state.conversation_id, "test_conv_123")
-        self.assertEqual(state.last_message_id, 42)
-        self.assertIsInstance(state.processing_queries, set)
-        
-        # Test adding/removing processing queries
-        query_id = "query_123"
-        state.processing_queries.add(query_id)
-        self.assertIn(query_id, state.processing_queries)
-        
-        state.processing_queries.discard(query_id)
-        self.assertNotIn(query_id, state.processing_queries) 

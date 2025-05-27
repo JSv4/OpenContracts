@@ -3,6 +3,7 @@
 import logging
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Union
 
+from opencontractserver.corpuses.models import Corpus
 from pydantic_ai import Agent as PydanticAIAgent
 from pydantic_ai.messages import ModelMessage
 
@@ -22,6 +23,9 @@ from opencontractserver.llms.agents.core_agents import (
     get_default_config,
 )
 from opencontractserver.llms.tools.pydantic_ai_tools import PydanticAIDependencies
+from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import (
+    PydanticAIAnnotationVectorStore,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -206,20 +210,30 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
     async def create(
         cls,
         document: Union[str, int, Document],
+        corpus: Union[str, int, Corpus],
         config: Optional[AgentConfig] = None,
         tools: Optional[List[Callable]] = None,
+        *,
         conversation: Optional[Conversation] = None,
-        **kwargs
+        **kwargs: Any,
     ) -> "PydanticAIDocumentAgent":
-        """Create a PydanticAI document agent using core functionality."""
+        """Create a Pydantic-AI document agent tied to a specific corpus."""
         if config is None:
             config = get_default_config()
         
-        context = await CoreDocumentAgentFactory.create_context(document, config)
+        logger.info(f"Creating Pydantic-AI document agent for document {document} and corpus {corpus}")
+        logger.info(f"Config (type {type(config)}): {config}")
+        # Provide explicit corpus so the factory can pick the proper embedder
+        context = await CoreDocumentAgentFactory.create_context(
+            document,
+            corpus,
+            config,
+        )
 
         # Use the CoreConversationManager factory method
         conversation_manager = await CoreConversationManager.create_for_document(
-            document=context.document,
+            context.corpus,
+            context.document,
             user_id=config.user_id,
             config=config,
             override_conversation=conversation
@@ -239,9 +253,19 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
         
         agent_deps_instance = PydanticAIDependencies(
             user_id=config.user_id,
+            corpus_id=context.corpus.id,
             document_id=context.document.id,
             **kwargs
         )
+        
+        vector_store = PydanticAIAnnotationVectorStore(
+            user_id=config.user_id,
+            corpus_id=context.corpus.id,
+            document_id=context.document.id,
+            embedder_path=config.embedder_path,
+        )
+        
+        agent_deps_instance.vector_store = vector_store
         
         return cls(
             context=context,
@@ -267,7 +291,7 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
     @classmethod
     async def create(
         cls,
-        corpus_id: Union[int, str],
+        corpus: Union[int, str, Corpus],
         config: Optional[AgentConfig] = None,
         tools: Optional[List[Callable]] = None,
         conversation: Optional[Conversation] = None,
@@ -277,11 +301,11 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
         if config is None:
             config = get_default_config()
         
-        context = await CoreCorpusAgentFactory.create_context(corpus_id, config)
+        context = await CoreCorpusAgentFactory.create_context(corpus, config)
 
         # Use the CoreConversationManager factory method
         conversation_manager = await CoreConversationManager.create_for_corpus(
-            corpus=context.corpus,
+            corpus=corpus,
             user_id=config.user_id,
             config=config,
             override_conversation=conversation
@@ -304,6 +328,14 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
             corpus_id=context.corpus.id,
             **kwargs
         )
+        
+        vector_store = PydanticAIAnnotationVectorStore(
+            user_id=config.user_id,
+            corpus_id=context.corpus.id,
+            embedder_path=config.embedder_path,
+        )
+        
+        agent_deps_instance.vector_store = vector_store
         
         return cls(
             context=context,

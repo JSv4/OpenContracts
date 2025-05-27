@@ -12,6 +12,7 @@ from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.vector_stores.core_vector_stores import CoreAnnotationVectorStore
+from opencontractserver.utils.embeddings import get_embedder
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +115,7 @@ class AgentConfig:
 class DocumentAgentContext:
     """Context for document-specific agents."""
     
+    corpus: Corpus
     document: Document
     config: AgentConfig
     vector_store: Optional[CoreAnnotationVectorStore] = None
@@ -124,6 +126,7 @@ class DocumentAgentContext:
             self.vector_store = CoreAnnotationVectorStore(
                 user_id=self.config.user_id,
                 document_id=self.document.id,
+                corpus_id=self.corpus.id,
                 embedder_path=self.config.embedder_path,
             )
 
@@ -320,17 +323,29 @@ class CoreDocumentAgentFactory:
     @staticmethod
     async def create_context(
         document: Union[str, int, Document],
+        corpus: Union[str, int, Corpus],
         config: AgentConfig,
     ) -> DocumentAgentContext:
+        
         """Create document agent context with all necessary components."""
         if not isinstance(document, Document):
             document = await Document.objects.aget(id=document)
         
+        if not isinstance(corpus, Corpus):
+            corpus = await Corpus.objects.aget(id=corpus)
+        
+        # ------------------------------------------------------------------
+        # Ensure an embedder is configured.
+        # ------------------------------------------------------------------
+        if config.embedder_path is None:
+            _, name = get_embedder(corpus.id)
+            config.embedder_path = name
+           
         # Set default system prompt if not provided
         if config.system_prompt is None:
             config.system_prompt = CoreDocumentAgentFactory.get_default_system_prompt(document)
         
-        return DocumentAgentContext(document=document, config=config)
+        return DocumentAgentContext(corpus=corpus, document=document, config=config)
 
 
 class CoreCorpusAgentFactory:
@@ -348,11 +363,13 @@ class CoreCorpusAgentFactory:
     
     @staticmethod
     async def create_context(
-        corpus_id: Union[str, int],
+        corpus: Union[str, int, Corpus],
         config: AgentConfig,
     ) -> CorpusAgentContext:
         """Create corpus agent context with all necessary components."""
-        corpus = await Corpus.objects.aget(id=corpus_id)
+        if not isinstance(corpus, Corpus):
+            corpus = await Corpus.objects.aget(id=corpus)
+        
         documents = [doc async for doc in corpus.documents.all()]
         
         # Set default system prompt if not provided
@@ -379,6 +396,7 @@ class CoreConversationManager:
     @classmethod
     async def create_for_document(
         cls,
+        corpus: Corpus,
         document: Document,
         user_id: Optional[int],
         config: AgentConfig,

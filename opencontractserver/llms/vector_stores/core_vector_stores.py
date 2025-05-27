@@ -98,6 +98,15 @@ class CoreAnnotationVectorStore:
         must_have_text: Optional[str] = None,
         embed_dim: int = 384,
     ):
+        # ------------------------------------------------------------------ #
+        # Validation – we need a corpus context unless the caller overrides
+        # the embedder explicitly.
+        # ------------------------------------------------------------------ #
+        if embedder_path is None and corpus_id is None:
+            raise ValueError(
+                "CoreAnnotationVectorStore requires either 'corpus_id' to "
+                "derive an embedder or an explicit 'embedder_path' override."
+            )
         self.user_id = user_id
         self.corpus_id = corpus_id
         self.document_id = document_id

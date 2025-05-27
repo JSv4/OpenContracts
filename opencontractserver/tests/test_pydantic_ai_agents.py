@@ -491,7 +491,8 @@ class TestPydanticAIAgents(TestCase):
 
         # Build agent via factory
         agent = await UnifiedAgentFactory.create_document_agent(
-            document=self.doc1,
+            self.doc1,
+            self.corpus,
             framework=AgentFramework.PYDANTIC_AI,
             user_id=self.user.id,
         )

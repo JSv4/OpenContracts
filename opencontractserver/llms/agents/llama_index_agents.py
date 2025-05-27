@@ -18,6 +18,7 @@ from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.llms.openai import OpenAI
 
 from opencontractserver.conversations.models import Conversation
+from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.agents.core_agents import (
     AgentConfig,
@@ -30,6 +31,7 @@ from opencontractserver.llms.agents.core_agents import (
     UnifiedChatResponse,
     UnifiedStreamResponse,
     SourceNode,
+    get_default_config,
 )
 from opencontractserver.llms.embedders.custom_pipeline_embedding import OpenContractsPipelineEmbedding
 from opencontractserver.llms.tools.llama_index_tools import (
@@ -87,15 +89,24 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
     async def create(
         cls,
         document: Union[str, int, Document],
-        config: AgentConfig,
+        corpus: Union[str, int, Corpus],
+        config: Optional[AgentConfig] = None,
         tools: Optional[List[FunctionTool]] = None,
-        conversation: Optional[Conversation] = None, # Add conversation override
+        *,
+        conversation: Optional[Conversation] = None,
+        **kwargs: Any,
     ) -> "LlamaIndexDocumentAgent":
-        """Create a LlamaIndex document agent using core functionality."""
+        """Create a LlamaIndex document agent tied to a specific corpus."""
+
         if config is None:
             config = get_default_config()
 
-        context = await CoreDocumentAgentFactory.create_context(document, config)
+        # Provide explicit corpus so the factory can pick the proper embedder
+        context = await CoreDocumentAgentFactory.create_context(
+            document,
+            corpus,
+            config,
+        )
 
         # Create conversation manager with basic constructor
         conversation_manager = await CoreConversationManager.create_for_document(
@@ -109,7 +120,10 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
         config.conversation = conversation_manager.conversation
 
         # Set up LlamaIndex-specific components
-        embed_model = OpenContractsPipelineEmbedding(embedder_path=config.embedder_path)
+        embed_model = OpenContractsPipelineEmbedding(
+            corpus_id=corpus.id,
+            embedder_path=config.embedder_path,
+        )
         Settings.embed_model = embed_model
 
         llm = OpenAI(
@@ -124,6 +138,7 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
         # Create vector store and index
         vector_store = DjangoAnnotationVectorStore.from_params(
             user_id=config.user_id,
+            corpus_id=corpus.id,
             document_id=context.document.id,
             embedder_path=config.embedder_path,
         )
@@ -381,23 +396,20 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
     @classmethod
     async def create(
         cls,
-        corpus_id: Union[str, int],
+        corpus: Union[str, int, Corpus],
         config: AgentConfig,
         tools: Optional[List[FunctionTool]] = None,
         conversation: Optional[Conversation] = None, # Add conversation override
     ) -> "LlamaIndexCorpusAgent":
         
         """Create a LlamaIndex corpus agent using core functionality."""
-        if config is None:
-            config = get_default_config()
-
-        context = await CoreCorpusAgentFactory.create_context(corpus_id, config)
+        context = await CoreCorpusAgentFactory.create_context(corpus, config)
 
         # Use the CoreConversationManager factory method
         conversation_manager = await CoreConversationManager.create_for_corpus(
-            corpus=context.corpus,
-            user_id=config.user_id,
-            config=config,
+            context.corpus,
+            config.user_id,
+            config,
             override_conversation=conversation
         )
         # Ensure the agent's config has the potentially newly created/loaded conversation
@@ -434,7 +446,11 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
                 temperature=config.temperature,
                 max_tokens=config.max_tokens,
             )
-            doc_agent = await LlamaIndexDocumentAgent.create(doc, doc_config)
+            doc_agent = await LlamaIndexDocumentAgent.create(
+                doc,
+                doc_config,
+                corpus_id=context.corpus.id,
+            )
 
             tool_name = f"doc_{doc.id}"
             doc_summary = (

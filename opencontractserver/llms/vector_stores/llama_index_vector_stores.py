@@ -1,7 +1,7 @@
 """LlamaIndex-specific vector store implementations."""
 
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from channels.db import database_sync_to_async
 from llama_index.core.schema import BaseNode, TextNode
@@ -97,33 +97,26 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
     @classmethod
     def from_params(
         cls,
-        user_id: str | int | None = None,
-        corpus_id: str | int | None = None,
-        document_id: str | int | None = None,
-        must_have_text: str | None = None,
-        hybrid_search: bool = False,
-        text_search_config: str = "english",
-        embed_dim: int = 1536,
-        cache_ok: bool = False,
-        perform_setup: bool = True,
-        debug: bool = False,
-        use_jsonb: bool = False,
-        embedder_path: str | None = None,
+        *,
+        user_id: Optional[Union[str, int]] = None,
+        corpus_id: Optional[Union[str, int]] = None,
+        document_id: Optional[Union[str, int]] = None,
+        embedder_path: Optional[str] = None,
+        **kwargs: Any,
     ) -> "LlamaIndexAnnotationVectorStore":
-        """Create instance from parameters."""
+        """
+        Wrapper around the class constructor.  We now accept an explicit
+        ``corpus_id`` so that callers (e.g. the updated
+        ``LlamaIndexDocumentAgent``) can satisfy the new validation rule
+        in *CoreAnnotationVectorStore* which demands either a corpus
+        context or an ``embedder_path`` override.
+        """
         return cls(
             user_id=user_id,
             corpus_id=corpus_id,
             document_id=document_id,
-            must_have_text=must_have_text,
-            hybrid_search=hybrid_search,
-            text_search_config=text_search_config,
-            embed_dim=embed_dim,
-            cache_ok=cache_ok,
-            perform_setup=perform_setup,
-            debug=debug,
-            use_jsonb=use_jsonb,
             embedder_path=embedder_path,
+            **kwargs,
         )
 
     def _convert_metadata_filters(self, filters: Optional[MetadataFilters]) -> Optional[dict[str, Any]]:

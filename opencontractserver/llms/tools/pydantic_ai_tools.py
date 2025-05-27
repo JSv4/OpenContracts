@@ -4,7 +4,8 @@ import inspect
 import logging
 from typing import Any, Callable, Dict, List, Optional, get_type_hints
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from opencontractserver.llms.vector_stores.core_vector_stores import CoreAnnotationVectorStore
 from pydantic_ai import RunContext
 from opencontractserver.llms.tools.tool_factory import CoreTool
 
@@ -25,12 +26,12 @@ class PydanticAIDependencies(BaseModel):
     This class is used as the `deps_type` for PydanticAI Agents
     and for typing the `RunContext` in tools.
     """
-    
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     user_id: Optional[int] = Field(default=None, description="Current user ID")
     document_id: Optional[int] = Field(default=None, description="Current document ID")
     corpus_id: Optional[int] = Field(default=None, description="Current corpus ID")
-    # Add other common dependencies here if needed, e.g., a vector store instance
-    # vector_store: Optional[Any] = Field(default=None, description="Vector store instance")
+    vector_store: CoreAnnotationVectorStore = Field(default=None, description="Vector store instance")
 
 
 class PydanticAIToolWrapper:

@@ -10,6 +10,7 @@ import logging
 from typing import Any, Optional, Union, List, Dict, Literal
 
 from opencontractserver.conversations.models import ChatMessage, Conversation
+from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.types import AgentFramework
 from opencontractserver.llms.agents.core_agents import CoreAgent
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 # Type aliases for cleaner API
 FrameworkType = Union[AgentFramework, Literal["llama_index", "pydantic_ai"]]
 DocumentType = Union[str, int, Document]
+CorpusType = Union[str, int, Corpus]
 ToolType = Union[str, CoreTool, callable]
 
 
@@ -32,6 +34,7 @@ class AgentAPI:
     @staticmethod
     async def for_document(
         document: DocumentType,
+        corpus: CorpusType,
         *,
         framework: FrameworkType = "llama_index",
         user_id: Optional[int] = None,
@@ -108,7 +111,8 @@ class AgentAPI:
         resolved_tools = _resolve_tools(tools) if tools else None
         
         return await UnifiedAgentFactory.create_document_agent(
-            document=document,
+            document,
+            corpus,
             framework=framework,
             user_id=user_id,
             conversation=conversation,
@@ -127,7 +131,7 @@ class AgentAPI:
     
     @staticmethod
     async def for_corpus(
-        corpus_id: Union[str, int],
+        corpus: Union[str, int, Corpus],
         *,
         framework: FrameworkType = "llama_index",
         user_id: Optional[int] = None,
@@ -204,7 +208,7 @@ class AgentAPI:
         resolved_tools = _resolve_tools(tools) if tools else None
         
         return await UnifiedAgentFactory.create_corpus_agent(
-            corpus_id=corpus_id,
+            corpus,
             framework=framework,
             user_id=user_id,
             conversation=conversation,

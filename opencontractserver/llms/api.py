@@ -6,6 +6,7 @@ This module provides a simple interface for creating document or corpus agents.
 
 import logging
 from typing import Any, Optional, Union, List, Dict, Literal
+from django.conf import settings
 
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
@@ -34,7 +35,7 @@ class AgentAPI:
         document: DocumentType,
         corpus: CorpusType,
         *,
-        framework: FrameworkType = "llama_index",
+        framework: Optional[FrameworkType] = None,
         user_id: Optional[int] = None,
         model: str = "gpt-4o-mini",
         system_prompt: Optional[str] = None,
@@ -101,7 +102,11 @@ class AgentAPI:
                 user_id=456  # Include for persistence
             )
         """
-        # Normalize framework
+        # Resolve default framework if caller did not specify one
+        if framework is None:
+            framework = getattr(
+                settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+            )
         if isinstance(framework, str):
             framework = AgentFramework(framework)
         
@@ -131,7 +136,7 @@ class AgentAPI:
     async def for_corpus(
         corpus: Union[str, int, Corpus],
         *,
-        framework: FrameworkType = "llama_index",
+        framework: Optional[FrameworkType] = None,
         user_id: Optional[int] = None,
         model: str = "gpt-4o-mini",
         system_prompt: Optional[str] = None,
@@ -198,7 +203,11 @@ class AgentAPI:
             async for chunk in agent.stream("Summarize findings"):
                 print(chunk.content, end="")
         """
-        # Normalize framework
+        # Resolve default framework if caller did not specify one
+        if framework is None:
+            framework = getattr(
+                settings, "LLMS_CORPUS_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+            )
         if isinstance(framework, str):
             framework = AgentFramework(framework)
         
@@ -314,8 +323,8 @@ class VectorStoreAPI:
     
     @staticmethod
     def create(
-        framework: FrameworkType = "llama_index",
         *,
+        framework: Optional[FrameworkType] = None,
         user_id: Optional[Union[str, int]] = None,
         corpus_id: Optional[Union[str, int]] = None,
         document_id: Optional[Union[str, int]] = None,
@@ -347,6 +356,12 @@ class VectorStoreAPI:
             # Pydantic AI vector store
             store = vector_stores.create("pydantic_ai", document_id=456)
         """
+        # Resolve default framework if caller did not specify one
+        if framework is None:
+            framework = getattr(
+                settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+            )
+            
         # Normalize framework
         if isinstance(framework, str):
             framework = AgentFramework(framework)

@@ -38,7 +38,7 @@ USE_AUTH0=false
 
 # LLM SETTINGS
 # ------------------------------------------------------------------------------
-OPENAI_API_KEY=fake
+OPENAI_API_KEY=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
 OPENAI_MODEL=gpt-4o
 
 # Set Proper Settings Module

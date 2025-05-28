@@ -2,6 +2,7 @@
 
 import logging
 from typing import Optional, Union, List, Callable
+from django.conf import settings
 
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
@@ -213,7 +214,7 @@ def _convert_tools_for_framework(
 # Enhanced convenience functions that maintain backward compatibility
 async def create_document_agent(
     document: Union[str, int, Document],
-    framework: Union[AgentFramework, str] = AgentFramework.LLAMA_INDEX,
+    framework: Union[AgentFramework, str, None] = None,
     user_id: Optional[int] = None,
     conversation: Optional[Conversation] = None,
     conversation_id: Optional[int] = None,
@@ -241,6 +242,10 @@ async def create_document_agent(
     Returns:
         CoreAgent: Framework-specific agent
     """
+    if framework is None:
+        framework = getattr(
+            settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+        )
     if isinstance(framework, str):
         framework = AgentFramework(framework)
     
@@ -260,7 +265,7 @@ async def create_document_agent(
 
 async def create_corpus_agent(
     corpus_id: Union[str, int],
-    framework: Union[AgentFramework, str] = AgentFramework.LLAMA_INDEX,
+    framework: Union[AgentFramework, str, None] = None,
     user_id: Optional[int] = None,
     conversation: Optional[Conversation] = None,
     conversation_id: Optional[int] = None,
@@ -286,6 +291,10 @@ async def create_corpus_agent(
     Returns:
         CoreAgent: Framework-specific agent
     """
+    if framework is None:
+        framework = getattr(
+            settings, "LLMS_CORPUS_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+        )
     if isinstance(framework, str):
         framework = AgentFramework(framework)
     

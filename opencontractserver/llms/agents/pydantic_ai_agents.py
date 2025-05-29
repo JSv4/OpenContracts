@@ -1,6 +1,7 @@
 """Clean PydanticAI implementation following PydanticAI patterns."""
 
 import logging
+import dataclasses
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Union
 
 from opencontractserver.corpuses.models import Corpus
@@ -91,7 +92,7 @@ class PydanticAICoreAgent(CoreAgentBase):
             if hasattr(run_result, 'sources') and run_result.sources:
                 sources = run_result.sources
             
-            usage_data = run_result.usage().model_dump() if run_result.usage() else None
+            usage_data = _usage_to_dict(run_result.usage())
             
             llm_msg_id = await self.store_llm_message(
                 llm_response_content, 
@@ -125,44 +126,41 @@ class PydanticAICoreAgent(CoreAgentBase):
                 message,
                 deps=self.agent_deps,
                 message_history=message_history,
-                **kwargs
+                **kwargs,
             ) as stream_result:
-                
+
+                # 1) incremental chunks
                 async for text_delta in stream_result.stream_text(delta=True):
                     accumulated_content += text_delta
-                    
-                    # Update the message in the database
                     await self.update_message(
-                        llm_msg_id, 
-                        accumulated_content,
-                        metadata={"state": "streaming"}
+                        llm_msg_id, accumulated_content, metadata={"state": "streaming"}
                     )
-                    
                     yield UnifiedStreamResponse(
                         content=text_delta,
                         accumulated_content=accumulated_content,
                         user_message_id=user_msg_id,
                         llm_message_id=llm_msg_id,
-                        is_complete=False
+                        is_complete=False,
                     )
-                
-                # Get final result after streaming completes
-                final_content = str(stream_result.data)
-                usage_data = stream_result.usage().model_dump() if stream_result.usage() else None
-                
-                # Extract sources if available
-                sources = []
-                if hasattr(stream_result, 'sources') and stream_result.sources:
-                    sources = stream_result.sources
-                
-                # Final update to mark message as complete
+
+                # 2) final content -------------------------------------------------
+                try:
+                    # Prefer the structured helper if available
+                    final_content = str(await stream_result.get_output())
+                except Exception:                            # noqa: BLE001
+                    # Fallback to what we already assembled
+                    final_content = accumulated_content
+
+                usage_data = _usage_to_dict(stream_result.usage())
+                sources: list[Any] = getattr(stream_result, "sources", []) or []
+
                 await self.update_message(
                     llm_msg_id,
                     final_content,
                     sources=sources,
-                    metadata={"state": "completed", "usage": usage_data}
+                    metadata={"state": "completed", "usage": usage_data},
                 )
-                
+
                 yield UnifiedStreamResponse(
                     content="",
                     accumulated_content=final_content,
@@ -170,7 +168,7 @@ class PydanticAICoreAgent(CoreAgentBase):
                     user_message_id=user_msg_id,
                     llm_message_id=llm_msg_id,
                     is_complete=True,
-                    metadata={"usage": usage_data}
+                    metadata={"usage": usage_data},
                 )
 
         except Exception as e:
@@ -300,6 +298,9 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
         """Create a PydanticAI corpus agent using core functionality."""
         if config is None:
             config = get_default_config()
+            
+        if not isinstance(corpus, Corpus):
+            corpus = await Corpus.objects.aget(id=corpus)
         
         context = await CoreCorpusAgentFactory.create_context(corpus, config)
 
@@ -343,3 +344,25 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
             pydantic_ai_agent=pydantic_ai_agent_instance,
             agent_deps=agent_deps_instance,
         )
+
+
+# --------------------------------------------------------------------------- #
+# helpers                                                                    #
+# --------------------------------------------------------------------------- #
+def _usage_to_dict(usage: Any) -> Optional[dict[str, Any]]:
+    """
+    Convert a pydantic-ai ``Usage`` instance (or any other arbitrary object)
+    into a plain ``dict`` that can be attached to message metadata.
+    Falls back to ``vars()`` if no structured helper is available.
+    """
+    if usage is None:  # noqa: D401 – early-exit guard
+        return None
+
+    if hasattr(usage, "model_dump"):         # pydantic v2
+        return usage.model_dump()            # type: ignore[arg-type]
+    if dataclasses.is_dataclass(usage):      # dataclass
+        return dataclasses.asdict(usage)
+    try:                                     # mapping-style object
+        return dict(usage)                   # type: ignore[arg-type]
+    except Exception:                        # pragma: no cover
+        return vars(usage)

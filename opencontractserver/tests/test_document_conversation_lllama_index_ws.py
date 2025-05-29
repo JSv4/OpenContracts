@@ -3,20 +3,19 @@ from __future__ import annotations
 import json
 import vcr
 import logging
-from types import SimpleNamespace
 from typing import Any
 from urllib.parse import quote
 
 from channels.testing import WebsocketCommunicator
 from graphql_relay import to_global_id
-from unittest import mock
-from unittest.mock import AsyncMock, MagicMock
+from django.test.utils import override_settings
 
 from opencontractserver.tests.base import WebsocketFixtureBaseTestCase
 
 logger = logging.getLogger(__name__)
 
 
+@override_settings(USE_AUTH0=False)
 class DocumentConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
     """
     End-to-end websocket test for the refactored DocumentQueryConsumer.
@@ -27,16 +26,13 @@ class DocumentConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
     throughout the stream.
     """
 
-    @vcr.use_cassette(
-        "fixtures/vcr_cassettes/test_document_conversation_ws.yaml",
-        filter_headers=["authorization"],
-    )
-    async def test_streaming_flow(
-        self,
-    ) -> None:
+    # ------------------------------------------------------------------
+    # Helper that performs the websocket round-trip + assertions
+    # ------------------------------------------------------------------
+    async def _assert_streaming_flow(self) -> None:
         """
         Connect, send a query, and verify ASYNC_START → ASYNC_CONTENT →
-        ASYNC_FINISH message sequence.
+        ASYNC_FINISH message sequence with stable ``message_id``.
         """
 
         # ------------------------------------------------------------------
@@ -121,4 +117,105 @@ If you need more specific details or any other information, feel free to ask!"""
         # 6.  Cleanup
         # ------------------------------------------------------------------
         await communicator.disconnect()
+
+    # ------------------------------------------------------------------
+    # Negative-path helpers
+    # ------------------------------------------------------------------
+    async def _assert_invalid_token(self) -> None:
+        """Connection should be rejected (code 4000) when the JWT is invalid."""
+        graphql_id = to_global_id("DocumentType", self.doc.id)
+        encoded_graphql_id = quote(graphql_id)
+        encoded_corpus_id = quote(to_global_id("CorpusType", self.corpus.id))
+
+        communicator = WebsocketCommunicator(
+            self.application,
+            f"ws/document/{encoded_graphql_id}/query/"
+            f"corpus/{encoded_corpus_id}/?token=not_a_real_token",
+        )
+        connected, close_code = await communicator.connect()
+        self.assertFalse(connected)
+        self.assertEqual(close_code, 4000)
+
+    async def _assert_missing_token(self) -> None:
+        """Omitting the token entirely must also yield close 4000."""
+        graphql_id = to_global_id("DocumentType", self.doc.id)
+        encoded_graphql_id = quote(graphql_id)
+        encoded_corpus_id = quote(to_global_id("CorpusType", self.corpus.id))
+
+        communicator = WebsocketCommunicator(
+            self.application,
+            f"ws/document/{encoded_graphql_id}/query/"
+            f"corpus/{encoded_corpus_id}/",
+        )
+        connected, close_code = await communicator.connect()
+        self.assertFalse(connected)
+        self.assertEqual(close_code, 4000)
+
+    async def _assert_invalid_document(self) -> None:
+        """
+        A non-existent document ID should result in:
+        • WebSocket *accepted*
+        • Immediate `SYNC_CONTENT` error payload
+        • Close code 4000
+        """
+        bad_doc_gid = to_global_id("DocumentType", 999_999)
+        encoded_bad_doc = quote(bad_doc_gid)
+        encoded_corpus_id = quote(to_global_id("CorpusType", self.corpus.id))
+
+        communicator = WebsocketCommunicator(
+            self.application,
+            f"ws/document/{encoded_bad_doc}/query/"
+            f"corpus/{encoded_corpus_id}/?token={self.token}",
+        )
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+
+        raw = await communicator.receive_from(timeout=5)
+        payload = json.loads(raw)
+        self.assertEqual(payload["type"], "SYNC_CONTENT")
+        self.assertIn("error", payload["data"])
+        self.assertEqual(payload["data"]["error"], "Requested Document not found.")
+
+        # The consumer closes with 4000 right after sending the error
+        close_code = await communicator.wait_closed()
+        self.assertEqual(close_code, 4000)
+
+    # ------------------------------------------------------------------
+    # Public test – executed for both possible default frameworks
+    # ------------------------------------------------------------------
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/test_document_conversation_ws.yaml",
+        filter_headers=["authorization"],
+    )
+    async def test_streaming_flow__all_default_frameworks(self) -> None:
+        """
+        Run the streaming-flow assertions twice – once with the global
+        defaults set to ``llama_index`` and once with ``pydantic_ai`` – to
+        confirm that our *settings-based* default selection works identically
+        for document-level conversations.
+        """
+
+        for framework in ("llama_index", "pydantic_ai"):
+            with self.subTest(default_framework=framework):
+                with override_settings(
+                    LLMS_DEFAULT_AGENT_FRAMEWORK=framework,
+                    LLMS_DOCUMENT_AGENT_FRAMEWORK=framework,
+                    LLMS_CORPUS_AGENT_FRAMEWORK=framework,
+                ):
+                    await self._assert_streaming_flow()
+
+    # ------------------------------------------------------------------
+    # Negative-path public tests (framework-agnostic)
+    # ------------------------------------------------------------------
+    async def test_invalid_token(self) -> None:  # noqa: D401
+        """Connection rejected with an **invalid** JWT token."""
+        await self._assert_invalid_token()
+
+    async def test_missing_token(self) -> None:  # noqa: D401
+        """Connection rejected when **no** JWT token is supplied."""
+        await self._assert_missing_token()
+
+    async def test_invalid_document_id(self) -> None:  # noqa: D401
+        """Proper SYNC_CONTENT error for a non-existent document ID."""
+        await self._assert_invalid_document()
         

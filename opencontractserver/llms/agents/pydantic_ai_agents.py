@@ -27,6 +27,9 @@ from opencontractserver.llms.tools.pydantic_ai_tools import PydanticAIDependenci
 from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import (
     PydanticAIAnnotationVectorStore,
 )
+from pydantic import TypeAdapter, ValidationError
+
+from opencontractserver.utils.embeddings import aget_embedder
 
 logger = logging.getLogger(__name__)
 
@@ -57,19 +60,25 @@ class PydanticAICoreAgent(CoreAgentBase):
         if not raw_messages:
             return None
 
-        try:
-            history: list[ModelMessage] = []
-            for msg in raw_messages:
-                role = "user" if msg.msg_type == "HUMAN" else "assistant"
-                history.append(ModelMessage(role=role, content=msg.content))
-            return history
-        except Exception as exc:  # pragma: no cover
-            logger.warning(
-                "Error converting message history for Pydantic-AI (%s). "
-                "Falling back to empty history.",
-                exc,
-            )
-            return None
+        history: list[ModelMessage] = []
+        for msg in raw_messages:
+            # only map HUMAN→user and LLM→assistant; skip SYSTEM
+            t = msg.msg_type.upper()
+            if t == "HUMAN":
+                role = "user"
+            elif t == "LLM":
+                role = "assistant"
+            else:
+                continue
+            try:
+                # use Pydantic's adapter to ensure proper validation
+                adapter = TypeAdapter(ModelMessage)
+                history.append(adapter.validate_python({"role": role, "content": msg.content}))
+            except ValidationError as ve:
+                logger.warning(
+                    "Skipping message %s in history (validation error: %s)", msg.id, ve
+                )
+        return history or None
 
     async def chat(self, message: str, **kwargs) -> UnifiedChatResponse:
         """Send a message and get a complete response using PydanticAI Agent.run()."""
@@ -239,6 +248,21 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
         # Ensure the agent's config has the potentially newly created/loaded conversation
         config.conversation = conversation_manager.conversation
 
+        # Resolve embedder_path asynchronously if not already set, otherwise this is done synchronously in vector store...
+        if config.embedder_path is None and context.corpus and context.corpus.id:
+            logger.info(f"Attempting to derive embedder_path for corpus {context.corpus.id} asynchronously.")
+            try:
+                _, resolved_embedder_path = await aget_embedder(
+                    corpus_id=context.corpus.id
+                )
+                if resolved_embedder_path:
+                    config.embedder_path = resolved_embedder_path
+                    logger.info(f"Derived embedder_path: {config.embedder_path}")
+                else:
+                    logger.warning(f"Could not derive embedder_path for corpus {context.corpus.id}.")
+            except Exception as e:
+                logger.warning(f"Error deriving embedder_path for corpus {context.corpus.id}: {e}")
+
         model_settings = _prepare_pydantic_ai_model_settings(config)
         
         pydantic_ai_agent_instance = PydanticAIAgent(
@@ -299,20 +323,37 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
         if config is None:
             config = get_default_config()
             
-        if not isinstance(corpus, Corpus):
-            corpus = await Corpus.objects.aget(id=corpus)
+        if not isinstance(corpus, Corpus): # Ensure corpus is loaded if ID is passed
+            corpus_obj = await Corpus.objects.aget(id=corpus)
+        else:
+            corpus_obj = corpus
         
-        context = await CoreCorpusAgentFactory.create_context(corpus, config)
+        context = await CoreCorpusAgentFactory.create_context(corpus_obj, config)
 
         # Use the CoreConversationManager factory method
         conversation_manager = await CoreConversationManager.create_for_corpus(
-            corpus=corpus,
+            corpus=corpus_obj,
             user_id=config.user_id,
             config=config,
             override_conversation=conversation
         )
         # Ensure the agent's config has the potentially newly created/loaded conversation
         config.conversation = conversation_manager.conversation
+
+        # Resolve embedder_path asynchronously if not already set
+        if config.embedder_path is None and corpus_obj and corpus_obj.id:
+            logger.info(f"Attempting to derive embedder_path for corpus {corpus_obj.id} asynchronously.")
+            try:
+                _, resolved_embedder_path = await aget_embedder(
+                    corpus_id=corpus_obj.id
+                )
+                if resolved_embedder_path:
+                    config.embedder_path = resolved_embedder_path
+                    logger.info(f"Derived embedder_path: {config.embedder_path}")
+                else:
+                    logger.warning(f"Could not derive embedder_path for corpus {corpus_obj.id}.")
+            except Exception as e:
+                logger.warning(f"Error deriving embedder_path for corpus {corpus_obj.id}: {e}")
         
         model_settings = _prepare_pydantic_ai_model_settings(config)
 

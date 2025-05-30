@@ -10,7 +10,7 @@ from channels.db import database_sync_to_async
 from django.db.models import QuerySet
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.utils.embeddings import generate_embeddings_from_text, get_embedder
+from opencontractserver.utils.embeddings import generate_embeddings_from_text, agenerate_embeddings_from_text, get_embedder
 
 _logger = logging.getLogger(__name__)
 
@@ -181,11 +181,29 @@ class CoreAnnotationVectorStore:
         return queryset
 
     def _generate_query_embedding(self, query_text: str) -> Optional[list[float]]:
-        """Generate embeddings from query text."""
+        """Generate embeddings from query text synchronously."""
         _logger.info(f"Generating embeddings from query string: '{query_text}'")
         _logger.info(f"Using embedder path: {self.embedder_path}")
 
         embedder_path, vector = generate_embeddings_from_text(
+            query_text,
+            embedder_path=self.embedder_path,
+        )
+
+        _logger.info(f"Generated embeddings using embedder: {embedder_path}")
+        if vector is not None:
+            _logger.info(f"Vector dimension: {len(vector)}")
+        else:
+            _logger.warning("Failed to generate embeddings - vector is None")
+
+        return vector
+
+    async def _agenerate_query_embedding(self, query_text: str) -> Optional[list[float]]:
+        """Generate embeddings from query text asynchronously."""
+        _logger.info(f"Async generating embeddings from query string: '{query_text}'")
+        _logger.info(f"Using embedder path: {self.embedder_path}")
+
+        embedder_path, vector = await agenerate_embeddings_from_text(
             query_text,
             embedder_path=self.embedder_path,
         )
@@ -292,7 +310,7 @@ class CoreAnnotationVectorStore:
         # Determine the query vector
         vector = query.query_embedding
         if vector is None and query.query_text is not None:
-            vector = self._generate_query_embedding(query.query_text)
+            vector = await self._agenerate_query_embedding(query.query_text)
 
         # Perform vector search if we have a valid embedding
         if vector is not None and len(vector) in [384, 768, 1536, 3072]:

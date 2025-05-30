@@ -3,6 +3,7 @@ from typing import Optional, Union
 
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
+import asyncio
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -192,3 +193,48 @@ def calculate_embedding_for_text(
     """
     _, embeddings = generate_embeddings_from_text(text, corpus_id, mimetype)
     return embeddings
+
+
+async def aget_embedder(
+    corpus_id: int | str | None = None,
+    mimetype_or_enum: Union[str, FileTypeEnum, None] = None,
+    embedder_path: Optional[str] = None,
+) -> tuple[type[BaseEmbedder], str]:
+    """
+    Async version of `get_embedder`.
+
+    All database access is executed with `database_sync_to_async` so that it
+    never blocks the event-loop thread.  The public signature mirrors the
+    synchronous helper for drop-in replacement.
+    """
+    # Wrap the synchronous implementation in a thread to keep the code DRY.
+    return await asyncio.to_thread(
+        get_embedder, corpus_id, mimetype_or_enum, embedder_path
+    )
+
+
+async def agenerate_embeddings_from_text(
+    text: str,
+    corpus_id: Optional[int] = None,
+    mimetype: Optional[Union[str, "FileTypeEnum"]] = None,
+    embedder_path: Optional[str] = None,
+) -> tuple[Optional[str], Optional[list[float]]]:
+    """
+    Async wrapper around ``generate_embeddings_from_text``.
+
+    The synchronous implementation performs blocking I/O (DB look-ups,
+    model loading).  Running it in the event-loop thread would trigger
+    ``SynchronousOnlyOperation`` and stall other coroutines.  We therefore
+    delegate the entire call to a worker thread via ``asyncio.to_thread``.
+
+    Returns
+    -------
+    (embedder_path, vector)      – identical to the synchronous helper.
+    """
+    return await asyncio.to_thread(
+        generate_embeddings_from_text,
+        text=text,
+        corpus_id=corpus_id,
+        mimetype=mimetype,
+        embedder_path=embedder_path,
+    )

@@ -204,8 +204,30 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
     async def aquery(
         self, query: VectorStoreQuery, **kwargs: Any
     ) -> VectorStoreQueryResult:
-        """Asynchronous query wrapper."""
-        return await database_sync_to_async(self.query)(query, **kwargs)
+        """Asynchronous query execution using the core store's async_search."""
+        logger.debug(
+            f"LlamaIndexAnnotationVectorStore aquery called with: {query.query_str[:100] if query.query_str else 'N/A'}"
+        )
+
+        # Convert LlamaIndex query to our internal format
+        search_query = VectorSearchQuery(
+            query_text=query.query_str,
+            query_embedding=query.query_embedding,
+            similarity_top_k=query.similarity_top_k or 100,
+            filters=self._convert_metadata_filters(query.filters)
+        )
+
+        # Use the async_search method of the core_store
+        core_results = await self._core_store.async_search(search_query)
+
+        # Convert core_results to LlamaIndex TextNodes
+        nodes = self._convert_to_text_nodes(core_results)
+
+        return VectorStoreQueryResult(
+            nodes=nodes,
+            similarities=[result.similarity_score for result in core_results],
+            ids=[str(result.annotation.id) for result in core_results]
+        )
 
 
 # Backward compatibility alias

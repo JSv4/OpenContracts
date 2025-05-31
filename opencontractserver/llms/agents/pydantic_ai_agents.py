@@ -6,8 +6,14 @@ from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Union
 
 from opencontractserver.corpuses.models import Corpus
 from pydantic_ai import Agent as PydanticAIAgent
-from pydantic_ai.messages import ModelMessage
-
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelRequest,
+    UserPromptPart,
+    SystemPromptPart,
+    ModelResponse,
+    TextPart,
+)
 
 from opencontractserver.conversations.models import Conversation
 from opencontractserver.documents.models import Document
@@ -62,22 +68,22 @@ class PydanticAICoreAgent(CoreAgentBase):
 
         history: list[ModelMessage] = []
         for msg in raw_messages:
-            # only map HUMAN→user and LLM→assistant; skip SYSTEM
-            t = msg.msg_type.upper()
-            if t == "HUMAN":
-                role = "user"
-            elif t == "LLM":
-                role = "assistant"
-            else:
+            msg_type_upper = msg.msg_type.upper()
+            content = msg.content
+
+            # Skip any messages with no actual content
+            if not content.strip():
                 continue
-            try:
-                # use Pydantic's adapter to ensure proper validation
-                adapter = TypeAdapter(ModelMessage)
-                history.append(adapter.validate_python({"role": role, "content": msg.content}))
-            except ValidationError as ve:
-                logger.warning(
-                    "Skipping message %s in history (validation error: %s)", msg.id, ve
-                )
+
+            if msg_type_upper == "HUMAN":
+                history.append(ModelRequest(parts=[UserPromptPart(content=content)]))
+            elif msg_type_upper == "LLM":
+                history.append(ModelResponse(parts=[TextPart(content=content)]))
+            elif msg_type_upper == "SYSTEM":
+                # System messages are also part of a "request" to the model
+                history.append(ModelRequest(parts=[SystemPromptPart(content=content)]))
+            # else: We skip unknown types or those not directly mappable here
+
         return history or None
 
     async def chat(self, message: str, **kwargs) -> UnifiedChatResponse:
@@ -87,12 +93,12 @@ class PydanticAICoreAgent(CoreAgentBase):
         message_history = await self._get_message_history()
 
         try:
-            run_result = await self.pydantic_ai_agent.run(
-                message,
-                deps=self.agent_deps,
-                message_history=message_history,
-                **kwargs
-            )
+            # Prepare parameters for run(); include history only if available
+            run_kwargs: dict[str, Any] = {"deps": self.agent_deps}
+            if message_history:
+                run_kwargs["message_history"] = message_history
+            run_kwargs.update(kwargs)
+            run_result = await self.pydantic_ai_agent.run(message, **run_kwargs)
             
             llm_response_content = str(run_result.data)
             
@@ -131,12 +137,12 @@ class PydanticAICoreAgent(CoreAgentBase):
         message_history = await self._get_message_history()
 
         try:
-            async with self.pydantic_ai_agent.run_stream(
-                message,
-                deps=self.agent_deps,
-                message_history=message_history,
-                **kwargs,
-            ) as stream_result:
+            # Prepare parameters for run_stream(); include history only if available
+            stream_kwargs: dict[str, Any] = {"deps": self.agent_deps}
+            if message_history:
+                stream_kwargs["message_history"] = message_history
+            stream_kwargs.update(kwargs)
+            async with self.pydantic_ai_agent.run_stream(message, **stream_kwargs) as stream_result:
 
                 # 1) incremental chunks
                 async for text_delta in stream_result.stream_text(delta=True):

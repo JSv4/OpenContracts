@@ -43,7 +43,7 @@ class TestOpenContractsPipelineEmbedding(TestCase):
         return asyncio.run(async_func(*args, **kwargs))
 
     @patch(
-        "opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text"
+        "opencontractserver.llms.embedders.custom_pipeline_embedding.generate_embeddings_from_text"
     )
     def test_get_query_embedding(self, mock_generate_embeddings):
         """
@@ -64,7 +64,7 @@ class TestOpenContractsPipelineEmbedding(TestCase):
         self.assertListEqual(result_embedding, [0.1, 0.2, 0.3])
 
     @patch(
-        "opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text"
+        "opencontractserver.llms.embedders.custom_pipeline_embedding.generate_embeddings_from_text"
     )
     def test_get_text_embedding(self, mock_generate_embeddings):
         """
@@ -85,13 +85,13 @@ class TestOpenContractsPipelineEmbedding(TestCase):
         self.assertListEqual(result_embedding, [0.5, 0.6, 0.7])
 
     @patch(
-        "opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text"
+        "opencontractserver.llms.embedders.custom_pipeline_embedding.agenerate_embeddings_from_text"
     )
-    def test_async_get_query_embedding(self, mock_generate_embeddings):
+    def test_async_get_query_embedding(self, mock_agenerate_embeddings):
         """
         Test the async query embedding generation.
         """
-        mock_generate_embeddings.return_value = "random_embedder", [1.0, 1.1, 1.2]
+        mock_agenerate_embeddings.return_value = "random_embedder", [1.0, 1.1, 1.2]
         query_text = "Async query"
 
         result_embedding = self.get_async_task_result(
@@ -99,18 +99,23 @@ class TestOpenContractsPipelineEmbedding(TestCase):
         )
 
         # Assertions
-        mock_generate_embeddings.assert_called_once()
+        mock_agenerate_embeddings.assert_called_once_with(
+            text=query_text,
+            corpus_id=self.test_corpus_id,
+            mimetype=self.test_mimetype,
+            embedder_path=self.test_embedder_path,
+        )
         self.assertIsInstance(result_embedding, list)
         self.assertListEqual(result_embedding, [1.0, 1.1, 1.2])
 
     @patch(
-        "opencontractserver.llms.custom_pipeline_embedding.generate_embeddings_from_text"
+        "opencontractserver.llms.embedders.custom_pipeline_embedding.agenerate_embeddings_from_text"
     )
-    def test_async_get_text_embedding(self, mock_generate_embeddings):
+    def test_async_get_text_embedding(self, mock_agenerate_embeddings):
         """
         Test the async text embedding generation.
         """
-        mock_generate_embeddings.return_value = "random_embedder", [2.0, 2.1, 2.2]
+        mock_agenerate_embeddings.return_value = "random_embedder", [2.0, 2.1, 2.2]
         text_content = "Async text"
 
         result_embedding = self.get_async_task_result(
@@ -118,7 +123,12 @@ class TestOpenContractsPipelineEmbedding(TestCase):
         )
 
         # Assertions
-        mock_generate_embeddings.assert_called_once()
+        mock_agenerate_embeddings.assert_called_once_with(
+            text=text_content,
+            corpus_id=self.test_corpus_id,
+            mimetype=self.test_mimetype,
+            embedder_path=self.test_embedder_path,
+        )
         self.assertIsInstance(result_embedding, list)
         self.assertListEqual(result_embedding, [2.0, 2.1, 2.2])
 

@@ -83,23 +83,29 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
         )  # Mock the create classmethod
 
         agent = await UnifiedAgentFactory.create_document_agent(
-            document=self.doc1,
+            self.doc1,
+            self.corpus1,
             framework=AgentFramework.LLAMA_INDEX,
             user_id=self.user.id,
-            model_name="test_model",
+            model="test_model",
         )
 
         mock_get_config.assert_called_once_with(
             user_id=self.user.id,
+            model_name="test_model",
             system_prompt=None,
+            temperature=0.7,
+            max_tokens=None,
+            streaming=True,
             conversation=None,
+            conversation_id=None,
             loaded_messages=None,
             embedder_path=None,
-            model_name="test_model",
+            tools=[]
         )
         MockLlamaDocAgent.create.assert_called_once_with(
-            self.doc1, mock_config, []
-        )  # Assumes no tools passed
+            self.doc1, self.corpus1, mock_config, [] 
+        )
         self.assertIs(agent, mock_agent_instance)
 
     @patch(MOCK_PYDANTIC_AI_DOC_AGENT_PATH, new_callable=MagicMock)
@@ -121,21 +127,30 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
         mock_convert_tools.return_value = converted_framework_tools
 
         agent = await UnifiedAgentFactory.create_document_agent(
-            document=self.doc1, framework=AgentFramework.PYDANTIC_AI, tools=raw_tools
+            self.doc1,
+            self.corpus1,
+            framework=AgentFramework.PYDANTIC_AI,
+            tools=raw_tools
         )
 
         mock_get_config.assert_called_once_with(
             user_id=None,
+            model_name="gpt-4o-mini",
             system_prompt=None,
+            temperature=0.7,
+            max_tokens=None,
+            streaming=True,
             conversation=None,
+            conversation_id=None,
             loaded_messages=None,
             embedder_path=None,
+            tools=raw_tools
         )
         mock_convert_tools.assert_called_once_with(
             raw_tools, AgentFramework.PYDANTIC_AI
         )
         MockPydanticDocAgent.create.assert_called_once_with(
-            self.doc1, mock_config, converted_framework_tools
+            self.doc1, self.corpus1, mock_config, converted_framework_tools
         )
         self.assertIs(agent, mock_agent_instance)
 
@@ -150,11 +165,24 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
         MockLlamaCorpusAgent.create = AsyncMock(return_value=mock_agent_instance)
 
         agent = await UnifiedAgentFactory.create_corpus_agent(
-            corpus_id=self.corpus1.id, framework=AgentFramework.LLAMA_INDEX
+            self.corpus1,
+            framework=AgentFramework.LLAMA_INDEX
         )
-        mock_get_config.assert_called_once()
+        mock_get_config.assert_called_once_with(
+            user_id=None, 
+            model_name="gpt-4o-mini", # Default from factory
+            system_prompt=None, 
+            temperature=0.7, # Default
+            max_tokens=None, # Default
+            streaming=True, # Default
+            conversation=None, 
+            conversation_id=None, # Default
+            loaded_messages=None, 
+            embedder_path=None,
+            tools=[] # Default
+        )
         MockLlamaCorpusAgent.create.assert_called_once_with(
-            self.corpus1.id, mock_config, []
+            self.corpus1, mock_config, []
         )
         self.assertIs(agent, mock_agent_instance)
 
@@ -169,22 +197,38 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
         MockPydanticCorpusAgent.create = AsyncMock(return_value=mock_agent_instance)
 
         agent = await UnifiedAgentFactory.create_corpus_agent(
-            corpus_id=self.corpus1.id, framework=AgentFramework.PYDANTIC_AI
+            self.corpus1,
+            framework=AgentFramework.PYDANTIC_AI
         )
-        mock_get_config.assert_called_once()
+        mock_get_config.assert_called_once_with(
+            user_id=None, 
+            model_name="gpt-4o-mini", # Default from factory
+            system_prompt=None, 
+            temperature=0.7, # Default
+            max_tokens=None, # Default
+            streaming=True, # Default
+            conversation=None, 
+            conversation_id=None, # Default
+            loaded_messages=None, 
+            embedder_path=None,
+            tools=[] # Default
+        )
         MockPydanticCorpusAgent.create.assert_called_once_with(
-            self.corpus1.id, mock_config, []
+            self.corpus1, mock_config, []
         )
         self.assertIs(agent, mock_agent_instance)
 
     async def test_unsupported_framework_raises_error(self):
         with self.assertRaises(ValueError):
             await UnifiedAgentFactory.create_document_agent(
-                self.doc1, framework="invalid_framework_name"
+                self.doc1,
+                self.corpus1,
+                framework="invalid_framework_name"
             )
         with self.assertRaises(ValueError):
             await UnifiedAgentFactory.create_corpus_agent(
-                self.corpus1.id, framework="invalid_framework_name"
+                self.corpus1,
+                framework="invalid_framework_name"
             )
 
 

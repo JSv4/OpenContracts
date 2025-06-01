@@ -561,6 +561,7 @@ class CoreConversationManager:
                 title=f"Chat about {corpus.title}",
                 description=f"Conversation about corpus: {corpus.title}",
                 creator_id=user_id,
+                chat_with_corpus=corpus,
             )
             logger.debug(
                 f"Created new conversation {conversation.id} for corpus {corpus.id} (user: {user_id})"

@@ -73,7 +73,7 @@ class TestLongConversationAPI(TestCase):
                 "opencontractserver.llms.agents.llama_index_agents.DjangoAnnotationVectorStore"
             ):
 
-                agent = await agents.for_document(self.document.id)
+                agent = await agents.for_document(self.document.id, self.corpus.id)
 
                 # Verify conversation metadata
                 conversation_id = agent.get_conversation_id()
@@ -171,9 +171,7 @@ class TestLongConversationAPI(TestCase):
                 "opencontractserver.llms.agents.llama_index_agents.DjangoAnnotationVectorStore"
             ):
 
-                agent = await agents.for_document(
-                    self.document.id, self.corpus.id
-                )  # Anonymous
+                agent = await agents.for_document(self.document.id, self.corpus.id)  # Anonymous
 
                 # Test the actual message storage methods
                 user_msg_id = await agent.store_user_message("Test user message")
@@ -406,7 +404,11 @@ class TestLongConversationAPI(TestCase):
 
     async def test_corpus_agent_persistent_conversation(self):
         """Test persistent conversations work for corpus agents."""
+        # Ensure a clean slate for this user's conversations for this test
+        await Conversation.objects.filter(creator=self.user).adelete()
+        
         initial_conversation_count = await Conversation.objects.acount()
+        self.assertEqual(initial_conversation_count, 0, "Ensuring no pre-existing convos for this user before test.")
 
         # Mock the OpenAI agent creation and methods
         with patch(
@@ -426,7 +428,12 @@ class TestLongConversationAPI(TestCase):
                 "opencontractserver.llms.agents.llama_index_agents.VectorStoreIndex"
             ):
 
-                agent = await agents.for_corpus(self.corpus.id, user_id=self.user.id)
+                agent = await agents.for_corpus(
+                    self.corpus.id, 
+                    user_id=self.user.id,
+                    conversation_id=None, # Explicitly None
+                    conversation=None # Explicitly None
+                )
 
                 # Verify persistent behavior
                 conversation_id = agent.get_conversation_id()
@@ -467,7 +474,7 @@ class TestLongConversationAPI(TestCase):
                 "opencontractserver.llms.agents.llama_index_agents.DjangoAnnotationVectorStore"
             ):
 
-                agent = await agents.for_document(self.document.id)  # Anonymous
+                agent = await agents.for_document(self.document.id, self.corpus.id)  # Anonymous
 
                 # Test multiple message storage operations
                 questions = [
@@ -522,7 +529,7 @@ class TestLongConversationAPI(TestCase):
             ):
 
                 # Test anonymous conversation info
-                anonymous_agent = await agents.for_document(self.document.id)
+                anonymous_agent = await agents.for_document(self.document.id, self.corpus.id)
                 anonymous_info = anonymous_agent.get_conversation_info()
 
                 self.assertIsNone(anonymous_info["conversation_id"])
@@ -531,7 +538,7 @@ class TestLongConversationAPI(TestCase):
 
                 # Test persistent conversation info
                 persistent_agent = await agents.for_document(
-                    self.document.id, user_id=self.user.id
+                    self.document.id, self.corpus.id, user_id=self.user.id
                 )
                 persistent_info = persistent_agent.get_conversation_info()
 

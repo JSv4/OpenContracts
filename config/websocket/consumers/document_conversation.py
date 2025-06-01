@@ -11,22 +11,19 @@ and encapsulates database operations for reading/writing conversation messages.
 
 from __future__ import annotations
 
-import uuid
-
-from django.conf import settings
-
-from opencontractserver.corpuses.models import Corpus
-
 import json
 import logging
 import urllib.parse
+import uuid
 from typing import Any
 
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.conf import settings
 from graphql_relay import from_global_id
 
 from config.websocket.utils.extract_ids import extract_websocket_path_id
 from opencontractserver.conversations.models import MessageType
+from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms import agents
 
@@ -99,9 +96,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             # 3. Extract & validate global IDs
             # ------------------------------------------------------------------
             graphql_corpus_id = extract_websocket_path_id(self.scope["path"], "corpus")
-            graphql_doc_id = extract_websocket_path_id(
-                self.scope["path"], "document"
-            )
+            graphql_doc_id = extract_websocket_path_id(self.scope["path"], "document")
 
             self.corpus_id = int(from_global_id(graphql_corpus_id)[1])
             self.document_id = int(from_global_id(graphql_doc_id)[1])
@@ -194,10 +189,10 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         Returns:
             A short descriptive title for the conversation
         """
-        
+
         from llama_index.core.llms import ChatMessage as LlamaChatMessage
         from llama_index.llms.openai import OpenAI
-        
+
         system_prompt = (
             "You are a helpful assistant that creates very concise chat titles. "
             "Create a brief (maximum 5 words) title that captures the essence "
@@ -261,7 +256,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 logger.debug(
                     f"[Session {self.session_id}] No agent loaded yet, initializing..."
                 )
-                
+
                 # Parse conversation ID from query string if provided
                 query_string = self.scope.get("query_string", b"").decode("utf-8")
                 query_params = urllib.parse.parse_qs(query_string)
@@ -272,51 +267,82 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 conversation_id_from_query = None
                 if load_convo_id_str:
                     try:
-                        conversation_id_from_query = int(from_global_id(load_convo_id_str)[1])
+                        conversation_id_from_query = int(
+                            from_global_id(load_convo_id_str)[1]
+                        )
                         logger.debug(
-                            f"[Session {self.session_id}] Requested to load existing conversation {conversation_id_from_query}"
+                            f"[Session {self.session_id}] load existing conversation {conversation_id_from_query}"
                         )
                     except Exception as e:
                         logger.error(
-                            f"[Session {self.session_id}] Could not parse conversation ID from query param: {str(e)}"
+                            f"[Session {self.session_id}] Could not parse convo ID from param: {str(e)}"
                         )
                         conversation_id_from_query = None
 
                 # Create agent using new unified API
                 logger.debug(
-                    f"[Session {self.session_id}] Creating document agent for document {self.document.id if self.document else 'UNKNOWN'}"
+                    f"[Session {self.session_id}] Creating agent for document "
+                    f"{self.document.id if self.document else 'UNKNOWN'}"
                 )
-                
+
                 agent_kwargs = {
                     "document": self.document,
                     "corpus": self.corpus,
                     "user_id": self.scope["user"].id,
                 }
-                
+
                 if conversation_id_from_query:
                     agent_kwargs["conversation_id"] = conversation_id_from_query
-                
+
                 # Logging for preferred_embedder - does not affect agent_kwargs for corpus
-                if self.corpus and hasattr(self.corpus, 'preferred_embedder') and self.corpus.preferred_embedder:
-                    logger.debug(f"[Session {self.session_id}] Corpus {self.corpus.id} has a preferred_embedder: {self.corpus.preferred_embedder}. Agent factory will use this if applicable.")
+                if (
+                    self.corpus
+                    and hasattr(self.corpus, "preferred_embedder")
+                    and self.corpus.preferred_embedder
+                ):
+                    logger.debug(
+                        f"[Session {self.session_id}] Corpus {self.corpus.id} "
+                        f"has a preferred_embedder: {self.corpus.preferred_embedder}. "
+                        "Agent factory will use this if applicable."
+                    )
                 elif self.corpus:
-                    logger.debug(f"[Session {self.session_id}] Corpus {self.corpus.id} does not have a preferred_embedder specified. Agent factory will use defaults.")
-                else: # Should not happen if connect() succeeded
-                    logger.warning(f"[Session {self.session_id}] self.corpus is None during agent initialization. This is unexpected.")
+                    logger.debug(
+                        f"[Session {self.session_id}] Corpus {self.corpus.id} "
+                        "does not have a preferred_embedder specified. Agent factory will use defaults."
+                    )
+                else:  # Should not happen if connect() succeeded
+                    logger.warning(
+                        f"[Session {self.session_id}] self.corpus is None "
+                        "during agent initialization. This is unexpected."
+                    )
 
                 self.agent = await agents.for_document(**agent_kwargs)
-                
+
                 # Enhanced Logging after agent initialization
                 if self.agent and self.agent.get_conversation_id():
-                    logger.debug(f"[Session {self.session_id}] Agent NEWLY INITIALIZED for doc {self.document_id} with conversation ID: {self.agent.get_conversation_id()}")
+                    logger.debug(
+                        f"[Session {self.session_id}] Agent NEWLY INITIALIZED "
+                        f"for doc {self.document_id} with conversation ID: "
+                        f"{self.agent.get_conversation_id()}"
+                    )
                 elif self.agent:
-                    logger.debug(f"[Session {self.session_id}] Agent NEWLY INITIALIZED for doc {self.document_id} (anonymous or new conversation).")
-            
+                    logger.debug(
+                        f"[Session {self.session_id}] Agent NEWLY INITIALIZED "
+                        f"for doc {self.document_id} (anonymous or new conversation)."
+                    )
+
             # Enhanced Logging for existing agent instance
             elif self.agent and self.agent.get_conversation_id():
-                 logger.debug(f"[Session {self.session_id}] Using EXISTING agent for doc {self.document_id} with conversation ID: {self.agent.get_conversation_id()}")
+                logger.debug(
+                    f"[Session {self.session_id}] Using EXISTING agent "
+                    f"for doc {self.document_id} with conversation ID: "
+                    f"{self.agent.get_conversation_id()}"
+                )
             elif self.agent:
-                 logger.debug(f"[Session {self.session_id}] Using EXISTING agent for doc {self.document_id} (anonymous or new conversation).")
+                logger.debug(
+                    f"[Session {self.session_id}] Using EXISTING agent "
+                    f"for doc {self.document_id} (anonymous or new conversation)."
+                )
 
             # Use the new streaming API
             logger.debug(
@@ -326,7 +352,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             try:
                 # Stream the response
                 async for chunk in self.agent.stream(user_query):
-                    if chunk.user_message_id and not hasattr(self, '_sent_start'):
+                    if chunk.user_message_id and not hasattr(self, "_sent_start"):
                         # Send ASYNC_START when we get the first chunk with message IDs
                         await self.send_standard_message(
                             msg_type="ASYNC_START",
@@ -335,7 +361,8 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                         )
                         self._sent_start = True
                         logger.debug(
-                            f"[Session {self.session_id}] Sent ASYNC_START with message_id: {chunk.llm_message_id}"
+                            f"[Session {self.session_id}] Sent ASYNC_START with "
+                            f"message_id: {chunk.llm_message_id}"
                         )
 
                     # Send each content chunk
@@ -353,8 +380,10 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                         if chunk.sources:
                             for source in chunk.sources:
                                 source_data = {
-                                    "annotation_id": source.metadata.get("annotation_id"),
-                                    "rawText": source.content, # Corrected from source.text
+                                    "annotation_id": source.metadata.get(
+                                        "annotation_id"
+                                    ),
+                                    "rawText": source.content,  # Corrected from source.text
                                     **source.metadata,
                                 }
                                 sources.append(source_data)
@@ -372,10 +401,10 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                             content="",  # Full content already sent in chunks
                             data=data,
                         )
-                        
+
                         # Reset the start flag for next message
-                        if hasattr(self, '_sent_start'):
-                            delattr(self, '_sent_start')
+                        if hasattr(self, "_sent_start"):
+                            delattr(self, "_sent_start")
 
                 logger.debug(
                     f"[Session {self.session_id}] Completed streaming response"

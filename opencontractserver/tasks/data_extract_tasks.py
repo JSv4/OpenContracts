@@ -21,8 +21,10 @@ from opencontractserver.extracts.models import Datacell
 from opencontractserver.llms.embedders.custom_pipeline_embedding import (
     OpenContractsPipelineEmbedding,
 )
-from opencontractserver.llms.vector_stores.vector_store_factory import UnifiedVectorStoreFactory
 from opencontractserver.llms.types import AgentFramework
+from opencontractserver.llms.vector_stores.vector_store_factory import (
+    UnifiedVectorStoreFactory,
+)
 from opencontractserver.shared.decorators import async_celery_task
 
 logger = logging.getLogger(__name__)
@@ -550,7 +552,9 @@ async def oc_llama_index_doc_query(
 
     from llama_index.llms.openai import OpenAI
 
-    from opencontractserver.llms.vector_stores.vector_store_factory import UnifiedVectorStoreFactory
+    from opencontractserver.llms.vector_stores.vector_store_factory import (
+        UnifiedVectorStoreFactory,
+    )
 
     # Retrieve Datacell
     logger.info(f"Starting oc_llama_index_doc_query for cell_id={cell_id}")
@@ -603,8 +607,6 @@ async def oc_llama_index_doc_query(
         # Build or load index
         # =====================
         # Get user_id with sync_to_async to properly resolve the related field
-        user_id = await sync_to_async(lambda: document.creator.id)()
-
         vector_store = UnifiedVectorStoreFactory.create_vector_store(
             framework=AgentFramework.LLAMA_INDEX,
             user_id=document.creator.id,

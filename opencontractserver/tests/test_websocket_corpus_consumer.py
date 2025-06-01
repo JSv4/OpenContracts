@@ -111,7 +111,9 @@ class CorpusConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
                 )
 
         # Full assistant text reconstructed from content chunks is non-empty
-        full_text = "".join(m["content"] for m in received if m["type"] == "ASYNC_CONTENT")
+        full_text = "".join(
+            m["content"] for m in received if m["type"] == "ASYNC_CONTENT"
+        )
         self.assertTrue(
             full_text.strip(),
             "Reconstructed assistant message should not be empty.",
@@ -206,7 +208,10 @@ class CorpusConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
                 ):
                     logger.info("Testing corpus agent framework: %s", framework)
                     await self._assert_streaming_flow()
-                    logger.info("PASS - Successfully tested corpus agent framework: %s", framework)
+                    logger.info(
+                        "PASS - Successfully tested corpus agent framework: %s",
+                        framework,
+                    )
 
     # ------------------------------------------------------------------
     # Negative-path public tests (framework-agnostic)

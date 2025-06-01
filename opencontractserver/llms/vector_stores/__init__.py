@@ -11,8 +11,8 @@ from opencontractserver.llms.vector_stores.core_vector_stores import (
 )
 from opencontractserver.llms.vector_stores.vector_store_factory import (
     UnifiedVectorStoreFactory,
-    create_vector_store,
     create_core_vector_store,
+    create_vector_store,
 )
 
 __all__ = [
@@ -22,6 +22,6 @@ __all__ = [
     "VectorSearchResult",
     # Factory
     "UnifiedVectorStoreFactory",
-    "create_vector_store", 
+    "create_vector_store",
     "create_core_vector_store",
 ]

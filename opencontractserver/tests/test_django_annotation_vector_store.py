@@ -167,9 +167,7 @@ class TestCoreAnnotationVectorStore(TestCase):
         just retrieve all matching annotations for the corpus (and user) with no doc_id.
         """
         query = VectorSearchQuery(
-            query_embedding=None, 
-            query_text=None, 
-            similarity_top_k=10
+            query_embedding=None, query_text=None, similarity_top_k=10
         )
         results = self.run_search_query(query)
         self.assertEqual(
@@ -189,9 +187,7 @@ class TestCoreAnnotationVectorStore(TestCase):
             document_id=self.doc1.id,
         )
         query = VectorSearchQuery(
-            query_embedding=None, 
-            query_text=None, 
-            similarity_top_k=10
+            query_embedding=None, query_text=None, similarity_top_k=10
         )
         results = store_doc1.search(query)
         self.assertEqual(
@@ -211,17 +207,13 @@ class TestCoreAnnotationVectorStore(TestCase):
             must_have_text="Another",
         )
         query = VectorSearchQuery(
-            query_embedding=None, 
-            query_text=None, 
-            similarity_top_k=10
+            query_embedding=None, query_text=None, similarity_top_k=10
         )
         results = store_text_filter.search(query)
-        self.assertEqual(
-            len(results), 1, "Only anno2 matches the substring 'Another'."
-        )
+        self.assertEqual(len(results), 1, "Only anno2 matches the substring 'Another'.")
         self.assertIn(
-            "Another annotation text, minor label, on doc1", 
-            results[0].annotation.raw_text
+            "Another annotation text, minor label, on doc1",
+            results[0].annotation.raw_text,
         )
 
     @override_settings(
@@ -233,12 +225,9 @@ class TestCoreAnnotationVectorStore(TestCase):
         (anno1, 2, 3) in ascending distance order, limited by top_k.
         """
         query_vec = constant_vector(384, value=0.25)
-        query = VectorSearchQuery(
-            query_embedding=query_vec, 
-            similarity_top_k=3
-        )
+        query = VectorSearchQuery(query_embedding=query_vec, similarity_top_k=3)
         results = self.run_search_query(query)
-        
+
         # Because the dimension is 384, we only expect anno1,2,3 to appear. Anno4 has no embedding.
         returned_ids = {result.annotation.id for result in results}
         self.assertNotIn(
@@ -250,8 +239,12 @@ class TestCoreAnnotationVectorStore(TestCase):
         self.assertIn(self.anno2.id, returned_ids)
         self.assertIn(self.anno3.id, returned_ids)
 
-    @patch("opencontractserver.llms.vector_stores.core_vector_stores.generate_embeddings_from_text")
-    def test_search_by_vector_similarity_generated_from_query_text(self, mock_gen_embeds):
+    @patch(
+        "opencontractserver.llms.vector_stores.core_vector_stores.generate_embeddings_from_text"
+    )
+    def test_search_by_vector_similarity_generated_from_query_text(
+        self, mock_gen_embeds
+    ):
         """
         Provide query_text instead of explicit embedding. The vector store should
         call generate_embeddings_from_text internally.
@@ -260,13 +253,11 @@ class TestCoreAnnotationVectorStore(TestCase):
         expected_vector = constant_vector(384, value=0.15)
         mock_gen_embeds.return_value = (
             "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
-            expected_vector
+            expected_vector,
         )
 
         query = VectorSearchQuery(
-            query_embedding=None,
-            query_text="test query",
-            similarity_top_k=3
+            query_embedding=None, query_text="test query", similarity_top_k=3
         )
         results = self.run_search_query(query)
 
@@ -286,15 +277,12 @@ class TestCoreAnnotationVectorStore(TestCase):
         """
         filters = {"annotation_label": "Important Label"}
         query = VectorSearchQuery(
-            query_embedding=None, 
-            query_text=None, 
-            filters=filters, 
-            similarity_top_k=10
+            query_embedding=None, query_text=None, filters=filters, similarity_top_k=10
         )
 
         results = self.run_search_query(query)
         returned_texts = [result.annotation.raw_text for result in results]
-        
+
         # anno1, anno3 both have "Important Label"
         self.assertEqual(
             len(returned_texts),
@@ -304,7 +292,9 @@ class TestCoreAnnotationVectorStore(TestCase):
         self.assertTrue(any("first annotation text" in txt for txt in returned_texts))
         self.assertTrue(any("doc2, important label" in txt for txt in returned_texts))
 
-    @patch("opencontractserver.llms.vector_stores.core_vector_stores.generate_embeddings_from_text")
+    @patch(
+        "opencontractserver.llms.vector_stores.core_vector_stores.generate_embeddings_from_text"
+    )
     def test_search_query_text_fallback_when_no_embedding(self, mock_gen_embeds):
         """
         If a user calls a search with query_text but the dimension is unsupported or generate_embeddings
@@ -315,9 +305,7 @@ class TestCoreAnnotationVectorStore(TestCase):
         mock_gen_embeds.return_value = (None, None)
 
         query = VectorSearchQuery(
-            query_embedding=None, 
-            query_text="some text", 
-            similarity_top_k=3
+            query_embedding=None, query_text="some text", similarity_top_k=3
         )
         results = self.run_search_query(query)
         self.assertEqual(
@@ -383,10 +371,7 @@ class TestCoreAnnotationVectorStore(TestCase):
 
         # Submit a vector-based query
         query_vec = constant_vector(384, value=0.50)
-        query = VectorSearchQuery(
-            query_embedding=query_vec, 
-            similarity_top_k=10
-        )
+        query = VectorSearchQuery(query_embedding=query_vec, similarity_top_k=10)
         results = store.search(query)
 
         returned_ids = {result.annotation.id for result in results}
@@ -410,10 +395,7 @@ class TestCoreAnnotationVectorStore(TestCase):
         Test that similarity scores are properly included in search results.
         """
         query_vec = constant_vector(384, value=0.25)
-        query = VectorSearchQuery(
-            query_embedding=query_vec, 
-            similarity_top_k=3
-        )
+        query = VectorSearchQuery(query_embedding=query_vec, similarity_top_k=3)
         results = self.run_search_query(query)
 
         # Check that all results have similarity scores
@@ -430,18 +412,15 @@ class TestCoreAnnotationVectorStore(TestCase):
             creator=self.user,
             is_public=True,
         )
-        
+
         store = CoreAnnotationVectorStore(
             user_id=self.user.id,
             corpus_id=empty_corpus.id,
         )
-        
-        query = VectorSearchQuery(
-            query_text="any text",
-            similarity_top_k=10
-        )
+
+        query = VectorSearchQuery(query_text="any text", similarity_top_k=10)
         results = store.search(query)
-        
+
         self.assertEqual(len(results), 0, "Empty corpus should return no results")
 
     def test_user_filtering(self) -> None:
@@ -450,11 +429,9 @@ class TestCoreAnnotationVectorStore(TestCase):
         """
         # Create another user and annotation
         other_user = User.objects.create_user(
-            username="otheruser", 
-            email="other@example.com", 
-            password="otherpass123"
+            username="otheruser", email="other@example.com", password="otherpass123"
         )
-        
+
         other_annotation = Annotation.objects.create(
             document=self.doc1,
             corpus=self.corpus,
@@ -462,19 +439,19 @@ class TestCoreAnnotationVectorStore(TestCase):
             raw_text="Annotation by other user",
             is_public=True,
         )
-        
+
         # Search with user filter
         store = CoreAnnotationVectorStore(
             user_id=self.user.id,
             corpus_id=self.corpus.id,
         )
-        
+
         query = VectorSearchQuery(similarity_top_k=10)
         results = store.search(query)
-        
+
         returned_ids = {result.annotation.id for result in results}
         self.assertNotIn(
-            other_annotation.id, 
-            returned_ids, 
-            "Other user's annotation should be filtered out"
+            other_annotation.id,
+            returned_ids,
+            "Other user's annotation should be filtered out",
         )

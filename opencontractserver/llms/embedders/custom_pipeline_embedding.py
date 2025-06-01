@@ -6,8 +6,8 @@ from llama_index.core.callbacks import CallbackManager
 
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 from opencontractserver.utils.embeddings import (
-    generate_embeddings_from_text,
     agenerate_embeddings_from_text,
+    generate_embeddings_from_text,
 )
 
 logger = logging.getLogger(__name__)

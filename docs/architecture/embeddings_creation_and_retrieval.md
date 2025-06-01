@@ -39,7 +39,7 @@ Our search architecture is designed with two layers: a **core API** that contain
          VectorSearchQuery,
          VectorSearchResult,
      )
-     
+
      # Initialize the core store
      store = CoreAnnotationVectorStore(
          corpus_id=my_corpus_id,
@@ -47,17 +47,17 @@ Our search architecture is designed with two layers: a **core API** that contain
          embedder_path="my-embedder",
          embed_dim=384,
      )
-     
+
      # Create a search query
      query = VectorSearchQuery(
          query_text="What is the main topic?",
          similarity_top_k=10,
          filters={"label": "important"}
      )
-     
+
      # Execute search
      results = store.search(query)
-     
+
      # Access results
      for result in results:
          annotation = result.annotation
@@ -80,12 +80,12 @@ Framework adapters are thin wrappers that translate between the core API and spe
      ```python
      # LlamaIndex usage
      from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
-     
+
      vector_store = DjangoAnnotationVectorStore(
          corpus_id=my_corpus_id,
          user_id=my_user_id,
      )
-     
+
      # Used with LlamaIndex query engines
      query_engine = index.as_query_engine(vector_store=vector_store)
      response = query_engine.query("What is the main topic?")
@@ -103,7 +103,7 @@ Framework adapters are thin wrappers that translate between the core API and spe
    - Adapter converts to `VectorSearchQuery`
    - Core store processes the query using our business logic
 
-2. **Vector Generation** 
+2. **Vector Generation**
    - If `query.query_text` is provided, core store calls `generate_embeddings_from_text(...)`
    - If `query.query_embedding` is provided, uses it directly
 

@@ -1,10 +1,12 @@
 """Unified vector store factory that can create vector stores for different frameworks."""
 
 import logging
-from typing import Optional, Union, Any
+from typing import Any, Optional, Union
 
 from opencontractserver.llms.types import AgentFramework
-from opencontractserver.llms.vector_stores.core_vector_stores import CoreAnnotationVectorStore
+from opencontractserver.llms.vector_stores.core_vector_stores import (
+    CoreAnnotationVectorStore,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ class UnifiedVectorStoreFactory:
         embedder_path: Optional[str] = None,
         must_have_text: Optional[str] = None,
         embed_dim: int = 384,
-        **kwargs
+        **kwargs,
     ) -> Any:
         """Create a vector store using the specified framework.
 
@@ -40,8 +42,9 @@ class UnifiedVectorStoreFactory:
         """
         if framework == AgentFramework.LLAMA_INDEX:
             from opencontractserver.llms.vector_stores.llama_index_vector_stores import (
-                LlamaIndexAnnotationVectorStore
+                LlamaIndexAnnotationVectorStore,
             )
+
             return LlamaIndexAnnotationVectorStore(
                 user_id=user_id,
                 corpus_id=corpus_id,
@@ -49,12 +52,13 @@ class UnifiedVectorStoreFactory:
                 embedder_path=embedder_path,
                 must_have_text=must_have_text,
                 embed_dim=embed_dim,
-                **kwargs
+                **kwargs,
             )
         elif framework == AgentFramework.PYDANTIC_AI:
             from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import (
-                PydanticAIAnnotationVectorStore
+                PydanticAIAnnotationVectorStore,
             )
+
             return PydanticAIAnnotationVectorStore(
                 user_id=user_id,
                 corpus_id=corpus_id,
@@ -62,7 +66,7 @@ class UnifiedVectorStoreFactory:
                 embedder_path=embedder_path,
                 must_have_text=must_have_text,
                 embed_dim=embed_dim,
-                **kwargs
+                **kwargs,
             )
         else:
             raise ValueError(f"Unsupported framework: {framework}")
@@ -75,7 +79,7 @@ class UnifiedVectorStoreFactory:
         embedder_path: Optional[str] = None,
         must_have_text: Optional[str] = None,
         embed_dim: int = 384,
-        **kwargs
+        **kwargs,
     ) -> CoreAnnotationVectorStore:
         """Create a framework-agnostic core vector store.
 
@@ -103,8 +107,7 @@ class UnifiedVectorStoreFactory:
 
 # Convenience functions for backward compatibility
 def create_vector_store(
-    framework: Union[AgentFramework, str] = AgentFramework.LLAMA_INDEX,
-    **kwargs
+    framework: Union[AgentFramework, str] = AgentFramework.LLAMA_INDEX, **kwargs
 ) -> Any:
     """Create a vector store (backward compatibility wrapper)."""
     if isinstance(framework, str):
@@ -114,4 +117,4 @@ def create_vector_store(
 
 def create_core_vector_store(**kwargs) -> CoreAnnotationVectorStore:
     """Create a core vector store (backward compatibility wrapper)."""
-    return UnifiedVectorStoreFactory.create_core_vector_store(**kwargs) 
+    return UnifiedVectorStoreFactory.create_core_vector_store(**kwargs)

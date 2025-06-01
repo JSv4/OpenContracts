@@ -8,22 +8,22 @@ from __future__ import annotations
 
 from typing import Any
 
-from opencontractserver.llms.types import AgentFramework
+from opencontractserver.llms.agents.agent_factory import (
+    UnifiedAgentFactory,
+    create_corpus_agent,
+    create_document_agent,
+)
 from opencontractserver.llms.agents.core_agents import (
     AgentConfig,
     CoreAgent,
     get_default_config,
 )
-from opencontractserver.llms.agents.agent_factory import (
-    UnifiedAgentFactory,
-    create_document_agent,
-    create_corpus_agent,
-)
+from opencontractserver.llms.types import AgentFramework
 
 __all__ = [
     # Core interfaces
     "AgentFramework",
-    "AgentConfig", 
+    "AgentConfig",
     "CoreAgent",
     "get_default_config",
     # Factory
@@ -35,6 +35,7 @@ __all__ = [
     "for_corpus",
 ]
 
+
 async def for_document(*args: Any, **kwargs: Any):
     """
     Backward-compatibility shim that returns a document agent.
@@ -42,9 +43,12 @@ async def for_document(*args: Any, **kwargs: Any):
     A local import is used to avoid a circular dependency with
     `opencontractserver.llms.api`.
     """
-    from opencontractserver.llms.api import agents as _agent_api  # pylint: disable=import-outside-toplevel
+    from opencontractserver.llms.api import (
+        agents as _agent_api,  # pylint: disable=import-outside-toplevel
+    )
 
     return await _agent_api.for_document(*args, **kwargs)
+
 
 async def for_corpus(*args: Any, **kwargs: Any):
     """
@@ -52,8 +56,11 @@ async def for_corpus(*args: Any, **kwargs: Any):
 
     See `for_document` for rationale behind the local import.
     """
-    from opencontractserver.llms.api import agents as _agent_api  # pylint: disable=import-outside-toplevel
+    from opencontractserver.llms.api import (
+        agents as _agent_api,  # pylint: disable=import-outside-toplevel
+    )
 
     return await _agent_api.for_corpus(*args, **kwargs)
+
 
 __all__.extend(["for_document", "for_corpus"])

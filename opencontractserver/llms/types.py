@@ -5,6 +5,6 @@ from enum import Enum
 
 class AgentFramework(Enum):
     """Supported agent frameworks."""
-    
+
     LLAMA_INDEX = "llama_index"
-    PYDANTIC_AI = "pydantic_ai" 
+    PYDANTIC_AI = "pydantic_ai"

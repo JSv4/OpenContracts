@@ -1,18 +1,16 @@
 """Unified agent factory that can create agents for different frameworks."""
 
 import logging
-from typing import Optional, Union, List, Callable
+from typing import Callable, Optional, Union
+
 from django.conf import settings
 
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.llms.types import AgentFramework
-from opencontractserver.llms.agents.core_agents import (
-    CoreAgent,
-    get_default_config,
-)
+from opencontractserver.llms.agents.core_agents import CoreAgent, get_default_config
 from opencontractserver.llms.tools.tool_factory import CoreTool, UnifiedToolFactory
+from opencontractserver.llms.types import AgentFramework
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +27,7 @@ class UnifiedAgentFactory:
         # Enhanced conversation management
         conversation: Optional[Conversation] = None,
         conversation_id: Optional[int] = None,
-        loaded_messages: Optional[List[ChatMessage]] = None,
+        loaded_messages: Optional[list[ChatMessage]] = None,
         # Configuration options
         model: Optional[str] = None,
         system_prompt: Optional[str] = None,
@@ -37,11 +35,11 @@ class UnifiedAgentFactory:
         max_tokens: Optional[int] = None,
         streaming: Optional[bool] = None,
         embedder_path: Optional[str] = None,
-        tools: Optional[List[Union[CoreTool, Callable, str]]] = None,
+        tools: Optional[list[Union[CoreTool, Callable, str]]] = None,
         # Legacy compatibility
         override_conversation: Optional[Conversation] = None,
         override_system_prompt: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> CoreAgent:
         """Create a document agent using the specified framework.
 
@@ -78,24 +76,38 @@ class UnifiedAgentFactory:
             system_prompt=system_prompt,
             temperature=temperature or kwargs.get("temperature", 0.7),
             max_tokens=max_tokens,
-            streaming=streaming if streaming is not None else kwargs.get("streaming", True),
+            streaming=streaming
+            if streaming is not None
+            else kwargs.get("streaming", True),
             conversation=conversation,
             conversation_id=conversation_id,
             loaded_messages=loaded_messages,
             embedder_path=embedder_path,
             tools=tools or [],
-            **kwargs
+            **kwargs,
         )
 
         # Convert tools to framework-specific format
-        framework_tools = _convert_tools_for_framework(tools, framework) if tools else []
+        framework_tools = (
+            _convert_tools_for_framework(tools, framework) if tools else []
+        )
 
         if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.agents.llama_index_agents import LlamaIndexDocumentAgent
-            return await LlamaIndexDocumentAgent.create(document, corpus, config, framework_tools)
+            from opencontractserver.llms.agents.llama_index_agents import (
+                LlamaIndexDocumentAgent,
+            )
+
+            return await LlamaIndexDocumentAgent.create(
+                document, corpus, config, framework_tools
+            )
         elif framework == AgentFramework.PYDANTIC_AI:
-            from opencontractserver.llms.agents.pydantic_ai_agents import PydanticAIDocumentAgent
-            return await PydanticAIDocumentAgent.create(document, corpus, config, framework_tools)
+            from opencontractserver.llms.agents.pydantic_ai_agents import (
+                PydanticAIDocumentAgent,
+            )
+
+            return await PydanticAIDocumentAgent.create(
+                document, corpus, config, framework_tools
+            )
         else:
             raise ValueError(f"Unsupported framework: {framework}")
 
@@ -107,7 +119,7 @@ class UnifiedAgentFactory:
         # Enhanced conversation management
         conversation: Optional[Conversation] = None,
         conversation_id: Optional[int] = None,
-        loaded_messages: Optional[List[ChatMessage]] = None,
+        loaded_messages: Optional[list[ChatMessage]] = None,
         # Configuration options
         model: Optional[str] = None,
         system_prompt: Optional[str] = None,
@@ -115,11 +127,11 @@ class UnifiedAgentFactory:
         max_tokens: Optional[int] = None,
         streaming: Optional[bool] = None,
         embedder_path: Optional[str] = None,
-        tools: Optional[List[Union[CoreTool, Callable, str]]] = None,
+        tools: Optional[list[Union[CoreTool, Callable, str]]] = None,
         # Legacy compatibility
         override_conversation: Optional[Conversation] = None,
         override_system_prompt: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> CoreAgent:
         """Create a corpus agent using the specified framework.
 
@@ -156,32 +168,41 @@ class UnifiedAgentFactory:
             system_prompt=system_prompt,
             temperature=temperature or kwargs.get("temperature", 0.7),
             max_tokens=max_tokens,
-            streaming=streaming if streaming is not None else kwargs.get("streaming", True),
+            streaming=streaming
+            if streaming is not None
+            else kwargs.get("streaming", True),
             conversation=conversation,
             conversation_id=conversation_id,
             loaded_messages=loaded_messages,
             embedder_path=embedder_path,
             tools=tools or [],
-            **kwargs
+            **kwargs,
         )
 
         # Convert tools to framework-specific format
-        framework_tools = _convert_tools_for_framework(tools, framework) if tools else []
+        framework_tools = (
+            _convert_tools_for_framework(tools, framework) if tools else []
+        )
 
         if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.agents.llama_index_agents import LlamaIndexCorpusAgent
+            from opencontractserver.llms.agents.llama_index_agents import (
+                LlamaIndexCorpusAgent,
+            )
+
             return await LlamaIndexCorpusAgent.create(corpus, config, framework_tools)
         elif framework == AgentFramework.PYDANTIC_AI:
-            from opencontractserver.llms.agents.pydantic_ai_agents import PydanticAICorpusAgent
+            from opencontractserver.llms.agents.pydantic_ai_agents import (
+                PydanticAICorpusAgent,
+            )
+
             return await PydanticAICorpusAgent.create(corpus, config, framework_tools)
         else:
             raise ValueError(f"Unsupported framework: {framework}")
 
 
 def _convert_tools_for_framework(
-    tools: List[Union[CoreTool, Callable, str]],
-    framework: AgentFramework
-) -> List:
+    tools: list[Union[CoreTool, Callable, str]], framework: AgentFramework
+) -> list:
     """Convert tools to framework-specific format.
 
     Args:
@@ -218,15 +239,15 @@ async def create_document_agent(
     user_id: Optional[int] = None,
     conversation: Optional[Conversation] = None,
     conversation_id: Optional[int] = None,
-    loaded_messages: Optional[List[ChatMessage]] = None,
+    loaded_messages: Optional[list[ChatMessage]] = None,
     embedder_path: Optional[str] = None,
     # Legacy compatibility
     override_conversation: Optional[Conversation] = None,
     override_system_prompt: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ) -> CoreAgent:
     """Create a document agent (enhanced backward compatibility wrapper).
-    
+
     Args:
         document: Document ID or instance
         framework: Agent framework to use
@@ -238,7 +259,7 @@ async def create_document_agent(
         override_conversation: Legacy parameter (use 'conversation' instead)
         override_system_prompt: Legacy parameter (use 'system_prompt' instead)
         **kwargs: Additional arguments passed to factory
-        
+
     Returns:
         CoreAgent: Framework-specific agent
     """
@@ -248,7 +269,7 @@ async def create_document_agent(
         )
     if isinstance(framework, str):
         framework = AgentFramework(framework)
-    
+
     return await UnifiedAgentFactory.create_document_agent(
         document=document,
         framework=framework,
@@ -259,7 +280,7 @@ async def create_document_agent(
         embedder_path=embedder_path,
         override_conversation=override_conversation,
         override_system_prompt=override_system_prompt,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -269,14 +290,14 @@ async def create_corpus_agent(
     user_id: Optional[int] = None,
     conversation: Optional[Conversation] = None,
     conversation_id: Optional[int] = None,
-    loaded_messages: Optional[List[ChatMessage]] = None,
+    loaded_messages: Optional[list[ChatMessage]] = None,
     # Legacy compatibility
     override_conversation: Optional[Conversation] = None,
     override_system_prompt: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ) -> CoreAgent:
     """Create a corpus agent (enhanced backward compatibility wrapper).
-    
+
     Args:
         corpus_id: Corpus ID
         framework: Agent framework to use
@@ -287,7 +308,7 @@ async def create_corpus_agent(
         override_conversation: Legacy parameter (use 'conversation' instead)
         override_system_prompt: Legacy parameter (use 'system_prompt' instead)
         **kwargs: Additional arguments passed to factory
-        
+
     Returns:
         CoreAgent: Framework-specific agent
     """
@@ -297,7 +318,7 @@ async def create_corpus_agent(
         )
     if isinstance(framework, str):
         framework = AgentFramework(framework)
-    
+
     return await UnifiedAgentFactory.create_corpus_agent(
         corpus_id=corpus_id,
         framework=framework,
@@ -307,5 +328,5 @@ async def create_corpus_agent(
         loaded_messages=loaded_messages,
         override_conversation=override_conversation,
         override_system_prompt=override_system_prompt,
-        **kwargs
+        **kwargs,
     )

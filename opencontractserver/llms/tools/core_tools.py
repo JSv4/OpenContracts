@@ -1,7 +1,7 @@
 """Framework-agnostic core tool functions for document and note operations."""
 
 import logging
-from typing import Optional, Union, Dict, Any, List
+from typing import Any, Optional
 
 from opencontractserver.annotations.models import Note
 from opencontractserver.documents.models import Document
@@ -13,10 +13,10 @@ def _token_count(text: str) -> int:
     """
     Naive token counting function. Splits on whitespace.
     Replace or augment with more robust tokenization if needed.
-    
+
     Args:
         text: The text to count tokens for
-        
+
     Returns:
         Number of tokens (whitespace-separated words)
     """
@@ -33,14 +33,14 @@ def load_document_md_summary(
 
     Args:
         document_id: The primary key (ID) of the Document
-        truncate_length: Optional number of characters to truncate. If provided, 
+        truncate_length: Optional number of characters to truncate. If provided,
                         returns only that many characters
-        from_start: If True, return from the start up to truncate_length. 
+        from_start: If True, return from the start up to truncate_length.
                    Otherwise, return from the end
 
     Returns:
         A string containing the content of the md_summary_file (possibly truncated)
-        
+
     Raises:
         ValueError: If document doesn't exist or has no md_summary_file
     """
@@ -57,7 +57,11 @@ def load_document_md_summary(
         content = file_obj.read()
         logger.debug(f"Loaded md_summary_file for document {document_id}")
 
-    if truncate_length is not None and isinstance(truncate_length, int) and truncate_length > 0:
+    if (
+        truncate_length is not None
+        and isinstance(truncate_length, int)
+        and truncate_length > 0
+    ):
         if from_start:
             content = content[:truncate_length]
         else:
@@ -76,7 +80,7 @@ def get_md_summary_token_length(document_id: int) -> int:
 
     Returns:
         An integer representing the approximate token count of the md_summary_file
-        
+
     Raises:
         ValueError: If document doesn't exist or has no md_summary_file
     """
@@ -97,7 +101,7 @@ def get_md_summary_token_length(document_id: int) -> int:
 def get_notes_for_document_corpus(
     document_id: int,
     corpus_id: Optional[int] = None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Retrieve all Note objects for a given document and (optionally) a specific corpus.
 
@@ -118,7 +122,7 @@ def get_notes_for_document_corpus(
             },
             ...
         ]
-        
+
     Raises:
         ValueError: If document doesn't exist
     """
@@ -153,7 +157,7 @@ def get_note_content_token_length(note_id: int) -> int:
 
     Returns:
         An integer representing the approximate token count of the note's content
-        
+
     Raises:
         ValueError: If note doesn't exist
     """
@@ -180,7 +184,7 @@ def get_partial_note_content(
 
     Returns:
         A string representing the specified portion of the note's content
-        
+
     Raises:
         ValueError: If note doesn't exist or invalid start/end indices
     """
@@ -190,7 +194,7 @@ def get_partial_note_content(
         raise ValueError(f"Note with id={note_id} does not exist.")
 
     content = note.content or ""
-    
+
     if start < 0:
         start = 0
     if end < start:
@@ -209,12 +213,13 @@ async def aget_md_summary_token_length(document_id: int) -> int:
 
     Returns:
         An integer representing the approximate token count of the md_summary_file
-        
+
     Raises:
         ValueError: If document doesn't exist or has no md_summary_file
     """
     try:
         from opencontractserver.documents.models import Document
+
         doc = await Document.objects.aget(pk=document_id)
     except Document.DoesNotExist:
         raise ValueError(f"Document with id={document_id} does not exist.")
@@ -249,6 +254,7 @@ async def aload_document_md_summary(
     """
     try:
         from opencontractserver.documents.models import Document
+
         doc = await Document.objects.aget(pk=document_id)
     except Document.DoesNotExist:
         raise ValueError(f"Document with id={document_id} does not exist.")
@@ -260,7 +266,11 @@ async def aload_document_md_summary(
         content = file_obj.read()
         logger.debug(f"Loaded md_summary_file for document {document_id}")
 
-    if truncate_length is not None and isinstance(truncate_length, int) and truncate_length > 0:
+    if (
+        truncate_length is not None
+        and isinstance(truncate_length, int)
+        and truncate_length > 0
+    ):
         if from_start:
             content = content[:truncate_length]
         else:
@@ -272,7 +282,7 @@ async def aload_document_md_summary(
 async def aget_notes_for_document_corpus(
     document_id: int,
     corpus_id: Optional[int] = None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Async version: Retrieve all Note objects for a given document and (optionally) a specific corpus.
 
@@ -284,21 +294,25 @@ async def aget_notes_for_document_corpus(
         A list of dictionaries, each containing Note data
     """
     from opencontractserver.annotations.models import Note
-    
+
     queryset = Note.objects.filter(document_id=document_id)
-    
+
     if corpus_id is not None:
         queryset = queryset.filter(corpus_id=corpus_id)
-    
+
     notes = []
     async for note in queryset:
-        notes.append({
-            "id": note.id,
-            "title": note.title,
-            "content": note.content[:512] if note.content else "",  # Truncate for performance
-            "creator_id": note.creator_id,
-            "created": note.created.isoformat() if note.created else None,
-            "modified": note.modified.isoformat() if note.modified else None,
-        })
-    
-    return notes 
+        notes.append(
+            {
+                "id": note.id,
+                "title": note.title,
+                "content": note.content[:512]
+                if note.content
+                else "",  # Truncate for performance
+                "creator_id": note.creator_id,
+                "created": note.created.isoformat() if note.created else None,
+                "modified": note.modified.isoformat() if note.modified else None,
+            }
+        )
+
+    return notes

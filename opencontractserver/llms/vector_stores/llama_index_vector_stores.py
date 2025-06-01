@@ -3,7 +3,6 @@
 import logging
 from typing import Any, Optional, Union
 
-from channels.db import database_sync_to_async
 from llama_index.core.schema import BaseNode, TextNode
 from llama_index.core.vector_stores.types import (
     BasePydanticVectorStore,
@@ -12,6 +11,7 @@ from llama_index.core.vector_stores.types import (
     VectorStoreQuery,
     VectorStoreQueryResult,
 )
+
 from opencontractserver.llms.vector_stores.core_vector_stores import (
     CoreAnnotationVectorStore,
     VectorSearchQuery,
@@ -54,7 +54,7 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
         use_jsonb: bool = False,
     ):
         """Initialize the LlamaIndex vector store.
-        
+
         Args:
             user_id: Filter by user ID
             corpus_id: Filter by corpus ID
@@ -74,7 +74,7 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
             stores_text=True,
             flat_metadata=False,
         )
-        
+
         # Initialize our core vector store
         self._core_store = CoreAnnotationVectorStore(
             user_id=user_id,
@@ -119,7 +119,9 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
             **kwargs,
         )
 
-    def _convert_metadata_filters(self, filters: Optional[MetadataFilters]) -> Optional[dict[str, Any]]:
+    def _convert_metadata_filters(
+        self, filters: Optional[MetadataFilters]
+    ) -> Optional[dict[str, Any]]:
         """Convert LlamaIndex MetadataFilters to our internal format."""
         if not filters or not filters.filters:
             return None
@@ -128,7 +130,7 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
         for filter_ in filters.filters:
             if isinstance(filter_, MetadataFilter):
                 result[filter_.key] = filter_.value
-            
+
         return result
 
     def _convert_to_text_nodes(self, results: list) -> list[TextNode]:
@@ -138,7 +140,9 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
             annotation = result.annotation
             node = TextNode(
                 doc_id=str(annotation.id),
-                text=annotation.raw_text if isinstance(annotation.raw_text, str) else "",
+                text=annotation.raw_text
+                if isinstance(annotation.raw_text, str)
+                else "",
                 embedding=annotation.embedding.tolist()
                 if getattr(annotation, "embedding", None) is not None
                 else [],
@@ -189,17 +193,13 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
 
         # Execute search using core store
         results = self._core_store.search(search_query)
-        
+
         # Convert results to LlamaIndex format
         nodes = self._convert_to_text_nodes(results)
         similarities = [result.similarity_score for result in results]
         ids = [str(result.annotation.id) for result in results]
 
-        return VectorStoreQueryResult(
-            nodes=nodes,
-            similarities=similarities,
-            ids=ids
-        )
+        return VectorStoreQueryResult(nodes=nodes, similarities=similarities, ids=ids)
 
     async def aquery(
         self, query: VectorStoreQuery, **kwargs: Any
@@ -214,7 +214,7 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
             query_text=query.query_str,
             query_embedding=query.query_embedding,
             similarity_top_k=query.similarity_top_k or 100,
-            filters=self._convert_metadata_filters(query.filters)
+            filters=self._convert_metadata_filters(query.filters),
         )
 
         # Use the async_search method of the core_store
@@ -226,9 +226,9 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
         return VectorStoreQueryResult(
             nodes=nodes,
             similarities=[result.similarity_score for result in core_results],
-            ids=[str(result.annotation.id) for result in core_results]
+            ids=[str(result.annotation.id) for result in core_results],
         )
 
 
 # Backward compatibility alias
-DjangoAnnotationVectorStore = LlamaIndexAnnotationVectorStore 
+DjangoAnnotationVectorStore = LlamaIndexAnnotationVectorStore

@@ -1,16 +1,19 @@
 """Core vector store functionality independent of any specific agent framework."""
 
-import logging
 import asyncio
-from typing import Any, Optional, Union
+import logging
 from dataclasses import dataclass
+from typing import Any, Optional, Union
 
 from asgiref.sync import sync_to_async
-from channels.db import database_sync_to_async
 from django.db.models import QuerySet
 
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.utils.embeddings import generate_embeddings_from_text, agenerate_embeddings_from_text, get_embedder
+from opencontractserver.utils.embeddings import (
+    agenerate_embeddings_from_text,
+    generate_embeddings_from_text,
+    get_embedder,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -131,7 +134,7 @@ class CoreAnnotationVectorStore:
 
         # Start with all annotations and prefetch related objects to avoid lazy loading
         # Note: bounding_box is a JSONField, not a foreign key, so it can't be in select_related
-        queryset = Annotation.objects.select_related('annotation_label').all()
+        queryset = Annotation.objects.select_related("annotation_label").all()
         _logger.debug(f"Initial queryset: {queryset.query}")
 
         # Apply instance-level filters
@@ -158,9 +161,7 @@ class CoreAnnotationVectorStore:
         return queryset
 
     def _apply_metadata_filters(
-        self,
-        queryset: QuerySet[Annotation],
-        filters: Optional[dict[str, Any]]
+        self, queryset: QuerySet[Annotation], filters: Optional[dict[str, Any]]
     ) -> QuerySet[Annotation]:
         """Apply additional metadata filters to the queryset."""
         if not filters:
@@ -198,7 +199,9 @@ class CoreAnnotationVectorStore:
 
         return vector
 
-    async def _agenerate_query_embedding(self, query_text: str) -> Optional[list[float]]:
+    async def _agenerate_query_embedding(
+        self, query_text: str
+    ) -> Optional[list[float]]:
         """Generate embeddings from query text asynchronously."""
         _logger.debug(f"Async generating embeddings from query string: '{query_text}'")
         _logger.debug(f"Using embedder path: {self.embedder_path}")
@@ -239,32 +242,38 @@ class CoreAnnotationVectorStore:
         # Perform vector search if we have a valid embedding
         if vector is not None and len(vector) in [384, 768, 1536, 3072]:
             _logger.debug(f"Using vector search with dimension: {len(vector)}")
-            _logger.debug(f"Performing vector search with embedder: {self.embedder_path}")
+            _logger.debug(
+                f"Performing vector search with embedder: {self.embedder_path}"
+            )
 
             queryset = queryset.search_by_embedding(
                 query_vector=vector,
                 embedder_path=self.embedder_path,
-                top_k=query.similarity_top_k
+                top_k=query.similarity_top_k,
             )
             _logger.debug(_safe_queryset_info_sync(queryset, "After vector search"))
         else:
             # Fallback to standard filtering with limit
             if vector is None:
-                _logger.debug("No vector available for search, using standard filtering")
+                _logger.debug(
+                    "No vector available for search, using standard filtering"
+                )
             else:
                 _logger.warning(
                     f"Invalid vector dimension: {len(vector)}, using standard filtering"
                 )
 
-            queryset = queryset[:query.similarity_top_k]
+            queryset = queryset[: query.similarity_top_k]
             _logger.debug(_safe_queryset_info_sync(queryset, "After limiting results"))
 
         # Execute query and convert to results
         _logger.debug("Fetching annotations from database")
-        
+
         # Safe queryset execution for both sync and async contexts
         if _is_async_context():
-            _logger.warning("Sync method called from async context - this may cause issues")
+            _logger.warning(
+                "Sync method called from async context - this may cause issues"
+            )
             # For now, we'll try the sync approach and let it fail gracefully
             try:
                 annotations = list(queryset)
@@ -273,7 +282,7 @@ class CoreAnnotationVectorStore:
                 return []
         else:
             annotations = list(queryset)
-            
+
         _logger.debug(f"Retrieved {len(annotations)} annotations")
 
         if annotations:
@@ -285,10 +294,11 @@ class CoreAnnotationVectorStore:
         results = []
         for annotation in annotations:
             similarity_score = getattr(annotation, "similarity_score", 1.0)
-            results.append(VectorSearchResult(
-                annotation=annotation,
-                similarity_score=similarity_score
-            ))
+            results.append(
+                VectorSearchResult(
+                    annotation=annotation, similarity_score=similarity_score
+                )
+            )
 
         return results
 
@@ -315,24 +325,28 @@ class CoreAnnotationVectorStore:
         # Perform vector search if we have a valid embedding
         if vector is not None and len(vector) in [384, 768, 1536, 3072]:
             _logger.debug(f"Using vector search with dimension: {len(vector)}")
-            _logger.debug(f"Performing vector search with embedder: {self.embedder_path}")
+            _logger.debug(
+                f"Performing vector search with embedder: {self.embedder_path}"
+            )
 
             queryset = queryset.search_by_embedding(
                 query_vector=vector,
                 embedder_path=self.embedder_path,
-                top_k=query.similarity_top_k
+                top_k=query.similarity_top_k,
             )
             _logger.debug(await _safe_queryset_info(queryset, "After vector search"))
         else:
             # Fallback to standard filtering with limit
             if vector is None:
-                _logger.debug("No vector available for search, using standard filtering")
+                _logger.debug(
+                    "No vector available for search, using standard filtering"
+                )
             else:
                 _logger.warning(
                     f"Invalid vector dimension: {len(vector)}, using standard filtering"
                 )
 
-            queryset = queryset[:query.similarity_top_k]
+            queryset = queryset[: query.similarity_top_k]
             _logger.debug(await _safe_queryset_info(queryset, "After limiting results"))
 
         # Execute query and convert to results
@@ -349,9 +363,10 @@ class CoreAnnotationVectorStore:
         results = []
         for annotation in annotations:
             similarity_score = getattr(annotation, "similarity_score", 1.0)
-            results.append(VectorSearchResult(
-                annotation=annotation,
-                similarity_score=similarity_score
-            ))
+            results.append(
+                VectorSearchResult(
+                    annotation=annotation, similarity_score=similarity_score
+                )
+            )
 
         return results

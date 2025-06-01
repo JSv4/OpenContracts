@@ -206,7 +206,7 @@ class BaseFixtureTestCase(TransactionTestCase):
             "txt_extract_file",
             "pawls_parse_file",
             "icon",
-            "md_summary_file",          # <- NEW
+            "md_summary_file",  # <- NEW
         )
 
         for doc in self.docs:

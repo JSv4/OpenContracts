@@ -64,21 +64,21 @@ Framework adapters are lightweight classes that translate between the core API a
 ```python
 class DjangoAnnotationVectorStore(BasePydanticVectorStore):
     """LlamaIndex adapter for Django Annotation Vector Store.
-    
+
     This is a thin wrapper around CoreAnnotationVectorStore that implements
     the LlamaIndex BasePydanticVectorStore interface.
     """
-    
+
     def __init__(self, corpus_id=None, user_id=None, **kwargs):
         super().__init__(stores_text=True, flat_metadata=False)
-        
+
         # Initialize our core vector store
         self._core_store = CoreAnnotationVectorStore(
             corpus_id=corpus_id,
             user_id=user_id,
             **kwargs
         )
-    
+
     def query(self, query: VectorStoreQuery) -> VectorStoreQueryResult:
         """Execute a vector search query using our core store."""
         # Convert LlamaIndex query to our internal format
@@ -91,7 +91,7 @@ class DjangoAnnotationVectorStore(BasePydanticVectorStore):
 
         # Execute search using core store
         results = self._core_store.search(search_query)
-        
+
         # Convert results to LlamaIndex format
         nodes = self._convert_to_text_nodes(results)
         similarities = [result.similarity_score for result in results]
@@ -130,7 +130,7 @@ The search process follows this pipeline:
 
 1. **Query Reception**: Framework adapter receives query in framework-specific format
 2. **Query Translation**: Adapter converts to `VectorSearchQuery`
-3. **Core Processing**: 
+3. **Core Processing**:
    - Build base Django queryset with instance filters (corpus, document, user)
    - Apply metadata filters (labels, etc.)
    - Generate embeddings from text if needed using `generate_embeddings_from_text`
@@ -147,7 +147,7 @@ def search(self, query: VectorSearchQuery) -> list[VectorSearchResult]:
     # Build filtered queryset
     queryset = self._build_base_queryset()
     queryset = self._apply_metadata_filters(queryset, query.filters)
-    
+
     # Perform vector search using mixin
     if vector is not None:
         queryset = queryset.search_by_embedding(
@@ -155,9 +155,9 @@ def search(self, query: VectorSearchQuery) -> list[VectorSearchResult]:
             embedder_path=self.embedder_path,
             top_k=query.similarity_top_k
         )
-    
+
     # Convert to results
-    return [VectorSearchResult(annotation=ann, similarity_score=getattr(ann, 'similarity_score', 1.0)) 
+    return [VectorSearchResult(annotation=ann, similarity_score=getattr(ann, 'similarity_score', 1.0))
             for ann in queryset]
 ```
 
@@ -175,7 +175,7 @@ queryset = queryset.annotate(
 The system automatically handles embedding generation and retrieval:
 
 - **Text Queries**: Automatically converted to embeddings using corpus-configured embedders
-- **Embedding Queries**: Used directly for similarity search  
+- **Embedding Queries**: Used directly for similarity search
 - **Multi-dimensional Support**: Supports 384, 768, 1536, and 3072 dimensional embeddings
 - **Embedder Detection**: Automatic detection of corpus-specific embedder configurations
 
@@ -215,14 +215,14 @@ To add support for a new framework, you would:
 class MyFrameworkAnnotationVectorStore(MyFrameworkBaseVectorStore):
     def __init__(self, **kwargs):
         self._core_store = CoreAnnotationVectorStore(**kwargs)
-    
+
     def search(self, framework_query):
         # Convert framework query to VectorSearchQuery
         core_query = self._convert_query(framework_query)
-        
+
         # Use core store
         results = self._core_store.search(core_query)
-        
+
         # Convert results back to framework format
         return self._convert_results(results)
 ```
@@ -237,7 +237,7 @@ The core business logic remains unchanged, ensuring consistency across all suppo
 This layered architecture provides a robust foundation for vector search capabilities within Django applications while maintaining compatibility with multiple agent frameworks. By separating core business logic from framework-specific adapters, we achieve:
 
 - **Consistency**: Same search behavior across all frameworks
-- **Maintainability**: Single codebase for core functionality  
+- **Maintainability**: Single codebase for core functionality
 - **Flexibility**: Easy addition of new framework support
 - **Performance**: Direct integration with Django ORM and pgvector
 

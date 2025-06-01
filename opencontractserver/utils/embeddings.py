@@ -1,9 +1,9 @@
+import asyncio
 import logging
 from typing import Optional, Union
 
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
-import asyncio
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

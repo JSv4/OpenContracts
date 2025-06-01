@@ -167,7 +167,7 @@ class PydanticAIAnnotationVectorStore:
         Returns:
             PydanticAIVectorSearchResponse with search results
         """
-        logger.info(f"PydanticAI vector search: query_text='{query_text}', top_k={similarity_top_k}")
+        logger.debug(f"PydanticAI vector search: query_text='{query_text}', top_k={similarity_top_k}")
         
         # Create search query
         search_query = VectorSearchQuery(
@@ -180,7 +180,7 @@ class PydanticAIAnnotationVectorStore:
         # Execute search using core store's async method
         results = await self.core_store.async_search(search_query)
         
-        logger.info(f"Found {len(results)} annotations")
+        logger.debug(f"Found {len(results)} annotations")
         
         # Convert to PydanticAI response format using async method
         return await PydanticAIVectorSearchResponse.async_from_core_results(results)

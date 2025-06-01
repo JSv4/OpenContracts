@@ -55,7 +55,7 @@ def load_document_md_summary(
     # Read the md_summary_file
     with doc.md_summary_file.open("r") as file_obj:
         content = file_obj.read()
-        logger.info(f"Loaded md_summary_file for document {document_id}")
+        logger.debug(f"Loaded md_summary_file for document {document_id}")
 
     if truncate_length is not None and isinstance(truncate_length, int) and truncate_length > 0:
         if from_start:
@@ -258,7 +258,7 @@ async def aload_document_md_summary(
 
     with doc.md_summary_file.open("r") as file_obj:
         content = file_obj.read()
-        logger.info(f"Loaded md_summary_file for document {document_id}")
+        logger.debug(f"Loaded md_summary_file for document {document_id}")
 
     if truncate_length is not None and isinstance(truncate_length, int) and truncate_length > 0:
         if from_start:

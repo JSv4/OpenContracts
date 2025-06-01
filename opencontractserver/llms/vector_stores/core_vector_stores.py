@@ -119,7 +119,7 @@ class CoreAnnotationVectorStore:
             embedder_path=embedder_path,
         )
         self.embedder_path = detected_embedder_path
-        _logger.info(f"Configured embedder path: {self.embedder_path}")
+        _logger.debug(f"Configured embedder path: {self.embedder_path}")
 
         # Validate or fallback dimension
         if self.embed_dim not in [384, 768, 1536, 3072]:
@@ -127,33 +127,33 @@ class CoreAnnotationVectorStore:
 
     def _build_base_queryset(self) -> QuerySet[Annotation]:
         """Build the base annotation queryset with standard filters."""
-        _logger.info("Building base queryset for vector search")
+        _logger.debug("Building base queryset for vector search")
 
         # Start with all annotations and prefetch related objects to avoid lazy loading
         # Note: bounding_box is a JSONField, not a foreign key, so it can't be in select_related
         queryset = Annotation.objects.select_related('annotation_label').all()
-        _logger.info(f"Initial queryset: {queryset.query}")
+        _logger.debug(f"Initial queryset: {queryset.query}")
 
         # Apply instance-level filters
         if self.corpus_id:
-            _logger.info(f"Filtering by corpus_id: {self.corpus_id}")
+            _logger.debug(f"Filtering by corpus_id: {self.corpus_id}")
             queryset = queryset.filter(corpus_id=self.corpus_id)
-            _logger.info(f"After corpus filter: {queryset.query}")
+            _logger.debug(f"After corpus filter: {queryset.query}")
 
         if self.document_id:
-            _logger.info(f"Filtering by document_id: {self.document_id}")
+            _logger.debug(f"Filtering by document_id: {self.document_id}")
             queryset = queryset.filter(document_id=self.document_id)
-            _logger.info(f"After document filter: {queryset.query}")
+            _logger.debug(f"After document filter: {queryset.query}")
 
         if self.user_id:
-            _logger.info(f"Filtering by user_id: {self.user_id}")
+            _logger.debug(f"Filtering by user_id: {self.user_id}")
             queryset = queryset.filter(creator_id=self.user_id)
-            _logger.info(f"After user filter: {queryset.query}")
+            _logger.debug(f"After user filter: {queryset.query}")
 
         if self.must_have_text:
-            _logger.info(f"Filtering by text content: '{self.must_have_text}'")
+            _logger.debug(f"Filtering by text content: '{self.must_have_text}'")
             queryset = queryset.filter(raw_text__icontains=self.must_have_text)
-            _logger.info(f"After text content filter: {queryset.query}")
+            _logger.debug(f"After text content filter: {queryset.query}")
 
         return queryset
 
@@ -166,7 +166,7 @@ class CoreAnnotationVectorStore:
         if not filters:
             return queryset
 
-        _logger.info(f"Applying metadata filters: {filters}")
+        _logger.debug(f"Applying metadata filters: {filters}")
 
         for key, value in filters.items():
             if key == "annotation_label":
@@ -177,22 +177,22 @@ class CoreAnnotationVectorStore:
                 # Generic filter fallback
                 queryset = queryset.filter(**{f"{key}__icontains": value})
 
-        _logger.info(f"After metadata filters: {queryset.query}")
+        _logger.debug(f"After metadata filters: {queryset.query}")
         return queryset
 
     def _generate_query_embedding(self, query_text: str) -> Optional[list[float]]:
         """Generate embeddings from query text synchronously."""
-        _logger.info(f"Generating embeddings from query string: '{query_text}'")
-        _logger.info(f"Using embedder path: {self.embedder_path}")
+        _logger.debug(f"Generating embeddings from query string: '{query_text}'")
+        _logger.debug(f"Using embedder path: {self.embedder_path}")
 
         embedder_path, vector = generate_embeddings_from_text(
             query_text,
             embedder_path=self.embedder_path,
         )
 
-        _logger.info(f"Generated embeddings using embedder: {embedder_path}")
+        _logger.debug(f"Generated embeddings using embedder: {embedder_path}")
         if vector is not None:
-            _logger.info(f"Vector dimension: {len(vector)}")
+            _logger.debug(f"Vector dimension: {len(vector)}")
         else:
             _logger.warning("Failed to generate embeddings - vector is None")
 
@@ -200,17 +200,17 @@ class CoreAnnotationVectorStore:
 
     async def _agenerate_query_embedding(self, query_text: str) -> Optional[list[float]]:
         """Generate embeddings from query text asynchronously."""
-        _logger.info(f"Async generating embeddings from query string: '{query_text}'")
-        _logger.info(f"Using embedder path: {self.embedder_path}")
+        _logger.debug(f"Async generating embeddings from query string: '{query_text}'")
+        _logger.debug(f"Using embedder path: {self.embedder_path}")
 
         embedder_path, vector = await agenerate_embeddings_from_text(
             query_text,
             embedder_path=self.embedder_path,
         )
 
-        _logger.info(f"Generated embeddings using embedder: {embedder_path}")
+        _logger.debug(f"Generated embeddings using embedder: {embedder_path}")
         if vector is not None:
-            _logger.info(f"Vector dimension: {len(vector)}")
+            _logger.debug(f"Vector dimension: {len(vector)}")
         else:
             _logger.warning("Failed to generate embeddings - vector is None")
 
@@ -238,29 +238,29 @@ class CoreAnnotationVectorStore:
 
         # Perform vector search if we have a valid embedding
         if vector is not None and len(vector) in [384, 768, 1536, 3072]:
-            _logger.info(f"Using vector search with dimension: {len(vector)}")
-            _logger.info(f"Performing vector search with embedder: {self.embedder_path}")
+            _logger.debug(f"Using vector search with dimension: {len(vector)}")
+            _logger.debug(f"Performing vector search with embedder: {self.embedder_path}")
 
             queryset = queryset.search_by_embedding(
                 query_vector=vector,
                 embedder_path=self.embedder_path,
                 top_k=query.similarity_top_k
             )
-            _logger.info(_safe_queryset_info_sync(queryset, "After vector search"))
+            _logger.debug(_safe_queryset_info_sync(queryset, "After vector search"))
         else:
             # Fallback to standard filtering with limit
             if vector is None:
-                _logger.info("No vector available for search, using standard filtering")
+                _logger.debug("No vector available for search, using standard filtering")
             else:
                 _logger.warning(
                     f"Invalid vector dimension: {len(vector)}, using standard filtering"
                 )
 
             queryset = queryset[:query.similarity_top_k]
-            _logger.info(_safe_queryset_info_sync(queryset, "After limiting results"))
+            _logger.debug(_safe_queryset_info_sync(queryset, "After limiting results"))
 
         # Execute query and convert to results
-        _logger.info("Fetching annotations from database")
+        _logger.debug("Fetching annotations from database")
         
         # Safe queryset execution for both sync and async contexts
         if _is_async_context():
@@ -274,10 +274,10 @@ class CoreAnnotationVectorStore:
         else:
             annotations = list(queryset)
             
-        _logger.info(f"Retrieved {len(annotations)} annotations")
+        _logger.debug(f"Retrieved {len(annotations)} annotations")
 
         if annotations:
-            _logger.info(f"First annotation ID: {annotations[0].id}")
+            _logger.debug(f"First annotation ID: {annotations[0].id}")
         else:
             _logger.warning("No annotations found for the query")
 
@@ -314,34 +314,34 @@ class CoreAnnotationVectorStore:
 
         # Perform vector search if we have a valid embedding
         if vector is not None and len(vector) in [384, 768, 1536, 3072]:
-            _logger.info(f"Using vector search with dimension: {len(vector)}")
-            _logger.info(f"Performing vector search with embedder: {self.embedder_path}")
+            _logger.debug(f"Using vector search with dimension: {len(vector)}")
+            _logger.debug(f"Performing vector search with embedder: {self.embedder_path}")
 
             queryset = queryset.search_by_embedding(
                 query_vector=vector,
                 embedder_path=self.embedder_path,
                 top_k=query.similarity_top_k
             )
-            _logger.info(await _safe_queryset_info(queryset, "After vector search"))
+            _logger.debug(await _safe_queryset_info(queryset, "After vector search"))
         else:
             # Fallback to standard filtering with limit
             if vector is None:
-                _logger.info("No vector available for search, using standard filtering")
+                _logger.debug("No vector available for search, using standard filtering")
             else:
                 _logger.warning(
                     f"Invalid vector dimension: {len(vector)}, using standard filtering"
                 )
 
             queryset = queryset[:query.similarity_top_k]
-            _logger.info(await _safe_queryset_info(queryset, "After limiting results"))
+            _logger.debug(await _safe_queryset_info(queryset, "After limiting results"))
 
         # Execute query and convert to results
-        _logger.info("Fetching annotations from database")
+        _logger.debug("Fetching annotations from database")
         annotations = await _safe_execute_queryset(queryset)
-        _logger.info(f"Retrieved {len(annotations)} annotations")
+        _logger.debug(f"Retrieved {len(annotations)} annotations")
 
         if annotations:
-            _logger.info(f"First annotation ID: {annotations[0].id}")
+            _logger.debug(f"First annotation ID: {annotations[0].id}")
         else:
             _logger.warning("No annotations found for the query")
 

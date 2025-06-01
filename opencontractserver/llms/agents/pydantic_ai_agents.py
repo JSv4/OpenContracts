@@ -234,8 +234,8 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
         if config is None:
             config = get_default_config()
         
-        logger.info(f"Creating Pydantic-AI document agent for document {document} and corpus {corpus}")
-        logger.info(f"Config (type {type(config)}): {config}")
+        logger.debug(f"Creating Pydantic-AI document agent for document {document} and corpus {corpus}")
+        logger.debug(f"Config (type {type(config)}): {config}")
         # Provide explicit corpus so the factory can pick the proper embedder
         context = await CoreDocumentAgentFactory.create_context(
             document,
@@ -256,14 +256,14 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
 
         # Resolve embedder_path asynchronously if not already set, otherwise this is done synchronously in vector store...
         if config.embedder_path is None and context.corpus and context.corpus.id:
-            logger.info(f"Attempting to derive embedder_path for corpus {context.corpus.id} asynchronously.")
+            logger.debug(f"Attempting to derive embedder_path for corpus {context.corpus.id} asynchronously.")
             try:
                 _, resolved_embedder_path = await aget_embedder(
                     corpus_id=context.corpus.id
                 )
                 if resolved_embedder_path:
                     config.embedder_path = resolved_embedder_path
-                    logger.info(f"Derived embedder_path: {config.embedder_path}")
+                    logger.debug(f"Derived embedder_path: {config.embedder_path}")
                 else:
                     logger.warning(f"Could not derive embedder_path for corpus {context.corpus.id}.")
             except Exception as e:
@@ -348,14 +348,14 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
 
         # Resolve embedder_path asynchronously if not already set
         if config.embedder_path is None and corpus_obj and corpus_obj.id:
-            logger.info(f"Attempting to derive embedder_path for corpus {corpus_obj.id} asynchronously.")
+            logger.debug(f"Attempting to derive embedder_path for corpus {corpus_obj.id} asynchronously.")
             try:
                 _, resolved_embedder_path = await aget_embedder(
                     corpus_id=corpus_obj.id
                 )
                 if resolved_embedder_path:
                     config.embedder_path = resolved_embedder_path
-                    logger.info(f"Derived embedder_path: {config.embedder_path}")
+                    logger.debug(f"Derived embedder_path: {config.embedder_path}")
                 else:
                     logger.warning(f"Could not derive embedder_path for corpus {corpus_obj.id}.")
             except Exception as e:

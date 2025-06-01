@@ -202,7 +202,7 @@ def _convert_tools_for_framework(
         elif isinstance(tool, str):
             # Handle tool names - these will be resolved by the tool factory
             # For now, we'll pass them through and let the framework handle them
-            logger.info(f"Tool name '{tool}' will be resolved by framework")
+            logger.debug(f"Tool name '{tool}' will be resolved by framework")
             continue
         else:
             logger.warning(f"Ignoring invalid tool: {tool}")

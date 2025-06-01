@@ -409,7 +409,7 @@ class CoreConversationManager:
         
         # For anonymous users (user_id is None), do NOT create or store conversations
         if user_id is None:
-            logger.info(f"Creating ephemeral (non-stored) conversation for anonymous user on document {document.id}")
+            logger.debug(f"Creating ephemeral (non-stored) conversation for anonymous user on document {document.id}")
             # Override config to ensure no message storage for anonymous conversations
             config.store_user_messages = False
             config.store_llm_messages = False
@@ -436,14 +436,14 @@ class CoreConversationManager:
                 creator_id=user_id,
                 chat_with_document=document,
             )
-            logger.info(f"Created new conversation {conversation.id} for document {document.id} (user: {user_id})")
+            logger.debug(f"Created new conversation {conversation.id} for document {document.id} (user: {user_id})")
         
         manager = cls(conversation, user_id, config)
         
         # Load existing messages if provided
         if loaded_messages or config.loaded_messages:
             messages = loaded_messages or config.loaded_messages
-            logger.info(f"Loaded {len(messages)} existing messages for conversation {conversation.id}")
+            logger.debug(f"Loaded {len(messages)} existing messages for conversation {conversation.id}")
         
         return manager
     
@@ -462,7 +462,7 @@ class CoreConversationManager:
         
         # For anonymous users (user_id is None), do NOT create or store conversations
         if user_id is None:
-            logger.info(f"Creating ephemeral (non-stored) conversation for anonymous user on corpus {corpus.id}")
+            logger.debug(f"Creating ephemeral (non-stored) conversation for anonymous user on corpus {corpus.id}")
             # Override config to ensure no message storage for anonymous conversations
             config.store_user_messages = False
             config.store_llm_messages = False
@@ -488,14 +488,14 @@ class CoreConversationManager:
                 description=f"Conversation about corpus: {corpus.title}",
                 creator_id=user_id,
             )
-            logger.info(f"Created new conversation {conversation.id} for corpus {corpus.id} (user: {user_id})")
+            logger.debug(f"Created new conversation {conversation.id} for corpus {corpus.id} (user: {user_id})")
         
         manager = cls(conversation, user_id, config)
         
         # Load existing messages if provided
         if loaded_messages or config.loaded_messages:
             messages = loaded_messages or config.loaded_messages
-            logger.info(f"Loaded {len(messages)} existing messages for conversation {conversation.id}")
+            logger.debug(f"Loaded {len(messages)} existing messages for conversation {conversation.id}")
         
         return manager
     

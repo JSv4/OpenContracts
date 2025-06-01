@@ -123,7 +123,7 @@ class TestLongConversationAPI(TestCase):
             ):
 
                 agent = await agents.for_document(
-                    self.document.id, user_id=self.user.id
+                    self.document.id, self.corpus.id, user_id=self.user.id
                 )
 
                 # Verify conversation metadata
@@ -171,7 +171,7 @@ class TestLongConversationAPI(TestCase):
                 "opencontractserver.llms.agents.llama_index_agents.DjangoAnnotationVectorStore"
             ):
 
-                agent = await agents.for_document(self.document.id)  # Anonymous
+                agent = await agents.for_document(self.document.id, self.corpus.id)  # Anonymous
 
                 # Test the actual message storage methods
                 user_msg_id = await agent.store_user_message("Test user message")
@@ -228,7 +228,7 @@ class TestLongConversationAPI(TestCase):
             ):
 
                 agent = await agents.for_document(
-                    self.document.id, user_id=self.user.id
+                    self.document.id, self.corpus.id, user_id=self.user.id
                 )
 
                 # Simulate storing a user message
@@ -286,7 +286,7 @@ class TestLongConversationAPI(TestCase):
 
                 # Create first agent session
                 agent1 = await agents.for_document(
-                    self.document.id, user_id=self.user.id
+                    self.document.id, self.corpus.id, user_id=self.user.id
                 )
                 conversation_id = agent1.get_conversation_id()
 
@@ -295,7 +295,8 @@ class TestLongConversationAPI(TestCase):
 
                 # Create second agent session with same conversation
                 agent2 = await agents.for_document(
-                    self.document.id,
+                    self.document.id, 
+                    self.corpus.id,
                     user_id=self.user.id,
                     conversation_id=conversation_id,
                 )
@@ -345,7 +346,7 @@ class TestLongConversationAPI(TestCase):
             ):
 
                 # Create anonymous agent
-                agent1 = await agents.for_document(self.document.id)  # No user_id
+                agent1 = await agents.for_document(self.document.id, self.corpus.id)  # No user_id
                 conversation_id = agent1.get_conversation_id()
 
                 self.assertIsNone(
@@ -354,7 +355,7 @@ class TestLongConversationAPI(TestCase):
 
                 # Try to "continue" the conversation (should create a new anonymous one)
                 agent2 = await agents.for_document(
-                    self.document.id, conversation_id=conversation_id
+                    self.document.id, self.corpus.id, conversation_id=conversation_id
                 )
 
                 # Both should be None since anonymous conversations aren't stored

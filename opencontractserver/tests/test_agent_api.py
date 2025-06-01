@@ -32,12 +32,13 @@ class TestAgentAPI(TestCase):
             mock_create.return_value = mock_agent
 
             async def test_async():
-                agent = await agents.for_document(123)
+                agent = await agents.for_document(123, 456)
 
                 # Verify it was called correctly
                 mock_create.assert_called_once()
                 args, kwargs = mock_create.call_args
-                self.assertEqual(kwargs["document"], 123)  # document passed as kwarg
+                self.assertEqual(args[0], 123)  # document is the first positional arg
+                self.assertEqual(args[1], 456)  # corpus is the second positional arg
                 self.assertEqual(
                     kwargs["framework"], AgentFramework.LLAMA_INDEX
                 )  # default
@@ -56,7 +57,8 @@ class TestAgentAPI(TestCase):
             async def test_async():
                 # Advanced configuration
                 await agents.for_document(
-                    document=456,
+                    123,
+                    456,
                     framework="pydantic_ai",
                     user_id=789,
                     model="gpt-4",
@@ -69,12 +71,13 @@ class TestAgentAPI(TestCase):
 
                 # Verify all parameters passed correctly
                 mock_create.assert_called_once()
-                _, kwargs = mock_create.call_args
-                self.assertEqual(kwargs["document"], 456)
+                args, kwargs = mock_create.call_args
+                self.assertEqual(args[0], 123) # document is the first positional arg
+                self.assertEqual(args[1], 456) # corpus is the second positional arg
                 self.assertEqual(kwargs["framework"], AgentFramework.PYDANTIC_AI)
                 self.assertEqual(kwargs["user_id"], 789)
-                self.assertEqual(kwargs["model_name"], "gpt-4")
-                self.assertEqual(kwargs["override_system_prompt"], "You are an expert")
+                self.assertEqual(kwargs["model"], "gpt-4")
+                self.assertEqual(kwargs["system_prompt"], "You are an expert")
                 self.assertEqual(kwargs["embedder_path"], "custom-embedder")
                 self.assertFalse(kwargs["streaming"])
                 self.assertTrue(kwargs["verbose"])
@@ -92,14 +95,14 @@ class TestAgentAPI(TestCase):
 
             async def test_async():
                 await agents.for_corpus(
-                    corpus_id=101, framework="llama_index", model="claude-3-sonnet"
+                    101, framework="llama_index", model="claude-3-sonnet"
                 )
 
                 mock_create.assert_called_once()
-                _, kwargs = mock_create.call_args
-                self.assertEqual(kwargs["corpus_id"], 101)
+                args, kwargs = mock_create.call_args
+                self.assertEqual(args[0], 101) # corpus is the first positional arg
                 self.assertEqual(kwargs["framework"], AgentFramework.LLAMA_INDEX)
-                self.assertEqual(kwargs["model_name"], "claude-3-sonnet")
+                self.assertEqual(kwargs["model"], "claude-3-sonnet")
 
             asyncio.run(test_async())
 
@@ -125,7 +128,9 @@ class TestAgentAPI(TestCase):
                 core_tool = CoreTool.from_function(my_tool)
 
                 await agents.for_document(
-                    document=123, tools=["summarize", my_tool, core_tool]
+                    123, 
+                    456, 
+                    tools=["summarize", my_tool, core_tool]
                 )
 
                 # Verify tools were resolved
@@ -361,7 +366,7 @@ class TestAPIIntegration(TestCase):
 
             async def test_async():
                 # Create agent
-                agent = await agents.for_document(123)
+                agent = await agents.for_document(123, 456)
 
                 # Chat with agent
                 response = await agent.chat("What is this document about?")
@@ -417,10 +422,10 @@ class TestAPIIntegration(TestCase):
 
             async def test_async():
                 # Create vector store
-                vector_stores.create("llama_index", document_id=123)
+                vector_stores.create(framework="llama_index", document_id=123)
 
                 # Create agent
-                await agents.for_document(123)
+                await agents.for_document(123, 456)
 
                 # Both should have been called
                 mock_vs_create.assert_called_once()

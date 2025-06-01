@@ -185,7 +185,7 @@ class AgentAPI:
 
             # Persistent conversation with user tracking
             agent = await agents.for_corpus(
-                corpus_id=456,
+                corpus=456,
                 user_id=123,  # Required for persistence
                 conversation_id=789  # Continue existing conversation
             )

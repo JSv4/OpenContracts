@@ -85,13 +85,14 @@ class TestAgentAPIHypermodern(TestAPISetup):
     ):
         mock_create_doc_agent.return_value = AsyncMock(spec=CoreAgent)
 
-        agent = await agents.for_document(self.doc1.id)
+        agent = await agents.for_document(self.doc1.id, self.corpus1.id)
 
         mock_create_doc_agent.assert_called_once()
-        call_kwargs = mock_create_doc_agent.call_args.kwargs
-        self.assertEqual(call_kwargs["document"], self.doc1.id)
+        args, kwargs = mock_create_doc_agent.call_args
+        self.assertEqual(args[0], self.doc1.id)
+        self.assertEqual(args[1], self.corpus1.id)
         self.assertEqual(
-            call_kwargs["framework"], AgentFramework.LLAMA_INDEX
+            kwargs["framework"], AgentFramework.LLAMA_INDEX
         )  # Default
         self.assertIsInstance(agent, CoreAgent)
 
@@ -104,12 +105,13 @@ class TestAgentAPIHypermodern(TestAPISetup):
     ):
         mock_create_doc_agent.return_value = AsyncMock(spec=CoreAgent)
 
-        agent = await agents.for_document(self.doc1.id, framework="pydantic_ai")
+        agent = await agents.for_document(self.doc1.id, self.corpus1.id, framework="pydantic_ai")
 
         mock_create_doc_agent.assert_called_once()
-        call_kwargs = mock_create_doc_agent.call_args.kwargs
-        self.assertEqual(call_kwargs["document"], self.doc1.id)
-        self.assertEqual(call_kwargs["framework"], AgentFramework.PYDANTIC_AI)
+        args, kwargs = mock_create_doc_agent.call_args
+        self.assertEqual(args[0], self.doc1.id)
+        self.assertEqual(args[1], self.corpus1.id)
+        self.assertEqual(kwargs["framework"], AgentFramework.PYDANTIC_AI)
         self.assertIsInstance(agent, CoreAgent)
 
     @patch(
@@ -120,7 +122,8 @@ class TestAgentAPIHypermodern(TestAPISetup):
         mock_create_doc_agent.return_value = AsyncMock(spec=CoreAgent)
 
         await agents.for_document(
-            document=self.doc2.id,
+            self.doc1.id,
+            self.corpus1.id,
             framework="llama_index",
             user_id=self.user.id,
             model="gpt-4-turbo",
@@ -135,24 +138,25 @@ class TestAgentAPIHypermodern(TestAPISetup):
         )
 
         mock_create_doc_agent.assert_called_once()
-        call_kwargs = mock_create_doc_agent.call_args.kwargs
+        args, kwargs = mock_create_doc_agent.call_args
 
-        self.assertEqual(call_kwargs["document"], self.doc2.id)
-        self.assertEqual(call_kwargs["framework"], AgentFramework.LLAMA_INDEX)
-        self.assertEqual(call_kwargs["user_id"], self.user.id)
-        self.assertEqual(call_kwargs["model_name"], "gpt-4-turbo")
-        self.assertEqual(call_kwargs["override_system_prompt"], "You are helpful.")
-        self.assertEqual(call_kwargs["override_conversation"], self.conversation1)
+        self.assertEqual(args[0], self.doc1.id)
+        self.assertEqual(args[1], self.corpus1.id)
+        self.assertEqual(kwargs["framework"], AgentFramework.LLAMA_INDEX)
+        self.assertEqual(kwargs["user_id"], self.user.id)
+        self.assertEqual(kwargs["model"], "gpt-4-turbo")
+        self.assertEqual(kwargs["system_prompt"], "You are helpful.")
+        self.assertEqual(kwargs["conversation"], self.conversation1)
         self.assertEqual(
-            call_kwargs["loaded_messages"], [self.chat_message1, self.chat_message2]
+            kwargs["loaded_messages"], [self.chat_message1, self.chat_message2]
         )
-        self.assertEqual(call_kwargs["embedder_path"], "custom/path/to/embedder")
-        self.assertFalse(call_kwargs["streaming"])
-        self.assertTrue(call_kwargs["verbose"])
-        self.assertEqual(call_kwargs["custom_arg"], "test_value")
+        self.assertEqual(kwargs["embedder_path"], "custom/path/to/embedder")
+        self.assertFalse(kwargs["streaming"])
+        self.assertTrue(kwargs["verbose"])
+        self.assertEqual(kwargs["custom_arg"], "test_value")
 
         # Check tools were resolved - UnifiedAgentFactory receives CoreTools
-        resolved_tools_arg = call_kwargs["tools"]
+        resolved_tools_arg = kwargs["tools"]
         self.assertIsInstance(resolved_tools_arg, list)
         self.assertEqual(len(resolved_tools_arg), 3)
         self.assertTrue(all(isinstance(t, CoreTool) for t in resolved_tools_arg))
@@ -174,11 +178,11 @@ class TestAgentAPIHypermodern(TestAPISetup):
         agent = await agents.for_corpus(self.corpus1.id, model="claude-opus")
 
         mock_create_corpus_agent.assert_called_once()
-        call_kwargs = mock_create_corpus_agent.call_args.kwargs
-        self.assertEqual(call_kwargs["corpus_id"], self.corpus1.id)
-        self.assertEqual(call_kwargs["model_name"], "claude-opus")
+        args, kwargs = mock_create_corpus_agent.call_args
+        self.assertEqual(args[0], self.corpus1.id)
+        self.assertEqual(kwargs["model"], "claude-opus")
         self.assertEqual(
-            call_kwargs["framework"], AgentFramework.LLAMA_INDEX
+            kwargs["framework"], AgentFramework.LLAMA_INDEX
         )  # Default
         self.assertIsInstance(agent, CoreAgent)
 
@@ -194,7 +198,7 @@ class TestAgentAPIHypermodern(TestAPISetup):
         mock_agent_instance.chat.return_value = "Mocked LLM response"
         mock_create_doc_agent.return_value = mock_agent_instance
 
-        agent = await agents.for_document(self.doc1.id)
+        agent = await agents.for_document(self.doc1.id, self.corpus1.id)
         response = await agent.chat("hello")
 
         self.assertEqual(response, "Mocked LLM response")
@@ -216,7 +220,7 @@ class TestAgentAPIHypermodern(TestAPISetup):
         mock_agent_instance.stream_chat = mock_stream_chat_impl
         mock_create_doc_agent.return_value = mock_agent_instance
 
-        agent = await agents.for_document(self.doc1.id)
+        agent = await agents.for_document(self.doc1.id, self.corpus1.id)
 
         chunks = []
         async for chunk in agent.stream_chat("stream hello"):
@@ -230,7 +234,7 @@ class TestAgentAPIHypermodern(TestAPISetup):
     async def test_agent_creation_with_nonexistent_document(self):
         # This will call the actual factory, which should raise Document.DoesNotExist
         with self.assertRaises(Document.DoesNotExist):
-            await agents.for_document(99999)
+            await agents.for_document(99999, self.corpus1.id)
 
 
 class TestToolAPIHypermodern(TestAPISetup):
@@ -294,7 +298,7 @@ class TestVectorStoreAPIHypermodern(TestAPISetup):
         mock_vs_instance = MagicMock()
         mock_create_vs.return_value = mock_vs_instance
 
-        store = vector_stores.create("pydantic_ai", document_id=self.doc1.id)
+        store = vector_stores.create(framework="pydantic_ai", document_id=self.doc1.id)
 
         mock_create_vs.assert_called_once()
         call_kwargs = mock_create_vs.call_args.kwargs

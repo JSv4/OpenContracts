@@ -72,8 +72,8 @@ class TestAgentAPI(TestCase):
                 # Verify all parameters passed correctly
                 mock_create.assert_called_once()
                 args, kwargs = mock_create.call_args
-                self.assertEqual(args[0], 123) # document is the first positional arg
-                self.assertEqual(args[1], 456) # corpus is the second positional arg
+                self.assertEqual(args[0], 123)  # document is the first positional arg
+                self.assertEqual(args[1], 456)  # corpus is the second positional arg
                 self.assertEqual(kwargs["framework"], AgentFramework.PYDANTIC_AI)
                 self.assertEqual(kwargs["user_id"], 789)
                 self.assertEqual(kwargs["model"], "gpt-4")
@@ -100,7 +100,7 @@ class TestAgentAPI(TestCase):
 
                 mock_create.assert_called_once()
                 args, kwargs = mock_create.call_args
-                self.assertEqual(args[0], 101) # corpus is the first positional arg
+                self.assertEqual(args[0], 101)  # corpus is the first positional arg
                 self.assertEqual(kwargs["framework"], AgentFramework.LLAMA_INDEX)
                 self.assertEqual(kwargs["model"], "claude-3-sonnet")
 
@@ -128,9 +128,7 @@ class TestAgentAPI(TestCase):
                 core_tool = CoreTool.from_function(my_tool)
 
                 await agents.for_document(
-                    123, 
-                    456, 
-                    tools=["summarize", my_tool, core_tool]
+                    123, 456, tools=["summarize", my_tool, core_tool]
                 )
 
                 # Verify tools were resolved

@@ -341,10 +341,15 @@ class CoreDocumentAgentFactory:
     def get_default_system_prompt(document: Document) -> str:
         """Generate default system prompt for document agent."""
         return (
-            f"You thoroughly answer requests about the document titled '{document.title}' "
-            f"(ID: {document.id}). This document is described as:\n\n`{document.description}`\n\n"
-            "Return your answers in thoughtful, attractive markdown. "
-            "Avoid repeating instructions, writing down your thought processes (unless asked), or giving disclaimers."
+            f"You are an expert assistant for document analysis and interpretation. "
+            f"Your primary goal is to answer questions accurately based on the provided document: '{document.title}' (ID: {document.id}).\n\n"
+            f"This document is described as:\n`{document.description}`\n\n"
+            f"While a summary may be available, it's crucial to leverage all your tools for a comprehensive understanding. "
+            f"You have access to a sophisticated vector search engine capable of finding semantically similar text to answer queries, alongside other specialized tools.\n\n"
+            f"Always prioritize information retrieved directly from the document using these tools. "
+            f"Do not rely solely on the summary or your general knowledge. "
+            f"Strive to provide answers grounded in the document's content, presented in clear and helpful markdown. "
+            f"Avoid repeating instructions or disclaimers."
         )
 
     @staticmethod

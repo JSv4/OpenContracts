@@ -287,6 +287,7 @@ class CoreAnnotationVectorStore:
 
         if annotations:
             _logger.debug(f"First annotation ID: {annotations[0].id}")
+            _logger.info(f"[CoreAnnotationVectorStore.search] Vector store returned {len(annotations)} annotations for query.")
         else:
             _logger.warning("No annotations found for the query")
 
@@ -356,6 +357,7 @@ class CoreAnnotationVectorStore:
 
         if annotations:
             _logger.debug(f"First annotation ID: {annotations[0].id}")
+            _logger.info(f"[CoreAnnotationVectorStore.async_search] Vector store returned {len(annotations)} annotations for query.")
         else:
             _logger.warning("No annotations found for the query")
 

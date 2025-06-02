@@ -1,11 +1,18 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You thoroughly answer requests
-      about the document titled ''Test Doc'' (ID: 1). This document is described as:\n\n`USC
-      Title 1 - Chapter 1`\n\nReturn your answers in thoughtful, attractive markdown.
-      Avoid repeating instructions, writing down your thought processes (unless asked),
-      or giving disclaimers."},{"role":"user","content":"Regarding US Code Title 1,
-      what is the rule of construction for ''words importing the masculine gender''?"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
+      document analysis and interpretation. Your primary goal is to answer questions
+      accurately based on the provided document: ''Test Doc'' (ID: 1).\n\nThis document
+      is described as:\n`USC Title 1 - Chapter 1`\n\nWhile a summary may be available,
+      it''s crucial to leverage all your tools for a comprehensive understanding.
+      You have access to a sophisticated vector search engine capable of finding semantically
+      similar text to answer queries, alongside other specialized tools.\n\nAlways
+      prioritize information retrieved directly from the document using these tools.
+      Do not rely solely on the summary or your general knowledge. Strive to provide
+      answers grounded in the document''s content, presented in clear and helpful
+      markdown. Avoid repeating instructions or disclaimers."},{"role":"user","content":"Regarding
+      US Code Title 1, what is the rule of construction for ''words importing the
+      masculine gender''?"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
       detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
       int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
       the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
@@ -54,7 +61,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '5197'
+      - '5696'
       content-type:
       - application/json
       host:
@@ -83,41 +90,41 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: 'data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_tOM0mziLntICehfjyYadf84m","type":"function","function":{"name":"doc_engine","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
+      string: 'data: {"id":"chatcmpl-Bdr0BIUCnnJSQq2qj04HZ3ynYn7XO","object":"chat.completion.chunk","created":1748838231,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_aTHs5ygy68jkPiupai7Ex40y","type":"function","function":{"name":"doc_engine","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0BIUCnnJSQq2qj04HZ3ynYn7XO","object":"chat.completion.chunk","created":1748838231,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"input"}}]},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0BIUCnnJSQq2qj04HZ3ynYn7XO","object":"chat.completion.chunk","created":1748838231,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"input"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\""}}]},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0BIUCnnJSQq2qj04HZ3ynYn7XO","object":"chat.completion.chunk","created":1748838231,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\""}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"words"}}]},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0BIUCnnJSQq2qj04HZ3ynYn7XO","object":"chat.completion.chunk","created":1748838231,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"words"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        data: {"id":"chatcmpl-Bdr0BIUCnnJSQq2qj04HZ3ynYn7XO","object":"chat.completion.chunk","created":1748838231,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
         importing"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        data: {"id":"chatcmpl-Bdr0BIUCnnJSQq2qj04HZ3ynYn7XO","object":"chat.completion.chunk","created":1748838231,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
         the"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        data: {"id":"chatcmpl-Bdr0BIUCnnJSQq2qj04HZ3ynYn7XO","object":"chat.completion.chunk","created":1748838231,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
         masculine"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        data: {"id":"chatcmpl-Bdr0BIUCnnJSQq2qj04HZ3ynYn7XO","object":"chat.completion.chunk","created":1748838231,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
         gender"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0BIUCnnJSQq2qj04HZ3ynYn7XO","object":"chat.completion.chunk","created":1748838231,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
+        data: {"id":"chatcmpl-Bdr0BIUCnnJSQq2qj04HZ3ynYn7XO","object":"chat.completion.chunk","created":1748838231,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
 
 
         data: [DONE]
@@ -126,20 +133,20 @@ interactions:
         '
     headers:
       CF-RAY:
-      - 94941c72b9b853b9-ATL
+      - 94942d7efffd4538-ATL
       Connection:
       - keep-alive
       Content-Type:
       - text/event-stream; charset=utf-8
       Date:
-      - Mon, 02 Jun 2025 04:12:13 GMT
+      - Mon, 02 Jun 2025 04:23:51 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=EJSRT5xr884qT7CQxb2I4qmr23YIvSe1sC0UH.BCN7c-1748837533-1.0.1.1-UrdHGhbU.nfmQCinSh23sy8OiLp_1wDOYFudezc8952fc.ChkEsJEthBNFfjV48xyuWoYjsqBdpU9y0nzCOT5lgg0bDE0reuXzIjTE46Eug;
-        path=/; expires=Mon, 02-Jun-25 04:42:13 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=RSeq4J13F33hxAw9ImnerHjjhK9XDk2bWUqj8G0Px5s-1748838231-1.0.1.1-neM0nyYw15A1tyGUtGk1s5bwIjeQKFc26RtBptpgVhO.dubzHTRbfBfFGG7NaOmiU.SKODzBXULN5ahXlBpt2hjWBm7_rUzc5D7hPcQgf90;
+        path=/; expires=Mon, 02-Jun-25 04:53:51 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=te1ttWQBBQj1t_geP9fcMfLRI2gOCwCgOCb7TtquKYU-1748837533235-0.0.1.1-604800000;
+      - _cfuvid=0xLqf00SzdSl2jFO3Eqf409RVlK.3f3vGZLPpd8_VMY-1748838231529-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -154,13 +161,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '562'
+      - '531'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '564'
+      - '534'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -168,13 +175,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999897'
+      - '3999772'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 1ms
+      - 3ms
       x-request-id:
-      - req_aaecb0822ad67e26b848189985b69fff
+      - req_3691e4d1c05980763f747fbdc8ab8532
     status:
       code: 200
       message: OK
@@ -210,21 +217,28 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 02 Jun 2025 04:12:14 GMT
+      - Mon, 02 Jun 2025 04:23:52 GMT
       Server:
       - gunicorn
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You thoroughly answer requests
-      about the document titled ''Test Doc'' (ID: 1). This document is described as:\n\n`USC
-      Title 1 - Chapter 1`\n\nReturn your answers in thoughtful, attractive markdown.
-      Avoid repeating instructions, writing down your thought processes (unless asked),
-      or giving disclaimers."},{"role":"user","content":"Regarding US Code Title 1,
-      what is the rule of construction for ''words importing the masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_tOM0mziLntICehfjyYadf84m","function":{"arguments":"{\"input\":\"words
+    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
+      document analysis and interpretation. Your primary goal is to answer questions
+      accurately based on the provided document: ''Test Doc'' (ID: 1).\n\nThis document
+      is described as:\n`USC Title 1 - Chapter 1`\n\nWhile a summary may be available,
+      it''s crucial to leverage all your tools for a comprehensive understanding.
+      You have access to a sophisticated vector search engine capable of finding semantically
+      similar text to answer queries, alongside other specialized tools.\n\nAlways
+      prioritize information retrieved directly from the document using these tools.
+      Do not rely solely on the summary or your general knowledge. Strive to provide
+      answers grounded in the document''s content, presented in clear and helpful
+      markdown. Avoid repeating instructions or disclaimers."},{"role":"user","content":"Regarding
+      US Code Title 1, what is the rule of construction for ''words importing the
+      masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_aTHs5ygy68jkPiupai7Ex40y","function":{"arguments":"{\"input\":\"words
       importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
-      Response","name":"doc_engine","tool_call_id":"call_tOM0mziLntICehfjyYadf84m"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      Response","name":"doc_engine","tool_call_id":"call_aTHs5ygy68jkPiupai7Ex40y"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
       detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
       int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
       the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
@@ -273,12 +287,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '5525'
+      - '6024'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=EJSRT5xr884qT7CQxb2I4qmr23YIvSe1sC0UH.BCN7c-1748837533-1.0.1.1-UrdHGhbU.nfmQCinSh23sy8OiLp_1wDOYFudezc8952fc.ChkEsJEthBNFfjV48xyuWoYjsqBdpU9y0nzCOT5lgg0bDE0reuXzIjTE46Eug;
-        _cfuvid=te1ttWQBBQj1t_geP9fcMfLRI2gOCwCgOCb7TtquKYU-1748837533235-0.0.1.1-604800000
+      - __cf_bm=RSeq4J13F33hxAw9ImnerHjjhK9XDk2bWUqj8G0Px5s-1748838231-1.0.1.1-neM0nyYw15A1tyGUtGk1s5bwIjeQKFc26RtBptpgVhO.dubzHTRbfBfFGG7NaOmiU.SKODzBXULN5ahXlBpt2hjWBm7_rUzc5D7hPcQgf90;
+        _cfuvid=0xLqf00SzdSl2jFO3Eqf409RVlK.3f3vGZLPpd8_VMY-1748838231529-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -305,278 +319,57 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: 'data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"role":"assistant","content":"","refusal":null},"logprobs":null,"finish_reason":null}]}
+      string: 'data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_A4UHW2fzuKEPK8B4OS61QbpL","type":"function","function":{"name":"doc_engine","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"The"},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        rule"},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"input"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\""}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        construction"},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"rule"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        for"},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        of"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        \""},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        construction"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"words"},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        for"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        importing"},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        words"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        the"},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        importing"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        masculine"},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        the"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        gender"},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        masculine"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"\""},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        gender"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        in"},"logprobs":null,"finish_reason":null}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]},"logprobs":null,"finish_reason":null}]}
 
 
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        US"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        Code"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        Title"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        "},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"1"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        states"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        that"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        such"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        words"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        are"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        be"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        understood"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        include"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        the"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        feminine"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        gender"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        as"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        well"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        This"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        means"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        that"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        terms"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        that"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        are"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        traditionally"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        masculine"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        should"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        be"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        interpreted"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        apply"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        equally"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        both"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        men"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        and"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        women"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        unless"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        the"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        context"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        indicates"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        otherwise"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        This"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        rule"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        promotes"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        gender"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"-neutral"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        language"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        in"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        legal"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        texts"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+        data: {"id":"chatcmpl-Bdr0CkTzKklxVa0cSvb0JzFoFVtrQ","object":"chat.completion.chunk","created":1748838232,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
 
 
         data: [DONE]
@@ -585,13 +378,13 @@ interactions:
         '
     headers:
       CF-RAY:
-      - 94941c7b599653b9-ATL
+      - 94942d85ca644538-ATL
       Connection:
       - keep-alive
       Content-Type:
       - text/event-stream; charset=utf-8
       Date:
-      - Mon, 02 Jun 2025 04:12:15 GMT
+      - Mon, 02 Jun 2025 04:23:52 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -607,13 +400,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '497'
+      - '577'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '604'
+      - '581'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -621,189 +414,18 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999890'
-      x-ratelimit-reset-requests:
-      - 12ms
-      x-ratelimit-reset-tokens:
-      - 1ms
-      x-request-id:
-      - req_65be428939a2a41a183eb1d8dede6010
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"role":"system","content":"You thoroughly answer requests
-      about the document titled ''Test Doc'' (ID: 1). This document is described as:\n\n`USC
-      Title 1 - Chapter 1`\n\nReturn your answers in thoughtful, attractive markdown.
-      Avoid repeating instructions, writing down your thought processes (unless asked),
-      or giving disclaimers."},{"role":"user","content":"Regarding US Code Title 1,
-      what is the rule of construction for ''words importing the masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_tOM0mziLntICehfjyYadf84m","function":{"arguments":"{\"input\":\"words
-      importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
-      Response","name":"doc_engine","tool_call_id":"call_tOM0mziLntICehfjyYadf84m"},{"role":"assistant","content":"The
-      rule of construction for \"words importing the masculine gender\" in US Code
-      Title 1 states that such words are to be understood to include the feminine
-      gender as well. This means that terms that are traditionally masculine should
-      be interpreted to apply equally to both men and women unless the context indicates
-      otherwise. This rule promotes gender-neutral language in legal texts."},{"role":"user","content":"What
-      does US Code Title 1, Section 3 state about the term ''vessel''?"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
-      detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
-      int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
-      the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
-      The primary key (ID) of the Document\n        truncate_length: Optional number
-      of characters to truncate. If provided,\n                        returns only
-      that many characters\n        from_start: If True, return from the start up
-      to truncate_length.\n                   Otherwise, return from the end\n\n    Returns:\n        A
-      string containing the content of the md_summary_file (possibly truncated)\n\n    Raises:\n        ValueError:
-      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
-      Id","type":"integer"},"truncate_length":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Truncate
-      Length"},"from_start":{"default":true,"title":"From Start","type":"boolean"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_md_summary_token_length","description":"get_md_summary_token_length(document_id:
-      int) -> int\n\n    Calculate the approximate token length of a Document''s md_summary_file.\n    Uses
-      a naive whitespace-based split for tokenization.\n\n    Args:\n        document_id:
-      The primary key (ID) of the Document\n\n    Returns:\n        An integer representing
-      the approximate token count of the md_summary_file\n\n    Raises:\n        ValueError:
-      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
-      Id","type":"integer"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_notes_for_document_corpus","description":"get_notes_for_document_corpus(document_id:
-      int, corpus_id: Optional[int] = None) -> list[dict[str, typing.Any]]\n\n    Retrieve
-      all Note objects for a given document and (optionally) a specific corpus.\n\n    Args:\n        document_id:
-      The primary key (ID) of the Document\n        corpus_id: The primary key (ID)
-      of the Corpus, or None if unspecified\n\n    Returns:\n        A list of dictionaries,
-      each containing Note data (content truncated to 512 chars):\n        [\n            {\n                \"id\":
-      <note_id>,\n                \"title\": <title>,\n                \"content\":
-      <content>,\n                \"creator_id\": <creator_id>,\n                \"created\":
-      <created_datetime_iso>,\n                \"modified\": <modified_datetime_iso>,\n            },\n            ...\n        ]\n\n    Raises:\n        ValueError:
-      If document doesn''t exist\n    ","parameters":{"properties":{"document_id":{"title":"Document
-      Id","type":"integer"},"corpus_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Corpus
-      Id"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_note_content_token_length","description":"get_note_content_token_length(note_id:
-      int) -> int\n\n    Calculate the approximate token length of a Note''s content
-      using naive whitespace-based split.\n\n    Args:\n        note_id: The primary
-      key (ID) of the Note\n\n    Returns:\n        An integer representing the approximate
-      token count of the note''s content\n\n    Raises:\n        ValueError: If note
-      doesn''t exist\n    ","parameters":{"properties":{"note_id":{"title":"Note Id","type":"integer"}},"required":["note_id"],"type":"object"}}},{"type":"function","function":{"name":"get_partial_note_content","description":"get_partial_note_content(note_id:
-      int, start: int = 0, end: int = 500) -> str\n\n    Retrieve a substring of the
-      note''s content from index ''start'' to index ''end''.\n\n    Args:\n        note_id:
-      The primary key (ID) of the Note\n        start: The starting position for extraction\n        end:
-      The position at which to stop before extraction (non-inclusive)\n\n    Returns:\n        A
-      string representing the specified portion of the note''s content\n\n    Raises:\n        ValueError:
-      If note doesn''t exist or invalid start/end indices\n    ","parameters":{"properties":{"note_id":{"title":"Note
-      Id","type":"integer"},"start":{"default":0,"title":"Start","type":"integer"},"end":{"default":500,"title":"End","type":"integer"}},"required":["note_id"],"type":"object"}}}]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '6042'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=EJSRT5xr884qT7CQxb2I4qmr23YIvSe1sC0UH.BCN7c-1748837533-1.0.1.1-UrdHGhbU.nfmQCinSh23sy8OiLp_1wDOYFudezc8952fc.ChkEsJEthBNFfjV48xyuWoYjsqBdpU9y0nzCOT5lgg0bDE0reuXzIjTE46Eug;
-        _cfuvid=te1ttWQBBQj1t_geP9fcMfLRI2gOCwCgOCb7TtquKYU-1748837533235-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - AsyncOpenAI/Python 1.81.0
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - async:asyncio
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 1.81.0
-      x-stainless-read-timeout:
-      - '60.0'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.10
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: 'data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_T87gBbHmBPdahPFBpywGRuHh","type":"function","function":{"name":"doc_engine","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"input"}}]},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\""}}]},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"v"}}]},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"essel"}}]},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
-
-
-        data: [DONE]
-
-
-        '
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 94941c87dd3553b9-ATL
-      Connection:
-      - keep-alive
-      Content-Type:
-      - text/event-stream; charset=utf-8
-      Date:
-      - Mon, 02 Jun 2025 04:12:16 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - user-54labie7aicgek5urzpgydpm
-      openai-processing-ms:
-      - '673'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '677'
-      x-ratelimit-limit-requests:
-      - '5000'
-      x-ratelimit-limit-tokens:
-      - '4000000'
-      x-ratelimit-remaining-requests:
-      - '4999'
-      x-ratelimit-remaining-tokens:
-      - '3999775'
+      - '3999766'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
       - 3ms
       x-request-id:
-      - req_277af2f526483a81a6ace2f012e80f79
+      - req_a1fc286e2a19f598173eb245d9cc04a6
     status:
       code: 200
       message: OK
 - request:
-    body: '{"text": "vessel"}'
+    body: '{"text": "rule of construction for words importing the masculine gender"}'
     headers:
       Accept:
       - '*/*'
@@ -812,7 +434,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '18'
+      - '73'
       Content-Type:
       - application/json
       User-Agent:
@@ -823,39 +445,41 @@ interactions:
     uri: http://vector-embedder:8000/embeddings
   response:
     body:
-      string: '{"embeddings":[[0.008239824324846268,0.09543173760175705,-0.005237738601863384,-0.0018048277124762535,-0.04372784495353699,-0.07095105201005936,-0.03156303986907005,0.07466771453619003,-0.010971556417644024,-0.030186086893081665,0.004635205026715994,-0.008243536576628685,-0.08712945133447647,0.05124194547533989,-0.07572082430124283,-0.061344508081674576,0.0027470707427710295,0.020654499530792236,-0.015503618866205215,0.08194834738969803,0.002156483707949519,0.05450804531574249,-0.07434756308794022,-0.03637514263391495,-0.04261154681444168,0.07257674634456635,0.004326025955379009,-0.012408992275595665,0.07698317617177963,-0.04355033114552498,-0.07351157069206238,0.0062050893902778625,-0.12755337357521057,0.005879636853933334,0.055997706949710846,0.00012613936269190162,-0.003053006948903203,-0.012129440903663635,0.035072680562734604,-0.04492848366498947,-0.019864296540617943,-0.07025901973247528,0.015048033557832241,0.1405063271522522,-0.007663074880838394,-0.06508765369653702,-0.009098591282963753,0.00585730979219079,0.02883373759686947,0.026437047868967056,-0.06356623023748398,-0.10088275372982025,0.02092703804373741,0.031353745609521866,-0.031236421316862106,-0.016464747488498688,-0.03668173402547836,-0.011769440025091171,0.012996467761695385,-0.10911480337381363,0.10328352451324463,0.05295664072036743,0.0019394054543226957,0.06377212703227997,-0.0008115296368487179,-0.06144730746746063,-0.029252780601382256,0.031145310029387474,-0.07680195569992065,0.01211316417902708,0.06442155689001083,0.0338902585208416,0.05902354046702385,0.049977902323007584,0.08092542737722397,-0.025140412151813507,0.019043659791350365,-0.03292038291692734,0.053600262850522995,0.11257566511631012,-0.09659907221794128,0.05934400111436844,-0.07870528101921082,-0.06068918853998184,-0.0386480987071991,0.023973748087882996,0.02030351385474205,0.029567670077085495,-0.06021672114729881,-0.0487995520234108,0.056739628314971924,-0.041419897228479385,0.00597557844594121,-0.0668569877743721,-0.02388615347445011,0.0031360811553895473,-0.07603196799755096,0.04746602475643158,0.03315134719014168,0.07704052329063416,0.05662873387336731,0.08600202947854996,0.01264849491417408,0.051507748663425446,-0.05606851354241371,0.03632454574108124,0.015772242099046707,-0.03940596058964729,0.03202599659562111,-0.10871376097202301,-0.0932372659444809,0.053177401423454285,-0.06796719878911972,-0.037181515246629715,-0.12475146353244781,-0.024646731093525887,-0.04788792133331299,-0.007102749776095152,0.0005189870717003942,-0.058444272726774216,0.011764712631702423,-0.01843326911330223,0.046175044029951096,-0.04248223081231117,-0.011377551592886448,-0.0448339581489563,0.05523412674665451,1.241877149920568e-30,-0.04698456823825836,-0.013500845991075039,0.0028049221727997065,-0.03983663022518158,0.04445898160338402,-0.008111873641610146,-0.003632071428000927,0.01245755236595869,-0.04138755425810814,0.08937162160873413,-0.06257205456495285,0.0035183620639145374,-0.0953991487622261,0.013263026252388954,0.051516443490982056,-0.04364941641688347,0.06019366532564163,-0.025788241997361183,-0.05356276035308838,-0.037773068994283676,0.023860249668359756,-0.024411875754594803,0.008927755057811737,-0.031203296035528183,0.0133748734369874,0.07681409269571304,-0.06118272244930267,-0.03375367075204849,-0.02574586495757103,0.027524687349796295,0.004618196748197079,-0.005333279259502888,0.048775605857372284,0.02835363708436489,-0.034604333341121674,0.058662861585617065,0.02367747388780117,-0.0031393859535455704,0.011567939072847366,-0.052584871649742126,-0.06413658708333969,-0.003079182468354702,0.050772327929735184,0.09379490464925766,-0.05496370792388916,-0.034546900540590286,-0.029892753809690475,-0.03664519265294075,0.04586982727050781,-0.00342997326515615,-0.005416008178144693,-0.02298208698630333,-0.04921106994152069,0.0494128055870533,0.04582759737968445,-0.006802388932555914,0.028222322463989258,0.08802759647369385,-0.05438341945409775,-0.02580084837973118,-0.06157641112804413,0.06887830048799515,0.0398181676864624,0.00980068277567625,0.05554666370153427,0.0866633728146553,0.048555951565504074,-0.06001346930861473,0.04289352893829346,-0.07727017998695374,-0.09302021563053131,0.03507250174880028,-0.019181177020072937,0.023853043094277382,0.0027176712173968554,0.08869022130966187,0.03190300986170769,-0.06378195434808731,0.009558168239891529,-0.09500428289175034,-0.12145964801311493,0.007591824512928724,0.002124533988535404,0.016773251816630363,-0.020514018833637238,0.028285659849643707,0.06004483997821808,0.014920368790626526,-0.002523953327909112,-0.02459617145359516,-0.021021302789449692,0.017245328053832054,0.016351673752069473,-0.052526816725730896,0.05205676332116127,-1.6796166744449414e-33,0.03363823518157005,-0.02459629252552986,-0.020110955461859703,-0.0225328728556633,0.004641604144126177,-0.00988637376576662,0.09996988624334335,0.007264451589435339,0.006851103622466326,-0.05924099683761597,-0.05101718381047249,0.0011230045929551125,0.008407332003116608,0.029303371906280518,-0.041908930987119675,0.11420642584562302,0.010526110418140888,-0.013568224385380745,0.031559057533741,-0.010858683846890926,0.014525305479764938,-0.020318076014518738,0.04418119788169861,0.018033837899565697,-0.0197466928511858,0.011348739266395569,0.023317908868193626,-0.13777031004428864,-0.0640081912279129,-0.034617356956005096,0.0008971841889433563,0.013300872407853603,0.08361666649580002,0.04994761943817139,-0.10092185437679291,-0.014109200797975063,0.06805573403835297,0.08505108952522278,-0.007465393282473087,-0.03922567144036293,-0.01016219425946474,-0.017533207312226295,-0.054216884076595306,0.02245010808110237,-0.06919782608747482,-0.016014615073800087,0.027811307460069656,-0.050060369074344635,0.06427035480737686,0.017231931909918785,-0.09970740228891373,-0.06843424588441849,0.11099259555339813,-0.027835369110107422,0.05708002299070358,0.049234066158533096,-0.033696118742227554,-0.08696892112493515,0.057623110711574554,-0.0075073339976370335,0.03676723316311836,0.08785521239042282,-0.005494766402989626,0.012967935763299465,0.06307290494441986,0.01495844591408968,-0.033147986978292465,0.03035622648894787,-0.04297580569982529,-0.025632308796048164,0.021640213206410408,0.008508739992976189,-0.06600089371204376,0.08361391723155975,-0.0007748339558020234,-0.1361204981803894,-0.02300933003425598,-0.005229854956269264,-0.0016331033548340201,0.002903954591602087,0.07649126648902893,0.007344916462898254,-0.0018386727897450328,0.012171529233455658,0.00033520188299007714,-0.07831930369138718,0.058662109076976776,-0.036256276071071625,-0.04794130474328995,0.024837777018547058,0.03682466596364975,0.07498371601104736,-0.030549362301826477,-0.06117002293467522,0.02564212866127491,-3.290705334314805e-33,-0.05259691923856735,0.0055962614715099335,0.05352601781487465,-0.013979548588395119,-0.02378700114786625,-0.10294082015752792,0.026544366031885147,0.09463266283273697,-0.013241522014141083,-0.05548373609781265,0.010048591531813145,-0.02979973889887333,-0.03574999421834946,-0.049358922988176346,0.032364875078201294,-0.0020042969845235348,-0.04343212768435478,0.0267627015709877,-0.005101039074361324,-0.0554957240819931,0.07693056762218475,-0.04987262189388275,0.07128915935754776,-0.0035608739126473665,-0.06305793672800064,0.039736777544021606,0.028494494035840034,-0.042261771857738495,0.08304981142282486,-0.0327175073325634,-0.019543062895536423,0.06953112035989761,0.06699476391077042,0.12173480540513992,0.04734481871128082,0.003160558408126235,-0.056899942457675934,0.03377221152186394,-0.08285409212112427,0.013659731484949589,-0.0011820429936051369,0.0959993228316307,-0.03752439096570015,-0.027875900268554688,0.09424096345901489,0.07712291926145554,-0.018873030319809914,0.0635114461183548,-0.016156429424881935,-0.03365403041243553,-0.00043377422844059765,7.555348020105157e-06,0.07792244106531143,0.032676082104444504,-0.023372335359454155,0.0617179349064827,0.004386594984680414,0.10528457164764404,0.02597929537296295,0.005734334699809551,-0.04558410868048668,0.04022357612848282,0.11805840581655502,0.028056079521775246]]}
+      string: '{"embeddings":[[0.01429020706564188,0.022378714755177498,0.05320737510919571,-0.016127878800034523,-0.09601742774248123,-0.011088565923273563,-0.029678570106625557,-0.0896596908569336,0.014551031403243542,0.06114553287625313,0.11347997188568115,-0.04062151908874512,-0.02005651220679283,0.048388443887233734,0.048092328011989594,0.03475945070385933,-0.09908424317836761,-0.008951363153755665,-0.008200009353458881,0.05554717406630516,0.040833838284015656,-0.11290040612220764,-0.008218997158110142,-0.05082904174923897,-0.024345124140381813,-0.07580740004777908,-0.027757832780480385,-0.006810445338487625,0.09005270153284073,0.0014820214128121734,-0.07010790705680847,0.033271610736846924,0.1068325936794281,0.02542342059314251,-0.04462050274014473,0.07197119295597076,0.022777747362852097,-0.014180362224578857,0.0016902893548831344,0.09029147773981094,-0.0379776693880558,-0.07830775529146194,-0.006405096501111984,0.06728405505418777,0.053189657628536224,0.029616620391607285,0.024951599538326263,0.08121036738157272,-0.06341485679149628,0.010835204273462296,-0.02984493598341942,-0.018101735040545464,-0.11323602497577667,0.14612621068954468,-0.05106591433286667,0.005437101237475872,0.029673103243112564,-0.040263768285512924,-0.013338997028768063,-0.039200570434331894,-0.057960376143455505,-0.014029734767973423,0.04060719162225723,0.004470265004783869,0.03704642504453659,-0.06953569501638412,-0.047960299998521805,0.007620357908308506,-0.05132989585399628,0.09615611284971237,0.03548164293169975,0.046054355800151825,-0.10672400891780853,0.0649501234292984,0.022898979485034943,0.09362945705652237,0.07654420286417007,-0.03244347125291824,-0.014955395832657814,-0.09005529433488846,-0.03013390116393566,-0.030884597450494766,0.10570110380649567,0.07531290501356125,0.025908641517162323,-0.007942816242575645,0.002242159564048052,-0.0675983875989914,-0.0795329213142395,0.07653742283582687,-0.11124773323535919,-0.15832993388175964,0.07608489692211151,0.011301606893539429,0.016344912350177765,-0.005608457140624523,-0.015690458938479424,0.008585374802350998,0.024883916601538658,-0.010350791737437248,-0.0030688776168972254,0.01157432235777378,-0.01869715377688408,-0.003059782087802887,-0.04782987758517265,-0.02405156008899212,-0.061163805425167084,-0.06214020773768425,-0.035026755183935165,-0.0405900739133358,-0.03821990638971329,-0.013107651844620705,-0.027875399217009544,-0.036165229976177216,0.024535296484827995,-0.01610482484102249,-0.010867029428482056,0.011038020253181458,0.0944691002368927,0.04126621410250664,-0.05678759887814522,-0.03471284732222557,2.1561772882705554e-05,-0.011402886360883713,-0.015932738780975342,0.001405358430929482,-0.04944617673754692,7.628530927090687e-31,-0.0009907225612550974,-0.01221191231161356,0.010079268366098404,0.0356077216565609,0.003744210349395871,0.04134775698184967,0.07344497740268707,-0.10641539096832275,0.0058586630038917065,-0.05338609218597412,-0.005060160532593727,-0.061076339334249496,-0.1047663688659668,0.029800284653902054,0.07675427198410034,0.019404049962759018,0.054998308420181274,0.0001911955769173801,-0.04428965598344803,0.023481206968426704,0.0865999087691307,0.02272483892738819,-0.006157336290925741,-0.008338894695043564,-0.04861677438020706,-0.03194882348179817,0.03617769107222557,-0.06328871101140976,-0.018363557755947113,-0.0185458455234766,-0.008130875416100025,-0.0936957448720932,0.01935153640806675,0.05048318952322006,0.025672823190689087,-0.052808068692684174,0.0367446132004261,-0.017081785947084427,0.04198899492621422,0.06099291890859604,0.02313954569399357,0.007951025851070881,0.06374216079711914,-0.010937115177512169,0.00347868911921978,0.08671586960554123,0.014997174963355064,-0.007875251583755016,-0.0620032399892807,0.03400557488203049,-0.044282395392656326,0.06142522767186165,0.0888276919722557,0.0026582826394587755,0.002070194808766246,0.0031580713111907244,0.018479816615581512,-0.002748786238953471,-0.033880818635225296,-0.00533371651545167,0.03997090458869934,0.0523265078663826,0.13330702483654022,0.08074486255645752,0.04342101514339447,-0.06736570596694946,-0.02038128487765789,-0.01334267295897007,0.07188534736633301,0.025470172986388206,-0.05464101582765579,-0.00890687108039856,-0.08943051844835281,0.10006405413150787,0.011434447020292282,0.017658673226833344,0.0014538186369463801,-0.04108055308461189,0.036952536553144455,-0.12266882508993149,-0.046568550169467926,0.06647412478923798,-0.08028233796358109,0.034759704023599625,-0.04404744505882263,-0.022664416581392288,0.023322705179452896,-0.05039932578802109,0.1327190101146698,0.03679449111223221,-0.040966566652059555,0.001299048075452447,0.018983371555805206,-0.0302891843020916,-0.006624765694141388,-2.7786267506470075e-33,-0.02121622860431671,-0.05009361356496811,0.016678398475050926,-0.01521577499806881,-0.07587278634309769,-0.02353091351687908,0.025034144520759583,0.03539643436670303,0.11132527887821198,0.01317739300429821,-0.004138621035963297,0.04774049296975136,-0.037118878215551376,-0.018147112801671028,-0.007532990071922541,-0.04421170428395271,-0.02823549322783947,0.009130687452852726,0.03317758068442345,0.10808631032705307,-0.03863772377371788,0.046188995242118835,-0.021605074405670166,-0.021666448563337326,0.021293822675943375,-0.0054625533521175385,-0.031618986278772354,0.01438411045819521,-0.0021663482766598463,0.07118610292673111,-0.01950893923640251,0.04597083106637001,-0.0529891699552536,0.07723455876111984,0.04237566143274307,-0.0439465269446373,-0.04463224112987518,0.05138278752565384,0.0915205255150795,0.017329247668385506,0.008695426397025585,-0.01248470414429903,-0.032509736716747284,-0.028260717168450356,0.023407774046063423,-0.03385508060455322,-0.11616683751344681,-0.008433095179498196,0.07993221282958984,0.00012152845738455653,-0.010836479254066944,0.014943604357540607,0.002703853417187929,-0.0887080579996109,-0.04235962778329849,-0.09348628669977188,-0.0041964068077504635,-0.06936747580766678,-0.04386020451784134,0.05195485055446625,-0.03084353730082512,0.052478160709142685,0.030667642131447792,-0.03792654722929001,-0.07242190837860107,-0.0595257505774498,0.0027636797167360783,-0.032657042145729065,0.01978624425828457,-0.028865162283182144,0.0309377983212471,-0.016202837228775024,0.014453763142228127,0.02269241027534008,-0.0218028761446476,-0.03161453828215599,0.06340712308883667,0.04783521592617035,0.06488651037216187,-0.0827481597661972,-0.06584247201681137,-0.01905827410519123,0.012967757880687714,0.021909140050411224,-0.029093237593770027,0.021785300225019455,0.0405433215200901,0.0804549977183342,0.012784174643456936,-0.043741315603256226,0.035449761897325516,0.07052694261074066,0.019350910559296608,0.020439565181732178,-0.0260615237057209,-3.6706581692791854e-33,-0.01795213110744953,-0.04110086336731911,0.029733145609498024,-0.005225858651101589,0.03249417990446091,0.008277079090476036,-0.05408591777086258,-0.11048930138349533,0.04686299338936806,0.039937037974596024,-0.016077909618616104,0.06448840349912643,0.06647711247205734,-0.06935907155275345,-0.06616345793008804,0.03685956448316574,0.06109257787466049,-0.026135550811886787,-0.021877402439713478,-0.03557031974196434,0.0024289139546453953,-0.038918834179639816,-0.04409472271800041,0.06202827766537666,-0.055396854877471924,0.03191826492547989,0.02791954018175602,-0.018787378445267677,-0.09702804684638977,0.045843325555324554,0.10349074751138687,0.08639664947986603,-0.05873175710439682,-0.04905671998858452,0.027060607448220253,0.02130368910729885,0.003811352653428912,-0.06295113265514374,0.012300537899136543,-0.007471580058336258,0.05216008797287941,-0.040676556527614594,-0.04402710124850273,-0.06201887130737305,0.0855797603726387,0.03174411505460739,0.018358269706368446,-0.03623392432928085,-0.0719745010137558,0.11736141890287399,0.028835855424404144,0.025577006861567497,-0.0027829294558614492,-0.0058133164420723915,0.04053531959652901,0.00432948861271143,-0.03617047518491745,0.01587449572980404,0.013251165859401226,-0.02378709428012371,0.0020140334963798523,-0.07064743340015411,0.13865260779857635,-0.05570881441235542]]}
 
         '
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '8078'
+      - '8060'
       Content-Type:
       - application/json
       Date:
-      - Mon, 02 Jun 2025 04:12:17 GMT
+      - Mon, 02 Jun 2025 04:23:53 GMT
       Server:
       - gunicorn
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You thoroughly answer requests
-      about the document titled ''Test Doc'' (ID: 1). This document is described as:\n\n`USC
-      Title 1 - Chapter 1`\n\nReturn your answers in thoughtful, attractive markdown.
-      Avoid repeating instructions, writing down your thought processes (unless asked),
-      or giving disclaimers."},{"role":"user","content":"Regarding US Code Title 1,
-      what is the rule of construction for ''words importing the masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_tOM0mziLntICehfjyYadf84m","function":{"arguments":"{\"input\":\"words
+    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
+      document analysis and interpretation. Your primary goal is to answer questions
+      accurately based on the provided document: ''Test Doc'' (ID: 1).\n\nThis document
+      is described as:\n`USC Title 1 - Chapter 1`\n\nWhile a summary may be available,
+      it''s crucial to leverage all your tools for a comprehensive understanding.
+      You have access to a sophisticated vector search engine capable of finding semantically
+      similar text to answer queries, alongside other specialized tools.\n\nAlways
+      prioritize information retrieved directly from the document using these tools.
+      Do not rely solely on the summary or your general knowledge. Strive to provide
+      answers grounded in the document''s content, presented in clear and helpful
+      markdown. Avoid repeating instructions or disclaimers."},{"role":"user","content":"Regarding
+      US Code Title 1, what is the rule of construction for ''words importing the
+      masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_aTHs5ygy68jkPiupai7Ex40y","function":{"arguments":"{\"input\":\"words
       importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
-      Response","name":"doc_engine","tool_call_id":"call_tOM0mziLntICehfjyYadf84m"},{"role":"assistant","content":"The
-      rule of construction for \"words importing the masculine gender\" in US Code
-      Title 1 states that such words are to be understood to include the feminine
-      gender as well. This means that terms that are traditionally masculine should
-      be interpreted to apply equally to both men and women unless the context indicates
-      otherwise. This rule promotes gender-neutral language in legal texts."},{"role":"user","content":"What
-      does US Code Title 1, Section 3 state about the term ''vessel''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_T87gBbHmBPdahPFBpywGRuHh","function":{"arguments":"{\"input\":\"vessel\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
-      Response","name":"doc_engine","tool_call_id":"call_T87gBbHmBPdahPFBpywGRuHh"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      Response","name":"doc_engine","tool_call_id":"call_aTHs5ygy68jkPiupai7Ex40y"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_A4UHW2fzuKEPK8B4OS61QbpL","function":{"arguments":"{\"input\":\"rule
+      of construction for words importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_A4UHW2fzuKEPK8B4OS61QbpL"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
       detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
       int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
       the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
@@ -904,12 +528,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '6340'
+      - '6377'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=EJSRT5xr884qT7CQxb2I4qmr23YIvSe1sC0UH.BCN7c-1748837533-1.0.1.1-UrdHGhbU.nfmQCinSh23sy8OiLp_1wDOYFudezc8952fc.ChkEsJEthBNFfjV48xyuWoYjsqBdpU9y0nzCOT5lgg0bDE0reuXzIjTE46Eug;
-        _cfuvid=te1ttWQBBQj1t_geP9fcMfLRI2gOCwCgOCb7TtquKYU-1748837533235-0.0.1.1-604800000
+      - __cf_bm=RSeq4J13F33hxAw9ImnerHjjhK9XDk2bWUqj8G0Px5s-1748838231-1.0.1.1-neM0nyYw15A1tyGUtGk1s5bwIjeQKFc26RtBptpgVhO.dubzHTRbfBfFGG7NaOmiU.SKODzBXULN5ahXlBpt2hjWBm7_rUzc5D7hPcQgf90;
+        _cfuvid=0xLqf00SzdSl2jFO3Eqf409RVlK.3f3vGZLPpd8_VMY-1748838231529-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -936,286 +560,727 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: 'data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"role":"assistant","content":"","refusal":null},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"US"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        Code"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        Title"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        "},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"1"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        Section"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        "},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"3"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        defines"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        the"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        term"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        \""},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"v"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"essel"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"\""},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        broadly"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        include"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        every"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        description"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        water"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"craft"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        or"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        other"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        artificial"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        contr"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"iv"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"ance"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        used"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        or"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        capable"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        being"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        used"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        as"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        a"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        means"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        transportation"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        on"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        water"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        This"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        definition"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        is"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        designed"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        encompass"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        a"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        wide"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        range"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        water"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"craft"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        ensuring"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        that"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        various"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        types"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        vessels"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        are"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        covered"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        under"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        legal"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        terms"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        and"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
-        regulations"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+      string: 'data: {"id":"chatcmpl-Bdr0D81zTQzrmIXsEtRXjHshiCUcu","object":"chat.completion.chunk","created":1748838233,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_MSiQQKbM8m2jRZOMmfV7Tryk","type":"function","function":{"name":"load_document_md_summary","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0D81zTQzrmIXsEtRXjHshiCUcu","object":"chat.completion.chunk","created":1748838233,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0D81zTQzrmIXsEtRXjHshiCUcu","object":"chat.completion.chunk","created":1748838233,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"document"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0D81zTQzrmIXsEtRXjHshiCUcu","object":"chat.completion.chunk","created":1748838233,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"_id"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0D81zTQzrmIXsEtRXjHshiCUcu","object":"chat.completion.chunk","created":1748838233,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0D81zTQzrmIXsEtRXjHshiCUcu","object":"chat.completion.chunk","created":1748838233,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"1"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0D81zTQzrmIXsEtRXjHshiCUcu","object":"chat.completion.chunk","created":1748838233,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"}"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0D81zTQzrmIXsEtRXjHshiCUcu","object":"chat.completion.chunk","created":1748838233,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-RAY:
+      - 94942d8c6ca34538-ATL
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 02 Jun 2025 04:23:54 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '576'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '579'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999761'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 3ms
+      x-request-id:
+      - req_d97111f4aa8a4fd63c2befd99433e21a
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
+      document analysis and interpretation. Your primary goal is to answer questions
+      accurately based on the provided document: ''Test Doc'' (ID: 1).\n\nThis document
+      is described as:\n`USC Title 1 - Chapter 1`\n\nWhile a summary may be available,
+      it''s crucial to leverage all your tools for a comprehensive understanding.
+      You have access to a sophisticated vector search engine capable of finding semantically
+      similar text to answer queries, alongside other specialized tools.\n\nAlways
+      prioritize information retrieved directly from the document using these tools.
+      Do not rely solely on the summary or your general knowledge. Strive to provide
+      answers grounded in the document''s content, presented in clear and helpful
+      markdown. Avoid repeating instructions or disclaimers."},{"role":"user","content":"Regarding
+      US Code Title 1, what is the rule of construction for ''words importing the
+      masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_aTHs5ygy68jkPiupai7Ex40y","function":{"arguments":"{\"input\":\"words
+      importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_aTHs5ygy68jkPiupai7Ex40y"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_A4UHW2fzuKEPK8B4OS61QbpL","function":{"arguments":"{\"input\":\"rule
+      of construction for words importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_A4UHW2fzuKEPK8B4OS61QbpL"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_MSiQQKbM8m2jRZOMmfV7Tryk","function":{"arguments":"{\"document_id\":1}","name":"load_document_md_summary"},"type":"function"}]},{"role":"tool","content":"#
+      Summary for Document 1 (USC Title 1 - General Provisions)\n\nThis document is
+      Title 1 of the United States Code, \"General Provisions,\" as enacted on July
+      30, 1947. It establishes fundamental rules for the construction and interpretation
+      of federal laws.\n\nKey topics covered:\n- **Chapter 1: Rules of Construction:**
+      Defines how terms like singular/plural, gender, and tense should be interpreted
+      in legislation. Provides standard definitions for \"person,\" \"company,\" \"vessel,\"
+      \"vehicle,\" \"oath,\" and \"writing.\" Addresses the meaning of \"county.\"\n-
+      **Chapter 2: Acts and Resolutions:** Outlines formalities for the enactment
+      of laws, procedures for repeals, and the sealing of official instruments.\n-
+      **Chapter 3: Code of Laws of the United States and Supplements:** Details regarding
+      the official U.S. Code and its supplements, including the District of Columbia
+      Code.\n\nThis title also includes provisions regarding \"products of American
+      fisheries,\" definitions of \"marriage\" and \"spouse\" (as amended by the Respect
+      for Marriage Act), and the inclusion of \"born-alive infants\" under terms like
+      \"person\" and \"human being.\" It serves as a foundational text for understanding
+      federal statutory language. ","name":"load_document_md_summary","tool_call_id":"call_MSiQQKbM8m2jRZOMmfV7Tryk"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
+      int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
+      the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        truncate_length: Optional number
+      of characters to truncate. If provided,\n                        returns only
+      that many characters\n        from_start: If True, return from the start up
+      to truncate_length.\n                   Otherwise, return from the end\n\n    Returns:\n        A
+      string containing the content of the md_summary_file (possibly truncated)\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"truncate_length":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Truncate
+      Length"},"from_start":{"default":true,"title":"From Start","type":"boolean"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_md_summary_token_length","description":"get_md_summary_token_length(document_id:
+      int) -> int\n\n    Calculate the approximate token length of a Document''s md_summary_file.\n    Uses
+      a naive whitespace-based split for tokenization.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n\n    Returns:\n        An integer representing
+      the approximate token count of the md_summary_file\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_notes_for_document_corpus","description":"get_notes_for_document_corpus(document_id:
+      int, corpus_id: Optional[int] = None) -> list[dict[str, typing.Any]]\n\n    Retrieve
+      all Note objects for a given document and (optionally) a specific corpus.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        corpus_id: The primary key (ID)
+      of the Corpus, or None if unspecified\n\n    Returns:\n        A list of dictionaries,
+      each containing Note data (content truncated to 512 chars):\n        [\n            {\n                \"id\":
+      <note_id>,\n                \"title\": <title>,\n                \"content\":
+      <content>,\n                \"creator_id\": <creator_id>,\n                \"created\":
+      <created_datetime_iso>,\n                \"modified\": <modified_datetime_iso>,\n            },\n            ...\n        ]\n\n    Raises:\n        ValueError:
+      If document doesn''t exist\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"corpus_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Corpus
+      Id"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_note_content_token_length","description":"get_note_content_token_length(note_id:
+      int) -> int\n\n    Calculate the approximate token length of a Note''s content
+      using naive whitespace-based split.\n\n    Args:\n        note_id: The primary
+      key (ID) of the Note\n\n    Returns:\n        An integer representing the approximate
+      token count of the note''s content\n\n    Raises:\n        ValueError: If note
+      doesn''t exist\n    ","parameters":{"properties":{"note_id":{"title":"Note Id","type":"integer"}},"required":["note_id"],"type":"object"}}},{"type":"function","function":{"name":"get_partial_note_content","description":"get_partial_note_content(note_id:
+      int, start: int = 0, end: int = 500) -> str\n\n    Retrieve a substring of the
+      note''s content from index ''start'' to index ''end''.\n\n    Args:\n        note_id:
+      The primary key (ID) of the Note\n        start: The starting position for extraction\n        end:
+      The position at which to stop before extraction (non-inclusive)\n\n    Returns:\n        A
+      string representing the specified portion of the note''s content\n\n    Raises:\n        ValueError:
+      If note doesn''t exist or invalid start/end indices\n    ","parameters":{"properties":{"note_id":{"title":"Note
+      Id","type":"integer"},"start":{"default":0,"title":"Start","type":"integer"},"end":{"default":500,"title":"End","type":"integer"}},"required":["note_id"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '7923'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=RSeq4J13F33hxAw9ImnerHjjhK9XDk2bWUqj8G0Px5s-1748838231-1.0.1.1-neM0nyYw15A1tyGUtGk1s5bwIjeQKFc26RtBptpgVhO.dubzHTRbfBfFGG7NaOmiU.SKODzBXULN5ahXlBpt2hjWBm7_rUzc5D7hPcQgf90;
+        _cfuvid=0xLqf00SzdSl2jFO3Eqf409RVlK.3f3vGZLPpd8_VMY-1748838231529-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.81.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_B8HbKlJLm0QLTMnpDJh3lX7U","type":"function","function":{"name":"doc_engine","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"input"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Chapter"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        "}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"1"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":":"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        Rules"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        of"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        Construction"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0EhpIbTkXXfL1PeXYxXWBpwMQ3","object":"chat.completion.chunk","created":1748838234,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-RAY:
+      - 94942d93af804538-ATL
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 02 Jun 2025 04:23:55 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '729'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '733'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999459'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 8ms
+      x-request-id:
+      - req_03df81168a9b8cad1fc2091381ccc15b
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "Chapter 1: Rules of Construction"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '44'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[-0.032839350402355194,0.10708502680063248,0.0615508109331131,-0.006281072739511728,-0.008197499439120293,0.0350637249648571,0.014733640477061272,-0.052557285875082016,-0.0011746539967134595,0.07453399896621704,0.03260437026619911,-0.04204535856842995,0.029078084975481033,-0.0831228718161583,-0.027415402233600616,-0.052040960639715195,-0.07963427901268005,-0.015083741396665573,-0.0980832427740097,0.032789696007966995,0.07989851385354996,0.02934904396533966,0.010361007414758205,0.03591429069638252,0.010363422334194183,-0.029982248321175575,-0.023914000019431114,0.04317173734307289,0.06377052515745163,-0.07891539484262466,-0.023222092539072037,0.0016030182596296072,-0.029071995988488197,0.006939859129488468,0.03151983767747879,0.08683747798204422,0.10570229589939117,-0.015266437083482742,-0.022799061611294746,0.05232565104961395,-0.03834180533885956,-0.0029896453488618135,0.019429277628660202,-0.002489753533154726,-0.009147748351097107,0.03931734338402748,0.034129660576581955,-0.024359937757253647,-0.07452517747879028,-0.030268490314483643,-0.05711021646857262,0.02957138791680336,-0.04497027024626732,-0.00500348350033164,0.033041223883628845,0.0712609812617302,0.010570866987109184,-0.0426209382712841,0.054250508546829224,-0.0745265930891037,0.04811081290245056,0.005942113697528839,-0.03781846910715103,-0.04071582108736038,0.09471870213747025,-0.01819433830678463,-0.009120765142142773,0.04337424039840698,0.0019676045048981905,0.12329285591840744,-0.030162347480654716,0.013682840391993523,-0.08490327000617981,0.06734214723110199,-0.014423188753426075,0.005384603515267372,0.02492927387356758,0.056407611817121506,-0.027386922389268875,-0.07586812227964401,-0.055246710777282715,-0.066770538687706,0.005368304904550314,-0.04213769733905792,-0.026552774012088776,0.046782393008470535,0.039790552109479904,-0.12978677451610565,0.02987237274646759,0.03955715522170067,-2.8824775654356927e-05,-0.12295333296060562,0.0011181519366800785,0.05321021005511284,0.008562667295336723,-0.010869520716369152,-0.07379089295864105,-0.03117258846759796,0.06828095018863678,0.08307141065597534,-0.03646635636687279,-0.01426246203482151,0.050238631665706635,0.011482883244752884,-0.009664631448686123,-0.08420116454362869,-0.07072000205516815,-0.03863789886236191,-0.024726472795009613,0.008190922439098358,0.052581340074539185,-0.0301648136228323,0.018101146444678307,-0.04781109467148781,-0.007851042784750462,0.0028877242002636194,0.04484628140926361,0.010276158340275288,0.009856468997895718,-0.043500568717718124,0.08279050886631012,0.020762626081705093,-0.04281199350953102,0.05802472308278084,-0.034778665751218796,-0.07636819034814835,-0.033185336738824844,2.786184216886795e-31,0.09365858882665634,-0.10706634074449539,-0.00770068122074008,0.023219479247927666,0.034518223255872726,0.028770212084054947,0.009767157956957817,0.03182848170399666,-0.046087153255939484,0.007760169450193644,0.027066467329859734,-0.03039931319653988,-0.07532515376806259,0.03868076577782631,0.04293777793645859,-0.04832755774259567,0.005968891549855471,-0.052570268511772156,-0.02959672175347805,0.01893622800707817,0.03974664956331253,0.03166380152106285,-0.011525762267410755,-0.03758147731423378,0.05677473545074463,0.0029820564668625593,0.026597660034894943,-0.042048338800668716,-0.14608235657215118,0.006798815447837114,0.029837358742952347,-0.031128745526075363,0.04716172069311142,0.08793222904205322,0.003366176038980484,0.02669348753988743,0.018103141337633133,-0.025621464475989342,0.027678439393639565,-0.07705548405647278,0.0010428153909742832,-0.011279392056167126,-0.037740129977464676,-0.017992675304412842,0.040456295013427734,0.07931463420391083,0.035300686955451965,0.04311105236411095,-0.0015745582059025764,0.013614526949822903,0.029162917286157608,0.06960377842187881,0.08076551556587219,-0.029657214879989624,0.11115740239620209,0.0030970550142228603,-0.04879860579967499,0.01750388741493225,-0.017534170299768448,0.011483637616038322,0.012738152407109737,0.07610320299863815,0.021379081532359123,0.08582880347967148,-0.08713045716285706,-0.009731028228998184,-0.056496940553188324,-0.07261628657579422,0.14392724633216858,-0.10248361527919769,-0.05520176142454147,0.039478566497564316,-0.08932673931121826,0.07634706050157547,0.012883729301393032,-0.0362507663667202,-0.07596921175718307,-0.04931298643350601,-0.017249800264835358,-0.04961118474602699,-0.06718414276838303,0.06036360189318657,-0.046078622341156006,0.0021631044801324606,0.002024365123361349,-0.06349682062864304,0.08989834785461426,-0.008027637377381325,0.009314199909567833,0.012980450876057148,0.01543340366333723,-0.07198793441057205,0.04609484598040581,0.028055669739842415,0.09969548881053925,-2.8338759034906166e-33,0.027821436524391174,-0.027095869183540344,-0.06460723280906677,-0.06277260929346085,-0.0632169172167778,-0.03368288278579712,-0.11307515949010849,-0.1002102941274643,-0.04628310725092888,0.001309125917032361,-0.07332683354616165,0.033495865762233734,0.016144709661602974,-0.05937599763274193,-0.06599125266075134,-0.09666786342859268,0.08272485435009003,-0.06741759926080704,0.041674576699733734,0.0685833990573883,-0.0032459597568958998,0.024964194744825363,-0.03067520633339882,-0.032877083867788315,-0.0004965119296684861,-0.1122906506061554,-0.08766337484121323,0.030369611456990242,-2.932941606559325e-05,0.03803221508860588,-0.03637555241584778,-0.04959158971905708,0.0508582629263401,0.060601767152547836,-0.040082041174173355,-0.08424506336450577,-0.01115686446428299,0.03168465569615364,0.09401512891054153,0.0016776230186223984,0.08211515843868256,0.026199745014309883,0.036368731409311295,-0.0028513127472251654,0.03558531776070595,-0.051196981221437454,0.09963458776473999,-0.03917549550533295,-0.06836368143558502,-0.057560995221138,-0.022522015497088432,-0.021477770060300827,0.035515643656253815,-0.04880844056606293,-0.05266539752483368,0.02373223751783371,0.012222112156450748,-0.07084760814905167,0.06389572471380234,-0.021597709506750107,0.01648147776722908,0.06796275079250336,-0.024539344012737274,0.08194830268621445,0.05581233277916908,-0.059296149760484695,-0.06360135972499847,0.004203510470688343,0.04943259805440903,0.04481961950659752,-0.1357012838125229,-0.04409203305840492,-0.1039218083024025,-0.0069841365329921246,0.02314898744225502,0.02829768694937229,-0.007888155989348888,0.04084395617246628,-0.006645914167165756,-0.038859326392412186,-0.018407698720693588,0.05887698009610176,-0.05028238520026207,0.043588440865278244,0.010218445211648941,0.0019782772287726402,0.08729668706655502,0.024977853521704674,-0.04348945617675781,0.05290897190570831,0.06554388999938965,0.013826653361320496,-0.00024381627736147493,0.0288567915558815,-0.02597227320075035,-1.04675852578855e-33,-0.04209699481725693,-0.04145233705639839,-0.00574432872235775,-0.009768106043338776,0.025373803451657295,-0.010216320864856243,0.06788945198059082,-0.035129364579916,-0.012163002043962479,0.04346659779548645,0.045703791081905365,0.08249117434024811,0.024408578872680664,0.04575139284133911,-0.048593416810035706,0.005939118564128876,-0.021020248532295227,-0.03556317090988159,-0.0721646174788475,0.021269986405968666,0.010333490557968616,-0.0519394725561142,-0.005687442608177662,0.01654387079179287,-0.005731942597776651,-0.005767484661191702,0.048760250210762024,-0.09694312512874603,0.023536907508969307,0.1731225997209549,0.086479052901268,0.09441560506820679,-0.007584335282444954,0.026687057688832283,-7.448607357218862e-05,-0.028552697971463203,-0.031842105090618134,0.04558582976460457,0.032089900225400925,-0.019779901951551437,0.01742587611079216,-0.005858162418007851,0.026389192789793015,-0.0018440202111378312,0.04881354048848152,-0.011453275568783283,-0.058341287076473236,-0.028097452595829964,-0.05640624091029167,0.022225327789783478,-0.03294467180967331,0.0010183538543060422,0.05956726893782616,-0.0027791843749582767,-0.01671435311436653,0.062414396554231644,0.02166725881397724,0.03817101940512657,0.0711507499217987,-0.05486777797341347,-0.0763951912522316,0.05696802958846092,0.02147541753947735,0.019260291010141373]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8073'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 02 Jun 2025 04:23:55 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
+      document analysis and interpretation. Your primary goal is to answer questions
+      accurately based on the provided document: ''Test Doc'' (ID: 1).\n\nThis document
+      is described as:\n`USC Title 1 - Chapter 1`\n\nWhile a summary may be available,
+      it''s crucial to leverage all your tools for a comprehensive understanding.
+      You have access to a sophisticated vector search engine capable of finding semantically
+      similar text to answer queries, alongside other specialized tools.\n\nAlways
+      prioritize information retrieved directly from the document using these tools.
+      Do not rely solely on the summary or your general knowledge. Strive to provide
+      answers grounded in the document''s content, presented in clear and helpful
+      markdown. Avoid repeating instructions or disclaimers."},{"role":"user","content":"Regarding
+      US Code Title 1, what is the rule of construction for ''words importing the
+      masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_aTHs5ygy68jkPiupai7Ex40y","function":{"arguments":"{\"input\":\"words
+      importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_aTHs5ygy68jkPiupai7Ex40y"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_A4UHW2fzuKEPK8B4OS61QbpL","function":{"arguments":"{\"input\":\"rule
+      of construction for words importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_A4UHW2fzuKEPK8B4OS61QbpL"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_MSiQQKbM8m2jRZOMmfV7Tryk","function":{"arguments":"{\"document_id\":1}","name":"load_document_md_summary"},"type":"function"}]},{"role":"tool","content":"#
+      Summary for Document 1 (USC Title 1 - General Provisions)\n\nThis document is
+      Title 1 of the United States Code, \"General Provisions,\" as enacted on July
+      30, 1947. It establishes fundamental rules for the construction and interpretation
+      of federal laws.\n\nKey topics covered:\n- **Chapter 1: Rules of Construction:**
+      Defines how terms like singular/plural, gender, and tense should be interpreted
+      in legislation. Provides standard definitions for \"person,\" \"company,\" \"vessel,\"
+      \"vehicle,\" \"oath,\" and \"writing.\" Addresses the meaning of \"county.\"\n-
+      **Chapter 2: Acts and Resolutions:** Outlines formalities for the enactment
+      of laws, procedures for repeals, and the sealing of official instruments.\n-
+      **Chapter 3: Code of Laws of the United States and Supplements:** Details regarding
+      the official U.S. Code and its supplements, including the District of Columbia
+      Code.\n\nThis title also includes provisions regarding \"products of American
+      fisheries,\" definitions of \"marriage\" and \"spouse\" (as amended by the Respect
+      for Marriage Act), and the inclusion of \"born-alive infants\" under terms like
+      \"person\" and \"human being.\" It serves as a foundational text for understanding
+      federal statutory language. ","name":"load_document_md_summary","tool_call_id":"call_MSiQQKbM8m2jRZOMmfV7Tryk"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_B8HbKlJLm0QLTMnpDJh3lX7U","function":{"arguments":"{\"input\":\"Chapter
+      1: Rules of Construction\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_B8HbKlJLm0QLTMnpDJh3lX7U"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
+      int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
+      the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        truncate_length: Optional number
+      of characters to truncate. If provided,\n                        returns only
+      that many characters\n        from_start: If True, return from the start up
+      to truncate_length.\n                   Otherwise, return from the end\n\n    Returns:\n        A
+      string containing the content of the md_summary_file (possibly truncated)\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"truncate_length":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Truncate
+      Length"},"from_start":{"default":true,"title":"From Start","type":"boolean"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_md_summary_token_length","description":"get_md_summary_token_length(document_id:
+      int) -> int\n\n    Calculate the approximate token length of a Document''s md_summary_file.\n    Uses
+      a naive whitespace-based split for tokenization.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n\n    Returns:\n        An integer representing
+      the approximate token count of the md_summary_file\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_notes_for_document_corpus","description":"get_notes_for_document_corpus(document_id:
+      int, corpus_id: Optional[int] = None) -> list[dict[str, typing.Any]]\n\n    Retrieve
+      all Note objects for a given document and (optionally) a specific corpus.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        corpus_id: The primary key (ID)
+      of the Corpus, or None if unspecified\n\n    Returns:\n        A list of dictionaries,
+      each containing Note data (content truncated to 512 chars):\n        [\n            {\n                \"id\":
+      <note_id>,\n                \"title\": <title>,\n                \"content\":
+      <content>,\n                \"creator_id\": <creator_id>,\n                \"created\":
+      <created_datetime_iso>,\n                \"modified\": <modified_datetime_iso>,\n            },\n            ...\n        ]\n\n    Raises:\n        ValueError:
+      If document doesn''t exist\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"corpus_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Corpus
+      Id"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_note_content_token_length","description":"get_note_content_token_length(note_id:
+      int) -> int\n\n    Calculate the approximate token length of a Note''s content
+      using naive whitespace-based split.\n\n    Args:\n        note_id: The primary
+      key (ID) of the Note\n\n    Returns:\n        An integer representing the approximate
+      token count of the note''s content\n\n    Raises:\n        ValueError: If note
+      doesn''t exist\n    ","parameters":{"properties":{"note_id":{"title":"Note Id","type":"integer"}},"required":["note_id"],"type":"object"}}},{"type":"function","function":{"name":"get_partial_note_content","description":"get_partial_note_content(note_id:
+      int, start: int = 0, end: int = 500) -> str\n\n    Retrieve a substring of the
+      note''s content from index ''start'' to index ''end''.\n\n    Args:\n        note_id:
+      The primary key (ID) of the Note\n        start: The starting position for extraction\n        end:
+      The position at which to stop before extraction (non-inclusive)\n\n    Returns:\n        A
+      string representing the specified portion of the note''s content\n\n    Raises:\n        ValueError:
+      If note doesn''t exist or invalid start/end indices\n    ","parameters":{"properties":{"note_id":{"title":"Note
+      Id","type":"integer"},"start":{"default":0,"title":"Start","type":"integer"},"end":{"default":500,"title":"End","type":"integer"}},"required":["note_id"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '8247'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=RSeq4J13F33hxAw9ImnerHjjhK9XDk2bWUqj8G0Px5s-1748838231-1.0.1.1-neM0nyYw15A1tyGUtGk1s5bwIjeQKFc26RtBptpgVhO.dubzHTRbfBfFGG7NaOmiU.SKODzBXULN5ahXlBpt2hjWBm7_rUzc5D7hPcQgf90;
+        _cfuvid=0xLqf00SzdSl2jFO3Eqf409RVlK.3f3vGZLPpd8_VMY-1748838231529-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.81.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-Bdr0F4QUt77OIaCx3L77AyzsOgDsI","object":"chat.completion.chunk","created":1748838235,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_1rek3WUK1yb6GZYeCtSwS0f9","type":"function","function":{"name":"doc_engine","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0F4QUt77OIaCx3L77AyzsOgDsI","object":"chat.completion.chunk","created":1748838235,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0F4QUt77OIaCx3L77AyzsOgDsI","object":"chat.completion.chunk","created":1748838235,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"input"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0F4QUt77OIaCx3L77AyzsOgDsI","object":"chat.completion.chunk","created":1748838235,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0F4QUt77OIaCx3L77AyzsOgDsI","object":"chat.completion.chunk","created":1748838235,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"gender"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0F4QUt77OIaCx3L77AyzsOgDsI","object":"chat.completion.chunk","created":1748838235,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        construction"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0F4QUt77OIaCx3L77AyzsOgDsI","object":"chat.completion.chunk","created":1748838235,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        rule"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0F4QUt77OIaCx3L77AyzsOgDsI","object":"chat.completion.chunk","created":1748838235,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0F4QUt77OIaCx3L77AyzsOgDsI","object":"chat.completion.chunk","created":1748838235,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-RAY:
+      - 94942d9ced1c4538-ATL
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 02 Jun 2025 04:23:56 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '613'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '617'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999454'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 8ms
+      x-request-id:
+      - req_7f1eb14332f54322f85976b7cf922c6a
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "gender construction rule"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '36'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[0.03252115473151207,0.09598729759454727,0.008737235330045223,-0.052551548928022385,-0.10067163407802582,0.017456423491239548,-0.03465454280376434,-0.08825988322496414,0.026952635496854782,0.06480464339256287,0.07275263965129852,-0.037877947092056274,-0.04273020476102829,0.0282187107950449,0.07055077701807022,-0.007014541421085596,-0.06306428462266922,0.0008591576479375362,-0.024874644353985786,0.09555397182703018,0.08607176691293716,-0.0656944140791893,0.05148636922240257,-0.045296065509319305,-0.048251740634441376,-0.1323423981666565,-0.0004890890559181571,0.00778708653524518,0.05767831578850746,-0.040808435529470444,-0.042256925255060196,0.03899485990405083,0.0334770493209362,-0.01562308520078659,-0.0700666755437851,-0.012283039279282093,0.007983468472957611,-0.058963559567928314,-0.00441768066957593,0.1257486790418625,-0.05523746460676193,-0.08562558144330978,0.022246310487389565,0.03784066066145897,0.0059648556634783745,0.09102988988161087,0.026916207745671272,0.026695143431425095,-0.08717850595712662,-0.017332881689071655,0.016504010185599327,0.006975267082452774,-0.046224091202020645,0.09911708533763885,-0.002007512841373682,-0.004221066832542419,-0.038346000015735626,-0.05054888874292374,0.010419194586575031,0.0021256490144878626,-0.04667583853006363,0.03198932856321335,0.0179453082382679,-0.02447780966758728,0.05249679461121559,0.014563153497874737,-0.03853759914636612,-0.029573101550340652,-0.012503420002758503,0.046610645949840546,0.05268686264753342,0.05606626346707344,-0.08788233995437622,0.118956558406353,0.05255075916647911,0.08951538056135178,0.02977651171386242,0.01906699687242508,0.003257686272263527,-0.09404291957616806,-0.09705373644828796,-0.07656391710042953,0.08850357681512833,0.03638231009244919,0.02708532102406025,-0.021860064938664436,0.018013762310147285,-0.023145711049437523,-0.061564989387989044,0.06503382325172424,-0.11082766205072403,-0.05477380007505417,0.005764434114098549,-0.02129441127181053,0.010312676429748535,0.021461104974150658,-0.06176135316491127,-0.0372227244079113,0.023612217977643013,0.0867144837975502,-0.007013644091784954,0.029786868020892143,-0.020404743030667305,-0.0003166029928252101,-0.021738136187195778,-0.013237742707133293,-0.07518982887268066,-0.012568449601531029,-0.028927287086844444,-0.009112384170293808,-0.03644999489188194,0.002907376503571868,-0.014671044424176216,-0.0012399586848914623,0.03438381850719452,-0.04479366913437843,0.045553792268037796,0.03528120368719101,0.09930288046598434,0.0017371342983096838,-0.0030694373417645693,-0.06684485077857971,-0.045527923852205276,-0.006115612108260393,-0.01836201548576355,-0.02788339927792549,-0.08512426912784576,5.77343345109756e-31,0.018889322876930237,-0.1110932007431984,0.03954005986452103,0.005727399606257677,0.023243196308612823,0.047703925520181656,0.046302251517772675,-0.07360955327749252,0.010949129238724709,-0.019613752141594887,0.0064118122681975365,-0.12084875255823135,-0.023629602044820786,-0.053812410682439804,0.09914368391036987,-0.02355189062654972,0.04585319757461548,0.0050911735743284225,-0.09160133451223373,0.057662662118673325,0.037491194903850555,0.07827843725681305,-0.01197363343089819,0.03258862718939781,-0.004943022038787603,-0.02989027090370655,0.027146629989147186,-0.03972306847572327,-0.04872796684503555,-0.010637949220836163,-0.019145891070365906,-0.06399497389793396,0.04198702797293663,0.047799304127693176,-0.0243984404951334,-0.03023088164627552,0.060981158167123795,-0.0028149804566055536,0.05395321175456047,0.06320218741893768,0.0037869985681027174,-0.05692480877041817,0.0286924559623003,0.007972587831318378,-0.04478587582707405,0.08023615926504135,0.04452236369252205,-0.012883640825748444,-0.07485642284154892,0.06948962807655334,-0.050770919770002365,0.1273755133152008,0.04002385959029198,-0.024531716480851173,0.06038430705666542,0.00742839090526104,-0.024892430752515793,-0.004547921475023031,-0.06262187659740448,0.00936126708984375,0.05519762635231018,0.05751694738864899,0.0728181004524231,0.01592106558382511,-0.049773577600717545,-0.05698157846927643,0.04272863268852234,-0.09381308406591415,0.10404781252145767,-0.07055535912513733,0.008494819514453411,0.03492765501141548,-0.041702087968587875,0.07373377680778503,0.001153645571321249,-0.019544649869203568,0.014024199917912483,-0.013458896428346634,0.06785958260297775,-0.16782543063163757,-0.005077489651739597,0.11790403723716736,-0.02237701788544655,0.005224174819886684,-0.030088454484939575,-0.06882739067077637,0.006736730691045523,0.016881097108125687,0.027308180928230286,0.0359407439827919,-0.032832369208335876,-0.01467131543904543,0.03654066100716591,-0.013170378282666206,0.0668368861079216,-2.2909176342396944e-33,-0.059062402695417404,-0.05225092172622681,-0.024776604026556015,-0.06551309674978256,-0.02855309098958969,-0.04762503504753113,-0.0032903437968343496,-0.1160537376999855,0.053025517612695694,0.05664580687880516,0.0030820739921182394,-0.025444965809583664,0.0036063191946595907,-0.010053534992039204,-0.07014509290456772,-0.04517044499516487,-0.041293054819107056,-0.04049009457230568,0.006960263010114431,0.1046953797340393,-0.03396349400281906,0.09060852974653244,-0.0067322445102036,-0.00875500775873661,-0.006895600352436304,-0.029834331944584846,-0.03592930734157562,-0.0006532129482366145,0.040755029767751694,0.06582047045230865,-0.0821058452129364,-0.04915837571024895,-0.009632118046283722,0.050898078829050064,0.05711778625845909,-0.10197470337152481,-0.03754599392414093,0.04671461135149002,0.13751086592674255,0.030151652172207832,0.024395642802119255,0.021740205585956573,0.006414816714823246,-0.002958387602120638,0.04134873300790787,-0.009736421518027782,-0.009259860031306744,-0.005293387454003096,0.07162291556596756,-0.0434793122112751,-0.08783198148012161,0.004624855238944292,-0.0025371252559125423,-0.08749781548976898,-0.049574244767427444,-0.10499931126832962,-0.05370447039604187,-0.022884497418999672,0.0028192484751343727,0.08512932062149048,-0.037565309554338455,0.05975549295544624,0.08305002748966217,0.004871557466685772,-0.04793870821595192,-0.06370320916175842,0.01895391196012497,-0.05138687789440155,-0.0022266171872615814,0.052758339792490005,0.010774418711662292,-0.013072320260107517,-0.04308044910430908,0.04560158774256706,0.02007506974041462,-0.040750980377197266,0.059045761823654175,0.028597019612789154,0.018443318083882332,-0.03126789629459381,-0.054219141602516174,0.01960686221718788,0.031119735911488533,0.060202617198228836,-0.041493333876132965,0.01903744600713253,0.05651089549064636,0.08275561779737473,-0.017030835151672363,0.01333676464855671,-0.0033978705760091543,0.07990607619285583,-0.004406058229506016,-0.024053774774074554,-0.02028355933725834,-1.604912171740262e-33,0.0036963922902941704,-0.05365602672100067,0.01066017895936966,-0.021613873541355133,0.05701964348554611,0.0507577583193779,0.023985926061868668,-0.11897828429937363,0.029232587665319443,0.03167232125997543,0.01966695487499237,0.04255248233675957,0.07951150089502335,-0.013152623549103737,-0.057768359780311584,-0.013239150866866112,0.051257550716400146,-0.028271185234189034,-0.0349503830075264,-0.0022145770490169525,-0.012515159323811531,-0.08671227842569351,-0.05161032825708389,0.05843634158372879,-0.03445471078157425,0.015608602203428745,0.02592313289642334,-0.022578904405236244,-0.08504120260477066,0.06739570200443268,0.10296246409416199,0.07487188279628754,-0.02677626721560955,-0.060085512697696686,0.04868898540735245,-0.02620181441307068,-0.010033275000751019,0.01906849443912506,0.020518677309155464,0.00016556598711758852,0.02292591519653797,-0.03926960751414299,-0.01705167256295681,-0.012775496579706669,0.054953161627054214,0.03948553651571274,-0.01260979101061821,-0.04225635528564453,-0.09245415776968002,0.09822650998830795,0.021449893712997437,-0.03448907658457756,0.010520041920244694,-0.020031262189149857,0.031728122383356094,-0.000654711970128119,0.007246198132634163,0.040766291320323944,0.04427238926291466,0.04915995895862579,-0.01235760748386383,-0.011280430480837822,0.0985575020313263,-0.02657633274793625]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8075'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 02 Jun 2025 04:23:56 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
+      document analysis and interpretation. Your primary goal is to answer questions
+      accurately based on the provided document: ''Test Doc'' (ID: 1).\n\nThis document
+      is described as:\n`USC Title 1 - Chapter 1`\n\nWhile a summary may be available,
+      it''s crucial to leverage all your tools for a comprehensive understanding.
+      You have access to a sophisticated vector search engine capable of finding semantically
+      similar text to answer queries, alongside other specialized tools.\n\nAlways
+      prioritize information retrieved directly from the document using these tools.
+      Do not rely solely on the summary or your general knowledge. Strive to provide
+      answers grounded in the document''s content, presented in clear and helpful
+      markdown. Avoid repeating instructions or disclaimers."},{"role":"user","content":"Regarding
+      US Code Title 1, what is the rule of construction for ''words importing the
+      masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_aTHs5ygy68jkPiupai7Ex40y","function":{"arguments":"{\"input\":\"words
+      importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_aTHs5ygy68jkPiupai7Ex40y"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_A4UHW2fzuKEPK8B4OS61QbpL","function":{"arguments":"{\"input\":\"rule
+      of construction for words importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_A4UHW2fzuKEPK8B4OS61QbpL"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_MSiQQKbM8m2jRZOMmfV7Tryk","function":{"arguments":"{\"document_id\":1}","name":"load_document_md_summary"},"type":"function"}]},{"role":"tool","content":"#
+      Summary for Document 1 (USC Title 1 - General Provisions)\n\nThis document is
+      Title 1 of the United States Code, \"General Provisions,\" as enacted on July
+      30, 1947. It establishes fundamental rules for the construction and interpretation
+      of federal laws.\n\nKey topics covered:\n- **Chapter 1: Rules of Construction:**
+      Defines how terms like singular/plural, gender, and tense should be interpreted
+      in legislation. Provides standard definitions for \"person,\" \"company,\" \"vessel,\"
+      \"vehicle,\" \"oath,\" and \"writing.\" Addresses the meaning of \"county.\"\n-
+      **Chapter 2: Acts and Resolutions:** Outlines formalities for the enactment
+      of laws, procedures for repeals, and the sealing of official instruments.\n-
+      **Chapter 3: Code of Laws of the United States and Supplements:** Details regarding
+      the official U.S. Code and its supplements, including the District of Columbia
+      Code.\n\nThis title also includes provisions regarding \"products of American
+      fisheries,\" definitions of \"marriage\" and \"spouse\" (as amended by the Respect
+      for Marriage Act), and the inclusion of \"born-alive infants\" under terms like
+      \"person\" and \"human being.\" It serves as a foundational text for understanding
+      federal statutory language. ","name":"load_document_md_summary","tool_call_id":"call_MSiQQKbM8m2jRZOMmfV7Tryk"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_B8HbKlJLm0QLTMnpDJh3lX7U","function":{"arguments":"{\"input\":\"Chapter
+      1: Rules of Construction\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_B8HbKlJLm0QLTMnpDJh3lX7U"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_1rek3WUK1yb6GZYeCtSwS0f9","function":{"arguments":"{\"input\":\"gender
+      construction rule\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_1rek3WUK1yb6GZYeCtSwS0f9"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
+      int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
+      the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        truncate_length: Optional number
+      of characters to truncate. If provided,\n                        returns only
+      that many characters\n        from_start: If True, return from the start up
+      to truncate_length.\n                   Otherwise, return from the end\n\n    Returns:\n        A
+      string containing the content of the md_summary_file (possibly truncated)\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"truncate_length":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Truncate
+      Length"},"from_start":{"default":true,"title":"From Start","type":"boolean"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_md_summary_token_length","description":"get_md_summary_token_length(document_id:
+      int) -> int\n\n    Calculate the approximate token length of a Document''s md_summary_file.\n    Uses
+      a naive whitespace-based split for tokenization.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n\n    Returns:\n        An integer representing
+      the approximate token count of the md_summary_file\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_notes_for_document_corpus","description":"get_notes_for_document_corpus(document_id:
+      int, corpus_id: Optional[int] = None) -> list[dict[str, typing.Any]]\n\n    Retrieve
+      all Note objects for a given document and (optionally) a specific corpus.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        corpus_id: The primary key (ID)
+      of the Corpus, or None if unspecified\n\n    Returns:\n        A list of dictionaries,
+      each containing Note data (content truncated to 512 chars):\n        [\n            {\n                \"id\":
+      <note_id>,\n                \"title\": <title>,\n                \"content\":
+      <content>,\n                \"creator_id\": <creator_id>,\n                \"created\":
+      <created_datetime_iso>,\n                \"modified\": <modified_datetime_iso>,\n            },\n            ...\n        ]\n\n    Raises:\n        ValueError:
+      If document doesn''t exist\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"corpus_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Corpus
+      Id"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_note_content_token_length","description":"get_note_content_token_length(note_id:
+      int) -> int\n\n    Calculate the approximate token length of a Note''s content
+      using naive whitespace-based split.\n\n    Args:\n        note_id: The primary
+      key (ID) of the Note\n\n    Returns:\n        An integer representing the approximate
+      token count of the note''s content\n\n    Raises:\n        ValueError: If note
+      doesn''t exist\n    ","parameters":{"properties":{"note_id":{"title":"Note Id","type":"integer"}},"required":["note_id"],"type":"object"}}},{"type":"function","function":{"name":"get_partial_note_content","description":"get_partial_note_content(note_id:
+      int, start: int = 0, end: int = 500) -> str\n\n    Retrieve a substring of the
+      note''s content from index ''start'' to index ''end''.\n\n    Args:\n        note_id:
+      The primary key (ID) of the Note\n        start: The starting position for extraction\n        end:
+      The position at which to stop before extraction (non-inclusive)\n\n    Returns:\n        A
+      string representing the specified portion of the note''s content\n\n    Raises:\n        ValueError:
+      If note doesn''t exist or invalid start/end indices\n    ","parameters":{"properties":{"note_id":{"title":"Note
+      Id","type":"integer"},"start":{"default":0,"title":"Start","type":"integer"},"end":{"default":500,"title":"End","type":"integer"}},"required":["note_id"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '8563'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=RSeq4J13F33hxAw9ImnerHjjhK9XDk2bWUqj8G0Px5s-1748838231-1.0.1.1-neM0nyYw15A1tyGUtGk1s5bwIjeQKFc26RtBptpgVhO.dubzHTRbfBfFGG7NaOmiU.SKODzBXULN5ahXlBpt2hjWBm7_rUzc5D7hPcQgf90;
+        _cfuvid=0xLqf00SzdSl2jFO3Eqf409RVlK.3f3vGZLPpd8_VMY-1748838231529-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.81.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_WvHa1HvNXdD0Dwy9txpYB2EI","type":"function","function":{"name":"doc_engine","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"input"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"US"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        Code"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        Title"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        "}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"1"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        Chapter"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        "}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"1"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0GUoojm9uHPj1zuSxCJqvfPMaE","object":"chat.completion.chunk","created":1748838236,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
 
 
         data: [DONE]
@@ -1226,13 +1291,13 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 94941c8dfa6453b9-ATL
+      - 94942da32d324538-ATL
       Connection:
       - keep-alive
       Content-Type:
       - text/event-stream; charset=utf-8
       Date:
-      - Mon, 02 Jun 2025 04:12:17 GMT
+      - Mon, 02 Jun 2025 04:23:57 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -1246,13 +1311,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '599'
+      - '348'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '613'
+      - '350'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -1260,13 +1325,247 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999770'
+      - '3999449'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 3ms
+      - 8ms
       x-request-id:
-      - req_707203ad517a5f5092a629b48323ad59
+      - req_58117e4555514c1badcf0f7c7d979d18
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "US Code Title 1 Chapter 1"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '37'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[-0.007381741888821125,0.06447645276784897,-0.006386092863976955,-0.026315981522202492,-0.010246453806757927,0.0837520882487297,0.03526415675878525,-0.007821840234100819,-0.02691563405096531,0.06728959828615189,0.005065636243671179,-0.019749287515878677,0.08070436120033264,-0.11220801621675491,-0.08714010566473007,-0.026457175612449646,-0.04411754757165909,-0.019147243350744247,-0.02297040820121765,-0.005835725460201502,0.013252325356006622,0.04866638034582138,-0.01701064594089985,0.021669067442417145,0.02630005031824112,0.025432277470827103,-0.008262339048087597,0.022470807656645775,-0.006595215760171413,-0.10634227842092514,0.005450661759823561,0.03153173625469208,0.01192829106003046,0.03318239003419876,0.04470280557870865,0.041165854781866074,0.11541345715522766,-0.0051561868749558926,0.009726912714540958,0.013893846422433853,-0.06901784241199493,-0.04594377428293228,0.033955756574869156,0.013508853502571583,0.019538896158337593,0.041610393673181534,-0.046333782374858856,0.02675960399210453,0.02634328231215477,0.008085425943136215,0.007237523328512907,0.03538103029131889,-0.10107720643281937,-0.007427676115185022,0.02554933726787567,0.06406252086162567,0.04158146679401398,0.011379998177289963,-0.003368878737092018,-0.049601346254348755,-0.03207409754395485,0.024670638144016266,-0.023970378562808037,0.047594375908374786,0.11289919167757034,-0.041974522173404694,-0.00014552808715961874,-0.02337217889726162,-0.0677744597196579,0.0010501588694751263,-0.07054980844259262,0.026417793706059456,-0.08388393372297287,0.02933802269399166,0.0035920871887356043,-0.04162098839879036,0.01691884547472,0.02645309641957283,0.060959842056035995,-0.11049312353134155,-0.06637227535247803,-0.07330937683582306,0.03072783164680004,0.005260172300040722,-0.017302174121141434,0.1438392847776413,-0.03507866710424423,-0.06868122518062592,0.04202928766608238,-0.03498368710279465,-0.029623275622725487,-0.11420923471450806,0.1413084864616394,0.09978385269641876,-0.02268463745713234,-0.03407352790236473,-0.09578459709882736,-0.0010354374535381794,-0.03514343872666359,0.07228653132915497,-0.023163629695773125,-0.013539283536374569,0.025215288624167442,-0.03840687498450279,-0.014794871211051941,-0.04796358570456505,0.06858991831541061,-0.06963063031435013,-0.007681256625801325,-0.03216050937771797,0.05103590339422226,-0.05480382218956947,-0.04183170571923256,-0.04171027988195419,0.01986280083656311,-0.013207395561039448,0.1454126387834549,-0.048553358763456345,-0.060452401638031006,-0.058549463748931885,0.10138965398073196,0.02822415716946125,-0.09041792154312134,0.03206993639469147,-0.09445777535438538,-0.04222767800092697,0.09781881421804428,1.139234581879083e-31,-0.007544616237282753,-0.07058147341012955,0.05136027932167053,0.04619543254375458,0.10418634116649628,0.021913127973675728,-0.024340394884347916,0.04970933496952057,-0.13852325081825256,0.084480881690979,0.07102937996387482,-0.06363338232040405,-0.05970473960042,0.12689606845378876,-0.04866178706288338,-0.00477950694039464,-0.03514651209115982,0.002244279021397233,-0.016059724614024162,-0.0075688171200454235,0.018108783289790154,0.06311000138521194,-0.0025465702638030052,-0.042646050453186035,0.06733452528715134,-0.008718843571841717,-0.05369248613715172,-0.007798423059284687,-0.022819511592388153,0.01788444258272648,0.014242452569305897,0.002967738313600421,0.034222088754177094,0.033995550125837326,0.01023542694747448,-0.012795350514352322,0.04419173300266266,-0.045068711042404175,-0.005717623047530651,0.010781154036521912,-0.028692303225398064,0.03585043177008629,-0.059836484491825104,-0.003569889348000288,0.07340484112501144,0.06658180058002472,0.0307124312967062,0.02788081020116806,0.03624357283115387,0.029183123260736465,-0.009060326032340527,0.09180402010679245,-0.012981770560145378,-0.01638178527355194,-0.0008900537504814565,-0.0082319974899292,-0.07849690318107605,0.06271172314882278,0.02013687789440155,-0.0025367937050759792,-0.03688080981373787,0.005776760634034872,0.02503282018005848,0.017463693395256996,-0.01651824079453945,-0.026542475447058678,-0.050809890031814575,-0.07659412920475006,0.07377317547798157,0.05931680276989937,-0.10127884894609451,-0.019840659573674202,0.040753237903118134,0.03962382301688194,0.05296265706419945,-0.03581547737121582,0.06987926363945007,-0.08433650434017181,0.0074488315731287,-0.04698142409324646,-0.0865546464920044,-0.022597255185246468,0.02445359341800213,-0.03149425610899925,-0.0005701517802663147,0.013547094538807869,0.08173739165067673,-0.08574647456407547,0.04730449244379997,0.025326216593384743,0.05922979861497879,-0.049443136900663376,-0.014692705124616623,0.007155184634029865,0.11958557367324829,-3.540175724944019e-33,-0.04696761071681976,-0.03257407620549202,-0.10292277485132217,-0.09731090068817139,-0.04446892812848091,-0.005141097120940685,-0.06733620166778564,0.019153591245412827,0.015076790004968643,-0.001734118559397757,0.014119834639132023,-0.02288188971579075,0.0018026649486273527,0.025499025359749794,0.030683068558573723,-0.04093038663268089,0.07260274142026901,-0.05492481216788292,-0.04243664816021919,0.07958781719207764,-0.03848353400826454,0.08477308601140976,-0.04912194982171059,-0.06842463463544846,-0.0016683783615007997,-0.07873114943504333,-0.05644030123949051,0.044981736689805984,0.03750542923808098,-0.009238633327186108,0.07286456972360611,0.0213608518242836,0.00555836409330368,0.08454813063144684,-0.0855400487780571,-0.025554681196808815,0.03737468272447586,-0.08501437306404114,0.03737306594848633,0.04671001806855202,0.023840753361582756,-0.028173618018627167,0.03309817612171173,0.007084128446877003,0.04632817581295967,-0.049450282007455826,0.055657193064689636,-0.030957208946347237,-0.09229879826307297,-0.0027798227965831757,-0.007150732446461916,-0.03224064037203789,-0.04393753036856651,-0.019032398238778114,-0.015119487419724464,0.045062776654958725,0.03822460025548935,-0.030711788684129715,-0.012314564548432827,-0.016352230682969093,0.007498841267079115,0.02491578459739685,-0.08783891797065735,0.04077695310115814,0.04872778803110123,-0.14792723953723907,-0.00912286713719368,-0.0022213917691260576,0.04372120276093483,0.0405818335711956,-0.10232660174369812,-0.028173379600048065,-0.10635579377412796,-0.047553468495607376,0.025960568338632584,0.05050571262836456,0.0019551455043256283,-0.02373543195426464,-0.05778443440794945,-0.04168645665049553,0.017154023051261902,0.029685867950320244,-0.11556455492973328,0.07097873836755753,-0.0070205493830144405,-0.007259811740368605,0.07516150921583176,0.044182710349559784,-0.04991232976317406,0.0030026971362531185,-0.0066617513075470924,0.007009569555521011,0.008321656845510006,0.02259238436818123,0.005635792855173349,-6.603023831226157e-35,-0.0438619889318943,-0.0010493929730728269,-0.04367057606577873,-0.0022073742002248764,0.011779697611927986,0.0856788232922554,0.012261969968676567,-0.01642158254981041,-0.06908100098371506,0.03531933203339577,0.009556245990097523,0.1048450693488121,0.00039474182995036244,-0.023485159501433372,-0.003515015123412013,0.013147053308784962,-0.04474761337041855,0.011814398691058159,-0.05294431746006012,0.058928232640028,0.0533783920109272,0.002027237555012107,-0.012787038460373878,-0.04653196781873703,-0.11521623283624649,0.027643198147416115,0.038615114986896515,0.00829334370791912,-0.02011531963944435,0.0888839140534401,0.06441321969032288,0.05153898149728775,-0.024277010932564735,-0.028822313994169235,0.026202186942100525,-0.008888606913387775,0.0010789408115670085,0.08819106221199036,0.06771627068519592,-0.07355064153671265,0.06718043982982635,-0.020387612283229828,0.008082219399511814,0.02506101131439209,-0.01777586340904236,0.03168829157948494,-0.03719973936676979,-0.06254693865776062,0.015891967341303825,-0.013331779278814793,-0.050673261284828186,-0.07079222053289413,0.061331313103437424,-0.012803628109395504,0.03243551030755043,0.0987224280834198,-0.008578699082136154,-0.017020320519804955,-0.005860454402863979,-0.025466857478022575,-0.02918330952525139,0.08430206775665283,0.0032982847187668085,-0.01866343803703785]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8069'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 02 Jun 2025 04:23:57 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
+      document analysis and interpretation. Your primary goal is to answer questions
+      accurately based on the provided document: ''Test Doc'' (ID: 1).\n\nThis document
+      is described as:\n`USC Title 1 - Chapter 1`\n\nWhile a summary may be available,
+      it''s crucial to leverage all your tools for a comprehensive understanding.
+      You have access to a sophisticated vector search engine capable of finding semantically
+      similar text to answer queries, alongside other specialized tools.\n\nAlways
+      prioritize information retrieved directly from the document using these tools.
+      Do not rely solely on the summary or your general knowledge. Strive to provide
+      answers grounded in the document''s content, presented in clear and helpful
+      markdown. Avoid repeating instructions or disclaimers."},{"role":"user","content":"Regarding
+      US Code Title 1, what is the rule of construction for ''words importing the
+      masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_aTHs5ygy68jkPiupai7Ex40y","function":{"arguments":"{\"input\":\"words
+      importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_aTHs5ygy68jkPiupai7Ex40y"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_A4UHW2fzuKEPK8B4OS61QbpL","function":{"arguments":"{\"input\":\"rule
+      of construction for words importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_A4UHW2fzuKEPK8B4OS61QbpL"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_MSiQQKbM8m2jRZOMmfV7Tryk","function":{"arguments":"{\"document_id\":1}","name":"load_document_md_summary"},"type":"function"}]},{"role":"tool","content":"#
+      Summary for Document 1 (USC Title 1 - General Provisions)\n\nThis document is
+      Title 1 of the United States Code, \"General Provisions,\" as enacted on July
+      30, 1947. It establishes fundamental rules for the construction and interpretation
+      of federal laws.\n\nKey topics covered:\n- **Chapter 1: Rules of Construction:**
+      Defines how terms like singular/plural, gender, and tense should be interpreted
+      in legislation. Provides standard definitions for \"person,\" \"company,\" \"vessel,\"
+      \"vehicle,\" \"oath,\" and \"writing.\" Addresses the meaning of \"county.\"\n-
+      **Chapter 2: Acts and Resolutions:** Outlines formalities for the enactment
+      of laws, procedures for repeals, and the sealing of official instruments.\n-
+      **Chapter 3: Code of Laws of the United States and Supplements:** Details regarding
+      the official U.S. Code and its supplements, including the District of Columbia
+      Code.\n\nThis title also includes provisions regarding \"products of American
+      fisheries,\" definitions of \"marriage\" and \"spouse\" (as amended by the Respect
+      for Marriage Act), and the inclusion of \"born-alive infants\" under terms like
+      \"person\" and \"human being.\" It serves as a foundational text for understanding
+      federal statutory language. ","name":"load_document_md_summary","tool_call_id":"call_MSiQQKbM8m2jRZOMmfV7Tryk"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_B8HbKlJLm0QLTMnpDJh3lX7U","function":{"arguments":"{\"input\":\"Chapter
+      1: Rules of Construction\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_B8HbKlJLm0QLTMnpDJh3lX7U"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_1rek3WUK1yb6GZYeCtSwS0f9","function":{"arguments":"{\"input\":\"gender
+      construction rule\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_1rek3WUK1yb6GZYeCtSwS0f9"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_WvHa1HvNXdD0Dwy9txpYB2EI","function":{"arguments":"{\"input\":\"US
+      Code Title 1 Chapter 1\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_WvHa1HvNXdD0Dwy9txpYB2EI"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
+      int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
+      the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        truncate_length: Optional number
+      of characters to truncate. If provided,\n                        returns only
+      that many characters\n        from_start: If True, return from the start up
+      to truncate_length.\n                   Otherwise, return from the end\n\n    Returns:\n        A
+      string containing the content of the md_summary_file (possibly truncated)\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"truncate_length":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Truncate
+      Length"},"from_start":{"default":true,"title":"From Start","type":"boolean"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_md_summary_token_length","description":"get_md_summary_token_length(document_id:
+      int) -> int\n\n    Calculate the approximate token length of a Document''s md_summary_file.\n    Uses
+      a naive whitespace-based split for tokenization.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n\n    Returns:\n        An integer representing
+      the approximate token count of the md_summary_file\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_notes_for_document_corpus","description":"get_notes_for_document_corpus(document_id:
+      int, corpus_id: Optional[int] = None) -> list[dict[str, typing.Any]]\n\n    Retrieve
+      all Note objects for a given document and (optionally) a specific corpus.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        corpus_id: The primary key (ID)
+      of the Corpus, or None if unspecified\n\n    Returns:\n        A list of dictionaries,
+      each containing Note data (content truncated to 512 chars):\n        [\n            {\n                \"id\":
+      <note_id>,\n                \"title\": <title>,\n                \"content\":
+      <content>,\n                \"creator_id\": <creator_id>,\n                \"created\":
+      <created_datetime_iso>,\n                \"modified\": <modified_datetime_iso>,\n            },\n            ...\n        ]\n\n    Raises:\n        ValueError:
+      If document doesn''t exist\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"corpus_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Corpus
+      Id"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_note_content_token_length","description":"get_note_content_token_length(note_id:
+      int) -> int\n\n    Calculate the approximate token length of a Note''s content
+      using naive whitespace-based split.\n\n    Args:\n        note_id: The primary
+      key (ID) of the Note\n\n    Returns:\n        An integer representing the approximate
+      token count of the note''s content\n\n    Raises:\n        ValueError: If note
+      doesn''t exist\n    ","parameters":{"properties":{"note_id":{"title":"Note Id","type":"integer"}},"required":["note_id"],"type":"object"}}},{"type":"function","function":{"name":"get_partial_note_content","description":"get_partial_note_content(note_id:
+      int, start: int = 0, end: int = 500) -> str\n\n    Retrieve a substring of the
+      note''s content from index ''start'' to index ''end''.\n\n    Args:\n        note_id:
+      The primary key (ID) of the Note\n        start: The starting position for extraction\n        end:
+      The position at which to stop before extraction (non-inclusive)\n\n    Returns:\n        A
+      string representing the specified portion of the note''s content\n\n    Raises:\n        ValueError:
+      If note doesn''t exist or invalid start/end indices\n    ","parameters":{"properties":{"note_id":{"title":"Note
+      Id","type":"integer"},"start":{"default":0,"title":"Start","type":"integer"},"end":{"default":500,"title":"End","type":"integer"}},"required":["note_id"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '8880'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=RSeq4J13F33hxAw9ImnerHjjhK9XDk2bWUqj8G0Px5s-1748838231-1.0.1.1-neM0nyYw15A1tyGUtGk1s5bwIjeQKFc26RtBptpgVhO.dubzHTRbfBfFGG7NaOmiU.SKODzBXULN5ahXlBpt2hjWBm7_rUzc5D7hPcQgf90;
+        _cfuvid=0xLqf00SzdSl2jFO3Eqf409RVlK.3f3vGZLPpd8_VMY-1748838231529-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.81.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-Bdr0HYrq4DeEsNsZfDLpkFs1gu2Pw","object":"chat.completion.chunk","created":1748838237,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_utAzdc2ehS1aOvR5VMuxkzCE","type":"function","function":{"name":"get_notes_for_document_corpus","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0HYrq4DeEsNsZfDLpkFs1gu2Pw","object":"chat.completion.chunk","created":1748838237,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0HYrq4DeEsNsZfDLpkFs1gu2Pw","object":"chat.completion.chunk","created":1748838237,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"document"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0HYrq4DeEsNsZfDLpkFs1gu2Pw","object":"chat.completion.chunk","created":1748838237,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"_id"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0HYrq4DeEsNsZfDLpkFs1gu2Pw","object":"chat.completion.chunk","created":1748838237,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0HYrq4DeEsNsZfDLpkFs1gu2Pw","object":"chat.completion.chunk","created":1748838237,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"1"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0HYrq4DeEsNsZfDLpkFs1gu2Pw","object":"chat.completion.chunk","created":1748838237,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"}"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdr0HYrq4DeEsNsZfDLpkFs1gu2Pw","object":"chat.completion.chunk","created":1748838237,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_54eb4bd693","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-RAY:
+      - 94942da7fbf24538-ATL
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 02 Jun 2025 04:23:57 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '459'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '462'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999443'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 8ms
+      x-request-id:
+      - req_3df2836586928b8ee87d196f62f6cf69
     status:
       code: 200
       message: OK

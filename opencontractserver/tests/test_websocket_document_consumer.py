@@ -513,6 +513,105 @@ class ConversationSourceLoggingTestCase(DocumentConversationWebsocketTestCase):
     have their `sources` persisted in the Message.metadata column.
     """
 
+    async def _run_full_conversation_flow(self, framework: str) -> Conversation:
+        """Override parent method with retrieval-oriented prompts to ensure sources are generated."""
+        graphql_doc_id = to_global_id("DocumentType", self.doc.id)
+        encoded_graphql_doc_id = quote(graphql_doc_id)
+        encoded_corpus_id = quote(to_global_id("CorpusType", self.corpus.id))
+        ws_path = (
+            f"ws/document/{encoded_graphql_doc_id}/query/"
+            f"corpus/{encoded_corpus_id}/?token={self.token}"
+        )
+
+        communicator = WebsocketCommunicator(self.application, ws_path)
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected, "WebSocket for new conversation should connect.")
+
+        # Use retrieval-oriented queries that will trigger vector store search
+        response_1 = await self._assert_streaming_flow(
+            communicator=communicator,
+            query_text="Regarding US Code Title 1, what is the rule of construction for 'words importing the masculine gender'?",
+            expected_response_key="query1_response",
+            is_loaded_conversation=False,
+        )
+        response_2 = await self._assert_streaming_flow(
+            communicator=communicator,
+            query_text="What does US Code Title 1, Section 3 state about the term 'vessel'?",
+            expected_response_key="query2_response",
+            is_loaded_conversation=False,
+        )
+
+        await communicator.disconnect()
+
+        conversation = await self._fetch_last_conversation()
+        # Don't assert on specific response content since we only care about sources
+        await self._log_and_assert_history(
+            conversation,
+            expected_queries=[
+                "Regarding US Code Title 1, what is the rule of construction for 'words importing the masculine gender'?",
+                "What does US Code Title 1, Section 3 state about the term 'vessel'?",
+            ],
+            expected_llm_replies=[response_1, response_2],
+        )
+        return conversation
+
+    async def _run_loaded_conversation_flow(self, framework: str) -> Conversation:
+        """Override parent method with retrieval-oriented prompts for loaded conversations."""
+        conversation = await self._create_and_populate_conversation()
+
+        history_check_agent = await for_document(
+            document=self.doc,
+            corpus=self.corpus,
+            user_id=self.user.id,
+            conversation_id=conversation.id,
+        )
+        actual_history_for_log = await history_check_agent.get_conversation_messages()
+        print(
+            f"Fetched {len(actual_history_for_log)} messages via agent API for "
+            f"conversation {conversation.id} for logging."
+        )
+
+        graphql_doc_id = to_global_id("DocumentType", self.doc.id)
+        encoded_graphql_doc_id = quote(graphql_doc_id)
+        encoded_corpus_id = quote(to_global_id("CorpusType", self.corpus.id))
+        graphql_convo_id = to_global_id("ConversationType", conversation.id)
+        encoded_graphql_convo_id = quote(graphql_convo_id)
+        ws_path = (
+            f"ws/document/{encoded_graphql_doc_id}/query/corpus/{encoded_corpus_id}/"
+            f"?token={self.token}&load_from_conversation_id={encoded_graphql_convo_id}"
+        )
+
+        communicator = WebsocketCommunicator(self.application, ws_path)
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected, "WebSocket for loaded conversation should connect.")
+
+        # Use retrieval-oriented queries
+        response_1 = await self._assert_streaming_flow(
+            communicator=communicator,
+            query_text="Regarding US Code Title 1, what is the rule of construction for 'words importing the masculine gender'?",
+            expected_response_key="query1_response",
+            is_loaded_conversation=True,
+        )
+        response_2 = await self._assert_streaming_flow(
+            communicator=communicator,
+            query_text="What does US Code Title 1, Section 3 state about the term 'vessel'?",
+            expected_response_key="query2_response",
+            is_loaded_conversation=True,
+        )
+
+        await communicator.disconnect()
+
+        await self._log_and_assert_history(
+            conversation,
+            expected_queries=[
+                "Regarding US Code Title 1, what is the rule of construction for 'words importing the masculine gender'?",
+                "What does US Code Title 1, Section 3 state about the term 'vessel'?",
+            ],
+            expected_llm_replies=[response_1, response_2],
+            expect_prepopulated_messages=True,
+        )
+        return conversation
+
     async def _assert_sources_persisted(self, conversation: Conversation) -> None:
         # Fetch only LLM messages created in the conversation
         llm_messages = await database_sync_to_async(
@@ -540,8 +639,9 @@ class ConversationSourceLoggingTestCase(DocumentConversationWebsocketTestCase):
             self.assertIn("similarity_score", first)
 
     @vcr.use_cassette(
-        "fixtures/vcr_cassettes/test_document_conversation_ws.yaml",
+        "fixtures/vcr_cassettes/test_document_conversation_sources_ws.yaml",
         filter_headers=["authorization"],
+        record_mode="once",  # Separate cassette for source logging tests
     )
     async def test_sources_are_logged_for_new_conversation(self) -> None:
         """
@@ -552,8 +652,9 @@ class ConversationSourceLoggingTestCase(DocumentConversationWebsocketTestCase):
         await self._assert_sources_persisted(conversation)
 
     @vcr.use_cassette(
-        "fixtures/vcr_cassettes/test_document_conversation_ws_loaded.yaml",
+        "fixtures/vcr_cassettes/test_document_conversation_sources_ws_loaded.yaml",
         filter_headers=["authorization"],
+        record_mode="once",
     )
     async def test_sources_are_logged_for_loaded_conversation(self) -> None:
         conversation = await self._run_loaded_conversation_flow("llama_index") 

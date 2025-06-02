@@ -160,7 +160,7 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
         )
 
         description = (
-            f"Provides detailed annotations and text from within the '{context.document.title}' document.",
+            f"Provides detailed annotations and text from within the '{context.document.title}' document."
         )
         # Start with standard document tools
         current_tools: list[FunctionTool] = [

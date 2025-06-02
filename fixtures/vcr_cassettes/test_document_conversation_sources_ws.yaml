@@ -1,0 +1,1273 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You thoroughly answer requests
+      about the document titled ''Test Doc'' (ID: 1). This document is described as:\n\n`USC
+      Title 1 - Chapter 1`\n\nReturn your answers in thoughtful, attractive markdown.
+      Avoid repeating instructions, writing down your thought processes (unless asked),
+      or giving disclaimers."},{"role":"user","content":"Regarding US Code Title 1,
+      what is the rule of construction for ''words importing the masculine gender''?"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
+      int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
+      the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        truncate_length: Optional number
+      of characters to truncate. If provided,\n                        returns only
+      that many characters\n        from_start: If True, return from the start up
+      to truncate_length.\n                   Otherwise, return from the end\n\n    Returns:\n        A
+      string containing the content of the md_summary_file (possibly truncated)\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"truncate_length":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Truncate
+      Length"},"from_start":{"default":true,"title":"From Start","type":"boolean"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_md_summary_token_length","description":"get_md_summary_token_length(document_id:
+      int) -> int\n\n    Calculate the approximate token length of a Document''s md_summary_file.\n    Uses
+      a naive whitespace-based split for tokenization.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n\n    Returns:\n        An integer representing
+      the approximate token count of the md_summary_file\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_notes_for_document_corpus","description":"get_notes_for_document_corpus(document_id:
+      int, corpus_id: Optional[int] = None) -> list[dict[str, typing.Any]]\n\n    Retrieve
+      all Note objects for a given document and (optionally) a specific corpus.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        corpus_id: The primary key (ID)
+      of the Corpus, or None if unspecified\n\n    Returns:\n        A list of dictionaries,
+      each containing Note data (content truncated to 512 chars):\n        [\n            {\n                \"id\":
+      <note_id>,\n                \"title\": <title>,\n                \"content\":
+      <content>,\n                \"creator_id\": <creator_id>,\n                \"created\":
+      <created_datetime_iso>,\n                \"modified\": <modified_datetime_iso>,\n            },\n            ...\n        ]\n\n    Raises:\n        ValueError:
+      If document doesn''t exist\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"corpus_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Corpus
+      Id"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_note_content_token_length","description":"get_note_content_token_length(note_id:
+      int) -> int\n\n    Calculate the approximate token length of a Note''s content
+      using naive whitespace-based split.\n\n    Args:\n        note_id: The primary
+      key (ID) of the Note\n\n    Returns:\n        An integer representing the approximate
+      token count of the note''s content\n\n    Raises:\n        ValueError: If note
+      doesn''t exist\n    ","parameters":{"properties":{"note_id":{"title":"Note Id","type":"integer"}},"required":["note_id"],"type":"object"}}},{"type":"function","function":{"name":"get_partial_note_content","description":"get_partial_note_content(note_id:
+      int, start: int = 0, end: int = 500) -> str\n\n    Retrieve a substring of the
+      note''s content from index ''start'' to index ''end''.\n\n    Args:\n        note_id:
+      The primary key (ID) of the Note\n        start: The starting position for extraction\n        end:
+      The position at which to stop before extraction (non-inclusive)\n\n    Returns:\n        A
+      string representing the specified portion of the note''s content\n\n    Raises:\n        ValueError:
+      If note doesn''t exist or invalid start/end indices\n    ","parameters":{"properties":{"note_id":{"title":"Note
+      Id","type":"integer"},"start":{"default":0,"title":"Start","type":"integer"},"end":{"default":500,"title":"End","type":"integer"}},"required":["note_id"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '5197'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.81.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_tOM0mziLntICehfjyYadf84m","type":"function","function":{"name":"doc_engine","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"input"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"words"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        importing"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        the"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        masculine"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"
+        gender"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoujgb5jnPfjt7bTAflkiLF7S7x","object":"chat.completion.chunk","created":1748837532,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-RAY:
+      - 94941c72b9b853b9-ATL
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 02 Jun 2025 04:12:13 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=EJSRT5xr884qT7CQxb2I4qmr23YIvSe1sC0UH.BCN7c-1748837533-1.0.1.1-UrdHGhbU.nfmQCinSh23sy8OiLp_1wDOYFudezc8952fc.ChkEsJEthBNFfjV48xyuWoYjsqBdpU9y0nzCOT5lgg0bDE0reuXzIjTE46Eug;
+        path=/; expires=Mon, 02-Jun-25 04:42:13 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=te1ttWQBBQj1t_geP9fcMfLRI2gOCwCgOCb7TtquKYU-1748837533235-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '562'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '564'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999897'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_aaecb0822ad67e26b848189985b69fff
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "words importing the masculine gender"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[0.013249900192022324,-0.011867810040712357,0.0030817678198218346,-0.002889943541958928,-0.09183814376592636,-0.01494270283728838,0.0010076649487018585,-0.09308014810085297,-0.019820239394903183,0.04094169661402702,0.09929979592561722,-0.047125715762376785,0.021463224664330482,0.026480332016944885,0.008618348278105259,0.048305124044418335,-0.09792329370975494,0.007575917523354292,0.032732926309108734,0.04444636031985283,-0.009051868692040443,-0.11090236902236938,-0.018854834139347076,-0.07555270940065384,-0.030855318531394005,-0.06923668831586838,-0.01981770247220993,-0.010639051906764507,0.01854490116238594,0.012238094583153725,-0.07624810934066772,0.0402970165014267,0.11126928776502609,0.04999329149723053,-0.0308267530053854,0.07186499983072281,0.0010380021994933486,0.012260518968105316,0.01775067113339901,0.059144582599401474,-0.049857161939144135,-0.1018294021487236,0.010811354033648968,0.07235915958881378,0.06607366353273392,0.028694214299321175,-0.0013079778291285038,0.07882265001535416,-0.017057212069630623,0.0073090833611786366,-0.039242517203092575,-0.03161276504397392,-0.12197339534759521,0.1652909815311432,-0.04120934382081032,0.01819404400885105,0.05177207291126251,-0.050241947174072266,-0.04424266144633293,-0.034466084092855453,-0.0648035928606987,-0.013966459780931473,0.046208012849092484,0.04657759144902229,0.02244962751865387,-0.09633687138557434,-0.026911908760666847,0.002215114189311862,-0.06670316308736801,0.048353735357522964,0.03439312055706978,0.04629788175225258,-0.093358613550663,0.02312523126602173,0.040600232779979706,0.07350026816129684,0.06087286397814751,-0.05409758538007736,-0.010657438077032566,-0.06330085545778275,-0.02169889770448208,-0.035450395196676254,0.07936565577983856,0.0732826292514801,0.007200459484010935,-0.024755606427788734,-0.016906771808862686,-0.027143996208906174,-0.07985686510801315,0.07776720076799393,-0.15154102444648743,-0.0715620368719101,0.09469084441661835,0.005446059629321098,-0.0047456976026296616,0.010891549289226532,0.043465755879879,0.02483345754444599,0.01185816340148449,0.006731071975082159,-0.0034735468216240406,0.03201624006032944,-0.052955880761146545,0.004497697576880455,-0.04113902896642685,-0.01791946217417717,-0.04085738956928253,-0.06776081770658493,-0.026798684149980545,-0.06295643001794815,-0.08112742006778717,-0.05141163617372513,-0.030503904446959496,-0.04767821356654167,0.06724224984645844,-0.0027770281303673983,0.00910151656717062,0.026352079585194588,0.06857100129127502,0.06288185715675354,-0.08835411071777344,-0.0007028357358649373,0.006187554448843002,-0.002913665259256959,0.020974652841687202,0.01527743972837925,-0.027476424351334572,1.1120616663863788e-30,-0.0058850194327533245,0.021335316821932793,0.029960371553897858,0.05461553856730461,-0.004376515280455351,0.02969064563512802,0.0762043446302414,-0.12621015310287476,0.005083980038762093,-0.07080455869436264,0.008714480325579643,-0.007628648076206446,-0.11495121568441391,0.0366576611995697,0.06518828868865967,0.03147871792316437,0.05483259633183479,0.02552080899477005,-0.027472665533423424,-0.0009935660054907203,0.07306376844644547,0.05500639230012894,-0.005254864227026701,0.005068828817456961,-0.03678402304649353,-0.027050474658608437,0.028815042227506638,-0.06106232851743698,0.0328400544822216,-0.013841288164258003,-0.0067795091308653355,-0.03296735882759094,0.020475637167692184,0.021766453981399536,0.04830126091837883,-0.06546597927808762,0.02289446070790291,-0.016643941402435303,0.018481943756341934,0.0903758630156517,0.0046913656406104565,-0.014022594317793846,0.053332023322582245,0.0006172352586872876,-0.01870664581656456,0.06528253108263016,0.034596215933561325,-0.01950659789144993,-0.04027446359395981,0.05038107559084892,-0.09022515267133713,0.04264131933450699,0.061599694192409515,0.008849764242768288,-0.06549423187971115,0.0021115855779498816,0.026447070762515068,0.018371760845184326,-0.06161164119839668,-0.011673967353999615,0.07470332831144333,0.02737780101597309,0.13928939402103424,0.061550140380859375,0.08824905753135681,-0.08563818037509918,-0.01843128353357315,-0.0023047872819006443,0.029868757352232933,0.09869009256362915,-0.08564560115337372,-0.02832583710551262,-0.031557898968458176,0.06131501495838165,0.014691788703203201,0.04251947999000549,0.026911942288279533,-0.06831302493810654,0.01949690654873848,-0.12284549325704575,-0.05233682319521904,0.03647562861442566,-0.08009757846593857,0.00276575586758554,-0.0453185997903347,0.02058912254869938,0.01631494052708149,-0.05559106543660164,0.14852097630500793,0.016121862456202507,-0.05535408854484558,0.020456654950976372,0.007777265273034573,-0.05138738453388214,-0.0595368966460228,-2.1222141747585337e-33,-0.017409266903996468,-0.06157802417874336,0.03640659525990486,0.01188776083290577,-0.0493939109146595,-0.017218833789229393,0.05553138628602028,0.09136010706424713,0.11986999958753586,0.04711860790848732,-0.004223914816975594,0.015203697606921196,-0.03657981753349304,0.02408784069120884,0.007325842976570129,-0.04640990495681763,-0.0033052547369152308,0.023416122421622276,0.000426145939854905,0.12777003645896912,-0.07564982026815414,0.06313639879226685,0.001926723401993513,-0.051162153482437134,0.002717751543968916,0.03378134220838547,0.03788173571228981,0.014145676046609879,-0.007040797732770443,0.06559540331363678,0.00993406679481268,0.04733738675713539,-0.06344151496887207,0.0658491775393486,0.06639394909143448,-0.006195961497724056,-0.03583565726876259,-0.0013404920464381576,0.05176333710551262,0.008880892768502235,-0.015245603397488594,-0.015213903971016407,-0.051916997879743576,-0.015587878413498402,0.031765032559633255,-0.024114536121487617,-0.14753344655036926,0.008238773792982101,0.0616922602057457,0.015856962651014328,-0.017938809469342232,0.04145896062254906,0.010786538012325764,-0.0648193284869194,0.022451363503932953,-0.08046247810125351,-0.03423110768198967,-0.0357385091483593,-0.042217228561639786,0.08305040746927261,-0.0431344211101532,0.035915225744247437,0.01143971923738718,-0.01883746311068535,-0.08485997468233109,-0.04833867400884628,0.01470127422362566,-0.0429815948009491,-0.0035964350681751966,-0.006964351981878281,0.08912873268127441,-0.024998653680086136,0.04372815042734146,0.015838919207453728,-0.027011491358280182,-0.05196748673915863,0.04731706902384758,0.028708022087812424,0.06541486829519272,-0.10159645229578018,-0.03613948076963425,-0.05505607649683952,0.04739812761545181,0.012189478613436222,-0.03641742840409279,0.015804804861545563,0.015413466840982437,0.09975064545869827,0.06703163683414459,-0.05767618492245674,0.006412866059690714,0.0701691210269928,0.0036785348784178495,0.0053910259157419205,-0.004916770849376917,-4.838742130245492e-33,-0.0007674022344872355,-0.024130037054419518,0.02587699703872204,-0.009633611887693405,0.043634142726659775,-0.002475704764947295,-0.05309966206550598,-0.07387110590934753,0.04632270708680153,0.030758939683437347,-0.0264211967587471,0.03836365044116974,0.05258234217762947,-0.04523647576570511,-0.031496647745370865,0.05458560213446617,0.051730457693338394,-0.02461601234972477,0.003313609631732106,-0.05170706659555435,0.02796877548098564,-0.01425256673246622,-0.025891778990626335,0.060458745807409286,-0.05834709852933884,0.031387317925691605,0.005480974912643433,0.006228322628885508,-0.08429321646690369,-0.042227525264024734,0.06713910400867462,0.049784377217292786,-0.056757763028144836,-0.09331747889518738,0.023232117295265198,0.07541689276695251,0.02018413320183754,-0.028960594907402992,-0.02343943901360035,-0.03742305934429169,0.061997704207897186,-0.029966766014695168,-0.06719624996185303,-0.0534370020031929,0.04083864763379097,0.032020993530750275,0.03356921300292015,-0.02927234396338463,-0.021595502272248268,0.08416932076215744,0.03153405338525772,0.03168464079499245,0.012690446339547634,0.013000790029764175,0.03877272456884384,-0.014254470355808735,-0.053891561925411224,0.002566720824688673,-0.028129054233431816,-0.004890475422143936,0.038625750690698624,-0.07005175948143005,0.11824093014001846,-0.0702713280916214]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8052'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 02 Jun 2025 04:12:14 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You thoroughly answer requests
+      about the document titled ''Test Doc'' (ID: 1). This document is described as:\n\n`USC
+      Title 1 - Chapter 1`\n\nReturn your answers in thoughtful, attractive markdown.
+      Avoid repeating instructions, writing down your thought processes (unless asked),
+      or giving disclaimers."},{"role":"user","content":"Regarding US Code Title 1,
+      what is the rule of construction for ''words importing the masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_tOM0mziLntICehfjyYadf84m","function":{"arguments":"{\"input\":\"words
+      importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_tOM0mziLntICehfjyYadf84m"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
+      int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
+      the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        truncate_length: Optional number
+      of characters to truncate. If provided,\n                        returns only
+      that many characters\n        from_start: If True, return from the start up
+      to truncate_length.\n                   Otherwise, return from the end\n\n    Returns:\n        A
+      string containing the content of the md_summary_file (possibly truncated)\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"truncate_length":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Truncate
+      Length"},"from_start":{"default":true,"title":"From Start","type":"boolean"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_md_summary_token_length","description":"get_md_summary_token_length(document_id:
+      int) -> int\n\n    Calculate the approximate token length of a Document''s md_summary_file.\n    Uses
+      a naive whitespace-based split for tokenization.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n\n    Returns:\n        An integer representing
+      the approximate token count of the md_summary_file\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_notes_for_document_corpus","description":"get_notes_for_document_corpus(document_id:
+      int, corpus_id: Optional[int] = None) -> list[dict[str, typing.Any]]\n\n    Retrieve
+      all Note objects for a given document and (optionally) a specific corpus.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        corpus_id: The primary key (ID)
+      of the Corpus, or None if unspecified\n\n    Returns:\n        A list of dictionaries,
+      each containing Note data (content truncated to 512 chars):\n        [\n            {\n                \"id\":
+      <note_id>,\n                \"title\": <title>,\n                \"content\":
+      <content>,\n                \"creator_id\": <creator_id>,\n                \"created\":
+      <created_datetime_iso>,\n                \"modified\": <modified_datetime_iso>,\n            },\n            ...\n        ]\n\n    Raises:\n        ValueError:
+      If document doesn''t exist\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"corpus_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Corpus
+      Id"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_note_content_token_length","description":"get_note_content_token_length(note_id:
+      int) -> int\n\n    Calculate the approximate token length of a Note''s content
+      using naive whitespace-based split.\n\n    Args:\n        note_id: The primary
+      key (ID) of the Note\n\n    Returns:\n        An integer representing the approximate
+      token count of the note''s content\n\n    Raises:\n        ValueError: If note
+      doesn''t exist\n    ","parameters":{"properties":{"note_id":{"title":"Note Id","type":"integer"}},"required":["note_id"],"type":"object"}}},{"type":"function","function":{"name":"get_partial_note_content","description":"get_partial_note_content(note_id:
+      int, start: int = 0, end: int = 500) -> str\n\n    Retrieve a substring of the
+      note''s content from index ''start'' to index ''end''.\n\n    Args:\n        note_id:
+      The primary key (ID) of the Note\n        start: The starting position for extraction\n        end:
+      The position at which to stop before extraction (non-inclusive)\n\n    Returns:\n        A
+      string representing the specified portion of the note''s content\n\n    Raises:\n        ValueError:
+      If note doesn''t exist or invalid start/end indices\n    ","parameters":{"properties":{"note_id":{"title":"Note
+      Id","type":"integer"},"start":{"default":0,"title":"Start","type":"integer"},"end":{"default":500,"title":"End","type":"integer"}},"required":["note_id"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '5525'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=EJSRT5xr884qT7CQxb2I4qmr23YIvSe1sC0UH.BCN7c-1748837533-1.0.1.1-UrdHGhbU.nfmQCinSh23sy8OiLp_1wDOYFudezc8952fc.ChkEsJEthBNFfjV48xyuWoYjsqBdpU9y0nzCOT5lgg0bDE0reuXzIjTE46Eug;
+        _cfuvid=te1ttWQBBQj1t_geP9fcMfLRI2gOCwCgOCb7TtquKYU-1748837533235-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.81.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"role":"assistant","content":"","refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"The"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        rule"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        of"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        construction"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        for"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        \""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"words"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        importing"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        the"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        masculine"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        gender"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"\""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        in"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        US"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        Code"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        Title"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"1"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        states"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        that"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        such"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        words"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        are"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        be"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        understood"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        include"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        the"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        feminine"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        gender"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        as"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        well"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        This"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        means"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        that"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        terms"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        that"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        are"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        traditionally"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        masculine"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        should"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        be"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        interpreted"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        apply"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        equally"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        both"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        men"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        and"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        women"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        unless"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        the"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        context"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        indicates"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        otherwise"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        This"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        rule"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        promotes"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        gender"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"-neutral"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        language"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        in"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        legal"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        texts"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqowjorLbdHUH5QEX7cQP7VBetBF","object":"chat.completion.chunk","created":1748837534,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-RAY:
+      - 94941c7b599653b9-ATL
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 02 Jun 2025 04:12:15 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '497'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '604'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999890'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_65be428939a2a41a183eb1d8dede6010
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You thoroughly answer requests
+      about the document titled ''Test Doc'' (ID: 1). This document is described as:\n\n`USC
+      Title 1 - Chapter 1`\n\nReturn your answers in thoughtful, attractive markdown.
+      Avoid repeating instructions, writing down your thought processes (unless asked),
+      or giving disclaimers."},{"role":"user","content":"Regarding US Code Title 1,
+      what is the rule of construction for ''words importing the masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_tOM0mziLntICehfjyYadf84m","function":{"arguments":"{\"input\":\"words
+      importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_tOM0mziLntICehfjyYadf84m"},{"role":"assistant","content":"The
+      rule of construction for \"words importing the masculine gender\" in US Code
+      Title 1 states that such words are to be understood to include the feminine
+      gender as well. This means that terms that are traditionally masculine should
+      be interpreted to apply equally to both men and women unless the context indicates
+      otherwise. This rule promotes gender-neutral language in legal texts."},{"role":"user","content":"What
+      does US Code Title 1, Section 3 state about the term ''vessel''?"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
+      int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
+      the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        truncate_length: Optional number
+      of characters to truncate. If provided,\n                        returns only
+      that many characters\n        from_start: If True, return from the start up
+      to truncate_length.\n                   Otherwise, return from the end\n\n    Returns:\n        A
+      string containing the content of the md_summary_file (possibly truncated)\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"truncate_length":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Truncate
+      Length"},"from_start":{"default":true,"title":"From Start","type":"boolean"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_md_summary_token_length","description":"get_md_summary_token_length(document_id:
+      int) -> int\n\n    Calculate the approximate token length of a Document''s md_summary_file.\n    Uses
+      a naive whitespace-based split for tokenization.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n\n    Returns:\n        An integer representing
+      the approximate token count of the md_summary_file\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_notes_for_document_corpus","description":"get_notes_for_document_corpus(document_id:
+      int, corpus_id: Optional[int] = None) -> list[dict[str, typing.Any]]\n\n    Retrieve
+      all Note objects for a given document and (optionally) a specific corpus.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        corpus_id: The primary key (ID)
+      of the Corpus, or None if unspecified\n\n    Returns:\n        A list of dictionaries,
+      each containing Note data (content truncated to 512 chars):\n        [\n            {\n                \"id\":
+      <note_id>,\n                \"title\": <title>,\n                \"content\":
+      <content>,\n                \"creator_id\": <creator_id>,\n                \"created\":
+      <created_datetime_iso>,\n                \"modified\": <modified_datetime_iso>,\n            },\n            ...\n        ]\n\n    Raises:\n        ValueError:
+      If document doesn''t exist\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"corpus_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Corpus
+      Id"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_note_content_token_length","description":"get_note_content_token_length(note_id:
+      int) -> int\n\n    Calculate the approximate token length of a Note''s content
+      using naive whitespace-based split.\n\n    Args:\n        note_id: The primary
+      key (ID) of the Note\n\n    Returns:\n        An integer representing the approximate
+      token count of the note''s content\n\n    Raises:\n        ValueError: If note
+      doesn''t exist\n    ","parameters":{"properties":{"note_id":{"title":"Note Id","type":"integer"}},"required":["note_id"],"type":"object"}}},{"type":"function","function":{"name":"get_partial_note_content","description":"get_partial_note_content(note_id:
+      int, start: int = 0, end: int = 500) -> str\n\n    Retrieve a substring of the
+      note''s content from index ''start'' to index ''end''.\n\n    Args:\n        note_id:
+      The primary key (ID) of the Note\n        start: The starting position for extraction\n        end:
+      The position at which to stop before extraction (non-inclusive)\n\n    Returns:\n        A
+      string representing the specified portion of the note''s content\n\n    Raises:\n        ValueError:
+      If note doesn''t exist or invalid start/end indices\n    ","parameters":{"properties":{"note_id":{"title":"Note
+      Id","type":"integer"},"start":{"default":0,"title":"Start","type":"integer"},"end":{"default":500,"title":"End","type":"integer"}},"required":["note_id"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '6042'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=EJSRT5xr884qT7CQxb2I4qmr23YIvSe1sC0UH.BCN7c-1748837533-1.0.1.1-UrdHGhbU.nfmQCinSh23sy8OiLp_1wDOYFudezc8952fc.ChkEsJEthBNFfjV48xyuWoYjsqBdpU9y0nzCOT5lgg0bDE0reuXzIjTE46Eug;
+        _cfuvid=te1ttWQBBQj1t_geP9fcMfLRI2gOCwCgOCb7TtquKYU-1748837533235-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.81.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_T87gBbHmBPdahPFBpywGRuHh","type":"function","function":{"name":"doc_engine","arguments":""}}],"refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"input"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\""}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"v"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"essel"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-Bdqoym24SfgGjVsP2UirZItfrk6c7","object":"chat.completion.chunk","created":1748837536,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"tool_calls"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 94941c87dd3553b9-ATL
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 02 Jun 2025 04:12:16 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '673'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '677'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999775'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 3ms
+      x-request-id:
+      - req_277af2f526483a81a6ace2f012e80f79
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"text": "vessel"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '18'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+      X-API-Key:
+      - abc123
+    method: POST
+    uri: http://vector-embedder:8000/embeddings
+  response:
+    body:
+      string: '{"embeddings":[[0.008239824324846268,0.09543173760175705,-0.005237738601863384,-0.0018048277124762535,-0.04372784495353699,-0.07095105201005936,-0.03156303986907005,0.07466771453619003,-0.010971556417644024,-0.030186086893081665,0.004635205026715994,-0.008243536576628685,-0.08712945133447647,0.05124194547533989,-0.07572082430124283,-0.061344508081674576,0.0027470707427710295,0.020654499530792236,-0.015503618866205215,0.08194834738969803,0.002156483707949519,0.05450804531574249,-0.07434756308794022,-0.03637514263391495,-0.04261154681444168,0.07257674634456635,0.004326025955379009,-0.012408992275595665,0.07698317617177963,-0.04355033114552498,-0.07351157069206238,0.0062050893902778625,-0.12755337357521057,0.005879636853933334,0.055997706949710846,0.00012613936269190162,-0.003053006948903203,-0.012129440903663635,0.035072680562734604,-0.04492848366498947,-0.019864296540617943,-0.07025901973247528,0.015048033557832241,0.1405063271522522,-0.007663074880838394,-0.06508765369653702,-0.009098591282963753,0.00585730979219079,0.02883373759686947,0.026437047868967056,-0.06356623023748398,-0.10088275372982025,0.02092703804373741,0.031353745609521866,-0.031236421316862106,-0.016464747488498688,-0.03668173402547836,-0.011769440025091171,0.012996467761695385,-0.10911480337381363,0.10328352451324463,0.05295664072036743,0.0019394054543226957,0.06377212703227997,-0.0008115296368487179,-0.06144730746746063,-0.029252780601382256,0.031145310029387474,-0.07680195569992065,0.01211316417902708,0.06442155689001083,0.0338902585208416,0.05902354046702385,0.049977902323007584,0.08092542737722397,-0.025140412151813507,0.019043659791350365,-0.03292038291692734,0.053600262850522995,0.11257566511631012,-0.09659907221794128,0.05934400111436844,-0.07870528101921082,-0.06068918853998184,-0.0386480987071991,0.023973748087882996,0.02030351385474205,0.029567670077085495,-0.06021672114729881,-0.0487995520234108,0.056739628314971924,-0.041419897228479385,0.00597557844594121,-0.0668569877743721,-0.02388615347445011,0.0031360811553895473,-0.07603196799755096,0.04746602475643158,0.03315134719014168,0.07704052329063416,0.05662873387336731,0.08600202947854996,0.01264849491417408,0.051507748663425446,-0.05606851354241371,0.03632454574108124,0.015772242099046707,-0.03940596058964729,0.03202599659562111,-0.10871376097202301,-0.0932372659444809,0.053177401423454285,-0.06796719878911972,-0.037181515246629715,-0.12475146353244781,-0.024646731093525887,-0.04788792133331299,-0.007102749776095152,0.0005189870717003942,-0.058444272726774216,0.011764712631702423,-0.01843326911330223,0.046175044029951096,-0.04248223081231117,-0.011377551592886448,-0.0448339581489563,0.05523412674665451,1.241877149920568e-30,-0.04698456823825836,-0.013500845991075039,0.0028049221727997065,-0.03983663022518158,0.04445898160338402,-0.008111873641610146,-0.003632071428000927,0.01245755236595869,-0.04138755425810814,0.08937162160873413,-0.06257205456495285,0.0035183620639145374,-0.0953991487622261,0.013263026252388954,0.051516443490982056,-0.04364941641688347,0.06019366532564163,-0.025788241997361183,-0.05356276035308838,-0.037773068994283676,0.023860249668359756,-0.024411875754594803,0.008927755057811737,-0.031203296035528183,0.0133748734369874,0.07681409269571304,-0.06118272244930267,-0.03375367075204849,-0.02574586495757103,0.027524687349796295,0.004618196748197079,-0.005333279259502888,0.048775605857372284,0.02835363708436489,-0.034604333341121674,0.058662861585617065,0.02367747388780117,-0.0031393859535455704,0.011567939072847366,-0.052584871649742126,-0.06413658708333969,-0.003079182468354702,0.050772327929735184,0.09379490464925766,-0.05496370792388916,-0.034546900540590286,-0.029892753809690475,-0.03664519265294075,0.04586982727050781,-0.00342997326515615,-0.005416008178144693,-0.02298208698630333,-0.04921106994152069,0.0494128055870533,0.04582759737968445,-0.006802388932555914,0.028222322463989258,0.08802759647369385,-0.05438341945409775,-0.02580084837973118,-0.06157641112804413,0.06887830048799515,0.0398181676864624,0.00980068277567625,0.05554666370153427,0.0866633728146553,0.048555951565504074,-0.06001346930861473,0.04289352893829346,-0.07727017998695374,-0.09302021563053131,0.03507250174880028,-0.019181177020072937,0.023853043094277382,0.0027176712173968554,0.08869022130966187,0.03190300986170769,-0.06378195434808731,0.009558168239891529,-0.09500428289175034,-0.12145964801311493,0.007591824512928724,0.002124533988535404,0.016773251816630363,-0.020514018833637238,0.028285659849643707,0.06004483997821808,0.014920368790626526,-0.002523953327909112,-0.02459617145359516,-0.021021302789449692,0.017245328053832054,0.016351673752069473,-0.052526816725730896,0.05205676332116127,-1.6796166744449414e-33,0.03363823518157005,-0.02459629252552986,-0.020110955461859703,-0.0225328728556633,0.004641604144126177,-0.00988637376576662,0.09996988624334335,0.007264451589435339,0.006851103622466326,-0.05924099683761597,-0.05101718381047249,0.0011230045929551125,0.008407332003116608,0.029303371906280518,-0.041908930987119675,0.11420642584562302,0.010526110418140888,-0.013568224385380745,0.031559057533741,-0.010858683846890926,0.014525305479764938,-0.020318076014518738,0.04418119788169861,0.018033837899565697,-0.0197466928511858,0.011348739266395569,0.023317908868193626,-0.13777031004428864,-0.0640081912279129,-0.034617356956005096,0.0008971841889433563,0.013300872407853603,0.08361666649580002,0.04994761943817139,-0.10092185437679291,-0.014109200797975063,0.06805573403835297,0.08505108952522278,-0.007465393282473087,-0.03922567144036293,-0.01016219425946474,-0.017533207312226295,-0.054216884076595306,0.02245010808110237,-0.06919782608747482,-0.016014615073800087,0.027811307460069656,-0.050060369074344635,0.06427035480737686,0.017231931909918785,-0.09970740228891373,-0.06843424588441849,0.11099259555339813,-0.027835369110107422,0.05708002299070358,0.049234066158533096,-0.033696118742227554,-0.08696892112493515,0.057623110711574554,-0.0075073339976370335,0.03676723316311836,0.08785521239042282,-0.005494766402989626,0.012967935763299465,0.06307290494441986,0.01495844591408968,-0.033147986978292465,0.03035622648894787,-0.04297580569982529,-0.025632308796048164,0.021640213206410408,0.008508739992976189,-0.06600089371204376,0.08361391723155975,-0.0007748339558020234,-0.1361204981803894,-0.02300933003425598,-0.005229854956269264,-0.0016331033548340201,0.002903954591602087,0.07649126648902893,0.007344916462898254,-0.0018386727897450328,0.012171529233455658,0.00033520188299007714,-0.07831930369138718,0.058662109076976776,-0.036256276071071625,-0.04794130474328995,0.024837777018547058,0.03682466596364975,0.07498371601104736,-0.030549362301826477,-0.06117002293467522,0.02564212866127491,-3.290705334314805e-33,-0.05259691923856735,0.0055962614715099335,0.05352601781487465,-0.013979548588395119,-0.02378700114786625,-0.10294082015752792,0.026544366031885147,0.09463266283273697,-0.013241522014141083,-0.05548373609781265,0.010048591531813145,-0.02979973889887333,-0.03574999421834946,-0.049358922988176346,0.032364875078201294,-0.0020042969845235348,-0.04343212768435478,0.0267627015709877,-0.005101039074361324,-0.0554957240819931,0.07693056762218475,-0.04987262189388275,0.07128915935754776,-0.0035608739126473665,-0.06305793672800064,0.039736777544021606,0.028494494035840034,-0.042261771857738495,0.08304981142282486,-0.0327175073325634,-0.019543062895536423,0.06953112035989761,0.06699476391077042,0.12173480540513992,0.04734481871128082,0.003160558408126235,-0.056899942457675934,0.03377221152186394,-0.08285409212112427,0.013659731484949589,-0.0011820429936051369,0.0959993228316307,-0.03752439096570015,-0.027875900268554688,0.09424096345901489,0.07712291926145554,-0.018873030319809914,0.0635114461183548,-0.016156429424881935,-0.03365403041243553,-0.00043377422844059765,7.555348020105157e-06,0.07792244106531143,0.032676082104444504,-0.023372335359454155,0.0617179349064827,0.004386594984680414,0.10528457164764404,0.02597929537296295,0.005734334699809551,-0.04558410868048668,0.04022357612848282,0.11805840581655502,0.028056079521775246]]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8078'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 02 Jun 2025 04:12:17 GMT
+      Server:
+      - gunicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You thoroughly answer requests
+      about the document titled ''Test Doc'' (ID: 1). This document is described as:\n\n`USC
+      Title 1 - Chapter 1`\n\nReturn your answers in thoughtful, attractive markdown.
+      Avoid repeating instructions, writing down your thought processes (unless asked),
+      or giving disclaimers."},{"role":"user","content":"Regarding US Code Title 1,
+      what is the rule of construction for ''words importing the masculine gender''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_tOM0mziLntICehfjyYadf84m","function":{"arguments":"{\"input\":\"words
+      importing the masculine gender\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_tOM0mziLntICehfjyYadf84m"},{"role":"assistant","content":"The
+      rule of construction for \"words importing the masculine gender\" in US Code
+      Title 1 states that such words are to be understood to include the feminine
+      gender as well. This means that terms that are traditionally masculine should
+      be interpreted to apply equally to both men and women unless the context indicates
+      otherwise. This rule promotes gender-neutral language in legal texts."},{"role":"user","content":"What
+      does US Code Title 1, Section 3 state about the term ''vessel''?"},{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_T87gBbHmBPdahPFBpywGRuHh","function":{"arguments":"{\"input\":\"vessel\"}","name":"doc_engine"},"type":"function"}]},{"role":"tool","content":"Empty
+      Response","name":"doc_engine","tool_call_id":"call_T87gBbHmBPdahPFBpywGRuHh"}],"model":"gpt-4o-mini","stream":true,"temperature":0.7,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"doc_engine","description":"Provides
+      detailed annotations and text from within the ''Test Doc'' document.","parameters":{"properties":{"input":{"title":"Input","type":"string"}},"required":["input"],"type":"object"}}},{"type":"function","function":{"name":"load_document_md_summary","description":"load_document_md_summary(document_id:
+      int, truncate_length: Optional[int] = None, from_start: bool = True) -> str\n\n    Load
+      the content of a Document''s md_summary_file field.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        truncate_length: Optional number
+      of characters to truncate. If provided,\n                        returns only
+      that many characters\n        from_start: If True, return from the start up
+      to truncate_length.\n                   Otherwise, return from the end\n\n    Returns:\n        A
+      string containing the content of the md_summary_file (possibly truncated)\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"truncate_length":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Truncate
+      Length"},"from_start":{"default":true,"title":"From Start","type":"boolean"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_md_summary_token_length","description":"get_md_summary_token_length(document_id:
+      int) -> int\n\n    Calculate the approximate token length of a Document''s md_summary_file.\n    Uses
+      a naive whitespace-based split for tokenization.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n\n    Returns:\n        An integer representing
+      the approximate token count of the md_summary_file\n\n    Raises:\n        ValueError:
+      If document doesn''t exist or has no md_summary_file\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_notes_for_document_corpus","description":"get_notes_for_document_corpus(document_id:
+      int, corpus_id: Optional[int] = None) -> list[dict[str, typing.Any]]\n\n    Retrieve
+      all Note objects for a given document and (optionally) a specific corpus.\n\n    Args:\n        document_id:
+      The primary key (ID) of the Document\n        corpus_id: The primary key (ID)
+      of the Corpus, or None if unspecified\n\n    Returns:\n        A list of dictionaries,
+      each containing Note data (content truncated to 512 chars):\n        [\n            {\n                \"id\":
+      <note_id>,\n                \"title\": <title>,\n                \"content\":
+      <content>,\n                \"creator_id\": <creator_id>,\n                \"created\":
+      <created_datetime_iso>,\n                \"modified\": <modified_datetime_iso>,\n            },\n            ...\n        ]\n\n    Raises:\n        ValueError:
+      If document doesn''t exist\n    ","parameters":{"properties":{"document_id":{"title":"Document
+      Id","type":"integer"},"corpus_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"default":null,"title":"Corpus
+      Id"}},"required":["document_id"],"type":"object"}}},{"type":"function","function":{"name":"get_note_content_token_length","description":"get_note_content_token_length(note_id:
+      int) -> int\n\n    Calculate the approximate token length of a Note''s content
+      using naive whitespace-based split.\n\n    Args:\n        note_id: The primary
+      key (ID) of the Note\n\n    Returns:\n        An integer representing the approximate
+      token count of the note''s content\n\n    Raises:\n        ValueError: If note
+      doesn''t exist\n    ","parameters":{"properties":{"note_id":{"title":"Note Id","type":"integer"}},"required":["note_id"],"type":"object"}}},{"type":"function","function":{"name":"get_partial_note_content","description":"get_partial_note_content(note_id:
+      int, start: int = 0, end: int = 500) -> str\n\n    Retrieve a substring of the
+      note''s content from index ''start'' to index ''end''.\n\n    Args:\n        note_id:
+      The primary key (ID) of the Note\n        start: The starting position for extraction\n        end:
+      The position at which to stop before extraction (non-inclusive)\n\n    Returns:\n        A
+      string representing the specified portion of the note''s content\n\n    Raises:\n        ValueError:
+      If note doesn''t exist or invalid start/end indices\n    ","parameters":{"properties":{"note_id":{"title":"Note
+      Id","type":"integer"},"start":{"default":0,"title":"Start","type":"integer"},"end":{"default":500,"title":"End","type":"integer"}},"required":["note_id"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '6340'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=EJSRT5xr884qT7CQxb2I4qmr23YIvSe1sC0UH.BCN7c-1748837533-1.0.1.1-UrdHGhbU.nfmQCinSh23sy8OiLp_1wDOYFudezc8952fc.ChkEsJEthBNFfjV48xyuWoYjsqBdpU9y0nzCOT5lgg0bDE0reuXzIjTE46Eug;
+        _cfuvid=te1ttWQBBQj1t_geP9fcMfLRI2gOCwCgOCb7TtquKYU-1748837533235-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.81.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"role":"assistant","content":"","refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"US"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        Code"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        Title"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"1"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        Section"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"3"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        defines"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        the"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        term"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        \""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"v"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"essel"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"\""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        broadly"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        include"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        every"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        description"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        of"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        water"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"craft"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        or"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        other"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        artificial"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        contr"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"iv"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"ance"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        used"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        or"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        capable"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        of"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        being"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        used"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        as"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        a"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        means"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        of"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        transportation"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        on"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        water"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        This"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        definition"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        is"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        designed"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        encompass"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        a"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        wide"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        range"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        of"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        water"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"craft"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        ensuring"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        that"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        various"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        types"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        of"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        vessels"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        are"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        covered"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        under"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        legal"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        terms"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        and"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"
+        regulations"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-BdqozpE52KT9NFdMbAeDj3890lq61","object":"chat.completion.chunk","created":1748837537,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_34a54ae93c","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 94941c8dfa6453b9-ATL
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 02 Jun 2025 04:12:17 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '599'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '613'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999770'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 3ms
+      x-request-id:
+      - req_707203ad517a5f5092a629b48323ad59
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -27,7 +27,7 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(WebsocketFixtureBaseTestCase):
     """
 
     @mock.patch(
-        "opencontractserver.llms.agents.for_document",
+        "opencontractserver.llms.agents.agent_factory.UnifiedAgentFactory.create_document_agent",
         new_callable=mock.AsyncMock,
     )
     async def test_middleware_with_valid_token(
@@ -88,7 +88,7 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(WebsocketFixtureBaseTestCase):
         await communicator.disconnect()
 
     @mock.patch(
-        "opencontractserver.llms.agents.for_document",
+        "opencontractserver.llms.agents.agent_factory.UnifiedAgentFactory.create_document_agent",
         new_callable=mock.AsyncMock,
     )
     async def test_middleware_with_invalid_token(
@@ -121,7 +121,7 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(WebsocketFixtureBaseTestCase):
         )
 
     @mock.patch(
-        "opencontractserver.llms.agents.for_document",
+        "opencontractserver.llms.agents.agent_factory.UnifiedAgentFactory.create_document_agent",
         new_callable=mock.AsyncMock,
     )
     async def test_middleware_without_token(

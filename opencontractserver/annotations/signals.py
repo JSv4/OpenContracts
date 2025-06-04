@@ -11,6 +11,10 @@ from opencontractserver.tasks.embeddings_task import (
 
 logger = logging.getLogger(__name__)
 
+# Define static dispatch UIDs for signals
+ANNOT_CREATE_UID = "process_annot_on_create_atomic_uid_v1"  # Added _v1 for potential future changes
+NOTE_CREATE_UID = "process_note_on_create_atomic_uid_v1"    # Added _v1
+
 
 def process_annot_on_create_atomic(sender, instance, created, **kwargs):
     """

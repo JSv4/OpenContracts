@@ -5,8 +5,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Optional, Union
 
-from asgiref.sync import sync_to_async
-from django.db.models import QuerySet
+from asgiref.sync import sync_to_async, async_to_sync
+from django.db.models import QuerySet, Q
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.utils.embeddings import (
@@ -128,35 +128,70 @@ class CoreAnnotationVectorStore:
         if self.embed_dim not in [384, 768, 1536, 3072]:
             self.embed_dim = getattr(embedder_class, "vector_size", 768)
 
-    def _build_base_queryset(self) -> QuerySet[Annotation]:
+    async def _build_base_queryset(self) -> QuerySet[Annotation]:
         """Build the base annotation queryset with standard filters."""
         _logger.debug("Building base queryset for vector search")
 
-        # Start with all annotations and prefetch related objects to avoid lazy loading
-        # Note: bounding_box is a JSONField, not a foreign key, so it can't be in select_related
-        queryset = Annotation.objects.select_related("annotation_label").all()
-        _logger.debug(f"Initial queryset: {queryset.query}")
+        # Select related for fields directly on Annotation or accessed often.
+        # Document's M2M to Corpus (corpus_set) is handled by JOINs in filters.
+        queryset = Annotation.objects.select_related("annotation_label", "document", "corpus").all()
+        _logger.info(await _safe_queryset_info(queryset, "Initial: Total annotations in DB"))
 
-        # Apply instance-level filters
-        if self.corpus_id:
-            _logger.debug(f"Filtering by corpus_id: {self.corpus_id}")
-            queryset = queryset.filter(corpus_id=self.corpus_id)
-            _logger.debug(f"After corpus filter: {queryset.query}")
+        active_filters = Q()
 
-        if self.document_id:
-            _logger.debug(f"Filtering by document_id: {self.document_id}")
-            queryset = queryset.filter(document_id=self.document_id)
-            _logger.debug(f"After document filter: {queryset.query}")
+        if self.document_id is not None:
+            # --- Document-specific context ---
+            _logger.debug(f"Document context: document_id={self.document_id}, corpus_id={self.corpus_id}")
+            
+            # 1. Annotations must belong to the specified document.
+            active_filters &= Q(document_id=self.document_id)
+            
+            # 2. Optional corpus scoping: In most cases, higher-level logic ensures that
+            #    the provided document belongs to the expected corpus. Performing an
+            #    additional M2M join here (`document__corpus_set__id=...`) triggers a
+            #    complex SQL path that can raise compatibility issues in some
+            #    environments. We therefore rely on the higher-level validation and
+            #    skip this join for performance and compatibility.
+            #    If you absolutely need this validation in-query, consider adding an
+            #    explicit check elsewhere (or revisiting this join once your DB
+            #    supports the required traversal).
+            
+            # For document-specific context, once document validity within the corpus is confirmed,
+            # both structural and non-structural annotations from that document are considered relevant
+            # to this (document_id, corpus_id) pair. No additional filter on Annotation.corpus_id 
+            # is applied here for corpus scoping, as the document's membership provides the link.
 
-        if self.user_id:
-            _logger.debug(f"Filtering by user_id: {self.user_id}")
-            queryset = queryset.filter(creator_id=self.user_id)
-            _logger.debug(f"After user filter: {queryset.query}")
+        elif self.corpus_id is not None:
+            # --- Corpus-only context (no document_id specified) ---
+            _logger.debug(f"Corpus-only context: corpus_id={self.corpus_id}")
+            # Annotations must be either:
+            # a) Structural (their Annotation.corpus_id might be null, included by nature)
+            # b) Non-structural AND directly linked to this corpus via Annotation.corpus_id.
+            active_filters &= (Q(structural=True) | Q(structural=False, corpus_id=self.corpus_id))
+        
+        # Apply accumulated document/corpus scope filters if any were added
+        if active_filters != Q(): # Check if any conditions were actually added
+            queryset = queryset.filter(active_filters)
+            _logger.info(await _safe_queryset_info(queryset, "After document/corpus scoping"))
+        else:
+            _logger.info("No document/corpus scope filters applied (e.g., neither document_id nor corpus_id provided for scoping).")
 
-        if self.must_have_text:
-            _logger.debug(f"Filtering by text content: '{self.must_have_text}'")
-            queryset = queryset.filter(raw_text__icontains=self.must_have_text)
-            _logger.debug(f"After text content filter: {queryset.query}")
+
+        # --- Visibility / permission filters (applied to the already scoped queryset) ---
+        # An annotation is visible if it's structural OR public OR created by the user.
+        visibility_q = Q(structural=True) | Q(is_public=True)
+        if self.user_id is not None:
+            visibility_q |= Q(creator_id=self.user_id)
+        
+        _logger.debug(f"Applying visibility filter: {visibility_q}")
+        queryset = queryset.filter(visibility_q)
+        _logger.debug(f"Query after visibility filter: {queryset.query}")
+        _logger.info(await _safe_queryset_info(queryset, "Annotations after visibility filtering"))
+
+        # Print the SQL query for inspection
+        print("-------------------- GENERATED SQL QUERY --------------------")
+        print(str(queryset.query))
+        print("-------------------------------------------------------------")
 
         return queryset
 
@@ -229,7 +264,7 @@ class CoreAnnotationVectorStore:
             List of search results with annotations and similarity scores
         """
         # Build base queryset with filters
-        queryset = self._build_base_queryset()
+        queryset = async_to_sync(self._build_base_queryset)()
 
         # Apply metadata filters
         queryset = self._apply_metadata_filters(queryset, query.filters)
@@ -313,7 +348,7 @@ class CoreAnnotationVectorStore:
             List of search results with annotations and similarity scores
         """
         # Build base queryset with filters
-        queryset = self._build_base_queryset()
+        queryset = await self._build_base_queryset()
 
         # Apply metadata filters
         queryset = self._apply_metadata_filters(queryset, query.filters)

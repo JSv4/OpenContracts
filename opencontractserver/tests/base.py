@@ -16,7 +16,11 @@ from graphql_jwt.shortcuts import get_token
 
 from config.asgi import application
 from opencontractserver.annotations.models import Annotation
-from opencontractserver.annotations.signals import process_annot_on_create_atomic
+from opencontractserver.corpuses.models import Corpus
+from opencontractserver.annotations.signals import (
+    process_annot_on_create_atomic,
+    ANNOT_CREATE_UID,  # Import the static UID
+)
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.documents.signals import process_doc_on_create_atomic
@@ -88,7 +92,11 @@ class BaseFixtureTestCase(TransactionTestCase):
 
         # Disconnect signals before loading fixtures
         post_save.disconnect(process_doc_on_create_atomic, sender=Document)
-        post_save.disconnect(process_annot_on_create_atomic, sender=Annotation)
+        post_save.disconnect(
+            process_annot_on_create_atomic,
+            sender=Annotation,
+            dispatch_uid=ANNOT_CREATE_UID  # Use static UID
+        )
 
         # Close any existing connections before setup
         for conn in connections.all():
@@ -151,7 +159,11 @@ class BaseFixtureTestCase(TransactionTestCase):
         finally:
             # Reconnect signals and clean up the filesystem
             post_save.connect(process_doc_on_create_atomic, sender=Document)
-            post_save.connect(process_annot_on_create_atomic, sender=Annotation)
+            post_save.connect(
+                process_annot_on_create_atomic,
+                sender=Annotation,
+                dispatch_uid=ANNOT_CREATE_UID  # Use static UID
+            )
 
             if os.path.exists(settings.MEDIA_ROOT):
                 shutil.rmtree(settings.MEDIA_ROOT)

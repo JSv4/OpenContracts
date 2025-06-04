@@ -17,6 +17,10 @@ services:
     environment:
       PORT: 8000
 
+  docling-parser:
+    image: jscrudato/docsling-local
+    container_name: docling-parser
+
   django: &django
     build:
       context: .
@@ -31,6 +35,7 @@ services:
       - vector-embedder
       - nlm-ingestor
       - celeryworker
+      - docling-parser
     volumes:
       - .:/app:z
     env_file:

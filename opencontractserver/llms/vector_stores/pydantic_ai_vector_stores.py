@@ -234,6 +234,29 @@ class PydanticAIAnnotationVectorStore:
         # Convert to PydanticAI response format
         return PydanticAIVectorSearchResponse.from_core_results(results)
 
+    # ------------------------------------------------------------------
+    # Compatibility: implement the minimal protocol expected by
+    # VectorStoreSearchTool (pydantic-ai built-in).
+    # ------------------------------------------------------------------
+
+    async def similarity_search(
+        self,
+        query: str,
+        *,
+        k: int = 8,
+        **kwargs: Any,
+    ) -> list[dict[str, Any]]:
+        """Async wrapper that adapts to pydantic-ai's expected signature.
+
+        VectorStoreSearchTool looks for a coroutine / function
+        `vector_store.similarity_search(query, k=…)` and returns a raw list
+        of dicts.  We delegate to ``search_annotations`` and then expose the
+        list of hits so that the tool can feed them directly to the model
+        (and propagate them to ``result.sources``).
+        """
+        response = await self.search_annotations(query_text=query, similarity_top_k=k)
+        return response.results
+
     def get_store_info(self) -> dict[str, Any]:
         """Get information about the vector store configuration.
 
@@ -277,7 +300,10 @@ class PydanticAIAnnotationVectorStore:
                 similarity_top_k=similarity_top_k,
                 filters=filters,
             )
-            return response.model_dump()
+            response_dict = response.model_dump()
+            # Provide a top-level "sources" key so PydanticAI RunResult exposes .sources
+            response_dict["sources"] = response_dict.get("results", [])
+            return response_dict
 
         # Set proper metadata for PydanticAI
         vector_search_tool.__name__ = "vector_search"

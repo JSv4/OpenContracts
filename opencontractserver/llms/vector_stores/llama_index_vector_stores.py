@@ -134,29 +134,28 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
         return result
 
     def _convert_to_text_nodes(self, results: list) -> list[TextNode]:
-        """Convert our search results to LlamaIndex TextNodes."""
-        nodes = []
+        """Convert our search results to LlamaIndex TextNodes with clean embedding retrieval."""
+        nodes: list[TextNode] = []
         for result in results:
             annotation = result.annotation
+
+            # Use the clean API to get the embedding vector
+            embedding_vector = annotation.get_embedding(
+                embedder_path=self._core_store.embedder_path,
+                dimension=self._core_store.embed_dim
+            )
+
             node = TextNode(
                 doc_id=str(annotation.id),
-                text=annotation.raw_text
-                if isinstance(annotation.raw_text, str)
-                else "",
-                embedding=annotation.embedding.tolist()
-                if getattr(annotation, "embedding", None) is not None
-                else [],
+                text=annotation.raw_text if isinstance(annotation.raw_text, str) else "",
+                embedding=embedding_vector,  # Clean retrieval via mixin API
                 extra_info={
                     "page": annotation.page,
                     "json": annotation.json,
                     "bounding_box": annotation.bounding_box,
                     "annotation_id": annotation.id,
-                    "label": annotation.annotation_label.text
-                    if annotation.annotation_label
-                    else None,
-                    "label_id": annotation.annotation_label.id
-                    if annotation.annotation_label
-                    else None,
+                    "label": annotation.annotation_label.text if annotation.annotation_label else None,
+                    "label_id": annotation.annotation_label.id if annotation.annotation_label else None,
                 },
             )
             nodes.append(node)
@@ -220,8 +219,33 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
         # Use the async_search method of the core_store
         core_results = await self._core_store.async_search(search_query)
 
-        # Convert core_results to LlamaIndex TextNodes
-        nodes = self._convert_to_text_nodes(core_results)
+        # Convert results to TextNodes in an async-safe way because
+        # ``annotation.get_embedding`` hits the ORM.
+        # Use the async embedding retrieval method now available.
+        async def _build_node(result) -> TextNode:
+            annotation = result.annotation
+
+            # Use async embedding retrieval instead of sync version
+            embedding_vector = await annotation.aget_embedding(
+                embedder_path=self._core_store.embedder_path,
+                dimension=self._core_store.embed_dim,
+            )
+
+            return TextNode(
+                doc_id=str(annotation.id),
+                text=annotation.raw_text if isinstance(annotation.raw_text, str) else "",
+                embedding=embedding_vector,
+                extra_info={
+                    "page": annotation.page,
+                    "json": annotation.json,
+                    "bounding_box": annotation.bounding_box,
+                    "annotation_id": annotation.id,
+                    "label": annotation.annotation_label.text if annotation.annotation_label else None,
+                    "label_id": annotation.annotation_label.id if annotation.annotation_label else None,
+                },
+            )
+
+        nodes = [await _build_node(r) for r in core_results]
 
         return VectorStoreQueryResult(
             nodes=nodes,

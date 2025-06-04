@@ -491,6 +491,7 @@ class Annotation(BaseOCModel, HasEmbeddingMixin):
             django.db.models.Index(fields=["document"]),
             django.db.models.Index(fields=["document", "creator"]),
             django.db.models.Index(fields=["corpus"]),
+            django.db.models.Index(fields=["structural", "corpus"]),
             django.db.models.Index(fields=["corpus", "creator"]),
             django.db.models.Index(fields=["document", "corpus"]),
             django.db.models.Index(fields=["document", "corpus", "creator"]),

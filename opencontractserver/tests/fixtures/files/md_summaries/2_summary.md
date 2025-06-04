@@ -8,4 +8,4 @@ Key aspects generally found in such documents include:
 - **Effective Dates & Amendments:** Information on when provisions came into force and any subsequent changes.
 - **Cross-References:** Links to other relevant sections of the U.S. Code or related acts.
 
-Without the specific text, this summary remains general. This document would serve as a primary legal reference for its subject matter. 
+Without the specific text, this summary remains general. This document would serve as a primary legal reference for its subject matter.

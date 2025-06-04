@@ -5,8 +5,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Optional, Union
 
-from asgiref.sync import sync_to_async, async_to_sync
-from django.db.models import QuerySet, Q
+from asgiref.sync import async_to_sync, sync_to_async
+from django.db.models import Q, QuerySet
 
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.utils.embeddings import (
@@ -134,18 +134,24 @@ class CoreAnnotationVectorStore:
 
         # Select related for fields directly on Annotation or accessed often.
         # Document's M2M to Corpus (corpus_set) is handled by JOINs in filters.
-        queryset = Annotation.objects.select_related("annotation_label", "document", "corpus").all()
-        _logger.info(await _safe_queryset_info(queryset, "Initial: Total annotations in DB"))
+        queryset = Annotation.objects.select_related(
+            "annotation_label", "document", "corpus"
+        ).all()
+        _logger.info(
+            await _safe_queryset_info(queryset, "Initial: Total annotations in DB")
+        )
 
         active_filters = Q()
 
         if self.document_id is not None:
             # --- Document-specific context ---
-            _logger.debug(f"Document context: document_id={self.document_id}, corpus_id={self.corpus_id}")
-            
+            _logger.debug(
+                f"Document context: document_id={self.document_id}, corpus_id={self.corpus_id}"
+            )
+
             # 1. Annotations must belong to the specified document.
             active_filters &= Q(document_id=self.document_id)
-            
+
             # 2. Optional corpus scoping: In most cases, higher-level logic ensures that
             #    the provided document belongs to the expected corpus. Performing an
             #    additional M2M join here (`document__corpus_set__id=...`) triggers a
@@ -155,10 +161,10 @@ class CoreAnnotationVectorStore:
             #    If you absolutely need this validation in-query, consider adding an
             #    explicit check elsewhere (or revisiting this join once your DB
             #    supports the required traversal).
-            
+
             # For document-specific context, once document validity within the corpus is confirmed,
             # both structural and non-structural annotations from that document are considered relevant
-            # to this (document_id, corpus_id) pair. No additional filter on Annotation.corpus_id 
+            # to this (document_id, corpus_id) pair. No additional filter on Annotation.corpus_id
             # is applied here for corpus scoping, as the document's membership provides the link.
 
         elif self.corpus_id is not None:
@@ -167,26 +173,36 @@ class CoreAnnotationVectorStore:
             # Annotations must be either:
             # a) Structural (their Annotation.corpus_id might be null, included by nature)
             # b) Non-structural AND directly linked to this corpus via Annotation.corpus_id.
-            active_filters &= (Q(structural=True) | Q(structural=False, corpus_id=self.corpus_id))
-        
-        # Apply accumulated document/corpus scope filters if any were added
-        if active_filters != Q(): # Check if any conditions were actually added
-            queryset = queryset.filter(active_filters)
-            _logger.info(await _safe_queryset_info(queryset, "After document/corpus scoping"))
-        else:
-            _logger.info("No document/corpus scope filters applied (e.g., neither document_id nor corpus_id provided for scoping).")
+            active_filters &= Q(structural=True) | Q(
+                structural=False, corpus_id=self.corpus_id
+            )
 
+        # Apply accumulated document/corpus scope filters if any were added
+        if active_filters != Q():  # Check if any conditions were actually added
+            queryset = queryset.filter(active_filters)
+            _logger.info(
+                await _safe_queryset_info(queryset, "After document/corpus scoping")
+            )
+        else:
+            _logger.info(
+                "No document/corpus scope filters applied (e.g., "
+                "neither document_id nor corpus_id provided for scoping)."
+            )
 
         # --- Visibility / permission filters (applied to the already scoped queryset) ---
         # An annotation is visible if it's structural OR public OR created by the user.
         visibility_q = Q(structural=True) | Q(is_public=True)
         if self.user_id is not None:
             visibility_q |= Q(creator_id=self.user_id)
-        
+
         _logger.debug(f"Applying visibility filter: {visibility_q}")
         queryset = queryset.filter(visibility_q)
         _logger.debug(f"Query after visibility filter: {queryset.query}")
-        _logger.info(await _safe_queryset_info(queryset, "Annotations after visibility filtering"))
+        _logger.info(
+            await _safe_queryset_info(
+                queryset, "Annotations after visibility filtering"
+            )
+        )
 
         # Print the SQL query for inspection
         print("-------------------- GENERATED SQL QUERY --------------------")
@@ -322,7 +338,9 @@ class CoreAnnotationVectorStore:
 
         if annotations:
             _logger.debug(f"First annotation ID: {annotations[0].id}")
-            _logger.info(f"[CoreAnnotationVectorStore.search] Vector store returned {len(annotations)} annotations for query.")
+            _logger.info(
+                f"[CoreAnnotationVectorStore.search] Vector store returned {len(annotations)} annotations for query."
+            )
         else:
             _logger.warning("No annotations found for the query")
 
@@ -389,12 +407,6 @@ class CoreAnnotationVectorStore:
         _logger.debug("Fetching annotations from database")
         annotations = await _safe_execute_queryset(queryset)
         _logger.debug(f"Retrieved {len(annotations)} annotations")
-
-        if annotations:
-            _logger.debug(f"First annotation ID: {annotations[0].id}")
-            _logger.info(f"[CoreAnnotationVectorStore.async_search] Vector store returned {len(annotations)} annotations for query.")
-        else:
-            _logger.warning("No annotations found for the query")
 
         # Convert to result objects
         results = []

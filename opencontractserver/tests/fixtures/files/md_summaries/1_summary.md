@@ -7,4 +7,4 @@ Key topics covered:
 - **Chapter 2: Acts and Resolutions:** Outlines formalities for the enactment of laws, procedures for repeals, and the sealing of official instruments.
 - **Chapter 3: Code of Laws of the United States and Supplements:** Details regarding the official U.S. Code and its supplements, including the District of Columbia Code.
 
-This title also includes provisions regarding "products of American fisheries," definitions of "marriage" and "spouse" (as amended by the Respect for Marriage Act), and the inclusion of "born-alive infants" under terms like "person" and "human being." It serves as a foundational text for understanding federal statutory language. 
+This title also includes provisions regarding "products of American fisheries," definitions of "marriage" and "spouse" (as amended by the Respect for Marriage Act), and the inclusion of "born-alive infants" under terms like "person" and "human being." It serves as a foundational text for understanding federal statutory language.

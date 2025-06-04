@@ -63,7 +63,9 @@ class TestLLMTools(TestCase):
 
     def test_load_document_md_summary_nonexistent_doc(self):
         """Test loading summary for non-existent document."""
-        with self.assertRaisesRegex(ValueError, "Document with id=999999 does not exist."):
+        with self.assertRaisesRegex(
+            ValueError, "Document with id=999999 does not exist."
+        ):
             load_document_md_summary(999999)
 
     def test_load_document_md_summary_no_file(self):
@@ -72,7 +74,9 @@ class TestLLMTools(TestCase):
             creator=self.user,
             title="No Summary Doc",
         )
-        with self.assertRaisesRegex(ValueError, "No md_summary_file attached to this document."):
+        with self.assertRaisesRegex(
+            ValueError, "No md_summary_file attached to this document."
+        ):
             load_document_md_summary(doc_without_summary.id)
 
     def test_load_document_md_summary_truncate_from_end(self):
@@ -84,7 +88,9 @@ class TestLLMTools(TestCase):
 
     def test_get_md_summary_token_length_nonexistent(self):
         """Test token length for non-existent document."""
-        with self.assertRaisesRegex(ValueError, "Document with id=999999 does not exist."):
+        with self.assertRaisesRegex(
+            ValueError, "Document with id=999999 does not exist."
+        ):
             get_md_summary_token_length(999999)
 
     def test_get_md_summary_token_length_no_file(self):
@@ -93,7 +99,9 @@ class TestLLMTools(TestCase):
             creator=self.user,
             title="No Summary Doc",
         )
-        with self.assertRaisesRegex(ValueError, "No md_summary_file attached to this document."):
+        with self.assertRaisesRegex(
+            ValueError, "No md_summary_file attached to this document."
+        ):
             get_md_summary_token_length(doc_without_summary.id)
 
     def test_get_notes_for_document_corpus_with_truncation(self):

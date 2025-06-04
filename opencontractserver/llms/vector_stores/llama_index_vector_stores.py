@@ -142,20 +142,26 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
             # Use the clean API to get the embedding vector
             embedding_vector = annotation.get_embedding(
                 embedder_path=self._core_store.embedder_path,
-                dimension=self._core_store.embed_dim
+                dimension=self._core_store.embed_dim,
             )
 
             node = TextNode(
                 doc_id=str(annotation.id),
-                text=annotation.raw_text if isinstance(annotation.raw_text, str) else "",
+                text=annotation.raw_text
+                if isinstance(annotation.raw_text, str)
+                else "",
                 embedding=embedding_vector,  # Clean retrieval via mixin API
                 extra_info={
                     "page": annotation.page,
                     "json": annotation.json,
                     "bounding_box": annotation.bounding_box,
                     "annotation_id": annotation.id,
-                    "label": annotation.annotation_label.text if annotation.annotation_label else None,
-                    "label_id": annotation.annotation_label.id if annotation.annotation_label else None,
+                    "label": annotation.annotation_label.text
+                    if annotation.annotation_label
+                    else None,
+                    "label_id": annotation.annotation_label.id
+                    if annotation.annotation_label
+                    else None,
                 },
             )
             nodes.append(node)
@@ -233,15 +239,21 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
 
             return TextNode(
                 doc_id=str(annotation.id),
-                text=annotation.raw_text if isinstance(annotation.raw_text, str) else "",
+                text=annotation.raw_text
+                if isinstance(annotation.raw_text, str)
+                else "",
                 embedding=embedding_vector,
                 extra_info={
                     "page": annotation.page,
                     "json": annotation.json,
                     "bounding_box": annotation.bounding_box,
                     "annotation_id": annotation.id,
-                    "label": annotation.annotation_label.text if annotation.annotation_label else None,
-                    "label_id": annotation.annotation_label.id if annotation.annotation_label else None,
+                    "label": annotation.annotation_label.text
+                    if annotation.annotation_label
+                    else None,
+                    "label_id": annotation.annotation_label.id
+                    if annotation.annotation_label
+                    else None,
                 },
             )
 

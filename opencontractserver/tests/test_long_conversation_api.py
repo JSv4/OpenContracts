@@ -171,7 +171,9 @@ class TestLongConversationAPI(TestCase):
                 "opencontractserver.llms.agents.llama_index_agents.DjangoAnnotationVectorStore"
             ):
 
-                agent = await agents.for_document(self.document.id, self.corpus.id)  # Anonymous
+                agent = await agents.for_document(
+                    self.document.id, self.corpus.id
+                )  # Anonymous
 
                 # Test the actual message storage methods
                 user_msg_id = await agent.store_user_message("Test user message")
@@ -406,9 +408,13 @@ class TestLongConversationAPI(TestCase):
         """Test persistent conversations work for corpus agents."""
         # Ensure a clean slate for this user's conversations for this test
         await Conversation.objects.filter(creator=self.user).adelete()
-        
+
         initial_conversation_count = await Conversation.objects.acount()
-        self.assertEqual(initial_conversation_count, 0, "Ensuring no pre-existing convos for this user before test.")
+        self.assertEqual(
+            initial_conversation_count,
+            0,
+            "Ensuring no pre-existing convos for this user before test.",
+        )
 
         # Mock the OpenAI agent creation and methods
         with patch(
@@ -429,10 +435,10 @@ class TestLongConversationAPI(TestCase):
             ):
 
                 agent = await agents.for_corpus(
-                    self.corpus.id, 
+                    self.corpus.id,
                     user_id=self.user.id,
-                    conversation_id=None, # Explicitly None
-                    conversation=None # Explicitly None
+                    conversation_id=None,  # Explicitly None
+                    conversation=None,  # Explicitly None
                 )
 
                 # Verify persistent behavior
@@ -474,7 +480,9 @@ class TestLongConversationAPI(TestCase):
                 "opencontractserver.llms.agents.llama_index_agents.DjangoAnnotationVectorStore"
             ):
 
-                agent = await agents.for_document(self.document.id, self.corpus.id)  # Anonymous
+                agent = await agents.for_document(
+                    self.document.id, self.corpus.id
+                )  # Anonymous
 
                 # Test multiple message storage operations
                 questions = [
@@ -529,7 +537,9 @@ class TestLongConversationAPI(TestCase):
             ):
 
                 # Test anonymous conversation info
-                anonymous_agent = await agents.for_document(self.document.id, self.corpus.id)
+                anonymous_agent = await agents.for_document(
+                    self.document.id, self.corpus.id
+                )
                 anonymous_info = anonymous_agent.get_conversation_info()
 
                 self.assertIsNone(anonymous_info["conversation_id"])

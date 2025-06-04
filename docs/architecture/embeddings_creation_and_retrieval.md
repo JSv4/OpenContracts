@@ -28,13 +28,13 @@
      ```python
      # Synchronous retrieval
      vector = instance.get_embedding(
-         embedder_path="openai/text-embedding-ada-002", 
+         embedder_path="openai/text-embedding-ada-002",
          dimension=384
      )
-     
+
      # Asynchronous retrieval (uses database_sync_to_async)
      vector = await instance.aget_embedding(
-         embedder_path="openai/text-embedding-ada-002", 
+         embedder_path="openai/text-embedding-ada-002",
          dimension=384
      )
      ```
@@ -208,7 +208,7 @@ Framework adapters are thin wrappers that translate between the core API and spe
 
      # Use with PydanticAI agent
      from pydantic_ai import Agent
-     
+
      agent = Agent(
          model=my_model,
          tools=[vector_search_tool],
@@ -219,7 +219,7 @@ Framework adapters are thin wrappers that translate between the core API and spe
    - Returns structured `PydanticAIVectorSearchResponse` with validated data:
      ```python
      response = await vector_store.search_annotations("query text")
-     
+
      # Response structure
      {
          "results": [

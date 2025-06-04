@@ -8,4 +8,4 @@ Features commonly present:
 - **Definitions of Key Terms:** Specific meanings of words as they apply within the context of the statute.
 - **Subsections and Paragraphs:** Granular organization for clarity and precision.
 
-As with other U.S. Code excerpts, this document provides authoritative legal text for its respective field. 
+As with other U.S. Code excerpts, this document provides authoritative legal text for its respective field.

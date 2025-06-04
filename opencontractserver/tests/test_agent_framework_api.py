@@ -91,9 +91,7 @@ class TestAgentAPIHypermodern(TestAPISetup):
         args, kwargs = mock_create_doc_agent.call_args
         self.assertEqual(args[0], self.doc1.id)
         self.assertEqual(args[1], self.corpus1.id)
-        self.assertEqual(
-            kwargs["framework"], AgentFramework.LLAMA_INDEX
-        )  # Default
+        self.assertEqual(kwargs["framework"], AgentFramework.LLAMA_INDEX)  # Default
         self.assertIsInstance(agent, CoreAgent)
 
     @patch(
@@ -105,7 +103,9 @@ class TestAgentAPIHypermodern(TestAPISetup):
     ):
         mock_create_doc_agent.return_value = AsyncMock(spec=CoreAgent)
 
-        agent = await agents.for_document(self.doc1.id, self.corpus1.id, framework="pydantic_ai")
+        agent = await agents.for_document(
+            self.doc1.id, self.corpus1.id, framework="pydantic_ai"
+        )
 
         mock_create_doc_agent.assert_called_once()
         args, kwargs = mock_create_doc_agent.call_args
@@ -181,9 +181,7 @@ class TestAgentAPIHypermodern(TestAPISetup):
         args, kwargs = mock_create_corpus_agent.call_args
         self.assertEqual(args[0], self.corpus1.id)
         self.assertEqual(kwargs["model"], "claude-opus")
-        self.assertEqual(
-            kwargs["framework"], AgentFramework.LLAMA_INDEX
-        )  # Default
+        self.assertEqual(kwargs["framework"], AgentFramework.LLAMA_INDEX)  # Default
         self.assertIsInstance(agent, CoreAgent)
 
     @patch(

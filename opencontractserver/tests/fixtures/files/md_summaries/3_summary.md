@@ -8,4 +8,4 @@ Typical components would include:
 - **Enforcement and Penalties:** Provisions related to how the law is enforced and consequences for non-compliance (if applicable).
 - **Historical and Revision Notes:** Information about the legislative history and any amendments to the sections.
 
-This summary is based on the general nature of U.S. Code documents. The actual content would provide detailed legal guidance on its specific subject. 
+This summary is based on the general nature of U.S. Code documents. The actual content would provide detailed legal guidance on its specific subject.

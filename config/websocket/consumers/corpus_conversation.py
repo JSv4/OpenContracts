@@ -208,8 +208,9 @@ class CorpusQueryConsumer(AsyncWebsocketConsumer):
                     for src in chunk.sources or []:
                         sources.append(
                             {
-                                "annotation_id": src.metadata.get("annotation_id"),
-                                "rawText": getattr(src, "text", ""),
+                                "annotation_id": src.annotation_id,
+                                "rawText": src.content,
+                                "similarity_score": src.similarity_score,
                                 **src.metadata,
                             }
                         )

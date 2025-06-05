@@ -380,11 +380,10 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                         if chunk.sources:
                             for source in chunk.sources:
                                 source_data = {
-                                    "annotation_id": source.metadata.get(
-                                        "annotation_id"
-                                    ),
-                                    "rawText": source.content,  # Corrected from source.text
-                                    **source.metadata,
+                                    "annotation_id": source.annotation_id,
+                                    "rawText": source.content,
+                                    "similarity_score": source.similarity_score,
+                                    **source.metadata,  # Flatten metadata to top level
                                 }
                                 sources.append(source_data)
 

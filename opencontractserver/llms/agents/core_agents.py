@@ -57,16 +57,15 @@ class SourceNode:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for storage in message data."""
-        # Front-end historical schema expects `rawText` rather than `content`.
-        # Store both keys so legacy and new consumers work seamlessly when
-        # re-loading messages from the database.
-        return {
+        # Flatten metadata to top level and include similarity_score
+        # This mirrors the WebSocket transmission format for consistency
+        result = {
             "annotation_id": self.annotation_id,
-            "content": self.content,
-            "rawText": self.content,
-            "metadata": self.metadata,
+            "rawText": self.content,  # Frontend expects rawText
             "similarity_score": self.similarity_score,
+            **self.metadata,  # Flatten all metadata fields to top level
         }
+        return result
 
 
 @dataclass

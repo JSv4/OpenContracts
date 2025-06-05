@@ -87,12 +87,25 @@ class _DummyStreamResult:
     async def __aexit__(self, *_):
         return False
 
-    async def stream_text(self, delta: bool = True):
+    async def stream_text(
+        self, delta: bool = True, debounce_by: Optional[float] = None
+    ):
         for ch in self.data:
             yield ch
 
     def usage(self):
         return None
+
+    # ------------------------------------------------------------------ #
+    # Additional helpers expected by PydanticAICoreAgent.stream()
+    # ------------------------------------------------------------------ #
+    async def get_output(self) -> str:  # noqa: D401 – simple passthrough
+        """Return the full output accumulated during streaming."""
+        return self.data
+
+    def all_messages(self):  # noqa: D401 – simple passthrough
+        """Return an empty message history for tests that don't need it."""
+        return []
 
 
 class TestPydanticAIAgents(TestCase):

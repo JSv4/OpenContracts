@@ -5,11 +5,6 @@ volumes:
   local_postgres_data_backups: {}
 
 services:
-  nlm-ingestor:
-    image: jscrudato/nlm-ingestor-opencontracts
-    container_name: nlm-ingestor
-    environment:
-      PORT: 5001
 
   vector-embedder:
     image: jscrudato/vector-embedder-microservice
@@ -33,7 +28,6 @@ services:
       - postgres
       - redis
       - vector-embedder
-      - nlm-ingestor
       - celeryworker
       - docling-parser
     volumes:
@@ -68,6 +62,5 @@ services:
     depends_on:
       - redis
       - postgres
-      - nlm-ingestor
     ports: []
     command: /start-celeryworker

@@ -129,7 +129,25 @@ class CoreAnnotationVectorStore:
             self.embed_dim = getattr(embedder_class, "vector_size", 768)
 
     async def _build_base_queryset(self) -> QuerySet[Annotation]:
-        """Build the base annotation queryset with standard filters."""
+        """Build the base annotation queryset applying the following rules.
+
+        1. Scope by document or corpus if those identifiers were supplied.
+        2. Optionally filter annotations whose ``raw_text`` contains the
+           ``must_have_text`` substring provided at construction time.  The
+           match is case-insensitive (``icontains``).
+        3. Visibility rules:
+
+           • *Structural* annotations are **always** returned.
+
+           • *Non-structural* annotations:
+               – When ``user_id`` **is provided** ⇒ limit to annotations the
+                 user created (``creator_id == user_id``).
+               – When ``user_id`` is **not provided** ⇒ limit to annotations
+                 that are public (``is_public=True``).
+
+        These rules mirror the expectations captured in the Django test suite
+        (``tests/test_django_annotation_vector_store.py``).
+        """
         _logger.debug("Building base queryset for vector search")
 
         # Select related for fields directly on Annotation or accessed often.
@@ -152,21 +170,6 @@ class CoreAnnotationVectorStore:
             # 1. Annotations must belong to the specified document.
             active_filters &= Q(document_id=self.document_id)
 
-            # 2. Optional corpus scoping: In most cases, higher-level logic ensures that
-            #    the provided document belongs to the expected corpus. Performing an
-            #    additional M2M join here (`document__corpus_set__id=...`) triggers a
-            #    complex SQL path that can raise compatibility issues in some
-            #    environments. We therefore rely on the higher-level validation and
-            #    skip this join for performance and compatibility.
-            #    If you absolutely need this validation in-query, consider adding an
-            #    explicit check elsewhere (or revisiting this join once your DB
-            #    supports the required traversal).
-
-            # For document-specific context, once document validity within the corpus is confirmed,
-            # both structural and non-structural annotations from that document are considered relevant
-            # to this (document_id, corpus_id) pair. No additional filter on Annotation.corpus_id
-            # is applied here for corpus scoping, as the document's membership provides the link.
-
         elif self.corpus_id is not None:
             # --- Corpus-only context (no document_id specified) ---
             _logger.debug(f"Corpus-only context: corpus_id={self.corpus_id}")
@@ -177,6 +180,7 @@ class CoreAnnotationVectorStore:
                 structural=False, corpus_id=self.corpus_id
             )
 
+        # ------------------------------------------------------------------ #
         # Apply accumulated document/corpus scope filters if any were added
         if active_filters != Q():  # Check if any conditions were actually added
             queryset = queryset.filter(active_filters)
@@ -189,11 +193,44 @@ class CoreAnnotationVectorStore:
                 "neither document_id nor corpus_id provided for scoping)."
             )
 
-        # --- Visibility / permission filters (applied to the already scoped queryset) ---
-        # An annotation is visible if it's structural OR public OR created by the user.
-        visibility_q = Q(structural=True) | Q(is_public=True)
+        # ------------------------------------------------------------------ #
+        # Text substring filtering (must_have_text)
+        # ------------------------------------------------------------------ #
+        if self.must_have_text:
+            queryset = queryset.filter(raw_text__icontains=self.must_have_text)
+            _logger.info(
+                await _safe_queryset_info(
+                    queryset, f"After must_have_text='{self.must_have_text}' filter"
+                )
+            )
+
+        # -------------------------------------------------------------- #
+        # Visibility rules
+        # -------------------------------------------------------------- #
+        # For document-specific queries we want ALL structural annotations
+        # from that document irrespective of user/public flags **plus**
+        # the usual visibility logic for *non-structural* annotations.
+        #
+        #   structural annotations → always visible (document filtered above)
+        #   non-structural annotations → visible if public OR owned by user
+        #
+        # This translates to:
+        #     (structural=True) OR
+        #     (structural=False AND (is_public=True OR creator_id=<user>))
+        #
+        # For non-document contexts we keep similar behaviour but tighten
+        # non-structural visibility when a user_id is supplied.
+
         if self.user_id is not None:
-            visibility_q |= Q(creator_id=self.user_id)
+            # User-specific request → include ALL structural annotations plus
+            # the requesting user's non-structural annotations.
+            visibility_q = Q(structural=True) | Q(
+                structural=False, creator_id=self.user_id
+            )
+        else:
+            # Anonymous / system request → structural annotations plus any
+            # non-structural annotations explicitly made public.
+            visibility_q = Q(structural=True) | Q(structural=False, is_public=True)
 
         _logger.debug(f"Applying visibility filter: {visibility_q}")
         queryset = queryset.filter(visibility_q)

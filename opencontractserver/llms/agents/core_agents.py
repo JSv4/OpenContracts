@@ -57,9 +57,13 @@ class SourceNode:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for storage in message data."""
+        # Front-end historical schema expects `rawText` rather than `content`.
+        # Store both keys so legacy and new consumers work seamlessly when
+        # re-loading messages from the database.
         return {
             "annotation_id": self.annotation_id,
             "content": self.content,
+            "rawText": self.content,
             "metadata": self.metadata,
             "similarity_score": self.similarity_score,
         }

@@ -398,7 +398,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                         )
                         await self.send_standard_message(
                             msg_type="ASYNC_FINISH",
-                            content="",  # Full content already sent in chunks
+                            content=chunk.accumulated_content,
                             data=data,
                         )
 

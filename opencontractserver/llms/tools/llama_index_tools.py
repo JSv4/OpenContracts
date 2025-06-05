@@ -141,9 +141,39 @@ def _create_individual_tools():
         load_document_md_summary,
     )
 
+    # ------------------------------------------------------------------ #
+    # Wrap summary loader so missing files don't crash agents at runtime.
+    # Unit tests expect ValueError when the *core* function is called
+    # directly, so we leave its behaviour intact.  The Llama-Index tool,
+    # however, should degrade gracefully — returning an empty string and
+    # logging a warning instead of propagating the exception.
+    # ------------------------------------------------------------------ #
+
+    def _safe_load_document_md_summary(
+        document_id: int,
+        truncate_length: Optional[int] = None,
+        from_start: bool = True,
+    ) -> str:
+        """Wrapper around load_document_md_summary that returns an empty string
+        instead of raising when the summary file is unavailable. This avoids
+        unhandled exceptions inside LlamaIndex agent tool calls.
+        """
+
+        try:
+            return load_document_md_summary(
+                document_id,
+                truncate_length=truncate_length,
+                from_start=from_start,
+            )
+        except ValueError as exc:  # missing file or document
+            logger.warning(
+                "load_document_md_summary failed for document %s: %s", document_id, exc
+            )
+            return "Summary not available"
+
     return {
         "load_document_md_summary_tool": FunctionTool.from_defaults(
-            load_document_md_summary
+            _safe_load_document_md_summary
         ),
         "get_md_summary_token_length_tool": FunctionTool.from_defaults(
             get_md_summary_token_length

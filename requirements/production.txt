@@ -14,7 +14,7 @@ django-anymail[mailgun]==8.6  # https://github.com/anymail/django-anymail
 # Not directly required, pinned by Snyk to avoid a vulnerability
 # Duplicated accross requirements files due to Snyk not understanding requirements inheritance
 # ------------------------------------------------------------------------------
-django==4.2.20  # pyup: < 4.0  # https://www.djangoproject.com/
+django==4.2.22  # pyup: < 4.0  # https://www.djangoproject.com/
 twisted>=24.7.0rc1 # not directly required, pinned by Snyk to avoid a vulnerability
 ipython>=8.10.0 # not directly required, pinned by Snyk to avoid a vulnerability
 requests>=2.32.2 # not directly required, pinned by Snyk to avoid a vulnerability

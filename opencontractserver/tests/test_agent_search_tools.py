@@ -6,8 +6,16 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.test import TestCase, override_settings
 
-from opencontractserver.annotations.models import Annotation, AnnotationLabel
+from opencontractserver.annotations.models import Annotation, AnnotationLabel, Note
+from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.llms.tools.core_tools import (
+    aget_md_summary_token_length,
+    aget_notes_for_document_corpus,
+    aload_document_md_summary,
+    get_note_content_token_length,
+    get_partial_note_content,
+)
 from opencontractserver.tasks.data_extract_tasks import annotation_window, text_search
 from opencontractserver.types.dicts import PawlsTokenPythonType
 
@@ -62,7 +70,7 @@ class TestDataExtractTasks(TestCase):
             pawls_parse_file=ContentFile(pawls_content, name="test_pawls.json"),
         )
 
-        # Make sure the text doc’s content matches the annotation’s raw_text:
+        # Make sure the text doc's content matches the annotation's raw_text:
         text_doc_content = "Test text annotation"
         self.txt_doc = Document.objects.create(
             title="Test Text Document",
@@ -187,7 +195,7 @@ class TestDataExtractTasks(TestCase):
     @patch("opencontractserver.tasks.data_extract_tasks.os.path.exists")
     def test_annotation_window_text(self, mock_exists):
         """
-        The doc’s text is now 'Test text annotation' (which is 19 chars long).
+        The doc's text is now 'Test text annotation' (which is 19 chars long).
         So annotation_window should slice [0:19].
         """
         mock_exists.return_value = True
@@ -244,3 +252,197 @@ class TestDataExtractTasks(TestCase):
         Document.objects.all().delete()
         AnnotationLabel.objects.all().delete()
         User.objects.all().delete()
+
+    # Additional tests for core_tools functions will be inserted below
+
+
+# ---------------------------------------------------------------------------
+# Additional tests for opencontractserver.llms.tools.core_tools
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+@override_settings(
+    DEFAULT_FILE_STORAGE="django.core.files.storage.FileSystemStorage",
+    MEDIA_ROOT="test_media/",
+)
+class TestCoreTools(TestCase):
+    """Tests for synchronous helper functions in core_tools.py."""
+
+    def setUp(self):
+        """Create user, document with markdown summary, corpus, and notes"""
+        self.user = User.objects.create_user(username="coretools", password="pass")
+
+        # Markdown summary content for the document
+        self.md_summary_content = "Markdown summary for testing purposes."
+
+        # Document with an attached md_summary_file (sync functions expect this)
+        self.doc = Document.objects.create(
+            title="Markdown Doc",
+            creator=self.user,
+            file_type="text/markdown",
+            md_summary_file=ContentFile(self.md_summary_content, name="summary.md"),
+        )
+
+        # Optional corpus used for corpus-filtered note retrieval
+        self.corpus = Corpus.objects.create(title="Test Corpus", creator=self.user)
+
+        # Notes – one without corpus and one with corpus
+        self.note1_content = "This is a note on the document."
+        self.note1 = Note.objects.create(
+            title="Note 1",
+            content=self.note1_content,
+            document=self.doc,
+            creator=self.user,
+        )
+
+        self.note2_content = "Another note belonging to corpus."
+        self.note2 = Note.objects.create(
+            title="Note 2",
+            content=self.note2_content,
+            document=self.doc,
+            corpus=self.corpus,
+            creator=self.user,
+        )
+
+    # ---------------------------------------------------------------------
+    # get_note_content_token_length
+    # ---------------------------------------------------------------------
+    def test_get_note_content_token_length(self):
+        """Should return correct whitespace token count for a note."""
+        expected = len(self.note1_content.split())
+        result = get_note_content_token_length(self.note1.id)
+        self.assertEqual(result, expected)
+
+        # Invalid ID should raise ValueError
+        with self.assertRaises(ValueError):
+            get_note_content_token_length(999_999)
+
+    # ---------------------------------------------------------------------
+    # get_partial_note_content
+    # ---------------------------------------------------------------------
+    def test_get_partial_note_content(self):
+        """Should return the specified substring and validate indices."""
+        start, end = 5, 15
+        expected_substring = self.note1_content[start:end]
+        result = get_partial_note_content(self.note1.id, start, end)
+        self.assertEqual(result, expected_substring)
+
+        # Non-existent note should raise
+        with self.assertRaises(ValueError):
+            get_partial_note_content(999_999, 0, 10)
+
+        # end < start should raise
+        with self.assertRaises(ValueError):
+            get_partial_note_content(self.note1.id, 10, 5)
+
+    def tearDown(self):
+        """Clean up created objects."""
+        Note.objects.all().delete()
+        Corpus.objects.all().delete()
+        Document.objects.all().delete()
+        User.objects.all().delete()
+
+
+# ---------------------------------------------------------------------------
+# Asynchronous tests for core_tools async helpers
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+@override_settings(
+    DEFAULT_FILE_STORAGE="django.core.files.storage.FileSystemStorage",
+    MEDIA_ROOT="test_media/",
+)
+@pytest.mark.asyncio
+async def test_async_md_summary_helpers():
+    """Test aget_md_summary_token_length and aload_document_md_summary."""
+    user = await User.objects.acreate(username="asyncuser", password="pass")
+
+    md_summary_text = "Async markdown summary file content for testing."
+    doc = await Document.objects.acreate(
+        title="Async Doc",
+        creator=user,
+        file_type="text/markdown",
+        md_summary_file=ContentFile(md_summary_text, name="async_summary.md"),
+    )
+
+    # ---------------------------------------------------------------------
+    # aget_md_summary_token_length returns correct token count
+    # ---------------------------------------------------------------------
+    expected_tokens = len(md_summary_text.split())
+    token_length = await aget_md_summary_token_length(doc.id)
+    assert token_length == expected_tokens
+
+    # ---------------------------------------------------------------------
+    # aload_document_md_summary with truncation (start)
+    # ---------------------------------------------------------------------
+    first_ten_chars = md_summary_text[:10]
+    loaded_start = await aload_document_md_summary(
+        doc.id, truncate_length=10, from_start=True
+    )
+    assert loaded_start == first_ten_chars
+
+    # ---------------------------------------------------------------------
+    # aload_document_md_summary with truncation (end)
+    # ---------------------------------------------------------------------
+    last_ten_chars = md_summary_text[-10:]
+    loaded_end = await aload_document_md_summary(
+        doc.id, truncate_length=10, from_start=False
+    )
+    assert loaded_end == last_ten_chars
+
+    # ---------------------------------------------------------------------
+    # Invalid document ID should raise
+    # ---------------------------------------------------------------------
+    with pytest.raises(ValueError):
+        await aget_md_summary_token_length(999_999)
+
+
+@pytest.mark.django_db
+@override_settings(
+    DEFAULT_FILE_STORAGE="django.core.files.storage.FileSystemStorage",
+    MEDIA_ROOT="test_media/",
+)
+@pytest.mark.asyncio
+async def test_aget_notes_for_document_corpus():
+    """Test asynchronous retrieval of notes with and without corpus filter."""
+    user = await User.objects.acreate(username="notecorpus", password="pass")
+
+    # Create document and corpus
+    doc = await Document.objects.acreate(
+        title="Doc for Notes",
+        creator=user,
+        file_type="text/plain",
+        txt_extract_file=ContentFile("", name="placeholder.txt"),
+    )
+    corpus = await Corpus.objects.acreate(title="Corpus A", creator=user)
+
+    # Create notes – one with corpus, one without
+    note_no_corpus = await Note.objects.acreate(
+        title="Loose Note",
+        content="Unlinked to corpus",
+        document=doc,
+        creator=user,
+    )
+
+    note_with_corpus = await Note.objects.acreate(
+        title="Linked Note",
+        content="Linked to corpus",
+        document=doc,
+        corpus=corpus,
+        creator=user,
+    )
+
+    # ---------------------------------------------------------------------
+    # Without corpus filter – expect both notes
+    # ---------------------------------------------------------------------
+    all_notes = await aget_notes_for_document_corpus(doc.id)
+    assert {n["id"] for n in all_notes} == {note_no_corpus.id, note_with_corpus.id}
+
+    # ---------------------------------------------------------------------
+    # With corpus filter – expect only the linked note
+    # ---------------------------------------------------------------------
+    filtered_notes = await aget_notes_for_document_corpus(doc.id, corpus_id=corpus.id)
+    assert len(filtered_notes) == 1
+    assert filtered_notes[0]["id"] == note_with_corpus.id

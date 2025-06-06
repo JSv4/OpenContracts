@@ -223,21 +223,6 @@ class CoreAgent(Protocol):
         """Get all messages in the current conversation."""
         ...
 
-    # Legacy compatibility methods
-    async def stream_chat(
-        self, message: str, **kwargs
-    ) -> AsyncGenerator[UnifiedStreamResponse, None]:
-        """Legacy method - delegates to stream()."""
-        async for chunk in self.stream(message, **kwargs):
-            yield chunk
-
-    async def store_message(self, content: str, msg_type: str = "LLM") -> int:
-        """Legacy method - delegates to appropriate store method."""
-        if msg_type.upper() == "USER":
-            return await self.store_user_message(content)
-        else:
-            return await self.store_llm_message(content)
-
 
 class CoreAgentBase(ABC):
     """Base implementation of CoreAgent with common functionality."""
@@ -354,36 +339,6 @@ class CoreDocumentAgentFactory:
             f"Strive to provide answers grounded in the document's content, presented in clear and helpful markdown. "
             f"Avoid repeating instructions or disclaimers."
         )
-
-    @staticmethod
-    def get_tool_descriptions(document: Document) -> list[dict[str, str]]:
-        """Get standardized tool descriptions for document agents."""
-        return [
-            {
-                "name": "doc_engine",
-                "description": f"Provides detailed annotations and text from within the '{document.title}' document.",
-            },
-            {
-                "name": "load_document_md_summary_tool",
-                "description": "Load markdown summary of the document.",
-            },
-            {
-                "name": "get_md_summary_token_length_tool",
-                "description": "Get token length of markdown summary.",
-            },
-            {
-                "name": "get_notes_for_document_corpus_tool",
-                "description": "Get notes for document or corpus.",
-            },
-            {
-                "name": "get_note_content_token_length_tool",
-                "description": "Get token length of note content.",
-            },
-            {
-                "name": "get_partial_note_content_tool",
-                "description": "Get partial note content.",
-            },
-        ]
 
     @staticmethod
     async def create_context(
@@ -626,33 +581,6 @@ class CoreConversationManager:
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = content
         await message.asave(update_fields=["content"])
-
-    async def update_message_sources(
-        self, message_id: int, sources: list[SourceNode]
-    ) -> None:
-        """Update only the sources of a message."""
-        # For anonymous conversations, don't store messages
-        if not self.conversation or message_id == 0:
-            return
-
-        message = await ChatMessage.objects.aget(id=message_id)
-        if not message.data:
-            message.data = {}
-        message.data["sources"] = [source.to_dict() for source in sources]
-        await message.asave(update_fields=["data"])
-
-    async def set_message_state(self, message_id: int, state: str) -> None:
-        """Update the state of a message."""
-        # For anonymous conversations, don't store messages
-        if not self.conversation or message_id == 0:
-            return
-
-        message = await ChatMessage.objects.aget(id=message_id)
-        if not message.data:
-            message.data = {}
-        message.data["state"] = state
-        message.data["updated_at"] = timezone.now().isoformat()
-        await message.asave(update_fields=["data"])
 
     async def complete_message(
         self,

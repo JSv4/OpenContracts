@@ -343,106 +343,103 @@ class TestCoreTools(TestCase):
         Document.objects.all().delete()
         User.objects.all().delete()
 
+    # ---------------------------------------------------------------------
+    # Asynchronous tests for core_tools async helpers
+    # ---------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# Asynchronous tests for core_tools async helpers
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.django_db
-@override_settings(
-    DEFAULT_FILE_STORAGE="django.core.files.storage.FileSystemStorage",
-    MEDIA_ROOT="test_media/",
-)
-@pytest.mark.asyncio
-async def test_async_md_summary_helpers():
-    """Test aget_md_summary_token_length and aload_document_md_summary."""
-    user = await User.objects.acreate(username="asyncuser", password="pass")
-
-    md_summary_text = "Async markdown summary file content for testing."
-    doc = await Document.objects.acreate(
-        title="Async Doc",
-        creator=user,
-        file_type="text/markdown",
-        md_summary_file=ContentFile(md_summary_text, name="async_summary.md"),
+    @override_settings(
+        DEFAULT_FILE_STORAGE="django.core.files.storage.FileSystemStorage",
+        MEDIA_ROOT="test_media/",
     )
+    async def test_async_md_summary_helpers(self):
+        """Test aget_md_summary_token_length and aload_document_md_summary."""
+        user = await User.objects.acreate(username="asyncuser", password="pass")
 
-    # ---------------------------------------------------------------------
-    # aget_md_summary_token_length returns correct token count
-    # ---------------------------------------------------------------------
-    expected_tokens = len(md_summary_text.split())
-    token_length = await aget_md_summary_token_length(doc.id)
-    assert token_length == expected_tokens
+        md_summary_text = "Async markdown summary file content for testing."
+        doc = await Document.objects.acreate(
+            title="Async Doc",
+            creator=user,
+            file_type="text/markdown",
+            md_summary_file=ContentFile(md_summary_text, name="async_summary.md"),
+        )
 
-    # ---------------------------------------------------------------------
-    # aload_document_md_summary with truncation (start)
-    # ---------------------------------------------------------------------
-    first_ten_chars = md_summary_text[:10]
-    loaded_start = await aload_document_md_summary(
-        doc.id, truncate_length=10, from_start=True
+        # ---------------------------------------------------------------------
+        # aget_md_summary_token_length returns correct token count
+        # ---------------------------------------------------------------------
+        expected_tokens = len(md_summary_text.split())
+        token_length = await aget_md_summary_token_length(doc.id)
+        self.assertEqual(token_length, expected_tokens)
+
+        # ---------------------------------------------------------------------
+        # aload_document_md_summary with truncation (start)
+        # ---------------------------------------------------------------------
+        first_ten_chars = md_summary_text[:10]
+        loaded_start = await aload_document_md_summary(
+            doc.id, truncate_length=10, from_start=True
+        )
+        self.assertEqual(loaded_start, first_ten_chars)
+
+        # ---------------------------------------------------------------------
+        # aload_document_md_summary with truncation (end)
+        # ---------------------------------------------------------------------
+        last_ten_chars = md_summary_text[-10:]
+        loaded_end = await aload_document_md_summary(
+            doc.id, truncate_length=10, from_start=False
+        )
+        self.assertEqual(loaded_end, last_ten_chars)
+
+        # ---------------------------------------------------------------------
+        # Invalid document ID should raise
+        # ---------------------------------------------------------------------
+        with self.assertRaises(ValueError):
+            await aget_md_summary_token_length(999_999)
+
+    @override_settings(
+        DEFAULT_FILE_STORAGE="django.core.files.storage.FileSystemStorage",
+        MEDIA_ROOT="test_media/",
     )
-    assert loaded_start == first_ten_chars
+    async def test_aget_notes_for_document_corpus(self):
+        """Test asynchronous retrieval of notes with and without corpus filter."""
+        user = await User.objects.acreate(username="notecorpus", password="pass")
 
-    # ---------------------------------------------------------------------
-    # aload_document_md_summary with truncation (end)
-    # ---------------------------------------------------------------------
-    last_ten_chars = md_summary_text[-10:]
-    loaded_end = await aload_document_md_summary(
-        doc.id, truncate_length=10, from_start=False
-    )
-    assert loaded_end == last_ten_chars
+        # Create document and corpus
+        doc = await Document.objects.acreate(
+            title="Doc for Notes",
+            creator=user,
+            file_type="text/plain",
+            txt_extract_file=ContentFile("", name="placeholder.txt"),
+        )
+        corpus = await Corpus.objects.acreate(title="Corpus A", creator=user)
 
-    # ---------------------------------------------------------------------
-    # Invalid document ID should raise
-    # ---------------------------------------------------------------------
-    with pytest.raises(ValueError):
-        await aget_md_summary_token_length(999_999)
+        # Create notes – one with corpus, one without
+        note_no_corpus = await Note.objects.acreate(
+            title="Loose Note",
+            content="Unlinked to corpus",
+            document=doc,
+            creator=user,
+        )
 
+        note_with_corpus = await Note.objects.acreate(
+            title="Linked Note",
+            content="Linked to corpus",
+            document=doc,
+            corpus=corpus,
+            creator=user,
+        )
 
-@pytest.mark.django_db
-@override_settings(
-    DEFAULT_FILE_STORAGE="django.core.files.storage.FileSystemStorage",
-    MEDIA_ROOT="test_media/",
-)
-@pytest.mark.asyncio
-async def test_aget_notes_for_document_corpus():
-    """Test asynchronous retrieval of notes with and without corpus filter."""
-    user = await User.objects.acreate(username="notecorpus", password="pass")
+        # ---------------------------------------------------------------------
+        # Without corpus filter – expect both notes
+        # ---------------------------------------------------------------------
+        all_notes = await aget_notes_for_document_corpus(doc.id)
+        self.assertEqual(
+            {n["id"] for n in all_notes}, {note_no_corpus.id, note_with_corpus.id}
+        )
 
-    # Create document and corpus
-    doc = await Document.objects.acreate(
-        title="Doc for Notes",
-        creator=user,
-        file_type="text/plain",
-        txt_extract_file=ContentFile("", name="placeholder.txt"),
-    )
-    corpus = await Corpus.objects.acreate(title="Corpus A", creator=user)
-
-    # Create notes – one with corpus, one without
-    note_no_corpus = await Note.objects.acreate(
-        title="Loose Note",
-        content="Unlinked to corpus",
-        document=doc,
-        creator=user,
-    )
-
-    note_with_corpus = await Note.objects.acreate(
-        title="Linked Note",
-        content="Linked to corpus",
-        document=doc,
-        corpus=corpus,
-        creator=user,
-    )
-
-    # ---------------------------------------------------------------------
-    # Without corpus filter – expect both notes
-    # ---------------------------------------------------------------------
-    all_notes = await aget_notes_for_document_corpus(doc.id)
-    assert {n["id"] for n in all_notes} == {note_no_corpus.id, note_with_corpus.id}
-
-    # ---------------------------------------------------------------------
-    # With corpus filter – expect only the linked note
-    # ---------------------------------------------------------------------
-    filtered_notes = await aget_notes_for_document_corpus(doc.id, corpus_id=corpus.id)
-    assert len(filtered_notes) == 1
-    assert filtered_notes[0]["id"] == note_with_corpus.id
+        # ---------------------------------------------------------------------
+        # With corpus filter – expect only the linked note
+        # ---------------------------------------------------------------------
+        filtered_notes = await aget_notes_for_document_corpus(
+            doc.id, corpus_id=corpus.id
+        )
+        self.assertEqual(len(filtered_notes), 1)
+        self.assertEqual(filtered_notes[0]["id"], note_with_corpus.id)

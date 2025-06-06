@@ -350,29 +350,6 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
         )
         # Ensure the agent's config has the potentially newly created/loaded conversation
         config.conversation = conversation_manager.conversation
-
-        # Resolve embedder_path asynchronously if not already set, otherwise this
-        # is done synchronously in vector store...
-        if config.embedder_path is None and context.corpus and context.corpus.id:
-            logger.debug(
-                f"Attempting to derive embedder_path for corpus {context.corpus.id} asynchronously."
-            )
-            try:
-                _, resolved_embedder_path = await aget_embedder(
-                    corpus_id=context.corpus.id
-                )
-                if resolved_embedder_path:
-                    config.embedder_path = resolved_embedder_path
-                    logger.debug(f"Derived embedder_path: {config.embedder_path}")
-                else:
-                    logger.warning(
-                        f"Could not derive embedder_path for corpus {context.corpus.id}."
-                    )
-            except Exception as e:
-                logger.warning(
-                    f"Error deriving embedder_path for corpus {context.corpus.id}: {e}"
-                )
-
         model_settings = _prepare_pydantic_ai_model_settings(config)
 
         # ------------------------------------------------------------------
@@ -560,15 +537,7 @@ def _usage_to_dict(usage: Any) -> Optional[dict[str, Any]]:
         logger.info(f"[_usage_to_dict] Dataclass conversion result: {result!r}")
         return result
 
-    try:  # mapping-style object
-        logger.info("[_usage_to_dict] Attempting dict() conversion")
-        result = dict(usage)  # type: ignore[arg-type]
-        logger.info(f"[_usage_to_dict] Dict conversion result: {result!r}")
-        return result
-    except Exception as e:  # pragma: no cover
-        logger.info(
-            f"[_usage_to_dict] Dict conversion failed with error: {e!r}, falling back to vars()"
-        )
-        result = vars(usage)
-        logger.info(f"[_usage_to_dict] Vars() fallback result: {result!r}")
-        return result
+    logger.warning(
+        f"[_usage_to_dict] No conversion method found for usage object: {usage!r}"
+    )
+    return None

@@ -604,6 +604,15 @@ class ConversationSourceLoggingTestCase(DocumentConversationWebsocketTestCase):
         )
         return conversation
 
+    def _assert_bbox(self, box: dict[str, Any], *, msg_prefix: str = "") -> None:
+        """Assert a four-float/int bounding-box dictionary."""
+        self.assertIsInstance(box, dict, msg_prefix + "must be dict")
+        for edge in ("top", "left", "right", "bottom"):
+            self.assertIn(edge, box, msg_prefix + f"missing '{edge}'")
+            self.assertIsInstance(
+                box[edge], (int, float), msg_prefix + f"'{edge}' not numeric"
+            )
+
     async def _assert_sources_persisted(self, conversation: Conversation) -> None:
         # Fetch only LLM messages created in the conversation
         llm_messages = await database_sync_to_async(
@@ -626,9 +635,72 @@ class ConversationSourceLoggingTestCase(DocumentConversationWebsocketTestCase):
                 len(sources), 0, f"Message {msg.id} has empty sources list"
             )
             # Optional: check shape of first source
-            first = sources[0]
-            self.assertIn("content", first)
-            self.assertIn("similarity_score", first)
+            resp = sources[0]
+
+            page_num: int = resp.get("page")  # capture once; used repeatedly
+
+            # ---------- Top-level keys -----------------------------------------------
+            required = {
+                "json",
+                "page",
+                "label",
+                "content",
+                "rawText",
+                "label_id",
+                "corpus_id",
+                "document_id",
+                "bounding_box",
+                "annotation_id",
+                "annotation_label",
+                "similarity_score",
+            }
+            self.assertIsInstance(resp, dict)
+            self.assertTrue(
+                required.issubset(resp.keys()),
+                f"Missing keys: {required - resp.keys()}",
+            )
+
+            # ---------- Simple type checks -------------------------------------------
+            self.assertIsInstance(page_num, int)
+            self.assertGreaterEqual(page_num, 0)
+
+            self.assertIsInstance(resp["label"], str)
+            self.assertIsInstance(resp["content"], str)
+            self.assertIsInstance(resp["rawText"], str)
+            self.assertIsInstance(resp["label_id"], int)
+            self.assertIsNone(resp["corpus_id"])
+            self.assertIsInstance(resp["document_id"], int)
+            self.assertIsInstance(resp["annotation_id"], int)
+            self.assertIsInstance(resp["annotation_label"], str)
+            self.assertIsInstance(resp["similarity_score"], (int, float))
+
+            # ---------- Bounding-box validation --------------------------------------
+            self._assert_bbox(
+                resp["bounding_box"], msg_prefix="Top-level bounding_box: "
+            )
+
+            # ---------- Per-page `json` block ----------------------------------------
+            page_map: dict[str, Any] = resp["json"]
+            self.assertIsInstance(page_map, dict)
+
+            page_key = str(page_num)
+            self.assertIn(page_key, page_map, f"`json` lacks page '{page_key}' entry")
+
+            p_entry: dict[str, Any] = page_map[page_key]
+            self.assertIsInstance(p_entry, dict)
+
+            # --- Cross-field consistency --------------------------------------------
+            self.assertEqual(p_entry["rawText"], resp["rawText"])
+            self.assertEqual(resp["content"], p_entry["rawText"])
+            self.assertEqual(resp["label"], resp["annotation_label"])
+
+            # --- Bounds inside page entry -------------------------------------------
+            self._assert_bbox(p_entry["bounds"], msg_prefix=f"Page {page_num} bounds: ")
+
+            # --- tokensJsons ---------------------------------------------------------
+            tokens = p_entry["tokensJsons"]
+            self.assertIsInstance(tokens, list)
+            self.assertGreater(len(tokens), 0, "tokensJsons list empty")
 
     async def _test_sources_for_framework(
         self, framework: str, cassette_name: str, test_type: str

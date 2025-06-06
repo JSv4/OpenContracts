@@ -51,27 +51,19 @@ class PydanticAIVectorSearchResponse(BaseModel):
                 "content": result.annotation.raw_text,
                 "document_id": result.annotation.document_id,
                 "corpus_id": result.annotation.corpus_id,
-                "similarity_score": result.similarity_score,
+                "page": result.annotation.page,
                 "annotation_label": result.annotation.annotation_label.text
                 if result.annotation.annotation_label
                 else None,
-                "page": result.annotation.page,
-                "bounds": {
-                    "top": result.annotation.bounding_box.top
-                    if result.annotation.bounding_box
-                    else None,
-                    "bottom": result.annotation.bounding_box.bottom
-                    if result.annotation.bounding_box
-                    else None,
-                    "left": result.annotation.bounding_box.left
-                    if result.annotation.bounding_box
-                    else None,
-                    "right": result.annotation.bounding_box.right
-                    if result.annotation.bounding_box
-                    else None,
-                }
-                if result.annotation.bounding_box
+                "label": result.annotation.annotation_label.text
+                if result.annotation.annotation_label
                 else None,
+                "label_id": result.annotation.annotation_label.id
+                if result.annotation.annotation_label
+                else None,
+                "json": result.annotation.json,
+                "bounding_box": result.annotation.bounding_box,
+                "similarity_score": result.similarity_score,
             }
             formatted_results.append(formatted_result)
 
@@ -102,14 +94,14 @@ class PydanticAIVectorSearchResponse(BaseModel):
                 "annotation_label": annotation.annotation_label.text
                 if annotation.annotation_label
                 else None,
-                "bounds": {
-                    "top": _bb_value(annotation.bounding_box, "top"),
-                    "bottom": _bb_value(annotation.bounding_box, "bottom"),
-                    "left": _bb_value(annotation.bounding_box, "left"),
-                    "right": _bb_value(annotation.bounding_box, "right"),
-                }
-                if annotation.bounding_box
+                "label": annotation.annotation_label.text
+                if annotation.annotation_label
                 else None,
+                "label_id": annotation.annotation_label.id
+                if annotation.annotation_label
+                else None,
+                "json": annotation.json,
+                "bounding_box": annotation.bounding_box,
             }
 
         formatted_results = []

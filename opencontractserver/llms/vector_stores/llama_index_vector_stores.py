@@ -154,9 +154,15 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
                 extra_info={
                     "page": annotation.page,
                     "json": annotation.json,
+                    "content": annotation.raw_text,
+                    "document_id": annotation.document_id,
+                    "corpus_id": annotation.corpus_id,
                     "bounding_box": annotation.bounding_box,
                     "annotation_id": annotation.id,
                     "label": annotation.annotation_label.text
+                    if annotation.annotation_label
+                    else None,
+                    "annotation_label": annotation.annotation_label.text
                     if annotation.annotation_label
                     else None,
                     "label_id": annotation.annotation_label.id
@@ -237,18 +243,24 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
                 dimension=self._core_store.embed_dim,
             )
 
-            return TextNode(
+            node = TextNode(
                 doc_id=str(annotation.id),
                 text=annotation.raw_text
                 if isinstance(annotation.raw_text, str)
                 else "",
-                embedding=embedding_vector,
+                embedding=embedding_vector,  # Clean retrieval via mixin API
                 extra_info={
                     "page": annotation.page,
                     "json": annotation.json,
+                    "content": annotation.raw_text,
+                    "document_id": annotation.document_id,
+                    "corpus_id": annotation.corpus_id,
                     "bounding_box": annotation.bounding_box,
                     "annotation_id": annotation.id,
                     "label": annotation.annotation_label.text
+                    if annotation.annotation_label
+                    else None,
+                    "annotation_label": annotation.annotation_label.text
                     if annotation.annotation_label
                     else None,
                     "label_id": annotation.annotation_label.id
@@ -256,6 +268,8 @@ class LlamaIndexAnnotationVectorStore(BasePydanticVectorStore):
                     else None,
                 },
             )
+
+            return node
 
         nodes = [await _build_node(r) for r in core_results]
 

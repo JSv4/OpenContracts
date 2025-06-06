@@ -122,29 +122,70 @@ agent = await agents.for_document(
 
 #### Agent Responses
 
-All agent interactions return rich, structured responses:
+All agent interactions return rich, structured responses with complete metadata:
 
 ```python
-# Chat response with full metadata
+# UnifiedChatResponse structure
 response = await agent.chat("What are the payment terms?")
 
-# UnifiedChatResponse attributes:
 response.content              # The LLM's response text
 response.sources              # List of SourceNode objects with citations
-response.user_message_id      # ID of the stored user message (when storage enabled)
-response.llm_message_id       # ID of the stored LLM response (when storage enabled)
-response.metadata             # Additional response metadata
+response.user_message_id      # ID of stored user message (if persistence enabled)
+response.llm_message_id       # ID of stored LLM response (if persistence enabled)  
+response.metadata             # Additional response metadata (framework-specific)
+
+# UnifiedStreamResponse structure (for streaming)
+async for chunk in agent.stream("Analyze the liability clauses"):
+    chunk.content             # Incremental content for this chunk
+    chunk.accumulated_content # Complete content so far
+    chunk.sources             # Sources (populated in final chunk)
+    chunk.user_message_id     # User message ID (available after first chunk)
+    chunk.llm_message_id      # LLM message ID (available after first chunk)
+    chunk.is_complete         # True for the final chunk
+    chunk.metadata            # Chunk metadata
+
+# SourceNode structure (individual source)
+for source in response.sources:
+    source.annotation_id      # Database ID of the source annotation
+    source.content           # Raw text content of the annotation
+    source.similarity_score  # Relevance score (0.0 to 1.0)
+    source.metadata         # Dict with document_id, corpus_id, page, annotation_label, etc.
+    
+    # Convenience method for serialization
+    source_dict = source.to_dict()  # Returns flattened dict for storage/transmission
 
 # Note: conversation_id is available via agent.get_conversation_id()
-
-# Stream response chunks
-async for chunk in agent.stream("Analyze the liability clauses"):
-    # UnifiedStreamResponse attributes:
-    chunk.content             # Incremental content
-    chunk.sources             # Sources (populated at end)
-    chunk.is_complete         # True for the last chunk
-    chunk.metadata            # Chunk metadata
 ```
+
+#### Source Structure
+
+All sources returned by agents follow a standardized format that includes annotation metadata and similarity scores:
+
+```python
+# Example source object structure
+source = {
+    "annotation_id": 123,
+    "rawText": "This is the annotation content",
+    "similarity_score": 0.85,
+    "document_id": 456,
+    "corpus_id": 789,
+    "page": 2,
+    "annotation_label": "Contract Clause"
+}
+
+# Sources are consistent across all contexts:
+response = await agent.chat("What are the payment terms?")
+for source in response.sources:
+    print(f"Source: {source.annotation_id} (score: {source.similarity_score})")
+    print(f"Content: {source.content}")
+    print(f"Metadata: {source.metadata}")
+```
+
+This format is used consistently in:
+- Database storage (ChatMessage.data['sources'])
+- WebSocket streaming (ASYNC_FINISH messages)
+- API responses (UnifiedChatResponse.sources)
+- Vector store search results
 
 ### Conversation Management
 
@@ -218,7 +259,7 @@ from opencontractserver.llms.tools.core_tools import (
     get_md_summary_token_length
 )
 
-# Use built-in tools by name (async versions will be preferred by async agents if available)
+# Use built-in tools by name (async versions preferred when available)
 # The '''corpus''' parameter is required for document agents.
 agent = await agents.for_document(
     document=123, # Use actual document ID or object
@@ -791,6 +832,13 @@ The framework is designed for production use with several performance optimizati
 - **Streaming Responses**: Large responses are streamed to avoid memory issues.
 - **Lazy Loading**: Django models use lazy loading for related objects unless explicitly prefetched.
 - **Context Windows**: Conversation context is managed within model limits by the agent implementations.
+
+### Source Management
+
+- **Consistent Serialization**: Sources use a unified format across database storage and WebSocket transmission to eliminate conversion overhead.
+- **Metadata Flattening**: Source metadata is flattened to top-level fields for efficient access and reduced nesting.
+- **Similarity Scores**: All sources include similarity scores for relevance ranking and filtering.
+- **Lazy Source Loading**: Sources are only populated when complete responses are available (final streaming chunk).
 
 ### Concurrency
 

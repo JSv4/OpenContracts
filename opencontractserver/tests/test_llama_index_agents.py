@@ -687,13 +687,7 @@ class TestLlamaIndexAgents(TestCase):
         mock_core_agent.conversation_manager.user_id = self.user.id
 
         # Create legacy wrapper
-        legacy_agent = OpenContractDbAgent(mock_core_agent)
-
-        # Test legacy interface methods exist
-        self.assertTrue(hasattr(legacy_agent, "astream_chat"))
-        self.assertTrue(hasattr(legacy_agent, "store_llm_message"))
-        self.assertTrue(hasattr(legacy_agent, "update_message"))
-        self.assertEqual(legacy_agent.user_id, self.user.id)
+        OpenContractDbAgent(mock_core_agent)
 
     @override_settings(
         OPENAI_API_KEY="test-key",

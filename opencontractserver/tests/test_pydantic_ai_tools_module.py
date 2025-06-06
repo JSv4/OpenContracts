@@ -5,18 +5,19 @@ from unittest.mock import MagicMock
 import pytest
 from django.test import TestCase
 
-from opencontractserver.llms.tools.tool_factory import CoreTool
 from opencontractserver.llms.tools.pydantic_ai_tools import (
-    PydanticAIToolWrapper,
     PydanticAIToolFactory,
-    pydantic_ai_tool,
+    PydanticAIToolWrapper,
     create_pydantic_ai_tool_from_func,
     create_typed_pydantic_ai_tool,
+    pydantic_ai_tool,
 )
+from opencontractserver.llms.tools.tool_factory import CoreTool
 
 # ---------------------------------------------------------------------------
 # Helper functions for the tests
 # ---------------------------------------------------------------------------
+
 
 def sync_multiply(a: int, b: int) -> int:
     """Multiply two integers and return the product (sync)."""
@@ -64,7 +65,10 @@ class TestPydanticAITools(TestCase):
 
     def test_pydantic_ai_tool_factory_collections(self):
         """Test factory helpers for building tool collections."""
-        tools = [CoreTool.from_function(sync_multiply), CoreTool.from_function(async_add)]
+        tools = [
+            CoreTool.from_function(sync_multiply),
+            CoreTool.from_function(async_add),
+        ]
 
         # create_tools returns list[Callable]
         callable_tools = PydanticAIToolFactory.create_tools(tools)
@@ -81,6 +85,7 @@ class TestPydanticAITools(TestCase):
 
     def test_decorator_function_properties(self):
         """Test decorator creates proper function signatures."""
+
         @pydantic_ai_tool(description="Square a number")
         def square(x: int) -> int:  # type: ignore[valid-type]
             """Return x squared."""
@@ -88,7 +93,7 @@ class TestPydanticAITools(TestCase):
 
         # Check that decorator preserves callable nature
         self.assertTrue(callable(square))
-        
+
         # Check signature includes ctx parameter
         sig = inspect.signature(square)
         first_param = next(iter(sig.parameters.keys()))
@@ -97,10 +102,10 @@ class TestPydanticAITools(TestCase):
     def test_typed_tool_creation(self):
         """Test creation of typed tools from annotated functions."""
         typed_tool = create_typed_pydantic_ai_tool(subtract)
-        
+
         # Should be callable
         self.assertTrue(callable(typed_tool))
-        
+
         # Should have ctx as first parameter
         sig = inspect.signature(typed_tool)
         first_param = next(iter(sig.parameters.keys()))
@@ -108,6 +113,7 @@ class TestPydanticAITools(TestCase):
 
     def test_custom_tool_creation(self):
         """Test custom tool creation with metadata."""
+
         def divide(x: int, y: int) -> Optional[float]:  # noqa: D401 – simple example
             """Divide x by y, returning None on ZeroDivisionError."""
             try:
@@ -123,7 +129,7 @@ class TestPydanticAITools(TestCase):
 
         # Should be callable
         self.assertTrue(callable(callable_tool))
-        
+
         # Should have proper signature
         sig = inspect.signature(callable_tool)
         params = list(sig.parameters.keys())
@@ -165,6 +171,7 @@ class TestPydanticAIToolsAsync(TestCase):
 
     async def test_decorator_tool_execution(self):
         """Test decorator creates executable async tool."""
+
         @pydantic_ai_tool(description="Square a number")
         def square(x: int) -> int:  # type: ignore[valid-type]
             """Return x squared."""
@@ -183,6 +190,7 @@ class TestPydanticAIToolsAsync(TestCase):
 
     async def test_custom_tool_execution_with_error_handling(self):
         """Test custom tool with error handling executes correctly."""
+
         def divide(x: int, y: int) -> Optional[float]:  # noqa: D401 – simple example
             """Divide x by y, returning None on ZeroDivisionError."""
             try:
@@ -201,4 +209,4 @@ class TestPydanticAIToolsAsync(TestCase):
         result_fail = await callable_tool(ctx, 8, 0)
 
         self.assertEqual(result_ok, 4.0)
-        self.assertIsNone(result_fail) 
+        self.assertIsNone(result_fail)

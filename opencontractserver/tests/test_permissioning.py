@@ -718,7 +718,6 @@ class PermissioningTestCase(TestCase):
         # )
 
     def test_permissions(self):
-
         """
         Test that a user can access the objects they have permission to see and cannot
         access objects they don't have permissions to see.

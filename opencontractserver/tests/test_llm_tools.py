@@ -8,11 +8,11 @@ from opencontractserver.annotations.models import Note
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.tools import (
-    _token_count,
     get_md_summary_token_length,
     get_notes_for_document_corpus,
     load_document_md_summary,
 )
+from opencontractserver.llms.tools.core_tools import _token_count
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -63,8 +63,10 @@ class TestLLMTools(TestCase):
 
     def test_load_document_md_summary_nonexistent_doc(self):
         """Test loading summary for non-existent document."""
-        result = load_document_md_summary(999999)
-        self.assertEqual(result, "Document with id=999999 does not exist.")
+        with self.assertRaisesRegex(
+            ValueError, "Document with id=999999 does not exist."
+        ):
+            load_document_md_summary(999999)
 
     def test_load_document_md_summary_no_file(self):
         """Test loading summary when no summary file exists."""
@@ -72,8 +74,10 @@ class TestLLMTools(TestCase):
             creator=self.user,
             title="No Summary Doc",
         )
-        result = load_document_md_summary(doc_without_summary.id)
-        self.assertEqual(result, "No md_summary_file attached to this document.")
+        with self.assertRaisesRegex(
+            ValueError, "No md_summary_file attached to this document."
+        ):
+            load_document_md_summary(doc_without_summary.id)
 
     def test_load_document_md_summary_truncate_from_end(self):
         """Test loading summary with truncation from end."""
@@ -84,8 +88,10 @@ class TestLLMTools(TestCase):
 
     def test_get_md_summary_token_length_nonexistent(self):
         """Test token length for non-existent document."""
-        result = get_md_summary_token_length(999999)
-        self.assertEqual(result, 0)
+        with self.assertRaisesRegex(
+            ValueError, "Document with id=999999 does not exist."
+        ):
+            get_md_summary_token_length(999999)
 
     def test_get_md_summary_token_length_no_file(self):
         """Test token length when no summary file exists."""
@@ -93,8 +99,10 @@ class TestLLMTools(TestCase):
             creator=self.user,
             title="No Summary Doc",
         )
-        result = get_md_summary_token_length(doc_without_summary.id)
-        self.assertEqual(result, 0)
+        with self.assertRaisesRegex(
+            ValueError, "No md_summary_file attached to this document."
+        ):
+            get_md_summary_token_length(doc_without_summary.id)
 
     def test_get_notes_for_document_corpus_with_truncation(self):
         """Test note retrieval with content truncation."""

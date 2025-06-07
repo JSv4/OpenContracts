@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Mapping, Optional
+from collections.abc import Mapping
+from typing import Optional
 
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
 

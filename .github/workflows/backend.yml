@@ -27,34 +27,24 @@ jobs:
   linter:
     runs-on: ubuntu-latest
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: true
-
-          # all of these default to true, but feel free to set to
-          # "false" if necessary for your workflow
-          docker-images: true
-          swap-storage: true
-
       - name: Checkout Code Repository
         uses: actions/checkout@v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
           cache: pip
           cache-dependency-path: |
             requirements/base.txt
             requirements/local.txt
 
-      - name: Run pre-commit
-        uses: pre-commit/action@v3.0.1
+      - name: Install dependencies
+        run: pip install -r requirements/local.txt
 
-  # With no caching at all the entire ci process takes 4m 30s to complete!
+      - name: Run pre-commit
+        run: pre-commit run --all-files
+
   pytest:
     runs-on: ubuntu-latest
 

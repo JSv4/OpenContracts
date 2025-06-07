@@ -51,7 +51,6 @@ class ApiTokenAuthTestCase(GraphQLTestCase):
         print(f"Token: {self.token}")
 
     def test_token_create_corpus(self):
-
         """
         Test that we can import an OpenContracts export via GraphQL and get back the expected
         responses from the endpoint.

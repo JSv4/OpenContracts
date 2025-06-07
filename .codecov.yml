@@ -26,3 +26,4 @@ comment:
 
 ignore:
   - "opencontractserver/tasks/data_extract_tasks.py"
+  - "opencontractserver/tests/base.py"

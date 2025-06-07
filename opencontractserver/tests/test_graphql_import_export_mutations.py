@@ -79,7 +79,6 @@ class GraphQLTestCase(TestCase):
             )
 
     def test_zip_upload(self):
-
         """
         Test that we can import an OpenContracts export via GraphQL and get back the expected
         responses from the endpoint.

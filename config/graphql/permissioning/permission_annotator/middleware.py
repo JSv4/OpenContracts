@@ -133,10 +133,10 @@ class PermissionAnnotatingMiddleware:
                     if full_name in info.context.permission_annotations:
                         pass
                     else:
-                        info.context.permission_annotations[
-                            full_name
-                        ] = get_permissions_for_user_on_model_in_app(
-                            app_name, model_name, info.context.user
+                        info.context.permission_annotations[full_name] = (
+                            get_permissions_for_user_on_model_in_app(
+                                app_name, model_name, info.context.user
+                            )
                         )
                 else:
                     info.context.permission_annotations = {

@@ -53,6 +53,7 @@ llama-index==0.12.9
 llama-index-agent-openai==0.4.8
 llama-index-llms-openai==0.3.12
 pytesseract
+pydantic-ai==0.2.*
 
 # Data Processing Tools
 # -------------------------------------------------------------------------------

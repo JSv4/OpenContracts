@@ -1,7 +1,8 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Mapping, Optional
+from collections.abc import Mapping
+from typing import Optional
 
 from django.conf import settings
 from django.core.files.base import ContentFile

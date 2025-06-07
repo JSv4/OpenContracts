@@ -101,6 +101,61 @@ class HasEmbeddingMixin:
             "Subclass must implement get_embedding_reference_kwargs()"
         )
 
+    def get_embedding(self, embedder_path: str, dimension: int) -> list[float] | None:
+        """
+        Retrieve the embedding vector for this object with the specified embedder and dimension.
+
+        Args:
+            embedder_path (str): Identifier of the embedding model ("openai/ada" etc.)
+            dimension (int): Vector dimension (384, 768, 1536, or 3072)
+
+        Returns:
+            List[float] | None: The embedding vector or None if not found
+        """
+        # Late import to avoid circular import
+        from opencontractserver.annotations.models import Embedding
+
+        # Get the appropriate vector field name
+        if dimension == 384:
+            vector_field = "vector_384"
+        elif dimension == 768:
+            vector_field = "vector_768"
+        elif dimension == 1536:
+            vector_field = "vector_1536"
+        elif dimension == 3072:
+            vector_field = "vector_3072"
+        else:
+            raise ValueError(f"Unsupported embedding dimension: {dimension}")
+
+        kwargs = self.get_embedding_reference_kwargs()  # e.g. {"document_id": self.pk}
+
+        try:
+            embedding = Embedding.objects.get(embedder_path=embedder_path, **kwargs)
+            vector = getattr(embedding, vector_field, None)
+            return vector if vector is not None else None
+        except Embedding.DoesNotExist:
+            return None
+
+    async def aget_embedding(
+        self, embedder_path: str, dimension: int
+    ) -> list[float] | None:
+        """
+        Async version of get_embedding() - retrieve the embedding vector for this object
+        with the specified embedder and dimension.
+
+        Args:
+            embedder_path (str): Identifier of the embedding model ("openai/ada" etc.)
+            dimension (int): Vector dimension (384, 768, 1536, or 3072)
+
+        Returns:
+            List[float] | None: The embedding vector or None if not found
+        """
+        from channels.db import database_sync_to_async
+
+        return await database_sync_to_async(self.get_embedding)(
+            embedder_path, dimension
+        )
+
     def add_embedding(self, embedder_path: str, vector: list[float] | None):
         """
         Creates or updates an Embedding for this object (Document, Annotation, Note, etc.)

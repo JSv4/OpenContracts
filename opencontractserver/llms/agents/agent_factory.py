@@ -76,9 +76,9 @@ class UnifiedAgentFactory:
             system_prompt=system_prompt,
             temperature=temperature or kwargs.get("temperature", 0.7),
             max_tokens=max_tokens,
-            streaming=streaming
-            if streaming is not None
-            else kwargs.get("streaming", True),
+            streaming=(
+                streaming if streaming is not None else kwargs.get("streaming", True)
+            ),
             conversation=conversation,
             conversation_id=conversation_id,
             loaded_messages=loaded_messages,
@@ -168,9 +168,9 @@ class UnifiedAgentFactory:
             system_prompt=system_prompt,
             temperature=temperature or kwargs.get("temperature", 0.7),
             max_tokens=max_tokens,
-            streaming=streaming
-            if streaming is not None
-            else kwargs.get("streaming", True),
+            streaming=(
+                streaming if streaming is not None else kwargs.get("streaming", True)
+            ),
             conversation=conversation,
             conversation_id=conversation_id,
             loaded_messages=loaded_messages,

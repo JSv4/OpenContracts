@@ -2,7 +2,7 @@ import io
 import json
 import logging
 import zipfile
-from typing import Mapping
+from collections.abc import Mapping
 
 from pdfredact import build_text_redacted_pdf, redact_pdf_to_images
 
@@ -79,9 +79,9 @@ class PDFRedactor(BasePostProcessor):
                             continue
 
                         pawls_pages = doc_data.get("pawls_file_content", [])
-                        annotations: list[
-                            OpenContractsAnnotationPythonType
-                        ] = doc_data.get("labelled_text", [])
+                        annotations: list[OpenContractsAnnotationPythonType] = (
+                            doc_data.get("labelled_text", [])
+                        )
 
                         if labels_to_redact:
                             annotations = [

@@ -19,7 +19,9 @@ from opencontractserver.annotations.models import Annotation
 from opencontractserver.annotations.signals import (
     ANNOT_CREATE_UID,  # Import the static UID
 )
-from opencontractserver.annotations.signals import process_annot_on_create_atomic
+from opencontractserver.annotations.signals import (
+    process_annot_on_create_atomic,
+)
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.documents.signals import process_doc_on_create_atomic

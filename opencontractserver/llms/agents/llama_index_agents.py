@@ -1,7 +1,8 @@
 """LlamaIndex-specific agent implementations using our core functionality."""
 
 import logging
-from typing import Any, AsyncGenerator, Optional, Union
+from collections.abc import AsyncGenerator
+from typing import Any, Optional, Union
 
 import nest_asyncio
 from llama_cloud import MessageRole
@@ -185,9 +186,11 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
             for msg in config.loaded_messages:
                 prefix_messages.append(
                     LlamaChatMessage(
-                        role=MessageRole.ASSISTANT
-                        if msg.msg_type.lower() == "llm"
-                        else MessageRole.USER,
+                        role=(
+                            MessageRole.ASSISTANT
+                            if msg.msg_type.lower() == "llm"
+                            else MessageRole.USER
+                        ),
                         content=msg.content if isinstance(msg.content, str) else "",
                     )
                 )
@@ -379,7 +382,6 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
         tools: Optional[list[FunctionTool]] = None,
         conversation: Optional[Conversation] = None,  # Add conversation override
     ) -> "LlamaIndexCorpusAgent":
-
         """Create a LlamaIndex corpus agent using core functionality."""
         context = await CoreCorpusAgentFactory.create_context(corpus, config)
 
@@ -469,9 +471,11 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
             for msg in config.loaded_messages:
                 prefix_messages.append(
                     LlamaChatMessage(
-                        role=MessageRole.ASSISTANT
-                        if msg.msg_type.lower() == "llm"
-                        else MessageRole.USER,
+                        role=(
+                            MessageRole.ASSISTANT
+                            if msg.msg_type.lower() == "llm"
+                            else MessageRole.USER
+                        ),
                         content=msg.content if isinstance(msg.content, str) else "",
                     )
                 )

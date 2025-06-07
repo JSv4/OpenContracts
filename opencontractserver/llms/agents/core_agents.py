@@ -2,8 +2,9 @@
 
 import logging
 from abc import ABC
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
-from typing import Any, AsyncGenerator, Optional, Protocol, Union, runtime_checkable
+from typing import Any, Optional, Protocol, Union, runtime_checkable
 
 from django.conf import settings
 from django.utils import timezone
@@ -48,9 +49,11 @@ class SourceNode:
                 "document_id": annotation.document_id,
                 "corpus_id": annotation.corpus_id,
                 "page": annotation.page,
-                "annotation_label": annotation.annotation_label.text
-                if annotation.annotation_label
-                else None,
+                "annotation_label": (
+                    annotation.annotation_label.text
+                    if annotation.annotation_label
+                    else None
+                ),
             },
             similarity_score=similarity_score,
         )
@@ -346,7 +349,6 @@ class CoreDocumentAgentFactory:
         corpus: Union[str, int, Corpus],
         config: AgentConfig,
     ) -> DocumentAgentContext:
-
         """Create document agent context with all necessary components."""
         if not isinstance(document, Document):
             document = await Document.objects.aget(id=document)

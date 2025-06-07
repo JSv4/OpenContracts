@@ -1,6 +1,7 @@
 """
 Tests for core agent components: AgentConfig, Contexts, and CoreConversationManager.
 """
+
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model

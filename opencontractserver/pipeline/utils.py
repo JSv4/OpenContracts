@@ -380,7 +380,7 @@ def get_default_embedder_for_filetype(mimetype: str) -> Optional[type[BaseEmbedd
 
 
 def get_dimension_from_embedder(
-    embedder_class_or_path: Union[type[BaseEmbedder], str]
+    embedder_class_or_path: Union[type[BaseEmbedder], str],
 ) -> int:
     """
     Get the dimension from an embedder class or path.
@@ -411,7 +411,7 @@ def get_dimension_from_embedder(
 
 
 def find_embedder_for_filetype(
-    mimetype_or_enum: Union[str, FileTypeEnum]
+    mimetype_or_enum: Union[str, FileTypeEnum],
 ) -> Optional[type[BaseEmbedder]]:
     """
     Find an appropriate embedder for a specific file type and dimension.

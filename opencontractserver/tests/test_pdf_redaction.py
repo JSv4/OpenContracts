@@ -388,7 +388,7 @@ class TestPDFRedaction(TestCase):
 
         # Build a single annotation for each discovered token pair.
         test_annotations = []
-        for (idx1, idx2) in target_token_pairs:
+        for idx1, idx2 in target_token_pairs:
             token1 = page_tokens[idx1]
             token2 = page_tokens[idx2]
 

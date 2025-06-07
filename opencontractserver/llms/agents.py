@@ -5,7 +5,9 @@ from typing import Literal
 
 import nest_asyncio
 
-from opencontractserver.llms.agents.agent_factory import AgentFramework
+from opencontractserver.llms.agents.agent_factory import (
+    AgentFramework,
+)
 from opencontractserver.llms.agents.agent_factory import (
     create_corpus_agent as unified_create_corpus_agent,
 )

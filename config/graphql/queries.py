@@ -402,7 +402,7 @@ class Query(graphene.ObjectType):
             "document",
             "corpus",
             "analysis",
-            "analysis__analyzer"
+            "analysis__analyzer",
             # 'embeddings' # If needed
         )
         return final_queryset

@@ -23,7 +23,7 @@ class PDFBase64FileTests(TestCase):
         self.assertIsNone(result)
 
     def test_non_pdf_file(self):
-        jpg_content = b"\xFF\xD8\xFF\xE0\x00\x10JFIF"
+        jpg_content = b"\xff\xd8\xff\xe0\x00\x10JFIF"
         result = self.field.get_file_extension("test.jpg", jpg_content)
         self.assertIsNone(result)
 

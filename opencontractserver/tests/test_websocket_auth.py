@@ -2,6 +2,7 @@
 Tests for GraphQLJWTTokenAuthMiddleware to ensure that it correctly validates the received token
 and assigns the correct user (or AnonymousUser) to the WebSocket scope.
 """
+
 import json
 import logging
 from typing import Any

@@ -306,9 +306,9 @@ async def aget_notes_for_document_corpus(
             {
                 "id": note.id,
                 "title": note.title,
-                "content": note.content[:512]
-                if note.content
-                else "",  # Truncate for performance
+                "content": (
+                    note.content[:512] if note.content else ""
+                ),  # Truncate for performance
                 "creator_id": note.creator_id,
                 "created": note.created.isoformat() if note.created else None,
                 "modified": note.modified.isoformat() if note.modified else None,

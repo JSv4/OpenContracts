@@ -554,6 +554,7 @@ class TestLlamaIndexAgents(TestCase):
         self, mock_settings, mock_vector_store, mock_index, mock_openai_agent
     ):
         """Test integrating custom tools with LlamaIndex agents."""
+
         # Create a custom tool
         def custom_analysis_tool(query: str) -> str:
             """Custom tool for document analysis."""

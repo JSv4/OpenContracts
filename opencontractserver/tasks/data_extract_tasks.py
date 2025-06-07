@@ -709,19 +709,26 @@ async def oc_llama_index_doc_query(
                         node=Node(
                             doc_id=str(row.id),
                             text=row.raw_text,
-                            embedding=row.embedding.tolist()
-                            if hasattr(row, "embedding") and row.embedding is not None
-                            else [],
+                            embedding=(
+                                row.embedding.tolist()
+                                if hasattr(row, "embedding")
+                                and row.embedding is not None
+                                else []
+                            ),
                             extra_info={
                                 "page": row.page,
                                 "bounding_box": row.bounding_box,
                                 "annotation_id": row.id,
-                                "label": row.annotation_label.text
-                                if row.annotation_label
-                                else None,
-                                "label_id": row.annotation_label.id
-                                if row.annotation_label
-                                else None,
+                                "label": (
+                                    row.annotation_label.text
+                                    if row.annotation_label
+                                    else None
+                                ),
+                                "label_id": (
+                                    row.annotation_label.id
+                                    if row.annotation_label
+                                    else None
+                                ),
                             },
                         ),
                         score=row.similarity,

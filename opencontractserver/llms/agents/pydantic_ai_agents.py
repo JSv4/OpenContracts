@@ -2,9 +2,10 @@
 
 import dataclasses
 import logging
-from typing import Any, AsyncGenerator, Callable, Optional, Union
+from collections.abc import AsyncGenerator
+from typing import Any, Callable, Optional, Union
 
-from pydantic_ai import Agent as PydanticAIAgent
+from pydantic_ai.agent import Agent as PydanticAIAgent
 from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,

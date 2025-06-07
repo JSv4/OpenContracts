@@ -5,7 +5,7 @@ from typing import Any, Optional, Union
 
 from channels.db import database_sync_to_async
 from pydantic import BaseModel
-from pydantic_ai import RunContext
+from pydantic_ai.tools import RunContext
 
 from opencontractserver.llms.tools.pydantic_ai_tools import PydanticAIDependencies
 from opencontractserver.llms.vector_stores.core_vector_stores import (
@@ -52,15 +52,21 @@ class PydanticAIVectorSearchResponse(BaseModel):
                 "document_id": result.annotation.document_id,
                 "corpus_id": result.annotation.corpus_id,
                 "page": result.annotation.page,
-                "annotation_label": result.annotation.annotation_label.text
-                if result.annotation.annotation_label
-                else None,
-                "label": result.annotation.annotation_label.text
-                if result.annotation.annotation_label
-                else None,
-                "label_id": result.annotation.annotation_label.id
-                if result.annotation.annotation_label
-                else None,
+                "annotation_label": (
+                    result.annotation.annotation_label.text
+                    if result.annotation.annotation_label
+                    else None
+                ),
+                "label": (
+                    result.annotation.annotation_label.text
+                    if result.annotation.annotation_label
+                    else None
+                ),
+                "label_id": (
+                    result.annotation.annotation_label.id
+                    if result.annotation.annotation_label
+                    else None
+                ),
                 "json": result.annotation.json,
                 "bounding_box": result.annotation.bounding_box,
                 "similarity_score": result.similarity_score,
@@ -91,15 +97,21 @@ class PydanticAIVectorSearchResponse(BaseModel):
                 "document_id": annotation.document_id,
                 "corpus_id": annotation.corpus_id,
                 "page": annotation.page,
-                "annotation_label": annotation.annotation_label.text
-                if annotation.annotation_label
-                else None,
-                "label": annotation.annotation_label.text
-                if annotation.annotation_label
-                else None,
-                "label_id": annotation.annotation_label.id
-                if annotation.annotation_label
-                else None,
+                "annotation_label": (
+                    annotation.annotation_label.text
+                    if annotation.annotation_label
+                    else None
+                ),
+                "label": (
+                    annotation.annotation_label.text
+                    if annotation.annotation_label
+                    else None
+                ),
+                "label_id": (
+                    annotation.annotation_label.id
+                    if annotation.annotation_label
+                    else None
+                ),
                 "json": annotation.json,
                 "bounding_box": annotation.bounding_box,
             }

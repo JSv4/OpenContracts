@@ -13,37 +13,39 @@ from opencontractserver.llms.tools.tool_factory import (
 from opencontractserver.llms.types import AgentFramework
 
 # ---------------------------------------------------------------------------
-# Stub external optional dependencies (``pydantic`` and ``pydantic_ai``) that
-# are imported inside ``pydantic_ai_tools`` but not required for the unit tests.
+# Optional lightweight stubs **only** if the real packages are unavailable.
 # ---------------------------------------------------------------------------
 
-_pydantic_stub = types.ModuleType("pydantic")
+try:
+    import pydantic  # noqa: F401
+except ModuleNotFoundError:  # pragma: no cover -- local dev without deps
+    _pydantic_stub = types.ModuleType("pydantic")
+
+    class _BaseModelStub:  # Minimal replacement for pydantic.BaseModel
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+        def __repr__(self):
+            attrs = ", ".join(f"{k}={v!r}" for k, v in self.__dict__.items())
+            return f"BaseModelStub({attrs})"
+
+    _pydantic_stub.BaseModel = _BaseModelStub  # type: ignore[attr-defined]
+    _pydantic_stub.Field = lambda *args, **kwargs: None  # type: ignore
+    _pydantic_stub.ConfigDict = lambda **kwargs: {}  # type: ignore
+    sys.modules["pydantic"] = _pydantic_stub
 
 
-class _BaseModelStub:  # Minimal replacement for pydantic.BaseModel
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+try:
+    import pydantic_ai  # noqa: F401
+except ModuleNotFoundError:  # pragma: no cover
+    _pydantic_ai_stub = types.ModuleType("pydantic_ai")
 
-    def __repr__(self):
-        attrs = ", ".join(f"{k}={v!r}" for k, v in self.__dict__.items())
-        return f"BaseModelStub({attrs})"
+    class _RunContext:  # Minimal RunContext replacement
+        pass
 
-
-_pydantic_stub.BaseModel = _BaseModelStub  # type: ignore[attr-defined]
-_pydantic_stub.Field = lambda *args, **kwargs: None  # type: ignore
-_pydantic_stub.ConfigDict = lambda **kwargs: {}  # type: ignore
-sys.modules.setdefault("pydantic", _pydantic_stub)
-
-_pydantic_ai_stub = types.ModuleType("pydantic_ai")
-
-
-class _RunContext:  # Minimal RunContext replacement
-    pass
-
-
-_pydantic_ai_stub.RunContext = _RunContext  # type: ignore
-sys.modules.setdefault("pydantic_ai", _pydantic_ai_stub)
+    _pydantic_ai_stub.RunContext = _RunContext  # type: ignore
+    sys.modules["pydantic_ai"] = _pydantic_ai_stub
 
 
 # Stub minimal llama_index.core.tools for tests (avoids heavy dependency).

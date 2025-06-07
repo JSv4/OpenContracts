@@ -51,6 +51,10 @@ class Conversation(BaseOCModel):
         blank=True,
         help_text="Optional title for the conversation",
     )
+    description = models.TextField(
+        blank=True,
+        help_text="Optional description for the conversation",
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         help_text="Timestamp when the conversation was created",

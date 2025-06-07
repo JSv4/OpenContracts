@@ -22,7 +22,6 @@ def set_permissions_for_obj_to_user(
     instance: type[django.db.models.Model],
     permissions: list[PermissionTypes],
 ) -> None:
-
     """
     Given an instance of a django Model, a user id or instance, and a list of desired permissions,
     **REPLACE** current permissions with specified permissions. Pass empty list to permissions to completely
@@ -139,7 +138,6 @@ def set_permissions_for_obj_to_user(
 
 
 def get_users_group_ids(user_instance=User) -> list[str | int]:
-
     """
     For a given user, return list of group ids it belongs to.
     """
@@ -150,7 +148,6 @@ def get_users_group_ids(user_instance=User) -> list[str | int]:
 def get_permission_id_to_name_map_for_model(
     instance: type[django.db.models.Model],
 ) -> dict:
-
     """
     Constantly ran into issues with Django Guardian's helper methods, but working with the database directly I can get
     what I want... namely for each of the permission types that were created in the various models' Meta fields,
@@ -234,7 +231,6 @@ def user_has_permission_for_obj(
     permission: PermissionTypes,
     include_group_permissions: bool = False,
 ) -> bool:
-
     """
     Helper method to see make it easier to check if a given user has a certain permission type
     for a given object. Uses database queries to quickly query what permissions on the model for

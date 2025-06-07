@@ -2,6 +2,7 @@
 Tests for GraphQLJWTTokenAuthMiddleware to ensure that it correctly validates the received token
 and assigns the correct user (or AnonymousUser) to the WebSocket scope.
 """
+
 import json
 import logging
 from typing import Any
@@ -27,7 +28,7 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(WebsocketFixtureBaseTestCase):
     """
 
     @mock.patch(
-        "config.websocket.consumers.document_conversation.create_document_agent",
+        "opencontractserver.llms.agents.agent_factory.UnifiedAgentFactory.create_document_agent",
         new_callable=mock.AsyncMock,
     )
     async def test_middleware_with_valid_token(
@@ -88,7 +89,7 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(WebsocketFixtureBaseTestCase):
         await communicator.disconnect()
 
     @mock.patch(
-        "config.websocket.consumers.document_conversation.create_document_agent",
+        "opencontractserver.llms.agents.agent_factory.UnifiedAgentFactory.create_document_agent",
         new_callable=mock.AsyncMock,
     )
     async def test_middleware_with_invalid_token(
@@ -121,7 +122,7 @@ class GraphQLJWTTokenAuthMiddlewareTestCase(WebsocketFixtureBaseTestCase):
         )
 
     @mock.patch(
-        "config.websocket.consumers.document_conversation.create_document_agent",
+        "opencontractserver.llms.agents.agent_factory.UnifiedAgentFactory.create_document_agent",
         new_callable=mock.AsyncMock,
     )
     async def test_middleware_without_token(

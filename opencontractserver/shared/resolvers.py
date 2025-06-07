@@ -115,7 +115,6 @@ def resolve_oc_model_queryset(
 def resolve_single_oc_model_from_id(
     model_type: type[BaseOCModel] = None, graphql_id: str = "", user: User = None
 ) -> BaseOCModel:
-
     """
     Helper method for resolvers for single objs... gets object with id and makes sure the
     user has sufficient permissions to request it too. Applies select/prefetch.

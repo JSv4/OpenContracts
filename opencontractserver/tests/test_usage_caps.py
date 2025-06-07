@@ -27,7 +27,6 @@ class TestContext:
 
 
 class GraphQLUsageLimitTestCase(TestCase):
-
     """
     In a public deployment, I want to limit any given user's doc count to 10, as
     well as to be able to turn on or off analyzer-running permissions for same users.

@@ -3,6 +3,7 @@ Tests for verifying that Embeddings associated with Documents, Annotations, and 
 can be created and queried via the manager-provided vector search methods, using the
 new mixin-based approach to register embeddings (e.g. model_instance.add_embedding()).
 """
+
 import random
 
 from django.test import TestCase

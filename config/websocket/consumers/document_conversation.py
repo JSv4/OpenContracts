@@ -1,11 +1,3 @@
-from __future__ import annotations
-
-import uuid
-
-from django.conf import settings
-
-from opencontractserver.corpuses.models import Corpus
-
 """
 DocumentQueryConsumer
 
@@ -17,25 +9,23 @@ We define a custom DocumentAgent class that wraps the llama_index OpenAIAgent
 and encapsulates database operations for reading/writing conversation messages.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import urllib.parse
+import uuid
 from typing import Any
 
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.conf import settings
 from graphql_relay import from_global_id
-from llama_index.core.chat_engine.types import StreamingAgentChatResponse
-from llama_index.core.llms import ChatMessage as LlamaChatMessage
-from llama_index.llms.openai import OpenAI
 
 from config.websocket.utils.extract_ids import extract_websocket_path_id
-from opencontractserver.conversations.models import ChatMessage, Conversation
+from opencontractserver.conversations.models import MessageType
+from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.llms.agents import (
-    MessageType,
-    OpenContractDbAgent,
-    create_document_agent,
-)
+from opencontractserver.llms import agents
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +35,13 @@ logger = logging.getLogger(__name__)
 class DocumentQueryConsumer(AsyncWebsocketConsumer):
     """
     A Channels WebSocket consumer for querying documents with LLM support.
-    Sets up embeddings, an LLM agent, and a conversation record to store
-    human and LLM messages.
+    Uses the new unified LLM API for framework-agnostic agent creation and
+    conversation management.
     """
 
-    conversation: Conversation | None = None
-    agent: OpenContractDbAgent | None = None
+    agent = None
     document: Document | None = None
-    new_conversation: bool = False
+    corpus: Corpus | None = None
 
     # Each consumer instance will get a unique session_id created in connect()
     session_id: str | None = None
@@ -60,21 +49,26 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.consumer_id = uuid.uuid4()  # Unique identifier for this instance
-        logger.info(f"[Consumer {self.consumer_id}] __init__ called.")
+        logger.debug(f"[Consumer {self.consumer_id}] __init__ called.")
 
     async def connect(self) -> None:
         """
         Handles the WebSocket connection event.
-        - Verifies the user is authenticated.
-        - Attempts to load the associated Document.
-        - Accepts the connection and logs the session_id for debugging.
+
+        NOTE
+        ----
+        This consumer *requires* a valid ``corpus_id`` in the WebSocket
+        path (e.g. ``…/corpus/<GLOBAL_ID>/document/<GLOBAL_ID>/``).
+        Any connection attempt without it is rejected.
         """
         self.session_id = str(uuid.uuid4())
-        logger.info(
-            f"[Consumer {self.consumer_id} | Session {self.session_id}] connect() called. Scope: {self.scope}"
+        logger.debug(
+            f"[Consumer {self.consumer_id} | Session {self.session_id}] connect() called. "
+            f"Scope: {self.scope}"
         )
 
         try:
+            # 1. User must be authenticated
             if not self.scope["user"].is_authenticated:
                 logger.warning(
                     f"[Session {self.session_id}] User is not authenticated."
@@ -82,63 +76,70 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 await self.close(code=4000)
                 return
 
-            # Extract a numeric Document ID from path
-            graphql_doc_id = extract_websocket_path_id(self.scope["path"], "document")
-            self.document_id = int(from_global_id(graphql_doc_id)[1])
-            logger.info(
-                f"[Session {self.session_id}] Extracted document_id: {self.document_id}"
-            )
-
-            # Try to extract optional corpus_id
-            try:
-                # Check if "corpus" is in the path, if so, try to extract it
-                if "/corpus/" in self.scope["path"]:
-                    graphql_corpus_id = extract_websocket_path_id(
-                        self.scope["path"], "corpus"
-                    )
-                    self.corpus_id = int(from_global_id(graphql_corpus_id)[1])
-                    self.corpus = await Corpus.objects.aget(id=self.corpus_id)
-                    logger.info(
-                        f"[Session {self.session_id}] Extracted corpus_id: {self.corpus_id}"
-                    )
-                else:
-                    self.corpus_id = None
-                    self.corpus = None
-                    logger.info(f"[Session {self.session_id}] No corpus_id in path")
-            except ValueError:
-                # If there's an error extracting corpus_id, it's not there
-                self.corpus_id = None
-                logger.info(
-                    f"[Session {self.session_id}] No valid corpus_id found in path"
+            # 2. The path MUST contain a corpus identifier
+            if "/corpus/" not in self.scope["path"]:
+                err_msg = (
+                    "Missing corpus_id in WebSocket path. "
+                    "Endpoint format: .../corpus/<ID>/document/<ID>/"
                 )
+                logger.error(f"[Session {self.session_id}] {err_msg}")
+                await self.accept()
+                await self.send_standard_message(
+                    msg_type="SYNC_CONTENT",
+                    content="",
+                    data={"error": err_msg},
+                )
+                await self.close(code=4000)
+                return
 
-            # Load the Document from DB
+            # ------------------------------------------------------------------
+            # 3. Extract & validate global IDs
+            # ------------------------------------------------------------------
+            graphql_corpus_id = extract_websocket_path_id(self.scope["path"], "corpus")
+            graphql_doc_id = extract_websocket_path_id(self.scope["path"], "document")
+
+            self.corpus_id = int(from_global_id(graphql_corpus_id)[1])
+            self.document_id = int(from_global_id(graphql_doc_id)[1])
+
+            # ------------------------------------------------------------------
+            # 4. Fetch DB records – will raise DoesNotExist if invalid
+            # ------------------------------------------------------------------
+            self.corpus = await Corpus.objects.aget(id=self.corpus_id)
             self.document = await Document.objects.aget(id=self.document_id)
 
-            logger.info(f"[Session {self.session_id}] Accepting WebSocket connection.")
-            await self.accept()
-            logger.info(f"[Session {self.session_id}] Connection accepted.")
+            logger.debug(
+                f"[Session {self.session_id}] Loaded Document {self.document_id} "
+                f"from Corpus {self.corpus_id}"
+            )
 
-        except ValueError as v_err:
-            logger.error(f"[Session {self.session_id}] Invalid document path: {v_err}")
+            await self.accept()
+            logger.debug(f"[Session {self.session_id}] Connection accepted.")
+
+        except (ValueError, Corpus.DoesNotExist):
+            # Covers bad path and unknown corpus IDs
+            err_msg = "Invalid or missing corpus_id in WebSocket path."
+            logger.error(f"[Session {self.session_id}] {err_msg}", exc_info=True)
             await self.accept()
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",
                 content="",
-                data={"error": f"Invalid document path: {v_err}"},
+                data={"error": err_msg},
             )
             await self.close(code=4000)
+
         except Document.DoesNotExist:
+            err_msg = "Requested Document not found."
             logger.error(
-                f"[Session {self.session_id}] Document not found: {self.document_id}"
+                f"[Session {self.session_id}] {err_msg} (id={self.document_id})"
             )
             await self.accept()
             await self.send_standard_message(
                 msg_type="SYNC_CONTENT",
                 content="",
-                data={"error": "Requested Document not found."},
+                data={"error": err_msg},
             )
             await self.close(code=4000)
+
         except Exception as e:
             logger.error(
                 f"[Session {self.session_id}] Error during connection: {str(e)}",
@@ -156,15 +157,14 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         """
         Handles the WebSocket disconnection event, logs the session_id and close_code.
         """
-        logger.info(
+        logger.debug(
             f"[Consumer {self.consumer_id} | Session {self.session_id}] disconnect() called."
         )
-        self.conversation = None
         self.agent = None
 
     async def send_standard_message(
         self,
-        msg_type: type[MessageType],
+        msg_type: MessageType,
         content: str = "",
         data: dict[str, Any] | None = None,
     ) -> None:
@@ -189,6 +189,10 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         Returns:
             A short descriptive title for the conversation
         """
+
+        from llama_index.core.llms import ChatMessage as LlamaChatMessage
+        from llama_index.llms.openai import OpenAI
+
         system_prompt = (
             "You are a helpful assistant that creates very concise chat titles. "
             "Create a brief (maximum 5 words) title that captures the essence "
@@ -227,7 +231,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
         Returns:
             None
         """
-        logger.info(
+        logger.debug(
             f"[Session {self.session_id}] receive() called with text_data: {text_data}"
         )
 
@@ -243,240 +247,175 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 )
                 return
 
-            logger.info(
+            logger.debug(
                 f"[Session {self.session_id}] Received user query: '{user_query}'"
             )
 
-            # If we haven't yet loaded/created a Conversation, do it now
-            if self.conversation is None:
-                logger.info(
-                    f"[Session {self.session_id}] No conversation loaded yet, initializing..."
+            # If we haven't yet created an agent, do it now
+            if self.agent is None:
+                logger.debug(
+                    f"[Session {self.session_id}] No agent loaded yet, initializing..."
                 )
-                # Attempt to parse 'load_from_conversation_id' from query string
+
+                # Parse conversation ID from query string if provided
                 query_string = self.scope.get("query_string", b"").decode("utf-8")
                 query_params = urllib.parse.parse_qs(query_string)
                 load_convo_id_str = query_params.get(
                     "load_from_conversation_id", [None]
                 )[0]
 
+                conversation_id_from_query = None
                 if load_convo_id_str:
                     try:
-                        load_convo_id = int(from_global_id(load_convo_id_str)[1])
-                        logger.info(
-                            f"[Session {self.session_id}] Attempting to load existing conversation {load_convo_id}"
+                        conversation_id_from_query = int(
+                            from_global_id(load_convo_id_str)[1]
                         )
-                        self.conversation = await Conversation.objects.aget(
-                            id=load_convo_id
-                        )
-                        logger.info(
-                            f"[Session {self.session_id}] Successfully loaded conversation {load_convo_id}"
-                        )
-                        prefix_messages = [
-                            msg
-                            async for msg in ChatMessage.objects.filter(
-                                conversation_id=load_convo_id
-                            ).order_by("created")
-                        ]
-                        logger.info(
-                            f"[Session {self.session_id}] Loaded {len(prefix_messages)} prefix messages"
+                        logger.debug(
+                            f"[Session {self.session_id}] load existing conversation {conversation_id_from_query}"
                         )
                     except Exception as e:
                         logger.error(
-                            f"[Session {self.session_id}] Could not load prefix messages: {str(e)}"
+                            f"[Session {self.session_id}] Could not parse convo ID from param: {str(e)}"
                         )
-                        prefix_messages = []
-                        self.conversation = None
-                else:
-                    # Create a brand new conversation
-                    logger.info(
-                        f"[Session {self.session_id}] Creating new conversation"
+                        conversation_id_from_query = None
+
+                # Create agent using new unified API
+                logger.debug(
+                    f"[Session {self.session_id}] Creating agent for document "
+                    f"{self.document.id if self.document else 'UNKNOWN'}"
+                )
+
+                agent_kwargs = {
+                    "document": self.document,
+                    "corpus": self.corpus,
+                    "user_id": self.scope["user"].id,
+                }
+
+                if conversation_id_from_query:
+                    agent_kwargs["conversation_id"] = conversation_id_from_query
+
+                # Logging for preferred_embedder - does not affect agent_kwargs for corpus
+                if (
+                    self.corpus
+                    and hasattr(self.corpus, "preferred_embedder")
+                    and self.corpus.preferred_embedder
+                ):
+                    logger.debug(
+                        f"[Session {self.session_id}] Corpus {self.corpus.id} "
+                        f"has a preferred_embedder: {self.corpus.preferred_embedder}. "
+                        "Agent factory will use this if applicable."
                     )
-                    self.conversation = await Conversation.objects.acreate(
-                        creator=self.scope["user"],
-                        title="",  # Temporary empty title, will be replaced below
-                        chat_with_document=self.document,
+                elif self.corpus:
+                    logger.debug(
+                        f"[Session {self.session_id}] Corpus {self.corpus.id} "
+                        "does not have a preferred_embedder specified. Agent factory will use defaults."
                     )
-                    logger.info(
-                        f"[Session {self.session_id}] Created new conversation with ID {self.conversation.id}"
+                else:  # Should not happen if connect() succeeded
+                    logger.warning(
+                        f"[Session {self.session_id}] self.corpus is None "
+                        "during agent initialization. This is unexpected."
                     )
-                    prefix_messages = []
-                    self.new_conversation = True
 
-                # Initialize the underlying Llama agent with optional prefix messages
-                logger.info(
-                    f"[Session {self.session_id}] Creating document agent for document {self.document_id}"
+                self.agent = await agents.for_document(**agent_kwargs)
+
+                # Enhanced Logging after agent initialization
+                if self.agent and self.agent.get_conversation_id():
+                    logger.debug(
+                        f"[Session {self.session_id}] Agent NEWLY INITIALIZED "
+                        f"for doc {self.document_id} with conversation ID: "
+                        f"{self.agent.get_conversation_id()}"
+                    )
+                elif self.agent:
+                    logger.debug(
+                        f"[Session {self.session_id}] Agent NEWLY INITIALIZED "
+                        f"for doc {self.document_id} (anonymous or new conversation)."
+                    )
+
+            # Enhanced Logging for existing agent instance
+            elif self.agent and self.agent.get_conversation_id():
+                logger.debug(
+                    f"[Session {self.session_id}] Using EXISTING agent "
+                    f"for doc {self.document_id} with conversation ID: "
+                    f"{self.agent.get_conversation_id()}"
                 )
-                underlying_llama_agent = await create_document_agent(
-                    document=self.document_id,
-                    user_id=self.scope["user"].id,
-                    loaded_messages=prefix_messages if prefix_messages else None,
-                    override_conversation=self.conversation,
-                    embedder_path=self.corpus.preferred_embedder,
+            elif self.agent:
+                logger.debug(
+                    f"[Session {self.session_id}] Using EXISTING agent "
+                    f"for doc {self.document_id} (anonymous or new conversation)."
                 )
 
-                # Initialize our custom agent
-                logger.info(
-                    f"[Session {self.session_id}] Initializing OpenContractDbAgent wrapper"
-                )
-                self.agent = underlying_llama_agent  # It's already wrapped!
-
-            # If conversation is brand new and has no chat messages, rename it
-            if (
-                self.new_conversation
-                and await self.conversation.chat_messages.all().acount() == 0
-            ):
-                logger.info(
-                    f"[Session {self.session_id}] Generating title for new conversation"
-                )
-                title = await self.generate_conversation_title(user_query)
-                self.conversation.title = title
-                await self.conversation.asave()
-                logger.info(
-                    f"[Session {self.session_id}] Set conversation title to: {title}"
-                )
-                self.new_conversation = False
-
-            # Store user message BEFORE LLM message stored
-            await ChatMessage.objects.acreate(
-                creator_id=self.scope["user"].id,
-                conversation=self.conversation,
-                msg_type="HUMAN",
-                content=user_query,
-            )
-
-            # Then create a placeholder for the LLM's message
-            message_id = await self.agent.store_llm_message("")
-            logger.info(
-                f"[Session {self.session_id}] Created placeholder message with ID: {message_id}"
-            )
-
-            # Then call the agent to generate a response, ensure NOT to resave user message
-            logger.info(
-                f"[Session {self.session_id}] Calling agent.astream_chat with query: '{user_query}'"
+            # Use the new streaming API
+            logger.debug(
+                f"[Session {self.session_id}] Calling agent.stream with query: '{user_query}'"
             )
 
             try:
-                response = await self.agent.astream_chat(
-                    user_query, store_user_message=False
+                # Stream the response
+                async for chunk in self.agent.stream(user_query):
+                    if chunk.user_message_id and not hasattr(self, "_sent_start"):
+                        # Send ASYNC_START when we get the first chunk with message IDs
+                        await self.send_standard_message(
+                            msg_type="ASYNC_START",
+                            content="",
+                            data={"message_id": chunk.llm_message_id},
+                        )
+                        self._sent_start = True
+                        logger.debug(
+                            f"[Session {self.session_id}] Sent ASYNC_START with "
+                            f"message_id: {chunk.llm_message_id}"
+                        )
+
+                    # Send each content chunk
+                    if chunk.content:
+                        await self.send_standard_message(
+                            msg_type="ASYNC_CONTENT",
+                            content=chunk.content,
+                            data={"message_id": chunk.llm_message_id},
+                        )
+
+                    # Send final message when streaming is complete
+                    if chunk.is_complete:
+                        # Prepare sources data
+                        sources = []
+                        if chunk.sources:
+                            for source in chunk.sources:
+                                source_data = {
+                                    "annotation_id": source.annotation_id,
+                                    "rawText": source.content,
+                                    "similarity_score": source.similarity_score,
+                                    **source.metadata,  # Flatten metadata to top level
+                                }
+                                sources.append(source_data)
+
+                        data = {
+                            "sources": sources,
+                            "message_id": chunk.llm_message_id,
+                        }
+
+                        logger.debug(
+                            f"[Session {self.session_id}] Sending ASYNC_FINISH message"
+                        )
+                        await self.send_standard_message(
+                            msg_type="ASYNC_FINISH",
+                            content=chunk.accumulated_content,
+                            data=data,
+                        )
+
+                        # Reset the start flag for next message
+                        if hasattr(self, "_sent_start"):
+                            delattr(self, "_sent_start")
+
+                logger.debug(
+                    f"[Session {self.session_id}] Completed streaming response"
                 )
-                logger.info(
-                    f"[Session {self.session_id}] Got initial response of type: {type(response)}"
-                )
+
             except Exception as api_error:
                 logger.error(
-                    f"[Session {self.session_id}] Error during OpenAI API call: {str(api_error)}",
+                    f"[Session {self.session_id}] Error during API call: {str(api_error)}",
                     exc_info=True,
                 )
                 # Re-raise to be caught by outer exception handler
                 raise
-
-            if isinstance(response, StreamingAgentChatResponse):
-                logger.info(
-                    f"[Session {self.session_id}] Processing StreamingAgentChatResponse"
-                )
-
-                await self.send_standard_message(
-                    msg_type="ASYNC_START",
-                    content="",
-                    data={"message_id": message_id},
-                )
-                llm_response_buffer = ""
-                token_count = 0
-
-                try:
-                    logger.info(
-                        f"[Session {self.session_id}] Starting to iterate through streaming tokens"
-                    )
-                    async for token in response.async_response_gen():
-                        token_count += 1
-                        if (
-                            token_count % 50 == 0
-                        ):  # Log every 50 tokens to avoid excessive logging
-                            logger.info(
-                                f"[Session {self.session_id}] Received {token_count} tokens so far"
-                            )
-
-                        llm_response_buffer += token
-                        await self.send_standard_message(
-                            msg_type="ASYNC_CONTENT",
-                            content=token,
-                            data={"message_id": message_id},
-                        )
-                    logger.info(
-                        f"[Session {self.session_id}] Completed token streaming, received {token_count} tokens total"
-                    )
-                except Exception as stream_error:
-                    logger.error(
-                        f"[Session {self.session_id}] Error during token streaming: {str(stream_error)}",
-                        exc_info=True,
-                    )
-                    raise
-
-                # Gather final sources (if any)
-                sources = {}
-
-                # Log response sources
-                logger.info(
-                    f"[Session {self.session_id}] Response has sources: {bool(response.sources)}"
-                )
-                logger.info(
-                    f"[Session {self.session_id}] Response has source_nodes: {bool(response.source_nodes)}"
-                )
-
-                if response.sources:
-                    for idx, source in enumerate(response.sources):
-                        raw_output = source.raw_output
-                        if hasattr(raw_output, "source_nodes"):
-                            for sn_idx, sn in enumerate(raw_output.source_nodes):
-                                sources[sn.metadata["annotation_id"]] = {
-                                    **sn.metadata,
-                                    "rawText": sn.text,
-                                }
-
-                if response.source_nodes:
-                    logger.info(
-                        f"[Session {self.session_id}] Response has source_nodes: {bool(response.source_nodes)}"
-                    )
-                    for sn_idx, sn in enumerate(response.source_nodes):
-                        logger.info(
-                            f"[Session {self.session_id}] Source node {sn_idx}: {sn.metadata}"
-                        )
-                        sources[sn.metadata["annotation_id"]] = {
-                            **sn.metadata,
-                            "rawText": sn.text,
-                        }
-
-                data = {"sources": list(sources.values()), "message_id": message_id}
-
-                logger.info(
-                    f"[Session {self.session_id}] Updating message {message_id} with final content"
-                )
-                await self.agent.update_message(
-                    llm_response_buffer, message_id, data=data
-                )
-
-                logger.info(f"[Session {self.session_id}] Sending ASYNC_FINISH message")
-                await self.send_standard_message(
-                    msg_type="ASYNC_FINISH",
-                    content=llm_response_buffer,
-                    data=data,
-                )
-
-            else:
-                logger.info(
-                    f"[Session {self.session_id}] Processing non-streaming response of type: {type(response)}"
-                )
-                final_text: str = getattr(response, "response", "")
-                logger.info(
-                    f"[Session {self.session_id}] Got response text of length: {len(final_text)}"
-                )
-                await self.agent.update_message(final_text, message_id)
-
-                await self.send_standard_message(
-                    msg_type="SYNC_CONTENT",
-                    content=final_text,
-                    data={"message_id": message_id},
-                )
 
         except Exception as e:
             logger.error(

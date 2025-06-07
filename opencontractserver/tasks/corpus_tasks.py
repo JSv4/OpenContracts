@@ -67,9 +67,11 @@ def run_task_name_analyzer(
                     task_func.s(
                         doc_id=doc_id,
                         analysis_id=analysis.id,
-                        corpus_id=analysis.analyzed_corpus.id
-                        if analysis.analyzed_corpus
-                        else None,
+                        corpus_id=(
+                            analysis.analyzed_corpus.id
+                            if analysis.analyzed_corpus
+                            else None
+                        ),
                         **(analysis_input_data if analysis_input_data else {}),
                     )
                     for doc_id in document_ids

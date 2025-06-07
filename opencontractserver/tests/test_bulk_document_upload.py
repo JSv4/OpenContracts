@@ -451,7 +451,7 @@ class BulkDocumentUploadTests(TestCase):
     def test_unknown_binary_file_skipped(self):
         """Test that unknown binary files are skipped during processing."""
         # Create a zip with an unknown binary file
-        unknown_binary = b"\x00\x01\x02\x03\xDE\xAD\xBE\xEF"  # Non-text binary data
+        unknown_binary = b"\x00\x01\x02\x03\xde\xad\xbe\xef"  # Non-text binary data
 
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w") as zip_file:

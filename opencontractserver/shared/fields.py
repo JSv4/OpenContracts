@@ -34,6 +34,7 @@ class PDFBase64File(Base64FileField):
 # validation error for JSONField.
 # See: https://stackoverflow.com/questions/55147169/django-admin-jsonfield-default-empty-dict-wont-save-in-admin
 
+
 # Combined a couple things into a single custom JSON Field...
 #
 # FIRST:

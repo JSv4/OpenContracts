@@ -85,7 +85,6 @@ class User(AbstractUser):
 
 
 class Assignment(django.db.models.Model):
-
     """
     This was included very early in an aspirational attempt to build some workflow
     functionality to assign and track review to specific users. Still a good idea, still

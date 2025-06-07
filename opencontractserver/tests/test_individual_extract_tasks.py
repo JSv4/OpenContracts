@@ -3,6 +3,7 @@ Tests to synchronously invoke and verify the oc_llama_index_doc_query Celery tas
 using BaseFixtureTestCase, ensuring that the Extract models and related objects
 (Fieldset, Column, Datacell) are set up correctly.
 """
+
 import logging
 
 # import vcr

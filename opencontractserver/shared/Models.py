@@ -6,7 +6,6 @@ from opencontractserver.shared.Managers import PermissionManager
 
 
 class BaseOCModel(models.Model):
-
     """
     Base model for all OpenContracts models that has some properties it's nice to have on
     all models.

@@ -49,7 +49,6 @@ class TemporaryFileHandle(django.db.models.Model):
 
 # Create your models here.
 class Corpus(TreeNode):
-
     """
     Corpus, which stores a collection of documents that are grouped for machine learning / study / export purposes.
     """
@@ -139,7 +138,6 @@ class Corpus(TreeNode):
 
     # Override save to update modified on save
     def save(self, *args, **kwargs):
-
         """On save, update timestamps"""
         if not self.pk:
             self.created = timezone.now()

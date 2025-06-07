@@ -24,7 +24,6 @@ class CorpusForkTestCase:
         self.user = User.objects.create_user(username="bob", password="12345678")
 
     def test_corpus_forking(self):
-
         """
         Test that we can fork an imported corpus
         """

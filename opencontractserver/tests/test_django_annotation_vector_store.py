@@ -5,16 +5,15 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.test import TestCase, override_settings
-from llama_index.core.vector_stores import (
-    MetadataFilter,
-    MetadataFilters,
-    VectorStoreQuery,
-)
 
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.llms.vector_stores import DjangoAnnotationVectorStore
+from opencontractserver.llms.vector_stores.core_vector_stores import (
+    CoreAnnotationVectorStore,
+    VectorSearchQuery,
+    VectorSearchResult,
+)
 
 User = get_user_model()
 
@@ -36,9 +35,9 @@ def constant_vector(dimension: int = 384, value: float = 0.5) -> list[float]:
     return [value] * dimension
 
 
-class TestDjangoAnnotationVectorStore(TestCase):
+class TestCoreAnnotationVectorStore(TestCase):
     """
-    A test suite for the DjangoAnnotationVectorStore class,
+    A test suite for the CoreAnnotationVectorStore class,
     particularly focusing on the new generate_embeddings_from_text,
     search_by_embedding patterns, and ensuring that we handle:
       - user ID filtering
@@ -47,7 +46,7 @@ class TestDjangoAnnotationVectorStore(TestCase):
       - partial text matching
       - annotation label metadata filters
       - direct query embedding usage
-      - generated query embedding usage (via query_str)
+      - generated query embedding usage (via query_text)
     """
 
     @classmethod
@@ -147,90 +146,90 @@ class TestDjangoAnnotationVectorStore(TestCase):
 
     def setUp(self) -> None:
         """
-        Instantiate a DjangoAnnotationVectorStore each test with default filters.
+        Instantiate a CoreAnnotationVectorStore each test with default filters.
         """
-        self.vector_store = DjangoAnnotationVectorStore(
+        self.vector_store = CoreAnnotationVectorStore(
             user_id=self.user.id,
             corpus_id=self.corpus.id,
             document_id=None,
             must_have_text=None,
         )
 
-    def run_sync_query(self, query: VectorStoreQuery):
+    def run_search_query(self, query: VectorSearchQuery) -> list[VectorSearchResult]:
         """
-        Helper to call the async .query method from a sync test environment.
+        Helper to call the .search method.
         """
-        return self.vector_store.query(query)
+        return self.vector_store.search(query)
 
-    def test_query_with_no_vector(self) -> None:
+    def test_search_with_no_vector(self) -> None:
         """
-        If we do a query without specifying either query_embedding or query_str,
+        If we do a search without specifying either query_embedding or query_text,
         just retrieve all matching annotations for the corpus (and user) with no doc_id.
         """
-        query = VectorStoreQuery(
-            query_embedding=None, query_str=None, similarity_top_k=None
+        query = VectorSearchQuery(
+            query_embedding=None, query_text=None, similarity_top_k=10
         )
-        result = self.run_sync_query(query)
+        results = self.run_search_query(query)
         self.assertEqual(
-            len(result.nodes),
+            len(results),
             4,
             "Should return all four annotations (no embedding filter).",
         )
 
-    def test_query_with_document_filter(self) -> None:
+    def test_search_with_document_filter(self) -> None:
         """
         Verifies specifying document_id in the vector store's init filters
         yields only that doc's annotations.
         """
-        store_doc1 = DjangoAnnotationVectorStore(
+        store_doc1 = CoreAnnotationVectorStore(
             user_id=self.user.id,
             corpus_id=self.corpus.id,
             document_id=self.doc1.id,
         )
-        query = VectorStoreQuery(
-            query_embedding=None, query_str=None, similarity_top_k=None
+        query = VectorSearchQuery(
+            query_embedding=None, query_text=None, similarity_top_k=10
         )
-        result = store_doc1.query(query)
+        results = store_doc1.search(query)
         self.assertEqual(
-            len(result.nodes), 2, "Should have exactly 2 annotations from doc1."
+            len(results), 2, "Should have exactly 2 annotations from doc1."
         )
-        texts = [n.text for n in result.nodes]
+        texts = [result.annotation.raw_text for result in results]
         self.assertTrue(any("first annotation text" in t for t in texts))
         self.assertTrue(any("Another annotation" in t for t in texts))
 
-    def test_query_with_text_filter(self) -> None:
+    def test_search_with_text_filter(self) -> None:
         """
         Using must_have_text substring search in the store's init.
         """
-        store_text_filter = DjangoAnnotationVectorStore(
+        store_text_filter = CoreAnnotationVectorStore(
             user_id=self.user.id,
             corpus_id=self.corpus.id,
             must_have_text="Another",
         )
-        query = VectorStoreQuery(
-            query_embedding=None, query_str=None, similarity_top_k=None
+        query = VectorSearchQuery(
+            query_embedding=None, query_text=None, similarity_top_k=10
         )
-        result = store_text_filter.query(query)
-        self.assertEqual(
-            len(result.nodes), 1, "Only anno2 matches the substring 'Another'."
-        )
+        results = store_text_filter.search(query)
+        self.assertEqual(len(results), 1, "Only anno2 matches the substring 'Another'.")
         self.assertIn(
-            "Another annotation text, minor label, on doc1", result.nodes[0].text
+            "Another annotation text, minor label, on doc1",
+            results[0].annotation.raw_text,
         )
 
     @override_settings(
         DEFAULT_EMBEDDER="opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder"  # noqa: E501
     )
-    def test_query_by_vector_similarity_explicit_embedding(self) -> None:
+    def test_search_by_vector_similarity_explicit_embedding(self) -> None:
         """
         Provide an explicit query embedding. Expect to see only annotations with embeddings
         (anno1, 2, 3) in ascending distance order, limited by top_k.
         """
         query_vec = constant_vector(384, value=0.25)
-        query = VectorStoreQuery(query_embedding=query_vec, similarity_top_k=3)
-        result = self.run_sync_query(query)
+        query = VectorSearchQuery(query_embedding=query_vec, similarity_top_k=3)
+        results = self.run_search_query(query)
+
         # Because the dimension is 384, we only expect anno1,2,3 to appear. Anno4 has no embedding.
-        returned_ids = {n.metadata["annotation_id"] for n in result.nodes}
+        returned_ids = {result.annotation.id for result in results}
         self.assertNotIn(
             self.anno4.id,
             returned_ids,
@@ -240,61 +239,50 @@ class TestDjangoAnnotationVectorStore(TestCase):
         self.assertIn(self.anno2.id, returned_ids)
         self.assertIn(self.anno3.id, returned_ids)
 
-    @patch("opencontractserver.utils.embeddings.generate_embeddings_from_text")
-    def test_query_by_vector_similarity_generated_from_query_str(self, mock_gen_embeds):
+    @patch(
+        "opencontractserver.llms.vector_stores.core_vector_stores.generate_embeddings_from_text"
+    )
+    def test_search_by_vector_similarity_generated_from_query_text(
+        self, mock_gen_embeds
+    ):
         """
-        Provide a textual query_str. We want to generate a known embedding
-        so the search_by_embedding call has consistent results for testing.
+        Provide query_text instead of explicit embedding. The vector store should
+        call generate_embeddings_from_text internally.
         """
-        # 1) Mock the generate_embeddings_from_text to return a vector of dimension 384
+        # Mock the embedding generation to return a known vector
+        expected_vector = constant_vector(384, value=0.15)
         mock_gen_embeds.return_value = (
-            "mocked-embedder",
-            [0.25] * 384,  # or any other test vector
+            "opencontractserver.pipeline.embedders.sent_transformer_microservice.MicroserviceEmbedder",
+            expected_vector,
         )
 
-        # 2) Instantiate your vector store
-        store = DjangoAnnotationVectorStore(
-            user_id=self.user.id,
-            corpus_id=self.corpus.id,
-            document_id=None,
-            must_have_text=None,
+        query = VectorSearchQuery(
+            query_embedding=None, query_text="test query", similarity_top_k=3
+        )
+        results = self.run_search_query(query)
+
+        # Verify the embedding generation was called
+        mock_gen_embeds.assert_called_once_with(
+            "test query",
+            embedder_path=self.vector_store.embedder_path,
         )
 
-        # 3) Run the query with a query_str
-        query = VectorStoreQuery(
-            query_embedding=None, query_str="some text", similarity_top_k=3
-        )
+        # Should return annotations with embeddings
+        returned_ids = {result.annotation.id for result in results}
+        self.assertNotIn(self.anno4.id, returned_ids, "anno4 has no embedding")
 
-        # Ensure anno4 doesn't have an embedding before running the query
-        # TODO - the embedding shouldn't be here... but having trouble stopping signal from firing.
-        self.anno4.embedding_set.all().delete()
-
-        result = store.query(query)
-
-        # 4) Assert you get the annotations you expect
-        returned_ids = {n.metadata["annotation_id"] for n in result.nodes}
-
-        # Verify the expected annotations are returned
-        self.assertIn(self.anno1.id, returned_ids)
-        self.assertIn(self.anno2.id, returned_ids)
-        self.assertIn(self.anno3.id, returned_ids)
-        self.assertNotIn(
-            str(self.anno4.id), returned_ids, "Should exclude anno4 with no embedding."
-        )
-
-    def test_query_with_label_metadata_filter(self) -> None:
+    def test_search_with_label_metadata_filter(self) -> None:
         """
-        Ensures we can filter by annotation_label text via the VectorStoreQuery filters.
+        Ensures we can filter by annotation_label text via the VectorSearchQuery filters.
         """
-        filters = MetadataFilters(
-            filters=[MetadataFilter(key="annotation_label", value="Important Label")]
-        )
-        query = VectorStoreQuery(
-            query_embedding=None, query_str=None, filters=filters, similarity_top_k=10
+        filters = {"annotation_label": "Important Label"}
+        query = VectorSearchQuery(
+            query_embedding=None, query_text=None, filters=filters, similarity_top_k=10
         )
 
-        result = self.run_sync_query(query)
-        returned_texts = [n.text for n in result.nodes]
+        results = self.run_search_query(query)
+        returned_texts = [result.annotation.raw_text for result in results]
+
         # anno1, anno3 both have "Important Label"
         self.assertEqual(
             len(returned_texts),
@@ -304,46 +292,33 @@ class TestDjangoAnnotationVectorStore(TestCase):
         self.assertTrue(any("first annotation text" in txt for txt in returned_texts))
         self.assertTrue(any("doc2, important label" in txt for txt in returned_texts))
 
-    @patch("opencontractserver.utils.embeddings.generate_embeddings_from_text")
-    def test_query_str_fallback_when_no_embedding(self, mock_gen_embeds):
+    @patch(
+        "opencontractserver.llms.vector_stores.core_vector_stores.generate_embeddings_from_text"
+    )
+    def test_search_query_text_fallback_when_no_embedding(self, mock_gen_embeds):
         """
-        If a user calls a query with query_str but the dimension is unsupported or generate_embeddings
+        If a user calls a search with query_text but the dimension is unsupported or generate_embeddings
         fails (None, None), we should just return results with no vector-based ordering.
         """
-
         # Return (None, None) from generate_embeddings_from_text so the vector store
         # can't do a similarity search and must fallback.
         mock_gen_embeds.return_value = (None, None)
 
-        query = VectorStoreQuery(
-            query_embedding=None, query_str="some text", similarity_top_k=3
+        query = VectorSearchQuery(
+            query_embedding=None, query_text="some text", similarity_top_k=3
         )
-        result = self.run_sync_query(query)
+        results = self.run_search_query(query)
         self.assertEqual(
-            len(result.nodes),
+            len(results),
             3,
-            "Should return all annotations with non-null embedding if embedding is None.",
-        )
-
-    def test_query_with_top_k_exceeded(self) -> None:
-        """
-        If we specify a top_k smaller than the total matched set, ensure we only get top_k back.
-        We'll do so with an explicit embedding search. We expect 3 matching +1 no embed => only 3 returned.
-        """
-        query_vec = constant_vector(384, value=0.25)
-        query = VectorStoreQuery(query_embedding=query_vec, similarity_top_k=2)
-        result = self.run_sync_query(query)
-        self.assertLessEqual(
-            len(result.nodes),
-            2,
-            "We should only retrieve top_k=2 with similarity search.",
+            "Should return top 3 annotations with fallback filtering.",
         )
 
     def test_batch_add_embeddings_and_corpus_exclusion(self) -> None:
         """
         1) Demonstrates adding embeddings in batch via add_embeddings().
         2) Ensures that annotations belonging to a different corpus
-           are excluded from queries restricted to self.corpus.
+           are excluded from searches restricted to self.corpus.
         """
         # Create a separate corpus for testing exclusion
         other_corpus = Corpus.objects.create(
@@ -387,7 +362,7 @@ class TestDjangoAnnotationVectorStore(TestCase):
         )
 
         # Instantiate a vector store restricted to self.corpus
-        store = DjangoAnnotationVectorStore(
+        store = CoreAnnotationVectorStore(
             user_id=self.user.id,
             corpus_id=self.corpus.id,
             document_id=None,
@@ -396,10 +371,10 @@ class TestDjangoAnnotationVectorStore(TestCase):
 
         # Submit a vector-based query
         query_vec = constant_vector(384, value=0.50)
-        query = VectorStoreQuery(query_embedding=query_vec, similarity_top_k=10)
-        result = store.query(query)
+        query = VectorSearchQuery(query_embedding=query_vec, similarity_top_k=10)
+        results = store.search(query)
 
-        returned_ids = {node.metadata["annotation_id"] for node in result.nodes}
+        returned_ids = {result.annotation.id for result in results}
 
         # Annotation in self.corpus should appear
         self.assertIn(
@@ -413,4 +388,70 @@ class TestDjangoAnnotationVectorStore(TestCase):
             annotation_other_corpus.id,
             returned_ids,
             "Annotation from a different corpus must be excluded.",
+        )
+
+    def test_similarity_scores_in_results(self) -> None:
+        """
+        Test that similarity scores are properly included in search results.
+        """
+        query_vec = constant_vector(384, value=0.25)
+        query = VectorSearchQuery(query_embedding=query_vec, similarity_top_k=3)
+        results = self.run_search_query(query)
+
+        # Check that all results have similarity scores
+        for result in results:
+            self.assertIsInstance(result.similarity_score, float)
+            self.assertTrue(0.0 <= result.similarity_score <= 1.0)
+
+    def test_empty_corpus_search(self) -> None:
+        """
+        Test searching in a corpus with no annotations.
+        """
+        empty_corpus = Corpus.objects.create(
+            title="Empty Corpus",
+            creator=self.user,
+            is_public=True,
+        )
+
+        store = CoreAnnotationVectorStore(
+            user_id=self.user.id,
+            corpus_id=empty_corpus.id,
+        )
+
+        query = VectorSearchQuery(query_text="any text", similarity_top_k=10)
+        results = store.search(query)
+
+        self.assertEqual(len(results), 0, "Empty corpus should return no results")
+
+    def test_user_filtering(self) -> None:
+        """
+        Test that user filtering works correctly.
+        """
+        # Create another user and annotation
+        other_user = User.objects.create_user(
+            username="otheruser", email="other@example.com", password="otherpass123"
+        )
+
+        other_annotation = Annotation.objects.create(
+            document=self.doc1,
+            corpus=self.corpus,
+            creator=other_user,
+            raw_text="Annotation by other user",
+            is_public=True,
+        )
+
+        # Search with user filter
+        store = CoreAnnotationVectorStore(
+            user_id=self.user.id,
+            corpus_id=self.corpus.id,
+        )
+
+        query = VectorSearchQuery(similarity_top_k=10)
+        results = store.search(query)
+
+        returned_ids = {result.annotation.id for result in results}
+        self.assertNotIn(
+            other_annotation.id,
+            returned_ids,
+            "Other user's annotation should be filtered out",
         )

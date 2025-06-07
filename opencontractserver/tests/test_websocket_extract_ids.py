@@ -1,6 +1,7 @@
 """
 Tests for the extract_websocket_path_id function in the websocket utils.
 """
+
 from django.test import TestCase
 
 from config.websocket.utils.extract_ids import extract_websocket_path_id

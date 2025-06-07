@@ -7,6 +7,7 @@ For more information on this file, see
 https://docs.djangoproject.com/en/dev/howto/deployment/asgi/
 
 """
+
 import os  # noqa: E402
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")

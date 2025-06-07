@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import Optional, Union
 
@@ -6,7 +5,10 @@ from llama_index.core.base.embeddings.base import BaseEmbedding, Embedding
 from llama_index.core.callbacks import CallbackManager
 
 from opencontractserver.pipeline.base.file_types import FileTypeEnum
-from opencontractserver.utils.embeddings import generate_embeddings_from_text
+from opencontractserver.utils.embeddings import (
+    agenerate_embeddings_from_text,
+    generate_embeddings_from_text,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -97,13 +99,17 @@ class OpenContractsPipelineEmbedding(BaseEmbedding):
 
     async def _aget_query_embedding(self, query: str) -> Embedding:
         """
-        Asynchronously embed the input query text, by calling OpenContracts'
-        ``generate_embeddings_from_text`` function in a background thread.
-
-        :param query: A string representing the query text.
-        :return: A list of floats representing the generated embedding.
+        Asynchronously embed the input query text via the dedicated async helper
+        which keeps the event-loop responsive.
         """
-        return await asyncio.to_thread(self._get_query_embedding, query)
+        logger.debug("Async generating embeddings for query: %s", query)
+        _, embedding = await agenerate_embeddings_from_text(
+            text=query,
+            corpus_id=self.corpus_id,
+            mimetype=self.mimetype,
+            embedder_path=self.embedder_path,
+        )
+        return embedding
 
     def _get_text_embedding(self, text: str) -> Embedding:
         """
@@ -124,10 +130,14 @@ class OpenContractsPipelineEmbedding(BaseEmbedding):
 
     async def _aget_text_embedding(self, text: str) -> Embedding:
         """
-        Asynchronously embed the input text, by calling OpenContracts'
-        ``generate_embeddings_from_text`` function in a background thread.
-
-        :param text: A string representing text content.
-        :return: A list of floats representing the generated embedding.
+        Asynchronously embed the input text via the dedicated async helper
+        which keeps the event-loop responsive.
         """
-        return await asyncio.to_thread(self._get_text_embedding, text)
+        logger.debug("Async generating embeddings for text: %s…", text[:50])
+        _, embedding = await agenerate_embeddings_from_text(
+            text=text,
+            corpus_id=self.corpus_id,
+            mimetype=self.mimetype,
+            embedder_path=self.embedder_path,
+        )
+        return embedding

@@ -51,10 +51,12 @@ jobs:
             requirements/base.txt
             requirements/local.txt
 
-      - name: Run pre-commit
-        uses: pre-commit/action@v3.0.1
+      - name: Install dependencies
+        run: pip install -r requirements/local.txt
 
-  # With no caching at all the entire ci process takes 4m 30s to complete!
+      - name: Run pre-commit
+        run: pre-commit run --all-files
+
   pytest:
     runs-on: ubuntu-latest
 

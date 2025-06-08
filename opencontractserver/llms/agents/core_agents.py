@@ -82,74 +82,58 @@ class UnifiedChatResponse:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass
-class ThoughtEvent:
-    """Represents an intermediate thought or reasoning step emitted while the agent is running.
+# --------------------------------------------------------------------------- #
+# DRY helper – shared fields for every streamed event                         #
+# --------------------------------------------------------------------------- #
 
-    Fields like ``content``/``is_complete`` mirror the legacy ``UnifiedStreamResponse`` so
-    existing WebSocket consumers that look for those attributes do not raise
-    ``AttributeError`` when upgrading to the event-based protocol.
-    """
+
+@dataclass
+class _BaseStreamEvt:
+    """Common fields shared by *all* stream-event dataclasses (old & new)."""
+
+    # Legacy / convenience fields so consumers can treat every event the same
+    content: str = ""
+    accumulated_content: str = ""
+    sources: list[SourceNode] = field(default_factory=list)
+    user_message_id: Optional[int] = None
+    llm_message_id: Optional[int] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    is_complete: bool = False
+
+
+# ------------------------------------------------------------------
+# Concrete event types
+# ------------------------------------------------------------------
+
+
+@dataclass
+class ThoughtEvent(_BaseStreamEvt):
+    """An intermediate reasoning step emitted while the agent is running."""
 
     type: Literal["thought"] = "thought"
     thought: str = ""
 
-    # Legacy-compat shadow fields (optional)
-    content: str = ""
-    accumulated_content: str = ""
-    sources: list[SourceNode] = field(default_factory=list)
-    user_message_id: Optional[int] = None
-    llm_message_id: Optional[int] = None
-    metadata: dict[str, Any] = field(default_factory=dict)
-    is_complete: bool = False
-
 
 @dataclass
-class ContentEvent:
-    """Represents a delta (token or chunk) of the assistant's final answer content."""
+class ContentEvent(_BaseStreamEvt):
+    """A delta (token or chunk) of the assistant's final textual answer."""
 
     type: Literal["content"] = "content"
-    content: str = ""
-
-    # Legacy-compat
-    accumulated_content: str = ""
-    sources: list[SourceNode] = field(default_factory=list)
-    user_message_id: Optional[int] = None
-    llm_message_id: Optional[int] = None
-    metadata: dict[str, Any] = field(default_factory=dict)
-    is_complete: bool = False
 
 
 @dataclass
-class SourceEvent:
-    """Represents one or more sources discovered during the agent run (e.g., vector search results)."""
+class SourceEvent(_BaseStreamEvt):
+    """One or more sources discovered during the agent run."""
 
     type: Literal["sources"] = "sources"
-    sources: list[SourceNode] = field(default_factory=list)
-
-    # Legacy-compat
-    content: str = ""
-    accumulated_content: str = ""
-    user_message_id: Optional[int] = None
-    llm_message_id: Optional[int] = None
-    metadata: dict[str, Any] = field(default_factory=dict)
-    is_complete: bool = False
 
 
 @dataclass
-class FinalEvent:
-    """Represents the final aggregated result of the run. Always the last event in the stream."""
+class FinalEvent(_BaseStreamEvt):
+    """The final, complete event – always the last one."""
 
     type: Literal["final"] = "final"
-    accumulated_content: str = ""
-    sources: list[SourceNode] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
-    user_message_id: Optional[int] = None
-    llm_message_id: Optional[int] = None
-
-    # Legacy-compat: mark completion
     is_complete: bool = True
-    content: str = ""
 
 
 # A discriminated union over all event types. The Literal strings defined in each

@@ -102,13 +102,14 @@ class PydanticAICoreAgent(CoreAgentBase):
         final_content: str,
         sources: list[SourceNode],
         usage: dict[str, Any] | None,
+        timeline: list[dict[str, Any]],
     ) -> None:
         """Finalize LLM message with content, sources, and metadata."""
         await self.complete_message(
             llm_id,
             final_content,
             sources=sources,
-            metadata={"usage": usage, "framework": "pydantic_ai"},
+            metadata={"usage": usage, "framework": "pydantic_ai", "timeline": timeline},
         )
 
     async def _get_message_history(self) -> Optional[list[ModelMessage]]:
@@ -166,9 +167,11 @@ class PydanticAICoreAgent(CoreAgentBase):
 
             usage_data = _usage_to_dict(run_result.usage())
 
+            timeline: list[dict[str, Any]] = []  # For reconstructing reasoning chain
+
             # Finalize the message atomically
             await self._finalise_llm_message(
-                llm_msg_id, llm_response_content, sources, usage_data
+                llm_msg_id, llm_response_content, sources, usage_data, timeline
             )
 
             return UnifiedChatResponse(
@@ -176,7 +179,7 @@ class PydanticAICoreAgent(CoreAgentBase):
                 sources=sources,
                 user_message_id=user_msg_id,
                 llm_message_id=llm_msg_id,
-                metadata={"usage": usage_data},
+                metadata={"usage": usage_data, "timeline": timeline},
             )
         except Exception as e:
             # Cancel placeholder message on error
@@ -196,6 +199,7 @@ class PydanticAICoreAgent(CoreAgentBase):
         accumulated_content: str = ""
         accumulated_sources: list[SourceNode] = []
         final_usage_data: dict[str, Any] | None = None
+        timeline: list[dict[str, Any]] = []  # For reconstructing reasoning chain
 
         # Re-hydrate the historical context for Pydantic-AI, if any exists.
         message_history = await self._get_message_history()
@@ -220,6 +224,12 @@ class PydanticAICoreAgent(CoreAgentBase):
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
+                        timeline.append(
+                            {
+                                "type": "thought",
+                                "text": "Received user prompt; beginning reasoning cycle…",
+                            }
+                        )
 
                     # ------------------------------------------------------------------
                     # MODEL REQUEST NODE – We can stream raw model deltas from here.
@@ -230,6 +240,12 @@ class PydanticAICoreAgent(CoreAgentBase):
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
+                        timeline.append(
+                            {
+                                "type": "thought",
+                                "text": "Sending request to language model…",
+                            }
+                        )
 
                         async with node.stream(agent_run.ctx) as model_stream:
                             async for event in model_stream:
@@ -237,6 +253,9 @@ class PydanticAICoreAgent(CoreAgentBase):
                                 if text:
                                     if is_answer:
                                         accumulated_content += text
+                                        timeline.append(
+                                            {"type": "content", "text": text}
+                                        )
 
                                     # Merge any source nodes attached to event (unlikely here but future-proof)
                                     accumulated_sources.extend(
@@ -244,6 +263,12 @@ class PydanticAICoreAgent(CoreAgentBase):
                                             _to_source_node(s)
                                             for s in getattr(event, "sources", [])
                                         ]
+                                    )
+                                    timeline.append(
+                                        {
+                                            "type": "sources",
+                                            "count": len(accumulated_sources),
+                                        }
                                     )
                                     yield ContentEvent(
                                         content=text,
@@ -262,6 +287,12 @@ class PydanticAICoreAgent(CoreAgentBase):
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
+                        timeline.append(
+                            {
+                                "type": "thought",
+                                "text": "Processing model response – may invoke tools…",
+                            }
+                        )
 
                         async with node.stream(agent_run.ctx) as tool_stream:
                             async for event in tool_stream:
@@ -275,6 +306,13 @@ class PydanticAICoreAgent(CoreAgentBase):
                                             "args": event.part.args,
                                         },
                                     )
+                                    timeline.append(
+                                        {
+                                            "type": "tool_call",
+                                            "tool": event.part.tool_name,
+                                            "args": event.part.args,
+                                        }
+                                    )
                                 elif event.event_kind == "function_tool_result":
                                     tool_name = event.result.tool_name  # type: ignore[attr-defined]
                                     # Capture vector-search results (our canonical source provider)
@@ -285,6 +323,12 @@ class PydanticAICoreAgent(CoreAgentBase):
                                                 _to_source_node(s) for s in raw_sources
                                             ]
                                             accumulated_sources.extend(new_sources)
+                                            timeline.append(
+                                                {
+                                                    "type": "sources",
+                                                    "count": len(new_sources),
+                                                }
+                                            )
                                             yield SourceEvent(
                                                 sources=new_sources,
                                                 user_message_id=user_msg_id,
@@ -297,6 +341,9 @@ class PydanticAICoreAgent(CoreAgentBase):
                                             llm_message_id=llm_msg_id,
                                             metadata={"tool_name": tool_name},
                                         )
+                                        timeline.append(
+                                            {"type": "tool_result", "tool": tool_name}
+                                        )
 
                     # ------------------------------------------------------------------
                     # END NODE – Execution graph is finished.
@@ -307,11 +354,18 @@ class PydanticAICoreAgent(CoreAgentBase):
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
+                        timeline.append(
+                            {
+                                "type": "thought",
+                                "text": "Run finished; aggregating final results…",
+                            }
+                        )
 
                 # After exiting the for-loop, the agent_run is complete and contains the final result.
                 if agent_run.result:
                     accumulated_content = str(agent_run.result.output)
                     final_usage_data = _usage_to_dict(agent_run.result.usage())
+                    timeline.append({"type": "status", "msg": "run_finished"})
 
             # Persist final message to DB
             await self._finalise_llm_message(
@@ -319,12 +373,17 @@ class PydanticAICoreAgent(CoreAgentBase):
                 accumulated_content,
                 accumulated_sources,
                 final_usage_data,
+                timeline,
             )
 
             yield FinalEvent(
                 accumulated_content=accumulated_content,
                 sources=accumulated_sources,
-                metadata={"usage": final_usage_data, "framework": "pydantic_ai"},
+                metadata={
+                    "usage": final_usage_data,
+                    "framework": "pydantic_ai",
+                    "timeline": timeline,
+                },
                 user_message_id=user_msg_id,
                 llm_message_id=llm_msg_id,
                 content="",  # kept empty

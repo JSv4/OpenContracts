@@ -4,7 +4,7 @@ import logging
 from abc import ABC
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol, Union, runtime_checkable
+from typing import Any, Literal, Optional, Protocol, Union, runtime_checkable
 
 from django.conf import settings
 from django.utils import timezone
@@ -80,6 +80,83 @@ class UnifiedChatResponse:
     user_message_id: Optional[int] = None
     llm_message_id: Optional[int] = None
     metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ThoughtEvent:
+    """Represents an intermediate thought or reasoning step emitted while the agent is running.
+
+    Fields like ``content``/``is_complete`` mirror the legacy ``UnifiedStreamResponse`` so
+    existing WebSocket consumers that look for those attributes do not raise
+    ``AttributeError`` when upgrading to the event-based protocol.
+    """
+
+    type: Literal["thought"] = "thought"
+    thought: str = ""
+
+    # Legacy-compat shadow fields (optional)
+    content: str = ""
+    accumulated_content: str = ""
+    sources: list[SourceNode] = field(default_factory=list)
+    user_message_id: Optional[int] = None
+    llm_message_id: Optional[int] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    is_complete: bool = False
+
+
+@dataclass
+class ContentEvent:
+    """Represents a delta (token or chunk) of the assistant's final answer content."""
+
+    type: Literal["content"] = "content"
+    content: str = ""
+
+    # Legacy-compat
+    accumulated_content: str = ""
+    sources: list[SourceNode] = field(default_factory=list)
+    user_message_id: Optional[int] = None
+    llm_message_id: Optional[int] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    is_complete: bool = False
+
+
+@dataclass
+class SourceEvent:
+    """Represents one or more sources discovered during the agent run (e.g., vector search results)."""
+
+    type: Literal["sources"] = "sources"
+    sources: list[SourceNode] = field(default_factory=list)
+
+    # Legacy-compat
+    content: str = ""
+    accumulated_content: str = ""
+    user_message_id: Optional[int] = None
+    llm_message_id: Optional[int] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    is_complete: bool = False
+
+
+@dataclass
+class FinalEvent:
+    """Represents the final aggregated result of the run. Always the last event in the stream."""
+
+    type: Literal["final"] = "final"
+    accumulated_content: str = ""
+    sources: list[SourceNode] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+    user_message_id: Optional[int] = None
+    llm_message_id: Optional[int] = None
+
+    # Legacy-compat: mark completion
+    is_complete: bool = True
+    content: str = ""
+
+
+# A discriminated union over all event types. The Literal strings defined in each
+# dataclass act as simple runtime markers that make it easy for downstream code
+# (e.g. WebSocket serializers) to switch on the `.type` attribute without costly
+# ``isinstance`` checks.
+UnifiedStreamEvent = Union[ThoughtEvent, ContentEvent, SourceEvent, FinalEvent]
 
 
 @dataclass
@@ -167,8 +244,8 @@ class CoreAgent(Protocol):
 
     async def stream(
         self, message: str, **kwargs
-    ) -> AsyncGenerator[UnifiedStreamResponse, None]:
-        """Send a message and get a streaming response with sources."""
+    ) -> AsyncGenerator[UnifiedStreamEvent, None]:
+        """Send a message and receive a typed stream of events (thoughts, content, sources, final)."""
         ...
 
     # Message management methods
@@ -312,8 +389,8 @@ class CoreAgentBase(ABC):
     # Legacy compatibility methods
     async def stream_chat(
         self, message: str, **kwargs
-    ) -> AsyncGenerator[UnifiedStreamResponse, None]:
-        """Legacy method - delegates to stream()."""
+    ) -> AsyncGenerator[UnifiedStreamEvent, None]:
+        """Legacy compatibility wrapper that simply forwards to ``stream`` and yields its events."""
         async for chunk in self.stream(message, **kwargs):
             yield chunk
 

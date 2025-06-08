@@ -5,14 +5,25 @@ import logging
 from collections.abc import AsyncGenerator
 from typing import Any, Callable, Optional, Union
 
+import pydantic_core
 from pydantic_ai.agent import Agent as PydanticAIAgent
+from pydantic_ai.agent import (
+    CallToolsNode,
+    End,
+    ModelRequestNode,
+    UserPromptNode,
+)
 from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,
     ModelResponse,
+    PartDeltaEvent,
+    PartStartEvent,
     SystemPromptPart,
     TextPart,
-    ToolReturnPart,
+    TextPartDelta,
+    ToolCallPart,
+    ToolCallPartDelta,
     UserPromptPart,
 )
 
@@ -21,15 +32,19 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.agents.core_agents import (
     AgentConfig,
+    ContentEvent,
     CoreAgentBase,
     CoreConversationManager,
     CoreCorpusAgentFactory,
     CoreDocumentAgentFactory,
     CorpusAgentContext,
     DocumentAgentContext,
+    FinalEvent,
+    SourceEvent,
     SourceNode,
+    ThoughtEvent,
     UnifiedChatResponse,
-    UnifiedStreamResponse,
+    UnifiedStreamEvent,
     get_default_config,
 )
 from opencontractserver.llms.tools.pydantic_ai_tools import PydanticAIDependencies
@@ -171,119 +186,152 @@ class PydanticAICoreAgent(CoreAgentBase):
 
     async def stream(
         self, message: str, **kwargs
-    ) -> AsyncGenerator[UnifiedStreamResponse, None]:
-        """Send a message and get a streaming response using PydanticAI Agent.run_stream()."""
+    ) -> AsyncGenerator[UnifiedStreamEvent, None]:
+        """Stream thoughts, content chunks, source events, and final output using Pydantic-AI's execution graph."""
+
         logger.info(f"[PydanticAI stream] Starting stream with message: {message!r}")
+
         user_msg_id, llm_msg_id = await self._initialise_llm_message(message)
 
-        accumulated_content = ""
+        accumulated_content: str = ""
+        accumulated_sources: list[SourceNode] = []
+        final_usage_data: dict[str, Any] | None = None
+
+        # Re-hydrate the historical context for Pydantic-AI, if any exists.
         message_history = await self._get_message_history()
-        logger.info(
-            f"[PydanticAI stream] Initial message_history for PydanticAIAgent: {message_history!r}"
-        )
+
+        stream_kwargs: dict[str, Any] = {"deps": self.agent_deps}
+        if message_history:
+            stream_kwargs["message_history"] = message_history
+        stream_kwargs.update(kwargs)
 
         try:
-            stream_kwargs: dict[str, Any] = {"deps": self.agent_deps}
-            if message_history:
-                stream_kwargs["message_history"] = message_history
-            stream_kwargs.update(kwargs)
-
-            async with self.pydantic_ai_agent.run_stream(
+            async with self.pydantic_ai_agent.iter(
                 message, **stream_kwargs
-            ) as stream_result:
-                logger.info(
-                    "[PydanticAI stream] Entered PydanticAIAgent.run_stream context"
-                )
+            ) as agent_run:
+                async for node in agent_run:
 
-                # 1. Stream textual delta for the user interface
-                async for text_delta in stream_result.stream_text(
-                    delta=True, debounce_by=0.1
-                ):
-                    logger.debug(
-                        f"[PydanticAI stream] Received text_delta: {text_delta!r}"
-                    )
-                    accumulated_content += text_delta
-                    await self.update_message(
-                        llm_msg_id,
-                        accumulated_content,
-                        metadata={"state": "streaming_text"},
-                    )
-                    yield UnifiedStreamResponse(
-                        content=text_delta,
-                        accumulated_content=accumulated_content,
-                        user_message_id=user_msg_id,
-                        llm_message_id=llm_msg_id,
-                        is_complete=False,
-                    )
+                    # ------------------------------------------------------------------
+                    # USER PROMPT NODE – This is the very first node in the graph.
+                    # ------------------------------------------------------------------
+                    if isinstance(node, UserPromptNode):
+                        yield ThoughtEvent(
+                            thought="Received user prompt; beginning reasoning cycle…",
+                            user_message_id=user_msg_id,
+                            llm_message_id=llm_msg_id,
+                        )
 
-                # 2. Ensure the stream is fully processed and get the final textual output
-                final_llm_text_output = await stream_result.get_output()
-                accumulated_content = final_llm_text_output
+                    # ------------------------------------------------------------------
+                    # MODEL REQUEST NODE – We can stream raw model deltas from here.
+                    # ------------------------------------------------------------------
+                    elif isinstance(node, ModelRequestNode):
+                        yield ThoughtEvent(
+                            thought="Sending request to language model…",
+                            user_message_id=user_msg_id,
+                            llm_message_id=llm_msg_id,
+                        )
 
-                # 3. Extract sources from the *complete message history* of the Pydantic AI run
-                all_pai_messages: list[ModelMessage] = stream_result.all_messages()
+                        async with node.stream(agent_run.ctx) as model_stream:
+                            async for event in model_stream:
+                                text, is_answer, meta = _event_to_text_and_meta(event)
+                                if text:
+                                    if is_answer:
+                                        accumulated_content += text
 
-                extracted_oc_source_nodes: list[SourceNode] = []
-
-                # Define the name of your vector search tool as PydanticAI sees it.
-                # If you passed `vector_store_instance.similarity_search` to tools,
-                # PydanticAI uses the method's actual name: "similarity_search".
-                vector_search_tool_name = "similarity_search"
-
-                for pai_msg_item in reversed(all_pai_messages):
-                    if pai_msg_item.kind == "request":
-                        if hasattr(pai_msg_item, "parts") and isinstance(
-                            pai_msg_item.parts, list
-                        ):
-                            for part in pai_msg_item.parts:
-                                if (
-                                    isinstance(part, ToolReturnPart)
-                                    and part.tool_name == vector_search_tool_name
-                                ):
-                                    raw_sources_from_tool = part.content
-                                    if isinstance(raw_sources_from_tool, list):
-                                        extracted_oc_source_nodes = [
+                                    # Merge any source nodes attached to event (unlikely here but future-proof)
+                                    accumulated_sources.extend(
+                                        [
                                             _to_source_node(s)
-                                            for s in raw_sources_from_tool
+                                            for s in getattr(event, "sources", [])
                                         ]
-                                    break
-                    if extracted_oc_source_nodes:
-                        break
+                                    )
+                                    yield ContentEvent(
+                                        content=text,
+                                        accumulated_content=accumulated_content,
+                                        user_message_id=user_msg_id,
+                                        llm_message_id=llm_msg_id,
+                                        metadata=meta,
+                                    )
 
-                if not extracted_oc_source_nodes:
-                    logger.warning(
-                        f"[PydanticAI stream] No sources extracted from tool '{vector_search_tool_name}'. "
-                        "Check tool name and agent execution flow."
-                    )
+                    # ------------------------------------------------------------------
+                    # CALL TOOLS NODE – Capture tool call & result events.
+                    # ------------------------------------------------------------------
+                    elif isinstance(node, CallToolsNode):
+                        yield ThoughtEvent(
+                            thought="Processing model response – may invoke tools…",
+                            user_message_id=user_msg_id,
+                            llm_message_id=llm_msg_id,
+                        )
 
-                # 4. Get usage data
-                usage_data = _usage_to_dict(stream_result.usage())
-                logger.info(f"[PydanticAI stream] Final usage_data: {usage_data!r}")
+                        async with node.stream(agent_run.ctx) as tool_stream:
+                            async for event in tool_stream:
+                                if event.event_kind == "function_tool_call":
+                                    yield ThoughtEvent(
+                                        thought=f"Calling tool `{event.part.tool_name}` with args {event.part.args}",
+                                        user_message_id=user_msg_id,
+                                        llm_message_id=llm_msg_id,
+                                        metadata={
+                                            "tool_name": event.part.tool_name,
+                                            "args": event.part.args,
+                                        },
+                                    )
+                                elif event.event_kind == "function_tool_result":
+                                    tool_name = event.result.tool_name  # type: ignore[attr-defined]
+                                    # Capture vector-search results (our canonical source provider)
+                                    if tool_name == "similarity_search":
+                                        raw_sources = event.result.content  # type: ignore[attr-defined]
+                                        if isinstance(raw_sources, list):
+                                            new_sources = [
+                                                _to_source_node(s) for s in raw_sources
+                                            ]
+                                            accumulated_sources.extend(new_sources)
+                                            yield SourceEvent(
+                                                sources=new_sources,
+                                                user_message_id=user_msg_id,
+                                                llm_message_id=llm_msg_id,
+                                            )
+                                    else:
+                                        yield ThoughtEvent(
+                                            thought=f"Tool `{tool_name}` returned a result.",
+                                            user_message_id=user_msg_id,
+                                            llm_message_id=llm_msg_id,
+                                            metadata={"tool_name": tool_name},
+                                        )
 
-                # 5. Finalize the LLM message in your database
-                await self._finalise_llm_message(
-                    llm_msg_id,
-                    final_llm_text_output,
-                    extracted_oc_source_nodes,
-                    usage_data,
-                )
+                    # ------------------------------------------------------------------
+                    # END NODE – Execution graph is finished.
+                    # ------------------------------------------------------------------
+                    elif isinstance(node, End):
+                        yield ThoughtEvent(
+                            thought="Run finished; aggregating final results…",
+                            user_message_id=user_msg_id,
+                            llm_message_id=llm_msg_id,
+                        )
 
-                # 6. Yield the final UnifiedStreamResponse indicating completion and including sources
-                yield UnifiedStreamResponse(
-                    content="",
-                    accumulated_content=final_llm_text_output,
-                    sources=extracted_oc_source_nodes,
-                    user_message_id=user_msg_id,
-                    llm_message_id=llm_msg_id,
-                    is_complete=True,
-                    metadata={"usage": usage_data, "framework": "pydantic_ai"},
-                )
-                logger.info("[PydanticAI stream] Stream finished.")
+                # After exiting the for-loop, the agent_run is complete and contains the final result.
+                if agent_run.result:
+                    accumulated_content = str(agent_run.result.output)
+                    final_usage_data = _usage_to_dict(agent_run.result.usage())
+
+            # Persist final message to DB
+            await self._finalise_llm_message(
+                llm_msg_id,
+                accumulated_content,
+                accumulated_sources,
+                final_usage_data,
+            )
+
+            yield FinalEvent(
+                accumulated_content=accumulated_content,
+                sources=accumulated_sources,
+                metadata={"usage": final_usage_data, "framework": "pydantic_ai"},
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                content="",  # kept empty
+            )
 
         except Exception as e:
-            await self.cancel_message(
-                llm_msg_id, f"Error in PydanticAI stream: {str(e)}"
-            )
+            await self.cancel_message(llm_msg_id, f"Error: {str(e)}")
             logger.exception(f"Error in PydanticAI stream: {e}")
             raise
 
@@ -510,8 +558,77 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
 
 
 # --------------------------------------------------------------------------- #
-# helpers                                                                    #
+# helpers – rich‐event extraction                                            #
 # --------------------------------------------------------------------------- #
+
+
+def _event_to_text_and_meta(event: Any) -> tuple[str, bool, dict[str, Any]]:
+    """Convert a *model* stream event (PartStart/Delta) to `(text, is_answer, meta)`.
+
+    Args:
+        event: The incoming event from `node.stream()`.
+
+    Returns:
+        text: ``str`` representation – empty if nothing user-visible.
+        is_answer: ``True`` if this text counts towards the assistant's final
+                   answer (i.e. *only* TextPart/Delta).
+        meta: Any additional metadata extracted (e.g. tool name & args).
+    """
+
+    text: str = ""
+    is_answer = False
+    meta: dict[str, Any] = {}
+
+    if isinstance(event, PartStartEvent):
+        part = event.part
+    elif isinstance(event, PartDeltaEvent):
+        part = event.delta
+    else:
+        return text, is_answer, meta  # unsupported event
+
+    # ------------------------------------------------------------------
+    # Full parts
+    # ------------------------------------------------------------------
+    if isinstance(part, TextPart):
+        text = part.content
+        is_answer = True
+    elif isinstance(part, ToolCallPart):
+        args_display = (
+            part.args
+            if isinstance(part.args, str)
+            else (
+                part.args_as_json_str()
+                if hasattr(part, "args_as_json_str")
+                else str(part.args)
+            )
+        )
+        text = f"{part.tool_name}({args_display})"
+        meta = {"tool_name": part.tool_name, "args": part.args}
+
+    # ------------------------------------------------------------------
+    # Deltas – incremental pieces
+    # ------------------------------------------------------------------
+    elif isinstance(part, TextPartDelta):
+        text = part.content_delta
+        is_answer = True
+    elif isinstance(part, ToolCallPartDelta):
+        # Build incremental readable description if possible
+        tool_name_inc = part.tool_name_delta or ""
+        if isinstance(part.args_delta, str):
+            args_inc = part.args_delta
+        elif isinstance(part.args_delta, dict):
+            args_inc = pydantic_core.to_json(part.args_delta).decode()
+        else:
+            args_inc = ""
+        text = f"{tool_name_inc}({args_inc})" if tool_name_inc or args_inc else ""
+        meta = {
+            "tool_name_delta": part.tool_name_delta,
+            "args_delta": part.args_delta,
+        }
+
+    return text, is_answer, meta
+
+
 def _usage_to_dict(usage: Any) -> Optional[dict[str, Any]]:
     """
     Convert a pydantic-ai ``Usage`` instance (or any other arbitrary object)

@@ -309,6 +309,8 @@ class CoreAgentBase(ABC):
         metadata: dict[str, Any] = None,
     ) -> None:
         """Update a stored message with content, sources, and metadata."""
+        if metadata and "timeline" not in metadata:
+            metadata["timeline"] = []
         await self.conversation_manager.update_message(
             message_id, content, sources, metadata
         )
@@ -666,8 +668,13 @@ class CoreConversationManager:
 
         if sources:
             data["sources"] = [source.to_dict() for source in sources]
+        # Ensure a timeline key exists even if adapter didn't supply one
         if metadata:
+            if "timeline" not in metadata:
+                metadata["timeline"] = []
             data.update(metadata)
+        else:
+            data.setdefault("timeline", [])
 
         message.data = data
         await message.asave()

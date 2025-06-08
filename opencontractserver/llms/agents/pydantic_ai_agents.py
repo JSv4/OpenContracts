@@ -53,6 +53,8 @@ from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import (
 )
 from opencontractserver.utils.embeddings import aget_embedder
 
+from .timeline_schema import TimelineEntry
+
 logger = logging.getLogger(__name__)
 
 
@@ -102,7 +104,7 @@ class PydanticAICoreAgent(CoreAgentBase):
         final_content: str,
         sources: list[SourceNode],
         usage: dict[str, Any] | None,
-        timeline: list[dict[str, Any]],
+        timeline: list[TimelineEntry],
     ) -> None:
         """Finalize LLM message with content, sources, and metadata."""
         await self.complete_message(
@@ -167,7 +169,7 @@ class PydanticAICoreAgent(CoreAgentBase):
 
             usage_data = _usage_to_dict(run_result.usage())
 
-            timeline: list[dict[str, Any]] = []  # For reconstructing reasoning chain
+            timeline: list[TimelineEntry] = []  # For reconstructing reasoning chain
 
             # Finalize the message atomically
             await self._finalise_llm_message(
@@ -199,7 +201,7 @@ class PydanticAICoreAgent(CoreAgentBase):
         accumulated_content: str = ""
         accumulated_sources: list[SourceNode] = []
         final_usage_data: dict[str, Any] | None = None
-        timeline: list[dict[str, Any]] = []  # For reconstructing reasoning chain
+        timeline: list[TimelineEntry] = []  # For reconstructing reasoning chain
 
         # Re-hydrate the historical context for Pydantic-AI, if any exists.
         message_history = await self._get_message_history()
@@ -253,9 +255,11 @@ class PydanticAICoreAgent(CoreAgentBase):
                                 if text:
                                     if is_answer:
                                         accumulated_content += text
-                                        timeline.append(
-                                            {"type": "content", "text": text}
-                                        )
+                                        # Only store a timeline entry for *complete* TextPart chunks
+                                        if isinstance(event, PartStartEvent):
+                                            timeline.append(
+                                                {"type": "content", "text": text}
+                                            )
 
                                     # Merge any source nodes attached to event (unlikely here but future-proof)
                                     accumulated_sources.extend(

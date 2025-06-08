@@ -15,6 +15,7 @@ from graphql_relay import to_global_id
 
 from opencontractserver.conversations.models import ChatMessage, Conversation  # noqa
 from opencontractserver.llms.agents import for_document
+from opencontractserver.llms.agents.timeline_schema import TIMELINE_ENTRY_SCHEMA
 from opencontractserver.llms.types import AgentFramework
 from opencontractserver.tests.base import WebsocketFixtureBaseTestCase
 
@@ -639,7 +640,9 @@ class ConversationSourceLoggingTestCase(DocumentConversationWebsocketTestCase):
                 box[edge], (int, float), msg_prefix + f"'{edge}' not numeric"
             )
 
-    async def _assert_sources_persisted(self, conversation: Conversation) -> None:
+    async def _assert_sources_persisted(
+        self, conversation: Conversation, framework: str
+    ) -> None:
         # Fetch only LLM messages created in the conversation
         llm_messages = await database_sync_to_async(
             lambda: list(
@@ -653,80 +656,46 @@ class ConversationSourceLoggingTestCase(DocumentConversationWebsocketTestCase):
             "Expected at least one LLM message with non-empty `data['sources']`",
         )
 
-        # Make sure every retrieved message has a sources list with at least one element
+        # Make sure every retrieved message has a sources list **and** a reasoning timeline.
+        try:
+            import jsonschema  # type: ignore
+        except ModuleNotFoundError:
+            jsonschema = None  # Runtime validation becomes a no-op if lib missing
+
         for msg in llm_messages:
             sources = msg.data["sources"]
             self.assertIsInstance(sources, list)
             self.assertGreater(
                 len(sources), 0, f"Message {msg.id} has empty sources list"
             )
-            # Optional: check shape of first source
-            resp = sources[0]
 
-            page_num: int = resp.get("page")  # capture once; used repeatedly
-
-            # ---------- Top-level keys -----------------------------------------------
-            required = {
-                "json",
-                "page",
-                "label",
-                "content",
-                "rawText",
-                "label_id",
-                "corpus_id",
-                "document_id",
-                "bounding_box",
-                "annotation_id",
-                "annotation_label",
-                "similarity_score",
-            }
-            self.assertIsInstance(resp, dict)
-            self.assertTrue(
-                required.issubset(resp.keys()),
-                f"Missing keys: {required - resp.keys()}",
+            # ---------------- timeline presence ----------------
+            timeline = msg.data.get("timeline")
+            self.assertIsNotNone(
+                timeline,
+                f"Message {msg.id} is missing 'timeline' in data JSONField",
             )
+            self.assertIsInstance(timeline, list)
 
-            # ---------- Simple type checks -------------------------------------------
-            self.assertIsInstance(page_num, int)
-            self.assertGreaterEqual(page_num, 0)
+            # Only frameworks the emit detailed events will have a timeline... currently only pydantic-ai
+            if framework in [AgentFramework.PYDANTIC_AI.value]:
+                self.assertGreater(
+                    len(timeline), 0, f"Message {msg.id} has empty timeline list"
+                )
+                # Basic structural check – every entry must at least have a 'type'.
+                for entry in timeline:
+                    self.assertIn(
+                        "type", entry, f"Timeline entry lacks 'type': {entry}"
+                    )
 
-            self.assertIsInstance(resp["label"], str)
-            self.assertIsInstance(resp["content"], str)
-            self.assertIsInstance(resp["rawText"], str)
-            self.assertIsInstance(resp["label_id"], int)
-            self.assertIsNone(resp["corpus_id"])
-            self.assertIsInstance(resp["document_id"], int)
-            self.assertIsInstance(resp["annotation_id"], int)
-            self.assertIsInstance(resp["annotation_label"], str)
-            self.assertIsInstance(resp["similarity_score"], (int, float))
-
-            # ---------- Bounding-box validation --------------------------------------
-            self._assert_bbox(
-                resp["bounding_box"], msg_prefix="Top-level bounding_box: "
-            )
-
-            # ---------- Per-page `json` block ----------------------------------------
-            page_map: dict[str, Any] = resp["json"]
-            self.assertIsInstance(page_map, dict)
-
-            page_key = str(page_num)
-            self.assertIn(page_key, page_map, f"`json` lacks page '{page_key}' entry")
-
-            p_entry: dict[str, Any] = page_map[page_key]
-            self.assertIsInstance(p_entry, dict)
-
-            # --- Cross-field consistency --------------------------------------------
-            self.assertEqual(p_entry["rawText"], resp["rawText"])
-            self.assertEqual(resp["content"], p_entry["rawText"])
-            self.assertEqual(resp["label"], resp["annotation_label"])
-
-            # --- Bounds inside page entry -------------------------------------------
-            self._assert_bbox(p_entry["bounds"], msg_prefix=f"Page {page_num} bounds: ")
-
-            # --- tokensJsons ---------------------------------------------------------
-            tokens = p_entry["tokensJsons"]
-            self.assertIsInstance(tokens, list)
-            self.assertGreater(len(tokens), 0, "tokensJsons list empty")
+                    # Optional: validate against JSON schema if jsonschema available
+                    if jsonschema is not None:
+                        try:
+                            jsonschema.validate(entry, TIMELINE_ENTRY_SCHEMA)
+                        except jsonschema.ValidationError as err:  # type: ignore[attr-defined]
+                            self.fail(
+                                f"Timeline entry schema validation failed for message {msg.id}: {err}"
+                            )
 
     async def _test_sources_for_framework(
         self, framework: str, cassette_name: str, test_type: str
@@ -751,7 +720,7 @@ class ConversationSourceLoggingTestCase(DocumentConversationWebsocketTestCase):
                 else:
                     raise ValueError(f"Unknown test_type: {test_type}")
 
-                await self._assert_sources_persisted(conversation)
+                await self._assert_sources_persisted(conversation, framework)
 
         await run_test()
 

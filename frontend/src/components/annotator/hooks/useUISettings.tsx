@@ -6,8 +6,10 @@ import {
   useQueryErrors,
   useInitializeUISettingsAtoms,
   useAdditionalUIStates,
+  chatTrayStateAtom,
 } from "../context/UISettingsAtom";
 import { useCallback, useMemo } from "react";
+import { useAtom } from "jotai";
 
 interface UseUISettingsProps {
   /**
@@ -79,6 +81,8 @@ export function useUISettings(props?: UseUISettingsProps) {
     setTopbarVisible,
   } = useAdditionalUIStates();
 
+  const [chatTrayState, setChatTrayState] = useAtom(chatTrayStateAtom);
+
   // Memoize the returned object
   const uiSettings = useMemo(
     () => ({
@@ -117,6 +121,10 @@ export function useUISettings(props?: UseUISettingsProps) {
       setShiftDown,
       topbarVisible,
       setTopbarVisible,
+
+      // Chat tray persistence
+      chatTrayState,
+      setChatTrayState,
     }),
     [
       zoomLevel,
@@ -145,6 +153,8 @@ export function useUISettings(props?: UseUISettingsProps) {
       setShiftDown,
       topbarVisible,
       setTopbarVisible,
+      chatTrayState,
+      setChatTrayState,
     ]
   );
 

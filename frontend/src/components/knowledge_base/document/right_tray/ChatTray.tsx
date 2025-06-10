@@ -80,6 +80,7 @@ import {
   mapWebSocketSourcesToChatMessageSources,
 } from "../../../annotator/context/ChatSourceAtom";
 import { TimelineEntry } from "../../../widgets/chat/ChatMessage";
+import { useUISettings } from "../../../annotator/hooks/useUISettings";
 
 /**
  * A helper interface representing the properties of data included in websocket messages,
@@ -204,6 +205,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     GET_CHAT_MESSAGES
   );
 
+  const { chatTrayState, setChatTrayState } = useUISettings();
+
   /**
    * On server data load, we map messages to local ChatMessageProps and
    * also store any 'sources' in the chatSourcesAtom (so pins and selection work).
@@ -312,6 +315,42 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [combinedMessages, scrollToBottom]);
+
+  // Restore persisted conversation + scroll
+  useEffect(() => {
+    if (chatTrayState.conversationId) {
+      loadConversation(chatTrayState.conversationId);
+    } else if (chatTrayState.isNewChat) {
+      startNewChat();
+    }
+    // restore scroll after messages render
+    setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTo({ top: chatTrayState.scrollOffset });
+      }
+    }, 0);
+  }, []);
+
+  // Persist on unmount or when id/newChat change
+  useEffect(() => {
+    return () => {
+      if (messagesContainerRef.current) {
+        setChatTrayState({
+          conversationId: selectedConversationId ?? null,
+          isNewChat,
+          scrollOffset: messagesContainerRef.current.scrollTop,
+        });
+      }
+    };
+  }, [selectedConversationId, isNewChat, setChatTrayState]);
+
+  // Track scroll to update offset live
+  const handlePersistedScroll = useCallback(() => {
+    if (messagesContainerRef.current) {
+      const offset = messagesContainerRef.current.scrollTop;
+      setChatTrayState((prev) => ({ ...prev, scrollOffset: offset }));
+    }
+  }, [setChatTrayState]);
 
   function appendStreamingTokenToChat(
     token: string,
@@ -977,6 +1016,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                 transition={{ delay: 0.3 }}
                 id="messages-container"
                 ref={messagesContainerRef}
+                onScroll={handlePersistedScroll}
               >
                 {combinedMessages.map((msg, idx) => {
                   // Find if this message has sources in our sourced messages state

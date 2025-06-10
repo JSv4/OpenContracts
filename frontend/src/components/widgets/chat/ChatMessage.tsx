@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
   Bot,
-  ExternalLink,
   Pin,
   ChevronUp,
   ChevronDown,
@@ -14,11 +13,26 @@ import {
   Wrench,
   CheckCircle,
   Activity,
+  Plus,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useSetAtom } from "jotai";
+import { useSetAtom, useAtomValue } from "jotai";
 import { chatSourcesAtom } from "../../annotator/context/ChatSourceAtom";
+import { useMemo } from "react";
+import { useCreateAnnotation } from "../../annotator/hooks/AnnotationHooks";
+import { useCorpusState } from "../../annotator/context/CorpusAtom";
+import { useSelectedDocument } from "../../annotator/context/DocumentAtom";
+import {
+  ServerTokenAnnotation,
+  ServerSpanAnnotation,
+} from "../../annotator/types/annotations";
+import {
+  MultipageAnnotationJson,
+  SinglePageAnnotationJson,
+  BoundingBox,
+  SpanAnnotationJson,
+} from "../../types";
 
 // Timeline entry type based on the schema
 export interface TimelineEntry {
@@ -315,6 +329,9 @@ const SourceList = styled.div`
 `;
 
 const SourceChip = styled.div<{ $isSelected: boolean }>`
+  position: relative;
+  overflow: visible;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -404,6 +421,56 @@ const ExpandButton = styled.button<{ $isExpanded: boolean }>`
       props.$isExpanded ? "rotate(180deg)" : "rotate(0deg)"};
   }
 `;
+
+// NEW styled components for annotation from source
+const AnnotateButton = styled.button`
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  color: #5c7c9d;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    color: #4a6b8c;
+  }
+`;
+
+const LabelMenu = styled.div`
+  position: absolute;
+  top: 2.2rem;
+  right: 0.5rem;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(200, 200, 200, 0.8);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  z-index: 2000;
+`;
+
+const LabelButton = styled.button`
+  border: none;
+  background: transparent;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  border-radius: 0.375rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+`;
+// END new styled components
 
 // Timeline styled components
 const TimelineContainer = styled.div`
@@ -560,6 +627,7 @@ const TimelineItemArgs = styled.div`
 `;
 
 interface SourceItemProps {
+  messageId: string;
   text: string;
   index: number;
   isSelected: boolean;
@@ -567,44 +635,123 @@ interface SourceItemProps {
 }
 
 const SourceItem: React.FC<SourceItemProps> = ({
+  messageId,
   text,
   index,
   isSelected,
   onClick,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [labelMenuOpen, setLabelMenuOpen] = useState(false);
 
+  // Hooks
+  const { selectedDocument } = useSelectedDocument();
+  const { humanSpanLabels, humanTokenLabels } = useCorpusState();
+  const chatStateValue = useAtomValue(chatSourcesAtom);
+  const createAnnotation = useCreateAnnotation();
+
+  const availableLabels = useMemo(() => {
+    if (selectedDocument?.fileType?.startsWith("text/")) {
+      return humanSpanLabels;
+    }
+    return humanTokenLabels;
+  }, [selectedDocument, humanSpanLabels, humanTokenLabels]);
+
+  // UI handlers
   const toggleExpand = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     setIsExpanded(!isExpanded);
   };
 
+  const handleAnnotateClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setLabelMenuOpen((prev) => !prev);
+  };
+
+  const handleLabelSelect = (label: any) => {
+    const msg = chatStateValue.messages.find((m) => m.messageId === messageId);
+    if (!msg) return setLabelMenuOpen(false);
+    const sourceData = msg.sources[index];
+    if (!sourceData) return setLabelMenuOpen(false);
+
+    try {
+      if (selectedDocument?.fileType?.startsWith("text/")) {
+        if (sourceData.startIndex === undefined || sourceData.endIndex === undefined) return setLabelMenuOpen(false);
+        const spanJson: SpanAnnotationJson = {
+          start: sourceData.startIndex,
+          end: sourceData.endIndex,
+        };
+        const newAnnot = new ServerSpanAnnotation(
+          sourceData.page ?? 0,
+          label,
+          sourceData.rawText,
+          false,
+          spanJson,
+          [],
+          false,
+          false,
+          false
+        );
+        createAnnotation(newAnnot);
+      } else {
+        const mpJson: MultipageAnnotationJson = {};
+        Object.entries(sourceData.boundsByPage).forEach(([pStr, bounds]) => {
+          const pNum = parseInt(pStr, 10);
+          mpJson[pNum] = {
+            bounds: bounds as BoundingBox,
+            tokensJsons: sourceData.tokensByPage[pNum] || [],
+            rawText: sourceData.rawText,
+          };
+        });
+        const firstPage = Number(Object.keys(mpJson)[0] || 0);
+        const newAnnot = new ServerTokenAnnotation(
+          firstPage,
+          label,
+          sourceData.rawText,
+          false,
+          mpJson,
+          [],
+          false,
+          false,
+          false
+        );
+        createAnnotation(newAnnot);
+      }
+    } catch (err) {
+      /* eslint-disable no-console */
+      console.error("Failed to create annotation from source", err);
+    } finally {
+      setLabelMenuOpen(false);
+    }
+  };
+
   return (
-    <SourceChip
-      className="source-chip"
-      $isSelected={isSelected}
-      onClick={onClick}
-    >
+    <SourceChip $isSelected={isSelected} onClick={onClick} className="source-chip">
       <SourceHeader>
         <SourceTitle $isSelected={isSelected}>
-          <Pin size={12} />
-          Source {index + 1}
+          <Pin size={12} /> Source {index + 1}
         </SourceTitle>
-        <ExpandButton
-          $isExpanded={isExpanded}
-          onClick={toggleExpand}
-          title={isExpanded ? "Show less" : "Show more"}
-        >
-          {isExpanded ? "Show less" : "Show more"}
-          <ChevronDown />
-        </ExpandButton>
+        <div style={{ display: "flex", gap: "0.25rem" }}>
+          <AnnotateButton title="Annotate" onClick={handleAnnotateClick}>
+            <Plus size={14} /> Annotate
+          </AnnotateButton>
+          <ExpandButton $isExpanded={isExpanded} onClick={toggleExpand} title={isExpanded ? "Show less" : "Show more"}>
+            {isExpanded ? "Show less" : "Show more"}
+            <ChevronDown />
+          </ExpandButton>
+        </div>
       </SourceHeader>
-      <SourceText
-        $isExpanded={isExpanded}
-        initial={false}
-        animate={{ height: isExpanded ? "auto" : "3em" }}
-        transition={{ duration: 0.2 }}
-      >
+      {labelMenuOpen && (
+        <LabelMenu>
+          {availableLabels.map((lab) => (
+            <LabelButton key={lab.id} onClick={() => handleLabelSelect(lab)}>
+              <span style={{ marginRight: 6, width: 8, height: 8, background: lab.color || "#1a75bc", display: "inline-block", borderRadius: 4 }} />
+              {lab.text}
+            </LabelButton>
+          ))}
+        </LabelMenu>
+      )}
+      <SourceText $isExpanded={isExpanded} initial={false} animate={{ height: isExpanded ? "auto" : "3em" }} transition={{ duration: 0.2 }}>
         {text}
       </SourceText>
     </SourceChip>
@@ -612,12 +759,14 @@ const SourceItem: React.FC<SourceItemProps> = ({
 };
 
 interface SourcePreviewProps {
+  messageId: string;
   sources: Array<{ text: string; onClick?: () => void }>;
   selectedIndex?: number;
   onSourceSelect: (index: number) => void;
 }
 
 const SourcePreview: React.FC<SourcePreviewProps> = ({
+  messageId,
   sources,
   selectedIndex,
   onSourceSelect,
@@ -653,6 +802,7 @@ const SourcePreview: React.FC<SourcePreviewProps> = ({
               {sources.map((source, index) => (
                 <SourceItem
                   key={index}
+                  messageId={messageId}
                   text={source.text}
                   index={index}
                   isSelected={selectedIndex === index}
@@ -973,6 +1123,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           {timeline.length > 0 && <TimelinePreview timeline={timeline} />}
           {sources.length > 0 && (
             <SourcePreview
+              messageId={messageId || ""}
               sources={sources}
               selectedIndex={selectedSourceIndex}
               onSourceSelect={handleSourceSelect}

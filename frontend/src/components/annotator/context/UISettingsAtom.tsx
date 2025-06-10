@@ -93,6 +93,20 @@ export const onSidebarToggleAtom = atom<(() => void) | undefined>(undefined);
 export const hasScrolledToAnnotationAtom = atom<string | null>(null);
 
 /**
+ * ChatTray persistence atom
+ */
+export interface ChatTrayPersist {
+  conversationId: string | null;
+  scrollOffset: number;
+  isNewChat: boolean;
+}
+export const chatTrayStateAtom = atom<ChatTrayPersist>({
+  conversationId: null,
+  scrollOffset: 0,
+  isNewChat: false,
+});
+
+/**
  * Hook to initialize UI settings atoms with initial values.
  * @param params Initial values for the UI settings.
  */

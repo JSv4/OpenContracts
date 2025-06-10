@@ -396,14 +396,29 @@ class CoreDocumentAgentFactory:
         """Generate default system prompt for document agent."""
         return (
             f"You are an expert assistant for document analysis and interpretation. "
-            f"Your primary goal is to answer questions accurately based on the provided document: '{document.title}' (ID: {document.id}).\n\n"  # noqa: E501
+            f"Your primary goal is to answer questions accurately based on document '{document.title}' (ID: {document.id}).\n\n"  # noqa: E501
             f"This document is described as:\n`{document.description}`\n\n"
-            f"While a summary may be available, it's crucial to leverage all your tools for a comprehensive understanding. "  # noqa: E501
-            f"You have access to a sophisticated vector search engine capable of finding semantically similar text to answer queries, alongside other specialized tools.\n\n"  # noqa: E501
-            f"Always prioritize information retrieved directly from the document using these tools. "
-            f"Do not rely solely on the summary or your general knowledge. "
-            f"Strive to provide answers grounded in the document's content, presented in clear and helpful markdown. "
-            f"Avoid repeating instructions or disclaimers."
+            f"**Available Tools:**\n"
+            f"You have access to a comprehensive set of tools for document analysis:\n\n"
+            f"1. **Vector Search**: A sophisticated semantic search engine that finds text passages similar to your queries.\n"  # noqa: E501
+            f"2. **Document Summary Access**: Tools to load and analyze the document's markdown summary, including:\n"
+            f"   - Loading full or truncated summary content\n"
+            f"   - Calculating token lengths for context management\n"
+            f"3. **Notes Analysis**: Tools to retrieve and examine notes attached to this document:\n"
+            f"   - Listing all notes with metadata\n"
+            f"   - Accessing specific note content\n"
+            f"   - Calculating note token lengths\n\n"
+            f"**Important**: Always check what tools are available to you, as additional specialized tools may be provided dynamically "  # noqa: E501
+            f"beyond the core set described above. Use the appropriate tools to gather information before answering.\n\n"  # noqa: E501
+            f"**Guidelines:**\n"
+            f"- Prioritize information retrieved directly from the document using these tools\n"
+            f"- We intentionally did not give you the entire document initially. \n"
+            "  Try doing some vector search to get more information initially and then iteratively \n"
+            "  identifying which parts of the document to review.  \n"
+            f"- Do not rely solely on the summary or your general knowledge\n"
+            f"- Use multiple tools when necessary for comprehensive answers\n"
+            f"- Present your findings in clear, helpful markdown format\n"
+            f"- Avoid repeating instructions or disclaimers in your responses"
         )
 
     @staticmethod
@@ -442,10 +457,24 @@ class CoreCorpusAgentFactory:
     def get_default_system_prompt(corpus: Corpus) -> str:
         """Generate default system prompt for corpus agent."""
         return (
-            f"You are an agent designed to answer queries about documents in a collection of documents "
-            f"called a corpus. This corpus is called '{corpus.title}'. "
-            "Please always use the provided tools (each corresponding to a document) to answer questions. "
-            "Do not rely on prior knowledge."
+            f"You are an expert assistant designed to analyze and answer queries about a collection of documents "
+            f"called '{corpus.title}'.\n\n"
+            f"**Available Tools:**\n"
+            f"You have access to comprehensive tools for analyzing documents in this corpus:\n\n"
+            f"1. **Document-Specific Tools**: Each document in the corpus has its own set of tools including:\n"
+            f"   - Vector search for semantic similarity matching within documents\n"
+            f"   - Document summary loading and analysis\n"
+            f"   - Notes retrieval and examination\n"
+            f"   - Token length calculations for context management\n"
+            f"2. **Cross-Document Analysis**: Tools that work across the entire corpus for comprehensive answers\n\n"
+            f"**Important**: Always check what tools are available to you, as additional specialized tools may be provided dynamically "  # noqa: E501
+            f"beyond the core set. The exact tools available will depend on the documents in this corpus.\n\n"
+            f"**Guidelines:**\n"
+            f"- Always use the provided tools to gather information before answering\n"
+            f"- Do not rely on prior knowledge about the documents\n"
+            f"- When appropriate, search across multiple documents for comprehensive answers\n"
+            f"- Cite specific documents and sources when presenting information\n"
+            f"- Present your findings in clear, well-structured markdown format"
         )
 
     @staticmethod

@@ -119,10 +119,11 @@ class PydanticAIToolWrapper:
             async_wrapper.__name__ = func_name
             async_wrapper.__doc__ = original_func.__doc__ or self._metadata.description
             async_wrapper.__signature__ = new_sig
-            async_wrapper.__annotations__ = getattr(
-                original_func, "__annotations__", {}
-            )
-
+            # Ensure the injected ``ctx`` parameter has a proper annotation so
+            # that Pydantic-AI's `_takes_ctx` helper can detect it.
+            _anns = dict(getattr(original_func, "__annotations__", {}))
+            _anns.setdefault("ctx", RunContext[PydanticAIDependencies])
+            async_wrapper.__annotations__ = _anns
             return async_wrapper
         else:
             # Convert sync function to async
@@ -143,9 +144,9 @@ class PydanticAIToolWrapper:
                 original_func.__doc__ or self._metadata.description
             )
             sync_to_async_wrapper.__signature__ = new_sig
-            sync_to_async_wrapper.__annotations__ = getattr(
-                original_func, "__annotations__", {}
-            )
+            _anns_sync = dict(getattr(original_func, "__annotations__", {}))
+            _anns_sync.setdefault("ctx", RunContext[PydanticAIDependencies])
+            sync_to_async_wrapper.__annotations__ = _anns_sync
 
             return sync_to_async_wrapper
 

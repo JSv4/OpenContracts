@@ -48,7 +48,16 @@ from opencontractserver.llms.agents.core_agents import (
     get_default_config,
 )
 from opencontractserver.llms.agents.timeline_stream_mixin import TimelineStreamMixin
-from opencontractserver.llms.tools.pydantic_ai_tools import PydanticAIDependencies
+from opencontractserver.llms.tools.core_tools import (
+    aget_md_summary_token_length,
+    aget_notes_for_document_corpus,
+    aload_document_md_summary,
+    aload_document_txt_extract,
+)
+from opencontractserver.llms.tools.pydantic_ai_tools import (
+    PydanticAIDependencies,
+    PydanticAIToolFactory,
+)
 from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import (
     PydanticAIAnnotationVectorStore,
 )
@@ -438,9 +447,81 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
         # schema automatically.
         default_vs_tool: Callable = vector_store.similarity_search
 
+        # -----------------------------
+        # Document-specific async tools
+        # -----------------------------
+        async def load_document_summary_tool(
+            truncate_length: int | None = None,
+            from_start: bool = True,
+        ) -> str:
+            """Load the document's markdown summary (optionally truncated)."""
+            return await aload_document_md_summary(
+                context.document.id, truncate_length, from_start
+            )
+
+        async def get_summary_token_length_tool() -> int:
+            """Return token length of the document's markdown summary."""
+            return await aget_md_summary_token_length(context.document.id)
+
+        async def get_document_notes_tool() -> list[dict[str, Any]]:
+            """Retrieve metadata & first 512-char preview of notes for this document."""
+            return await aget_notes_for_document_corpus(
+                context.document.id, context.corpus.id
+            )
+
+        async def load_document_text_tool(
+            start: int | None = None,
+            end: int | None = None,
+            refresh: bool = False,
+        ) -> str:
+            """Return a slice of the document's plain-text extract."""
+            return await aload_document_txt_extract(
+                context.document.id, start, end, refresh=refresh
+            )
+
+        # Wrap with PydanticAI factory
+        load_summary_tool = PydanticAIToolFactory.from_function(
+            load_document_summary_tool,
+            name="load_document_summary",
+            description="Load the markdown summary of the document. Optionally truncate by length and direction.",
+            parameter_descriptions={
+                "truncate_length": "Optional number of characters to truncate the summary to",
+                "from_start": "If True, truncate from start; if False, truncate from end",
+            },
+        )
+
+        get_summary_length_tool = PydanticAIToolFactory.from_function(
+            get_summary_token_length_tool,
+            name="get_summary_token_length",
+            description="Get the approximate token length of the document's markdown summary.",
+        )
+
+        get_notes_tool = PydanticAIToolFactory.from_function(
+            get_document_notes_tool,
+            name="get_document_notes",
+            description="Retrieve all notes attached to this document in the current corpus.",
+        )
+
+        load_text_tool = PydanticAIToolFactory.from_function(
+            load_document_text_tool,
+            name="load_document_text",
+            description="Load the document's plain-text extract (full or partial).",
+            parameter_descriptions={
+                "start": "Inclusive start character index (default 0)",
+                "end": "Exclusive end character index (defaults to end of file)",
+                "refresh": "If true, refresh the cached content from disk",
+            },
+        )
+
         # Merge caller-supplied tools (if any) after the default one so callers
         # can override behaviour/order if desired.
-        effective_tools: list[Callable] = [default_vs_tool]
+        effective_tools: list[Callable] = [
+            default_vs_tool,
+            load_summary_tool,
+            get_summary_length_tool,
+            get_notes_tool,
+            load_text_tool,
+        ]
         if tools:
             effective_tools.extend(tools)
 

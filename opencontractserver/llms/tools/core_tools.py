@@ -50,7 +50,7 @@ def load_document_md_summary(
         raise ValueError(f"Document with id={document_id} does not exist.")
 
     if not doc.md_summary_file:
-        raise ValueError("No md_summary_file attached to this document.")
+        return "NO SUMMARY PREPARED"
 
     # Read the md_summary_file
     with doc.md_summary_file.open("r") as file_obj:
@@ -90,7 +90,7 @@ def get_md_summary_token_length(document_id: int) -> int:
         raise ValueError(f"Document with id={document_id} does not exist.")
 
     if not doc.md_summary_file:
-        raise ValueError("No md_summary_file attached to this document.")
+        return 0
 
     with doc.md_summary_file.open("r") as file_obj:
         content = file_obj.read()
@@ -225,7 +225,7 @@ async def aget_md_summary_token_length(document_id: int) -> int:
         raise ValueError(f"Document with id={document_id} does not exist.")
 
     if not doc.md_summary_file:
-        raise ValueError("No md_summary_file attached to this document.")
+        return 0
 
     with doc.md_summary_file.open("r") as file_obj:
         content = file_obj.read()
@@ -260,7 +260,7 @@ async def aload_document_md_summary(
         raise ValueError(f"Document with id={document_id} does not exist.")
 
     if not doc.md_summary_file:
-        raise ValueError("No md_summary_file attached to this document.")
+        return "NO SUMMARY PREPARED"
 
     with doc.md_summary_file.open("r") as file_obj:
         content = file_obj.read()
@@ -316,3 +316,102 @@ async def aget_notes_for_document_corpus(
         )
 
     return notes
+
+
+# --------------------------------------------------------------------------- #
+# Plain-text extract helpers                                                  #
+# --------------------------------------------------------------------------- #
+
+# In-memory cache keyed by ``document_id`` so subsequent calls avoid disk IO.
+# NOTE: This is **per-process** only – the cache is reset when the worker
+# restarts. For long-running workers this provides a fast path while keeping
+# memory usage bounded by the number of distinct documents accessed.
+_DOC_TXT_CACHE: dict[int, str] = {}
+
+
+def load_document_txt_extract(
+    document_id: int,
+    start: int | None = None,
+    end: int | None = None,
+    *,
+    refresh: bool = False,
+) -> str:
+    """Load the plain-text extraction stored in a Document's ``txt_extract_file``.
+
+    The returned string can be sliced by providing *start* and *end* character
+    indices. Supplying *refresh=True* forces a cache miss, re-reading the file
+    from disk even if a cached copy exists.
+
+    Parameters
+    ----------
+    document_id:
+        Primary key of the :class:`~opencontractserver.documents.models.Document`.
+    start:
+        Optional inclusive start index. Defaults to ``0`` when *None*.
+    end:
+        Optional exclusive end index. Defaults to the end of the file when
+        *None*.
+    refresh:
+        If ``True`` the cached content for *document_id* is discarded and the
+        file is read from disk again.
+
+    Returns
+    -------
+    str
+        The requested slice of the document's text extract.
+
+    Raises
+    ------
+    ValueError
+        If the document does not exist, has no ``txt_extract_file`` attached, or
+        if *start*/*end* indices are invalid.
+    """
+    from opencontractserver.documents.models import (  # local import to avoid circular deps
+        Document,
+    )
+
+    if refresh and document_id in _DOC_TXT_CACHE:
+        _DOC_TXT_CACHE.pop(document_id, None)
+
+    if document_id not in _DOC_TXT_CACHE:
+        # Populate the cache – may raise if document/file missing.
+        try:
+            doc = Document.objects.get(pk=document_id)
+        except Document.DoesNotExist as exc:
+            raise ValueError(f"Document with id={document_id} does not exist.") from exc
+
+        if not doc.txt_extract_file:
+            raise ValueError("No txt_extract_file attached to this document.")
+
+        _DOC_TXT_CACHE[document_id] = doc.txt_extract_file.read().decode("utf-8")
+        logger.debug(
+            "Cached txt_extract_file for document %s (%d characters)",
+            document_id,
+            len(_DOC_TXT_CACHE[document_id]),
+        )
+
+    content = _DOC_TXT_CACHE[document_id]
+
+    # Normalise indices.
+    start_idx = 0 if start is None else max(0, start)
+    end_idx = len(content) if end is None else end
+
+    if end_idx < start_idx:
+        raise ValueError("End index must be greater than or equal to start index.")
+
+    return content[start_idx:end_idx]
+
+
+async def aload_document_txt_extract(
+    document_id: int,
+    start: int | None = None,
+    end: int | None = None,
+    *,
+    refresh: bool = False,
+) -> str:
+    """Async wrapper around :func:`load_document_txt_extract`."""
+    from channels.db import database_sync_to_async
+
+    return await database_sync_to_async(load_document_txt_extract)(
+        document_id, start, end, refresh=refresh
+    )

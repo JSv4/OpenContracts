@@ -49,10 +49,15 @@ from opencontractserver.llms.agents.core_agents import (
 )
 from opencontractserver.llms.agents.timeline_stream_mixin import TimelineStreamMixin
 from opencontractserver.llms.tools.core_tools import (
+    aadd_document_note,
+    aget_corpus_description,
     aget_md_summary_token_length,
     aget_notes_for_document_corpus,
     aload_document_md_summary,
     aload_document_txt_extract,
+    asearch_document_notes,
+    aupdate_corpus_description,
+    aupdate_document_note,
 )
 from opencontractserver.llms.tools.pydantic_ai_tools import (
     PydanticAIDependencies,
@@ -513,6 +518,74 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
             },
         )
 
+        # -----------------------------
+        # New note manipulation tools
+        # -----------------------------
+
+        async def add_document_note_tool(title: str, content: str) -> dict[str, int]:
+            """Create a new note attached to this document and return its id."""
+            note = await aadd_document_note(
+                document_id=context.document.id,
+                title=title,
+                content=content,
+                creator_id=config.user_id,
+                corpus_id=context.corpus.id,
+            )
+            return {"note_id": note.id}
+
+        async def update_document_note_tool(
+            note_id: int, new_content: str
+        ) -> dict[str, int | None]:
+            """Version-up an existing note and return new version number."""
+            rev = await aupdate_document_note(
+                note_id=note_id,
+                new_content=new_content,
+                author_id=config.user_id,
+            )
+            version = rev.version if rev else None
+            return {"version": version}
+
+        async def search_document_notes_tool(
+            search_term: str, limit: int | None = None
+        ):
+            """Search notes attached to this document for a keyword."""
+            return await asearch_document_notes(
+                document_id=context.document.id,
+                search_term=search_term,
+                corpus_id=context.corpus.id,
+                limit=limit,
+            )
+
+        add_note_tool_wrapped = PydanticAIToolFactory.from_function(
+            add_document_note_tool,
+            name="add_document_note",
+            description="Create a new note attached to the current document in this corpus.",
+            parameter_descriptions={
+                "title": "Title of the note",
+                "content": "Full markdown content of the note",
+            },
+        )
+
+        update_note_tool_wrapped = PydanticAIToolFactory.from_function(
+            update_document_note_tool,
+            name="update_document_note",
+            description="Update an existing note's content, creating a new revision.",
+            parameter_descriptions={
+                "note_id": "ID of the note to update",
+                "new_content": "New note content (markdown)",
+            },
+        )
+
+        search_notes_tool_wrapped = PydanticAIToolFactory.from_function(
+            search_document_notes_tool,
+            name="search_document_notes",
+            description="Search notes for a keyword (title or content)",
+            parameter_descriptions={
+                "search_term": "Keyword or phrase to search for (case-insensitive)",
+                "limit": "Maximum number of results to return",
+            },
+        )
+
         # Merge caller-supplied tools (if any) after the default one so callers
         # can override behaviour/order if desired.
         effective_tools: list[Callable] = [
@@ -521,6 +594,9 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
             get_summary_length_tool,
             get_notes_tool,
             load_text_tool,
+            add_note_tool_wrapped,
+            update_note_tool_wrapped,
+            search_notes_tool_wrapped,
         ]
         if tools:
             effective_tools.extend(tools)
@@ -632,9 +708,59 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
         # schema automatically.
         default_vs_tool: Callable = vector_store.similarity_search
 
+        # -----------------------------
+        # Corpus description tools
+        # -----------------------------
+
+        async def get_corpus_description_tool(
+            truncate_length: int | None = None,
+            from_start: bool = True,
+        ) -> str:
+            """Return the current corpus markdown description (optionally truncated)."""
+            return await aget_corpus_description(
+                corpus_id=context.corpus.id,
+                truncate_length=truncate_length,
+                from_start=from_start,
+            )
+
+        async def update_corpus_description_tool(
+            new_content: str,
+        ) -> dict[str, int | None]:
+            """Update the corpus description and return new version number (if changed)."""
+            rev = await aupdate_corpus_description(
+                corpus_id=context.corpus.id,
+                new_content=new_content,
+                author_id=config.user_id,
+            )
+            version = rev.version if rev else None
+            return {"version": version}
+
+        get_corpus_desc_tool_wrapped = PydanticAIToolFactory.from_function(
+            get_corpus_description_tool,
+            name="get_corpus_description",
+            description="Retrieve the latest markdown description for this corpus.",
+            parameter_descriptions={
+                "truncate_length": "Optionally truncate the description to this many characters",
+                "from_start": "If true, truncate from beginning else from end",
+            },
+        )
+
+        update_corpus_desc_tool_wrapped = PydanticAIToolFactory.from_function(
+            update_corpus_description_tool,
+            name="update_corpus_description",
+            description="Update corpus description with new markdown text, creating a revision if changed.",
+            parameter_descriptions={
+                "new_content": "Full markdown content",
+            },
+        )
+
         # Merge caller-supplied tools (if any) after the default one so callers
         # can override behaviour/order if desired.
-        effective_tools: list[Callable] = [default_vs_tool]
+        effective_tools: list[Callable] = [
+            default_vs_tool,
+            get_corpus_desc_tool_wrapped,
+            update_corpus_desc_tool_wrapped,
+        ]
         if tools:
             effective_tools.extend(tools)
 

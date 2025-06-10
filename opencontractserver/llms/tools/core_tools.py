@@ -3,7 +3,8 @@
 import logging
 from typing import Any, Optional
 
-from opencontractserver.annotations.models import Note
+from opencontractserver.annotations.models import Note, NoteRevision
+from opencontractserver.corpuses.models import Corpus, CorpusDescriptionRevision
 from opencontractserver.documents.models import Document
 
 logger = logging.getLogger(__name__)
@@ -414,4 +415,223 @@ async def aload_document_txt_extract(
 
     return await database_sync_to_async(load_document_txt_extract)(
         document_id, start, end, refresh=refresh
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Corpus description helpers                                                  #
+# --------------------------------------------------------------------------- #
+
+
+def get_corpus_description(
+    corpus_id: int,
+    truncate_length: int | None = None,
+    from_start: bool = True,
+) -> str:
+    """Return the latest markdown description for a corpus.
+
+    Parameters
+    ----------
+    corpus_id: int
+        Primary key of the `Corpus`.
+    truncate_length: int | None, optional
+        If provided, returns at most this many characters. Positive values only.
+    from_start: bool
+        If ``True`` truncates from the beginning; otherwise from the end.
+    """
+
+    try:
+        corpus = Corpus.objects.get(pk=corpus_id)
+    except Corpus.DoesNotExist as exc:
+        raise ValueError(f"Corpus with id={corpus_id} does not exist.") from exc
+
+    if not corpus.md_description:
+        return ""
+
+    with corpus.md_description.open("r") as fh:
+        content = fh.read()
+
+    if truncate_length and truncate_length > 0:
+        content = (
+            content[:truncate_length] if from_start else content[-truncate_length:]
+        )
+
+    return content
+
+
+async def aget_corpus_description(
+    corpus_id: int,
+    truncate_length: int | None = None,
+    from_start: bool = True,
+) -> str:
+    """Async wrapper around :func:`get_corpus_description`."""
+    from channels.db import database_sync_to_async
+
+    return await database_sync_to_async(get_corpus_description)(
+        corpus_id, truncate_length, from_start
+    )
+
+
+def update_corpus_description(
+    *, corpus_id: int, new_content: str, author_id: int | None = None, author=None
+) -> CorpusDescriptionRevision | None:
+    """Version-up the corpus description, creating the markdown file if needed.
+
+    Either ``author`` (User instance) or ``author_id`` must be provided.
+    Returns the created `CorpusDescriptionRevision` or ``None`` when the content
+    has not changed.
+    """
+
+    if author is None and author_id is None:
+        raise ValueError("Provide either author or author_id.")
+
+    if author is None:
+        from django.contrib.auth import get_user_model
+
+        author = get_user_model().objects.get(pk=author_id)
+
+    try:
+        corpus = Corpus.objects.get(pk=corpus_id)
+    except Corpus.DoesNotExist as exc:
+        raise ValueError(f"Corpus with id={corpus_id} does not exist.") from exc
+
+    return corpus.update_description(new_content=new_content, author=author)
+
+
+async def aupdate_corpus_description(
+    *, corpus_id: int, new_content: str, author_id: int | None = None, author=None
+):
+    """Async wrapper around :func:`update_corpus_description`."""
+    from channels.db import database_sync_to_async
+
+    return await database_sync_to_async(update_corpus_description)(
+        corpus_id=corpus_id, new_content=new_content, author_id=author_id, author=author
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Note creation / updating                                                    #
+# --------------------------------------------------------------------------- #
+
+
+def add_document_note(
+    *,
+    document_id: int,
+    title: str,
+    content: str,
+    creator_id: int,
+    corpus_id: int | None = None,
+) -> Note:
+    """Create and return a new Note for a given document."""
+
+    try:
+        Document.objects.get(pk=document_id)
+    except Document.DoesNotExist as exc:
+        raise ValueError(f"Document with id={document_id} does not exist.") from exc
+
+    note = Note.objects.create(
+        document_id=document_id,
+        corpus_id=corpus_id,
+        title=title,
+        content=content,
+        creator_id=creator_id,
+    )
+
+    return note
+
+
+async def aadd_document_note(
+    *,
+    document_id: int,
+    title: str,
+    content: str,
+    creator_id: int,
+    corpus_id: int | None = None,
+):
+    from channels.db import database_sync_to_async
+
+    return await database_sync_to_async(add_document_note)(
+        document_id=document_id,
+        title=title,
+        content=content,
+        creator_id=creator_id,
+        corpus_id=corpus_id,
+    )
+
+
+def update_document_note(
+    *, note_id: int, new_content: str, author_id: int | None = None
+) -> NoteRevision | None:
+    """Version-up a note's content."""
+
+    try:
+        note = Note.objects.get(pk=note_id)
+    except Note.DoesNotExist as exc:
+        raise ValueError(f"Note with id={note_id} does not exist.") from exc
+
+    return note.version_up(new_content=new_content, author=author_id)
+
+
+async def aupdate_document_note(
+    *, note_id: int, new_content: str, author_id: int | None = None, author=None
+):
+    from channels.db import database_sync_to_async
+
+    return await database_sync_to_async(update_document_note)(
+        note_id=note_id, new_content=new_content, author_id=author_id, author=author
+    )
+
+
+def search_document_notes(
+    document_id: int,
+    search_term: str,
+    *,
+    corpus_id: int | None = None,
+    limit: int | None = None,
+) -> list[dict[str, str | int]]:
+
+    import django
+
+    """Return notes for *document_id* whose title or content contains *search_term* (case-insensitive)."""
+
+    if not Document.objects.filter(pk=document_id).exists():
+        raise ValueError(f"Document with id={document_id} does not exist.")
+
+    notes_qs = Note.objects.filter(document_id=document_id)
+
+    if corpus_id is not None:
+        notes_qs = notes_qs.filter(corpus_id=corpus_id)
+
+    notes_qs = notes_qs.filter(
+        django.db.models.Q(title__icontains=search_term)
+        | django.db.models.Q(content__icontains=search_term)
+    ).order_by("-modified")
+
+    if limit and limit > 0:
+        notes_qs = notes_qs[:limit]
+
+    return [
+        {
+            "id": note.id,
+            "title": note.title,
+            "content": note.content,
+            "creator_id": note.creator_id,
+            "created": note.created.isoformat() if note.created else None,
+            "modified": note.modified.isoformat() if note.modified else None,
+        }
+        for note in notes_qs
+    ]
+
+
+async def asearch_document_notes(
+    document_id: int,
+    search_term: str,
+    *,
+    corpus_id: int | None = None,
+    limit: int | None = None,
+):
+    from channels.db import database_sync_to_async
+
+    return await database_sync_to_async(search_document_notes)(
+        document_id, search_term, corpus_id=corpus_id, limit=limit
     )

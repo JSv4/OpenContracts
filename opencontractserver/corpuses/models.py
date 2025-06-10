@@ -137,18 +137,28 @@ class Corpus(TreeNode):
     REVISION_SNAPSHOT_INTERVAL = 10
 
     def _read_md_description_content(self) -> str:
-        """Helper to read current markdown description text if file exists."""
-        if self.md_description and self.md_description.name:
+        """Return the current markdown description as text.
+
+        Handles both text-mode and binary-mode reads so it works regardless of
+        how the file was saved.
+        """
+        if not (self.md_description and self.md_description.name):
+            return ""
+
+        # First try text-mode which yields `str` directly.
+        try:
+            self.md_description.open("r")  # type: ignore[arg-type]
             try:
-                self.md_description.open("r")
-                return self.md_description.read().decode("utf-8")
-            except Exception:
-                # Fallback to binary read
-                self.md_description.open("rb")
+                return self.md_description.read()
+            finally:
+                self.md_description.close()
+        except Exception:
+            # Fall back to binary mode and decode manually.
+            try:
+                self.md_description.open("rb")  # type: ignore[arg-type]
                 return self.md_description.read().decode("utf-8", errors="ignore")
             finally:
                 self.md_description.close()
-        return ""
 
     def update_description(self, *, new_content: str, author):
         """Create a new revision and update md_description.

@@ -14,8 +14,13 @@ from opencontractserver.llms.tools import (
 )
 from opencontractserver.llms.tools.core_tools import (
     _token_count,
+    add_document_note,
     aload_document_txt_extract,
+    get_corpus_description,
     load_document_txt_extract,
+    search_document_notes,
+    update_corpus_description,
+    update_document_note,
 )
 
 User = get_user_model()
@@ -59,6 +64,22 @@ class TestLLMTools(TestCase):
             title="Test Note",
             content="Test note content that is longer than the typical preview length",
             creator=self.user,
+        )
+
+        # Prepare corpus markdown description via helper
+        self.initial_corpus_md = "# Corpus\n\nInitial description"
+        update_corpus_description(
+            corpus_id=self.corpus.id,
+            new_content=self.initial_corpus_md,
+            author_id=self.user.id,
+        )
+
+        # Create second revision
+        self.updated_corpus_md = "# Corpus\n\nUpdated description v2"
+        update_corpus_description(
+            corpus_id=self.corpus.id,
+            new_content=self.updated_corpus_md,
+            author_id=self.user.id,
         )
 
     def test_token_count_empty(self):
@@ -137,6 +158,64 @@ class TestLLMTools(TestCase):
         """Test successful txt extract loading."""
         result = load_document_txt_extract(self.doc.id)
         self.assertEqual(result, self.txt_content)
+
+    # ------------------------------------------------------------------
+    # New tests for corpus description helpers
+    # ------------------------------------------------------------------
+
+    def test_get_corpus_description(self):
+        """Should return the latest markdown description."""
+        desc = get_corpus_description(self.corpus.id)
+        self.assertEqual(desc, self.updated_corpus_md)
+
+    def test_update_corpus_description_no_change_returns_none(self):
+        """Updating with identical content should return None."""
+        result = update_corpus_description(
+            corpus_id=self.corpus.id,
+            new_content=self.updated_corpus_md,
+            author_id=self.user.id,
+        )
+        self.assertIsNone(result)
+
+    # ------------------------------------------------------------------
+    # New tests for note helpers
+    # ------------------------------------------------------------------
+
+    def test_add_and_search_document_note(self):
+        """Add a new note and ensure it appears in search results."""
+
+        new_note = add_document_note(
+            document_id=self.doc.id,
+            title="Searchable Note",
+            content="This note contains keyword foobar in content.",
+            creator_id=self.user.id,
+        )
+
+        results = search_document_notes(
+            document_id=self.doc.id, search_term="foobar", limit=5
+        )
+
+        self.assertTrue(any(r["id"] == new_note.id for r in results))
+
+    def test_update_document_note(self):
+        """Version-up an existing note and verify content update."""
+
+        old_revision_count = self.note.revisions.count()
+
+        new_content = "Updated note content version 2"
+        revision = update_document_note(
+            note_id=self.note.id,
+            new_content=new_content,
+            author_id=self.user.id,
+        )
+
+        # Revision object is returned
+        self.assertIsNotNone(revision)
+        self.assertEqual(revision.version, old_revision_count + 1)
+
+        # Note content updated
+        self.note.refresh_from_db()
+        self.assertEqual(self.note.content, new_content)
 
 
 class AsyncTestLLMTools(TransactionTestCase):

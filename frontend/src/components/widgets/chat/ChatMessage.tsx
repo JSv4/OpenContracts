@@ -8,11 +8,28 @@ import {
   Pin,
   ChevronUp,
   ChevronDown,
+  Clock,
+  Zap,
+  MessageSquare,
+  Wrench,
+  CheckCircle,
+  Activity,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useSetAtom } from "jotai";
 import { chatSourcesAtom } from "../../annotator/context/ChatSourceAtom";
+
+// Timeline entry type based on the schema
+export interface TimelineEntry {
+  type: "thought" | "content" | "tool_call" | "tool_result" | "sources" | "status";
+  text?: string;
+  tool?: string;
+  args?: any;
+  count?: number;
+  metadata?: Record<string, any>;
+  msg?: string;
+}
 
 export interface ChatMessageProps {
   messageId?: string; // Optional because some messages (like streaming ones) might not have an ID yet
@@ -21,12 +38,14 @@ export interface ChatMessageProps {
   timestamp: string;
   isAssistant: boolean;
   hasSources?: boolean;
+  hasTimeline?: boolean;
   isSelected?: boolean;
   onSelect?: () => void;
   sources?: Array<{
     text: string;
     onClick?: () => void;
   }>;
+  timeline?: TimelineEntry[];
 }
 
 const MessageContainer = styled(motion.div)<{
@@ -386,6 +405,160 @@ const ExpandButton = styled.button<{ $isExpanded: boolean }>`
   }
 `;
 
+// Timeline styled components
+const TimelineContainer = styled.div`
+  position: relative;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+  overflow: hidden;
+  transition: all 0.2s ease-in-out;
+  margin-top: 0.75rem;
+`;
+
+const TimelineHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(156, 163, 175, 0.05);
+  border-bottom: 1px solid rgba(156, 163, 175, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background: rgba(156, 163, 175, 0.1);
+  }
+`;
+
+const TimelineTitle = styled.div`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const TimelineContent = styled(motion.div)`
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #4a5568;
+  max-height: 400px;
+  overflow-y: auto;
+`;
+
+const TimelineList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const TimelineItem = styled.div<{ $type: TimelineEntry['type'] }>`
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: ${(props) => {
+    switch (props.$type) {
+      case 'thought': return 'rgba(168, 85, 247, 0.05)';
+      case 'tool_call': return 'rgba(59, 130, 246, 0.05)';
+      case 'tool_result': return 'rgba(34, 197, 94, 0.05)';
+      case 'content': return 'rgba(249, 115, 22, 0.05)';
+      case 'sources': return 'rgba(92, 124, 157, 0.05)';
+      case 'status': return 'rgba(156, 163, 175, 0.05)';
+      default: return 'rgba(255, 255, 255, 0.7)';
+    }
+  }};
+  border: 1px solid ${(props) => {
+    switch (props.$type) {
+      case 'thought': return 'rgba(168, 85, 247, 0.1)';
+      case 'tool_call': return 'rgba(59, 130, 246, 0.1)';
+      case 'tool_result': return 'rgba(34, 197, 94, 0.1)';
+      case 'content': return 'rgba(249, 115, 22, 0.1)';
+      case 'sources': return 'rgba(92, 124, 157, 0.1)';
+      case 'status': return 'rgba(156, 163, 175, 0.1)';
+      default: return 'rgba(156, 163, 175, 0.1)';
+    }
+  }};
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px ${(props) => {
+      switch (props.$type) {
+        case 'thought': return 'rgba(168, 85, 247, 0.1)';
+        case 'tool_call': return 'rgba(59, 130, 246, 0.1)';
+        case 'tool_result': return 'rgba(34, 197, 94, 0.1)';
+        case 'content': return 'rgba(249, 115, 22, 0.1)';
+        case 'sources': return 'rgba(92, 124, 157, 0.1)';
+        case 'status': return 'rgba(156, 163, 175, 0.1)';
+        default: return 'rgba(156, 163, 175, 0.1)';
+      }
+    }};
+  }
+`;
+
+const TimelineIcon = styled.div<{ $type: TimelineEntry['type'] }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+  background: ${(props) => {
+    switch (props.$type) {
+      case 'thought': return 'linear-gradient(135deg, #a855f7, #9333ea)';
+      case 'tool_call': return 'linear-gradient(135deg, #3b82f6, #2563eb)';
+      case 'tool_result': return 'linear-gradient(135deg, #22c55e, #16a34a)';
+      case 'content': return 'linear-gradient(135deg, #f97316, #ea580c)';
+      case 'sources': return 'linear-gradient(135deg, #5c7c9d, #4a6b8c)';
+      case 'status': return 'linear-gradient(135deg, #9ca3af, #6b7280)';
+      default: return 'linear-gradient(135deg, #9ca3af, #6b7280)';
+    }
+  }};
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+`;
+
+const TimelineItemContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const TimelineItemTitle = styled.div`
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+`;
+
+const TimelineItemText = styled.div`
+  color: #4b5563;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  word-break: break-word;
+`;
+
+const TimelineItemArgs = styled.div`
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 0.375rem;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.75rem;
+  color: #374151;
+  overflow-x: auto;
+`;
+
 interface SourceItemProps {
   text: string;
   index: number;
@@ -498,6 +671,113 @@ const SourcePreview: React.FC<SourcePreviewProps> = ({
   );
 };
 
+// Helper function to get icon for timeline entry type
+const getTimelineIcon = (type: TimelineEntry['type']) => {
+  switch (type) {
+    case 'thought':
+      return <Zap />;
+    case 'tool_call':
+      return <Wrench />;
+    case 'tool_result':
+      return <CheckCircle />;
+    case 'content':
+      return <MessageSquare />;
+    case 'sources':
+      return <Pin />;
+    case 'status':
+      return <Activity />;
+    default:
+      return <Clock />;
+  }
+};
+
+// Helper function to get title for timeline entry type
+const getTimelineTitle = (entry: TimelineEntry) => {
+  switch (entry.type) {
+    case 'thought':
+      return 'Thinking';
+    case 'tool_call':
+      return `Calling ${entry.tool || 'Tool'}`;
+    case 'tool_result':
+      return `${entry.tool || 'Tool'} Result`;
+    case 'content':
+      return 'Generating Response';
+    case 'sources':
+      return 'Found Sources';
+    case 'status':
+      return entry.msg || 'Status Update';
+    default:
+      return 'Timeline Entry';
+  }
+};
+
+interface TimelinePreviewProps {
+  timeline: TimelineEntry[];
+}
+
+const TimelinePreview: React.FC<TimelinePreviewProps> = ({ timeline }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
+  };
+
+  return (
+    <TimelineContainer
+      className="timeline-container"
+      onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+    >
+      <TimelineHeader onClick={handleHeaderClick}>
+        <TimelineTitle>
+          <Clock size={14} />
+          Timeline ({timeline.length} {timeline.length === 1 ? 'step' : 'steps'})
+        </TimelineTitle>
+        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </TimelineHeader>
+      <AnimatePresence>
+        {isExpanded && (
+          <TimelineContent
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <TimelineList>
+              {timeline.map((entry, index) => (
+                <TimelineItem key={index} $type={entry.type}>
+                  <TimelineIcon $type={entry.type}>
+                    {getTimelineIcon(entry.type)}
+                  </TimelineIcon>
+                  <TimelineItemContent>
+                    <TimelineItemTitle>
+                      {getTimelineTitle(entry)}
+                    </TimelineItemTitle>
+                    {entry.text && (
+                      <TimelineItemText>{entry.text}</TimelineItemText>
+                    )}
+                    {entry.args && (
+                      <TimelineItemArgs>
+                        <strong>Arguments:</strong>
+                        <pre>{JSON.stringify(entry.args, null, 2)}</pre>
+                      </TimelineItemArgs>
+                    )}
+                    {entry.count !== undefined && (
+                      <TimelineItemText>
+                        <strong>Count:</strong> {entry.count}
+                      </TimelineItemText>
+                    )}
+                  </TimelineItemContent>
+                </TimelineItem>
+              ))}
+            </TimelineList>
+          </TimelineContent>
+        )}
+      </AnimatePresence>
+    </TimelineContainer>
+  );
+};
+
 const SourceIndicator = styled.div<{ $isSelected?: boolean }>`
   position: absolute;
   right: 1rem;
@@ -545,6 +825,54 @@ const SourceIndicator = styled.div<{ $isSelected?: boolean }>`
   }
 `;
 
+const TimelineIndicator = styled.div<{ $isSelected?: boolean }>`
+  position: absolute;
+  right: ${(props) => (props.$isSelected ? "8rem" : "1rem")};
+  top: 1rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: ${(props) =>
+    props.$isSelected ? "#6B7280" : "rgba(156, 163, 175, 0.1)"};
+  color: ${(props) => (props.$isSelected ? "white" : "#6B7280")};
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transform: none;
+  opacity: 1;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  border: 1px solid
+    ${(props) =>
+      props.$isSelected ? "transparent" : "rgba(156, 163, 175, 0.2)"};
+
+  svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    background: ${(props) =>
+      props.$isSelected ? "#4B5563" : "rgba(156, 163, 175, 0.15)"};
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(156, 163, 175, 0.15);
+
+    svg {
+      transform: rotate(-15deg);
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    right: ${(props) => (props.$isSelected ? "6rem" : "1rem")};
+  }
+`;
+
 const Timestamp = styled.div`
   color: #868e96;
   font-size: 0.75rem;
@@ -578,7 +906,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   timestamp,
   isAssistant,
   sources = [],
+  timeline = [],
   hasSources,
+  hasTimeline,
   isSelected,
   onSelect,
 }) => {
@@ -589,7 +919,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     timestamp,
     isAssistant,
     sources,
+    timeline,
     hasSources,
+    hasTimeline,
     isSelected,
   });
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<
@@ -619,6 +951,12 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
+      {hasTimeline && timeline.length > 0 && (
+        <TimelineIndicator $isSelected={isSelected}>
+          <Clock size={14} />
+          {timeline.length} {timeline.length === 1 ? 'step' : 'steps'}
+        </TimelineIndicator>
+      )}
       {hasSources && (
         <SourceIndicator $isSelected={isSelected}>
           <Pin size={14} />
@@ -632,6 +970,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         <UserName>{isAssistant ? "AI Assistant" : user}</UserName>
         <MessageContent $isAssistant={isAssistant}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          {timeline.length > 0 && <TimelinePreview timeline={timeline} />}
           {sources.length > 0 && (
             <SourcePreview
               sources={sources}

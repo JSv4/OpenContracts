@@ -322,7 +322,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                         "during agent initialization. This is unexpected."
                     )
 
-                self.agent = await agents.for_document(**agent_kwargs)
+                self.agent = await agents.for_document(
+                    **agent_kwargs, framework=settings.LLMS_DEFAULT_AGENT_FRAMEWORK
+                )
 
                 # Enhanced Logging after agent initialization
                 if self.agent and self.agent.get_conversation_id():
@@ -404,6 +406,11 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                             data={
                                 "sources": sources_payload,
                                 "message_id": event.llm_message_id,
+                                "timeline": (
+                                    event.metadata.get("timeline", [])
+                                    if isinstance(event.metadata, dict)
+                                    else []
+                                ),
                             },
                         )
 
@@ -434,6 +441,11 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                                 data={
                                     "sources": sources_payload,
                                     "message_id": event.llm_message_id,
+                                    "timeline": (
+                                        event.metadata.get("timeline", [])
+                                        if isinstance(event.metadata, dict)
+                                        else []
+                                    ),
                                 },
                             )
 

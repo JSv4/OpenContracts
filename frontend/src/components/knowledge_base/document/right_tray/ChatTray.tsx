@@ -79,6 +79,7 @@ import {
   useChatSourceState,
   mapWebSocketSourcesToChatMessageSources,
 } from "../../../annotator/context/ChatSourceAtom";
+import { TimelineEntry } from "../../../widgets/chat/ChatMessage";
 
 /**
  * A helper interface representing the properties of data included in websocket messages,
@@ -99,11 +100,15 @@ export interface WebSocketSources {
  * the actual text content, and optional annotation data.
  */
 export interface MessageData {
-  type: "ASYNC_START" | "ASYNC_CONTENT" | "ASYNC_FINISH" | "SYNC_CONTENT";
+  type: "ASYNC_START" | "ASYNC_CONTENT" | "ASYNC_FINISH" | "SYNC_CONTENT" | "ASYNC_THOUGHT" | "ASYNC_SOURCES";
   content: string;
   data?: {
     sources?: WebSocketSources[];
+    timeline?: TimelineEntry[];
     message_id?: string;
+    tool_name?: string;
+    args?: any;
+    [key: string]: any; // For any additional metadata
   };
 }
 
@@ -223,27 +228,36 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
     // First, register them in our chatSourcesAtom if they have sources
     messages.forEach((srvMsg) => {
-      if (srvMsg.data?.sources?.length) {
+      const srvMsgData = srvMsg.data as { sources?: WebSocketSources[]; timeline?: TimelineEntry[]; message_id?: string } | undefined;
+      if (srvMsgData?.sources?.length) {
         handleCompleteMessage(
           srvMsg.content,
-          srvMsg.data.sources,
+          srvMsgData.sources,
           srvMsg.id,
-          srvMsg.createdAt
+          srvMsg.createdAt,
+          srvMsgData.timeline
         );
       }
     });
 
     console.log("messages", messages);
 
-    // Then, map them for immediate display - NOW INCLUDING hasSources FLAG
-    const mapped = messages.map((msg) => ({
-      messageId: msg.id,
-      user: msg.msgType === "HUMAN" ? "You" : "Assistant",
-      content: msg.content,
-      timestamp: new Date(msg.createdAt).toLocaleString(),
-      isAssistant: msg.msgType !== "HUMAN",
-      hasSources: !!msg.data?.sources?.length,
-    }));
+    // Then, map them for immediate display - NOW INCLUDING hasSources and hasTimeline FLAGS
+    const mapped = messages.map((msg) => {
+      // Type assertion for data field to include timeline
+      const msgData = msg.data as { sources?: WebSocketSources[]; timeline?: TimelineEntry[]; message_id?: string } | undefined;
+      
+      return {
+        messageId: msg.id,
+        user: msg.msgType === "HUMAN" ? "You" : "Assistant",
+        content: msg.content,
+        timestamp: new Date(msg.createdAt).toLocaleString(),
+        isAssistant: msg.msgType !== "HUMAN",
+        hasSources: !!msgData?.sources?.length,
+        hasTimeline: !!msgData?.timeline?.length,
+        timeline: msgData?.timeline || [],
+      };
+    });
     setServerMessages(mapped);
   }, [msgData]);
 
@@ -333,6 +347,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
             content: token,
             timestamp: new Date().toLocaleString(),
             isAssistant: true,
+            hasTimeline: false,
+            timeline: [],
           },
         ];
       }
@@ -341,15 +357,72 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   }
 
   /**
+   * Append an *agent thought* (or tool call/result) to the timeline of the
+   * streaming assistant message so the user can watch reasoning unfold.
+   */
+  const appendThoughtToMessage = (
+    thoughtText: string,
+    data: MessageData["data"] | undefined
+  ): void => {
+    const messageId = data?.message_id;
+    if (!messageId || !thoughtText) return;
+
+    // Determine timeline entry type
+    let entryType: TimelineEntry["type"] = "thought";
+    if (data?.tool_name && data?.args) entryType = "tool_call";
+    else if (data?.tool_name && !data?.args) entryType = "tool_result";
+
+    const newEntry: TimelineEntry = {
+      type: entryType,
+      text: thoughtText,
+      tool: data?.tool_name,
+      args: data?.args,
+    };
+
+    // Update chat UI timeline
+    setChat((prev) => {
+      const idx = prev.findIndex((m) => m.messageId === messageId);
+      if (idx === -1) {
+        // No message yet (thought arrived very early) – create skeleton.
+        return [
+          ...prev,
+          {
+            messageId,
+            user: "Assistant",
+            content: "", // will be filled later
+            timestamp: new Date().toLocaleString(),
+            isAssistant: true,
+            hasTimeline: true,
+            timeline: [newEntry],
+          },
+        ];
+      }
+
+      const msg = prev[idx];
+      const timeline = msg.timeline ? [...msg.timeline, newEntry] : [newEntry];
+      const updated = {
+        ...msg,
+        hasTimeline: true,
+        timeline,
+      } as ChatMessageProps;
+
+      return [...prev.slice(0, idx), updated, ...prev.slice(idx + 1)];
+    });
+  };
+
+  /**
    * Finalize a partially-streamed response by replacing the last chat entry
    * with the final content (and calling `handleCompleteMessage` to store sources).
    * @param content - the fully streamed final response
    * @param sourcesData - optional array of WebSocketSources describing pinned info
+   * @param overrideId - optional message ID to use
+   * @param timelineData - optional timeline entries
    */
   const finalizeStreamingResponse = (
     content: string,
     sourcesData?: WebSocketSources[],
-    overrideId?: string
+    overrideId?: string,
+    timelineData?: TimelineEntry[]
   ): void => {
     console.log("finalizeStreamingResponse", {
       content,
@@ -395,7 +468,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       });
 
       // Now store the final content + sources in ChatSourceAtom with the same ID
-      handleCompleteMessage(content, sourcesData, lastMsgId, overrideId);
+      handleCompleteMessage(content, sourcesData, lastMsgId, undefined, timelineData);
 
       return updatedMessages;
     });
@@ -466,6 +539,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           hasContent: !!content,
           hasSources: !!data?.sources,
           sourceCount: data?.sources?.length,
+          hasTimeline: !!data?.timeline,
+          timelineCount: data?.timeline?.length,
           message_id: data?.message_id,
         });
 
@@ -476,19 +551,31 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           case "ASYNC_CONTENT":
             appendStreamingTokenToChat(content, data?.message_id);
             break;
+          case "ASYNC_THOUGHT":
+            appendThoughtToMessage(content, data);
+            break;
+          case "ASYNC_SOURCES":
+            mergeSourcesIntoMessage(data?.sources, data?.message_id);
+            break;
           case "ASYNC_FINISH":
-            finalizeStreamingResponse(content, data?.sources, data?.message_id);
+            finalizeStreamingResponse(content, data?.sources, data?.message_id, data?.timeline);
             break;
           case "SYNC_CONTENT": {
             const sourcesToPass =
               data?.sources && Array.isArray(data.sources)
                 ? data.sources
                 : undefined;
+            const timelineToPass =
+              data?.timeline && Array.isArray(data.timeline)
+                ? data.timeline
+                : undefined;
             console.log(
               "[ChatTray WebSocket] SYNC_CONTENT sources:",
-              sourcesToPass
+              sourcesToPass,
+              "timeline:",
+              timelineToPass
             );
-            handleCompleteMessage(content, sourcesToPass, data?.message_id);
+            handleCompleteMessage(content, sourcesToPass, data?.message_id, undefined, timelineToPass);
             break;
           }
           default:
@@ -698,7 +785,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     content: string,
     sourcesData?: Array<WebSocketSources>,
     overrideId?: string,
-    overrideCreatedAt?: string
+    overrideCreatedAt?: string,
+    timelineData?: TimelineEntry[]
   ): void => {
     if (!overrideId) {
       console.warn(
@@ -752,6 +840,73 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           selectedMessageId: overrideId ? prev.selectedMessageId : messageId,
         };
       }
+    });
+  };
+
+  /**
+   * Merge *additional* sources arriving via ASYNC_SOURCES into the existing
+   * ChatSourceAtom + local chat message so the user can click pins while the
+   * answer is still streaming.
+   */
+  const mergeSourcesIntoMessage = (
+    sourcesData: WebSocketSources[] | undefined,
+    overrideId?: string
+  ): void => {
+    if (!sourcesData?.length || !overrideId) return;
+
+    // First convert incoming sources → ChatMessageSource objects.
+    const mappedSources = mapWebSocketSourcesToChatMessageSources(
+      sourcesData,
+      overrideId
+    );
+
+    // Update ChatSourceAtom – merge or append sources for the message.
+    setChatSourceState((prev) => {
+      const idx = prev.messages.findIndex((m) => m.messageId === overrideId);
+      if (idx === -1) {
+        // Message not yet in atom – create skeleton entry so pins work.
+        return {
+          ...prev,
+          messages: [
+            ...prev.messages,
+            {
+              messageId: overrideId,
+              content: "", // will be filled later by finalizeStreamingResponse
+              timestamp: new Date().toISOString(),
+              sources: mappedSources,
+            },
+          ],
+        };
+      }
+
+      // Merge with existing sources (avoid duplicates by annotation_id)
+      const existing = prev.messages[idx];
+      const mergedSources = [
+        ...existing.sources,
+        ...mappedSources.filter(
+          (ms) =>
+            !existing.sources.some(
+              (es) => es.annotation_id === ms.annotation_id
+            )
+        ),
+      ];
+
+      const updatedMessages = [...prev.messages];
+      updatedMessages[idx] = { ...existing, sources: mergedSources };
+
+      return { ...prev, messages: updatedMessages };
+    });
+
+    // Update transient chat UI so pin indicator appears immediately.
+    setChat((prev) => {
+      const idx = prev.findIndex((m) => m.messageId === overrideId);
+      if (idx === -1) return prev;
+      const msg = prev[idx];
+      return [
+        ...prev.slice(0, idx),
+        { ...msg, hasSources: true },
+        ...prev.slice(idx + 1),
+      ];
     });
   };
 
@@ -848,7 +1003,9 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                       key={msg.messageId || idx}
                       {...msg}
                       hasSources={!!sourcedMessage?.sources.length}
+                      hasTimeline={msg.hasTimeline}
                       sources={sources}
+                      timeline={msg.timeline}
                       isSelected={
                         sourcedMessage?.messageId === selectedMessageId
                       }

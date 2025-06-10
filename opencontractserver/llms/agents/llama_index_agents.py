@@ -258,7 +258,7 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
                 sources=sources,
                 user_message_id=user_msg_id,
                 llm_message_id=llm_msg_id,
-                metadata={"framework": "llama_index"},
+                metadata={"framework": "pydantic-ai"},
             )
 
         except Exception as e:

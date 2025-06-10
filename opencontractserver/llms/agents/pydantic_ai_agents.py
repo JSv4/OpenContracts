@@ -47,6 +47,7 @@ from opencontractserver.llms.agents.core_agents import (
     UnifiedStreamEvent,
     get_default_config,
 )
+from opencontractserver.llms.agents.timeline_stream_mixin import TimelineStreamMixin
 from opencontractserver.llms.tools.pydantic_ai_tools import PydanticAIDependencies
 from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import (
     PydanticAIAnnotationVectorStore,
@@ -78,7 +79,12 @@ def _to_source_node(raw: Any) -> SourceNode:
     )
 
 
-class PydanticAICoreAgent(CoreAgentBase):
+# ---------------------------------------------------------------------------
+# Pydantic‐AI base – now inherits TimelineStreamMixin for unified timeline.
+# ---------------------------------------------------------------------------
+
+
+class PydanticAICoreAgent(TimelineStreamMixin, CoreAgentBase):
     """PydanticAI implementation of CoreAgentBase following PydanticAI patterns."""
 
     def __init__(
@@ -189,10 +195,14 @@ class PydanticAICoreAgent(CoreAgentBase):
             logger.exception(f"Error in PydanticAI chat: {e}")
             raise
 
-    async def stream(
+    # NOTE: This method was previously called ``stream``.  It is now renamed
+    # to ``_stream_core`` so that the TimelineStreamMixin can wrap it and take
+    # care of collecting the reasoning timeline.
+
+    async def _stream_core(
         self, message: str, **kwargs
     ) -> AsyncGenerator[UnifiedStreamEvent, None]:
-        """Stream thoughts, content chunks, source events, and final output using Pydantic-AI's execution graph."""
+        """Internal streaming generator – TimelineStreamMixin adds timeline."""
 
         logger.info(f"[PydanticAI stream] Starting stream with message: {message!r}")
 
@@ -201,7 +211,6 @@ class PydanticAICoreAgent(CoreAgentBase):
         accumulated_content: str = ""
         accumulated_sources: list[SourceNode] = []
         final_usage_data: dict[str, Any] | None = None
-        timeline: list[TimelineEntry] = []  # For reconstructing reasoning chain
 
         # Re-hydrate the historical context for Pydantic-AI, if any exists.
         message_history = await self._get_message_history()
@@ -226,12 +235,6 @@ class PydanticAICoreAgent(CoreAgentBase):
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
-                        timeline.append(
-                            {
-                                "type": "thought",
-                                "text": "Received user prompt; beginning reasoning cycle…",
-                            }
-                        )
 
                     # ------------------------------------------------------------------
                     # MODEL REQUEST NODE – We can stream raw model deltas from here.
@@ -242,12 +245,6 @@ class PydanticAICoreAgent(CoreAgentBase):
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
-                        timeline.append(
-                            {
-                                "type": "thought",
-                                "text": "Sending request to language model…",
-                            }
-                        )
 
                         async with node.stream(agent_run.ctx) as model_stream:
                             async for event in model_stream:
@@ -255,11 +252,7 @@ class PydanticAICoreAgent(CoreAgentBase):
                                 if text:
                                     if is_answer:
                                         accumulated_content += text
-                                        # Only store a timeline entry for *complete* TextPart chunks
-                                        if isinstance(event, PartStartEvent):
-                                            timeline.append(
-                                                {"type": "content", "text": text}
-                                            )
+                                        # Content timeline now handled by TimelineStreamMixin
 
                                     # Merge any source nodes attached to event (unlikely here but future-proof)
                                     accumulated_sources.extend(
@@ -268,12 +261,8 @@ class PydanticAICoreAgent(CoreAgentBase):
                                             for s in getattr(event, "sources", [])
                                         ]
                                     )
-                                    timeline.append(
-                                        {
-                                            "type": "sources",
-                                            "count": len(accumulated_sources),
-                                        }
-                                    )
+                                    # builder will record Sources automatically
+
                                     yield ContentEvent(
                                         content=text,
                                         accumulated_content=accumulated_content,
@@ -291,12 +280,6 @@ class PydanticAICoreAgent(CoreAgentBase):
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
-                        timeline.append(
-                            {
-                                "type": "thought",
-                                "text": "Processing model response – may invoke tools…",
-                            }
-                        )
 
                         async with node.stream(agent_run.ctx) as tool_stream:
                             async for event in tool_stream:
@@ -310,13 +293,8 @@ class PydanticAICoreAgent(CoreAgentBase):
                                             "args": event.part.args,
                                         },
                                     )
-                                    timeline.append(
-                                        {
-                                            "type": "tool_call",
-                                            "tool": event.part.tool_name,
-                                            "args": event.part.args,
-                                        }
-                                    )
+                                    # builder will record tool thought events via emits
+
                                 elif event.event_kind == "function_tool_result":
                                     tool_name = event.result.tool_name  # type: ignore[attr-defined]
                                     # Capture vector-search results (our canonical source provider)
@@ -327,17 +305,14 @@ class PydanticAICoreAgent(CoreAgentBase):
                                                 _to_source_node(s) for s in raw_sources
                                             ]
                                             accumulated_sources.extend(new_sources)
-                                            timeline.append(
-                                                {
-                                                    "type": "sources",
-                                                    "count": len(new_sources),
-                                                }
-                                            )
+                                            # Emit a dedicated SourceEvent so the client
+                                            # can update citations in real-time.
                                             yield SourceEvent(
                                                 sources=new_sources,
                                                 user_message_id=user_msg_id,
                                                 llm_message_id=llm_msg_id,
                                             )
+
                                     else:
                                         yield ThoughtEvent(
                                             thought=f"Tool `{tool_name}` returned a result.",
@@ -345,9 +320,7 @@ class PydanticAICoreAgent(CoreAgentBase):
                                             llm_message_id=llm_msg_id,
                                             metadata={"tool_name": tool_name},
                                         )
-                                        timeline.append(
-                                            {"type": "tool_result", "tool": tool_name}
-                                        )
+                                        # builder handles thought
 
                     # ------------------------------------------------------------------
                     # END NODE – Execution graph is finished.
@@ -358,35 +331,20 @@ class PydanticAICoreAgent(CoreAgentBase):
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
-                        timeline.append(
-                            {
-                                "type": "thought",
-                                "text": "Run finished; aggregating final results…",
-                            }
-                        )
 
                 # After exiting the for-loop, the agent_run is complete and contains the final result.
                 if agent_run.result:
                     accumulated_content = str(agent_run.result.output)
                     final_usage_data = _usage_to_dict(agent_run.result.usage())
-                    timeline.append({"type": "status", "msg": "run_finished"})
+                    # builder will add run_finished status
 
-            # Persist final message to DB
-            await self._finalise_llm_message(
-                llm_msg_id,
-                accumulated_content,
-                accumulated_sources,
-                final_usage_data,
-                timeline,
-            )
-
+            # Emit final event – TimelineStreamMixin will take care of metadata
             yield FinalEvent(
                 accumulated_content=accumulated_content,
                 sources=accumulated_sources,
                 metadata={
                     "usage": final_usage_data,
                     "framework": "pydantic_ai",
-                    "timeline": timeline,
                 },
                 user_message_id=user_msg_id,
                 llm_message_id=llm_msg_id,
@@ -486,6 +444,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
         if tools:
             effective_tools.extend(tools)
 
+        logger.info(f"Created pydantic ai agent with context {config.system_prompt}")
         pydantic_ai_agent_instance = PydanticAIAgent(
             model=config.model_name,
             system_prompt=config.system_prompt,

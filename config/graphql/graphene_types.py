@@ -25,7 +25,12 @@ from opencontractserver.annotations.models import (
     Relationship,
 )
 from opencontractserver.conversations.models import ChatMessage, Conversation
-from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
+from opencontractserver.corpuses.models import (
+    Corpus,
+    CorpusAction,
+    CorpusDescriptionRevision,
+    CorpusQuery,
+)
 from opencontractserver.documents.models import (
     Document,
     DocumentAnalysisRow,
@@ -743,6 +748,21 @@ class CorpusType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     def resolve_icon(self, info):
         return "" if not self.icon else info.context.build_absolute_uri(self.icon.url)
 
+    # File link resolver for markdown description
+    def resolve_md_description(self, info):
+        return (
+            ""
+            if not self.md_description
+            else info.context.build_absolute_uri(self.md_description.url)
+        )
+
+    # Optional list of description revisions
+    description_revisions = graphene.List(lambda: CorpusDescriptionRevisionType)
+
+    def resolve_description_revisions(self, info):
+        # Returns all revisions, ordered by version asc by default from model ordering
+        return self.revisions.all() if hasattr(self, "revisions") else []
+
     class Meta:
         model = Corpus
         interfaces = [relay.Node]
@@ -1071,3 +1091,15 @@ def resolve_pipeline_components(self, info, mimetype=None):
 
     components = get_components_by_mimetype(backend_enum)
     return components
+
+
+# ---------------- CorpusDescriptionRevisionType ----------------
+
+
+class CorpusDescriptionRevisionType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    """GraphQL type for CorpusDescriptionRevision model."""
+
+    class Meta:
+        model = CorpusDescriptionRevision
+        interfaces = [relay.Node]
+        connection_class = CountableConnection

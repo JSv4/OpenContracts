@@ -1,7 +1,10 @@
+import difflib
+import hashlib
 import uuid
 
 import django
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -665,6 +668,146 @@ class Note(BaseOCModel, HasEmbeddingMixin):
     created = django.db.models.DateTimeField(default=timezone.now)
     modified = django.db.models.DateTimeField(default=timezone.now, blank=True)
 
+    REVISION_SNAPSHOT_INTERVAL = (
+        10  # store full snapshot every N revisions for fast reconstruction
+    )
+
+    def save(self, *args, **kwargs):
+        """Override save to automatically create a NoteRevision when `content` changes.
+        Set `skip_revision=True` in kwargs to bypass automatic revision creation
+        (used internally by `version_up`).
+        """
+        skip_revision: bool = kwargs.pop("skip_revision", False)
+        revision_author = kwargs.pop("revision_author", None)
+
+        # Determine whether this is a create vs update
+        is_new = self.pk is None
+
+        # Fetch original content for diffing (only for existing instances and when we need revision)
+        original_content: str = ""
+        if not is_new and not self._state.adding and not skip_revision:
+            original_content = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values_list("content", flat=True)
+                .first()
+                or ""
+            )
+
+        # Update timestamps
+        if is_new:
+            self.created = timezone.now()
+        self.modified = timezone.now()
+
+        with transaction.atomic():
+            super_result = super().save(*args, **kwargs)
+
+            # Auto-create a NoteRevision unless explicitly skipped
+            if not skip_revision and (
+                is_new or original_content != (self.content or "")
+            ):
+                from opencontractserver.annotations.models import (  # local import to avoid cycles
+                    NoteRevision,
+                )
+
+                latest_rev = (
+                    NoteRevision.objects.filter(note_id=self.pk)
+                    .order_by("-version")
+                    .first()
+                )
+                next_version = 1 if latest_rev is None else latest_rev.version + 1
+
+                diff_text = "\n".join(
+                    difflib.unified_diff(
+                        original_content.splitlines(),
+                        (self.content or "").splitlines(),
+                        lineterm="",
+                    )
+                )
+
+                should_snapshot = (
+                    next_version % self.REVISION_SNAPSHOT_INTERVAL == 0 or is_new
+                )
+                snapshot_text = self.content if should_snapshot else None
+
+                NoteRevision.objects.create(
+                    note_id=self.pk,
+                    author=revision_author or self.creator,
+                    version=next_version,
+                    diff=diff_text,
+                    snapshot=snapshot_text,
+                    checksum_base=hashlib.sha256(original_content.encode()).hexdigest(),
+                    checksum_full=hashlib.sha256(
+                        (self.content or "").encode()
+                    ).hexdigest(),
+                )
+
+            return super_result
+
+    def version_up(self, *, new_content: str, author):
+        """Utility to bump the note to a new version.
+
+        Args:
+            new_content (str): The full markdown content of the new version.
+            author (User | int): User object or id responsible for the change.
+
+        Returns:
+            NoteRevision: the created revision object (or `None` if no changes).
+        """
+        # Resolve author to User instance if an id is passed
+        if isinstance(author, int):
+            author_obj = get_user_model().objects.get(pk=author)
+        else:
+            author_obj = author
+
+        # Short-circuit if content has not changed
+        if (self.content or "") == (new_content or ""):
+            return None
+
+        # Compute diff & version within transaction
+        with transaction.atomic():
+            original_content = self.content or ""
+
+            # Update note fields and persist without auto-revision (we will create it manually)
+            self.content = new_content
+            self.modified = timezone.now()
+            self.save(skip_revision=True)  # bypass auto revision to avoid duplication
+
+            # Determine next version
+            from opencontractserver.annotations.models import (  # avoid circular import
+                NoteRevision,
+            )
+
+            latest_rev = (
+                NoteRevision.objects.filter(note_id=self.pk)
+                .order_by("-version")
+                .first()
+            )
+            next_version = 1 if latest_rev is None else latest_rev.version + 1
+
+            diff_text = "\n".join(
+                difflib.unified_diff(
+                    original_content.splitlines(),
+                    new_content.splitlines(),
+                    lineterm="",
+                )
+            )
+
+            should_snapshot = next_version % self.REVISION_SNAPSHOT_INTERVAL == 0
+            snapshot_text = new_content if should_snapshot else None
+
+            revision = NoteRevision.objects.create(
+                note=self,
+                author=author_obj,
+                version=next_version,
+                diff=diff_text,
+                snapshot=snapshot_text,
+                checksum_base=hashlib.sha256(original_content.encode()).hexdigest(),
+                checksum_full=hashlib.sha256(new_content.encode()).hexdigest(),
+            )
+
+        return revision
+
     def get_embedding_reference_kwargs(self) -> dict:
         return {"note_id": self.pk}
 
@@ -689,13 +832,6 @@ class Note(BaseOCModel, HasEmbeddingMixin):
         ]
         ordering = ("created",)
 
-    def save(self, *args, **kwargs):
-        """On save, update timestamps"""
-        if not self.pk:
-            self.created = timezone.now()
-        self.modified = timezone.now()
-        return super().save(*args, **kwargs)
-
 
 # Model for Django Guardian permissions
 class NoteUserObjectPermission(UserObjectPermissionBase):
@@ -709,3 +845,51 @@ class NoteGroupObjectPermission(GroupObjectPermissionBase):
     content_object = django.db.models.ForeignKey(
         "Note", on_delete=django.db.models.CASCADE
     )
+
+
+class NoteRevision(django.db.models.Model):
+    """Append-only log of changes to a `Note`.
+
+    Stores a compact unified diff against the previous version plus an optional full
+    snapshot every `Note.REVISION_SNAPSHOT_INTERVAL` versions so that historical
+    materialisation is `O(N)` where `N` ≤ interval.
+    """
+
+    note = django.db.models.ForeignKey(
+        "annotations.Note",
+        on_delete=django.db.models.CASCADE,
+        related_name="revisions",
+    )
+    author = django.db.models.ForeignKey(
+        get_user_model(),
+        on_delete=django.db.models.SET_NULL,
+        null=True,
+        related_name="note_revisions",
+    )
+
+    # Monotonic per-note version starting at 1
+    version = django.db.models.PositiveIntegerField()
+
+    # Unified diff text (line-oriented, UTF-8)
+    diff = django.db.models.TextField(blank=True)
+
+    # Optional full snapshot of the note content
+    snapshot = django.db.models.TextField(null=True, blank=True)
+
+    # SHA-256 checksums for data integrity / fast mismatch detection
+    checksum_base = django.db.models.CharField(max_length=64, blank=True)
+    checksum_full = django.db.models.CharField(max_length=64, blank=True)
+
+    created = django.db.models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        indexes = [
+            django.db.models.Index(fields=["note"]),
+            django.db.models.Index(fields=["author"]),
+            django.db.models.Index(fields=["created"]),
+        ]
+        unique_together = ("note", "version")
+        ordering = ("note_id", "version")
+
+    def __str__(self):
+        return f"NoteRevision(note_id={self.note_id}, v={self.version})"

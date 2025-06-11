@@ -33,6 +33,7 @@ import {
   BoundingBox,
   SpanAnnotationJson,
 } from "../../types";
+import { AnnotationLabelType } from "../../../types/graphql-api";
 
 // Timeline entry type based on the schema
 export interface TimelineEntry {
@@ -632,6 +633,8 @@ interface SourceItemProps {
   index: number;
   isSelected: boolean;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+  availableLabels: AnnotationLabelType[];
+  createAnnotation: (a: ServerTokenAnnotation | ServerSpanAnnotation) => void;
 }
 
 const SourceItem: React.FC<SourceItemProps> = ({
@@ -640,22 +643,14 @@ const SourceItem: React.FC<SourceItemProps> = ({
   index,
   isSelected,
   onClick,
+  availableLabels,
+  createAnnotation,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [labelMenuOpen, setLabelMenuOpen] = useState(false);
 
-  // Hooks
-  const { selectedDocument } = useSelectedDocument();
-  const { humanSpanLabels, humanTokenLabels } = useCorpusState();
   const chatStateValue = useAtomValue(chatSourcesAtom);
-  const createAnnotation = useCreateAnnotation();
-
-  const availableLabels = useMemo(() => {
-    if (selectedDocument?.fileType?.startsWith("text/")) {
-      return humanSpanLabels;
-    }
-    return humanTokenLabels;
-  }, [selectedDocument, humanSpanLabels, humanTokenLabels]);
+  const { selectedDocument } = useSelectedDocument();
 
   // UI handlers
   const toggleExpand = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -669,7 +664,7 @@ const SourceItem: React.FC<SourceItemProps> = ({
   };
 
   const handleLabelSelect = (label: any) => {
-    const msg = chatStateValue.messages.find((m) => m.messageId === messageId);
+    const msg = chatStateValue.messages.find((m: any) => m.messageId === messageId);
     if (!msg) return setLabelMenuOpen(false);
     const sourceData = msg.sources[index];
     if (!sourceData) return setLabelMenuOpen(false);
@@ -763,6 +758,8 @@ interface SourcePreviewProps {
   sources: Array<{ text: string; onClick?: () => void }>;
   selectedIndex?: number;
   onSourceSelect: (index: number) => void;
+  availableLabels: AnnotationLabelType[];
+  createAnnotation: (a: ServerTokenAnnotation | ServerSpanAnnotation) => void;
 }
 
 const SourcePreview: React.FC<SourcePreviewProps> = ({
@@ -770,6 +767,8 @@ const SourcePreview: React.FC<SourcePreviewProps> = ({
   sources,
   selectedIndex,
   onSourceSelect,
+  availableLabels,
+  createAnnotation,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -811,6 +810,8 @@ const SourcePreview: React.FC<SourcePreviewProps> = ({
                     onSourceSelect(index);
                     source.onClick?.();
                   }}
+                  availableLabels={availableLabels}
+                  createAnnotation={createAnnotation}
                 />
               ))}
             </SourceList>
@@ -1062,23 +1063,18 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   isSelected,
   onSelect,
 }) => {
-  console.log("[ChatMessage] Rendering with props:", {
-    messageId,
-    user,
-    content,
-    timestamp,
-    isAssistant,
-    sources,
-    timeline,
-    hasSources,
-    hasTimeline,
-    isSelected,
-  });
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<
     number | undefined
   >();
 
   const setChatState = useSetAtom(chatSourcesAtom);
+  const createAnnotation = useCreateAnnotation();
+  const { humanSpanLabels, humanTokenLabels } = useCorpusState();
+  const { selectedDocument } = useSelectedDocument();
+  const availableLabels = useMemo(() => {
+    if (selectedDocument?.fileType?.startsWith("text/")) return humanSpanLabels;
+    return humanTokenLabels;
+  }, [selectedDocument, humanSpanLabels, humanTokenLabels]);
 
   const handleSourceSelect = (index: number) => {
     setSelectedSourceIndex(index === selectedSourceIndex ? undefined : index);
@@ -1091,7 +1087,6 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   };
 
-  console.log("[ChatMessage] About to render. Content:", content);
   return (
     <MessageContainer
       $isAssistant={isAssistant}
@@ -1127,6 +1122,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               sources={sources}
               selectedIndex={selectedSourceIndex}
               onSourceSelect={handleSourceSelect}
+              availableLabels={availableLabels}
+              createAnnotation={createAnnotation}
             />
           )}
         </MessageContent>

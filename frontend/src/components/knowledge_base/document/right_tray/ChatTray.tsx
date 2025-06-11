@@ -207,6 +207,12 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
   const { chatTrayState, setChatTrayState } = useUISettings();
 
+  // Ref to manage auto-scrolling behaviour
+  const autoScrollRef = useRef(true);
+
+  // Flag so we only run initial scroll restore once
+  const initialRestoreDone = useRef(false);
+
   /**
    * On server data load, we map messages to local ChatMessageProps and
    * also store any 'sources' in the chatSourcesAtom (so pins and selection work).
@@ -313,43 +319,69 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
   // Scroll when messages change
   useEffect(() => {
-    scrollToBottom();
+    if (autoScrollRef.current) {
+      scrollToBottom();
+    }
   }, [combinedMessages, scrollToBottom]);
 
   // Restore persisted conversation + scroll
   useEffect(() => {
     if (chatTrayState.conversationId) {
+      // open the cached conversation and immediately refresh first page
       loadConversation(chatTrayState.conversationId);
+      setShowLoad(false);
+      // explicit refresh to ensure new messages are fetched even if cached
+      fetchChatMessages({
+        variables: {
+          conversationId: chatTrayState.conversationId,
+          limit: 10,
+        },
+        fetchPolicy: "network-only",
+      });
     } else if (chatTrayState.isNewChat) {
       startNewChat();
     }
-    // restore scroll after messages render
-    setTimeout(() => {
-      if (messagesContainerRef.current) {
-        messagesContainerRef.current.scrollTo({ top: chatTrayState.scrollOffset });
-      }
-    }, 0);
   }, []);
 
-  // Persist on unmount or when id/newChat change
+  // Once messages arrive, restore the scroll offset exactly once
   useEffect(() => {
-    return () => {
-      if (messagesContainerRef.current) {
-        setChatTrayState({
-          conversationId: selectedConversationId ?? null,
-          isNewChat,
-          scrollOffset: messagesContainerRef.current.scrollTop,
-        });
-      }
-    };
+    if (
+      !initialRestoreDone.current &&
+      chatTrayState.conversationId &&
+      selectedConversationId === chatTrayState.conversationId &&
+      combinedMessages.length > 0 &&
+      messagesContainerRef.current
+    ) {
+      const container = messagesContainerRef.current;
+      container.scrollTo({ top: chatTrayState.scrollOffset });
+      // update auto scroll flag based on restored position
+      const dist =
+        container.scrollHeight - chatTrayState.scrollOffset - container.clientHeight;
+      autoScrollRef.current = dist < 100;
+      initialRestoreDone.current = true;
+    }
+  }, [combinedMessages, chatTrayState.conversationId, chatTrayState.scrollOffset, selectedConversationId]);
+
+  // Keep chatTrayState atom in sync with current conversation mode
+  useEffect(() => {
+    setChatTrayState((prev) => ({
+      ...prev,
+      conversationId: selectedConversationId ?? null,
+      isNewChat,
+    }));
   }, [selectedConversationId, isNewChat, setChatTrayState]);
 
   // Track scroll to update offset live
   const handlePersistedScroll = useCallback(() => {
-    if (messagesContainerRef.current) {
-      const offset = messagesContainerRef.current.scrollTop;
-      setChatTrayState((prev) => ({ ...prev, scrollOffset: offset }));
-    }
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const offset = container.scrollTop;
+    setChatTrayState((prev) => ({ ...prev, scrollOffset: offset }));
+
+    // Disable auto-scroll if the user is more than 100 px from bottom
+    const distanceFromBottom = container.scrollHeight - offset - container.clientHeight;
+    autoScrollRef.current = distanceFromBottom < 100;
   }, [setChatTrayState]);
 
   function appendStreamingTokenToChat(

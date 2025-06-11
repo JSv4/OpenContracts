@@ -173,14 +173,13 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
     const ref = useCallback(
       (el: HTMLLIElement | null) => {
         if (!el) return;
-
         const measured = Math.round(el.getBoundingClientRect().height);
 
-        /* Update height only if it changed by ≥1 px.                       *
-         * Use functional state to avoid stale closure problems.            */
+        // update ONLY if row had not been measured before
         setRowHeights((prev) => {
-          if (index >= prev.length) return prev; // safety
-          if (Math.abs(prev[index] - measured) < 1) return prev; // no change
+          if (index >= prev.length) return prev;
+          if (prev[index] !== DEFAULT_ROW_HEIGHT) return prev;  // already stable
+          if (Math.abs(prev[index] - measured) < 1) return prev; // same
           const next = [...prev];
           next[index] = measured;
           return next;

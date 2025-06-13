@@ -1,6 +1,8 @@
 """Clean PydanticAI implementation following PydanticAI patterns."""
 
 import dataclasses
+import inspect
+import json
 import logging
 from collections.abc import AsyncGenerator
 from typing import Any, Callable, Optional, Union
@@ -32,6 +34,7 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.agents.core_agents import (
     AgentConfig,
+    ApprovalNeededEvent,
     ContentEvent,
     CoreAgentBase,
     CoreConversationManager,
@@ -40,14 +43,15 @@ from opencontractserver.llms.agents.core_agents import (
     CorpusAgentContext,
     DocumentAgentContext,
     FinalEvent,
+    MessageState,
     SourceEvent,
     SourceNode,
     ThoughtEvent,
-    UnifiedChatResponse,
     UnifiedStreamEvent,
     get_default_config,
 )
 from opencontractserver.llms.agents.timeline_stream_mixin import TimelineStreamMixin
+from opencontractserver.llms.exceptions import ToolConfirmationRequired
 from opencontractserver.llms.tools.core_tools import (
     aadd_document_note,
     aget_corpus_description,
@@ -98,7 +102,7 @@ def _to_source_node(raw: Any) -> SourceNode:
 # ---------------------------------------------------------------------------
 
 
-class PydanticAICoreAgent(TimelineStreamMixin, CoreAgentBase):
+class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
     """PydanticAI implementation of CoreAgentBase following PydanticAI patterns."""
 
     def __init__(
@@ -166,48 +170,33 @@ class PydanticAICoreAgent(TimelineStreamMixin, CoreAgentBase):
 
         return history or None
 
-    async def chat(self, message: str, **kwargs) -> UnifiedChatResponse:
-        """Send a message and get a complete response using PydanticAI Agent.run()."""
+    async def _chat_raw(
+        self, message: str, **kwargs
+    ) -> tuple[str, list[SourceNode], dict]:
+        """Low-level chat; returns content, sources, metadata (no DB ops)."""
         logger.info(f"[PydanticAI sync chat] Starting chat with message: {message!r}")
-        user_msg_id, llm_msg_id = await self._initialise_llm_message(message)
 
         message_history = await self._get_message_history()
 
-        try:
-            # Prepare parameters for run(); include history only if available
-            run_kwargs: dict[str, Any] = {"deps": self.agent_deps}
-            if message_history:
-                run_kwargs["message_history"] = message_history
-            run_kwargs.update(kwargs)
-            run_result = await self.pydantic_ai_agent.run(message, **run_kwargs)
+        # Prepare parameters for run(); include history only if available
+        run_kwargs: dict[str, Any] = {"deps": self.agent_deps}
+        if message_history:
+            run_kwargs["message_history"] = message_history
+        run_kwargs.update(kwargs)
 
-            llm_response_content = str(run_result.data)
-            logger.debug(f"[PydanticAI chat] llm_response_content: {dir(run_result)}")
+        run_result = await self.pydantic_ai_agent.run(message, **run_kwargs)
 
-            # Extract and convert sources from result if available
-            sources = [_to_source_node(s) for s in getattr(run_result, "sources", [])]
+        llm_response_content = str(run_result.data)
+        sources = [
+            self._normalise_source(s) for s in getattr(run_result, "sources", [])
+        ]
+        usage_data = _usage_to_dict(run_result.usage())
 
-            usage_data = _usage_to_dict(run_result.usage())
-
-            timeline: list[TimelineEntry] = []  # For reconstructing reasoning chain
-
-            # Finalize the message atomically
-            await self._finalise_llm_message(
-                llm_msg_id, llm_response_content, sources, usage_data, timeline
-            )
-
-            return UnifiedChatResponse(
-                content=llm_response_content,
-                sources=sources,
-                user_message_id=user_msg_id,
-                llm_message_id=llm_msg_id,
-                metadata={"usage": usage_data, "timeline": timeline},
-            )
-        except Exception as e:
-            # Cancel placeholder message on error
-            await self.cancel_message(llm_msg_id, f"Error: {str(e)}")
-            logger.exception(f"Error in PydanticAI chat: {e}")
-            raise
+        return (
+            llm_response_content,
+            sources,
+            {"usage": usage_data, "framework": "pydantic_ai"},
+        )
 
     # NOTE: This method was previously called ``stream``.  It is now renamed
     # to ``_stream_core`` so that the TimelineStreamMixin can wrap it and take
@@ -365,10 +354,172 @@ class PydanticAICoreAgent(TimelineStreamMixin, CoreAgentBase):
                 content="",  # kept empty
             )
 
+        except ToolConfirmationRequired as e:
+            # Handle pause during streaming
+            logger.info(
+                "[PydanticAI stream] Pausing – tool '%s' requires approval.",
+                e.tool_name,
+            )
+
+            await self.complete_message(
+                llm_msg_id,
+                content="Awaiting user approval for tool execution.",
+                metadata={
+                    "state": MessageState.AWAITING_APPROVAL,
+                    "pending_tool_call": {
+                        "name": e.tool_name,
+                        "arguments": e.tool_args,
+                        "tool_call_id": e.tool_call_id,
+                    },
+                    "framework": "pydantic_ai",
+                },
+            )
+
+            # Emit explicit approval-needed event (non-final).
+            yield ApprovalNeededEvent(
+                pending_tool_call={
+                    "name": e.tool_name,
+                    "arguments": e.tool_args,
+                    "tool_call_id": e.tool_call_id,
+                },
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata={"state": MessageState.AWAITING_APPROVAL},
+            )
+            return
+
         except Exception as e:
             await self.cancel_message(llm_msg_id, f"Error: {str(e)}")
             logger.exception(f"Error in PydanticAI stream: {e}")
             raise
+
+    async def resume_with_approval(
+        self,
+        llm_message_id: int,
+        approved: bool,
+        **kwargs,
+    ):
+        """Resume a paused run after an approval decision."""
+
+        from django.core.exceptions import ObjectDoesNotExist
+
+        from opencontractserver.conversations.models import ChatMessage
+
+        try:
+            paused_msg = await ChatMessage.objects.aget(id=llm_message_id)
+        except ObjectDoesNotExist:  # pragma: no cover – defensive guard
+            raise ValueError(f"ChatMessage {llm_message_id} not found")
+
+        if paused_msg.data.get("state") != MessageState.AWAITING_APPROVAL:
+            raise ValueError("Message is not awaiting approval")
+
+        pending = paused_msg.data.get("pending_tool_call") or {}
+        tool_name = pending.get("name")
+        tool_args = pending.get("arguments", {})
+
+        # Execute if approved, else craft rejection content
+        if approved:
+            # Locate CoreTool by name among config.tools if available
+            core_tool = next(
+                (
+                    t
+                    for t in (self.config.tools or [])
+                    if getattr(t, "name", None) == tool_name
+                ),
+                None,
+            )
+            if core_tool is None:
+                # Fallback – attempt to use pydantic-ai registry
+                tool_callable = self.pydantic_ai_agent._function_tools.get(tool_name)
+                if tool_callable is None:
+                    raise ValueError(f"Tool '{tool_name}' not found for execution")
+
+                # tool_callable expects ctx first; provide minimal stub
+                class _EmptyCtx:  # noqa: D401 – simple placeholder
+                    tool_call_id = pending.get("tool_call_id")
+
+                result = await tool_callable(_EmptyCtx(), **tool_args)
+            else:
+                fn = core_tool.function
+                result = (
+                    await fn(**tool_args)
+                    if inspect.iscoroutinefunction(fn)
+                    else fn(**tool_args)
+                )
+
+            tool_result = {"result": result}
+            status_str = "approved"
+        else:
+            tool_result = {
+                "status": "rejected",
+                "reason": "User did not approve execution.",
+            }
+            status_str = "rejected"
+
+        # Append tool_return part to history and continue conversation via chat
+        from uuid import uuid4
+
+        from pydantic_ai.messages import ModelRequest, ToolReturnPart
+
+        tool_call_id = pending.get("tool_call_id") or str(uuid4())
+
+        tool_return_part = ToolReturnPart(
+            tool_name=tool_name,
+            content=json.dumps(tool_result),
+            tool_call_id=tool_call_id,
+        )
+
+        # Build a message history using conversation records up to this point
+        history = await self._get_message_history()
+        if history is None:
+            history = []
+
+        history.append(ModelRequest(parts=[tool_return_part]))
+
+        # Mark original paused message as completed so it no longer appears
+        try:
+            await self.update_message(
+                paused_msg.id,
+                paused_msg.content,
+                metadata={
+                    **paused_msg.data,
+                    "state": MessageState.COMPLETED,
+                    "approval_decision": status_str,
+                },
+            )
+        except Exception as _e:  # pragma: no cover – non-critical
+            logger.warning(
+                "Failed to update paused message state after approval: %s", _e
+            )
+
+        # Persist the raw tool result for audit trail (optional for UI)
+        try:
+            await self.store_llm_message(
+                content=json.dumps(tool_result),
+                metadata={
+                    "tool_result": True,
+                    "approval_decision": status_str,
+                },
+            )
+        except Exception as _e:  # pragma: no cover – non-critical
+            logger.debug("Could not persist tool result message: %s", _e)
+
+        # Continue via chat; honour caller preference for streaming.
+        if kwargs.pop("stream", False):
+            return self.stream(
+                "Continue",
+                message_history=history,
+                **kwargs,  # type: ignore[arg-type]
+            )
+        else:
+            return await self.chat(
+                "Continue",
+                message_history=history,
+                **kwargs,
+            )
+
+    # Expose for CoreAgentBase wrapper
+    _stream_raw = _stream_core
 
 
 def _prepare_pydantic_ai_model_settings(

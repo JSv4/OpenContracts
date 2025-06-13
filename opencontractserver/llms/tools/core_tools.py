@@ -1,7 +1,9 @@
 """Framework-agnostic core tool functions for document and note operations."""
 
 import logging
+from functools import partial
 from typing import Any, Optional
+from uuid import uuid4
 
 from opencontractserver.annotations.models import Note, NoteRevision
 from opencontractserver.corpuses.models import Corpus, CorpusDescriptionRevision
@@ -320,6 +322,30 @@ async def aget_notes_for_document_corpus(
 
 
 # --------------------------------------------------------------------------- #
+# Helper for safe sync→async DB execution                                  #
+# --------------------------------------------------------------------------- #
+
+# Using `thread_sensitive=False` ensures each wrapped call executes in a fresh
+# worker-thread from the pool rather than the dedicated per-wrapper thread
+# used by the default value (``True``).  This avoids the situation where the
+# underlying database connection inside that long-lived thread becomes stale
+# – a common cause of sporadic "connection is closed" / ``OperationalError``
+# during async test-runs that spin up and tear down the database repeatedly.
+
+try:
+    from channels.db import database_sync_to_async as _orig_db_sync_to_async
+
+    # The wrapped helper behaves exactly like ``database_sync_to_async`` but
+    # always opts-out of the thread-sensitive behaviour.
+    _db_sync_to_async = partial(_orig_db_sync_to_async, thread_sensitive=False)
+except ModuleNotFoundError:  # channels not installed – fall back gracefully
+    # In non-ASGI environments or during documentation builds Channels may not
+    # be available.  Degrade to the original helper so synchronous execution
+    # still works (tests will mark the ASGI paths appropriately).
+    from asgiref.sync import sync_to_async as _db_sync_to_async  # type: ignore
+
+
+# --------------------------------------------------------------------------- #
 # Plain-text extract helpers                                                  #
 # --------------------------------------------------------------------------- #
 
@@ -411,9 +437,7 @@ async def aload_document_txt_extract(
     refresh: bool = False,
 ) -> str:
     """Async wrapper around :func:`load_document_txt_extract`."""
-    from channels.db import database_sync_to_async
-
-    return await database_sync_to_async(load_document_txt_extract)(
+    return await _db_sync_to_async(load_document_txt_extract)(
         document_id, start, end, refresh=refresh
     )
 
@@ -465,9 +489,7 @@ async def aget_corpus_description(
     from_start: bool = True,
 ) -> str:
     """Async wrapper around :func:`get_corpus_description`."""
-    from channels.db import database_sync_to_async
-
-    return await database_sync_to_async(get_corpus_description)(
+    return await _db_sync_to_async(get_corpus_description)(
         corpus_id, truncate_length, from_start
     )
 
@@ -502,9 +524,7 @@ async def aupdate_corpus_description(
     *, corpus_id: int, new_content: str, author_id: int | None = None, author=None
 ):
     """Async wrapper around :func:`update_corpus_description`."""
-    from channels.db import database_sync_to_async
-
-    return await database_sync_to_async(update_corpus_description)(
+    return await _db_sync_to_async(update_corpus_description)(
         corpus_id=corpus_id, new_content=new_content, author_id=author_id, author=author
     )
 
@@ -548,9 +568,7 @@ async def aadd_document_note(
     creator_id: int,
     corpus_id: int | None = None,
 ):
-    from channels.db import database_sync_to_async
-
-    return await database_sync_to_async(add_document_note)(
+    return await _db_sync_to_async(add_document_note)(
         document_id=document_id,
         title=title,
         content=content,
@@ -575,9 +593,7 @@ def update_document_note(
 async def aupdate_document_note(
     *, note_id: int, new_content: str, author_id: int | None = None, author=None
 ):
-    from channels.db import database_sync_to_async
-
-    return await database_sync_to_async(update_document_note)(
+    return await _db_sync_to_async(update_document_note)(
         note_id=note_id, new_content=new_content, author_id=author_id, author=author
     )
 
@@ -630,8 +646,322 @@ async def asearch_document_notes(
     corpus_id: int | None = None,
     limit: int | None = None,
 ):
+    return await _db_sync_to_async(search_document_notes)(
+        document_id, search_term, corpus_id=corpus_id, limit=limit
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Annotation duplication helpers                                              #
+# --------------------------------------------------------------------------- #
+
+
+def duplicate_annotations_with_label(
+    annotation_ids: list[int],
+    *,
+    new_label_text: str,
+    creator_id: int,
+    label_type: str | None = None,
+) -> list[int]:
+    """Duplicate existing annotations applying *new_label_text* (synchronous).
+
+    This synchronous variant ensures the required label-set and label exist on
+    each annotation's corpus *without* relying on any helper methods grafted
+    onto the :class:`~opencontractserver.corpuses.models.Corpus` model.
+
+    Parameters
+    ----------
+    annotation_ids:
+        Primary keys of the annotations to duplicate.
+    new_label_text:
+        The text of the label to assign to the duplicates. Case-sensitive.
+    creator_id:
+        User identifier recorded as *creator* for both the duplicates and for
+        any label/label-set created on-the-fly.
+    label_type:
+        Optional label type (defaults to ``TOKEN_LABEL`` when *None*).
+
+    Returns
+    -------
+    list[int]
+        Primary keys of the newly created annotations in the same order as the
+        input list.
+    """
+
+    from django.db import transaction
+
+    from opencontractserver.annotations.models import (
+        TOKEN_LABEL,
+        Annotation,
+        AnnotationLabel,
+        LabelSet,
+    )
+
+    if label_type is None:
+        label_type = TOKEN_LABEL
+
+    # Fetch annotations; keep their database objects in memory while
+    # preserving the order of *annotation_ids*.
+    annotations = list(
+        Annotation.objects.filter(pk__in=annotation_ids).select_related(
+            "corpus", "document"
+        )
+    )
+
+    if len(annotations) != len(annotation_ids):
+        missing = set(annotation_ids) - {a.pk for a in annotations}
+        raise ValueError(f"Annotation(s) not found: {sorted(missing)}")
+
+    new_ids: list[int] = []
+    label_cache: dict[int, AnnotationLabel] = {}
+
+    with transaction.atomic():
+        for ann in annotations:
+            if ann.corpus_id is None:
+                raise ValueError(
+                    f"Annotation id={ann.pk} is not associated with a corpus and "
+                    "cannot be duplicated with a corpus label."
+                )
+
+            corpus = ann.corpus  # already fetched via select_related
+
+            # Obtain / create label for this corpus (use cache to minimise DB chatter).
+            label = label_cache.get(corpus.pk)
+            if label is None:
+                # Ensure corpus has a label-set.
+                if corpus.label_set_id is None:
+                    corpus.label_set = LabelSet.objects.create(
+                        title=f"LabelSet for Corpus {corpus.pk}",
+                        description="",
+                        creator_id=creator_id,
+                    )
+                    corpus.save(update_fields=["label_set", "modified"])
+
+                # Look for existing label with given text & type.
+                label_qs = corpus.label_set.annotation_labels.filter(
+                    text=new_label_text, label_type=label_type
+                )
+                label = label_qs.first()
+
+                if label is None:
+                    label = AnnotationLabel.objects.create(
+                        text=new_label_text,
+                        label_type=label_type,
+                        color="#05313d",
+                        description="",
+                        icon="tags",
+                        creator_id=creator_id,
+                    )
+                    corpus.label_set.annotation_labels.add(label)
+
+                label_cache[corpus.pk] = label
+
+            # Create the duplicate annotation.
+            duplicate = Annotation.objects.create(
+                page=ann.page,
+                raw_text=ann.raw_text,
+                tokens_jsons=ann.tokens_jsons,
+                bounding_box=ann.bounding_box,
+                json=ann.json,
+                parent=ann.parent,
+                annotation_type=ann.annotation_type,
+                annotation_label=label,
+                document=ann.document,
+                corpus=corpus,
+                structural=ann.structural,
+                creator_id=creator_id,
+            )
+
+            new_ids.append(duplicate.pk)
+
+    return new_ids
+
+
+async def aduplicate_annotations_with_label(
+    annotation_ids: list[int],
+    *,
+    new_label_text: str,
+    creator_id: int,
+    label_type: str | None = None,
+):
+    """Async wrapper around :func:`duplicate_annotations_with_label`."""
+    return await _db_sync_to_async(duplicate_annotations_with_label)(
+        annotation_ids,
+        new_label_text=new_label_text,
+        creator_id=creator_id,
+        label_type=label_type,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Exact-string annotation helper for PDFs                                     #
+# --------------------------------------------------------------------------- #
+
+
+def add_annotations_from_exact_strings(
+    items: list[tuple[str, str, int, int]],
+    *,
+    creator_id: int,
+) -> list[int]:
+    """Create annotations for exact string matches in documents.
+
+    Each *item* is ``(label_text, exact_string, document_id, corpus_id)``.
+
+    • PDF (application/pdf): builds token‐level annotations (TOKEN_LABEL) via PlasmaPDF.
+    • Plain-text (application/txt, text/plain): builds span annotations (SPAN_LABEL).
+
+    Other file types raise ``ValueError``.
+    """
+
+    import json
+    from collections import defaultdict
+
+    from django.db import transaction
+    from plasmapdf.models.PdfDataLayer import build_translation_layer
+    from plasmapdf.models.types import SpanAnnotation, TextSpan
+
+    from opencontractserver.annotations.models import (
+        SPAN_LABEL,
+        TOKEN_LABEL,
+        Annotation,
+    )
+    from opencontractserver.corpuses.models import Corpus
+    from opencontractserver.documents.models import Document
+
+    # Group items by (doc_id, corpus_id) to avoid loading the same PAWLS layer multiple times.
+    grouped: dict[tuple[int, int], list[tuple[str, str]]] = defaultdict(list)
+    for label_text, exact_str, doc_id, corpus_id in items:
+        grouped[(doc_id, corpus_id)].append((label_text, exact_str))
+
+    created_ids: list[int] = []
+
+    for (doc_id, corpus_id), tuples in grouped.items():
+        # Validate document & corpus linkage.
+        try:
+            doc = Document.objects.get(pk=doc_id)
+        except Document.DoesNotExist as exc:
+            raise ValueError(f"Document id={doc_id} does not exist") from exc
+
+        try:
+            corpus = Corpus.objects.get(pk=corpus_id)
+        except Corpus.DoesNotExist as exc:
+            raise ValueError(f"Corpus id={corpus_id} does not exist") from exc
+
+        if not corpus.documents.filter(pk=doc_id).exists():
+            raise ValueError(
+                f"Document id={doc_id} is not linked to corpus id={corpus_id}."
+            )
+
+        file_type = doc.file_type.lower()
+
+        if file_type == "application/pdf":
+            if not doc.pawls_parse_file:
+                raise ValueError(
+                    f"PDF document id={doc_id} lacks a PAWLS layer; cannot annotate."
+                )
+
+            # Load PAWLS tokens once per document.
+            doc.pawls_parse_file.open("r")
+            try:
+                pawls_tokens = json.load(doc.pawls_parse_file)
+            finally:
+                doc.pawls_parse_file.close()
+
+            pdf_layer = build_translation_layer(pawls_tokens)
+            doc_text = pdf_layer.doc_text
+
+            label_type_const = TOKEN_LABEL
+
+            def _create_annotation(pos: int, end_idx: int, label_obj):
+                span = TextSpan(
+                    id=str(uuid4()), start=pos, end=end_idx, text=doc_text[pos:end_idx]
+                )
+                span_annotation = SpanAnnotation(
+                    span=span, annotation_label=label_obj.text
+                )
+                oc_ann = pdf_layer.create_opencontract_annotation_from_span(
+                    span_annotation
+                )
+
+                return Annotation(
+                    raw_text=oc_ann["rawText"],
+                    page=oc_ann.get("page", 1),
+                    json=oc_ann["annotation_json"],
+                    annotation_label=label_obj,
+                    document=doc,
+                    corpus=corpus,
+                    creator_id=creator_id,
+                    annotation_type=TOKEN_LABEL,
+                    structural=False,
+                )
+
+        elif file_type in {"application/txt", "text/plain"}:
+            if not doc.txt_extract_file:
+                raise ValueError(
+                    f"Text document id={doc_id} lacks txt_extract_file; cannot annotate."
+                )
+            doc.txt_extract_file.open("r")
+            try:
+                doc_text = doc.txt_extract_file.read()
+            finally:
+                doc.txt_extract_file.close()
+
+            label_type_const = SPAN_LABEL
+
+            def _create_annotation(pos: int, end_idx: int, label_obj):
+                return Annotation(
+                    raw_text=doc_text[pos:end_idx],
+                    page=1,
+                    json={"start": pos, "end": end_idx},
+                    annotation_label=label_obj,
+                    document=doc,
+                    corpus=corpus,
+                    creator_id=creator_id,
+                    annotation_type=SPAN_LABEL,
+                    structural=False,
+                )
+
+        else:
+            raise ValueError(
+                f"Unsupported file_type {doc.file_type} for document id={doc_id}"
+            )
+
+        # Common creation loop (works for both PDF and text).
+        with transaction.atomic():
+            for label_text, exact_str in tuples:
+                label_obj = corpus.ensure_label_and_labelset(
+                    label_text=label_text,
+                    creator_id=creator_id,
+                    label_type=label_type_const,
+                )
+
+                start_idx = 0
+                while True:
+                    pos = doc_text.find(exact_str, start_idx)
+                    if pos == -1:
+                        break
+
+                    end_idx = pos + len(exact_str)
+
+                    annot_obj = _create_annotation(pos, end_idx, label_obj)
+                    annot_obj.save()
+
+                    created_ids.append(annot_obj.pk)
+
+                    start_idx = end_idx
+
+    return created_ids
+
+
+async def aadd_annotations_from_exact_strings(
+    items: list[tuple[str, str, int, int]],
+    *,
+    creator_id: int,
+):
+    """Async wrapper around :func:`add_annotations_from_exact_strings`."""
+
     from channels.db import database_sync_to_async
 
-    return await database_sync_to_async(search_document_notes)(
-        document_id, search_term, corpus_id=corpus_id, limit=limit
+    return await database_sync_to_async(add_annotations_from_exact_strings)(
+        items, creator_id=creator_id
     )

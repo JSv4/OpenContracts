@@ -21,10 +21,16 @@ class ToolMetadata:
 
 @dataclass
 class CoreTool:
-    """Framework-agnostic tool representation."""
+    """Framework-agnostic tool representation.
+
+    ``requires_approval`` marks tools that must be explicitly approved by a
+    human before execution.  Framework adapters **must** honour this flag
+    and implement a veto-gate when set to ``True``.
+    """
 
     function: Callable
     metadata: ToolMetadata
+    requires_approval: bool = False
 
     @classmethod
     def from_function(
@@ -33,6 +39,8 @@ class CoreTool:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parameter_descriptions: Optional[dict[str, str]] = None,
+        *,
+        requires_approval: bool = False,
     ) -> "CoreTool":
         """Create a CoreTool from a Python function.
 
@@ -41,6 +49,7 @@ class CoreTool:
             name: Optional custom name (defaults to function name)
             description: Optional custom description (extracted from docstring if not provided)
             parameter_descriptions: Optional parameter descriptions
+            requires_approval: Whether the tool requires explicit approval
 
         Returns:
             CoreTool instance
@@ -59,7 +68,9 @@ class CoreTool:
             parameter_descriptions=parameter_descriptions,
         )
 
-        return cls(function=func, metadata=metadata)
+        return cls(
+            function=func, metadata=metadata, requires_approval=requires_approval
+        )
 
     @property
     def name(self) -> str:
@@ -168,6 +179,8 @@ class UnifiedToolFactory:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parameter_descriptions: Optional[dict[str, str]] = None,
+        *,
+        requires_approval: bool = False,
     ) -> Any:
         """Create a framework-specific tool directly from a function.
 
@@ -177,6 +190,7 @@ class UnifiedToolFactory:
             name: Optional custom name
             description: Optional custom description
             parameter_descriptions: Optional parameter descriptions
+            requires_approval: Whether the tool requires explicit approval
 
         Returns:
             Framework-specific tool instance
@@ -191,6 +205,7 @@ class UnifiedToolFactory:
                 name=name,
                 description=description,
                 parameter_descriptions=parameter_descriptions,
+                requires_approval=requires_approval,
             )
         elif framework == AgentFramework.PYDANTIC_AI:
             from opencontractserver.llms.tools.pydantic_ai_tools import (
@@ -202,6 +217,7 @@ class UnifiedToolFactory:
                 name=name,
                 description=description,
                 parameter_descriptions=parameter_descriptions,
+                requires_approval=requires_approval,
             )
         else:
             raise ValueError(f"Unsupported framework: {framework}")

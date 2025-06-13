@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.test import TestCase, TransactionTestCase
 
-from opencontractserver.annotations.models import Note
+from opencontractserver.annotations.models import TOKEN_LABEL, Annotation, Note
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.tools import (
@@ -15,7 +15,9 @@ from opencontractserver.llms.tools import (
 from opencontractserver.llms.tools.core_tools import (
     _token_count,
     add_document_note,
+    aduplicate_annotations_with_label,
     aload_document_txt_extract,
+    duplicate_annotations_with_label,
     get_corpus_description,
     load_document_txt_extract,
     search_document_notes,
@@ -217,14 +219,62 @@ class TestLLMTools(TestCase):
         self.note.refresh_from_db()
         self.assertEqual(self.note.content, new_content)
 
+    # ------------------------------------------------------------------
+    # New tests for annotation duplication helper
+    # ------------------------------------------------------------------
 
-class AsyncTestLLMTools(TransactionTestCase):
+    def test_duplicate_annotations_with_label(self):
+        """Duplicate an annotation and ensure label/labelset are created."""
+
+        # Create source annotation (no label-set on corpus yet).
+        source_ann = Annotation.objects.create(
+            page=1,
+            raw_text="Sample annotation",
+            document=self.doc,
+            corpus=self.corpus,
+            creator=self.user,
+        )
+
+        # Sanity: corpus should not have a label_set at this point.
+        self.assertIsNone(self.corpus.label_set)
+
+        new_ids = duplicate_annotations_with_label(
+            [source_ann.id],
+            new_label_text="NewLabel",
+            creator_id=self.user.id,
+        )
+
+        # One duplicate should be produced.
+        self.assertEqual(len(new_ids), 1)
+
+        duplicate = Annotation.objects.get(pk=new_ids[0])
+
+        # Corpus now has a label_set and the label inside it.
+        self.corpus.refresh_from_db()
+        self.assertIsNotNone(self.corpus.label_set)
+
+        label = duplicate.annotation_label
+        self.assertIsNotNone(label)
+        self.assertEqual(label.text, "NewLabel")
+        self.assertEqual(label.label_type, TOKEN_LABEL)
+        self.assertIn(label, self.corpus.label_set.annotation_labels.all())
+
+        # Duplicate keeps original fields.
+        self.assertEqual(duplicate.page, source_ann.page)
+        self.assertEqual(duplicate.raw_text, source_ann.raw_text)
+        self.assertEqual(duplicate.document_id, source_ann.document_id)
+        self.assertEqual(duplicate.corpus_id, source_ann.corpus_id)
+        self.assertEqual(duplicate.creator_id, self.user.id)
+
+
+class AsyncTestDuplicateTools(TransactionTestCase):
     """Separate test class for async tests to avoid database connection issues."""
 
     @classmethod
     def setUpClass(cls):
         """Set up test data."""
         super().setUpClass()
+
         cls.user = User.objects.create_user(username="testuser_async", password="12345")
 
         # Create a test document with txt extract file
@@ -240,6 +290,90 @@ class AsyncTestLLMTools(TransactionTestCase):
         )
         cls.doc.txt_extract_file.save(
             "test_extract_async.txt", ContentFile(cls.txt_content.encode())
+        )
+
+        cls.corpus = Corpus.objects.create(
+            title="Async Corpus",
+            creator=cls.user,
+        )
+
+        cls.annotation = Annotation.objects.create(
+            page=1,
+            raw_text="Async annotation",
+            document=cls.doc,
+            corpus=cls.corpus,
+            creator=cls.user,
+        )
+
+    # ------------------------------------------------------------------
+    # New async tests for annotation duplication helper - why separate class?
+    # Why indeed... some deep dark async f*ckery going on here.
+    # ------------------------------------------------------------------
+
+    async def test_aduplicate_annotations_with_label(self):
+        """Async duplication should mirror sync behaviour."""
+
+        new_ids = await aduplicate_annotations_with_label(
+            [self.annotation.id],
+            new_label_text="AsyncNewLabel",
+            creator_id=self.user.id,
+        )
+
+        self.assertEqual(len(new_ids), 1)
+
+        # Pull related objects in a single DB round-trip so attribute access
+        # below doesn't trigger additional (sync-only) queries.
+        new_ann = await Annotation.objects.select_related("annotation_label").aget(
+            pk=new_ids[0]
+        )
+
+        # corpus should now have label_set populated
+        corpus_refresh = await Corpus.objects.select_related("label_set").aget(
+            pk=self.corpus.id
+        )
+        self.assertIsNotNone(corpus_refresh.label_set)
+
+        self.assertIsNotNone(new_ann.annotation_label)
+        self.assertEqual(new_ann.annotation_label.text, "AsyncNewLabel")
+        self.assertEqual(new_ann.creator_id, self.user.id)
+
+
+class AsyncTestLLMTools(TestCase):
+    """Separate test class for async tests to avoid database connection issues."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Set up test data."""
+        super().setUpClass()
+
+        cls.user = User.objects.create_user(username="testuser_async", password="12345")
+
+        # Create a test document with txt extract file
+        cls.doc = Document.objects.create(
+            creator=cls.user,
+            title="Async Test Document",
+            description="Test Description",
+        )
+
+        # Create mock txt extract content and file
+        cls.txt_content = (
+            "This is test text extract content for async document analysis."
+        )
+        cls.doc.txt_extract_file.save(
+            "test_extract_async.txt", ContentFile(cls.txt_content.encode())
+        )
+
+        cls.corpus = Corpus.objects.create(
+            title="Async Corpus",
+            creator=cls.user,
+        )
+
+        cls.annotation = Annotation.objects.create(
+            page=1,
+            raw_text="Async annotation",
+            document=cls.doc,
+            corpus=cls.corpus,
+            creator=cls.user,
         )
 
     async def test_aload_document_txt_extract_success(self):

@@ -27,6 +27,7 @@ class MessageState:
     COMPLETED = "completed"
     ERROR = "error"
     CANCELLED = "cancelled"
+    AWAITING_APPROVAL = "awaiting_approval"
 
 
 @dataclass
@@ -136,11 +137,30 @@ class FinalEvent(_BaseStreamEvt):
     is_complete: bool = True
 
 
+# ------------------------------------------------------------------
+# Approval gating – emitted when execution pauses for human approval.
+# ------------------------------------------------------------------
+
+
+@dataclass
+class ApprovalNeededEvent(_BaseStreamEvt):
+    """Stream event indicating the agent is waiting for tool approval."""
+
+    type: Literal["approval_needed"] = "approval_needed"
+    pending_tool_call: dict[str, Any] = field(default_factory=dict)
+
+
 # A discriminated union over all event types. The Literal strings defined in each
 # dataclass act as simple runtime markers that make it easy for downstream code
 # (e.g. WebSocket serializers) to switch on the `.type` attribute without costly
 # ``isinstance`` checks.
-UnifiedStreamEvent = Union[ThoughtEvent, ContentEvent, SourceEvent, FinalEvent]
+UnifiedStreamEvent = Union[
+    ThoughtEvent,
+    ContentEvent,
+    SourceEvent,
+    ApprovalNeededEvent,
+    FinalEvent,
+]
 
 
 @dataclass
@@ -171,6 +191,8 @@ class AgentConfig:
     system_prompt: Optional[str] = None
     temperature: float = 0.7
     max_tokens: Optional[int] = None
+    # NEW ➜ frequency (in tokens) for interim DB updates during streaming
+    stream_update_freq: int = 50
 
     # Enhanced conversation management
     conversation: Optional[Conversation] = None
@@ -287,9 +309,38 @@ class CoreAgent(Protocol):
         """Get all messages in the current conversation."""
         ...
 
+    # ------------------------------------------------------------------
+    # Human-in-the-loop: approve / resume
+    # ------------------------------------------------------------------
+
+    async def resume_with_approval(
+        self,
+        llm_message_id: int,
+        approved: bool,
+        **kwargs,
+    ) -> Union[UnifiedChatResponse, AsyncGenerator[UnifiedStreamEvent, None]]:
+        """Resume a paused conversation after an approval decision.
+
+        Args:
+            llm_message_id: The message that is currently *awaiting* approval.
+            approved: ``True`` if the user approved execution; ``False`` if
+                rejected.
+            **kwargs: Forwarded to the underlying ``chat`` / ``stream``.
+        """
+        ...
+
 
 class CoreAgentBase(ABC):
-    """Base implementation of CoreAgent with common functionality."""
+    """Base implementation of CoreAgent with common functionality.
+
+    Sub-classes **must** implement the framework-specific low-level hooks
+
+        async def _chat_raw(self, message: str, **kw) -> tuple[str, list[SourceNode], dict]:
+        async def _stream_raw(self, message: str, **kw) -> AsyncGenerator[UnifiedStreamEvent, None]:
+
+    All DB-persistence, approval gating and incremental message updates are
+    handled by the concrete ``chat`` / ``stream`` wrappers defined here.
+    """
 
     def __init__(
         self, config: AgentConfig, conversation_manager: "CoreConversationManager"
@@ -386,6 +437,235 @@ class CoreAgentBase(ABC):
             return await self.store_user_message(content)
         else:
             return await self.store_llm_message(content)
+
+    # ------------------------------------------------------------------
+    # Framework-specific hooks – **must** be implemented by adapters.
+    # ------------------------------------------------------------------
+
+    async def _chat_raw(
+        self, message: str, **kwargs
+    ) -> tuple[str, list[SourceNode], dict]:  # pragma: no cover – abstract
+        """Return *(content, sources, metadata)*.
+
+        Default implementation raises ``NotImplementedError`` so sub-classes
+        are forced to provide their own version.
+        """
+        raise NotImplementedError
+
+    async def _stream_raw(
+        self, message: str, **kwargs
+    ) -> AsyncGenerator[UnifiedStreamEvent, None]:  # pragma: no cover – abstract
+        """Yield framework-native events (ThoughtEvent / ContentEvent / …).
+
+        The base wrapper will take care of DB side-effects.
+        """
+        raise NotImplementedError
+
+    # ------------------------------------------------------------------
+    # Public chat / stream wrappers – universal across frameworks.
+    # ------------------------------------------------------------------
+
+    async def chat(self, message: str, **kwargs) -> UnifiedChatResponse:  # type: ignore[override]
+        """Framework-agnostic chat wrapper that transparently persists state."""
+
+        from opencontractserver.llms.exceptions import ToolConfirmationRequired
+
+        # Honour per-call override for message persistence
+        store_messages: bool = kwargs.pop("store_messages", True)
+
+        # 1️⃣  Persist user prompt (if configured)
+        user_msg_id: int | None = None
+        llm_msg_id: int | None = None
+
+        if store_messages and self.conversation_manager.config.store_user_messages:
+            user_msg_id = await self.store_user_message(message)
+
+        if store_messages and self.conversation_manager.config.store_llm_messages:
+            llm_msg_id = await self.create_placeholder_message("LLM")
+
+        try:
+            # 2️⃣  Delegate to framework
+            content, sources, meta = await self._chat_raw(message, **kwargs)
+
+            # 3️⃣  Finalise message
+            if llm_msg_id:
+                await self.complete_message(llm_msg_id, content, sources, meta)
+
+            return UnifiedChatResponse(
+                content=content,
+                sources=sources,
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata=meta or {},
+            )
+
+        except ToolConfirmationRequired as e:
+            # Mark message as awaiting approval and bubble up light response
+            if llm_msg_id is None:
+                # We may reach here if placeholder wasn't created (anonymous?), create one now
+                llm_msg_id = await self.create_placeholder_message("LLM")
+
+            await self.pause_for_approval(
+                llm_msg_id,
+                tool_name=e.tool_name,
+                tool_args=e.tool_args,
+                tool_call_id=e.tool_call_id,
+            )
+
+            return UnifiedChatResponse(
+                content="Action required: approval needed to run tool.",
+                sources=[],
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata={
+                    "state": MessageState.AWAITING_APPROVAL,
+                    "pending_tool_call": {
+                        "name": e.tool_name,
+                        "arguments": e.tool_args,
+                        "tool_call_id": e.tool_call_id,
+                    },
+                },
+            )
+
+        except Exception as exc:
+            if llm_msg_id:
+                await self.cancel_message(llm_msg_id, f"Error: {exc}")
+            raise
+
+    # NOTE: Streaming wrapper is more involved but follows same pattern
+    async def stream(self, message: str, **kwargs):  # type: ignore[override]
+        """Framework-agnostic streaming wrapper with persistence."""
+
+        from opencontractserver.llms.exceptions import ToolConfirmationRequired
+
+        store_messages: bool = kwargs.pop("store_messages", True)
+
+        user_msg_id: int | None = None
+        llm_msg_id: int | None = None
+
+        if store_messages and self.conversation_manager.config.store_user_messages:
+            user_msg_id = await self.store_user_message(message)
+
+        if store_messages and self.conversation_manager.config.store_llm_messages:
+            llm_msg_id = await self.create_placeholder_message("LLM")
+
+        accumulated_content: str = ""
+        accumulated_sources: list[SourceNode] = []
+        token_counter = 0
+
+        try:
+            async for evt in self._stream_raw(message, **kwargs):
+
+                # Merge sources for later finalisation
+                if hasattr(evt, "sources") and evt.sources:
+                    accumulated_sources.extend(evt.sources)
+
+                # Track accumulating content for incremental updates
+                if hasattr(evt, "content") and evt.content:
+                    accumulated_content += evt.content
+                    token_counter += 1
+
+                # Periodic DB update
+                if (
+                    llm_msg_id
+                    and token_counter % self.config.stream_update_freq == 0
+                    and accumulated_content
+                ):
+                    await self.conversation_manager.update_message_content(
+                        llm_msg_id, accumulated_content
+                    )
+
+                yield evt  # Pass through
+
+            # After generator exhausted – finalise message
+            if llm_msg_id:
+                await self.complete_message(
+                    llm_msg_id,
+                    accumulated_content,
+                    accumulated_sources,
+                    {},
+                )
+
+        except ToolConfirmationRequired as e:
+            # Finalise as awaiting approval and emit ApprovalNeededEvent
+            await self.pause_for_approval(
+                llm_msg_id,
+                tool_name=e.tool_name,
+                tool_args=e.tool_args,
+                tool_call_id=e.tool_call_id,
+            )
+
+            yield ApprovalNeededEvent(
+                pending_tool_call={
+                    "name": e.tool_name,
+                    "arguments": e.tool_args,
+                    "tool_call_id": e.tool_call_id,
+                },
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+            )
+
+        except Exception as exc:
+            if llm_msg_id:
+                await self.cancel_message(llm_msg_id, f"Error: {exc}")
+            raise
+
+    # ------------------------------------------------------------------
+    # Helper for lightweight source normalisation (framework-agnostic)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _normalise_source(raw: Any) -> SourceNode:
+        """Best-effort conversion of *raw* into a SourceNode instance."""
+        if isinstance(raw, SourceNode):
+            return raw
+
+        # Attempt to treat *raw* like a mapping
+        if hasattr(raw, "model_dump"):
+            raw = raw.model_dump()
+        if isinstance(raw, dict):
+            return SourceNode(
+                annotation_id=int(raw.get("annotation_id", 0)),
+                content=raw.get("content", raw.get("text", "")),
+                metadata=raw,
+                similarity_score=float(raw.get("similarity_score", 1.0)),
+            )
+
+        # Fallback: string or unknown – wrap in dummy SourceNode
+        return SourceNode(
+            annotation_id=0, content=str(raw), metadata={}, similarity_score=1.0
+        )
+
+    # ------------------------------------------------------------------
+    # Human-in-the-loop helpers
+    # ------------------------------------------------------------------
+
+    async def pause_for_approval(
+        self,
+        llm_message_id: int,
+        *,
+        tool_name: str,
+        tool_args: dict[str, Any],
+        tool_call_id: str | None = None,
+        framework: str = "pydantic_ai",
+    ) -> None:
+        """Mark an LLM message as *awaiting approval*.
+
+        Adapters that implement dangerous or privileged tools can call this
+        one-liner instead of re-implementing the same bookkeeping.
+        """
+        await self.complete_message(
+            llm_message_id,
+            content="Awaiting user approval for tool execution.",
+            metadata={
+                "state": MessageState.AWAITING_APPROVAL,
+                "pending_tool_call": {
+                    "name": tool_name,
+                    "arguments": tool_args,
+                    "tool_call_id": tool_call_id,
+                },
+                "framework": framework,
+            },
+        )
 
 
 class CoreDocumentAgentFactory:

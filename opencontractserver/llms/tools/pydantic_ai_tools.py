@@ -7,6 +7,7 @@ from typing import Any, Callable, Optional, get_type_hints
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai.tools import RunContext
 
+from opencontractserver.llms.exceptions import ToolConfirmationRequired
 from opencontractserver.llms.tools.tool_factory import CoreTool
 from opencontractserver.llms.vector_stores.core_vector_stores import (
     CoreAnnotationVectorStore,
@@ -101,15 +102,37 @@ class PydanticAIToolWrapper:
         # Create new signature
         new_sig = sig.replace(parameters=new_params)
 
+        # ------------------------------------------------------------------
+        # Helper that raises veto-gate exception when required.
+        # ------------------------------------------------------------------
+
+        def _maybe_raise(ctx: RunContext[PydanticAIDependencies], *a, **kw):
+            """Raise ToolConfirmationRequired if this CoreTool needs approval."""
+            if self.core_tool.requires_approval:
+                bound = inspect.signature(original_func).bind(*a, **kw)
+                bound.apply_defaults()
+
+                # pydantic-ai attaches a unique tool_call_id to the context
+                tool_call_id = getattr(ctx, "tool_call_id", None)
+
+                raise ToolConfirmationRequired(
+                    tool_name=self.core_tool.name,
+                    tool_args=dict(bound.arguments),
+                    tool_call_id=tool_call_id,
+                )
+
+        # ------------------------------------------------------------------
+
         if inspect.iscoroutinefunction(original_func):
 
             async def async_wrapper(
                 ctx: RunContext[PydanticAIDependencies], *args, **kwargs
             ):
                 """Async wrapper for PydanticAI tools."""
+                # Trigger approval gate *before* attempting execution.
+                _maybe_raise(ctx, *args, **kwargs)
+
                 try:
-                    # Dependencies from ctx.deps can be accessed here if original_func needs them
-                    # For now, CoreTool functions are generic and don't use ctx.
                     return await original_func(*args, **kwargs)
                 except Exception as e:
                     logger.error(f"Error in tool {func_name}: {e}")
@@ -127,12 +150,14 @@ class PydanticAIToolWrapper:
             return async_wrapper
         else:
             # Convert sync function to async
+
             async def sync_to_async_wrapper(
                 ctx: RunContext[PydanticAIDependencies], *args, **kwargs
             ):
                 """Sync to async wrapper for PydanticAI tools."""
+                _maybe_raise(ctx, *args, **kwargs)
+
                 try:
-                    # Dependencies from ctx.deps can be accessed here if original_func needs them
                     return original_func(*args, **kwargs)
                 except Exception as e:
                     logger.error(f"Error in tool {func_name}: {e}")
@@ -219,6 +244,8 @@ class PydanticAIToolFactory:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parameter_descriptions: Optional[dict[str, str]] = None,
+        *,
+        requires_approval: bool = False,
     ) -> Callable:
         """Create a PydanticAI-compatible callable tool directly from a Python function.
 
@@ -227,6 +254,7 @@ class PydanticAIToolFactory:
             name: Optional custom name
             description: Optional custom description
             parameter_descriptions: Optional parameter descriptions
+            requires_approval: Whether the tool requires approval
 
         Returns:
             PydanticAI-compatible callable function
@@ -236,6 +264,7 @@ class PydanticAIToolFactory:
             name=name,
             description=description,
             parameter_descriptions=parameter_descriptions,
+            requires_approval=requires_approval,
         )
         return PydanticAIToolWrapper(core_tool).callable_function
 

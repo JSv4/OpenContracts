@@ -27,6 +27,7 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms import agents
 from opencontractserver.llms.agents.core_agents import (
+    ApprovalNeededEvent,
     ContentEvent,
     FinalEvent,
     SourceEvent,
@@ -243,6 +244,15 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
         try:
             text_data_json: dict[str, Any] = json.loads(text_data)
+
+            # ------------------------------------------------------------------
+            # 0. Approval workflow messages (no 'query' field expected)
+            # ------------------------------------------------------------------
+
+            if "approval_decision" in text_data_json:
+                await self._handle_approval_decision(text_data_json)
+                return
+
             user_query: str = text_data_json.get("query", "").strip()
 
             if not user_query:
@@ -256,6 +266,14 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             logger.debug(
                 f"[Session {self.session_id}] Received user query: '{user_query}'"
             )
+
+            # ------------------------------------------------------------------
+            # 0. Approval workflow messages (no 'query' field expected)
+            # ------------------------------------------------------------------
+
+            if "approval_decision" in text_data_json:
+                await self._handle_approval_decision(text_data_json)
+                return
 
             # If we haven't yet created an agent, do it now
             if self.agent is None:
@@ -397,6 +415,17 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                                 },
                             )
 
+                    elif isinstance(event, ApprovalNeededEvent):
+                        # Tell front-end we are paused waiting for approval
+                        await self.send_standard_message(
+                            msg_type="ASYNC_APPROVAL_NEEDED",
+                            content="",
+                            data={
+                                "message_id": event.llm_message_id,
+                                "pending_tool_call": event.pending_tool_call,
+                            },
+                        )
+
                     elif isinstance(event, FinalEvent):
                         # Prepare sources data (if not already sent)
                         sources_payload = [s.to_dict() for s in event.sources]
@@ -473,4 +502,84 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 msg_type="SYNC_CONTENT",
                 content="",
                 data={"error": f"Error during message processing: {e}"},
+            )
+
+    # ------------------------------------------------------------------
+    # Approval gate helper
+    # ------------------------------------------------------------------
+
+    async def _handle_approval_decision(self, payload: dict[str, Any]) -> None:
+        """Process an approval / rejection coming from the front-end.
+
+        Expected JSON payload:
+        {
+            "approval_decision": true | false,
+            "llm_message_id": 123
+        }
+        """
+
+        approved: bool = bool(payload.get("approval_decision"))
+        llm_msg_id = payload.get("llm_message_id")
+
+        if llm_msg_id is None:
+            await self.send_standard_message(
+                msg_type="SYNC_CONTENT",
+                content="",
+                data={"error": "llm_message_id missing in approval payload"},
+            )
+            return
+
+        if self.agent is None:
+            await self.send_standard_message(
+                msg_type="SYNC_CONTENT",
+                content="",
+                data={"error": "Agent not initialised for approval"},
+            )
+            return
+
+        try:
+            # Stream the resumed answer so UX stays consistent
+            async for event in self.agent.resume_with_approval(
+                llm_msg_id, approved, stream=True
+            ):
+                # Re-use the same event → websocket mapping logic
+                if isinstance(event, ThoughtEvent):
+                    await self.send_standard_message(
+                        msg_type="ASYNC_THOUGHT",
+                        content=event.thought,
+                        data={"message_id": event.llm_message_id, **event.metadata},
+                    )
+                elif isinstance(event, ContentEvent):
+                    if event.content:
+                        await self.send_standard_message(
+                            msg_type="ASYNC_CONTENT",
+                            content=event.content,
+                            data={"message_id": event.llm_message_id},
+                        )
+                elif isinstance(event, SourceEvent):
+                    await self.send_standard_message(
+                        msg_type="ASYNC_SOURCES",
+                        content="",
+                        data={
+                            "message_id": event.llm_message_id,
+                            "sources": [s.to_dict() for s in event.sources],
+                        },
+                    )
+                elif isinstance(event, FinalEvent):
+                    await self.send_standard_message(
+                        msg_type="ASYNC_FINISH",
+                        content=event.accumulated_content or event.content,
+                        data={
+                            "sources": [s.to_dict() for s in event.sources],
+                            "message_id": event.llm_message_id,
+                            "timeline": event.metadata.get("timeline", []),
+                        },
+                    )
+
+        except Exception as e:
+            logger.error("Approval resume error: %s", e, exc_info=True)
+            await self.send_standard_message(
+                msg_type="SYNC_CONTENT",
+                content="",
+                data={"error": f"Failed to resume after approval: {e}"},
             )

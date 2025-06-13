@@ -286,6 +286,64 @@ class Corpus(TreeNode):
         """
         return generate_embeddings_from_text(text, corpus_id=self.pk)
 
+    # --------------------------------------------------------------------- #
+    # Label helper                                                         #
+    # --------------------------------------------------------------------- #
+
+    def ensure_label_and_labelset(
+        self,
+        *,
+        label_text: str,
+        creator_id: int,
+        label_type: str | None = None,
+        color: str = "#05313d",
+        description: str = "",
+        icon: str = "tags",
+    ):
+        """Return an AnnotationLabel for *label_text*, creating prerequisites.
+
+        Ensures the corpus has a label-set and that a label with the given text
+        & type exists within it. Returns that label instance.
+        """
+
+        from django.db import transaction
+
+        from opencontractserver.annotations.models import (
+            TOKEN_LABEL,
+            AnnotationLabel,
+            LabelSet,
+        )
+
+        if label_type is None:
+            label_type = TOKEN_LABEL
+
+        with transaction.atomic():
+            # Create label-set lazily.
+            if self.label_set is None:
+                self.label_set = LabelSet.objects.create(
+                    title=f"Corpus {self.pk} Set",
+                    description="Auto-created label set",
+                    creator_id=creator_id,
+                )
+                self.save(update_fields=["label_set", "modified"])
+
+            # Fetch/create label inside that set.
+            label = self.label_set.annotation_labels.filter(
+                text=label_text, label_type=label_type
+            ).first()
+            if label is None:
+                label = AnnotationLabel.objects.create(
+                    text=label_text,
+                    label_type=label_type,
+                    color=color,
+                    description=description,
+                    icon=icon,
+                    creator_id=creator_id,
+                )
+                self.label_set.annotation_labels.add(label)
+
+        return label
+
 
 # Model for Django Guardian permissions... trying to improve performance...
 class CorpusUserObjectPermission(UserObjectPermissionBase):

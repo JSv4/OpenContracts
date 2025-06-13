@@ -2,6 +2,9 @@ import difflib
 import hashlib
 import uuid
 
+# Typed representations for the `json` payload
+from typing import Union, cast
+
 import django
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -34,6 +37,8 @@ from opencontractserver.shared.Managers import (
 from opencontractserver.shared.mixins import HasEmbeddingMixin
 from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.utils import calc_oc_file_path
+
+from .json_types import MultipageAnnotationJson, SpanAnnotationJson
 
 User = get_user_model()
 
@@ -477,6 +482,103 @@ class Annotation(BaseOCModel, HasEmbeddingMixin):
 
     def get_embedding_reference_kwargs(self) -> dict:
         return {"annotation_id": self.pk}
+
+    # ---------------------------------------------------------------------
+    # Convenience helpers
+    # ---------------------------------------------------------------------
+
+    @property
+    def typed_json(self) -> "Union[MultipageAnnotationJson, SpanAnnotationJson]":
+        """Return `self.json` with a precise static type.
+
+        This helper exists purely for IDE / static-analysis benefit. It performs
+        *no* runtime transformation and therefore has **zero** performance
+        impact in production.
+        """
+
+        return cast("Union[MultipageAnnotationJson, SpanAnnotationJson]", self.json)
+
+    # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
+
+    def clean(self) -> None:  # noqa: C901  (complexity – kept minimal)
+        """Lightweight schema validation for the `json` field.
+
+        For performance reasons the check runs only when either
+
+        * the Django setting ``VALIDATE_ANNOTATION_JSON`` is truthy, **or**
+        * ``settings.DEBUG`` is ``True``.
+
+        The validation is intentionally shallow (type/shape only) to avoid
+        expensive deep walks for large payloads.
+        """
+
+        super().clean()
+
+        from django.conf import settings  # local to avoid global import cost
+
+        should_validate: bool = bool(
+            getattr(settings, "VALIDATE_ANNOTATION_JSON", settings.DEBUG)
+        )
+
+        if not should_validate:
+            return
+
+        if self.annotation_type == TOKEN_LABEL:
+            if not isinstance(self.json, dict):
+                raise ValueError(
+                    "TOKEN_LABEL annotations must store MultipageAnnotationJson (dict)."
+                )
+            # Spot-check: page key + expected sub-keys in first entry
+            for page, page_obj in list(self.json.items())[:1]:
+                if not isinstance(page, (int, str)):
+                    raise ValueError("Page keys must be int-convertible.")
+                if not (
+                    isinstance(page_obj, dict)
+                    and {"bounds", "tokensJsons", "rawText"}.issubset(page_obj.keys())
+                ):
+                    raise ValueError(
+                        "Each page entry must contain 'bounds', 'tokensJsons', and 'rawText'."
+                    )
+
+        elif self.annotation_type == SPAN_LABEL:
+            if not (
+                isinstance(self.json, dict)
+                and set(self.json.keys()) == {"start", "end"}
+                and isinstance(self.json["start"], int)
+                and isinstance(self.json["end"], int)
+            ):
+                raise ValueError(
+                    "SPAN_LABEL annotations must store SpanAnnotationJson with 'start' and 'end' ints."
+                )
+
+        # Other annotation types are free-form – no validation.
+
+    # ------------------------------------------------------------------
+    # Persistence
+    # ------------------------------------------------------------------
+
+    def save(self, *args, **kwargs):
+        """Override save to optionally validate `json` integrity.
+
+        *No additional queries* are executed; the validation inspects the in-memory
+        `.json` payload only, therefore the cost is negligible.
+        """
+
+        # Re-use the same flag used in `clean`.
+        from django.conf import settings
+
+        if getattr(settings, "VALIDATE_ANNOTATION_JSON", settings.DEBUG):
+            # Ensure that `clean()` is executed even if external callers forget.
+            self.clean()
+
+        # Maintain timestamp consistency
+        if not self.pk:
+            self.created = timezone.now()
+        self.modified = timezone.now()
+
+        return super().save(*args, **kwargs)
 
     class Meta:
         permissions = (

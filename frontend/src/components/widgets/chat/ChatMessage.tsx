@@ -14,6 +14,8 @@ import {
   CheckCircle,
   Activity,
   Plus,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -61,6 +63,7 @@ export interface ChatMessageProps {
     onClick?: () => void;
   }>;
   timeline?: TimelineEntry[];
+  approvalStatus?: "approved" | "rejected" | "awaiting";
 }
 
 const MessageContainer = styled(motion.div)<{
@@ -1024,6 +1027,54 @@ const TimelineIndicator = styled.div<{ $isSelected?: boolean }>`
   }
 `;
 
+const ApprovalIndicator = styled.div<{ 
+  $status: "approved" | "rejected" | "awaiting";
+  $isSelected?: boolean;
+}>`
+  position: absolute;
+  right: ${(props) => (props.$isSelected ? "8rem" : "1rem")};
+  top: ${(props) => (props.$isSelected ? "3.5rem" : "3.5rem")};
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: ${(props) => {
+    if (props.$status === "approved") return "rgba(5, 150, 105, 0.1)";
+    if (props.$status === "rejected") return "rgba(220, 38, 38, 0.1)";
+    return "rgba(245, 158, 11, 0.1)";
+  }};
+  color: ${(props) => {
+    if (props.$status === "approved") return "#059669";
+    if (props.$status === "rejected") return "#dc2626";
+    return "#f59e0b";
+  }};
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transform: none;
+  opacity: 1;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  border: 1px solid
+    ${(props) => {
+      if (props.$status === "approved") return "rgba(5, 150, 105, 0.2)";
+      if (props.$status === "rejected") return "rgba(220, 38, 38, 0.2)";
+      return "rgba(245, 158, 11, 0.2)";
+    }};
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    right: ${(props) => (props.$isSelected ? "6rem" : "1rem")};
+  }
+`;
+
 const Timestamp = styled.div`
   color: #868e96;
   font-size: 0.75rem;
@@ -1062,6 +1113,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   hasTimeline,
   isSelected,
   onSelect,
+  approvalStatus,
 }) => {
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<
     number | undefined
@@ -1087,6 +1139,32 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   };
 
+  const getApprovalIcon = (status: "approved" | "rejected" | "awaiting") => {
+    switch (status) {
+      case "approved":
+        return <CheckCircle size={14} />;
+      case "rejected":
+        return <XCircle size={14} />;
+      case "awaiting":
+        return <AlertCircle size={14} />;
+      default:
+        return null;
+    }
+  };
+
+  const getApprovalText = (status: "approved" | "rejected" | "awaiting") => {
+    switch (status) {
+      case "approved":
+        return "Approved";
+      case "rejected":
+        return "Rejected";
+      case "awaiting":
+        return "Awaiting Approval";
+      default:
+        return "";
+    }
+  };
+
   return (
     <MessageContainer
       $isAssistant={isAssistant}
@@ -1107,6 +1185,12 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           <Pin size={14} />
           {sources.length > 0 ? `${sources.length} sources` : "View sources"}
         </SourceIndicator>
+      )}
+      {approvalStatus && (
+        <ApprovalIndicator $status={approvalStatus} $isSelected={isSelected}>
+          {getApprovalIcon(approvalStatus)}
+          {getApprovalText(approvalStatus)}
+        </ApprovalIndicator>
       )}
       <Avatar $isAssistant={isAssistant}>
         {isAssistant ? <Bot /> : <User />}

@@ -50,6 +50,7 @@ class LlamaIndexToolFactory:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parameter_descriptions: Optional[dict[str, str]] = None,
+        **kwargs,
     ) -> FunctionTool:
         """Create a LlamaIndex tool directly from a function.
 

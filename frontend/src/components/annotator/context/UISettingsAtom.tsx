@@ -107,6 +107,25 @@ export const chatTrayStateAtom = atom<ChatTrayPersist>({
 });
 
 /**
+ * Chat panel width persistence atom
+ */
+export type ChatPanelWidthMode = "quarter" | "half" | "full" | "custom";
+
+export interface ChatPanelWidthState {
+  mode: ChatPanelWidthMode;
+  customWidth?: number; // percentage 0-100
+  lastMode: ChatPanelWidthMode; // for auto-minimize restore
+  autoMinimize: boolean;
+}
+
+export const chatPanelWidthAtom = atom<ChatPanelWidthState>({
+  mode: "half",
+  customWidth: undefined,
+  lastMode: "half",
+  autoMinimize: true,
+});
+
+/**
  * Hook to initialize UI settings atoms with initial values.
  * @param params Initial values for the UI settings.
  */
@@ -384,5 +403,65 @@ export function useAdditionalUIStates() {
     setShiftDown,
     topbarVisible,
     setTopbarVisible,
+  };
+}
+
+/**
+ * Hook for managing chat panel width
+ */
+export function useChatPanelWidth() {
+  const [chatPanelWidth, setChatPanelWidth] = useAtom(chatPanelWidthAtom);
+
+  const setMode = useCallback(
+    (mode: ChatPanelWidthMode) => {
+      setChatPanelWidth((prev) => ({
+        ...prev,
+        mode,
+        lastMode: mode !== "quarter" ? mode : prev.lastMode,
+      }));
+    },
+    [setChatPanelWidth]
+  );
+
+  const setCustomWidth = useCallback(
+    (width: number) => {
+      setChatPanelWidth((prev) => ({
+        ...prev,
+        mode: "custom",
+        customWidth: width,
+        lastMode: "custom",
+      }));
+    },
+    [setChatPanelWidth]
+  );
+
+  const toggleAutoMinimize = useCallback(() => {
+    setChatPanelWidth((prev) => ({
+      ...prev,
+      autoMinimize: !prev.autoMinimize,
+    }));
+  }, [setChatPanelWidth]);
+
+  const minimize = useCallback(() => {
+    setChatPanelWidth((prev) => ({
+      ...prev,
+      mode: "quarter",
+    }));
+  }, [setChatPanelWidth]);
+
+  const restore = useCallback(() => {
+    setChatPanelWidth((prev) => ({
+      ...prev,
+      mode: prev.lastMode,
+    }));
+  }, [setChatPanelWidth]);
+
+  return {
+    ...chatPanelWidth,
+    setMode,
+    setCustomWidth,
+    toggleAutoMinimize,
+    minimize,
+    restore,
   };
 }

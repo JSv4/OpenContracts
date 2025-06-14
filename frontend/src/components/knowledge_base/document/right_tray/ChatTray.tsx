@@ -68,6 +68,8 @@ import {
   SendButton,
   ErrorMessage,
   ConnectionStatus,
+  ChatInputWrapper,
+  CharacterCount,
 } from "../ChatContainers";
 import { FetchMoreOnVisible } from "../../../widgets/infinite_scroll/FetchMoreOnVisible";
 import { NewChatFloatingButton } from "../ChatContainers";
@@ -84,6 +86,7 @@ import {
 } from "../../../annotator/context/ChatSourceAtom";
 import { TimelineEntry } from "../../../widgets/chat/ChatMessage";
 import { useUISettings } from "../../../annotator/hooks/useUISettings";
+import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 
 /**
  * A helper interface representing the properties of data included in websocket messages,
@@ -241,6 +244,41 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
   // Flag so we only run initial scroll restore once
   const initialRestoreDone = useRef(false);
+
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
+  // State for auto-resizing textarea
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const MAX_MESSAGE_LENGTH = 4000;
+
+  // Auto-resize function
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = "auto";
+
+    // Set new height based on content
+    const newHeight = Math.min(textarea.scrollHeight, 200); // Max 200px
+    textarea.style.height = `${newHeight}px`;
+  }, []);
+
+  // Reset textarea height when message is cleared
+  useEffect(() => {
+    if (!newMessage) {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        textarea.style.height = "44px"; // Reset to initial height
+      }
+    }
+  }, [newMessage]);
+
+  // Initial textarea setup
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [adjustTextareaHeight]);
 
   /**
    * On server data load, we map messages to local ChatMessageProps and
@@ -1497,29 +1535,53 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                     animate={{ opacity: 1 }}
                   />
                 )}
-                <ChatInput
-                  value={newMessage}
-                  onChange={(e: {
-                    target: { value: SetStateAction<string> };
-                  }) => setNewMessage(e.target.value)}
-                  placeholder={
-                    wsReady
-                      ? "Type your message..."
-                      : "Waiting for connection..."
-                  }
-                  disabled={!wsReady}
-                  onKeyPress={(e: { key: string }) => {
-                    if (e.key === "Enter") {
-                      sendMessageOverSocket();
+                <ChatInputWrapper>
+                  <ChatInput
+                    ref={textareaRef}
+                    value={newMessage}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                      const value = e.target.value;
+                      if (value.length <= MAX_MESSAGE_LENGTH) {
+                        setNewMessage(value);
+                        // Use setTimeout to ensure DOM updates before measuring
+                        setTimeout(adjustTextareaHeight, 0);
+                      }
+                    }}
+                    placeholder={
+                      wsReady
+                        ? "Type your message..."
+                        : "Waiting for connection..."
                     }
-                  }}
-                />
+                    disabled={!wsReady}
+                    onKeyDown={(
+                      e: React.KeyboardEvent<HTMLTextAreaElement>
+                    ) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        if (newMessage.trim()) {
+                          sendMessageOverSocket();
+                        }
+                      }
+                    }}
+                    rows={1}
+                  />
+                  {newMessage.length > MAX_MESSAGE_LENGTH * 0.9 && (
+                    <CharacterCount
+                      $nearLimit={newMessage.length >= MAX_MESSAGE_LENGTH}
+                    >
+                      {newMessage.length}/{MAX_MESSAGE_LENGTH}
+                    </CharacterCount>
+                  )}
+                </ChatInputWrapper>
                 <SendButton
+                  $hasText={!!newMessage.trim()}
                   disabled={!wsReady || !newMessage.trim()}
                   onClick={sendMessageOverSocket}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  animate={wsReady ? { y: [0, -2, 0] } : {}}
+                  animate={
+                    wsReady && newMessage.trim() ? { y: [0, -2, 0] } : {}
+                  }
                   transition={{ duration: 0.2 }}
                 >
                   <Send size={18} />

@@ -110,6 +110,19 @@ import { Icon } from "semantic-ui-react";
 import { useChatSourceState } from "../../annotator/context/ChatSourceAtom";
 import { useCreateAnnotation } from "../../annotator/hooks/AnnotationHooks";
 import { useScrollContainerRef } from "../../annotator/context/DocumentAtom";
+import { useChatPanelWidth } from "../../annotator/context/UISettingsAtom";
+import {
+  ResizeHandle,
+  WidthControlBar,
+  WidthButton,
+  AutoMinimizeToggle,
+  WidthControlMenu,
+  WidthControlToggle,
+  WidthMenuItem,
+  MenuDivider,
+  ChatIndicator,
+} from "./StyledContainers";
+import { Eye, EyeOff, Settings, Maximize2 } from "lucide-react";
 
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
@@ -271,6 +284,43 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const { setProgress, zoomLevel, setShiftDown, setZoomLevel } = useUISettings({
     width,
   });
+
+  // Chat panel width management
+  const {
+    mode,
+    customWidth,
+    autoMinimize,
+    setMode,
+    setCustomWidth,
+    toggleAutoMinimize,
+    minimize,
+    restore,
+  } = useChatPanelWidth();
+
+  // Calculate actual panel width based on mode
+  const getPanelWidthPercentage = (): number => {
+    switch (mode) {
+      case "quarter":
+        return 25;
+      case "half":
+        return 50;
+      case "full":
+        return 90;
+      case "custom":
+        return customWidth || 50;
+      default:
+        return 50;
+    }
+  };
+
+  // Resize handle state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartWidth, setDragStartWidth] = useState(0);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const documentAreaRef = useRef<HTMLDivElement>(null);
+  const [showWidthMenu, setShowWidthMenu] = useState(false);
+
   const [showGraph, setShowGraph] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("summary");
   const [showAnalyzerModal, setShowAnalyzerModal] = useState(false);
@@ -1096,6 +1146,108 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }
   })();
 
+  // Resize handlers
+  const handleResizeStart = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStartX(e.clientX);
+    setDragStartWidth(getPanelWidthPercentage());
+    e.preventDefault();
+  };
+
+  const handleResizeMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging) return;
+
+      const deltaX = dragStartX - e.clientX;
+      const windowWidth = window.innerWidth;
+      const deltaPercentage = (deltaX / windowWidth) * 100;
+      const newWidth = Math.max(
+        15,
+        Math.min(95, dragStartWidth + deltaPercentage)
+      );
+
+      // Snap to preset widths if close
+      const snapThreshold = 3;
+      if (Math.abs(newWidth - 25) < snapThreshold) {
+        setMode("quarter");
+      } else if (Math.abs(newWidth - 50) < snapThreshold) {
+        setMode("half");
+      } else if (Math.abs(newWidth - 90) < snapThreshold) {
+        setMode("full");
+      } else {
+        setCustomWidth(newWidth);
+      }
+    },
+    [isDragging, dragStartX, dragStartWidth, setMode, setCustomWidth]
+  );
+
+  const handleResizeEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Add resize event listeners
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleResizeMove);
+      document.addEventListener("mouseup", handleResizeEnd);
+      return () => {
+        document.removeEventListener("mousemove", handleResizeMove);
+        document.removeEventListener("mouseup", handleResizeEnd);
+      };
+    }
+  }, [isDragging, handleResizeMove, handleResizeEnd]);
+
+  // Auto-minimize logic
+  const handleDocumentMouseEnter = useCallback(() => {
+    if (
+      autoMinimize &&
+      showRightPanel &&
+      activeTab === "chat" &&
+      !isDragging &&
+      !isMinimized
+    ) {
+      minimize();
+      setIsMinimized(true);
+    }
+  }, [
+    autoMinimize,
+    showRightPanel,
+    activeTab,
+    isDragging,
+    isMinimized,
+    minimize,
+  ]);
+
+  const handlePanelMouseEnter = useCallback(() => {
+    if (isMinimized) {
+      restore();
+      setIsMinimized(false);
+    }
+  }, [isMinimized, restore]);
+
+  // Reset minimized state when tab changes or panel closes
+  useEffect(() => {
+    if (!showRightPanel || activeTab !== "chat") {
+      setIsMinimized(false);
+    }
+  }, [showRightPanel, activeTab]);
+
+  // Close width menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (showWidthMenu && !target.closest("[data-width-menu]")) {
+        setShowWidthMenu(false);
+      }
+    };
+
+    if (showWidthMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showWidthMenu]);
+
   // The main viewer content:
   let viewerContent: JSX.Element = <></>;
   if (metadata.fileType === "application/pdf") {
@@ -1186,12 +1338,14 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     ) : (
       <div
         id="document-layer"
+        ref={documentAreaRef}
+        onMouseEnter={handleDocumentMouseEnter}
         style={{
           flex: 1,
           position: "relative",
           marginRight:
             !isMobile && showRightPanel
-              ? `${getPanelWidth(width)}px`
+              ? `${getPanelWidthPercentage()}%`
               : undefined,
         }}
       >
@@ -1347,6 +1501,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           <AnimatePresence>
             {showRightPanel && activeTab && (
               <SlidingPanel
+                panelWidth={getPanelWidthPercentage()}
+                onMouseEnter={handlePanelMouseEnter}
                 initial={{ x: "100%", opacity: 0 }}
                 animate={{ x: "0%", opacity: 1 }}
                 exit={{ x: "100%", opacity: 0 }}
@@ -1355,6 +1511,11 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   opacity: { duration: 0.2, ease: "easeOut" },
                 }}
               >
+                <ResizeHandle
+                  onMouseDown={handleResizeStart}
+                  $isDragging={isDragging}
+                  whileHover={{ scale: 1.1 }}
+                />
                 <ControlButtonGroupLeft>
                   <ControlButtonWrapper>
                     <ControlButton
@@ -1373,7 +1534,99 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   </ControlButtonWrapper>
                 </ControlButtonGroupLeft>
                 {rightPanelContent}
+                {activeTab === "chat" && (
+                  <>
+                    <WidthControlToggle
+                      onClick={() => setShowWidthMenu(!showWidthMenu)}
+                      whileTap={{ scale: 0.9 }}
+                      data-width-menu
+                    >
+                      <Settings />
+                    </WidthControlToggle>
+                    <AnimatePresence>
+                      {showWidthMenu && (
+                        <WidthControlMenu
+                          initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                          transition={{ duration: 0.15 }}
+                          data-width-menu
+                        >
+                          <WidthMenuItem
+                            $isActive={mode === "quarter"}
+                            onClick={() => {
+                              setMode("quarter");
+                              setShowWidthMenu(false);
+                            }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Compact
+                            <span className="percentage">25%</span>
+                          </WidthMenuItem>
+                          <WidthMenuItem
+                            $isActive={mode === "half"}
+                            onClick={() => {
+                              setMode("half");
+                              setShowWidthMenu(false);
+                            }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Standard
+                            <span className="percentage">50%</span>
+                          </WidthMenuItem>
+                          <WidthMenuItem
+                            $isActive={mode === "full"}
+                            onClick={() => {
+                              setMode("full");
+                              setShowWidthMenu(false);
+                            }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Wide
+                            <span className="percentage">90%</span>
+                          </WidthMenuItem>
+                          <MenuDivider />
+                          <WidthMenuItem
+                            $isActive={autoMinimize}
+                            onClick={() => {
+                              toggleAutoMinimize();
+                              setShowWidthMenu(false);
+                            }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Auto-minimize
+                            {autoMinimize ? (
+                              <Eye size={16} />
+                            ) : (
+                              <EyeOff size={16} />
+                            )}
+                          </WidthMenuItem>
+                        </WidthControlMenu>
+                      )}
+                    </AnimatePresence>
+                  </>
+                )}
               </SlidingPanel>
+            )}
+          </AnimatePresence>
+
+          {/* Chat indicator when panel is closed */}
+          <AnimatePresence>
+            {!showRightPanel && !isMobile && (
+              <ChatIndicator
+                onClick={() => {
+                  setActiveTab("chat");
+                  setShowRightPanel(true);
+                }}
+                initial={{ x: 100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 100, opacity: 0 }}
+                transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <MessageSquare />
+              </ChatIndicator>
             )}
           </AnimatePresence>
         </MainContentArea>

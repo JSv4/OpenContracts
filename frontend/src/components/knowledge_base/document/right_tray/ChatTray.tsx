@@ -34,6 +34,9 @@ import {
   Send,
   X,
   Calendar,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { Button, CardMeta } from "semantic-ui-react";
 import {
@@ -65,6 +68,8 @@ import {
   SendButton,
   ErrorMessage,
   ConnectionStatus,
+  ChatInputWrapper,
+  CharacterCount,
 } from "../ChatContainers";
 import { FetchMoreOnVisible } from "../../../widgets/infinite_scroll/FetchMoreOnVisible";
 import { NewChatFloatingButton } from "../ChatContainers";
@@ -79,6 +84,9 @@ import {
   useChatSourceState,
   mapWebSocketSourcesToChatMessageSources,
 } from "../../../annotator/context/ChatSourceAtom";
+import { TimelineEntry } from "../../../widgets/chat/ChatMessage";
+import { useUISettings } from "../../../annotator/hooks/useUISettings";
+import useWindowDimensions from "../../../hooks/WindowDimensionHook";
 
 /**
  * A helper interface representing the properties of data included in websocket messages,
@@ -99,11 +107,27 @@ export interface WebSocketSources {
  * the actual text content, and optional annotation data.
  */
 export interface MessageData {
-  type: "ASYNC_START" | "ASYNC_CONTENT" | "ASYNC_FINISH" | "SYNC_CONTENT";
+  type:
+    | "ASYNC_START"
+    | "ASYNC_CONTENT"
+    | "ASYNC_FINISH"
+    | "SYNC_CONTENT"
+    | "ASYNC_THOUGHT"
+    | "ASYNC_SOURCES"
+    | "ASYNC_APPROVAL_NEEDED";
   content: string;
   data?: {
     sources?: WebSocketSources[];
+    timeline?: TimelineEntry[];
     message_id?: string;
+    tool_name?: string;
+    args?: any;
+    pending_tool_call?: {
+      name: string;
+      arguments: any;
+      tool_call_id?: string;
+    };
+    [key: string]: any; // For any additional metadata
   };
 }
 
@@ -144,6 +168,20 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | undefined
   >();
+
+  // Approval state
+  const [pendingApproval, setPendingApproval] = useState<{
+    messageId: string;
+    toolCall: {
+      name: string;
+      arguments: any;
+      tool_call_id?: string;
+    };
+  } | null>(null);
+
+  // Controls visibility of the approval modal (can be dismissed & reopened)
+  const [showApprovalModal, setShowApprovalModal] = useState<boolean>(false);
+
   const {
     messages: sourcedMessages,
     selectedMessageId,
@@ -199,6 +237,49 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     GET_CHAT_MESSAGES
   );
 
+  const { chatTrayState, setChatTrayState } = useUISettings();
+
+  // Ref to manage auto-scrolling behaviour
+  const autoScrollRef = useRef(true);
+
+  // Flag so we only run initial scroll restore once
+  const initialRestoreDone = useRef(false);
+
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
+  // State for auto-resizing textarea
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const MAX_MESSAGE_LENGTH = 4000;
+
+  // Auto-resize function
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = "auto";
+
+    // Set new height based on content
+    const newHeight = Math.min(textarea.scrollHeight, 200); // Max 200px
+    textarea.style.height = `${newHeight}px`;
+  }, []);
+
+  // Reset textarea height when message is cleared
+  useEffect(() => {
+    if (!newMessage) {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        textarea.style.height = "44px"; // Reset to initial height
+      }
+    }
+  }, [newMessage]);
+
+  // Initial textarea setup
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [adjustTextareaHeight]);
+
   /**
    * On server data load, we map messages to local ChatMessageProps and
    * also store any 'sources' in the chatSourcesAtom (so pins and selection work).
@@ -223,27 +304,92 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
     // First, register them in our chatSourcesAtom if they have sources
     messages.forEach((srvMsg) => {
-      if (srvMsg.data?.sources?.length) {
+      const srvMsgData = srvMsg.data as
+        | {
+            sources?: WebSocketSources[];
+            timeline?: TimelineEntry[];
+            message_id?: string;
+          }
+        | undefined;
+      if (srvMsgData?.sources?.length) {
         handleCompleteMessage(
           srvMsg.content,
-          srvMsg.data.sources,
+          srvMsgData.sources,
           srvMsg.id,
-          srvMsg.createdAt
+          srvMsg.createdAt,
+          srvMsgData.timeline
         );
       }
     });
 
     console.log("messages", messages);
 
-    // Then, map them for immediate display - NOW INCLUDING hasSources FLAG
-    const mapped = messages.map((msg) => ({
-      messageId: msg.id,
-      user: msg.msgType === "HUMAN" ? "You" : "Assistant",
-      content: msg.content,
-      timestamp: new Date(msg.createdAt).toLocaleString(),
-      isAssistant: msg.msgType !== "HUMAN",
-      hasSources: !!msg.data?.sources?.length,
-    }));
+    // Then, map them for immediate display - NOW INCLUDING hasSources and hasTimeline FLAGS
+    const mapped = messages.map((msg) => {
+      // Type assertion for data field to include timeline and approval status
+      const msgData = msg.data as
+        | {
+            sources?: WebSocketSources[];
+            timeline?: TimelineEntry[];
+            message_id?: string;
+            approval_decision?: string;
+            state?: string;
+            pending_tool_call?: {
+              name: string;
+              arguments: any;
+              tool_call_id?: string;
+            };
+          }
+        | undefined;
+
+      // Determine lifecycle + approval status from *persisted* state field first
+      const lifecycleState =
+        ((msg as any).state as string | undefined) || msgData?.state;
+
+      let approvalStatus: "approved" | "rejected" | "awaiting" | undefined;
+      if (msgData?.approval_decision === "approved") {
+        approvalStatus = "approved";
+      } else if (msgData?.approval_decision === "rejected") {
+        approvalStatus = "rejected";
+      } else if (lifecycleState === "awaiting_approval") {
+        approvalStatus = "awaiting";
+      }
+
+      const isCompleteFlag =
+        lifecycleState !== "in_progress" &&
+        lifecycleState !== "awaiting_approval";
+
+      const mappedMsg = {
+        messageId: msg.id,
+        user: msg.msgType === "HUMAN" ? "You" : "Assistant",
+        content: msg.content,
+        timestamp: new Date(msg.createdAt).toLocaleString(),
+        isAssistant: msg.msgType !== "HUMAN",
+        hasSources: !!msgData?.sources?.length,
+        hasTimeline: !!msgData?.timeline?.length,
+        timeline: msgData?.timeline || [],
+        approvalStatus,
+        // Pass through pending tool call if present
+        pendingToolCall: msgData?.pending_tool_call,
+        isComplete: isCompleteFlag,
+      } as any;
+
+      // If this message is awaiting approval and we haven't already set
+      // pendingApproval, prime the overlay so users can act immediately.
+      if (
+        approvalStatus === "awaiting" &&
+        msgData?.pending_tool_call &&
+        !pendingApproval
+      ) {
+        setPendingApproval({
+          messageId: msg.id.toString(),
+          toolCall: msgData.pending_tool_call,
+        });
+        setShowApprovalModal(true);
+      }
+
+      return mappedMsg;
+    });
     setServerMessages(mapped);
   }, [msgData]);
 
@@ -278,7 +424,27 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   /**
    * Combine serverMessages + local chat for final display
    */
-  const combinedMessages = [...serverMessages, ...chat];
+  const combinedMessages = useMemo(() => {
+    const messages = [...serverMessages, ...chat];
+
+    // If there's a pending approval, add a placeholder message to show the status
+    if (pendingApproval) {
+      const approvalMessage = {
+        messageId: `approval_${pendingApproval.messageId}`,
+        user: "Assistant",
+        content: `Tool execution paused: ${pendingApproval.toolCall.name}`,
+        timestamp: new Date().toLocaleString(),
+        isAssistant: true,
+        hasTimeline: false,
+        timeline: [],
+        approvalStatus: "awaiting" as const,
+        isComplete: false,
+      };
+      messages.push(approvalMessage);
+    }
+
+    return messages;
+  }, [serverMessages, chat, pendingApproval]);
 
   // Add ref for messages container
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -296,8 +462,78 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
   // Scroll when messages change
   useEffect(() => {
-    scrollToBottom();
+    if (autoScrollRef.current) {
+      scrollToBottom();
+    }
   }, [combinedMessages, scrollToBottom]);
+
+  // Restore persisted conversation + scroll
+  useEffect(() => {
+    if (chatTrayState.conversationId) {
+      // open the cached conversation and immediately refresh first page
+      loadConversation(chatTrayState.conversationId);
+      setShowLoad(false);
+      // explicit refresh to ensure new messages are fetched even if cached
+      fetchChatMessages({
+        variables: {
+          conversationId: chatTrayState.conversationId,
+          limit: 10,
+        },
+        fetchPolicy: "network-only",
+      });
+    } else if (chatTrayState.isNewChat) {
+      startNewChat();
+    }
+  }, []);
+
+  // Once messages arrive, restore the scroll offset exactly once
+  useEffect(() => {
+    if (
+      !initialRestoreDone.current &&
+      chatTrayState.conversationId &&
+      selectedConversationId === chatTrayState.conversationId &&
+      combinedMessages.length > 0 &&
+      messagesContainerRef.current
+    ) {
+      const container = messagesContainerRef.current;
+      container.scrollTo({ top: chatTrayState.scrollOffset });
+      // update auto scroll flag based on restored position
+      const dist =
+        container.scrollHeight -
+        chatTrayState.scrollOffset -
+        container.clientHeight;
+      autoScrollRef.current = dist < 100;
+      initialRestoreDone.current = true;
+    }
+  }, [
+    combinedMessages,
+    chatTrayState.conversationId,
+    chatTrayState.scrollOffset,
+    selectedConversationId,
+  ]);
+
+  // Keep chatTrayState atom in sync with current conversation mode
+  useEffect(() => {
+    setChatTrayState((prev) => ({
+      ...prev,
+      conversationId: selectedConversationId ?? null,
+      isNewChat,
+    }));
+  }, [selectedConversationId, isNewChat, setChatTrayState]);
+
+  // Track scroll to update offset live
+  const handlePersistedScroll = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const offset = container.scrollTop;
+    setChatTrayState((prev) => ({ ...prev, scrollOffset: offset }));
+
+    // Disable auto-scroll if the user is more than 100 px from bottom
+    const distanceFromBottom =
+      container.scrollHeight - offset - container.clientHeight;
+    autoScrollRef.current = distanceFromBottom < 100;
+  }, [setChatTrayState]);
 
   function appendStreamingTokenToChat(
     token: string,
@@ -317,6 +553,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
         const updatedLast = {
           ...lastMessage,
           content: lastMessage.content + token,
+          isComplete: false,
         };
         return [...prev.slice(0, -1), updatedLast];
       } else {
@@ -333,6 +570,9 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
             content: token,
             timestamp: new Date().toLocaleString(),
             isAssistant: true,
+            hasTimeline: false,
+            timeline: [],
+            isComplete: false,
           },
         ];
       }
@@ -341,15 +581,74 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   }
 
   /**
+   * Append an *agent thought* (or tool call/result) to the timeline of the
+   * streaming assistant message so the user can watch reasoning unfold.
+   */
+  const appendThoughtToMessage = (
+    thoughtText: string,
+    data: MessageData["data"] | undefined
+  ): void => {
+    const messageId = data?.message_id;
+    if (!messageId || !thoughtText) return;
+
+    // Determine timeline entry type
+    let entryType: TimelineEntry["type"] = "thought";
+    if (data?.tool_name && data?.args) entryType = "tool_call";
+    else if (data?.tool_name && !data?.args) entryType = "tool_result";
+
+    const newEntry: TimelineEntry = {
+      type: entryType,
+      text: thoughtText,
+      tool: data?.tool_name,
+      args: data?.args,
+    };
+
+    // Update chat UI timeline
+    setChat((prev) => {
+      const idx = prev.findIndex((m) => m.messageId === messageId);
+      if (idx === -1) {
+        // No message yet (thought arrived very early) – create skeleton.
+        return [
+          ...prev,
+          {
+            messageId,
+            user: "Assistant",
+            content: "", // will be filled later
+            timestamp: new Date().toLocaleString(),
+            isAssistant: true,
+            hasTimeline: true,
+            timeline: [newEntry],
+            isComplete: false,
+          },
+        ];
+      }
+
+      const msg = prev[idx];
+      const timeline = msg.timeline ? [...msg.timeline, newEntry] : [newEntry];
+      const updated = {
+        ...msg,
+        hasTimeline: true,
+        timeline,
+        isComplete: false,
+      } as ChatMessageProps;
+
+      return [...prev.slice(0, idx), updated, ...prev.slice(idx + 1)];
+    });
+  };
+
+  /**
    * Finalize a partially-streamed response by replacing the last chat entry
    * with the final content (and calling `handleCompleteMessage` to store sources).
    * @param content - the fully streamed final response
    * @param sourcesData - optional array of WebSocketSources describing pinned info
+   * @param overrideId - optional message ID to use
+   * @param timelineData - optional timeline entries
    */
   const finalizeStreamingResponse = (
     content: string,
     sourcesData?: WebSocketSources[],
-    overrideId?: string
+    overrideId?: string,
+    timelineData?: TimelineEntry[]
   ): void => {
     console.log("finalizeStreamingResponse", {
       content,
@@ -388,6 +687,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       updatedMessages[forwardIndex] = {
         ...assistantMsg,
         content,
+        isComplete: true,
       };
       console.log("Updated message with final content:", {
         messageId: lastMsgId,
@@ -395,7 +695,13 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       });
 
       // Now store the final content + sources in ChatSourceAtom with the same ID
-      handleCompleteMessage(content, sourcesData, lastMsgId, overrideId);
+      handleCompleteMessage(
+        content,
+        sourcesData,
+        lastMsgId,
+        undefined,
+        timelineData
+      );
 
       return updatedMessages;
     });
@@ -466,6 +772,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           hasContent: !!content,
           hasSources: !!data?.sources,
           sourceCount: data?.sources?.length,
+          hasTimeline: !!data?.timeline,
+          timelineCount: data?.timeline?.length,
           message_id: data?.message_id,
         });
 
@@ -475,20 +783,66 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
             break;
           case "ASYNC_CONTENT":
             appendStreamingTokenToChat(content, data?.message_id);
+            // Clear pending approval if agent resumes after approval decision
+            if (
+              pendingApproval &&
+              data?.message_id === pendingApproval.messageId
+            ) {
+              setPendingApproval(null);
+            }
+            break;
+          case "ASYNC_THOUGHT":
+            appendThoughtToMessage(content, data);
+            break;
+          case "ASYNC_SOURCES":
+            mergeSourcesIntoMessage(data?.sources, data?.message_id);
+            break;
+          case "ASYNC_APPROVAL_NEEDED":
+            if (data?.pending_tool_call && data?.message_id) {
+              setPendingApproval({
+                messageId: data.message_id,
+                toolCall: data.pending_tool_call,
+              });
+              setShowApprovalModal(true);
+            }
             break;
           case "ASYNC_FINISH":
-            finalizeStreamingResponse(content, data?.sources, data?.message_id);
+            finalizeStreamingResponse(
+              content,
+              data?.sources,
+              data?.message_id,
+              data?.timeline
+            );
+            // Clear pending approval when streaming finishes (covers both approval and rejection cases)
+            if (
+              pendingApproval &&
+              data?.message_id === pendingApproval.messageId
+            ) {
+              setPendingApproval(null);
+            }
             break;
           case "SYNC_CONTENT": {
             const sourcesToPass =
               data?.sources && Array.isArray(data.sources)
                 ? data.sources
                 : undefined;
+            const timelineToPass =
+              data?.timeline && Array.isArray(data.timeline)
+                ? data.timeline
+                : undefined;
             console.log(
               "[ChatTray WebSocket] SYNC_CONTENT sources:",
-              sourcesToPass
+              sourcesToPass,
+              "timeline:",
+              timelineToPass
             );
-            handleCompleteMessage(content, sourcesToPass, data?.message_id);
+            handleCompleteMessage(
+              content,
+              sourcesToPass,
+              data?.message_id,
+              undefined,
+              timelineToPass
+            );
             break;
           }
           default:
@@ -527,6 +881,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     // Clear both local chat state and server messages
     setChat([]);
     setServerMessages([]);
+    setPendingApproval(null);
 
     console.log("[ChatTray] Calling fetchChatMessages with variables:", {
       conversationId,
@@ -553,6 +908,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     setChat([]);
     setServerMessages([]);
     setSelectedConversationId(undefined);
+    setPendingApproval(null);
     if (socketRef.current) {
       socketRef.current.close();
       socketRef.current = null;
@@ -569,6 +925,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     setShowLoad(false);
     setChat([]);
     setServerMessages([]);
+    setPendingApproval(null);
     // Potentially you'll create a new conversation server-side
   };
 
@@ -622,6 +979,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           content: trimmed,
           timestamp: new Date().toLocaleString(),
           isAssistant: false,
+          isComplete: false,
         },
       ]);
       socketRef.current.send(JSON.stringify({ query: trimmed }));
@@ -637,6 +995,41 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       }, 300);
     }
   }, [newMessage, user_obj?.email, wsReady]);
+
+  /**
+   * Send approval decision back to the WebSocket.
+   */
+  const sendApprovalDecision = useCallback(
+    (approved: boolean): void => {
+      if (!pendingApproval || !socketRef.current || !wsReady) {
+        console.warn("Cannot send approval decision - missing requirements");
+        return;
+      }
+
+      try {
+        const messageData = {
+          approval_decision: approved,
+          llm_message_id: parseInt(pendingApproval.messageId),
+        };
+
+        console.log(
+          `[ChatTray] Sending approval decision: ${
+            approved ? "APPROVED" : "REJECTED"
+          } for message ${pendingApproval.messageId}`
+        );
+
+        socketRef.current.send(JSON.stringify(messageData));
+
+        // Don't clear pendingApproval immediately - wait for the response
+        // It will be cleared when we receive the continuation content
+        setWsError(null);
+      } catch (err) {
+        console.error("Failed to send approval decision:", err);
+        setWsError("Failed to send approval decision. Please try again.");
+      }
+    },
+    [pendingApproval, wsReady]
+  );
 
   // Render error if GraphQL query fails
   if (error) {
@@ -698,7 +1091,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     content: string,
     sourcesData?: Array<WebSocketSources>,
     overrideId?: string,
-    overrideCreatedAt?: string
+    overrideCreatedAt?: string,
+    timelineData?: TimelineEntry[]
   ): void => {
     if (!overrideId) {
       console.warn(
@@ -728,7 +1122,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           content,
           timestamp: messageTimestamp,
           sources: mappedSources.length ? mappedSources : existingMsg.sources,
-        };
+        } as typeof existingMsg;
 
         const updatedMessages = [...prev.messages];
         updatedMessages[existingIndex] = updatedMsg;
@@ -753,6 +1147,229 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
         };
       }
     });
+  };
+
+  /**
+   * Merge *additional* sources arriving via ASYNC_SOURCES into the existing
+   * ChatSourceAtom + local chat message so the user can click pins while the
+   * answer is still streaming.
+   */
+  const mergeSourcesIntoMessage = (
+    sourcesData: WebSocketSources[] | undefined,
+    overrideId?: string
+  ): void => {
+    if (!sourcesData?.length || !overrideId) return;
+
+    // First convert incoming sources → ChatMessageSource objects.
+    const mappedSources = mapWebSocketSourcesToChatMessageSources(
+      sourcesData,
+      overrideId
+    );
+
+    // Update ChatSourceAtom – merge or append sources for the message.
+    setChatSourceState((prev) => {
+      const idx = prev.messages.findIndex((m) => m.messageId === overrideId);
+      if (idx === -1) {
+        // Message not yet in atom – create skeleton entry so pins work.
+        return {
+          ...prev,
+          messages: [
+            ...prev.messages,
+            {
+              messageId: overrideId,
+              content: "", // will be filled later by finalizeStreamingResponse
+              timestamp: new Date().toISOString(),
+              sources: mappedSources,
+              isComplete: false,
+            },
+          ],
+        };
+      }
+
+      // Merge with existing sources (avoid duplicates by annotation_id)
+      const existing = prev.messages[idx];
+      const mergedSources = [
+        ...existing.sources,
+        ...mappedSources.filter(
+          (ms) =>
+            !existing.sources.some(
+              (es) => es.annotation_id === ms.annotation_id
+            )
+        ),
+      ];
+
+      const updatedMessages = [...prev.messages];
+      const mergedMsg = { ...existing, sources: mergedSources };
+      updatedMessages[idx] = mergedMsg;
+
+      return { ...prev, messages: updatedMessages };
+    });
+
+    // Update transient chat UI so pin indicator appears immediately.
+    setChat((prev) => {
+      const idx = prev.findIndex((m) => m.messageId === overrideId);
+      if (idx === -1) return prev;
+      const msg = prev[idx];
+      return [
+        ...prev.slice(0, idx),
+        { ...msg, hasSources: true },
+        ...prev.slice(idx + 1),
+      ];
+    });
+  };
+
+  /**
+   * Approval overlay component
+   */
+  const ApprovalOverlay = () => {
+    if (!pendingApproval || !showApprovalModal) return null;
+
+    return (
+      <motion.div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "1rem",
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
+        <motion.div
+          style={{
+            backgroundColor: "white",
+            borderRadius: "12px",
+            padding: "2rem",
+            maxWidth: "500px",
+            width: "100%",
+            boxShadow:
+              "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          }}
+          initial={{ scale: 0.9, y: 20 }}
+          animate={{ scale: 1, y: 0 }}
+          exit={{ scale: 0.9, y: 20 }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              marginBottom: "1.5rem",
+            }}
+          >
+            <AlertTriangle size={24} style={{ color: "#f59e0b" }} />
+            <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 600 }}>
+              Tool Approval Required
+            </h3>
+            <button
+              style={{
+                marginLeft: "auto",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+              }}
+              onClick={() => setShowApprovalModal(false)}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div style={{ marginBottom: "1.5rem" }}>
+            <p style={{ margin: "0 0 1rem 0", color: "#374151" }}>
+              The assistant wants to execute the following tool:
+            </p>
+            <div
+              style={{
+                backgroundColor: "#f3f4f6",
+                padding: "1rem",
+                borderRadius: "8px",
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
+                Tool: {pendingApproval.toolCall.name}
+              </div>
+              {Object.keys(pendingApproval.toolCall.arguments).length > 0 && (
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
+                    Arguments:
+                  </div>
+                  <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                    {JSON.stringify(
+                      pendingApproval.toolCall.arguments,
+                      null,
+                      2
+                    )}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div
+            style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}
+          >
+            <Button
+              size="medium"
+              onClick={() => sendApprovalDecision(false)}
+              style={{
+                backgroundColor: "#dc2626",
+                color: "white",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
+              <XCircle size={16} />
+              Reject
+            </Button>
+            <Button
+              size="medium"
+              onClick={() => sendApprovalDecision(true)}
+              style={{
+                backgroundColor: "#059669",
+                color: "white",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
+              <CheckCircle size={16} />
+              Approve
+            </Button>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  // Helper to render reopen button when modal dismissed but approval pending
+  const ReopenApprovalButton = () => {
+    if (!pendingApproval || showApprovalModal) return null;
+    return (
+      <Button
+        size="small"
+        onClick={() => setShowApprovalModal(true)}
+        style={{
+          background: "#f59e0b",
+          color: "white",
+          marginLeft: "1rem",
+        }}
+      >
+        Pending Approval
+      </Button>
+    );
   };
 
   /**
@@ -803,6 +1420,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                   <ArrowLeft size={16} />
                   Back to Conversations
                 </Button>
+                <ReopenApprovalButton />
               </motion.div>
 
               {/* Scrollable Messages Container */}
@@ -822,6 +1440,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                 transition={{ delay: 0.3 }}
                 id="messages-container"
                 ref={messagesContainerRef}
+                onScroll={handlePersistedScroll}
               >
                 {combinedMessages.map((msg, idx) => {
                   // Find if this message has sources in our sourced messages state
@@ -848,7 +1467,9 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                       key={msg.messageId || idx}
                       {...msg}
                       hasSources={!!sourcedMessage?.sources.length}
+                      hasTimeline={msg.hasTimeline}
                       sources={sources}
+                      timeline={msg.timeline}
                       isSelected={
                         sourcedMessage?.messageId === selectedMessageId
                       }
@@ -914,29 +1535,53 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                     animate={{ opacity: 1 }}
                   />
                 )}
-                <ChatInput
-                  value={newMessage}
-                  onChange={(e: {
-                    target: { value: SetStateAction<string> };
-                  }) => setNewMessage(e.target.value)}
-                  placeholder={
-                    wsReady
-                      ? "Type your message..."
-                      : "Waiting for connection..."
-                  }
-                  disabled={!wsReady}
-                  onKeyPress={(e: { key: string }) => {
-                    if (e.key === "Enter") {
-                      sendMessageOverSocket();
+                <ChatInputWrapper>
+                  <ChatInput
+                    ref={textareaRef}
+                    value={newMessage}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                      const value = e.target.value;
+                      if (value.length <= MAX_MESSAGE_LENGTH) {
+                        setNewMessage(value);
+                        // Use setTimeout to ensure DOM updates before measuring
+                        setTimeout(adjustTextareaHeight, 0);
+                      }
+                    }}
+                    placeholder={
+                      wsReady
+                        ? "Type your message..."
+                        : "Waiting for connection..."
                     }
-                  }}
-                />
+                    disabled={!wsReady}
+                    onKeyDown={(
+                      e: React.KeyboardEvent<HTMLTextAreaElement>
+                    ) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        if (newMessage.trim()) {
+                          sendMessageOverSocket();
+                        }
+                      }
+                    }}
+                    rows={1}
+                  />
+                  {newMessage.length > MAX_MESSAGE_LENGTH * 0.9 && (
+                    <CharacterCount
+                      $nearLimit={newMessage.length >= MAX_MESSAGE_LENGTH}
+                    >
+                      {newMessage.length}/{MAX_MESSAGE_LENGTH}
+                    </CharacterCount>
+                  )}
+                </ChatInputWrapper>
                 <SendButton
+                  $hasText={!!newMessage.trim()}
                   disabled={!wsReady || !newMessage.trim()}
                   onClick={sendMessageOverSocket}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  animate={wsReady ? { y: [0, -2, 0] } : {}}
+                  animate={
+                    wsReady && newMessage.trim() ? { y: [0, -2, 0] } : {}
+                  }
                   transition={{ duration: 0.2 }}
                 >
                   <Send size={18} />
@@ -1104,6 +1749,11 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           )}
         </AnimatePresence>
       </ConversationIndicator>
+
+      {/* Approval Overlay */}
+      <AnimatePresence>
+        <ApprovalOverlay />
+      </AnimatePresence>
     </ChatContainer>
   );
 };

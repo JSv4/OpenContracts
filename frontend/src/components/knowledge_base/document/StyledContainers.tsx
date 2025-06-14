@@ -546,6 +546,7 @@ export const ControlButton = styled(motion.button)`
 
 interface SlidingPanelProps {
   pushContent?: boolean;
+  panelWidth: number; // percentage 0-100
 }
 
 export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
@@ -555,7 +556,7 @@ export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
   right: 0;
   z-index: 2000;
 
-  width: clamp(320px, 65%, 520px);
+  width: ${(props) => props.panelWidth}%;
   height: 100%;
 
   /* Enhanced background and effects */
@@ -595,6 +596,281 @@ export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
     padding-top: max(env(safe-area-inset-top), 1rem);
     background: white;
     overflow: visible !important; // CRUCIAL: Let the button breathe!
+  }
+`;
+
+export const ResizeHandle = styled(motion.div)<{ $isDragging: boolean }>`
+  position: absolute;
+  left: -4px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  background: ${(props) =>
+    props.$isDragging ? "rgba(66, 153, 225, 0.3)" : "transparent"};
+  transition: background 0.2s ease;
+  z-index: 2001;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 40px;
+    background: rgba(226, 232, 240, 0.8);
+    border-radius: 1px;
+    opacity: ${(props) => (props.$isDragging ? 1 : 0)};
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover {
+    background: rgba(66, 153, 225, 0.1);
+
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  /* Hide on mobile */
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const WidthControlBar = styled(motion.div)`
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 2002;
+
+  /* Hide on mobile */
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const WidthControlMenu = styled(motion.div)`
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(226, 232, 240, 0.5);
+  z-index: 2002;
+  overflow: hidden;
+
+  /* Hide on mobile */
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const WidthControlToggle = styled(motion.button)`
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.5);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 2001;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    color: #4a5568;
+  }
+
+  &:hover {
+    background: white;
+    border-color: #4299e1;
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.15);
+
+    svg {
+      color: #4299e1;
+    }
+  }
+
+  /* Hide on mobile */
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const WidthMenuItem = styled(motion.button)<{ $isActive: boolean }>`
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border: none;
+  background: ${(props) =>
+    props.$isActive ? "rgba(66, 153, 225, 0.08)" : "transparent"};
+  color: ${(props) => (props.$isActive ? "#4299e1" : "#4a5568")};
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${(props) =>
+      props.$isActive ? "rgba(66, 153, 225, 0.12)" : "rgba(0, 0, 0, 0.03)"};
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  .percentage {
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+`;
+
+export const MenuDivider = styled.div`
+  height: 1px;
+  background: rgba(226, 232, 240, 0.5);
+  margin: 0.5rem 0;
+`;
+
+export const ChatIndicator = styled(motion.button)`
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 80px;
+  background: #4299e1;
+  border: none;
+  border-radius: 24px 0 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: -4px 0 12px rgba(66, 153, 225, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1999;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    right: 0;
+    background: linear-gradient(135deg, #5ba3eb 0%, #4299e1 100%);
+    border-radius: 22px 0 0 22px;
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+    color: white;
+    position: relative;
+    z-index: 1;
+  }
+
+  &:hover {
+    width: 56px;
+    box-shadow: -6px 0 20px rgba(66, 153, 225, 0.3);
+
+    svg {
+      transform: scale(1.1);
+    }
+  }
+
+  /* Pulse animation */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    right: -4px;
+    background: #4299e1;
+    border-radius: 28px 0 0 28px;
+    opacity: 0;
+    animation: chatPulse 2s ease-out infinite;
+  }
+
+  @keyframes chatPulse {
+    0% {
+      opacity: 0.4;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.2);
+    }
+  }
+
+  /* Hide on mobile */
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const WidthButton = styled(motion.button)<{ $isActive: boolean }>`
+  padding: 0.5rem 1rem;
+  border: none;
+  background: ${(props) => (props.$isActive ? "#4299e1" : "transparent")};
+  color: ${(props) => (props.$isActive ? "white" : "#4a5568")};
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${(props) =>
+      props.$isActive ? "#3182ce" : "rgba(66, 153, 225, 0.1)"};
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+`;
+
+export const AutoMinimizeToggle = styled(motion.button)<{ $isActive: boolean }>`
+  padding: 0.5rem;
+  border: none;
+  background: ${(props) =>
+    props.$isActive ? "rgba(72, 187, 120, 0.1)" : "transparent"};
+  color: ${(props) => (props.$isActive ? "#38a169" : "#718096")};
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: ${(props) =>
+      props.$isActive ? "rgba(72, 187, 120, 0.2)" : "rgba(0, 0, 0, 0.05)"};
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `;
 

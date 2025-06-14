@@ -2,10 +2,32 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
 import path from "path"; // Import path module
 
+// Custom plugin to handle asset imports in Playwright tests
+const assetPlugin = () => {
+  return {
+    name: "asset-plugin",
+    load(id: string) {
+      // Handle image imports by returning a mock URL
+      if (id.match(/\.(png|jpe?g|gif|svg|webp)$/)) {
+        return `export default "${path.basename(id)}";`;
+      }
+    },
+  };
+};
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base: "/",
-  plugins: [react()],
+  plugins: [react(), assetPlugin()],
+  // Add asset handling for Playwright tests
+  assetsInclude: [
+    "**/*.png",
+    "**/*.jpg",
+    "**/*.jpeg",
+    "**/*.svg",
+    "**/*.gif",
+    "**/*.webp",
+  ],
   // Better handling of assets in all environments
   resolve: {
     alias: {

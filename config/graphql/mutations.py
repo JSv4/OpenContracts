@@ -38,6 +38,7 @@ from config.graphql.graphene_types import (
     UserExportType,
     UserFeedbackType,
     UserType,
+    NoteType,
 )
 from config.graphql.serializers import (
     AnnotationSerializer,
@@ -51,6 +52,7 @@ from opencontractserver.annotations.models import (
     AnnotationLabel,
     LabelSet,
     Relationship,
+    Note,
 )
 from opencontractserver.corpuses.models import (
     Corpus,
@@ -1625,6 +1627,85 @@ class UpdateCorpusMutation(DRFMutation):
         preferred_embedder = graphene.String(required=False)
 
 
+class UpdateCorpusDescription(graphene.Mutation):
+    """
+    Mutation to update a corpus's markdown description, creating a new version in the process.
+    Only the corpus creator can update the description.
+    """
+    
+    class Arguments:
+        corpus_id = graphene.ID(
+            required=True, 
+            description="ID of the corpus to update"
+        )
+        new_content = graphene.String(
+            required=True,
+            description="New markdown content for the corpus description"
+        )
+    
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(CorpusType)
+    version = graphene.Int(description="The new version number after update")
+    
+    @login_required
+    def mutate(root, info, corpus_id, new_content):
+        from opencontractserver.corpuses.models import Corpus
+        
+        try:
+            user = info.context.user
+            corpus_pk = from_global_id(corpus_id)[1]
+            
+            # Get the corpus and check ownership
+            corpus = Corpus.objects.get(pk=corpus_pk)
+            
+            if corpus.creator != user:
+                return UpdateCorpusDescription(
+                    ok=False,
+                    message="You can only update descriptions for corpuses that you created.",
+                    obj=None,
+                    version=None
+                )
+            
+            # Use the update_description method to create a new version
+            revision = corpus.update_description(new_content=new_content, author=user)
+            
+            if revision is None:
+                # No changes were made
+                return UpdateCorpusDescription(
+                    ok=True,
+                    message="No changes detected. Description remains at current version.",
+                    obj=corpus,
+                    version=corpus.revisions.count()
+                )
+            
+            # Refresh the corpus to get the updated state
+            corpus.refresh_from_db()
+            
+            return UpdateCorpusDescription(
+                ok=True,
+                message=f"Corpus description updated successfully. Now at version {revision.version}.",
+                obj=corpus,
+                version=revision.version
+            )
+            
+        except Corpus.DoesNotExist:
+            return UpdateCorpusDescription(
+                ok=False,
+                message="Corpus not found.",
+                obj=None,
+                version=None
+            )
+        except Exception as e:
+            logger.error(f"Error updating corpus description: {e}")
+            return UpdateCorpusDescription(
+                ok=False,
+                message=f"Failed to update corpus description: {str(e)}",
+                obj=None,
+                version=None
+            )
+
+
 class DeleteCorpusMutation(DRFDeletion):
     class IOSettings:
         model = Corpus
@@ -2575,6 +2656,216 @@ class DeleteCorpusAction(DRFDeletion):
         )
 
 
+class UpdateNote(graphene.Mutation):
+    """
+    Mutation to update a note's content, creating a new version in the process.
+    Only the note creator can update their notes.
+    """
+    
+    class Arguments:
+        note_id = graphene.ID(
+            required=True, 
+            description="ID of the note to update"
+        )
+        new_content = graphene.String(
+            required=True,
+            description="New markdown content for the note"
+        )
+        title = graphene.String(
+            required=False,
+            description="Optional new title for the note"
+        )
+    
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(NoteType)
+    version = graphene.Int(description="The new version number after update")
+    
+    @login_required
+    def mutate(root, info, note_id, new_content, title=None):
+        from opencontractserver.annotations.models import Note
+        
+        try:
+            user = info.context.user
+            note_pk = from_global_id(note_id)[1]
+            
+            # Get the note and check ownership
+            note = Note.objects.get(pk=note_pk)
+            
+            if note.creator != user:
+                return UpdateNote(
+                    ok=False,
+                    message="You can only update notes that you created.",
+                    obj=None,
+                    version=None
+                )
+            
+            # Update title if provided
+            if title is not None:
+                note.title = title
+            
+            # Use the version_up method to create a new version
+            revision = note.version_up(new_content=new_content, author=user)
+            
+            if revision is None:
+                # No changes were made
+                return UpdateNote(
+                    ok=True,
+                    message="No changes detected. Note remains at current version.",
+                    obj=note,
+                    version=note.revisions.count()
+                )
+            
+            # Refresh the note to get the updated state
+            note.refresh_from_db()
+            
+            return UpdateNote(
+                ok=True,
+                message=f"Note updated successfully. Now at version {revision.version}.",
+                obj=note,
+                version=revision.version
+            )
+            
+        except Note.DoesNotExist:
+            return UpdateNote(
+                ok=False,
+                message="Note not found.",
+                obj=None,
+                version=None
+            )
+        except Exception as e:
+            logger.error(f"Error updating note: {e}")
+            return UpdateNote(
+                ok=False,
+                message=f"Failed to update note: {str(e)}",
+                obj=None,
+                version=None
+            )
+
+
+class DeleteNote(DRFDeletion):
+    """
+    Mutation to delete a note. Only the creator can delete their notes.
+    """
+    class IOSettings:
+        model = Note
+        lookup_field = "id"
+    
+    class Arguments:
+        id = graphene.String(required=True)
+
+
+class CreateNote(graphene.Mutation):
+    """
+    Mutation to create a new note for a document.
+    """
+    
+    class Arguments:
+        document_id = graphene.ID(
+            required=True,
+            description="ID of the document this note is for"
+        )
+        corpus_id = graphene.ID(
+            required=False,
+            description="Optional ID of the corpus this note is associated with"
+        )
+        title = graphene.String(
+            required=True,
+            description="Title of the note"
+        )
+        content = graphene.String(
+            required=True,
+            description="Markdown content of the note"
+        )
+        parent_id = graphene.ID(
+            required=False,
+            description="Optional ID of parent note for hierarchical notes"
+        )
+    
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(NoteType)
+    
+    @login_required
+    def mutate(root, info, document_id, title, content, corpus_id=None, parent_id=None):
+        from opencontractserver.annotations.models import Note
+        from opencontractserver.documents.models import Document
+        from opencontractserver.corpuses.models import Corpus
+        
+        try:
+            user = info.context.user
+            document_pk = from_global_id(document_id)[1]
+            
+            # Get the document
+            document = Document.objects.get(pk=document_pk)
+            
+            # Check if user has permission to add notes to this document
+            if not (document.is_public or document.creator == user):
+                return CreateNote(
+                    ok=False,
+                    message="You don't have permission to add notes to this document.",
+                    obj=None
+                )
+            
+            # Prepare note data
+            note_data = {
+                "document": document,
+                "title": title,
+                "content": content,
+                "creator": user,
+            }
+            
+            # Handle optional corpus
+            if corpus_id:
+                corpus_pk = from_global_id(corpus_id)[1]
+                corpus = Corpus.objects.get(pk=corpus_pk)
+                note_data["corpus"] = corpus
+            
+            # Handle optional parent note
+            if parent_id:
+                parent_pk = from_global_id(parent_id)[1]
+                parent_note = Note.objects.get(pk=parent_pk)
+                note_data["parent"] = parent_note
+            
+            # Create the note
+            note = Note.objects.create(**note_data)
+            
+            # Set permissions
+            set_permissions_for_obj_to_user(user, note, [PermissionTypes.CRUD])
+            
+            return CreateNote(
+                ok=True,
+                message="Note created successfully!",
+                obj=note
+            )
+            
+        except Document.DoesNotExist:
+            return CreateNote(
+                ok=False,
+                message="Document not found.",
+                obj=None
+            )
+        except Corpus.DoesNotExist:
+            return CreateNote(
+                ok=False,
+                message="Corpus not found.",
+                obj=None
+            )
+        except Note.DoesNotExist:
+            return CreateNote(
+                ok=False,
+                message="Parent note not found.",
+                obj=None
+            )
+        except Exception as e:
+            logger.error(f"Error creating note: {e}")
+            return CreateNote(
+                ok=False,
+                message=f"Failed to create note: {str(e)}",
+                obj=None
+            )
+
+
 class Mutation(graphene.ObjectType):
     # TOKEN MUTATIONS (IF WE'RE NOT OUTSOURCING JWT CREATION TO AUTH0) #######
     if not settings.USE_AUTH0:
@@ -2625,6 +2916,7 @@ class Mutation(graphene.ObjectType):
     make_corpus_public = MakeCorpusPublic.Field()
     create_corpus = CreateCorpusMutation.Field()
     update_corpus = UpdateCorpusMutation.Field()
+    update_corpus_description = UpdateCorpusDescription.Field()
     delete_corpus = DeleteCorpusMutation.Field()
     link_documents_to_corpus = AddDocumentsToCorpus.Field()
     remove_documents_from_corpus = RemoveDocumentsFromCorpus.Field()
@@ -2664,3 +2956,6 @@ class Mutation(graphene.ObjectType):
     reject_datacell = RejectDatacell.Field()
     edit_datacell = EditDatacell.Field()
     start_extract_for_doc = StartDocumentExtract.Field()
+    update_note = UpdateNote.Field()
+    delete_note = DeleteNote.Field()
+    create_note = CreateNote.Field()

@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from opencontractserver.corpuses.models import Corpus
-from opencontractserver.documents.models import Document
 from opencontractserver.llms.tools.core_tools import update_corpus_description
 
 User = get_user_model()
@@ -25,7 +24,9 @@ class CorpusPatchToolTests(TestCase):
         current = self.corpus._read_md_description_content()
         new_md = "# H1\n\nChanged"
         diff_text = "".join(
-            difflib.ndiff(current.splitlines(keepends=True), new_md.splitlines(keepends=True))
+            difflib.ndiff(
+                current.splitlines(keepends=True), new_md.splitlines(keepends=True)
+            )
         )
         rev = update_corpus_description(
             corpus_id=self.corpus.id,
@@ -35,4 +36,4 @@ class CorpusPatchToolTests(TestCase):
         self.assertIsNotNone(rev)
         self.corpus.refresh_from_db()
         updated = self.corpus._read_md_description_content()
-        self.assertEqual(updated, new_md) 
+        self.assertEqual(updated, new_md)

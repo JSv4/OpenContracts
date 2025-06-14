@@ -18,6 +18,7 @@ User = get_user_model()
 
 MessageType = Literal["ASYNC_START", "ASYNC_CONTENT", "ASYNC_FINISH", "SYNC_CONTENT"]
 
+
 # NEW – persisted lifecycle state so the frontend does not have to
 # inspect JSON blobs to determine whether a message is complete, paused…
 class MessageStateChoices(models.TextChoices):

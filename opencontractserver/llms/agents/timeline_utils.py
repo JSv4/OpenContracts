@@ -12,7 +12,7 @@ book-keeping logic in each adapter implementation.
 
 from typing import Any
 
-from .core_agents import FinalEvent, SourceEvent, ThoughtEvent, UnifiedStreamEvent
+from .core_agents import FinalEvent, SourceEvent, ThoughtEvent
 
 __all__ = ["TimelineBuilder"]
 
@@ -66,7 +66,10 @@ class TimelineBuilder:
                     return
 
                 # 2️⃣  Tool result – "Tool `name` returned ..."
-                if item.thought.lower().startswith("tool ") and "returned" in item.thought.lower():
+                if (
+                    item.thought.lower().startswith("tool ")
+                    and "returned" in item.thought.lower()
+                ):
                     self._timeline.append({"type": "tool_result", "tool": tool_name})
                     return
 

@@ -2,11 +2,10 @@ import difflib
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from django.core.files.base import ContentFile
 
 from opencontractserver.annotations.models import Note
-from opencontractserver.documents.models import Document
 from opencontractserver.corpuses.models import Corpus
+from opencontractserver.documents.models import Document
 from opencontractserver.llms.tools.core_tools import update_document_note
 
 User = get_user_model()
@@ -52,4 +51,4 @@ class NotePatchToolTests(TestCase):
                 new_content="foo",
                 diff_text="bar",
                 author_id=self.user.id,
-            ) 
+            )

@@ -1,7 +1,6 @@
 """Framework-agnostic core tool functions for document and note operations."""
 
 import logging
-from functools import partial
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -524,7 +523,9 @@ def update_corpus_description(
         current = corpus._read_md_description_content()
         new_content = _apply_ndiff_patch(current, diff_text)
 
-    return corpus.update_description(new_content=new_content, author=author or author_id)
+    return corpus.update_description(
+        new_content=new_content, author=author or author_id
+    )
 
 
 async def aupdate_corpus_description(
@@ -641,10 +642,17 @@ def update_document_note(
 
 
 async def aupdate_document_note(
-    *, note_id: int, new_content: str | None = None, diff_text: str | None = None, author_id: int | None = None
+    *,
+    note_id: int,
+    new_content: str | None = None,
+    diff_text: str | None = None,
+    author_id: int | None = None,
 ):
     return await _db_sync_to_async(update_document_note)(
-        note_id=note_id, new_content=new_content, diff_text=diff_text, author_id=author_id
+        note_id=note_id,
+        new_content=new_content,
+        diff_text=diff_text,
+        author_id=author_id,
     )
 
 

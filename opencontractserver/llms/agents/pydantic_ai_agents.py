@@ -1,7 +1,6 @@
 """Clean PydanticAI implementation following PydanticAI patterns."""
 
 import dataclasses
-import inspect
 import json
 import logging
 from collections.abc import AsyncGenerator
@@ -27,8 +26,8 @@ from pydantic_ai.messages import (
     TextPartDelta,
     ToolCallPart,
     ToolCallPartDelta,
-    UserPromptPart,
     ToolReturnPart,
+    UserPromptPart,
 )
 
 from opencontractserver.conversations.models import Conversation
@@ -55,7 +54,9 @@ from opencontractserver.llms.agents.core_agents import (
 from opencontractserver.llms.agents.timeline_stream_mixin import TimelineStreamMixin
 from opencontractserver.llms.exceptions import ToolConfirmationRequired
 from opencontractserver.llms.tools.core_tools import (
+    aadd_annotations_from_exact_strings,
     aadd_document_note,
+    aduplicate_annotations_with_label,
     aget_corpus_description,
     aget_md_summary_token_length,
     aget_notes_for_document_corpus,
@@ -64,8 +65,6 @@ from opencontractserver.llms.tools.core_tools import (
     asearch_document_notes,
     aupdate_corpus_description,
     aupdate_document_note,
-    aduplicate_annotations_with_label,
-    aadd_annotations_from_exact_strings,
 )
 from opencontractserver.llms.tools.pydantic_ai_tools import (
     PydanticAIDependencies,
@@ -232,7 +231,10 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                 .order_by("-created")
                 .afirst()
             )
-            if placeholder and (placeholder.data or {}).get("state") == MessageState.IN_PROGRESS:
+            if (
+                placeholder
+                and (placeholder.data or {}).get("state") == MessageState.IN_PROGRESS
+            ):
                 llm_msg_id = placeholder.id
 
         # Fallback (e.g. when this adapter is called outside CoreAgentBase)
@@ -389,7 +391,9 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                     result_content = str(agent_run.result.output)
                     # If we failed to stream tokens (e.g. provider buffered) or the
                     # final result is longer (more complete), prefer it.
-                    if not accumulated_content or len(result_content) > len(accumulated_content):
+                    if not accumulated_content or len(result_content) > len(
+                        accumulated_content
+                    ):
                         accumulated_content = result_content
                     final_usage_data = _usage_to_dict(agent_run.result.usage())
                     # builder will add run_finished status
@@ -425,7 +429,9 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                     builder.timeline,
                 )
             except Exception as _err:
-                logger.exception("Failed to persist LLM message with timeline: %s", _err)
+                logger.exception(
+                    "Failed to persist LLM message with timeline: %s", _err
+                )
 
             # Emit to caller (frontend)
             yield final_event
@@ -531,7 +537,9 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                         break
 
                 if candidate is None or not callable(candidate):
-                    raise TypeError("Tool object is not callable and no inner function found")
+                    raise TypeError(
+                        "Tool object is not callable and no inner function found"
+                    )
 
                 result = await candidate(_EmptyCtx(), **tool_args)
 
@@ -563,9 +571,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
         # further model calls so the frontend DB poll sees the new state.
         # ------------------------------------------------------------------
 
-        new_state = (
-            MessageState.COMPLETED if approved else MessageState.CANCELLED
-        )
+        new_state = MessageState.COMPLETED if approved else MessageState.CANCELLED
 
         try:
             await self.complete_message(
@@ -891,9 +897,13 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
                     try:
                         norm_entries.append(ExactStringEntry(**ent))
                     except Exception as _exc:  # pragma: no cover – validation guard
-                        raise ValueError("Invalid entry format for add_exact_string_annotations") from _exc
+                        raise ValueError(
+                            "Invalid entry format for add_exact_string_annotations"
+                        ) from _exc
                 else:  # pragma: no cover – defensive
-                    raise TypeError("Unsupported entry type for add_exact_string_annotations")
+                    raise TypeError(
+                        "Unsupported entry type for add_exact_string_annotations"
+                    )
 
             items = [
                 (e.label_text, e.exact_string, context.document.id, context.corpus.id)

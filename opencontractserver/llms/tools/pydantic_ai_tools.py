@@ -108,7 +108,9 @@ class PydanticAIToolWrapper:
 
         def _maybe_raise(ctx: RunContext[PydanticAIDependencies], *a, **kw):
             """Raise ToolConfirmationRequired if this CoreTool needs approval."""
-            if self.core_tool.requires_approval and not getattr(ctx, "skip_approval_gate", False):
+            if self.core_tool.requires_approval and not getattr(
+                ctx, "skip_approval_gate", False
+            ):
                 bound = inspect.signature(original_func).bind(*a, **kw)
                 bound.apply_defaults()
 

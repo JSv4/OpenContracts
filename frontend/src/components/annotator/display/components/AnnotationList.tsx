@@ -178,7 +178,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
         // update ONLY if row had not been measured before
         setRowHeights((prev) => {
           if (index >= prev.length) return prev;
-          if (prev[index] !== DEFAULT_ROW_HEIGHT) return prev;  // already stable
+          if (prev[index] !== DEFAULT_ROW_HEIGHT) return prev; // already stable
           if (Math.abs(prev[index] - measured) < 1) return prev; // same
           const next = [...prev];
           next[index] = measured;

@@ -18,6 +18,15 @@ User = get_user_model()
 
 MessageType = Literal["ASYNC_START", "ASYNC_CONTENT", "ASYNC_FINISH", "SYNC_CONTENT"]
 
+# NEW – persisted lifecycle state so the frontend does not have to
+# inspect JSON blobs to determine whether a message is complete, paused…
+class MessageStateChoices(models.TextChoices):
+    IN_PROGRESS = "in_progress", "In Progress"
+    COMPLETED = "completed", "Completed"
+    CANCELLED = "cancelled", "Cancelled"
+    ERROR = "error", "Error"
+    AWAITING_APPROVAL = "awaiting_approval", "Awaiting Approval"
+
 
 class ConversationUserObjectPermission(UserObjectPermissionBase):
     """
@@ -177,6 +186,13 @@ class ChatMessage(BaseOCModel):
         related_name="created_by_chat_message",
         help_text="Annotations that this chat message created",
         blank=True,
+    )
+
+    state = models.CharField(
+        max_length=32,
+        choices=MessageStateChoices.choices,
+        default=MessageStateChoices.COMPLETED,
+        help_text="Lifecycle state of the message for quick filtering",
     )
 
     def __str__(self) -> str:

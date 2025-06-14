@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -39,7 +39,13 @@ import { AnnotationLabelType } from "../../../types/graphql-api";
 
 // Timeline entry type based on the schema
 export interface TimelineEntry {
-  type: "thought" | "content" | "tool_call" | "tool_result" | "sources" | "status";
+  type:
+    | "thought"
+    | "content"
+    | "tool_call"
+    | "tool_result"
+    | "sources"
+    | "status";
   text?: string;
   tool?: string;
   args?: any;
@@ -64,6 +70,7 @@ export interface ChatMessageProps {
   }>;
   timeline?: TimelineEntry[];
   approvalStatus?: "approved" | "rejected" | "awaiting";
+  isComplete?: boolean;
 }
 
 const MessageContainer = styled(motion.div)<{
@@ -525,53 +532,76 @@ const TimelineList = styled.div`
   gap: 0.5rem;
 `;
 
-const TimelineItem = styled.div<{ $type: TimelineEntry['type'] }>`
+const TimelineItem = styled.div<{ $type: TimelineEntry["type"] }>`
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.75rem;
   background: ${(props) => {
     switch (props.$type) {
-      case 'thought': return 'rgba(168, 85, 247, 0.05)';
-      case 'tool_call': return 'rgba(59, 130, 246, 0.05)';
-      case 'tool_result': return 'rgba(34, 197, 94, 0.05)';
-      case 'content': return 'rgba(249, 115, 22, 0.05)';
-      case 'sources': return 'rgba(92, 124, 157, 0.05)';
-      case 'status': return 'rgba(156, 163, 175, 0.05)';
-      default: return 'rgba(255, 255, 255, 0.7)';
+      case "thought":
+        return "rgba(168, 85, 247, 0.05)";
+      case "tool_call":
+        return "rgba(59, 130, 246, 0.05)";
+      case "tool_result":
+        return "rgba(34, 197, 94, 0.05)";
+      case "content":
+        return "rgba(249, 115, 22, 0.05)";
+      case "sources":
+        return "rgba(92, 124, 157, 0.05)";
+      case "status":
+        return "rgba(156, 163, 175, 0.05)";
+      default:
+        return "rgba(255, 255, 255, 0.7)";
     }
   }};
-  border: 1px solid ${(props) => {
-    switch (props.$type) {
-      case 'thought': return 'rgba(168, 85, 247, 0.1)';
-      case 'tool_call': return 'rgba(59, 130, 246, 0.1)';
-      case 'tool_result': return 'rgba(34, 197, 94, 0.1)';
-      case 'content': return 'rgba(249, 115, 22, 0.1)';
-      case 'sources': return 'rgba(92, 124, 157, 0.1)';
-      case 'status': return 'rgba(156, 163, 175, 0.1)';
-      default: return 'rgba(156, 163, 175, 0.1)';
-    }
-  }};
+  border: 1px solid
+    ${(props) => {
+      switch (props.$type) {
+        case "thought":
+          return "rgba(168, 85, 247, 0.1)";
+        case "tool_call":
+          return "rgba(59, 130, 246, 0.1)";
+        case "tool_result":
+          return "rgba(34, 197, 94, 0.1)";
+        case "content":
+          return "rgba(249, 115, 22, 0.1)";
+        case "sources":
+          return "rgba(92, 124, 157, 0.1)";
+        case "status":
+          return "rgba(156, 163, 175, 0.1)";
+        default:
+          return "rgba(156, 163, 175, 0.1)";
+      }
+    }};
   border-radius: 0.5rem;
   transition: all 0.2s ease-in-out;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px ${(props) => {
-      switch (props.$type) {
-        case 'thought': return 'rgba(168, 85, 247, 0.1)';
-        case 'tool_call': return 'rgba(59, 130, 246, 0.1)';
-        case 'tool_result': return 'rgba(34, 197, 94, 0.1)';
-        case 'content': return 'rgba(249, 115, 22, 0.1)';
-        case 'sources': return 'rgba(92, 124, 157, 0.1)';
-        case 'status': return 'rgba(156, 163, 175, 0.1)';
-        default: return 'rgba(156, 163, 175, 0.1)';
-      }
-    }};
+    box-shadow: 0 2px 8px
+      ${(props) => {
+        switch (props.$type) {
+          case "thought":
+            return "rgba(168, 85, 247, 0.1)";
+          case "tool_call":
+            return "rgba(59, 130, 246, 0.1)";
+          case "tool_result":
+            return "rgba(34, 197, 94, 0.1)";
+          case "content":
+            return "rgba(249, 115, 22, 0.1)";
+          case "sources":
+            return "rgba(92, 124, 157, 0.1)";
+          case "status":
+            return "rgba(156, 163, 175, 0.1)";
+          default:
+            return "rgba(156, 163, 175, 0.1)";
+        }
+      }};
   }
 `;
 
-const TimelineIcon = styled.div<{ $type: TimelineEntry['type'] }>`
+const TimelineIcon = styled.div<{ $type: TimelineEntry["type"] }>`
   display: flex;
   align-items: center;
   justify-content: center;
@@ -581,13 +611,20 @@ const TimelineIcon = styled.div<{ $type: TimelineEntry['type'] }>`
   flex-shrink: 0;
   background: ${(props) => {
     switch (props.$type) {
-      case 'thought': return 'linear-gradient(135deg, #a855f7, #9333ea)';
-      case 'tool_call': return 'linear-gradient(135deg, #3b82f6, #2563eb)';
-      case 'tool_result': return 'linear-gradient(135deg, #22c55e, #16a34a)';
-      case 'content': return 'linear-gradient(135deg, #f97316, #ea580c)';
-      case 'sources': return 'linear-gradient(135deg, #5c7c9d, #4a6b8c)';
-      case 'status': return 'linear-gradient(135deg, #9ca3af, #6b7280)';
-      default: return 'linear-gradient(135deg, #9ca3af, #6b7280)';
+      case "thought":
+        return "linear-gradient(135deg, #a855f7, #9333ea)";
+      case "tool_call":
+        return "linear-gradient(135deg, #3b82f6, #2563eb)";
+      case "tool_result":
+        return "linear-gradient(135deg, #22c55e, #16a34a)";
+      case "content":
+        return "linear-gradient(135deg, #f97316, #ea580c)";
+      case "sources":
+        return "linear-gradient(135deg, #5c7c9d, #4a6b8c)";
+      case "status":
+        return "linear-gradient(135deg, #9ca3af, #6b7280)";
+      default:
+        return "linear-gradient(135deg, #9ca3af, #6b7280)";
     }
   }};
   color: white;
@@ -624,7 +661,7 @@ const TimelineItemArgs = styled.div`
   background: rgba(0, 0, 0, 0.02);
   border-radius: 0.375rem;
   border: 1px solid rgba(0, 0, 0, 0.05);
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
   font-size: 0.75rem;
   color: #374151;
   overflow-x: auto;
@@ -667,14 +704,20 @@ const SourceItem: React.FC<SourceItemProps> = ({
   };
 
   const handleLabelSelect = (label: any) => {
-    const msg = chatStateValue.messages.find((m: any) => m.messageId === messageId);
+    const msg = chatStateValue.messages.find(
+      (m: any) => m.messageId === messageId
+    );
     if (!msg) return setLabelMenuOpen(false);
     const sourceData = msg.sources[index];
     if (!sourceData) return setLabelMenuOpen(false);
 
     try {
       if (selectedDocument?.fileType?.startsWith("text/")) {
-        if (sourceData.startIndex === undefined || sourceData.endIndex === undefined) return setLabelMenuOpen(false);
+        if (
+          sourceData.startIndex === undefined ||
+          sourceData.endIndex === undefined
+        )
+          return setLabelMenuOpen(false);
         const spanJson: SpanAnnotationJson = {
           start: sourceData.startIndex,
           end: sourceData.endIndex,
@@ -724,7 +767,11 @@ const SourceItem: React.FC<SourceItemProps> = ({
   };
 
   return (
-    <SourceChip $isSelected={isSelected} onClick={onClick} className="source-chip">
+    <SourceChip
+      $isSelected={isSelected}
+      onClick={onClick}
+      className="source-chip"
+    >
       <SourceHeader>
         <SourceTitle $isSelected={isSelected}>
           <Pin size={12} /> Source {index + 1}
@@ -733,7 +780,11 @@ const SourceItem: React.FC<SourceItemProps> = ({
           <AnnotateButton title="Annotate" onClick={handleAnnotateClick}>
             <Plus size={14} /> Annotate
           </AnnotateButton>
-          <ExpandButton $isExpanded={isExpanded} onClick={toggleExpand} title={isExpanded ? "Show less" : "Show more"}>
+          <ExpandButton
+            $isExpanded={isExpanded}
+            onClick={toggleExpand}
+            title={isExpanded ? "Show less" : "Show more"}
+          >
             {isExpanded ? "Show less" : "Show more"}
             <ChevronDown />
           </ExpandButton>
@@ -743,13 +794,27 @@ const SourceItem: React.FC<SourceItemProps> = ({
         <LabelMenu>
           {availableLabels.map((lab) => (
             <LabelButton key={lab.id} onClick={() => handleLabelSelect(lab)}>
-              <span style={{ marginRight: 6, width: 8, height: 8, background: lab.color || "#1a75bc", display: "inline-block", borderRadius: 4 }} />
+              <span
+                style={{
+                  marginRight: 6,
+                  width: 8,
+                  height: 8,
+                  background: lab.color || "#1a75bc",
+                  display: "inline-block",
+                  borderRadius: 4,
+                }}
+              />
               {lab.text}
             </LabelButton>
           ))}
         </LabelMenu>
       )}
-      <SourceText $isExpanded={isExpanded} initial={false} animate={{ height: isExpanded ? "auto" : "3em" }} transition={{ duration: 0.2 }}>
+      <SourceText
+        $isExpanded={isExpanded}
+        initial={false}
+        animate={{ height: isExpanded ? "auto" : "3em" }}
+        transition={{ duration: 0.2 }}
+      >
         {text}
       </SourceText>
     </SourceChip>
@@ -826,19 +891,19 @@ const SourcePreview: React.FC<SourcePreviewProps> = ({
 };
 
 // Helper function to get icon for timeline entry type
-const getTimelineIcon = (type: TimelineEntry['type']) => {
+const getTimelineIcon = (type: TimelineEntry["type"]) => {
   switch (type) {
-    case 'thought':
+    case "thought":
       return <Zap />;
-    case 'tool_call':
+    case "tool_call":
       return <Wrench />;
-    case 'tool_result':
+    case "tool_result":
       return <CheckCircle />;
-    case 'content':
+    case "content":
       return <MessageSquare />;
-    case 'sources':
+    case "sources":
       return <Pin />;
-    case 'status':
+    case "status":
       return <Activity />;
     default:
       return <Clock />;
@@ -848,33 +913,118 @@ const getTimelineIcon = (type: TimelineEntry['type']) => {
 // Helper function to get title for timeline entry type
 const getTimelineTitle = (entry: TimelineEntry) => {
   switch (entry.type) {
-    case 'thought':
-      return 'Thinking';
-    case 'tool_call':
-      return `Calling ${entry.tool || 'Tool'}`;
-    case 'tool_result':
-      return `${entry.tool || 'Tool'} Result`;
-    case 'content':
-      return 'Generating Response';
-    case 'sources':
-      return 'Found Sources';
-    case 'status':
-      return entry.msg || 'Status Update';
+    case "thought":
+      return "Thinking";
+    case "tool_call":
+      return `Calling ${entry.tool || "Tool"}`;
+    case "tool_result":
+      return `${entry.tool || "Tool"} Result`;
+    case "content":
+      return "Generating Response";
+    case "sources":
+      return "Found Sources";
+    case "status":
+      return entry.msg || "Status Update";
     default:
-      return 'Timeline Entry';
+      return "Timeline Entry";
   }
 };
 
 interface TimelinePreviewProps {
   timeline: TimelineEntry[];
+  collapsed?: boolean;
+  /**
+   * When true, only the most recent entry will start expanded – previous ones start collapsed.
+   * This is useful while the assistant is still streaming and we want a concise view.
+   */
+  expandLatestOnly?: boolean;
+  onToggle?: () => void;
 }
 
-const TimelinePreview: React.FC<TimelinePreviewProps> = ({ timeline }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+// Separate component so each entry manages its own expand/collapse state
+interface CollapsibleTimelineItemProps {
+  entry: TimelineEntry;
+  initiallyExpanded: boolean;
+}
+
+const CollapsibleTimelineItem: React.FC<CollapsibleTimelineItemProps> = ({
+  entry,
+  initiallyExpanded,
+}) => {
+  const [expanded, setExpanded] = useState(initiallyExpanded);
+
+  // Keep local state in sync if parent decides to change initial expansion (e.g., when newest entry added)
+  useEffect(() => {
+    setExpanded(initiallyExpanded);
+  }, [initiallyExpanded]);
+
+  const handleToggle = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Prevent parent (TimelineHeader) toggle when clicking inside the list
+    e.stopPropagation();
+    setExpanded((prev) => !prev);
+  };
+
+  return (
+    <TimelineItem
+      $type={entry.type}
+      onClick={handleToggle}
+      style={{ cursor: "pointer" }}
+    >
+      <TimelineIcon $type={entry.type}>
+        {getTimelineIcon(entry.type)}
+      </TimelineIcon>
+      <TimelineItemContent>
+        <TimelineItemTitle>{getTimelineTitle(entry)}</TimelineItemTitle>
+        {expanded && (
+          <>
+            {entry.text && <TimelineItemText>{entry.text}</TimelineItemText>}
+            {entry.args && (
+              <TimelineItemArgs>
+                <strong>Arguments:</strong>
+                <pre>{JSON.stringify(entry.args, null, 2)}</pre>
+              </TimelineItemArgs>
+            )}
+            {entry.count !== undefined && (
+              <TimelineItemText>
+                <strong>Count:</strong> {entry.count}
+              </TimelineItemText>
+            )}
+          </>
+        )}
+      </TimelineItemContent>
+    </TimelineItem>
+  );
+};
+
+const TimelinePreview: React.FC<TimelinePreviewProps> = ({
+  timeline,
+  collapsed = true,
+  expandLatestOnly = false,
+  onToggle,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(!collapsed);
+
+  // Build initial expanded state map whenever timeline changes length OR the flag changes
+  const buildInitialExpandedStates = () =>
+    timeline.map((_, idx) =>
+      expandLatestOnly ? idx === timeline.length - 1 : true
+    );
+
+  const [expandedStates, setExpandedStates] = useState<boolean[]>(
+    buildInitialExpandedStates()
+  );
+
+  // If new timeline entries arrive or expandLatestOnly flag flips, rebuild
+  useEffect(() => {
+    setExpandedStates(buildInitialExpandedStates());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeline.length, expandLatestOnly]);
 
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    setIsExpanded(!isExpanded);
+    const newVal = !isExpanded;
+    setIsExpanded(newVal);
+    onToggle?.();
   };
 
   return (
@@ -885,7 +1035,8 @@ const TimelinePreview: React.FC<TimelinePreviewProps> = ({ timeline }) => {
       <TimelineHeader onClick={handleHeaderClick}>
         <TimelineTitle>
           <Clock size={14} />
-          Timeline ({timeline.length} {timeline.length === 1 ? 'step' : 'steps'})
+          Timeline ({timeline.length} {timeline.length === 1 ? "step" : "steps"}
+          )
         </TimelineTitle>
         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
       </TimelineHeader>
@@ -899,30 +1050,12 @@ const TimelinePreview: React.FC<TimelinePreviewProps> = ({ timeline }) => {
           >
             <TimelineList>
               {timeline.map((entry, index) => (
-                <TimelineItem key={index} $type={entry.type}>
-                  <TimelineIcon $type={entry.type}>
-                    {getTimelineIcon(entry.type)}
-                  </TimelineIcon>
-                  <TimelineItemContent>
-                    <TimelineItemTitle>
-                      {getTimelineTitle(entry)}
-                    </TimelineItemTitle>
-                    {entry.text && (
-                      <TimelineItemText>{entry.text}</TimelineItemText>
-                    )}
-                    {entry.args && (
-                      <TimelineItemArgs>
-                        <strong>Arguments:</strong>
-                        <pre>{JSON.stringify(entry.args, null, 2)}</pre>
-                      </TimelineItemArgs>
-                    )}
-                    {entry.count !== undefined && (
-                      <TimelineItemText>
-                        <strong>Count:</strong> {entry.count}
-                      </TimelineItemText>
-                    )}
-                  </TimelineItemContent>
-                </TimelineItem>
+                <CollapsibleTimelineItem
+                  key={index}
+                  entry={entry}
+                  initiallyExpanded={expandedStates[index]}
+                  // Re-sync when expandedStates updates
+                />
               ))}
             </TimelineList>
           </TimelineContent>
@@ -1027,7 +1160,7 @@ const TimelineIndicator = styled.div<{ $isSelected?: boolean }>`
   }
 `;
 
-const ApprovalIndicator = styled.div<{ 
+const ApprovalIndicator = styled.div<{
   $status: "approved" | "rejected" | "awaiting";
   $isSelected?: boolean;
 }>`
@@ -1114,10 +1247,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   isSelected,
   onSelect,
   approvalStatus,
+  isComplete = true,
 }) => {
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<
     number | undefined
   >();
+
+  // Default presence checks if explicit flags not provided
+  const effectiveHasSources = hasSources ?? sources.length > 0;
+  const effectiveHasTimeline = hasTimeline ?? timeline.length > 0;
 
   const setChatState = useSetAtom(chatSourcesAtom);
   const createAnnotation = useCreateAnnotation();
@@ -1165,6 +1303,21 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   };
 
+  const showTimelineOnly =
+    isAssistant &&
+    effectiveHasTimeline &&
+    (!isComplete || content.trim().length === 0);
+
+  // Local collapse state for timeline when message is COMPLETE
+  const [tlCollapsed, setTlCollapsed] = useState<boolean>(isComplete);
+
+  // When message transitions to complete, collapse timeline automatically
+  useEffect(() => {
+    if (isComplete) {
+      setTlCollapsed(true);
+    }
+  }, [isComplete]);
+
   return (
     <MessageContainer
       $isAssistant={isAssistant}
@@ -1174,13 +1327,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
-      {hasTimeline && timeline.length > 0 && (
+      {effectiveHasTimeline && (
         <TimelineIndicator $isSelected={isSelected}>
           <Clock size={14} />
-          {timeline.length} {timeline.length === 1 ? 'step' : 'steps'}
+          {timeline.length} {timeline.length === 1 ? "step" : "steps"}
         </TimelineIndicator>
       )}
-      {hasSources && (
+      {effectiveHasSources && (
         <SourceIndicator $isSelected={isSelected}>
           <Pin size={14} />
           {sources.length > 0 ? `${sources.length} sources` : "View sources"}
@@ -1197,20 +1350,44 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       </Avatar>
       <ContentContainer>
         <UserName>{isAssistant ? "AI Assistant" : user}</UserName>
-        <MessageContent $isAssistant={isAssistant}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-          {timeline.length > 0 && <TimelinePreview timeline={timeline} />}
-          {sources.length > 0 && (
-            <SourcePreview
-              messageId={messageId || ""}
-              sources={sources}
-              selectedIndex={selectedSourceIndex}
-              onSourceSelect={handleSourceSelect}
-              availableLabels={availableLabels}
-              createAnnotation={createAnnotation}
-            />
-          )}
-        </MessageContent>
+        {!showTimelineOnly && (
+          <MessageContent $isAssistant={isAssistant}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+            {approvalStatus && (
+              <div style={{ marginTop: "0.5rem" }}>
+                {getApprovalIcon(approvalStatus)}{" "}
+                {getApprovalText(approvalStatus)}
+              </div>
+            )}
+            {/* Collapsible timeline once message is complete */}
+            {effectiveHasTimeline && (
+              <TimelinePreview
+                timeline={timeline}
+                collapsed={tlCollapsed}
+                onToggle={() => setTlCollapsed(!tlCollapsed)}
+              />
+            )}
+            {/* Sources inside bubble */}
+            {effectiveHasSources && sources.length > 0 && (
+              <SourcePreview
+                messageId={messageId || ""}
+                sources={sources}
+                selectedIndex={selectedSourceIndex}
+                onSourceSelect={handleSourceSelect}
+                availableLabels={availableLabels}
+                createAnnotation={createAnnotation}
+              />
+            )}
+          </MessageContent>
+        )}
+        {/* Streaming timeline only (no bubble) */}
+        {showTimelineOnly && (
+          <TimelinePreview
+            timeline={timeline}
+            collapsed={false}
+            expandLatestOnly={true}
+          />
+        )}
         <Timestamp>{timestamp}</Timestamp>
       </ContentContainer>
     </MessageContainer>

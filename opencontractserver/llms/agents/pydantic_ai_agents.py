@@ -6,6 +6,7 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 from typing import Any, Callable, Optional, Union
+from uuid import uuid4
 
 import pydantic_core
 from pydantic_ai.agent import Agent as PydanticAIAgent
@@ -27,6 +28,7 @@ from pydantic_ai.messages import (
     ToolCallPart,
     ToolCallPartDelta,
     UserPromptPart,
+    ToolReturnPart,
 )
 
 from opencontractserver.conversations.models import Conversation
@@ -62,6 +64,8 @@ from opencontractserver.llms.tools.core_tools import (
     asearch_document_notes,
     aupdate_corpus_description,
     aupdate_document_note,
+    aduplicate_annotations_with_label,
+    aadd_annotations_from_exact_strings,
 )
 from opencontractserver.llms.tools.pydantic_ai_tools import (
     PydanticAIDependencies,
@@ -73,6 +77,7 @@ from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import (
 from opencontractserver.utils.embeddings import aget_embedder
 
 from .timeline_schema import TimelineEntry
+from .timeline_utils import TimelineBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -209,7 +214,30 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
 
         logger.info(f"[PydanticAI stream] Starting stream with message: {message!r}")
 
-        user_msg_id, llm_msg_id = await self._initialise_llm_message(message)
+        # Try to reuse the LLM placeholder that CoreAgentBase.stream created
+        # just before invoking this method. That placeholder is the most
+        # recent *in-progress* LLM message for this conversation.
+
+        from opencontractserver.conversations.models import ChatMessage
+
+        user_msg_id: int | None = None
+        llm_msg_id: int | None = None
+
+        if self.conversation_manager.conversation:
+            placeholder = (
+                await ChatMessage.objects.filter(
+                    conversation=self.conversation_manager.conversation,
+                    msg_type="LLM",
+                )
+                .order_by("-created")
+                .afirst()
+            )
+            if placeholder and (placeholder.data or {}).get("state") == MessageState.IN_PROGRESS:
+                llm_msg_id = placeholder.id
+
+        # Fallback (e.g. when this adapter is called outside CoreAgentBase)
+        if llm_msg_id is None:
+            user_msg_id, llm_msg_id = await self._initialise_llm_message(message)
 
         accumulated_content: str = ""
         accumulated_sources: list[SourceNode] = []
@@ -223,6 +251,9 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
             stream_kwargs["message_history"] = message_history
         stream_kwargs.update(kwargs)
 
+        # Timeline builder – captures reasoning steps for persistence/UI
+        builder = TimelineBuilder()
+
         try:
             async with self.pydantic_ai_agent.iter(
                 message, **stream_kwargs
@@ -233,21 +264,25 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                     # USER PROMPT NODE – This is the very first node in the graph.
                     # ------------------------------------------------------------------
                     if isinstance(node, UserPromptNode):
-                        yield ThoughtEvent(
+                        event_obj = ThoughtEvent(
                             thought="Received user prompt; beginning reasoning cycle…",
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
+                        builder.add(event_obj)
+                        yield event_obj
 
                     # ------------------------------------------------------------------
                     # MODEL REQUEST NODE – We can stream raw model deltas from here.
                     # ------------------------------------------------------------------
                     elif isinstance(node, ModelRequestNode):
-                        yield ThoughtEvent(
+                        event_obj = ThoughtEvent(
                             thought="Sending request to language model…",
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
+                        builder.add(event_obj)
+                        yield event_obj
 
                         async with node.stream(agent_run.ctx) as model_stream:
                             async for event in model_stream:
@@ -266,37 +301,45 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                     )
                                     # builder will record Sources automatically
 
-                                    yield ContentEvent(
+                                    content_ev = ContentEvent(
                                         content=text,
                                         accumulated_content=accumulated_content,
                                         user_message_id=user_msg_id,
                                         llm_message_id=llm_msg_id,
                                         metadata=meta,
                                     )
+                                    builder.add(content_ev)
+                                    yield content_ev
 
                     # ------------------------------------------------------------------
                     # CALL TOOLS NODE – Capture tool call & result events.
                     # ------------------------------------------------------------------
                     elif isinstance(node, CallToolsNode):
-                        yield ThoughtEvent(
+                        event_obj = ThoughtEvent(
                             thought="Processing model response – may invoke tools…",
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
+                        builder.add(event_obj)
+                        yield event_obj
 
                         async with node.stream(agent_run.ctx) as tool_stream:
                             async for event in tool_stream:
                                 if event.event_kind == "function_tool_call":
-                                    yield ThoughtEvent(
-                                        thought=f"Calling tool `{event.part.tool_name}` with args {event.part.args}",
+                                    tool_name = event.part.tool_name
+                                    # Include specialised timeline entry via ThoughtEvent metadata detection
+                                    # The ThoughtEvent itself will be passed to builder.add below.
+                                    tool_ev = ThoughtEvent(
+                                        thought=f"Calling tool `{tool_name}` with args {event.part.args}",
                                         user_message_id=user_msg_id,
                                         llm_message_id=llm_msg_id,
                                         metadata={
-                                            "tool_name": event.part.tool_name,
+                                            "tool_name": tool_name,
                                             "args": event.part.args,
                                         },
                                     )
-                                    # builder will record tool thought events via emits
+                                    builder.add(tool_ev)
+                                    yield tool_ev
 
                                 elif event.event_kind == "function_tool_result":
                                     tool_name = event.result.tool_name  # type: ignore[attr-defined]
@@ -310,39 +353,52 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                             accumulated_sources.extend(new_sources)
                                             # Emit a dedicated SourceEvent so the client
                                             # can update citations in real-time.
-                                            yield SourceEvent(
+                                            src_ev = SourceEvent(
                                                 sources=new_sources,
                                                 user_message_id=user_msg_id,
                                                 llm_message_id=llm_msg_id,
                                             )
+                                            builder.add(src_ev)
+                                            yield src_ev
 
                                     else:
-                                        yield ThoughtEvent(
+                                        # Let TimelineBuilder infer tool_result from metadata
+                                        tool_ev = ThoughtEvent(
                                             thought=f"Tool `{tool_name}` returned a result.",
                                             user_message_id=user_msg_id,
                                             llm_message_id=llm_msg_id,
                                             metadata={"tool_name": tool_name},
                                         )
-                                        # builder handles thought
+                                        builder.add(tool_ev)
+                                        yield tool_ev
 
                     # ------------------------------------------------------------------
                     # END NODE – Execution graph is finished.
                     # ------------------------------------------------------------------
                     elif isinstance(node, End):
-                        yield ThoughtEvent(
+                        end_ev = ThoughtEvent(
                             thought="Run finished; aggregating final results…",
                             user_message_id=user_msg_id,
                             llm_message_id=llm_msg_id,
                         )
+                        builder.add(end_ev)
+                        yield end_ev
 
                 # After exiting the for-loop, the agent_run is complete and contains the final result.
                 if agent_run.result:
-                    accumulated_content = str(agent_run.result.output)
+                    result_content = str(agent_run.result.output)
+                    # If we failed to stream tokens (e.g. provider buffered) or the
+                    # final result is longer (more complete), prefer it.
+                    if not accumulated_content or len(result_content) > len(accumulated_content):
+                        accumulated_content = result_content
                     final_usage_data = _usage_to_dict(agent_run.result.usage())
                     # builder will add run_finished status
 
-            # Emit final event – TimelineStreamMixin will take care of metadata
-            yield FinalEvent(
+            # --------------------------------------------------------------
+            # Build and inject the final timeline, then persist via helper
+            # --------------------------------------------------------------
+
+            final_event = FinalEvent(
                 accumulated_content=accumulated_content,
                 sources=accumulated_sources,
                 metadata={
@@ -351,8 +407,28 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                 },
                 user_message_id=user_msg_id,
                 llm_message_id=llm_msg_id,
-                content="",  # kept empty
+                content="",
             )
+
+            builder.add(final_event)
+
+            # Inject timeline into metadata
+            final_event.metadata["timeline"] = builder.timeline
+
+            # Persist – this is idempotent even if CoreAgentBase finalises later
+            try:
+                await self._finalise_llm_message(
+                    llm_msg_id,
+                    accumulated_content,
+                    accumulated_sources,
+                    final_usage_data,
+                    builder.timeline,
+                )
+            except Exception as _err:
+                logger.exception("Failed to persist LLM message with timeline: %s", _err)
+
+            # Emit to caller (frontend)
+            yield final_event
 
         except ToolConfirmationRequired as e:
             # Handle pause during streaming
@@ -398,8 +474,12 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
         llm_message_id: int,
         approved: bool,
         **kwargs,
-    ):
-        """Resume a paused run after an approval decision."""
+    ) -> AsyncGenerator[UnifiedStreamEvent, None]:
+        """Resume a paused run after an approval decision.
+
+        Always yields a *stream* of events so callers can iterate via
+        ``async for`` regardless of approval outcome.
+        """
 
         from django.core.exceptions import ObjectDoesNotExist
 
@@ -417,35 +497,43 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
         tool_name = pending.get("name")
         tool_args = pending.get("arguments", {})
 
-        # Execute if approved, else craft rejection content
+        # Determine result based on decision
         if approved:
             # Locate CoreTool by name among config.tools if available
-            core_tool = next(
+            wrapper_fn = next(
                 (
                     t
                     for t in (self.config.tools or [])
-                    if getattr(t, "name", None) == tool_name
+                    if getattr(t, "__name__", None) == tool_name
                 ),
                 None,
             )
-            if core_tool is None:
-                # Fallback – attempt to use pydantic-ai registry
-                tool_callable = self.pydantic_ai_agent._function_tools.get(tool_name)
-                if tool_callable is None:
+
+            # Helper stub ctx carrying call-id for wrappers that expect it.
+            class _EmptyCtx:  # noqa: D401 – simple placeholder
+                tool_call_id = pending.get("tool_call_id")
+                skip_approval_gate = True
+
+            if wrapper_fn is not None:
+                # Pydantic-AI wrappers accept ctx as first arg.
+                result = await wrapper_fn(_EmptyCtx(), **tool_args)
+            else:
+                # Resort to pydantic-ai registry – may return Tool object.
+                tool_obj = self.pydantic_ai_agent._function_tools.get(tool_name)
+                if tool_obj is None:
                     raise ValueError(f"Tool '{tool_name}' not found for execution")
 
-                # tool_callable expects ctx first; provide minimal stub
-                class _EmptyCtx:  # noqa: D401 – simple placeholder
-                    tool_call_id = pending.get("tool_call_id")
+                # Try common attributes to reach the underlying callable.
+                candidate = None
+                for attr in ("function", "_wrapped_function", "callable_function"):
+                    candidate = getattr(tool_obj, attr, None)
+                    if callable(candidate):
+                        break
 
-                result = await tool_callable(_EmptyCtx(), **tool_args)
-            else:
-                fn = core_tool.function
-                result = (
-                    await fn(**tool_args)
-                    if inspect.iscoroutinefunction(fn)
-                    else fn(**tool_args)
-                )
+                if candidate is None or not callable(candidate):
+                    raise TypeError("Tool object is not callable and no inner function found")
+
+                result = await candidate(_EmptyCtx(), **tool_args)
 
             tool_result = {"result": result}
             status_str = "approved"
@@ -456,67 +544,76 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
             }
             status_str = "rejected"
 
-        # Append tool_return part to history and continue conversation via chat
-        from uuid import uuid4
+        # Append tool_return part to history only when *approved*; for rejected we
+        # simply finish the message lifecycle and emit a final event.
+        if approved:
+            tool_call_id = pending.get("tool_call_id") or str(uuid4())
 
-        from pydantic_ai.messages import ModelRequest, ToolReturnPart
+            tool_return_part = ToolReturnPart(
+                tool_name=tool_name,
+                content=json.dumps(tool_result),
+                tool_call_id=tool_call_id,
+            )
 
-        tool_call_id = pending.get("tool_call_id") or str(uuid4())
+            history = await self._get_message_history() or []
+            history.append(ModelRequest(parts=[tool_return_part]))
 
-        tool_return_part = ToolReturnPart(
-            tool_name=tool_name,
-            content=json.dumps(tool_result),
-            tool_call_id=tool_call_id,
+        # ------------------------------------------------------------------
+        # Mark the original paused message as completed/rejected BEFORE any
+        # further model calls so the frontend DB poll sees the new state.
+        # ------------------------------------------------------------------
+
+        new_state = (
+            MessageState.COMPLETED if approved else MessageState.CANCELLED
         )
 
-        # Build a message history using conversation records up to this point
-        history = await self._get_message_history()
-        if history is None:
-            history = []
-
-        history.append(ModelRequest(parts=[tool_return_part]))
-
-        # Mark original paused message as completed so it no longer appears
         try:
-            await self.update_message(
+            await self.complete_message(
                 paused_msg.id,
                 paused_msg.content,
                 metadata={
                     **paused_msg.data,
-                    "state": MessageState.COMPLETED,
+                    "state": new_state,
                     "approval_decision": status_str,
+                    "message_id": str(paused_msg.id),
                 },
             )
         except Exception as _e:  # pragma: no cover – non-critical
             logger.warning(
-                "Failed to update paused message state after approval: %s", _e
+                "Failed to finalise paused message after approval decision: %s",
+                _e,
             )
 
-        # Persist the raw tool result for audit trail (optional for UI)
-        try:
-            await self.store_llm_message(
-                content=json.dumps(tool_result),
+        # If rejected – emit client-facing event(s)
+        if not approved:
+            yield FinalEvent(
+                accumulated_content="Tool execution rejected by user.",
+                sources=[],
                 metadata={
-                    "tool_result": True,
                     "approval_decision": status_str,
+                    "message_id": str(paused_msg.id),
                 },
+                user_message_id=paused_msg.id,
+                llm_message_id=paused_msg.id,
+                content="",
             )
-        except Exception as _e:  # pragma: no cover – non-critical
-            logger.debug("Could not persist tool result message: %s", _e)
+            return
 
-        # Continue via chat; honour caller preference for streaming.
-        if kwargs.pop("stream", False):
-            return self.stream(
-                "Continue",
-                message_history=history,
-                **kwargs,  # type: ignore[arg-type]
-            )
+        # If approved – continue via streaming and yield downstream events.
         else:
-            return await self.chat(
-                "Continue",
-                message_history=history,
-                **kwargs,
+            # For approved, send back the tool_result as final.
+            yield FinalEvent(
+                accumulated_content=str(tool_result["result"]),
+                sources=[],
+                metadata={
+                    "approval_decision": status_str,
+                    "message_id": str(paused_msg.id),
+                },
+                user_message_id=paused_msg.id,
+                llm_message_id=paused_msg.id,
+                content=str(tool_result["result"]),
             )
+            return
 
     # Expose for CoreAgentBase wrapper
     _stream_raw = _stream_core
@@ -715,6 +812,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
                 "title": "Title of the note",
                 "content": "Full markdown content of the note",
             },
+            requires_approval=True,
         )
 
         update_note_tool_wrapped = PydanticAIToolFactory.from_function(
@@ -725,6 +823,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
                 "note_id": "ID of the note to update",
                 "new_content": "New note content (markdown)",
             },
+            requires_approval=True,
         )
 
         search_notes_tool_wrapped = PydanticAIToolFactory.from_function(
@@ -737,6 +836,97 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
             },
         )
 
+        # -----------------------------
+        # Annotation manipulation tools (write – require approval)
+        # -----------------------------
+
+        async def duplicate_annotations_tool(
+            annotation_ids: list[int],
+            new_label_text: str,
+            label_type: str | None = None,
+        ) -> dict[str, list[int]]:
+            """Duplicate existing annotations in the current document with a new label.
+
+            Args:
+                annotation_ids: IDs of annotations to duplicate.
+                new_label_text: Text for the new annotation label.
+                label_type: Optional label type.
+
+            Returns:
+                Dict with key ``annotation_ids`` listing newly created IDs.
+            """
+
+            new_ids = await aduplicate_annotations_with_label(
+                annotation_ids,
+                new_label_text=new_label_text,
+                creator_id=config.user_id,
+                label_type=label_type,
+            )
+            return {"annotation_ids": new_ids}
+
+        from pydantic import BaseModel, Field
+
+        class ExactStringEntry(BaseModel):
+            """Structured entry for an exact‐string annotation request."""
+
+            label_text: str = Field(..., description="Text of the annotation label")
+            exact_string: str = Field(..., description="Exact string to annotate")
+
+        async def add_exact_string_annotations_tool(
+            entries: list[ExactStringEntry],
+        ) -> dict[str, list[int]]:
+            """Create annotations for *exact* string matches in the current document.
+
+            Each *entry* provides ``label_text`` and ``exact_string``.  The tool
+            automatically applies all entries to the current document & corpus.
+            """
+
+            # Accept both ExactStringEntry instances *and* plain dicts coming
+            # back from the approval metadata.
+            norm_entries: list[ExactStringEntry] = []
+            for ent in entries:
+                if isinstance(ent, ExactStringEntry):
+                    norm_entries.append(ent)
+                elif isinstance(ent, dict):
+                    try:
+                        norm_entries.append(ExactStringEntry(**ent))
+                    except Exception as _exc:  # pragma: no cover – validation guard
+                        raise ValueError("Invalid entry format for add_exact_string_annotations") from _exc
+                else:  # pragma: no cover – defensive
+                    raise TypeError("Unsupported entry type for add_exact_string_annotations")
+
+            items = [
+                (e.label_text, e.exact_string, context.document.id, context.corpus.id)
+                for e in norm_entries
+            ]
+
+            new_ids = await aadd_annotations_from_exact_strings(
+                items, creator_id=config.user_id
+            )
+            return {"annotation_ids": new_ids}
+
+        duplicate_ann_tool_wrapped = PydanticAIToolFactory.from_function(
+            duplicate_annotations_tool,
+            name="duplicate_annotations",
+            description="Duplicate existing annotations with a new label (requires approval).",
+            parameter_descriptions={
+                "annotation_ids": "List of source annotation IDs",
+                "new_label_text": "Text for the new label",
+                "label_type": "Optional label type override",
+            },
+            requires_approval=True,
+        )
+
+        add_exact_ann_tool_wrapped = PydanticAIToolFactory.from_function(
+            add_exact_string_annotations_tool,
+            name="add_exact_string_annotations",
+            description="Add annotations for exact string matches in the current document (requires approval).",
+            parameter_descriptions={
+                "entries": "List of objects with keys 'label_text' and 'exact_string'",
+            },
+            requires_approval=True,
+        )
+
         # Merge caller-supplied tools (if any) after the default one so callers
         # can override behaviour/order if desired.
         effective_tools: list[Callable] = [
@@ -745,9 +935,12 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
             get_summary_length_tool,
             get_notes_tool,
             load_text_tool,
+            search_notes_tool_wrapped,
+            # Write operations below – all require approval
             add_note_tool_wrapped,
             update_note_tool_wrapped,
-            search_notes_tool_wrapped,
+            duplicate_ann_tool_wrapped,
+            add_exact_ann_tool_wrapped,
         ]
         if tools:
             effective_tools.extend(tools)

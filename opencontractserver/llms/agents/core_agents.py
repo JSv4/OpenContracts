@@ -350,7 +350,24 @@ class CoreAgentBase(ABC):
 
     async def create_placeholder_message(self, msg_type: str = "LLM") -> int:
         """Create a placeholder message and return its ID."""
-        return await self.conversation_manager.create_placeholder_message(msg_type)
+        # For anonymous conversations, don't store messages
+        if not self.conversation_manager.conversation:
+            return 0  # Return a placeholder ID for anonymous conversations
+
+        from opencontractserver.conversations.models import ChatMessage as CM
+
+        message = await ChatMessage.objects.acreate(
+            conversation=self.conversation_manager.conversation,
+            content="",
+            msg_type=msg_type,
+            creator_id=self.conversation_manager.user_id,
+            data={
+                "state": MessageState.IN_PROGRESS,
+                "created_at": timezone.now().isoformat(),
+            },
+            state=CM.MessageStateChoices.IN_PROGRESS,
+        )
+        return message.id
 
     async def update_message(
         self,
@@ -934,6 +951,8 @@ class CoreConversationManager:
         if not self.conversation:
             return 0  # Return a placeholder ID for anonymous conversations
 
+        from opencontractserver.conversations.models import ChatMessage as CM
+
         message = await ChatMessage.objects.acreate(
             conversation=self.conversation,
             content="",
@@ -943,6 +962,7 @@ class CoreConversationManager:
                 "state": MessageState.IN_PROGRESS,
                 "created_at": timezone.now().isoformat(),
             },
+            state=CM.MessageStateChoices.IN_PROGRESS,
         )
         return message.id
 
@@ -954,7 +974,8 @@ class CoreConversationManager:
 
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = content
-        await message.asave(update_fields=["content"])
+        message.state = MessageState.COMPLETED
+        await message.asave(update_fields=["content", "state"])
 
     async def complete_message(
         self,
@@ -970,9 +991,9 @@ class CoreConversationManager:
 
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = content
+        message.state = MessageState.COMPLETED
 
         data = message.data or {}
-        data["state"] = MessageState.COMPLETED
         data["completed_at"] = timezone.now().isoformat()
 
         if sources:
@@ -996,8 +1017,8 @@ class CoreConversationManager:
 
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = reason
+        message.state = MessageState.CANCELLED
         data = message.data or {}
-        data["state"] = MessageState.CANCELLED
         data["cancelled_at"] = timezone.now().isoformat()
         message.data = data
         await message.asave()
@@ -1017,6 +1038,7 @@ class CoreConversationManager:
                 "state": MessageState.COMPLETED,
                 "created_at": timezone.now().isoformat(),
             },
+            state=MessageState.COMPLETED,
         )
         return message.id
 
@@ -1047,6 +1069,7 @@ class CoreConversationManager:
             msg_type="LLM",
             creator_id=self.user_id,
             data=data,
+            state=MessageState.COMPLETED,
         )
         return message.id
 
@@ -1064,6 +1087,7 @@ class CoreConversationManager:
 
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = content
+        message.state = MessageState.COMPLETED
 
         data = message.data or {}
         data["updated_at"] = timezone.now().isoformat()

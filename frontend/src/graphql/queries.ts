@@ -2186,6 +2186,7 @@ export interface ChatMessageNode {
   id: string;
   msgType: string;
   content: string;
+  state?: string;
   // Add other fields (data, createdAt, creator, etc.) if you need them
 }
 
@@ -2212,6 +2213,7 @@ export const GET_CHAT_MESSAGES = gql`
       id
       msgType
       content
+      state
       data
     }
   }

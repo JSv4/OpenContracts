@@ -108,16 +108,34 @@ class PydanticAIToolWrapper:
 
         def _maybe_raise(ctx: RunContext[PydanticAIDependencies], *a, **kw):
             """Raise ToolConfirmationRequired if this CoreTool needs approval."""
-            if self.core_tool.requires_approval:
+            if self.core_tool.requires_approval and not getattr(ctx, "skip_approval_gate", False):
                 bound = inspect.signature(original_func).bind(*a, **kw)
                 bound.apply_defaults()
+
+                # Make arguments JSON-serialisable to avoid DB/JSONField errors.
+                def _serialise(obj):
+                    """Return JSON-friendly version of *obj* for metadata storage."""
+                    if isinstance(obj, (str, int, float, bool)) or obj is None:
+                        return obj
+                    if hasattr(obj, "model_dump"):
+                        return obj.model_dump()
+                    if isinstance(obj, list):
+                        return [_serialise(o) for o in obj]
+                    if isinstance(obj, tuple):
+                        return tuple(_serialise(o) for o in obj)
+                    if isinstance(obj, dict):
+                        return {k: _serialise(v) for k, v in obj.items()}
+                    # Fallback – string representation
+                    return str(obj)
+
+                serialised_args = {k: _serialise(v) for k, v in bound.arguments.items()}
 
                 # pydantic-ai attaches a unique tool_call_id to the context
                 tool_call_id = getattr(ctx, "tool_call_id", None)
 
                 raise ToolConfirmationRequired(
                     tool_name=self.core_tool.name,
-                    tool_args=dict(bound.arguments),
+                    tool_args=serialised_args,
                     tool_call_id=tool_call_id,
                 )
 

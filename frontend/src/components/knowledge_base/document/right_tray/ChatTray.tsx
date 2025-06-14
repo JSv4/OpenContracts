@@ -104,7 +104,14 @@ export interface WebSocketSources {
  * the actual text content, and optional annotation data.
  */
 export interface MessageData {
-  type: "ASYNC_START" | "ASYNC_CONTENT" | "ASYNC_FINISH" | "SYNC_CONTENT" | "ASYNC_THOUGHT" | "ASYNC_SOURCES" | "ASYNC_APPROVAL_NEEDED";
+  type:
+    | "ASYNC_START"
+    | "ASYNC_CONTENT"
+    | "ASYNC_FINISH"
+    | "SYNC_CONTENT"
+    | "ASYNC_THOUGHT"
+    | "ASYNC_SOURCES"
+    | "ASYNC_APPROVAL_NEEDED";
   content: string;
   data?: {
     sources?: WebSocketSources[];
@@ -158,7 +165,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | undefined
   >();
-  
+
   // Approval state
   const [pendingApproval, setPendingApproval] = useState<{
     messageId: string;
@@ -168,6 +175,10 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       tool_call_id?: string;
     };
   } | null>(null);
+
+  // Controls visibility of the approval modal (can be dismissed & reopened)
+  const [showApprovalModal, setShowApprovalModal] = useState<boolean>(false);
+
   const {
     messages: sourcedMessages,
     selectedMessageId,
@@ -255,7 +266,13 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
     // First, register them in our chatSourcesAtom if they have sources
     messages.forEach((srvMsg) => {
-      const srvMsgData = srvMsg.data as { sources?: WebSocketSources[]; timeline?: TimelineEntry[]; message_id?: string } | undefined;
+      const srvMsgData = srvMsg.data as
+        | {
+            sources?: WebSocketSources[];
+            timeline?: TimelineEntry[];
+            message_id?: string;
+          }
+        | undefined;
       if (srvMsgData?.sources?.length) {
         handleCompleteMessage(
           srvMsg.content,
@@ -272,25 +289,39 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     // Then, map them for immediate display - NOW INCLUDING hasSources and hasTimeline FLAGS
     const mapped = messages.map((msg) => {
       // Type assertion for data field to include timeline and approval status
-      const msgData = msg.data as { 
-        sources?: WebSocketSources[]; 
-        timeline?: TimelineEntry[]; 
-        message_id?: string;
-        approval_decision?: string;
-        state?: string;
-      } | undefined;
-      
-      // Determine approval status from message data
+      const msgData = msg.data as
+        | {
+            sources?: WebSocketSources[];
+            timeline?: TimelineEntry[];
+            message_id?: string;
+            approval_decision?: string;
+            state?: string;
+            pending_tool_call?: {
+              name: string;
+              arguments: any;
+              tool_call_id?: string;
+            };
+          }
+        | undefined;
+
+      // Determine lifecycle + approval status from *persisted* state field first
+      const lifecycleState =
+        ((msg as any).state as string | undefined) || msgData?.state;
+
       let approvalStatus: "approved" | "rejected" | "awaiting" | undefined;
       if (msgData?.approval_decision === "approved") {
         approvalStatus = "approved";
       } else if (msgData?.approval_decision === "rejected") {
         approvalStatus = "rejected";
-      } else if (msgData?.state === "awaiting_approval") {
+      } else if (lifecycleState === "awaiting_approval") {
         approvalStatus = "awaiting";
       }
-      
-      return {
+
+      const isCompleteFlag =
+        lifecycleState !== "in_progress" &&
+        lifecycleState !== "awaiting_approval";
+
+      const mappedMsg = {
         messageId: msg.id,
         user: msg.msgType === "HUMAN" ? "You" : "Assistant",
         content: msg.content,
@@ -300,7 +331,26 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
         hasTimeline: !!msgData?.timeline?.length,
         timeline: msgData?.timeline || [],
         approvalStatus,
-      };
+        // Pass through pending tool call if present
+        pendingToolCall: msgData?.pending_tool_call,
+        isComplete: isCompleteFlag,
+      } as any;
+
+      // If this message is awaiting approval and we haven't already set
+      // pendingApproval, prime the overlay so users can act immediately.
+      if (
+        approvalStatus === "awaiting" &&
+        msgData?.pending_tool_call &&
+        !pendingApproval
+      ) {
+        setPendingApproval({
+          messageId: msg.id.toString(),
+          toolCall: msgData.pending_tool_call,
+        });
+        setShowApprovalModal(true);
+      }
+
+      return mappedMsg;
     });
     setServerMessages(mapped);
   }, [msgData]);
@@ -338,7 +388,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
    */
   const combinedMessages = useMemo(() => {
     const messages = [...serverMessages, ...chat];
-    
+
     // If there's a pending approval, add a placeholder message to show the status
     if (pendingApproval) {
       const approvalMessage = {
@@ -350,10 +400,11 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
         hasTimeline: false,
         timeline: [],
         approvalStatus: "awaiting" as const,
+        isComplete: false,
       };
       messages.push(approvalMessage);
     }
-    
+
     return messages;
   }, [serverMessages, chat, pendingApproval]);
 
@@ -410,11 +461,18 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       container.scrollTo({ top: chatTrayState.scrollOffset });
       // update auto scroll flag based on restored position
       const dist =
-        container.scrollHeight - chatTrayState.scrollOffset - container.clientHeight;
+        container.scrollHeight -
+        chatTrayState.scrollOffset -
+        container.clientHeight;
       autoScrollRef.current = dist < 100;
       initialRestoreDone.current = true;
     }
-  }, [combinedMessages, chatTrayState.conversationId, chatTrayState.scrollOffset, selectedConversationId]);
+  }, [
+    combinedMessages,
+    chatTrayState.conversationId,
+    chatTrayState.scrollOffset,
+    selectedConversationId,
+  ]);
 
   // Keep chatTrayState atom in sync with current conversation mode
   useEffect(() => {
@@ -434,7 +492,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     setChatTrayState((prev) => ({ ...prev, scrollOffset: offset }));
 
     // Disable auto-scroll if the user is more than 100 px from bottom
-    const distanceFromBottom = container.scrollHeight - offset - container.clientHeight;
+    const distanceFromBottom =
+      container.scrollHeight - offset - container.clientHeight;
     autoScrollRef.current = distanceFromBottom < 100;
   }, [setChatTrayState]);
 
@@ -456,6 +515,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
         const updatedLast = {
           ...lastMessage,
           content: lastMessage.content + token,
+          isComplete: false,
         };
         return [...prev.slice(0, -1), updatedLast];
       } else {
@@ -474,6 +534,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
             isAssistant: true,
             hasTimeline: false,
             timeline: [],
+            isComplete: false,
           },
         ];
       }
@@ -519,6 +580,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
             isAssistant: true,
             hasTimeline: true,
             timeline: [newEntry],
+            isComplete: false,
           },
         ];
       }
@@ -529,6 +591,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
         ...msg,
         hasTimeline: true,
         timeline,
+        isComplete: false,
       } as ChatMessageProps;
 
       return [...prev.slice(0, idx), updated, ...prev.slice(idx + 1)];
@@ -586,6 +649,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       updatedMessages[forwardIndex] = {
         ...assistantMsg,
         content,
+        isComplete: true,
       };
       console.log("Updated message with final content:", {
         messageId: lastMsgId,
@@ -593,7 +657,13 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       });
 
       // Now store the final content + sources in ChatSourceAtom with the same ID
-      handleCompleteMessage(content, sourcesData, lastMsgId, undefined, timelineData);
+      handleCompleteMessage(
+        content,
+        sourcesData,
+        lastMsgId,
+        undefined,
+        timelineData
+      );
 
       return updatedMessages;
     });
@@ -676,7 +746,10 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           case "ASYNC_CONTENT":
             appendStreamingTokenToChat(content, data?.message_id);
             // Clear pending approval if agent resumes after approval decision
-            if (pendingApproval && data?.message_id === pendingApproval.messageId) {
+            if (
+              pendingApproval &&
+              data?.message_id === pendingApproval.messageId
+            ) {
               setPendingApproval(null);
             }
             break;
@@ -692,12 +765,21 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                 messageId: data.message_id,
                 toolCall: data.pending_tool_call,
               });
+              setShowApprovalModal(true);
             }
             break;
           case "ASYNC_FINISH":
-            finalizeStreamingResponse(content, data?.sources, data?.message_id, data?.timeline);
+            finalizeStreamingResponse(
+              content,
+              data?.sources,
+              data?.message_id,
+              data?.timeline
+            );
             // Clear pending approval when streaming finishes (covers both approval and rejection cases)
-            if (pendingApproval && data?.message_id === pendingApproval.messageId) {
+            if (
+              pendingApproval &&
+              data?.message_id === pendingApproval.messageId
+            ) {
               setPendingApproval(null);
             }
             break;
@@ -716,7 +798,13 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
               "timeline:",
               timelineToPass
             );
-            handleCompleteMessage(content, sourcesToPass, data?.message_id, undefined, timelineToPass);
+            handleCompleteMessage(
+              content,
+              sourcesToPass,
+              data?.message_id,
+              undefined,
+              timelineToPass
+            );
             break;
           }
           default:
@@ -853,6 +941,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           content: trimmed,
           timestamp: new Date().toLocaleString(),
           isAssistant: false,
+          isComplete: false,
         },
       ]);
       socketRef.current.send(JSON.stringify({ query: trimmed }));
@@ -884,11 +973,15 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           approval_decision: approved,
           llm_message_id: parseInt(pendingApproval.messageId),
         };
-        
-        console.log(`[ChatTray] Sending approval decision: ${approved ? 'APPROVED' : 'REJECTED'} for message ${pendingApproval.messageId}`);
-        
+
+        console.log(
+          `[ChatTray] Sending approval decision: ${
+            approved ? "APPROVED" : "REJECTED"
+          } for message ${pendingApproval.messageId}`
+        );
+
         socketRef.current.send(JSON.stringify(messageData));
-        
+
         // Don't clear pendingApproval immediately - wait for the response
         // It will be cleared when we receive the continuation content
         setWsError(null);
@@ -991,7 +1084,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           content,
           timestamp: messageTimestamp,
           sources: mappedSources.length ? mappedSources : existingMsg.sources,
-        };
+        } as typeof existingMsg;
 
         const updatedMessages = [...prev.messages];
         updatedMessages[existingIndex] = updatedMsg;
@@ -1049,6 +1142,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
               content: "", // will be filled later by finalizeStreamingResponse
               timestamp: new Date().toISOString(),
               sources: mappedSources,
+              isComplete: false,
             },
           ],
         };
@@ -1067,7 +1161,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       ];
 
       const updatedMessages = [...prev.messages];
-      updatedMessages[idx] = { ...existing, sources: mergedSources };
+      const mergedMsg = { ...existing, sources: mergedSources };
+      updatedMessages[idx] = mergedMsg;
 
       return { ...prev, messages: updatedMessages };
     });
@@ -1089,7 +1184,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
    * Approval overlay component
    */
   const ApprovalOverlay = () => {
-    if (!pendingApproval) return null;
+    if (!pendingApproval || !showApprovalModal) return null;
 
     return (
       <motion.div
@@ -1117,30 +1212,49 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
             padding: "2rem",
             maxWidth: "500px",
             width: "100%",
-            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            boxShadow:
+              "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
           }}
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9, y: 20 }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              marginBottom: "1.5rem",
+            }}
+          >
             <AlertTriangle size={24} style={{ color: "#f59e0b" }} />
             <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 600 }}>
               Tool Approval Required
             </h3>
+            <button
+              style={{
+                marginLeft: "auto",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+              }}
+              onClick={() => setShowApprovalModal(false)}
+            >
+              <X size={20} />
+            </button>
           </div>
-          
+
           <div style={{ marginBottom: "1.5rem" }}>
             <p style={{ margin: "0 0 1rem 0", color: "#374151" }}>
               The assistant wants to execute the following tool:
             </p>
-            <div 
-              style={{ 
-                backgroundColor: "#f3f4f6", 
-                padding: "1rem", 
-                borderRadius: "8px", 
+            <div
+              style={{
+                backgroundColor: "#f3f4f6",
+                padding: "1rem",
+                borderRadius: "8px",
                 fontFamily: "monospace",
-                fontSize: "0.875rem"
+                fontSize: "0.875rem",
               }}
             >
               <div style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
@@ -1148,16 +1262,24 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
               </div>
               {Object.keys(pendingApproval.toolCall.arguments).length > 0 && (
                 <div>
-                  <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>Arguments:</div>
+                  <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
+                    Arguments:
+                  </div>
                   <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                    {JSON.stringify(pendingApproval.toolCall.arguments, null, 2)}
+                    {JSON.stringify(
+                      pendingApproval.toolCall.arguments,
+                      null,
+                      2
+                    )}
                   </pre>
                 </div>
               )}
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+          <div
+            style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}
+          >
             <Button
               size="medium"
               onClick={() => sendApprovalDecision(false)}
@@ -1191,6 +1313,24 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           </div>
         </motion.div>
       </motion.div>
+    );
+  };
+
+  // Helper to render reopen button when modal dismissed but approval pending
+  const ReopenApprovalButton = () => {
+    if (!pendingApproval || showApprovalModal) return null;
+    return (
+      <Button
+        size="small"
+        onClick={() => setShowApprovalModal(true)}
+        style={{
+          background: "#f59e0b",
+          color: "white",
+          marginLeft: "1rem",
+        }}
+      >
+        Pending Approval
+      </Button>
     );
   };
 
@@ -1242,6 +1382,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                   <ArrowLeft size={16} />
                   Back to Conversations
                 </Button>
+                <ReopenApprovalButton />
               </motion.div>
 
               {/* Scrollable Messages Container */}
@@ -1546,7 +1687,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
           )}
         </AnimatePresence>
       </ConversationIndicator>
-      
+
       {/* Approval Overlay */}
       <AnimatePresence>
         <ApprovalOverlay />

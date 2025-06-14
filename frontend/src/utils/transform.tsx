@@ -122,8 +122,10 @@ export function convertToServerAnnotation(
   let approved = false;
   let rejected = false;
   if (annotation.userFeedback?.edges.length === 1) {
-    approved = Boolean(annotation.userFeedback.edges[0]?.node?.approved) ?? false;
-    rejected = Boolean(annotation.userFeedback.edges[0]?.node?.rejected) ?? false;
+    approved =
+      Boolean(annotation.userFeedback.edges[0]?.node?.approved) ?? false;
+    rejected =
+      Boolean(annotation.userFeedback.edges[0]?.node?.rejected) ?? false;
   }
 
   if (isSpanAnnotation(annotation)) {

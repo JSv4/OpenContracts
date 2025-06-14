@@ -31,22 +31,60 @@ class TimelineBuilder:
     # ------------------------------------------------------------------
     # Public helpers
     # ------------------------------------------------------------------
-    def add(self, event: UnifiedStreamEvent) -> None:
-        """Inspect *event* and append an appropriate timeline entry (in-place)."""
-        if isinstance(event, ThoughtEvent):
-            if event.thought:
-                self._timeline.append({"type": "thought", "text": event.thought})
+    def add(self, item: Any) -> None:
+        """Append *item* – event or ready dict – to the timeline with smart inference.
 
-        elif isinstance(event, SourceEvent):
-            self._timeline.append({"type": "sources", "count": len(event.sources)})
+        Supports:
+        • UnifiedStreamEvent instances (Thought/Source/Final)
+        • Pre-constructed timeline dicts (already schema-compliant)
+        """
 
-        elif isinstance(event, FinalEvent):
-            # Mark logical completion – individual adapters may add richer meta
+        # If the caller passed a dict that already conforms to the schema –
+        # simply extend the list.
+        if isinstance(item, dict):
+            self._timeline.append(item)
+            return
+
+        # ------------------------------------------------------------------
+        # UnifiedStreamEvent handling
+        # ------------------------------------------------------------------
+        if isinstance(item, ThoughtEvent):
+            meta = item.metadata or {}
+            tool_name = meta.get("tool_name")
+
+            # Detect tool-related thoughts for richer icons in the UI.
+            if tool_name:
+                # 1️⃣  Tool call – "Calling tool `name` ..."
+                if item.thought.lower().startswith("calling tool"):
+                    self._timeline.append(
+                        {
+                            "type": "tool_call",
+                            "tool": tool_name,
+                            "args": meta.get("args"),
+                        }
+                    )
+                    return
+
+                # 2️⃣  Tool result – "Tool `name` returned ..."
+                if item.thought.lower().startswith("tool ") and "returned" in item.thought.lower():
+                    self._timeline.append({"type": "tool_result", "tool": tool_name})
+                    return
+
+            # Fallback: regular thought entry
+            if item.thought:
+                self._timeline.append({"type": "thought", "text": item.thought})
+            return
+
+        if isinstance(item, SourceEvent):
+            self._timeline.append({"type": "sources", "count": len(item.sources)})
+            return
+
+        if isinstance(item, FinalEvent):
+            # Logical finish marker
             self._timeline.append({"type": "status", "msg": "run_finished"})
+            return
 
-        # We purposely *ignore* ContentEvent to avoid bloating the timeline with
-        # every token / chunk.  Adapters that need fine-grained deltas should
-        # emit explicit ThoughtEvents instead (e.g. for tool calls).
+        # ContentEvent and others are ignored to keep timeline concise.
 
     # ------------------------------------------------------------------
     # Accessors

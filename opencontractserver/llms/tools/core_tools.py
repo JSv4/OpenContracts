@@ -333,11 +333,7 @@ async def aget_notes_for_document_corpus(
 # during async test-runs that spin up and tear down the database repeatedly.
 
 try:
-    from channels.db import database_sync_to_async as _orig_db_sync_to_async
-
-    # The wrapped helper behaves exactly like ``database_sync_to_async`` but
-    # always opts-out of the thread-sensitive behaviour.
-    _db_sync_to_async = partial(_orig_db_sync_to_async, thread_sensitive=False)
+    from channels.db import database_sync_to_async as _db_sync_to_async
 except ModuleNotFoundError:  # channels not installed – fall back gracefully
     # In non-ASGI environments or during documentation builds Channels may not
     # be available.  Degrade to the original helper so synchronous execution
@@ -495,37 +491,58 @@ async def aget_corpus_description(
 
 
 def update_corpus_description(
-    *, corpus_id: int, new_content: str, author_id: int | None = None, author=None
-) -> CorpusDescriptionRevision | None:
-    """Version-up the corpus description, creating the markdown file if needed.
+    *,
+    corpus_id: int,
+    new_content: str | None = None,
+    diff_text: str | None = None,
+    author_id: int | None = None,
+    author=None,
+) -> "CorpusDescriptionRevision | None":
+    """Patch or replace a corpus markdown description.
 
-    Either ``author`` (User instance) or ``author_id`` must be provided.
-    Returns the created `CorpusDescriptionRevision` or ``None`` when the content
-    has not changed.
+    Provide either *new_content* or an ``ndiff`` *diff_text* that will be
+    applied to the current description.  Mirrors the behaviour of
+    :py:meth:`Corpus.update_description`.
     """
+
+    if new_content is None and diff_text is None:
+        raise ValueError("Provide either new_content or diff_text")
+
+    if new_content is not None and diff_text is not None:
+        raise ValueError("Provide only one of new_content or diff_text, not both")
 
     if author is None and author_id is None:
         raise ValueError("Provide either author or author_id.")
-
-    if author is None:
-        from django.contrib.auth import get_user_model
-
-        author = get_user_model().objects.get(pk=author_id)
 
     try:
         corpus = Corpus.objects.get(pk=corpus_id)
     except Corpus.DoesNotExist as exc:
         raise ValueError(f"Corpus with id={corpus_id} does not exist.") from exc
 
-    return corpus.update_description(new_content=new_content, author=author)
+    if diff_text is not None:
+        # Need current content
+        current = corpus._read_md_description_content()
+        new_content = _apply_ndiff_patch(current, diff_text)
+
+    return corpus.update_description(new_content=new_content, author=author or author_id)
 
 
 async def aupdate_corpus_description(
-    *, corpus_id: int, new_content: str, author_id: int | None = None, author=None
+    *,
+    corpus_id: int,
+    new_content: str | None = None,
+    diff_text: str | None = None,
+    author_id: int | None = None,
+    author=None,
 ):
-    """Async wrapper around :func:`update_corpus_description`."""
+    """Async wrapper around update_corpus_description."""
+
     return await _db_sync_to_async(update_corpus_description)(
-        corpus_id=corpus_id, new_content=new_content, author_id=author_id, author=author
+        corpus_id=corpus_id,
+        new_content=new_content,
+        diff_text=diff_text,
+        author_id=author_id,
+        author=author,
     )
 
 
@@ -577,24 +594,57 @@ async def aadd_document_note(
     )
 
 
+def _apply_ndiff_patch(original: str, diff_text: str) -> str:
+    """Return *patched* text by applying an ``ndiff``-style diff.
+
+    Raises ``ValueError`` when the diff cannot be applied.
+    """
+
+    import difflib
+
+    try:
+        patched_lines = difflib.restore(diff_text.splitlines(keepends=True), 2)
+        return "".join(patched_lines)
+    except Exception as exc:  # pragma: no cover
+        raise ValueError("Failed to apply diff_text to original note content") from exc
+
+
 def update_document_note(
-    *, note_id: int, new_content: str, author_id: int | None = None
+    *,
+    note_id: int,
+    new_content: str | None = None,
+    diff_text: str | None = None,
+    author_id: int | None = None,
 ) -> NoteRevision | None:
-    """Version-up a note's content."""
+    """Version‐up a note.
+
+    Provide either *new_content* **or** *diff_text* (produced via
+    ``difflib.ndiff``). When *diff_text* is given the function patches the
+    current content to obtain the updated text.
+    """
+
+    if new_content is None and diff_text is None:
+        raise ValueError("Provide either new_content or diff_text")
+
+    if new_content is not None and diff_text is not None:
+        raise ValueError("Provide only one of new_content or diff_text, not both")
 
     try:
         note = Note.objects.get(pk=note_id)
     except Note.DoesNotExist as exc:
         raise ValueError(f"Note with id={note_id} does not exist.") from exc
 
+    if diff_text is not None:
+        new_content = _apply_ndiff_patch(note.content or "", diff_text)
+
     return note.version_up(new_content=new_content, author=author_id)
 
 
 async def aupdate_document_note(
-    *, note_id: int, new_content: str, author_id: int | None = None, author=None
+    *, note_id: int, new_content: str | None = None, diff_text: str | None = None, author_id: int | None = None
 ):
     return await _db_sync_to_async(update_document_note)(
-        note_id=note_id, new_content=new_content, author_id=author_id, author=author
+        note_id=note_id, new_content=new_content, diff_text=diff_text, author_id=author_id
     )
 
 

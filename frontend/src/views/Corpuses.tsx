@@ -107,6 +107,8 @@ import { CorpusDashboard } from "../components/corpuses/CorpusDashboard";
 import { useCorpusState } from "../components/annotator/context/CorpusAtom";
 import { CorpusSettings } from "../components/corpuses/CorpusSettings";
 import { CorpusChat } from "../components/corpuses/CorpusChat";
+import { CorpusHome } from "../components/corpuses/CorpusHome";
+import { CorpusDescriptionEditor } from "../components/corpuses/CorpusDescriptionEditor";
 
 const MobileTabMenu = styled(Menu)`
   &.ui.menu {
@@ -221,7 +223,7 @@ const DashboardContainer = styled.div`
 const ContentWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   flex: 1;
   padding: ${({ theme }) =>
@@ -410,9 +412,11 @@ const RecentChatCard = styled.div`
 const CorpusQueryView = ({
   opened_corpus,
   opened_corpus_id,
+  setShowDescriptionEditor,
 }: {
   opened_corpus: CorpusType | null;
   opened_corpus_id: string | null;
+  setShowDescriptionEditor: (show: boolean) => void;
 }) => {
   const [chatExpanded, setChatExpanded] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -556,7 +560,10 @@ const CorpusQueryView = ({
       <DashboardContainer>
         <ContentWrapper id="corpus-dashboard-content-wrapper">
           {!chatExpanded && (
-            <CorpusDashboard corpus={opened_corpus as CorpusType} />
+            <CorpusHome
+              corpus={opened_corpus as CorpusType}
+              onEditDescription={() => setShowDescriptionEditor(true)}
+            />
           )}
 
           <ChatTransitionContainer
@@ -571,7 +578,7 @@ const CorpusQueryView = ({
               boxShadow: chatExpanded ? "none" : "0 4px 20px rgba(0,0,0,0.15)",
               transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
               height: chatExpanded ? "100%" : "auto",
-              display: "flex",
+              display: chatExpanded ? "flex" : "none",
               flexDirection: "column",
               overflow: "hidden",
             }}
@@ -650,6 +657,8 @@ export const Corpuses = () => {
   const [show_new_corpus_modal, setShowNewCorpusModal] =
     useState<boolean>(false);
   const [active_tab, setActiveTab] = useState<number>(0);
+  const [showDescriptionEditor, setShowDescriptionEditor] =
+    useState<boolean>(false);
 
   const [corpusSearchCache, setCorpusSearchCache] =
     useState<string>(corpus_search_term);
@@ -1053,14 +1062,14 @@ export const Corpuses = () => {
   let panes = [
     {
       menuItem: {
-        key: "query",
+        key: "home",
         content: use_mobile_layout ? (
           <TabIcon>
             <Brain />
-            <span>Query</span>
+            <span>Home</span>
           </TabIcon>
         ) : (
-          "Query"
+          "Home"
         ),
       },
       render: () => (
@@ -1074,6 +1083,7 @@ export const Corpuses = () => {
           <CorpusQueryView
             opened_corpus={opened_corpus}
             opened_corpus_id={opened_corpus_id}
+            setShowDescriptionEditor={setShowDescriptionEditor}
           />
         </Tab.Pane>
       ),
@@ -1265,6 +1275,17 @@ export const Corpuses = () => {
     <CardLayout
       Modals={
         <>
+          {opened_corpus && showDescriptionEditor && (
+            <CorpusDescriptionEditor
+              corpusId={opened_corpus.id}
+              isOpen={showDescriptionEditor}
+              onClose={() => setShowDescriptionEditor(false)}
+              onUpdate={() => {
+                refetchMetadata();
+                setShowDescriptionEditor(false);
+              }}
+            />
+          )}
           <ConfirmModal
             message={`Are you sure you want to delete corpus?`}
             yesAction={() => handleDeleteCorpus(deleting_corpus?.id)}

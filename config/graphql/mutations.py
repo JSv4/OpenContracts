@@ -1627,6 +1627,85 @@ class UpdateCorpusMutation(DRFMutation):
         preferred_embedder = graphene.String(required=False)
 
 
+class UpdateCorpusDescription(graphene.Mutation):
+    """
+    Mutation to update a corpus's markdown description, creating a new version in the process.
+    Only the corpus creator can update the description.
+    """
+    
+    class Arguments:
+        corpus_id = graphene.ID(
+            required=True, 
+            description="ID of the corpus to update"
+        )
+        new_content = graphene.String(
+            required=True,
+            description="New markdown content for the corpus description"
+        )
+    
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(CorpusType)
+    version = graphene.Int(description="The new version number after update")
+    
+    @login_required
+    def mutate(root, info, corpus_id, new_content):
+        from opencontractserver.corpuses.models import Corpus
+        
+        try:
+            user = info.context.user
+            corpus_pk = from_global_id(corpus_id)[1]
+            
+            # Get the corpus and check ownership
+            corpus = Corpus.objects.get(pk=corpus_pk)
+            
+            if corpus.creator != user:
+                return UpdateCorpusDescription(
+                    ok=False,
+                    message="You can only update descriptions for corpuses that you created.",
+                    obj=None,
+                    version=None
+                )
+            
+            # Use the update_description method to create a new version
+            revision = corpus.update_description(new_content=new_content, author=user)
+            
+            if revision is None:
+                # No changes were made
+                return UpdateCorpusDescription(
+                    ok=True,
+                    message="No changes detected. Description remains at current version.",
+                    obj=corpus,
+                    version=corpus.revisions.count()
+                )
+            
+            # Refresh the corpus to get the updated state
+            corpus.refresh_from_db()
+            
+            return UpdateCorpusDescription(
+                ok=True,
+                message=f"Corpus description updated successfully. Now at version {revision.version}.",
+                obj=corpus,
+                version=revision.version
+            )
+            
+        except Corpus.DoesNotExist:
+            return UpdateCorpusDescription(
+                ok=False,
+                message="Corpus not found.",
+                obj=None,
+                version=None
+            )
+        except Exception as e:
+            logger.error(f"Error updating corpus description: {e}")
+            return UpdateCorpusDescription(
+                ok=False,
+                message=f"Failed to update corpus description: {str(e)}",
+                obj=None,
+                version=None
+            )
+
+
 class DeleteCorpusMutation(DRFDeletion):
     class IOSettings:
         model = Corpus
@@ -2837,6 +2916,7 @@ class Mutation(graphene.ObjectType):
     make_corpus_public = MakeCorpusPublic.Field()
     create_corpus = CreateCorpusMutation.Field()
     update_corpus = UpdateCorpusMutation.Field()
+    update_corpus_description = UpdateCorpusDescription.Field()
     delete_corpus = DeleteCorpusMutation.Field()
     link_documents_to_corpus = AddDocumentsToCorpus.Field()
     remove_documents_from_corpus = RemoveDocumentsFromCorpus.Field()

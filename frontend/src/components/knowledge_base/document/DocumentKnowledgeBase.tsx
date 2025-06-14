@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   Search,
   BarChart3,
+  Edit3,
 } from "lucide-react";
 import {
   GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
@@ -113,9 +114,6 @@ import { useScrollContainerRef } from "../../annotator/context/DocumentAtom";
 import { useChatPanelWidth } from "../../annotator/context/UISettingsAtom";
 import {
   ResizeHandle,
-  WidthControlBar,
-  WidthButton,
-  AutoMinimizeToggle,
   WidthControlMenu,
   WidthControlToggle,
   WidthMenuItem,
@@ -123,6 +121,8 @@ import {
   ChatIndicator,
 } from "./StyledContainers";
 import { Eye, EyeOff, Settings, Maximize2 } from "lucide-react";
+import { NoteEditor } from "./NoteEditor";
+import { NewNoteModal } from "./NewNoteModal";
 
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
@@ -799,6 +799,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [selectedNote, setSelectedNote] = useState<(typeof notes)[0] | null>(
     null
   );
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [showNewNoteModal, setShowNewNoteModal] = useState(false);
 
   /* doc viewer (pdf or text snippet) */
   const { setPdfDoc } = usePdfDoc();
@@ -921,7 +923,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         );
       case "notes":
         return (
-          <div className="flex-1 overflow-auto">
+          <div
+            className="flex-1 overflow-auto"
+            style={{ position: "relative" }}
+          >
             <NotesHeader>
               <h3>
                 <Notebook size={20} />
@@ -945,6 +950,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   <PostItNote
                     key={note.id}
                     onClick={() => setSelectedNote(note)}
+                    onDoubleClick={() => setEditingNoteId(note.id)}
                     initial={{ opacity: 0, y: 20, rotate: 0 }}
                     animate={{
                       opacity: 1,
@@ -962,7 +968,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                       rotate: ((index % 3) - 1) * 0.5,
                       transition: { duration: 0.2 },
                     }}
+                    title="Double-click to edit"
                   >
+                    <div className="edit-indicator">
+                      <Edit3 size={14} />
+                    </div>
+                    {note.title && <div className="title">{note.title}</div>}
                     <div className="content">
                       <SafeMarkdown>{note.content}</SafeMarkdown>
                     </div>
@@ -974,6 +985,19 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                 ))}
               </NotesGrid>
             )}
+            <NewChatFloatingButton
+              onClick={() => setShowNewNoteModal(true)}
+              style={{
+                position: "absolute",
+                bottom: "20px",
+                right: "20px",
+                background: "#4a90e2",
+              }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <i className="plus icon" />
+            </NewChatFloatingButton>
           </div>
         );
       case "search":
@@ -1656,9 +1680,23 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       >
         {selectedNote && (
           <>
+            <Modal.Header>{selectedNote.title || "Untitled Note"}</Modal.Header>
             <Modal.Content>
               <SafeMarkdown>{selectedNote.content}</SafeMarkdown>
             </Modal.Content>
+            <Modal.Actions>
+              <Button
+                primary
+                onClick={() => {
+                  setEditingNoteId(selectedNote.id);
+                  setSelectedNote(null);
+                }}
+              >
+                <Icon name="edit" />
+                Edit Note
+              </Button>
+              <Button onClick={() => setSelectedNote(null)}>Close</Button>
+            </Modal.Actions>
             <div className="meta">
               Added by {selectedNote.creator.email} on{" "}
               {new Date(selectedNote.created).toLocaleString()}
@@ -1666,6 +1704,29 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           </>
         )}
       </NoteModal>
+
+      {editingNoteId && (
+        <NoteEditor
+          noteId={editingNoteId}
+          isOpen={true}
+          onClose={() => setEditingNoteId(null)}
+          onUpdate={() => {
+            // Refetch the document data to get updated notes
+            refetch();
+          }}
+        />
+      )}
+
+      <NewNoteModal
+        isOpen={showNewNoteModal}
+        onClose={() => setShowNewNoteModal(false)}
+        documentId={documentId}
+        corpusId={corpusId}
+        onCreated={() => {
+          // Refetch the document data to get the new note
+          refetch();
+        }}
+      />
     </FullScreenModal>
   );
 };

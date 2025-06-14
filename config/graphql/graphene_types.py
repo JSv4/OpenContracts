@@ -23,6 +23,7 @@ from opencontractserver.annotations.models import (
     LabelSet,
     Note,
     Relationship,
+    NoteRevision,
 )
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import (
@@ -401,6 +402,22 @@ class NoteType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         GenericScalar,
         description="List representing the path from the root ancestor to this note and its descendants.",
     )
+    
+    # Version history
+    revisions = graphene.List(
+        lambda: NoteRevisionType,
+        description="List of all revisions/versions of this note, ordered by version."
+    )
+    current_version = graphene.Int(description="Current version number of the note")
+    
+    def resolve_revisions(self, info):
+        """Returns all revisions for this note, ordered by version."""
+        return self.revisions.all()
+    
+    def resolve_current_version(self, info):
+        """Returns the current version number."""
+        latest_revision = self.revisions.order_by('-version').first()
+        return latest_revision.version if latest_revision else 0
 
     # Resolver for descendants_tree
     def resolve_descendants_tree(self, info):
@@ -517,6 +534,28 @@ class NoteType(AnnotatePermissionsForReadMixin, DjangoObjectType):
             return queryset.all().visible_to_user(info.context.user)
         else:
             return queryset
+
+
+class NoteRevisionType(DjangoObjectType):
+    """
+    GraphQL type for the NoteRevision model to expose note version history.
+    """
+    
+    class Meta:
+        model = NoteRevision
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+        fields = [
+            "id",
+            "note",
+            "author",
+            "version",
+            "diff",
+            "snapshot",
+            "checksum_base",
+            "checksum_full",
+            "created",
+        ]
 
 
 class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):

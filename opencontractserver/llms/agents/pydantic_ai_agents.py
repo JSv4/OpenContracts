@@ -363,6 +363,80 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                             builder.add(src_ev)
                                             yield src_ev
 
+                                    # Special handling for nested document-agent responses
+                                    elif tool_name == "ask_document":
+                                        # The ask_document tool returns a dict with keys: answer, sources, timeline
+                                        try:
+                                            result_payload = event.result.content  # type: ignore[attr-defined]
+                                            # Ensure we have a dict (pydantic may already return dict object)
+                                            if isinstance(result_payload, str):
+                                                import json as _json
+                                                result_payload = _json.loads(result_payload)
+
+                                            if isinstance(result_payload, dict):
+                                                # 1) Surface child sources immediately so UI can pin them
+                                                child_sources_raw = result_payload.get("sources", [])
+                                                if child_sources_raw:
+                                                    new_sources = [
+                                                        _to_source_node(s) for s in child_sources_raw
+                                                    ]
+                                                    accumulated_sources.extend(new_sources)
+                                                    src_ev = SourceEvent(
+                                                        sources=new_sources,
+                                                        user_message_id=user_msg_id,
+                                                        llm_message_id=llm_msg_id,
+                                                    )
+                                                    builder.add(src_ev)
+                                                    yield src_ev
+
+                                                # 2) Relay child timeline entries as ThoughtEvents, prefixing with document context for clarity
+                                                child_tl = result_payload.get("timeline", [])
+                                                for tl_entry in child_tl:
+                                                    tl_text = tl_entry.get("thought") or ""
+                                                    if not tl_text:
+                                                        continue
+                                                    prefixed_text = f"[ask_document] {tl_text}"
+                                                    tl_ev = ThoughtEvent(
+                                                        thought=prefixed_text,
+                                                        user_message_id=user_msg_id,
+                                                        llm_message_id=llm_msg_id,
+                                                        metadata={
+                                                            "tool_name": tool_name,
+                                                            **(tl_entry.get("metadata") or {}),
+                                                        },
+                                                    )
+                                                    builder.add(tl_ev)
+                                                    yield tl_ev
+
+                                                # 3) Append the child answer to accumulated_content so it is included in final answer.
+                                                answer_txt = result_payload.get("answer", "")
+                                                if answer_txt:
+                                                    accumulated_content += answer_txt
+                                                    content_ev = ContentEvent(
+                                                        content=answer_txt,
+                                                        accumulated_content=accumulated_content,
+                                                        user_message_id=user_msg_id,
+                                                        llm_message_id=llm_msg_id,
+                                                        metadata={"from": "ask_document"},
+                                                    )
+                                                    builder.add(content_ev)
+                                                    yield content_ev
+                                        except Exception as _inner_exc:  # noqa: BLE001 – defensive
+                                            logger.warning(
+                                                "Failed to process ask_document result payload: %s",
+                                                _inner_exc,
+                                            )
+
+                                        # Always log completion of ask_document regardless of success
+                                        tool_ev = ThoughtEvent(
+                                            thought=f"Tool `{tool_name}` returned a result.",
+                                            user_message_id=user_msg_id,
+                                            llm_message_id=llm_msg_id,
+                                            metadata={"tool_name": tool_name},
+                                        )
+                                        builder.add(tool_ev)
+                                        yield tool_ev
+
                                     else:
                                         # Let TimelineBuilder infer tool_result from metadata
                                         tool_ev = ThoughtEvent(
@@ -411,7 +485,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                 },
                 user_message_id=user_msg_id,
                 llm_message_id=llm_msg_id,
-                content="",
+                content=accumulated_content,
             )
 
             builder.add(final_event)
@@ -1108,12 +1182,141 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
             },
         )
 
-        # Merge caller-supplied tools (if any) after the default one so callers
-        # can override behaviour/order if desired.
+        # -----------------------------
+        # Document coordination tools – empower corpus agent to talk to per-document agents
+        # -----------------------------
+
+        from opencontractserver.llms import agents as _agents_api  # local import to avoid circulars
+        from opencontractserver.llms.types import AgentFramework as _AgentFramework
+
+        async def list_documents_tool() -> list[dict[str, Any]]:
+            """Return basic metadata for all documents in the current corpus.
+
+            Each list entry contains ``document_id``, ``title`` and ``description`` so
+            the coordinator LLM can decide which document-specific agent to consult.
+            """
+            return [
+                {
+                    "document_id": doc.id,
+                    "title": doc.title,
+                    "description": getattr(doc, "description", ""),
+                }
+                for doc in context.documents
+            ]
+
+        async def ask_document_tool(document_id: int, question: str) -> dict[str, Any]:
+            """Ask a question to a **document-specific** agent inside this corpus.
+
+            The call transparently streams the document agent so we can capture
+            its *full* reasoning timeline (tool calls, vector-search citations…)
+            and surface that back to the coordinator LLM.
+
+            Args:
+                document_id: ID of the target document (must belong to this corpus).
+                question:   The natural-language question to forward.
+
+            Returns:
+                An object with keys:
+                    answer (str)   – final assistant answer
+                    sources (list) – flattened source dicts
+                    timeline (list) – detailed reasoning/events emitted by the sub-agent
+            """
+
+            from pydantic import BaseModel, Field
+
+            class DocAnswer(BaseModel):
+                """Structured result returned by the `ask_document` tool."""
+
+                answer: str = Field(description="The document agent's final answer")
+                sources: list[dict] = Field(
+                    default_factory=list,
+                    description="Flattened citation objects produced by the document agent",
+                )
+                timeline: list[dict] = Field(
+                    default_factory=list,
+                    description="Event timeline (thoughts, tool calls, etc.) from the document agent run",
+                )
+
+            # Guard against cross-corpus leakage
+            if document_id not in {d.id for d in context.documents}:
+                raise ValueError("Document does not belong to current corpus")
+
+            doc_agent = await _agents_api.for_document(
+                document=document_id,
+                corpus=context.corpus.id,
+                user_id=config.user_id,
+                framework=_AgentFramework.PYDANTIC_AI,
+            )
+
+            # Side-channel observer from AgentConfig (set by WebSocket layer)
+            observer_cb = getattr(config, "stream_observer", None)
+
+            accumulated_answer: str = ""
+            captured_sources: list[dict] = []
+            captured_timeline: list[dict] = []
+
+            async for ev in doc_agent.stream(question):
+                # Capture content
+                if getattr(ev, "type", "") == "content":
+                    accumulated_answer += getattr(ev, "content", "")
+
+                # Forward raw event upstream (side-channel)
+                if callable(observer_cb):
+                    try:
+                        await observer_cb(ev)
+                    except Exception:
+                        logger.exception("stream_observer raised during ask_document")
+
+                # Capture mid-stream sources
+                if getattr(ev, "type", "") == "sources":
+                    captured_sources.extend([s.to_dict() for s in ev.sources])
+
+                # Capture timeline (thought events etc.)
+                if getattr(ev, "type", "") == "thought":
+                    captured_timeline.append(
+                        {
+                            "type": ev.type,
+                            "thought": ev.thought,
+                            "metadata": ev.metadata,
+                        }
+                    )
+
+                if getattr(ev, "type", "") == "final":
+                    # Merge any final sources / timeline injected by the adapter
+                    captured_sources = [s.to_dict() for s in ev.sources] or captured_sources
+                    if isinstance(ev.metadata, dict) and ev.metadata.get("timeline"):
+                        captured_timeline = ev.metadata["timeline"]
+
+            return DocAnswer(
+                answer=accumulated_answer,
+                sources=captured_sources,
+                timeline=captured_timeline,
+            ).model_dump()
+
+        list_docs_tool_wrapped = PydanticAIToolFactory.from_function(
+            list_documents_tool,
+            name="list_documents",
+            description="List all documents in the current corpus with basic metadata.",
+        )
+
+        ask_doc_tool_wrapped = PydanticAIToolFactory.from_function(
+            ask_document_tool,
+            name="ask_document",
+            description="Delegate a question to a document-specific agent and return its answer and sources.",
+            parameter_descriptions={
+                "document_id": "ID of the document to query (must be in this corpus)",
+                "question": "The natural-language question to ask the document agent",
+            },
+        )
+
+        # Merge caller-supplied tools (if any) after the default ones so callers can
+        # override behaviour/order if desired.
         effective_tools: list[Callable] = [
             default_vs_tool,
             get_corpus_desc_tool_wrapped,
             update_corpus_desc_tool_wrapped,
+            list_docs_tool_wrapped,
+            ask_doc_tool_wrapped,
         ]
         if tools:
             effective_tools.extend(tools)
@@ -1176,38 +1379,19 @@ def _event_to_text_and_meta(event: Any) -> tuple[str, bool, dict[str, Any]]:
         text = part.content
         is_answer = True
     elif isinstance(part, ToolCallPart):
-        args_display = (
-            part.args
-            if isinstance(part.args, str)
-            else (
-                part.args_as_json_str()
-                if hasattr(part, "args_as_json_str")
-                else str(part.args)
-            )
-        )
-        text = f"{part.tool_name}({args_display})"
+        # Tool invocation text should not reach the user; surface via metadata only.
         meta = {"tool_name": part.tool_name, "args": part.args}
-
-    # ------------------------------------------------------------------
-    # Deltas – incremental pieces
-    # ------------------------------------------------------------------
+        text = ""  # suppress chatter
     elif isinstance(part, TextPartDelta):
         text = part.content_delta
         is_answer = True
     elif isinstance(part, ToolCallPartDelta):
-        # Build incremental readable description if possible
-        tool_name_inc = part.tool_name_delta or ""
-        if isinstance(part.args_delta, str):
-            args_inc = part.args_delta
-        elif isinstance(part.args_delta, dict):
-            args_inc = pydantic_core.to_json(part.args_delta).decode()
-        else:
-            args_inc = ""
-        text = f"{tool_name_inc}({args_inc})" if tool_name_inc or args_inc else ""
+        # Suppress incremental tool chatter as well
         meta = {
             "tool_name_delta": part.tool_name_delta,
             "args_delta": part.args_delta,
         }
+        text = ""
 
     return text, is_answer, meta
 

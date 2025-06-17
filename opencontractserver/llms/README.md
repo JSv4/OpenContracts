@@ -72,6 +72,7 @@ Agents are the primary interface for interacting with documents and corpora. The
 - **Corpus Agents**: Work with collections of documents.
 - **Framework Flexibility**: Choose between LlamaIndex, PydanticAI, or future frameworks.
 - **Conversation Persistence**: Automatic conversation management and message storage.
+- **Nested Streaming**: Real-time visibility into child agent execution through stream observers.
 
 #### Creating Agents
 
@@ -103,6 +104,17 @@ agent = await agents.for_document(
     model="gpt-4",
     temperature=0.1,
     tools=["load_md_summary", "get_notes_for_document_corpus"]
+)
+
+# Advanced: With stream observer for nested agent visibility
+async def my_stream_observer(event):
+    """Receives events from nested agent calls."""
+    print(f"[Nested] {event.type}: {getattr(event, 'content', getattr(event, 'thought', ''))}")
+
+agent = await agents.for_corpus(
+    corpus=456,
+    framework=AgentFramework.PYDANTIC_AI,
+    stream_observer=my_stream_observer  # Will receive events from child document agents
 )
 
 # Advanced: Using existing conversation or preloaded messages
@@ -447,6 +459,113 @@ response = await agent.resume_with_approval(
 - Code paths: `tools/pydantic_ai_tools.py` (veto-gate), `agents/pydantic_ai_agents.py` (pause/resume)
 ```
 
+### Nested Agent Streaming
+
+The framework now supports **real-time visibility into nested agent execution** through the stream observer pattern. This is particularly powerful when corpus agents delegate work to document agents.
+
+#### The Stream Observer Pattern
+
+When a parent agent (e.g., corpus agent) calls a child agent (e.g., document agent via `ask_document` tool), the child's stream events can be forwarded to a configured observer:
+
+```python
+from opencontractserver.llms import agents
+from opencontractserver.llms.types import StreamObserver
+
+# Define your observer
+async def websocket_forwarder(event):
+    """Forward nested events to WebSocket clients."""
+    await websocket.send_json({
+        "type": event.type,
+        "content": getattr(event, "content", ""),
+        "thought": getattr(event, "thought", ""),
+        "sources": [s.to_dict() for s in getattr(event, "sources", [])]
+    })
+
+# Create agent with observer
+corpus_agent = await agents.for_corpus(
+    corpus=corpus_id,
+    user_id=user_id,
+    stream_observer=websocket_forwarder
+)
+
+# When streaming, nested events bubble up automatically
+async for event in corpus_agent.stream("Analyze payment terms across all contracts"):
+    # Parent agent events
+    if event.type == "thought" and "[ask_document]" in event.thought:
+        # These are relayed child agent thoughts
+        print(f"Child agent: {event.thought}")
+    else:
+        # Direct parent agent events
+        print(f"Parent: {event.type} - {event.content}")
+```
+
+#### How It Works
+
+1. **Configuration**: Set `stream_observer` in `AgentConfig` or pass it when creating agents
+2. **Automatic Forwarding**: Framework adapters call the observer for every emitted event
+3. **Child Agent Integration**: Tools like `ask_document` forward their stream to the observer
+4. **WebSocket Ready**: Perfect for real-time UI updates showing nested reasoning
+
+#### Example: Corpus Agent with Live Document Analysis
+
+```python
+# In your WebSocket handler
+async def handle_corpus_query(websocket, corpus_id, query):
+    # Create observer that forwards to WebSocket
+    async def forward_to_client(event):
+        await websocket.send_json({
+            "event": event.type,
+            "data": {
+                "content": getattr(event, "content", ""),
+                "thought": getattr(event, "thought", ""),
+                "sources": [s.to_dict() for s in getattr(event, "sources", [])],
+                "metadata": getattr(event, "metadata", {})
+            }
+        })
+    
+    # Create corpus agent with observer
+    agent = await agents.for_corpus(
+        corpus=corpus_id,
+        stream_observer=forward_to_client
+    )
+    
+    # Stream response - client sees EVERYTHING including nested calls
+    async for event in agent.stream(query):
+        # Parent events also go to client
+        await forward_to_client(event)
+```
+
+#### Benefits
+
+- **Complete Visibility**: See exactly what child agents are doing in real-time
+- **Better UX**: Users see progress even during long-running nested operations
+- **Debugging**: Full execution trace across agent boundaries
+- **No Blocking**: Parent agent continues streaming while child executes
+
+#### Implementation Details
+
+The stream observer is implemented at the framework adapter level:
+
+- **PydanticAI**: `ask_document_tool` explicitly forwards child events
+- **CoreAgentBase**: `_emit_observer_event` helper ensures safe forwarding
+- **Error Handling**: Observer exceptions are caught and logged, never breaking the stream
+
+```python
+# Inside ask_document_tool (simplified)
+async for ev in doc_agent.stream(question):
+    # Capture content for final response
+    if ev.type == "content":
+        accumulated_answer += ev.content
+    
+    # Forward ALL events to observer
+    if callable(observer_cb):
+        await observer_cb(ev)  # Real-time forwarding
+    
+    # Process sources, timeline, etc.
+```
+
+This pattern ensures that even deeply nested agent calls remain visible and debuggable, providing unprecedented transparency into complex multi-agent workflows.
+
 ### Streaming
 
 All agents support streaming responses for real-time interaction. The framework now provides **event-based streaming** for rich, granular interaction visibility.
@@ -637,6 +756,7 @@ The framework follows a layered architecture that separates concerns and enables
    - When you call `await agent.chat("Your query")`, the `CoreAgentBase` wrapper automatically handles user message storage, LLM placeholder creation, calling the adapter's `_chat_raw()` method, and completing the stored message with results.
    - This architecture ensures that adapters cannot "forget" to persist conversations or handle approval flows—all database operations are centralized and automatic.
    - PydanticAI agents provide granular event-based streaming that exposes the agent's execution graph in real-time.
+   - The `_emit_observer_event()` helper enables stream observers to receive events from nested agent calls, providing complete visibility across agent boundaries.
 
 5. **Conversation Management**:
    - `CoreConversationManager` handles message persistence and retrieval.
@@ -752,7 +872,8 @@ config = AgentConfig(
     system_prompt="You are an expert legal analyst...",
     embedder_path="sentence-transformers/all-MiniLM-L6-v2",
     tools=["load_md_summary", "get_notes_for_document_corpus"], # Ensure tools are appropriate for context
-    verbose=True
+    verbose=True,
+    stream_observer=my_observer_function  # Optional: receive nested agent events
 )
 
 # The '''corpus''' parameter is required for document agents.
@@ -1240,6 +1361,7 @@ To add support for a new LLM framework (e.g., LangChain, Haystack):
             # Implement raw streaming using your framework (no DB operations)
             # Yield UnifiedStreamEvent objects (ThoughtEvent, ContentEvent, etc.)
             # CoreAgentBase wrapper will handle message storage and incremental updates automatically
+            # Call self._emit_observer_event(event) to forward events to any configured observer
             pass
     ```
 
@@ -1313,6 +1435,10 @@ User Query → PydanticAI Agent → Execution Graph Stream
 │ ThoughtEvent: "Calling tool similarity_search(...)"│
 │ SourceEvent: [SourceNode, SourceNode, ...]         │
 │ ThoughtEvent: "Tool returned result"               │
+├─────────────────────────────────────────────────────┤
+│ ThoughtEvent: "[ask_document] Calling tool..."     │  ← Nested agent events
+│ ContentEvent: "The payment terms state..."         │  ← From child agent
+│ SourceEvent: [SourceNode from child, ...]          │  ← Child's sources
 ├─────────────────────────────────────────────────────┤
 │ FinalEvent: Complete answer + all sources + usage  │
 └─────────────────────────────────────────────────────┘

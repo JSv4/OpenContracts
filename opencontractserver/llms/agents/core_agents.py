@@ -4,12 +4,16 @@ import logging
 from abc import ABC
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
-from typing import Any, Literal, Optional, Protocol, Union, runtime_checkable
+from typing import Any, Literal, Optional, Protocol, Union, runtime_checkable, Callable, Awaitable
 
 from django.conf import settings
 from django.utils import timezone
 
-from opencontractserver.conversations.models import ChatMessage, Conversation
+from opencontractserver.conversations.models import (
+    ChatMessage,
+    Conversation,
+    MessageStateChoices,
+)
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.vector_stores.core_vector_stores import (
@@ -137,6 +141,15 @@ class FinalEvent(_BaseStreamEvt):
     is_complete: bool = True
 
 
+@dataclass
+class ErrorEvent(_BaseStreamEvt):
+    """Emitted when the run terminates with an unrecoverable error."""
+
+    type: Literal["error"] = "error"
+    is_complete: bool = True
+    error: str = ""
+
+
 # ------------------------------------------------------------------
 # Approval gating – emitted when execution pauses for human approval.
 # ------------------------------------------------------------------
@@ -160,6 +173,7 @@ UnifiedStreamEvent = Union[
     SourceEvent,
     ApprovalNeededEvent,
     FinalEvent,
+    ErrorEvent,
 ]
 
 
@@ -193,6 +207,11 @@ class AgentConfig:
     max_tokens: Optional[int] = None
     # NEW ➜ frequency (in tokens) for interim DB updates during streaming
     stream_update_freq: int = 50
+
+    # Optional callback – every emitted UnifiedStreamEvent will also be
+    # forwarded here.  Useful for bubbling nested streams up to the
+    # WebSocket layer while a tool call blocks the parent LLM.
+    stream_observer: Optional[Callable[[Any], Awaitable[None]]] = None
 
     # Enhanced conversation management
     conversation: Optional[Conversation] = None
@@ -354,7 +373,10 @@ class CoreAgentBase(ABC):
         if not self.conversation_manager.conversation:
             return 0  # Return a placeholder ID for anonymous conversations
 
-        from opencontractserver.conversations.models import ChatMessage as CM
+        from opencontractserver.conversations.models import (
+            ChatMessage,
+            MessageStateChoices,
+        )
 
         message = await ChatMessage.objects.acreate(
             conversation=self.conversation_manager.conversation,
@@ -365,7 +387,7 @@ class CoreAgentBase(ABC):
                 "state": MessageState.IN_PROGRESS,
                 "created_at": timezone.now().isoformat(),
             },
-            state=CM.MessageStateChoices.IN_PROGRESS,
+            state=MessageState.IN_PROGRESS,
         )
         return message.id
 
@@ -447,6 +469,7 @@ class CoreAgentBase(ABC):
         """Legacy compatibility wrapper that simply forwards to ``stream`` and yields its events."""
         async for chunk in self.stream(message, **kwargs):
             yield chunk
+
 
     async def store_message(self, content: str, msg_type: str = "LLM") -> int:
         """Legacy method - delegates to appropriate store method."""
@@ -546,8 +569,15 @@ class CoreAgentBase(ABC):
 
         except Exception as exc:
             if llm_msg_id:
-                await self.cancel_message(llm_msg_id, f"Error: {exc}")
-            raise
+                await self.conversation_manager.mark_message_error(llm_msg_id, str(exc))
+            # Return an error response so callers can surface the failure gracefully
+            return UnifiedChatResponse(
+                content="Error: " + str(exc),
+                sources=[],
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata={"error": str(exc)},
+            )
 
     # NOTE: Streaming wrapper is more involved but follows same pattern
     async def stream(self, message: str, **kwargs):  # type: ignore[override]
@@ -592,6 +622,9 @@ class CoreAgentBase(ABC):
                         llm_msg_id, accumulated_content
                     )
 
+                # Side-channel: forward to observer if configured.
+                await self._emit_observer_event(evt)
+
                 yield evt  # Pass through
 
             # After generator exhausted – finalise message
@@ -624,8 +657,18 @@ class CoreAgentBase(ABC):
 
         except Exception as exc:
             if llm_msg_id:
-                await self.cancel_message(llm_msg_id, f"Error: {exc}")
-            raise
+                await self.conversation_manager.mark_message_error(llm_msg_id, str(exc))
+
+            # Emit error event so front-end can conclude the stream cleanly
+            yield ErrorEvent(
+                error=str(exc),
+                content="",  # no delta
+                is_complete=True,
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata={"error": str(exc)},
+            )
+            return
 
     # ------------------------------------------------------------------
     # Helper for lightweight source normalisation (framework-agnostic)
@@ -683,6 +726,34 @@ class CoreAgentBase(ABC):
                 "framework": framework,
             },
         )
+
+    async def mark_message_error(self, message_id: int, error: str) -> None:
+        """Mark an existing message as errored with the given text."""
+        # For anonymous conversations, don't store messages
+        if not self.conversation or message_id == 0:
+            return
+
+        message = await ChatMessage.objects.aget(id=message_id)
+        message.content = error
+        message.state = MessageState.ERROR
+        data = message.data or {}
+        data["error"] = error
+        data["errored_at"] = timezone.now().isoformat()
+        message.data = data
+        await message.asave()
+
+    # ------------------------------------------------------------------
+    # Observer helper
+    # ------------------------------------------------------------------
+
+    async def _emit_observer_event(self, evt: Any) -> None:
+        """Forward *evt* to the ``stream_observer`` if one is configured."""
+        cb = getattr(self.config, "stream_observer", None)
+        if cb and callable(cb):
+            try:
+                await cb(evt)
+            except Exception:  # pragma: no cover – observer must not kill run
+                logger.exception("Stream observer raised an exception")
 
 
 class CoreDocumentAgentFactory:
@@ -758,12 +829,19 @@ class CoreCorpusAgentFactory:
             f"called '{corpus.title}'.\n\n"
             f"**Available Tools:**\n"
             f"You have access to comprehensive tools for analyzing documents in this corpus:\n\n"
-            f"1. **Document-Specific Tools**: Each document in the corpus has its own set of tools including:\n"
-            f"   - Vector search for semantic similarity matching within documents\n"
-            f"   - Document summary loading and analysis\n"
-            f"   - Notes retrieval and examination\n"
+            f"1. **Document-Specific Tools** – available *per* document via the `ask_document` helper:\n"
+            f"   - Vector search inside that document\n"
+            f"   - Summary & note access\n"
+            f"   - Annotation manipulation (subject to approval)\n"
             f"   - Token length calculations for context management\n"
-            f"2. **Cross-Document Analysis**: Tools that work across the entire corpus for comprehensive answers\n\n"
+            f"2. **Corpus-Level Coordination Tools** – orchestrate multi-document reasoning:\n"
+            f"   - `list_documents()` → returns `[{{document_id, title, description}}]` for discovery\n"
+            f"   - `ask_document(document_id, question)` → runs a **document agent** and yields a rich object:\n"
+            f"       • `answer` str – the assistant's final answer\n"
+            f"       • `sources` list – flattened citation objects (annotation_id, page, rawText …)\n"
+            f"       • `timeline` list – detailed reasoning & tool calls from the sub-agent run\n"
+            f"   Use these keys to compile thorough, well-cited corpus-level answers.\n"
+            f"3. **Cross-Document Vector Search** – semantic search across the entire corpus for broad context\n\n"
             f"**Important**: Always check what tools are available to you, as additional specialized tools may be provided dynamically "  # noqa: E501
             f"beyond the core set. The exact tools available will depend on the documents in this corpus.\n\n"
             f"**Guidelines:**\n"
@@ -771,7 +849,8 @@ class CoreCorpusAgentFactory:
             f"- Do not rely on prior knowledge about the documents\n"
             f"- When appropriate, search across multiple documents for comprehensive answers\n"
             f"- Cite specific documents and sources when presenting information\n"
-            f"- Present your findings in clear, well-structured markdown format"
+            f"- Prefer using `sources` returned by `ask_document` or vector search to justify claims\n"
+            f"- Present your findings in clear, well-structured markdown format, using footnote-style citations"
         )
 
     @staticmethod
@@ -951,7 +1030,10 @@ class CoreConversationManager:
         if not self.conversation:
             return 0  # Return a placeholder ID for anonymous conversations
 
-        from opencontractserver.conversations.models import ChatMessage as CM
+        from opencontractserver.conversations.models import (
+            ChatMessage,
+            MessageStateChoices,
+        )
 
         message = await ChatMessage.objects.acreate(
             conversation=self.conversation,
@@ -962,7 +1044,7 @@ class CoreConversationManager:
                 "state": MessageState.IN_PROGRESS,
                 "created_at": timezone.now().isoformat(),
             },
-            state=CM.MessageStateChoices.IN_PROGRESS,
+            state=MessageState.IN_PROGRESS,
         )
         return message.id
 
@@ -1038,7 +1120,7 @@ class CoreConversationManager:
                 "state": MessageState.COMPLETED,
                 "created_at": timezone.now().isoformat(),
             },
-            state=MessageState.COMPLETED,
+            state=MessageStateChoices.COMPLETED,
         )
         return message.id
 
@@ -1069,7 +1151,7 @@ class CoreConversationManager:
             msg_type="LLM",
             creator_id=self.user_id,
             data=data,
-            state=MessageState.COMPLETED,
+            state=MessageStateChoices.COMPLETED,
         )
         return message.id
 
@@ -1098,6 +1180,32 @@ class CoreConversationManager:
             data.update(metadata)
 
         message.data = data
+        await message.asave()
+
+    async def mark_message_error(self, message_id: int, error: str) -> None:
+        """Mark an existing message as errored along with the error text.
+
+        This mirrors the helper available on ``CoreAgentBase`` so that agent
+        wrappers can consistently delegate the persistence step to the
+        conversation manager.  Front-end code relies on the ``state`` and
+        ``error`` fields to detect failed runs and render a proper error
+        bubble instead of crashing the stream.
+        """
+        # Anonymous (non-persistent) conversations – nothing to store.
+        if not self.conversation or message_id == 0:
+            return
+
+        from opencontractserver.conversations.models import ChatMessage
+
+        message = await ChatMessage.objects.aget(id=message_id)
+        message.content = error
+        message.state = MessageState.ERROR
+
+        data = message.data or {}
+        data["error"] = error
+        data["errored_at"] = timezone.now().isoformat()
+        message.data = data
+
         await message.asave()
 
 

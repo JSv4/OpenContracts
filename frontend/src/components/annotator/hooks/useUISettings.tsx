@@ -125,6 +125,10 @@ export function useUISettings(props?: UseUISettingsProps) {
       // Chat tray persistence
       chatTrayState,
       setChatTrayState,
+
+      // helper inside the returned object
+      shouldShowChatTray: (page: "document" | "corpus") =>
+        page === "document" && chatTrayState.isOpen,
     }),
     [
       zoomLevel,

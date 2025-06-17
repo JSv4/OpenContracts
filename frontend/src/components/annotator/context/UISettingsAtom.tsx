@@ -96,11 +96,13 @@ export const hasScrolledToAnnotationAtom = atom<string | null>(null);
  * ChatTray persistence atom
  */
 export interface ChatTrayPersist {
+  isOpen: boolean;
   conversationId: string | null;
   scrollOffset: number;
   isNewChat: boolean;
 }
 export const chatTrayStateAtom = atom<ChatTrayPersist>({
+  isOpen: false,
   conversationId: null,
   scrollOffset: 0,
   isNewChat: false,

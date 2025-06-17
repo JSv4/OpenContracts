@@ -114,7 +114,8 @@ export interface MessageData {
     | "SYNC_CONTENT"
     | "ASYNC_THOUGHT"
     | "ASYNC_SOURCES"
-    | "ASYNC_APPROVAL_NEEDED";
+    | "ASYNC_APPROVAL_NEEDED"
+    | "ASYNC_ERROR";
   content: string;
   data?: {
     sources?: WebSocketSources[];
@@ -820,6 +821,15 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
             ) {
               setPendingApproval(null);
             }
+            break;
+          case "ASYNC_ERROR":
+            // treat as finish but set error state
+            setWsError(data?.error || "Agent error");
+            finalizeStreamingResponse(
+              data?.error || "Error",
+              [],
+              data?.message_id
+            );
             break;
           case "SYNC_CONTENT": {
             const sourcesToPass =

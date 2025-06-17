@@ -428,20 +428,30 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
                     elif isinstance(event, FinalEvent):
                         # Prepare sources data (if not already sent)
-                        sources_payload = [s.to_dict() for s in event.sources]
-                        await self.send_standard_message(
-                            msg_type="ASYNC_FINISH",
-                            content=event.accumulated_content or event.content,
-                            data={
-                                "sources": sources_payload,
-                                "message_id": event.llm_message_id,
-                                "timeline": (
-                                    event.metadata.get("timeline", [])
-                                    if isinstance(event.metadata, dict)
-                                    else []
-                                ),
-                            },
-                        )
+                        if getattr(event, "type", "") == "error":
+                            await self.send_standard_message(
+                                msg_type="ASYNC_ERROR",
+                                content="",
+                                data={
+                                    "error": getattr(event, "error", "Unknown error"),
+                                    "message_id": event.llm_message_id,
+                                },
+                            )
+                        else:
+                            sources_payload = [s.to_dict() for s in event.sources]
+                            await self.send_standard_message(
+                                msg_type="ASYNC_FINISH",
+                                content=event.accumulated_content or event.content,
+                                data={
+                                    "sources": sources_payload,
+                                    "message_id": event.llm_message_id,
+                                    "timeline": (
+                                        event.metadata.get("timeline", [])
+                                        if isinstance(event.metadata, dict)
+                                        else []
+                                    ),
+                                },
+                            )
 
                         # Reset flag
                         if hasattr(self, "_sent_start"):

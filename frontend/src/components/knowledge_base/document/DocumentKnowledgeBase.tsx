@@ -1412,6 +1412,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     setActiveLayer("knowledge");
   }, []);
 
+  const { shouldShowChatTray } = useUISettings();
+
   return (
     <FullScreenModal
       id="knowledge-base-modal"
@@ -1523,7 +1525,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           )}
           {/* Right Panel, if needed */}
           <AnimatePresence>
-            {showRightPanel && activeTab && (
+            {showRightPanel && activeTab && shouldShowChatTray("document") && (
               <SlidingPanel
                 panelWidth={getPanelWidthPercentage()}
                 onMouseEnter={handlePanelMouseEnter}

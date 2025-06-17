@@ -19,8 +19,12 @@ import {
   Settings,
   Home,
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Menu as LucideMenu,
 } from "lucide-react";
 import styled from "styled-components";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { CorpusCards } from "../components/corpuses/CorpusCards";
@@ -84,6 +88,7 @@ import {
   GetCorpusMetadataOutputs,
   GET_CORPUSES,
   GET_CORPUS_METADATA,
+  GET_CORPUS_STATS,
   RequestDocumentsInputs,
   RequestDocumentsOutputs,
   GET_DOCUMENTS,
@@ -110,102 +115,6 @@ import { CorpusChat } from "../components/corpuses/CorpusChat";
 import { CorpusHome } from "../components/corpuses/CorpusHome";
 import { CorpusDescriptionEditor } from "../components/corpuses/CorpusDescriptionEditor";
 
-const MobileTabMenu = styled(Menu)`
-  &.ui.menu {
-    border: none;
-    box-shadow: none;
-    background: transparent;
-    margin-bottom: 0;
-
-    .item {
-      flex: 1;
-      justify-content: center;
-      padding: 1rem 0.5rem;
-      min-height: 4rem;
-      border: none;
-      background: transparent;
-      position: relative;
-
-      &::after {
-        content: "";
-        position: absolute;
-        bottom: 0;
-        left: 10%;
-        right: 10%;
-        height: 3px;
-        background: transparent;
-        border-radius: 3px;
-        transition: all 0.2s ease;
-      }
-
-      &.active {
-        color: #4a90e2;
-        font-weight: 500;
-
-        &::after {
-          background: #4a90e2;
-        }
-
-        svg {
-          stroke-width: 2.5;
-          transform: translateY(-2px);
-        }
-      }
-
-      svg {
-        width: 24px;
-        height: 24px;
-        stroke-width: 2;
-        transition: all 0.2s ease;
-        margin: 0;
-      }
-    }
-  }
-`;
-
-const TabIcon = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-
-  span {
-    font-size: 0.75rem;
-    font-weight: 500;
-    opacity: 0.8;
-    white-space: nowrap;
-    color: inherit;
-  }
-`;
-
-// First add a styled container for the tab layout
-const TabContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  overflow: hidden;
-
-  .ui.menu {
-    flex-shrink: 0; /* Prevent menu from shrinking */
-    margin-bottom: 0;
-    padding: 0.5rem 0.5rem 0;
-    border-bottom: 1px solid #e2e8f0;
-  }
-
-  .tab-content {
-    flex: 1; /* Take remaining space */
-    overflow: hidden; /* Create new stacking context */
-    position: relative; /* For absolute children if any */
-    display: flex;
-    flex-direction: column;
-
-    .ui.tab {
-      height: 100%;
-      overflow-y: auto;
-    }
-  }
-`;
-
 // Add these styled components near your other styled components
 const DashboardContainer = styled.div`
   display: flex;
@@ -214,9 +123,7 @@ const DashboardContainer = styled.div`
   position: relative;
   overflow: hidden;
   padding: 0;
-  max-width: 1200px;
-  margin: 0 auto;
-  justify-content: center;
+  width: 100%;
 `;
 
 // TODO - need to drop this padding
@@ -226,9 +133,10 @@ const ContentWrapper = styled.div`
   align-items: stretch;
   justify-content: center;
   flex: 1;
-  padding: ${({ theme }) =>
-    theme.width <= MOBILE_VIEW_BREAKPOINT ? "2rem 1rem" : "0"};
+  padding: 0;
   height: 100%;
+  overflow: hidden;
+  min-height: 0;
 `;
 
 const ChatTransitionContainer = styled.div<{
@@ -238,12 +146,12 @@ const ChatTransitionContainer = styled.div<{
   display: flex;
   flex-direction: column;
   height: ${(props) =>
-    props.isSearchTransform ? (props.isExpanded ? "100%" : "56px") : "100%"};
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    props.isSearchTransform ? (props.isExpanded ? "100%" : "auto") : "100%"};
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   background: white;
-  border-radius: ${(props) => (props.isExpanded ? "0" : "12px")};
+  border-radius: ${(props) => (props.isExpanded ? "0" : "16px")};
   box-shadow: ${(props) =>
-    props.isExpanded ? "none" : "0 4px 12px rgba(0,0,0,0.1)"};
+    props.isExpanded ? "none" : "0 8px 24px rgba(0,0,0,0.12)"};
   overflow: hidden;
   position: relative;
   z-index: ${(props) => (props.isExpanded ? "10" : "1")};
@@ -252,10 +160,14 @@ const ChatTransitionContainer = styled.div<{
 const SearchToConversationInput = styled.div<{ isExpanded: boolean }>`
   display: flex;
   align-items: center;
-  padding: ${(props) => (props.isExpanded ? "1rem" : "0.75rem 1rem")};
+  padding: ${(props) => (props.isExpanded ? "1.25rem 1.5rem" : "1rem 1.25rem")};
   border-bottom: ${(props) =>
-    props.isExpanded ? "1px solid #e2e8f0" : "none"};
-  background: ${(props) => (props.isExpanded ? "white" : "transparent")};
+    props.isExpanded ? "1px solid rgba(226, 232, 240, 0.8)" : "none"};
+  background: ${(props) =>
+    props.isExpanded ? "rgba(255, 255, 255, 0.98)" : "transparent"};
+  backdrop-filter: ${(props) => (props.isExpanded ? "blur(12px)" : "none")};
+  box-shadow: ${(props) =>
+    props.isExpanded ? "0 2px 8px rgba(0, 0, 0, 0.04)" : "none"};
 
   input {
     flex: 1;
@@ -263,15 +175,16 @@ const SearchToConversationInput = styled.div<{ isExpanded: boolean }>`
     outline: none;
     font-size: 1rem;
     background: transparent;
+    color: #0f172a;
 
     &::placeholder {
-      color: #a0aec0;
+      color: #94a3b8;
     }
   }
 
   .actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
 
   .nav-button {
@@ -282,12 +195,14 @@ const SearchToConversationInput = styled.div<{ isExpanded: boolean }>`
     font-weight: 500;
     background: transparent;
     border: none;
-    padding: 0.5rem;
+    padding: 0.625rem 0.875rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    border-radius: 8px;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.03);
+      background: rgba(0, 0, 0, 0.04);
+      color: #2d3748;
     }
 
     .button-text {
@@ -323,88 +238,6 @@ const ConversationContainer = styled.div`
     padding: 1rem;
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     z-index: 10;
-  }
-`;
-
-const DashboardActionBar = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid #e2e8f0;
-`;
-
-const ChatEntryPoint = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 8px;
-  margin: 1rem;
-
-  &:hover {
-    background: #f7fafc;
-  }
-
-  h3 {
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-  }
-
-  p {
-    color: #718096;
-    max-width: 400px;
-  }
-`;
-
-const RecentChatsContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 1rem;
-`;
-
-const RecentChatCard = styled.div`
-  flex: 1;
-  min-width: 250px;
-  max-width: 350px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: #4a90e2;
-    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
-  }
-
-  h4 {
-    margin-top: 0;
-    margin-bottom: 0.5rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  p {
-    color: #718096;
-    font-size: 0.875rem;
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .timestamp {
-    font-size: 0.75rem;
-    color: #a0aec0;
-    margin-top: 0.5rem;
   }
 `;
 
@@ -619,6 +452,227 @@ const CorpusQueryView = ({
   }
 };
 
+// Add new styled components for the sidebar navigation
+const CorpusViewContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+`;
+
+const NavigationSidebar = styled(motion.div)<{ isExpanded: boolean }>`
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: ${(props) => (props.isExpanded ? "280px" : "72px")};
+  background: white;
+  border-right: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+  z-index: 100;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
+    position: fixed;
+    width: ${(props) => (props.isExpanded ? "280px" : "0")};
+    box-shadow: ${(props) =>
+      props.isExpanded ? "4px 0 12px rgba(0, 0, 0, 0.1)" : "none"};
+  }
+`;
+
+const NavigationHeader = styled.div<{ isExpanded: boolean }>`
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: ${(props) =>
+    props.isExpanded ? "space-between" : "center"};
+  min-height: 72px;
+`;
+
+const NavigationToggle = styled(motion.button)`
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #4a5568;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #e2e8f0;
+    color: #2d3748;
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const NavigationItems = styled.div`
+  flex: 1;
+  padding: 1rem 0;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f8fafc;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 3px;
+
+    &:hover {
+      background: #cbd5e1;
+    }
+  }
+`;
+
+const NavigationItem = styled(motion.button)<{
+  isActive: boolean;
+  isExpanded: boolean;
+}>`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: ${(props) => (props.isExpanded ? "0.875rem 1.5rem" : "0.875rem")};
+  background: ${(props) =>
+    props.isActive
+      ? "linear-gradient(to right, #f0f7ff, #f8fbff)"
+      : "transparent"};
+  border: none;
+  color: ${(props) => (props.isActive ? "#4a90e2" : "#64748b")};
+  font-weight: ${(props) => (props.isActive ? "600" : "500")};
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  justify-content: ${(props) => (props.isExpanded ? "flex-start" : "center")};
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #4a90e2;
+    opacity: ${(props) => (props.isActive ? "1" : "0")};
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover {
+    background: ${(props) =>
+      props.isActive
+        ? "linear-gradient(to right, #f0f7ff, #f8fbff)"
+        : "#f8fafc"};
+    color: ${(props) => (props.isActive ? "#4a90e2" : "#2d3748")};
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  span {
+    white-space: nowrap;
+    opacity: ${(props) => (props.isExpanded ? "1" : "0")};
+    width: ${(props) => (props.isExpanded ? "auto" : "0")};
+    overflow: hidden;
+    transition: opacity 0.2s ease, width 0.2s ease;
+  }
+`;
+
+const MainContentArea = styled.div<{ sidebarExpanded: boolean }>`
+  flex: 1;
+  margin-left: ${(props) => (props.sidebarExpanded ? "280px" : "72px")};
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
+    margin-left: 0;
+  }
+`;
+
+const MobileMenuBackdrop = styled(motion.div)`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+  display: none;
+
+  @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
+    display: block;
+  }
+`;
+
+const MobileMenuToggle = styled(motion.button)`
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 101;
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
+    display: flex;
+  }
+`;
+
+const NotificationBadge = styled.div`
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+`;
+
 export const Corpuses = () => {
   const { width } = useWindowDimensions();
   const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
@@ -659,6 +713,8 @@ export const Corpuses = () => {
   const [active_tab, setActiveTab] = useState<number>(0);
   const [showDescriptionEditor, setShowDescriptionEditor] =
     useState<boolean>(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
 
   const [corpusSearchCache, setCorpusSearchCache] =
     useState<string>(corpus_search_term);
@@ -858,6 +914,22 @@ export const Corpuses = () => {
     );
     refetch_documents();
   }, [selected_metadata_id_to_filter_on]);
+
+  // Fetch corpus stats
+  const { data: statsData, loading: statsLoading } = useQuery(
+    GET_CORPUS_STATS,
+    {
+      variables: { corpusId: opened_corpus?.id },
+      skip: !opened_corpus_id,
+    }
+  );
+
+  const stats = statsData?.corpusStats || {
+    totalDocs: 0,
+    totalAnnotations: 0,
+    totalAnalyses: 0,
+    totalExtracts: 0,
+  };
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Query to shape item data
@@ -1059,106 +1131,47 @@ export const Corpuses = () => {
     });
   }
 
-  let panes = [
+  // Navigation items configuration
+  const navigationItems = [
     {
-      menuItem: {
-        key: "home",
-        content: use_mobile_layout ? (
-          <TabIcon>
-            <Brain />
-            <span>Home</span>
-          </TabIcon>
-        ) : (
-          "Home"
-        ),
-      },
-      render: () => (
-        <Tab.Pane
-          style={{
-            height: "100%",
-            overflow: "hidden",
-            padding: use_mobile_layout ? "0.25rem 0" : undefined,
-          }}
-        >
-          <CorpusQueryView
-            opened_corpus={opened_corpus}
-            opened_corpus_id={opened_corpus_id}
-            setShowDescriptionEditor={setShowDescriptionEditor}
-          />
-        </Tab.Pane>
+      id: "home",
+      label: "Home",
+      icon: <Brain />,
+      component: (
+        <CorpusQueryView
+          opened_corpus={opened_corpus}
+          opened_corpus_id={opened_corpus_id}
+          setShowDescriptionEditor={setShowDescriptionEditor}
+        />
       ),
     },
     {
-      menuItem: {
-        key: "documents",
-        content: use_mobile_layout ? (
-          <TabIcon>
-            <FileText />
-            <span>Docs</span>
-          </TabIcon>
-        ) : (
-          "Documents"
-        ),
-      },
-      render: () => (
-        <Tab.Pane style={{ overflowY: "scroll" }} id="CorpusesTabDiv">
-          <CorpusDocumentCards opened_corpus_id={opened_corpus_id} />
-        </Tab.Pane>
-      ),
+      id: "documents",
+      label: "Documents",
+      icon: <FileText />,
+      badge: stats.totalDocs,
+      component: <CorpusDocumentCards opened_corpus_id={opened_corpus_id} />,
     },
     {
-      menuItem: {
-        key: "annotations",
-        content: use_mobile_layout ? (
-          <TabIcon>
-            <MessageSquare />
-            <span>Notes</span>
-          </TabIcon>
-        ) : (
-          "Annotations"
-        ),
-      },
-      render: () => (
-        <Tab.Pane style={{ overflowY: "scroll" }}>
-          <CorpusAnnotationCards opened_corpus_id={opened_corpus_id} />
-        </Tab.Pane>
-      ),
+      id: "annotations",
+      label: "Annotations",
+      icon: <MessageSquare />,
+      badge: stats.totalAnnotations,
+      component: <CorpusAnnotationCards opened_corpus_id={opened_corpus_id} />,
     },
     {
-      menuItem: {
-        key: "analyses",
-        content: use_mobile_layout ? (
-          <TabIcon>
-            <Factory />
-            <span>Analyze</span>
-          </TabIcon>
-        ) : (
-          "Analyses"
-        ),
-      },
-      render: () => (
-        <Tab.Pane style={{ overflowY: "scroll" }}>
-          <CorpusAnalysesCards />
-        </Tab.Pane>
-      ),
+      id: "analyses",
+      label: "Analyses",
+      icon: <Factory />,
+      badge: stats.totalAnalyses,
+      component: <CorpusAnalysesCards />,
     },
     {
-      menuItem: {
-        key: "extracts",
-        content: use_mobile_layout ? (
-          <TabIcon>
-            <Table />
-            <span>Extract</span>
-          </TabIcon>
-        ) : (
-          "Extracts"
-        ),
-      },
-      render: () => (
-        <Tab.Pane style={{ overflowY: "scroll" }}>
-          <CorpusExtractCards />
-        </Tab.Pane>
-      ),
+      id: "extracts",
+      label: "Extracts",
+      icon: <Table />,
+      badge: stats.totalExtracts,
+      component: <CorpusExtractCards />,
     },
     ...(opened_corpus &&
     getPermissions(opened_corpus.myPermissions || []).includes(
@@ -1166,51 +1179,36 @@ export const Corpuses = () => {
     )
       ? [
           {
-            menuItem: {
-              key: "settings",
-              content: use_mobile_layout ? (
-                <TabIcon>
-                  <Settings />
-                  <span>Settings</span>
-                </TabIcon>
-              ) : (
-                "Settings"
-              ),
-            },
-            render: () => (
-              <Tab.Pane style={{ overflowY: "scroll" }}>
-                {opened_corpus?.title && (
-                  <CorpusSettings
-                    corpus={{
-                      id: opened_corpus.id,
-                      title: opened_corpus.title,
-                      description: opened_corpus.description || "",
-                      allowComments: opened_corpus.allowComments || false,
-                      preferredEmbedder: opened_corpus.preferredEmbedder,
-                      creator: opened_corpus.creator,
-                      created: opened_corpus.created,
-                      modified: opened_corpus.modified,
-                      isPublic: opened_corpus.isPublic,
-                    }}
-                  />
-                )}
-              </Tab.Pane>
-            ),
+            id: "settings",
+            label: "Settings",
+            icon: <Settings />,
+            component: opened_corpus?.title ? (
+              <CorpusSettings
+                corpus={{
+                  id: opened_corpus.id,
+                  title: opened_corpus.title,
+                  description: opened_corpus.description || "",
+                  allowComments: opened_corpus.allowComments || false,
+                  preferredEmbedder: opened_corpus.preferredEmbedder,
+                  creator: opened_corpus.creator,
+                  created: opened_corpus.created,
+                  modified: opened_corpus.modified,
+                  isPublic: opened_corpus.isPublic,
+                }}
+              />
+            ) : null,
           },
         ]
       : []),
   ];
 
-  let content = <></>;
-  // TODO - move <Annotator/> to root of <App>
-  // These else if statements should really be broken into separate components.
-  //console.log(`Opened_corpus`, opened_corpus, 'opened_document', opened_document);
+  const currentView = navigationItems[active_tab];
 
+  let content = <></>;
   if (
     (opened_corpus === null || opened_corpus === undefined) &&
     (opened_document === null || opened_document === undefined)
   ) {
-    // console.log("Set content to CorpusCards");
     content = (
       <CorpusCards
         items={corpus_items}
@@ -1229,37 +1227,153 @@ export const Corpuses = () => {
     (opened_corpus !== null || opened_corpus !== undefined) &&
     (opened_document === null || opened_document === undefined)
   ) {
-    // console.log("Set content to tab");
     content = (
-      <div
-        className="CorpusesTabDiv"
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          justifyContent: "center",
-          height: "100%",
-          flex: 1,
-          overflow: "hidden",
-        }}
-      >
-        <TabContainer>
-          <Tab
-            id="SelectedCorpusTabDiv"
-            menu={{
-              secondary: true,
-              pointing: true,
-              as: use_mobile_layout ? MobileTabMenu : undefined,
-            }}
-            attached={false}
-            activeIndex={active_tab}
-            onTabChange={(e, { activeIndex }) =>
-              setActiveTab(activeIndex ? Number(activeIndex) : 0)
+      <CorpusViewContainer>
+        {/* Mobile backdrop */}
+        <AnimatePresence>
+          {mobileSidebarOpen && (
+            <MobileMenuBackdrop
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Navigation Sidebar */}
+        <NavigationSidebar
+          isExpanded={use_mobile_layout ? mobileSidebarOpen : sidebarExpanded}
+          initial={{ width: use_mobile_layout ? "0" : "72px" }}
+          animate={{
+            width: use_mobile_layout
+              ? mobileSidebarOpen
+                ? "280px"
+                : "0"
+              : sidebarExpanded
+              ? "280px"
+              : "72px",
+          }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          onMouseEnter={() => {
+            if (!use_mobile_layout && !sidebarExpanded) {
+              setSidebarExpanded(true);
             }
-            panes={panes}
-            className="tab-content"
-          />
-        </TabContainer>
-      </div>
+          }}
+          onMouseLeave={() => {
+            if (!use_mobile_layout && sidebarExpanded) {
+              setSidebarExpanded(false);
+            }
+          }}
+        >
+          <NavigationHeader
+            isExpanded={use_mobile_layout ? mobileSidebarOpen : sidebarExpanded}
+          >
+            {(use_mobile_layout ? mobileSidebarOpen : sidebarExpanded) && (
+              <motion.h3
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                style={{
+                  margin: 0,
+                  fontSize: "1.125rem",
+                  fontWeight: 600,
+                  color: "#0f172a",
+                }}
+              >
+                Navigation
+              </motion.h3>
+            )}
+            {!use_mobile_layout && (
+              <NavigationToggle
+                onClick={() => setSidebarExpanded(!sidebarExpanded)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                  marginLeft: sidebarExpanded ? "0" : "auto",
+                  marginRight: sidebarExpanded ? "0" : "auto",
+                }}
+              >
+                {sidebarExpanded ? <ChevronLeft /> : <ChevronRight />}
+              </NavigationToggle>
+            )}
+          </NavigationHeader>
+
+          <NavigationItems>
+            {navigationItems.map((item, index) => (
+              <NavigationItem
+                key={item.id}
+                isActive={active_tab === index}
+                isExpanded={
+                  use_mobile_layout ? mobileSidebarOpen : sidebarExpanded
+                }
+                onClick={() => {
+                  setActiveTab(index);
+                  if (use_mobile_layout) {
+                    setMobileSidebarOpen(false);
+                  }
+                }}
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div style={{ position: "relative" }}>
+                  {item.icon}
+                  {item.badge &&
+                    item.badge > 0 &&
+                    !sidebarExpanded &&
+                    !use_mobile_layout && (
+                      <NotificationBadge>{item.badge}</NotificationBadge>
+                    )}
+                </div>
+                {(use_mobile_layout ? mobileSidebarOpen : sidebarExpanded) && (
+                  <>
+                    <span>{item.label}</span>
+                    {item.badge && item.badge > 0 && (
+                      <span
+                        style={{
+                          marginLeft: "auto",
+                          fontSize: "0.875rem",
+                          opacity: 0.7,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </>
+                )}
+              </NavigationItem>
+            ))}
+          </NavigationItems>
+        </NavigationSidebar>
+
+        {/* Mobile menu toggle button */}
+        {use_mobile_layout && (
+          <MobileMenuToggle
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <LucideMenu />
+          </MobileMenuToggle>
+        )}
+
+        {/* Main content area */}
+        <MainContentArea
+          sidebarExpanded={!use_mobile_layout && sidebarExpanded}
+        >
+          <div
+            style={{
+              height: "100%",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 0,
+            }}
+          >
+            {currentView?.component}
+          </div>
+        </MainContentArea>
+      </CorpusViewContainer>
     );
   } else if (
     opened_corpus !== null &&
@@ -1400,7 +1514,7 @@ export const Corpuses = () => {
             placeholder="Search for corpus..."
             value={corpusSearchCache}
           />
-        ) : active_tab === 0 ? (
+        ) : currentView?.id === "home" || currentView?.id === "documents" ? (
           <CreateAndSearchBar
             onChange={handleDocumentSearchChange}
             actions={contract_actions}
@@ -1426,7 +1540,7 @@ export const Corpuses = () => {
               )
             }
           />
-        ) : active_tab == 1 ? (
+        ) : currentView?.id === "annotations" ? (
           <CreateAndSearchBar
             onChange={handleAnnotationSearchChange}
             actions={corpus_actions}
@@ -1451,7 +1565,7 @@ export const Corpuses = () => {
               )
             }
           />
-        ) : (
+        ) : currentView?.id === "analyses" || currentView?.id === "extracts" ? (
           <CreateAndSearchBar
             onChange={handleAnalysisSearchChange}
             actions={corpus_actions}
@@ -1463,6 +1577,14 @@ export const Corpuses = () => {
                 <FilterToAnalysesSelector corpus={opened_corpus} />
               </>
             }
+          />
+        ) : (
+          // Default search bar for any other views (like settings)
+          <CreateAndSearchBar
+            onChange={() => {}}
+            actions={[]}
+            placeholder="Search..."
+            value=""
           />
         )
       }

@@ -202,6 +202,8 @@ class ChatMessage(BaseOCModel):
             f"in conversation {self.conversation.pk}"
         )
 
+    # (compatibility alias added below, outside the class body)
+
 
 class ChatMessageUserObjectPermission(UserObjectPermissionBase):
     """
@@ -221,3 +223,11 @@ class ChatMessageGroupObjectPermission(GroupObjectPermissionBase):
     content_object = django.db.models.ForeignKey(
         "ChatMessage", on_delete=django.db.models.CASCADE
     )
+
+# --------------------------------------------------------------------------- #
+# Backwards-compatibility: older code expects ``ChatMessage.MessageStateChoices``
+# as an attribute on the model *after* import.  We expose the alias after the
+# class is fully defined to avoid NameError during class construction.
+# --------------------------------------------------------------------------- #
+
+ChatMessage.MessageStateChoices = MessageStateChoices  # type: ignore[attr-defined]

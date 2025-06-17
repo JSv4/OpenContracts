@@ -2,7 +2,7 @@
 
 import inspect
 import logging
-from typing import Any, Callable, Optional, get_type_hints
+from typing import Any, Callable, Optional, get_type_hints, Awaitable
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai.tools import RunContext
@@ -40,6 +40,13 @@ class PydanticAIDependencies(BaseModel):
     corpus_id: Optional[int] = Field(default=None, description="Current corpus ID")
     vector_store: CoreAnnotationVectorStore = Field(
         default=None, description="Vector store instance"
+    )
+
+    # Optional hook so tools can surface nested stream events to the
+    # application layer (e.g. WebSocket) while a call is running.
+    stream_observer: Optional[Callable[[Any], Awaitable[None]]] = Field(
+        default=None,
+        description="Side-channel callback that receives UnifiedStreamEvent objects",
     )
 
 

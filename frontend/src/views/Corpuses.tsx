@@ -1243,6 +1243,7 @@ export const Corpuses = () => {
 
         {/* Navigation Sidebar */}
         <NavigationSidebar
+          data-testid="navigation-sidebar"
           isExpanded={use_mobile_layout ? mobileSidebarOpen : sidebarExpanded}
           initial={{ width: use_mobile_layout ? "0" : "72px" }}
           animate={{
@@ -1301,6 +1302,7 @@ export const Corpuses = () => {
           <NavigationItems>
             {navigationItems.map((item, index) => (
               <NavigationItem
+                data-item-id={item.id}
                 key={item.id}
                 isActive={active_tab === index}
                 isExpanded={

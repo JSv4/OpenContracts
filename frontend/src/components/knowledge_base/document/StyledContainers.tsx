@@ -677,7 +677,13 @@ export const WidthControlMenu = styled(motion.div)`
   }
 `;
 
-export const WidthControlToggle = styled(motion.button)`
+/**
+ * Styled button for toggling the width control menu.
+ * Includes an id for testability and accessibility.
+ */
+export const WidthControlToggle = styled(motion.button).attrs({
+  id: "width-control-toggle",
+})`
   position: absolute;
   top: 1rem;
   left: 1rem;

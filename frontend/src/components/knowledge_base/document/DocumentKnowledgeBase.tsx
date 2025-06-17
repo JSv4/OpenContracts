@@ -1412,8 +1412,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     setActiveLayer("knowledge");
   }, []);
 
-  const { shouldShowChatTray } = useUISettings();
-
   return (
     <FullScreenModal
       id="knowledge-base-modal"
@@ -1525,8 +1523,9 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           )}
           {/* Right Panel, if needed */}
           <AnimatePresence>
-            {showRightPanel && activeTab && shouldShowChatTray("document") && (
+            {showRightPanel && activeTab && (
               <SlidingPanel
+                id="sliding-panel"
                 panelWidth={getPanelWidthPercentage()}
                 onMouseEnter={handlePanelMouseEnter}
                 initial={{ x: "100%", opacity: 0 }}
@@ -1538,6 +1537,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                 }}
               >
                 <ResizeHandle
+                  id="resize-handle"
                   onMouseDown={handleResizeStart}
                   $isDragging={isDragging}
                   whileHover={{ scale: 1.1 }}
@@ -1579,6 +1579,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                           data-width-menu
                         >
                           <WidthMenuItem
+                            id="compact-width-menu-item"
                             $isActive={mode === "quarter"}
                             onClick={() => {
                               setMode("quarter");
@@ -1601,6 +1602,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                             <span className="percentage">50%</span>
                           </WidthMenuItem>
                           <WidthMenuItem
+                            id="wide-width-menu-item"
                             $isActive={mode === "full"}
                             onClick={() => {
                               setMode("full");

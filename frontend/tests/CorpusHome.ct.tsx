@@ -106,7 +106,7 @@ function mountCorpusHome(mount: any) {
 
 test.use({ viewport: { width: 1200, height: 800 } });
 
-test.only("search bar expands on hover and collapses on mouse leave", async ({
+test("search bar expands on hover and collapses on mouse leave", async ({
   mount,
   page,
 }) => {

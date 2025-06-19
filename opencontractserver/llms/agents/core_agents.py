@@ -603,6 +603,20 @@ class CoreAgentBase(ABC):
         try:
             async for evt in self._stream_raw(message, **kwargs):
 
+                # ➊ Ensure every event carries the DB message identifiers so the
+                #    websocket consumer can reliably emit the mandatory
+                #    `ASYNC_START` envelope *before* any granular event.
+                if isinstance(evt, dict):
+                    # Events coming from legacy adapters might still be plain dicts –
+                    # skip automatic augmentation to avoid type errors.
+                    pass
+                else:
+                    # Set identifiers only if the adapter has not already done so.
+                    if getattr(evt, "user_message_id", None) is None:
+                        evt.user_message_id = user_msg_id
+                    if getattr(evt, "llm_message_id", None) is None:
+                        evt.llm_message_id = llm_msg_id
+
                 # Merge sources for later finalisation
                 if hasattr(evt, "sources") and evt.sources:
                     accumulated_sources.extend(evt.sources)

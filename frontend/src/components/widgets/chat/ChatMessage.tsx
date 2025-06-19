@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -524,6 +524,55 @@ const TimelineContent = styled(motion.div)`
   color: #4a5568;
   max-height: 400px;
   overflow-y: auto;
+  scroll-behavior: smooth;
+  position: relative;
+`;
+
+const AutoScrollIndicator = styled(motion.div)<{ $active: boolean }>`
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  margin: 0 -0.75rem -0.5rem;
+  background: ${(props) =>
+    props.$active
+      ? "linear-gradient(to top, rgba(255,255,255,0.95), rgba(255,255,255,0.8))"
+      : "linear-gradient(to top, rgba(245,245,245,0.95), rgba(245,245,245,0.8))"};
+  border-top: 1px solid
+    ${(props) =>
+      props.$active ? "rgba(59, 130, 246, 0.2)" : "rgba(156, 163, 175, 0.2)"};
+  font-size: 0.7rem;
+  color: ${(props) => (props.$active ? "#3b82f6" : "#9ca3af")};
+  cursor: ${(props) => (props.$active ? "default" : "pointer")};
+  transition: all 0.2s ease;
+
+  svg {
+    width: 12px;
+    height: 12px;
+    animation: ${(props) => (props.$active ? "bounce 2s infinite" : "none")};
+  }
+
+  @keyframes bounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+
+  &:hover {
+    background: ${(props) =>
+      props.$active
+        ? "linear-gradient(to top, rgba(255,255,255,1), rgba(255,255,255,0.9))"
+        : "linear-gradient(to top, rgba(245,245,245,1), rgba(245,245,245,0.9))"};
+  }
 `;
 
 const TimelineList = styled.div`
@@ -966,6 +1015,9 @@ const TimelinePreview: React.FC<TimelinePreviewProps> = ({
   onToggle,
 }) => {
   const [isExpanded, setIsExpanded] = useState(!collapsed);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const prevTimelineLengthRef = useRef(timeline.length);
 
   /* Expansion state per entry ----------------------------------------- */
   const buildInitialExpandedStates = () =>
@@ -976,6 +1028,78 @@ const TimelinePreview: React.FC<TimelinePreviewProps> = ({
   const [expandedStates, setExpandedStates] = useState<boolean[]>(
     buildInitialExpandedStates()
   );
+
+  // Calculate responsive threshold
+  const getScrollThreshold = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return 50;
+
+    // Use 10% of container height or 100px (whichever is smaller) for desktop
+    // 50px for mobile
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) return 50;
+
+    const tenPercent = container.clientHeight * 0.1;
+    return Math.min(tenPercent, 100);
+  };
+
+  // Check if scrolled near bottom
+  const checkIfNearBottom = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return true;
+
+    const threshold = getScrollThreshold();
+    const isNear =
+      container.scrollHeight - container.scrollTop - container.clientHeight <=
+      threshold;
+    setIsNearBottom(isNear);
+    return isNear;
+  };
+
+  // Handle scroll events to track user scrolling
+  const handleScroll = () => {
+    checkIfNearBottom();
+  };
+
+  // Scroll to bottom manually
+  const scrollToBottom = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop =
+        scrollContainerRef.current.scrollHeight;
+      setIsNearBottom(true);
+    }
+  };
+
+  // Auto-scroll to bottom only when NEW entries are added (if near bottom)
+  useEffect(() => {
+    const hasNewEntries = timeline.length > prevTimelineLengthRef.current;
+
+    if (
+      hasNewEntries &&
+      isNearBottom &&
+      isExpanded &&
+      scrollContainerRef.current
+    ) {
+      // Small delay to ensure DOM has updated
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop =
+            scrollContainerRef.current.scrollHeight;
+        }
+      }, 50);
+    }
+
+    prevTimelineLengthRef.current = timeline.length;
+  }, [timeline.length, isNearBottom, isExpanded]);
+
+  // Initial scroll to bottom when first expanded
+  useEffect(() => {
+    if (isExpanded && scrollContainerRef.current) {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    }
+  }, [isExpanded]);
 
   // Sync header expansion with `collapsed` prop
   useEffect(() => {
@@ -1026,6 +1150,8 @@ const TimelinePreview: React.FC<TimelinePreviewProps> = ({
       <AnimatePresence>
         {isExpanded && (
           <TimelineContent
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -1041,6 +1167,16 @@ const TimelinePreview: React.FC<TimelinePreviewProps> = ({
                 />
               ))}
             </TimelineList>
+            <AutoScrollIndicator
+              $active={isNearBottom}
+              onClick={!isNearBottom ? scrollToBottom : undefined}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <ChevronDown />
+              {isNearBottom ? "Auto-scrolling" : "Scroll to bottom"}
+            </AutoScrollIndicator>
           </TimelineContent>
         )}
       </AnimatePresence>

@@ -48,7 +48,6 @@ import {
   GetCorpusWithHistoryQueryVariables,
 } from "../../graphql/queries";
 import { SafeMarkdown } from "../knowledge_base/markdown/SafeMarkdown";
-import { CorpusChat } from "./CorpusChat";
 import { CorpusType } from "../../types/graphql-api";
 import { showQueryViewState } from "../../graphql/cache";
 import { PermissionTypes } from "../types";
@@ -221,14 +220,15 @@ const StatLabel = styled.div`
 
 const MainContent = styled.div`
   flex: 1;
-  overflow: hidden;
-  padding: 2.5rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 0.25rem;
   display: flex;
   justify-content: center;
   min-height: 0;
-
   @media (max-width: 768px) {
     padding: 1.5rem 1rem;
+    padding-bottom: 180px;
   }
 `;
 
@@ -538,434 +538,6 @@ const LoadingPlaceholder = styled.div`
   }
 `;
 
-const FloatingSearchBar = styled(motion.div)<{ $expanded: boolean }>`
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: ${(props) => (props.$expanded ? "16px" : "24px")};
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: ${(props) =>
-    props.$expanded ? "0.875rem 1.25rem" : "0.75rem 1rem"};
-  width: ${(props) => (props.$expanded ? "60%" : "220px")};
-  max-width: 600px;
-  min-width: 240px;
-  z-index: 10;
-  transition: all 0.3s ease;
-
-  @media (max-width: 768px) {
-    width: ${(props) => (props.$expanded ? "calc(100% - 4rem)" : "180px")};
-    max-width: calc(100% - 4rem);
-  }
-`;
-
-const SearchIconWrapper = styled.div`
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-`;
-
-const SearchInput = styled(motion.input)`
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 0.9375rem;
-  color: #1e293b;
-  background: transparent;
-  min-width: 0;
-
-  &::placeholder {
-    color: #94a3b8;
-  }
-`;
-
-const SearchPrompt = styled(motion.span)`
-  color: #64748b;
-  font-size: 0.875rem;
-  font-weight: 500;
-  white-space: nowrap;
-`;
-
-const SearchActions = styled(motion.div)`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const SearchActionButton = styled(motion.button)`
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: #f1f5f9;
-  border: none;
-  color: #4a90e2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #4a90e2;
-    color: white;
-  }
-`;
-
-// Always-visible button that opens conversation history
-const HistoryButton = styled.button`
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  color: #4a90e2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: all 0.25s ease;
-
-  &:hover {
-    background: #4a90e2;
-    color: #ffffff;
-  }
-`;
-
-const ChatSection = styled(motion.div)`
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-`;
-
-// Add new styled component for prominent search section
-const SearchSection = styled(motion.div)`
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-  border-radius: 20px;
-  padding: 2.5rem;
-  box-shadow: 0 8px 24px rgba(74, 144, 226, 0.25);
-  position: relative;
-  overflow: hidden;
-  flex-shrink: 0;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(
-      circle,
-      rgba(255, 255, 255, 0.1) 0%,
-      transparent 70%
-    );
-    animation: float 20s infinite linear;
-  }
-
-  @keyframes float {
-    0% {
-      transform: translate(0, 0) rotate(0deg);
-    }
-    100% {
-      transform: translate(-50%, -50%) rotate(360deg);
-    }
-  }
-
-  @media (max-width: 768px) {
-    padding: 2rem 1.5rem;
-  }
-`;
-
-const SearchSectionContent = styled.div`
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 1.5rem;
-`;
-
-const SearchSectionTitle = styled.h2`
-  color: white;
-  font-size: 1.875rem;
-  font-weight: 700;
-  margin: 0;
-  letter-spacing: -0.02em;
-
-  @media (max-width: 768px) {
-    font-size: 1.5rem;
-  }
-`;
-
-const SearchSectionSubtitle = styled.p`
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 1.125rem;
-  margin: 0;
-  max-width: 500px;
-  line-height: 1.5;
-
-  @media (max-width: 768px) {
-    font-size: 1rem;
-  }
-`;
-
-const SearchBar = styled(motion.form)`
-  width: 100%;
-  max-width: 600px;
-  display: flex;
-  gap: 0.75rem;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
-`;
-
-const SearchInputWrapper = styled.div`
-  flex: 1;
-  position: relative;
-`;
-
-const SearchInputField = styled.input`
-  width: 100%;
-  padding: 1rem 1.25rem 1rem 3.5rem;
-  border: none;
-  border-radius: 12px;
-  font-size: 1rem;
-  background: white;
-  color: #0f172a;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-
-  &::placeholder {
-    color: #94a3b8;
-  }
-
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3),
-      0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-`;
-
-const SearchInputIcon = styled.div`
-  position: absolute;
-  left: 1.25rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #64748b;
-`;
-
-const SearchButton = styled(motion.button)`
-  padding: 1rem 2rem;
-  background: white;
-  color: #4a90e2;
-  border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  @media (max-width: 768px) {
-    width: 100%;
-    justify-content: center;
-  }
-`;
-
-const QuickActions = styled.div`
-  display: flex;
-  gap: 1rem;
-  margin-top: 0.5rem;
-`;
-
-const QuickActionButton = styled(motion.button)`
-  padding: 0.625rem 1.25rem;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(255, 255, 255, 0.5);
-  }
-`;
-
-// Unified search container that morphs between collapsed and expanded states
-const SearchContainer = styled(motion.div)<{ $expanded: boolean }>`
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-  border-radius: ${(props) => (props.$expanded ? "20px" : "16px")};
-  padding: ${(props) => (props.$expanded ? "2rem 2.5rem" : "1rem 1.5rem")};
-  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
-  display: flex;
-  flex-direction: column;
-  gap: ${(props) => (props.$expanded ? "1rem" : "0.75rem")};
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-  cursor: ${(props) => (props.$expanded ? "default" : "pointer")};
-  width: 100%;
-  max-width: ${(props) => (props.$expanded ? "900px" : "600px")};
-  margin: 0 auto;
-
-  &:hover {
-    box-shadow: 0 6px 20px rgba(74, 144, 226, 0.3);
-  }
-
-  @media (max-width: 768px) {
-    padding: ${(props) => (props.$expanded ? "1.5rem" : "0.875rem 1.25rem")};
-  }
-`;
-
-const SearchContent = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  color: white;
-  flex: 1;
-`;
-
-const SearchText = styled.div`
-  flex: 1;
-  cursor: pointer;
-
-  h3 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    margin: 0;
-    margin-bottom: 0.25rem;
-  }
-
-  p {
-    font-size: 0.875rem;
-    margin: 0;
-    opacity: 0.9;
-  }
-`;
-
-const ExpandIcon = styled.div`
-  color: white;
-  transition: transform 0.3s ease;
-  cursor: pointer;
-
-  &:hover {
-    transform: translateX(4px);
-  }
-`;
-
-// Add new styled component for the collapsible search input
-const CollapsedSearchInput = styled.textarea`
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 10px;
-  font-size: 0.9375rem;
-  font-family: inherit;
-  background: rgba(255, 255, 255, 0.95);
-  color: #0f172a;
-  resize: none;
-  min-height: 42px;
-  max-height: calc(1.5em * 5); /* 5 lines max */
-  overflow-y: auto;
-  transition: all 0.2s ease;
-  line-height: 1.5;
-  cursor: text;
-
-  &::placeholder {
-    color: #64748b;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: rgba(255, 255, 255, 0.5);
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
-  }
-
-  /* Custom scrollbar */
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(74, 144, 226, 0.6);
-    border-radius: 3px;
-
-    &:hover {
-      background: rgba(74, 144, 226, 0.8);
-    }
-  }
-`;
-
-const CollapsedSearchActions = styled.div`
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-`;
-
-const CollapsedSearchButton = styled(motion.button)`
-  padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.95);
-  color: #4a90e2;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  white-space: nowrap;
-
-  &:hover {
-    background: white;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
-
 interface CorpusHomeProps {
   corpus: CorpusType;
   onEditDescription: () => void;
@@ -975,12 +547,7 @@ export const CorpusHome: React.FC<CorpusHomeProps> = ({
   corpus,
   onEditDescription,
 }) => {
-  const [showChat, setShowChat] = useState(false);
   const [mdContent, setMdContent] = useState<string | null>(null);
-  const [searchExpanded, setSearchExpanded] = useState(false);
-  const [searchInput, setSearchInput] = useState("");
-  const [initialChatQuery, setInitialChatQuery] = useState<string>("");
-  const [isSearchSectionExpanded, setIsSearchSectionExpanded] = useState(false);
 
   // Fetch corpus stats
   const { data: statsData, loading: statsLoading } = useQuery(
@@ -1018,47 +585,6 @@ export const CorpusHome: React.FC<CorpusHomeProps> = ({
     totalExtracts: 0,
   };
 
-  const handleQuickAction = (action: string) => {
-    switch (action) {
-      case "chat":
-        setShowChat(true);
-        break;
-      case "history":
-        showQueryViewState("VIEW");
-        break;
-    }
-  };
-
-  const handleSearchSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const trimmedQuery = searchInput.trim();
-    if (trimmedQuery) {
-      setInitialChatQuery(trimmedQuery);
-      setShowChat(true);
-      setSearchExpanded(false);
-      setSearchInput("");
-    }
-  };
-
-  const handleTextareaKeyDown = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>
-  ) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSearchSubmit();
-    }
-  };
-
-  const adjustTextareaHeight = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const textarea = e.target;
-    textarea.style.height = "auto";
-    const newHeight = Math.min(
-      textarea.scrollHeight,
-      parseFloat(getComputedStyle(textarea).lineHeight) * 5
-    );
-    textarea.style.height = `${newHeight}px`;
-  };
-
   const canEdit = getPermissions(corpus.myPermissions || []).includes(
     PermissionTypes.CAN_UPDATE
   );
@@ -1071,9 +597,9 @@ export const CorpusHome: React.FC<CorpusHomeProps> = ({
   ];
 
   return (
-    <Container>
-      <TopBar>
-        <CorpusInfo>
+    <Container id="corpus-home-container">
+      <TopBar id="corpus-home-top-bar">
+        <CorpusInfo id="corpus-home-corpus-info">
           <TitleRow>
             <CorpusTitle>{corpus.title}</CorpusTitle>
             <AccessBadge isPublic={corpus.isPublic}>
@@ -1132,262 +658,98 @@ export const CorpusHome: React.FC<CorpusHomeProps> = ({
         </StatsRow>
       </TopBar>
 
-      <MainContent>
+      <MainContent id="corpus-home-main-content">
         <ContentWrapper id="corpus-home-content">
-          <AnimatePresence initial={false} exitBeforeEnter>
-            {showChat ? (
-              <ChatSection
-                key="chat-section"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                transition={{ duration: 0.4 }}
-                style={{ height: "100%", minHeight: 0 }}
-              >
-                <CorpusChat
-                  corpusId={corpus.id}
-                  showLoad={false}
-                  initialQuery={initialChatQuery}
-                  setShowLoad={() => {}}
-                  onMessageSelect={() => {}}
-                  forceNewChat={true}
-                  onClose={() => setShowChat(false)}
-                />
-              </ChatSection>
-            ) : (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  minHeight: 0,
-                  height: "100%",
-                  gap: "2rem",
-                }}
-              >
-                <AnimatePresence exitBeforeEnter>
-                  <SearchContainer
-                    data-testid="search-container"
-                    $expanded={isSearchSectionExpanded}
-                    layout
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                    onMouseEnter={() => setIsSearchSectionExpanded(true)}
-                    onMouseLeave={() => setIsSearchSectionExpanded(false)}
-                    onClick={() => setIsSearchSectionExpanded(true)}
-                  >
-                    {/* Expanded header & quick actions */}
-                    {isSearchSectionExpanded && (
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          width: "100%",
-                        }}
-                      >
-                        <div style={{ flex: 1 }}>
-                          <SearchSectionTitle style={{ color: "white" }}>
-                            Ask Questions About This Corpus
-                          </SearchSectionTitle>
-                          <SearchSectionSubtitle
-                            style={{ color: "rgba(255,255,255,0.9)" }}
-                          >
-                            Get instant answers and insights from your documents
-                          </SearchSectionSubtitle>
-                        </div>
-                        <motion.button
-                          style={{
-                            background: "rgba(255, 255, 255, 0.2)",
-                            border: "1px solid rgba(255, 255, 255, 0.3)",
-                            borderRadius: "8px",
-                            padding: "0.5rem",
-                            cursor: "pointer",
-                            color: "white",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsSearchSectionExpanded(false);
-                          }}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <X size={20} />
-                        </motion.button>
-                      </div>
-                    )}
-
-                    {/* Shared input form */}
-                    <form
-                      onSubmit={handleSearchSubmit}
-                      style={{
-                        display: "flex",
-                        gap: "0.75rem",
-                        alignItems: "flex-end",
-                        width: "100%",
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <CollapsedSearchInput
-                          placeholder="Ask a question about this corpus..."
-                          value={searchInput}
-                          onChange={(e) => {
-                            setSearchInput(e.target.value);
-                            adjustTextareaHeight(e);
-                          }}
-                          onKeyDown={handleTextareaKeyDown}
-                          rows={1}
-                        />
-                      </div>
-                      <CollapsedSearchActions>
-                        <CollapsedSearchButton
-                          type="submit"
-                          disabled={!searchInput.trim()}
-                          whileHover={searchInput.trim() ? { scale: 1.02 } : {}}
-                          whileTap={searchInput.trim() ? { scale: 0.98 } : {}}
-                          title="Ask"
-                        >
-                          <MessageCircle size={16} />
-                        </CollapsedSearchButton>
-                        <CollapsedSearchButton
-                          type="button"
-                          onClick={() => showQueryViewState("VIEW")}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          title="Conversation history"
-                        >
-                          <Activity size={16} />
-                        </CollapsedSearchButton>
-                      </CollapsedSearchActions>
-                    </form>
-
-                    {/* Quick actions shown only when expanded */}
-                    {isSearchSectionExpanded && (
-                      <QuickActions>
-                        <QuickActionButton
-                          onClick={() => {
-                            setSearchInput(
-                              "What are the key themes in this corpus?"
-                            );
-                            handleSearchSubmit(new Event("submit") as any);
-                          }}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Sparkles size={16} />
-                          Key Themes
-                        </QuickActionButton>
-                        <QuickActionButton
-                          onClick={() => showQueryViewState("VIEW")}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Activity size={16} />
-                          View History
-                        </QuickActionButton>
-                      </QuickActions>
-                    )}
-                  </SearchContainer>
-                </AnimatePresence>
-
-                <DescriptionCard
-                  key="description-card"
-                  id="corpus-home-description-card"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                  style={{ minHeight: 0 }}
-                >
-                  <DescriptionHeader>
-                    <DescriptionTitle>
-                      <BookOpen size={20} />
-                      About this Corpus
-                    </DescriptionTitle>
-                    <ActionButtons>
-                      {(mdContent || corpus.description) && (
-                        <HeaderHistoryButton onClick={onEditDescription}>
-                          <Activity size={14} />
-                          Version History
-                        </HeaderHistoryButton>
-                      )}
-                      {canEdit && (
-                        <HeaderEditButton onClick={onEditDescription}>
-                          {mdContent || corpus.description ? (
-                            <>
-                              <Edit size={14} />
-                              Edit Description
-                            </>
-                          ) : (
-                            <>
-                              <Plus size={14} />
-                              Add Description
-                            </>
-                          )}
-                        </HeaderEditButton>
-                      )}
-                    </ActionButtons>
-                  </DescriptionHeader>
-
-                  <DescriptionContent
-                    className={!mdContent && !corpus.description ? "empty" : ""}
-                  >
-                    {corpusLoading ? (
-                      <LoadingPlaceholder>
-                        <div className="title-skeleton"></div>
-                        <div className="paragraph-skeleton">
-                          <div className="line-skeleton long"></div>
-                          <div className="line-skeleton long"></div>
-                          <div className="line-skeleton medium"></div>
-                        </div>
-                        <div className="paragraph-skeleton">
-                          <div className="line-skeleton long"></div>
-                          <div className="line-skeleton short"></div>
-                        </div>
-                        <div className="paragraph-skeleton">
-                          <div className="line-skeleton medium"></div>
-                          <div className="line-skeleton long"></div>
-                          <div className="line-skeleton medium"></div>
-                          <div className="line-skeleton short"></div>
-                        </div>
-                      </LoadingPlaceholder>
-                    ) : mdContent ? (
-                      <SafeMarkdown>{mdContent}</SafeMarkdown>
-                    ) : corpus.description ? (
-                      <p>{corpus.description}</p>
+          <DescriptionCard
+            key="description-card"
+            id="corpus-home-description-card"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            style={{ minHeight: 0 }}
+          >
+            <DescriptionHeader>
+              <DescriptionTitle>
+                <BookOpen size={20} />
+                About this Corpus
+              </DescriptionTitle>
+              <ActionButtons>
+                {(mdContent || corpus.description) && (
+                  <HeaderHistoryButton onClick={onEditDescription}>
+                    <Activity size={14} />
+                    Version History
+                  </HeaderHistoryButton>
+                )}
+                {canEdit && (
+                  <HeaderEditButton onClick={onEditDescription}>
+                    {mdContent || corpus.description ? (
+                      <>
+                        <Edit size={14} />
+                        Edit Description
+                      </>
                     ) : (
                       <>
-                        <Sparkles
-                          size={48}
-                          style={{ marginBottom: "1rem", color: "#cbd5e1" }}
-                        />
-                        <p
-                          style={{
-                            fontSize: "1.125rem",
-                            color: "#64748b",
-                            marginBottom: "1.5rem",
-                          }}
-                        >
-                          No description yet. Help others understand what this
-                          corpus contains.
-                        </p>
-                        {canEdit && (
-                          <AddDescriptionButton onClick={onEditDescription}>
-                            <Plus size={18} />
-                            Add Description
-                          </AddDescriptionButton>
-                        )}
+                        <Plus size={14} />
+                        Add Description
                       </>
                     )}
-                  </DescriptionContent>
-                </DescriptionCard>
-              </div>
-            )}
-          </AnimatePresence>
+                  </HeaderEditButton>
+                )}
+              </ActionButtons>
+            </DescriptionHeader>
+
+            <DescriptionContent
+              className={!mdContent && !corpus.description ? "empty" : ""}
+            >
+              {corpusLoading ? (
+                <LoadingPlaceholder>
+                  <div className="title-skeleton"></div>
+                  <div className="paragraph-skeleton">
+                    <div className="line-skeleton long"></div>
+                    <div className="line-skeleton long"></div>
+                    <div className="line-skeleton medium"></div>
+                  </div>
+                  <div className="paragraph-skeleton">
+                    <div className="line-skeleton long"></div>
+                    <div className="line-skeleton short"></div>
+                  </div>
+                  <div className="paragraph-skeleton">
+                    <div className="line-skeleton medium"></div>
+                    <div className="line-skeleton long"></div>
+                    <div className="line-skeleton medium"></div>
+                    <div className="line-skeleton short"></div>
+                  </div>
+                </LoadingPlaceholder>
+              ) : mdContent ? (
+                <SafeMarkdown>{mdContent}</SafeMarkdown>
+              ) : corpus.description ? (
+                <p>{corpus.description}</p>
+              ) : (
+                <>
+                  <Sparkles
+                    size={48}
+                    style={{ marginBottom: "1rem", color: "#cbd5e1" }}
+                  />
+                  <p
+                    style={{
+                      fontSize: "1.125rem",
+                      color: "#64748b",
+                      marginBottom: "1.5rem",
+                    }}
+                  >
+                    No description yet. Help others understand what this corpus
+                    contains.
+                  </p>
+                  {canEdit && (
+                    <AddDescriptionButton onClick={onEditDescription}>
+                      <Plus size={18} />
+                      Add Description
+                    </AddDescriptionButton>
+                  )}
+                </>
+              )}
+            </DescriptionContent>
+          </DescriptionCard>
         </ContentWrapper>
       </MainContent>
     </Container>

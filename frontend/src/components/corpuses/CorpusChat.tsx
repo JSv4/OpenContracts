@@ -59,8 +59,6 @@ import {
   SendButton,
   ErrorMessage,
   ConnectionStatus,
-  NewChatFloatingButton,
-  BackButton,
   FilterContainer,
 } from "../knowledge_base/document/ChatContainers";
 
@@ -340,30 +338,6 @@ const EmptyStateContainer = styled.div`
   }
 `;
 
-// Add a new styled component for the navigation buttons
-const NavigationButton = styled(Button)`
-  background: transparent !important;
-  padding: 0.5rem !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.5rem !important;
-  color: #4a5568 !important;
-  font-weight: 500 !important;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.03) !important;
-  }
-
-  @media (max-width: 768px) {
-    font-size: 0.85rem !important;
-
-    svg {
-      width: 14px !important;
-      height: 14px !important;
-    }
-  }
-`;
-
 // Update the ChatContainer styled component
 const ChatContainer = styled.div`
   display: flex;
@@ -376,9 +350,10 @@ const ChatContainer = styled.div`
   margin: 0;
   padding: 0;
   border-radius: 0;
+  flex: 1;
 
   @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
@@ -394,15 +369,36 @@ const ConversationIndicator = styled.div`
   width: 100%;
   overflow: hidden;
   position: relative;
+  min-height: 0; /* Important for flex children to properly overflow */
+  flex: 1;
+`;
+
+// Add a styled component for the input wrapper
+const ChatInputWrapper = styled.div`
+  flex-shrink: 0;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.04);
 `;
 
 // Enhance the ChatInputContainer for better mobile experience
-const EnhancedChatInputContainer = styled(ChatInputContainer)`
+const EnhancedChatInputContainer = styled(ChatInputContainer)<{
+  $disabled?: boolean;
+}>`
   padding: 1.25rem 1.5rem;
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(0, 0, 0, 0.05);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
+
+  /* When disabled (i.e. assistant is processing) */
+  ${(props) =>
+    props.$disabled &&
+    `
+      opacity: 0.6;        /* Visually indicate inactive state */
+    `}
 
   @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
     padding: 1rem;
@@ -412,12 +408,15 @@ const EnhancedChatInputContainer = styled(ChatInputContainer)`
 
 // Enhance the chat messages area for mobile
 const MessagesArea = styled.div`
-  flex: 1 1 auto;
+  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 1.5rem;
-  padding-bottom: 100px;
   background: linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%);
+  min-height: 0;
+  position: relative;
+  /* Ensure content doesn't get hidden under header */
+  height: calc(100% - 80px);
 
   /* Custom scrollbar */
   &::-webkit-scrollbar {
@@ -440,27 +439,10 @@ const MessagesArea = styled.div`
 
   @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
     padding: 1rem;
-    padding-bottom: 90px;
+    /* Adjust for smaller header on mobile */
+    height: calc(100% - 60px);
   }
 `;
-
-// Compact header for mobile
-// const ChatHeader = styled(motion.div)`
-//   padding: 0.75rem 1.25rem;
-//   border-bottom: 1px solid rgba(0,0,0,0.08);
-//   background: rgba(255,255,255,0.98);
-//   backdrop-filter: blur(8px);
-//   z-index: 2;
-//   position: sticky;
-//   top: 0;
-//   display: flex;
-//   align-items: center;
-//   justify-content: space-between;
-//
-//   @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
-//     padding: 0.5rem 0.75rem;
-//   }
-// `;
 
 // Enhance the chat input for better mobile experience
 const EnhancedChatInput = styled(ChatInput)`
@@ -485,40 +467,6 @@ const EnhancedChatInput = styled(ChatInput)`
   @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
     font-size: 0.875rem;
     padding: 0.75rem 1rem;
-  }
-`;
-
-// Update the TopNavHeader to include title
-const TopNavHeader = styled(motion.div)`
-  width: 100%;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  z-index: 10;
-  position: sticky;
-  top: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-
-  @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
-    padding: 0.75rem 1rem;
-    flex-direction: row;
-  }
-`;
-
-const HeaderTitle = styled.div`
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #1a202c;
-  flex: 1;
-  text-align: center;
-  margin: 0 0.5rem;
-
-  @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
-    font-size: 0.95rem;
   }
 `;
 
@@ -977,23 +925,6 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
   };
 
   /**
-   * Exits the current conversation and resets chat state.
-   */
-  const exitConversation = (): void => {
-    setIsNewChat(false);
-    setShowLoad(false);
-    setNewMessage("");
-    setChat([]);
-    setServerMessages([]);
-    setSelectedConversationId(undefined);
-    if (socketRef.current) {
-      socketRef.current.close();
-      socketRef.current = null;
-    }
-    refetchConversations();
-  };
-
-  /**
    * Start a brand-new chat (unselect existing conversation).
    */
   const startNewChat = useCallback((): void => {
@@ -1418,38 +1349,6 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
 
   return (
     <ChatContainer id="corpus-chat-container">
-      {/* Top navigation header to allow navigating back */}
-      {!showLoad && (
-        <TopNavHeader
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.25 }}
-        >
-          <NavigationButton
-            onClick={() => {
-              if (isConversation) {
-                // If we are inside an active conversation, first go back to
-                // the conversation list view. Otherwise close the chat and
-                // return to the CorpusHome markdown view.
-                exitConversation();
-              } else {
-                onClose?.();
-              }
-            }}
-          >
-            <ArrowLeft size={16} />
-            {isConversation ? "Conversations" : "Corpus Home"}
-          </NavigationButton>
-
-          <HeaderTitle>
-            {isConversation ? "Conversation" : "Conversations"}
-          </HeaderTitle>
-
-          {/* Spacer to balance flex layout */}
-          <div style={{ width: 32 }} />
-        </TopNavHeader>
-      )}
       <ConversationIndicator id="conversation-indicator">
         {/* We always show the top navigation in every state */}
 
@@ -1457,20 +1356,58 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
           {isConversation ? (
             // CONVERSATION VIEW
             <motion.div
+              id="corpus-chat-conversation-view"
               key="conversation"
               style={{
                 display: "flex",
                 flexDirection: "column",
-                height: "100%",
                 width: "100%",
                 position: "relative",
                 overflow: "hidden",
+                minHeight: 0,
+                flex: 1,
               }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
+              {/* Header with Back Button */}
+              <ConversationHeader>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "1rem" }}
+                >
+                  <IconButton
+                    onClick={() => {
+                      setSelectedConversationId(undefined);
+                      setIsNewChat(false);
+                      setShowLoad(true);
+                      setChat([]);
+                      setServerMessages([]);
+                    }}
+                    title="Back to conversations"
+                    whileTap={{ scale: 0.95 }}
+                    style={{
+                      background: "rgba(66, 153, 225, 0.08)",
+                      color: "#4299e1",
+                      border: "1px solid rgba(66, 153, 225, 0.2)",
+                    }}
+                  >
+                    <ArrowLeft size={20} />
+                  </IconButton>
+                  <h2>{isNewChat ? "New Conversation" : "Conversation"}</h2>
+                </div>
+                <div className="actions">
+                  <IconButton
+                    onClick={() => showQueryViewState("ASK")}
+                    title="Return to Dashboard"
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Home size={20} />
+                  </IconButton>
+                </div>
+              </ConversationHeader>
+
               {/* Scrollable Messages */}
               <MessagesArea
                 className="chat-messages-area"
@@ -1545,21 +1482,11 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
               </MessagesArea>
 
               {/* Input */}
-              <div
-                className="chat-input-area"
-                style={{
-                  position: "sticky",
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  background: "rgba(255, 255, 255, 0.95)",
-                  backdropFilter: "blur(10px)",
-                  borderTop: "1px solid rgba(0, 0, 0, 0.1)",
-                  zIndex: 3,
-                  paddingBottom: `@media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) { 0 }`,
-                }}
-              >
-                <EnhancedChatInputContainer $isTyping={isNewChat}>
+              <ChatInputWrapper>
+                <EnhancedChatInputContainer
+                  $isTyping={isNewChat}
+                  $disabled={isProcessing}
+                >
                   {wsError ? (
                     <ErrorMessage>
                       <motion.div
@@ -1596,9 +1523,16 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.2 }}
-                      style={{ display: "flex", alignItems: "center" }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        fontSize: "0.9rem",
+                        color: "#4A5568",
+                      }}
                     >
                       <Loader active inline size="small" />
+                      <span>Assistant is responding…</span>
                     </motion.div>
                   )}
                   <EnhancedChatInput
@@ -1631,7 +1565,7 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
                     <Send size={18} />
                   </SendButton>
                 </EnhancedChatInputContainer>
-              </div>
+              </ChatInputWrapper>
             </motion.div>
           ) : (
             // CONVERSATION MENU VIEW

@@ -498,7 +498,7 @@ const TimelineHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   background: rgba(156, 163, 175, 0.05);
   border-bottom: 1px solid rgba(156, 163, 175, 0.1);
   cursor: pointer;
@@ -510,16 +510,16 @@ const TimelineHeader = styled.div`
 `;
 
 const TimelineTitle = styled.div`
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: #6b7280;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
 `;
 
 const TimelineContent = styled(motion.div)`
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   color: #4a5568;
   max-height: 400px;
@@ -529,75 +529,22 @@ const TimelineContent = styled(motion.div)`
 const TimelineList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.375rem;
 `;
 
 const TimelineItem = styled.div<{ $type: TimelineEntry["type"] }>`
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: ${(props) => {
-    switch (props.$type) {
-      case "thought":
-        return "rgba(168, 85, 247, 0.05)";
-      case "tool_call":
-        return "rgba(59, 130, 246, 0.05)";
-      case "tool_result":
-        return "rgba(34, 197, 94, 0.05)";
-      case "content":
-        return "rgba(249, 115, 22, 0.05)";
-      case "sources":
-        return "rgba(92, 124, 157, 0.05)";
-      case "status":
-        return "rgba(156, 163, 175, 0.05)";
-      default:
-        return "rgba(255, 255, 255, 0.7)";
-    }
-  }};
-  border: 1px solid
-    ${(props) => {
-      switch (props.$type) {
-        case "thought":
-          return "rgba(168, 85, 247, 0.1)";
-        case "tool_call":
-          return "rgba(59, 130, 246, 0.1)";
-        case "tool_result":
-          return "rgba(34, 197, 94, 0.1)";
-        case "content":
-          return "rgba(249, 115, 22, 0.1)";
-        case "sources":
-          return "rgba(92, 124, 157, 0.1)";
-        case "status":
-          return "rgba(156, 163, 175, 0.1)";
-        default:
-          return "rgba(156, 163, 175, 0.1)";
-      }
-    }};
-  border-radius: 0.5rem;
+  gap: 0.375rem;
+  padding: 0.25rem 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   transition: all 0.2s ease-in-out;
 
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px
-      ${(props) => {
-        switch (props.$type) {
-          case "thought":
-            return "rgba(168, 85, 247, 0.1)";
-          case "tool_call":
-            return "rgba(59, 130, 246, 0.1)";
-          case "tool_result":
-            return "rgba(34, 197, 94, 0.1)";
-          case "content":
-            return "rgba(249, 115, 22, 0.1)";
-          case "sources":
-            return "rgba(92, 124, 157, 0.1)";
-          case "status":
-            return "rgba(156, 163, 175, 0.1)";
-          default:
-            return "rgba(156, 163, 175, 0.1)";
-        }
-      }};
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.25rem;
   }
 `;
 
@@ -605,64 +552,78 @@ const TimelineIcon = styled.div<{ $type: TimelineEntry["type"] }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
   flex-shrink: 0;
-  background: ${(props) => {
+  background: transparent;
+  color: ${(props) => {
     switch (props.$type) {
       case "thought":
-        return "linear-gradient(135deg, #a855f7, #9333ea)";
+        return "#a855f7";
       case "tool_call":
-        return "linear-gradient(135deg, #3b82f6, #2563eb)";
+        return "#3b82f6";
       case "tool_result":
-        return "linear-gradient(135deg, #22c55e, #16a34a)";
+        return "#22c55e";
       case "content":
-        return "linear-gradient(135deg, #f97316, #ea580c)";
+        return "#f97316";
       case "sources":
-        return "linear-gradient(135deg, #5c7c9d, #4a6b8c)";
+        return "#5c7c9d";
       case "status":
-        return "linear-gradient(135deg, #9ca3af, #6b7280)";
+        return "#9ca3af";
       default:
-        return "linear-gradient(135deg, #9ca3af, #6b7280)";
+        return "#9ca3af";
     }
   }};
-  color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   svg {
-    width: 1rem;
-    height: 1rem;
+    width: 0.875rem;
+    height: 0.875rem;
   }
 `;
 
 const TimelineItemContent = styled.div`
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 `;
 
-const TimelineItemTitle = styled.div`
+const TimelineItemTitle = styled.div<{ $expanded?: boolean }>`
   font-weight: 500;
-  color: #1f2937;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
+  color: ${(props) => (props.$expanded ? "#1f2937" : "#4b5563")};
+  font-size: 0.8125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  user-select: none;
+
+  &::after {
+    content: ${(props) => (props.$expanded ? '"▼"' : '"▶"')};
+    font-size: 0.5rem;
+    color: #9ca3af;
+    transition: transform 0.2s ease;
+  }
 `;
 
 const TimelineItemText = styled.div`
   color: #4b5563;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   line-height: 1.5;
   word-break: break-word;
+  padding-left: 0.25rem;
 `;
 
 const TimelineItemArgs = styled.div`
-  margin-top: 0.5rem;
-  padding: 0.5rem;
+  margin-top: 0.25rem;
+  padding: 0.375rem;
   background: rgba(0, 0, 0, 0.02);
   border-radius: 0.375rem;
   border: 1px solid rgba(0, 0, 0, 0.05);
   font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #374151;
   overflow-x: auto;
 `;
@@ -974,7 +935,9 @@ const CollapsibleTimelineItem: React.FC<CollapsibleTimelineItemProps> = ({
         {getTimelineIcon(entry.type)}
       </TimelineIcon>
       <TimelineItemContent>
-        <TimelineItemTitle>{getTimelineTitle(entry)}</TimelineItemTitle>
+        <TimelineItemTitle $expanded={expanded}>
+          {getTimelineTitle(entry)}
+        </TimelineItemTitle>
         {expanded && (
           <>
             {entry.text && <TimelineItemText>{entry.text}</TimelineItemText>}
@@ -1004,7 +967,7 @@ const TimelinePreview: React.FC<TimelinePreviewProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(!collapsed);
 
-  // Build initial expanded state map whenever timeline changes length OR the flag changes
+  /* Expansion state per entry ----------------------------------------- */
   const buildInitialExpandedStates = () =>
     timeline.map((_, idx) =>
       expandLatestOnly ? idx === timeline.length - 1 : true
@@ -1014,10 +977,30 @@ const TimelinePreview: React.FC<TimelinePreviewProps> = ({
     buildInitialExpandedStates()
   );
 
-  // If new timeline entries arrive or expandLatestOnly flag flips, rebuild
+  // Sync header expansion with `collapsed` prop
   useEffect(() => {
-    setExpandedStates(buildInitialExpandedStates());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setIsExpanded(!collapsed);
+  }, [collapsed]);
+
+  // Maintain expandedStates length & default for newest entry while streaming
+  useEffect(() => {
+    setExpandedStates((prev) => {
+      if (timeline.length > prev.length) {
+        const additional = timeline.length - prev.length;
+        const newStates = [...prev, ...Array(additional).fill(false)];
+
+        if (expandLatestOnly) {
+          newStates[newStates.length - 1] = true; // latest expanded
+        }
+        return newStates;
+      }
+
+      if (timeline.length < prev.length) {
+        return prev.slice(0, timeline.length);
+      }
+
+      return prev;
+    });
   }, [timeline.length, expandLatestOnly]);
 
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {

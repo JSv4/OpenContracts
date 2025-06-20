@@ -8,7 +8,7 @@ The chat system uses WebSocket messages to stream partial responses from the age
 
 ```typescript
 interface MessageData {
-  type: 
+  type:
     | "ASYNC_START"    // Agent begins generating a response
     | "ASYNC_CONTENT"  // Partial content update
     | "ASYNC_THOUGHT"  // Agent's internal reasoning/tool usage
@@ -37,7 +37,7 @@ interface MessageData {
 
 The WebSocket connection is managed in `CorpusChat.tsx` through a `useEffect` hook that depends on:
 - `auth_token`
-- `corpusId` 
+- `corpusId`
 - `selectedConversationId`
 - `isNewChat`
 
@@ -122,9 +122,9 @@ The state changes above map to specific UI components:
 ### Timeline View
 ```typescript
 // In ChatMessage.tsx:
-const showTimelineOnly = 
-  isAssistant && 
-  effectiveHasTimeline && 
+const showTimelineOnly =
+  isAssistant &&
+  effectiveHasTimeline &&
   (!isComplete || content.trim().length === 0);
 ```
 
@@ -163,4 +163,4 @@ Errors can occur at two levels:
 
 This documentation is based on analysis of:
 - `frontend/src/components/corpuses/CorpusChat.tsx`
-- `frontend/src/components/widgets/chat/ChatMessage.tsx` 
+- `frontend/src/components/widgets/chat/ChatMessage.tsx`

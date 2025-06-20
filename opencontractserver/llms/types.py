@@ -1,7 +1,8 @@
 """Shared types and enums for the OpenContracts LLM framework."""
 
+from collections.abc import Awaitable
 from enum import Enum
-from typing import Protocol, Awaitable, Any
+from typing import Any, Protocol
 
 
 class AgentFramework(Enum):
@@ -14,6 +15,7 @@ class AgentFramework(Enum):
 # ------------------------------------------------------------------
 # Side-channel streaming helper
 # ------------------------------------------------------------------
+
 
 class StreamObserver(Protocol):
     """Callable that receives live ``UnifiedStreamEvent`` objects.

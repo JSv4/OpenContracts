@@ -224,6 +224,7 @@ class ChatMessageGroupObjectPermission(GroupObjectPermissionBase):
         "ChatMessage", on_delete=django.db.models.CASCADE
     )
 
+
 # --------------------------------------------------------------------------- #
 # Backwards-compatibility: older code expects ``ChatMessage.MessageStateChoices``
 # as an attribute on the model *after* import.  We expose the alias after the

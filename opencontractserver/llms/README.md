@@ -157,6 +157,9 @@ response.metadata             # Additional response metadata (framework-specific
 #                     decisions, framework-specific "thinking" lines).
 #     ContentEvent  – textual delta that forms part of the **final** answer.
 #     SourceEvent   – a batch of SourceNode objects discovered mid-stream.
+#     ApprovalNeededEvent – tool requires human approval before execution.
+#     ApprovalResultEvent – approval decision has been recorded.
+#     ResumeEvent   – execution is resuming after approval.
 #     FinalEvent    – emitted once; contains the full answer, sources, usage…
 #
 # All events carry the legacy fields (``user_message_id``, ``llm_message_id``,
@@ -171,6 +174,8 @@ response.metadata             # Additional response metadata (framework-specific
 #         print(ev.content, end="")
 #     elif ev.type == "sources":
 #         print(f"\nFound {len(ev.sources)} sources so far…")
+#     elif ev.type == "approval_needed":
+#         print(f"⚠️ Tool '{ev.pending_tool_call['name']}' needs approval")
 #     elif ev.type == "final":
 #         print("\nDone! Total tokens:", ev.metadata.get("usage", {}).get("total_tokens"))
 # ```
@@ -363,6 +368,26 @@ pydantic_agent = await agents.for_document(
 
 Some tools might be *dangerous* (e.g. deleting data) or simply require legal review before execution. OpenContracts supports a **durable approval gate** that pauses the agent right before such a tool would run, persists all state, and lets a human approve or reject the call at a later time—even after a server restart.
 
+##### Approval Flow Overview
+
+When a tool requiring approval is called, the framework:
+
+1. **Pauses execution** before running the tool
+2. **Emits an `ApprovalNeededEvent`** with the pending tool call details
+3. **Persists state** in the database with `state=AWAITING_APPROVAL`
+4. **Waits for human decision** via `resume_with_approval()`
+
+Upon approval/rejection:
+
+1. **Emits `ApprovalResultEvent`** with the decision
+2. If approved:
+   - **Emits `ResumeEvent`** to signal continuation
+   - **Executes the tool** with the original arguments
+   - **Continues normal agent execution** (can call more tools)
+3. If rejected:
+   - **Emits final event** with rejection message
+   - **Ends the conversation turn**
+
 ##### Flagging Tools for Approval
 
 ```python
@@ -392,7 +417,11 @@ agent = await agents.for_document(
 When the LLM attempts to call a flagged tool, the agent pauses and emits an `ApprovalNeededEvent`:
 
 ```python
-from opencontractserver.llms.agents.core_agents import ApprovalNeededEvent
+from opencontractserver.llms.agents.core_agents import (
+    ApprovalNeededEvent,
+    ApprovalResultEvent,
+    ResumeEvent
+)
 
 async for event in agent.stream("Delete user account 42"):
     match event.type:
@@ -406,21 +435,33 @@ async for event in agent.stream("Delete user account 42"):
             approved = await get_user_decision()
             
             # Resume execution
-            continued_response = await agent.resume_with_approval(
+            async for resume_event in agent.resume_with_approval(
                 llm_message_id=event.llm_message_id,
-                approved=approved,
-                stream=True  # continue streaming
-            )
-            
-            # Process the continued response
-            async for continuation_event in continued_response:
-                # Handle normal events (thought, content, sources, final)
-                pass
-                
+                approved=approved
+            ):
+                # Handle approval result and continuation events
+                match resume_event.type:
+                    case "approval_result":
+                        print(f"Decision: {resume_event.decision}")
+                    case "resume":
+                        print(f"Execution resuming...")
+                    case "thought" | "content" | "sources" | "final":
+                        # Normal event processing continues
+                        pass
+                 
         case "thought" | "content" | "sources" | "final":
             # Handle other events normally
             pass
 ```
+
+##### New Event Types
+
+The approval flow introduces two new event types:
+
+| Event Type | Purpose | Key Fields | When Emitted |
+|------------|---------|------------|--------------|
+| `ApprovalResultEvent` | Confirms decision was recorded | `decision` ("approved"/"rejected"), `pending_tool_call` | Immediately after `resume_with_approval()` |
+| `ResumeEvent` | Signals execution restart | Standard event fields | After approval, before tool execution |
 
 ##### Approval Event Structure
 
@@ -437,20 +478,29 @@ async for event in agent.stream("Delete user account 42"):
 ##### Resumption API
 
 ```python
-# Approve the tool execution
-response = await agent.resume_with_approval(
+# Resume execution after approval
+# Returns an async generator of events
+async for event in agent.resume_with_approval(
     llm_message_id=paused_message_id,
-    approved=True,
-    stream=False  # or True for streaming response
-)
+    approved=True
+):
+    # Process events (approval_result, resume, thought, content, etc.)
+    if event.type == "final":
+        print(f"Final answer: {event.accumulated_content}")
 
-# Reject the tool execution  
-response = await agent.resume_with_approval(
+# Reject the tool execution
+async for event in agent.resume_with_approval(
     llm_message_id=paused_message_id,
     approved=False
-)
-# LLM receives rejection notice and can choose alternative approaches
+):
+    # Will receive approval_result + final event with rejection message
+    pass
 ```
+
+**Multi-Tool Execution**: After approval, the agent continues its normal execution flow. It can:
+- Process the tool result
+- Call additional tools (including other approval-gated tools)
+- Generate a final response incorporating all tool results
 
 **Implementation Notes:**
 - Approval state persists across server restarts (stored in database)
@@ -755,6 +805,8 @@ The framework follows a layered architecture that separates concerns and enables
    - Framework adapters only implement low-level `_chat_raw()` and `_stream_raw()` methods that return pure content without any database side-effects.
    - When you call `await agent.chat("Your query")`, the `CoreAgentBase` wrapper automatically handles user message storage, LLM placeholder creation, calling the adapter's `_chat_raw()` method, and completing the stored message with results.
    - This architecture ensures that adapters cannot "forget" to persist conversations or handle approval flows—all database operations are centralized and automatic.
+   - **Approval Flow**: When a tool requiring approval is called, the framework automatically pauses execution, emits `ApprovalNeededEvent`, and waits for `resume_with_approval()` to be called.
+   - **Resume Capability**: The `resume_with_approval()` method allows continuation of paused executions, emitting `ApprovalResultEvent` and `ResumeEvent` before resuming normal agent flow.
    - PydanticAI agents provide granular event-based streaming that exposes the agent's execution graph in real-time.
    - The `_emit_observer_event()` helper enables stream observers to receive events from nested agent calls, providing complete visibility across agent boundaries.
 
@@ -1456,6 +1508,8 @@ User Query → PydanticAI Agent → Execution Graph Stream
 | `ContentEvent` | Answer content deltas | `content`, `accumulated_content`, `metadata` | Model text generation |
 | `SourceEvent` | Source discovery | `sources`, `metadata` | Vector search results |
 | `ApprovalNeededEvent` | Tool approval required | `pending_tool_call`, `metadata` | Flagged tool execution paused |
+| `ApprovalResultEvent` | Approval decision recorded | `decision`, `pending_tool_call`, `metadata` | After resume_with_approval() called |
+| `ResumeEvent` | Execution restarting | Standard event fields | After approval, before tool runs |
 | `FinalEvent` | Complete results | `accumulated_content`, `sources`, `metadata` | End of execution |
 
 #### Implementation Benefits
@@ -1476,7 +1530,6 @@ async for event in agent.stream("Complex legal analysis"):
         answer_panel.append_text(event.content)
     elif event.type == "sources":
         source_panel.update_sources(event.sources)
-        debug_panel.add_tool_result(timestamp, "sources_found", len(event.sources))
     elif event.type == "approval_needed":
         # Human-in-the-loop: pause execution, request approval
         approval_panel.show_approval_request(

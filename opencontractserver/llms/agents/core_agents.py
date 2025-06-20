@@ -2,9 +2,9 @@
 
 import logging
 from abc import ABC
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable
 from dataclasses import dataclass, field
-from typing import Any, Literal, Optional, Protocol, Union, runtime_checkable, Callable, Awaitable
+from typing import Any, Callable, Literal, Optional, Protocol, Union, runtime_checkable
 
 from django.conf import settings
 from django.utils import timezone
@@ -163,6 +163,27 @@ class ApprovalNeededEvent(_BaseStreamEvt):
     pending_tool_call: dict[str, Any] = field(default_factory=dict)
 
 
+# ------------------------------------------------------------------
+# New events for post-approval workflow
+# ------------------------------------------------------------------
+
+
+@dataclass
+class ApprovalResultEvent(_BaseStreamEvt):
+    """Emitted as soon as the user decision (approve/reject) is recorded."""
+
+    type: Literal["approval_result"] = "approval_result"
+    decision: Literal["approved", "rejected"] = "approved"
+    pending_tool_call: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ResumeEvent(_BaseStreamEvt):
+    """Marks the actual resumption of execution after approval."""
+
+    type: Literal["resume"] = "resume"
+
+
 # A discriminated union over all event types. The Literal strings defined in each
 # dataclass act as simple runtime markers that make it easy for downstream code
 # (e.g. WebSocket serializers) to switch on the `.type` attribute without costly
@@ -172,6 +193,8 @@ UnifiedStreamEvent = Union[
     ContentEvent,
     SourceEvent,
     ApprovalNeededEvent,
+    ApprovalResultEvent,
+    ResumeEvent,
     FinalEvent,
     ErrorEvent,
 ]
@@ -375,7 +398,6 @@ class CoreAgentBase(ABC):
 
         from opencontractserver.conversations.models import (
             ChatMessage,
-            MessageStateChoices,
         )
 
         message = await ChatMessage.objects.acreate(
@@ -469,7 +491,6 @@ class CoreAgentBase(ABC):
         """Legacy compatibility wrapper that simply forwards to ``stream`` and yields its events."""
         async for chunk in self.stream(message, **kwargs):
             yield chunk
-
 
     async def store_message(self, content: str, msg_type: str = "LLM") -> int:
         """Legacy method - delegates to appropriate store method."""
@@ -742,19 +763,15 @@ class CoreAgentBase(ABC):
         )
 
     async def mark_message_error(self, message_id: int, error: str) -> None:
-        """Mark an existing message as errored with the given text."""
-        # For anonymous conversations, don't store messages
-        if not self.conversation or message_id == 0:
-            return
+        """Delegate to the conversation manager's implementation.
 
-        message = await ChatMessage.objects.aget(id=message_id)
-        message.content = error
-        message.state = MessageState.ERROR
-        data = message.data or {}
-        data["error"] = error
-        data["errored_at"] = timezone.now().isoformat()
-        message.data = data
-        await message.asave()
+        The original inlined code used the undefined attribute
+        ``self.conversation`` which raises ``AttributeError``.  To avoid
+        duplication and keep a single source-of-truth, this wrapper now
+        forwards the call to :pymeth:`CoreConversationManager.mark_message_error`.
+        """
+
+        await self.conversation_manager.mark_message_error(message_id, error)
 
     # ------------------------------------------------------------------
     # Observer helper
@@ -1046,7 +1063,6 @@ class CoreConversationManager:
 
         from opencontractserver.conversations.models import (
             ChatMessage,
-            MessageStateChoices,
         )
 
         message = await ChatMessage.objects.acreate(

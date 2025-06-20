@@ -7,7 +7,6 @@ from collections.abc import AsyncGenerator
 from typing import Any, Callable, Optional, Union
 from uuid import uuid4
 
-import pydantic_core
 from pydantic_ai.agent import Agent as PydanticAIAgent
 from pydantic_ai.agent import (
     CallToolsNode,
@@ -36,6 +35,7 @@ from opencontractserver.documents.models import Document
 from opencontractserver.llms.agents.core_agents import (
     AgentConfig,
     ApprovalNeededEvent,
+    ApprovalResultEvent,
     ContentEvent,
     CoreAgentBase,
     CoreConversationManager,
@@ -45,6 +45,7 @@ from opencontractserver.llms.agents.core_agents import (
     DocumentAgentContext,
     FinalEvent,
     MessageState,
+    ResumeEvent,
     SourceEvent,
     SourceNode,
     ThoughtEvent,
@@ -213,32 +214,14 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
 
         logger.info(f"[PydanticAI stream] Starting stream with message: {message!r}")
 
-        # Try to reuse the LLM placeholder that CoreAgentBase.stream created
-        # just before invoking this method. That placeholder is the most
-        # recent *in-progress* LLM message for this conversation.
+        # Extract optional overrides (used by resume_with_approval)
+        force_llm_id: int | None = kwargs.pop("force_llm_id", None)
+        force_user_msg_id: int | None = kwargs.pop("force_user_msg_id", None)
 
-        from opencontractserver.conversations.models import ChatMessage
+        user_msg_id: int | None = force_user_msg_id
+        llm_msg_id: int | None = force_llm_id
 
-        user_msg_id: int | None = None
-        llm_msg_id: int | None = None
-
-        if self.conversation_manager.conversation:
-            placeholder = (
-                await ChatMessage.objects.filter(
-                    conversation=self.conversation_manager.conversation,
-                    msg_type="LLM",
-                )
-                .order_by("-created")
-                .afirst()
-            )
-            if (
-                placeholder
-                and (placeholder.data or {}).get("state") == MessageState.IN_PROGRESS
-            ):
-                llm_msg_id = placeholder.id
-
-        # Fallback (e.g. when this adapter is called outside CoreAgentBase)
-        if llm_msg_id is None:
+        if self.conversation_manager.conversation and llm_msg_id is None:
             user_msg_id, llm_msg_id = await self._initialise_llm_message(message)
 
         accumulated_content: str = ""
@@ -371,16 +354,24 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                             # Ensure we have a dict (pydantic may already return dict object)
                                             if isinstance(result_payload, str):
                                                 import json as _json
-                                                result_payload = _json.loads(result_payload)
+
+                                                result_payload = _json.loads(
+                                                    result_payload
+                                                )
 
                                             if isinstance(result_payload, dict):
                                                 # 1) Surface child sources immediately so UI can pin them
-                                                child_sources_raw = result_payload.get("sources", [])
+                                                child_sources_raw = result_payload.get(
+                                                    "sources", []
+                                                )
                                                 if child_sources_raw:
                                                     new_sources = [
-                                                        _to_source_node(s) for s in child_sources_raw
+                                                        _to_source_node(s)
+                                                        for s in child_sources_raw
                                                     ]
-                                                    accumulated_sources.extend(new_sources)
+                                                    accumulated_sources.extend(
+                                                        new_sources
+                                                    )
                                                     src_ev = SourceEvent(
                                                         sources=new_sources,
                                                         user_message_id=user_msg_id,
@@ -389,27 +380,40 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                                     builder.add(src_ev)
                                                     yield src_ev
 
-                                                # 2) Relay child timeline entries as ThoughtEvents, prefixing with document context for clarity
-                                                child_tl = result_payload.get("timeline", [])
+                                                # 2) Relay child timeline entries as ThoughtEvents,
+                                                # prefixing with document context for clarity
+                                                child_tl = result_payload.get(
+                                                    "timeline", []
+                                                )
                                                 for tl_entry in child_tl:
-                                                    tl_text = tl_entry.get("thought") or ""
+                                                    tl_text = (
+                                                        tl_entry.get("thought") or ""
+                                                    )
                                                     if not tl_text:
                                                         continue
-                                                    prefixed_text = f"[ask_document] {tl_text}"
+                                                    prefixed_text = (
+                                                        f"[ask_document] {tl_text}"
+                                                    )
                                                     tl_ev = ThoughtEvent(
                                                         thought=prefixed_text,
                                                         user_message_id=user_msg_id,
                                                         llm_message_id=llm_msg_id,
                                                         metadata={
                                                             "tool_name": tool_name,
-                                                            **(tl_entry.get("metadata") or {}),
+                                                            **(
+                                                                tl_entry.get("metadata")
+                                                                or {}
+                                                            ),
                                                         },
                                                     )
                                                     builder.add(tl_ev)
                                                     yield tl_ev
 
-                                                # 3) Append the child answer to accumulated_content so it is included in final answer.
-                                                answer_txt = result_payload.get("answer", "")
+                                                # 3) Append the child answer to accumulated_content
+                                                # so it is included in final answer.
+                                                answer_txt = result_payload.get(
+                                                    "answer", ""
+                                                )
                                                 if answer_txt:
                                                     accumulated_content += answer_txt
                                                     content_ev = ContentEvent(
@@ -417,11 +421,15 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                                         accumulated_content=accumulated_content,
                                                         user_message_id=user_msg_id,
                                                         llm_message_id=llm_msg_id,
-                                                        metadata={"from": "ask_document"},
+                                                        metadata={
+                                                            "from": "ask_document"
+                                                        },
                                                     )
                                                     builder.add(content_ev)
                                                     yield content_ev
-                                        except Exception as _inner_exc:  # noqa: BLE001 – defensive
+                                        except (
+                                            Exception
+                                        ) as _inner_exc:  # noqa: BLE001 – defensive
                                             logger.warning(
                                                 "Failed to process ask_document result payload: %s",
                                                 _inner_exc,
@@ -577,6 +585,14 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
         tool_name = pending.get("name")
         tool_args = pending.get("arguments", {})
 
+        # Emit ApprovalResultEvent immediately so consumers are aware of decision
+        yield ApprovalResultEvent(
+            decision="approved" if approved else "rejected",
+            pending_tool_call=pending,
+            user_message_id=paused_msg.id,
+            llm_message_id=paused_msg.id,
+        )
+
         # Determine result based on decision
         if approved:
             # Locate CoreTool by name among config.tools if available
@@ -594,9 +610,18 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                 tool_call_id = pending.get("tool_call_id")
                 skip_approval_gate = True
 
+            import inspect
+
+            async def _maybe_await(call_result):  # noqa: D401 – small helper
+                return (
+                    await call_result
+                    if inspect.isawaitable(call_result)
+                    else call_result
+                )
+
             if wrapper_fn is not None:
                 # Pydantic-AI wrappers accept ctx as first arg.
-                result = await wrapper_fn(_EmptyCtx(), **tool_args)
+                result = await _maybe_await(wrapper_fn(_EmptyCtx(), **tool_args))
             else:
                 # Resort to pydantic-ai registry – may return Tool object.
                 tool_obj = self.pydantic_ai_agent._function_tools.get(tool_name)
@@ -615,7 +640,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                         "Tool object is not callable and no inner function found"
                     )
 
-                result = await candidate(_EmptyCtx(), **tool_args)
+                result = await _maybe_await(candidate(_EmptyCtx(), **tool_args))
 
             tool_result = {"result": result}
             status_str = "approved"
@@ -633,7 +658,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
 
             tool_return_part = ToolReturnPart(
                 tool_name=tool_name,
-                content=json.dumps(tool_result),
+                content=json.dumps(tool_result, default=str),
                 tool_call_id=tool_call_id,
             )
 
@@ -666,8 +691,9 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
 
         # If rejected – emit client-facing event(s)
         if not approved:
+            rejection_msg = "Tool execution rejected by user."
             yield FinalEvent(
-                accumulated_content="Tool execution rejected by user.",
+                accumulated_content=rejection_msg,
                 sources=[],
                 metadata={
                     "approval_decision": status_str,
@@ -675,24 +701,76 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                 },
                 user_message_id=paused_msg.id,
                 llm_message_id=paused_msg.id,
-                content="",
+                content=rejection_msg,
             )
             return
 
         # If approved – continue via streaming and yield downstream events.
         else:
-            # For approved, send back the tool_result as final.
-            yield FinalEvent(
-                accumulated_content=str(tool_result["result"]),
-                sources=[],
-                metadata={
-                    "approval_decision": status_str,
-                    "message_id": str(paused_msg.id),
-                },
-                user_message_id=paused_msg.id,
-                llm_message_id=paused_msg.id,
-                content=str(tool_result["result"]),
+            # New placeholder LLM message to track resumed run
+            resumed_llm_id = await self.create_placeholder_message("LLM")
+
+            # ----------------------------------------------------------
+            # Determine the *actual* user message that triggered the pause
+            # so that downstream events carry the correct identifier.  We
+            # simply pick the most recent HUMAN message in the same
+            # conversation.
+            # ----------------------------------------------------------
+            user_message_id: int | None = None
+            from opencontractserver.conversations.models import (  # local import to avoid cycles
+                ChatMessage,
             )
+
+            if paused_msg.conversation_id:
+                async for _m in ChatMessage.objects.filter(
+                    conversation_id=paused_msg.conversation_id,
+                    msg_type="HUMAN",
+                ).order_by("-created"):
+                    user_message_id = _m.id
+                    break
+
+            if user_message_id is None:
+                user_message_id = paused_msg.id  # Fallback to previous behaviour
+
+            # Emit ResumeEvent so consumers can start a new spinner / pane
+            yield ResumeEvent(
+                user_message_id=user_message_id,
+                llm_message_id=resumed_llm_id,
+            )
+
+            # ----------------------------------------------
+            # Run normal streaming continuation via _stream_core
+            # ----------------------------------------------
+
+            history_req = ModelRequest(parts=[tool_return_part])
+            history = await self._get_message_history() or []
+            history.append(history_req)
+
+            accumulated_content = ""
+
+            async for ev in self._stream_core(
+                "<continue>",
+                message_history=history,
+                force_llm_id=resumed_llm_id,
+                force_user_msg_id=user_message_id,
+                deps=self.agent_deps,
+            ):
+                if isinstance(ev, FinalEvent):
+                    ev.metadata["approval_decision"] = status_str
+                    accumulated_content = ev.accumulated_content or ev.content
+                yield ev
+
+            # Ensure DB message contains approval_decision (it may have been
+            # missing in _stream_core's finalisation).
+            try:
+                await self.conversation_manager.update_message(
+                    resumed_llm_id,
+                    accumulated_content,
+                    metadata={"approval_decision": status_str},
+                )
+            except Exception:  # pragma: no cover
+                logger.exception("Failed to patch approval_decision on resumed msg")
+
             return
 
     # Expose for CoreAgentBase wrapper
@@ -1186,7 +1264,9 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
         # Document coordination tools – empower corpus agent to talk to per-document agents
         # -----------------------------
 
-        from opencontractserver.llms import agents as _agents_api  # local import to avoid circulars
+        from opencontractserver.llms import (
+            agents as _agents_api,  # local import to avoid circulars
+        )
         from opencontractserver.llms.types import AgentFramework as _AgentFramework
 
         async def list_documents_tool() -> list[dict[str, Any]]:
@@ -1283,7 +1363,9 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
 
                 if getattr(ev, "type", "") == "final":
                     # Merge any final sources / timeline injected by the adapter
-                    captured_sources = [s.to_dict() for s in ev.sources] or captured_sources
+                    captured_sources = [
+                        s.to_dict() for s in ev.sources
+                    ] or captured_sources
                     if isinstance(ev.metadata, dict) and ev.metadata.get("timeline"):
                         captured_timeline = ev.metadata["timeline"]
 

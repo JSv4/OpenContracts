@@ -190,17 +190,19 @@ class CorpusQueryConsumer(AsyncWebsocketConsumer):
         try:
             # Import event classes locally to avoid heavy imports at top
             from opencontractserver.llms.agents.core_agents import (
-                ThoughtEvent,
-                ContentEvent,
-                SourceEvent,
                 ApprovalNeededEvent,
-                FinalEvent,
+                ContentEvent,
                 ErrorEvent,
+                FinalEvent,
+                SourceEvent,
+                ThoughtEvent,
             )
 
             async for event in self.agent.stream(user_query):
                 # Ensure START message once we have IDs
-                if getattr(event, "user_message_id", None) is not None and not hasattr(self, "_sent_start"):
+                if getattr(event, "user_message_id", None) is not None and not hasattr(
+                    self, "_sent_start"
+                ):
                     await self.send_standard_message(
                         msg_type="ASYNC_START",
                         data={"message_id": event.llm_message_id},

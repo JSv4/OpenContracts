@@ -556,7 +556,6 @@ const CorpusQueryView = ({
           transition={{ duration: 0.3 }}
         >
           {renderNavigationHeader()}
-
           <CorpusChat
             corpusId={opened_corpus.id}
             showLoad={false}

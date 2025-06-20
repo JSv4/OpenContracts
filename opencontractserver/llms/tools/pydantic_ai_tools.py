@@ -2,7 +2,8 @@
 
 import inspect
 import logging
-from typing import Any, Callable, Optional, get_type_hints, Awaitable
+from collections.abc import Awaitable
+from typing import Any, Callable, Optional, get_type_hints
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai.tools import RunContext

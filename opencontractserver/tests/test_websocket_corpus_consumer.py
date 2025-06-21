@@ -77,7 +77,8 @@ class CorpusConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
                 logger.info(f"time taken: {end - start}")
             except Exception as e:  # noqa: BLE001
                 import traceback
-                traceback.print_exc()                
+
+                traceback.print_exc()
                 logger.error(f"Websocket timeout error: {e}", exc_info=True)
                 self.fail(f"Timed-out waiting for websocket messages: {e}")
 

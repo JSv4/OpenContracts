@@ -1,6 +1,7 @@
 """Framework-agnostic core tool functions for document and note operations."""
 
 import logging
+from functools import partial
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -321,23 +322,30 @@ async def aget_notes_for_document_corpus(
 
 
 # --------------------------------------------------------------------------- #
-# Helper for safe sync→async DB execution                                  #
+# We need a robust helper that **always** executes the wrapped function in a
+# *fresh* worker thread so the database connection opened inside that thread is
+# guaranteed to be valid for the lifetime of the call.  Re-using the same
+# thread between subsequent invocations (the default behaviour when
+# ``thread_sensitive=True``) risks the connection becoming stale once Django
+# closes it at the end of a test case – ultimately raising the dreaded
+# "the connection is closed" OperationalError when the old thread is re-used.
+#
+# To avoid this we create a partially-applied wrapper with
+# ``thread_sensitive=False`` irrespective of whether Channels is installed.  We
+# fall back to ``asgiref.sync.sync_to_async`` when Channels is unavailable,
+# applying the same parameter.
 # --------------------------------------------------------------------------- #
 
-# Using `thread_sensitive=False` ensures each wrapped call executes in a fresh
-# worker-thread from the pool rather than the dedicated per-wrapper thread
-# used by the default value (``True``).  This avoids the situation where the
-# underlying database connection inside that long-lived thread becomes stale
-# – a common cause of sporadic "connection is closed" / ``OperationalError``
-# during async test-runs that spin up and tear down the database repeatedly.
-
 try:
-    from channels.db import database_sync_to_async as _db_sync_to_async
-except ModuleNotFoundError:  # channels not installed – fall back gracefully
-    # In non-ASGI environments or during documentation builds Channels may not
-    # be available.  Degrade to the original helper so synchronous execution
-    # still works (tests will mark the ASGI paths appropriately).
-    from asgiref.sync import sync_to_async as _db_sync_to_async  # type: ignore
+    from channels.db import (
+        database_sync_to_async as _database_sync_to_async,  # type: ignore
+    )
+
+    _db_sync_to_async = partial(_database_sync_to_async, thread_sensitive=False)  # type: ignore
+except ModuleNotFoundError:  # Channels not installed – fall back gracefully
+    from asgiref.sync import sync_to_async as _sync_to_async  # type: ignore
+
+    _db_sync_to_async = partial(_sync_to_async, thread_sensitive=False)  # type: ignore
 
 
 # --------------------------------------------------------------------------- #
@@ -431,10 +439,55 @@ async def aload_document_txt_extract(
     *,
     refresh: bool = False,
 ) -> str:
-    """Async wrapper around :func:`load_document_txt_extract`."""
-    return await _db_sync_to_async(load_document_txt_extract)(
-        document_id, start, end, refresh=refresh
-    )
+    """Asynchronously load a slice of a document's ``txt_extract_file``.
+
+    This implementation avoids the thread-pool wrapper by relying on Django's
+    native async ORM utilities (``aget`` et al.). Only file IO remains
+    synchronous which is acceptable given the typically small size of the
+    text-extract payload.
+    """
+
+    from opencontractserver.documents.models import Document  # local import
+
+    # Refresh – evict any existing cache entry first.
+    if refresh and document_id in _DOC_TXT_CACHE:
+        _DOC_TXT_CACHE.pop(document_id, None)
+
+    # Populate cache on first access.
+    if document_id not in _DOC_TXT_CACHE:
+        try:
+            doc = await Document.objects.aget(pk=document_id)
+        except Document.DoesNotExist as exc:
+            raise ValueError(f"Document with id={document_id} does not exist.") from exc
+
+        if not doc.txt_extract_file:
+            raise ValueError("No txt_extract_file attached to this document.")
+
+        # Reading from ``FileField`` is inherently blocking – perform the read
+        # synchronously but keep the payload in memory thereafter to avoid
+        # repetitive disk (or network) IO.
+        doc.txt_extract_file.open("rb")  # type: ignore[arg-type]
+        try:
+            _DOC_TXT_CACHE[document_id] = doc.txt_extract_file.read().decode("utf-8")
+        finally:
+            doc.txt_extract_file.close()
+
+        logger.debug(
+            "Cached txt_extract_file for document %s (%d characters)",
+            document_id,
+            len(_DOC_TXT_CACHE[document_id]),
+        )
+
+    content = _DOC_TXT_CACHE[document_id]
+
+    # Normalise indices and slice.
+    start_idx = 0 if start is None else max(0, start)
+    end_idx = len(content) if end is None else end
+
+    if end_idx < start_idx:
+        raise ValueError("End index must be greater than or equal to start index.")
+
+    return content[start_idx:end_idx]
 
 
 # --------------------------------------------------------------------------- #
@@ -483,10 +536,30 @@ async def aget_corpus_description(
     truncate_length: int | None = None,
     from_start: bool = True,
 ) -> str:
-    """Async wrapper around :func:`get_corpus_description`."""
-    return await _db_sync_to_async(get_corpus_description)(
-        corpus_id, truncate_length, from_start
-    )
+    """Async implementation of :func:`get_corpus_description` using native ORM calls."""
+
+    from opencontractserver.corpuses.models import Corpus  # local import
+
+    try:
+        corpus = await Corpus.objects.aget(pk=corpus_id)
+    except Corpus.DoesNotExist as exc:
+        raise ValueError(f"Corpus with id={corpus_id} does not exist.") from exc
+
+    if not corpus.md_description:
+        return ""
+
+    corpus.md_description.open("r")  # type: ignore[arg-type]
+    try:
+        content: str = corpus.md_description.read()
+    finally:
+        corpus.md_description.close()
+
+    if truncate_length and truncate_length > 0:
+        content = (
+            content[:truncate_length] if from_start else content[-truncate_length:]
+        )
+
+    return content
 
 
 def update_corpus_description(
@@ -536,15 +609,90 @@ async def aupdate_corpus_description(
     author_id: int | None = None,
     author=None,
 ):
-    """Async wrapper around update_corpus_description."""
+    """Async variant of :func:`update_corpus_description` relying on Django's async ORM."""
 
-    return await _db_sync_to_async(update_corpus_description)(
-        corpus_id=corpus_id,
-        new_content=new_content,
-        diff_text=diff_text,
-        author_id=author_id,
-        author=author,
+    import difflib
+    import hashlib
+
+    from django.contrib.auth import get_user_model
+    from django.core.files.base import ContentFile
+    from django.db import transaction
+    from django.utils import timezone
+
+    from opencontractserver.corpuses.models import (
+        Corpus,
+        CorpusDescriptionRevision,
     )
+
+    if new_content is None and diff_text is None:
+        raise ValueError("Provide either new_content or diff_text")
+
+    if new_content is not None and diff_text is not None:
+        raise ValueError("Provide only one of new_content or diff_text, not both")
+
+    if author is None and author_id is None:
+        raise ValueError("Provide either author or author_id.")
+
+    try:
+        corpus = await Corpus.objects.aget(pk=corpus_id)
+    except Corpus.DoesNotExist as exc:
+        raise ValueError(f"Corpus with id={corpus_id} does not exist.") from exc
+
+    # Compute *new_content* from the diff when required.
+    if diff_text is not None:
+        current = corpus._read_md_description_content()
+        new_content = _apply_ndiff_patch(current, diff_text)
+    else:
+        current = corpus._read_md_description_content()
+
+    assert new_content is not None  # mypy – safeguarded above.
+
+    # Resolve author.
+    if author is None:
+        User = get_user_model()
+        author = await User.objects.aget(pk=author_id)  # type: ignore[assignment]
+
+    # No change – early exit.
+    if current == new_content:
+        return None
+
+    async with transaction.atomic():
+        # Persist the new markdown file.
+        filename = f"{uuid4()}.md"
+        corpus.md_description.save(filename, ContentFile(new_content), save=False)  # type: ignore[arg-type]
+        corpus.modified = timezone.now()
+        await corpus.asave()
+
+        # Compute next version number.
+        latest_rev = (
+            await CorpusDescriptionRevision.objects.filter(corpus_id=corpus.pk)
+            .order_by("-version")
+            .afirst()
+        )
+        next_version = 1 if latest_rev is None else latest_rev.version + 1
+
+        diff_text_final = "\n".join(
+            difflib.unified_diff(
+                current.splitlines(), new_content.splitlines(), lineterm=""
+            )
+        )
+
+        should_snapshot = (
+            next_version % corpus.REVISION_SNAPSHOT_INTERVAL == 0 or next_version == 1
+        )
+        snapshot_text = new_content if should_snapshot else None
+
+        revision = await CorpusDescriptionRevision.objects.acreate(
+            corpus=corpus,
+            author=author,
+            version=next_version,
+            diff=diff_text_final,
+            snapshot=snapshot_text,
+            checksum_base=hashlib.sha256(current.encode()).hexdigest(),
+            checksum_full=hashlib.sha256(new_content.encode()).hexdigest(),
+        )
+
+    return revision
 
 
 # --------------------------------------------------------------------------- #
@@ -586,13 +734,25 @@ async def aadd_document_note(
     creator_id: int,
     corpus_id: int | None = None,
 ):
-    return await _db_sync_to_async(add_document_note)(
+    """Create a new :class:`~opencontractserver.annotations.models.Note` asynchronously."""
+
+    from opencontractserver.annotations.models import Note
+    from opencontractserver.documents.models import Document
+
+    # Ensure the document exists first.
+    exists = await Document.objects.filter(pk=document_id).aexists()
+    if not exists:
+        raise ValueError(f"Document with id={document_id} does not exist.")
+
+    note = await Note.objects.acreate(
         document_id=document_id,
+        corpus_id=corpus_id,
         title=title,
         content=content,
         creator_id=creator_id,
-        corpus_id=corpus_id,
     )
+
+    return note
 
 
 def _apply_ndiff_patch(original: str, diff_text: str) -> str:
@@ -648,12 +808,82 @@ async def aupdate_document_note(
     diff_text: str | None = None,
     author_id: int | None = None,
 ):
-    return await _db_sync_to_async(update_document_note)(
-        note_id=note_id,
-        new_content=new_content,
-        diff_text=diff_text,
-        author_id=author_id,
-    )
+    """Async variant of ``update_document_note`` avoiding thread-pool hand-off."""
+
+    import difflib
+    import hashlib
+
+    from django.contrib.auth import get_user_model
+    from django.db import transaction
+    from django.utils import timezone
+
+    from opencontractserver.annotations.models import Note, NoteRevision
+
+    if new_content is None and diff_text is None:
+        raise ValueError("Provide either new_content or diff_text")
+
+    if new_content is not None and diff_text is not None:
+        raise ValueError("Provide only one of new_content or diff_text, not both")
+
+    try:
+        note = await Note.objects.aget(pk=note_id)
+    except Note.DoesNotExist as exc:
+        raise ValueError(f"Note with id={note_id} does not exist.") from exc
+
+    # Resolve new_content when a diff is supplied.
+    if diff_text is not None:
+        new_content = _apply_ndiff_patch(note.content or "", diff_text)
+
+    assert new_content is not None  # ensured above
+
+    # Early exit if nothing changed.
+    if (note.content or "") == new_content:
+        return None
+
+    # Resolve author (may be None for system actions).
+    author = None
+    if author_id is not None:
+        User = get_user_model()
+        author = await User.objects.aget(pk=author_id)
+
+    async with transaction.atomic():
+        original_content = note.content or ""
+
+        # Update the note *without* triggering the automatic revision logic in
+        # ``save`` – we perform the revision manually below. We therefore use
+        # ``aupdate`` on the queryset.
+        await Note.objects.filter(pk=note.pk).aupdate(
+            content=new_content, modified=timezone.now()
+        )
+
+        latest_rev = (
+            await NoteRevision.objects.filter(note_id=note.pk)
+            .order_by("-version")
+            .afirst()
+        )
+        next_version = 1 if latest_rev is None else latest_rev.version + 1
+
+        diff_text_final = "\n".join(
+            difflib.unified_diff(
+                original_content.splitlines(), new_content.splitlines(), lineterm=""
+            )
+        )
+
+        interval = getattr(Note, "REVISION_SNAPSHOT_INTERVAL", 10)
+        should_snapshot = next_version % interval == 0
+        snapshot_text = new_content if should_snapshot else None
+
+        revision = await NoteRevision.objects.acreate(
+            note_id=note.pk,
+            author=author,
+            version=next_version,
+            diff=diff_text_final,
+            snapshot=snapshot_text,
+            checksum_base=hashlib.sha256(original_content.encode()).hexdigest(),
+            checksum_full=hashlib.sha256(new_content.encode()).hexdigest(),
+        )
+
+    return revision
 
 
 def search_document_notes(
@@ -704,9 +934,45 @@ async def asearch_document_notes(
     corpus_id: int | None = None,
     limit: int | None = None,
 ):
-    return await _db_sync_to_async(search_document_notes)(
-        document_id, search_term, corpus_id=corpus_id, limit=limit
-    )
+    """Async search for notes matching *search_term* within a document."""
+
+    import django
+
+    from opencontractserver.annotations.models import Note
+    from opencontractserver.documents.models import Document
+
+    # Validate document existence.
+    exists = await Document.objects.filter(pk=document_id).aexists()
+    if not exists:
+        raise ValueError(f"Document with id={document_id} does not exist.")
+
+    notes_qs = Note.objects.filter(document_id=document_id)
+
+    if corpus_id is not None:
+        notes_qs = notes_qs.filter(corpus_id=corpus_id)
+
+    notes_qs = notes_qs.filter(
+        django.db.models.Q(title__icontains=search_term)
+        | django.db.models.Q(content__icontains=search_term)
+    ).order_by("-modified")
+
+    if limit and limit > 0:
+        notes_qs = notes_qs[:limit]
+
+    results: list[dict[str, str | int]] = []
+    async for note in notes_qs:
+        results.append(
+            {
+                "id": note.id,
+                "title": note.title,
+                "content": note.content,
+                "creator_id": note.creator_id,
+                "created": note.created.isoformat() if note.created else None,
+                "modified": note.modified.isoformat() if note.modified else None,
+            }
+        )
+
+    return results
 
 
 # --------------------------------------------------------------------------- #

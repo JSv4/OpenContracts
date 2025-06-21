@@ -477,11 +477,16 @@ class TestLlamaIndexAgents(TestCase):
         config = AgentConfig(user_id=self.user.id, model_name="gpt-4o-mini")
         agent = await LlamaIndexDocumentAgent.create(self.doc1, self.corpus, config)
 
-        # Test that exceptions are properly handled
-        with self.assertRaises(Exception) as cm:
-            await agent.chat("Test query")
+        # Under the new framework semantics the agent should **not** raise –
+        # it should return a UnifiedChatResponse that contains the error
+        # information in its metadata so that front-ends can render a proper
+        # error bubble while keeping the conversation alive.
 
-        self.assertEqual(str(cm.exception), "LLM error")
+        response = await agent.chat("Test query")
+
+        self.assertIsInstance(response, UnifiedChatResponse)
+        self.assertEqual(response.metadata.get("error"), "LLM error")
+        self.assertTrue(response.content.startswith("Error:"))
 
     @patch("opencontractserver.llms.agents.llama_index_agents.OpenAIAgent")
     @patch("opencontractserver.llms.agents.llama_index_agents.VectorStoreIndex")

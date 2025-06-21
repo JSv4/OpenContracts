@@ -1,6 +1,7 @@
 """Framework-agnostic core tool functions for document and note operations."""
 
 import logging
+from datetime import datetime
 from functools import partial
 from typing import Any, Optional
 from uuid import uuid4
@@ -352,11 +353,9 @@ except ModuleNotFoundError:  # Channels not installed – fall back gracefully
 # Plain-text extract helpers                                                  #
 # --------------------------------------------------------------------------- #
 
-# In-memory cache keyed by ``document_id`` so subsequent calls avoid disk IO.
-# NOTE: This is **per-process** only – the cache is reset when the worker
-# restarts. For long-running workers this provides a fast path while keeping
-# memory usage bounded by the number of distinct documents accessed.
-_DOC_TXT_CACHE: dict[int, str] = {}
+# Cache now stores a tuple of (last_modified timestamp, file contents) so we can
+# transparently invalidate entries when the underlying file changes.
+_DOC_TXT_CACHE: dict[int, tuple["datetime", str]] = {}
 
 
 def load_document_txt_extract(
@@ -400,27 +399,37 @@ def load_document_txt_extract(
         Document,
     )
 
-    if refresh and document_id in _DOC_TXT_CACHE:
-        _DOC_TXT_CACHE.pop(document_id, None)
+    # Retrieve the document regardless – we need its `modified` timestamp to
+    # determine cache validity.
+    try:
+        doc = Document.objects.get(pk=document_id)
+    except Document.DoesNotExist as exc:
+        raise ValueError(f"Document with id={document_id} does not exist.") from exc
 
-    if document_id not in _DOC_TXT_CACHE:
-        # Populate the cache – may raise if document/file missing.
-        try:
-            doc = Document.objects.get(pk=document_id)
-        except Document.DoesNotExist as exc:
-            raise ValueError(f"Document with id={document_id} does not exist.") from exc
+    if not doc.txt_extract_file:
+        raise ValueError("No txt_extract_file attached to this document.")
 
-        if not doc.txt_extract_file:
-            raise ValueError("No txt_extract_file attached to this document.")
+    # Decide whether to use the cached value.
+    use_cache = False
+    if not refresh and document_id in _DOC_TXT_CACHE:
+        cached_ts, _ = _DOC_TXT_CACHE[document_id]
+        use_cache = cached_ts == doc.modified
 
-        _DOC_TXT_CACHE[document_id] = doc.txt_extract_file.read().decode("utf-8")
+    if not use_cache:
+        # (Re)load from storage.
+        content_bytes = doc.txt_extract_file.read()  # type: ignore[arg-type]
+        content_str = content_bytes.decode("utf-8")
+        _DOC_TXT_CACHE[document_id] = (doc.modified, content_str)
+
         logger.debug(
-            "Cached txt_extract_file for document %s (%d characters)",
+            "(Re)cached txt_extract_file for document %s (%d characters, ts=%s)",
             document_id,
-            len(_DOC_TXT_CACHE[document_id]),
+            len(content_str),
+            doc.modified,
         )
 
-    content = _DOC_TXT_CACHE[document_id]
+    # Unpack cached tuple.
+    content = _DOC_TXT_CACHE[document_id][1]
 
     # Normalise indices.
     start_idx = 0 if start is None else max(0, start)
@@ -449,36 +458,35 @@ async def aload_document_txt_extract(
 
     from opencontractserver.documents.models import Document  # local import
 
-    # Refresh – evict any existing cache entry first.
+    # Hard timestamp-aware cache validation.
     if refresh and document_id in _DOC_TXT_CACHE:
         _DOC_TXT_CACHE.pop(document_id, None)
 
-    # Populate cache on first access.
-    if document_id not in _DOC_TXT_CACHE:
-        try:
-            doc = await Document.objects.aget(pk=document_id)
-        except Document.DoesNotExist as exc:
-            raise ValueError(f"Document with id={document_id} does not exist.") from exc
+    try:
+        doc = await Document.objects.aget(pk=document_id)
+    except Document.DoesNotExist as exc:
+        raise ValueError(f"Document with id={document_id} does not exist.") from exc
 
-        if not doc.txt_extract_file:
-            raise ValueError("No txt_extract_file attached to this document.")
+    if not doc.txt_extract_file:
+        raise ValueError("No txt_extract_file attached to this document.")
 
-        # Reading from ``FileField`` is inherently blocking – perform the read
-        # synchronously but keep the payload in memory thereafter to avoid
-        # repetitive disk (or network) IO.
-        doc.txt_extract_file.open("rb")  # type: ignore[arg-type]
-        try:
-            _DOC_TXT_CACHE[document_id] = doc.txt_extract_file.read().decode("utf-8")
-        finally:
-            doc.txt_extract_file.close()
+    use_cache = False
+    if not refresh and document_id in _DOC_TXT_CACHE:
+        cached_ts, _ = _DOC_TXT_CACHE[document_id]
+        use_cache = cached_ts == doc.modified
+
+    if not use_cache:
+        content_str = doc.txt_extract_file.read().decode("utf-8")  # type: ignore[arg-type]
+        _DOC_TXT_CACHE[document_id] = (doc.modified, content_str)
 
         logger.debug(
-            "Cached txt_extract_file for document %s (%d characters)",
+            "(Re)cached txt_extract_file for document %s (%d characters, ts=%s)",
             document_id,
-            len(_DOC_TXT_CACHE[document_id]),
+            len(content_str),
+            doc.modified,
         )
 
-    content = _DOC_TXT_CACHE[document_id]
+    content = _DOC_TXT_CACHE[document_id][1]
 
     # Normalise indices and slice.
     start_idx = 0 if start is None else max(0, start)

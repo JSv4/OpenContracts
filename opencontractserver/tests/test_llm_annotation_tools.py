@@ -24,76 +24,41 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Utility helpers for tests
-# ---------------------------------------------------------------------------
-
-
-def _build_pawls_tokens_for_text(text: str):
-    """Generate a minimal PAWLS token layer for *text* on a single page."""
-
-    tokens = []
-    cursor_x = 0.0
-    for token_text in text.split():
-        tokens.append(
-            {
-                "x": cursor_x,
-                "y": 0.0,
-                "width": float(len(token_text)),
-                "height": 10.0,
-                "text": token_text,
-            }
-        )
-        cursor_x += len(token_text) + 1  # simple separation
-
-    page_obj = {
-        "page": {"width": 612.0, "height": 792.0, "index": 0},
-        "tokens": tokens,
-    }
-    return [page_obj]
-
-
-# ---------------------------------------------------------------------------
 # Sync tests
 # ---------------------------------------------------------------------------
-
-
 class TestLLMAnnotationTools(TestCase):
-    def setUp(self):  # noqa: D401
-        """Create base user and corpus."""
-
-        self.user = User.objects.create_user("anno_user", password="pass")
-        self.corpus = Corpus.objects.create(title="Anno Corpus", creator=self.user)
-
-    # ---------------------------- PDF ----------------------------------- #
-
-    def _create_pdf_document(self) -> Document:
+    
+    @classmethod
+    def setUpClass(cls):  # noqa: D401
+        super().setUpClass()
+        cls.user = User.objects.create_user("anno_user", password="pass")
+        cls.corpus = Corpus.objects.create(title="Anno Corpus", creator=cls.user)
+        
         pawls_json = SAMPLE_PAWLS_FILE_ONE_PATH.read_text()
         pawls_tokens = json.loads(pawls_json)
 
-        doc = Document.objects.create(
-            creator=self.user,
+        cls.doc = Document.objects.create(
+            creator=cls.user,
             title="PDF Doc",
             file_type="application/pdf",
             page_count=len(pawls_tokens),
         )
-        doc.pawls_parse_file.save(
+        cls.doc.pawls_parse_file.save(
             SAMPLE_PAWLS_FILE_ONE_PATH.name, ContentFile(pawls_json.encode())
         )
-        doc.save()
-        self.corpus.documents.add(doc)
-        return doc
+        cls.doc.save()
+        cls.corpus.documents.add(cls.doc)
 
     def test_add_annotations_pdf(self):
         """Exact-string PDF annotation results in TOKEN_LABEL annotations."""
 
-        doc = self._create_pdf_document()
 
         search_word = "Agreement"  # Appears multiple times in sample contract
         tuples: list[tuple[str, str, int, int]] = [
             (
                 "ContractTerm",
                 search_word,
-                doc.id,
+                self.doc.id,
                 self.corpus.id,
             )
         ]

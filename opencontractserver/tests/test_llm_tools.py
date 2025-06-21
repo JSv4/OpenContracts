@@ -376,6 +376,35 @@ class AsyncTestLLMTools(TestCase):
             creator=cls.user,
         )
 
+    # ------------------------------------------------------------------
+    # NEW: Make sure the mock extract lives inside the *current* MEDIA_ROOT
+    # assigned by pytest-django for this particular test function.
+    # Pytest-django rewrites settings.MEDIA_ROOT for every test; when the
+    # file is only written once in setUpClass it ends up inside the first
+    # tmp directory, breaking subsequent tests that run with a different
+    # MEDIA_ROOT.  Re-sync the file at the start of every test to guarantee
+    # it exists where Django expects it.
+    # ------------------------------------------------------------------
+
+    def setUp(self):  # noqa: D401 – simple helper, not public API
+        """Ensure txt_extract_file exists in the active MEDIA_ROOT."""
+        # Refresh the document to obtain a clean instance for the current DB
+        # transaction.
+        self.doc.refresh_from_db()
+
+        from django.core.files.base import ContentFile
+
+        # When pytest-django swaps MEDIA_ROOT the underlying file might no
+        # longer be present at the path derived from self.doc.txt_extract_file
+        # even though the field *name* itself remains unchanged. Re-create the
+        # file when missing so IO in the actual test does not raise.
+        storage = self.doc.txt_extract_file.storage
+        if not storage.exists(self.doc.txt_extract_file.name):
+            self.doc.txt_extract_file.save(
+                "test_extract_async.txt",
+                ContentFile(self.txt_content.encode()),
+            )
+
     async def test_aload_document_txt_extract_success(self):
         """Async version should load full extract correctly."""
         result = await aload_document_txt_extract(self.doc.id)

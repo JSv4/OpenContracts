@@ -489,8 +489,23 @@ class TestPydanticAIAgents(TestCase):
         ctx.document = self.doc1
         ctx.config = cfg
 
+        # Conversation-manager mock needs a few async helpers and config so that
+        # CoreAgentBase.chat()/stream() can interact without AttributeErrors.
         conv_mgr = MagicMock(spec=CoreConversationManager)
+
+        # Minimal conversation context – None disables DB persistence paths.
+        conv_mgr.conversation = None  # behave like anonymous session
+
+        # Attach the **same** config object so attribute access works.
+        conv_mgr.config = cfg
+
+        # Async variants for any IO helpers that CoreAgentBase may call during
+        # chat/stream.  We stub them out so the test remains pure unit.
         conv_mgr.get_conversation_messages = AsyncMock(return_value=[])
+        conv_mgr.update_message_content = AsyncMock()
+        conv_mgr.complete_message = AsyncMock()
+        conv_mgr.cancel_message = AsyncMock()
+        conv_mgr.update_message = AsyncMock()
 
         agent = PydanticAIDocumentAgent(
             context=ctx,
@@ -512,6 +527,52 @@ class TestPydanticAIAgents(TestCase):
         # Stream
         streamed = [chunk async for chunk in agent.stream("test")]
         self.assertTrue(any(c.is_complete for c in streamed))
+
+    @patch("opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIAgent")
+    async def test_pydantic_ai_chat_error_wrapping(
+        self, mock_pyd_ai_cls: MagicMock
+    ) -> None:
+        """`chat` should return an *error* response, not raise."""
+
+        # Mock the underlying LLM to raise
+        erring_llm = MagicMock()
+        erring_llm.run = AsyncMock(side_effect=Exception("LLM failure"))
+        mock_pyd_ai_cls.return_value = erring_llm
+
+        # Build minimal agent (reuse helpers from previous test)
+        from opencontractserver.llms.agents.core_agents import (
+            AgentConfig,
+            CoreConversationManager,
+            DocumentAgentContext,
+        )
+
+        cfg = MagicMock(spec=AgentConfig)
+        cfg.store_user_messages = cfg.store_llm_messages = False  # simplify
+        cfg.user_id = self.user.id
+
+        ctx = MagicMock(spec=DocumentAgentContext)
+        ctx.document = self.doc1
+        ctx.config = cfg
+
+        conv_mgr = MagicMock(spec=CoreConversationManager)
+        conv_mgr.conversation = None
+        conv_mgr.config = cfg
+
+        agent = PydanticAIDocumentAgent(
+            context=ctx,
+            conversation_manager=conv_mgr,
+            pydantic_ai_agent=erring_llm,
+            agent_deps=MagicMock(),
+        )
+
+        # Chat – should *not* raise
+        resp = await agent.chat("trigger error")
+
+        from opencontractserver.llms.agents.core_agents import UnifiedChatResponse
+
+        self.assertIsInstance(resp, UnifiedChatResponse)
+        self.assertEqual(resp.metadata.get("error"), "LLM failure")
+        self.assertTrue(resp.content.startswith("Error:"))
 
     @patch("opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIAgent")
     async def test_pydantic_ai_agent_factory_integration(

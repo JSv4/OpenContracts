@@ -283,6 +283,46 @@ class CorpusQueryConsumer(AsyncWebsocketConsumer):
                     if hasattr(self, "_sent_start"):
                         delattr(self, "_sent_start")
 
+                else:
+                    # ------------------------------------------------------------------
+                    # Legacy path: some adapters (e.g. llama-index) still yield the
+                    # unified *response objects* directly instead of the granular
+                    # ThoughtEvent / ContentEvent / FinalEvent hierarchy.  To maintain
+                    # backward-compatibility we treat those objects similarly to the
+                    # document consumer: every delta with ``content`` becomes an
+                    # ASYNC_CONTENT frame and when ``is_complete`` flips to ``True`` we
+                    # dispatch the mandatory ASYNC_FINISH so the front-end can close
+                    # the stream gracefully.
+                    # ------------------------------------------------------------------
+                    if hasattr(event, "content") and event.content:
+                        await self.send_standard_message(
+                            msg_type="ASYNC_CONTENT",
+                            content=str(event.content),
+                            data={"message_id": event.llm_message_id},
+                        )
+
+                    if getattr(event, "is_complete", False):
+                        sources_payload: list[dict[str, Any]] = []
+                        if hasattr(event, "sources") and event.sources:
+                            sources_payload = [s.to_dict() for s in event.sources]
+
+                        await self.send_standard_message(
+                            msg_type="ASYNC_FINISH",
+                            content=getattr(event, "accumulated_content", ""),
+                            data={
+                                "sources": sources_payload,
+                                "message_id": event.llm_message_id,
+                                "timeline": (
+                                    event.metadata.get("timeline", [])
+                                    if isinstance(event.metadata, dict)
+                                    else []
+                                ),
+                            },
+                        )
+
+                        if hasattr(self, "_sent_start"):
+                            delattr(self, "_sent_start")
+
             logger.debug("[Session %s] Streaming complete.", self.session_id)
 
         except Exception as llm_err:  # noqa: BLE001

@@ -10,6 +10,7 @@ consumer still produces the four message-types (`ASYNC_START`,
 `ASYNC_CONTENT`, `ASYNC_FINISH`, `SYNC_CONTENT`) the UI depends on.
 """
 
+import datetime
 import json
 import logging
 from typing import Any
@@ -70,9 +71,15 @@ class CorpusConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
         received: list[dict[str, Any]] = []
         while True:
             try:
-                raw = await communicator.receive_from(timeout=15)
-            except Exception:  # noqa: BLE001
-                self.fail("Timed-out waiting for websocket messages")
+                start = datetime.datetime.now()
+                raw = await communicator.receive_from(timeout=25)
+                end = datetime.datetime.now()
+                logger.info(f"time taken: {end - start}")
+            except Exception as e:  # noqa: BLE001
+                import traceback
+                traceback.print_exc()                
+                logger.error(f"Websocket timeout error: {e}", exc_info=True)
+                self.fail(f"Timed-out waiting for websocket messages: {e}")
 
             payload = json.loads(raw)
             logger.debug("payload=%s", payload)

@@ -14,6 +14,9 @@ class TestContext:
     def __init__(self, user):
         self.user = user
 
+    def build_absolute_uri(self, location=None):
+        return "http://www.IAmNotARealURL.com"
+
 
 class CorpusQueryMutationTestCase(TestCase):
     def setUp(self):

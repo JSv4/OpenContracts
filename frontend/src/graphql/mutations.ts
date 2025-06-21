@@ -86,17 +86,26 @@ export const DELETE_CORPUS = gql`
 `;
 
 export interface UpdateCorpusInputs {
+  id: string;
   title?: string;
   description?: string;
   icon?: string;
   filename?: string;
   preferredEmbedder?: string;
+  labelSet?: string;
 }
 
 export interface UpdateCorpusOutputs {
   updateCorpus: {
-    ok?: boolean;
-    message?: string;
+    ok: boolean;
+    message: string;
+    obj: {
+      id: string;
+      title: string;
+      description: string;
+      icon?: string;
+      labelSet?: LabelSetType;
+    };
   };
 }
 
@@ -122,6 +131,63 @@ export const UPDATE_CORPUS = gql`
     }
   }
 `;
+
+export const UPDATE_CORPUS_DESCRIPTION = gql`
+  mutation UpdateCorpusDescription($corpusId: ID!, $newContent: String!) {
+    updateCorpusDescription(corpusId: $corpusId, newContent: $newContent) {
+      ok
+      message
+      version
+      obj {
+        id
+        title
+        description
+        mdDescription
+        descriptionRevisions {
+          id
+          version
+          author {
+            id
+            email
+          }
+          created
+          diff
+          snapshot
+        }
+      }
+    }
+  }
+`;
+
+export interface UpdateCorpusDescriptionInputs {
+  corpusId: string;
+  newContent: string;
+}
+
+export interface UpdateCorpusDescriptionOutputs {
+  updateCorpusDescription: {
+    ok: boolean;
+    message: string;
+    version?: number;
+    obj?: {
+      id: string;
+      title: string;
+      description: string;
+      mdDescription?: string;
+      descriptionRevisions: Array<{
+        id: string;
+        version: number;
+        author: {
+          id: string;
+          email: string;
+        };
+        created: string;
+        diff: string;
+        snapshot?: string;
+      }>;
+    };
+  };
+}
 
 export interface CreateCorpusInputs {
   title?: string;

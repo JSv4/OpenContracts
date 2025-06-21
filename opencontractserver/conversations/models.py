@@ -19,6 +19,16 @@ User = get_user_model()
 MessageType = Literal["ASYNC_START", "ASYNC_CONTENT", "ASYNC_FINISH", "SYNC_CONTENT"]
 
 
+# NEW – persisted lifecycle state so the frontend does not have to
+# inspect JSON blobs to determine whether a message is complete, paused…
+class MessageStateChoices(models.TextChoices):
+    IN_PROGRESS = "in_progress", "In Progress"
+    COMPLETED = "completed", "Completed"
+    CANCELLED = "cancelled", "Cancelled"
+    ERROR = "error", "Error"
+    AWAITING_APPROVAL = "awaiting_approval", "Awaiting Approval"
+
+
 class ConversationUserObjectPermission(UserObjectPermissionBase):
     """
     Permissions for Conversation objects at the user level.
@@ -179,11 +189,20 @@ class ChatMessage(BaseOCModel):
         blank=True,
     )
 
+    state = models.CharField(
+        max_length=32,
+        choices=MessageStateChoices.choices,
+        default=MessageStateChoices.COMPLETED,
+        help_text="Lifecycle state of the message for quick filtering",
+    )
+
     def __str__(self) -> str:
         return (
             f"ChatMessage {self.pk} - {self.msg_type} "
             f"in conversation {self.conversation.pk}"
         )
+
+    # (compatibility alias added below, outside the class body)
 
 
 class ChatMessageUserObjectPermission(UserObjectPermissionBase):
@@ -204,3 +223,12 @@ class ChatMessageGroupObjectPermission(GroupObjectPermissionBase):
     content_object = django.db.models.ForeignKey(
         "ChatMessage", on_delete=django.db.models.CASCADE
     )
+
+
+# --------------------------------------------------------------------------- #
+# Backwards-compatibility: older code expects ``ChatMessage.MessageStateChoices``
+# as an attribute on the model *after* import.  We expose the alias after the
+# class is fully defined to avoid NameError during class construction.
+# --------------------------------------------------------------------------- #
+
+ChatMessage.MessageStateChoices = MessageStateChoices  # type: ignore[attr-defined]

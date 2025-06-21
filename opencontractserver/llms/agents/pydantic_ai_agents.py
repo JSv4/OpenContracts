@@ -122,8 +122,27 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
         self.agent_deps = agent_deps
 
     async def _initialise_llm_message(self, user_text: str) -> tuple[int, int]:
-        """Initialize user and LLM messages for a conversation turn."""
-        user_id = await self.store_user_message(user_text)
+        """Ensure messages are persisted exactly once per turn.
+
+        CoreAgentBase.stream() has *already* written the HUMAN row before the
+        adapter is entered.  Creating another one here would duplicate the
+        message.  We therefore re-use the most recent HUMAN message in the
+        active conversation when available and only insert a new row if – for
+        some edge-case – the wrapper skipped persistence (e.g. store_messages
+        was False or we are running via the low-level ``_chat_raw`` path).
+        """
+
+        # Try to reuse the last HUMAN message if it matches the current turn
+        user_id: int | None = None
+        if self.conversation_manager.conversation:
+            history = await self.conversation_manager.get_conversation_messages()
+            if history and history[-1].msg_type.upper() == "HUMAN":
+                user_id = history[-1].id
+
+        # Fallback: create the HUMAN message ourselves (rare code-paths)
+        if user_id is None:
+            user_id = await self.store_user_message(user_text)
+
         llm_id = await self.create_placeholder_message("LLM")
         return user_id, llm_id
 
@@ -221,8 +240,27 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
         user_msg_id: int | None = force_user_msg_id
         llm_msg_id: int | None = force_llm_id
 
+        # ------------------------------------------------------------------
+        # Deduplicate message persistence
+        # ------------------------------------------------------------------
         if self.conversation_manager.conversation and llm_msg_id is None:
-            user_msg_id, llm_msg_id = await self._initialise_llm_message(message)
+            # Check if CoreAgentBase.stream() already created the placeholder
+            history = await self.conversation_manager.get_conversation_messages()
+            if (
+                history
+                and history[-1].msg_type.upper() == "LLM"
+                and not history[-1].content
+            ):
+                llm_msg_id = history[-1].id
+                # The corresponding HUMAN message should be right before it
+                for prev in reversed(history[:-1]):
+                    if prev.msg_type.upper() == "HUMAN":
+                        user_msg_id = prev.id
+                        break
+
+            # If still none – fall back to helper that creates fresh rows
+            if llm_msg_id is None:
+                user_msg_id, llm_msg_id = await self._initialise_llm_message(message)
 
         accumulated_content: str = ""
         accumulated_sources: list[SourceNode] = []

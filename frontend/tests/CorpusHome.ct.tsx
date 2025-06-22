@@ -27,7 +27,10 @@ const dummyCorpus: CorpusType = {
   labelSet: null,
   allowComments: true,
   preferredEmbedder: null,
-  myPermissions: [PermissionTypes.CAN_UPDATE, PermissionTypes.CAN_READ],
+  myPermissions: [
+    "update_corpus",
+    "read_corpus",
+  ] as unknown as PermissionTypes[],
   analyses: {
     pageInfo: {
       hasNextPage: false,
@@ -106,29 +109,62 @@ function mountCorpusHome(mount: any) {
 
 test.use({ viewport: { width: 1200, height: 800 } });
 
-test("search bar expands on hover and collapses on mouse leave", async ({
+test("renders corpus header, stats and description controls", async ({
   mount,
   page,
 }) => {
   await mountCorpusHome(mount);
 
-  const container = page.locator('[data-testid="search-container"]');
-  await expect(container).toBeVisible();
+  /* ------------------------------------------------------------------
+   * Header (title, privacy badge, stats)
+   * ------------------------------------------------------------------ */
+  const topBar = page.locator("#corpus-home-top-bar");
+  await expect(topBar).toBeVisible();
 
-  // Initially collapsed – quick-actions absent
+  // Title is rendered
   await expect(
-    container.locator("text=Ask Questions About This Corpus")
-  ).toBeHidden();
-
-  // Hover to expand
-  await container.hover();
-  await expect(
-    container.locator("text=Ask Questions About This Corpus")
+    topBar.locator("h1", { hasText: dummyCorpus.title })
   ).toBeVisible();
 
-  // Move mouse away to collapse
-  await page.mouse.move(0, 0);
+  // Privacy badge reflects corpus.isPublic
+  const privacyText = dummyCorpus.isPublic ? "Public" : "Private";
+  await expect(topBar.locator(`text=${privacyText}`)).toBeVisible();
+
+  // Stat labels are present (values mocked via GET_CORPUS_STATS)
+  const statLabels = ["Docs", "Notes", "Analyses", "Extracts"];
+  for (const label of statLabels) {
+    await expect(topBar.locator(`text=${label}`)).toBeVisible();
+  }
+
+  // Wait for mocked stats values to appear
+  await expect(topBar.locator("text=3")).toBeVisible(); // Docs
+  await expect(topBar.locator("text=5")).toBeVisible(); // Notes
+
+  /* ------------------------------------------------------------------
+   * Description card
+   * ------------------------------------------------------------------ */
+  const descriptionCard = page.locator("#corpus-home-description-card");
+  await expect(descriptionCard).toBeVisible();
+
+  // Section heading
+  await expect(descriptionCard.locator("text=About this Corpus")).toBeVisible();
+
+  // Description text
   await expect(
-    container.locator("text=Ask Questions About This Corpus")
-  ).toBeHidden();
+    descriptionCard.locator(
+      "text=Dummy corpus for component-testing CorpusHome."
+    )
+  ).toBeVisible();
+
+  /* ------------------------------------------------------------------
+   * Action buttons (Version History + Edit Description)
+   * ------------------------------------------------------------------ */
+  await expect(
+    page.getByRole("button", { name: "Version History" })
+  ).toBeVisible();
+
+  // Either "Edit Description" or "Add Description" should be available depending on permissions
+  await expect(
+    page.getByRole("button", { name: /(?:Edit|Add) Description/i })
+  ).toBeVisible();
 });

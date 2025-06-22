@@ -21,12 +21,11 @@ cases.
 import pytest
 import vcr
 
-from django.db.models import Q
-
+from opencontractserver.conversations.models import ChatMessage
 from opencontractserver.llms import agents as llm_agents
 from opencontractserver.llms.tools.tool_factory import CoreTool
 from opencontractserver.tests.base import BaseFixtureTestCase
-from opencontractserver.conversations.models import ChatMessage
+
 
 @pytest.mark.django_db(transaction=True)
 class PublicCorpusPersistenceTestCase(BaseFixtureTestCase):
@@ -44,7 +43,7 @@ class PublicCorpusPersistenceTestCase(BaseFixtureTestCase):
         await self.corpus.asave(update_fields=["is_public"])
 
         # Sanity: no chat messages exist before the test.
-        baseline_msg_count = await ChatMessage.objects.all().acount()   # type: ignore[attr-defined]
+        baseline_msg_count = await ChatMessage.objects.all().acount()  # type: ignore[attr-defined]
 
         # Authenticated user but public corpus – persistence should still be off.
         agent = await llm_agents.for_corpus(corpus=self.corpus.id, user_id=self.user.id)
@@ -108,7 +107,9 @@ class PublicToolFilteringTestCase(BaseFixtureTestCase):
         )
 
         # Agent.config.tools must not include the dangerous tool.
-        assert all(getattr(t, "requires_approval", False) is False for t in agent.config.tools)
+        assert all(
+            getattr(t, "requires_approval", False) is False for t in agent.config.tools
+        )
 
 
 @pytest.mark.django_db(transaction=True)
@@ -125,4 +126,4 @@ class PermissionGuardTestCase(BaseFixtureTestCase):
         await self.corpus.asave(update_fields=["is_public"])
 
         with pytest.raises(PermissionError):
-            await llm_agents.for_corpus(corpus=self.corpus.id, user_id=None) 
+            await llm_agents.for_corpus(corpus=self.corpus.id, user_id=None)

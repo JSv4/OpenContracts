@@ -114,6 +114,22 @@ class TestLLMAnnotationTools(TestCase):
             self.assertEqual(ann.document_id, doc.id)
             self.assertIn("Agreement", ann.raw_text)
 
+    def setUp(self):  # noqa: D401 – simple helper, not public API
+        """Ensure pawls_parse_file exists in the active MEDIA_ROOT."""
+        # After pytest-django swaps MEDIA_ROOT between tests, the file saved in
+        # setUpClass might live in a different temp directory. Re-create it if
+        # it was cleaned up so subsequent file IO does not fail.
+
+        # Refresh to get up-to-date field values inside current transaction.
+        self.doc.refresh_from_db()
+
+        storage = self.doc.pawls_parse_file.storage
+        if not storage.exists(self.doc.pawls_parse_file.name):
+            self.doc.pawls_parse_file.save(
+                self.doc.pawls_parse_file.name,
+                ContentFile(SAMPLE_PAWLS_FILE_ONE_PATH.read_bytes()),
+            )
+
 
 # ---------------------------------------------------------------------------
 # Async tests

@@ -693,6 +693,7 @@ export const DocumentViewer: React.FC<DocumentViewerBaseProps> = ({
                   x: { type: "spring", damping: 30, stiffness: 300 },
                   opacity: { duration: 0.2, ease: "easeOut" },
                 }}
+                panelWidth={getPanelWidth(width)}
               >
                 <ControlButtonGroupLeft>
                   <ControlButtonWrapper>

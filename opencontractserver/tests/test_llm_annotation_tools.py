@@ -76,7 +76,7 @@ class TestLLMAnnotationTools(TestCase):
         for ann in Annotation.objects.filter(id__in=new_ids):
             self.assertEqual(ann.annotation_label_id, label.id)
             self.assertEqual(ann.annotation_type, TOKEN_LABEL)
-            self.assertEqual(ann.document_id, doc.id)
+            self.assertEqual(ann.document_id, self.doc.id)
             self.assertIn(search_word, ann.raw_text)
 
     # ---------------------------- TEXT ---------------------------------- #

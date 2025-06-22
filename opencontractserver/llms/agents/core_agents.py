@@ -834,6 +834,12 @@ class CoreDocumentAgentFactory:
             corpus = await Corpus.objects.aget(id=corpus)
 
         # ------------------------------------------------------------------
+        # Basic permission check – anonymous sessions cannot access private docs
+        # ------------------------------------------------------------------
+        _assert_access(corpus, config.user_id)
+        _assert_access(document, config.user_id)
+
+        # ------------------------------------------------------------------
         # Ensure an embedder is configured (async!).
         # ------------------------------------------------------------------
         if config.embedder_path is None:
@@ -893,6 +899,9 @@ class CoreCorpusAgentFactory:
         if not isinstance(corpus, Corpus):
             corpus = await Corpus.objects.aget(id=corpus)
 
+        # Permission check – anonymous sessions cannot access private corpuses
+        _assert_access(corpus, config.user_id)
+
         documents = [doc async for doc in corpus.documents.all()]
 
         # Set default system prompt if not provided
@@ -937,10 +946,14 @@ class CoreConversationManager:
         """Create conversation manager for document agent with enhanced options."""
         conversation = None
 
-        # For anonymous users (user_id is None), do NOT create or store conversations
-        if user_id is None:
+        # For anonymous users, public corpuses, or when caller disabled storage, avoid DB persistence.
+        if (
+            user_id is None
+            or _is_public(corpus)
+            or (not config.store_user_messages and not config.store_llm_messages)
+        ):
             logger.debug(
-                f"Creating ephemeral (non-stored) conversation for anonymous user on document {document.id}"
+                f"Creating ephemeral (non-stored) conversation for public/anonymous user on document {document.id}"
             )
             # Override config to ensure no message storage for anonymous conversations
             config.store_user_messages = False
@@ -996,10 +1009,14 @@ class CoreConversationManager:
         """Create conversation manager for corpus agent with enhanced options."""
         conversation = None
 
-        # For anonymous users (user_id is None), do NOT create or store conversations
-        if user_id is None:
+        # For anonymous users, public corpuses, or when caller disabled storage, avoid DB persistence.
+        if (
+            user_id is None
+            or _is_public(corpus)
+            or (not config.store_user_messages and not config.store_llm_messages)
+        ):
             logger.debug(
-                f"Creating ephemeral (non-stored) conversation for anonymous user on corpus {corpus.id}"
+                f"Creating ephemeral (non-stored) conversation for public/anonymous user on corpus {corpus.id}"
             )
             # Override config to ensure no message storage for anonymous conversations
             config.store_user_messages = False
@@ -1251,3 +1268,56 @@ def get_default_config(**overrides) -> AgentConfig:
     }
     defaults.update(overrides)
     return AgentConfig(**defaults)
+
+
+# ------------------------------------------------------------------
+# Visibility & permission helpers (public/private corpuses & documents)
+# ------------------------------------------------------------------
+
+
+def _is_public(obj: Any) -> bool:  # noqa: ANN401 – generic helper
+    """Return ``True`` if a *Document* or *Corpus* is publicly visible.
+
+    The helper is intentionally lenient – we merely look for the most
+    common attributes that encode visibility so the core framework does
+    *not* depend on a particular field name.  If no recognisable public
+    flag is found we conservatively assume the object is *private*.
+    """
+
+    if obj is None:
+        return False
+
+    # 1. Explicit boolean ``is_public`` field – preferred convention.
+    if hasattr(obj, "is_public"):
+        try:
+            return bool(getattr(obj, "is_public"))
+        except Exception:  # pragma: no cover – defensive
+            return False
+
+    # 2. String/enum ``visibility`` field.
+    if hasattr(obj, "visibility"):
+        try:
+            visibility = getattr(obj, "visibility")
+            # Accept both enum or plain string representations.
+            if isinstance(visibility, str):
+                return visibility.lower() == "public"
+            # Enum – rely on ``name`` attr.
+            return getattr(visibility, "name", "").lower() == "public"
+        except Exception:  # pragma: no cover – defensive
+            return False
+
+    return False  # default: not public
+
+
+def _assert_access(obj: Any, user_id: int | None) -> None:  # noqa: ANN401
+    """Raise *PermissionError* if *user_id* may not access *obj*.
+
+    Current policy: anonymous users (``user_id is None``) may only access
+    *public* corpuses/documents.  Authenticated access control beyond
+    that is expected to be enforced at the application layer.
+    """
+
+    if not _is_public(obj) and user_id is None:
+        raise PermissionError(
+            "Access denied – private resource requires authentication."
+        )

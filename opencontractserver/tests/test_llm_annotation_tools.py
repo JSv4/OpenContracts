@@ -27,13 +27,13 @@ logger = logging.getLogger(__name__)
 # Sync tests
 # ---------------------------------------------------------------------------
 class TestLLMAnnotationTools(TestCase):
-    
+
     @classmethod
     def setUpClass(cls):  # noqa: D401
         super().setUpClass()
         cls.user = User.objects.create_user("anno_user", password="pass")
         cls.corpus = Corpus.objects.create(title="Anno Corpus", creator=cls.user)
-        
+
         pawls_json = SAMPLE_PAWLS_FILE_ONE_PATH.read_text()
         pawls_tokens = json.loads(pawls_json)
 
@@ -51,7 +51,6 @@ class TestLLMAnnotationTools(TestCase):
 
     def test_add_annotations_pdf(self):
         """Exact-string PDF annotation results in TOKEN_LABEL annotations."""
-
 
         search_word = "Agreement"  # Appears multiple times in sample contract
         tuples: list[tuple[str, str, int, int]] = [

@@ -10,7 +10,6 @@ import { useReactiveVar } from "@apollo/client";
 import {
   displayAnnotationOnAnnotatorLoad,
   onlyDisplayTheseAnnotations,
-  openedDocument,
   selectedExtract,
   showAnnotationBoundingBoxes,
   showAnnotationLabels,
@@ -23,6 +22,7 @@ import {
   ServerAnnotationType,
   LabelDisplayBehavior,
 } from "../../../types/graphql-api";
+import { useNavigate } from "react-router-dom";
 
 const StatusDot = styled.div<{ statusColor: string }>`
   width: 8px;
@@ -203,6 +203,8 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
   const cellRef = useRef<HTMLDivElement>(null);
   const [cellWidth, setCellWidth] = useState<number>(0);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (cellRef.current) {
       const computedStyle = getComputedStyle(cellRef.current);
@@ -287,10 +289,15 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
       only_display_these_annotations &&
       only_display_these_annotations.length > 0
     ) {
-      openedDocument(only_display_these_annotations[0].document);
+      const first = only_display_these_annotations[0];
+      if (first.document && first.corpus) {
+        navigate(
+          `/corpus/${first.corpus.id}/document/${first.document.id}?ann=${first.id}`
+        );
+      }
       setViewSourceAnnotations(null);
     }
-  }, [only_display_these_annotations]);
+  }, [only_display_these_annotations, navigate]);
 
   return (
     <CellContainer ref={cellRef} style={{ background: getCellBackground() }}>

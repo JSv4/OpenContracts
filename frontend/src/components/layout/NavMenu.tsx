@@ -6,7 +6,13 @@ import { Link } from "react-router-dom";
 import logo from "../../assets/images/os_legal_128.png";
 import user_logo from "../../assets/icons/noun-person-113116-FFFFFF.png";
 import { header_menu_items } from "../../assets/configurations/menus";
-import { authToken, showExportModal, userObj } from "../../graphql/cache";
+import {
+  authToken,
+  showExportModal,
+  userObj,
+  openedCorpus,
+  openedDocument,
+} from "../../graphql/cache";
 import { useReactiveVar } from "@apollo/client";
 import { useEnv } from "../hooks/UseEnv";
 import { VERSION_TAG } from "../../assets/configurations/constants";
@@ -25,6 +31,20 @@ export const NavMenu = () => {
   let public_header_items = header_menu_items.filter((item) => !item.protected);
   let private_header_items = header_menu_items.filter((item) => item.protected);
 
+  /*
+   * Determines whether a menu item should be shown as active based on the current
+   * location pathname. We consider an item active when the pathname is exactly
+   * the route OR it is a sub-route (i.e. pathname starts with `${route}/`).
+   */
+  const getIsActive = (route: string) => {
+    if (route === "/corpuses") {
+      // "Corpuses" acts as our home page and should also be active for the old
+      // root path ("/") to avoid a brief flash before the redirect kicks in.
+      return pathname === "/" || pathname.startsWith("/corpuses");
+    }
+    return pathname === route || pathname.startsWith(`${route}/`);
+  };
+
   const requestLogout = (args: any) => {
     if (REACT_APP_USE_AUTH0) {
       logout(args);
@@ -35,12 +55,18 @@ export const NavMenu = () => {
     }
   };
 
+  const clearSelections = () => {
+    openedCorpus(null);
+    openedDocument(null);
+  };
+
   const items = public_header_items.map((item) => (
     <Menu.Item
       id={item.id}
       name={item.title}
-      active={pathname === item.route}
+      active={getIsActive(item.route)}
       key={`${item.title}`}
+      onClick={clearSelections}
     >
       <Link to={item.route}>{item.title}</Link>
     </Menu.Item>
@@ -50,14 +76,23 @@ export const NavMenu = () => {
     <Menu.Item
       id={item.id}
       name={item.title}
-      active={pathname === item.route}
+      active={getIsActive(item.route)}
       key={`${item.title}`}
+      onClick={clearSelections}
     >
       <Link to={item.route}>{item.title}</Link>
     </Menu.Item>
   ));
 
   if (REACT_APP_USE_AUTH0) {
+    const doLogin = () => {
+      loginWithRedirect({
+        appState: {
+          returnTo: window.location.pathname + window.location.search,
+        },
+      });
+    };
+
     return (
       <Menu fluid inverted attached style={{ marginBottom: "0px" }}>
         <Menu.Item header>
@@ -108,7 +143,7 @@ export const NavMenu = () => {
               </Menu.Item>
             </>
           ) : (
-            <Menu.Item onClick={() => loginWithRedirect()}>Login</Menu.Item>
+            <Menu.Item onClick={doLogin}>Login</Menu.Item>
           )}
         </Menu.Menu>
       </Menu>

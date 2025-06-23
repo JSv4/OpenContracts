@@ -9,7 +9,7 @@ import {
   useQuery,
   useReactiveVar,
 } from "@apollo/client";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
   FileText,
   MessageSquare,
@@ -940,6 +940,8 @@ export const Corpuses = () => {
   const opened_query_obj = useReactiveVar(openedQueryObj);
 
   const location = useLocation();
+  const { corpusId: routeCorpusId } = useParams();
+  const navigate = useNavigate();
 
   const corpusUploadRef = useRef() as React.MutableRefObject<HTMLInputElement>;
 
@@ -1048,6 +1050,41 @@ export const Corpuses = () => {
     fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true, // required to get loading signal on fetchMore
   });
+
+  /* --------------------------------------------------------------------------------------------------
+   * Deep-link support: if the user navigates directly to `/corpuses/:id` we may not have the corpus in
+   * the paginated GET_CORPUSES response yet. We therefore lazily fetch the corpus metadata **by id**
+   * and hydrate the `openedCorpus` reactive var as soon as it arrives.
+   * -------------------------------------------------------------------------------------------------- */
+  const [
+    fetchCorpusById,
+    { data: corpusByIdData, loading: corpusByIdLoading },
+  ] = useLazyQuery<GetCorpusMetadataOutputs, GetCorpusMetadataInputs>(
+    GET_CORPUS_METADATA,
+    {
+      fetchPolicy: "network-only",
+    }
+  );
+
+  /* Trigger the lazy query when we have a route id but no opened corpus and the list query finished. */
+  useEffect(() => {
+    if (
+      routeCorpusId &&
+      !opened_corpus &&
+      !loading_corpuses &&
+      !corpusByIdLoading &&
+      !corpusByIdData
+    ) {
+      fetchCorpusById({ variables: { metadataForCorpusId: routeCorpusId } });
+    }
+  }, [routeCorpusId, opened_corpus, loading_corpuses, fetchCorpusById]);
+
+  /* When the single-corpus query returns, sync it with the global reactive var. */
+  useEffect(() => {
+    if (corpusByIdData?.corpus) {
+      openedCorpus(corpusByIdData.corpus);
+    }
+  }, [corpusByIdData]);
 
   if (corpus_load_error) {
     toast.error("ERROR\nUnable to fetch corpuses.");
@@ -1625,6 +1662,38 @@ export const Corpuses = () => {
     console.log("Show annotator");
     content = <></>;
   }
+
+  // After corpus_items derived
+  /* ------------------------------------------------------------------ */
+  /* URL → open corpus                                                  */
+  useEffect(() => {
+    if (!routeCorpusId) return;
+    if (opened_corpus && opened_corpus.id === routeCorpusId) return;
+
+    // attempt to find in already fetched list
+    const match = corpus_items.find((c) => c.id === routeCorpusId);
+    if (match) {
+      openedCorpus(match);
+    } else {
+      // not in current page; best effort: trigger refetch with search param to include id? skip for now
+      // could call refetchCorpuses but we already fetch all pages lazily; leave.
+    }
+  }, [routeCorpusId, opened_corpus, corpus_items]);
+
+  /* ------------------------------------------------------------------ */
+  /* open corpus → URL                                                  */
+  useEffect(() => {
+    if (opened_corpus) {
+      if (routeCorpusId !== opened_corpus.id) {
+        navigate(`/corpuses/${opened_corpus.id}`, { replace: true });
+      }
+    } else {
+      // Do not navigate away if we are on a corpus route and the data is still loading
+      if (routeCorpusId && !loading_corpuses) {
+        navigate(`/corpuses`, { replace: true });
+      }
+    }
+  }, [opened_corpus, routeCorpusId, navigate, loading_corpuses]);
 
   return (
     <CardLayout

@@ -2,7 +2,7 @@ import { useEffect, useCallback } from "react";
 
 import { useAuth0 } from "@auth0/auth0-react";
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import _ from "lodash";
 
@@ -14,6 +14,7 @@ import { useQuery, useReactiveVar } from "@apollo/client";
 
 import {
   authToken,
+  authStatusVar,
   showAnnotationLabels,
   showExportModal,
   userObj,
@@ -58,6 +59,8 @@ import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/Selec
 import { DocumentUploadModal } from "./components/widgets/modals/DocumentUploadModal";
 import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUploadModal";
 import { DocumentViewer } from "./components/documents/Viewer";
+import { DocumentKBRoute } from "./components/routes/DocumentKBRoute";
+import { useRouteStateSync } from "./hooks/RouteStateSync";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0 } = useEnv();
@@ -99,9 +102,12 @@ export const App = () => {
     fetchPolicy: "network-only",
   });
 
+  const authLoading = REACT_APP_USE_AUTH0 && user === undefined;
+
   useEffect(() => {
+    if (authLoading) return; // wait until Auth0 SDK has decided
+
     if (meData?.me) {
-      console.log("Setting backend user from GET_ME:", meData.me);
       backendUserObj(meData.me);
     } else if (!meLoading && auth_token && meError) {
       console.error("Error fetching backend user:", meError);
@@ -109,7 +115,7 @@ export const App = () => {
     } else if (!auth_token) {
       backendUserObj(null);
     }
-  }, [meData, meLoading, meError, auth_token]);
+  }, [authLoading, meData, meLoading, meError, auth_token]);
 
   useEffect(() => {
     if (width <= 800) {
@@ -127,16 +133,17 @@ export const App = () => {
             audience: `https://opensource.legal/contracts`,
             scope: "application:login",
           }).then((token) => {
-            // console.log("Token from get access token silently...")
             if (token) {
               console.log("Auth0 token obtained");
               authToken(token);
               userObj(user);
+              authStatusVar("AUTHENTICATED");
             } else {
               authToken("");
               userObj(null);
               backendUserObj(null);
               toast.error("Unable to login");
+              authStatusVar("ANONYMOUS");
             }
           });
         } catch (e: any) {
@@ -144,6 +151,7 @@ export const App = () => {
           authToken("");
           userObj(null);
           backendUserObj(null);
+          authStatusVar("ANONYMOUS");
         }
       } else if (user === undefined) {
         // Auth0 still loading, do nothing
@@ -152,6 +160,7 @@ export const App = () => {
         authToken("");
         userObj(null);
         backendUserObj(null);
+        authStatusVar("ANONYMOUS");
       }
     }
   }, [getAccessTokenSilently, REACT_APP_USE_AUTH0, user?.sub]);
@@ -171,6 +180,14 @@ export const App = () => {
     showUploadNewDocumentsModal(true);
     uploadModalPreloadedFiles(filePackages);
   }, []);
+
+  // Central bidirectional sync between Router <-> reactive vars
+  useRouteStateSync();
+
+  // Immediately mark auth ready for builds without Auth0
+  if (!REACT_APP_USE_AUTH0 && authStatusVar() === "LOADING") {
+    authStatusVar("ANONYMOUS");
+  }
 
   return (
     <div
@@ -196,6 +213,9 @@ export const App = () => {
           <DocumentKnowledgeBase
             documentId={knowledge_base_modal.documentId}
             corpusId={knowledge_base_modal.corpusId}
+            initialAnnotationIds={
+              knowledge_base_modal.annotationIds ?? undefined
+            }
             onClose={handleKnowledgeBaseModalClose}
           />
         )}
@@ -261,7 +281,14 @@ export const App = () => {
               corpusId={opened_corpus?.id || null}
             />
             <Routes>
-              <Route path="/" element={<Corpuses />} />
+              <Route path="/" element={<Navigate to="/corpuses" replace />} />
+              <Route
+                path="/corpus/:corpusId/document/:documentId"
+                element={<DocumentKBRoute />}
+              />
+              <Route path="/corpuses" element={<Corpuses />} />
+              <Route path="/corpuses/:corpusId" element={<Corpuses />} />
+              <Route path="/corpus/:corpusId" element={<Corpuses />} />
               {!REACT_APP_USE_AUTH0 ? (
                 <Route path="/login" element={<Login />} />
               ) : (

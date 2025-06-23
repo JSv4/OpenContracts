@@ -1,4 +1,5 @@
 import { IdGetter, InMemoryCache, makeVar } from "@apollo/client";
+import { persistentVar } from "../utils/persistentVar";
 import {
   FieldPolicy,
   KeySpecifier,
@@ -170,21 +171,29 @@ export const cache = new InMemoryCache({
 /**
  * Global GUI State / Variables
  */
-export const showCookieAcceptModal = makeVar<boolean>(true);
+// Persist the acceptance of our cookie policy in localStorage so that the
+// dialog is only shown until a user accepts. We treat the presence of the
+// key with the value "true" as meaning the user has already accepted, and
+// therefore the modal should be hidden by default on subsequent page loads.
+const hasAcceptedCookies = localStorage.getItem("oc_cookieAccepted") === "true";
+export const showCookieAcceptModal = makeVar<boolean>(!hasAcceptedCookies);
 export const showAddDocsToCorpusModal = makeVar<boolean>(false);
 export const showRemoveDocsFromCorpusModal = makeVar<boolean>(false);
 export const showUploadNewDocumentsModal = makeVar<boolean>(false);
 export const showDeleteDocumentsModal = makeVar<boolean>(false);
 export const showNewLabelsetModal = makeVar<boolean>(false);
 export const showExportModal = makeVar<boolean>(false);
-export const showKnowledgeBaseModal = makeVar<{
+export const showKnowledgeBaseModal = persistentVar<{
   isOpen: boolean;
   documentId: string | null;
   corpusId: string | null;
-}>({
+  /** Pre-selected annotation IDs to seed selectedAnnotationsAtom */
+  annotationIds?: string[] | null;
+}>("oc_kbModal", {
   isOpen: false,
   documentId: null,
   corpusId: null,
+  annotationIds: null,
 });
 // if this is true, only render the currently selected annotation.
 export const showSelectedAnnotationOnly = makeVar<boolean>(true);
@@ -209,7 +218,10 @@ export const allowUserInput = makeVar<boolean>(false);
  *  Document-related global variables.
  */
 export const documentSearchTerm = makeVar<string>("");
-export const openedDocument = makeVar<DocumentType | null>(null);
+export const openedDocument = persistentVar<DocumentType | null>(
+  "oc_openedDocument",
+  null
+);
 export const selectedDocumentIds = makeVar<string[]>([]);
 export const viewingDocument = makeVar<DocumentType | null>(null);
 export const editingDocument = makeVar<DocumentType | null>(null);
@@ -228,7 +240,10 @@ export const extractSearchTerm = makeVar<string>("");
 export const corpusSearchTerm = makeVar<string>("");
 export const filterToCorpus = makeVar<CorpusType | null>(null);
 export const selectedCorpus = makeVar<CorpusType | null>(null);
-export const openedCorpus = makeVar<CorpusType | null>(null);
+export const openedCorpus = persistentVar<CorpusType | null>(
+  "oc_openedCorpus",
+  null
+);
 export const viewingCorpus = makeVar<CorpusType | null>(null);
 export const deletingCorpus = makeVar<CorpusType | null>(null);
 export const editingCorpus = makeVar<CorpusType | null>(null);
@@ -267,6 +282,7 @@ export const onlyDisplayTheseAnnotations = makeVar<
 export const annotationContentSearchTerm = makeVar<string>("");
 export const selectedMetaAnnotationId = makeVar<string>("");
 export const includeStructuralAnnotations = makeVar<boolean>(false); // These are weird as they don't have a labelset and user probably doesn't want to see them.
+export const selectedAnnotationIds = makeVar<string[]>([]);
 
 /**
  * Analyzer-related global variables
@@ -307,3 +323,10 @@ export const uploadModalPreloadedFiles = makeVar<FileUploadPackageProps[]>([]);
 export const showBulkUploadModal = makeVar<boolean>(false);
 
 export const backendUserObj = makeVar<UserType | null>(null);
+
+/**
+ * Authentication status lifecycle: LOADING until Auth0 SDK resolves (or immediate for no-auth builds),
+ * then AUTHENTICATED when we have a bearer token, otherwise ANONYMOUS.
+ */
+export type AuthStatus = "LOADING" | "AUTHENTICATED" | "ANONYMOUS";
+export const authStatusVar = makeVar<AuthStatus>("LOADING");

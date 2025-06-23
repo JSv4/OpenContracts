@@ -6,7 +6,13 @@ import { Link } from "react-router-dom";
 import logo from "../../assets/images/os_legal_128.png";
 import user_logo from "../../assets/icons/noun-person-113116-FFFFFF.png";
 import { header_menu_items } from "../../assets/configurations/menus";
-import { authToken, showExportModal, userObj } from "../../graphql/cache";
+import {
+  authToken,
+  showExportModal,
+  userObj,
+  openedCorpus,
+  openedDocument,
+} from "../../graphql/cache";
 import { useReactiveVar } from "@apollo/client";
 import "./MobileNavMenu.css";
 import { useEnv } from "../hooks/UseEnv";
@@ -35,13 +41,26 @@ export const MobileNavMenu = () => {
     }
   };
 
+  const isActive = (route: string) => {
+    if (route === "/corpuses") {
+      return pathname === "/" || pathname.startsWith("/corpuses");
+    }
+    return pathname === route || pathname.startsWith(`${route}/`);
+  };
+
+  const clearSelections = () => {
+    openedCorpus(null);
+    openedDocument(null);
+  };
+
   const items = public_header_items.map((item) => (
     <Dropdown.Item
       id={item.id}
       className="uninvert_me"
       name={item.title}
-      active={pathname === item.route}
+      active={isActive(item.route)}
       key={`${item.title}`}
+      onClick={clearSelections}
     >
       <Link to={item.route}>{item.title}</Link>
     </Dropdown.Item>
@@ -52,8 +71,9 @@ export const MobileNavMenu = () => {
       id={item.id}
       className="uninvert_me"
       name={item.title}
-      active={pathname === item.route}
+      active={isActive(item.route)}
       key={`${item.title}`}
+      onClick={clearSelections}
     >
       <Link to={item.route}>{item.title}</Link>
     </Dropdown.Item>

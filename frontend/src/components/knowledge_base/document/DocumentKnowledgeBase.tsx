@@ -123,9 +123,13 @@ import {
 import { Eye, EyeOff, Settings, Maximize2 } from "lucide-react";
 import { NoteEditor } from "./NoteEditor";
 import { NewNoteModal } from "./NewNoteModal";
+import { useUrlAnnotationSync } from "../../../hooks/useUrlAnnotationSync";
 
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
+import { openedDocument, openedCorpus } from "../../../graphql/cache";
+import { selectedAnnotationIds } from "../../../graphql/cache";
+import { useAuthReady } from "../../../hooks/useAuthReady";
 
 // Setting worker path to worker bundle.
 GlobalWorkerOptions.workerSrc = workerSrc;
@@ -133,6 +137,12 @@ GlobalWorkerOptions.workerSrc = workerSrc;
 interface DocumentKnowledgeBaseProps {
   documentId: string;
   corpusId: string;
+  /**
+   * Optional list of annotation IDs that should be selected when the modal opens.
+   * When provided the component will seed `selectedAnnotationsAtom`, triggering
+   * the usual scroll-to-annotation behaviour in the PDF/TXT viewers.
+   */
+  initialAnnotationIds?: string[];
   onClose?: () => void;
 }
 
@@ -272,14 +282,11 @@ const AnimatedWrapper = styled.div`
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   documentId,
   corpusId,
+  initialAnnotationIds,
   onClose,
 }) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
-
-  // Helper to compute the panel width following the clamp strategy
-  const getPanelWidth = (windowWidth: number): number =>
-    Math.min(Math.max(windowWidth * 0.65, 320), 520);
 
   const { setProgress, zoomLevel, setShiftDown, setZoomLevel } = useUISettings({
     width,
@@ -359,7 +366,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [markdownError, setMarkdownError] = useState<boolean>(false);
 
   const { selectedAnalysis, selectedExtract } = useAnalysisSelection();
-  const { selectedAnnotations } = useAnnotationSelection();
+  const { selectedAnnotations, setSelectedAnnotations } =
+    useAnnotationSelection();
 
   const {
     dataCells,
@@ -518,7 +526,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         const transformedCorpus: CorpusType = {
           ...data.corpus,
           myPermissions: getPermissions(data.corpus.myPermissions || []),
-        };
+        } as any;
         corpusUpdatePayload.selectedCorpus = transformedCorpus; // Assign the transformed object
       }
 
@@ -532,6 +540,17 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         setCorpus(corpusUpdatePayload); // Pass the complete payload
         console.log("[processAnnotationsData] setCorpus called.");
       }
+
+      // Keep global navigation vars in sync so router & other components know
+      openedDocument(data.document as any);
+      if (data.corpus) {
+        const transformedCorpus: CorpusType = {
+          ...data.corpus,
+          myPermissions: getPermissions(data.corpus.myPermissions || []),
+        } as any;
+        openedCorpus(transformedCorpus);
+      }
+      setPermissions(data.document.myPermissions ?? []);
     }
   };
 
@@ -585,6 +604,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   );
 
   // Fetch combined knowledge & annotation data
+  const authReady = useAuthReady();
   const {
     data: combinedData,
     loading,
@@ -594,6 +614,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     GetDocumentKnowledgeAndAnnotationsOutput,
     GetDocumentKnowledgeAndAnnotationsInput
   >(GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS, {
+    skip: !authReady || !documentId || !corpusId,
     variables: {
       documentId,
       corpusId,
@@ -736,13 +757,29 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       }
     },
     onError: (error) => {
+      // If the backend hasn\'t yet indexed/authorised this doc the first
+      // request may come back with "Document matching query does not exist.".
+      // We silently ignore this **once** and keep the loader visible; a
+      // follow-up refetch (triggered when Apollo receives the updated auth
+      // headers) will succeed and onCompleted will take over.
+      const benign404 =
+        error?.graphQLErrors?.length === 1 &&
+        error.graphQLErrors[0].message.includes(
+          "Document matching query does not exist"
+        );
+
+      if (benign404) {
+        console.warn("Initial 404 for document – will retry automatically");
+        return; // keep LOADING state
+      }
+
+      // Otherwise treat as real error
       console.error("GraphQL Query Error fetching document data:", error);
       toast.error(`Failed to load document details: ${error.message}`);
       setViewState(ViewState.ERROR);
     },
     fetchPolicy: "network-only",
     nextFetchPolicy: "no-cache",
-    skip: !documentId || !corpusId,
   });
 
   useEffect(() => {
@@ -1411,6 +1448,28 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     setShowRightPanel(false);
     setActiveLayer("knowledge");
   }, []);
+
+  /* ------------------------------------------------------------------ */
+  /* Seed selection atom once if the caller provided initial ids         */
+  useEffect(() => {
+    if (initialAnnotationIds && initialAnnotationIds.length > 0) {
+      setSelectedAnnotations(initialAnnotationIds);
+    }
+  }, [initialAnnotationIds, setSelectedAnnotations]);
+
+  // keep URL ↔ selection in sync
+  useUrlAnnotationSync();
+
+  /* ------------------------------------------------------ */
+  /*  Cleanup on unmount – clear document + annotation sel  */
+  /* ------------------------------------------------------ */
+  useEffect(() => {
+    return () => {
+      openedDocument(null); // leave corpus intact
+      setSelectedAnnotations([]);
+      selectedAnnotationIds([]);
+    };
+  }, [setSelectedAnnotations]);
 
   return (
     <FullScreenModal

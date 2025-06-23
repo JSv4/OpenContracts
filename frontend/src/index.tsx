@@ -1,7 +1,7 @@
 import { App } from "./App";
 import { BrowserRouter } from "react-router-dom";
 import { createRoot } from "react-dom/client";
-import { Auth0Provider } from "@auth0/auth0-react";
+import { Auth0ProviderWithHistory } from "./utils/Auth0ProviderWithHistory";
 import {
   ApolloClient,
   ApolloProvider,
@@ -13,15 +13,6 @@ import { LooseObject } from "./components/types";
 
 import "./index.css";
 import reportWebVitals from "./reportWebVitals";
-import history from "./utils/history";
-
-// Please see https://auth0.github.io/auth0-react/interfaces/auth0_provider.auth0provideroptions.html
-// for a full list of the available properties on the provider
-const onRedirectCallback = (appState: any) => {
-  history.push(
-    appState && appState.returnTo ? appState.returnTo : window.location.pathname
-  );
-};
 
 // Can't use useEnv hook here...
 console.log("Window env", window._env_);
@@ -81,17 +72,16 @@ if (REACT_APP_USE_AUTH0) {
     audience: REACT_APP_AUDIENCE,
     redirectUri: window.location.origin,
     scope: "application:login",
-    onRedirectCallback,
   };
 
   root.render(
-    <Auth0Provider {...providerConfig}>
-      <ApolloProvider client={client}>
-        <BrowserRouter>
+    <BrowserRouter>
+      <Auth0ProviderWithHistory {...providerConfig}>
+        <ApolloProvider client={client}>
           <App />
-        </BrowserRouter>
-      </ApolloProvider>
-    </Auth0Provider>
+        </ApolloProvider>
+      </Auth0ProviderWithHistory>
+    </BrowserRouter>
   );
 } else {
   console.log("Rendering with NO AUTH0");

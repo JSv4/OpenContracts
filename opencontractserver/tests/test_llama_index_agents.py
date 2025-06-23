@@ -94,21 +94,21 @@ class TestLlamaIndexAgents(TestCase):
                 title="Test Corpus",
                 description="A test corpus for agent testing",
                 creator=cls.user,
-                is_public=True,
+                is_public=False,
             )
 
             cls.doc1 = Document.objects.create(
                 title="Test Document 1",
                 description="First test document",
                 creator=cls.user,
-                is_public=True,
+                is_public=False,
             )
 
             cls.doc2 = Document.objects.create(
                 title="Test Document 2",
                 description="Second test document",
                 creator=cls.user,
-                is_public=True,
+                is_public=False,
             )
 
             # Add documents to corpus
@@ -132,7 +132,7 @@ class TestLlamaIndexAgents(TestCase):
                 creator=cls.user,
                 raw_text="This is the first annotation text about important topics",
                 annotation_label=cls.label_important,
-                is_public=True,
+                is_public=False,
             )
 
             cls.anno2 = Annotation.objects.create(
@@ -141,7 +141,7 @@ class TestLlamaIndexAgents(TestCase):
                 creator=cls.user,
                 raw_text="Another annotation in the same document about different topics",
                 annotation_label=cls.label_summary,
-                is_public=True,
+                is_public=False,
             )
 
             cls.anno3 = Annotation.objects.create(
@@ -150,7 +150,7 @@ class TestLlamaIndexAgents(TestCase):
                 creator=cls.user,
                 raw_text="Annotation text for doc2, also marked as important",
                 annotation_label=cls.label_important,
-                is_public=True,
+                is_public=False,
             )
 
         # Add embeddings to annotations

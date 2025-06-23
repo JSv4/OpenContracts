@@ -7,6 +7,7 @@ import {
   GET_CORPUSES,
   GET_CORPUS_STATS,
   GET_CORPUS_METADATA,
+  GET_DOCUMENTS,
 } from "../src/graphql/queries";
 import { PermissionTypes } from "../src/components/types";
 import { CorpusType } from "../src/types/graphql-api";
@@ -17,14 +18,17 @@ import { CorpusType } from "../src/types/graphql-api";
 const dummyCorpus: CorpusType = {
   id: "CORPUS_PLAYWRIGHT",
   title: "Playwright Dummy Corpus",
+  icon: null,
   isPublic: false,
   description: "",
   created: new Date().toISOString(),
   modified: new Date().toISOString(),
   creator: { id: "USER1", email: "tester@example.com", __typename: "UserType" },
   labelSet: null,
+  parent: null as unknown as CorpusType,
   allowComments: true,
   preferredEmbedder: null,
+  appliedAnalyzerIds: [],
   myPermissions: [PermissionTypes.CAN_UPDATE, PermissionTypes.CAN_READ],
   analyses: {
     edges: [],
@@ -35,6 +39,8 @@ const dummyCorpus: CorpusType = {
       endCursor: null,
       __typename: "PageInfo",
     },
+    totalCount: 0,
+    __typename: "AnalysisTypeConnection",
   },
   annotations: {
     edges: [],
@@ -45,6 +51,8 @@ const dummyCorpus: CorpusType = {
       endCursor: null,
       __typename: "PageInfo",
     },
+    totalCount: 0,
+    __typename: "AnnotationTypeConnection",
   },
   documents: {
     edges: [],
@@ -55,6 +63,8 @@ const dummyCorpus: CorpusType = {
       endCursor: null,
       __typename: "PageInfo",
     },
+    totalCount: 0,
+    __typename: "DocumentTypeConnection",
   },
   __typename: "CorpusType",
 };
@@ -66,6 +76,29 @@ const mocks: MockedResponse[] = [
       data: {
         corpuses: {
           edges: [{ node: dummyCorpus, __typename: "CorpusTypeEdge" }],
+          pageInfo: {
+            hasNextPage: false,
+            hasPreviousPage: false,
+            startCursor: null,
+            endCursor: null,
+            __typename: "PageInfo",
+          },
+          __typename: "CorpusTypeConnection",
+        },
+      },
+    },
+  },
+  {
+    request: { query: GET_CORPUSES, variables: { textSearch: "" } },
+    result: {
+      data: {
+        corpuses: {
+          edges: [
+            {
+              node: dummyCorpus,
+              __typename: "CorpusTypeEdge",
+            },
+          ],
           pageInfo: {
             hasNextPage: false,
             hasPreviousPage: false,
@@ -100,24 +133,82 @@ const mocks: MockedResponse[] = [
       query: GET_CORPUS_METADATA,
       variables: { metadataForCorpusId: dummyCorpus.id },
     },
-    result: { data: { corpusMetadata: [] } },
+    result: { data: { corpus: { ...dummyCorpus, parent: null } } },
+  },
+  {
+    request: {
+      query: GET_DOCUMENTS,
+      variables: {
+        inCorpusWithId: dummyCorpus.id,
+        annotateDocLabels: true,
+        includeMetadata: true,
+      },
+    },
+    result: {
+      data: {
+        documents: {
+          edges: [],
+          pageInfo: {
+            hasNextPage: false,
+            hasPreviousPage: false,
+            startCursor: null,
+            endCursor: null,
+            __typename: "PageInfo",
+          },
+          __typename: "DocumentTypeConnection",
+        },
+      },
+    },
+  },
+  {
+    request: {
+      query: GET_DOCUMENTS,
+      variables: {
+        annotateDocLabels: false,
+        includeMetadata: false,
+      },
+    },
+    result: {
+      data: {
+        documents: {
+          __typename: "DocumentTypeConnection",
+          edges: [],
+          pageInfo: {
+            hasNextPage: false,
+            hasPreviousPage: false,
+            startCursor: null,
+            endCursor: null,
+            __typename: "PageInfo",
+          },
+        },
+      },
+    },
   },
 ];
 
-function mountCorpuses(mount: any) {
-  openedCorpus(dummyCorpus);
-  return mount(<CorpusesTestWrapper mocks={mocks} />);
-}
+const mountCorpuses = (mount: any, initialCorpus?: CorpusType | null) => {
+  if (initialCorpus) {
+    openedCorpus(initialCorpus);
+  } else {
+    openedCorpus(null);
+  }
+  return mount(
+    <CorpusesTestWrapper
+      mocks={mocks}
+      initialCorpus={initialCorpus}
+      initialEntries={
+        initialCorpus ? [`/corpuses/${initialCorpus.id}`] : ["/corpuses"]
+      }
+    />
+  );
+};
 
 /* -------------------------------------------------------------------------- */
 /* Tests                                                                       */
 /* -------------------------------------------------------------------------- */
 
 test("sidebar expands and tab navigation works", async ({ mount, page }) => {
-  await mountCorpuses(mount);
-
-  // Click the corpus card to open it first
-  await page.locator(".header", { hasText: "Playwright Dummy Corpus" }).click();
+  await mountCorpuses(mount, dummyCorpus);
 
   const sidebar = page.locator('[data-testid="navigation-sidebar"]');
   await expect(sidebar).toBeVisible();

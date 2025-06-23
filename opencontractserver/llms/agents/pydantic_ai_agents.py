@@ -1363,6 +1363,8 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
                 document=document_id,
                 corpus=context.corpus.id,
                 user_id=config.user_id,
+                store_user_messages=False,
+                store_llm_messages=False,
                 framework=_AgentFramework.PYDANTIC_AI,
             )
 

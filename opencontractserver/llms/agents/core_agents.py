@@ -947,10 +947,8 @@ class CoreConversationManager:
         conversation = None
 
         # For anonymous users, public corpuses, or when caller disabled storage, avoid DB persistence.
-        if (
-            user_id is None
-            or _is_public(corpus)
-            or (not config.store_user_messages and not config.store_llm_messages)
+        if user_id is None or (
+            not config.store_user_messages and not config.store_llm_messages
         ):
             logger.debug(
                 f"Creating ephemeral (non-stored) conversation for public/anonymous user on document {document.id}"
@@ -1010,10 +1008,8 @@ class CoreConversationManager:
         conversation = None
 
         # For anonymous users, public corpuses, or when caller disabled storage, avoid DB persistence.
-        if (
-            user_id is None
-            or _is_public(corpus)
-            or (not config.store_user_messages and not config.store_llm_messages)
+        if user_id is None or (
+            not config.store_user_messages and not config.store_llm_messages
         ):
             logger.debug(
                 f"Creating ephemeral (non-stored) conversation for public/anonymous user on corpus {corpus.id}"

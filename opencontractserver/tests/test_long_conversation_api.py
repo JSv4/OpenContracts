@@ -107,6 +107,11 @@ class TestLongConversationAPI(TestCase):
 
     async def test_persistent_conversation_creation(self):
         """Test that user conversations are created and stored."""
+        # Ensure corpus is *private* so the new public-context optimisation does not
+        # bypass DB persistence for this authenticated user.
+        self.corpus.is_public = False
+        await self.corpus.asave(update_fields=["is_public"])
+
         initial_conversation_count = await Conversation.objects.acount()
 
         # Mock the OpenAI agent creation and methods
@@ -214,6 +219,10 @@ class TestLongConversationAPI(TestCase):
 
     async def test_persistent_conversation_message_storage(self):
         """Test that user conversations store messages."""
+        # Make corpus private to enable message persistence for authenticated user.
+        self.corpus.is_public = False
+        await self.corpus.asave(update_fields=["is_public"])
+
         initial_message_count = await ChatMessage.objects.acount()
 
         # Mock the OpenAI agent creation and methods
@@ -273,6 +282,10 @@ class TestLongConversationAPI(TestCase):
 
     async def test_conversation_continuity(self):
         """Test that persistent conversations can be continued across sessions."""
+        # Ensure corpus is private for persistence.
+        self.corpus.is_public = False
+        await self.corpus.asave(update_fields=["is_public"])
+
         # Mock the OpenAI agent creation and methods
         with patch(
             "opencontractserver.llms.agents.llama_index_agents.OpenAIAgent"
@@ -411,6 +424,10 @@ class TestLongConversationAPI(TestCase):
 
     async def test_corpus_agent_persistent_conversation(self):
         """Test persistent conversations work for corpus agents."""
+        # Switch corpus to private to allow persistence logic.
+        self.corpus.is_public = False
+        await self.corpus.asave(update_fields=["is_public"])
+
         # Ensure a clean slate for this user's conversations for this test
         await Conversation.objects.filter(creator=self.user).adelete()
 
@@ -550,6 +567,10 @@ class TestLongConversationAPI(TestCase):
                 self.assertIsNone(anonymous_info["conversation_id"])
                 self.assertIsNone(anonymous_info["user_id"])
                 self.assertIsNone(anonymous_info["title"])
+
+                # Switch to private corpus so persistent agent will store messages.
+                self.corpus.is_public = False
+                await self.corpus.asave(update_fields=["is_public"])
 
                 # Test persistent conversation info
                 persistent_agent = await agents.for_document(

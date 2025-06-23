@@ -171,12 +171,10 @@ export const cache = new InMemoryCache({
 /**
  * Global GUI State / Variables
  */
-// Persist the acceptance of our cookie policy in localStorage so that the
-// dialog is only shown until a user accepts. We treat the presence of the
-// key with the value "true" as meaning the user has already accepted, and
-// therefore the modal should be hidden by default on subsequent page loads.
-const hasAcceptedCookies = localStorage.getItem("oc_cookieAccepted") === "true";
-export const showCookieAcceptModal = makeVar<boolean>(!hasAcceptedCookies);
+// Cookie consent modal reactive variable.
+// Initialized to `false`; the App component decides at runtime whether to
+// show the modal based on the browser's localStorage state.
+export const showCookieAcceptModal = makeVar<boolean>(false);
 export const showAddDocsToCorpusModal = makeVar<boolean>(false);
 export const showRemoveDocsFromCorpusModal = makeVar<boolean>(false);
 export const showUploadNewDocumentsModal = makeVar<boolean>(false);

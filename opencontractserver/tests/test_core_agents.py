@@ -36,16 +36,19 @@ class TestCoreAgentComponentsSetup(TestCase):
             title="Core Test Corpus",
             creator=cls.user,
             preferred_embedder="test/embedder/corpus_default",
-            is_public=True,
         )
         cls.doc1 = Document.objects.create(
             title="Core Test Doc 1",
             corpus=cls.corpus1,
             creator=cls.user,
             description="Doc1 Description",
+            is_public=True,
         )
         cls.doc2 = Document.objects.create(
-            title="Core Test Doc 2", creator=cls.user, description="Doc2 Description"
+            title="Core Test Doc 2",
+            creator=cls.user,
+            description="Doc2 Description",
+            is_public=True,
         )  # No corpus
 
         cls.conversation1 = Conversation.objects.create(
@@ -126,6 +129,7 @@ class TestAgentContexts(TestCoreAgentComponentsSetup):
             title="Doc1 in Test Corpus",
             creator=self.user,
             description="First document for this specific test",
+            is_public=True,
         )
         # Explicitly add to the ManyToManyField
         await test_corpus.documents.aadd(doc1_for_this_test)
@@ -135,11 +139,13 @@ class TestAgentContexts(TestCoreAgentComponentsSetup):
             title="Doc2 in Test Corpus",
             creator=self.user,
             description="Second document for this specific test",
+            is_public=True,
         )
         # Explicitly add to the ManyToManyField
         await test_corpus.documents.aadd(doc2_for_this_test)
 
         config = AgentConfig(embedder_path=None)  # Test corpus default embedder
+        config.user_id = self.user.id
 
         # Use the factory method with the ID of the locally created corpus
         context = await CoreCorpusAgentFactory.create_context(test_corpus.id, config)
@@ -164,6 +170,10 @@ class TestAgentContexts(TestCoreAgentComponentsSetup):
         self.assertEqual(config.embedder_path, "test/embedder/corpus_default")
 
     async def test_corpus_agent_context_specific_embedder(self):
+        # Ensure corpus is public to allow anonymous access during context creation.
+        self.corpus1.is_public = True
+        await self.corpus1.asave(update_fields=["is_public"])
+
         config = AgentConfig(embedder_path="specific/path")
         # Use the factory method instead of direct instantiation
         await CoreCorpusAgentFactory.create_context(self.corpus1.id, config)
@@ -274,6 +284,7 @@ class TestCoreAgentFactoriesDefaults(TestCoreAgentComponentsSetup):
     ):
         mock_get_prompt.return_value = "Mocked default prompt"
         config = AgentConfig(system_prompt=None)  # Ensure it's None to trigger default
+        config.user_id = self.user.id
 
         context = await CoreDocumentAgentFactory.create_context(
             self.doc1, self.corpus1, config
@@ -285,6 +296,8 @@ class TestCoreAgentFactoriesDefaults(TestCoreAgentComponentsSetup):
     async def test_create_document_context_uses_override_prompt(self):
         override_prompt = "My custom prompt for docs"
         config = AgentConfig(system_prompt=override_prompt)
+        config.user_id = self.user.id
+
         context = await CoreDocumentAgentFactory.create_context(
             self.doc1, self.corpus1, config
         )

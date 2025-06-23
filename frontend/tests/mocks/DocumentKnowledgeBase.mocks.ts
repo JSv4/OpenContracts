@@ -4,6 +4,7 @@ import {
   GET_CONVERSATIONS,
   GET_DOCUMENT_ANALYSES_AND_EXTRACTS,
   GET_CHAT_MESSAGES,
+  GET_CORPUSES,
 } from "../../src/graphql/queries";
 
 import path from "path";
@@ -479,6 +480,59 @@ export const graphqlMocks: ReadonlyArray<MockedResponse> = [
         conversations: {
           __typename: "ConversationTypeConnection",
           edges: [],
+          pageInfo: createPageInfo(),
+        },
+      },
+    },
+  },
+  // Minimal corpus list mock so <Corpuses> loads without infinite load
+  {
+    request: {
+      query: GET_CORPUSES,
+      variables: {},
+    },
+    result: {
+      data: {
+        corpuses: {
+          __typename: "CorpusTypeConnection",
+          edges: [
+            {
+              __typename: "CorpusTypeEdge",
+              node: {
+                __typename: "CorpusType",
+                id: CORPUS_ID,
+                title: "Sample Corpus",
+                description: "",
+                myPermissions: ["read_corpus"],
+              },
+            },
+          ],
+          pageInfo: createPageInfo(),
+        },
+      },
+    },
+  },
+  // Same query but with *no* variables object – MockedProvider treats this as a separate match
+  {
+    request: {
+      query: GET_CORPUSES,
+    },
+    result: {
+      data: {
+        corpuses: {
+          __typename: "CorpusTypeConnection",
+          edges: [
+            {
+              __typename: "CorpusTypeEdge",
+              node: {
+                __typename: "CorpusType",
+                id: CORPUS_ID,
+                title: "Sample Corpus",
+                description: "",
+                myPermissions: ["read_corpus"],
+              },
+            },
+          ],
           pageInfo: createPageInfo(),
         },
       },

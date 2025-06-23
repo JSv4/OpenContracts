@@ -326,7 +326,7 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
         for doc in context.documents:
             # Create document agent context
             doc_config = AgentConfig(
-                user_id=None,  # Make sub-document agents anonymous to prevent new conversations
+                user_id=config.user_id,
                 model_name=config.model_name,
                 api_key=config.api_key,
                 embedder_path=config.embedder_path,
@@ -335,6 +335,8 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
                 verbose=config.verbose,
                 temperature=config.temperature,
                 max_tokens=config.max_tokens,
+                store_user_messages=False,
+                store_llm_messages=False,
             )
             doc_agent = await LlamaIndexDocumentAgent.create(
                 doc,

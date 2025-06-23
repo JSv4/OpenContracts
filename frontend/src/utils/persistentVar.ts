@@ -8,7 +8,13 @@ import { makeVar, ReactiveVar } from "@apollo/client";
  * for persistence, ensuring it's compatible with `useReactiveVar`.
  */
 export function persistentVar<T>(key: string, defaultValue: T): ReactiveVar<T> {
-  const stored = sessionStorage.getItem(key);
+  // Safely access sessionStorage only when running in a browser environment.
+  const storage: Storage | null =
+    typeof window !== "undefined" && window.sessionStorage
+      ? window.sessionStorage
+      : null;
+
+  const stored = storage?.getItem(key) ?? null;
   let initial: T = defaultValue;
 
   if (stored && stored !== "undefined" && stored !== "null") {
@@ -16,17 +22,19 @@ export function persistentVar<T>(key: string, defaultValue: T): ReactiveVar<T> {
       const parsed = JSON.parse(stored);
       initial = parsed;
     } catch {
-      // malformed, ignore and use default
+      // Malformed JSON or other error – ignore and fall back to default.
     }
   }
 
   const rv = makeVar<T>(initial);
 
   rv.onNextChange((value) => {
+    if (!storage) return; // No persistence available in this environment.
+
     if (value === undefined || value === null) {
-      sessionStorage.removeItem(key);
+      storage.removeItem(key);
     } else {
-      sessionStorage.setItem(key, JSON.stringify(value));
+      storage.setItem(key, JSON.stringify(value));
     }
   });
 

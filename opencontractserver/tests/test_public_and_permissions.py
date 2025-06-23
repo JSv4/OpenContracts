@@ -21,7 +21,7 @@ cases.
 import pytest
 import vcr
 
-from opencontractserver.conversations.models import ChatMessage
+from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.llms import agents as llm_agents
 from opencontractserver.llms.tools.tool_factory import CoreTool
 from opencontractserver.tests.base import BaseFixtureTestCase
@@ -45,8 +45,8 @@ class PublicCorpusPersistenceTestCase(BaseFixtureTestCase):
         # Sanity: no chat messages exist before the test.
         baseline_msg_count = await ChatMessage.objects.all().acount()  # type: ignore[attr-defined]
 
-        # Authenticated user but public corpus – persistence should still be off.
-        agent = await llm_agents.for_corpus(corpus=self.corpus.id, user_id=self.user.id)
+        # Anonymous user on public corpus should not create persistence.
+        agent = await llm_agents.for_corpus(corpus=self.corpus.id)
 
         # Trigger a simple chat; content is irrelevant for the assertion.
         await agent.chat("Hello, public world!")
@@ -127,3 +127,32 @@ class PermissionGuardTestCase(BaseFixtureTestCase):
 
         with pytest.raises(PermissionError):
             await llm_agents.for_corpus(corpus=self.corpus.id, user_id=None)
+
+
+class PydanticAICorpusPersistenceTestCase(BaseFixtureTestCase):
+    """Ensure Pydantic-AI corpus agent does not create extra conversations."""
+
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/test_pydantic_corpus_persistence_single.yaml",
+        filter_headers=["authorization"],
+    )
+    async def test_pydantic_corpus_persistence_single(self):  # noqa: D401 – test name
+        # Private corpus so authenticated user will persist.
+        self.corpus.is_public = False
+        await self.corpus.asave(update_fields=["is_public"])
+
+        start_conv = await Conversation.objects.acount()  # type: ignore[attr-defined]
+
+        agent = await llm_agents.for_corpus(
+            corpus=self.corpus.id,
+            user_id=self.user.id,
+            framework="pydantic_ai",
+        )
+
+        # Run a simple chat to ensure agent functionality.
+        await agent.chat("Hello pydantic corpus!")
+
+        end_conv = await Conversation.objects.acount()  # type: ignore[attr-defined]
+
+        # Exactly one new conversation row (for the corpus agent itself).
+        assert end_conv == start_conv + 1

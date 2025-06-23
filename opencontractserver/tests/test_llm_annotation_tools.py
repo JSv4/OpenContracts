@@ -137,6 +137,19 @@ class TestLLMAnnotationTools(TestCase):
 
 
 class AsyncTestLLMAnnotationTools(TransactionTestCase):
+    def setUp(self):  # noqa: D401 – ensure pawls file exists across MEDIA_ROOT swaps
+        """Ensure pawls_parse_file exists in the active MEDIA_ROOT (async variant)."""
+
+        # Refresh instance to get latest file path after transactional resets.
+        self.pdf_doc.refresh_from_db()
+
+        storage = self.pdf_doc.pawls_parse_file.storage
+        if not storage.exists(self.pdf_doc.pawls_parse_file.name):
+            self.pdf_doc.pawls_parse_file.save(
+                self.pdf_doc.pawls_parse_file.name,
+                ContentFile(SAMPLE_PAWLS_FILE_ONE_PATH.read_bytes()),
+            )
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

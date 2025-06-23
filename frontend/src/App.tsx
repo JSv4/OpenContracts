@@ -189,6 +189,23 @@ export const App = () => {
     authStatusVar("ANONYMOUS");
   }
 
+  /* ---------------------------------------------------------------------- */
+  /* Cookie consent initialization                                          */
+  /* ---------------------------------------------------------------------- */
+  useEffect(() => {
+    // Run once on mount in browser to determine whether to display the
+    // cookie consent banner. We avoid touching `localStorage` during SSR or
+    // in non-browser test environments.
+    if (typeof window === "undefined") return;
+
+    const accepted =
+      window.localStorage?.getItem("oc_cookieAccepted") === "true";
+    // Only update if we haven't explicitly set it elsewhere yet.
+    if (showCookieAcceptModal() === false && !accepted) {
+      showCookieAcceptModal(true);
+    }
+  }, []);
+
   return (
     <div
       style={{

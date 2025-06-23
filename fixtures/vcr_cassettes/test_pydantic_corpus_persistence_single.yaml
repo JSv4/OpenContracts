@@ -1,0 +1,126 @@
+interactions:
+- request:
+    body: "{\"messages\":[{\"role\":\"user\",\"content\":\"Hello pydantic corpus!\"},{\"role\":\"user\",\"content\":\"Hello
+      pydantic corpus!\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"temperature\":0.7,\"tool_choice\":\"auto\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"similarity_search\",\"description\":\"Async
+      wrapper that adapts to pydantic-ai's expected signature.\\n\\nVectorStoreSearchTool
+      looks for a coroutine / function\\n`vector_store.similarity_search(query, k=\u2026)`
+      and returns a raw list\\nof dicts.  We delegate to ``search_annotations`` and
+      then expose the\\nlist of hits so that the tool can feed them directly to the
+      model\\n(and propagate them to ``result.sources``).\",\"parameters\":{\"properties\":{\"query\":{\"type\":\"string\"},\"k\":{\"type\":\"integer\"}},\"required\":[\"query\"],\"type\":\"object\"}}},{\"type\":\"function\",\"function\":{\"name\":\"get_corpus_description\",\"description\":\"Return
+      the current corpus markdown description (optionally truncated).\",\"parameters\":{\"additionalProperties\":false,\"properties\":{\"truncate_length\":{\"anyOf\":[{\"type\":\"integer\"},{\"type\":\"null\"}]},\"from_start\":{\"type\":\"boolean\"}},\"type\":\"object\"}}},{\"type\":\"function\",\"function\":{\"name\":\"update_corpus_description\",\"description\":\"Update
+      the corpus description and return new version number (if changed).\",\"parameters\":{\"additionalProperties\":false,\"properties\":{\"new_content\":{\"type\":\"string\"}},\"required\":[\"new_content\"],\"type\":\"object\"},\"strict\":true}},{\"type\":\"function\",\"function\":{\"name\":\"list_documents\",\"description\":\"Return
+      basic metadata for all documents in the current corpus.\\n\\nEach list entry
+      contains ``document_id``, ``title`` and ``description`` so\\nthe coordinator
+      LLM can decide which document-specific agent to consult.\",\"parameters\":{\"additionalProperties\":false,\"properties\":{},\"type\":\"object\"}}},{\"type\":\"function\",\"function\":{\"name\":\"ask_document\",\"description\":\"<summary>Ask
+      a question to a **document-specific** agent inside this corpus.\\n\\nThe call
+      transparently streams the document agent so we can capture\\nits *full* reasoning
+      timeline (tool calls, vector-search citations\u2026)\\nand surface that back
+      to the coordinator LLM.</summary>\\n<returns>\\n<type>An object with keys</type>\\n<description>\\n
+      \   answer (str)   \u2013 final assistant answer\\n    sources (list) \u2013
+      flattened source dicts\\n    timeline (list) \u2013 detailed reasoning/events
+      emitted by the sub-agent</description>\\n</returns>\",\"parameters\":{\"additionalProperties\":false,\"properties\":{\"document_id\":{\"description\":\"ID
+      of the target document (must belong to this corpus).\",\"type\":\"integer\"},\"question\":{\"description\":\"The
+      natural-language question to forward.\",\"type\":\"string\"}},\"required\":[\"document_id\",\"question\"],\"type\":\"object\"},\"strict\":true}}]}"
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2685'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSQW7bMBC86xXsnq3CcuS68aVAgAYpCuTaBkUg0ORKYkJxCXKV1gj894KSbclt
+        A/TCA2dnODPc10wIMBq2AlQrWXXe5je2vdFc3KqvO/354fv9t8KXt88PH56iermHRWLQ7gkVn1jv
+        FXXeIhtyI6wCSsakWmzWy81yU6zWA9CRRptojee8pLwzzuSr5arMl5u8+Hhkt2QURtiKH5kQQrwO
+        Z/LpNP6CrVguTjcdxigbhO15SAgIZNMNyBhNZOkYFhOoyDG6wfodWkvvxB39FEo68UWMBLGnXjBp
+        uf80Jwas+yiTeddbOwOkc8QyhR8sPx6Rw9mkpcYH2sU/qFAbZ2JbBZSRXDIUmTwM6CET4nEoo7/I
+        Bz5Q57liesbhubJYj3ow/cGEFsemgImlnbFWJ9aFXqWRpbFxVicoqVrUE3XqXvba0AzIZqn/dvMv
+        7TG5cc3/yE+AUugZdeUDaqMuE09jAdOKvjV2bnkwDBHDi1FYscGQfkJjLXs7Lg7EfWTsqtq4BoMP
+        Ztye2ldXpVyXEq+vFGSH7DcAAAD//wMAEywJa0sDAAA=
+    headers:
+      CF-RAY:
+      - 954668c7e83a69b9-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 23 Jun 2025 19:32:05 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=DZY.zL05P3JXV9W_5D0buccu3utJ4gjXcxGldnkk29w-1750707125-1.0.1.1-T7LP5OsPc5.m_77sukIPVYvX2.i4w10BROLFUWjm3ad6TlyHSnByvu6CIcESgG4VyID9FtCA18lJ2JAUasCCaNp3MHApyCIVHqzLDCnG5_4;
+        path=/; expires=Mon, 23-Jun-25 20:02:05 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=QUgWc4IrubQ4YaJdVRr502sAz5dpPv259yLZlGFEYDU-1750707125427-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '443'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '448'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999986'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_63b150ff08a4cec080d59086f88a30c5
+    status:
+      code: 200
+      message: OK
+version: 1

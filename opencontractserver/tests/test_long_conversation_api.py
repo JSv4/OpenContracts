@@ -50,6 +50,11 @@ class TestLongConversationAPI(TestCase):
 
         cls.corpus.documents.add(cls.document)
 
+        # Ensure fixture-derived corpus is public for anonymous-agent tests.
+        if hasattr(cls, "corpus"):
+            cls.corpus.is_public = True
+            cls.corpus.save(update_fields=["is_public"])
+
     async def test_anonymous_conversation_creation(self):
         """Test that anonymous conversations are created but not stored."""
         initial_conversation_count = await Conversation.objects.acount()

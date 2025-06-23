@@ -36,6 +36,7 @@ class TestCoreAgentComponentsSetup(TestCase):
             title="Core Test Corpus",
             creator=cls.user,
             preferred_embedder="test/embedder/corpus_default",
+            is_public=True,
         )
         cls.doc1 = Document.objects.create(
             title="Core Test Doc 1",

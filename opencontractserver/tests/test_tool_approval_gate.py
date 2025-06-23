@@ -113,10 +113,10 @@ class TestApprovalFlow(TestCase):
         cls.user: User = User.objects.create_user("gate-user")
 
         cls.corpus: Corpus = Corpus.objects.create(
-            title="Gate Corpus", description="", creator=cls.user, is_public=True
+            title="Gate Corpus", description="", creator=cls.user, is_public=False
         )
         cls.document: Document = Document.objects.create(
-            title="Gate Doc", description="", creator=cls.user, is_public=True
+            title="Gate Doc", description="", creator=cls.user, is_public=False
         )
         cls.corpus.documents.add(cls.document)
 

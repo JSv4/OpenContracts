@@ -150,6 +150,22 @@ class AsyncTestLLMAnnotationTools(TransactionTestCase):
                 ContentFile(SAMPLE_PAWLS_FILE_ONE_PATH.read_bytes()),
             )
 
+        # Ensure txt_extract_file also exists in the active MEDIA_ROOT. Similar to the
+        # PAWLS layer above, Django may point ``settings.MEDIA_ROOT`` at a new temporary
+        # directory between tests, causing the path stored on ``txt_extract_file`` to
+        # become stale. Re-save the fixture file when the underlying file is missing so
+        # subsequent IO (e.g. via ``add_annotations_from_exact_strings``) does not
+        # raise ``FileNotFoundError``.
+
+        self.txt_doc.refresh_from_db()
+
+        txt_storage = self.txt_doc.txt_extract_file.storage
+        if not txt_storage.exists(self.txt_doc.txt_extract_file.name):
+            self.txt_doc.txt_extract_file.save(
+                self.txt_doc.txt_extract_file.name,
+                ContentFile(SAMPLE_TXT_FILE_ONE_PATH.read_bytes()),
+            )
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

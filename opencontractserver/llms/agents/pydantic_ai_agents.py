@@ -595,12 +595,12 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
             # Cancel the message in the database
             await self.cancel_message(llm_msg_id, f"Error: {str(e)}")
             logger.exception(f"Error in PydanticAI stream: {e}")
-            
+
             # Emit an ErrorEvent so consumers can handle it gracefully
             error_message = str(e)
             if "UsageLimitExceeded" in type(e).__name__:
                 error_message = f"Usage limit exceeded: {error_message}"
-            
+
             yield ErrorEvent(
                 error=error_message,
                 content=f"Error: {error_message}",
@@ -609,8 +609,8 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                 metadata={
                     "error_type": type(e).__name__,
                     "error_message": str(e),
-                    "framework": "pydantic_ai"
-                }
+                    "framework": "pydantic_ai",
+                },
             )
 
     async def resume_with_approval(

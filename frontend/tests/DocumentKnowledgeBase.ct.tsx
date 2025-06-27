@@ -429,6 +429,11 @@ test("selects a label and creates an annotation by dragging", async ({
     .click();
   console.log("[TEST] Switched to Document layer...");
 
+  // Wait until first page canvas is rendered – ensures token search is ready
+  await expect(page.locator("#pdf-container canvas").first()).toBeVisible({
+    timeout: LONG_TIMEOUT,
+  });
+
   // *** ADDED WAIT *AFTER* LAYER SWITCH ***
   // Wait for the label selector to display text derived from the corpus data.
   // This ensures the corpus state update has propagated to the Document layer components.
@@ -492,32 +497,53 @@ test("selects a label and creates an annotation by dragging", async ({
   // Wait for Apollo cache to update (keep this, might need adjustment)
   await page.waitForTimeout(1000); // Slightly longer wait after mock confirms execution
 
-  // 6. Navigate to annotations panel to see results
+  // Wait for a conversation title inside the ChatTray – confirms SlidingPanel is visible
+  const slidingPanel = page.locator("#sliding-panel").first();
+  await expect(slidingPanel).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Measure panel width via its bounding box
+  const resizeHandle = page.locator("#resize-handle");
+  const widthToggle = page.locator("#width-control-toggle");
+
+  async function getPanelWidth() {
+    const left = await slidingPanel.evaluate(
+      (el) => el.getBoundingClientRect().left
+    );
+    const winWidth = await page.evaluate(() => window.innerWidth);
+    return winWidth - (left as number);
+  }
+
+  const widthBefore = await getPanelWidth();
+  console.log(`[TEST] SlidingPanel initial width: ${widthBefore}px`);
+
+  // 7. Open the width control menu and choose "Compact" (25 %)
+  await widthToggle.click();
+  const wideBtn = page.locator("#wide-width-menu-item");
+  await expect(wideBtn).toBeVisible({ timeout: LONG_TIMEOUT });
+  await wideBtn.click();
+
+  // Allow the animation to finish
+  await page.waitForTimeout(500);
+  const widthAfter = await getPanelWidth();
+  console.log(
+    `[TEST] SlidingPanel width after Compact selection: ${widthAfter}px`
+  );
+  expect(widthAfter).toBeGreaterThan(widthBefore); // ensure width actually shrank
+
+  // 8. Switch to the Annotations tab
   await page.getByRole("button", { name: "Annotations" }).click();
-  const annotationsPanel = page.locator(".sidebar__annotations"); // Define panel locator
-  await expect(annotationsPanel).toBeVisible({
-    timeout: LONG_TIMEOUT,
-  });
 
-  // Log panel contents for debugging (optional but helpful)
-  console.log("[TEST] Current annotations panel contents:");
-  const panelHTML = await annotationsPanel.evaluate((el) => el.innerHTML);
-  console.log(panelHTML);
+  const annotationsPanel = page.locator(".sidebar__annotations");
+  await expect(annotationsPanel).toBeVisible({ timeout: LONG_TIMEOUT });
 
-  // Check if mock was hit by checking console logs (optional)
-  // const logs = await page.evaluate(() => {
-  //   return (window as any).mutationCalled || false;
-  // });
-  // console.log(`[TEST] Mutation called according to window flag: ${logs}`);
-
-  // 7. Assert Success - Wait specifically for the element within the panel
-  const annotationElement = annotationsPanel // Ensure we look *within* the panel
+  // 9. Verify the newly created annotation is visible inside the panel
+  const annotationElement = annotationsPanel
     .locator('[data-annotation-id="new-annot-1"]')
     .first();
-
-  // Wait specifically for the annotation element to be visible
-  await expect(annotationElement).toBeVisible({ timeout: 15000 }); // Increased timeout for this specific assertion
-  console.log("[TEST SUCCESS] Found annotation with data-annotation-id");
+  await expect(annotationElement).toBeVisible({ timeout: 15000 });
+  console.log(
+    "[TEST SUCCESS] Found annotation with data-annotation-id and verified width control"
+  );
 });
 
 test("filters annotations correctly when 'Show Structural' and 'Show Only Selected' are toggled", async ({
@@ -643,6 +669,11 @@ test("DocNavigation search jumps to first 'Transfer Taxes' hit on page 4", async
     .locator(".layers-menu")
     .getByRole("button", { name: "Document" })
     .click();
+
+  // Wait until first page canvas is rendered – ensures token search is ready
+  await expect(page.locator("#pdf-container canvas").first()).toBeVisible({
+    timeout: LONG_TIMEOUT,
+  });
 
   /* 4️⃣  open the DocNavigation search panel (desktop = hover) */
   const nav = page.locator("#doc-navigation .search-container");

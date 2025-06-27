@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Table, Icon, Popup, Modal, Button, Loader } from "semantic-ui-react";
+import { useNavigate } from "react-router-dom";
 
 import {
   DatacellType,
@@ -8,10 +9,7 @@ import {
 } from "../../../types/graphql-api";
 import { JSONTree } from "react-json-tree";
 import {
-  displayAnnotationOnAnnotatorLoad,
   onlyDisplayTheseAnnotations,
-  openedDocument,
-  selectedAnnotation,
   selectedExtract,
   showAnnotationBoundingBoxes,
   showAnnotationLabels,
@@ -74,6 +72,8 @@ export const ExtractDatacell = ({
     onlyDisplayTheseAnnotations
   );
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     // console.log("DataCell - viewSourceAnnotations", viewSourceAnnotations);
     if (viewSourceAnnotations !== null) {
@@ -92,10 +92,15 @@ export const ExtractDatacell = ({
       only_display_these_annotations
     );
     if (only_display_these_annotations) {
-      openedDocument(only_display_these_annotations[0].document); // All sources for doc should share same document
+      const first = only_display_these_annotations[0]; // All sources share same doc & corpus
+      if (first.document && first.corpus) {
+        navigate(
+          `/corpus/${first.corpus.id}/document/${first.document.id}?ann=${first.id}`
+        );
+      }
       setViewSourceAnnotations(null);
     }
-  }, [only_display_these_annotations]);
+  }, [only_display_these_annotations, navigate]);
 
   useEffect(() => {
     setEditData(cellData.correctedData ?? cellData.data ?? {});

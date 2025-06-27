@@ -8,7 +8,11 @@ from django.conf import settings
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
-from opencontractserver.llms.agents.core_agents import CoreAgent, get_default_config
+from opencontractserver.llms.agents.core_agents import (
+    CoreAgent,
+    _is_public,
+    get_default_config,
+)
 from opencontractserver.llms.tools.tool_factory import CoreTool, UnifiedToolFactory
 from opencontractserver.llms.types import AgentFramework
 
@@ -36,6 +40,8 @@ class UnifiedAgentFactory:
         streaming: Optional[bool] = None,
         embedder_path: Optional[str] = None,
         tools: Optional[list[Union[CoreTool, Callable, str]]] = None,
+        store_user_messages: Optional[bool] = None,
+        store_llm_messages: Optional[bool] = None,
         # Legacy compatibility
         override_conversation: Optional[Conversation] = None,
         override_system_prompt: Optional[str] = None,
@@ -57,6 +63,8 @@ class UnifiedAgentFactory:
             streaming: Optional enable/disable streaming
             embedder_path: Optional embedder path
             tools: Optional list of tools (CoreTool instances, functions, or tool names)
+            store_user_messages: Optional enable/disable storing user messages
+            store_llm_messages: Optional enable/disable storing LLM messages
             override_conversation: Legacy parameter (use 'conversation' instead)
             override_system_prompt: Legacy parameter (use 'system_prompt' instead)
             **kwargs: Additional framework-specific arguments
@@ -69,6 +77,12 @@ class UnifiedAgentFactory:
             conversation = override_conversation
         if override_system_prompt and not system_prompt:
             system_prompt = override_system_prompt
+
+        persistence_flags: dict[str, bool] = {}
+        if store_user_messages is not None:
+            persistence_flags["store_user_messages"] = store_user_messages
+        if store_llm_messages is not None:
+            persistence_flags["store_llm_messages"] = store_llm_messages
 
         config = get_default_config(
             user_id=user_id,
@@ -84,8 +98,46 @@ class UnifiedAgentFactory:
             loaded_messages=loaded_messages,
             embedder_path=embedder_path,
             tools=tools or [],
+            **persistence_flags,
             **kwargs,
         )
+
+        # --------------------------------------------------------------
+        # Public corpus/document ⇒ strip approval-gated tools
+        # --------------------------------------------------------------
+
+        # Resolve privacy status (best-effort – failures default to private)
+        try:
+            doc_obj = (
+                document
+                if isinstance(document, Document)
+                else await Document.objects.aget(id=document)
+            )
+            corpus_obj = (
+                corpus
+                if isinstance(corpus, Corpus)
+                else await Corpus.objects.aget(id=corpus)
+            )
+        except Exception:
+            doc_obj = None
+            corpus_obj = None
+
+        public_context = _is_public(doc_obj) or _is_public(corpus_obj)
+
+        filtered_tools: list[Union[CoreTool, Callable, str]] = []
+        if tools:
+            for t in tools:
+                if public_context and isinstance(t, CoreTool) and t.requires_approval:
+                    logger.warning(
+                        "Skipping approval-required tool '%s' for public context",
+                        t.name,
+                    )
+                    continue
+                filtered_tools.append(t)
+        tools = filtered_tools
+
+        # Keep config in sync so downstream logic respects the filtered list
+        config.tools = tools
 
         # Convert tools to framework-specific format
         framework_tools = (
@@ -128,6 +180,8 @@ class UnifiedAgentFactory:
         streaming: Optional[bool] = None,
         embedder_path: Optional[str] = None,
         tools: Optional[list[Union[CoreTool, Callable, str]]] = None,
+        store_user_messages: Optional[bool] = None,
+        store_llm_messages: Optional[bool] = None,
         # Legacy compatibility
         override_conversation: Optional[Conversation] = None,
         override_system_prompt: Optional[str] = None,
@@ -136,7 +190,7 @@ class UnifiedAgentFactory:
         """Create a corpus agent using the specified framework.
 
         Args:
-            corpus_id: Corpus ID
+            corpus: Corpus ID or instance
             framework: Which agent framework to use
             user_id: Optional user ID for message attribution
             conversation: Optional existing conversation object
@@ -149,6 +203,8 @@ class UnifiedAgentFactory:
             streaming: Optional enable/disable streaming
             embedder_path: Optional embedder path
             tools: Optional list of tools (CoreTool instances, functions, or tool names)
+            store_user_messages: Optional enable/disable storing user messages
+            store_llm_messages: Optional enable/disable storing LLM messages
             override_conversation: Legacy parameter (use 'conversation' instead)
             override_system_prompt: Legacy parameter (use 'system_prompt' instead)
             **kwargs: Additional framework-specific arguments
@@ -161,6 +217,12 @@ class UnifiedAgentFactory:
             conversation = override_conversation
         if override_system_prompt and not system_prompt:
             system_prompt = override_system_prompt
+
+        persistence_flags = {}
+        if store_user_messages is not None:
+            persistence_flags["store_user_messages"] = store_user_messages
+        if store_llm_messages is not None:
+            persistence_flags["store_llm_messages"] = store_llm_messages
 
         config = get_default_config(
             user_id=user_id,
@@ -176,8 +238,40 @@ class UnifiedAgentFactory:
             loaded_messages=loaded_messages,
             embedder_path=embedder_path,
             tools=tools or [],
+            **persistence_flags,
             **kwargs,
         )
+
+        # --------------------------------------------------------------
+        # Public corpus/document ⇒ strip approval-gated tools
+        # --------------------------------------------------------------
+
+        # Resolve privacy status (best-effort – failures default to private)
+        try:
+            corpus_obj = (
+                corpus
+                if isinstance(corpus, Corpus)
+                else await Corpus.objects.aget(id=corpus)
+            )
+        except Exception:
+            corpus_obj = None
+
+        public_context = _is_public(corpus_obj)
+
+        filtered_tools: list[Union[CoreTool, Callable, str]] = []
+        if tools:
+            for t in tools:
+                if public_context and isinstance(t, CoreTool) and t.requires_approval:
+                    logger.warning(
+                        "Skipping approval-required tool '%s' for public context",
+                        t.name,
+                    )
+                    continue
+                filtered_tools.append(t)
+        tools = filtered_tools
+
+        # Keep config in sync so downstream logic respects the filtered list
+        config.tools = tools
 
         # Convert tools to framework-specific format
         framework_tools = (
@@ -285,7 +379,7 @@ async def create_document_agent(
 
 
 async def create_corpus_agent(
-    corpus_id: Union[str, int],
+    corpus: Union[str, int, Corpus],
     framework: Union[AgentFramework, str, None] = None,
     user_id: Optional[int] = None,
     conversation: Optional[Conversation] = None,
@@ -299,7 +393,7 @@ async def create_corpus_agent(
     """Create a corpus agent (enhanced backward compatibility wrapper).
 
     Args:
-        corpus_id: Corpus ID
+        corpus: Corpus ID or instance
         framework: Agent framework to use
         user_id: Optional user ID for message attribution
         conversation: Optional existing conversation object
@@ -320,7 +414,7 @@ async def create_corpus_agent(
         framework = AgentFramework(framework)
 
     return await UnifiedAgentFactory.create_corpus_agent(
-        corpus_id=corpus_id,
+        corpus=corpus,
         framework=framework,
         user_id=user_id,
         conversation=conversation,

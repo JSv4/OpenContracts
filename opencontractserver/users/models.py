@@ -80,7 +80,11 @@ class User(AbstractUser):
             logger.info(
                 f"Adding user {self.username} to group {settings.DEFAULT_PERMISSIONS_GROUP}"
             )
-            my_group = Group.objects.get(name=settings.DEFAULT_PERMISSIONS_GROUP)
+            # Ensure the default permissions group is present even if database was flushed during tests.
+            # Using get_or_create avoids breaking user creation when the group is missing.
+            my_group, _ = Group.objects.get_or_create(
+                name=settings.DEFAULT_PERMISSIONS_GROUP
+            )
             self.groups.add(my_group)
 
 

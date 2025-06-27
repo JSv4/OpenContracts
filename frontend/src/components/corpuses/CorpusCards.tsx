@@ -13,6 +13,7 @@ import {
 } from "../../graphql/cache";
 
 import { Card, Dimmer, Loader } from "semantic-ui-react";
+import { useNavigate } from "react-router-dom";
 
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import { CorpusType, PageInfo } from "../../types/graphql-api";
@@ -44,6 +45,7 @@ export const CorpusCards = ({
   style,
 }: CorpusCardsProps) => {
   const { width } = useWindowDimensions();
+  const navigate = useNavigate();
   const card_cols = determineCardColCount(width);
 
   const [contextMenuOpen, setContextMenuOpen] = useState<string | null>(null);
@@ -120,7 +122,7 @@ export const CorpusCards = ({
           contextMenuOpen={contextMenuOpen}
           setContextMenuOpen={setContextMenuOpen}
           onOpen={() => {
-            openedCorpus(item);
+            navigate(`/corpuses/${item.id}`);
           }}
           onSelect={() => toggleCorpusSelect(item.id)}
           onDelete={() => deletingCorpus(item)}

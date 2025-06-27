@@ -13,6 +13,7 @@ import {
 } from "semantic-ui-react";
 import _ from "lodash";
 import styled from "styled-components";
+import { useNavigate } from "react-router-dom";
 
 import {
   editingDocument,
@@ -20,7 +21,6 @@ import {
   showAddDocsToCorpusModal,
   showDeleteDocumentsModal,
   viewingDocument,
-  showKnowledgeBaseModal,
   openedCorpus,
 } from "../../graphql/cache";
 import { AnnotationLabelType, DocumentType } from "../../types/graphql-api";
@@ -191,6 +191,9 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
 
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
 
+  // React Router navigation helper
+  const navigate = useNavigate();
+
   /**
    * Adds a mild delay so the user must hover
    * over the thumbnail for 1 second to enlarge.
@@ -319,11 +322,7 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
           onClick: () => {
             const currentCorpus = openedCorpus();
             if (currentCorpus) {
-              showKnowledgeBaseModal({
-                isOpen: true,
-                documentId: item.id,
-                corpusId: currentCorpus.id,
-              });
+              navigate(`/corpus/${currentCorpus.id}/document/${item.id}`);
               if (onClick) onClick(item);
             }
           },

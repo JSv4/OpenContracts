@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Modal } from "semantic-ui-react";
 import styled from "styled-components";
+import { Edit3 } from "lucide-react";
 
 export const PostItNote = styled(motion.button)`
   background: #fff7b1;
@@ -36,6 +37,42 @@ export const PostItNote = styled(motion.button)`
     background: rgba(0, 0, 0, 0.03);
     border-radius: 0 0 3px 3px;
   }
+
+  .edit-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    color: #666;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &:hover .edit-indicator {
+    opacity: 1;
+  }
+
+  .title {
+    font-family: "Kalam", cursive;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a365d;
+    margin-bottom: 0.75rem;
+    line-height: 1.3;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-height: 60px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
   .content {
     max-height: 200px;
     overflow: hidden;
@@ -43,6 +80,7 @@ export const PostItNote = styled(motion.button)`
     font-family: "Kalam", cursive;
     line-height: 1.6;
     color: #2c3e50;
+    padding-right: 24px; /* Make room for edit indicator */
     &::after {
       content: "";
       position: absolute;

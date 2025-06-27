@@ -22,10 +22,16 @@ from opencontractserver.annotations.models import (
     AnnotationLabel,
     LabelSet,
     Note,
+    NoteRevision,
     Relationship,
 )
 from opencontractserver.conversations.models import ChatMessage, Conversation
-from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusQuery
+from opencontractserver.corpuses.models import (
+    Corpus,
+    CorpusAction,
+    CorpusDescriptionRevision,
+    CorpusQuery,
+)
 from opencontractserver.documents.models import (
     Document,
     DocumentAnalysisRow,
@@ -397,6 +403,22 @@ class NoteType(AnnotatePermissionsForReadMixin, DjangoObjectType):
         description="List representing the path from the root ancestor to this note and its descendants.",
     )
 
+    # Version history
+    revisions = graphene.List(
+        lambda: NoteRevisionType,
+        description="List of all revisions/versions of this note, ordered by version.",
+    )
+    current_version = graphene.Int(description="Current version number of the note")
+
+    def resolve_revisions(self, info):
+        """Returns all revisions for this note, ordered by version."""
+        return self.revisions.all()
+
+    def resolve_current_version(self, info):
+        """Returns the current version number."""
+        latest_revision = self.revisions.order_by("-version").first()
+        return latest_revision.version if latest_revision else 0
+
     # Resolver for descendants_tree
     def resolve_descendants_tree(self, info):
         """
@@ -512,6 +534,28 @@ class NoteType(AnnotatePermissionsForReadMixin, DjangoObjectType):
             return queryset.all().visible_to_user(info.context.user)
         else:
             return queryset
+
+
+class NoteRevisionType(DjangoObjectType):
+    """
+    GraphQL type for the NoteRevision model to expose note version history.
+    """
+
+    class Meta:
+        model = NoteRevision
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+        fields = [
+            "id",
+            "note",
+            "author",
+            "version",
+            "diff",
+            "snapshot",
+            "checksum_base",
+            "checksum_full",
+            "created",
+        ]
 
 
 class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
@@ -742,6 +786,21 @@ class CorpusType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 
     def resolve_icon(self, info):
         return "" if not self.icon else info.context.build_absolute_uri(self.icon.url)
+
+    # File link resolver for markdown description
+    def resolve_md_description(self, info):
+        return (
+            ""
+            if not self.md_description
+            else info.context.build_absolute_uri(self.md_description.url)
+        )
+
+    # Optional list of description revisions
+    description_revisions = graphene.List(lambda: CorpusDescriptionRevisionType)
+
+    def resolve_description_revisions(self, info):
+        # Returns all revisions, ordered by version asc by default from model ordering
+        return self.revisions.all() if hasattr(self, "revisions") else []
 
     class Meta:
         model = Corpus
@@ -1071,3 +1130,15 @@ def resolve_pipeline_components(self, info, mimetype=None):
 
     components = get_components_by_mimetype(backend_enum)
     return components
+
+
+# ---------------- CorpusDescriptionRevisionType ----------------
+
+
+class CorpusDescriptionRevisionType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    """GraphQL type for CorpusDescriptionRevision model."""
+
+    class Meta:
+        model = CorpusDescriptionRevision
+        interfaces = [relay.Node]
+        connection_class = CountableConnection

@@ -51,6 +51,7 @@ class AgentAPI:
         tools: Optional[list[ToolType]] = None,
         embedder: Optional[str] = None,
         verbose: bool = False,
+        persist: Optional[bool] = None,
         **kwargs,
     ) -> CoreAgent:
         """
@@ -71,6 +72,7 @@ class AgentAPI:
             tools: List of tool names, CoreTool instances, or functions
             embedder: Custom embedder path
             verbose: Enable verbose logging
+            persist: Optional persistence flag
             **kwargs: Additional framework-specific options
 
         Returns:
@@ -116,6 +118,14 @@ class AgentAPI:
         # Convert tool names to CoreTool instances
         resolved_tools = _resolve_tools(tools) if tools else None
 
+        # If caller explicitly disabled persistence we propagate the flags via **kwargs
+        persistence_overrides: dict[str, Any] = {}
+        if persist is False:
+            persistence_overrides = {
+                "store_user_messages": False,
+                "store_llm_messages": False,
+            }
+
         return await UnifiedAgentFactory.create_document_agent(
             document,
             corpus,
@@ -132,6 +142,7 @@ class AgentAPI:
             embedder_path=embedder,
             tools=resolved_tools,
             verbose=verbose,
+            **persistence_overrides,
             **kwargs,
         )
 
@@ -152,6 +163,7 @@ class AgentAPI:
         tools: Optional[list[ToolType]] = None,
         embedder: Optional[str] = None,
         verbose: bool = False,
+        persist: Optional[bool] = None,
         **kwargs,
     ) -> CoreAgent:
         """
@@ -172,6 +184,7 @@ class AgentAPI:
             tools: List of tool names, CoreTool instances, or functions
             embedder: Custom embedder path (uses corpus default if None)
             verbose: Enable verbose logging
+            persist: Optional persistence flag
             **kwargs: Additional framework-specific options
 
         Returns:
@@ -217,6 +230,14 @@ class AgentAPI:
         # Convert tool names to CoreTool instances
         resolved_tools = _resolve_tools(tools) if tools else None
 
+        # If caller explicitly disabled persistence we propagate the flags via **kwargs
+        persistence_overrides: dict[str, Any] = {}
+        if persist is False:
+            persistence_overrides = {
+                "store_user_messages": False,
+                "store_llm_messages": False,
+            }
+
         return await UnifiedAgentFactory.create_corpus_agent(
             corpus,
             framework=framework,
@@ -232,6 +253,7 @@ class AgentAPI:
             embedder_path=embedder,
             tools=resolved_tools,
             verbose=verbose,
+            **persistence_overrides,
             **kwargs,
         )
 

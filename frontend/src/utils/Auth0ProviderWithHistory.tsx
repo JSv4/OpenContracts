@@ -13,6 +13,7 @@ export const Auth0ProviderWithHistory: React.FC<Props> = ({
   const navigate = useNavigate();
 
   const onRedirectCallback = (appState?: { returnTo?: string }) => {
+    console.log("[Auth0ProviderWithHistory] onRedirectCallback", appState);
     navigate(
       appState?.returnTo || window.location.pathname + window.location.search,
       {

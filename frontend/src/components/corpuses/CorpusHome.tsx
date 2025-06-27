@@ -57,23 +57,21 @@ import { getPermissions } from "../../utils/transform";
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background: linear-gradient(to bottom, #f8fafc 0%, #f1f5f9 100%);
+  flex: 1;
+  background: #f8fafc;
   overflow: hidden;
   position: relative;
 `;
 
 const TopBar = styled.div`
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
   padding: 1.75rem 2.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 2rem;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
   @media (max-width: 768px) {
     padding: 1.25rem 1rem;
@@ -159,17 +157,36 @@ const MetadataRow = styled.div`
 const StatsRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 2.5rem;
+  gap: 1.5rem;
   flex-shrink: 0;
 
+  > *:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    right: -0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 20px;
+    background: #e2e8f0;
+  }
+
+  > * {
+    position: relative;
+  }
+
   @media (max-width: 1024px) {
-    gap: 2rem;
+    gap: 1.25rem;
   }
 
   @media (max-width: 768px) {
     width: 100%;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 0.5rem;
+
+    > *:not(:last-child)::after {
+      display: none;
+    }
   }
 `;
 
@@ -178,27 +195,10 @@ const StatItem = styled.div`
   flex-direction: column;
   align-items: center;
   gap: 0.375rem;
-  position: relative;
-
-  &::after {
-    content: "";
-    position: absolute;
-    right: -1.25rem;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 1px;
-    height: 24px;
-    background: #e2e8f0;
-  }
-
-  &:last-child::after {
-    display: none;
-  }
 
   @media (max-width: 768px) {
-    &::after {
-      right: -0.5rem;
-    }
+    flex: 1;
+    min-width: 0;
   }
 `;
 
@@ -244,10 +244,10 @@ const ContentWrapper = styled.div`
 
 const DescriptionCard = styled(motion.div)`
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -257,11 +257,11 @@ const DescriptionCard = styled(motion.div)`
 
 const DescriptionHeader = styled.div`
   padding: 1.75rem 2rem;
-  border-bottom: 1px solid rgba(241, 245, 249, 0.8);
+  border-bottom: 1px solid #f1f5f9;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(to right, #fafbfc 0%, #f8fafc 100%);
+  background: #fafbfc;
   flex-shrink: 0;
 `;
 
@@ -335,6 +335,7 @@ const DescriptionContent = styled.div`
   overflow-x: hidden;
   position: relative;
   min-height: 0;
+  max-height: 100%;
 
   &::-webkit-scrollbar {
     width: 8px;

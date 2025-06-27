@@ -81,6 +81,7 @@ import {
 } from "../widgets/chat/ChatMessage";
 import { getCorpusQueryWebSocket } from "../chat/get_websockets";
 import { MOBILE_VIEW_BREAKPOINT } from "../../assets/configurations/constants";
+import useWindowDimensions from "../hooks/WindowDimensionHook";
 
 /**
  * A helper interface representing the properties of data included in websocket messages,
@@ -213,13 +214,13 @@ const EnhancedConversationCard = styled(ConversationCard)`
   flex-direction: column;
   height: 200px;
   padding: 1.75rem;
-  border-radius: 16px;
+  border-radius: 12px;
   background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
-  border: 1px solid transparent;
+  border: 1px solid #e2e8f0;
 
   &::before {
     content: "";
@@ -227,17 +228,16 @@ const EnhancedConversationCard = styled(ConversationCard)`
     top: 0;
     left: 0;
     width: 100%;
-    height: 4px;
-    background: linear-gradient(90deg, #4299e1, #3182ce);
+    height: 3px;
+    background: #4a90e2;
     transform: scaleX(0);
     transform-origin: left;
-    transition: transform 0.3s ease;
+    transition: transform 0.2s ease;
   }
 
   &:hover {
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
-    border-color: #e0e7ff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #cbd5e1;
 
     &::before {
       transform: scaleX(1);
@@ -253,15 +253,17 @@ const MessageCount = styled(motion.div)`
   position: absolute;
   top: 1.5rem;
   right: 1.5rem;
-  min-width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 12px;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 0.95rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-size: 0.875rem;
+  background: #f0f7ff;
+  color: #4a90e2;
+  border: 1px solid #e0e7ff;
 `;
 
 const EnhancedCardContent = styled(CardContent)`
@@ -351,6 +353,7 @@ const ChatContainer = styled.div`
   padding: 0;
   border-radius: 0;
   flex: 1;
+  min-height: 0; /* Important for flex children */
 
   @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
     position: fixed;
@@ -383,6 +386,76 @@ const ChatInputWrapper = styled.div`
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.04);
 `;
 
+// Add new styled component for processing indicator
+const ProcessingIndicator = styled(motion.div)`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.5rem;
+  background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+  color: #4a90e2;
+  border-radius: 24px;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #d4e3f4;
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.15);
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(74, 144, 226, 0.15) 50%,
+      transparent 100%
+    );
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 100%;
+    }
+  }
+
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+    background: #4a90e2;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 4px rgba(74, 144, 226, 0.4);
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    50% {
+      transform: scale(1.5);
+      opacity: 0.4;
+    }
+  }
+
+  /* Loader color override */
+  .ui.loader {
+    &:after {
+      border-color: #4a90e2 transparent transparent !important;
+    }
+  }
+`;
+
 // Enhance the ChatInputContainer for better mobile experience
 const EnhancedChatInputContainer = styled(ChatInputContainer)<{
   $disabled?: boolean;
@@ -407,7 +480,7 @@ const EnhancedChatInputContainer = styled(ChatInputContainer)<{
 `;
 
 // Enhance the chat messages area for mobile
-const MessagesArea = styled.div`
+const MessagesArea = styled.div<{ $isProcessing?: boolean }>`
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
@@ -415,8 +488,25 @@ const MessagesArea = styled.div`
   background: linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%);
   min-height: 0;
   position: relative;
-  /* Ensure content doesn't get hidden under header */
-  height: calc(100% - 80px);
+  display: flex;
+  flex-direction: column;
+  transition: background 0.3s ease;
+
+  ${(props) =>
+    props.$isProcessing &&
+    `
+    background: linear-gradient(to bottom, #f0f7ff 0%, #f8fbff 100%);
+    animation: subtleGlow 2s ease-in-out infinite;
+    
+    @keyframes subtleGlow {
+      0%, 100% {
+        background: linear-gradient(to bottom, #f0f7ff 0%, #f8fbff 100%);
+      }
+      50% {
+        background: linear-gradient(to bottom, #e6f2ff 0%, #f0f7ff 100%);
+      }
+    }
+  `}
 
   /* Custom scrollbar */
   &::-webkit-scrollbar {
@@ -439,8 +529,6 @@ const MessagesArea = styled.div`
 
   @media (max-width: ${MOBILE_VIEW_BREAKPOINT}px) {
     padding: 1rem;
-    /* Adjust for smaller header on mobile */
-    height: calc(100% - 60px);
   }
 `;
 
@@ -534,6 +622,44 @@ const MessageWrapper = styled(motion.div)<{ isLatest?: boolean }>`
   `}
 `;
 
+// Add a styled component for the chat navigation header
+const ChatNavigationHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+`;
+
+// Add a styled component for the back button
+const BackButton = styled(motion.button)`
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #e2e8f0;
+  }
+`;
+
+// Add a styled component for the navigation title
+const NavigationTitle = styled.span`
+  flex: 1;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1a202c;
+`;
+
 /**
  * CorpusChat component provides:
  * 1) Initial user selection of either creating a new conversation or loading an existing one,
@@ -553,6 +679,10 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
   forceNewChat = false,
   onClose,
 }) => {
+  // Window dimensions for responsive layout
+  const { width } = useWindowDimensions();
+  const use_mobile_layout = width <= MOBILE_VIEW_BREAKPOINT;
+
   // Chat state
   const [isNewChat, setIsNewChat] = useState(forceNewChat);
   const [newMessage, setNewMessage] = useState("");
@@ -1002,48 +1132,6 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
     return data?.conversations?.edges?.map((edge) => edge?.node) || [];
   }, [data]);
 
-  // Quick stats
-  const calculateMessageStats = (conversations: any[]) => {
-    const counts = conversations.map(
-      (conv) => conv?.chatMessages?.totalCount || 0
-    );
-    const max = Math.max(...counts);
-    const min = Math.min(...counts);
-    const sum = counts.reduce((a, b) => a + b, 0);
-    const mean = sum / (counts.length || 1);
-
-    const variance =
-      counts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
-      (counts.length || 1);
-    const stdDev = Math.sqrt(variance);
-
-    return { max, min, mean, stdDev };
-  };
-
-  const getMessageCountColor = (
-    count: number,
-    stats: { max: number; min: number; mean: number; stdDev: number }
-  ) => {
-    if (count === 0) {
-      return {
-        background: "linear-gradient(135deg, #EDF2F7 0%, #E2E8F0 100%)",
-        opacity: 0.9,
-        textColor: "#4A5568",
-      };
-    }
-
-    const zScore = (count - stats.mean) / (stats.stdDev || 1);
-    const intensity = 1 / (1 + Math.exp(-zScore));
-
-    return {
-      background: `linear-gradient(135deg, 
-          rgba(43, 108, 176, ${0.7 + intensity * 0.3}) 0%, 
-          rgba(44, 82, 130, ${0.8 + intensity * 0.2}) 100%)`,
-      opacity: 0.8 + intensity * 0.2,
-      textColor: intensity > 0.3 ? "white" : "#1A202C",
-    };
-  };
-
   function appendStreamingTokenToChat(
     token: string,
     overrideMessageId?: string
@@ -1350,7 +1438,39 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
   return (
     <ChatContainer id="corpus-chat-container">
       <ConversationIndicator id="conversation-indicator">
-        {/* We always show the top navigation in every state */}
+        {/* Mobile navigation header */}
+        {use_mobile_layout && isConversation && (
+          <ChatNavigationHeader>
+            <BackButton
+              onClick={() => {
+                if (selectedConversationId || !isNewChat) {
+                  // Go back to conversation list
+                  setSelectedConversationId(undefined);
+                  setIsNewChat(false);
+                  setChat([]);
+                  setServerMessages([]);
+                } else {
+                  // Go back to corpus home
+                  showQueryViewState("ASK");
+                }
+              }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <ArrowLeft size={20} />
+            </BackButton>
+            <NavigationTitle>
+              {selectedConversationId ? "Conversation" : "New Chat"}
+            </NavigationTitle>
+            <IconButton
+              onClick={() => showQueryViewState("ASK")}
+              title="Return to Dashboard"
+              whileTap={{ scale: 0.95 }}
+            >
+              <Home size={20} />
+            </IconButton>
+          </ChatNavigationHeader>
+        )}
 
         <AnimatePresence>
           {isConversation ? (
@@ -1372,46 +1492,11 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              {/* Header with Back Button */}
-              <ConversationHeader>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "1rem" }}
-                >
-                  <IconButton
-                    onClick={() => {
-                      setSelectedConversationId(undefined);
-                      setIsNewChat(false);
-                      setShowLoad(true);
-                      setChat([]);
-                      setServerMessages([]);
-                    }}
-                    title="Back to conversations"
-                    whileTap={{ scale: 0.95 }}
-                    style={{
-                      background: "rgba(66, 153, 225, 0.08)",
-                      color: "#4299e1",
-                      border: "1px solid rgba(66, 153, 225, 0.2)",
-                    }}
-                  >
-                    <ArrowLeft size={20} />
-                  </IconButton>
-                  <h2>{isNewChat ? "New Conversation" : "Conversation"}</h2>
-                </div>
-                <div className="actions">
-                  <IconButton
-                    onClick={() => showQueryViewState("ASK")}
-                    title="Return to Dashboard"
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Home size={20} />
-                  </IconButton>
-                </div>
-              </ConversationHeader>
-
               {/* Scrollable Messages */}
               <MessagesArea
                 className="chat-messages-area"
                 ref={messagesContainerRef}
+                $isProcessing={isProcessing}
               >
                 {combinedMessages.map((msg, idx) => {
                   const sourcedMessage = sourcedMessages.find(
@@ -1479,6 +1564,41 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
                     </MessageWrapper>
                   );
                 })}
+
+                {/* Show processing indicator as a message in the chat */}
+                {isProcessing && (
+                  <MessageWrapper
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      padding: "1rem 0",
+                    }}
+                  >
+                    <ProcessingIndicator
+                      initial={{ scale: 0.95 }}
+                      animate={{ scale: 1 }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        repeatType: "reverse",
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <div className="pulse-dot" />
+                      <Loader active inline size="small" inverted />
+                      <span>AI Assistant is thinking...</span>
+                      <div
+                        className="pulse-dot"
+                        style={{ animationDelay: "0.5s" }}
+                      />
+                    </ProcessingIndicator>
+                  </MessageWrapper>
+                )}
               </MessagesArea>
 
               {/* Input */}
@@ -1516,24 +1636,6 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                     />
-                  )}
-                  {isProcessing && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        fontSize: "0.9rem",
-                        color: "#4A5568",
-                      }}
-                    >
-                      <Loader active inline size="small" />
-                      <span>Assistant is responding…</span>
-                    </motion.div>
                   )}
                   <EnhancedChatInput
                     value={newMessage}
@@ -1693,16 +1795,6 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
                             stiffness: 500,
                             damping: 25,
                             delay: index * 0.05 + 0.2,
-                          }}
-                          style={{
-                            background: getMessageCountColor(
-                              conv.chatMessages?.totalCount || 0,
-                              calculateMessageStats(conversations)
-                            ).background,
-                            color: getMessageCountColor(
-                              conv.chatMessages?.totalCount || 0,
-                              calculateMessageStats(conversations)
-                            ).textColor,
                           }}
                         >
                           {conv.chatMessages?.totalCount || 0}

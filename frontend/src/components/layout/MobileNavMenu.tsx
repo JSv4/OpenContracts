@@ -18,22 +18,39 @@ import "./MobileNavMenu.css";
 import { useEnv } from "../hooks/UseEnv";
 
 export const MobileNavMenu = () => {
-  const { REACT_APP_USE_AUTH0 } = useEnv();
-  const { loginWithRedirect, logout, user: auth0_user, isLoading } = useAuth0();
+  const { REACT_APP_USE_AUTH0, REACT_APP_AUDIENCE } = useEnv();
+  const {
+    loginWithRedirect,
+    loginWithPopup,
+    logout,
+    user: auth0_user,
+    isLoading,
+  } = useAuth0();
   const cache_user = useReactiveVar(userObj);
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
   const user = REACT_APP_USE_AUTH0 ? auth0_user : cache_user;
 
+  // Debug logging for authentication state (Mobile)
+  console.log("[MobileNavMenu] REACT_APP_USE_AUTH0:", REACT_APP_USE_AUTH0);
+  console.log("[MobileNavMenu] isLoading:", isLoading);
+  console.log("[MobileNavMenu] auth0_user:", auth0_user);
+  console.log("[MobileNavMenu] cache_user:", cache_user);
+  console.log("[MobileNavMenu] resolved user:", user);
+
   const show_export_modal = useReactiveVar(showExportModal);
 
   let public_header_items = header_menu_items.filter((item) => !item.protected);
   let private_header_items = header_menu_items.filter((item) => item.protected);
 
-  const requestLogout = (args: any) => {
+  const requestLogout = () => {
     if (REACT_APP_USE_AUTH0) {
-      logout(args);
+      logout({
+        logoutParams: {
+          returnTo: window.location.origin,
+        },
+      });
     } else {
       authToken("");
       userObj(null);
@@ -126,9 +143,7 @@ export const MobileNavMenu = () => {
                     />
                     <Dropdown.Item
                       text="Logout"
-                      onClick={() =>
-                        requestLogout({ returnTo: window.location.origin })
-                      }
+                      onClick={() => requestLogout()}
                       icon={<Icon name="log out" />}
                     />
                     {/* <Dropdown.Item 
@@ -141,7 +156,28 @@ export const MobileNavMenu = () => {
               </Menu.Item>
             </>
           ) : (
-            <Menu.Item onClick={() => loginWithRedirect()}>Login</Menu.Item>
+            <Menu.Item
+              onClick={async () => {
+                try {
+                  await loginWithPopup({
+                    authorizationParams: {
+                      audience: REACT_APP_AUDIENCE || undefined,
+                      scope: "openid profile email",
+                      redirect_uri: window.location.origin,
+                    },
+                  });
+                } catch (e) {
+                  await loginWithRedirect({
+                    authorizationParams: {
+                      audience: REACT_APP_AUDIENCE || undefined,
+                      scope: "openid profile email",
+                    },
+                  });
+                }
+              }}
+            >
+              Login
+            </Menu.Item>
           )}
         </Menu.Menu>
       </Menu>
@@ -193,9 +229,7 @@ export const MobileNavMenu = () => {
                     />
                     <Dropdown.Item
                       text="Logout"
-                      onClick={() =>
-                        requestLogout({ returnTo: window.location.origin })
-                      }
+                      onClick={() => requestLogout()}
                       icon={<Icon name="log out" />}
                     />
                     {/* <Dropdown.Item 

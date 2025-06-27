@@ -18,13 +18,26 @@ import { useEnv } from "../hooks/UseEnv";
 import { VERSION_TAG } from "../../assets/configurations/constants";
 
 export const NavMenu = () => {
-  const { REACT_APP_USE_AUTH0 } = useEnv();
-  const { loginWithRedirect, logout, user: auth0_user, isLoading } = useAuth0();
+  const { REACT_APP_USE_AUTH0, REACT_APP_AUDIENCE } = useEnv();
+  const {
+    loginWithRedirect,
+    loginWithPopup,
+    logout,
+    user: auth0_user,
+    isLoading,
+  } = useAuth0();
   const cache_user = useReactiveVar(userObj);
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
   const user = REACT_APP_USE_AUTH0 ? auth0_user : cache_user;
+
+  // Debug logging for authentication state
+  console.log("[NavMenu] REACT_APP_USE_AUTH0:", REACT_APP_USE_AUTH0);
+  console.log("[NavMenu] isLoading:", isLoading);
+  console.log("[NavMenu] auth0_user:", auth0_user);
+  console.log("[NavMenu] cache_user:", cache_user);
+  console.log("[NavMenu] resolved user:", user);
 
   const show_export_modal = useReactiveVar(showExportModal);
 
@@ -45,9 +58,13 @@ export const NavMenu = () => {
     return pathname === route || pathname.startsWith(`${route}/`);
   };
 
-  const requestLogout = (args: any) => {
+  const requestLogout = () => {
     if (REACT_APP_USE_AUTH0) {
-      logout(args);
+      logout({
+        logoutParams: {
+          returnTo: window.location.origin,
+        },
+      });
     } else {
       authToken("");
       userObj(null);
@@ -85,12 +102,32 @@ export const NavMenu = () => {
   ));
 
   if (REACT_APP_USE_AUTH0) {
-    const doLogin = () => {
-      loginWithRedirect({
-        appState: {
-          returnTo: window.location.pathname + window.location.search,
-        },
-      });
+    const doLogin = async () => {
+      console.log("[NavMenu] doLogin clicked, attempting loginWithPopup...");
+      try {
+        await loginWithPopup({
+          authorizationParams: {
+            audience: REACT_APP_AUDIENCE || undefined,
+            scope: "openid profile email",
+            redirect_uri: window.location.origin,
+          },
+        });
+        console.log("[NavMenu] loginWithPopup succeeded");
+      } catch (error) {
+        console.error(
+          "[NavMenu] loginWithPopup error, falling back to redirect:",
+          error
+        );
+        await loginWithRedirect({
+          appState: {
+            returnTo: window.location.pathname + window.location.search,
+          },
+          authorizationParams: {
+            audience: REACT_APP_AUDIENCE || undefined,
+            scope: "openid profile email",
+          },
+        });
+      }
     };
 
     return (
@@ -128,9 +165,7 @@ export const NavMenu = () => {
                     />
                     <Dropdown.Item
                       text="Logout"
-                      onClick={() =>
-                        requestLogout({ returnTo: window.location.origin })
-                      }
+                      onClick={() => requestLogout()}
                       icon={<Icon name="log out" />}
                     />
                     {/* <Dropdown.Item 
@@ -184,9 +219,7 @@ export const NavMenu = () => {
                     />
                     <Dropdown.Item
                       text="Logout"
-                      onClick={() =>
-                        requestLogout({ returnTo: window.location.origin })
-                      }
+                      onClick={() => requestLogout()}
                       icon={<Icon name="log out" />}
                     />
                     {/* <Dropdown.Item 

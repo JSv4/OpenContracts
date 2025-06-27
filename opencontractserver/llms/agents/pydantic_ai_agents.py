@@ -43,6 +43,7 @@ from opencontractserver.llms.agents.core_agents import (
     CoreDocumentAgentFactory,
     CorpusAgentContext,
     DocumentAgentContext,
+    ErrorEvent,
     FinalEvent,
     MessageState,
     ResumeEvent,
@@ -591,9 +592,26 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
             return
 
         except Exception as e:
+            # Cancel the message in the database
             await self.cancel_message(llm_msg_id, f"Error: {str(e)}")
             logger.exception(f"Error in PydanticAI stream: {e}")
-            raise
+            
+            # Emit an ErrorEvent so consumers can handle it gracefully
+            error_message = str(e)
+            if "UsageLimitExceeded" in type(e).__name__:
+                error_message = f"Usage limit exceeded: {error_message}"
+            
+            yield ErrorEvent(
+                error=error_message,
+                content=f"Error: {error_message}",
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata={
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "framework": "pydantic_ai"
+                }
+            )
 
     async def resume_with_approval(
         self,

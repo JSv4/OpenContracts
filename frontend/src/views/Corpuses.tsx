@@ -120,7 +120,7 @@ import { CorpusDescriptionEditor } from "../components/corpuses/CorpusDescriptio
 const DashboardContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
   position: relative;
   overflow: hidden;
   padding: 0;
@@ -132,13 +132,13 @@ const ContentWrapper = styled.div`
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: center;
+  justify-content: flex-start;
   flex: 1;
   padding: 0;
   height: 100%;
-  overflow: auto; /* Changed from hidden to auto to allow scrolling */
+  overflow: hidden;
   min-height: 0;
-  position: relative; /* Added to contain absolute children */
+  position: relative;
 `;
 
 const ChatTransitionContainer = styled.div<{
@@ -218,59 +218,37 @@ const SearchToConversationInput = styled.div<{ isExpanded: boolean }>`
 // Add new styled components for enhanced UI
 const FloatingSearchContainer = styled(motion.div)`
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
   overflow: hidden;
   z-index: 100;
   display: flex;
   align-items: center;
-  padding-left: 0.5rem; /* reduced padding */
-  width: 96px; /* wider to show both icons */
-  max-width: 720px; /* much wider max for comfortable typing */
-  min-height: 44px; /* slightly smaller */
-  height: auto; /* allow growth with content */
+  padding-left: 0.5rem;
+  width: 96px;
+  max-width: 720px;
+  min-height: 44px;
+  height: auto;
   transition: all 0.35s ease;
-  margin: 0 auto; /* center in parent */
-
-  /* Add a subtle pulse animation when collapsed to draw attention */
-  &:not(:hover):not(:focus-within) {
-    animation: subtlePulse 2s ease-in-out infinite;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
-      0 0 0 3px rgba(66, 153, 225, 0.15);
-    padding-right: 0.5rem; /* minimal padding when collapsed */
-  }
+  margin: 0 auto;
 
   &:hover,
   &:focus-within {
-    width: 100%; /* use full available width */
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-    align-items: flex-start; /* align to top when expanded for multiline */
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #cbd5e1;
+    align-items: flex-start;
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
     padding-right: 0.5rem;
   }
 
-  @keyframes subtlePulse {
-    0%,
-    100% {
-      transform: scale(1);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
-        0 0 0 3px rgba(66, 153, 225, 0.15);
-    }
-    50% {
-      transform: scale(1.02);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
-        0 0 0 5px rgba(66, 153, 225, 0.25);
-    }
-  }
-
   @media (max-width: 768px) {
-    width: 88px; /* show both icons on mobile too */
-    max-width: calc(100vw - 2rem); /* full width minus some margin */
+    width: 88px;
+    max-width: calc(100vw - 2rem);
     min-height: 42px;
 
-    /* Also trigger expansion on touch/tap for mobile */
     &:active,
     &:hover,
     &:focus-within {
@@ -351,7 +329,7 @@ const SearchActionsContainer = styled.div`
 const ActionButton = styled(motion.button)`
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #64748b;
@@ -364,7 +342,6 @@ const ActionButton = styled(motion.button)`
   &:hover:not(:disabled) {
     background: #e2e8f0;
     color: #475569;
-    transform: translateY(-1px);
   }
 
   &:disabled {
@@ -549,6 +526,8 @@ const CorpusQueryView = ({
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
+            height: "100%",
+            minHeight: 0,
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -577,6 +556,8 @@ const CorpusQueryView = ({
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          height: "100%",
+          minHeight: 0,
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -584,7 +565,10 @@ const CorpusQueryView = ({
         transition={{ duration: 0.3 }}
       >
         <DashboardContainer id="corpus-dashboard-container">
-          <ContentWrapper id="corpus-dashboard-content-wrapper">
+          <ContentWrapper
+            id="corpus-dashboard-content-wrapper"
+            style={{ position: "relative" }}
+          >
             <CorpusHome
               corpus={opened_corpus as CorpusType}
               onEditDescription={() => setShowDescriptionEditor(true)}
@@ -667,7 +651,12 @@ const CorpusQueryView = ({
   } else {
     return (
       <motion.div
-        style={{ height: "100%", display: "flex", flexDirection: "column" }}
+        style={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+        }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -706,8 +695,7 @@ const NavigationSidebar = styled(motion.div)<{ isExpanded: boolean }>`
   height: 100%;
   width: ${(props) => (props.isExpanded ? "280px" : "72px")};
   background: white;
-  border-right: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+  border-right: 1px solid #e2e8f0;
   z-index: 100;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
@@ -718,7 +706,7 @@ const NavigationSidebar = styled(motion.div)<{ isExpanded: boolean }>`
     position: fixed;
     width: ${(props) => (props.isExpanded ? "280px" : "0")};
     box-shadow: ${(props) =>
-      props.isExpanded ? "4px 0 12px rgba(0, 0, 0, 0.1)" : "none"};
+      props.isExpanded ? "2px 0 8px rgba(0, 0, 0, 0.1)" : "none"};
   }
 `;
 
@@ -788,10 +776,7 @@ const NavigationItem = styled(motion.button)<{
   align-items: center;
   gap: 1rem;
   padding: ${(props) => (props.isExpanded ? "0.875rem 1.5rem" : "0.875rem")};
-  background: ${(props) =>
-    props.isActive
-      ? "linear-gradient(to right, #f0f7ff, #f8fbff)"
-      : "transparent"};
+  background: ${(props) => (props.isActive ? "#f0f7ff" : "transparent")};
   border: none;
   color: ${(props) => (props.isActive ? "#4a90e2" : "#64748b")};
   font-weight: ${(props) => (props.isActive ? "600" : "500")};
@@ -807,23 +792,20 @@ const NavigationItem = styled(motion.button)<{
     left: 0;
     top: 0;
     bottom: 0;
-    width: 4px;
+    width: 3px;
     background: #4a90e2;
     opacity: ${(props) => (props.isActive ? "1" : "0")};
     transition: opacity 0.2s ease;
   }
 
   &:hover {
-    background: ${(props) =>
-      props.isActive
-        ? "linear-gradient(to right, #f0f7ff, #f8fbff)"
-        : "#f8fafc"};
+    background: ${(props) => (props.isActive ? "#f0f7ff" : "#f8fafc")};
     color: ${(props) => (props.isActive ? "#4a90e2" : "#2d3748")};
   }
 
   svg {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
   }
 
@@ -952,7 +934,9 @@ export const Corpuses = () => {
   const [active_tab, setActiveTab] = useState<number>(0);
   const [showDescriptionEditor, setShowDescriptionEditor] =
     useState<boolean>(false);
-  const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(
+    () => width > MOBILE_VIEW_BREAKPOINT
+  ); // Expanded by default on desktop
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
 
   const [corpusSearchCache, setCorpusSearchCache] =
@@ -1026,8 +1010,10 @@ export const Corpuses = () => {
     StartImportCorpusExport,
     StartImportCorpusInputs
   >(START_IMPORT_CORPUS, {
-    onCompleted: () =>
-      toast.success("SUCCESS!\vCorpus file upload and import has started."),
+    onCompleted: () => {
+      toast.success("SUCCESS!\vCorpus file upload and import has started.");
+      // Note: Import is async, stats will update via polling
+    },
     onError: (error: ApolloError) =>
       toast.error(`Could Not Start Import: ${error.message}`),
   });
@@ -1147,11 +1133,19 @@ export const Corpuses = () => {
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Effects to reload data on certain changes
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // If user logs in while on this page... refetch to get their authorized corpuses
+  // If user logs in/out while on this page... refetch to get their authorized corpuses
   useEffect(() => {
+    // Always refetch corpuses when auth state changes (login or logout)
+    refetchCorpuses();
     if (auth_token) {
-      refetchCorpuses();
       refetchMetadata();
+    } else {
+      // Clear opened corpus when logged out
+      openedCorpus(null);
+      // Navigate to corpuses list if we were viewing a specific corpus
+      if (routeCorpusId) {
+        navigate("/corpuses");
+      }
     }
   }, [auth_token]);
 
@@ -1178,6 +1172,7 @@ export const Corpuses = () => {
     } else {
       console.log("Fetch metdata for corpus id: ", opened_corpus_id);
       fetchMetadata({ variables: { metadataForCorpusId: opened_corpus.id } });
+      refetchStats(); // Refresh stats when corpus changes
     }
   }, [opened_corpus]);
 
@@ -1190,13 +1185,16 @@ export const Corpuses = () => {
   }, [selected_metadata_id_to_filter_on]);
 
   // Fetch corpus stats
-  const { data: statsData, loading: statsLoading } = useQuery(
-    GET_CORPUS_STATS,
-    {
-      variables: { corpusId: opened_corpus?.id },
-      skip: !opened_corpus_id,
-    }
-  );
+  const {
+    data: statsData,
+    loading: statsLoading,
+    refetch: refetchStats,
+  } = useQuery(GET_CORPUS_STATS, {
+    variables: { corpusId: opened_corpus?.id },
+    skip: !opened_corpus_id,
+    pollInterval: 5000, // Poll every 5 seconds for real-time updates
+    fetchPolicy: "cache-and-network", // Always fetch fresh data while showing cached
+  });
 
   const stats = statsData?.corpusStats || {
     totalDocs: 0,
@@ -1236,6 +1234,7 @@ export const Corpuses = () => {
   >(UPDATE_CORPUS, {
     onCompleted: (data) => {
       refetchCorpuses();
+      refetchStats(); // Refresh stats after corpus update
       editingCorpus(null);
     },
   });
@@ -1258,6 +1257,7 @@ export const Corpuses = () => {
   >(REMOVE_DOCUMENTS_FROM_CORPUS, {
     onCompleted: () => {
       fetchDocumentsLazily();
+      refetchStats(); // Refresh stats after removing documents
     },
   });
 
@@ -1270,6 +1270,7 @@ export const Corpuses = () => {
   >(CREATE_CORPUS, {
     onCompleted: (data) => {
       refetchCorpuses();
+      refetchStats(); // Refresh stats after corpus creation
       setShowNewCorpusModal(false);
     },
   });
@@ -1519,7 +1520,9 @@ export const Corpuses = () => {
         <NavigationSidebar
           data-testid="navigation-sidebar"
           isExpanded={use_mobile_layout ? mobileSidebarOpen : sidebarExpanded}
-          initial={{ width: use_mobile_layout ? "0" : "72px" }}
+          initial={{
+            width: use_mobile_layout ? "0" : sidebarExpanded ? "280px" : "72px",
+          }}
           animate={{
             width: use_mobile_layout
               ? mobileSidebarOpen
@@ -1530,16 +1533,6 @@ export const Corpuses = () => {
               : "72px",
           }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
-          onMouseEnter={() => {
-            if (!use_mobile_layout && !sidebarExpanded) {
-              setSidebarExpanded(true);
-            }
-          }}
-          onMouseLeave={() => {
-            if (!use_mobile_layout && sidebarExpanded) {
-              setSidebarExpanded(false);
-            }
-          }}
         >
           <NavigationHeader
             isExpanded={use_mobile_layout ? mobileSidebarOpen : sidebarExpanded}
@@ -1587,6 +1580,8 @@ export const Corpuses = () => {
                   if (use_mobile_layout) {
                     setMobileSidebarOpen(false);
                   }
+                  // Refresh stats when switching tabs
+                  refetchStats();
                 }}
                 whileHover={{ x: 2 }}
                 whileTap={{ scale: 0.98 }}
@@ -1640,12 +1635,13 @@ export const Corpuses = () => {
         >
           <div
             style={{
-              height: "100%",
+              flex: 1,
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
               minHeight: 0,
-              justifyContent: "space-between",
+              justifyContent: "flex-start",
+              height: "100%",
             }}
           >
             {currentView?.component}
@@ -1706,6 +1702,7 @@ export const Corpuses = () => {
               onClose={() => setShowDescriptionEditor(false)}
               onUpdate={() => {
                 refetchMetadata();
+                refetchStats(); // Refresh stats after description update
                 setShowDescriptionEditor(false);
               }}
             />

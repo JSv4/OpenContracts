@@ -646,6 +646,12 @@ async for event in agent.stream("What are the key contract terms?"):
             for source in event.sources:
                 print(f"  - {source.annotation_id}: {source.content[:50]}...")
                 
+        case "error":
+            print(f"\n❌ Error: {event.error}")
+            print(f"Error type: {event.metadata.get('error_type', 'Unknown')}")
+            # Handle error gracefully - stream ends after error event
+            break
+                
         case "final":
             print(f"\n✅ Complete! Usage: {event.metadata.get('usage', {})}")
             print(f"Total sources: {len(event.sources)}")
@@ -1220,9 +1226,13 @@ except Exception as e:
 #     except Exception as e:
 #         # Send error event based on streaming type
 #         if hasattr(agent, '_uses_event_streaming'):  # Event-based streaming
-#             yield FinalEvent(
-#                 accumulated_content=f"Error: {e}",
-#                 metadata={"error": str(e), "framework": "error"}
+#             # Note: Errors are now handled internally by the framework and
+#             # emitted as ErrorEvent objects. This try/except is only needed
+#             # for truly unexpected errors outside the agent's control.
+#             yield ErrorEvent(
+#                 error=str(e),
+#                 content=f"Error: {e}",
+#                 metadata={"error": str(e), "error_type": type(e).__name__}
 #             )
 #         else:  # Legacy streaming
 #             yield UnifiedStreamResponse(
@@ -1511,6 +1521,7 @@ User Query → PydanticAI Agent → Execution Graph Stream
 | `ApprovalResultEvent` | Approval decision recorded | `decision`, `pending_tool_call`, `metadata` | After resume_with_approval() called |
 | `ResumeEvent` | Execution restarting | Standard event fields | After approval, before tool runs |
 | `FinalEvent` | Complete results | `accumulated_content`, `sources`, `metadata` | End of execution |
+| `ErrorEvent` | Error occurred during execution | `error`, `metadata` | Unrecoverable errors (e.g., rate limits, API failures) |
 
 #### Implementation Benefits
 

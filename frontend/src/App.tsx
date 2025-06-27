@@ -63,7 +63,7 @@ import { DocumentKBRoute } from "./components/routes/DocumentKBRoute";
 import { useRouteStateSync } from "./hooks/RouteStateSync";
 
 export const App = () => {
-  const { REACT_APP_USE_AUTH0 } = useEnv();
+  const { REACT_APP_USE_AUTH0, REACT_APP_AUDIENCE } = useEnv();
   const auth_token = useReactiveVar(authToken);
   const show_export_modal = useReactiveVar(showExportModal);
   const show_cookie_modal = useReactiveVar(showCookieAcceptModal);
@@ -78,7 +78,20 @@ export const App = () => {
     showUploadNewDocumentsModal
   );
 
-  const { getAccessTokenSilently, user } = useAuth0();
+  const {
+    getAccessTokenSilently,
+    user,
+    isLoading,
+    isAuthenticated,
+    error: authError,
+  } = useAuth0();
+
+  // Global debug logging for auth state in App
+  console.log("[App] isLoading:", isLoading);
+  console.log("[App] isAuthenticated:", isAuthenticated);
+  console.log("[App] user:", user);
+  console.log("[App] current authStatusVar:", authStatusVar());
+  console.log("[App] authError:", authError);
 
   const handleKnowledgeBaseModalClose = useCallback(() => {
     showKnowledgeBaseModal({
@@ -102,10 +115,8 @@ export const App = () => {
     fetchPolicy: "network-only",
   });
 
-  const authLoading = REACT_APP_USE_AUTH0 && user === undefined;
-
   useEffect(() => {
-    if (authLoading) return; // wait until Auth0 SDK has decided
+    if (isLoading) return; // wait until Auth0 SDK has decided
 
     if (meData?.me) {
       backendUserObj(meData.me);
@@ -115,7 +126,7 @@ export const App = () => {
     } else if (!auth_token) {
       backendUserObj(null);
     }
-  }, [authLoading, meData, meLoading, meError, auth_token]);
+  }, [isLoading, meData, meLoading, meError, auth_token]);
 
   useEffect(() => {
     if (width <= 800) {
@@ -126,44 +137,67 @@ export const App = () => {
   // Only use this if we're using Auth0 Authentication... otherwise we don't
   // need to access the Auth0 SDK.
   useEffect(() => {
-    if (REACT_APP_USE_AUTH0) {
-      if (user) {
-        try {
-          getAccessTokenSilently({
-            audience: `https://opensource.legal/contracts`,
-            scope: "application:login",
-          }).then((token) => {
-            if (token) {
-              console.log("Auth0 token obtained");
-              authToken(token);
-              userObj(user);
-              authStatusVar("AUTHENTICATED");
-            } else {
-              authToken("");
-              userObj(null);
-              backendUserObj(null);
-              toast.error("Unable to login");
-              authStatusVar("ANONYMOUS");
-            }
-          });
-        } catch (e: any) {
-          console.log(e.message);
+    if (!REACT_APP_USE_AUTH0) {
+      return;
+    }
+
+    if (isLoading) {
+      console.log("[App] Auth0 is still loading; skipping token fetch");
+      return; // Still loading, do nothing.
+    }
+
+    if (isAuthenticated && user) {
+      console.log(
+        "[App] User is authenticated, attempting to fetch access token..."
+      );
+      getAccessTokenSilently({
+        authorizationParams: {
+          audience: REACT_APP_AUDIENCE || undefined,
+          scope: "openid profile email",
+        },
+      })
+        .then((token) => {
+          if (token) {
+            console.log("[App] Received token:", token);
+            console.log("Auth0 token obtained");
+            authToken(token);
+            userObj(user);
+            authStatusVar("AUTHENTICATED");
+          } else {
+            console.error(
+              "[App] No token received from getAccessTokenSilently"
+            );
+            authToken("");
+            userObj(null);
+            authStatusVar("ANONYMOUS");
+            toast.error("Unable to login: no token received");
+          }
+        })
+        .catch((e: any) => {
+          console.error("[App] Error in getAccessTokenSilently:", e);
+          console.error("Error obtaining Auth0 token:", e);
           authToken("");
           userObj(null);
-          backendUserObj(null);
           authStatusVar("ANONYMOUS");
-        }
-      } else if (user === undefined) {
-        // Auth0 still loading, do nothing
-      } else {
-        // Auth0 user not found/logged out
-        authToken("");
-        userObj(null);
-        backendUserObj(null);
-        authStatusVar("ANONYMOUS");
-      }
+          toast.error("Unable to login: " + e.message);
+        });
+    } else {
+      console.warn(
+        "[App] User is not authenticated or missing; cleaning auth state"
+      );
+      // Not authenticated, clean up state.
+      authToken("");
+      userObj(null);
+      authStatusVar("ANONYMOUS");
     }
-  }, [getAccessTokenSilently, REACT_APP_USE_AUTH0, user?.sub]);
+  }, [
+    isLoading,
+    isAuthenticated,
+    user,
+    getAccessTokenSilently,
+    REACT_APP_USE_AUTH0,
+    REACT_APP_AUDIENCE,
+  ]);
 
   console.log("Cookie Accepted: ", show_cookie_modal);
 
@@ -298,7 +332,12 @@ export const App = () => {
               corpusId={opened_corpus?.id || null}
             />
             <Routes>
-              <Route path="/" element={<Navigate to="/corpuses" replace />} />
+              <Route
+                path="/"
+                element={
+                  isLoading ? <div /> : <Navigate to="/corpuses" replace />
+                }
+              />
               <Route
                 path="/corpus/:corpusId/document/:documentId"
                 element={<DocumentKBRoute />}

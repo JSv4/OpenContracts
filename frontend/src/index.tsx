@@ -23,7 +23,7 @@ const REACT_APP_APPLICATION_CLIENT_ID = window._env_
   ? window._env_.REACT_APP_APPLICATION_CLIENT_ID || ""
   : "";
 const REACT_APP_AUDIENCE = window._env_
-  ? window._env_.REACT_APP_AUDIENCE || "http://localhost:5173"
+  ? window._env_.REACT_APP_AUDIENCE || ""
   : "";
 const REACT_APP_API_ROOT_URL = window._env_
   ? window._env_.REACT_APP_API_ROOT_URL || "http://localhost:8000"
@@ -69,10 +69,15 @@ if (REACT_APP_USE_AUTH0) {
   const providerConfig = {
     domain: REACT_APP_APPLICATION_DOMAIN,
     clientId: REACT_APP_APPLICATION_CLIENT_ID,
-    audience: REACT_APP_AUDIENCE,
-    redirectUri: window.location.origin,
-    scope: "application:login",
+    authorizationParams: {
+      audience: REACT_APP_AUDIENCE || undefined,
+      scope: "openid profile email",
+      redirect_uri: window.location.origin,
+    },
   };
+
+  console.log("[index.tsx] Auth0 providerConfig:", providerConfig);
+  console.log("[index.tsx] window.location.origin:", window.location.origin);
 
   root.render(
     <BrowserRouter>

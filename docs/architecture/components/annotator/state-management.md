@@ -4,193 +4,246 @@
 
 1. [Overview](#overview)
 2. [Component Hierarchy](#component-hierarchy)
-3. [Data Flow](#data-flow)
-   3.1 [Initial Data Fetching](#initial-data-fetching)
-   3.2 [Local State Management](#local-state-management)
-4. [Key Components](#key-components)
-   4.1 [CorpusDocumentAnnotator](#corpusdocumentannotator)
-   4.2 [AnnotatorRenderer](#annotatorrenderer)
-   4.3 [PDFView](#pdfview)
-   4.4 [PdfAnnotations](#pdfannotations)
-5. [Context Providers](#context-providers)
-   5.1 [AnnotationStore](#annotationstore)
-   5.2 [PDFStore](#pdfstore)
-6. [Server Interactions](#server-interactions)
-7. [Optimizations and Considerations](#optimizations-and-considerations)
-8. [Roadmap](#roadmap)
+3. [State Management with Jotai](#state-management-with-jotai)
+4. [Data Flow](#data-flow)
+5. [Key Components](#key-components)
+6. [Annotation Filtering System](#annotation-filtering-system)
+7. [Performance Optimizations](#performance-optimizations)
 
-## 1. Overview
+## Overview
 
-The Annotator system is designed to efficiently manage and display annotations on PDF documents. It utilizes a
-combination of server-fetched data and local state management to provide a responsive user experience while minimizing
-unnecessary server requests.
+The Annotator system uses a modern architecture combining Jotai for state management with virtualized rendering for performance. It efficiently manages and displays annotations on PDF documents while maintaining responsive user experience even with large documents and numerous annotations.
 
-## 2. Component Hierarchy
+## Component Hierarchy
 
-The main components of the Annotator system, in hierarchical order, are:
+```
+DocumentKnowledgeBase (Data fetching & top-level state)
+├── PDF (Virtualization engine)
+│   └── PDFPage (Individual page renderer)
+│       ├── Canvas (PDF content)
+│       ├── SelectionLayer (User interactions)
+│       ├── Selection (Annotation display)
+│       ├── SearchResult (Search highlights)
+│       └── ChatSourceResult (Chat source highlights)
+├── Sidebars/Panels (UI for managing annotations)
+├── ViewSettingsPopup (Annotation visibility controls)
+└── LabelSelector (Active annotation label selection)
+```
 
-1. CorpusDocumentAnnotator
-2. AnnotatorRenderer
-3. PDFView
-4. PDF
-5. Page
-6. Selection
+## State Management with Jotai
 
-## 3. Data Flow
+The system uses Jotai atoms for reactive state management, providing efficient updates and computed derivations:
 
-## Diagram
+### Core Atoms (AnnotationAtoms.tsx)
+
+```typescript
+// Primary annotation state
+export const pdfAnnotationsAtom = atom<PdfAnnotations>(
+  new PdfAnnotations([], [], [])
+);
+
+// Structural annotations (separate for filtering)
+export const structuralAnnotationsAtom = atom<ServerTokenAnnotation[]>([]);
+
+// Computed atom: All annotations deduplicated
+export const allAnnotationsAtom = atom<(ServerTokenAnnotation | ServerSpanAnnotation)[]>((get) => {
+  const { annotations } = get(pdfAnnotationsAtom);
+  const structural = get(structuralAnnotationsAtom);
+  
+  // Deduplicate and combine
+  const seen = new Set<string>();
+  const out = [];
+  
+  for (const a of [...annotations, ...structural]) {
+    if (!seen.has(a.id)) {
+      seen.add(a.id);
+      out.push(a);
+    }
+  }
+  return out;
+});
+
+// Computed atom: Annotations indexed by page
+export const perPageAnnotationsAtom = atom((get) => {
+  const all = get(allAnnotationsAtom);
+  const map = new Map<number, (ServerTokenAnnotation | ServerSpanAnnotation)[]>();
+  
+  for (const a of all) {
+    const pageIdx = a.page ?? 0;
+    if (!map.has(pageIdx)) map.set(pageIdx, []);
+    map.get(pageIdx)!.push(a);
+  }
+  return map;
+});
+```
+
+### UI State Atoms (UISettingsAtom.tsx)
+
+- `zoomLevelAtom` - Current PDF zoom level
+- `selectedAnnotationIdsAtom` - Currently selected annotations
+- `showStructuralAtom` - Whether to show structural annotations
+- `spanLabelsToViewAtom` - Which labels to display
+
+### Document State Atoms (DocumentAtom.tsx)
+
+- `scrollContainerRefAtom` - Reference to scrolling container
+- `pendingScrollAnnotationIdAtom` - Annotation to scroll to
+- `textSearchStateAtom` - Current search results and selection
+
+## Data Flow
+
+### 1. Initial Data Loading
 
 ```mermaid
 graph TD
-    A[CorpusDocumentAnnotator] -->|Initial data| B[AnnotatorRenderer]
-    B -->|Creates| P[PdfAnnotations]
-    P -.->|Updates| B
-    B -->|Passes| C[PDFView]
-    C -->|Provides context| G[AnnotationStore]
-    C -->|Provides context| H[PDFStore]
-    C --> D[PDF]
-    D --> E[Page]
-    E --> F[Selection]
-
-    G -.->|Accessed by| D & E & F
-    H -.->|Accessed by| D & E
-
-    subgraph "Annotator State Management"
-    P
-    G
-    end
-
-    style A fill:#f9d,stroke:#333,stroke-width:2px
-    style B fill:#ffd,stroke:#333,stroke-width:2px
-    style C fill:#dfd,stroke:#333,stroke-width:2px
-    style D fill:#ddf,stroke:#333,stroke-width:2px
-    style E fill:#fdd,stroke:#333,stroke-width:2px
-    style F fill:#dff,stroke:#333,stroke-width:2px
-    style G fill:#f9f,stroke:#333,stroke-width:2px
-    style H fill:#d9f,stroke:#333,stroke-width:2px
-    style P fill:#fdf,stroke:#333,stroke-width:2px
+    A[DocumentKnowledgeBase] -->|GraphQL Query| B[GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS]
+    B --> C[Process Annotations]
+    C --> D[Update Jotai Atoms]
+    D --> E[pdfAnnotationsAtom]
+    D --> F[structuralAnnotationsAtom]
+    E --> G[allAnnotationsAtom<br/>(computed)]
+    F --> G
+    G --> H[perPageAnnotationsAtom<br/>(computed)]
+    G --> I[useVisibleAnnotations<br/>(filtered)]
+    I --> J[PDFPage Components]
 ```
 
-### 3.1 Initial Data Fetching
+### 2. User Interactions
 
-1. When the CorpusDocumentAnnotator mounts, it fetches initial annotation data from the server.
-2. This data includes:
-    - annotation_objs
-    - relationship_annotations
-    - doc_type_annotations
-3. The fetched data is passed to the AnnotatorRenderer component.
+When a user selects an annotation:
+1. `selectedAnnotationIdsAtom` is updated
+2. `useVisibleAnnotations` ensures selected annotations are visible
+3. PDF component expands visible range to include annotation's page
+4. PDFPage scrolls the specific annotation into view
 
-### 3.2 Local State Management
+### 3. Filtering Updates
 
-1. AnnotatorRenderer creates a PdfAnnotations object using the initial data.
-2. PdfAnnotations serves as the central state management object for annotations.
-3. Local updates to annotations are managed through the AnnotationStore context.
-4. These updates are reflected in the PdfAnnotations object without triggering server requests.
+When filter settings change:
+1. UI atoms (showStructural, spanLabelsToView) are updated
+2. `useVisibleAnnotations` recomputes based on new filters
+3. Only affected PDFPage components re-render
+4. No network requests needed - all filtering is local
 
-## 4. Key Components
+## Key Components
 
-### 4.1 CorpusDocumentAnnotator
+### DocumentKnowledgeBase
 
-- Responsible for initial data fetching from the server.
-- Passes the fetched data to AnnotatorRenderer.
-- Does not actively manage annotations after initial load.
+- **Purpose**: Top-level container managing document viewing and knowledge extraction
+- **Responsibilities**:
+  - Fetches document and annotation data via GraphQL
+  - Initializes Jotai atoms with fetched data
+  - Manages layout and panel switching
+  - Coordinates between different viewing modes
 
-### 4.2 AnnotatorRenderer
+### PDF Component
 
-- Creates and manages the PdfAnnotations object.
-- Provides change functions to AnnotationStore for local state updates.
-- Passes the PdfAnnotations object to PDFView.
-- Ensures local component state stays in sync with the initial server data.
+- **Purpose**: Implements virtualized rendering for performance
+- **Key Features**:
+  - Calculates visible page range using binary search
+  - Manages page height caching per zoom level
+  - Ensures selected items' pages are always rendered
+  - Handles scroll-to-annotation coordination
 
-### 4.3 PDFView
+### PDFPage Component
 
-- Receives the PdfAnnotations object from AnnotatorRenderer.
-- Provides AnnotationStore and PDFStore contexts to its children.
-- Renders the PDF component and manages the display of annotations.
+- **Purpose**: Renders individual PDF pages with annotations
+- **Optimizations**:
+  - Only renders when in viewport
+  - Manages its own PDF rendering lifecycle
+  - Filters annotations to show only those on current page
+  - Handles annotation selection and creation
 
-### 4.4 PdfAnnotations
+### useVisibleAnnotations Hook
 
-- Central object for managing annotation state.
-- Created and updated by AnnotatorRenderer.
-- Holds the current state of all annotations, relationships, and document type annotations.
+```typescript
+export function useVisibleAnnotations() {
+  const allAnnotations = useAllAnnotations();
+  const { showStructural } = useAnnotationDisplay();
+  const { spanLabelsToView } = useAnnotationControls();
+  const { selectedAnnotations, selectedRelations } = useAnnotationSelection();
+  
+  return useMemo(() => {
+    // Force visibility for selected items
+    const forcedIds = new Set([
+      ...selectedAnnotations,
+      ...selectedRelations.flatMap(r => [...r.sourceIds, ...r.targetIds])
+    ]);
+    
+    // Apply filters
+    return allAnnotations.filter(annot => {
+      if (forcedIds.has(annot.id)) return true;
+      if (annot.structural && !showStructural) return false;
+      if (labelFilter && !labelFilter.has(annot.label.id)) return false;
+      return true;
+    });
+  }, [/* dependencies */]);
+}
+```
 
-## 5. Context Providers
+## Annotation Filtering System
 
-### 5.1 AnnotationStore
+The system provides centralized, consistent filtering through `useVisibleAnnotations`:
 
-- Provided by PDFView.
-- Contains change functions from AnnotatorRenderer.
-- Allows child components to access and modify annotation data.
-- Facilitates local state updates without server interactions.
+1. **Forced Visibility**
+   - Selected annotations always visible
+   - Annotations in selected relationships always visible
+   - Overrides all other filters
 
-### 5.2 PDFStore
+2. **Structural Filter**
+   - Toggle visibility of structural annotations
+   - When enabled, shows annotations in relationships
 
-- Provided by PDFView.
-- Contains PDF-related data and functions.
-- Accessed by PDF and Page components for rendering and layout purposes.
+3. **Label Filter**
+   - Filter by specific annotation labels
+   - Multi-select capability
+   - Only applies to non-forced annotations
 
-## 6. Server Interactions
+4. **Page-Level Filtering**
+   - PDFPage components further filter to show only annotations on their page
+   - Efficient - no unnecessary rendering of off-page annotations
 
-- Initial data is fetched when CorpusDocumentAnnotator mounts.
-- While the Annotator is open, no further data is fetched from the server.
-- Local changes are managed in the PdfAnnotations object and AnnotationStore.
-- Server synchronization (if implemented) would typically occur when the Annotator is closed or explicitly requested by
-  the user.
+## Performance Optimizations
 
-## 7. Optimizations and Considerations
+### 1. Virtualized Rendering
+- Only visible PDF pages (+overscan) are rendered
+- Dramatic performance improvement for large documents
+- Smart range expansion for selected items
 
-- The system minimizes server requests by managing annotations locally once loaded.
-- PdfAnnotations object serves as a single source of truth for annotation data during the Annotator session.
-- Context providers (AnnotationStore and PDFStore) allow efficient access to data and functions throughout the component
-  tree.
-- Consider implementing a strategy for syncing local changes back to the server, either periodically or on Annotator
-  close.
-- For large documents or numerous annotations, consider implementing virtualization or pagination to improve
-  performance.
+### 2. Computed Atoms
+- Derivations only recalculate when dependencies change
+- No manual state synchronization needed
+- Automatic memoization built-in
 
-This README provides a comprehensive overview of the Annotator system's data flow and state management. It explains how
-the various components interact, how data is initially loaded and subsequently managed locally, and the role of key
-objects like PdfAnnotations in maintaining system state.
+### 3. Granular Updates
+- Component-level filtering prevents unnecessary re-renders
+- Page components operate independently
+- Zoom changes only affect visible pages
 
-## 8. Roadmap
+### 4. Efficient Data Structures
+- Page-indexed annotation map for O(1) lookups
+- Set-based deduplication
+- Binary search for visible page detection
 
-### 8.1 Migration to Apollo Cache
+### 5. Scroll Optimization
+- RequestAnimationFrame for smooth scrolling
+- Throttled scroll event handling
+- Smart scroll-to-annotation with precedence system
 
-A key upcoming enhancement to the Annotator system is the planned migration of local state management to Apollo cache.
-This change aims to leverage Apollo's powerful caching and state management capabilities to further optimize our
-application.
+## Best Practices
 
-#### Objectives:
+1. **Always use hooks** for accessing annotation state
+   - `useAllAnnotations()` for all annotations
+   - `useVisibleAnnotations()` for filtered annotations
+   - `usePdfAnnotations()` for raw PdfAnnotations object
 
-1. **Centralized State Management**: Move the local state currently managed by PdfAnnotations and AnnotationStore into
-   Apollo's cache.
+2. **Leverage computed atoms** instead of manual calculations
+   - They automatically update when dependencies change
+   - Provide built-in memoization
 
-2. **Improved Data Consistency**: Utilize Apollo's cache normalization to ensure data consistency across the
-   application.
+3. **Keep filtering logic centralized** in `useVisibleAnnotations`
+   - Ensures consistency across all components
+   - Single source of truth for visibility
 
-3. **Reactive Updates**: Take advantage of Apollo's reactive variables for real-time updates across components.
-
-4. **Optimized Performance**: Leverage Apollo's caching mechanisms to reduce unnecessary re-renders and improve overall
-   performance.
-
-5. **Simplified Data Flow**: Streamline the data flow by using Apollo's query and mutation hooks for both local and
-   server state management.
-
-#### Implementation Considerations:
-
-- **Cache Policies**: Define appropriate cache policies for annotations, relationships, and document types.
-- **Local-only Fields**: Utilize Apollo's local-only fields for managing UI state that doesn't need to be persisted to
-  the server.
-- **Pagination Handling**: Implement effective pagination strategies using Apollo's fetchMore functionality for large
-  documents or numerous annotations.
-- **Offline Support**: Explore Apollo's offline capabilities to enhance the system's resilience to network issues.
-- **Type Safety**: Leverage Apollo's code generation features to ensure type safety across our GraphQL operations.
-
-#### Challenges and Mitigations:
-
-- **Learning Curve**: There may be a learning curve for developers unfamiliar with Apollo's local state management.
-  We'll provide comprehensive documentation and training sessions to ease the transition.
-- **Refactoring Effort**: Significant refactoring of existing components will be necessary. We'll approach this
-  incrementally, starting with isolated components and gradually expanding.
-- **Performance Monitoring**: We'll need to closely monitor performance during and after the migration to ensure the new
-  system meets or exceeds the performance of the current implementation.
+4. **Use proper atom updates** to maintain immutability
+   - Always create new objects/arrays when updating
+   - Jotai relies on referential equality for updates

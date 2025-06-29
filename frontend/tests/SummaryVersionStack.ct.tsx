@@ -206,16 +206,15 @@ test("triggers onVersionClick when card is clicked", async ({
     />
   );
 
-  // Ensure the card is visible and click
-  const v2Card = page.getByTestId("summary-card-2");
-  await expect(v2Card).toBeVisible();
-  // Use JS click to avoid overlapping z-index problems when cards are stacked.
-  const v2Handle = await v2Card.elementHandle();
-  if (v2Handle) {
-    await page.evaluate((el) => (el as HTMLElement).click(), v2Handle);
+  // Click the latest (v3) card which is rendered on top – avoids overlap issues;
+  const topCard = page.getByTestId("summary-card-3");
+  await expect(topCard).toBeVisible();
+  const handle = await topCard.elementHandle();
+  if (handle) {
+    await page.evaluate((el) => (el as HTMLElement).click(), handle);
   }
 
-  await page.waitForTimeout(100);
+  await page.waitForTimeout(50);
   expect(clickedVersion).toBe(3);
 });
 

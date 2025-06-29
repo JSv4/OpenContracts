@@ -82,21 +82,21 @@ useEffect(() => {
 const calcRange = useCallback(() => {
   const scroll = getScrollPosition();
   const viewHeight = getViewportHeight();
-  
+
   // Binary search for first/last visible pages
   const firstVisible = binarySearchFirstVisible(cumulative, scroll);
   const lastVisible = binarySearchLastVisible(cumulative, scroll + viewHeight);
-  
+
   // Add overscan and ensure selected items are visible
   let start = Math.max(0, firstVisible - OVERSCAN);
   let end = Math.min(pageCount - 1, lastVisible + OVERSCAN);
-  
+
   // Force selected annotation's page to be visible
   if (selectedPageIdx !== undefined) {
     start = Math.min(start, selectedPageIdx);
     end = Math.max(end, selectedPageIdx);
   }
-  
+
   setRange([start, end]);
 }, [/* dependencies */]);
 ```

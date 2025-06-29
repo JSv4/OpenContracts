@@ -72,7 +72,7 @@ const calcRange = useCallback(() => {
   const el = getScrollElement();
   const scroll = /* current scroll position */;
   const viewH = /* viewport height */;
-  
+
   // Binary search for first visible page
   let lo = 0, hi = cumulative.length - 1;
   while (lo < hi) {
@@ -81,16 +81,16 @@ const calcRange = useCallback(() => {
     else hi = mid;
   }
   const first = lo;
-  
+
   // Find last visible page
   const limit = scroll + viewH;
   // ... binary search for last visible
-  
+
   // Add overscan for smooth scrolling
   const overscan = 2;
   let start = Math.max(0, first - overscan);
   let end = Math.min(pageCount - 1, last + overscan);
-  
+
   setRange([start, end]);
 }, [/* dependencies */]);
 ```
@@ -130,7 +130,7 @@ return (
       const top = cumulative[idx];
       const height = pageHeights[idx];
       const visible = idx >= range[0] && idx <= range[1];
-      
+
       return (
         <div
           key={pInfo.page.pageNumber}
@@ -171,13 +171,13 @@ When an annotation is selected:
 useEffect(() => {
   if (selectedAnnotations.length === 0 || pageHeights.length === 0) return;
   if (selectedPageIdx === undefined) return;
-  
+
   const targetId = selectedAnnotations[0];
-  
+
   // Scroll to page
   const topOffset = Math.max(0, cumulative[selectedPageIdx] - 32);
   getScrollElement().scrollTo({ top: topOffset, behavior: "smooth" });
-  
+
   // Tell PDFPage to center the annotation
   setPendingScrollId(targetId);
 }, [selectedAnnotations, selectedPageIdx, /* ... */]);
@@ -193,11 +193,11 @@ Once the page is rendered:
 ```typescript
 useEffect(() => {
   if (!hasPdfPageRendered) return;
-  
+
   if (pendingScrollId) {
     const pageOwnsAnnotation = /* check if annotation is on this page */;
     if (!pageOwnsAnnotation) return;
-    
+
     let cancelled = false;
     const tryScroll = () => {
       if (cancelled) return;
@@ -263,4 +263,4 @@ const getScrollElement = useCallback((): HTMLElement | Window => {
 2. **Progressive rendering** - Low-res preview while scrolling
 3. **Intersection Observer** - More efficient visibility detection
 4. **Memory pressure handling** - Reduce overscan under memory constraints
-5. **Predictive preloading** - Anticipate scroll direction 
+5. **Predictive preloading** - Anticipate scroll direction

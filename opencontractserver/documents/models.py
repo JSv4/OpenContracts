@@ -1,12 +1,10 @@
-import functools
 import difflib
+import functools
 import hashlib
-import uuid
 
 import django
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
@@ -103,26 +101,25 @@ class Document(BaseOCModel, HasEmbeddingMixin):
 
     def get_summary_for_corpus(self, corpus):
         """Get the latest summary content for this document in a specific corpus.
-        
+
         Args:
             corpus: The corpus to get the summary for.
         Returns:
             str: The latest summary content, or empty string if none exists.
         """
         from opencontractserver.documents.models import DocumentSummaryRevision
-        
+
         latest_rev = (
             DocumentSummaryRevision.objects.filter(
-                document_id=self.pk,
-                corpus_id=corpus.pk
+                document_id=self.pk, corpus_id=corpus.pk
             )
             .order_by("-version")
             .first()
         )
-        
+
         if not latest_rev:
             return ""
-            
+
         if latest_rev.snapshot:
             return latest_rev.snapshot
         else:
@@ -149,16 +146,15 @@ class Document(BaseOCModel, HasEmbeddingMixin):
         from opencontractserver.documents.models import (  # avoid circular
             DocumentSummaryRevision,
         )
-        
+
         latest_rev = (
             DocumentSummaryRevision.objects.filter(
-                document_id=self.pk, 
-                corpus_id=corpus.pk
+                document_id=self.pk, corpus_id=corpus.pk
             )
             .order_by("-version")
             .first()
         )
-        
+
         if latest_rev and latest_rev.snapshot:
             original_content = latest_rev.snapshot
         elif latest_rev:
@@ -432,7 +428,7 @@ class DocumentSummaryRevision(django.db.models.Model):
         on_delete=django.db.models.CASCADE,
         related_name="summary_revisions",
     )
-    
+
     corpus = django.db.models.ForeignKey(
         "corpuses.Corpus",
         on_delete=django.db.models.CASCADE,
@@ -465,4 +461,4 @@ class DocumentSummaryRevision(django.db.models.Model):
     def __str__(self):
         return (
             f"DocumentSummaryRevision(document_id={self.document_id}, v={self.version})"
-    )
+        )

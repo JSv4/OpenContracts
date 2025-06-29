@@ -226,9 +226,9 @@ When testing scroll-to-annotation:
 
 ```typescript
 // Route with annotation ID in URL
-<Route 
-  path="/corpus/:corpusId/document/:documentId" 
-  element={<DocumentKBRoute />} 
+<Route
+  path="/corpus/:corpusId/document/:documentId"
+  element={<DocumentKBRoute />}
 />
 
 // Direct component usage
@@ -245,4 +245,4 @@ The system will automatically:
 2. Select the specified annotation
 3. Scroll the page into view
 4. Center the annotation on screen
-5. Update the URL to reflect the selection 
+5. Update the URL to reflect the selection

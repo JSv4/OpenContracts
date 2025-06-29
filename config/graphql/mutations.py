@@ -10,7 +10,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Max, Q
 from django.utils import timezone
 from filetype import filetype
 from graphene.types.generic import GenericScalar
@@ -457,8 +457,12 @@ class UpdateDocumentSummary(graphene.Mutation):
     """
 
     class Arguments:
-        document_id = graphene.ID(required=True, description="ID of the document to update")
-        corpus_id = graphene.ID(required=True, description="ID of the corpus this summary is for")
+        document_id = graphene.ID(
+            required=True, description="ID of the document to update"
+        )
+        corpus_id = graphene.ID(
+            required=True, description="ID of the corpus this summary is for"
+        )
         new_content = graphene.String(
             required=True, description="New markdown content for the document summary"
         )
@@ -473,20 +477,23 @@ class UpdateDocumentSummary(graphene.Mutation):
         try:
             from opencontractserver.corpuses.models import Corpus
             from opencontractserver.documents.models import DocumentSummaryRevision
-            
+
             # Extract pks from graphene ids
             _, doc_pk = from_global_id(document_id)
             _, corpus_pk = from_global_id(corpus_id)
-            
+
             document = Document.objects.get(pk=doc_pk)
             corpus = Corpus.objects.get(pk=corpus_pk)
-            
+
             # Check if user has any existing summary for this document-corpus combination
-            existing_summary = DocumentSummaryRevision.objects.filter(
-                document_id=doc_pk,
-                corpus_id=corpus_pk
-            ).order_by('version').first()
-            
+            existing_summary = (
+                DocumentSummaryRevision.objects.filter(
+                    document_id=doc_pk, corpus_id=corpus_pk
+                )
+                .order_by("version")
+                .first()
+            )
+
             # Permission logic
             if existing_summary:
                 # If summary exists, only the original author can update
@@ -501,9 +508,11 @@ class UpdateDocumentSummary(graphene.Mutation):
                 # If no summary exists, check corpus permissions
                 # User can create if: corpus is public OR user has update permission on corpus
                 is_public_corpus = corpus.is_public
-                user_has_corpus_perm = info.context.user.has_perm("update_corpus", corpus)
+                user_has_corpus_perm = info.context.user.has_perm(
+                    "update_corpus", corpus
+                )
                 user_is_creator = corpus.creator == info.context.user
-                
+
                 if not (is_public_corpus or user_has_corpus_perm or user_is_creator):
                     return UpdateDocumentSummary(
                         ok=False,
@@ -514,18 +523,18 @@ class UpdateDocumentSummary(graphene.Mutation):
 
             # Update the summary using the new method
             revision = document.update_summary(
-                new_content=new_content, 
-                author=info.context.user,
-                corpus=corpus
+                new_content=new_content, author=info.context.user, corpus=corpus
             )
 
             # If no change, revision will be None
             if revision is None:
-                latest_version = DocumentSummaryRevision.objects.filter(
-                    document_id=doc_pk,
-                    corpus_id=corpus_pk
-                ).aggregate(max_version=django.db.models.Max('version'))['max_version'] or 0
-                
+                latest_version = (
+                    DocumentSummaryRevision.objects.filter(
+                        document_id=doc_pk, corpus_id=corpus_pk
+                    ).aggregate(max_version=Max("version"))["max_version"]
+                    or 0
+                )
+
                 return UpdateDocumentSummary(
                     ok=True,
                     message="No changes detected in summary content.",
@@ -943,7 +952,7 @@ class UploadCorpusImportZip(graphene.Mutation):
 
             # Store our corpus in a temporary file handler which lets us rely on
             # django-wide selection of S3 or local storage in django container
-            base64_img_bytes = base64_file_string.encode("utf-8")
+            base64_img_bytes = base_64_file_string.encode("utf-8")
             decoded_file_data = base64.decodebytes(base64_img_bytes)
 
             with transaction.atomic():

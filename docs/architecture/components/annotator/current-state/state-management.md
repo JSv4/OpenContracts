@@ -49,11 +49,11 @@ export const structuralAnnotationsAtom = atom<ServerTokenAnnotation[]>([]);
 export const allAnnotationsAtom = atom<(ServerTokenAnnotation | ServerSpanAnnotation)[]>((get) => {
   const { annotations } = get(pdfAnnotationsAtom);
   const structural = get(structuralAnnotationsAtom);
-  
+
   // Deduplicate and combine
   const seen = new Set<string>();
   const out = [];
-  
+
   for (const a of [...annotations, ...structural]) {
     if (!seen.has(a.id)) {
       seen.add(a.id);
@@ -67,7 +67,7 @@ export const allAnnotationsAtom = atom<(ServerTokenAnnotation | ServerSpanAnnota
 export const perPageAnnotationsAtom = atom((get) => {
   const all = get(allAnnotationsAtom);
   const map = new Map<number, (ServerTokenAnnotation | ServerSpanAnnotation)[]>();
-  
+
   for (const a of all) {
     const pageIdx = a.page ?? 0;
     if (!map.has(pageIdx)) map.set(pageIdx, []);
@@ -161,14 +161,14 @@ export function useVisibleAnnotations() {
   const { showStructural } = useAnnotationDisplay();
   const { spanLabelsToView } = useAnnotationControls();
   const { selectedAnnotations, selectedRelations } = useAnnotationSelection();
-  
+
   return useMemo(() => {
     // Force visibility for selected items
     const forcedIds = new Set([
       ...selectedAnnotations,
       ...selectedRelations.flatMap(r => [...r.sourceIds, ...r.targetIds])
     ]);
-    
+
     // Apply filters
     return allAnnotations.filter(annot => {
       if (forcedIds.has(annot.id)) return true;

@@ -84,19 +84,19 @@ The PDF component implements a sophisticated virtualization system to handle lar
 const calcRange = useCallback(() => {
   const scroll = /* get scroll position */;
   const viewH = /* get viewport height */;
-  
+
   // Binary search for first/last visible pages
   // Add overscan for smooth scrolling
   const overscan = 2;
   let start = Math.max(0, firstVisible - overscan);
   let end = Math.min(pageCount - 1, lastVisible + overscan);
-  
+
   // Ensure selected annotation's page is included
   if (selectedPageIdx !== undefined) {
     start = Math.min(start, selectedPageIdx);
     end = Math.max(end, selectedPageIdx);
   }
-  
+
   setRange([start, end]);
 }, [/* dependencies */]);
 ```
@@ -193,4 +193,4 @@ The system implements a sophisticated two-phase approach for scrolling to annota
 1. **Phase 1**: Page-level scrolling ensures the target page is visible
 2. **Phase 2**: Element-level scrolling centers the specific annotation
 
-See [scroll-to-annotation-flow.md](./scroll-to-annotation-flow.md) for detailed documentation of this system. 
+See [scroll-to-annotation-flow.md](./scroll-to-annotation-flow.md) for detailed documentation of this system.
